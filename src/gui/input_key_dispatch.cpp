@@ -1157,8 +1157,8 @@ void GuiInputHandler::close_history_mode() {
 // going through set_history_delta): the pointer stash (flag_hit_rects), the stem
 // painter's stash (marker_stems — paint-only since the stems-inert ruling,
 // 2026-08-12, but its `marker_index` still changes domain across the edge and
-// the playhead's stem-suppression decider reads it) and the diff-flag LIST
-// their indices name.
+// the stem painter's flash override reads it) and the diff-flag LIST their
+// indices name.
 //
 // The stashes (app.flag_hit_rects, app.marker_stems) are STAGED by the flag
 // cache's rebuild and promoted at the frame that blits its surface (architect

@@ -103,9 +103,10 @@
 // settings editor, not a Settings dropdown row — and are read ONCE, at
 // startup, into the process-wide marker palette (set_marker_base_colors,
 // render.h), which nothing mutates after; every in-app commit carries them
-// through verbatim from the live struct. Both templates stamp the sampled
-// kdenlive category colours the classes wore as constants
-// (kMarkerColor*Default: #9b59b6, #f47750, #1abc9c, #da4453). A config
+// through verbatim from the live struct. Both templates stamp the colours
+// the classes wore as constants (kMarkerColor*Default: #9b59b6, #3daee9,
+// #1abc9c, #da4453 — the sampled kdenlive category colours, and Breeze's
+// highlight blue for the phase-reset class, architect 2026-09-26). A config
 // lacking any of them is missing-key fatal, no migration.
 // THE TWO LEVEL KEYS CAME AND WENT 2026-09-25 (architect):
 // `waveform_magnification_foreground_db` and

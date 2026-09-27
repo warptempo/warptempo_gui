@@ -956,9 +956,8 @@ bool clip_hit_rect_to_waveform_columns(FlagHitRect& r, int x0, int w) {
 // flag iterator admits a marker whose flag reaches into [0, w) from either
 // side — one left of column 0 whose right-running box hangs into view, one at
 // grid point w for its border alone — but only a marker whose own column is a
-// real waveform column publishes a stem. The stem painter and the playhead's
-// suppression decider (playhead_stem_suppressed) read only real columns, so an
-// off-surface entry can neither paint nor hide a coincident playhead's stem.
+// real waveform column publishes a stem. The stem painter reads only real
+// columns, so an off-surface entry cannot paint.
 // `col` is the marker's column relative to x0. The one spelling for both lane
 // producers (render_flag_boxes_impl, render_history_diff_flags).
 bool stem_column_on_waveform(int col, int w) {
@@ -1234,10 +1233,10 @@ struct FlagFace {
 // retold the same day on the naming-symmetry ruling: warp is never the
 // unmarked default, so this is a REQUIRED argument at every call, never a
 // defaulted bool). The phase-reset flag box paints in the column's shades
-// (marker_palette().phase_reset, orange at the default, render.h); the warp
+// (marker_palette().phase_reset, blue at the default, render.h); the warp
 // flag box and the warp column's bound cells stay on the warp shades (purple
 // at the default),
-// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS ORANGE (architect
+// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS OWN HUE (architect
 // 2026-09-21, superseding the 2026-09-15 purple-on-either-column choice: the
 // cells wear their own column's hue) — every bound-cell call site passes the
 // face of the column the cells belong to, the same `column_face` its flag box
@@ -1336,41 +1335,29 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         // varies on the disabled axis alone.
         f.border = kMarkerFlagBorder;
         f.label = kMarkerFlagLabel;
-        // THE STEM FOLLOWS THE SELECTION BIT AS THE FILL DOES (architect
-        // 2026-09-23): the bright fill when selected, the class's own REST
-        // stem kMarkerStemRed otherwise.
-        f.stem  = selected ? kMarkerFlagFillRedSel : kMarkerStemRed;
+        // THE STEM FOLLOWS THE SELECTION BIT (architect 2026-09-23): the
+        // class's own REST stem kMarkerStemRed at rest, and selected the
+        // playhead stem's white, as every live class's is (architect
+        // 2026-09-26, the default arm below).
+        f.stem  = selected ? kPlayheadStem : kMarkerStemRed;
         f.has_stem = true;
         return f;
     }
     flag_column_pair(column_face, selected, f.fill, f.edge);
     f.border = kMarkerFlagBorder;   // live: undamped, like the red arm above
     f.label = kMarkerFlagLabel;
-    // THE STEM WEARS THE FILL, SELECTION INCLUDED (architect 2026-09-23: "make
-    // the stems the same colour as the highlighted flag when a flag is
-    // selected, so that it stands out" — at a coarse zoom among many markers,
-    // the playhead is found by looking up and the selected stems by looking
-    // down). The column's selected pair's fill when selected, its calm fill at
-    // rest, on both columns.
-    f.stem = f.fill;
+    // THE STEM FOLLOWS THE SELECTION BIT (architect 2026-09-23: "so that it
+    // stands out" — at a coarse zoom among many markers, the playhead is found
+    // by looking up and the selected stems by looking down). At rest it wears
+    // the column's calm fill; SELECTED IT WEARS THE PLAYHEAD STEM'S WHITE,
+    // kPlayheadStem, on both columns (architect 2026-09-26, superseding the
+    // 2026-09-23 Sel fill), as the red arm above does. A coincident playhead
+    // paints its own white over it (paint_playheads), so the two read as one
+    // line.
+    f.stem = selected ? kPlayheadStem : f.fill;
     f.has_stem = true;
     return f;
 }
-
-} // namespace
-
-// The phase-reset lead-in ring's colour (declaration in render.h): the ladder
-// above asked for a LIVE, SELECTED reset's stem on the class the flag pass
-// hands it — the highlight shade of that class, always (architect 2026-09-26:
-// only a selected marker can have the overlay). It stands outside the file's
-// anonymous namespace so paint_handler.cpp reaches it; the ladder it calls
-// stays file-local.
-GuiColor phase_reset_ring_color(bool red) {
-    return resolve_flag_face(/*disabled=*/false, red, /*selected=*/true,
-                             FlagColumnFace::PhaseReset).stem;
-}
-
-namespace {
 
 // THE MARKER'S BOXES IN PAINTED ORDER, RANKED: the flag box, then the lower
 // bound cell, the upper bound cell. That is the one
@@ -1486,7 +1473,7 @@ void render_flag_boxes_impl(
     // marker_palette().phase_reset, render.h). It reaches the
     // resting flag-box face below AND THE TWO BOUND CELLS (architect
     // 2026-09-21: the cells wear their own column's hue — purple on W,
-    // orange on P).
+    // the phase-reset hue on P).
     FlagColumnFace column_face) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
@@ -1625,9 +1612,10 @@ void render_flag_boxes_impl(
             // bright, so a selected marker always shows its selection
             // somewhere. Disabled and red blend as they always did, cell by
             // cell through the same ladders; the border reads the class alone
-            // and the stem the flag box's fill, so the payload face carries
-            // both for the marker (a marker whose addressed cell is a bound
-            // cell keeps its rest stem, as its flag box keeps its rest fill).
+            // and the stem the flag box's selection bit, so the payload face
+            // carries both for the marker (a marker whose addressed cell is a
+            // bound cell keeps its rest stem, as its flag box keeps its rest
+            // fill; only a bright payload turns the stem white).
             MarkerCell bright = i == focus_marker ? focus_cell
                                                   : MarkerCell::Payload;
             // THE FALLBACK ASKS WHETHER THE BRIGHT CELL IS SHOWN AT ALL, by
@@ -1750,7 +1738,7 @@ void render_flag_boxes_impl(
             // the same ladder, so a cell reads as another payload of the same
             // flag and not as a second surface (a bound cell wears
             // its own column's hue — purple on the warp column, the phase-reset
-            // orange on the phase-reset column, architect 2026-09-21). Each cell resolves
+            // hue on the phase-reset column, architect 2026-09-21). Each cell resolves
             // its own face, because the selected pair is
             // the addressed cell's alone (above). The seam is the flag's own
             // left-border column laid on each cell's left edge. No budget and
@@ -1769,7 +1757,8 @@ void render_flag_boxes_impl(
                         // THE CELLS WEAR THEIR OWN COLUMN'S HUE (architect
                         // 2026-09-21, superseding the 2026-09-15 purple on
                         // either column): the same `column_face` this pass's
-                        // flag box takes — purple on W, orange on P.
+                        // flag box takes — purple on W, the phase-reset
+                        // hue on P.
                         //
                         // A TIE FOLLOWER'S CELLS TAKE THE DISABLED FACE
                         // (architect 2026-09-19): they show the LEADER's
@@ -2828,7 +2817,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the open editor must read as the same flag or cell, only wider, which
     // is the whole surface's promise. The payload editor is a warp-column
     // surface by its own open gates, so the only field this reaches on the
-    // phase-reset column is a BOUND field, and it wears the phase-reset orange
+    // phase-reset column is a BOUND field, and it wears the phase-reset hue
     // as the resting cell does (architect 2026-09-21, superseding the
     // 2026-09-15 purple on either column).
     const FlagColumnFace column_face =
