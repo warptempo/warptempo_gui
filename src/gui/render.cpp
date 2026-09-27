@@ -584,7 +584,9 @@ void render_playhead(cairo_t* cr,
     // derivation (half a source frame at the 1/16 slope floor plus three half
     // target frames, 9.5 / q px at the deepest zoom's q, half the working
     // column): 0.345 px on the laptop at 44.1 kHz (q = 27.5), 0.413 px on the
-    // tablet (q = 23). Reading the bar as [g(c) − spp/2, g(c) + spp/2) is the
+    // tablet (q = 23), and under half a pixel at every waveform width, the
+    // deepest-zoom floor holding q >= 20 (0.475 px; kDeepestZoomMinFramesPerPx,
+    // app_state.h). Reading the bar as [g(c) − spp/2, g(c) + spp/2) is the
     // alternative that was declined.
     const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 

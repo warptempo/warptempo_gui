@@ -261,7 +261,8 @@ PositionNudgePrologue position_nudge_prologue(
 // the pixel phase, so whole-frame rounding residue never accumulates — rounding
 // each press independently would paint occasional 0 or 2 px jumps). The deepest
 // zoom, level 1, paints q = half the working column (working_column_frames,
-// app_state.h). In the PHASE nudge's mapped target home that gives q / 16 source
+// app_state.h), floored at kDeepestZoomMinFramesPerPx = 20 (app_state.h). In
+// the PHASE nudge's mapped target home that gives q / 16 source
 // frames per target pixel under the value brackets (tempo times both scales at
 // least 0.25 * 0.5 * 0.5 = 1/16), so the whole-frame rounding error is at most
 // 8 / q px: at 44.1 kHz the laptop's q = 27.5 gives 1.71875 frames per pixel and
@@ -269,10 +270,10 @@ PositionNudgePrologue position_nudge_prologue(
 // 25 give 1.875 / 0.267 px and 1.5625 / 0.320 px. In the WARP nudge's identity
 // source home the bound is trivially stronger (error at most half a frame,
 // 0.5 / q: 0.018 px on the laptop, 0.022 on the tablet). Either way each press
-// still advances at least one whole frame. THE BOUND NEEDS q > 16, a working
-// column of at least 33 frames: it would fail from a waveform width of 3264 px
-// at 44.1 kHz (3552 at 48 kHz), which no deployed device has, and no guard
-// stands for it.
+// still advances at least one whole frame. THE BOUND NEEDS q > 16, and the
+// deepest-zoom floor holds it at every waveform width: where level 1 would
+// paint under 20 frames per pixel the zoom stops at 20 (8 / 20 = 0.4 px,
+// effective_min_zoom_level, main.cpp).
 //
 // ONE PAINTED COLUMN PER PRESS IS A COLUMN-STEP PROPERTY AND NOTHING ELSE, and
 // the trap it documents already bit once: the only other gesture that ever claimed

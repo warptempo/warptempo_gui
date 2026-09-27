@@ -504,7 +504,7 @@ int painted_column_of_source_frame_on_basis(
 // and AT THE RIGHT WALL the view cannot pan further: at the current zoom no
 // viewport paints it (End's landing at the whole-song zoom does this in the
 // ordinary case; a file short enough that the whole-song fit saturates at
-// kMinZoom occupies less than the window, so its last frame paints inside and
+// the floor occupies less than the window, so its last frame paints inside and
 // is correctly not refused).
 // Mid-song the same rounding is ordinary culling — the camera pages one
 // column and the item is in view — so the test is asked of THE RIGHT-WALL

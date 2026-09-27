@@ -2641,7 +2641,7 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
 // the fork, reuse the applier, no second zoom rule"). dx zooms plain linear
 // off the LIVE level, RIGHT zooming in (`zoom_level - dx/rate` — the sign's
 // derivation from the pinch is at the zoom phase's contract), pre-clamped
-// into the chokepoint's own [kMinZoom, effective ceiling] window exactly as
+// into the chokepoint's own [effective floor, effective ceiling] window exactly as
 // every apply_strip_drag_zoom caller pre-clamps. The divisor is the RESOLVED
 // rate — device px per level at the live gui_scale — and never the authored
 // constant; why the rate scales is at nav_zoom_px_per_level(), app_state.h.
@@ -2649,10 +2649,11 @@ double GuiInputHandler::nav_drag_zoom_level(double dx) const {
     const GuiRect wf_area = waveform_area(app);
     const int64_t total = live_total_frames(app, audio);
     double new_level = app.zoom_level - dx / nav_zoom_px_per_level();
-    const double max_l = effective_max_zoom_level(wf_area.w, total,
-                                                  audio.working_column());
-    if (new_level < kMinZoom) new_level = kMinZoom;
-    if (new_level > max_l)    new_level = max_l;
+    const int64_t column = audio.working_column();
+    const double min_l = effective_min_zoom_level(column);
+    const double max_l = effective_max_zoom_level(wf_area.w, total, column);
+    if (new_level < min_l) new_level = min_l;
+    if (new_level > max_l) new_level = max_l;
     return new_level;
 }
 
@@ -2860,7 +2861,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // where it is, apply_strip_drag_zoom's own MID-GESTURE TRUE-NO-OP
         // return drops any frame whose post-clamp level AND viewport both
         // stand — every frame of a pinch that begins saturated at a wall
-        // (pinching further out at full zoom-out, or further in at kMinZoom),
+        // (pinching further out at full zoom-out, or further in at the floor),
         // which is precisely the edge the stem was asked for. Without this line
         // such a pinch would show no stem until it turned around. Once per
         // phase, and it merges with the apply's own damage on every frame that
@@ -2929,7 +2930,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // The distance ratio maps to the level LOGARITHMICALLY — spreading the
     // fingers by 2x is one level in (spp halves, so the content between the
     // fingers scales with the finger gap; no feel constant). Pre-clamped into
-    // the same [kMinZoom, effective ceiling] window clamp_viewport_start
+    // the same [effective floor, effective ceiling] window clamp_viewport_start
     // re-applies, exactly as every other caller pre-clamps — the chokepoint's
     // level_changed compare requires a real request (its contract names the
     // callers).
@@ -2942,10 +2943,11 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         new_level = nav_drag_zoom_level(zoom_dx);
     } else {
         new_level = app.zoom_level - std::log2(eff_ratio);
-        const double max_l =
-            effective_max_zoom_level(wf_area.w, total, audio.working_column());
-        if (new_level < kMinZoom) new_level = kMinZoom;
-        if (new_level > max_l)    new_level = max_l;
+        const int64_t column = audio.working_column();
+        const double min_l = effective_min_zoom_level(column);
+        const double max_l = effective_max_zoom_level(wf_area.w, total, column);
+        if (new_level < min_l) new_level = min_l;
+        if (new_level > max_l) new_level = max_l;
     }
 
     // ONE placement carries whichever axis is live, and the fork above decided

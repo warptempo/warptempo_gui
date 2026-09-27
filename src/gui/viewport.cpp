@@ -606,7 +606,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // exemption here, so a zoom during a following play suspends its paging.
     // `level_changed` reports a real move, not a request: BOTH callers — the
     // nav drag's zoom phase (apply_nav_zoom_at) and the two-finger touch-nav
-    // body (apply_touch_nav_update) — pre-clamp new_level into the same [kMinZoom, effective_max_zoom_level]
+    // body (apply_touch_nav_update) — pre-clamp new_level into the same [effective_min_zoom_level, effective_max_zoom_level]
     // window clamp_viewport_start re-applies, so the pre-assignment compare
     // cannot read a wall-saturated no-op as movement.
 

@@ -509,7 +509,7 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 
 // Frame an ACTIVE-domain span [lo, hi] into the viewport: compute the margined
 // fit level (effective_max_zoom_level's formula over the span, clamped
-// [kMinZoom, effective ceiling]) and CENTER the span in the window, then apply
+// [effective_min_zoom_level, effective ceiling]) and CENTER the span in the window, then apply
 // through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
 // sync render). `margin` adds the EDGE MARGIN per side — kViewportEdgeMarginFraction

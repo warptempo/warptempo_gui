@@ -61,8 +61,10 @@ public:
     // 2^(level − 2), samples_per_pixel_at) and the gain analysis's column:
     // whole source frames per pixel at the working zoom on this device, fixed
     // for this audio's lifetime (the rule at working_column_frames,
-    // app_state.h). Nothing reads it before a load, since the no-audio state
-    // greys every face; the assert is that claim.
+    // app_state.h). Nothing reads it before a load: the no-audio state greys
+    // every face, and the one tooltip fork that reaches the map
+    // (overview_command_target) answers its no-op first there; the assert is
+    // that claim.
     int64_t working_column()  const {
         assert(working_column_ > 0);
         return working_column_;

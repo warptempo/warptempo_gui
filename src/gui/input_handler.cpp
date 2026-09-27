@@ -3031,6 +3031,16 @@ bool overview_recall_restorable(const AppState& app) {
 OverviewCommandTarget overview_command_target(const AppState& app,
                                               const GuiAudio& audio) {
     OverviewCommandTarget t;
+    // NO PIECE, NO ACT: while there is nothing to dispatch on (a load in
+    // flight, or the blank window before the startup load) the fork answers
+    // the no-op through the one owner the roster's grey reads
+    // (no_audio_to_dispatch_on), so the tooltip over the grey face names the
+    // act plainly and nothing below reads the working column before a load
+    // publishes it.
+    if (no_audio_to_dispatch_on(app, audio.total_frames())) {
+        t.arm = OverviewCommandTarget::Arm::NoOp;
+        return t;
+    }
     // THE WHOLE-SONG STATE ANSWERS FIRST (R-17g): a `0` that landed on the
     // ceiling is still out after a resize or an S/T flip has moved that
     // ceiling, and its stamp is the answer — in the stamp's own audio view.
@@ -3174,7 +3184,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // the PAINTED window at that level (W·q_t, q_t the sixteenth-frame grid step
     // — the span the waveform will show); the start itself is left unsnapped,
     // clamp_viewport_start owning the viewport grid (see the centering block
-    // below). A span too small for kMinZoom to fill (the floor-saturated case)
+    // below). A span too small for the floor (effective_min_zoom_level) to fill (the floor-saturated case)
     // rests centered instead of left-aligned, and the unclamped case degenerates
     // to the span's left edge (W·q_t covers the margined span by the fit-level
     // solve, past it by under a sixteenth of a frame per column). Ends at
@@ -3205,23 +3215,24 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 
     // Fit level: effective_max_zoom_level's own solve (fit_zoom_level, main.cpp
     // — the level whose painted span W·q covers the span) with the
-    // span in place of total, clamped into [kMinZoom, per-file effective
-    // ceiling]. A zoom-OUT ceiling and a zoom-IN floor, so framing a tiny span
-    // may go deep (down to kMinZoom) while a span wider than the song
+    // span in place of total, clamped into [effective floor, per-file
+    // effective ceiling]. A zoom-OUT ceiling and a zoom-IN floor, so framing a
+    // tiny span may go deep (down to effective_min_zoom_level) while a span wider than the song
     // saturates at whole-song-visible — and the whole song's span solves to
     // the ceiling itself.
     double span = fhi - flo;
     if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
     const double raw_level = fit_zoom_level(span, W, column);
     const double ceiling = effective_max_zoom_level(W, total, column);
-    const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
+    const double target_level =
+        std::clamp(raw_level, effective_min_zoom_level(column), ceiling);
 
     // CENTER: place the margined span's midpoint at the centre of the PAINTED
     // window at the target level, visible_t = W·q_t (samples_visible's span at
     // that level, the one geometry land_subject's fit test and centring read) —
     // at the fit level and at every whole level (column × 2^(L − 2), a whole
     // number of frames or a half at level 1) q_t is the level's spp itself,
-    // and a level clamped to kMinZoom or the ceiling centres on the window it
+    // and a level clamped to the floor or the ceiling centres on the window it
     // will actually paint. Only the FINAL start is nearbyint'd;
     // the viewport grid is clamp_viewport_start's (the chokepoint). In the
     // ordinary UNCLAMPED fit W·q_t is the margined span rounded UP to the

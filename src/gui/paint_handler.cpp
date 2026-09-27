@@ -5037,8 +5037,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             fill_waveform_line(cr, lane.x, wave_w, col,
                                major ? major_top : minor_top, tick_bottom);
             if (!major) continue;
-            // The label sits just right of its own major tick, so the number and
-            // the line it names cannot drift apart.
+            // The label starts past its major tick's own width plus a scaled 2 px gap.
             // The label's TIME is still the exact step time — only tick
             // PLACEMENT is distributed, and a major is at its own exact time
             // anyway. Its x rides `col`, which for a major IS the rounded major,
@@ -5059,7 +5058,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                    ? kRedesignLabel : kRulerLabel;
             cairo_set_source_rgb(cr, c.r, c.g, c.b);
             text_shape::show_shaped_run(cr, run,
-                                        static_cast<double>(lane.x + col + 3),
+                                        static_cast<double>(lane.x + col +
+                                                            waveform_line_px() +
+                                                            scaled_px(2)),
                                         baseline);
         }
     }
@@ -5122,7 +5123,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // is the right edge: a frame in the song's last half-column rounds to grid
     // point wave_w, one past the last column — End's landing at the whole-song
     // zoom in the ordinary case (a file short enough that the fit saturates at
-    // kMinZoom occupies less than the window and its last frame paints
+    // the floor occupies less than the window and its last frame paints
     // inside), and at the right wall at some zooms — and the head's left
     // half at the edge keeps that playhead on screen at its true point rather
     // than vanishing or being pulled inward. The marker-lane STEM stays gated

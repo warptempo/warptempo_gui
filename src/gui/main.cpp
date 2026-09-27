@@ -93,8 +93,9 @@ namespace {
 // working column (working_column_frames, app_state.h), computed directly in
 // samples_per_pixel_at. The level rests anywhere in the one continuous domain
 // [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest zoom-in (half a
-// working column per pixel), level 2 the working zoom (one column), each whole
-// step exactly 2x the previous, and the fit-equivalent level (full zoom-out,
+// working column per pixel) unless the floor raises it
+// (effective_min_zoom_level below), level 2 the working zoom (one column),
+// each whole step exactly 2x the previous, and the fit-equivalent level (full zoom-out,
 // whole song visible) is the point on the same curve whose painted span
 // width·q covers total (fit_zoom_level).
 
@@ -967,26 +968,41 @@ double fit_zoom_level(double span_frames, int width_px, int64_t column_frames) {
         static_cast<double>(column_frames));
 }
 
+// The live zoom floor — the rule and its derivation are at
+// kDeepestZoomMinFramesPerPx (app_state.h). At a binding floor the level's
+// spp is 20 to within a few ULPs of exp2(log2(x)), far under the 1/32 frame
+// that would move painter_quantized_spp off 20, so the floor paints q = 20
+// exactly.
+double effective_min_zoom_level(int64_t column_frames) {
+    assert(column_frames > 0);
+    const double floor_level = 2.0 + std::log2(
+        static_cast<double>(kDeepestZoomMinFramesPerPx) /
+        static_cast<double>(column_frames));
+    return std::max(kMinZoom, floor_level);
+}
+
 // The per-file effective zoom-out ceiling: the fit level of the whole song
 // (fit_zoom_level above — the level whose painted span width·q covers
-// total_frames), clamped into [kMinZoom, kMaxZoom]; full zoom-out
+// total_frames), clamped into [effective floor, kMaxZoom]; full zoom-out
 // rests here (whole-song-visible, Ableton behavior), where samples_visible >=
 // total_frames and clamp_viewport_start parks the start at 0. It moves with
 // the waveform's width (the whole-song state follows it, ViewState::
-// whole_song_visible). A degenerate tiny file (fit_level < kMinZoom) collapses
-// the range to the floor — clamp_viewport_start's visible >= total branch owns
-// that start = 0 display. Because kMaxZoom is derived from audio_io's
+// whole_song_visible). A degenerate tiny file (fit_level under the floor,
+// effective_min_zoom_level) collapses the range to the floor —
+// clamp_viewport_start's visible >= total branch owns that start = 0
+// display. Because kMaxZoom is derived from audio_io's
 // structural source caps (see settings_file.h), fit_level is below kMaxZoom
 // for every loadable file, so the clamp's upper edge is never the binding one
 // in practice.
 double effective_max_zoom_level(int waveform_width_px,
                                 int64_t total_frames,
                                 int64_t column_frames) {
+    const double floor_level = effective_min_zoom_level(column_frames);
     if (waveform_width_px <= 0 || total_frames <= 0)
-        return kMinZoom;  // degenerate: collapse to the floor
+        return floor_level;  // degenerate: collapse to the floor
     const double fit = fit_zoom_level(static_cast<double>(total_frames),
                                       waveform_width_px, column_frames);
-    return std::clamp(fit, kMinZoom, kMaxZoom);
+    return std::clamp(fit, floor_level, kMaxZoom);
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
@@ -997,14 +1013,17 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
 
 double clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level) {
     // The one owner of the level-bounds pair. No live frames (loading states) →
-    // return the level untouched: effective_max_zoom_level collapses to kMinZoom
-    // on a zero total, and stomping the level the load path is mid-assignment
-    // would be wrong. Otherwise clamp into [kMinZoom, per-file ceiling].
+    // return the level untouched: effective_max_zoom_level collapses to the
+    // floor on a zero total, and stomping the level the load path is
+    // mid-assignment would be wrong. Otherwise clamp into [effective floor,
+    // per-file ceiling] — the floor's one owner is effective_min_zoom_level,
+    // so a saved tab zoom under it clamps here as it goes live.
     const int64_t total = live_total_frames(a, audio);
     if (total <= 0) return level;
-    return std::clamp(level, kMinZoom,
+    const int64_t column = audio.working_column();
+    return std::clamp(level, effective_min_zoom_level(column),
                       effective_max_zoom_level(waveform_area(a).w, total,
-                                               audio.working_column()));
+                                               column));
 }
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {

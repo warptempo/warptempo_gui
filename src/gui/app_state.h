@@ -60,9 +60,11 @@ struct GuiTargetRender;
 // whatever the live ceiling becomes. And `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
 // Tab walk changes no zoom at any level (architect 2026-09-22). Smaller level = less file per window
-// = more zoomed in. kMinZoom is the deepest zoom-in the continuous zoom
-// gestures reach, one step finer than kWorkingZoomLevel, the fine-tuning rest
-// point `c` lands on. A continuous zoom gesture rests where it ends.
+// = more zoomed in. The deepest zoom-in the continuous zoom gestures reach
+// is effective_min_zoom_level (main.cpp): kMinZoom, one step finer than
+// kWorkingZoomLevel, the fine-tuning rest point `c` lands on, unless this
+// device's column would paint finer than kDeepestZoomMinFramesPerPx there
+// (below). A continuous zoom gesture rests where it ends.
 //
 // THE ZOOM MAP IS DEVICE-RELATIVE (architect 2026-09-27: "level 2 is the
 // working level on this device; everything works off it"): spp(level) =
@@ -77,7 +79,29 @@ struct GuiTargetRender;
 // withdrawn: the grid is shared per level within a device.
 constexpr double kWorkingZoomLevel = 2.0;  // spp = the working column exactly;
                                            // the zoom gestures can go one
-                                           // step deeper to kMinZoom
+                                           // step deeper, to the floor below
+// THE DEEPEST-ZOOM FLOOR (architect 2026-09-27): the finest step the zoom may
+// paint, in source frames per pixel. Level 1 paints half the working column,
+// and on a wide enough strip that is too fine for two guarantees:
+//   * THE ONE-COLUMN NUDGE (position_nudge.h): at the value brackets' extreme
+//     stretch the phase nudge's target home carries q / 16 source frames per
+//     target pixel, so its whole-frame rounding error, 8 / q px, stays under
+//     half a pixel only for q > 16, and each adjacent column is a whole frame
+//     away only for q >= 16;
+//   * THE TARGET-VIEW ROUND TRIP (render.cpp's playhead comment,
+//     zoom-viewport-strip.md): its worst-case residue is 9.5 / q px, under
+//     half a pixel only for q > 19.
+// 20 holds both at every width (8 / 20 = 0.4 px, 9.5 / 20 = 0.475 px). It is a
+// whole number of frames, so it sits on the sixteenth-frame grid and the
+// floor paints q = 20 exactly (painter_quantized_spp). It binds only where
+// level 1 would paint finer, a working column under 40 frames, which no
+// deployed device has (level 1's q: laptop 27.5 and tablet 23 at 44.1 kHz,
+// 30 / 25 at 48 kHz, 60 / 50 at 96 kHz); a 3840 px strip at 44.1 kHz
+// (column 28) floors at 20 frames per pixel, about 1.74 s across against the
+// working zoom's 2.44 s. The persisted zoom vocabulary [kMinZoom, kMaxZoom] is
+// unchanged: a saved level under the floor clamps where it goes live, at
+// clamp_zoom_level.
+constexpr int64_t kDeepestZoomMinFramesPerPx = 20;
 // The zoom level an AppState / ViewState / recall stamp holds BEFORE the load
 // writes the real one (file_loader.cpp). A placeholder only: nothing reads it
 // before the load overwrites it, since the no-audio state greys every face.
@@ -196,7 +220,7 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // architect, having driven it, found it "a little too slow". 200 is the same
 // derivation with the overshoot taken off, not a new one.
 //
-// WHAT IT COSTS, AND WHY THAT IS AFFORDABLE: the whole [kMinZoom, effective
+// WHAT IT COSTS, AND WHY THAT IS AFFORDABLE: the whole [effective floor, effective
 // ceiling] span is roughly 3200 authored px of travel — over a screen and a
 // half at the deployment size — and that is fine BECAUSE OF THE CAPTURE. The
 // notional-x freeze (its record is at GuiPlatform::set_notional_x_frozen) is
@@ -11689,14 +11713,22 @@ bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
                                  int64_t column_frames);
+// THE LIVE ZOOM FLOOR, the one owner: max(kMinZoom, 2 + log2(
+// kDeepestZoomMinFramesPerPx / column)), the level whose spp is exactly the
+// floor's frames per pixel when that is coarser than level 1 (the rule at
+// kDeepestZoomMinFramesPerPx). The GUI's lower zoom bound everywhere:
+// clamp_zoom_level, the pinch / Ctrl-drag / pen pre-clamps, the span
+// framer, and effective_max_zoom_level's degenerate collapse and fit clamp,
+// so the ceiling never sits under it.
+double  effective_min_zoom_level(int64_t column_frames);
 // The covering level: the one whose painted span (width·q, the sixteenth-frame
 // grid) covers `span_frames`, unclamped — a covering question, so a ceiling,
 // n = ceil(16·span/width), the level's spp n/16 and so its q n/16, by the
 // map's inverse level = 2 + log2((n/16)/column) — the ceiling's solve and the
 // span framer's (the rule at its definition, main.cpp).
 double  fit_zoom_level(double span_frames, int width_px, int64_t column_frames);
-// Clamp a requested zoom level into the per-file window [kMinZoom, effective
-// per-file ceiling]. The single owner of the level-bounds pair, shared by the
+// Clamp a requested zoom level into the per-file window [effective floor
+// (effective_min_zoom_level), effective per-file ceiling]. The single owner of the level-bounds pair, shared by the
 // clamp_viewport_start chokepoint and the appliers' pre-clamps. A no-op
 // while loading (no live frames), so it cannot stomp a level the load path is
 // mid-assignment.
@@ -11722,7 +11754,9 @@ bool overview_recall_restorable(const AppState& a);
 //     moved the ceiling does not make the press forget it is out; and the
 //     stamp is the live audio view's): `level` is the stamp's level clamped
 //     into the live window.
-//   * NoOp — nothing to return to: the whole-song state stands over a stamp
+//   * NoOp — no piece to dispatch on (no_audio_to_dispatch_on, answered
+//     first, so nothing reads the working column before a load), or nothing
+//     to return to: the whole-song state stands over a stamp
 //     from the other audio view, or the level is at the per-file ceiling
 //     (`>=`) with the state down — a ceiling this key never produced (a short
 //     file that opens whole-song-visible, a level the clamp or a zoom gesture
