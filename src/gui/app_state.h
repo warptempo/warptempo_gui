@@ -4907,10 +4907,12 @@ struct AppState {
     // source (GuiAudio::gain_curve: the leveler, the expander and the
     // compressor) — is two flat bars per column, in both audio views: the
     // levelled, expanded OUTER and the compressed, expanded INNER over it,
-    // both in the plate's ink, the inner outlined in one pixel of its own
-    // (architect 2026-09-25/27, the inks render.h's row-6 constants — the
-    // rule is at render_waveform's declaration); DARK, the raw picture
-    // alone. THE BIT IS THE ANSWER, read by waveform_magnified
+    // both in the plate's ink, the inner outlined in an erosion at distance
+    // t = waveform_line_px() of its own (1 px at 100%, 2 on the tablet at
+    // 225%; t snapshotted on the plate job and in its fingerprint, render.h
+    // and waveform_cache.cpp) (architect 2026-09-25/27, the inks render.h's
+    // row-6 constants — the rule is at render_waveform's declaration); DARK,
+    // the raw picture alone. THE BIT IS THE ANSWER, read by waveform_magnified
     // (warp_frame_map_view.h) and by the lamp's face, and by nothing else —
     // it reaches no authoring, no red cue, no render and no sidecar. Its one
     // writer is GuiInputHandler::set_show_waveform_magnification.

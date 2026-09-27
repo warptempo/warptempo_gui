@@ -1072,7 +1072,8 @@ inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 // the OUTER bar — the levelled, expanded one, painted first, behind — and the
 // INNER bar — the source's own bar through the compressor, painted over, the
 // one the eye reads for detail — BOTH FILLED IN kWaveformInk, the inner
-// distinguished only by its ONE-PIXEL OUTLINE, its true contour, in
+// distinguished only by its OUTLINE, its true contour, an erosion at distance
+// waveform_line_px() (1 px at 100 %, 2 on the tablet), in
 // kWaveformForegroundOutline (settled by his eye 2026-09-27).
 //
 // THE PLATE'S INK: row 6's crop sample, the dark lamp's one ink and both lit
