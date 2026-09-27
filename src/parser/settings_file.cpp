@@ -85,11 +85,11 @@ using warptempo_parse::prefix_line_error;
 // having grown a render player of its own, and a
 // config still carrying an `audio_player=` line refuses there exactly as a
 // sidecar carrying one refuses here (architect approval 2026-08-28,
-// comment-only). THAT CONFIG IS NOW FIVE KEYS — `gui_scale`, `projects_repo`,
-// `projects_path`, `last_project`, `sync_path`, the writer's own order (four
-// between that retirement and 2026-08-30, when `sync_path` arrived with the
-// mirror's configured destination) — and none of them is readable from here
-// (architect approval 2026-08-30, comment only). A `.settings` still carrying
+// comment-only). THE DEVICE CONFIG'S KEYS ARE ENUMERATED AT
+// `kDeviceConfigKeys` (src/gui/device_config.cpp; grammars in
+// src/gui/device_config.h) — the count and the list have moved more than
+// once since and none of them is readable from here (architect approval
+// 2026-09-27, comment only). A `.settings` still carrying
 // any of the four
 // is load-fatal in both products by the ordinary unknown-key refusal below —
 // hand-editing the lines out is the whole recovery, NO migration and no reader

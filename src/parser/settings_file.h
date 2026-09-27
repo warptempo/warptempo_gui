@@ -27,13 +27,11 @@
 // render player, and a config still
 // carrying an `audio_player=` line is unknown-key fatal there exactly as a
 // sidecar carrying one is here (architect approval 2026-08-28, comment-only).
-// THE DEVICE CONFIG IS FIVE KEYS — `gui_scale`, `projects_repo`,
-// `projects_path`, `last_project`, `sync_path`, in the writer's own order
-// (it was four between `audio_player`'s retirement and 2026-08-30, when
-// `sync_path` arrived to name where Synchronize to external storage mirrors,
-// retiring the discovery that had found that destination). None of the five
-// has ever been this schema's business (architect approval 2026-08-30,
-// comment only).
+// THE DEVICE CONFIG'S KEYS ARE ENUMERATED AT `kDeviceConfigKeys`
+// (src/gui/device_config.cpp; grammars in src/gui/device_config.h) — the count
+// and the list have moved more than once since and this file is not their
+// owner. None of them has ever been this schema's business (architect
+// approval 2026-09-27, comment only).
 //
 // The file is program-written (Ctrl+S / the first-open template), so every
 // violation is adversarial under the two-category rule and load-fatal with
