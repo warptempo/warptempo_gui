@@ -10337,11 +10337,7 @@ inline bool iteration_column_lit(const AppState& app, char column) {
 // and hand the arrows a bound to step on a marker the sweep never reads.
 // marker_walk_step (below) is one of its readers; another is
 // value_drag_target's bound arm (2026-09-10), which asks the same question
-// for the same reason — a drag must not step a bound on a flag showing none;
-// the third is the phase-reset lead-in ring's selection bit
-// (phase_reset_overlay_band, paint_handler.cpp, 2026-09-23), which must light
-// the ring exactly when the flag pass lights the reset's stem, and the pass's
-// bright-cell fallback turns on whether the addressed bound cell is painted.
+// for the same reason — a drag must not step a bound on a flag showing none.
 //
 // THE PAINTER SPELLS THE SAME COMPOSITION ACROSS ITS PARAMETER BOUNDARY, and
 // cannot call this: render_flags / render_phase_reset_flags take their store,

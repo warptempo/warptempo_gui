@@ -1233,16 +1233,16 @@ struct FlagFace {
 // WHICH COLUMN'S DEFAULT/SELECTED PAIR THIS FACE WEARS (architect 2026-09-15,
 // retold the same day on the naming-symmetry ruling: warp is never the
 // unmarked default, so this is a REQUIRED argument at every call, never a
-// defaulted bool). The phase-reset flag box paints in the column's BLUE —
-// Breeze's highlight #3daee9 sampled, the other three RECORDED DERIVATIONS
-// off it (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
+// defaulted bool). The phase-reset flag box paints in the column's ORANGE —
+// all four sampled from the architect's crops
+// (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
 // box and the warp column's bound cells stay on kMarkerFlagFill's purple,
-// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS BLUE (architect
+// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS ORANGE (architect
 // 2026-09-21, superseding the 2026-09-15 purple-on-either-column choice: the
 // cells wear their own column's hue) — every bound-cell call site passes the
 // face of the column the cells belong to, the same `column_face` its flag box
-// takes. (A third face, the magnification level markers column's orange,
-// stood from 2026-09-15 until that column's deletion, architect 2026-09-23.)
+// takes. (A third face, the magnification level markers column's, stood from
+// 2026-09-15 until that column's deletion, architect 2026-09-23.)
 enum class FlagColumnFace { Warp, PhaseReset };
 
 // The default and selected pair of one column's flag box — the one place the
@@ -1327,7 +1327,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
     }
     if (red) {
         // THE REST PAIR AT REST, THE BRIGHT PAIR SELECTED (architect
-        // 2026-09-16): red joins the shape the three column pairs already
+        // 2026-09-16): red joins the shape the two column pairs already
         // have, read on this same `selected` bit — which, at the flag pass's
         // own rule, is true for the marker's ADDRESSED CELL alone. The class
         // ladder above is untouched, so the cue is never masked: a selected
@@ -1366,14 +1366,13 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
 } // namespace
 
 // The phase-reset lead-in ring's colour (declaration in render.h): the ladder
-// above asked for a LIVE reset's stem on the same class and selection bits the
-// flag pass hands it, so the ring can never pick a colour its stem would not —
-// the rest colour at rest, the bright fill when selected (architect
-// 2026-09-23: the ring and the stem are one object and brighten together). It
-// stands outside the file's anonymous namespace so paint_handler.cpp reaches
-// it; the ladder it calls stays file-local.
-GuiColor phase_reset_stem_color(bool red, bool selected) {
-    return resolve_flag_face(/*disabled=*/false, red, selected,
+// above asked for a LIVE, SELECTED reset's stem on the class the flag pass
+// hands it — the highlight shade of that class, always (architect 2026-09-26:
+// only a selected marker can have the overlay). It stands outside the file's
+// anonymous namespace so paint_handler.cpp reaches it; the ladder it calls
+// stays file-local.
+GuiColor phase_reset_ring_color(bool red) {
+    return resolve_flag_face(/*disabled=*/false, red, /*selected=*/true,
                              FlagColumnFace::PhaseReset).stem;
 }
 
@@ -1489,11 +1488,11 @@ void render_flag_boxes_impl(
     // WHICH COLUMN'S FLAG BOX THIS IS, REQUIRED rather than defaulted (the
     // naming-symmetry ruling: warp is never the unmarked default) — render_flags
     // passes `FlagColumnFace::Warp`, render_phase_reset_flags passes
-    // `FlagColumnFace::PhaseReset` (the phase-reset blue,
+    // `FlagColumnFace::PhaseReset` (the phase-reset orange,
     // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h). It reaches the
     // resting flag-box face below AND THE TWO BOUND CELLS (architect
-    // 2026-09-21: the cells wear their own column's hue — purple on W, blue
-    // on P).
+    // 2026-09-21: the cells wear their own column's hue — purple on W,
+    // orange on P).
     FlagColumnFace column_face) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
@@ -1757,7 +1756,7 @@ void render_flag_boxes_impl(
             // the same ladder, so a cell reads as another payload of the same
             // flag and not as a second surface (a bound cell wears
             // its own column's hue — purple on the warp column, the phase-reset
-            // blue on the phase-reset column, architect 2026-09-21). Each cell resolves
+            // orange on the phase-reset column, architect 2026-09-21). Each cell resolves
             // its own face, because the selected pair is
             // the addressed cell's alone (above). The seam is the flag's own
             // left-border column laid on each cell's left edge. No budget and
@@ -1776,7 +1775,7 @@ void render_flag_boxes_impl(
                         // THE CELLS WEAR THEIR OWN COLUMN'S HUE (architect
                         // 2026-09-21, superseding the 2026-09-15 purple on
                         // either column): the same `column_face` this pass's
-                        // flag box takes — purple on W, blue on P.
+                        // flag box takes — purple on W, orange on P.
                         //
                         // A TIE FOLLOWER'S CELLS TAKE THE DISABLED FACE
                         // (architect 2026-09-19): they show the LEADER's
@@ -2793,7 +2792,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the open editor must read as the same flag or cell, only wider, which
     // is the whole surface's promise. The payload editor is a warp-column
     // surface by its own open gates, so the only field this reaches on the
-    // phase-reset column is a BOUND field, and it wears the phase-reset blue
+    // phase-reset column is a BOUND field, and it wears the phase-reset orange
     // as the resting cell does (architect 2026-09-21, superseding the
     // 2026-09-15 purple on either column).
     const FlagColumnFace column_face =
