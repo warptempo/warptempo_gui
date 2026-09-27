@@ -28,7 +28,9 @@ struct GuiInputHandler;
 // since 2026-09-02 (architect, the four-tier review's R-22) projects_path and
 // sync_path, which had been hand-edited only, and since 2026-09-13
 // max_waveform_height (the config's sixth key, last_project, is the
-// program's own and has no editor; `audio_player`, once
+// program's own and has no editor, and fg_color, fg_border_color, bg_color
+// and bg_border_color, the lit plate's four inks for a tuning phase, are
+// hand-edited; `audio_player`, once
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:

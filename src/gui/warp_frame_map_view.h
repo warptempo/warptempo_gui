@@ -204,7 +204,8 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // plotted curve, a tint over the picture or a colour read from the gain: the
 // lit plate's per-column shade, which read the leveler's gain for one day,
 // is struck (architect 2026-09-25, render_waveform) and both lit bars are
-// flat colours.
+// flat colours (each with its one-pixel outline in a flat colour of its
+// own, 2026-09-27).
 //
 // NO MODE TERM — the `h` view follows the lamp as it stood when the view was
 // entered (the lamp is dead there by its allowlist), its plate being the live

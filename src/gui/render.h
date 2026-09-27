@@ -103,9 +103,17 @@ struct TrimRange {
 // constant here and in the redesign blocks below is constexpr, there are no
 // user-settable colors, nothing is read from ~/.config, and a retune is a
 // recompile. Every painted surface in the product takes its value from one of
-// these constants, WITH NO EXCEPTION: the waveform's inks were device-config
-// keys for short tuning phases (2026-09-25/26) and are constexpr at row 6
-// below, on the values the architect closed them on by eye.
+// these constants, WITH ONE STANDING EXCEPTION, TEMPORARY BY RULING: the lit
+// plate's four inks — the inner bar's fill and outline and the outer bar's
+// fill and outline — are the device config's `fg_color`,
+// `fg_border_color`, `bg_color` and `bg_border_color` for a tuning phase
+// (architect 2026-09-27), reaching the painter through the
+// startup-installed waveform_lit_inks(); the defaults at row 6 below are
+// what both first-run templates stamp, and the inks return to this rule as
+// constants when the phase closes. (The waveform's inks were device-config
+// keys for short earlier tuning phases, 2026-09-25/26, each closed by eye;
+// the record is at row 6.) The dark plate's kWaveformInk is not in the
+// phase.
 //
 // WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
 // residue. The palette used to be 23 MUTABLE globals overwritten once at startup
@@ -1067,35 +1075,80 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 
 // THE WAVEFORM'S INKS. With the magnification lamp dark the plate is the raw
-// bar alone in kWaveformInk, row 6's crop sample. With it lit the plate is
-// two bars in TWO FLAT INKS (architect 2026-09-26; the rule is at
-// render_waveform's declaration): the OUTER bar — the levelled, expanded
-// one, painted first, behind — in kWaveformInk, the plate's own ink, and the
-// INNER bar — the source's own bar through the compressor, painted over — in
-// kWaveformForegroundInk, a lighter, teal-leaning ink. The source's bar is
-// the one the eye reads for detail, so it is the one that stands forward.
+// bar alone in kWaveformInk, row 6's crop sample, with no outline. With it
+// lit the plate is two bars, each a FLAT FILL with a ONE-PIXEL OUTLINE — its
+// true contour (the rule is at render_waveform's declaration): the OUTER bar
+// — the levelled, expanded one, painted first, behind — and the INNER bar —
+// the source's own bar through the compressor, painted over, the one the eye
+// reads for detail.
 //
-// THE PLATE'S INK: row 6's crop sample, the dark lamp's one ink and the lit
-// plate's background.
+// THE PLATE'S INK: row 6's crop sample, the dark lamp's one ink (constexpr,
+// NOT in the tuning phase below) and the lit outer bar's default.
 inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 
-// THE LIT PLATE'S FOREGROUND, the inner bar's ink (architect 2026-09-26,
-// closing the tuning phase by eye): DERIVED, not sampled — the 1:1 blend of
-// kWaveformInk (28, 129, 107) and kdenlive's teal marker category #1abc9c
-// (26, 188, 156), the same sampled byte kHistoryAddedFill carries, each
-// channel through std::nearbyint (round half to even): (27, 158.5 -> 158,
-// 131.5 -> 132). The full teal read "a little bright" and dulled the
-// unmagnified plate beside it; the half blend is "less tiring on long
-// sessions".
-inline constexpr GuiColor kWaveformForegroundInk = hex(0x1B9E84);  // (27, 158, 132)
+// THE LIT PLATE'S FOUR INKS ARE TUNABLE FOR A TUNING PHASE (architect
+// 2026-09-27): the device config's `fg_color` (the inner bar's fill),
+// `fg_border_color` (its outline), `bg_color` (the outer bar's fill) and
+// `bg_border_color` (its outline), each `#rrggbb`, read once at startup into
+// the process-wide set (waveform_lit_inks(), below), the palette header's
+// one exception. The four constants below are THE PHASE'S DEFAULTS, the
+// values both first-run templates stamp and the painter wears until
+// gui_main installs the config's. With them the lit plate is byte-identical
+// to the plate before the outline existed: each outline defaults to its own
+// fill, and an outline in its fill's colour is no outline (the guarantee is
+// at render_waveform's declaration). When the phase closes the keys are
+// struck and the chosen values are constants here.
+//
+// THE INNER FILL'S DEFAULT (architect 2026-09-26, closing the earlier phase
+// by eye): DERIVED, not sampled — the 1:1 blend of kWaveformInk
+// (28, 129, 107) and kdenlive's teal marker category #1abc9c (26, 188, 156),
+// the same sampled byte kHistoryAddedFill carries, each channel through
+// std::nearbyint (round half to even): (27, 158.5 -> 158, 131.5 -> 132). The
+// full teal read "a little bright" and dulled the unmagnified plate beside
+// it; the half blend is "less tiring on long sessions".
+inline constexpr GuiColor kWaveformForegroundInkDefault = hex(0x1B9E84);  // (27, 158, 132)
+// THE INNER OUTLINE'S DEFAULT: the inner fill itself (no visible outline).
+inline constexpr GuiColor kWaveformForegroundBorderInkDefault =
+    kWaveformForegroundInkDefault;  // #1b9e84
+// THE OUTER FILL'S DEFAULT: the plate's own ink, as the lit outer wore it.
+inline constexpr GuiColor kWaveformBackgroundInkDefault = kWaveformInk;  // #1c816b
+// THE OUTER OUTLINE'S DEFAULT: the outer fill itself (no visible outline).
+inline constexpr GuiColor kWaveformBackgroundBorderInkDefault =
+    kWaveformBackgroundInkDefault;  // #1c816b
+
+// THE LIT PLATE'S FOUR INKS as the painter reads them (the phase's terms
+// above). The set starts at the four defaults, so a process that never
+// installs one paints them.
+struct WaveformLitInks {
+    GuiColor inner_fill;     // `fg_color`
+    GuiColor inner_border;   // `fg_border_color`
+    GuiColor outer_fill;     // `bg_color`
+    GuiColor outer_border;   // `bg_border_color`
+};
+
+// INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's four
+// through set_waveform_lit_inks at startup, beside set_gui_scale_percent and
+// before the first project loads — so before the first plate job — and
+// nothing calls it again (the keys have no in-app writer; a retune is a
+// config edit and a relaunch). THAT IS WHY THE WAVEFORM WORKER READS THEM
+// DIRECTLY, with no job field, and why the plate fingerprint carries no
+// colour term: a value that cannot change within a process needs no
+// snapshot and no key, and the plate cache is a process-lifetime surface
+// that nothing persists. waveform_lit_inks() has one reader, render_waveform
+// (render.cpp), once per call. When the phase closes both are struck and the
+// painter reads constants again.
+void                   set_waveform_lit_inks(const WaveformLitInks& inks);
+const WaveformLitInks& waveform_lit_inks();
 
 // A SUPERSEDED RECORD of the lit inks' tuning (2026-09-24..26): the bar
 // behind wore #1f8b4c, then #135647, then a per-column shade by the leveler's
-// gain, then #17594b (the canvas:ink 1:1 blend); the core wore #17594b,
-// #1abc9c, #1b9e84, then a per-column blend toward #1abc9c by the bar gap
-// (struck: "it doesn't work"); the device keys `fg_color`, `fg_blend_loud` /
-// `fg_blend_quiet` and `fg_color` / `bg_color` carried them in turn and are
-// struck (device_config.h). The canvas STAYS kWaveformCanvas #12312b.
+// gain, then #17594b (the canvas:ink 1:1 blend), then kWaveformInk; the core
+// wore #17594b, #1abc9c, #1b9e84, then a per-column blend toward #1abc9c by
+// the bar gap (struck: "it doesn't work"), then #1b9e84 as the constexpr
+// kWaveformForegroundInk (2026-09-26); the device keys `fg_color`,
+// `fg_blend_loud` / `fg_blend_quiet` and `fg_color` / `bg_color` carried them
+// in turn and were struck (device_config.h) before the present four-key
+// phase. The canvas STAYS kWaveformCanvas #12312b.
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -2841,9 +2894,11 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // THE SILHOUETTE IS A COLUMN OF HARD BARS. Each column reduces to two TIPS in
 // float rows — its raw maximum as the top tip, its raw minimum as the bottom —
 // and paints as ONE opaque bar spanning floor(top) .. floor(bot) inclusive.
-// There is no interior/edge split, no fractional coverage, no regime threshold,
-// and NO INTER-COLUMN CONNECTIVITY AT ALL: a spike stands alone beside a short
-// neighbour, which is the classic min/max look the architect chose.
+// There is no fractional coverage, no regime threshold, and NO INTER-COLUMN
+// CONNECTIVITY AT ALL: a spike stands alone beside a short neighbour, which is
+// the classic min/max look the architect chose. (The lit plate's one-pixel
+// outline — THE LIT OUTLINE, below — recolours a bar's own edge pixels by its
+// neighbours' extents and adds no pixel, so the silhouette is unchanged.)
 //
 // THE ANTIALIASED RENDERER IS DELETED (architect 2026-08-01, at a side-by-side
 // against a snapshotted AA binary — "subtle but noticeable, I prefer without
@@ -2865,11 +2920,15 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // existed because a column's ink came from the segments on BOTH its sides, so an
 // edge column missing an undrawn neighbour was under-covered against the same
 // audio rendered interior and shifted under a pan. A bar depends on nothing but
-// its own interval, so a column's pixels are now a pure function of its own
+// its own interval, so a column's pixel SET is a pure function of its own
 // (k0+c) span — two renders of the same columns at the same basis agree
-// exactly, and an edge column matches the same audio rendered interior, with no
-// correction needed. The AUTHORING LATTICE below is untouched and is still what
-// makes that span depend on the global index alone.
+// exactly. The AUTHORING LATTICE below is untouched and is still what makes
+// that span depend on the global index alone. (With the lamp lit, which of a
+// bar's pixels wear its OUTLINE ink reads the two neighbouring columns' rows —
+// THE LIT OUTLINE, below — and at the plate's two side edges the missing
+// neighbour counts as inside, so an edge column's outline can differ from the
+// same audio rendered interior; every plate is a full render since the
+// shift-and-strip pan's retirement, so no plate ever stitches the two.)
 //
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
@@ -2888,8 +2947,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // use sees the pixels.
 //
 // THE INKS ARE READ HERE rather than passed: the plate paints in
-// kWaveformInk with the lamp dark, and lit the outer in kWaveformInk with
-// the inner over it in kWaveformForegroundInk, two flat constants — it
+// kWaveformInk with the lamp dark, and lit in the four flat inks of
+// waveform_lit_inks() (the tuning phase's `bg_color` / `bg_border_color`
+// on the outer, `fg_color` / `fg_border_color` on the inner, installed once
+// at startup; render.h's row 6) — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
@@ -2905,10 +2966,12 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // through the leveler and the inner through the compressor (architect
 // 2026-09-25):
 //
-//   OUTER (painted first) = raw x g x E, in kWaveformInk — the
-//                           levelled, expanded bar;
-//   INNER (painted over)  = raw x c x E, in kWaveformForegroundInk — the
-//                           source's bar DOWNWARD-COMPRESSED.
+//   OUTER (painted first) = raw x g x E, filled in `bg_color` and outlined
+//                           in `bg_border_color` — the levelled, expanded
+//                           bar;
+//   INNER (painted over)  = raw x c x E, filled in `fg_color` and outlined
+//                           in `fg_border_color` — the source's bar
+//                           DOWNWARD-COMPRESSED.
 //
 // g is the leveler's gain at the column's centre source frame
 // (waveform_gain_at), c the compressor's scale there (waveform_inner_scale_at,
@@ -2920,11 +2983,45 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // they become rows, and each keeps the >=1px floor. The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
 // reading is the source's bar in the lighter foreground ink over the
-// levelled bar in the plate's own ink behind it, the core's relative
+// levelled bar behind it (at the defaults, #1b9e84 over the plate's own
+// #1c816b), the core's relative
 // thickness the loudness — at or under the compressor's
 // threshold the core is the raw bar (x E), over it thinner by its ratio.
 // NULL (the dark lamp) draws the raw bar alone in kWaveformInk at scale 1,
-// byte for byte the plate it always drew. Nothing else in this painter moves
+// with no outline, byte for byte the plate it always drew.
+//
+// THE LIT OUTLINE (architect 2026-09-27) — A TRUE CONTOUR, ONE PIXEL,
+// ALIASED. A pixel of a bar's shape is a BORDER pixel iff any of its four
+// neighbours (left, right, up, down) lies outside that same bar's shape (the
+// outer's shape is the outer bars of all columns, the inner's the inner
+// bars). Paint order per column: outer fill, outer border, inner fill, inner
+// border — so the inner's fill covers the outer's outline wherever the two
+// overlap, and on a steep rise between columns the outline runs down the
+// taller column's side and the line is continuous. EXACTLY ONE TRUE PIXEL
+// at every gui_scale, as the plate and the stems are, written as pixel words
+// like every other plate pixel: no cairo stroke, no coverage, no blend.
+// THE EDGES: a neighbour column beyond the plate's left or right edge counts
+// as INSIDE (the waveform continues off screen, so no vertical line is drawn
+// at the area's sides); a row beyond the channel's lane counts as inside
+// where the bar was CLIPPED there — a tip that reached the sample domain's
+// edge (|v| >= 1 after its scale, the clamp that makes a loud outer clip
+// flat) — because the shape continues past the lane rather than ending,
+// and as OUTSIDE where the tip merely floors into the lane's edge row short
+// of full scale, the shape genuinely ending there. So a clipped forte carries
+// no line along the lane's edge, and the two channels' clipped outers still
+// meet flush at the split row. Each channel's lane is its own shape; the
+// other channel's pixels are never a neighbour. A 1-2 px bar comes out all
+// border; the >=1px floor stands. THE ALGORITHM is per column, from the
+// three columns' row extents alone, no 2D scan: a bar's interior is its rows
+// [r0 + 1, r1 - 1] (r0 / r1 themselves where that end is clipped),
+// intersected with each in-plate neighbour's [r0, r1]; its border is the
+// bar's rows above and below that interior (the whole bar when it is empty).
+// SAME COLOUR IS NO OUTLINE, BYTE FOR BYTE: the outline recolours pixels of
+// the bar's own shape and adds none, each written once with its fill's word
+// or its border's, so a border ink equal to its fill writes the identical
+// words to the identical pixels — at the defaults the lit plate is the plate
+// before the outline existed. paint_region_ink lifts border pixels as it
+// lifts every opaque plate pixel, from the pixel's own colour. Nothing else in this painter moves
 // (the column grid, the >=1px floor, the carried-endpoint chain and the
 // aliased-only writer are untouched). A loud passage's outer clips flat at
 // the lane's edges while the inner still shows its compressed height inside
@@ -2947,7 +3044,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 //
 // THE ALIGNMENT IS EXACT BY CONSTRUCTION: the two bars share the lattice, the
 // column's [s0, s1), the pyramid level and the one read. THE OUTER IS A
-// DILATION ABOUT THE CENTRE ROW, NOT AN OUTLINE: a column straddling zero has
+// DILATION ABOUT THE CENTRE ROW, NOT A HALO ROUND THE INNER: a column straddling zero has
 // its outer containing the inner; a column wholly on one side of zero (low
 // material at working zoom) has its outer pushed outward, with a gap between
 // it and the inner. Intended — that is what a true magnification looks like.
@@ -2955,7 +3052,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // read,
 // the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
-// lamp).
+// lamp). The outline adds one row-extent pair per bar per column, held for
+// the call so the write can see both neighbours, and a handful of compares.
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).

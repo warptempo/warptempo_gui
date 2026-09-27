@@ -549,6 +549,14 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
+    // THE LIT PLATE'S FOUR INKS, the tuning phase's defaults (architect
+    // 2026-09-27; the phase's terms at render.h's row-6 palette block), the
+    // same on both templates: each bar's outline equal to its fill, so the
+    // plate is the one before the outline existed.
+    cfg.fg_color        = kWaveformForegroundInkDefault;        // #1b9e84
+    cfg.fg_border_color = kWaveformForegroundBorderInkDefault;  // #1b9e84
+    cfg.bg_color        = kWaveformBackgroundInkDefault;        // #1c816b
+    cfg.bg_border_color = kWaveformBackgroundBorderInkDefault;  // #1c816b
     return cfg;
 }
 

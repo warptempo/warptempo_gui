@@ -278,12 +278,13 @@ void render_waveform(cairo_surface_t* dest,
     // Each column is written straight into the plate's pixel words, and a
     // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
     // filled inclusively with the opaque ink word (with the lamp lit, the
-    // outer bar goes down first in the plate's word and the inner over it in
-    // the core's — the rule is at this function's declaration).
-    // There is no
-    // interior/edge split, no fractional coverage, and no inter-column
-    // connectivity of any kind — a spike stands alone, exactly as in a classic
-    // min/max renderer.
+    // outer bar goes down first and the inner over it, each in its fill word
+    // with its one-pixel outline in its border word — the rule is at this
+    // function's declaration).
+    // There is no fractional coverage and no inter-column connectivity of
+    // any kind — a spike stands alone, exactly as in a classic min/max
+    // renderer; the lit outline READS the neighbouring columns' rows to
+    // decide which of a bar's own pixels are its border, and adds none.
     //
     // THE ANTIALIASED RENDERER IS DELETED (architect 2026-08-01, after the
     // side-by-side against a snapshotted AA binary: "subtle but noticeable — I
@@ -309,11 +310,17 @@ void render_waveform(cairo_surface_t* dest,
     // THE PREMULTIPLIED WORDS, each built once per call through the one word
     // owner (argb32_opaque_word, render.h — its byte-order and rounding
     // contract lives there): the plate's ink (the row-6 constant), worn by
-    // the dark lamp's raw bar and the lit lamp's outer, and the foreground
-    // (kWaveformForegroundInk) worn by the lit lamp's inner (built always,
-    // written only when lit).
-    const uint32_t ink_word = argb32_opaque_word(kWaveformInk);
-    const uint32_t fg_word  = argb32_opaque_word(kWaveformForegroundInk);
+    // the dark lamp's raw bar, and the lit lamp's four — each bar's fill and
+    // outline, the tuning phase's `bg_color` / `bg_border_color` on the
+    // outer and `fg_color` / `fg_border_color` on the inner, installed once
+    // at startup (waveform_lit_inks, render.h; built always, written only
+    // when lit).
+    const WaveformLitInks& lit = waveform_lit_inks();
+    const uint32_t ink_word          = argb32_opaque_word(kWaveformInk);
+    const uint32_t outer_fill_word   = argb32_opaque_word(lit.outer_fill);
+    const uint32_t outer_border_word = argb32_opaque_word(lit.outer_border);
+    const uint32_t inner_fill_word   = argb32_opaque_word(lit.inner_fill);
+    const uint32_t inner_border_word = argb32_opaque_word(lit.inner_border);
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -384,6 +391,102 @@ void render_waveform(cairo_surface_t* dest,
     // this function).
     double g_prev = to_source(edge_at(static_cast<long long>(col0)));
 
+    // THE BAR'S ROWS. The column's tips — its maximum -> top tip, its minimum
+    // -> bottom tip, in float rows, never snapped — are clamped to this
+    // channel's rows BEFORE any row index is derived, so a clipped interval
+    // cannot address outside the band; then both ends are floored and the bar
+    // is the rows r0 .. r1 inclusive. r0 == r1 for any sub-pixel interval,
+    // which is the >=1px floor stated at the top of this function, and it
+    // holds for both bars. (r0 > r1 — an EMPTY bar — only where both tips sit
+    // at or past the lane's bottom edge, a tip of -1 flooring to the row past
+    // the lane; it writes nothing.) The regime split (thin vs tall) went with
+    // the tip segments: there is one rendering for every column now, however
+    // small its interval. One owner for both bars and both lamps, so the
+    // outer and the inner cannot disagree about the geometry.
+    //
+    // THE OPEN ENDS are the lit outline's (the rule is at this function's
+    // declaration): an end whose tip reached the sample domain's edge — the
+    // magnified_tip clamp, |v| >= 1 — was CLIPPED at the lane's edge row, the
+    // shape continuing past the lane, so the row beyond the lane is not
+    // outside it there. A tip at full scale lands on exactly that edge row
+    // (yt == y_lo, yb == y_hi flooring to y_hi - 1 by the clamp), so an open
+    // end always sits on the lane's edge.
+    struct BarRows {
+        int  r0;
+        int  r1;
+        bool open_top;
+        bool open_bot;
+    };
+    const auto bar_rows = [&](double tip_min, double tip_max) {
+        double yt = y_center - tip_max * half_h;
+        double yb = y_center - tip_min * half_h;
+        const double row_lo = static_cast<double>(y_lo);
+        const double row_hi = static_cast<double>(y_hi);   // exclusive
+        if (yt < row_lo) yt = row_lo;
+        if (yb < row_lo) yb = row_lo;
+        if (yt > row_hi) yt = row_hi;
+        if (yb > row_hi) yb = row_hi;
+        int r0 = static_cast<int>(std::floor(yt));
+        int r1 = static_cast<int>(std::floor(yb));
+        if (r0 < y_lo)     r0 = y_lo;
+        if (r1 > y_hi - 1) r1 = y_hi - 1;
+        return BarRows{r0, r1, tip_max >= 1.0, tip_min <= -1.0};
+    };
+
+    // THE DARK BAR: its rows filled with one word, no outline.
+    const auto fill_bar = [&](int x, const BarRows& b, uint32_t word) {
+        if (x < col_lo || x >= col_hi) return;
+        for (int y = b.r0; y <= b.r1; ++y) put(x, y, word);
+    };
+
+    // THE LIT BAR: its rows, each written ONCE with the fill's word or the
+    // border's (the outline recolours pixels of the bar's own shape and adds
+    // none, which is the same-colour guarantee at the declaration). THE
+    // CONTOUR FROM THE THREE COLUMNS' EXTENTS, no 2D scan: a row of this bar
+    // is INTERIOR iff its up and down neighbours are in this bar (every row
+    // but r0 and r1, and those too at an open end) and its left and right
+    // neighbours are in theirs (inside the neighbour's [r0, r1]; a null
+    // neighbour — beyond the plate's side edge — counts as inside). That
+    // interior is one interval [lo, hi] because each bar is one; the rows of
+    // the bar above and below it are the border, the whole bar when it is
+    // empty. An empty neighbour (r0 > r1) empties it, so its side is all
+    // border, as it should be.
+    const auto outline_bar = [&](int x, const BarRows& b,
+                                 const BarRows* left, const BarRows* right,
+                                 uint32_t fill_word, uint32_t border_word) {
+        if (x < col_lo || x >= col_hi) return;
+        if (b.r0 > b.r1) return;
+        int lo = b.open_top ? b.r0 : b.r0 + 1;
+        int hi = b.open_bot ? b.r1 : b.r1 - 1;
+        if (left) {
+            lo = std::max(lo, left->r0);
+            hi = std::min(hi, left->r1);
+        }
+        if (right) {
+            lo = std::max(lo, right->r0);
+            hi = std::min(hi, right->r1);
+        }
+        if (lo > hi) {
+            for (int y = b.r0; y <= b.r1; ++y) put(x, y, border_word);
+            return;
+        }
+        // lo >= r0 and hi <= r1 here: each clause only narrows the interval.
+        for (int y = b.r0;   y < lo;     ++y) put(x, y, border_word);
+        for (int y = lo;     y <= hi;    ++y) put(x, y, fill_word);
+        for (int y = hi + 1; y <= b.r1;  ++y) put(x, y, border_word);
+    };
+
+    // THE LIT BARS' ROWS, one pair per column of this call, held so the
+    // write pass can read both neighbours of every column. Both callers are
+    // full-plate renders, so this call's columns ARE the plate and its first
+    // and last columns' missing neighbours are the plate's side edges.
+    std::vector<BarRows> outer_rows;
+    std::vector<BarRows> inner_rows;
+    if (gain_or_null) {
+        outer_rows.resize(static_cast<size_t>(area.w));
+        inner_rows.resize(static_cast<size_t>(area.w));
+    }
+
     for (int i = 0; i < area.w; i++) {
         const long long c  = static_cast<long long>(col0) + i;
         const double    f1 = edge_at(c + 1);
@@ -396,66 +499,61 @@ void render_waveform(cairo_surface_t* dest,
 
         const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
-        const int x = area.x + i;
 
-        // THE BAR. The column's tips — its maximum -> top tip, its minimum ->
-        // bottom tip, in float rows, never snapped — are clamped to this
-        // channel's rows BEFORE any row index is derived, so a clipped interval
-        // cannot address outside the band; then both ends are floored and the
-        // bar filled inclusively with `word`. r0 == r1 for any sub-pixel
-        // interval, which is the >=1px floor stated at the top of this
-        // function, and it holds for both bars. The regime split (thin vs tall)
-        // went with the tip segments: there is one rendering for every column
-        // now, however small its interval. One writer for both bars, so the
-        // outer and the inner cannot disagree about the geometry.
-        const auto fill_bar = [&](double tip_min, double tip_max, uint32_t word) {
-            if (x < col_lo || x >= col_hi) return;
-            double yt = y_center - tip_max * half_h;
-            double yb = y_center - tip_min * half_h;
-            const double row_lo = static_cast<double>(y_lo);
-            const double row_hi = static_cast<double>(y_hi);   // exclusive
-            if (yt < row_lo) yt = row_lo;
-            if (yb < row_lo) yb = row_lo;
-            if (yt > row_hi) yt = row_hi;
-            if (yb > row_hi) yb = row_hi;
-            int r0 = static_cast<int>(std::floor(yt));
-            int r1 = static_cast<int>(std::floor(yb));
-            if (r0 < y_lo)     r0 = y_lo;
-            if (r1 > y_hi - 1) r1 = y_hi - 1;
-            for (int y = r0; y <= r1; ++y) put(x, y, word);
-        };
-
-        // LIT: THE OUTER FIRST, the column's raw extremes times the curve's
-        // gain at the column's centre source frame and the expander's largest
-        // multiplier over the working columns [s0, s1) spans, in the
-        // background ink; THEN THE INNER over it, the same extremes times the
-        // compressor's scale at the same frame and the same multiplier, in
-        // the foreground ink. Each is clamped to the sample domain [-1, 1] BEFORE
-        // it becomes rows: the clamp is what makes a magnified forte clip
-        // flat against the lane's edges instead of running off into row
+        // LIT: THE OUTER, the column's raw extremes times the curve's gain at
+        // the column's centre source frame and the expander's largest
+        // multiplier over the working columns [s0, s1) spans; THE INNER, the
+        // same extremes times the compressor's scale at the same frame and
+        // the same multiplier. Each is clamped to the sample domain [-1, 1]
+        // BEFORE it becomes rows: the clamp is what makes a magnified forte
+        // clip flat against the lane's edges instead of running off into row
         // arithmetic (the inner's scale is at most 1, so its clamp is a
         // no-op kept for the one shape). A PICTURE gain: the samples
-        // themselves are untouched, here and everywhere. Replace-writes:
-        // where the two overlap the inner wins.
+        // themselves are untouched, here and everywhere. The rows are held
+        // for the write pass below, which paints the outer first and the
+        // inner over it.
         // DARK: the raw bar at scale 1.0, where the clamp is a no-op (raw
-        // peaks already rest in range), so the dark plate is the plate this
-        // writer always drew.
+        // peaks already rest in range), written here in the plate's ink, so
+        // the dark plate is the plate this writer always drew.
         if (gain_or_null) {
             const int64_t centre = (s0 + s1) / 2;
             const double e = static_cast<double>(
                 waveform_expander_multiplier_over(*gain_or_null, s0, s1));
             const double outer = waveform_gain_at(*gain_or_null, centre) * e;
             const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
-            fill_bar(magnified_tip(mm.first, outer),
-                     magnified_tip(mm.second, outer), ink_word);
-            fill_bar(magnified_tip(mm.first, inner),
-                     magnified_tip(mm.second, inner), fg_word);
+            outer_rows[static_cast<size_t>(i)] =
+                bar_rows(magnified_tip(mm.first, outer),
+                         magnified_tip(mm.second, outer));
+            inner_rows[static_cast<size_t>(i)] =
+                bar_rows(magnified_tip(mm.first, inner),
+                         magnified_tip(mm.second, inner));
         } else {
-            fill_bar(magnified_tip(mm.first, 1.0),
-                     magnified_tip(mm.second, 1.0), ink_word);
+            fill_bar(area.x + i,
+                     bar_rows(magnified_tip(mm.first, 1.0),
+                              magnified_tip(mm.second, 1.0)),
+                     ink_word);
         }
 
         g_prev = g1;
+    }
+
+    // THE LIT WRITE PASS, per column: outer fill and outline, then inner fill
+    // and outline over it — replace-writes, so where the two overlap the
+    // inner wins, as it always has.
+    if (gain_or_null) {
+        for (int i = 0; i < area.w; i++) {
+            const size_t k = static_cast<size_t>(i);
+            const bool has_left  = i > 0;
+            const bool has_right = i + 1 < area.w;
+            outline_bar(area.x + i, outer_rows[k],
+                        has_left  ? &outer_rows[k - 1] : nullptr,
+                        has_right ? &outer_rows[k + 1] : nullptr,
+                        outer_fill_word, outer_border_word);
+            outline_bar(area.x + i, inner_rows[k],
+                        has_left  ? &inner_rows[k - 1] : nullptr,
+                        has_right ? &inner_rows[k + 1] : nullptr,
+                        inner_fill_word, inner_border_word);
+        }
     }
 
     // Last CPU write is done — hand the buffer back to cairo.
@@ -2434,6 +2532,21 @@ int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }
+
+namespace {
+    // The lit plate's four inks for the tuning phase — the device config's
+    // `fg_color`, `fg_border_color`, `bg_color` and `bg_border_color`,
+    // installed once by gui_main at startup and never mutated after (the
+    // contract, and why the worker reads them with no snapshot, is at the
+    // declaration, render.h). They start at the phase's defaults.
+    WaveformLitInks g_waveform_lit_inks{kWaveformForegroundInkDefault,
+                                        kWaveformForegroundBorderInkDefault,
+                                        kWaveformBackgroundInkDefault,
+                                        kWaveformBackgroundBorderInkDefault};
+} // namespace
+
+void set_waveform_lit_inks(const WaveformLitInks& inks) { g_waveform_lit_inks = inks; }
+const WaveformLitInks& waveform_lit_inks() { return g_waveform_lit_inks; }
 
 namespace {
     // The waveform's configured maximum height in AUTHORED px — the device
