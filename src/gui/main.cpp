@@ -1734,6 +1734,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&](int x, int y) { input_handler.begin_touch_caret_drag(x, y); },
         [&](int x, int y) { input_handler.update_touch_caret_drag(x, y); },
         [&]() { input_handler.end_touch_caret_drag(); });
+    // THE PEN'S RETAINED ZOOM ANCHOR'S RELEASE (architect 2026-09-27): the
+    // platform fires it where a retained anchor dies — its inventory is at
+    // GuiPlatform::set_pen_zoom_anchor_release_hook (platform_android.h); the
+    // Wayland backend accepts it and never fires it. Its partner, the
+    // retention itself, is a query end_touch_nav asks
+    // (GuiPlatform::pen_lift_keeps_zoom_anchor), not a hook.
+    gui.set_pen_zoom_anchor_release_hook(
+        [&]() { input_handler.release_pen_zoom_anchor(); });
 
     auto invalidate_modal_dialog_area = [&]() { viewport.invalidate_modal_dialog_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
@@ -2095,6 +2103,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (GuiPointerLeaveReason) is the first term of the test: the ruled titlebar
     // trip keeps its face and its mode, the hard end of the stream keeps nothing
     // and runs the unconditional clear and disarm.
+    // AND THE PEN'S HOVER ENDING KEEPS NOTHING EITHER (PenHoverEnd, architect
+    // 2026-09-27: every pen hover effect acts only within the GUI's plane): a
+    // pen rising off row 1 steps onto no titlebar, so the row's fill and its
+    // mode leave with the pen like every other face.
     // THE TOOLTIP GOES DOWN ON THIS EDGE TOO, and it must go down HERE rather
     // than be left to the tick's hover recompute: the hint hangs BELOW the top
     // strip, and hide_shift_tooltip is the only route that damages the box's own

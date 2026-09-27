@@ -581,7 +581,7 @@ void GuiInputCore::pointer_enter(double x, double y) {
     deliver_motion(pointer_x_, pointer_y_);
 }
 
-void GuiInputCore::pointer_leave() {
+void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     pointer_focused_ = false;
     // Fire the leave hook: no motion arrives WHILE the pointer stays outside, so
     // without this a redesigned row's button would keep its lit face for that
@@ -668,9 +668,10 @@ void GuiInputCore::pointer_leave() {
     // buys the consumer: the stream continues, so this is the edge on which the
     // hook body is permitted to keep state it expects a return motion to
     // re-derive (2026-08-08 — the menu row's armed mode and its hovered button,
-    // on a leave whose last position was inside row 1's band).
-    if (pointer_left_hook_)
-        pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
+    // on a leave whose last position was inside row 1's band). The Android
+    // pen's hover ending passes PenHoverEnd instead, the one leave with no
+    // titlebar to step onto (the enum carries the rule).
+    if (pointer_left_hook_) pointer_left_hook_(reason);
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because
     // a drag that briefly skids outside the surface and returns

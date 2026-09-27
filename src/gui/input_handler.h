@@ -1179,8 +1179,18 @@ struct GuiInputHandler {
     // pivot cleared, the gesture's one GUI-side record since 2026-08-14
     // (TouchNavZoomState, app_state.h) through clear_touch_zoom_seat below, so
     // a later pair seats afresh instead of inheriting a dead pinch's anchor —
-    // and so the anchor stem it gates is rubbed out at every end.
+    // and so the anchor stem it gates is rubbed out at every end but ONE: the
+    // pen lifting with its side button held keeps a one-finger seat as the
+    // RETAINED anchor (architect 2026-09-27; the platform answers the pen
+    // facts, GuiPlatform::pen_lift_keeps_zoom_anchor, false on Wayland).
     void end_touch_nav();
+    // THE PEN'S RETAINED ANCHOR RELEASED — the platform's release hook
+    // (GuiPlatform::set_pen_zoom_anchor_release_hook, whose Android inventory
+    // is the list of what ends it; the Wayland backend never fires it): a
+    // RETAINED seat is cleared with its stem's erase through
+    // clear_touch_zoom_seat, and a seat a live gesture holds is left to that
+    // gesture. Contract at TouchNavZoomState, app_state.h.
+    void release_pen_zoom_anchor();
     // (THE SEATED PINCH'S CLEAR is a FREE function since codex round 20 — the
     // view switches clear the seat too and they are not this class's:
     // clear_touch_zoom_seat(app, viewport), declared beside

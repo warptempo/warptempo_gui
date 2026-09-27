@@ -1653,7 +1653,8 @@ struct ScrollDragState {
 //     survivor's pan), refused or not — the clear leads the body while the
 //     seat follows the refusal, the two halves deliberately on opposite sides
 //     of it (the reasoning is at the site) — and at end_touch_nav, every end
-//     included, so a later upgrade re-seats rather than inheriting a stale
+//     included but ONE (the retained pen anchor, the bullet below), so a
+//     later upgrade re-seats rather than inheriting a stale
 //     anchor. SUCH A FRAME IS GUARANTEED AT THE DOWNGRADE ITSELF: the platform
 //     delivers one single-finger frame at the two-to-one transition even
 //     though both its deltas are no-ops (the exemption at
@@ -1675,6 +1676,29 @@ struct ScrollDragState {
 //     The membership, its derivation, the correctness / fresh-grip split and
 //     the do-not-add-touch-to-any_pointer_gesture_active note all live at
 //     clear_touch_zoom_seat's declaration (input_handler.h).
+//   * THE ONE END THAT KEEPS IT — THE PEN'S RETAINED ANCHOR (architect
+//     2026-09-27; the laptop's Ctrl + left button held while the mouse is
+//     lifted off the table and set down again): a ONE-FINGER seat standing
+//     when THE PEN lifts with its side button still held (the stroke's last
+//     sampled Ctrl bit — the lift itself is unsampled) OUTLIVES that end,
+//     `retained` set, the stem still painted at the anchor's live column; the
+//     next button-held landing's zoom frames find it seated and of their own
+//     kind, so they continue about the SAME anchor_sample (no re-seat; the
+//     edge rebind applies as on any frame), and the first such frame drops
+//     `retained` — the seat is a live gesture's again. The platform owns the
+//     pen facts and end_touch_nav asks it (GuiPlatform::
+//     pen_lift_keeps_zoom_anchor, true only inside the pen's own lift and
+//     only on the Android backend); the Wayland backend answers false, so the
+//     laptop's every end clears exactly as before. A RETAINED SEAT DIES
+//     (release_pen_zoom_anchor, through clear_touch_zoom_seat, erase
+//     included) at the platform's release hook — a finger's contact, the pen
+//     landing without its button, the first in-plane pen report showing the
+//     button up, a stroke a finger joined lifting, a cancel and focus loss
+//     (the inventory is at GuiPlatform::set_pen_zoom_anchor_release_hook,
+//     platform_android.h) — and at every clear above that reaches any seat:
+//     the view-state writers and the source load. A motionless button-held
+//     tap, a button-held landing off the waveform and a button-held region
+//     hold deliver no nav frame and so leave it standing, retained.
 // THE COLUMN IS RE-DERIVED EVERY FRAME from the held frame against the live
 // viewport, and a column pushed outside the waveform CLAMPS to the edge pixel
 // and REBINDS this field to that pixel's content — apply_nav_zoom_at's pivot
@@ -1699,6 +1723,7 @@ struct TouchNavZoomState {
     bool   seated        = false;
     double anchor_sample = 0.0;   // the held SONG frame (active domain)
     bool   one_finger    = false; // seated by the one-finger (ctrl) zoom
+    bool   retained      = false; // the pen's anchor, kept past its gesture's end
 };
 
 // (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides

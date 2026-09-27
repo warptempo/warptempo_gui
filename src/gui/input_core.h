@@ -131,13 +131,23 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     `pointer_in_window` back and leave a hover face stale, which is a recorded
 //     ACCEPTED GLITCH (architect 2026-08-09; the record is at the fire site) and
 //     self-heals on the pointer's next entry.
+//   * PenHoverEnd is the Android backend's S Pen HOVER ENDING
+//     (GuiPlatform::end_pen_hover: a HOVER_EXIT, a report above the GUI's
+//     plane, any first down, focus loss — architect 2026-09-27, every pen
+//     hover effect acts only within the plane). An ordinary leave in every
+//     respect but the one this enum exists for: the pen has NO TITLEBAR, so
+//     the menu row's keep below — a step one pixel up off row 1 being a step
+//     onto the titlebar rather than out of the visit — does not apply to it.
+//     A pen rising off row 1 has left the visit, and the row's fill and mode
+//     go with every other face. The Wayland backend never passes it.
 // The distinction exists for exactly one consumer today (main.cpp's hook body,
 // where the menu row's armed mode and its hovered button survive an ordinary
-// leave through row 1 and never survive the hard one); every other clear the
-// hook performs is unconditional and reads this not at all.
+// leave through row 1 and never survive the hard one or the pen's); every
+// other clear the hook performs is unconditional and reads this not at all.
 enum class GuiPointerLeaveReason {
     OrdinaryLeave,
     CapabilityLoss,
+    PenHoverEnd,
 };
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
@@ -266,8 +276,9 @@ public:
     // state, so the press, the motions and the settled hook's
     // sync_nav_drag_mode all read the bit that event carried; the pen's own
     // lift is not sampled (its last leg keeps the stroke's bit), and the bit
-    // drops after that lift, at a cancel, a hover exit, a finger's first down
-    // and focus loss. The door is the same one — an
+    // drops after that lift, at a cancel, a hover exit (or any pen report
+    // above the GUI's plane, 2026-09-27), a finger's first down and focus
+    // loss. The door is the same one — an
     // edge here means the same thing whoever produced it — and it owes the
     // touch machine ONE thing of its own: a ctrl edge under a live
     // single-finger nav is announced to the GUI as a nav frame (the exemption
@@ -291,7 +302,12 @@ public:
     void forget_keyboard_state();
 
     void pointer_enter(double x, double y);
-    void pointer_leave();
+    // `reason` is OrdinaryLeave (every Wayland call, the default) or
+    // PenHoverEnd (the Android pen's hover ending, its one other caller);
+    // never CapabilityLoss, which is pointer_capability_lost's alone
+    // (GuiPointerLeaveReason, above the class).
+    void pointer_leave(
+        GuiPointerLeaveReason reason = GuiPointerLeaveReason::OrdinaryLeave);
     void pointer_motion(double x, double y);
     void pointer_button(GuiMouseButton button, bool pressed);
     // THE SIGN IS THE SEAM'S CONTRACT AND BOTH DOORS SHARE IT: POSITIVE MEANS

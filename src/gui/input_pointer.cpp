@@ -2754,6 +2754,14 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     if ((!f.two_finger && !one_finger_zoom) ||
         app.touch_nav_zoom.one_finger != one_finger_zoom)
         clear_touch_zoom_seat(app, viewport);
+    // A SEAT THE PEN'S LIFT RETAINED IS A LIVE GESTURE'S AGAIN from the first
+    // frame that survives the clear above — which, for the pen's next
+    // button-held landing, is its first one-finger zoom frame: the seat is of
+    // its own kind, so nothing clears and nothing re-seats below, and the
+    // zoom continues about the same song frame (contract at
+    // TouchNavZoomState, app_state.h). Whether it outlives THIS gesture is
+    // decided afresh at this gesture's end.
+    app.touch_nav_zoom.retained = false;
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
@@ -2988,8 +2996,31 @@ void GuiInputHandler::end_touch_nav() {
     // clear_touch_zoom_seat because the clear owes the STEM'S ERASE: an end
     // rebuilds nothing of its own, so without the damage a hard end would
     // leave the pivot mark painted over a settled view.
-    clear_touch_zoom_seat(app, viewport);
+    // THE ONE END THAT KEEPS THE SEAT (architect 2026-09-27; contract at
+    // TouchNavZoomState, app_state.h): the pen lifting with its side button
+    // held leaves a ONE-FINGER seat standing, marked retained, so the next
+    // button-held landing zooms on about the same anchor — the laptop's Ctrl
+    // held while the mouse is lifted and set down. The pen facts are the
+    // platform's and it answers them here, true only inside the pen's own
+    // lift on the Android backend (GuiPlatform::pen_lift_keeps_zoom_anchor);
+    // the Wayland backend answers false, so the laptop clears at every end
+    // exactly as before. Nothing on screen changes at a retention, so it owes
+    // no damage; the stem the seat gates simply stays.
+    TouchNavZoomState& z = app.touch_nav_zoom;
+    if (z.seated && z.one_finger && gui.pen_lift_keeps_zoom_anchor())
+        z.retained = true;
+    else
+        clear_touch_zoom_seat(app, viewport);
     if (playback.is_playing()) playback.resync_predictor();
+}
+
+void GuiInputHandler::release_pen_zoom_anchor() {
+    // A RETAINED SEAT ALONE: a seat a live gesture holds is that gesture's to
+    // clear (its own frames and its end), so a release reaching one — a pen
+    // report showing the button up mid-stroke, whose ctrl edge has already
+    // cleared it — changes nothing. The erase is clear_touch_zoom_seat's.
+    if (!app.touch_nav_zoom.retained) return;
+    clear_touch_zoom_seat(app, viewport);
 }
 
 // The pan-zone query's body (contract at the declaration): THE NAVIGATION

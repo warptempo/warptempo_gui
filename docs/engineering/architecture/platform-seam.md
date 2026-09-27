@@ -512,7 +512,18 @@ drag coordinates floor instead of truncating.
   each (`pen_hovering_` the one owner; hovers are dropped while any touch
   contact is down and ANY first down, pen or finger, ends a standing hover, so
   the doors never overlap), which is what runs the hover walk and the tooltip dwell under a
-  hovering pen. VERIFIED ON THE TABLET (architect 2026-09-25): every step of
+  hovering pen. SINCE 2026-09-27 BOTH PEN RULES READ ONE PLANE
+  (`kPenPlaneDistance` = 30 raw `AXIS_DISTANCE` counts, about 3 mm, through
+  the one predicate `pen_report_in_plane`; touch.md's pen section): a hover
+  above it ends the hover (`pointer_leave` with
+  `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face) and drops the
+  Ctrl bit, and only an in-plane report is sampled. And two seam members
+  carry THE PEN'S RETAINED ZOOM ANCHOR to the GUI's seat
+  (`TouchNavZoomState`): the query `pen_lift_keeps_zoom_anchor`, which
+  `GuiInputHandler::end_touch_nav` asks at the gesture's end, and
+  `set_pen_zoom_anchor_release_hook`, fired where the anchor dies (the
+  inventory is at its Android declaration); the Wayland twins answer false
+  and never fire. VERIFIED ON THE TABLET (architect 2026-09-25): every step of
   the protocol passed, the barrel button arrives and zooms, and hover shows
   the tooltips.
 

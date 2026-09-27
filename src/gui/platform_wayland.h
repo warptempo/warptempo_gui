@@ -252,6 +252,17 @@ public:
     // GuiInputCore::touch_contact_active, input_core.h.
     bool touch_contact_active() const;
 
+    // THE PEN'S RETAINED ZOOM ANCHOR — two seam members whose producer is the
+    // Android backend's S Pen alone (the contract, the rule and the release
+    // inventory are at platform_android.h's declarations; the GUI half is
+    // TouchNavZoomState, app_state.h). THIS BACKEND HAS NO PEN: the query
+    // answers false, so every touch nav end clears its seat exactly as it
+    // always did, and the release hook is accepted and never fired. They
+    // exist so the one consumer (main.cpp, GuiInputHandler::end_touch_nav)
+    // compiles against either backend unchanged.
+    bool pen_lift_keeps_zoom_anchor() const { return false; }
+    void set_pen_zoom_anchor_release_hook(std::function<void()> /*cb*/) {}
+
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
     // inventory are all at GuiInputCore::set_touch_slop_px, input_core.h.
