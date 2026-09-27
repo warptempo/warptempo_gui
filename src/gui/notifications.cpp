@@ -317,6 +317,35 @@ void GuiNotifications::set_hover(uint64_t id, bool close) {
             }
         }
     }
+    // THE X's HOVER FADE (architect 2026-09-27, the Breeze port at render.h's
+    // HoverFade): the X is a flat tool button, so it snaps in and fades out.
+    // The edge is on the X's own bit — this card's id with the close flag —
+    // so moving from the X onto its card's body is an end, and moving between
+    // two cards' X boxes ends one and starts the other. Each tail is keyed to
+    // its card's id and dies with the card (tick_hover_fades erases a slot
+    // whose card is no longer painted).
+    {
+        const uint64_t old_x = st.close_hovered ? st.hovered_id : 0;
+        const uint64_t new_x = close ? id : 0;
+        if (old_x != new_x) {
+            const auto edge = [&](uint64_t x_id, bool hovered) {
+                if (x_id == 0) return;
+                AppState::Notifications::CloseFade* slot = nullptr;
+                for (AppState::Notifications::CloseFade& c : st.close_fades)
+                    if (c.id == x_id) { slot = &c; break; }
+                if (slot == nullptr) {
+                    if (!hovered) return;
+                    st.close_fades.push_back({x_id, HoverFade{}});
+                    slot = &st.close_fades.back();
+                }
+                if (hover_fade_edge(slot->fade, HoverFadeKind::SnapIn,
+                                    hovered, now))
+                    app.hover_fades_running = true;
+            };
+            edge(old_x, false);
+            edge(new_x, true);
+        }
+    }
     // THE X's FACE is the one thing hover paints; the card's body wears
     // none, so the damage is the two X boxes and nothing wider.
     for (const AppState::NotificationPainted& p : st.painted) {

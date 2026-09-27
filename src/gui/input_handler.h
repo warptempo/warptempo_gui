@@ -1445,6 +1445,14 @@ struct GuiInputHandler {
     // faces moved.
     void recompute_redesign_button_hover();
     void clear_redesign_button_hover();
+    // THE HOVER FADES (architect 2026-09-27, Breeze's hover animation; the
+    // model is at render.h's HoverFade). The roster's edge stamp, called by the
+    // two writers above on every flip of a button's `hovered` bit; the tick's
+    // advance (main.cpp), which is one bit test while no fade runs and damages
+    // a face's own rect only when its painted level changes. Both are paint
+    // state only — no input road reads a fade.
+    void stamp_redesign_button_hover_fade(RedesignButton id, int64_t now);
+    void tick_hover_fades();
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
@@ -4240,6 +4248,9 @@ private:
     // button-is-its-chord.
     int  modal_dialog_button_hit(int x, int y) const;
     void update_modal_dialog_hover(int x, int y);
+    // The modal row's hover fade edges, the walk above's own (the buttons'
+    // SnapIn tails and the field's two-way fade, keyed to the painted session).
+    void stamp_modal_dialog_hover_fades(int hit, bool in_field);
     void dispatch_modal_dialog_editor_act(bool ok);
 
     // -- THE ON-SCREEN KEYBOARD'S POINTER HALF (2026-08-27) ----------------

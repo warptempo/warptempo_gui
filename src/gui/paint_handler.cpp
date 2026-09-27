@@ -248,6 +248,16 @@ GuiColor redesign_row_ground(const AppState& app) {
                               : kRedesignRowGroundUnfocused;
 }
 
+// A ROSTER TOOL BUTTON'S PAINTED HOVER, [0, kHoverFadeSteps] (architect
+// 2026-09-27, render.h's HoverFade): full while the pointer is on it, then
+// its SnapIn tail — cut on a dead button, as Breeze paints no animation on a
+// disabled one. The icon row, the bottom row and the view bar read it; the
+// tabs read their own two-way fade directly and the menu anchors none.
+int redesign_button_hover_steps(const AppState::RedesignButtonFace& face) {
+    if (face.hovered) return kHoverFadeSteps;
+    return face.enabled ? hover_fade_steps(face.fade) : 0;
+}
+
 // THE ACCENT'S FOCUS FORK — ONE OWNER for "which blue does a face that says
 // SELECTED or FOCUSED wear right now" (architect 2026-09-02: "breeze blue
 // should change to #1b4155 when window loses focus"). Its three readers
@@ -576,7 +586,7 @@ struct ViewBarFace {
     bool     filled;   // false = the bar background already shows the rest face
     bool     framed;
 };
-ViewBarFace view_bar_face(GuiColor bg, bool focused, bool hovered,
+ViewBarFace view_bar_face(GuiColor bg, bool focused, int hover_steps,
                           bool selected, bool pressed) {
     ViewBarFace f{};
     // HOVER ONLY EVER MOVES THE OUTLINE, in BOTH focus states (architect
@@ -603,13 +613,22 @@ ViewBarFace view_bar_face(GuiColor bg, bool focused, bool hovered,
                    ? mix_color(kRedesignAccent, bg, kRedesignClickMix)
                    : mix_color(kRedesignViewBarLiftBase, bg,
                                kRedesignViewBarSelectedMix);
-    f.framed = hovered || pressed || selected;
+    f.framed = hover_steps > 0 || pressed || selected;
     // The pointer's frame is the accent; a resting selected button's is the
     // calmer lift — row 4's rule, on this bar's own pair of colors.
-    f.frame  = (hovered || pressed)
-                   ? kRedesignAccent
-                   : mix_color(kRedesignViewBarLiftBase, bg,
-                               kRedesignViewBarFrameMix);
+    // THE HOVER FADES (architect 2026-09-27, render.h's HoverFade): the bar's
+    // buttons are tool buttons, so `hover_steps` is full while hovered and
+    // runs down the SnapIn tail after, blending the accent toward what the
+    // face paints unhovered — the selected lift's frame, else the bar's own
+    // ground under a frame the rest face does not draw. A press is the
+    // accent outright.
+    const GuiColor rest_frame =
+        selected ? mix_color(kRedesignViewBarLiftBase, bg,
+                             kRedesignViewBarFrameMix)
+                 : bg;
+    f.frame  = pressed ? kRedesignAccent
+                       : hover_fade_color(kRedesignAccent, rest_frame,
+                                          hover_steps);
     return f;
 }
 
@@ -1980,7 +1999,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             const bool pressed =
                 redesign_button_pressed_face(app, kViewBarButtons[i].id);
             const ViewBarFace f =
-                view_bar_face(bar_bg, bar_focused, face.hovered,
+                view_bar_face(bar_bg, bar_focused,
+                              redesign_button_hover_steps(face),
                               face.selected, pressed);
 
             if (f.filled || f.framed) {
@@ -2276,7 +2296,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         int  x = 0;
         int  w = 0;
         bool selected = false;
-        bool hovered  = false;
+        // THE HOVER AS A LEVEL, [0, kHoverFadeSteps] (architect 2026-09-27):
+        // Breeze's tab-bar engine fades a tab's hover both ways over 100 ms
+        // and restarts on each edge (render.h's HoverFade, Restarting), so
+        // both parts of the hover face — the fill and the edge — blend from
+        // the rest face by this one level.
+        int  hover    = 0;
         text_shape::ShapedRun run;
     };
     constexpr int kTabCount = static_cast<int>(std::size(kTabs));
@@ -2330,7 +2355,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             // everywhere. The dim machinery went with its producer rather
             // than sitting here unreachable; the product's one disabled
             // blend is unchanged and still the rule on row 4.
-            boxes[i].hovered  = face.hovered;
+            boxes[i].hover    = hover_fade_steps(face.fade);
             if (face.selected && selected_i < 0) selected_i = i;
             x += tab_w;
         }
@@ -2395,9 +2420,13 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         if (right_of_selected) { fx -= spill; fw += spill; }
         if (left_of_selected)  { fw += spill; }
 
-        const GuiColor tab_face = b.hovered ? kRedesignTabHover
-                                            : kRedesignTabRest;
-        const int fill_h = b.hovered ? content_h - line_w : content_h;
+        // A FADING tab takes the hover's shape — the fill stopping one line
+        // short, the edge in the row it left — at the blended colours, so the
+        // base row runs from the rest fill to the hover edge by the same level
+        // as the fill runs from rest to hover.
+        const GuiColor tab_face = hover_fade_color(kRedesignTabHover,
+                                                   kRedesignTabRest, b.hover);
+        const int fill_h = b.hover > 0 ? content_h - line_w : content_h;
         cairo_set_source_rgb(cr, tab_face.r, tab_face.g, tab_face.b);
         redesign_rounded_top_rect_path(cr, fx, content_y,
                                        static_cast<double>(fw),
@@ -2435,10 +2464,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     }
     for (int i = 0; i < kTabCount; ++i) {
         const TabBox& b = boxes[i];
-        if (b.selected || !b.hovered) continue;
-        cairo_set_source_rgb(cr, kRedesignTabHoverEdge.r,
-                             kRedesignTabHoverEdge.g,
-                             kRedesignTabHoverEdge.b);
+        if (b.selected || b.hover <= 0) continue;
+        const GuiColor edge = hover_fade_color(kRedesignTabHoverEdge,
+                                               kRedesignTabRest, b.hover);
+        cairo_set_source_rgb(cr, edge.r, edge.g, edge.b);
         cairo_rectangle(cr, b.x, base_y, b.w, line_w);
         cairo_fill(cr);
     }
@@ -2991,7 +3020,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // recompute refuses to hover a disabled button and the claim never
         // records a press on one, but a button can go dead UNDER either with no
         // pointer event to refresh it (row 2's outline carries the same guard).
-        const bool hovered = face.hovered && face.enabled;
+        // THE HOVER IS A LEVEL SINCE 2026-09-27 (architect, Breeze's hover
+        // animation — render.h's HoverFade): full while hovered, then the
+        // SnapIn tail as the outline fades out over 100 ms.
+        const int hover =
+            face.enabled ? redesign_button_hover_steps(face) : 0;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
 
@@ -3000,7 +3033,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // is here" and the fill says "this is the state", so every combination
         // of the two falls out instead of being enumerated.
         const bool has_fill = pressed || face.selected;
-        const bool has_line = hovered || pressed || face.selected;
+        const bool has_line = hover > 0 || pressed || face.selected;
         // What the glyph ends up sitting on, which is the ground its own dim
         // mixes toward: the painted fill where there is one, else the row.
         GuiColor under = kRedesignContentGround;
@@ -3018,9 +3051,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
                         : kRedesignSelectedFill,
                 kRedesignContentGround, keep);
             // Accent when the pointer is on it or it is held; otherwise the
-            // calm grey that frames a resting toggled-on button.
+            // calm grey that frames a resting toggled-on button. A FADING
+            // outline blends the accent toward what the button paints
+            // unhovered at the line's pixels: that grey on a selected button,
+            // else the row's ground (a flat button has no resting line — the
+            // tail is the outline dissolving, Breeze's transparent pen).
             const GuiColor line = mix_color(
-                (hovered || pressed) ? kRedesignAccent : kRedesignLine,
+                pressed ? kRedesignAccent
+                        : hover_fade_color(kRedesignAccent,
+                                           face.selected
+                                               ? kRedesignLine
+                                               : kRedesignContentGround,
+                                           hover),
                 kRedesignContentGround, keep);
             redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
                               has_fill ? &fill : nullptr,
@@ -3603,12 +3645,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             GuiRect{x, btn_y, btn, btn});
 
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
-        const bool hovered = face.hovered && face.enabled;
+        // The hover level and its fading line are the icon row's own
+        // (architect 2026-09-27, render.h's HoverFade).
+        const int hover =
+            face.enabled ? redesign_button_hover_steps(face) : 0;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
 
         const bool has_fill = pressed || face.selected;
-        const bool has_line = hovered || pressed || face.selected;
+        const bool has_line = hover > 0 || pressed || face.selected;
         GuiColor under = kRedesignContentGround;
         if (has_fill || has_line) {
             const GuiColor fill = mix_color(
@@ -3617,7 +3662,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                         : kRedesignSelectedFill,
                 kRedesignContentGround, keep);
             const GuiColor line = mix_color(
-                (hovered || pressed) ? kRedesignAccent : kRedesignLine,
+                pressed ? kRedesignAccent
+                        : hover_fade_color(kRedesignAccent,
+                                           face.selected
+                                               ? kRedesignLine
+                                               : kRedesignContentGround,
+                                           hover),
                 kRedesignContentGround, keep);
             redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
                               has_fill ? &fill : nullptr,
@@ -4494,8 +4544,19 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         }
 
         const GuiRect close{close_x, box_y, btn, btn};
-        if (st.hovered_id == n.id && st.close_hovered) {
-            const GuiColor line = kRedesignAccent;
+        // THE X's OUTLINE IS A LEVEL (architect 2026-09-27, render.h's
+        // HoverFade): full while hovered, then its SnapIn tail — Breeze's
+        // flat tool button — dissolving into the card's own ground, read from
+        // the slot keyed to this card's id.
+        int close_hover =
+            (st.hovered_id == n.id && st.close_hovered) ? kHoverFadeSteps : 0;
+        if (close_hover == 0) {
+            for (const AppState::Notifications::CloseFade& c : st.close_fades)
+                if (c.id == n.id) { close_hover = hover_fade_steps(c.fade); break; }
+        }
+        if (close_hover > 0) {
+            const GuiColor line = hover_fade_color(
+                kRedesignAccent, kModalFieldGround, close_hover);
             redesign_face_box(cr, close.x, close.y, btn, btn, lw, radius,
                               nullptr, &line);
         }
@@ -6848,6 +6909,13 @@ void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
     app.modal_dialog_field_hovered   = false;
+    // THE HOVER FADES GO WITH THE FACES THEY SOFTEN (architect 2026-09-27):
+    // a tail is keyed to a button of THIS surface, so the edges that retire
+    // the indices retire the tails too — hard, with no fade on a dialog that
+    // closed or changed (render.h's HoverFade).
+    app.modal_dialog_button_fades.clear();
+    app.modal_dialog_field_fade    = HoverFade{};
+    app.modal_dialog_fades_session = 0;
     // THE LIST BIT is modal face state too (2026-08-28): whether the ring's
     // -1 means the folder overlay's list, under all three of the overlay's
     // contents alike (the panel's band lands the ring at -1 too, showing
@@ -6879,6 +6947,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.session = 0;
     dlg.box     = GuiRect{0, 0, 0, 0};
     dlg.field   = GuiRect{0, 0, 0, 0};
+    dlg.field_frame = GuiRect{0, 0, 0, 0};
     dlg.scrub   = GuiRect{0, 0, 0, 0};
     dlg.clock   = GuiRect{0, 0, 0, 0};
     dlg.buttons.clear();
@@ -7797,12 +7866,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // editor and this field have always shared — a fill under a 1px edge
         // — rather than dropping the edge and making the invalid state read
         // differently on the two surfaces that share the red.
+        //
+        // THE HOVER HALF FADES BOTH WAYS (architect 2026-09-27, Breeze's
+        // line-edit frame: the input-widget engine animates hover in and out
+        // over 100 ms, reversing mid-fade — render.h's HoverFade, Reversing),
+        // blending the border toward the accent by the field's own level.
+        // THE FOCUS HALF STAYS HARD, his pick for every focus decoration: a
+        // focused field is the accent outright, the level unread (Breeze's
+        // focus-over-hover precedence, without its focus animation).
         const bool field_focused = app.modal_dialog_focus < 0;
         const GuiColor field_ground =
             ed->red ? kMarkerFlagFillRedSel : kModalFieldGround;
+        const int field_hover =
+            app.modal_dialog_fades_session == live_session
+                ? hover_fade_steps(app.modal_dialog_field_fade)
+                : (app.modal_dialog_field_hovered ? kHoverFadeSteps : 0);
         const GuiColor field_line =
-            (app.modal_dialog_field_hovered || field_focused)
-                ? kRedesignAccent : kModalFieldBorder;
+            field_focused ? kRedesignAccent
+                          : hover_fade_color(kRedesignAccent,
+                                             kModalFieldBorder, field_hover);
         redesign_face_box(cr, field_outer.x, field_outer.y,
                           field_outer.w, field_outer.h,
                           fbord, rad, &field_ground, &field_line);
@@ -7974,6 +8056,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         cairo_restore(cr);   // the field clip
 
         dlg.field = field_inner;
+        dlg.field_frame = field_outer;
     }
 
     // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
@@ -8066,6 +8149,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
              static_cast<int>(i) == app.modal_dialog_key_pressed);
         const bool hovered = enabled &&
                              static_cast<int>(i) == app.modal_dialog_hovered;
+        // THE HOVER AS A LEVEL (architect 2026-09-27, render.h's HoverFade):
+        // full while hovered, then this button's SnapIn tail — Breeze's
+        // QPushButton — read from the slot keyed to this painted session and
+        // cut on a dead button. It moves the OUTLINE alone; the fill and the
+        // halo never read it.
+        int hover = hovered ? kHoverFadeSteps : 0;
+        if (!hovered && enabled &&
+            app.modal_dialog_fades_session == live_session &&
+            i < app.modal_dialog_button_fades.size())
+            hover = hover_fade_steps(app.modal_dialog_button_fades[i]);
         const bool focused = static_cast<int>(i) == app.modal_dialog_focus;
         const bool active_focus = focused && app.modal_dialog_focus_active;
         // THE DISABLED RUNG'S ONE KNOB: every ink below retains this
@@ -8104,14 +8197,29 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // that split exact: a hovered ACTIVE focus is still a pointer claim
         // and takes the live blue, which is the same reading as the block
         // above's "active focus plus hover is identical to active focus".
-        const GuiColor line = mix_color(
-            (hovered || armed || pressed)
+        const bool has_fill = pressed || focused || lit;
+        // THE REST LINE is the ladder with the hover term taken out — the
+        // claims that outrank it, then the focus's two strengths, then the
+        // word button's grey; a glyph button that draws no line at rest has
+        // neither fill nor line there, so the row's ground is what its tail
+        // dissolves into. A hovered button blends the accent over it by
+        // `hover`, so a tail on a focused button runs toward the FOCUS line,
+        // which is itself painted hard (the focus changes with no fade, his
+        // pick).
+        const bool rest_has_line =
+            !plan[i].glyph || armed || pressed || focused || lit;
+        const GuiColor rest_line =
+            (armed || pressed)
                 ? kRedesignAccent
                 : active_focus ? accent_for_focus(app)
                 : focused ? kModalFocusLinePassive
-                          : kRedesignLine,
+                : rest_has_line ? kRedesignLine
+                                : kRedesignContentGround;
+        const GuiColor line = mix_color(
+            (armed || pressed)
+                ? kRedesignAccent
+                : hover_fade_color(kRedesignAccent, rest_line, hover),
             kRedesignContentGround, keep);
-        const bool has_fill = pressed || focused || lit;
         // The rest line is the word button's; a glyph button shows one only
         // while something claims it or its lamp stands (the ladder above).
         // SINCE 2026-09-01 THE FORK IS OWNER-SHAPED: the player's row is SEVEN
@@ -8121,8 +8229,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // an editor's and the picker's buttons are all words and all keep
         // theirs. The expression is unchanged — it asks the button, not the
         // owner.
-        const bool has_line = !plan[i].glyph || hovered || armed || pressed ||
-                              focused || lit;
+        const bool has_line = rest_has_line || hover > 0;
         redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,
                           has_fill ? &fill : nullptr,
                           has_line ? &line : nullptr);

@@ -3330,6 +3330,48 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
     return -1;
 }
 
+// THE MODAL ROW'S HOVER FADE EDGES (architect 2026-09-27, the Breeze port at
+// render.h's HoverFade), called by the walk below on a change and before it
+// writes the new answer: the button the pointer left starts its SnapIn tail
+// (QPushButton), the one it reached snaps full, and the field fades either
+// way (Reversing — Breeze's line-edit frame animates hover in and out). The
+// slots are keyed to the PAINTED surface's session — the stash the hit was
+// read from — and a set carried over from another session is dropped first,
+// so no tail lands on a button of a different dialog. A button the painter
+// published dead is cut, not faded (the roster edge's rule).
+void GuiInputHandler::stamp_modal_dialog_hover_fades(int hit, bool in_field) {
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    if (!dlg.valid) return;
+    if (app.modal_dialog_fades_session != dlg.session) {
+        app.modal_dialog_button_fades.clear();
+        app.modal_dialog_field_fade   = HoverFade{};
+        app.modal_dialog_fades_session = dlg.session;
+    }
+    const int64_t now = monotonic_ms();
+    const auto edge = [&](int index, bool hovered) {
+        if (index < 0 || static_cast<size_t>(index) >= dlg.buttons.size())
+            return;
+        std::vector<HoverFade>& fades = app.modal_dialog_button_fades;
+        if (fades.size() <= static_cast<size_t>(index))
+            fades.resize(static_cast<size_t>(index) + 1);
+        HoverFade& fd = fades[static_cast<size_t>(index)];
+        if (!dlg.buttons[static_cast<size_t>(index)].enabled) {
+            hover_fade_cut(fd, hovered);
+            return;
+        }
+        if (hover_fade_edge(fd, HoverFadeKind::SnapIn, hovered, now))
+            app.hover_fades_running = true;
+    };
+    if (hit != app.modal_dialog_hovered) {
+        edge(app.modal_dialog_hovered, false);
+        edge(hit, true);
+    }
+    if (in_field != app.modal_dialog_field_hovered &&
+        hover_fade_edge(app.modal_dialog_field_fade, HoverFadeKind::Reversing,
+                        in_field, now))
+        app.hover_fades_running = true;
+}
+
 // The dialog buttons' hover face — the pointer fact, written on every motion
 // under a standing dialog; a change damages the stashed box (the painter
 // reads the index back). The index resets with the stash in
@@ -3370,6 +3412,7 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     if (app.modal_dialog_hovered != hit || feint ||
         app.modal_dialog_press_inside != inside ||
         app.modal_dialog_field_hovered != in_field) {
+        stamp_modal_dialog_hover_fades(hit, in_field);
         app.modal_dialog_hovered       = hit;
         app.modal_dialog_field_hovered = in_field;
         app.modal_dialog_press_inside  = inside;
@@ -7258,6 +7301,120 @@ void GuiInputHandler::finalize_active_drags() {
     app.trim_bar_press = TrimBarPressSeed{};
 }
 
+// THE ROSTER'S HOVER FADE EDGE — the one place a button's HoverFade is
+// stamped (architect 2026-09-27, the Breeze port; the model is at render.h's
+// HoverFade), called by the two writers of `hovered` below on every flip and
+// by nothing else, so the fade's direction always mirrors the bit. A MENU
+// ANCHOR stamps nothing (redesign_button_hover_fade_kind: Breeze animates no
+// QMenuBar). A button that is DEAD at the edge is cut rather than faded —
+// Breeze paints no animation on a disabled button (renderButtonFrame's
+// `enabled` term), and the painters gate the tail on the same bit. The edge
+// raises AppState::hover_fades_running when an animation now runs, which is
+// what wakes the tick's walk (tick_hover_fades). No damage here: the caller's
+// own strip damage covers the edge frame, the tick the frames after it.
+void GuiInputHandler::stamp_redesign_button_hover_fade(RedesignButton id,
+                                                       int64_t now) {
+    AppState::RedesignButtonFace& f = app.redesign_buttons[static_cast<size_t>(id)];
+    const std::optional<HoverFadeKind> kind =
+        redesign_button_hover_fade_kind(id);
+    if (!kind) return;
+    if (!f.enabled) {
+        hover_fade_cut(f.fade, f.hovered);
+        return;
+    }
+    if (hover_fade_edge(f.fade, *kind, f.hovered, now))
+        app.hover_fades_running = true;
+}
+
+// THE HOVER FADES' CLOCK — the tick's one tenant for them (main.cpp, right
+// after the roster's hover recompute, on every tick past the startup load,
+// gestures included: a fade is time, not a pointer fact). ONE BIT WHEN IDLE:
+// with AppState::hover_fades_running false this returns at once, so a settled
+// GUI pays no walk and no repaint. While any fade runs it walks the three
+// fading surfaces, advances each running fade to the tick's clock and damages
+// THAT FACE'S OWN RECT, and only when its painted level changed — at most
+// kHoverFadeSteps repaints per fade, never one per tick (Android's loop has no
+// vsync pacing, so a per-tick damage would post at the tick's rate), and never
+// the whole strip the edge writers damage.
+//
+// A FACE THAT IS GONE TAKES ITS FADE WITH IT, here as a second line behind
+// the surfaces' own drops: a roster button that publishes no rect (the bottom
+// row yielded to a modal) is cut; a modal set whose session is not the
+// painted one is dropped whole, and a slot past the painted row's buttons is
+// cut; a close fade whose card is no longer painted is erased. So a tail can
+// never paint on a different button than the one that left it.
+//
+// PAINT ONLY — the strictly-as-painted rule is untouched: nothing this writes
+// is read by a press, a cursor, a tooltip or a hit test (the rule is stated
+// at render.h's HoverFade).
+void GuiInputHandler::tick_hover_fades() {
+    if (!app.hover_fades_running) return;
+    const int64_t now = monotonic_ms();
+    bool running = false;
+
+    for (int i = 0; i < kRedesignButtonCount; ++i) {
+        AppState::RedesignButtonFace& f = app.redesign_buttons[i];
+        if (!f.fade.running) continue;
+        if (f.rect.w <= 0 || f.rect.h <= 0) {
+            hover_fade_cut(f.fade, f.hovered);
+            continue;
+        }
+        if (hover_fade_advance(f.fade, now)) viewport.invalidate_rect(f.rect);
+        running = running || f.fade.running;
+    }
+
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    if (!dlg.valid || dlg.session != app.modal_dialog_fades_session) {
+        app.modal_dialog_button_fades.clear();
+        hover_fade_cut(app.modal_dialog_field_fade, false);
+    } else {
+        for (size_t i = 0; i < app.modal_dialog_button_fades.size(); ++i) {
+            HoverFade& fd = app.modal_dialog_button_fades[i];
+            if (!fd.running) continue;
+            if (i >= dlg.buttons.size()) {
+                hover_fade_cut(fd, false);
+                continue;
+            }
+            if (hover_fade_advance(fd, now))
+                viewport.invalidate_rect(dlg.buttons[i].rect);
+            running = running || fd.running;
+        }
+        HoverFade& ff = app.modal_dialog_field_fade;
+        if (ff.running) {
+            if (dlg.field_frame.w <= 0 || dlg.field_frame.h <= 0) {
+                hover_fade_cut(ff, false);
+            } else {
+                if (hover_fade_advance(ff, now))
+                    viewport.invalidate_rect(dlg.field_frame);
+                running = running || ff.running;
+            }
+        }
+    }
+
+    std::vector<AppState::Notifications::CloseFade>& cf =
+        app.notifications.close_fades;
+    for (size_t i = 0; i < cf.size();) {
+        const AppState::NotificationPainted* shown = nullptr;
+        for (const AppState::NotificationPainted& p : app.notifications.painted)
+            if (p.id == cf[i].id) { shown = &p; break; }
+        if (shown == nullptr) {
+            cf.erase(cf.begin() + static_cast<std::ptrdiff_t>(i));
+            continue;
+        }
+        if (hover_fade_advance(cf[i].fade, now))
+            viewport.invalidate_rect(shown->close);
+        if (!cf[i].fade.running && !cf[i].fade.rising) {
+            // Settled dark: the slot has nothing left to say.
+            cf.erase(cf.begin() + static_cast<std::ptrdiff_t>(i));
+            continue;
+        }
+        running = running || cf[i].fade.running;
+        ++i;
+    }
+
+    app.hover_fades_running = running;
+}
+
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
 // tabs, row 4's twenty-three — the toolbar four included since the 2026-08-12
@@ -7285,10 +7442,16 @@ void GuiInputHandler::clear_redesign_button_hover() {
     // one of its own faces moved).
     bool changed_top       = false;
     bool changed_transport = false;
+    const int64_t now = monotonic_ms();
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         if (!f.hovered) continue;
         f.hovered = false;
+        // THE CLEAR IS A HOVER END LIKE ANY OTHER, so it leaves the button's
+        // own tail (stamp_redesign_button_hover_fade) — the pointer leaving
+        // the window, the pen rising out of the plane and the dropdown's open
+        // edge all end a hover the way Qt's Leave event does under Breeze.
+        stamp_redesign_button_hover_fade(static_cast<RedesignButton>(i), now);
         if (redesign_button_in_transport_row(static_cast<RedesignButton>(i)))
             changed_transport = true;
         else
@@ -7369,6 +7532,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     bool changed_top       = false;
     bool changed_transport = false;
     int  hovered_tip = -1;
+    const int64_t fade_now = monotonic_ms();
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         const RedesignButton id = static_cast<RedesignButton>(i);
@@ -7395,6 +7559,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         const bool inside = under_pointer && f.enabled;
         if (f.hovered != inside) {
             f.hovered = inside;
+            stamp_redesign_button_hover_fade(id, fade_now);
             if (redesign_button_in_transport_row(id))
                 changed_transport = true;
             else

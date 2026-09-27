@@ -2861,6 +2861,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
 
+        // THE HOVER FADES' CLOCK (architect 2026-09-27, Breeze's hover
+        // animation — render.h's HoverFade): after the recompute, so an edge
+        // it stamped this tick is advanced on the same clock, and ungated,
+        // since a fade is time rather than a pointer fact and a gesture that
+        // starts while a tail runs must not freeze it half-drawn. One bit
+        // test while no fade runs; while one does, a face's own rect is
+        // damaged only when its painted level changes.
+        input_handler.tick_hover_fades();
+
         // THE CHROME BUTTON HOLD-REPEAT (architect 2026-08-16): while a press
         // stands on a button whose chord row carries `repeats` (the bottom
         // row's four cardinal arrows, Undo / Redo), this

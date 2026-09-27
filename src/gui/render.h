@@ -2600,6 +2600,139 @@ inline constexpr int64_t kTooltipDelayMs        = kHoldBeatMs;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
+
+// THE HOVER FADE — BREEZE'S HOVER ANIMATION, PORTED (architect 2026-09-27:
+// "Breeze exactly", only what Breeze animates, one rule on both devices, the
+// keyboard focus kept hard). The numbers are Breeze 6.7.5's kstyle defaults as
+// this laptop runs them (breeze.kcfg: AnimationsDuration 100, AnimationSteps
+// 10; no AnimationDurationFactor in kdeglobals and no breezerc): a 100 ms
+// animation, LINEAR (Breeze::Animation sets no easing curve, and Qt's default
+// is linear), of a 0..1 bias DIGITIZED to ten levels (AnimationData::digitize,
+// floor(v · steps) / steps) and fed to a colour mix — KColorUtils::mix over an
+// opaque ground, which is mix_color here. Hard-coded like every other chrome
+// number; no device key.
+//
+// THREE KINDS, each one Breeze engine's own behaviour:
+//   SnapIn — a tool or push button (renderButtonFrame forces the pen to the
+//     highlight while hovered, so the widget-state animation shows only on
+//     the way out): the outline is full the instant hover begins; when it
+//     ends the outline fades toward the rest face from where the hidden
+//     animation stood. WidgetStateData REVERSES a running animation from its
+//     current time, so a hover shorter than 100 ms leaves a tail that starts
+//     below full, and a return mid-fade is full again at once while the
+//     hidden value climbs on from where the tail had brought it.
+//   Reversing — a line-edit frame (the input-widget engine on the same
+//     WidgetStateData): both ways, reversing from the current time.
+//   Restarting — a tab (TabBarData::updateState calls restart()): both ways,
+//     and an edge RESTARTS its direction from the end — a tab re-entered
+//     mid-fade-out fades in again from zero, one left mid-fade-in jumps to
+//     full and fades out. That jump is Breeze's own, ported as he asked.
+//
+// THE STATE IS AN EDGE, NOT AN ACCUMULATOR: each fade keeps the clock and the
+// animation time at its last hover edge, so the level at any instant is
+// derived (hover_fade_time), never integrated per frame. The ONE clock is the
+// run loop's tick (GuiInputHandler::tick_hover_fades), which advances every
+// running fade's published `level` and damages a face's own rect only when
+// its PAINTED level changes — at most kHoverFadeSteps repaints per fade,
+// which matters on Android where nothing paces the loop to the panel — and
+// does nothing but test one bit when no fade runs. The painters read `level`
+// through hover_fade_steps and nothing else.
+//
+// A FADE IS PAINT, NEVER A CLAIM (the strictly-as-painted rule): a fading
+// outline on a button the pointer has left is a tail, and no press, cursor,
+// tooltip or hit test reads it — every input road keeps reading the hover bits
+// and the painted faces exactly as before. The hover bits stay the truth of
+// where the pointer is; the fade only softens what that truth left behind.
+//
+// WHAT DOES NOT ANIMATE, because Breeze registers no engine for it: the menu
+// row's pill (QMenuBar), the dropdown items (QMenu), the folder overlay's rows
+// (item views); and, by his pick, every keyboard-focus decoration, the
+// tooltip's show and hide, and the window-activation recolour.
+inline constexpr int64_t kHoverFadeMs    = 100;
+inline constexpr int     kHoverFadeSteps = 10;
+
+enum class HoverFadeKind : uint8_t { SnapIn, Reversing, Restarting };
+
+struct HoverFade {
+    int64_t       edge_ms = 0;      // the clock at the last hover edge
+    int64_t       from    = 0;      // animation time at that edge, [0, kHoverFadeMs]
+    HoverFadeKind kind    = HoverFadeKind::SnapIn;
+    bool          rising  = false;  // the hover bit the last edge set
+    bool          running = false;  // Breeze's isRunning: a level still moves
+    int           level   = 0;      // the digitized level, [0, kHoverFadeSteps]
+};
+
+// The animation time at `now`, [0, kHoverFadeMs]: linear from the edge in the
+// edge's direction, and the direction's end once the animation has stopped.
+inline int64_t hover_fade_time(const HoverFade& f, int64_t now) {
+    if (!f.running) return f.rising ? kHoverFadeMs : 0;
+    const int64_t el = now > f.edge_ms ? now - f.edge_ms : 0;
+    const int64_t t  = f.rising ? f.from + el : f.from - el;
+    return t < 0 ? 0 : (t > kHoverFadeMs ? kHoverFadeMs : t);
+}
+
+// Breeze's digitize, on whole milliseconds so the floor is exact.
+inline int hover_fade_digitize(int64_t t) {
+    return static_cast<int>(t * kHoverFadeSteps / kHoverFadeMs);
+}
+
+// THE PAINTED LEVEL, [0, kHoverFadeSteps] — the one thing a painter reads. A
+// SnapIn face is full for as long as it is hovered, whatever its hidden
+// animation is doing.
+inline int hover_fade_steps(const HoverFade& f) {
+    if (f.kind == HoverFadeKind::SnapIn && f.rising) return kHoverFadeSteps;
+    return f.level;
+}
+
+// A HOVER EDGE, written by the face's own hover writer on a flip of its bit
+// and nowhere else. Returns whether an animation now runs, so the writer can
+// raise AppState::hover_fades_running for the tick. A call that is not a flip
+// changes nothing.
+inline bool hover_fade_edge(HoverFade& f, HoverFadeKind kind, bool hovered,
+                            int64_t now) {
+    if (f.rising == hovered && f.kind == kind) return f.running;
+    const int64_t t = hover_fade_time(f, now);
+    f.kind    = kind;
+    f.from    = kind == HoverFadeKind::Restarting
+                    ? (hovered ? 0 : kHoverFadeMs)
+                    : t;
+    f.edge_ms = now;
+    f.rising  = hovered;
+    f.running = hovered ? f.from < kHoverFadeMs : f.from > 0;
+    f.level   = hover_fade_digitize(f.from);
+    return f.running;
+}
+
+// THE HARD CUT: the face takes its settled look for the bit at once, no tail —
+// a face that went dead, left the screen or changed identity.
+inline void hover_fade_cut(HoverFade& f, bool hovered) {
+    f.rising  = hovered;
+    f.running = false;
+    f.level   = hovered ? kHoverFadeSteps : 0;
+}
+
+// THE TICK'S STEP for one fade: publishes the level at `now`, stops the
+// animation at its end, and returns whether the PAINTED level changed — the
+// one condition that owes the face a repaint.
+inline bool hover_fade_advance(HoverFade& f, int64_t now) {
+    if (!f.running) return false;
+    const int before = hover_fade_steps(f);
+    const int64_t t  = hover_fade_time(f, now);
+    f.level   = hover_fade_digitize(t);
+    f.running = f.rising ? t < kHoverFadeMs : t > 0;
+    return hover_fade_steps(f) != before;
+}
+
+// THE BLEND: `lit` (the hover colour) over `rest` (whatever the face paints
+// unhovered at those pixels — its resting line, or the fill or ground under a
+// face that has none) at the painted level, KColorUtils::mix's arithmetic.
+// Exact at both ends, so a settled face is the hard face bit for bit.
+inline GuiColor hover_fade_color(GuiColor lit, GuiColor rest, int steps) {
+    if (steps >= kHoverFadeSteps) return lit;
+    if (steps <= 0) return rest;
+    return mix_color(lit, rest,
+                     static_cast<double>(steps) / kHoverFadeSteps);
+}
 // THE DROPDOWNS' VERTICAL metrics — one set for every menu, out here for the
 // same reason the tooltip's height is: the popup's OPEN EDGE must damage the box
 // before the box has ever been painted, and its HEIGHT is fully derivable

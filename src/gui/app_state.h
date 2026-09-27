@@ -3308,6 +3308,19 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
     return false;
 }
 
+// WHICH ROSTER BUTTONS FADE THEIR HOVER, AND HOW (architect 2026-09-27, the
+// Breeze port at render.h's HoverFade): the two tabs fade both ways and
+// restart (QTabBar's engine); every tool button — the icon row, the bottom
+// row, row 1's view bar — snaps in and fades out (QToolButton's); row 1's
+// MENU ANCHORS do not animate at all, Breeze having no QMenuBar engine, so
+// their pill stays the hard switch it was (std::nullopt: no edge is stamped).
+inline constexpr std::optional<HoverFadeKind>
+redesign_button_hover_fade_kind(RedesignButton b) {
+    if (redesign_button_is_menu_anchor(b)) return std::nullopt;
+    if (redesign_button_is_tab(b)) return HoverFadeKind::Restarting;
+    return HoverFadeKind::SnapIn;
+}
+
 // THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
 // what the menu row's Settings button drops down. Each row pairs the HUMAN
 // LABEL (Title Case since 2026-09-03, kdenlive's own menu spelling and, since
@@ -5772,8 +5785,25 @@ struct AppState {
         bool    enabled       = true;
         bool    selected      = false;
         bool    glyph_swapped = false;
+        // THE HOVER FADE (render.h's HoverFade, architect 2026-09-27): paint
+        // state only, its edges stamped by the two writers of `hovered`
+        // (recompute_redesign_button_hover and clear_redesign_button_hover)
+        // on the button's own kind (redesign_button_hover_fade_kind), and its
+        // level advanced by the tick. KEYED TO THE BUTTON'S IDENTITY by
+        // construction — one slot per roster button — so a tail can only
+        // ever paint on the button that left it; it is cut when the button
+        // goes dead under it or stops being painted. Row 1's menu anchors
+        // never stamp one.
+        HoverFade fade{};
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
+
+    // ANY HOVER FADE RUNNING — the tick's one cheap check (tick_hover_fades,
+    // input_pointer.cpp). Raised by every edge that starts an animation, on
+    // every surface that fades (the roster, the modal row's buttons and field,
+    // the notification cards' close buttons); lowered by the tick's walk once
+    // none is left running. While it is false the tick does nothing more.
+    bool hover_fades_running = false;
 
     // (THE ACTIVE TAB'S LOCK RECT IS DELETED — architect 2026-08-14, "we
     // should move the icon out of the tab and into the icon row, then show the
@@ -6154,6 +6184,10 @@ struct AppState {
         uint64_t                       session = 0;
         GuiRect                        box{0, 0, 0, 0};
         GuiRect                        field{0, 0, 0, 0};
+        // THE FIELD'S OUTER BOX, its border included — the one rect a hover
+        // fade frame on the field damages (tick_hover_fades); `field` above
+        // is the inner rect every press reads.
+        GuiRect                        field_frame{0, 0, 0, 0};
         // THE PLAYER'S TWO PUBLISHED CELLS (2026-08-28), zero under every
         // other owner: the PLAY-SCRUB — THE WHOLE SLIDER ITEM, the button
         // box's own band, so a press anywhere on it is on the slider and the
@@ -6315,6 +6349,19 @@ struct AppState {
     // this is false under a prompt by construction; reset with the three face
     // indices in paint_modal_dialog's no-dialog and owner-change arms.
     bool modal_dialog_field_hovered = false;
+
+    // THE MODAL ROW'S HOVER FADES (architect 2026-09-27, render.h's
+    // HoverFade): one per dialog button, indexed like modal_dialog_hovered,
+    // SnapIn — Breeze's QPushButton — and the field's, Reversing — Breeze's
+    // line-edit frame, which fades both ways. Written on the hover walk's
+    // edges (update_modal_dialog_hover) and KEYED TO THE PAINTED SURFACE'S
+    // SESSION (`modal_dialog_fades_session`), so a fade outlives neither its
+    // dialog nor a change of dialog: reset_modal_dialog_face_state drops them
+    // with the face indices, and the tick drops a set whose session is no
+    // longer the one on screen.
+    std::vector<HoverFade> modal_dialog_button_fades;
+    HoverFade              modal_dialog_field_fade{};
+    uint64_t               modal_dialog_fades_session = 0;
 
     // THE ARMED DIALOG BUTTON — the CLICK FACE and, unlike the roster's, THE
     // ACT'S OWN RECORD: these buttons act AT THE RELEASE (architect 2026-08-13,
@@ -8225,6 +8272,16 @@ struct AppState {
         uint64_t                         next_id = 1;
         uint64_t                         hovered_id = 0;
         bool                             close_hovered = false;
+        // THE CLOSE BUTTONS' HOVER FADES (architect 2026-09-27): Breeze's
+        // flat QToolButton, SnapIn, one per card id whose X has been hovered
+        // and whose tail still runs; stamped by set_hover's edges, advanced
+        // by the tick, and dropped with the card — a dismissed or expired
+        // card's X leaves no tail on the card that takes its place.
+        struct CloseFade {
+            uint64_t  id = 0;
+            HoverFade fade{};
+        };
+        std::vector<CloseFade>           close_fades;
         std::vector<NotificationPainted> painted;
         GuiRect                          painted_rect{0, 0, 0, 0};
         // THE HELD-REPEAT CARVE-OUT'S ONE BIT (architect 2026-09-01, the
