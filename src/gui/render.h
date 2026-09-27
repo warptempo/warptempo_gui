@@ -2917,27 +2917,26 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 //
 //   OUTER (painted first) = raw x g x E, in kWaveformInk, no outline — the
 //                           levelled, expanded bar;
-//   INNER (painted over)  = raw x c x G x E, in kWaveformInk outlined in
+//   INNER (painted over)  = raw x c x 1/2 x E, in kWaveformInk outlined in
 //                           kWaveformForegroundOutline — the source's bar
 //                           DOWNWARD-COMPRESSED.
 //
 // g is the leveler's gain at the column's centre source frame
-// (waveform_gain_at), c x G the inner bar's scale there
+// (waveform_gain_at), c x 1/2 the inner bar's scale there
 // (waveform_inner_scale_at: c the compressor's, the inner bar's stage on the
-// window loudness L, and G the flat foreground gain folded into it at the
-// derivation, a tuning key since 2026-09-27 — waveform_gain.h owns them
-// all), and E the expander's largest multiplier over the working columns
-// the column spans (waveform_expander_multiplier_over) — ON BOTH BARS, so the
-// gap between them is g / (c x G), a pure function of L, and at G <= 1 the
-// inner never stands out of the outer (a positive G may, in the quiet
-// passages, accepted for the tuning phase). Each bar's tips are CLAMPED to [-1, 1] before
+// window loudness L, and 1/2 the flat foreground gain folded into it at the
+// derivation — waveform_gain.h owns them all), and E the expander's largest
+// multiplier over the working columns the column spans
+// (waveform_expander_multiplier_over) — ON BOTH BARS, so the gap between
+// them is g / (c x 1/2), a pure function of L, and the inner never stands
+// out of the outer. Each bar's tips are CLAMPED to [-1, 1] before
 // they become rows, and each keeps the >=1px floor. The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
 // reading is the source's bar, the same ink as the levelled bar behind it and
 // set off from it by its darker one-pixel contour alone (settled by his eye
 // 2026-09-27), the core's relative thickness the loudness — at or under the
-// compressor's threshold the core is the raw bar (x E), over it thinner by
-// its ratio.
+// compressor's threshold the core is half the raw bar (x E), over it thinner
+// by its ratio.
 // NULL (the dark lamp) draws the raw bar alone in kWaveformInk at scale 1,
 // with no outline, byte for byte the plate it always drew.
 //
@@ -3000,7 +2999,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // read,
 // the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
-// lamp and carries the inner bar's three numbers). The outline adds one row-extent pair per column for the inner, held
+// lamp). The outline adds one row-extent pair per column for the inner, held
 // for the call so the write can see both neighbours, and a handful of
 // compares.
 //

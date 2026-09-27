@@ -3,10 +3,8 @@
 #include "settings_io.h"       // atomic_write_string_to_path
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
-#include "value_format.h"      // format_value_double / parse_value_double
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
-#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -19,17 +17,16 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (NINE keys since
-// 2026-09-27: the lit plate's four ink keys and `waveform_widening` left that
-// morning with the values constexpr in render.h, and the inner bar's three
-// tuning keys arrived after them; the fuller count's succession — up to
-// seventeen with the tuning phases of 2026-09-23..27 — is the header's
+// set the shared scanner enforces after the loop (SIX keys since
+// 2026-09-27, when the lit plate's four ink keys and `waveform_widening` left
+// with the values constexpr in render.h, and the inner bar's three tuning
+// keys, which stood after sync_path for the rest of that day, left with
+// theirs constexpr in waveform_gain.cpp; the fuller count's succession — up
+// to seventeen with the tuning phases of 2026-09-23..27 — is the header's
 // record and git's). THE ORDER IS THE
 // ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
 // projects_repo, projects_path, last_project, sync_path — the sixth placed
-// right after gui_scale (architect 2026-09-13), and the inner bar's three
-// after sync_path, the compressor's threshold and ratio then the foreground
-// gain (architect 2026-09-27). The scanner takes it as a
+// right after gui_scale (architect 2026-09-13). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -43,9 +40,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
-    "waveform_compressor_threshold_db",
-    "waveform_compressor_ratio",
-    "waveform_foreground_gain_db",
 };
 
 } // namespace
@@ -60,77 +54,6 @@ std::string format_max_waveform_height(int authored_px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", authored_px);
     return std::string(buf);
-}
-
-namespace {
-
-// THE SIGNED DECIBEL SPELLING the threshold and the foreground gain share
-// (the header's serializers and parsers): the magnitude through the value
-// road (which spells no sign), the sign re-attached below zero. std::fabs,
-// not a negation, so a negative zero spells `0.00` as the reader demands.
-std::string format_signed_decibels(double v) {
-    const std::string mag = format_value_double(std::fabs(v), 2);
-    return v < 0.0 ? "-" + mag : mag;
-}
-
-// The sidecar `scale` key's shape (validate_engine_setting,
-// engine_settings_io.cpp) at min 2, with the sign handled here because
-// parse_value_double refuses one: strip ONE leading '-', the strict magnitude
-// parse (a second sign and a '+' refuse there), the round trip back to the
-// bytes read — which refuses `-0.00` (the writer spells zero `0.00`) and
-// every non-canonical spelling. The grammar alone; each key's range owner is
-// asked after it.
-bool parse_signed_decibels(std::string_view s, double& out) {
-    const bool negative = !s.empty() && s.front() == '-';
-    double mag = 0.0;
-    if (!parse_value_double(negative ? s.substr(1) : s, mag)) return false;
-    const double v = negative ? -mag : mag;
-    if (format_signed_decibels(v) != s) return false;
-    out = v;
-    return true;
-}
-
-} // namespace
-
-std::string format_waveform_compressor_threshold_db(double v) {
-    return format_signed_decibels(v);
-}
-
-bool parse_waveform_compressor_threshold_db(std::string_view s, double& out) {
-    // The shared signed spelling, then the range owner.
-    double v = 0.0;
-    if (!parse_signed_decibels(s, v)) return false;
-    if (!is_waveform_compressor_threshold_db(v)) return false;
-    out = v;
-    return true;
-}
-
-std::string format_waveform_compressor_ratio(double v) {
-    return format_value_double(v, 2);
-}
-
-bool parse_waveform_compressor_ratio(std::string_view s, double& out) {
-    // The strict magnitude parse (no sign at all), the canonical round trip,
-    // then the range owner.
-    double v = 0.0;
-    if (!parse_value_double(s, v)) return false;
-    if (format_waveform_compressor_ratio(v) != s) return false;
-    if (!is_waveform_compressor_ratio(v)) return false;
-    out = v;
-    return true;
-}
-
-std::string format_waveform_foreground_gain_db(double v) {
-    return format_signed_decibels(v);
-}
-
-bool parse_waveform_foreground_gain_db(std::string_view s, double& out) {
-    // The shared signed spelling, then the range owner.
-    double v = 0.0;
-    if (!parse_signed_decibels(s, v)) return false;
-    if (!is_waveform_foreground_gain_db(v)) return false;
-    out = v;
-    return true;
 }
 
 std::filesystem::path device_config_path() {
@@ -177,16 +100,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
-        } else if (k == "waveform_compressor_threshold_db") {
-            // The inner bar's three through their serializers, the
-            // canonical min-2-decimal spellings the reader demands back.
-            s += format_waveform_compressor_threshold_db(
-                cfg.waveform_inner.threshold_db);
-        } else if (k == "waveform_compressor_ratio") {
-            s += format_waveform_compressor_ratio(cfg.waveform_inner.ratio);
-        } else if (k == "waveform_foreground_gain_db") {
-            s += format_waveform_foreground_gain_db(
-                cfg.waveform_inner.foreground_gain_db);
         }
         s += '\n';
     }
@@ -280,42 +193,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kSyncPathGrammarReason);
             }
             out.sync_path = value;
-            return {};
-        }
-        if (key == "waveform_compressor_threshold_db") {
-            // One canonical signed spelling and the range, through the one
-            // parser in the header (the sign stripped, the settings'
-            // bracketed-double road on the magnitude, the round trip, then
-            // is_waveform_compressor_threshold_db).
-            double v = 0.0;
-            if (!parse_waveform_compressor_threshold_db(value, v)) {
-                return bad_value(ln, key, value,
-                                 kWaveformCompressorThresholdDbGrammarReason);
-            }
-            out.waveform_inner.threshold_db = v;
-            return {};
-        }
-        if (key == "waveform_compressor_ratio") {
-            // One canonical unsigned spelling and the range, through the one
-            // parser in the header.
-            double v = 0.0;
-            if (!parse_waveform_compressor_ratio(value, v)) {
-                return bad_value(ln, key, value,
-                                 kWaveformCompressorRatioGrammarReason);
-            }
-            out.waveform_inner.ratio = v;
-            return {};
-        }
-        if (key == "waveform_foreground_gain_db") {
-            // One canonical signed spelling and the range, through the one
-            // parser in the header (the threshold's grammar, its own range,
-            // is_waveform_foreground_gain_db).
-            double v = 0.0;
-            if (!parse_waveform_foreground_gain_db(value, v)) {
-                return bad_value(ln, key, value,
-                                 kWaveformForegroundGainDbGrammarReason);
-            }
-            out.waveform_inner.foreground_gain_db = v;
             return {};
         }
         return warptempo_parse::prefix_line_error(

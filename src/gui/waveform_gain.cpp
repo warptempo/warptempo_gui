@@ -55,15 +55,15 @@ constexpr double kStepSeconds = 0.1;
 constexpr double kSilentGain = 8.0;
 
 // --- the constants' reasons --------------------------------------------------
-// The seven picture values here are HARD-CODED (architect: every project
-// shares one frame of reference, so they are set once and left; a retune is a
+// The ten picture values are HARD-CODED (architect: every project shares
+// one frame of reference, so they are set once and left; a retune is a
 // recompile, by design — waveform_gain.h). The leveler's five and the
 // expander's two were device-config keys, `waveform_gain_*` and
-// `waveform_expander_*`, for a tuning phase closed 2026-09-24. The inner
-// bar's three numbers are not here: they are device-config keys in a tuning
-// phase of their own (architect 2026-09-27) and arrive as the derivation's
-// WaveformInnerParams (the stage and the defaults are waveform_gain.h's; the
-// measured map they started from is below the expander's two).
+// `waveform_expander_*`, for a tuning phase closed 2026-09-24; the
+// compressor's two were `waveform_compressor_threshold_db` and
+// `waveform_compressor_ratio`, the phase closed 2026-09-25 and a second one
+// closed 2026-09-27 beside the foreground gain's
+// `waveform_foreground_gain_db`.
 //
 // kWindowSeconds 3.0: the EBU short-term loudness length, chosen by
 // eye (architect 2026-09-23) for the contrast it gives and for the earlier
@@ -134,16 +134,17 @@ constexpr double kExpanderThresholdDb = -8.0;
 constexpr double kExpanderRatio = 2.0;
 static_assert(kExpanderRatio > 1.0, "the expander reduces under the threshold");
 
-// THE COMPRESSOR'S MEASURED MAP (waveform_gain.h owns the stage), the record
-// the tuning phase of 2026-09-27 starts from: T -24 and R 2 were settled by
-// eye on the laptop 2026-09-25 when the inner was a solid bar, and the
-// architect is retuning them by eye now that it is an outline. On the
-// leveler's own window loudness L in dBFS. THE CRITERION as it stood: the gap
+// THE COMPRESSOR'S TWO (waveform_gain.h owns the stage), architect
+// 2026-09-25, settled by eye on the laptop at the close of their tuning phase
+// when the inner was a solid bar, and reconfirmed by eye 2026-09-27 at the
+// close of a second phase with the inner drawn as an outline over the
+// outer's ink; on the leveler's own window loudness L in dBFS. THE CRITERION: the gap
 // between the inner and the outer bar >= 4.5 dB at the loudest 5 % of hops,
-// the quiet parts untouched. The map (the product's leveler and expander
-// re-derived over the three K550 movements, 2026-09-25; the inner's height in
-// lane halves at L's p5 / p25 / p50 / p75 / p95, movement I; all at a
-// foreground gain of 0 dB):
+// the quiet parts untouched. The measured map (the product's leveler and
+// expander re-derived over the three K550 movements, 2026-09-25; the inner's
+// height in lane halves at L's p5 / p25 / p50 / p75 / p95, movement I; all at
+// unit gain, before the foreground gain below — the settled half lowers every
+// inner height by half and widens every gap by 6.02 dB):
 //
 //   T -20 R 4   gap at p95 4.7 / 5.0 / 5.2 dB   .07 .11 .21 .38 .39
 //   T -22 R 3              5.6 / 6.0 / 6.3      .07 .11 .18 .34 .35
@@ -154,13 +155,32 @@ static_assert(kExpanderRatio > 1.0, "the expander reduces under the threshold");
 // and the pairings T -20 with R <= 3 and T -22 with R 2 break the criterion
 // (the outer's fringe returns in the crescendos). In this material the
 // leveler never clamps to x1 (L's p95 is -14.8 / -16.1 / -16.7 dBFS), so the
-// stage works over L in [-35, -15]. T -24 held the criterion in all three
-// movements with margin (the smallest gap on any open column 4.1 / 4.5 /
-// 4.8 dB, at the crescendo just over T), the inner reading pp 0.07, piano
-// 0.11 and a tutti a third of the lane — a monotone five-fold span; R 2 was
-// the gentlest ratio that held it there, a steeper one shrinking the tuttis
-// ("tiny" at -26 / 3). A foreground gain of G dB moves every inner height by
-// 10^(G/20) and every gap by -G dB.
+// stage works over L in [-35, -15].
+//
+// kCompressorThresholdDb -24: with the ratio below, the threshold that holds
+// the criterion in all three movements with margin (the smallest gap on any
+// open column 4.1 / 4.5 / 4.8 dB, at the crescendo just over T), the inner
+// reading pp 0.07, piano 0.11 and a tutti a third of the lane — a monotone
+// five-fold span.
+constexpr double kCompressorThresholdDb = -24.0;
+
+// kCompressorRatio 2: the gentlest ratio that holds the criterion at that
+// threshold; a steeper one shrinks the tuttis ("tiny" at -26 / 3). At least 1
+// by construction: 1 would be the identity.
+constexpr double kCompressorRatio = 2.0;
+static_assert(kCompressorRatio >= 1.0, "the compressor never expands");
+
+// THE FOREGROUND GAIN (waveform_gain.h owns the stage), architect 2026-09-27,
+// settled by eye on the laptop at the close of the inner bar's second tuning
+// phase: a FLAT LINEAR multiplier on the inner bar alone, folded into every
+// hop's inner scale. Drawn as an outline over the outer's own ink, the inner
+// at unit gain sat too close to the lane top in the tuttis; the architect
+// picked -6.02 dB by eye and asked for the "actual half", so it is written as
+// exactly 0.5 and never as a decibel power — the multiply below is exact.
+// Under 1, so the inner (c x 1/2 <= 1 <= g) never stands out of the outer.
+constexpr double kForegroundGain = 0.5;
+static_assert(kForegroundGain > 0.0 && kForegroundGain <= kGainMin,
+              "the inner never stands out of the outer");
 
 // THE CURVE (waveform_gain.h, THE EXPANDER): the reduction in dB, >= 0 and
 // uncapped, for a column whose leveled peak reads `x` dB — 0 at or above the
@@ -217,8 +237,7 @@ private:
 }  // namespace
 
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate,
-                                       const WaveformInnerParams& inner) {
+                                       int sample_rate) {
     if (total_frames <= 0) return {};
 
     const int64_t col = working_zoom_column_frames(sample_rate);
@@ -265,12 +284,6 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         }
     }
 
-    // THE FOREGROUND GAIN (waveform_gain.h), folded into every hop's inner
-    // scale here so the painter's inner stays raw x scale x E: G =
-    // 10^(dB / 20), and at 0 dB pow returns exactly 1, so the multiply below
-    // is exact and the default plate is the plate without the key.
-    const double foreground_gain = std::pow(10.0, inner.foreground_gain_db / 20);
-
     WaveformGainCurve out;
     out.hop_frames = st * col;
     out.gain.resize(measured.size());
@@ -280,11 +293,11 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         // no L over any threshold, reduces nothing — the inner scale is the
         // foreground gain alone.
         std::fill(out.gain.begin(), out.gain.end(), std::clamp(kSilentGain, kGainMin, kGainMax));
-        std::fill(out.inner_scale.begin(), out.inner_scale.end(), foreground_gain);
+        std::fill(out.inner_scale.begin(), out.inner_scale.end(), kForegroundGain);
     } else {
         // THE COMPRESSOR'S SLOPE (waveform_gain.h): (1 - 1/R) dB of reduction
         // per dB of L over the threshold; 0 at R = 1, the identity.
-        const double slope = 1.0 - 1.0 / inner.ratio;
+        const double slope = 1.0 - 1.0 / kCompressorRatio;
         for (size_t k = 0; k < measured.size(); ++k) {
             // A silent point takes the NEARER known point's L, the earlier on
             // a tie (the retained detector's rule) — and so its gain AND its
@@ -314,10 +327,12 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
             out.gain[k] = std::clamp(std::pow(10.0, (kTargetDb - level) / 20),
                                      kGainMin, kGainMax);
             // THE COMPRESSOR on the UNCLAMPED L (waveform_gain.h): nothing at
-            // or under the threshold (10^0 is exactly 1), the slope over it.
+            // or under the threshold (10^0 is exactly 1), the slope over it;
+            // then THE FOREGROUND GAIN, the exact half.
             const double reduction =
-                level > inner.threshold_db ? slope * (level - inner.threshold_db) : 0.0;
-            out.inner_scale[k] = std::pow(10.0, -reduction / 20) * foreground_gain;
+                level > kCompressorThresholdDb ? slope * (level - kCompressorThresholdDb)
+                                               : 0.0;
+            out.inner_scale[k] = std::pow(10.0, -reduction / 20) * kForegroundGain;
         }
     }
 

@@ -549,13 +549,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE INNER BAR'S THREE NUMBERS, the tuning phase's starting point
-    // (architect 2026-09-27; the stage at waveform_gain.h), the same on both
-    // templates and the picture before the phase: a threshold of -24.00 dBFS,
-    // a ratio of 2.00 and a foreground gain of 0.00 dB.
-    cfg.waveform_inner.threshold_db       = kWaveformCompressorThresholdDbDefault;
-    cfg.waveform_inner.ratio              = kWaveformCompressorRatioDefault;
-    cfg.waveform_inner.foreground_gain_db = kWaveformForegroundGainDbDefault;
     return cfg;
 }
 
