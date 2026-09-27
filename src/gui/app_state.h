@@ -3331,8 +3331,7 @@ redesign_button_hover_fade_kind(RedesignButton b) {
 // `separator_before` marks the one place the two categories part: the four
 // SIDECAR keys a hand edits (the metadata), then the five editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
-// `last_project` is the program's own and the S Pen's TEMPORARY tuning pair
-// `pen_plane_enter` / `pen_plane_exit` is hand-edited, so none has a row).
+// `last_project` is the program's own and has no row).
 //
 // It lives here rather than in the painter because three domains read it — the
 // painter (labels, layout), the press claim (which key a click prefills) and

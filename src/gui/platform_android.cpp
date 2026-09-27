@@ -549,10 +549,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE PEN PLANE'S THRESHOLDS, TEMPORARY for their tuning phase (the
-    // pair's head at device_config.h; the one reader is pen_report_in_plane).
-    cfg.pen_plane_enter = kPenPlaneEnterDefault;
-    cfg.pen_plane_exit  = kPenPlaneExitDefault;
     return cfg;
 }
 
@@ -2081,7 +2077,7 @@ void GuiPlatform::end_pen_hover() {
 }
 
 // THE GUI'S PLANE (architect 2026-09-27): the pen acts on the GUI only
-// within a few millimetres of the glass. AXIS_DISTANCE on this tablet's
+// within about a centimetre of the glass. AXIS_DISTANCE on this tablet's
 // sec_e-pen is the RAW driver count (`dumpsys input`: range 0..255,
 // touch.distance.calibration scaled, DistanceScale 1.000), about 10 counts
 // per millimetre — the last hover report before the tip lands reads 2..8,
@@ -2089,17 +2085,18 @@ void GuiPlatform::end_pen_hover() {
 // 2026-09-27). THE PLANE HAS HYSTERESIS: one cutoff flickered on the glass
 // (a pen held still at it toggled the hover outline, the count jittering
 // across the line), so a pen ENTERS the plane at or under one threshold
-// and LEAVES it only past a second one at or above it, One UI's own
-// detect-near, release-far shape. THE NUMBERS ARE THE ARCHITECT'S and in a tuning
-// phase: the device config's TEMPORARY pair `pen_plane_enter` and
-// `pen_plane_exit` (templates 30 and 40, about 3 and 4 mm; the grammar, the
-// exit >= enter rule and the phase's closing rule at device_config.h),
-// pushed down once per process by set_pen_plane_thresholds into
-// pen_plane_enter_ and pen_plane_exit_, the two members the latch reads.
-void GuiPlatform::set_pen_plane_thresholds(int enter, int exit) {
-    pen_plane_enter_ = static_cast<float>(enter);
-    pen_plane_exit_  = static_cast<float>(exit);
-}
+// and LEAVES it only past a second one above it, One UI's own detect-near,
+// release-far shape. THE NUMBERS ARE THE ARCHITECT'S, tuned on the glass
+// (2026-09-27): ENTER at 85 counts, about 8.5 mm, and EXIT past 100, about
+// 10 mm. At that scale 85 sits near the edge of detection itself — the pen
+// is first detected somewhere in 81..117 — so the plane begins close to
+// where the pen is first seen: one first detected at or under 85 enters at
+// its first report, and one detected higher within about 3 mm more of
+// descent. The phase in which they were device keys is closed and the keys
+// struck (device_config.h's record); a retune is a recompile of these two
+// lines.
+constexpr float kPenPlaneEnter = 85.0f;
+constexpr float kPenPlaneExit  = 100.0f;
 
 // THE ONE PREDICATE — "is this pen report within the GUI's plane" — read by
 // both pen rules and nothing else: the hover doors (on_motion_event's hover
@@ -2116,8 +2113,8 @@ void GuiPlatform::set_pen_plane_thresholds(int enter, int exit) {
 //   - A HOVER report — HOVER_ENTER / HOVER_MOVE, and a BUTTON_PRESS /
 //     BUTTON_RELEASE while the pen is not on the glass — reads its distance
 //     against the threshold the latch names: OUT, it ENTERS at or under
-//     pen_plane_enter_; IN, it STAYS while at or under pen_plane_exit_ and
-//     goes OUT past it.
+//     kPenPlaneEnter; IN, it STAYS while at or under kPenPlaneExit and goes
+//     OUT past it.
 //   - A HOVER_EXIT and a CANCEL set the latch OUT and are never in. The
 //     platform sends the exit both when the pen leaves range and just before
 //     every tip down (harmless: the DOWN that follows is a contact, IN), and
@@ -2151,7 +2148,7 @@ bool GuiPlatform::pen_report_in_plane(const AInputEvent* event, int32_t masked,
             const float distance = AMotionEvent_getAxisValue(
                 event, AMOTION_EVENT_AXIS_DISTANCE, pen_index);
             pen_in_plane_ = distance <=
-                (pen_in_plane_ ? pen_plane_exit_ : pen_plane_enter_);
+                (pen_in_plane_ ? kPenPlaneExit : kPenPlaneEnter);
             return pen_in_plane_;
         }
         case AMOTION_EVENT_ACTION_HOVER_EXIT:

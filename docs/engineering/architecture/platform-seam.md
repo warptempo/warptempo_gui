@@ -335,7 +335,7 @@ drag coordinates floor instead of truncating.
   shape `ensure_device_available_for_play` already set.)
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. The EIGHT keys it stamps (six, plus the S Pen's TEMPORARY `pen_plane_enter` / `pen_plane_exit` pair of 2026-09-27) are per-DEVICE preferences
+  both-sides member. The SIX keys it stamps are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the clone's own `projects/`, Android 225 %
@@ -344,11 +344,12 @@ drag coordinates floor instead of truncating.
   `kDefaultProjectsRepo` and a
   blank `last_project` AND a blank `sync_path` — neither template guesses a
   destination for the mirror, a wrong guess aiming its creates, copies and
-  removals at a folder the user never named — and `pen_plane_enter=30` /
-  `pen_plane_exit=40` (`kPenPlaneEnterDefault` / `kPenPlaneExitDefault`;
-  the laptop reads nothing of them, having no pen). (Keys the template no longer
+  removals at a folder the user never named. (Keys the template no longer
   stamps: the lit plate's ink keys `fg_color` / `bg_color`, 2026-09-26 for
-  their tuning phase, struck at its close — settings.md; and `audio_player`, which stood here until
+  their tuning phase, struck at its close — settings.md; the S Pen's plane
+  keys, the single `pen_plane_distance` and then the pair `pen_plane_enter` /
+  `pen_plane_exit`, 2026-09-27 for theirs, struck at its close the same day
+  — settings.md; and `audio_player`, which stood here until
   2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
   spawnable player existing there — and retired whole with the in-app render
   player, which plays a render through the product's own engine on both
@@ -519,12 +520,11 @@ drag coordinates floor instead of truncating.
   `pen_report_in_plane`, which owns the plane's latch and is asked once per
   pen-carrying event; WITH HYSTERESIS since the same day's glass pass, a
   hover report entering at or under one threshold and a pen in the plane
-  leaving only past a second at or above it; a constexpr 30, about 3 mm,
-  when it landed, briefly one tuning key, and now the device config's
-  TEMPORARY pair `pen_plane_enter` / `pen_plane_exit`, templates 30 and 40,
-  pushed down once per process by `GuiPlatform::set_pen_plane_thresholds` —
-  a both-sides member the Wayland backend accepts and ignores; the latch's
-  transitions are touch.md's pen section): a hover
+  leaving only past a second above it — `kPenPlaneEnter` = 85 and
+  `kPenPlaneExit` = 100, about 8.5 and 10 mm, constexpr beside the latch in
+  the Android backend, the architect's glass-tuned numbers closing the
+  same day's tuning phase, whose device keys and startup push are struck;
+  the latch's transitions are touch.md's pen section): a hover
   or hovering button edge above it ends the hover (`pointer_leave` with
   `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face) and drops the
   Ctrl bit, and only an in-plane report is sampled. And two seam members

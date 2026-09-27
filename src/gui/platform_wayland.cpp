@@ -714,11 +714,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE PEN PLANE'S THRESHOLDS, TEMPORARY for their tuning phase (the
-    // pair's head at device_config.h). Stamped because every key is required
-    // on every device; this backend has no pen and nothing here reads them.
-    cfg.pen_plane_enter = kPenPlaneEnterDefault;
-    cfg.pen_plane_exit  = kPenPlaneExitDefault;
     return cfg;
 }
 
