@@ -207,7 +207,7 @@ GuiMediaState GuiCarTransport::derive() const {
     // the car: "instead of just T+W it should say A) T+W"): the active A/B
     // tab's own letter, a close parenthesis and a space, then the view pair
     // exactly as the view bar spells it. THE TAB TERM IS THIS LINE'S ALONE —
-    // view_pair_label is the VIEW BAR's speller and its four buttons paint
+    // view_pair_label is the VIEW BAR's speller and its three buttons paint
     // `T+W` with no tab in it — so the tab letter is composed here and in no
     // other place.
     st.artist         = std::string(1, app.active_tab_view) + ") " +

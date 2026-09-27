@@ -184,15 +184,15 @@ struct ToolbarChord {
 // the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
     // Row 1's RIGHT FLOAT — the view bar (2026-08-02). The
-    // ABSOLUTE view selectors: S+W, T+P, T+W — THE ROW ORDER HERE IS THE
+    // ABSOLUTE view selectors: S+W, T+W, T+P — THE ROW ORDER HERE IS THE
     // BAR'S (kViewBarButtons, paint_handler.cpp). Everything
     // the selectors own arrives by construction through on_key's own handler — the audio-first-then-markers
     // order, the refused-target-entry abort of the whole press, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
     // swallow. There is no second route to keep in step.
     {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
-    {RedesignButton::ViewTP,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
-    {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
+    {RedesignButton::ViewTW,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
+    {RedesignButton::ViewTP,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
     // The toolbar four — icon-row members since the 2026-08-12 relayout
     // dissolved row 2 (the chords, gates and flags are UNCHANGED by the move;
     // only the face and the band changed hands).
@@ -1254,7 +1254,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the view bar's ViewSW/ViewTP/ViewTW (bare 1/2/3, the admitted
+//   LIVE — the view bar's ViewSW/ViewTW/ViewTP (bare 1/2/3, the admitted
 //   view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the

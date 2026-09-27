@@ -1977,7 +1977,7 @@ struct TrimBarPressSeed {
 enum class RedesignButton {
     // Row 1, the menu row: the LEFT-FLOATING anchors, then the three of the
     // RIGHT-FLOATING view bar (2026-08-02) in their painted order — the
-    // absolute view selectors S+W / T+P / T+W, which are bare 1/2/3. (A
+    // absolute view selectors S+W / T+W / T+P, which are bare 1/2/3. (A
     // fourth, S+M on the backtick, led the bar from 2026-09-15 until the
     // magnification level markers column's deletion, architect 2026-09-23.)
     //
@@ -2054,7 +2054,7 @@ enum class RedesignButton {
     // (is_av_sync_stats_key, toggle_av_sync_stats, redesign_button_shift_
     // admits). kHelpPopupItems, DropdownMenu::Help and every arm that named
     // the anchor went with it.)
-    File, Edit, Settings, ViewSW, ViewTP, ViewTW,
+    File, Edit, Settings, ViewSW, ViewTW, ViewTP,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
     // carry their ordinary tooltips, and their Ctrl+Tab switches the active
@@ -2994,8 +2994,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Edit:
         case RedesignButton::Settings:
         case RedesignButton::ViewSW:
-        case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
+        case RedesignButton::ViewTP:
             return true;
         case RedesignButton::TabA:
         case RedesignButton::TabB:
@@ -5382,7 +5382,7 @@ struct AppState {
     // view, and GuiInputHandler::switch_active_audio_view_to lands the column
     // on 'W' before it leaves for source — the two writers holding the one
     // invariant between them. The three live combinations are therefore S+W,
-    // T+P, T+W — the three view selectors' — and S+P is load-fatal.
+    // T+W, T+P — the three view selectors' — and S+P is load-fatal.
     char active_markers_view = 'W';
 
     // Active audio view: 'S' = source (the authored timeline), 'T' =
@@ -12197,8 +12197,8 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // and the hover outline is the one thing that follows the grey; the
         // account of what a reader sees is at their enabled arm below.
         case RedesignButton::ViewSW:
-        case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
+        case RedesignButton::ViewTP:
         // (WALK BOTH TABS WAS A MEMBER from 2026-09-10 until its deletion on
         // 2026-09-14: the march is refused under the lock for a reason of
         // SHAPE — its own tab switch clears the selection and re-seats the
@@ -14940,8 +14940,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE UNFOCUSED WINDOW and never this bit (architect 2026-08-02; the
         // record and the arithmetic are at kRedesignViewBarBg, render.h).
         case RedesignButton::ViewSW:
-        case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
+        case RedesignButton::ViewTP:
             return !iteration_lock_greys(a, b);
         // GRID ITERATIONS READS THE LOCK AND NOTHING ELSE, because the `i`
         // arm has nothing else left to mirror (2026-09-09): the lamp is
@@ -15723,10 +15723,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // combination that lit none of them.
         case RedesignButton::ViewSW:     return a.active_audio_view   == 'S' &&
                                                 a.active_markers_view == 'W';
-        case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
-                                                a.active_markers_view == 'P';
         case RedesignButton::ViewTW:     return a.active_audio_view   == 'T' &&
                                                 a.active_markers_view == 'W';
+        case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
+                                                a.active_markers_view == 'P';
         case RedesignButton::TabA:       return a.active_tab_view     == 'A';
         case RedesignButton::TabB:       return a.active_tab_view     == 'B';
         // (THE TWO VIEW LAMPS LIT AWAY FROM HOME here from 2026-09-04 to
@@ -16400,8 +16400,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::Edit:
         case RedesignButton::Settings:
         case RedesignButton::ViewSW:
-        case RedesignButton::ViewTP:
-        case RedesignButton::ViewTW:     return {nullptr, nullptr};
+        case RedesignButton::ViewTW:
+        case RedesignButton::ViewTP:     return {nullptr, nullptr};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};

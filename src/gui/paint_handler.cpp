@@ -458,8 +458,9 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
 // workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
 // Color" bar, the one row the redesign had left out) reborn as the three
-// ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, which are bare 1/2/3; the bar reads
-// in the selectors' order left to right. (A fourth, S+M on the backtick, led
+// ABSOLUTE VIEW SELECTORS: S+W, T+W, T+P, which are bare 1/2/3; the bar reads
+// in the selectors' order left to right (the two target views traded slots and
+// keys, architect 2026-09-27). (A fourth, S+M on the backtick, led
 // the bar from 2026-09-15 until the magnification level markers column's
 // deletion, architect 2026-09-23. THE RIGHT-FLOAT FIGURES BELOW — 183 and 409
 // — WERE MEASURED WITH FOUR SELECTORS and are not re-measured: the bar is one
@@ -567,8 +568,8 @@ constexpr ViewBarButtonDef kViewBarButtons[] = {
     // Bare 1, 2 and 3 in order. Each is spelled audio letter then column
     // letter.
     {RedesignButton::ViewSW, 'S', 'W'},
-    {RedesignButton::ViewTP, 'T', 'P'},
     {RedesignButton::ViewTW, 'T', 'W'},
+    {RedesignButton::ViewTP, 'T', 'P'},
 };
 constexpr int kViewBarButtonCount =
     static_cast<int>(std::size(kViewBarButtons));
@@ -1616,7 +1617,7 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
     // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
-    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (the right
+    // "Settings", and the RIGHT one, the view bar's S+W / T+W / T+P (the right
     // float 2026-08-02, File replacing the Quit button 2026-08-13, the
     // Navigation anchor deleted from between them 2026-08-15, Edit arriving
     // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and

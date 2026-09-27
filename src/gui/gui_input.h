@@ -766,8 +766,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the magnification lamp; `0` already means "the whole song" to the
         // camera, and its shifted form says it to the trim).
         case GuiKeys::Digit0: return bare || sh;
-        // The three absolute view selectors: bare 1 is S+W, bare 2 T+P, bare 3
-        // T+W, and 4..9 bind nothing.
+        // The three absolute view selectors: bare 1 is S+W, bare 2 T+W, bare 3
+        // T+P, and 4..9 bind nothing.
         case GuiKeys::Digit1:
         case GuiKeys::Digit2: case GuiKeys::Digit3:
             return bare;
@@ -850,7 +850,7 @@ static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit3, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "bare 1 is the S+W view selector and bare 3 the T+W one; "
+              "bare 1 is the S+W view selector and bare 3 the T+P one; "
               "digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the nine-place contract's own "

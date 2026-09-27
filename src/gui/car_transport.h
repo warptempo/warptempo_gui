@@ -380,7 +380,7 @@ private:
     // THE MARKER COLUMN IS DELIBERATELY NOT AMONG THEM (2026-09-19). W, P and
     // M choose which flags are authored and painted and change NOTHING about
     // the sound this latch is waiting for: the same buffer, the same trim, the
-    // same state. Pressing `2` to look at the phase resets while the preview
+    // same state. Pressing `3` to look at the phase resets while the preview
     // settles would cost him the play, and the play he lost would have sounded
     // identical to the one he gets by pressing it again. A RESTORE IS ALREADY
     // COVERED: an undo entry carries all three view tags and its restore

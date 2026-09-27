@@ -387,7 +387,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         }
         if (gv.c == app.active_markers_view) { unchanged(); return true; }
         // THE TYPED `P` CROSSES TO TARGET FIRST (architect 2026-09-21: the
-        // phase-reset column is target view only) — bare 2's
+        // phase-reset column is target view only) — bare 3's
         // shape, the audio switch before the column entry. Entering target
         // CAN refuse (the tripwire class, silent on screen with its stderr
         // line), and a refused crossing changes nothing, so the commit reports

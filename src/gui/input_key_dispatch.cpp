@@ -412,7 +412,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+P / T+W). They are
+    // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+W / T+P). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no

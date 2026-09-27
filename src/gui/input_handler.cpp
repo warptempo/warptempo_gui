@@ -907,8 +907,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              working zoom centered on the playhead;
     //                              arms the hold posture
     //   - f (no mods)            → toggle the follow lamp (toggle_follow)
-    //   - 1/2/3 (no mods)        → the absolute view selectors (S+W / T+P /
-    //                              T+W), the ONE road onto both view
+    //   - 1/2/3 (no mods)        → the absolute view selectors (S+W / T+W /
+    //                              T+P), the ONE road onto both view
     //                              axes: each composes the S/T chokepoint
     //                              switch_active_audio_view_to with the column
     //                              entry GuiActiveViews::select_active_markers_view
@@ -1140,7 +1140,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // keyboard road.)
 
     // BARE 1 / 2 / 3 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01):
-    // `1` is S+W, `2` is T+P, `3` is T+W. (The backtick was a fourth, S+M,
+    // `1` is S+W, `2` is T+W, `3` is T+P (architect 2026-09-27: the two
+    // target views traded keys and bar slots). (The backtick was a fourth, S+M,
     // from 2026-09-19 until the magnification level markers column's
     // deletion, architect 2026-09-23.) They name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
     // consumed no-op — that is the whole difference from the deleted `t` and
@@ -1199,7 +1200,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
          key == GuiKeys::Digit3) &&
         !ctrl && !shift && !alt) {
         const char want_audio   = (key == GuiKeys::Digit1) ? 'S' : 'T';
-        const char want_markers = (key == GuiKeys::Digit2) ? 'P' : 'W';
+        const char want_markers = (key == GuiKeys::Digit3) ? 'P' : 'W';
         const bool column_changes = (app.active_markers_view != want_markers);
         switch_active_audio_view_to(want_audio);
         if (app.active_audio_view != want_audio) return;   // refused
@@ -1719,10 +1720,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
     // gesture, while
     // the Tab family changes no zoom (2026-08-05), so `0` is
-    // the one command that reaches the whole song. DIGITS 1, 2,
-    // 3 and 4 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (`4` since
-    // 2026-09-15; their block is up beside the axis handlers they compose);
-    // 5..9 are unbound. SHIFT+0 is RESET TRIM (architect 2026-09-22; its arm
+    // the one command that reaches the whole song. DIGITS 1, 2
+    // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is
+    // up beside the axis handlers they compose); 4..9 are unbound. SHIFT+0 is RESET TRIM (architect 2026-09-22; its arm
     // is further down this body, where the trim bracket family stood).
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         run_overview_command();
