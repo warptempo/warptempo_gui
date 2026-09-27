@@ -909,12 +909,15 @@ private:
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
-    // ONE PAINT-TIME COLOUR OVERRIDE, and one only (2026-08-01): the open flag
-    // editor's invalid-commit RED FLASH reaches its marker's stem, so a flashing
-    // flag and its stem agree. It is applied here rather than published into the
-    // stash because that is how the flash face itself works — an override over
-    // the resolved class, per frame, out of any cache (the definition carries
-    // the reasoning and the damage story).
+    // TWO PAINT-TIME COLOUR OVERRIDES, in this precedence: the open flag
+    // editor's invalid-commit RED FLASH reaches its marker's stem (2026-08-01),
+    // so a flashing flag and its stem agree; and THE HELD STEM (architect
+    // 2026-09-26): while AppState::camera_hold stands, every stem the playhead
+    // stands on (playhead_stands_on_stem) wears the hold lamp's white,
+    // kPlayheadHeadHeld, outside the `h` view. Both are applied here rather
+    // than published into the stash because each is an override over the
+    // resolved class, per frame, out of any cache (the definition carries the
+    // reasoning and the damage story).
     //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag
@@ -932,8 +935,14 @@ private:
     // alike) does not paint and the marker's stem IS the display.
     // The HEAD still paints — see the definition for the whole ruling, the two
     // ways a stem qualifies, and why this is a state compare and never a pixel
-    // one.
+    // one. It is the any-of over the stash of playhead_stands_on_stem.
     bool playhead_stem_suppressed() const;
+    // THE ONE PER-STEM QUESTION "does the playhead stand on this stem": the
+    // drag ride, or the land's exact-int64 coincidence at rest. Read by the
+    // suppression above (any stem) and by paint_marker_stems' held-stem
+    // override (each stem), so the column the playhead's stem yields and the
+    // stem the hold whitens are one answer.
+    bool playhead_stands_on_stem(const MarkerStem& stem) const;
     // THE RESTING CURSOR's waveform stem (the head and the marker-lane run
     // belong to paint_ruler_row). Paints OVER the marker stems (architect
     // 2026-09-23, invoked after paint_marker_stems; a coincident marker's stem

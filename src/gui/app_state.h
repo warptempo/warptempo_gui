@@ -4617,7 +4617,9 @@ struct AppState {
     // by `'`, in no sidecar and no settings vocabulary. THE HOLD'S LAMP IS
     // THE PLAYHEAD HEAD (architect 2026-09-24): the head paints white
     // (kPlayheadHeadHeld, render.h) while the bit stands and its grey
-    // (kPlayheadHead) when it does not, repainted by the per-tick face
+    // (kPlayheadHead) when it does not, and the stem of the marker the
+    // playhead stands on wears the same white while it stands (architect
+    // 2026-09-26, paint_marker_stems), both repainted by the per-tick face
     // comparator (main.cpp) — no icon, no card when it is armed or cleared;
     // follow wears its icon-row lamp.
     //
@@ -4752,9 +4754,11 @@ struct AppState {
     bool    camera_hold            = false;
     // THE HOLD LAMP'S LAST-SEEN BIT (architect 2026-09-24): the value of
     // camera_hold the per-tick face comparator (main.cpp) last damaged the
-    // ruler lane for, so the playhead head (paint_ruler_row) repaints white
-    // or grey on every flip of the bit — which the writers above spell no
-    // damage for. Written by that comparator alone; read by nothing else.
+    // ruler lane and the waveform area for, so the playhead head
+    // (paint_ruler_row) and the held marker's stem (paint_marker_stems,
+    // architect 2026-09-26) repaint white or in their own colours on every
+    // flip of the bit — which the writers above spell no damage for. Written
+    // by that comparator alone; read by nothing else.
     bool    camera_hold_lamp_last  = false;
 
     // FOLLOW — THE `f` LAMP (architect 2026-09-23, reinstated the evening

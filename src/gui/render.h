@@ -659,9 +659,17 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // painter, paint_ruler_row): the marker classes' ladder DISABLED > RED >
 // default is untouched and the head joins none of it. The held head takes
 // the SAME kPlayheadHeadAlpha — the head stays translucent in both states, so
-// the one alpha exception stays one. The stem, the scanner and the column do
-// not change. Its repaint is the per-tick comparator's (main.cpp), since the
-// bit flips with no damage of its own.
+// the one alpha exception stays one. The playhead's own stem, the scanner and
+// the column do not change. Its repaint is the per-tick comparator's
+// (main.cpp), since the bit flips with no damage of its own.
+//
+// AND THE HELD MARKER'S STEM WEARS IT (architect 2026-09-26: when the playhead
+// head goes white, the held marker's stem goes white): while the hold stands,
+// the marker the playhead stands on — the column where the playhead's stem
+// yields to the marker's (GuiPaintHandler::playhead_stem_suppressed) — stems
+// in kPlayheadHeadHeld over its class, red included, its flag unchanged. A
+// paint-time override at GuiPaintHandler::paint_marker_stems, which owns the
+// rule; the comparator's flip damages the waveform area for it.
 //
 // THE HEAD IS THE OPAQUE PALETTE'S ONE RULED EXCEPTION (architect 2026-09-23,
 // when the head moved up onto the ruler lane's bottom rows): it composites at
@@ -677,8 +685,9 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 inline constexpr GuiColor kPlayheadHead      = hex(0x8E8F91);
 inline constexpr double   kPlayheadHeadAlpha = 0.8;
 inline constexpr GuiColor kPlayheadStem      = hex(0xFCFCFC);
-// The hold lamp's lit head (above): the stem's white by ruling, one fact, so
-// it is spelled as the stem's constant rather than a second sample.
+// The hold lamp's lit head (above) and the held marker's stem: the stem's
+// white by ruling, one fact, so it is spelled as the stem's constant rather
+// than a second sample.
 inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
@@ -773,7 +782,11 @@ inline constexpr GuiColor kMarkerFlagEdgeRedSel  = hex(0x8E3C44);
 // when selected. Since 2026-09-16 this constant EQUALS the red class's rest
 // fill, by coincidence of provenance rather than by derivation — both are the
 // unselected removed crop's fill, arrived at separately — so it stays its own
-// constant and a retune of one is not a retune of the other.
+// constant and a retune of one is not a retune of the other. OVER EVERY CLASS'S
+// STEM, red's included, the hold posture paints the stem the playhead stands on
+// in kPlayheadHeadHeld while AppState::camera_hold stands (architect
+// 2026-09-26; a paint-time override at GuiPaintHandler::paint_marker_stems,
+// the published stem colour untouched).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
 // THE SEAM COLUMN between a flag box and the cell to its right is a 1px
@@ -3401,9 +3414,10 @@ struct FlagLaneRects {
 // paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved face — its class, brightened
 // when its flag box is (architect 2026-09-23); the consumer applies
-// exactly one override over it, the open flag editor's invalid-commit red flash
-// (a transient the painter has no business baking into a cache — the contract is
-// at GuiPaintHandler::paint_marker_stems).
+// two overrides over it, the open flag editor's invalid-commit red flash and,
+// while the hold posture stands, the hold lamp's white on the stem the playhead
+// stands on (architect 2026-09-26) — states the painter has no business baking
+// into a cache; the contract is at GuiPaintHandler::paint_marker_stems.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
