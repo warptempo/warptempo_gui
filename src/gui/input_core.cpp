@@ -1980,9 +1980,11 @@ void GuiInputCore::end_touch_nav_gesture(bool deliver_final_frame) {
     //     gesture leaves in the GUI is held OPEN. Its one GUI-side record
     //     since 2026-08-14 is the pinch's seated pivot (TouchNavZoomState),
     //     and it cannot survive a hard end: the seat exists only where a frame
-    //     was DELIVERED (it is taken by the first two-finger frame that
-    //     survives the GUI's refusal, applied or not), which is exactly the
-    //     condition this end hook is owed on, and the hook clears it.
+    //     was DELIVERED (it is taken by the first zoom frame — two-finger, or
+    //     one-finger carrying ctrl — that survives the GUI's refusal, applied
+    //     or not), which is exactly the condition this end hook is owed on,
+    //     and the hook clears it (the pen's retained anchor is kept only
+    //     inside the pen's own lift, never at a cancel or a capability loss).
     if (deliver_final_frame && touch_nav_frame_dirty_) {
         touch_nav_frame_dirty_ = false;
         deliver_touch_nav_frame(/*deliver_even_if_no_op=*/false);

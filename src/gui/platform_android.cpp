@@ -1864,11 +1864,16 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // the old bit and announces the edge to a live single-finger nav
             // itself, so there is no position to hand over and no frame owed.
             // AN EDGE ABOVE THE GUI'S PLANE was not sampled (the pen is out
-            // of reach there), so it drops the bit instead, the hover arm's
-            // own answer — and it leaves the retained anchor alone: released
-            // high up and pressed again before re-entering the plane, the
-            // anchor stands.
-            if (pen_present && !pen_in_plane) set_pen_ctrl(false);
+            // of reach there) and is no pointer, so it takes the hover arm's
+            // own above-plane answer whole: a standing hover ENDS
+            // (end_pen_hover — the outline, the menu row's fill and mode and
+            // the tooltip all go) and the bit drops. It leaves the retained
+            // anchor alone: released high up and pressed again before
+            // re-entering the plane, the anchor stands.
+            if (pen_present && !pen_in_plane) {
+                end_pen_hover();
+                set_pen_ctrl(false);
+            }
             return;
 
         case AMOTION_EVENT_ACTION_DOWN:
@@ -1888,29 +1893,31 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // bit its own DOWN just reported.
             //
             // THE RETAINED ZOOM ANCHOR (release inventory (a),
-            // set_pen_zoom_anchor_release_hook): A FINGER'S FIRST DOWN
-            // RELEASES IT — any finger contact ends the pen's lifted zoom. A
-            // finger landing while THE PEN OWNS a live stroke is an ignored
-            // contact and the stroke keeps its seat, but the stroke is marked
-            // (pen_stroke_shared_), so its lift keeps nothing. The pen's own
-            // first down opens a fresh stroke, unmarked; whether it releases
-            // the anchor was the sampling's answer above (b).
+            // set_pen_zoom_anchor_release_hook): EVERY FINGER DOWN RELEASES
+            // IT — any finger contact ends the pen's lifted zoom, at the
+            // contact itself, whatever the glass already holds. A finger
+            // landing while THE PEN OWNS a live stroke is an ignored contact:
+            // the release still fires (a seat retained by an earlier stroke
+            // that this one has not yet reached with a nav frame dies here,
+            // and the stem with it), and it is inert on the stroke's own live
+            // seat (the GUI clears a RETAINED seat alone), which the stroke
+            // keeps; the stroke is marked (pen_stroke_shared_), so its lift
+            // keeps nothing. The pen's own first down opens a fresh stroke,
+            // unmarked; whether it releases the anchor was the sampling's
+            // answer above (b).
             {
                 const bool finger_down = index < count && !is_pen(index);
                 if (!input_.touch_contact_active()) {
                     end_pen_hover();
-                    if (finger_down) {
-                        set_pen_ctrl(false);
-                        release_pen_zoom_anchor();
-                    } else {
-                        pen_stroke_shared_ = false;
-                    }
+                    if (finger_down) set_pen_ctrl(false);
+                    else pen_stroke_shared_ = false;
                 } else if (finger_down) {
                     const std::optional<GuiTouchTool> owner =
                         input_.touch_owner_tool();
                     if (owner && *owner == GuiTouchTool::Pen)
                         pen_stroke_shared_ = true;
                 }
+                if (finger_down) release_pen_zoom_anchor();
                 if (index < count && is_pen(index)) pen_on_glass_ = true;
             }
             if (index < count) {
@@ -1991,14 +1998,14 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 // so the final leg and the release ran under the bit the
                 // stroke last had, whatever buttons the up reports. A hover
                 // that follows reports the button afresh. A LIFT THAT KEEPS
-                // NOTHING RELEASES a retained anchor its stroke never reached
-                // (a motionless tap delivers no nav frame and no nav end) —
-                // the stroke a finger joined, the one reason a pen that held
-                // its button keeps nothing; otherwise inert.
+                // NOTHING FIRES NO RELEASE: every road to it already released
+                // at its own edge — a button up sampled in the plane (b, c) or
+                // a finger's down (a), the one reason a pen that held its
+                // button keeps nothing — and the lift's own nav end cleared
+                // any live seat.
                 if (pen_lift) {
                     pen_on_glass_ = false;
                     input_.touch_frame();
-                    if (!keep_seat) release_pen_zoom_anchor();
                     set_pen_ctrl(false);
                     return;
                 }

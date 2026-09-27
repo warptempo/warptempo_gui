@@ -6063,9 +6063,9 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
 
-// Paints the anchor stem (the Ableton pivot affordance) at the live zoom
-// gesture's current anchor column, full waveform height. TWO PRODUCERS, ONE
-// STEM:
+// Paints the anchor stem (the Ableton pivot affordance) at the zoom anchor's
+// current column, full waveform height — a live zoom gesture's, or the S
+// Pen's retained one between strokes. TWO PRODUCERS, ONE STEM:
 //   * THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while `zooming` — from a
 //     ctrl-armed press, or from a ctrl-down edge mid-drag, and gone again at
 //     the ctrl-up edge; the mode's contract is at ScrollDragState);
@@ -6077,7 +6077,12 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 //     strangeness, it seems like") — the record it reads is one seat shared
 //     by the TWO-FINGER PINCH and, since 2026-09-25, the ONE-FINGER CTRL ZOOM
 //     (`TouchNavZoomState::one_finger`), so the stem has a third producer
-//     riding the second's record.
+//     riding the second's record; AND THE SEAT'S THIRD POSTURE, THE PEN'S
+//     RETAINED ANCHOR (`TouchNavZoomState::retained`, architect 2026-09-27):
+//     a one-finger seat the pen lifted from with its side button held
+//     outlives the gesture, so the stem stays painted between strokes, at
+//     the anchor's live column, until the platform's release hook or a
+//     view-state clear takes the seat.
 // The gate is the gesture record and nothing else since 2026-08-05
 // (architect), so THE PRESS ITSELF SHOWS THE PIVOT — the headless zoom stem —
 // rather than the stem appearing only once the drag crosses the slack. The
@@ -6085,7 +6090,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // (arm_nav_zoom_press / the mode sync in on_motion); it
 // vanishes the moment its gate drops (release / button loss / the force-end
 // finalizer / the ctrl-up switch, each spelling its own damage; Esc no longer
-// ends a gesture at all). The stem is the ZOOM PIVOT and nothing more — the
+// ends a gesture at all) — on the glass, at the seat's clear, which a
+// retained pen anchor defers past the pen's lift. The stem is the ZOOM PIVOT and nothing more — the
 // playhead jump that briefly rode the strip drag was rolled back 2026-08-06
 // and the stem is what survives it.
 // THE PINCH OWES ITS DAMAGE AT BOTH ENDS, exactly as the other producer

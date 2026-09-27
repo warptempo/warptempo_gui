@@ -3018,7 +3018,9 @@ void GuiInputHandler::release_pen_zoom_anchor() {
     // A RETAINED SEAT ALONE: a seat a live gesture holds is that gesture's to
     // clear (its own frames and its end), so a release reaching one — a pen
     // report showing the button up mid-stroke, whose ctrl edge has already
-    // cleared it — changes nothing. The erase is clear_touch_zoom_seat's.
+    // cleared it, or a finger landing on a live pen stroke, which the
+    // platform marks so that stroke's lift keeps nothing — changes nothing.
+    // The erase is clear_touch_zoom_seat's.
     if (!app.touch_nav_zoom.retained) return;
     clear_touch_zoom_seat(app, viewport);
 }

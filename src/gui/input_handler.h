@@ -441,7 +441,9 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // an upgrade takes.
 // Its two non-writer callers are unchanged: the touch nav body's top (any
 // frame whose meaning is not the seat's — a pan frame, or a zoom of the other
-// kind) and end_touch_nav (every end of the gesture). THE
+// kind) and end_touch_nav (every end of the gesture but the pen's lift with
+// its side button held, which RETAINS a one-finger seat instead; the retained
+// seat's own clear is release_pen_zoom_anchor, through this). THE
 // FIRST OF THOSE IS REACHED AT THE DOWNGRADE ITSELF, and by construction rather
 // than by luck: the core delivers ONE single-finger frame at the two-to-one
 // transition even when both of its deltas are no-ops (the no-op exemption at

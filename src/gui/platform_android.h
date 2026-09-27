@@ -286,10 +286,11 @@ public:
     // THE RELEASE HOOK — fired (null-safe) where a retained anchor must die,
     // and this is the inventory (on_motion_event and on_app_cmd, by grep of
     // release_pen_zoom_anchor):
-    //   (a) A FINGER'S CONTACT — a finger's first down. A finger landing
-    //       while the PEN owns a live stroke is an ignored contact that
-    //       leaves the stroke its seat, and marks the stroke so its lift
-    //       keeps nothing and fires this instead;
+    //   (a) A FINGER'S CONTACT — every finger down, at the contact itself.
+    //       A finger landing while the PEN owns a live stroke is an ignored
+    //       contact: this still fires (taking a seat an earlier stroke
+    //       retained, inert on the live stroke's own), and the stroke is
+    //       marked so its lift keeps nothing;
     //   (b) THE PEN LANDING WITHOUT ITS BUTTON (its DOWN, sampled released);
     //   (c) THE FIRST IN-PLANE PEN REPORT SHOWING THE BUTTON UP, the plane
     //       being pen_report_in_plane's (hover reports at or under
@@ -555,8 +556,8 @@ private:
     bool window_activated_ = false;
     // THE S PEN IS HOVERING AS THE POINTER (2026-09-25): true between the
     // pen's translated HOVER_ENTER (the core's pointer_enter) and the edge
-    // that ends it — HOVER_EXIT, a hover report above the GUI's plane
-    // (pen_report_in_plane), ANY first contact down (the pen's tip or a
+    // that ends it — HOVER_EXIT, a hover report or hovering button edge
+    // above the GUI's plane (pen_report_in_plane), ANY first contact down (the pen's tip or a
     // finger), or focus loss, each delivering the core's pointer_leave. What
     // makes the doors sequence sanely is that one owner: a hover never
     // overlaps a touch the core is translating (on_motion_event's hover and

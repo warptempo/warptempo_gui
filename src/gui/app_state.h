@@ -1637,8 +1637,11 @@ struct ScrollDragState {
 // drops at the edge.
 //
 // LIFECYCLE (the body is apply_touch_nav_update, input_pointer.cpp):
-//   * MEANINGFUL ONLY while a two-finger phase is live.
-//   * SEATED AT THE FIRST TWO-FINGER FRAME THAT SURVIVES THE wheel_context
+//   * MEANINGFUL while a zoom phase is live — a pinch, or a one-finger frame
+//     carrying ctrl — and, for a one-finger seat alone, across the pen's
+//     lifts while it stands retained (the last bullet).
+//   * SEATED AT THE FIRST ZOOM FRAME (two-finger, or one-finger with ctrl)
+//     THAT SURVIVES THE wheel_context
 //     REFUSAL — so a frame the gesture refuses seats nothing, seating being a
 //     navigation act — at the song frame under THAT frame's centroid column.
 //     It is deliberately NOT gated on the frame APPLYING anything (2026-08-14,
@@ -1691,9 +1694,9 @@ struct ScrollDragState {
 //     only on the Android backend); the Wayland backend answers false, so the
 //     laptop's every end clears exactly as before. A RETAINED SEAT DIES
 //     (release_pen_zoom_anchor, through clear_touch_zoom_seat, erase
-//     included) at the platform's release hook — a finger's contact, the pen
+//     included) at the platform's release hook — every finger down, the pen
 //     landing without its button, the first in-plane pen report showing the
-//     button up, a stroke a finger joined lifting, a cancel and focus loss
+//     button up, a cancel and focus loss
 //     (the inventory is at GuiPlatform::set_pen_zoom_anchor_release_hook,
 //     platform_android.h) — and at every clear above that reaches any seat:
 //     the view-state writers and the source load. A motionless button-held
@@ -5674,11 +5677,15 @@ struct AppState {
     // release / lost button, by the force-end finalizer, and file load.
     ScrollDragState scroll_drag;
 
-    // The touch two-finger pinch's HELD PIVOT (contract at TouchNavZoomState).
-    // Not a pointer gesture and so deliberately not in the pointer-gesture
-    // clear lists: it is seated and cleared by the touch nav body itself and by
+    // The touch zoom's HELD PIVOT — the pinch's, or the one-finger ctrl
+    // zoom's (the S Pen's side button) — contract at TouchNavZoomState. Not a
+    // pointer gesture and so deliberately not in the pointer-gesture clear
+    // lists: it is seated and cleared by the touch nav body itself and by
     // end_touch_nav, which the platform fires on every end — a finger lift,
-    // wl_touch.cancel and touch-capability loss alike.
+    // wl_touch.cancel and touch-capability loss alike — and which clears it at
+    // every end but the pen's lift with its button held, where a one-finger
+    // seat stays RETAINED until the platform's release hook
+    // (release_pen_zoom_anchor) or a view-state clear takes it.
     TouchNavZoomState touch_nav_zoom;
 
     // Mouse drag-to-select inside the active text editor. Cleared on

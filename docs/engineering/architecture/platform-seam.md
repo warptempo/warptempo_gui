@@ -515,7 +515,7 @@ drag coordinates floor instead of truncating.
   hovering pen. SINCE 2026-09-27 BOTH PEN RULES READ ONE PLANE
   (`kPenPlaneDistance` = 30 raw `AXIS_DISTANCE` counts, about 3 mm, through
   the one predicate `pen_report_in_plane`; touch.md's pen section): a hover
-  above it ends the hover (`pointer_leave` with
+  or hovering button edge above it ends the hover (`pointer_leave` with
   `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face) and drops the
   Ctrl bit, and only an in-plane report is sampled. And two seam members
   carry THE PEN'S RETAINED ZOOM ANCHOR to the GUI's seat
