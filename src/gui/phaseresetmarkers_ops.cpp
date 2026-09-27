@@ -204,9 +204,10 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // a band clamped to N/2; the number is NOT made quantization-aware and the
 // band is NOT clamped, because a clamp would hide the engine's geometry
 // rather than fix it. And it is invisible where it is read: SUB-PIXEL at the
-// working zoom for every numeric slope (`c` is zoom level 2.0 = 1.25 ms/px,
-// ~55 output samples per pixel at 44.1 kHz, 60 at 48 kHz — the whole ~16.5
-// worst case is under a third of one pixel).
+// working zoom for every numeric slope (`c` is zoom level 2.0, one working
+// column per pixel: 55 output samples on the laptop at 44.1 kHz and 46 on the
+// tablet, 60 / 50 at 48 kHz — the whole ~16.5 worst case is under a third of
+// one pixel on the laptop and under 0.36 of one on the tablet).
 //
 // N/2 is measured in the target/output paint domain, then mapped to a
 // source frame. kPhaseResetLeadInSamples is an exact integer and the

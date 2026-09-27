@@ -5031,10 +5031,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                       static_cast<double>(kRulerMinorsPerStep)));
             if (col < 0 || col >= wave_w) continue;
             const bool major = (i == 0);
+            // waveform_line_px() wide (render.h, the class's one inventory),
+            // left edge on the tick's own column, clipped at the right edge.
             cairo_set_source_rgb(cr, kRulerTick.r, kRulerTick.g, kRulerTick.b);
-            cairo_rectangle(cr, lane.x + col, major ? major_top : minor_top,
-                            1, tick_bottom - (major ? major_top : minor_top));
-            cairo_fill(cr);
+            fill_waveform_line(cr, lane.x, wave_w, col,
+                               major ? major_top : minor_top, tick_bottom);
             if (!major) continue;
             // The label sits just right of its own major tick, so the number and
             // the line it names cannot drift apart.
@@ -5094,7 +5095,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // every repaint of this band first refills the lane ground above.
     //
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
-    // 1px kPlayheadStem run from the marker lane's top to the waveform top,
+    // waveform_line_px()-wide kPlayheadStem run (the waveform segment's own
+    // columns) from the marker lane's top to the waveform top,
     // where render_playhead's waveform segment (paint_playheads) begins, so
     // head, column and stem read as one unbroken object. It paints HERE, before
     // the flag blit that follows this pass, so a flag standing in the column
@@ -5134,7 +5136,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int col = static_cast<int>(std::nearbyint(cursor_px));
         const double s     = gui_scale_factor();
         const int    reach = playhead_head_half_px(0, s);  // the widest row
-        if (col + reach >= 0 && col - reach <= wave_w - 1) {
+        // THE STEM'S WIDTH: the head's rows take its parity so the head stays
+        // centred on the stem's own columns (playhead_head_half_px, render.h).
+        const int    t     = waveform_line_px();
+        if (col + reach + t - 1 >= 0 && col - reach <= wave_w - 1) {
             // THE ROW COUNT NEEDS NO FLOOR: 12 authored rows reach 6 at the
             // schema's own bottom (gui_scale 50), and only a factor below 1/24
             // could empty the loop — outside the vocabulary entirely. The
@@ -5166,17 +5171,17 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 // which also owns the tip's floor of 1.
                 const int half = playhead_head_half_px(r, s);
                 cairo_rectangle(cr, lane.x + col - half, head_top + r,
-                                2 * half + 1, 1);
+                                2 * half + t, 1);
             }
             // ONE FILL over the disjoint rows, so no pixel composites twice.
             cairo_fill(cr);
             cairo_restore(cr);
 
-            if (col >= 0 && col < wave_w && !playhead_stem_suppressed()) {
+            if (!playhead_stem_suppressed()) {
                 cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g,
                                      kPlayheadStem.b);
-                cairo_rectangle(cr, lane.x + col, marker.y, 1, marker.h);
-                cairo_fill(cr);
+                fill_waveform_line(cr, lane.x, wave_w, col, marker.y,
+                                   marker.y + marker.h);
             }
         }
     }
@@ -5777,7 +5782,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 }
 
 // THE OVERLAY RING — the phase-reset overlay's WHOLE visual (architect
-// 2026-07-27): the band's 1px opaque border in the phase-reset stem's own
+// 2026-07-27): the band's opaque border, waveform_line_px() thick (1px at
+// 100 %, the stem's own width at every scale), in the phase-reset stem's own
 // colour (see below) and nothing else,
 // painted AFTER the plate. It is a BOUNDARY LINE, like the playheads and the
 // stems, so an opaque line crossing waveform ink is correct and intended, and
@@ -5827,12 +5833,19 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
     // bottom border's last), with the verticals spanning every row between them.
+    // EVERY SIDE IS waveform_line_px() THICK (render.h, the class's one
+    // inventory), inward from the band's edges, so the left side's columns
+    // [x0, x0 + t) are the stem's own; a side is never wider than the band
+    // (both verticals then cover it), and the band is already clipped to the
+    // waveform's columns, so no side reaches past them.
+    const double t  = static_cast<double>(waveform_line_px());
+    const double sw = std::min(t, w);
     const double y0 = static_cast<double>(area.y);
     const double h  = static_cast<double>(area.h);
-    cairo_rectangle(cr, band.x0, y0, w, 1.0);            // top
-    cairo_rectangle(cr, band.x0, y0 + h - 1.0, w, 1.0);  // bottom
-    cairo_rectangle(cr, band.x0, y0, 1.0, h);            // left
-    cairo_rectangle(cr, band.x1 - 1.0, y0, 1.0, h);      // right
+    cairo_rectangle(cr, band.x0, y0, w, t);              // top
+    cairo_rectangle(cr, band.x0, y0 + h - t, w, t);      // bottom
+    cairo_rectangle(cr, band.x0, y0, sw, h);             // left
+    cairo_rectangle(cr, band.x1 - sw, y0, sw, h);        // right
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -6028,24 +6041,21 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             : -1;
 
     cairo_save(cr);
-    cairo_set_line_width(cr, 1.0);
     const double y0 = static_cast<double>(area.y);
     const double y1 = static_cast<double>(area.y + area.h);
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
-        // render.cpp); this restates that gate against the area this painter
-        // is handed, so no entry can leak its column into the chrome beside
-        // the waveform.
-        const double col = stem.x - static_cast<double>(area.x);
-        if (col < 0.0 || col >= static_cast<double>(area.w)) continue;
-        const double x_px = static_cast<double>(area.x) + col + 0.5;
+        // render.cpp); fill_waveform_line (render.h) restates that gate
+        // against the area this painter is handed, so no entry can leak its
+        // column into the chrome beside the waveform, and clips the line's
+        // waveform_line_px() width at the right edge.
+        const int col = static_cast<int>(std::nearbyint(
+            stem.x - static_cast<double>(area.x)));
         const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
                                                             : stem.color;
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
-        cairo_move_to(cr, x_px, y0);
-        cairo_line_to(cr, x_px, y1);
-        cairo_stroke(cr);
+        fill_waveform_line(cr, area.x, area.w, col, y0, y1);
     }
     cairo_restore(cr);
 }
@@ -6149,11 +6159,14 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // the playhead still paints everywhere else, unconditionally, and the HEAD
 // paints even here (on the ruler's bottom rows since 2026-09-23, just above
 // the coincident flag, so it stays whole; a ±1 column is invisible against the HEAD, whose widest row is
-// 2 * playhead_head_half_px(0, s) + 1 — 9px at the 50% floor, 19 at 100%, 73 at
-// the 400% ceiling, so it is at least nine columns wide anywhere in the schema
-// and the ±1 never approaches half of it. That is exactly what a 1px stem
-// beside another 1px stem is not, at any scale: the stem is one column by
-// ruling and does not scale at all, so there the same ±1 is the whole object).
+// 2 * playhead_head_half_px(0, s) + waveform_line_px() — 9px at the 50% floor,
+// 19 at 100%, 68 at the 350% ceiling, so it is at least nine columns wide
+// anywhere in the schema and the ±1 never approaches half of it. That is
+// exactly what a stem beside another stem is not, at any scale: a stem is
+// waveform_line_px() wide (render.h; 1 column at 100 %, 2 on the tablet —
+// the line scales with gui_scale since 2026-09-27), so there the same ±1 is
+// half the object or more, and a t-wide playhead one column left of a
+// marker, painting over the stems, covers t − 1 of that stem's t columns).
 // The suppression covers the WHOLE stem, its marker-lane run included (read by
 // paint_ruler_row as well as paint_playheads): in that lane the coincident
 // marker's flag fills the column, and a white run a column beside its left
@@ -6330,8 +6343,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form, drawn at the resting cursor column whatever the selection and
-    // whatever the region are doing — a 1px line painted solid straight over the
-    // plate ink. WITH ONE EXCEPTION SINCE 2026-08-01, and exactly one: where a
+    // whatever the region are doing — a waveform_line_px()-wide line (render.h)
+    // painted solid straight over the plate ink. WITH ONE EXCEPTION SINCE 2026-08-01, and exactly one: where a
     // MARKER'S stem already stands on the playhead's frame, the playhead's STEM
     // does not paint and that marker's stem is the display (035e669's
     // hidden-behind-the-marker model, reinstated — the whole ruling is at

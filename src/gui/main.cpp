@@ -88,15 +88,15 @@ namespace {
 // their pointer surface, 2026-08-12) — so nothing of that family is
 // file-local here.
 
-// ms-per-pixel is a continuous function of the zoom level (a real-valued
-// exponent): ms_per_px(level) = kZoomBaseMsPerPx * 2^(level - 1), computed
-// directly in samples_per_pixel_at. The level rests anywhere in the one
-// continuous domain [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest
-// zoom-in (0.625 ms/px, 1.2 s); each whole step is exactly 2x the previous, so the integer
-// rungs reproduce the historical ladder (0.625, 1.25, 2.5, ...) bit-for-bit,
-// and the fit-equivalent level (full zoom-out, whole song visible) is the
-// point on the same curve whose painted span width·q covers total
-// (fit_zoom_level).
+// Samples-per-pixel is a continuous function of the zoom level (a real-valued
+// exponent): spp(level) = column × 2^(level − 2), the column this device's
+// working column (working_column_frames, app_state.h), computed directly in
+// samples_per_pixel_at. The level rests anywhere in the one continuous domain
+// [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest zoom-in (half a
+// working column per pixel), level 2 the working zoom (one column), each whole
+// step exactly 2x the previous, and the fit-equivalent level (full zoom-out,
+// whole song visible) is the point on the same curve whose painted span
+// width·q covers total (fit_zoom_level).
 
 // playhead_half_px() (half-width of the column invalidated around a playhead
 // position) now lives in render.h as a single shared inline accessor,
@@ -601,14 +601,13 @@ GuiRect waveform_area(const AppState& a) {
     // gutter appears only at a non-multiple-of-16 width (never at
     // 1920/2304/2560/3840).
     //
-    // The step is 16 = 1600/gcd(44100,1600), the strictest step among
-    // standard sample rates (every standard rate's step divides 16): every
-    // standard rate's samples-per-pixel at a WHOLE zoom level is exact in
-    // sixteenths of a frame, and the painter grid is quantized to sixteenths
-    // (painter_quantized_spp, warp_frame_map_view.h), so at a multiple-of-16
-    // width W·q is a WHOLE number of frames at every level, whole or
-    // fractional — the right wall, the viewport grid and the visible span
-    // stay integral — and at whole levels q is the logical spp exactly.
+    // The step is 16 because the painter grid is quantized to sixteenths of
+    // a frame (painter_quantized_spp, warp_frame_map_view.h), so at a
+    // multiple-of-16 width W·q is a WHOLE number of frames at every level,
+    // whole or fractional — the right wall, the viewport grid and the visible
+    // span stay integral. Every whole level's spp is the whole working
+    // column times a power of two (a half at level 1), so at whole levels q is
+    // the logical spp exactly at every rate.
     constexpr int kGridStepPx = 16;
     const int effective_w = w - (w % kGridStepPx);
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
@@ -921,15 +920,16 @@ std::pair<long long, long long> compute_trim_samples(
     return {begin, end};
 }
 
-double samples_per_pixel_at(double zoom_level, int sample_rate) {
-    // One continuous domain, no sentinel: ms_per_px = kZoomBaseMsPerPx * 2^(level - 1).
-    // Fully level-determined and domain-independent — at the per-file effective
-    // ceiling the exponent already yields spp = ceil(16·total/width)/16, a
-    // painted span covering the whole song (fit_zoom_level), so there is no
-    // fit-file special case.
+double samples_per_pixel_at(double zoom_level, int64_t column_frames) {
+    // One continuous domain, no sentinel: spp = column × 2^(level − 2), the
+    // device-relative map (its rule at kWorkingZoomLevel, app_state.h), so
+    // level 2 is exactly one working column per pixel. Fully level-determined
+    // and domain-independent — at the per-file effective ceiling the exponent
+    // already yields spp = ceil(16·total/width)/16, a painted span covering
+    // the whole song (fit_zoom_level), so there is no fit-file special case.
     assert(zoom_level >= kMinZoom && zoom_level <= kMaxZoom);
-    return kZoomBaseMsPerPx * std::exp2(zoom_level - 1.0) *
-           static_cast<double>(sample_rate) / 1000.0;
+    assert(column_frames > 0);
+    return static_cast<double>(column_frames) * std::exp2(zoom_level - 2.0);
 }
 
 // THE FIT LEVEL for a span of `span_frames` on a strip `width_px` wide. It
@@ -938,30 +938,33 @@ double samples_per_pixel_at(double zoom_level, int sample_rate) {
 // columns CONTAIN the span, width·q >= span_frames — and a covering question
 // on a lattice is a ceiling: n = ceil(16 · span / width), the smallest whole
 // count of sixteenths per column that covers. The level returned is the one
-// whose spp is n/16 itself; the grid step's own nearbyint then finds n/16
-// already on the lattice (the level's spp lands within ULPs of it, at the
-// centre of q's rounding bin, so no ULP of the log2/exp2 round trip can flip
-// q), and width·n/16 >= span. GRIDS ROUND TO NEAREST, COVERING ROUNDS UP —
-// the project's rounding rule, not a patch: the exact solve of spp·width ==
-// span would leave q to round to the NEAREST sixteenth, half the time below
-// spp — a painted span up to width/32 frames SHORT of the span, so a whole
-// song would not fit its whole-song level (whole_song_visible and
-// clamp_viewport_start's visible >= total branch would fail, the whole-song
-// view panning one column). The overshoot is under one sixteenth of a frame
-// per column — under width/16 frames of silence past the span's end, which is
-// under one column once a column holds more than width/16 frames (any span
-// longer than about five seconds at 1920 px). UNCLAMPED: the callers own
-// their bounds. Two readers: effective_max_zoom_level below (the whole song)
-// and the span framer frame_span_into_view (input_handler.cpp), whose own two
-// callers are the trim-bar double-click (run_span_framing_command,
-// input_handler.cpp) and the group undo/redo restore that cannot fit
-// (undo.cpp).
-double fit_zoom_level(double span_frames, int width_px, int sample_rate) {
+// whose spp is n/16 itself, the map's inverse, level = 2 + log2((n/16) /
+// column); the grid step's own nearbyint then finds n/16 already on the
+// lattice: the forward map's exp2 of the log2 lands within a few ULPs of n/16
+// (a relative error near 1e-15, so under 1e-8 frame even at kMaxZoom's
+// spp of about 1.8e6 frames), far under the 1/32 frame that would move q to
+// another sixteenth, so q comes back exactly n/16, and width·n/16 >= span.
+// GRIDS ROUND TO NEAREST, COVERING ROUNDS UP — the project's rounding rule,
+// not a patch: the exact solve of spp·width == span would leave q to round to
+// the NEAREST sixteenth, half the time below spp — a painted span up to
+// width/32 frames SHORT of the span, so a whole song would not fit its
+// whole-song level (whole_song_visible and clamp_viewport_start's visible >=
+// total branch would fail, the whole-song view panning one column). The
+// overshoot is under one sixteenth of a frame per column — under width/16
+// frames of silence past the span's end, which is under one column once a
+// column holds more than width/16 frames (any span longer than about five
+// seconds at 1920 px). UNCLAMPED: the callers own their bounds. Two readers:
+// effective_max_zoom_level below (the whole song) and the span framer
+// frame_span_into_view (input_handler.cpp), whose own two callers are the
+// trim-bar double-click (run_span_framing_command, input_handler.cpp) and the
+// group undo/redo restore that cannot fit (undo.cpp).
+double fit_zoom_level(double span_frames, int width_px, int64_t column_frames) {
+    assert(column_frames > 0);
     const double sixteenths = std::ceil(
         span_frames * kPainterGridSubdivisions / static_cast<double>(width_px));
-    return 1.0 + std::log2(
-        sixteenths / kPainterGridSubdivisions * 1000.0 /
-        (kZoomBaseMsPerPx * static_cast<double>(sample_rate)));
+    return 2.0 + std::log2(
+        sixteenths / kPainterGridSubdivisions /
+        static_cast<double>(column_frames));
 }
 
 // The per-file effective zoom-out ceiling: the fit level of the whole song
@@ -978,11 +981,11 @@ double fit_zoom_level(double span_frames, int width_px, int sample_rate) {
 // in practice.
 double effective_max_zoom_level(int waveform_width_px,
                                 int64_t total_frames,
-                                int sample_rate) {
-    if (waveform_width_px <= 0 || total_frames <= 0 || sample_rate <= 0)
+                                int64_t column_frames) {
+    if (waveform_width_px <= 0 || total_frames <= 0)
         return kMinZoom;  // degenerate: collapse to the floor
     const double fit = fit_zoom_level(static_cast<double>(total_frames),
-                                      waveform_width_px, sample_rate);
+                                      waveform_width_px, column_frames);
     return std::clamp(fit, kMinZoom, kMaxZoom);
 }
 
@@ -1001,7 +1004,7 @@ double clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level) 
     if (total <= 0) return level;
     return std::clamp(level, kMinZoom,
                       effective_max_zoom_level(waveform_area(a).w, total,
-                                               audio.sample_rate()));
+                                               audio.working_column()));
 }
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
@@ -1016,7 +1019,7 @@ int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
     // frames at every level (painter_quantized_spp) — so the keep-visible
     // tests, the centring, the right wall and the whole-song test all measure
     // the span the waveform actually shows.
-    const double spp = samples_per_pixel_at(a.zoom_level, audio.sample_rate());
+    const double spp = samples_per_pixel_at(a.zoom_level, audio.working_column());
     return static_cast<int64_t>(std::nearbyint(
         painter_quantized_spp(spp) * static_cast<double>(area.w)));
 }
@@ -1028,7 +1031,7 @@ double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
     // spp no longer needs the total, but dropping the evaluation would move the
     // cache-rebuild/diagnostic timing — deliberately kept identical.
     (void)live_total_frames(a, audio);
-    return samples_per_pixel_at(a.zoom_level, audio.sample_rate());
+    return samples_per_pixel_at(a.zoom_level, audio.working_column());
 }
 
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
@@ -1108,7 +1111,7 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
         const int64_t live_total = live_total_frames(a, audio);
         if (live_total > 0) {
             a.zoom_level = effective_max_zoom_level(
-                waveform_area(a).w, live_total, audio.sample_rate());
+                waveform_area(a).w, live_total, audio.working_column());
         }
     }
     a.zoom_level = clamp_zoom_level(a, audio, a.zoom_level);
@@ -1187,8 +1190,8 @@ double scanner_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     // (playhead_scanner_precise) rather than the quantized integer sample, so a
     // per-frame viewport rescale during a strip-drag zoom slides the scanner
     // smoothly instead of jittering on integer-frame steps. The line still
-    // paints as a hard 1px column at the rounded pixel; only its basis is
-    // continuous.
+    // paints as a hard waveform_line_px()-wide rect at the rounded pixel
+    // (render_playhead); only its basis is continuous.
     return (a.playhead_scanner_precise - static_cast<double>(vp_start)) / spp;
 }
 
@@ -1325,10 +1328,11 @@ struct GuiProjectOutcome {
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
 // contract is at platform.h; gui_main below is the loop). The window, the
-// input core, the device config and the render cache are the caller's and
-// outlive every call.
+// input core, the device config, the held waveform width and the render cache
+// are the caller's and outlive every call.
 GuiProjectOutcome run_project(GuiPlatform&            gui,
                               DeviceConfig&           device_config,
+                              int&                    held_waveform_width_px,
                               RenderCache&            render_cache,
                               const GuiProjectSource& project,
                               bool&                   window_up) {
@@ -2343,7 +2347,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // takes the project's NAME from here rather than deriving one from
             // the source's parent folder (the rule is at
             // GuiFileLoader::load_file).
-            if (!file_loader.load_file(project)) {
+            if (!file_loader.load_file(project, held_waveform_width_px)) {
                 // A project is opened by rebuilding this whole object set
                 // around it and there is no in-session replacement surface,
                 // so every load refusal is terminal. It is also the
@@ -3498,6 +3502,14 @@ int gui_main(const char* argument) {
     RenderCache render_cache;
     render_cache.init();
 
+    // THE HELD WAVEFORM WIDTH, ONCE PER PROCESS, beside the device config (the
+    // working column's rule is at working_column_frames, app_state.h): 0 until
+    // the first project's load writes waveform_area(app).w into it
+    // (GuiFileLoader::load_file); every project the loop opens computes its
+    // own rate's working column from it, so the zoom map's column never
+    // re-derives on a resize or a later open.
+    int held_waveform_width_px = 0;
+
     // THE PROJECT LOOP. Everything ONE PER PROCESS is above; everything ONE PER
     // PROJECT is run_project's, built around the session's source and torn
     // down before it returns. run() returns for two reasons — an exit, and
@@ -3524,7 +3536,8 @@ int gui_main(const char* argument) {
     int  exit_status = 0;
     for (;;) {
         const GuiProjectOutcome outcome =
-            run_project(gui, device_config, render_cache, project, window_up);
+            run_project(gui, device_config, held_waveform_width_px,
+                        render_cache, project, window_up);
         if (outcome.reopen.empty()) {
             exit_status = outcome.exit_status;
             break;

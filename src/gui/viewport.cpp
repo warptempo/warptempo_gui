@@ -948,8 +948,9 @@ void Viewport::follow_scroll_if_needed() {
 //
 // WALK — the Tab walk, always a single frame (the paired march's steps came
 // here until 2026-09-26, when each took bare `c`'s act instead):
-//   * AT THE WORKING ZOOM OR FINER (app.zoom_level <= kWorkingZoomLevel; 2.0
-//     exactly is "at working", anything above is coarse) the subject is
+//   * AT THE WORKING ZOOM OR FINER, AS PAINTED (the painted step q is at
+//     most the working column, audio.working_column(); `c`'s level 2.0 paints
+//     q = column exactly, any coarser q is coarse) the subject is
 //     CENTRED, ON SCREEN OR NOT, the centring body's own placement: the walk
 //     always moves one way and every landing frames alike, so no half of the
 //     screen is skipped;
@@ -1036,8 +1037,13 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     if (W <= 0 || sr <= 0 || visible <= 0) return true;
     const int64_t vp_end = app.viewport_start_sample + visible;
     const bool on_screen = lo >= app.viewport_start_sample && hi < vp_end;
-    // The working-zoom read, inline by ruling: the walk's one zoom term.
-    const bool fine = app.zoom_level <= kWorkingZoomLevel;
+    // The working-zoom read, inline by ruling: the walk's one zoom term. AS
+    // PAINTED, q against the working column, not the level against 2.0: a
+    // rest just above level 2 (under a 1/32 frame over the column) paints
+    // the working picture exactly and walks like it.
+    const bool fine =
+        painter_samples_per_pixel(app, audio, waveform_area(app)) <=
+        static_cast<double>(audio.working_column());
     bool centre = false;
     switch (kind) {
         case LandingKind::Walk:

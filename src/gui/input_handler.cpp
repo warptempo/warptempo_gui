@@ -3049,7 +3049,7 @@ OverviewCommandTarget overview_command_target(const AppState& app,
     }
     const double full_out = effective_max_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio),
-        audio.sample_rate());
+        audio.working_column());
     if (app.zoom_level >= full_out) {
         t.arm = OverviewCommandTarget::Arm::NoOp;
         return t;
@@ -3182,8 +3182,8 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;
-    const int     sr   = audio.sample_rate();
-    if (W <= 0 || sr <= 0) return;
+    if (W <= 0) return;
+    const int64_t column = audio.working_column();
     const int64_t total = live_total_frames(app, audio);
     if (total <= 0) return;
 
@@ -3212,16 +3212,17 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // the ceiling itself.
     double span = fhi - flo;
     if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
-    const double raw_level = fit_zoom_level(span, W, sr);
-    const double ceiling = effective_max_zoom_level(W, total, sr);
+    const double raw_level = fit_zoom_level(span, W, column);
+    const double ceiling = effective_max_zoom_level(W, total, column);
     const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
 
     // CENTER: place the margined span's midpoint at the centre of the PAINTED
     // window at the target level, visible_t = W·q_t (samples_visible's span at
     // that level, the one geometry land_subject's fit test and centring read) —
-    // at the fit level and at every standard rate's whole level q_t is the
-    // level's spp itself, and a rate whose step is not a sixteenth centres on
-    // the window it will actually paint. Only the FINAL start is nearbyint'd;
+    // at the fit level and at every whole level (column × 2^(L − 2), a whole
+    // number of frames or a half at level 1) q_t is the level's spp itself,
+    // and a level clamped to kMinZoom or the ceiling centres on the window it
+    // will actually paint. Only the FINAL start is nearbyint'd;
     // the viewport grid is clamp_viewport_start's (the chokepoint). In the
     // ordinary UNCLAMPED fit W·q_t is the margined span rounded UP to the
     // sixteenth-frame grid (under W/16 frames over, fit_zoom_level), so
@@ -3233,7 +3234,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // branch.
     const double mid       = 0.5 * (flo + fhi);
     const double visible_t =
-        painter_quantized_spp(samples_per_pixel_at(target_level, sr)) *
+        painter_quantized_spp(samples_per_pixel_at(target_level, column)) *
         static_cast<double>(W);
     const int64_t target_start =
         static_cast<int64_t>(std::nearbyint(mid - visible_t / 2.0));

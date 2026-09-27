@@ -15,9 +15,10 @@
 // THE LEVELER IS A LOUDNESS NORMALIZER PER WINDOW (architect 2026-09-24): one
 // named audio tool, measuring each window's short-term loudness and bringing
 // it to a target. Its unit is the painted column at WORKING ZOOM — the
-// placement-instrument zoom, where one column is
-// kZoomBaseMsPerPx * 2^(kWorkingZoomLevel - 1) of source time (55 frames at
-// 44.1 kHz) — which carries two numbers read in one pass over the samples:
+// placement-instrument zoom, where one column is the device's WORKING COLUMN
+// (working_column_frames, app_state.h, handed in by the caller: 55 frames on
+// the laptop at 44.1 kHz, 46 on the tablet) — which carries two numbers read
+// in one pass over the samples:
 // its PEAK, the plate renderer's own min/max reduced to one number (the
 // largest |x| over both channels), and its MEAN SQUARE (the sum of x^2 over
 // its 2 * col samples, both channels together, divided by 2 * col).
@@ -160,8 +161,9 @@
 //   (waveform_expander_multiplier_over), and multiplies it into both tips
 //   of BOTH lit bars — beside the gain on the outer, beside the compressor
 //   on the inner (architect 2026-09-25: both stages on both bars) — before
-//   each bar's one clamp. At working zoom that is the
-//   column's own. Coarser, the bar is the raw min/max of every member, so
+//   each bar's one clamp. At working zoom in source view that is exactly the
+//   column's own (the plate's column and the analysis column are one width,
+//   and the viewport rests on the column's multiples). Coarser, the bar is the raw min/max of every member, so
 //   the member carrying the extreme is not known without a second pyramid;
 //   the smallest reduction is the one choice under which the coarse bar is
 //   never SHORTER than any member's own expanded bar (raw peak times the
@@ -266,9 +268,11 @@ struct WaveformGainCurve {
 
 // `interleaved` is stereo float32, `total_frames` frames (2 * total_frames
 // floats) — the decoded source buffer as GuiAudio holds it. A zero-frame
-// input returns the empty curve.
+// input returns the empty curve. `column_frames` is the analysis column, the
+// device's working column (>= 1; GuiAudio::load's, fixed for the audio's
+// lifetime, so the plate fingerprint carries no column term).
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate);
+                                       int sample_rate, int64_t column_frames);
 
 // The gain at one source frame: linear between the two nearest hops, the
 // first and last hop's gain held beyond the ends. 1.0 for an empty curve.
@@ -287,9 +291,12 @@ double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame);
 float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (14 since the inner bar's three numbers were hard-coded,
-// 2026-09-27, the foreground gain at the exact half — the fingerprint's
-// formula back to the version alone; 13 was the three as tuning keys, hashed
+// the rule above (15 since the analysis column became the device's working
+// column, 2026-09-27, handed in by the load — the column itself is no
+// fingerprint term: the plates live in memory, the cache is per project and
+// the column is fixed for its lifetime; 14 was the inner bar's three numbers
+// hard-coded, the same day, the foreground gain at the exact half — the
+// fingerprint's formula back to the version alone; 13 was the three as tuning keys, hashed
 // with the version, the same day; 12 was the core shade's third per-hop
 // array struck, 2026-09-26; 11 was the core shade joining, 2026-09-25; 10 was the
 // compressor's two numbers hard-coded, the same day —
@@ -306,4 +313,4 @@ float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t 
 // Nothing derived from the gain outlives the process — the curve is derived
 // at every load (the `.peaks` sidecar carries no curve) and the plates live
 // in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 14;
+inline constexpr uint64_t kWaveformGainVersion = 15;

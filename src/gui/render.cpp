@@ -8,6 +8,7 @@
 #include "warp_frame_map_view.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -164,7 +165,8 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     // grey #686a6c, whose last paint site this was); the shape is unchanged, and
     // waveform_content_rect — the band every band-filling pass clips to — reads
     // the same waveform_border_px, so the two cannot drift. Nothing covers the
-    // border but the deliberate full-height 1px verticals (playheads, stems),
+    // border but the deliberate full-height verticals (playheads, stems,
+    // waveform_line_px() wide),
     // which is their recorded z-intent and survives row 6 unchanged. Integer-
     // edged rects with AA off, the crisp-line convention. An area too short to
     // carry both borders draws neither rather than overlapping them.
@@ -186,6 +188,7 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
+                     int outline_px,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -280,7 +283,7 @@ void render_waveform(cairo_surface_t* dest,
     // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
     // filled inclusively with the opaque ink word (with the lamp lit, the
     // outer bar goes down first and the inner over it, both in the ink word,
-    // the inner's one-pixel outline in the outline word — the rule is at this
+    // the inner's outline (outline_px thick) in the outline word — the rule is at this
     // function's declaration).
     // There is no fractional coverage and no inter-column connectivity of
     // any kind — a spike stands alone, exactly as in a classic min/max
@@ -437,29 +440,37 @@ void render_waveform(cairo_surface_t* dest,
 
     // THE LIT INNER BAR: its rows, each written ONCE with the ink word or the
     // outline word (the outline recolours pixels of the bar's own shape and
-    // adds none). THE
-    // CONTOUR FROM THE THREE COLUMNS' EXTENTS, no 2D scan: a row of this bar
-    // is INTERIOR iff its up and down neighbours are in this bar (every row
-    // but r0 and r1, and those too at an open end) and its left and right
-    // neighbours are in theirs (inside the neighbour's [r0, r1]; a null
-    // neighbour — beyond the plate's side edge — counts as inside). That
-    // interior is one interval [lo, hi] because each bar is one; the rows of
-    // the bar above and below it are the border, the whole bar when it is
-    // empty. An empty neighbour (r0 > r1) empties it, so its side is all
-    // border, as it should be.
-    const auto outline_bar = [&](int x, const BarRows& b,
-                                 const BarRows* left, const BarRows* right) {
+    // adds none). THE CONTOUR FROM THE 2t + 1 COLUMNS' EXTENTS, t =
+    // outline_px (the line width, render.h's waveform_line_px, snapshotted on
+    // the job), no 2D scan: a row of this bar is INTERIOR iff every row within
+    // t above and below it is in this bar (rows [r0 + t, r1 - t], and r0 / r1
+    // themselves at an open end) and it lies inside every column within t on
+    // each side (inside that column's [r0, r1]; a column beyond the plate's
+    // side edge counts as inside) — an erosion at distance t, the
+    // four-neighbour test at t = 1. That interior is one interval [lo, hi]
+    // because each bar is one; the rows of the bar above and below it are the
+    // border, the whole bar when it is empty. An empty neighbour (r0 > r1)
+    // empties it, so its side is all border, as it should be.
+    assert(!gain_or_null || outline_px >= 1);
+    const int t = outline_px;
+    const auto outline_bar = [&](int i, const std::vector<BarRows>& rows) {
+        const int x = area.x + i;
         if (x < col_lo || x >= col_hi) return;
+        const BarRows& b = rows[static_cast<size_t>(i)];
         if (b.r0 > b.r1) return;
-        int lo = b.open_top ? b.r0 : b.r0 + 1;
-        int hi = b.open_bot ? b.r1 : b.r1 - 1;
-        if (left) {
-            lo = std::max(lo, left->r0);
-            hi = std::min(hi, left->r1);
-        }
-        if (right) {
-            lo = std::max(lo, right->r0);
-            hi = std::min(hi, right->r1);
+        int lo = b.open_top ? b.r0 : b.r0 + t;
+        int hi = b.open_bot ? b.r1 : b.r1 - t;
+        for (int d = 1; d <= t; ++d) {
+            if (i - d >= 0) {
+                const BarRows& n = rows[static_cast<size_t>(i - d)];
+                lo = std::max(lo, n.r0);
+                hi = std::min(hi, n.r1);
+            }
+            if (i + d < area.w) {
+                const BarRows& n = rows[static_cast<size_t>(i + d)];
+                lo = std::max(lo, n.r0);
+                hi = std::min(hi, n.r1);
+            }
         }
         if (lo > hi) {
             for (int y = b.r0; y <= b.r1; ++y) put(x, y, outline_word);
@@ -472,9 +483,10 @@ void render_waveform(cairo_surface_t* dest,
     };
 
     // THE LIT INNER BARS' ROWS, one per column of this call, held so the
-    // write pass can read both neighbours of every column. Both callers are
-    // full-plate renders, so this call's columns ARE the plate and its first
-    // and last columns' missing neighbours are the plate's side edges.
+    // write pass can read the neighbours within t of every column. Both
+    // callers are full-plate renders, so this call's columns ARE the plate and
+    // its first and last columns' missing neighbours are the plate's side
+    // edges.
     std::vector<BarRows> inner_rows;
     if (gain_or_null) inner_rows.resize(static_cast<size_t>(area.w));
 
@@ -533,12 +545,7 @@ void render_waveform(cairo_surface_t* dest,
     // outer the loop above wrote — replace-writes, so where the two overlap
     // the inner wins, as it always has.
     if (gain_or_null) {
-        for (int i = 0; i < area.w; i++) {
-            const size_t k = static_cast<size_t>(i);
-            outline_bar(area.x + i, inner_rows[k],
-                        i > 0          ? &inner_rows[k - 1] : nullptr,
-                        i + 1 < area.w ? &inner_rows[k + 1] : nullptr);
-        }
+        for (int i = 0; i < area.w; i++) outline_bar(i, inner_rows);
     }
 
     // Last CPU write is done — hand the buffer back to cairo.
@@ -573,25 +580,23 @@ void render_playhead(cairo_t* cr,
     // zoom-out of a 30-minute movement, where one column is nearly a second
     // wide). The POINT model is what is load-bearing and it is not traded for
     // the cell rule here: every column→frame landing in the product rides it,
-    // with the worst-case round-trip residue derived as 0.345 px in
-    // zoom-viewport-strip.md. Reading the bar as [g(c) − spp/2, g(c) + spp/2)
-    // is the alternative that was declined.
-    const double col  = std::nearbyint(playhead_pixel_x);
-    const double x_px = area.x + col + 0.5;
+    // with the worst-case round-trip residue of zoom-viewport-strip.md's
+    // derivation (half a source frame at the 1/16 slope floor plus three half
+    // target frames, 9.5 / q px at the deepest zoom's q, half the working
+    // column): 0.345 px on the laptop at 44.1 kHz (q = 27.5), 0.413 px on the
+    // tablet (q = 23). Reading the bar as [g(c) − spp/2, g(c) + spp/2) is the
+    // alternative that was declined.
+    const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
     cairo_save(cr);
-    // The 1px vertical line paints whenever its column is onscreen (it is
-    // column-gated only, so it never leaks into an adjacent region).
+    // The waveform_line_px()-wide line (render.h) paints whenever its column
+    // is onscreen (gated on its own column and clipped at the right edge by
+    // fill_waveform_line, so it never leaks into an adjacent region).
     // ONE SOLID LINE, straight over whatever it crosses — waveform ink included.
     // A saturated stem over the dark ink reads without any cut, so there is no
     // two-tone overdraw here (see the declaration for the retirement).
-    if (col >= 0.0 && col < static_cast<double>(area.w)) {
-        cairo_set_source_rgb(cr, color.r, color.g, color.b);
-        cairo_set_line_width(cr, 1.0);
-        cairo_move_to(cr, x_px, area.y);
-        cairo_line_to(cr, x_px, area.y + area.h);
-        cairo_stroke(cr);
-    }
+    cairo_set_source_rgb(cr, color.r, color.g, color.b);
+    fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     cairo_restore(cr);
 }
 
@@ -599,10 +604,12 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     if (area.w <= 0 || area.h <= 0) return;
     // The clamp is where the affordance lives: an anchor pushed to (or past) a
     // song edge pins to the edge column, so the stem draws exactly there.
+    // The line is waveform_line_px() wide (render.h), its left edge on the
+    // column, clipped at the right edge (fill_waveform_line), so an anchor
+    // pinned to the last column paints that one column.
     if (col < 0)          col = 0;
     if (col >= area.w)    col = area.w - 1;
 
-    const double x_px = static_cast<double>(area.x) + col + 0.5;
     cairo_save(cr);
     // THE ANCHOR STEM IS THE PLAYHEAD'S WHITE (architect 2026-08-01, at the
     // row-6 live look): kPlayheadStem #fcfcfc, hard-coded per the redesign's
@@ -613,10 +620,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     // than a marker stem": it is a position line during a gesture, and the
     // product's position lines are this white.
     cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g, kPlayheadStem.b);
-    cairo_set_line_width(cr, 1.0);
-    cairo_move_to(cr, x_px, static_cast<double>(area.y));
-    cairo_line_to(cr, x_px, static_cast<double>(area.y + area.h));
-    cairo_stroke(cr);
+    fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     cairo_restore(cr);
 }
 

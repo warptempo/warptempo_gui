@@ -59,7 +59,12 @@ struct GuiFileLoader {
     // deriving one from the source's parent — a derivation that answers a
     // different name whenever a link is in the way. The source is the same
     // object's `source`, so the pair can never be mismatched.
-    bool load_file(const GuiProjectSource& project);
+    // `held_waveform_width_px` is the PROCESS's held waveform width (gui_main
+    // owns it beside the device config): 0 until the first project's load,
+    // which writes waveform_area(app).w into it; every load then computes its
+    // source's working column from it (working_column_frames, app_state.h),
+    // so the column never re-derives on a resize or a later open.
+    bool load_file(const GuiProjectSource& project, int& held_waveform_width_px);
 };
 
 // THE DRY-RUN IS THE REAL LOAD'S FAILURE VOCABULARY MINUS THE DECODE

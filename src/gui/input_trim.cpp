@@ -924,15 +924,14 @@ void GuiInputHandler::commit_trim_drag() {
             // snap is nearest-column, so it moves an off-grid coincident value
             // in EITHER direction — toward the window's inside or away from it
             // — and only the toward case is caught by the partner re-clamp
-            // below. Worked at working zoom, q = 55.125 (44.1 kHz): a partner
-            // end at 12345 sits at 12345/55.125 = 223.95 → column 224 → grid
-            // frame 12348, so a begin pinned on it snapped PAST it and the
+            // below. Worked at the laptop's working zoom, q = 55 (44.1 kHz): a
+            // partner end at 12350 sits at 12350/55 = 224.55 → column 225 →
+            // grid frame 12375, so a begin pinned on it snapped PAST it and the
             // re-clamp pulled it back — equality restored, clear fired. But a
-            // partner end at 12320 sits at 223.49 → column 223 → grid frame
-            // 12293 (nearbyint(223 × 55.125) = nearbyint(12292.875)), so the
-            // pinned begin snapped AWAY to 12293, the begin re-clamp
-            // (`v > partner`) did not bind, and the pair rested [12293, 12320]
-            // — a 27-frame (~0.6 ms) sliver auto_clear_crossed_trim's
+            // partner end at 12345 sits at 224.45 → column 224 → grid frame
+            // 12320 (224 × 55), so the pinned begin snapped AWAY to 12320, the
+            // begin re-clamp (`v > partner`) did not bind, and the pair rested
+            // [12320, 12345] — a 25-frame (~0.6 ms) sliver auto_clear_crossed_trim's
             // `end <= begin` compare does not recognise, which silently
             // defeated the ruled quick-clear on roughly half the phase space of
             // an off-grid partner. (The comment that stood here claimed "the

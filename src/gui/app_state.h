@@ -60,19 +60,50 @@ struct GuiTargetRender;
 // whatever the live ceiling becomes. And `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
 // Tab walk changes no zoom at any level (architect 2026-09-22). Smaller level = less file per window
-// = more zoomed in. kMinZoom (1.2 s) is the deepest zoom-in the continuous
-// zoom gestures reach; kWorkingZoomLevel (2.4 s, one step shallower) is the
-// fine-tuning rest point `c` lands on, where the working-zoom authoring-grid
-// bit-exactness claims hold. A continuous zoom gesture rests where it ends.
+// = more zoomed in. kMinZoom is the deepest zoom-in the continuous zoom
+// gestures reach, one step finer than kWorkingZoomLevel, the fine-tuning rest
+// point `c` lands on. A continuous zoom gesture rests where it ends.
 //
-// The level→scale map is ms_per_px(level) = kZoomBaseMsPerPx * 2^(level - 1),
-// its base the ONE named constant every site that solves or evaluates the map
-// reads (samples_per_pixel_at and effective_max_zoom_level in main.cpp, and
-// the span framer in input_handler.cpp).
-constexpr double kZoomBaseMsPerPx  = 0.625; // ms per pixel at level 1 (1.2 s)
-constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; the zoom
-                                           // gestures can go one step deeper
-                                           // to kMinZoom (1.2 s)
+// THE ZOOM MAP IS DEVICE-RELATIVE (architect 2026-09-27: "level 2 is the
+// working level on this device; everything works off it"): spp(level) =
+// column × 2^(level − 2) frames per pixel, the column this device's WORKING
+// COLUMN (working_column_frames below), so level 2 paints exactly one working
+// column per pixel, level 1 half of one, level 3 two, and so on. The column is
+// the map's one parameter; every site that solves or evaluates the map reads
+// it (samples_per_pixel_at, fit_zoom_level and effective_max_zoom_level in
+// main.cpp, and through them the span framer in input_handler.cpp). A saved
+// level (tab_a_zoom / tab_b_zoom) therefore means the same RELATIVE zoom on
+// any device, and the cross-device promise of one frame grid per level is
+// withdrawn: the grid is shared per level within a device.
+constexpr double kWorkingZoomLevel = 2.0;  // spp = the working column exactly;
+                                           // the zoom gestures can go one
+                                           // step deeper to kMinZoom
+// The zoom level an AppState / ViewState / recall stamp holds BEFORE the load
+// writes the real one (file_loader.cpp). A placeholder only: nothing reads it
+// before the load overwrites it, since the no-audio state greys every face.
+constexpr double kUnloadedZoomLevel = 2.0;
+
+// THE WORKING COLUMN, the one owner: the whole number of source frames one
+// waveform pixel spans at the working zoom on a strip `waveform_width_px`
+// wide, nearbyint(2.4 s × sample_rate ÷ width) — the working zoom shows 2.4 s
+// of source across the strip on every device (1920 px at 44.1 kHz: 55; the
+// tablet's 2304: 46; at 48 kHz 60 and 50). Spelled (24·sr)/(10·W): both
+// operands are exact integers in a double and the one divide is correctly
+// rounded, so a true .5 tie (2016 px at 44.1 kHz, 52.5) is exact and takes
+// banker's rounding; `2.4 * sr / W` would round 2.4 first and is never the
+// spelling. A WHOLE column sits on the sixteenth-frame grid at every rate
+// (painter_quantized_spp), so `c` lands on q = column exactly and the viewport
+// grid points are its exact multiples. THE WIDTH IS HELD PER PROCESS
+// (gui_main): the first project's load reads waveform_area(app).w once and
+// every later load in the process computes its own rate's column from that
+// held width, so nothing re-derives it on a resize or a later open. The
+// column lives on the loaded audio (GuiAudio::working_column, set by
+// GuiAudio::load, its one writer), and its readers assert it positive.
+inline int64_t working_column_frames(int sample_rate, int waveform_width_px) {
+    return static_cast<int64_t>(std::nearbyint(
+        (24.0 * static_cast<double>(sample_rate)) /
+        (10.0 * static_cast<double>(waveform_width_px))));
+}
 
 // THE STEPPED PAN'S STRIDE, as a divisor of the visible span: one plain wheel
 // detent over the waveform (handle_wheel) and one PageUp / PageDown each move
@@ -4258,7 +4289,7 @@ inline TrimState full_trim_window(int64_t total_frames) {
 // the camera, from two more fields — the playhead as a source frame and its
 // column in the stamped window — deleted with it.)
 struct OverviewRecall {
-    double  zoom_level             = kWorkingZoomLevel;
+    double  zoom_level             = kUnloadedZoomLevel;
     int64_t viewport_start_sample  = 0;
     int64_t playhead_cursor_sample = 0;
     // The audio view the three above are expressed in ('S' / 'T'), and the
@@ -4289,7 +4320,7 @@ struct OverviewRecall {
 // restore.
 struct ViewState {
     int64_t viewport_start_sample      = 0;
-    double  zoom_level                 = kWorkingZoomLevel;
+    double  zoom_level                 = kUnloadedZoomLevel;
     int64_t playhead_cursor_sample     = 0;
 
     // BARE `0`'s RECALL STAMP (architect 2026-09-23; the struct and its
@@ -4605,7 +4636,7 @@ struct AppState {
     // to/from these fields only at view-switch boundaries (see active_views).
     // Do not collapse this into a projection — the duplication is the design.
     int64_t playhead_cursor_sample = 0;
-    double  zoom_level             = kWorkingZoomLevel;
+    double  zoom_level             = kUnloadedZoomLevel;
     int64_t viewport_start_sample  = 0;
     // THE HOLD POSTURE AND THE FOLLOW LAMP (architect 2026-09-23). The hold
     // replaced the Ctrl+Left / Ctrl+Right hold-column chord: camera behaviour
@@ -4818,7 +4849,7 @@ struct AppState {
     // clamp_viewport_start after its write.
     struct CameraPostureIdentity {
         int64_t viewport_start_sample = 0;
-        double  zoom_level            = kWorkingZoomLevel;
+        double  zoom_level            = kUnloadedZoomLevel;
         char    tab_view              = 'A';
         char    audio_view            = 'S';
         bool operator==(const CameraPostureIdentity&) const = default;
@@ -9627,12 +9658,13 @@ inline int keyboard_slot_max_height_px(const AppState& a) {
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
-// The pure level→spp exponent: ms_per_px = kZoomBaseMsPerPx * 2^(level - 1), fully
-// level-determined and domain-independent. Non-static/public because it is
+// The pure level→spp exponent: spp = column × 2^(level − 2), the column the
+// loaded audio's working column (the device-relative map's rule at
+// kWorkingZoomLevel), fully level-determined and domain-independent. Non-static/public because it is
 // called from input_render_dispatch.cpp's dispatch-time view-anchor math (a
 // domain OTHER than the active display context's — a cell's own map domain),
 // so it cannot be main-private.
-double  samples_per_pixel_at(double zoom_level, int sample_rate);
+double  samples_per_pixel_at(double zoom_level, int64_t column_frames);
 // Active-domain sample range a marker may occupy to stay within the visible
 // strip: pixel 0 (viewport_start) through the last fully-visible pixel
 // (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so
@@ -9655,11 +9687,11 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 // fractional authored position unrepresentable). Banker's rounding
 // (std::nearbyint under the default rounding mode — the project-wide
 // convention), no epsilon; the cast after nearbyint is exact. The ties are
-// real, not theoretical: at 44.1 kHz
-// the zoom table's frames-per-pixel values are 27.5625, 55.125, 110.25,
-// 220.5, 441, ... (0.625 ms/px deepest, doubling), so at the 5 ms level
-// every odd pixel offset is an exact half-frame tie — banker's rounding
-// debiases them. No other call site may round or cast an authored
+// real, not theoretical: every painted step q is a whole number of
+// sixteenths of a frame (painter_quantized_spp), so a column's frame
+// position can sit exactly on a half — at level 1 on an odd working column
+// (the laptop's 55 at 44.1 kHz gives q = 27.5) every odd pixel offset is an
+// exact half-frame tie — and banker's rounding debiases them. No other call site may round or cast an authored
 // position on its own.
 inline int64_t snap_authored_frame(double frame) {
     return static_cast<int64_t>(std::nearbyint(frame));
@@ -11656,12 +11688,13 @@ bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
 
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
-                                 int sample_rate);
+                                 int64_t column_frames);
 // The covering level: the one whose painted span (width·q, the sixteenth-frame
 // grid) covers `span_frames`, unclamped — a covering question, so a ceiling,
-// n = ceil(16·span/width), the level's spp n/16 and so its q n/16 — the
-// ceiling's solve and the span framer's (the rule at its definition, main.cpp).
-double  fit_zoom_level(double span_frames, int width_px, int sample_rate);
+// n = ceil(16·span/width), the level's spp n/16 and so its q n/16, by the
+// map's inverse level = 2 + log2((n/16)/column) — the ceiling's solve and the
+// span framer's (the rule at its definition, main.cpp).
+double  fit_zoom_level(double span_frames, int width_px, int64_t column_frames);
 // Clamp a requested zoom level into the per-file window [kMinZoom, effective
 // per-file ceiling]. The single owner of the level-bounds pair, shared by the
 // clamp_viewport_start chokepoint and the appliers' pre-clamps. A no-op

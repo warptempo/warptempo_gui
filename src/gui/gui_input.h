@@ -284,8 +284,9 @@ struct HorizontalArrowStep {
 // follows from the engine's lattice, which only P has: the render depends
 // only on the window a reset seeds in (S - N/2, the engine seeding at the
 // last window at or before it), so a column nudge on P is almost always
-// SILENT — about seventeen of eighteen at working zoom re-render identical
-// audio — and the hop is the only arrow move there that changes what is
+// SILENT — about seventeen of eighteen at the laptop's working zoom (one hop
+// is about 18.6 of its 55-frame columns; about twenty-one of twenty-two on the
+// tablet's 46) re-render identical audio — and the hop is the only arrow move there that changes what is
 // heard. Every reader of the horizontal pair's step asks this: the marker-
 // and waveform-lane dispatch, and the Left / Right face
 // (horizontal_arrow_step_actionable, app_state.h), so the face asks the step

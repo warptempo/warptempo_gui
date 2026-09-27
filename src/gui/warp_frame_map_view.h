@@ -204,7 +204,8 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // plotted curve, a tint over the picture or a colour read from the gain: the
 // lit plate's per-column shade, which read the leveler's gain for one day,
 // is struck (architect 2026-09-25, render_waveform) and both lit bars are
-// one flat colour, the inner's one-pixel outline another (2026-09-27).
+// one flat colour, the inner's outline (waveform_line_px() thick) another
+// (2026-09-27).
 //
 // NO MODE TERM — the `h` view follows the lamp as it stood when the view was
 // entered (the lamp is dead there by its allowlist), its plate being the live
@@ -290,21 +291,24 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 // THE QUANTIZATION ITSELF, for a samples-per-pixel the caller already holds:
 // THE SIXTEENTH-FRAME GRID (architect 2026-09-26), q = nearbyint(spp * 16) / 16,
 // 0.0 on a non-positive spp. painter_samples_per_pixel is this at the LIVE
-// level. IT IS WIDTH-FREE, so at every zoom level, whole or fractional (every
-// rest a Ctrl-drag, pinch or pen zoom leaves), every device and window size
-// share one grid: the same click, drop, nudge and flag drag land on the same
-// frame on the laptop, the tablet and any hand resize.
+// level. IT IS WIDTH-FREE: the quantization reads no width, so at a given spp
+// every window size shares one grid, and a hand resize never moves a landing
+// at a held zoom. The LEVEL→spp map is device-relative since 2026-09-27
+// (spp = working column × 2^(level − 2), samples_per_pixel_at), and the
+// working column is fixed per process from the held width, so within a
+// device every level, whole or fractional (every rest a Ctrl-drag, pinch or
+// pen zoom leaves), has one grid; across devices the same level is the same
+// RELATIVE zoom and a different grid, the cross-device promise withdrawn.
 //
 // WHY 16 — the waveform width rule's own reason (waveform_area, main.cpp):
-// 16 = 1600 / gcd(44100, 1600), the strictest step among the standard rates,
-// so every standard rate's whole-level spp (kZoomBaseMsPerPx·2^(L−1)·sr/1000,
-// i.e. sr/1600·2^(L−1)) is EXACT in sixteenths — at a WHOLE level, the working
-// zoom included, q is the logical spp itself — and every waveform width is a
-// multiple of 16, so w·q is a WHOLE number of frames at every level: the right
-// wall, the viewport grid and the visible span stay integral. A rate whose
-// step is not a sixteenth rounds it to the nearest sixteenth, invisibly
-// (a 1/32-frame residue per column) and still width-free. Idempotent: a q
-// passed back in returns itself.
+// every waveform width is a multiple of 16, so w·q is a WHOLE number of
+// frames at every level: the right wall, the viewport grid and the visible
+// span stay integral. The working column is a whole number of frames, so
+// every whole level's spp (column × 2^(L − 2): whole from level 2 up, a half
+// at level 1) is EXACT in sixteenths — at a WHOLE level, the working zoom
+// included, q is the logical spp itself, at every rate. A fractional rest
+// rounds to the nearest sixteenth, invisibly (under a 1/32-frame residue per
+// column). Idempotent: a q passed back in returns itself.
 inline constexpr double kPainterGridSubdivisions = 16.0;
 inline double painter_quantized_spp(double spp) {
     if (!(spp > 0.0)) return 0.0;
@@ -354,12 +358,14 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
 // authored data, so the playhead lattice is an authoring lattice too.
 //
 // The choice is invisible in paint: both forms sit within one frame of the
-// ideal grid point (m+col)*q, and one frame is at most ~1/27.5 px at the
-// deepest numeric zoom — far under the half-pixel paint-rounding threshold — so
-// a landing paints at column `col` either way.
+// ideal grid point (m+col)*q, and one frame is at most 1/q px, q at least
+// half the working column at the deepest numeric zoom (27.5 on the laptop, 23
+// on the tablet at 44.1 kHz) — far under the half-pixel paint-rounding
+// threshold — so a landing paints at column `col` either way.
 //
 // m recovery is exact for product-reachable audio lengths: at the deepest
-// numeric zoom q >= ~27.5 frames/px and a source length fits well within the
+// numeric zoom q >= column / 2 frames/px (23 or more on every deployed device)
+// and a source length fits well within the
 // double mantissa, so |viewport_start/q - m| << 0.5. The target domain's total
 // is at most 16x the source's — build_warp_frame_map divides each source delta
 // by the product of tempo, marker scale and settings scale, and all three

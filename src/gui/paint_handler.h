@@ -146,7 +146,7 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, inset_px, the GAIN field, target,
+    // vp_start, vp_end, area_w, area_h, inset_px, line_px, the GAIN field, target,
     // and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
     // on, and each is keyed BY FIELD rather than through whatever else happens
     // to move with it.
@@ -166,6 +166,11 @@ struct WaveformCache {
     // was font-derived then. The proxy died with the grid; the thing itself is
     // what the job takes.)
     int       fp_inset_px = -1;
+    // THE LINE WIDTH the live pixels were rendered with (waveform_line_px(),
+    // render.h): the lit inner bar's outline erodes at that distance, so a
+    // gui_scale change that moves it re-renders the plate BY FIELD, keyed
+    // directly like the inset.
+    int       fp_line_px = -1;
     // THE GAIN FIELD the live pixels were rendered under — the derived
     // curve's version where the picture is magnified, 0 where the gate answers
     // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
@@ -208,6 +213,7 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_inset_px = -1;
+    int       pending_fp_line_px = -1;
     uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
@@ -230,6 +236,7 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured waveform inset
+    int       supersede_line_px     = 0;   // GUI-captured waveform line width
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
@@ -684,6 +691,10 @@ private:
         // field — the plate's only non-area geometry, so nothing else would
         // move if it changed alone.
         int      inset_px      = 0;
+        // The waveform LINE WIDTH (waveform_line_px()), captured the same way
+        // and for the same reason: the lit inner bar's outline erodes at that
+        // distance, so it is both a render input and a fingerprint field.
+        int      line_px       = 0;
         // The waveform PICTURE's gain field (waveform_gain_fingerprint): nonzero
         // means apply the audio's derived curve. It is both the render input
         // and the fingerprint field, exactly like inset_px above: it feeds the

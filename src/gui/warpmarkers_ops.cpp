@@ -1724,8 +1724,8 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // landing as a const owner to compare against, a caller-side copy being the
     // drift the truthful-buttons rule exists to prevent. The anchoring basis is
     // the DISPLAYED map there, which in warp's SOURCE home view is the empty
-    // identity map — every commit a plain integer frame, and the working-zoom
-    // authoring-grid bit-exactness claims (all source-view) hold. Crossing a
+    // identity map — every commit a plain integer frame, at the working zoom
+    // an exact multiple of the working column. Crossing a
     // neighbor is legal and goes through the reorder-and-remap below.
     int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step);

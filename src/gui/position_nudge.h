@@ -259,14 +259,20 @@ PositionNudgePrologue position_nudge_prologue(
 // finer than the pixel grid, so every adjacent-column target is representable in
 // the authored domain (and re-anchoring to the column grid every press re-derives
 // the pixel phase, so whole-frame rounding residue never accumulates — rounding
-// each press independently would paint occasional 0 or 2 px jumps). In the PHASE
-// nudge's mapped target home the deepest zoom gives at least 27.5625 / 16 = 1.72
-// source frames per target pixel under the value brackets (tempo times both scales
-// at least 0.25 * 0.5 * 0.5 = 1/16) at the 44100 sample-rate floor, so the
-// whole-frame rounding error is just under 0.291 px (0.5 / 1.72265625 =
-// 0.29025); in the WARP nudge's identity source home the bound is trivially
-// stronger (a column is at least 27.5625 whole frames, error at most 0.5 frame,
-// about 0.018 px). Either way each press still advances at least one whole frame.
+// each press independently would paint occasional 0 or 2 px jumps). The deepest
+// zoom, level 1, paints q = half the working column (working_column_frames,
+// app_state.h). In the PHASE nudge's mapped target home that gives q / 16 source
+// frames per target pixel under the value brackets (tempo times both scales at
+// least 0.25 * 0.5 * 0.5 = 1/16), so the whole-frame rounding error is at most
+// 8 / q px: at 44.1 kHz the laptop's q = 27.5 gives 1.71875 frames per pixel and
+// 0.291 px, the tablet's q = 23 gives 1.4375 and 0.348 px; at 48 kHz, q = 30 and
+// 25 give 1.875 / 0.267 px and 1.5625 / 0.320 px. In the WARP nudge's identity
+// source home the bound is trivially stronger (error at most half a frame,
+// 0.5 / q: 0.018 px on the laptop, 0.022 on the tablet). Either way each press
+// still advances at least one whole frame. THE BOUND NEEDS q > 16, a working
+// column of at least 33 frames: it would fail from a waveform width of 3264 px
+// at 44.1 kHz (3552 at 48 kHz), which no deployed device has, and no guard
+// stands for it.
 //
 // ONE PAINTED COLUMN PER PRESS IS A COLUMN-STEP PROPERTY AND NOTHING ELSE, and
 // the trap it documents already bit once: the only other gesture that ever claimed

@@ -83,24 +83,31 @@
 // (effective_max_zoom_level) and is deliberately NOT schema-checked here:
 // persisted zoom is validated against the theoretical vocabulary only, and the
 // runtime reclamp owns the per-file ceiling — the same display-scratch
-// convention the persisted viewport/playhead values follow. ms-per-pixel(level)
-// = 0.625 * 2^(level-1) (GUI-side, the base kZoomBaseMsPerPx in app_state.h,
-// read by main.cpp's samples_per_pixel_at), so an integer level reproduces the
-// historical 2x-per-step ladder exactly, and the
-// exponent yields spp = total/width exactly at the fit-equivalent level. The
-// constants live here rather than in the GUI so an out-of-vocabulary persisted
-// zoom refuses identically in the GUI and the CLI.
+// convention the persisted viewport/playhead values follow. The level→scale
+// map is GUI-side and DEVICE-RELATIVE (architect approval 2026-09-27):
+// samples-per-pixel(level) = column * 2^(level-2), the column the device's
+// working column in whole source frames, nearbyint(2.4 s * rate / waveform
+// width) (working_column_frames in app_state.h, read by main.cpp's
+// samples_per_pixel_at), so level 2 is exactly one working column per pixel,
+// each whole step is 2x, a persisted level means the same RELATIVE zoom on any
+// device, and the fit-equivalent level is the one whose painted span covers
+// the song (fit_zoom_level). The constants live here rather than in the GUI
+// so an out-of-vocabulary persisted zoom refuses identically in the GUI and
+// the CLI.
 constexpr double kMinZoom = 1.0;
-// kMaxZoom is DERIVED from audio_io's structural source caps, not invented. The
+// kMaxZoom is BOUNDED by audio_io's structural source caps, not invented. The
 // longest loadable source is bounded by the RIFF uint32 data-chunk size limit
 // (~4 GiB of PCM); the binding case is 24-bit stereo (6 bytes/frame) at the
-// 44100 Hz rate floor -> 4294967295 / 6 ~= 715.8 M frames ~= 16232 s. The
-// narrowest supported window is 640 px (kMinWindowWidthPx; waveform effective
-// width 640). kMaxZoom is the smallest whole level whose visible span covers
-// that worst case at that width: 0.625 * 2^(17-1) ms/px * 640 px = 26214.4 s
-// >= 16232 s, while level 16 gives 13107.2 s < 16232 s -- so 17 is minimal
-// (architect approval 2026-09-13: back to 17 with the ladder's base returned to
-// 0.625 ms/px, the one-day 1.25 base and its kMaxZoom 16 rolled back).
+// 44100 Hz rate floor -> 4294967295 / 6 ~= 715.8 M frames ~= 16232 s. Under
+// the device-relative map (architect approval 2026-09-27) the visible span at
+// a level is width * column * 2^(level-2) frames, about 2.4 s * 2^(level-2)
+// whatever the width: level 17 spans about 78600 s (at least 77395 s over
+// every multiple-of-16 width from the 640 px minimum window to 3840 px, at
+// every standard rate), so 17 covers the worst case with a wide margin. It is
+// no longer the MINIMAL covering level (15 would cover, at least 19349 s);
+// the vocabulary stays [1, 17] because it is persisted (architect approval
+// 2026-09-13 for 17 under the retired absolute 0.625 ms/px ladder, where 17
+// was minimal at 640 px).
 // Consequence: for EVERY loadable file the fit level is below kMaxZoom by
 // construction, so full zoom-out always rests at whole-song-visible.
 constexpr double kMaxZoom = 17.0;  // (architect approval 2026-09-13)

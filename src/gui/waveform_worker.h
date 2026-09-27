@@ -55,6 +55,10 @@ struct WaveformJob {
     // set_gui_scale_percent without draining in-flight jobs — so ALL
     // font-derived geometry is snapshotted here for a coherent render.
     int       inset_px         = 0;
+    // The waveform LINE WIDTH (waveform_line_px(), render.h), captured beside
+    // the inset for the same reason: the lit inner bar's outline erodes at
+    // that distance.
+    int       line_px          = 0;
 
     // THE WAVEFORM'S GAIN FIELD (waveform_gain_fingerprint,
     // warp_frame_map_view.h, which owns the gate): the derivation's version
@@ -179,8 +183,8 @@ private:
 // the GUI thread (force_synchronous_waveform_rebuild), touching only the
 // supplied dest surface, the audio handle's peak pyramid (read-only after
 // load), the caller's warp_frame_map snapshot, and the job-captured geometry
-// scalars (area_w/area_h/inset_px) — no other shared or main-thread state. The
-// inset and the MAGNIFICATION are passed in rather than read off live state so
+// scalars (area_w/area_h/inset_px/line_px) — no other shared or main-thread
+// state. The inset, the line width and the MAGNIFICATION are passed in rather than read off live state so
 // the render touches no gui_scale and no settings state: ALL scale-dependent
 // geometry
 // is snapshotted on the GUI thread at dispatch, closing the race with a
@@ -196,6 +200,7 @@ void render_waveform_to_cache_surface(
     int area_w,
     int area_h,
     int inset_px,
+    int line_px,
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,

@@ -559,7 +559,8 @@ bool write_cache_to_disk(const std::string& source_path,
 
 } // namespace
 
-bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress) {
+bool GuiAudio::load(const std::string& path, int64_t working_column,
+                    const ProgressCallback& on_progress) {
     auto info = audio_probe(path);
     if (!info) {
         std::fprintf(stderr,
@@ -602,6 +603,7 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         samples_         = make_immutable_samples(std::move(next_samples));
         total_frames_    = next_total_frames;
         sample_rate_     = next_sample_rate;
+        working_column_  = working_column;
         channels_        = next_channels;
         render_channels_ = next_render_channels;
         load_identity_size_ = next_load_identity.size;
@@ -622,9 +624,10 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         GainDerivation* const state = gain_.get();
         state->thread = std::thread(
             [state, samples = samples_, frames = next_total_frames,
-             rate = next_sample_rate]() {
+             rate = next_sample_rate, column = working_column]() {
                 const auto g0 = std::chrono::steady_clock::now();
-                state->curve = derive_waveform_gain(samples->data(), frames, rate);
+                state->curve = derive_waveform_gain(samples->data(), frames,
+                                                    rate, column);
                 const double ms = std::chrono::duration<double, std::milli>(
                     std::chrono::steady_clock::now() - g0).count();
                 std::fprintf(stderr, "warptempo_gui: gain_derive=%.1f ms\n", ms);

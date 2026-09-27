@@ -14,6 +14,7 @@
 #include "wav_io.h"     // checked_audio_sample_count (the dry-run's allocation arm)
 
 #include <algorithm>
+#include <cassert>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
@@ -202,7 +203,8 @@ std::optional<GuiFailure> source_load_dry_run(
     return std::nullopt;
 }
 
-bool GuiFileLoader::load_file(const GuiProjectSource& project) {
+bool GuiFileLoader::load_file(const GuiProjectSource& project,
+                              int& held_waveform_width_px) {
     const std::string path = project.source.string();
     // NO EXTENSION REFUSAL STANDS HERE, and none is wanted (2026-09-02): the
     // `.peaks` cache refusal that opened this body — from the era when a path
@@ -264,6 +266,21 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     gui.invalidate_region(0, 0, app.width, app.height);
     gui.paint_now();
 
+    // THE WORKING COLUMN (working_column_frames, app_state.h, the rule): the
+    // process holds the WAVEFORM WIDTH, read here once at its first project's
+    // load — the window is mapped at its first configure's size by now (the
+    // startup tick waits on has_initial_configure) — and every load computes
+    // its own rate's column from that held width, published on the audio and
+    // handed to the gain derivation. One stderr line per load, which the
+    // tablet reads in logcat.
+    if (held_waveform_width_px <= 0) held_waveform_width_px = waveform_area(app).w;
+    assert(held_waveform_width_px > 0);
+    const int64_t working_column = working_column_frames(
+        source_info->sample_rate, held_waveform_width_px);
+    std::fprintf(stderr, "warptempo_gui: working_column=%lld (W=%d, %d Hz)\n",
+                 static_cast<long long>(working_column), held_waveform_width_px,
+                 source_info->sample_rate);
+
     GuiAudio next;
     const auto t0 = std::chrono::steady_clock::now();
     // Loading is a blocking, uninterruptible phase: the run loop is suspended
@@ -273,7 +290,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // observed until the load completes; the queued event is then read when
     // run() resumes and the deferred quit is honored on completion. An urgent
     // abort is pkill / the compositor's force-close.
-    const bool ok = next.load(path, [&](float) {
+    const bool ok = next.load(path, working_column, [&](float) {
         // Pump the event loop so the compositor stays responsive across a
         // multi-frame load.
         gui.drain_events();
@@ -296,10 +313,11 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
-    // Open at the working zoom (2.4 s) for normal files; a file too short for
-    // it opens at its effective ceiling (whole-song-visible) instead.
+    // Open at the working zoom (one working column per pixel) for normal
+    // files; a file too short for it opens at its effective ceiling
+    // (whole-song-visible) instead.
     app.zoom_level = std::min(kWorkingZoomLevel, effective_max_zoom_level(
-        waveform_area(app).w, audio.total_frames(), audio.sample_rate()));
+        waveform_area(app).w, audio.total_frames(), audio.working_column()));
     clamp_viewport_start(app, audio);
 
     // (NO PLAYBACK-SPEED OR gui_scale RESET HERE ANY MORE — 2026-08-27. The

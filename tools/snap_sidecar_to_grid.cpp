@@ -2,6 +2,12 @@
 // marker sidecar on its canonical lattice, at the original path, keeping the
 // pre-snap bytes as '<original-path>.bak'.
 //
+// HISTORICAL LATTICE (2026-09-27): the "zoom-2" grid named in this file is
+// the pre-2026-09-27 lattice at the absolute 1.25 ms/px working zoom; the
+// GUI now works on a device-relative working column, so this one-shot tool
+// is no longer bit-for-bit with GUI authoring (the note at the head of
+// sidecar_snap_common.h).
+//
 // Authored positions are deterministic against canonical, viewport-independent
 // lattices: the warp column against the source view's zoom-2 column grid, the
 // phase reset column against the zoom-2 TARGET column lattice the live warp map

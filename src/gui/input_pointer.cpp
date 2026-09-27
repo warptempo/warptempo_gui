@@ -2650,7 +2650,7 @@ double GuiInputHandler::nav_drag_zoom_level(double dx) const {
     const int64_t total = live_total_frames(app, audio);
     double new_level = app.zoom_level - dx / nav_zoom_px_per_level();
     const double max_l = effective_max_zoom_level(wf_area.w, total,
-                                                  audio.sample_rate());
+                                                  audio.working_column());
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
     return new_level;
@@ -2943,7 +2943,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     } else {
         new_level = app.zoom_level - std::log2(eff_ratio);
         const double max_l =
-            effective_max_zoom_level(wf_area.w, total, audio.sample_rate());
+            effective_max_zoom_level(wf_area.w, total, audio.working_column());
         if (new_level < kMinZoom) new_level = kMinZoom;
         if (new_level > max_l)    new_level = max_l;
     }

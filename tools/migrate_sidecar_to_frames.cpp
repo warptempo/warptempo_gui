@@ -2,6 +2,12 @@
 // whole-source-frame authored domain, at the original path, keeping the legacy
 // bytes as '<original-path>.bak'.
 //
+// HISTORICAL LATTICE (2026-09-27): the "zoom-2" grid named in this file is
+// the pre-2026-09-27 lattice at the absolute 1.25 ms/px working zoom; the
+// GUI now works on a device-relative working column, so this one-shot tool
+// is no longer bit-for-bit with GUI authoring (the note at the head of
+// sidecar_snap_common.h).
+//
 // The authored time domain moved from MM:SS.mmm timestamps to whole source
 // frames; there is no legacy read path in the GUI, parser, or CLI, so old
 // sidecars fail loudly at load. This standalone tool is the sole conversion

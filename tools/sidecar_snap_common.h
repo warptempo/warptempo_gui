@@ -1,5 +1,15 @@
 #pragma once
 
+// HISTORICAL LATTICE (2026-09-27): everything below describes the GUI's zoom-2
+// lattice as it stood BEFORE the device-relative zoom map of 2026-09-27 — the
+// absolute 1.25 ms/px working zoom, q = sample_rate * 1.25 / 1000 (55.125 at
+// 44.1 kHz). The GUI's working zoom is now one device working column per pixel
+// (nearbyint(2.4 s × rate ÷ waveform width), 55 on the laptop at 44.1 kHz, 46
+// on the tablet; src/gui/app_state.h, working_column_frames), so these one-shot
+// tools are NO LONGER BIT-FOR-BIT with GUI authoring. Markers they wrote stay
+// whole frames and load unchanged; the GUI's next nudge lands them on its own
+// grid. No code here changed with it.
+//
 // sidecar_snap_common — the two canonical authored LATTICES a sidecar position
 // lands on, plus the sibling, read and backup/write machinery the sidecar tools
 // share. Header-only and TOOL-LOCAL: the tools are standalone binaries that

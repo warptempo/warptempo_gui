@@ -2206,8 +2206,10 @@ double mono_line_height_px(double size_px);
 // box occupies rows 37..56 with the border at column 22 and the FILL — and the
 // stem running on below it — at column 23.
 //
-// LEFT-ANCHORED, NOT CENTERED. The composite settles it: the 1px stem stands on
-// the box's leftmost column, so a marker's box opens AT its frame and runs
+// LEFT-ANCHORED, NOT CENTERED. The composite settles it: the stem stands on
+// the box's leftmost column (its waveform_line_px() width running rightward
+// from there, under the fill, never under the border), so a marker's box
+// opens AT its frame and runs
 // rightward, exactly as a kdenlive guide label does. The old flag was centered
 // on its column (it was a symmetric shape with a tip); a text box is not
 // symmetric and has no tip, so centering it would put the frame under the
@@ -2299,6 +2301,45 @@ inline int marker_flag_baseline_px() {
 // area (the measurement and the reasoning are at the row-6 palette block).
 inline int waveform_border_px() {
     return scaled_px(kWaveformBorderPx, 1);
+}
+// THE WAVEFORM'S LINE WIDTH (architect 2026-09-27, "scale all, including the
+// ruler ticks and the playhead head"): every vertical LINE on the waveform and
+// the ruler scales with gui_scale — 1 up to 149 % (the floor holding 50 %), 2
+// from 150 % through 250 % (the tablet's 225 % included; banker's rounding
+// takes 2.5 to 2), 3 above that and 4 at the 350 % ceiling.
+// ITS READERS, grepped at the ruling — the one inventory of the class, each
+// an ALIASED INTEGER RECT [col, col + t) whose left edge is the item's own
+// column and which is clipped to the waveform's columns [0, w): the marker
+// stems in both columns and the `h` diff lane (paint_marker_stems), the
+// playhead's waveform segment and the scanner (render_playhead), the
+// playhead's run through the marker lane and the ruler ticks
+// (paint_ruler_row), the zoom anchor stem (render_strip_anchor_stem), and the
+// phase-reset lead-in ring's four sides (t thick, its left side on the
+// stem's own columns); and the lit plate's inner OUTLINE, an erosion at
+// distance t (outline_bar, render.cpp, t riding the plate job and its
+// fingerprint). The playhead HEAD widens each row by t − 1 on the right so it
+// stays centred on the stem (paint_ruler_row). NOT a reader: the plate
+// column, one device pixel by rule — resolution, not size — with its bar's
+// one-row floor.
+inline int waveform_line_px() {
+    return scaled_px(1, 1);
+}
+// THE LINE'S ONE PAINT: columns [col, col + waveform_line_px()) of a strip
+// whose columns are [0, area_w), at window x `area_x`, rows [y0, y1), as ONE
+// aliased integer rect in the caller's source colour. THE TWO EDGE RULES live
+// here: a line is GATED ON ITS OWN COLUMN (col outside [0, area_w) paints
+// nothing, so a marker at column −1 shows no pixel at 0 — a line belongs to
+// its column), and its width is CLIPPED at the right edge, so a line at
+// w − 1 paints that one column and nothing reaches a non-multiple-of-16
+// window's leftover strip.
+inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
+                               double y0, double y1) {
+    if (col < 0 || col >= area_w) return;
+    const int t   = waveform_line_px();
+    const int end = (col + t < area_w) ? col + t : area_w;
+    cairo_rectangle(cr, static_cast<double>(area_x + col), y0,
+                    static_cast<double>(end - col), y1 - y0);
+    cairo_fill(cr);
 }
 // THE SCALE IS THE ONE THING A FLAG CUTS (architect 2026-09-19, replacing the
 // nine-glyph budget this lane carried from the retired marker-text lane). A
@@ -2506,12 +2547,16 @@ inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
 //
 // THE FLOOR OF 1 (architect 2026-08-10, with the gui_scale floor 100->50): the
 // table's last two rows are 1 authored px, which rounds to 0 at s = 0.5, and a
-// half of 0 is a 1px row — the head's tip would collapse onto the 1px stem and
-// stop reading as a tip at all. Floored, the bottom row is 3 px wide (width is
-// 2*half+1, always odd, so the centring stays structural and the shape stays
-// aliased integer rects). A FLOOR, NOT A PIN: at 100% and above every scaled
-// half is already >= 1, so nothing above the baseline moves and the tips keep
-// scaling.
+// half of 0 is a 1px row — the head's tip would collapse onto the stem and
+// stop reading as a tip at all. Floored, the bottom row is 3 px wide there. A
+// FLOOR, NOT A PIN: at 100% and above every scaled half is already >= 1, so
+// nothing above the baseline moves and the tips keep scaling.
+//
+// THE HEAD IS CENTRED ON THE STEM AT EVERY SCALE (architect 2026-09-27): the
+// stem is waveform_line_px() = t columns wide, [col, col + t), so each row
+// takes the stem's parity, [col − half, col + half + t − 1], 2·half + t wide
+// — odd at t = 1 as before, even at the tablet's t = 2 — integer and aliased,
+// with the same `half` on each side of the stem's own columns.
 //
 // THE ROW INVERSE TRUNCATES, deliberately — the one conversion here off the
 // project's nearbyint rule. `device_row / s` is a POSITION INSIDE the authored
@@ -2621,7 +2666,9 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // Half-width (px) of the playhead COLUMN's reach: a playhead at column c owns
 // [c - playhead_half_px(), c + playhead_half_px()]. Bounds the playhead's
 // off-screen cull and its narrow invalidation strip — the single definition
-// shared by render.cpp (cull) and main.cpp (invalidation). 7 at 100%.
+// shared by render.cpp (cull) and main.cpp (invalidation). 7 at 100%. It
+// covers the scanner's waveform_line_px()-wide line [c, c + t) at every
+// gui_scale: t − 1 is 0 to 3 across [50, 350] % while this reach is 3 to 27.
 //
 // PROVENANCE (2026-08-02): it was the horizontal footprint of the tip-down
 // triangle (the mask was 2H-1 wide and centered, so H-1 either side), read
@@ -2634,9 +2681,10 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 //
 // RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD on the
 // ruler lane's bottom rows is WIDER than this reach at every scale. The head's
-// widest row is 2 * playhead_head_half_px(0, s) + 1 off kPlayheadHeadHalf[0]
-// = 9 — 19px at 100% (the crop's own width), 9 at 50%, 29 at 150%, 37 at 200%
-// and 73 at the 400% ceiling — against this +/- 7-at-100% reach, which rides a
+// widest row is 2 * playhead_head_half_px(0, s) + waveform_line_px() off
+// kPlayheadHeadHalf[0] = 9 — 19px at 100% (the crop's own width), 9 at 50%,
+// 30 at 150%, 38 at 200%, 42 at 225% and 68 at the 350% ceiling — against
+// this +/- 7-at-100% reach, which rides a
 // different authored unit. Both scale, and neither is a function of the
 // other, so the gap is a fact at every scale rather than a 100%-only
 // observation. It is harmless as
@@ -2846,7 +2894,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // There is no fractional coverage, no regime threshold, and NO INTER-COLUMN
 // CONNECTIVITY AT ALL: a spike stands alone beside a short neighbour, which is
 // the classic min/max look the architect chose. (The lit inner bar's
-// one-pixel outline — THE LIT OUTLINE, below — recolours the bar's own edge
+// outline — THE LIT OUTLINE, below, waveform_line_px() thick — recolours the bar's own edge
 // pixels by its neighbours' extents and adds no pixel, so the silhouette is
 // unchanged.)
 //
@@ -2933,22 +2981,27 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // they become rows, and each keeps the >=1px floor. The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
 // reading is the source's bar, the same ink as the levelled bar behind it and
-// set off from it by its darker one-pixel contour alone (settled by his eye
+// set off from it by its darker contour alone (one pixel at 100 %, the line
+// width at every scale; settled by his eye
 // 2026-09-27), the core's relative thickness the loudness — at or under the
 // compressor's threshold the core is half the raw bar (x E), over it thinner
 // by its ratio.
 // NULL (the dark lamp) draws the raw bar alone in kWaveformInk at scale 1,
 // with no outline, byte for byte the plate it always drew.
 //
-// THE LIT OUTLINE (architect 2026-09-27) — THE INNER BAR'S TRUE CONTOUR, ONE
-// PIXEL, ALIASED. A pixel of the inner's shape (the inner bars of all
-// columns) is a BORDER pixel iff any of its four neighbours (left, right, up,
-// down) lies outside that shape. The outer bar has no outline (its outline
-// ink would be its fill). Paint order per column: outer, then the inner's
-// fill and border over it; on a steep rise between columns the outline runs
-// down the taller column's side and the line is continuous. EXACTLY ONE TRUE PIXEL
-// at every gui_scale, as the plate and the stems are, written as pixel words
-// like every other plate pixel: no cairo stroke, no coverage, no blend.
+// THE LIT OUTLINE (architect 2026-09-27) — THE INNER BAR'S TRUE CONTOUR,
+// `outline_px` THICK, ALIASED. `outline_px` is t = waveform_line_px() (render.h,
+// the job's snapshot): 1 at 100 %, 2 on the tablet — the outline is a LINE
+// and scales with gui_scale like the stems, while the plate column stays one
+// device pixel. A pixel of the inner's shape (the inner bars of all columns)
+// is a BORDER pixel iff any pixel within t of it straight left, right, up or
+// down lies outside that shape — an erosion at distance t, the four-neighbour
+// test at t = 1, byte-identical there to the one-pixel contour. The outer bar
+// has no outline (its outline ink would be its fill). Paint order per column:
+// outer, then the inner's fill and border over it; on a steep rise between
+// columns the outline runs down the taller column's side and the line is
+// continuous. Written as pixel words like every other plate pixel: no cairo
+// stroke, no coverage, no blend.
 // THE EDGES: a neighbour column beyond the plate's left or right edge counts
 // as INSIDE (the waveform continues off screen, so no vertical line is drawn
 // at the area's sides); a row beyond the channel's lane counts as inside
@@ -2959,12 +3012,13 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // So a clipped bar carries no line along the lane's edge, and the two
 // channels' clipped bars still meet flush at the split row. Each channel's
 // lane is its own shape; the
-// other channel's pixels are never a neighbour. A 1-2 px bar comes out all
-// border; the >=1px floor stands. THE ALGORITHM is per column, from the
-// three columns' row extents alone, no 2D scan: a bar's interior is its rows
-// [r0 + 1, r1 - 1] (r0 / r1 themselves where that end is clipped),
-// intersected with each in-plate neighbour's [r0, r1]; its border is the
-// bar's rows above and below that interior (the whole bar when it is empty).
+// other channel's pixels are never a neighbour. A bar up to 2t px tall comes
+// out all border; the >=1px floor stands. THE ALGORITHM is per column, from
+// the row extents of the 2t + 1 columns around it alone, no 2D scan: a bar's
+// interior is its rows [r0 + t, r1 - t] (r0 / r1 themselves where that end
+// is clipped), intersected with the [r0, r1] of every in-plate column within
+// t on each side; its border is the bar's rows above and below that interior
+// (the whole bar when it is empty).
 // The outline recolours pixels of the bar's own shape and adds none, each
 // written once with the fill's word or the outline's. paint_region_ink lifts
 // outline pixels as it lifts every opaque plate pixel, from the pixel's own
@@ -3000,8 +3054,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
 // lamp). The outline adds one row-extent pair per column for the inner, held
-// for the call so the write can see both neighbours, and a handful of
-// compares.
+// for the call so the write can see its neighbours, and a handful of
+// compares per neighbour within t.
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).
@@ -3031,8 +3085,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // the two pyramids rather than rebuild one — at the memory of a second
 // pyramid. RULED (architect 2026-09-23): the centre rule stands and no gained
 // second pyramid is built — placement is never done at a coarse zoom, so the
-// approximation there costs nothing the plate is used for. At working zoom (55 frames per column against a 4400-frame
-// hop) the two agree.
+// approximation there costs nothing the plate is used for. At working zoom
+// (one working column per plate column against a hop of whole columns: 55
+// frames against 4400 on the laptop, 46 against 4416 on the tablet) the two
+// agree.
 //
 // THE EXPANDER'S MULTIPLIER rides the same pointer (the curve's
 // `expander_multiplier`, one per working-zoom column, waveform_gain.h owns
@@ -3067,12 +3123,14 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
+                     int outline_px,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
-// Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`
-// (offset from area.x, float for subpixel centering), in one solid `color` end
-// to end, painted straight over whatever it crosses — waveform ink included.
-// No-op if outside; the line is column-gated only, so it never leaks into an
+// Draws a waveform_line_px()-wide vertical LINE across `area` at the column
+// nearest `playhead_pixel_x` (offset from area.x), [col, col + t), in one solid
+// `color` end to end, painted straight over whatever it crosses — waveform
+// ink included. No-op if outside; the line is gated on its own column and
+// clipped at the right edge (fill_waveform_line), so it never leaks into an
 // adjacent region.
 //
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02). It used to carry a
@@ -3097,7 +3155,7 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color);
 
-// Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
+// Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
 // spanning the full waveform height like a marker stem, in kPlayheadStem
 // #fcfcfc since 2026-08-01 — the product's one position-line white, replacing
@@ -3108,7 +3166,8 @@ void render_playhead(cairo_t* cr,
 // visible (the Ableton affordance). Like every other stem it paints ONE solid
 // color straight over the waveform ink it crosses — the ink-notch overdraw and
 // its plate parameter are retired (architect 2026-07-26, with the polarity
-// inversion). The vertical line is hard-aliased at the +0.5 half-pixel column.
+// inversion). The line is an aliased integer rect waveform_line_px() wide,
+// [col, col + t), clipped at the right edge (fill_waveform_line).
 void render_strip_anchor_stem(cairo_t* cr,
                               GuiRect area,
                               int col);

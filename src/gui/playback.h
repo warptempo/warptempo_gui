@@ -119,8 +119,10 @@
 // FRAME GRID AT THIS TOOL'S PLAY LENGTHS: the clocks part at 10–100 ppm, so
 // 0.6–6 ms per minute, and this is a spot-check instrument for segments of
 // up to ~30 s (the trim/render design, the memory-vs-disk preview cutoff),
-// where that is 0.6–3 ms — half a pixel to two and a half at the working
-// zoom (`c` is 1.25 ms/px), and well inside the ±10 ms band in which a
+// where that is 0.6–3 ms — half a pixel to two and a half at the laptop's
+// working zoom (`c` is one working column per pixel, 55 frames or 1.25 ms at
+// 44.1 kHz there, 46 frames or about 1.04 ms on the tablet, where it is
+// about three pixels at the top), and well inside the ±10 ms band in which a
 // picture/sound offset is invisible. THE BAND IS WHAT CARRIES THE RULING,
 // not the pixel count: the drift is imperceptible because the ear and the
 // eye do not resolve it, and a couple of pixels of line at a spot-check

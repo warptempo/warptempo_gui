@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -45,12 +46,27 @@ public:
     // The picture's gain curve (gain_curve below) is NOT part of the load:
     // load() starts its derivation on a thread of its own once the samples are
     // published and returns without waiting for it (gain_curve_ready below).
-    bool load(const std::string& path, const ProgressCallback& on_progress);
+    // `working_column` is the device's working column for this source's rate
+    // (working_column_frames, app_state.h, computed by the loader from the
+    // process's held waveform width): load() publishes it beside the rate and
+    // hands it to the gain derivation, whose analysis column it is.
+    bool load(const std::string& path, int64_t working_column,
+              const ProgressCallback& on_progress);
 
     int64_t total_frames()    const { return total_frames_; }
     uint64_t source_load_size()  const { return load_identity_size_; }
     int64_t  source_load_mtime() const { return load_identity_mtime_; }
     int     sample_rate()     const { return sample_rate_; }
+    // THE WORKING COLUMN, the zoom map's one parameter (spp = column ×
+    // 2^(level − 2), samples_per_pixel_at) and the gain analysis's column:
+    // whole source frames per pixel at the working zoom on this device, fixed
+    // for this audio's lifetime (the rule at working_column_frames,
+    // app_state.h). Nothing reads it before a load, since the no-audio state
+    // greys every face; the assert is that claim.
+    int64_t working_column()  const {
+        assert(working_column_ > 0);
+        return working_column_;
+    }
     int     channels()        const { return channels_; }
 
     // Raw interleaved float32 sample buffer. The pointer is valid as long as
@@ -146,6 +162,7 @@ private:
     std::shared_ptr<const std::vector<float>> samples_;
     int64_t            total_frames_    = 0;
     int                sample_rate_     = 0;
+    int64_t            working_column_  = 0;
     int                channels_        = 0;
     int                render_channels_ = 0;
 

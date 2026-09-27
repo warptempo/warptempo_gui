@@ -1,11 +1,5 @@
 #include "waveform_gain.h"
 
-// app_state.h is included here and not in the header for ONE reason: it owns
-// the zoom map's two constants, and the column width below is derived from
-// them rather than restated. Nothing else is read from
-// it; the derivation touches no application state.
-#include "app_state.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -17,32 +11,21 @@
 
 namespace {
 
-// --- the column: derived, not chosen ---------------------------------------
+// --- the column: the caller's, not chosen here ----------------------------
 // The measure reads the picture at WORKING ZOOM, the placement-instrument
-// zoom, so its column is the working zoom's column in source frames:
-//   ms_per_px = kZoomBaseMsPerPx * 2^(kWorkingZoomLevel - 1)   (1.25 ms)
-//   COL       = floor(ms_per_px * sample_rate / 1000)
-// evaluated in that order: 1.25 * 44100 = 55125 exactly, / 1000 = 55.125
-// exactly, floor 55; at 48 kHz, 60.
-static_assert(kWorkingZoomLevel == static_cast<double>(static_cast<int>(kWorkingZoomLevel)),
-              "the working column's power of two is taken over a whole level");
-
-constexpr double working_zoom_ms_per_px() {
-    double ms = kZoomBaseMsPerPx;
-    for (int step = 1; step < static_cast<int>(kWorkingZoomLevel); ++step) ms *= 2.0;
-    return ms;
-}
-
-// Truncation is the floor here: every operand is positive.
-constexpr int64_t working_zoom_column_frames(int sample_rate) {
-    return static_cast<int64_t>(working_zoom_ms_per_px() * sample_rate / 1000.0);
-}
-static_assert(working_zoom_column_frames(44100) == 55, "55 source frames per column at 44.1 kHz");
-static_assert(working_zoom_column_frames(48000) == 60, "60 source frames per column at 48 kHz");
+// zoom, so its column is the device's WORKING COLUMN in source frames,
+// nearbyint(2.4 s × rate ÷ the held waveform width) (working_column_frames,
+// app_state.h, its one owner), handed in by GuiAudio::load: 55 on the laptop's
+// 1920 px at 44.1 kHz (as before the device-relative map of 2026-09-27, when
+// it was floor(55.125)), 46 on the tablet's 2304 px, 60 / 50 at 48 kHz. At
+// the working zoom in source view a plate column then covers exactly one
+// analysis column, the viewport resting on the column's own multiples.
 
 // --- the fixed constants -----------------------------------------------------
 // THE ANALYSIS HOP is resolution only, and it is the EBU short-term
-// loudness's 100 ms. Measured against a 10 ms hop at working zoom (1.25 ms/px,
+// loudness's 100 ms, taken as a whole number of columns (80 of the laptop's
+// 55 frames at 44.1 kHz, 4400 frames; 96 of the tablet's 46, 4416). Measured
+// against a 10 ms hop at the laptop's working zoom (55 frames per pixel,
 // where 0.1 s is an 80 px linear segment) over the 40th's first movement, the
 // two curves differed by 0.028 dB mean, 0.21 dB at p99, 1.47 dB at the
 // maximum, 0.10 % of columns over 0.5 dB — indistinguishable, so the coarser
@@ -141,7 +124,9 @@ static_assert(kExpanderRatio > 1.0, "the expander reduces under the threshold");
 // outer's ink; on the leveler's own window loudness L in dBFS. THE CRITERION: the gap
 // between the inner and the outer bar >= 4.5 dB at the loudest 5 % of hops,
 // the quiet parts untouched. The measured map (the product's leveler and
-// expander re-derived over the three K550 movements, 2026-09-25; the inner's
+// expander re-derived over the three K550 movements, 2026-09-25, at the
+// laptop's 55-frame working column, which the device-relative map of
+// 2026-09-27 leaves unchanged, so the map stands byte for byte there; the inner's
 // height in lane halves at L's p5 / p25 / p50 / p75 / p95, movement I; all at
 // unit gain, before the foreground gain below — the settled half lowers every
 // inner height by half and widens every gap by 6.02 dB):
@@ -237,10 +222,10 @@ private:
 }  // namespace
 
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate) {
+                                       int sample_rate, int64_t column_frames) {
     if (total_frames <= 0) return {};
 
-    const int64_t col = working_zoom_column_frames(sample_rate);
+    const int64_t col = column_frames;
     assert(col >= 1);
 
     // THE COLUMN PASS, one read of every sample: each column of `col` frames
