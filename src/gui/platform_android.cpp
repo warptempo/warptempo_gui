@@ -549,9 +549,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE PEN PLANE'S CUTOFF, TEMPORARY for its tuning phase (the key's
-    // head at device_config.h; the one reader is pen_report_in_plane).
-    cfg.pen_plane_distance = kPenPlaneDistanceDefault;
+    // THE PEN PLANE'S THRESHOLDS, TEMPORARY for their tuning phase (the
+    // pair's head at device_config.h; the one reader is pen_report_in_plane).
+    cfg.pen_plane_enter = kPenPlaneEnterDefault;
+    cfg.pen_plane_exit  = kPenPlaneExitDefault;
     return cfg;
 }
 
@@ -1569,8 +1570,11 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 // contacts are gone and the button is unobserved until the
                 // pen reports again, so no anchor is carried across the
                 // window's absence. The pen's contact record goes with the
-                // contacts.
+                // contacts, and the plane's latch goes OUT (the pen left the
+                // window; pen_report_in_plane's transitions): the pen's next
+                // report here must enter the plane afresh.
                 pen_on_glass_ = false;
+                pen_in_plane_ = false;
                 release_pen_zoom_anchor();
             }
             break;
@@ -1745,6 +1749,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // WHETHER THIS PEN REPORT IS WITHIN THE GUI'S PLANE — the one answer both
     // pen rules read (pen_report_in_plane): the hover doors below and the
     // retained anchor's release (c). False when the event carries no pen.
+    // ASKED HERE ONCE PER EVENT AND NOWHERE ELSE: the predicate owns the
+    // plane's latch and updates it as it answers, so a second asking would
+    // be a second transition; everything below reads this const.
     const bool pen_in_plane =
         pen_present && pen_report_in_plane(event, masked, pen_index);
 
@@ -1781,12 +1788,13 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // the bit, and a button edge reported above the plane drops it in its own
     // arm — so re-entering the plane samples the button afresh. (A cancel
     // and a HOVER_EXIT are never in the plane, which is what keeps them
-    // unsampled here.)
+    // unsampled here. The plane has hysteresis, so "within" is the latch's
+    // answer: a pen that entered stays sampled up to the exit threshold.)
     //
     // AND AN IN-PLANE REPORT SHOWING THE BUTTON UP RELEASES THE PEN'S
     // RETAINED ZOOM ANCHOR (release inventory (b) and (c),
     // set_pen_zoom_anchor_release_hook): the pen's DOWN sampled released, a
-    // hover at or under the plane, a hovering button edge there, a
+    // hover within the plane, a hovering button edge there, a
     // mid-stroke report. Only while the pen steers: an ignored pen's button
     // reads released by rule, not by the hand, and the finger that owns the
     // gesture already released any anchor at its own first down. A release
@@ -1840,8 +1848,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // outline, the menu row's fill and mode, and the tooltip and its
             // dwell all go, the leave hook's own list, main.cpp; the reason
             // is PenHoverEnd, end_pen_hover) and the Ctrl bit drops — and no
-            // enter or motion is delivered. Back at or under the plane the
-            // first report is a fresh enter. Neither the exit nor a report
+            // enter or motion is delivered. Back within the plane (at or
+            // under the ENTER threshold, the latch's rule) the first report
+            // is a fresh enter. Neither the exit nor a report
             // above the plane touches the retained zoom anchor.
             if (!pen_present) return;
             if (!pen_in_plane) {   // a HOVER_EXIT, or a hover above the plane
@@ -2026,10 +2035,14 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // was cleared by the cancel's own nav end (the lift query
             // answers false outside a lift), and this release takes one a
             // tap had left standing. The pen's contact record goes with the
-            // contacts.
+            // contacts, and the plane's latch goes OUT, UNCONDITIONALLY like
+            // the Ctrl clear (pen_report_in_plane's transitions: the
+            // predicate sets it out only on a cancel that still carries the
+            // pen, and this one may not).
             input_.touch_cancel();
             set_pen_ctrl(false);
             pen_on_glass_ = false;
+            pen_in_plane_ = false;
             release_pen_zoom_anchor();
             return;   // a cancel closes its own batch; no frame is owed
 
@@ -2073,48 +2086,79 @@ void GuiPlatform::end_pen_hover() {
 // touch.distance.calibration scaled, DistanceScale 1.000), about 10 counts
 // per millimetre — the last hover report before the tip lands reads 2..8,
 // the pen is detected from 81..117 and lost at 84..129 (a raw capture,
-// 2026-09-27). THE NUMBER IS THE ARCHITECT'S. It was a constexpr 30 (about
-// 3 mm) when the plane landed earlier the same day; it is the device
-// config's TEMPORARY tuning key `pen_plane_distance` now (template 50, about 5 mm; the grammar and the
-// phase's closing rule at device_config.h), pushed down once per process by
-// set_pen_plane_distance into pen_plane_distance_, the one member this
-// predicate reads. No hysteresis: his glass pass decides whether flicker at
-// the boundary shows.
-void GuiPlatform::set_pen_plane_distance(int counts) {
-    pen_plane_distance_ = static_cast<float>(counts);
+// 2026-09-27). THE PLANE HAS HYSTERESIS: one cutoff flickered on the glass
+// (a pen held still at it toggled the hover outline, the count jittering
+// across the line), so a pen ENTERS the plane at or under one threshold
+// and LEAVES it only past a second one at or above it, One UI's own
+// detect-near, release-far shape. THE NUMBERS ARE THE ARCHITECT'S and in a tuning
+// phase: the device config's TEMPORARY pair `pen_plane_enter` and
+// `pen_plane_exit` (templates 30 and 40, about 3 and 4 mm; the grammar, the
+// exit >= enter rule and the phase's closing rule at device_config.h),
+// pushed down once per process by set_pen_plane_thresholds into
+// pen_plane_enter_ and pen_plane_exit_, the two members the latch reads.
+void GuiPlatform::set_pen_plane_thresholds(int enter, int exit) {
+    pen_plane_enter_ = static_cast<float>(enter);
+    pen_plane_exit_  = static_cast<float>(exit);
 }
 
 // THE ONE PREDICATE — "is this pen report within the GUI's plane" — read by
 // both pen rules and nothing else: the hover doors (on_motion_event's hover
 // arm: above the plane the pen is not a pointer) and the retained zoom
-// anchor's release (c) (an in-plane report showing the button up). A CONTACT
-// always is: the down, move and up actions carry the pen only while it is on
-// the glass. A HOVER report — HOVER_ENTER / HOVER_MOVE, and a BUTTON_PRESS /
-// BUTTON_RELEASE while the pen is not on the glass — is iff its distance is
-// at or under the cutoff (pen_plane_distance_). A HOVER_EXIT NEVER IS, and neither is anything
-// else: the platform sends the exit both when the pen leaves range and just
-// before every tip down, and at a range leave the driver writes distance 0
-// beside the tool going up, so the exit carries no trustworthy height. THAT
-// SAME TRAP is why the button edge asks pen_on_glass_ (keyed on the contact
-// actions) rather than reading distance 0 as touching.
+// anchor's release (c) (an in-plane report showing the button up). IT OWNS
+// THE PLANE'S LATCH (pen_in_plane_) and answers with the latch's new state,
+// so its one caller asks it exactly once per pen-carrying event. THE
+// TRANSITIONS:
+//   - A CONTACT report is always in and sets the latch IN: the down, move
+//     and up actions carry the pen only while it is on the glass, and so
+//     does a BUTTON_PRESS / BUTTON_RELEASE while pen_on_glass_. A lift
+//     therefore leaves the pen in the plane, and the hover right after it
+//     stays in until it rises past the exit threshold.
+//   - A HOVER report — HOVER_ENTER / HOVER_MOVE, and a BUTTON_PRESS /
+//     BUTTON_RELEASE while the pen is not on the glass — reads its distance
+//     against the threshold the latch names: OUT, it ENTERS at or under
+//     pen_plane_enter_; IN, it STAYS while at or under pen_plane_exit_ and
+//     goes OUT past it.
+//   - A HOVER_EXIT and a CANCEL set the latch OUT and are never in. The
+//     platform sends the exit both when the pen leaves range and just before
+//     every tip down (harmless: the DOWN that follows is a contact, IN), and
+//     at a range leave the driver writes distance 0 beside the tool going
+//     up, so the exit carries no trustworthy height. THAT SAME TRAP is why
+//     the button edge asks pen_on_glass_ (keyed on the contact actions)
+//     rather than reading distance 0 as touching.
+//   - Every other action is never in and leaves the latch alone.
+// The latch's other writers are the hard ends, OUT unconditionally: the
+// CANCEL arm (a cancel that no longer carries the pen never reaches this
+// predicate) and focus loss (the pen left the window, no exit owed).
 bool GuiPlatform::pen_report_in_plane(const AInputEvent* event, int32_t masked,
-                                      size_t pen_index) const {
+                                      size_t pen_index) {
     switch (masked) {
         case AMOTION_EVENT_ACTION_DOWN:
         case AMOTION_EVENT_ACTION_POINTER_DOWN:
         case AMOTION_EVENT_ACTION_MOVE:
         case AMOTION_EVENT_ACTION_UP:
         case AMOTION_EVENT_ACTION_POINTER_UP:
+            pen_in_plane_ = true;
             return true;
         case AMOTION_EVENT_ACTION_BUTTON_PRESS:
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
-            if (pen_on_glass_) return true;
+            if (pen_on_glass_) {
+                pen_in_plane_ = true;
+                return true;
+            }
             [[fallthrough]];
         case AMOTION_EVENT_ACTION_HOVER_ENTER:
-        case AMOTION_EVENT_ACTION_HOVER_MOVE:
-            return AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_DISTANCE,
-                                             pen_index) <= pen_plane_distance_;
-        default:   // HOVER_EXIT, CANCEL and every other action
+        case AMOTION_EVENT_ACTION_HOVER_MOVE: {
+            const float distance = AMotionEvent_getAxisValue(
+                event, AMOTION_EVENT_AXIS_DISTANCE, pen_index);
+            pen_in_plane_ = distance <=
+                (pen_in_plane_ ? pen_plane_exit_ : pen_plane_enter_);
+            return pen_in_plane_;
+        }
+        case AMOTION_EVENT_ACTION_HOVER_EXIT:
+        case AMOTION_EVENT_ACTION_CANCEL:
+            pen_in_plane_ = false;
+            return false;
+        default:   // every other action
             return false;
     }
 }

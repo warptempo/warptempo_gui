@@ -293,22 +293,23 @@ public:
     //       marked so its lift keeps nothing;
     //   (b) THE PEN LANDING WITHOUT ITS BUTTON (its DOWN, sampled released);
     //   (c) THE FIRST IN-PLANE PEN REPORT SHOWING THE BUTTON UP, the plane
-    //       being pen_report_in_plane's (hover reports at or under
-    //       pen_plane_distance_, hovering button edges likewise, and every
-    //       contact report). A button state reported ABOVE the plane, a
-    //       HOVER_EXIT, or nothing at all (out of range) changes nothing;
+    //       being pen_report_in_plane's latch (a hover report or hovering
+    //       button edge entering at or under pen_plane_enter_ and staying
+    //       in until one rises past pen_plane_exit_, and every contact
+    //       report). A button state reported ABOVE the plane, a HOVER_EXIT,
+    //       or nothing at all (out of range) changes nothing;
     //   (d) THE HARD ENDS — a CANCEL and focus loss.
     // The GUI's body (GuiInputHandler::release_pen_zoom_anchor) clears only a
     // RETAINED seat, so a fire that meets a live gesture's seat is inert.
     void set_pen_zoom_anchor_release_hook(std::function<void()> cb);
 
-    // THE GUI'S PLANE'S CUTOFF, in raw AXIS_DISTANCE counts — the device
-    // config's TEMPORARY tuning key `pen_plane_distance` (architect
-    // 2026-09-27; its grammar and the phase's closing rule at
-    // device_config.h) pushed down by gui_main once per process, beside the
-    // touch slop, before init(). The one reader is pen_report_in_plane,
-    // where the measured scale is.
-    void set_pen_plane_distance(int counts);
+    // THE GUI'S PLANE'S TWO THRESHOLDS, in raw AXIS_DISTANCE counts — the
+    // device config's TEMPORARY tuning pair `pen_plane_enter` and
+    // `pen_plane_exit` (architect 2026-09-27; their grammar, the exit >= enter
+    // rule and the phase's closing rule at device_config.h) pushed down by
+    // gui_main once per process, beside the touch slop, before init(). The
+    // one reader is pen_report_in_plane's latch, where the measured scale is.
+    void set_pen_plane_thresholds(int enter, int exit);
 
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
@@ -587,6 +588,13 @@ private:
     // pen_report_in_plane for the one action that can arrive either way, a
     // BUTTON_PRESS / BUTTON_RELEASE.
     bool pen_on_glass_ = false;
+    // THE GUI'S PLANE'S LATCH — the pen is within the plane (architect
+    // 2026-09-27, the plane's hysteresis). pen_report_in_plane owns it whole:
+    // it reads and writes it once per pen-carrying event, the transitions
+    // being listed at its definition (platform_android.cpp). Besides that
+    // owner only the hard ends write it, OUT: a cancel and focus loss, which
+    // clear it unconditionally as they clear pen_on_glass_.
+    bool pen_in_plane_ = false;
     // A FINGER LANDED DURING THE PEN'S LIVE STROKE (release inventory (a) at
     // set_pen_zoom_anchor_release_hook): set at such a finger's down, reset
     // at the pen's first down; the stroke's lift then keeps no anchor.
@@ -595,11 +603,14 @@ private:
     // own touch_up and false everywhere else.
     bool pen_lift_keeps_anchor_ = false;
     std::function<void()> pen_zoom_anchor_release_hook_;
-    // THE GUI'S PLANE'S CUTOFF (set_pen_plane_distance), the one value
-    // pen_report_in_plane compares a hover report's distance against. Born
-    // at the template's value; gui_main installs the config's before any
-    // event is read.
-    float pen_plane_distance_ = static_cast<float>(kPenPlaneDistanceDefault);
+    // THE GUI'S PLANE'S TWO THRESHOLDS (set_pen_plane_thresholds): the
+    // height at or under which a hover report enters the plane, and the one
+    // past which a hover report leaves it, the two values
+    // pen_report_in_plane's latch compares a hover report's distance
+    // against. Born at the template's values; gui_main installs the config's
+    // before any event is read.
+    float pen_plane_enter_ = static_cast<float>(kPenPlaneEnterDefault);
+    float pen_plane_exit_  = static_cast<float>(kPenPlaneExitDefault);
 
     // THE FIRST on_resize_ FIRE IS OWED RATHER THAN MADE. init() adopts a
     // window that already exists (android_main waits for it), which is BEFORE
@@ -782,10 +793,14 @@ private:
     // stands (pen_hovering_ above).
     void end_pen_hover();
     // THE GUI'S PLANE — the one predicate both pen rules read (the hover
-    // doors and the retained anchor's release); the cutoff's road and the
-    // measured scale are at its definition, platform_android.cpp.
+    // doors and the retained anchor's release), and the owner of the plane's
+    // latch (pen_in_plane_): it UPDATES the latch as it answers, so it is
+    // asked exactly once per pen-carrying event (on_motion_event's one
+    // `pen_in_plane` const, its only caller). The thresholds' road, the
+    // transitions and the measured scale are at its definition,
+    // platform_android.cpp.
     bool pen_report_in_plane(const struct AInputEvent* event, int32_t masked,
-                             size_t pen_index) const;
+                             size_t pen_index);
     // Fire the release hook (set_pen_zoom_anchor_release_hook), null-safe.
     void release_pen_zoom_anchor();
 };
