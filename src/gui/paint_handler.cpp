@@ -6027,25 +6027,105 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             ? ed.target
             : -1;
 
+    // THE FOCUSED STEM IS WHITE OVER THE INK (the architect's 2026-09-27
+    // experiment): the ONE focused marker's stem (MarkerStem::focused, the
+    // focus the flag pass was handed — app.last_selected_marker live,
+    // app.history_mode.focus in `h`) paints kPlayheadStem #fcfcfc on every row
+    // where the PLATE has ink under it, and its ordinary colour on every row
+    // where the plate shows the canvas. Every other stem, and every flag, is
+    // unchanged; no hold condition, the focus alone.
+    //
+    // INK IS A NONZERO ALPHA BYTE ON THE PLATE SURFACE (wf_cache.surface),
+    // read at the stem's own column exactly where paint_waveform_plate blitted
+    // it, at (area.x, area.y) inside the content band. The plate is cleared
+    // to transparent before every render and carries no ground
+    // (render_waveform_to_cache_surface), and its alpha is binary since the
+    // antialiased renderer's deletion, so alpha != 0 is every drawn plate
+    // pixel and nothing else: the dark plate's kWaveformInk, the lit plate's
+    // outer and inner bars in fill or outline, and the pixels paint_region_ink
+    // lifts (it lifts exactly the opaque plate words and writes none of its
+    // own into the plate). The canvas — kWaveformCanvas or the region's
+    // recolour — is window paint under a transparent plate pixel, so it reads
+    // as no ink whichever ground stands. Reading the plate rather than the
+    // window keeps the passes painted before this one (the phase-reset
+    // overlay's ring, the region ground) out of the answer. Rows outside the
+    // content band read as no ink, because the blit is clipped to that band.
+    //
+    // THE BASIS NEEDS NO MAPPING: the question is which plate pixel is on
+    // screen under the stem, and both sit in window pixels on this frame —
+    // the stem at the column its flag pass published, the plate at the blit
+    // offset — so the answer is strictly as painted even across an async
+    // publish window in which the two bases differ.
+    //
+    // THE RED FLASH WINS OVER THE WHITE: a flashing stem paints kMarkerStemRed
+    // whole, since the flash reads the flag and its stem as one object in
+    // one colour, and the white is a picture of the focus, which the flash
+    // already is.
+    //
+    // Painted as RUNS of rows, one 1 px rect each, integer pixels with no
+    // antialiasing (the stem's policy): contiguous ink rows in kPlayheadStem,
+    // contiguous canvas rows in the stem's colour. One column of plate reads
+    // per frame for the one focused stem.
+    cairo_surface_t* const plate = wf_cache.surface;
+    const unsigned char* plate_data = nullptr;
+    int plate_stride = 0;
+    int plate_w      = 0;
+    int plate_h      = 0;
+    if (plate && cairo_surface_get_type(plate) == CAIRO_SURFACE_TYPE_IMAGE &&
+        cairo_image_surface_get_format(plate) == CAIRO_FORMAT_ARGB32) {
+        cairo_surface_flush(plate);
+        plate_data   = cairo_image_surface_get_data(plate);
+        plate_stride = cairo_image_surface_get_stride(plate);
+        plate_w      = cairo_image_surface_get_width(plate);
+        plate_h      = cairo_image_surface_get_height(plate);
+    }
+    const GuiRect content = waveform_content_rect(area);
+    const int band_y0 = std::max(content.y, area.y);
+    const int band_y1 = std::min(content.y + content.h, area.y + area.h);
+
     cairo_save(cr);
-    cairo_set_line_width(cr, 1.0);
-    const double y0 = static_cast<double>(area.y);
-    const double y1 = static_cast<double>(area.y + area.h);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    const int y0 = area.y;
+    const int y1 = area.y + area.h;
+    const auto fill_run = [&](int x, int ya, int yb, const GuiColor& c) {
+        if (yb <= ya) return;
+        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        cairo_rectangle(cr, x, ya, 1, yb - ya);
+        cairo_fill(cr);
+    };
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
         // render.cpp); this restates that gate against the area this painter
         // is handed, so no entry can leak its column into the chrome beside
         // the waveform.
-        const double col = stem.x - static_cast<double>(area.x);
-        if (col < 0.0 || col >= static_cast<double>(area.w)) continue;
-        const double x_px = static_cast<double>(area.x) + col + 0.5;
-        const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
-                                                            : stem.color;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
-        cairo_move_to(cr, x_px, y0);
-        cairo_line_to(cr, x_px, y1);
-        cairo_stroke(cr);
+        const double col_d = stem.x - static_cast<double>(area.x);
+        if (col_d < 0.0 || col_d >= static_cast<double>(area.w)) continue;
+        const int col = static_cast<int>(std::floor(col_d));
+        const int x   = area.x + col;
+        const bool flashing = (stem.marker_index == flash_idx);
+        const GuiColor c = flashing ? kMarkerStemRed : stem.color;
+        if (!stem.focused || flashing || !plate_data || col >= plate_w) {
+            fill_run(x, y0, y1, c);
+            continue;
+        }
+        const auto ink_at = [&](int y) {
+            if (y < band_y0 || y >= band_y1) return false;
+            const int py = y - area.y;
+            if (py < 0 || py >= plate_h) return false;
+            const auto* row = reinterpret_cast<const uint32_t*>(
+                plate_data + static_cast<size_t>(py) * plate_stride);
+            return (row[col] >> 24) != 0u;
+        };
+        int run_start = y0;
+        bool run_ink  = ink_at(y0);
+        for (int y = y0 + 1; y <= y1; ++y) {
+            const bool ink = (y < y1) && ink_at(y);
+            if (y < y1 && ink == run_ink) continue;
+            fill_run(x, run_start, y, run_ink ? kPlayheadStem : c);
+            run_start = y;
+            run_ink   = ink;
+        }
     }
     cairo_restore(cr);
 }

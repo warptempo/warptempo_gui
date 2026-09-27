@@ -2012,7 +2012,8 @@ void render_flag_boxes_impl(
                 // to its left (the architect's explicit clause, spelled at
                 // marker_flag_border_px).
                 out_stems->push_back(
-                    MarkerStem{i, static_cast<double>(bx), face.stem});
+                    MarkerStem{i, static_cast<double>(bx), face.stem,
+                               i == focus_marker});
             }
         });
 
@@ -2510,7 +2511,8 @@ void render_history_diff_flags(
                                        ? (focused ? kHistoryRemovedFillSel
                                                   : kHistoryRemovedFill)
                                        : (focused ? kHistoryAddedFillSel
-                                                  : kHistoryAddedFill)});
+                                                  : kHistoryAddedFill),
+                                   i == focus_index});
                 }
             }
         });
