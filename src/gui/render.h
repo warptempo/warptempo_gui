@@ -1140,6 +1140,28 @@ struct WaveformLitInks {
 void                   set_waveform_lit_inks(const WaveformLitInks& inks);
 const WaveformLitInks& waveform_lit_inks();
 
+// THE PLATE'S WIDENING FOR A TUNING PHASE (architect 2026-09-27): the device
+// config's `waveform_widening`, how many COLUMNS on EACH side of a plate
+// column its peak read reaches past its own span — both plates, every zoom,
+// both audio views and `h` (the rule is at render_waveform's declaration).
+// Held as integer HUNDREDTHS of a column, the key's own `N.NN` grain
+// (is_waveform_widening_hundredths, device_config.h, owns the grammar and the
+// [0, 4.00] bracket). THE DEFAULT, 0.50 column, is what both first-run
+// templates stamp; 0 is the plate exactly as it was before the key existed.
+inline constexpr int kWaveformWideningDefaultHundredths = 50;
+
+// INSTALLED ONCE, NEVER MUTATED — the lit inks' contract exactly: gui_main
+// installs the config's value beside set_waveform_lit_inks, before the first
+// plate job, and nothing calls it again (the key has no in-app writer; a
+// retune is a config edit and a relaunch), so the waveform worker reads it
+// with no job field and the plate fingerprint carries no widening term (the
+// plate cache is process-lifetime; nothing persists a plate).
+// waveform_widening_columns() is k in columns, hundredths / 100.0 (0.0
+// exactly at 0); its one reader is render_waveform, once per call. When the
+// phase closes both are struck and the painter reads a constant.
+void   set_waveform_widening_hundredths(int hundredths);
+double waveform_widening_columns();
+
 // A SUPERSEDED RECORD of the lit inks' tuning (2026-09-24..26): the bar
 // behind wore #1f8b4c, then #135647, then a per-column shade by the leveler's
 // gain, then #17594b (the canvas:ink 1:1 blend), then kWaveformInk; the core
@@ -2916,13 +2938,67 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // inclusive fill always writes at least one row. Flat or silent material draws
 // a hairline; nothing can fade out or vanish.
 //
+// THE WIDENING (architect 2026-09-27, A TUNING PHASE): each column's bar is
+// the min/max over its own span WIDENED BY k COLUMNS ON EACH SIDE, k the
+// device config's `waveform_widening` (default 0.50, [0, 4.00] in hundredths;
+// installed once at startup, waveform_widening_columns above). The read is
+// the column's display interval [c - k, c + 1 + k) in column units: each end
+// a display frame through the lattice's nearbyint ((k0 + c - k) * spp and
+// (k0 + c + 1 + k) * spp), then through THE SAME MAP the column's own edges
+// take — the identity in source view, the warp map in target view, so the
+// widening is k columns of DISPLAY time and a tempo-compressed column widens
+// by the source its neighbours actually show — then nearbyint to a whole
+// sample, held to contain the column's own [s0, s1) and clamped to the
+// source. It applies to BOTH plates (dark, and lit, where the outer and inner
+// bars read the one widened peak), at every zoom, in both audio views and in
+// `h` (the one painter). THE GAIN, THE COMPRESSOR'S SCALE AND THE EXPANDER'S
+// MULTIPLIER ARE UNCHANGED: they still take the column's own [s0, s1) and its
+// centre frame; only the peak read widens. WHY: a coarser pyramid level's
+// outward rounding to whole bins widened each column by an accident of bin
+// alignment, 0-63 samples of each neighbour from spp 64 up, unevenly column
+// to column, and a low-frequency trace drawn that way read as a 2-3 px line
+// the architect found far more comfortable than the 1 px trace at the working
+// zoom; the widening makes that deliberate and even.
+// EVENNESS — THE LEVEL RULE: with k > 0 the read takes the coarsest cached
+// level whose stride is AT MOST A QUARTER of the column's span in samples
+// (GuiAudio::level_for_span asked span / 4), raw samples below four times the
+// finest stride (spp < 64). A bin read rounds each end OUTWARD by at most one
+// stride less a sample, so the residual unevenness is under a quarter column
+// at each end, outward only. Source view asks the exact spp — one level for
+// every column, as the unwidened read does. Target view asks the larger of
+// the column's own mapped span and the widened span's MEAN column ((source
+// span of the widened interval) / (1 + 2k)): where the slope is even the two
+// agree and the bound is the column's own quarter; where a warp marker's
+// slope jump sits inside the widening the mean bounds the read's cost, and
+// the quarter-column bound then holds in the wider columns' units.
+// COST PER COLUMN, per channel, unconditional: at most 16(1 + 2k) + 2 pairs
+// (34 at the default 0.50, 146 at the 4.00 ceiling) — the stride is over a
+// sixteenth of the span the level was asked with, and the read covers 1 + 2k
+// such spans plus the two rounded ends — or at most 64(1 + 2k) + 2 raw
+// samples (130 at 0.50) below the finest stride; plus, in target view, two
+// map lookups for the widened ends. The unwidened read's bound (5 pairs or 16
+// samples) is GuiAudio::level_for_span's.
+// k = 0 IS THE PLATE BEFORE THE KEY, BYTE FOR BYTE: the painter's widening
+// branch is skipped whole and the column takes the unwidened read's own
+// level and range, the same expressions in the same order.
+// TRUTHFULNESS: no bar exceeds a real peak — both tips are extremes the
+// signal actually reaches (after the lit plate's own scales, as before) —
+// and every pixel of a bar is a value the signal takes within k columns of
+// its column (plus the quarter-column rounding above); the cost is placement:
+// a sharp onset's leading edge may show up to k columns EARLY, and a release
+// linger k columns late. The phase closes by eye; the chosen k is then a
+// constant.
+//
 // PAN INVARIANCE IS STRENGTHENED, NOT WEAKENED, BY THE HALOS' REMOVAL. They
 // existed because a column's ink came from the segments on BOTH its sides, so an
 // edge column missing an undrawn neighbour was under-covered against the same
 // audio rendered interior and shifted under a pan. A bar depends on nothing but
 // its own interval, so a column's pixel SET is a pure function of its own
 // (k0+c) span — two renders of the same columns at the same basis agree
-// exactly. The AUTHORING LATTICE below is untouched and is still what makes
+// exactly (THE WIDENING keeps this: its span is (k0+c-k, k0+c+1+k) on the same
+// lattice, read from the source rather than from a neighbouring column, so an
+// edge column widens past the plate's edge exactly as an interior one does).
+// The AUTHORING LATTICE below is untouched and is still what makes
 // that span depend on the global index alone. (With the lamp lit, which of a
 // bar's pixels wear its OUTLINE ink reads the two neighbouring columns' rows —
 // THE LIT OUTLINE, below — and at the plate's two side edges the missing

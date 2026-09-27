@@ -257,6 +257,13 @@ void render_waveform(cairo_surface_t* dest,
                                                    : samples_per_pixel);
     };
 
+    // THE WIDENING, k columns on each side of every column's peak read (the
+    // tuning phase's `waveform_widening`, installed once at startup; the rule,
+    // its level choice and its bounds are at this function's declaration).
+    // At 0 the read below is today's, untouched.
+    const double widening = waveform_widening_columns();
+    const bool   widen    = widening > 0.0;
+
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
@@ -497,10 +504,51 @@ void render_waveform(cairo_surface_t* dest,
         long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
-        const int level = level_for_column(g1 - g0);
-        const auto mm = audio.get_peak_range(channel, level, s0, s1);
+        // THE PEAK READ. [s0, s1) stays the column's own span for the gain,
+        // the compressor and the expander below; only the read widens.
+        std::pair<float, float> mm;
+        if (!widen) {
+            // k = 0: today's level and today's read, the same expressions in
+            // the same order — the pre-widening plate, byte for byte.
+            const int level = level_for_column(g1 - g0);
+            mm = audio.get_peak_range(channel, level, s0, s1);
+        } else {
+            // THE WIDENED SPAN: the column's display interval [c - k,
+            // c + 1 + k) in column units, each end a display frame through
+            // the lattice's own nearbyint, then through the SAME map the
+            // column's edges take (to_source — identity in source view, the
+            // warp map in target view), then nearbyint to a whole sample.
+            // Held to contain [s0, s1) (the map is monotonic, so this only
+            // matters at a tie) and clamped to the source.
+            const double wg0 = to_source(std::nearbyint(
+                (static_cast<double>(k0 + c) - widening) * samples_per_pixel));
+            const double wg1 = to_source(std::nearbyint(
+                (static_cast<double>(k0 + c + 1) + widening) *
+                samples_per_pixel));
+            long long w0 = static_cast<long long>(std::nearbyint(wg0));
+            long long w1 = static_cast<long long>(std::nearbyint(wg1));
+            if (w0 > s0) w0 = s0;
+            if (w1 < s1) w1 = s1;
+            if (w0 < 0) w0 = 0;
+            if (w1 > audio.total_frames()) w1 = audio.total_frames();
+            // THE EVEN LEVEL: the coarsest stride at most A QUARTER of the
+            // column's span (raw below 4 x the finest stride), so the read's
+            // outward rounding to whole bins adds under a quarter column at
+            // each end. Source view asks the exact spp, one level for every
+            // column as today. Target view asks the larger of the column's
+            // own mapped span and the widened span's mean column, which is
+            // the column's own wherever the slope is even and bounds the read
+            // where a warp marker's slope jump sits inside the widening.
+            const double level_span =
+                warp_frame_map
+                    ? std::max(g1 - g0, (wg1 - wg0) / (1.0 + 2.0 * widening))
+                    : samples_per_pixel;
+            const int level = audio.level_for_span(level_span * 0.25);
+            mm = audio.get_peak_range(channel, level, w0, w1);
+        }
 
-        // LIT: THE OUTER, the column's raw extremes times the curve's gain at
+        // LIT: THE OUTER, the column's raw extremes (the widened read's, when
+        // k > 0) times the curve's gain at
         // the column's centre source frame and the expander's largest
         // multiplier over the working columns [s0, s1) spans; THE INNER, the
         // same extremes times the compressor's scale at the same frame and
@@ -2547,6 +2595,21 @@ namespace {
 
 void set_waveform_lit_inks(const WaveformLitInks& inks) { g_waveform_lit_inks = inks; }
 const WaveformLitInks& waveform_lit_inks() { return g_waveform_lit_inks; }
+
+namespace {
+    // The plate's widening for the tuning phase — the device config's
+    // `waveform_widening` in hundredths of a column, installed once by
+    // gui_main at startup and never mutated after (the contract is at the
+    // declaration, render.h). It starts at the phase's default.
+    int g_waveform_widening_hundredths = kWaveformWideningDefaultHundredths;
+} // namespace
+
+void set_waveform_widening_hundredths(int hundredths) {
+    g_waveform_widening_hundredths = hundredths;
+}
+double waveform_widening_columns() {
+    return static_cast<double>(g_waveform_widening_hundredths) / 100.0;
+}
 
 namespace {
     // The waveform's configured maximum height in AUTHORED px — the device

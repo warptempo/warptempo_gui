@@ -3421,7 +3421,7 @@ int gui_main(const char* argument) {
     // below. The record is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its ten keys describe the MACHINE, not the piece, so they live in
+    // Its eleven keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's
@@ -3479,6 +3479,12 @@ int gui_main(const char* argument) {
                                           device_config.fg_border_color,
                                           device_config.bg_color,
                                           device_config.bg_border_color});
+    // THE PLATE'S WIDENING, the tuning phase's `waveform_widening`
+    // (architect 2026-09-27): installed ONCE here beside the inks, before the
+    // first plate job, under the same contract — no in-app writer, so the
+    // worker reads it with no job field and the plate fingerprint carries no
+    // widening term (set_waveform_widening_hundredths, render.h).
+    set_waveform_widening_hundredths(device_config.waveform_widening_hundredths);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

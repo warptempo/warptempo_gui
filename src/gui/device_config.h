@@ -11,7 +11,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Ten keys live here and nowhere else:
+// piece (architect 2026-08-27). Eleven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -31,13 +31,17 @@
 //   fg_border_color=#rrggbb  the inner bar's one-pixel outline, likewise
 //   bg_color=#rrggbb         the lit plate's OUTER bar's fill, likewise
 //   bg_border_color=#rrggbb  the outer bar's one-pixel outline, likewise
+//   waveform_widening=N.NN   the plate's peak-read widening in COLUMNS on
+//                            each side, [0.00, 4.00] — for a TUNING PHASE
+//                            (below), the grammar at
+//                            is_waveform_widening_hundredths
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the waveform picture's keys stood after sync_path from 2026-09-23 until
 // the last of them left 2026-09-25, the ink tuning keys stood there
-// 2026-09-25/26, and the four lit-ink keys stand there since 2026-09-27,
-// below);
+// 2026-09-25/26, the four lit-ink keys stand there since 2026-09-27, and
+// `waveform_widening` after them since the same day, below);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -115,6 +119,16 @@
 // (#1b9e84, #1b9e84, #1c816b, #1c816b — the plate as it was before the
 // outline, byte for byte). A config lacking any is missing-key fatal, no
 // migration.
+// `waveform_widening` ARRIVED 2026-09-27 (architect), A TUNING PHASE OF ITS
+// OWN, placed after bg_border_color: how many columns on each side of a
+// plate column its peak read reaches (render_waveform's declaration owns the
+// rule, its level choice and its truthfulness statement). Hand-edited like
+// the four inks (no in-app road), read ONCE at startup into the process-wide
+// value (set_waveform_widening_hundredths, render.h), which nothing mutates
+// after; every in-app commit carries it through verbatim from the live
+// struct. Both templates stamp kWaveformWideningDefaultHundredths, `0.50`;
+// `0.00` is the plate before the key, byte for byte. Missing-key fatal, no
+// migration; when the phase closes it is struck and k is a constant.
 // THE TWO LEVEL KEYS CAME AND WENT 2026-09-25 (architect):
 // `waveform_magnification_foreground_db` and
 // `waveform_magnification_background_db` (earlier the same day
@@ -142,7 +156,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the ten keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eleven keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -155,7 +169,8 @@
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
 // max_waveform_height, projects_repo, projects_path, last_project, sync_path,
-// fg_color, fg_border_color, bg_color, bg_border_color) and it is what
+// fg_color, fg_border_color, bg_color, bg_border_color, waveform_widening)
+// and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -181,13 +196,13 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
-// writes — it is the program's own — and the four lit-ink keys have none
-// either, being the tuning phase's hand-edited surface (with the app quit,
-// the R-6 rule above).
+// writes — it is the program's own — and the four lit-ink keys and
+// `waveform_widening` have none either, being the tuning phases'
+// hand-edited surface (with the app quit, the R-6 rule above).
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// ten.
+// eleven.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -208,6 +223,7 @@ struct DeviceConfig {
     GuiColor    fg_border_color = kWaveformForegroundBorderInkDefault;
     GuiColor    bg_color        = kWaveformBackgroundInkDefault;
     GuiColor    bg_border_color = kWaveformBackgroundBorderInkDefault;
+    int         waveform_widening_hundredths = kWaveformWideningDefaultHundredths;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -312,6 +328,28 @@ GuiColor parse_waveform_colour(std::string_view v);
 // with std::nearbyint — exact for every colour parse_waveform_colour builds,
 // so the round trip is byte-exact. The config writer's alone.
 std::string format_waveform_colour(GuiColor c);
+
+// THE WAVEFORM WIDENING GRAMMAR — the ONE owner for `waveform_widening`
+// (architect 2026-09-27, the tuning phase): the value is k, in COLUMNS on
+// each side of a plate column's peak read (render_waveform's declaration owns
+// what it does), spelled N.NN — exactly the strict centesimal pair the
+// authored tempo uses (parse_tempo_cents / format_tempo_cents,
+// value_format.h: one integer digit run with no leading zero but a lone `0`,
+// one dot, exactly two fraction digits, no sign, no exponent), so the one
+// canonical spelling is structural and `0.50`, `1.00` and `0.00` round-trip
+// byte for byte while `.5`, `0.5`, `00.50` and `0.500` refuse. The value is
+// held as integer HUNDREDTHS; this predicate is its BRACKET, [0, 400] =
+// [0.00, 4.00] — four columns a side is already a nine-column smear, the
+// phase's ceiling. The config reader is its one asker (the key has no
+// editor).
+inline constexpr bool is_waveform_widening_hundredths(int64_t v) {
+    return v >= 0 && v <= 400;
+}
+
+// The widening's reason, spelled once for the config reader's `bad_value`
+// line (its one reader).
+inline constexpr const char* kWaveformWideningGrammarReason =
+    "must be a decimal in [0.00, 4.00] with exactly two decimals";
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -532,8 +570,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIX KEY COMMITS (the four lit-ink keys have
-// none: every write carries them verbatim from the live struct), and this is
+// THREE CALL SITES CARRY THE SIX KEY COMMITS (the four lit-ink keys and
+// `waveform_widening` have none: every write carries them verbatim from the
+// live struct), and this is
 // their inventory (re-greped 2026-09-13 with the sixth key):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves four keys —
@@ -554,8 +593,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path, a blank last_project and the four lit-ink keys' defaults,
-// #1b9e84 / #1b9e84 / #1c816b / #1c816b),
+// sync_path, a blank last_project, the four lit-ink keys' defaults,
+// #1b9e84 / #1b9e84 / #1c816b / #1c816b, and a waveform_widening of 0.50),
 // so a first run on either device lands a
 // file that is
 // already right for it and the user edits
