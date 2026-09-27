@@ -9,7 +9,8 @@
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Six keys live here and nowhere else:
+// piece (architect 2026-08-27). Seven keys live here and nowhere else, the
+// seventh a TEMPORARY tuning key (below):
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -23,12 +24,17 @@
 //   sync_path=<path>         the ABSOLUTE folder Synchronize to external
 //                            storage mirrors this project into, or EMPTY for
 //                            "not set up on this device" (external_sync.h)
+//   pen_plane_distance=<counts> TEMPORARY, a tuning phase: the S Pen's
+//                            plane cutoff in raw AXIS_DISTANCE counts, an
+//                            integer [0, 255]; read by the Android backend
+//                            alone (the Wayland backend has no pen)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the waveform picture's keys stood after sync_path from 2026-09-23 until
 // the last of them left 2026-09-25, and the ink and widening tuning keys
-// stood there 2026-09-25..27, below);
+// stood there 2026-09-25..27, below; the pen plane's tuning key stands
+// there since 2026-09-27);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -108,6 +114,19 @@
 // architect closed it by eye the same day on -24.00, 2.00 and -6.02 dB taken
 // as the exact half, now constexpr in waveform_gain.cpp. A config still
 // carrying any of the three is unknown-key fatal, no migration.
+// `pen_plane_distance` IS A TEMPORARY TUNING KEY (architect 2026-09-27):
+// the S Pen acts on the GUI only within its plane, a hover report counting
+// iff its raw AXIS_DISTANCE is at or under this value (the one predicate is
+// GuiPlatform::pen_report_in_plane, platform_android.cpp, where the measured
+// scale is: about 10 counts per millimetre). The number was a constexpr (30)
+// when the plane landed earlier the same day; it is a key while the
+// architect tunes it on the glass, a retune being a hand edit of the
+// tablet's file and a relaunch, and it has no Settings row and no in-app
+// writer. EVERY KEY IS REQUIRED ON EVERY
+// DEVICE, so the laptop's file carries it too and nothing there reads it:
+// the Wayland backend has no pen. WHEN HE SETTLES THE NUMBER the key is
+// struck and the value hard-coded at the predicate again — unknown-key fatal,
+// no migration, the house rule every tuning key above closed under.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -121,7 +140,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -133,8 +152,8 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// max_waveform_height, projects_repo, projects_path, last_project, sync_path)
-// and it is what
+// max_waveform_height, projects_repo, projects_path, last_project, sync_path,
+// pen_plane_distance) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -164,7 +183,7 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// six.
+// seven.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -174,6 +193,13 @@
 // only an empty VALUE.
 //
 // The members are in the writer's order.
+//
+// THE PEN PLANE'S TEMPLATE VALUE, the ONE spelling of the number (architect
+// 2026-09-27): both backends' templates stamp it (device_config_defaults) and
+// the struct is born with it. 50 raw AXIS_DISTANCE counts, about 5 mm on the
+// tablet's pen. TEMPORARY with its key (above).
+inline constexpr int kPenPlaneDistanceDefault = 50;
+
 struct DeviceConfig {
     int         gui_scale = 100;
     int         max_waveform_height = 500;
@@ -181,6 +207,7 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     std::string sync_path;
+    int         pen_plane_distance = kPenPlaneDistanceDefault;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -246,6 +273,18 @@ inline constexpr bool is_gui_scale_percent(int64_t v) {
 inline constexpr bool is_max_waveform_height(int64_t v) {
     return v >= 0 && v <= 9999;
 }
+
+// THE pen_plane_distance RANGE — the ONE owner (architect 2026-09-27, a
+// TEMPORARY tuning key), asked by this file's reader alone: the key has no
+// editor. [0, 255] is the axis's own declared range on the tablet's pen
+// (`dumpsys input`: DISTANCE 0..255, DistanceScale 1.000), so every value
+// the driver can report is a cutoff the key can name. Plain digits, the
+// scale's road (parse_authored_frame, one canonical spelling).
+inline constexpr bool is_pen_plane_distance(int64_t v) {
+    return v >= 0 && v <= 255;
+}
+inline constexpr const char* kPenPlaneDistanceGrammarReason =
+    "must be an integer in [0, 255] in canonical spelling";
 
 // The scale's and the cap's reasons, spelled once for their two readers each
 // (the config reader's `bad_value` line and the settings editor's card).
@@ -429,6 +468,11 @@ std::string format_gui_scale_percent(int percent);
 // settings editor's recall (recall_gui_setting_value) both call it.
 std::string format_max_waveform_height(int authored_px);
 
+// The canonical on-disk spelling of the pen plane's cutoff — plain digits,
+// the same `%d` shape; this file's writer is its one caller (the key has no
+// editor, so no recall).
+std::string format_pen_plane_distance(int counts);
+
 // The resolved config path, or an EMPTY path when neither XDG_CONFIG_HOME nor
 // HOME is set (the loader turns that into its own fatal line; the writer
 // reports the failure and writes nothing).
@@ -474,7 +518,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // struct they were handed rather than composing one from AppState's fields.
 //
 // THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
-// (re-greped 2026-09-13 with the sixth key):
+// (re-greped 2026-09-13 with the sixth key; the seventh, the TEMPORARY
+// `pen_plane_distance`, has no commit at all — hand-edited for its tuning
+// phase, every other key's commit carrying the live struct's value through
+// unchanged):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves four keys —
 // `max_waveform_height=`, `projects_repo=`, `projects_path=` and `sync_path=`
@@ -494,7 +541,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path and a blank last_project),
+// sync_path, a blank last_project and kPenPlaneDistanceDefault),
 // so a first run on either device lands a
 // file that is
 // already right for it and the user edits

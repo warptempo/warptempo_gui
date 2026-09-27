@@ -3455,7 +3455,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its six keys describe the MACHINE, not the piece, so they live in
+    // Its seven keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's
@@ -3522,6 +3522,13 @@ int gui_main(const char* argument) {
     // size it is opened at.
     GuiPlatform gui;
     gui.set_touch_slop_px(drag_moved_threshold_px());
+    // THE PEN PLANE'S CUTOFF (the device config's TEMPORARY tuning key
+    // `pen_plane_distance`, architect 2026-09-27) rides the same push, once
+    // per process and before any event is read: its one reader is the
+    // Android backend's pen_report_in_plane, the Wayland backend accepting
+    // it and reading nothing (it has no pen). Nothing writes it after this
+    // read; a retune is a hand edit and a relaunch.
+    gui.set_pen_plane_distance(device_config.pen_plane_distance);
 
     // THE RENDER CACHE, ONCE PER PROCESS: its keying is fingerprint-only — the
     // source path and its identity are INSIDE the key (render_fingerprint,

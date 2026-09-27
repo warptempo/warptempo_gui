@@ -17,16 +17,17 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SIX keys since
-// 2026-09-27, when the lit plate's four ink keys and `waveform_widening` left
-// with the values constexpr in render.h, and the inner bar's three tuning
-// keys, which stood after sync_path for the rest of that day, left with
-// theirs constexpr in waveform_gain.cpp; the fuller count's succession — up
-// to seventeen with the tuning phases of 2026-09-23..27 — is the header's
-// record and git's). THE ORDER IS THE
+// set the shared scanner enforces after the loop (SEVEN keys since
+// 2026-09-27: six once the lit plate's four ink keys and `waveform_widening`
+// left that day with the values constexpr in render.h, and the inner bar's
+// three tuning keys, which stood after sync_path for the rest of that day,
+// left with theirs constexpr in waveform_gain.cpp; the seventh the S Pen's
+// TEMPORARY `pen_plane_distance`, after sync_path for its tuning phase; the
+// fuller count's succession — up to seventeen with the tuning phases of
+// 2026-09-23..27 — is the header's record and git's). THE ORDER IS THE
 // ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
 // projects_repo, projects_path, last_project, sync_path — the sixth placed
-// right after gui_scale (architect 2026-09-13). The scanner takes it as a
+// right after gui_scale (architect 2026-09-13), the tuning key last. The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -40,6 +41,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
+    "pen_plane_distance",
 };
 
 } // namespace
@@ -53,6 +55,12 @@ std::string format_gui_scale_percent(int percent) {
 std::string format_max_waveform_height(int authored_px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", authored_px);
+    return std::string(buf);
+}
+
+std::string format_pen_plane_distance(int counts) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", counts);
     return std::string(buf);
 }
 
@@ -100,6 +108,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
+        } else if (k == "pen_plane_distance") {
+            // TEMPORARY, a tuning phase (device_config.h's head).
+            s += format_pen_plane_distance(cfg.pen_plane_distance);
         }
         s += '\n';
     }
@@ -193,6 +204,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kSyncPathGrammarReason);
             }
             out.sync_path = value;
+            return {};
+        }
+        if (key == "pen_plane_distance") {
+            // TEMPORARY, a tuning phase (device_config.h's head). The scale's
+            // road exactly: plain digits through parse_authored_frame, then
+            // the RANGE through the one owner in the header.
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) || !is_pen_plane_distance(v)) {
+                return bad_value(ln, key, value,
+                                 kPenPlaneDistanceGrammarReason);
+            }
+            out.pen_plane_distance = static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

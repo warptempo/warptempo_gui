@@ -55,7 +55,7 @@ public:
     // BACKEND is born with, stamped into
     // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
     // file there and never consulted again (device_config.h owns the file, its
-    // schema and its six keys). It is a PLATFORM FACT and lives on the seam for
+    // schema and its seven keys). It is a PLATFORM FACT and lives on the seam for
     // exactly that reason: the scale a panel wants and where on THIS device the
     // projects live are
     // answers only the backend has, and routing them through here is what keeps
@@ -262,6 +262,13 @@ public:
     // compiles against either backend unchanged.
     bool pen_lift_keeps_zoom_anchor() const { return false; }
     void set_pen_zoom_anchor_release_hook(std::function<void()> /*cb*/) {}
+
+    // THE GUI'S PLANE'S CUTOFF — the device config's TEMPORARY tuning key
+    // `pen_plane_distance` (device_config.h), whose one reader is the
+    // Android backend's pen_report_in_plane. THIS BACKEND HAS NO PEN: it
+    // accepts the value and reads nothing, so gui_main pushes it with no
+    // `#ifdef`.
+    void set_pen_plane_distance(int /*counts*/) {}
 
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site

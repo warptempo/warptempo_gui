@@ -335,7 +335,7 @@ drag coordinates floor instead of truncating.
   shape `ensure_device_available_for_play` already set.)
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. The SIX keys it stamps are per-DEVICE preferences
+  both-sides member. The SEVEN keys it stamps (six, plus the S Pen's TEMPORARY `pen_plane_distance` of 2026-09-27) are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the clone's own `projects/`, Android 225 %
@@ -344,7 +344,9 @@ drag coordinates floor instead of truncating.
   `kDefaultProjectsRepo` and a
   blank `last_project` AND a blank `sync_path` — neither template guesses a
   destination for the mirror, a wrong guess aiming its creates, copies and
-  removals at a folder the user never named. (Keys the template no longer
+  removals at a folder the user never named — and `pen_plane_distance=50`
+  (`kPenPlaneDistanceDefault`; the laptop reads nothing of it, having no
+  pen). (Keys the template no longer
   stamps: the lit plate's ink keys `fg_color` / `bg_color`, 2026-09-26 for
   their tuning phase, struck at its close — settings.md; and `audio_player`, which stood here until
   2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
@@ -513,8 +515,13 @@ drag coordinates floor instead of truncating.
   contact is down and ANY first down, pen or finger, ends a standing hover, so
   the doors never overlap), which is what runs the hover walk and the tooltip dwell under a
   hovering pen. SINCE 2026-09-27 BOTH PEN RULES READ ONE PLANE
-  (`kPenPlaneDistance` = 30 raw `AXIS_DISTANCE` counts, about 3 mm, through
-  the one predicate `pen_report_in_plane`; touch.md's pen section): a hover
+  (a cutoff in raw `AXIS_DISTANCE` counts, through the one predicate
+  `pen_report_in_plane`; a constexpr 30, about 3 mm, when it landed earlier
+  that day, and
+  since then the device config's TEMPORARY tuning key `pen_plane_distance`,
+  template 50, about 5 mm, pushed down once per process by
+  `GuiPlatform::set_pen_plane_distance` — a both-sides member the Wayland
+  backend accepts and ignores; touch.md's pen section): a hover
   or hovering button edge above it ends the hover (`pointer_leave` with
   `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face) and drops the
   Ctrl bit, and only an in-plane report is sampled. And two seam members

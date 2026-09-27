@@ -714,6 +714,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
+    // THE PEN PLANE'S CUTOFF, TEMPORARY for its tuning phase (the key's
+    // head at device_config.h). Stamped because every key is required on
+    // every device; this backend has no pen and nothing here reads it.
+    cfg.pen_plane_distance = kPenPlaneDistanceDefault;
     return cfg;
 }
 

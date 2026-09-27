@@ -549,6 +549,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
+    // THE PEN PLANE'S CUTOFF, TEMPORARY for its tuning phase (the key's
+    // head at device_config.h; the one reader is pen_report_in_plane).
+    cfg.pen_plane_distance = kPenPlaneDistanceDefault;
     return cfg;
 }
 
@@ -2065,15 +2068,21 @@ void GuiPlatform::end_pen_hover() {
 }
 
 // THE GUI'S PLANE (architect 2026-09-27): the pen acts on the GUI only
-// within about 3 mm of the glass. AXIS_DISTANCE on this tablet's sec_e-pen
-// is the RAW driver count (`dumpsys input`: range 0..255,
+// within a few millimetres of the glass. AXIS_DISTANCE on this tablet's
+// sec_e-pen is the RAW driver count (`dumpsys input`: range 0..255,
 // touch.distance.calibration scaled, DistanceScale 1.000), about 10 counts
 // per millimetre — the last hover report before the tip lands reads 2..8,
 // the pen is detected from 81..117 and lost at 84..129 (a raw capture,
-// 2026-09-27). THE NUMBER IS THE ARCHITECT'S and a retune is this one line.
-// No hysteresis: his glass pass decides whether flicker at the boundary
-// shows.
-constexpr float kPenPlaneDistance = 30.0f;
+// 2026-09-27). THE NUMBER IS THE ARCHITECT'S. It was a constexpr 30 (about
+// 3 mm) when the plane landed earlier the same day; it is the device
+// config's TEMPORARY tuning key `pen_plane_distance` now (template 50, about 5 mm; the grammar and the
+// phase's closing rule at device_config.h), pushed down once per process by
+// set_pen_plane_distance into pen_plane_distance_, the one member this
+// predicate reads. No hysteresis: his glass pass decides whether flicker at
+// the boundary shows.
+void GuiPlatform::set_pen_plane_distance(int counts) {
+    pen_plane_distance_ = static_cast<float>(counts);
+}
 
 // THE ONE PREDICATE — "is this pen report within the GUI's plane" — read by
 // both pen rules and nothing else: the hover doors (on_motion_event's hover
@@ -2082,7 +2091,7 @@ constexpr float kPenPlaneDistance = 30.0f;
 // always is: the down, move and up actions carry the pen only while it is on
 // the glass. A HOVER report — HOVER_ENTER / HOVER_MOVE, and a BUTTON_PRESS /
 // BUTTON_RELEASE while the pen is not on the glass — is iff its distance is
-// at or under the constant. A HOVER_EXIT NEVER IS, and neither is anything
+// at or under the cutoff (pen_plane_distance_). A HOVER_EXIT NEVER IS, and neither is anything
 // else: the platform sends the exit both when the pen leaves range and just
 // before every tip down, and at a range leave the driver writes distance 0
 // beside the tool going up, so the exit carries no trustworthy height. THAT
@@ -2104,7 +2113,7 @@ bool GuiPlatform::pen_report_in_plane(const AInputEvent* event, int32_t masked,
         case AMOTION_EVENT_ACTION_HOVER_ENTER:
         case AMOTION_EVENT_ACTION_HOVER_MOVE:
             return AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_DISTANCE,
-                                             pen_index) <= kPenPlaneDistance;
+                                             pen_index) <= pen_plane_distance_;
         default:   // HOVER_EXIT, CANCEL and every other action
             return false;
     }

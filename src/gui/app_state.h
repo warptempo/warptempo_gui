@@ -3318,7 +3318,8 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // `separator_before` marks the one place the two categories part: the four
 // SIDECAR keys a hand edits (the metadata), then the five editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
-// `last_project` is the program's own and has no row).
+// `last_project` is the program's own and the S Pen's TEMPORARY tuning key
+// `pen_plane_distance` is hand-edited, so neither has a row).
 //
 // It lives here rather than in the painter because three domains read it — the
 // painter (labels, layout), the press claim (which key a click prefills) and
