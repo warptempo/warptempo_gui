@@ -714,18 +714,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE LIT PLATE'S FOUR INKS, the tuning phase's defaults (architect
-    // 2026-09-27; the phase's terms at render.h's row-6 palette block), the
-    // same on both templates: each bar's outline equal to its fill, so the
-    // plate is the one before the outline existed.
-    cfg.fg_color        = kWaveformForegroundInkDefault;        // #1b9e84
-    cfg.fg_border_color = kWaveformForegroundBorderInkDefault;  // #1b9e84
-    cfg.bg_color        = kWaveformBackgroundInkDefault;        // #1c816b
-    cfg.bg_border_color = kWaveformBackgroundBorderInkDefault;  // #1c816b
-    // THE PLATE'S WIDENING, its tuning phase's default (architect
-    // 2026-09-27; the rule at render_waveform's declaration), the same on
-    // both templates: half a column on each side.
-    cfg.waveform_widening_hundredths = kWaveformWideningDefaultHundredths;  // 0.50
     return cfg;
 }
 
