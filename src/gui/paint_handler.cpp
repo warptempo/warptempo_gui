@@ -5809,8 +5809,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // THE RING WEARS THE PLAYHEAD STEM'S WHITE, kPlayheadStem, ALWAYS
     // (architect 2026-09-26, superseding the same day's highlight shade of the
     // reset's class): only the focused reset has the overlay
-    // (Selection::phase_overlay_subject), the focus is a member of the
-    // selection, and every selected marker's stem is that white
+    // (Selection::phase_overlay_subject), and the focus's stem is that white
     // (resolve_marker_stem, render.cpp), so the ring and the stem it starts
     // from read as one object, red class or not. A constant colour, so the ring's
     // damage is its visibility's alone (the selection, the focus, the mode),
@@ -7601,9 +7600,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // state paints the interior in the marker-flag red class's BRIGHT
         // pair (fill under its 1px top edge, the flag anatomy's own order),
         // so there is ONE invalid red in the product and no second box. IT IS
-        // THE CLASS'S DERIVED `Sel` PAIR, which no marker wears: the class
-        // took a calm REST pair on 2026-09-16 and selection went white on
-        // 2026-09-26, leaving the bright red the flash's alone, called not
+        // THE CLASS'S DERIVED `Sel` PAIR, which a resting red marker never
+        // wears (the class took a calm REST pair on 2026-09-16), called not
         // copied, so the flag editor's flash and this one cannot drift. THE TOP EDGE IS
         // CLIPPED TO THE ROUNDED INTERIOR (2026-08-13, when the box grew
         // corners): a straight 1px band across a rounded box would poke out
@@ -8890,9 +8888,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     so a cursor resting on a marker sits hidden behind it, a
         //     coincident marker's stem covering the cursor's with no
         //     suppression of either. A SELECTION adds no playhead-like mark
-        //     of its own, its whole cue being its members' WHITE addressed
-        //     cells and WHITE stems (SELECTION IS WHITE, render.h), with the
-        //     landed cursor on the focus. (2026-08-01 lifted the SCANNER
+        //     of its own, its whole cue being its members' bright addressed
+        //     cells and bright stems — the focus's WHITE (THE FOCUS IS WHITE,
+        //     render.h) — with the landed cursor on the focus. (2026-08-01 lifted the SCANNER
         //     above the stems, so the moving line does not blink out at every
         //     marker it crosses; the 2026-09-26 ruling leaves it there.)
 

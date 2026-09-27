@@ -1198,14 +1198,16 @@ struct FlagFace {
 
 // THE COLOR-CLASS LADDER, one owner for both marker columns (the full
 // statement is at render_flags' declaration): disabled wins outright, then
-// selection's white pair, then red's rest pair, then the column's rest pair —
-// and the DISABLED arm runs that same selection-red-column ladder INSIDE
-// ITSELF to pick the pair it blends, so selection lifts a disabled marker
-// exactly as it lifts a live one (architect 2026-08-01). SELECTION IS WHITE
-// (architect 2026-09-26): one selected pair for every live class, red
-// included, kMarkerFlagFillSel / kMarkerFlagEdgeSel (render.h), so a selected
-// red marker's red is read off its calm cells, and the red class's own
-// derived bright pair is the invalid flash's alone.
+// the focus's white pair, then the class's selected pair (red's own on the
+// red class), then red's rest pair, then the column's rest pair — and the
+// DISABLED arm runs that same ladder INSIDE ITSELF to pick the pair it
+// blends, so selection lifts a disabled marker exactly as it lifts a live one
+// (architect 2026-08-01). THE FOCUS IS WHITE (architect 2026-09-26, "focused
+// marker should be white, others the previous derived selection color"):
+// kMarkerFlagFillSel / kMarkerFlagEdgeSel (render.h) on the focus's addressed
+// cell on every live class; every other selected member's addressed cell
+// wears its class's derived selected pair, so a selected red marker that is
+// not the focus stays red, only brighter.
 //
 // THE DISABLED FACE'S LABEL DIMS AGAINST THE FLAG, NOT AGAINST THE LANE. Every
 // SHAPE surface takes its fraction of itself over the lane ground, as ruled.
@@ -1244,34 +1246,43 @@ struct FlagFace {
 // 2026-09-15 until that column's deletion, architect 2026-09-23.)
 enum class FlagColumnFace { Warp, PhaseReset };
 
-// The pair one live cell wears: the white selected pair on a selected cell,
-// else red's rest pair, else its column's rest pair — the one place the
-// pairs are chosen, so the live arm and the disabled arm below cannot pick
-// differently. (The columns' own derived selected halves are unread here: the
-// selection is white on every class.)
-static void flag_class_pair(bool red, bool selected,
+// THE CLASS'S SHADES, the one route both the flag face and the stem read a
+// class through: the red class's own derivation of #da4453 (kMarkerRedShades,
+// render.h — red is asked before the column, so red stays red on both
+// columns), else the column's (marker_palette().warp / .phase_reset).
+static const MarkerShades& flag_class_shades(bool red,
+                                             FlagColumnFace column_face) {
+    if (red) return kMarkerRedShades;
+    const MarkerPalette& palette = marker_palette();
+    return column_face == FlagColumnFace::PhaseReset ? palette.phase_reset
+                                                     : palette.warp;
+}
+
+// The pair one live cell wears — the one place the pairs are chosen, so the
+// live arm and the disabled arm below cannot pick differently. THE THREE
+// TIERS (architect 2026-09-26, "focused marker should be white, others the
+// previous derived selection color"): the FOCUS's addressed cell wears the
+// white pair (kMarkerFlagFillSel / kMarkerFlagEdgeSel); any other selected
+// member's addressed cell wears its CLASS'S derived selected pair — red's
+// (kMarkerRedShades, the red class keeps its hue) or its column's; an
+// unselected cell wears its class's rest pair. `selected` is the cell's
+// brightness (the addressed cell of a selected marker) and `focused` whether
+// the marker is the focus; the white needs both.
+static void flag_class_pair(bool red, bool selected, bool focused,
                             FlagColumnFace column_face,
                             GuiColor& fill, GuiColor& edge) {
-    if (selected) {
+    if (selected && focused) {
         fill = kMarkerFlagFillSel;
         edge = kMarkerFlagEdgeSel;
         return;
     }
-    if (red) {
-        fill = kMarkerFlagFillRed;
-        edge = kMarkerFlagEdgeRed;
-        return;
-    }
-    const MarkerPalette& palette = marker_palette();
-    const MarkerShades& shades = column_face == FlagColumnFace::PhaseReset
-                                     ? palette.phase_reset
-                                     : palette.warp;
-    fill = shades.fill;
-    edge = shades.edge;
+    const MarkerShades& shades = flag_class_shades(red, column_face);
+    fill = selected ? shades.fill_sel : shades.fill;
+    edge = selected ? shades.edge_sel : shades.edge;
 }
 
 FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
-                           FlagColumnFace column_face) {
+                           bool focused, FlagColumnFace column_face) {
     FlagFace f;
     if (disabled) {
         // The class the marker WOULD paint, blended — the LIVE LADDER RUN
@@ -1292,13 +1303,15 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         // colour and still reads switched off.
         //
         // RED TAKES THE LIFT TOO, as the live red class does: a selected
-        // disabled red marker is the disabled rendition of the WHITE pair,
-        // like every class's (SELECTION IS WHITE, architect 2026-09-26), and
-        // its unselected cells keep the dimmed red. The pair is chosen by the
+        // disabled red marker is the disabled rendition of the red class's
+        // own derived selected pair, and of the WHITE pair on the focus's
+        // addressed cell as every class's is (architect 2026-09-26); its
+        // unselected cells keep the dimmed red. The pair is chosen by the
         // live arms' own helper — one question, every class.
         GuiColor base_fill;
         GuiColor base_edge;
-        flag_class_pair(red, selected, column_face, base_fill, base_edge);
+        flag_class_pair(red, selected, focused, column_face, base_fill,
+                        base_edge);
         f.fill  = mix_color(base_fill, kRedesignContentGround,
                             kMarkerDisabledMix);
         f.edge  = mix_color(base_edge, kRedesignContentGround,
@@ -1322,11 +1335,12 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledLabelMix);
         return f;
     }
-    // THE WHITE PAIR SELECTED, ELSE THE CLASS'S REST PAIR (architect
-    // 2026-09-26; red's rest pair 2026-09-16), read on the `selected` bit —
-    // which, at the flag pass's own rule, is true for the marker's ADDRESSED
-    // CELL alone, so a selected red marker's other cells stay red.
-    flag_class_pair(red, selected, column_face, f.fill, f.edge);
+    // THE WHITE PAIR ON THE FOCUS, THE CLASS'S SELECTED PAIR ON ANY OTHER
+    // MEMBER, ELSE THE CLASS'S REST PAIR (architect 2026-09-26; red's rest
+    // pair 2026-09-16), read on the `selected` bit — which, at the flag pass's
+    // own rule, is true for the marker's ADDRESSED CELL alone, so a selected
+    // marker's other cells stay calm — and the `focused` bit.
+    flag_class_pair(red, selected, focused, column_face, f.fill, f.edge);
     // FULL-STRENGTH BORDER on every LIVE class, red and selected included,
     // and that is the precise mirror of what fill and edge do rather than a
     // second rule: the live arms damp nothing, so the border they take is
@@ -1339,33 +1353,35 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
 }
 
 // THE MARKER STEM'S COLOUR, THE ONE OWNER (architect 2026-09-26), or nullopt
-// for NO STEM. It reads the marker's CLASS and its SELECTION MEMBERSHIP —
-// never a cell's brightness, so the addressed cell does not reach it:
+// for NO STEM. It reads the marker's CLASS, its SELECTION MEMBERSHIP and
+// whether it is THE FOCUS (AppState::last_selected_marker, always a member of
+// the selection) — never a cell's brightness, so the addressed cell does not
+// reach it:
 //   disabled   no stem, ever;
-//   selected   the playhead stem's white, kPlayheadStem — selection's own
-//              colour (SELECTION IS WHITE, render.h) — on both columns and
-//              every live class, red included, focus or not, whichever cell
-//              is addressed (a member addressed at a bound cell stems white
-//              though its flag box keeps its rest fill; architect 2026-09-23:
-//              "so that it stands out" — at a coarse zoom among many
-//              markers, the playhead is found by looking up and the selected
-//              stems by looking down);
+//   the focus  the playhead stem's white, kPlayheadStem, on both columns and
+//              every live class, red included, whichever cell is addressed
+//              (a focus addressed at a bound cell stems white though its flag
+//              box keeps its rest fill; architect 2026-09-26);
+//   selected   the class's derived SELECTED FILL — the column's fill_sel, or
+//              the red class's own (kMarkerRedShades.fill_sel, #ff6c7b) —
+//              (architect 2026-09-23: "so that it stands out" — at a coarse
+//              zoom among many markers, the playhead is found by looking up
+//              and the selected stems by looking down);
 //   at rest    the class's calm fill — the column's fill, or the red class's
 //              own rest stem kMarkerStemRed.
+// The class is read through flag_class_shades, the flag face's own route.
 // The playhead's stem paints UNDER every marker stem (paint_playheads, before
 // paint_marker_stems), so a coincident marker's stem covers it. The flag pass
 // publishes the answer into the stem stash (render_flag_boxes_impl); the `h`
 // view's diff stems are that lane's own (render_history_diff_flags).
 std::optional<GuiColor> resolve_marker_stem(bool disabled, bool red,
-                                            bool selected,
+                                            bool selected, bool focused,
                                             FlagColumnFace column_face) {
     if (disabled) return std::nullopt;
-    if (selected) return kPlayheadStem;
-    if (red) return kMarkerStemRed;
-    GuiColor fill;
-    GuiColor edge;
-    flag_class_pair(false, false, column_face, fill, edge);
-    return fill;
+    if (selected && focused) return kPlayheadStem;
+    if (!selected && red) return kMarkerStemRed;
+    const MarkerShades& shades = flag_class_shades(red, column_face);
+    return selected ? shades.fill_sel : shades.fill;
 }
 
 // THE MARKER'S BOXES IN PAINTED ORDER, RANKED: the flag box, then the lower
@@ -1604,17 +1620,24 @@ void render_flag_boxes_impl(
             // real question and the answer is the one it belongs to: a disabled
             // red marker blends the red class's own rest pair and stays
             // recognisably red (on a selected marker's addressed cell it
-            // blends the white pair, as every class does).
+            // blends the red class's selected pair, or the white pair on the
+            // focus, as every class does).
             // Disabled still WINS — it decides the blend and the missing stem —
             // it just no longer erases the hue.
             const bool dis = disabled_of(i);
             const bool red = red_set.count(i) > 0;
             const bool sel = selected_set.count(i) > 0;
+            // THE FOCUS (AppState::last_selected_marker, render_flags'
+            // `focus_marker`): its addressed cell wears the white pair and its
+            // stem the playhead stem's white; every other member wears its
+            // class's derived selected pair (architect 2026-09-26).
+            const bool focused = i == focus_marker;
             // THE SELECTED PAIR IS ONE CELL'S (architect 2026-09-05, "light
             // the colour of only the flag that's clicked"): a selected marker
-            // paints its ADDRESSED cell in the selected pair and its other
-            // cells in its ordinary class pair (the selected pair is white
-            // on every class, architect 2026-09-26). The addressed cell is the
+            // paints its ADDRESSED cell in the selected pair — white on the
+            // focus, its class's own on every other member (architect
+            // 2026-09-26) — and its other cells in its ordinary class pair.
+            // The addressed cell is the
             // payload for every selected marker but the focus, whose
             // addressed cell is the axis — and where the axis names a cell
             // this marker does not paint (a bound cell on an owner disabled
@@ -1623,10 +1646,10 @@ void render_flag_boxes_impl(
             // somewhere. Disabled and red blend as they always did, cell by
             // cell through the same ladders; the border reads the class
             // alone. The stem reads no cell: its owner (resolve_marker_stem)
-            // takes the marker's membership, so a member addressed at a bound
-            // cell stems white while its flag box keeps its rest fill.
-            MarkerCell bright = i == focus_marker ? focus_cell
-                                                  : MarkerCell::Payload;
+            // takes the marker's membership and focus, so a focus addressed
+            // at a bound cell stems white while its flag box keeps its rest
+            // fill.
+            MarkerCell bright = focused ? focus_cell : MarkerCell::Payload;
             // THE FALLBACK ASKS WHETHER THE BRIGHT CELL IS SHOWN AT ALL, by
             // this pass OR by the open field standing in for it — never merely
             // whether THIS pass paints it. A field paints the box it edits and
@@ -1649,7 +1672,7 @@ void render_flag_boxes_impl(
             };
             const FlagFace face =
                 resolve_flag_face(dis, red, cell_selected(MarkerCell::Payload),
-                                  column_face);
+                                  focused, column_face);
 
             // THE EDITED MARKER'S BOX IS NOT PAINTED HERE — the open editor
             // owns every pixel of it (render_flag_editor_box, which paints the
@@ -1783,7 +1806,7 @@ void render_flag_boxes_impl(
                         // untouched and keeps its live class, the grey being
                         // about the cells alone.
                         resolve_flag_face(dis || cells.follower, red,
-                                          cell_selected(which),
+                                          cell_selected(which), focused,
                                           column_face),
                         closes);
                 };
@@ -1898,7 +1921,7 @@ void render_flag_boxes_impl(
             // The stem stash is gated to [0, w), both edges
             // (stem_column_on_waveform).
             const std::optional<GuiColor> stem =
-                resolve_marker_stem(dis, red, sel, column_face);
+                resolve_marker_stem(dis, red, sel, focused, column_face);
             if (out_stems && stem &&
                 stem_column_on_waveform(bx - top_strip_area.x,
                                         waveform_width)) {
@@ -2460,11 +2483,13 @@ namespace {
                rgb24_of(m.edge_sel) == edge_sel;
     }
     static_assert(derives_to(0x9B59B6, 0x563165, 0xC974ED, 0x704083));  // purple
-    static_assert(derives_to(0xDA4453, 0x79262E, 0xFF6C7B, 0x8E3C44));  // red
+    // red: kMarkerRedShades, whose selected half a selected red member that
+    // is not the focus wears, and the invalid flash too
+    static_assert(derives_to(0xDA4453, 0x79262E, 0xFF6C7B, 0x8E3C44));
     static_assert(derives_to(0xF47750, 0x88422C, 0xFFAC92, 0x8E5F51));  // orange
     static_assert(derives_to(0x1ABC9C, 0x0E6857, 0x22F4CB, 0x138871));  // green
-    // SELECTION IS WHITE (architect 2026-09-26): the live classes' one
-    // selected pair is the playhead stem's white over its derived edge,
+    // THE FOCUS IS WHITE (architect 2026-09-26): the focus's addressed cell
+    // wears the playhead stem's white over its derived edge,
     // QColor(#fcfcfc).darker(180) — achromatic, so v alone scales:
     // 64764 * 100 / 180 = 35980, and 35980 / 257 narrows to 140.
     static_assert(rgb24_of(kMarkerFlagFillSel) == 0xFCFCFC);
@@ -2798,10 +2823,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // is visibly the same flag, only wider. The red flash overrides the whole
     // pair with this lane's own kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel —
     // the red class's derived BRIGHT pair, which is what "the one invalid
-    // red" names and which no marker wears: a resting red marker takes the
-    // calm REST pair (2026-09-16) and a selected marker of any class the
-    // white pair (2026-09-26), so an invalid commit is as loud as it ever was
-    // and can never be mistaken for the marker's own face. The three DIALOG editors flash this
+    // red" names: a resting red marker takes the calm REST pair (2026-09-16),
+    // and the field stands in for the focus's addressed cell, which wears the
+    // white pair on every class (2026-09-26), so an invalid commit can never
+    // be mistaken for the field's own face. The three DIALOG editors flash this
     // same pair (as this box's anatomy on the bottom strip from 2026-08-02, and
     // as the dialog FIELD's recolor since 2026-08-12), so there is no
     // second red to contrast against (see the declaration). It overrides the
@@ -2825,10 +2850,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the state rather than assumed. Every box in the riding run below asks
     // the same question of its own cell, which is why the flag pass's own
     // fallback is written to ignore suppression: the field is where the
-    // marker's selection shows while its box is being edited.
+    // marker's selection shows while its box is being edited. THE FIELD
+    // STANDS IN FOR THE FOCUS'S ADDRESSED CELL, so it wears the focus's white
+    // pair (architect 2026-09-26) — read off the same state the flag pass
+    // reads, `focused` being that pass's own question of this marker.
     const bool sel = app.selected_markers.count(idx) > 0;
-    const MarkerCell bright = idx == app.last_selected_marker
-                                  ? app.addressed_cell : MarkerCell::Payload;
+    const bool focused = idx == app.last_selected_marker;
+    const MarkerCell bright = focused ? app.addressed_cell
+                                      : MarkerCell::Payload;
     const auto cell_selected = [&](MarkerCell c) { return sel && c == bright; };
     // EVERY FIELD WEARS ITS OWN COLUMN'S HUE, because it IS its box unrolled:
     // the open editor must read as the same flag or cell, only wider, which
@@ -2840,7 +2869,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const FlagColumnFace column_face =
         phase ? FlagColumnFace::PhaseReset : FlagColumnFace::Warp;
     FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell),
-                                      column_face);
+                                      focused, column_face);
     // The border column the box wears: the flag's own for the payload editor,
     // and the SEAM DIVIDER for the bound field — the
     // same constant, the same width, the same face.border, standing on the
@@ -3163,7 +3192,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 // Its own column's hue, as the field it rides (architect
                 // 2026-09-21).
                 resolve_flag_face(cell_dis, red_class,
-                                  cell_selected(MarkerCell::Lower),
+                                  cell_selected(MarkerCell::Lower), focused,
                                   column_face),
                 // Never the run's last box: the upper cell rides after it on
                 // every kind that carries the lower.
@@ -3177,7 +3206,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 baseline, cl.upper_run,
                 // Its own column's hue, as the lower cell just above.
                 resolve_flag_face(cell_dis, red_class,
-                                  cell_selected(MarkerCell::Upper),
+                                  cell_selected(MarkerCell::Upper), focused,
                                   column_face),
                 // THE RUN'S LAST BOX, so it closes the run (2026-09-25) —
                 // the resting run's own ending, at the field's edge.

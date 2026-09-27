@@ -899,10 +899,11 @@ private:
     // of the active column stems, always, from its flag's bottom (= the marker
     // lane's bottom = the waveform top) down through the waveform to the
     // window's content bottom, in its class's calm fill; a DISABLED marker
-    // stems never. EVERY SELECTED marker's stem wears the playhead stem's
-    // white, kPlayheadStem, focus or not (SELECTION IS WHITE, architect
-    // 2026-09-26), so at a coarse zoom the selected stems stand out among
-    // many; the colour is resolved in the painter (resolve_marker_stem,
+    // stems never. A SELECTED marker's stem wears its class's Sel fill, and
+    // the focus's the playhead stem's white, kPlayheadStem (THE FOCUS IS
+    // WHITE, architect 2026-09-26), so at a coarse zoom the selected stems
+    // stand out among many; the colour is resolved in the painter
+    // (resolve_marker_stem,
     // render.cpp) and published in the stash. The stems paint OVER the
     // playhead's stem, always — a marker on the playhead's own frame
     // included, with no suppression (architect 2026-09-26) — as the flags

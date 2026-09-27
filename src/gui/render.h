@@ -681,12 +681,13 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // the alpha instead and that constant is deleted.)
 inline constexpr GuiColor kPlayheadHead      = hex(0x8E8F91);
 inline constexpr double   kPlayheadHeadAlpha = 0.8;
-// The stem's white is also SELECTION'S COLOUR on the live marker lane — the
-// selected fill of every live class (kMarkerFlagFillSel, below) and every
-// selected marker's stem — and the phase-reset lead-in ring (architect
-// 2026-09-26: the owners are resolve_flag_face and resolve_marker_stem,
-// render.cpp, and paint_phase_reset_overlay_ring, paint_handler.cpp) — read
-// from this constant, one fact.
+// The stem's white is also THE FOCUS'S COLOUR on the live marker lane — the
+// fill of the focused marker's addressed cell on every live class
+// (kMarkerFlagFillSel, below) and the focused marker's stem — and the
+// phase-reset lead-in ring (architect 2026-09-26: the owners are
+// resolve_flag_face and resolve_marker_stem, render.cpp, and
+// paint_phase_reset_overlay_ring, paint_handler.cpp) — read from this
+// constant, one fact.
 inline constexpr GuiColor kPlayheadStem      = hex(0xFCFCFC);
 // The hold lamp's lit head (above): the stem's white by ruling, one fact, so
 // it is spelled as the stem's constant rather than a second sample.
@@ -719,13 +720,19 @@ inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 // The bright cell is the whole of the addressed cell's cue: it carries no
 // underline and no mark of its own.
 //
-// SELECTION IS WHITE (architect 2026-09-26): the bright pair is ONE pair for
-// every live class — the warp column, the phase-reset column and the red
-// class alike — the playhead stem's white kPlayheadStem as the fill and its
-// derived edge (kMarkerFlagFillSel / kMarkerFlagEdgeSel, below). A selected
-// marker's addressed cell and its stem wear it, so the selection reads as the
-// one white the playhead already is; the CLASS is read off the calm cells and
-// the calm flags around it. The label stays kMarkerFlagLabel black.
+// THE FOCUS IS WHITE, EVERY OTHER MEMBER ITS CLASS'S BRIGHT PAIR (architect
+// 2026-09-26: "too bright — focused marker should be white, others the
+// previous derived selection color"). THREE TIERS:
+//   the focus   (AppState::last_selected_marker) its addressed cell wears the
+//               playhead stem's white kPlayheadStem over its derived edge
+//               (kMarkerFlagFillSel / kMarkerFlagEdgeSel, below) on every
+//               live class, red included, and its stem is kPlayheadStem;
+//   selected    every other member's addressed cell (the payload) wears its
+//               CLASS'S derived selected pair — the column's fill_sel /
+//               edge_sel, or the red class's own (kMarkerRedShades) so red
+//               keeps its hue — and its stem that same fill_sel;
+//   at rest     the class's rest pair and rest stem.
+// The label stays kMarkerFlagLabel black on all three.
 //
 // The RED crop is 56x17 and supplies COLORS ONLY — its dimensions are the
 // regular class's (the architect's own instruction).
@@ -749,14 +756,11 @@ inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 // static_asserts in render.cpp; a chain through bytes misses two of them by
 // one.
 //
-// WHO READS THE SELECTED HALF: since SELECTION IS WHITE (above), a live
-// class's own fill_sel / edge_sel paints nothing — the live marker lane reads
-// fill and edge from marker_palette().warp / .phase_reset and the one white
-// pair for selection — while the `h` view's two diff classes still swap to
-// their own fill_sel / edge_sel, and the red class's selected half is the
-// invalid red (kMarkerRedShades, below). The derivation stays whole: the
-// selected shades are what the static_asserts pin against the crops, and the
-// white pair's edge is this same derivation's edge.
+// WHO READS THE SELECTED HALF: every selected member but the focus, on the
+// live lane (its addressed cell and its stem, THE FOCUS IS WHITE above); the
+// `h` view's two diff classes on their focused and selected flags; and the
+// red class's selected half is also the invalid red (kMarkerRedShades,
+// below). The white pair's edge is this same derivation's edge.
 //
 // THE BASES OF FOUR CLASSES ARE DEVICE-CONFIG KEYS FOR A TUNING PHASE
 // (architect 2026-09-26; the schema is device_config.h's): marker_color_warp,
@@ -935,28 +939,30 @@ struct MarkerPalette {
 void                 set_marker_base_colors(const MarkerBaseColors& bases);
 const MarkerPalette& marker_palette();
 
-// THE SELECTED PAIR OF EVERY LIVE CLASS (architect 2026-09-26, SELECTION IS
+// THE FOCUS'S PAIR ON EVERY LIVE CLASS (architect 2026-09-26, THE FOCUS IS
 // WHITE, the palette block above): the fill is the playhead stem's white and
 // the edge is derive_marker_shades' edge of it — QColor(#fcfcfc).darker(180),
 // #8c8c8c, pinned by a static_assert in render.cpp — through the one
 // derivation rather than a second sample, so the white pair's anatomy (a
 // fill under a darker 1px top edge) is the one rule every class's rest pair
-// follows. resolve_flag_face reads this pair for a selected marker's
+// follows. resolve_flag_face reads this pair for the FOCUSED marker's
 // addressed cell on both columns and on the red class, before either
-// column's shades or red's; the disabled arm blends it toward the lane ground
-// as it blends every pair. (The derivation's own selected half of the white
-// is unread.)
+// column's shades or red's; every other selected member takes its class's
+// own selected pair; the disabled arm blends it toward the lane ground as it
+// blends every pair. (The derivation's own selected half of the white is
+// unread.)
 inline constexpr MarkerShades kMarkerSelectedShades =
     derive_marker_shades(kPlayheadStem);
 inline constexpr GuiColor kMarkerFlagFillSel = kMarkerSelectedShades.fill;
 inline constexpr GuiColor kMarkerFlagEdgeSel = kMarkerSelectedShades.edge;
 
-// THE RED CLASS HAS A REST PAIR (architect 2026-09-16), and SELECTED IT IS
-// WHITE LIKE EVERY OTHER CLASS (architect 2026-09-26): its addressed cell
-// takes kMarkerFlagFillSel / kMarkerFlagEdgeSel and its stem is white, and
-// the red is read off its calm cells. The class ladder DISABLED > RED >
-// default picks the REST pair; selection, the one white pair, stands outside
-// it.
+// THE RED CLASS HAS A REST PAIR AND A SELECTED PAIR, LIKE EVERY OTHER CLASS
+// (architect 2026-09-16), both of this one derivation (kMarkerRedShades):
+// a selected red member that is not the focus wears the selected pair on its
+// addressed cell and its fill_sel as its stem, so it is still red, only
+// brighter; the FOCUS is white on every class, red included (architect
+// 2026-09-26), its red read off its calm cells. The ladder is focus-white >
+// selected (red's own on red) > red rest > column rest.
 //
 // PROVENANCE IS THE REMOVED CROPS' LADDER, AND THE CLASS IS CONSTEXPR: its
 // base is #da4453, the UNSELECTED removed crop's fill
@@ -968,15 +974,15 @@ inline constexpr GuiColor kMarkerFlagEdgeSel = kMarkerSelectedShades.edge;
 // retune of that key moves the `h` lane alone — two facts that agree at the
 // default, not one fact referenced twice.
 //
-// THE DERIVED BRIGHT PAIR IS THE PRODUCT'S ONE INVALID RED — the red flash a
-// refused commit paints, on the flag editor's unrolled box and on the dialog
-// field alike, and nothing else since selection went white. Those two
-// surfaces read kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel, CALLED NOT
-// COPIED (the phrase is this palette's, at kModalFieldGround below): one fact
-// with one constant, so the two flashes can never drift. It stays the bright
-// red of the red class's own derivation, so the flash is as loud as it ever
-// was and can never be mistaken for a resting red marker (the calm pair) or
-// a selected one (white).
+// THE DERIVED BRIGHT PAIR IS ALSO THE PRODUCT'S ONE INVALID RED — the red
+// flash a refused commit paints, on the flag editor's unrolled box and on the
+// dialog field alike. Those two surfaces read kMarkerFlagFillRedSel /
+// kMarkerFlagEdgeRedSel, CALLED NOT COPIED (the phrase is this palette's, at
+// kModalFieldGround below): one fact with one constant, so the two flashes
+// can never drift. The flag editor's field stands in for the focus's
+// addressed cell, which is white, so its flash can never be mistaken for its
+// own face; the selected red members the lane shows read the same pair
+// through kMarkerRedShades (resolve_flag_face), one derivation.
 inline constexpr MarkerShades kMarkerRedShades =
     derive_marker_shades(hex(0xDA4453));
 inline constexpr GuiColor kMarkerFlagFillRed     = kMarkerRedShades.fill;
@@ -987,11 +993,12 @@ inline constexpr GuiColor kMarkerFlagEdgeRedSel  = kMarkerRedShades.edge_sel;
 // explicit value for it. THE STEM FOLLOWS THE SELECTION (architect
 // 2026-09-23, "so that it stands out" — at a coarse zoom among many markers
 // the playhead is found by looking up and the selected stems by looking
-// down), and EVERY SELECTED MARKER'S STEM IS THE PLAYHEAD STEM'S WHITE,
-// kPlayheadStem, on both columns and every live class, red included
-// (architect 2026-09-26): resolve_marker_stem (render.cpp) gives a resting
-// red marker this constant and every other resting class its column's calm
-// fill, and a selected one white. This constant EQUALS the red class's base, by coincidence of
+// down), and THE FOCUS'S STEM IS THE PLAYHEAD STEM'S WHITE, kPlayheadStem, on
+// both columns and every live class, red included (architect 2026-09-26):
+// resolve_marker_stem (render.cpp) gives a resting red marker this constant,
+// a selected one the red class's fill_sel (#ff6c7b) and the focus white, and
+// every other class its column's calm fill at rest, its fill_sel selected
+// and white on the focus. This constant EQUALS the red class's base, by coincidence of
 // provenance rather than by derivation — both are the unselected removed
 // crop's fill, arrived at separately — so it stays its own constant and a
 // retune of one is not a retune of the other.
@@ -1025,30 +1032,30 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // THE DEFAULT'S SHADES are derive_marker_shades' of #3daee9, as every
 // class's are:
 //   unselected  fill #3daee9  edge #226181
-//   selected    fill #73cfff  edge #40738e   (unread: selection is white)
+//   selected    fill #73cfff  edge #40738e
 // (The orange the column wore between was sampled off the architect's crops
 // tmp/keep/screenshots/orange-unselected.png and orange-selected.png — fill
 // #f47750 / edge #88422c, selected #ffac92 / #8e5f51 — and that ladder stays
 // one of the sampled sets pinning derive_marker_shades, render.cpp.)
 //
-// RED STAYS RED ON EVERY COLUMN AT REST (kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed, resolve_flag_face's red arm, asked before the column),
-// SELECTION IS WHITE ON EVERY COLUMN (kMarkerFlagFillSel /
-// kMarkerFlagEdgeSel, asked before both), and the phase-reset STEM follows
-// the warp rule: this calm fill at rest and the playhead stem's white
-// (kPlayheadStem) when selected, as every live class's selected stem is
+// RED STAYS RED ON EVERY COLUMN, at rest and selected (kMarkerRedShades,
+// resolve_flag_face's class route, asked before the column), THE FOCUS IS
+// WHITE ON EVERY COLUMN (kMarkerFlagFillSel / kMarkerFlagEdgeSel, asked
+// before both), and the phase-reset STEM follows the warp rule: this calm
+// fill at rest, the Sel fill when selected, and the playhead stem's white
+// (kPlayheadStem) on the focus, as every live class's focused stem is
 // (architect 2026-09-26; resolve_marker_stem, render.cpp).
 // THE PHASE-RESET LEAD-IN RING on the waveform wears kPlayheadStem too,
 // always (architect 2026-09-26; paint_phase_reset_overlay_ring,
-// paint_handler.cpp): only the focused reset has the overlay, and the focus
-// is selected, so the ring matches the white stem it starts from. THE BOUND (hop) CELLS ON
+// paint_handler.cpp): only the focused reset has the overlay, so the ring
+// matches the white stem it starts from. THE BOUND (hop) CELLS ON
 // THIS COLUMN WEAR THIS PAIR TOO (architect 2026-09-21: the cells wear their
 // own column's hue — superseding his 2026-09-15 "fine for now", which had
 // kept them on the warp column's purple): every bound-cell call site into
 // resolve_flag_face passes the face of the column the cells belong to — the
 // resting cells, the bound editor's field and the boxes riding it — through
-// the same class ladder as the reset's own flag box (disabled > red >
-// default, the addressed cell of a selected marker white). The argument stays
+// the same class ladder as the reset's own flag box (disabled > focus white >
+// selected > red > default, on the addressed cell). The argument stays
 // required, never defaulted (warp is never the unmarked default).
 
 // THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
@@ -1072,10 +1079,11 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 //
 // WHAT IT BUYS, per class at the default bases (black against the fill,
 // versus the #fcfcfc it replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
-// gain, the brighter the fill the larger — the red class 4.93 vs 4.15, the
-// PHASE-RESET column's blue 8.43 vs 2.43, the live selection's white 20.5
-// against none at all (SELECTION IS WHITE, architect 2026-09-26: white ink
-// could not stand on it), the diff lane's green 8.72 vs 2.33 and its red
+// gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, the
+// red class 4.93 vs 4.15 at rest and 7.68 vs 2.66 selected, the PHASE-RESET
+// column's blue 8.43 vs 2.43 and 12.1 vs 1.69 selected, the focus's white
+// 20.5 against none at all (THE FOCUS IS WHITE, architect 2026-09-26: white
+// ink could not stand on it), the diff lane's green 8.72 vs 2.33 and its red
 // 4.93 vs 4.11. So the one class that does not gain does not lose either,
 // which is what makes a single ink honest across the ladder.
 //
@@ -1162,7 +1170,7 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // red crops as a rest pair and a selected pair, read on the selection bit
 // exactly as this mode's focus swap reads its own. THE STEM FOLLOWS THE SAME SWAP (architect 2026-09-23):
 // a focused or selected diff flag stems in its class's Sel fill, a resting one
-// in the class's rest fill. (The live lane's selection — flag and stem — is
+// in the class's rest fill. (The live lane's focus — flag and stem — is
 // white since 2026-09-26; this lane's focused and selected flags and stems
 // keep their class's Sel pair, the ruling having named the live classes
 // alone.)
@@ -1209,11 +1217,12 @@ inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 // would show its neighbour through itself and read as a third color.
 //
 // "THE CLASS COLOR" INCLUDES THE SELECTION SWAP (architect 2026-08-01): the
-// pair entering this blend is the one the marker would paint LIVE — the white
-// selected pair (kMarkerFlagFillSel, SELECTION IS WHITE, architect
-// 2026-09-26), red's rest pair, or its column's calm pair, resolved by the
-// live ladder's own order — so a selected disabled marker takes the same
-// relative lift a live one does (~#595a5c), border included. One blend, one
+// pair entering this blend is the one the marker would paint LIVE — the
+// focus's white pair (kMarkerFlagFillSel, THE FOCUS IS WHITE, architect
+// 2026-09-26), a selected member's class Sel pair (red's own on red), red's
+// rest pair, or its column's calm pair, resolved by the live ladder's own
+// order — so a selected disabled marker takes the same relative lift a live
+// one does (the focus ~#595a5c), border included. One blend, one
 // ladder: there is no separate disabled brightness rule to drift.
 //
 // THIS FRACTION IS THE SURFACES' — fill, top edge and left border, on the flag,
@@ -1249,8 +1258,9 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // 1.73 — so 0.75 buys nearly all of the reachable contrast while leaving the
 // label visibly inside the disabled face rather than painting it at full live
 // strength. On the brighter dimmed pairs it lands where the ruling asked:
-// the red class 1.59 at rest, and a selected flag of any class 2.58 on the
-// white pair's ~#595a5c (SELECTION IS WHITE, architect 2026-09-26). (THE PHASE-RESET FLAG BOX reads ~1.89 against its own ~#274657 at
+// the selected flag 1.80, the red class 1.59 at rest and 1.81 selected, and
+// the focus of any class 2.58 on the white pair's ~#595a5c (THE FOCUS IS
+// WHITE, architect 2026-09-26). (THE PHASE-RESET FLAG BOX reads ~1.89 against its own ~#274657 at
 // the default blue — a lighter fill whose ceiling is 2.10, headroom the calm
 // purple does not have — off the generic mix_color call resolve_flag_face
 // feeds it, no constant of its own and the fraction unchanged.) ONE
@@ -1582,9 +1592,8 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 // two facts that agree, so the existing constant ships and no kModal one
 // exists). The invalid red flash
 // recolors the FIELD in the marker-flag red class's derived BRIGHT pair
-// (kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel — the one invalid red, which
-// no marker wears since selection went white, architect 2026-09-26), called
-// not copied.
+// (kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel — the one invalid red, the
+// red class's own selected pair), called not copied.
 inline constexpr GuiColor kModalFieldGround = hex(0x141618);
 inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 
@@ -3610,9 +3619,9 @@ struct FlagLaneRects {
 // per-frame waveform pass (GuiPaintHandler::paint_marker_stems), paint-side,
 // so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved face — its class's calm fill
-// at rest and the playhead stem's white when selected on the live columns
-// (architect 2026-09-26; resolve_marker_stem, render.cpp), the diff class's
-// Sel fill
+// at rest, its Sel fill when selected and the playhead stem's white on the
+// focus on the live columns (architect 2026-09-26; resolve_marker_stem,
+// render.cpp), the diff class's Sel fill
 // on a focused or selected diff flag in `h`; the consumer applies
 // exactly one override over it, the open flag editor's invalid-commit red flash
 // (a transient the painter has no business baking into a cache — the contract is
@@ -3713,8 +3722,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // for.)
 //
 // COLOR CLASSES, resolved in priority order. DISABLED WINS, then the white
-// selected pair on the addressed cell of a selected marker, then red, then the
-// column's default pair:
+// pair on the focus's addressed cell, then the class's selected pair on any
+// other selected marker's addressed cell (red's own on the red class), then
+// red, then the column's default pair:
 //   Disabled:  every surface of the flag BLENDED 25% over the lane ground
 //              (kMarkerDisabledMix, through mix_color) — fill, top edge, LEFT
 //              BORDER (architect 2026-08-02) and label alike — and NO STEM.
@@ -3727,20 +3737,27 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              SELECTION IS PART OF "ITS OWN CLASS" (architect 2026-08-01): a
 //              selected disabled marker blends the SELECTED pair, fill and edge
 //              both, so it carries the same relative lift a live marker's
-//              selection gives — the disabled rendition of the selected face,
-//              which is the white pair on every class, red included, since
-//              2026-09-26.
-//   Selected:  kMarkerFlagFillSel / kMarkerFlagEdgeSel — the playhead stem's
-//              white and its derived edge — on the addressed cell of a
-//              selected marker, ON EVERY LIVE CLASS AND BOTH COLUMNS
-//              (SELECTION IS WHITE, architect 2026-09-26); its other cells
-//              keep their rest pair below; stem kPlayheadStem, the white.
+//              selection gives — the disabled rendition of the selected face:
+//              the white pair on the focus, the class's own selected pair on
+//              every other member, red included (architect 2026-09-26).
+//   Focus:     kMarkerFlagFillSel / kMarkerFlagEdgeSel — the playhead stem's
+//              white and its derived edge — on the FOCUSED marker's addressed
+//              cell (AppState::last_selected_marker, `focus_marker` below),
+//              ON EVERY LIVE CLASS AND BOTH COLUMNS (THE FOCUS IS WHITE,
+//              architect 2026-09-26); its other cells keep their rest pair
+//              below; stem kPlayheadStem, the white, whichever cell is
+//              addressed.
+//   Selected:  the class's derived selected pair on every other selected
+//              marker's addressed cell (the payload) — the column's
+//              fill_sel / edge_sel, or on the red class kMarkerRedShades'
+//              own (#ff6c7b / #8e3c44, the invalid flash's pair too, one
+//              derivation), so a selected red marker is still red, only
+//              brighter; stem the same fill_sel.
 //   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed (architect 2026-09-16
-//              gave red a rest pair; its derived bright pair is the invalid
-//              flash's alone since selection went white); stem kMarkerStemRed
-//              at rest (resolve_marker_stem); border kMarkerFlagBorder
-//              undamped, like every live class. RED STAYS RED ON BOTH
-//              COLUMNS — the column fork below never reaches this arm.
+//              gave red a rest pair); stem kMarkerStemRed at rest
+//              (resolve_marker_stem); border kMarkerFlagBorder undamped,
+//              like every live class. RED STAYS RED ON BOTH COLUMNS — the
+//              column fork below never reaches this arm.
 //   Otherwise: the warp shades' fill / edge (marker_palette().warp) on the
 //              WARP flag box and its bound cells, or the phase-reset
 //              shades' (marker_palette().phase_reset) on the PHASE-RESET
@@ -3750,7 +3767,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              resolve_flag_face's fourth argument — REQUIRED, never
 //              defaulted, since warp is never the unmarked default: every call
 //              site names its column explicitly — the phase-reset flag box
-//              and its cells pass `PhaseReset`) — SELECTION IS THE WHITE SWAP
+//              and its cells pass `PhaseReset`) — SELECTION IS THE SWAPS
 //              ABOVE AND NOTHING ELSE. The stem wears the column's calm fill at
 //              rest (resolve_marker_stem, architect 2026-09-26).
 //
@@ -3772,9 +3789,11 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // the plain composer's (flag_text) in every state; no bracket paints anywhere.
 //
 // `focus_marker` / `focus_cell` NAME THE BRIGHT CELL (architect 2026-09-05):
-// a selected marker paints its ADDRESSED cell in the selected pair and its
-// other cells in its ordinary class pair, and the addressed cell is the
-// payload for every selected marker but the focus, whose addressed cell is
+// a selected marker paints its ADDRESSED cell in the selected pair — the
+// white pair on the focus, its class's own on every other member (architect
+// 2026-09-26) — and its other cells in its ordinary class pair, and the
+// addressed cell is the payload for every selected marker but the focus,
+// whose addressed cell is
 // `focus_cell` (AppState::addressed_cell — a press's cell, an editor's, or
 // the one a bracket-only undo entry's restore brings back; every other focus
 // route resets it to the payload). Where the focus SHOWS that cell NOWHERE —
@@ -3786,8 +3805,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // columns — a phase reset's bound cells are cells too. Disabled and red
 // blend cell by cell through the same ladders; the border reads the class
 // alone. The stem reads no cell (resolve_marker_stem, render.cpp): the
-// marker's membership alone, so a selected marker stems white whichever of
-// its cells is addressed.
+// marker's membership and focus, so the focus stems white whichever of its
+// cells is addressed.
 //
 // `cr`'s scaled font is set by this function (the redesign sans face at
 // redesign_font_size_px) and restored.
@@ -3982,10 +4001,10 @@ struct FlagEditorBox {
 // resting label was capped, the field opening at the committed run's own width
 // and growing only with what is typed past it. An
 // invalid commit flashes the marker lane's OWN red class, in its derived
-// BRIGHT pair — kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel, which no
-// marker wears (red at rest takes its calm pair since 2026-09-16, and a
-// selected marker the white pair since 2026-09-26), so the flash is as loud
-// as it ever was and is never a resting or a selected marker's face. The three DIALOG editors flash that same pair too
+// BRIGHT pair — kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel. The field
+// stands in for the focus's addressed cell, which is white on every class
+// (architect 2026-09-26), and red at rest takes its calm pair (2026-09-16),
+// so the flash is as loud as it ever was and is never the field's own face. The three DIALOG editors flash that same pair too
 // (since 2026-08-02, as the flag-anatomy box on the bottom strip; since
 // 2026-08-12 as the dialog FIELD's recolor, fill under the 1px top edge —
 // paint_modal_dialog), so there is one
@@ -4205,7 +4224,7 @@ struct HistoryDiffFlag {
 // singleton when the set is empty, and the revert act reads them the same way, so
 // a second brightness would be a distinction nothing acts on. The STEM reads the
 // class and that same swap (architect 2026-09-23: the class's Sel fill on a
-// focused or selected flag, where the live lane's selected stem is white
+// focused or selected flag, where the live lane's focused stem is white
 // since 2026-09-26) — and a
 // CHANGED pair stems RED, deferring to the old. THE STEM ALSO READS THE DISABLED
 // AXIS NOW (architect 2026-08-22): a SINGLE flag — added-only or removed-only —

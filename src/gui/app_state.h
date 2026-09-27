@@ -5266,10 +5266,11 @@ struct AppState {
     // STEMS NEVER APPEAR OR VANISH WITH THE SELECTION (row 5, architect). Every
     // ENABLED marker of the active column stems, always
     // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash); a
-    // disabled marker stems never. A selected marker's stem wears the
-    // playhead stem's white (kPlayheadStem; resolve_marker_stem, architect
-    // 2026-09-26), so selection's cue is the flags' white addressed cells and
-    // the white stems beneath them (SELECTION IS WHITE, render.h). The successive apparatus this
+    // disabled marker stems never. A selected marker's stem wears its
+    // class's Sel fill and the focus's the playhead stem's white
+    // (kPlayheadStem; resolve_marker_stem, architect 2026-09-26), so
+    // selection's cue is the flags' bright addressed cells and the bright
+    // stems beneath them (THE FOCUS IS WHITE, render.h). The successive apparatus this
     // replaces is worth naming once, because each layer was deleted for the same
     // reason the next one was: the conditional stem's hover/pin arms
     // (harvested 2026-07-25 for always-on-for-a-singleton), then the singleton

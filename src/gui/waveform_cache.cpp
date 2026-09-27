@@ -1237,9 +1237,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // fallback OR that share their frame with another row of their own store,
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
     // the hard-coded red class: kMarkerFlagFillRed/kMarkerFlagEdgeRed with the
-    // kMarkerStemRed stem, and on a selected marker the white pair on its
-    // addressed cell and the white stem, like every other live class
-    // (SELECTION IS WHITE, architect 2026-09-26; resolve_flag_face and
+    // kMarkerStemRed stem, a selected marker its derived selected pair on its
+    // addressed cell and its fill_sel stem, and the focus the white pair and
+    // the white stem, like every other live class (THE FOCUS IS WHITE,
+    // architect 2026-09-26; resolve_flag_face and
     // resolve_marker_stem — a disabled red marker stems nothing, and its flag
     // blends whichever pair it would have worn toward the lane ground, its
     // unselected cells staying recognisably red).
