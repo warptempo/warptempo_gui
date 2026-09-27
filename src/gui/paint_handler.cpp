@@ -5814,8 +5814,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE RING WEARS THE PLAYHEAD STEM'S WHITE, kPlayheadStem, ALWAYS
     // (architect 2026-09-26, superseding the same day's highlight shade of the
-    // reset's class): only a selected reset has the overlay, and a selected
-    // reset's stem is that white, so the ring and the stem it starts from
+    // reset's class): only the focused reset has the overlay
+    // (Selection::phase_overlay_subject), and the focus's stem is that white
+    // (resolve_marker_stem, render.cpp), so the ring and the stem it starts from
     // read as one object, red class or not. A constant colour, so the ring's
     // damage is its visibility's alone (the selection, the focus, the mode),
     // each of which misses the flag cache's fingerprint, whose rebuild
@@ -5968,8 +5969,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
-// what stems and in what colour (a selected marker's stem in the playhead
-// stem's white, architect 2026-09-26) — is at the declaration.
+// what stems and in what colour (the focused marker's stem in the playhead
+// stem's white, a selected one in its class's Sel fill, architect 2026-09-26)
+// — is at the declaration.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its flag box's LEFT EDGE, and that column was
@@ -6002,7 +6004,7 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // marker's red class already does — the flash borrows that class's stem,
     // kMarkerStemRed, it does not invent a colour, so #da4453 either way. The
     // flash stem stays the red class's REST stem although the flag's flash
-    // took the class's BRIGHT pair on 2026-09-16 and a selected stem is
+    // took the class's BRIGHT pair on 2026-09-16 and the focus's stem is
     // white since 2026-09-26: the flash override is its own ruling and was
     // left as it stood. A playhead standing on the flashing marker paints its
     // own white over this stem (paint_playheads, after this pass).
@@ -6208,8 +6210,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // Z-INTENT (architect 2026-09-23 and 2026-09-26): this segment goes down
     // OVER the marker stems painted before it, and the marker-lane run above
     // it goes OVER the flag boxes (paint_playhead_head_and_run, after the
-    // flag blit). At a coincident column it paints over the marker's stem; a
-    // selected marker's stem is the same white, so the pair reads as one
+    // flag blit). At a coincident column it paints over the marker's stem;
+    // the focused marker's stem is the same white, so the pair reads as one
     // line. The stem is drawn to run OVER the waveform's own borders: it is a
     // boundary line like the marker stems beside it, not a thing the borders
     // clip.
@@ -8895,12 +8897,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     run paint over every flag, bound cell and diff flag, so at a
         //     coarse zoom a dense run of markers never hides WHERE THE
         //     PLAYHEAD IS, and a cursor resting on a marker crosses its flag
-        //     rather than hiding behind it. A selected marker's stem wears the
-        //     same white (kPlayheadStem), so a coincident pair reads as one
-        //     line. A SELECTION adds no playhead-like mark of its own, its
+        //     rather than hiding behind it. The focused marker's stem wears
+        //     the same white (kPlayheadStem), so a coincident pair reads as
+        //     one line. A SELECTION adds no playhead-like mark of its own, its
         //     whole cue being its members' BRIGHTENED FLAGS (the class
-        //     ladder's brighter pair) and white stems with the landed cursor
-        //     on the focus. (2026-08-01 lifted the SCANNER above the stems, so
+        //     ladder's brighter pair) and Sel-fill stems, the focus's white,
+        //     with the landed cursor on the focus. (2026-08-01 lifted the SCANNER above the stems, so
         //     the moving line does not blink out at every marker it crosses.)
 
         if (rects_intersect(exposed, wave_paint)) {

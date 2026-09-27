@@ -898,12 +898,12 @@ private:
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
     // of the active column stems, always, from its flag's bottom (= the marker
     // lane's bottom = the waveform top) down through the waveform to the
-    // window's content bottom, in its flag box's fill; a DISABLED marker stems
-    // never. A selected marker's stem wears the playhead stem's white,
-    // kPlayheadStem (architect 2026-09-26, after the 2026-09-23 bright fill),
-    // so at a coarse zoom the selected stems stand out among many; the colour
-    // is resolved in the painter (resolve_flag_face) and published in the
-    // stash. The stems paint UNDER the playhead's stem, always — a marker on
+    // window's content bottom, in its class's calm fill; a DISABLED marker
+    // stems never. A selected marker's stem wears its class's selected fill
+    // and THE FOCUS's the playhead stem's white, kPlayheadStem (architect
+    // 2026-09-26), so at a coarse zoom the selected stems stand out among
+    // many and the focus among them; the colour is resolved in the painter
+    // (resolve_marker_stem, render.cpp) and published in the stash. The stems paint UNDER the playhead's stem, always — a marker on
     // the playhead's own frame included (architect 2026-09-26) — and under
     // the flags, which the playhead's lane run crosses in turn.
     //

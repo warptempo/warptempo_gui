@@ -1186,14 +1186,14 @@ static IterCellLayout measure_iter_cells(cairo_scaled_font_t* font,
     return l;
 }
 
-// The resolved paint of ONE marker flag: the three surfaces plus the stem.
+// The resolved paint of ONE marker flag box or bound cell: the three surfaces
+// and the label. (The stem is not a box's: resolve_marker_stem below owns it,
+// off the marker's membership and focus rather than a cell's brightness.)
 struct FlagFace {
     GuiColor fill;
     GuiColor edge;
     GuiColor border;
     GuiColor label;
-    GuiColor stem;
-    bool     has_stem;
 };
 
 // THE COLOR-CLASS LADDER, one owner for both marker columns (the full
@@ -1314,8 +1314,6 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         f.border = mix_color(kMarkerFlagBorder, kRedesignContentGround,
                              kMarkerDisabledMix);
         f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledLabelMix);
-        f.stem  = f.fill;
-        f.has_stem = false;      // NO STEM EVER for a disabled marker
         return f;
     }
     if (red) {
@@ -1335,28 +1333,45 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         // varies on the disabled axis alone.
         f.border = kMarkerFlagBorder;
         f.label = kMarkerFlagLabel;
-        // THE STEM FOLLOWS THE SELECTION BIT (architect 2026-09-23): the
-        // class's own REST stem kMarkerStemRed at rest, and selected the
-        // playhead stem's white, as every live class's is (architect
-        // 2026-09-26, the default arm below).
-        f.stem  = selected ? kPlayheadStem : kMarkerStemRed;
-        f.has_stem = true;
         return f;
     }
     flag_column_pair(column_face, selected, f.fill, f.edge);
     f.border = kMarkerFlagBorder;   // live: undamped, like the red arm above
     f.label = kMarkerFlagLabel;
-    // THE STEM FOLLOWS THE SELECTION BIT (architect 2026-09-23: "so that it
-    // stands out" — at a coarse zoom among many markers, the playhead is found
-    // by looking up and the selected stems by looking down). At rest it wears
-    // the column's calm fill; SELECTED IT WEARS THE PLAYHEAD STEM'S WHITE,
-    // kPlayheadStem, on both columns (architect 2026-09-26, superseding the
-    // 2026-09-23 Sel fill), as the red arm above does. A coincident playhead
-    // paints its own white over it (paint_playheads), so the two read as one
-    // line.
-    f.stem = selected ? kPlayheadStem : f.fill;
-    f.has_stem = true;
     return f;
+}
+
+// THE MARKER STEM'S COLOUR, THE ONE OWNER (architect 2026-09-26), or nullopt
+// for NO STEM. It reads the marker's CLASS, its SELECTION MEMBERSHIP and
+// whether it is THE FOCUS (AppState::last_selected_marker, always a member of
+// the selection) — never a cell's brightness, so the addressed cell does not
+// reach it:
+//   disabled   no stem, ever;
+//   the focus  the playhead stem's white, kPlayheadStem, on both columns and
+//              every live class, red included, whichever cell is addressed
+//              (a focus addressed at a bound cell stems white though its flag
+//              box keeps its rest fill);
+//   selected   the class's SELECTED FILL — the column's fill_sel, or
+//              kMarkerFlagFillRedSel on the red class (architect 2026-09-23:
+//              "so that it stands out" — at a coarse zoom among many
+//              markers, the playhead is found by looking up and the selected
+//              stems by looking down);
+//   at rest    the class's calm fill — the column's fill, or the red class's
+//              own rest stem kMarkerStemRed.
+// A coincident playhead paints its own white over the focus's
+// (paint_playheads), so the two read as one line. The flag pass publishes the
+// answer into the stem stash (render_flag_boxes_impl); the `h` view's diff
+// stems are that lane's own (render_history_diff_flags).
+std::optional<GuiColor> resolve_marker_stem(bool disabled, bool red,
+                                            bool selected, bool focused,
+                                            FlagColumnFace column_face) {
+    if (disabled) return std::nullopt;
+    if (focused) return kPlayheadStem;
+    if (red) return selected ? kMarkerFlagFillRedSel : kMarkerStemRed;
+    GuiColor fill;
+    GuiColor edge;
+    flag_column_pair(column_face, selected, fill, edge);
+    return fill;
 }
 
 // THE MARKER'S BOXES IN PAINTED ORDER, RANKED: the flag box, then the lower
@@ -1611,11 +1626,11 @@ void render_flag_boxes_impl(
             // after its press), the payload is
             // bright, so a selected marker always shows its selection
             // somewhere. Disabled and red blend as they always did, cell by
-            // cell through the same ladders; the border reads the class alone
-            // and the stem the flag box's selection bit, so the payload face
-            // carries both for the marker (a marker whose addressed cell is a
-            // bound cell keeps its rest stem, as its flag box keeps its rest
-            // fill; only a bright payload turns the stem white).
+            // cell through the same ladders; the border reads the class
+            // alone. The stem reads no cell: its owner (resolve_marker_stem)
+            // takes the marker's membership and focus, so a focus addressed
+            // at a bound cell stems white while its flag box keeps its rest
+            // fill.
             MarkerCell bright = i == focus_marker ? focus_cell
                                                   : MarkerCell::Payload;
             // THE FALLBACK ASKS WHETHER THE BRIGHT CELL IS SHOWN AT ALL, by
@@ -1888,7 +1903,10 @@ void render_flag_boxes_impl(
             }
             // The stem stash is gated to [0, w), both edges
             // (stem_column_on_waveform).
-            if (out_stems && face.has_stem &&
+            const std::optional<GuiColor> stem =
+                resolve_marker_stem(dis, red, sel, sel && i == focus_marker,
+                                    column_face);
+            if (out_stems && stem &&
                 stem_column_on_waveform(bx - top_strip_area.x,
                                         waveform_width)) {
                 // THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN — bx, the
@@ -1896,7 +1914,7 @@ void render_flag_boxes_impl(
                 // to its left (the architect's explicit clause, spelled at
                 // marker_flag_border_px).
                 out_stems->push_back(
-                    MarkerStem{i, static_cast<double>(bx), face.stem});
+                    MarkerStem{i, static_cast<double>(bx), *stem});
             }
         });
 
