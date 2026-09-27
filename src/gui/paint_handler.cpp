@@ -5989,9 +5989,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // which follows this pass, and under the flag boxes, so a dense run of stems at
 // a coarse zoom never hides a playhead standing near them. Where the playhead's
 // column IS a marker's, the marker's stem wins the column by the ruling's other
-// half: the playhead's stem does not paint there (playhead_stem_suppressed),
-// and while the hold stands that marker's stem is the lamp's white (THE HELD
-// STEM, in the body). The full sequence is the paint-order block in on_redraw.
+// half: the playhead's stem does not paint there (playhead_stem_suppressed).
+// The full sequence is the paint-order block in on_redraw.
 void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     if (app.marker_stems.empty()) return;
@@ -6027,41 +6026,6 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             ? ed.target
             : -1;
 
-    // THE HELD STEM (architect 2026-09-26): WHEN THE PLAYHEAD HEAD GOES WHITE,
-    // THE HELD MARKER'S STEM GOES WHITE. While AppState::camera_hold stands
-    // (the head paints kPlayheadHeadHeld, paint_ruler_row) the marker the
-    // playhead stands on stems in that same constant — the lamp's white,
-    // which IS kPlayheadStem — so the posture reads down the whole column as
-    // well as in the head. WHICH MARKER is playhead_stands_on_stem's answer,
-    // the very predicate whose any-of suppresses the playhead's own stem
-    // there, so the white stem is exactly what shows in the column the
-    // playhead yields: the land's exact-int64 coincidence at rest, and the
-    // drag ride (a press on the marker under the playhead keeps the hold, the
-    // tow's translate_playhead_to clears nothing, and commit_drag's
-    // move_playhead_to puts it out at the release). EVERY stem that qualifies
-    // wears it: two markers of the column stacked on the playhead's frame are
-    // one column, and whichever the stash paints last must not put its class
-    // back over the other's white. The red class takes it too; a disabled
-    // marker publishes no stem and so never qualifies. THE FLAG IS UNTOUCHED
-    // (its class and selected pairs as ever) and so is the phase-reset
-    // lead-in ring, which reads the class ladder (phase_reset_stem_color).
-    // The flash red above outranks it: the transient speaks to the edit.
-    // NOT IN THE `h` VIEW: its stash carries diff-flag indices, which the
-    // predicate's store lookup does not read.
-    //
-    // A PAINT-TIME OVERRIDE LIKE THE FLASH, for the same reason: the stash
-    // keeps publishing the marker's real class, so the flag cache takes no
-    // fingerprint for the posture and nothing is un-published when it clears.
-    // Its damage: the held stem only ever stands in the playhead's own
-    // column, which every playhead write already owes the damage of (the
-    // column it leaves and the one it reaches — the playhead's stem moves
-    // with it; the reseat, the lands and the marker drag's motion take the
-    // waveform area whole), and a marker moving under the playhead
-    // republishes the stash; the bit's flips, which may move nothing, are
-    // paid by the hold lamp's per-tick comparator (main.cpp), which
-    // invalidates the waveform area beside the ruler lane.
-    const bool held = app.camera_hold && !app.history_mode.active;
-
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
     const double y0 = static_cast<double>(area.y);
@@ -6075,10 +6039,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
         const double col = stem.x - static_cast<double>(area.x);
         if (col < 0.0 || col >= static_cast<double>(area.w)) continue;
         const double x_px = static_cast<double>(area.x) + col + 0.5;
-        const GuiColor c =
-            (stem.marker_index == flash_idx)         ? kMarkerStemRed
-            : (held && playhead_stands_on_stem(stem)) ? kPlayheadHeadHeld
-                                                      : stem.color;
+        const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
+                                                            : stem.color;
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
         cairo_move_to(cr, x_px, y0);
         cairo_line_to(cr, x_px, y1);
@@ -6265,50 +6227,38 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // damage_stem_on_subject_change for (selection.cpp), whose mutators damage the
 // top strip and not the waveform. Keyed on the playhead and the stash instead,
 // every input this reads is already damaged by its own writer.
-//
-// ONE PREDICATE, TWO READERS (architect 2026-09-26): the per-stem question
-// "does the playhead stand on this stem" is playhead_stands_on_stem, below,
-// and this suppression is its any-of over the stash. paint_marker_stems asks
-// the same predicate stem by stem for THE HELD STEM (the hold lamp's white,
-// at its definition), so the column whose playhead stem yields and the stem
-// that goes white while the hold stands can never disagree.
 bool GuiPaintHandler::playhead_stem_suppressed() const {
+    if (app.marker_stems.empty()) return false;
+
+    // The dragged marker, or -1. The view compare is a statement, not a repair:
+    // the drag-modal gate swallows `p`, so a live drag's mode is always the
+    // active column — the stash indices this compares against are that column's.
+    const int dragged =
+        (app.drag.active && app.drag.drag_mode == app.active_markers_view &&
+         !app.drag.dragging_markers.empty())
+            ? app.drag.dragging_markers[0]
+            : -1;
+
+    const auto coincident = [&](int64_t source_frame) {
+        return clamp_playhead_to_live_domain(
+                   source_frame_to_active_domain(app, audio, source_frame),
+                   app, audio) == app.playhead_cursor_sample;
+    };
+
+    // The stash is the ACTIVE column's (both columns publish one), so the
+    // store is the active one through its selector pair (active_marker_count /
+    // active_marker_time_frame, app_state.h).
+    const int n = active_marker_count(app);
     for (const MarkerStem& stem : app.marker_stems) {
-        if (playhead_stands_on_stem(stem)) return true;
+        const int i = stem.marker_index;
+        if (i == dragged) return true;
+        if (i < 0) continue;
+        // Index-guarded against the store the stash was published from having
+        // shrunk since (an undo under a stale stash): a missing row simply does
+        // not suppress.
+        if (i < n && coincident(active_marker_time_frame(app, i))) return true;
     }
     return false;
-}
-
-// -- GuiPaintHandler::playhead_stands_on_stem ----------------------------
-
-// The per-stem half of the suppression above, whose block carries the whole
-// argument: the drag ride, or exact coincidence at rest by the land's own
-// int64 formula. Its two readers are the suppression and paint_marker_stems'
-// held-stem override; nothing else asks it.
-bool GuiPaintHandler::playhead_stands_on_stem(const MarkerStem& stem) const {
-    const int i = stem.marker_index;
-    if (i < 0) return false;
-
-    // THE DRAG RIDE: the dragged marker. The view compare is a statement, not
-    // a repair: the drag-modal gate swallows `p`, so a live drag's mode is
-    // always the active column — the stash indices this compares against are
-    // that column's.
-    if (app.drag.active && app.drag.drag_mode == app.active_markers_view &&
-        !app.drag.dragging_markers.empty() &&
-        i == app.drag.dragging_markers[0])
-        return true;
-
-    // EXACT COINCIDENCE AT REST. The stash is the ACTIVE column's (both
-    // columns publish one), so the store is the active one through its
-    // selector pair (active_marker_count / active_marker_time_frame,
-    // app_state.h). Index-guarded against the store the stash was published
-    // from having shrunk since (an undo under a stale stash): a missing row
-    // simply does not qualify.
-    if (i >= active_marker_count(app)) return false;
-    return clamp_playhead_to_live_domain(
-               source_frame_to_active_domain(
-                   app, audio, active_marker_time_frame(app, i)),
-               app, audio) == app.playhead_cursor_sample;
 }
 
 // -- GuiPaintHandler::paint_playheads ------------------------------------

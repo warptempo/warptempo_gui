@@ -2743,18 +2743,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // lane. So this watches the bit against the one it last damaged for
         // (AppState::camera_hold_lamp_last) and on a drift invalidates the
         // RULER LANE (top_ruler_row_area, the rect the head's painter
-        // computes; the head sits on its bottom rows) AND THE WAVEFORM AREA,
-        // where the held marker's stem wears the same white while the bit
-        // stands (architect 2026-09-26, THE HELD STEM at paint_marker_stems;
-        // the stem spans the area top to bottom, and a flip is a discrete
-        // act, so the area whole is the rect rather than a column the
-        // stash would have to be asked for). No writer of the bit spells the
-        // damage. Above the loading return, so a flip during a load is paid
-        // too.
+        // computes; the head sits on its bottom rows). No writer of the bit
+        // spells the damage. Above the loading return, so a flip during a
+        // load is paid too.
         if (app.camera_hold != app.camera_hold_lamp_last) {
             app.camera_hold_lamp_last = app.camera_hold;
             viewport.invalidate_rect(top_ruler_row_area(app));
-            viewport.invalidate_rect(waveform_area(app));
         }
 
         // THE ON-SCREEN KEYBOARD'S SHOW AND HIDE (2026-08-27), the roster
