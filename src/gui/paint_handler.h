@@ -744,10 +744,10 @@ private:
     void paint_ruler_row(cairo_t* cr);
     // THE RESTING CURSOR'S STRIP HALF: the translucent head on the ruler
     // lane's bottom rows and the 1px run through the marker lane. Invoked in
-    // the ruler's own top-strip gate AFTER the flag blit, so the whole
-    // playhead sits above every flag, bound cell and diff flag (architect
-    // 2026-09-26); only the open flag editor's box and the floating chrome
-    // paint over it. See the definition for the ruling.
+    // the ruler's own top-strip gate directly after paint_ruler_row and
+    // BEFORE the flag blit, so the whole playhead sits behind every flag,
+    // bound cell and diff flag (architect 2026-09-26). See the definition for
+    // the ruling.
     void paint_playhead_head_and_run(cairo_t* cr);
     // THE FOUR REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
     // flat
@@ -899,13 +899,15 @@ private:
     // of the active column stems, always, from its flag's bottom (= the marker
     // lane's bottom = the waveform top) down through the waveform to the
     // window's content bottom, in its class's calm fill; a DISABLED marker
-    // stems never. A selected marker's stem wears its class's selected fill
-    // and THE FOCUS's the playhead stem's white, kPlayheadStem (architect
+    // stems never. EVERY SELECTED marker's stem wears the playhead stem's
+    // white, kPlayheadStem, focus or not (SELECTION IS WHITE, architect
     // 2026-09-26), so at a coarse zoom the selected stems stand out among
-    // many and the focus among them; the colour is resolved in the painter
-    // (resolve_marker_stem, render.cpp) and published in the stash. The stems paint UNDER the playhead's stem, always — a marker on
-    // the playhead's own frame included (architect 2026-09-26) — and under
-    // the flags, which the playhead's lane run crosses in turn.
+    // many; the colour is resolved in the painter (resolve_marker_stem,
+    // render.cpp) and published in the stash. The stems paint OVER the
+    // playhead's stem, always — a marker on the playhead's own frame
+    // included, with no suppression (architect 2026-09-26) — as the flags
+    // paint over the playhead's lane run; only the scanner paints over
+    // them.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its flag box's LEFT EDGE, and
@@ -929,10 +931,10 @@ private:
     // (2026-08-02).
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
     // THE RESTING CURSOR's waveform stem (the head and the marker-lane run
-    // belong to paint_playhead_head_and_run). Paints OVER the marker stems, a
-    // coincident marker's included (architect 2026-09-23, unconditional since
-    // 2026-09-26; invoked after paint_marker_stems), as its strip half paints
-    // over the flags: the whole playhead above every marker surface.
+    // belong to paint_playhead_head_and_run). Paints UNDER the marker stems,
+    // a coincident marker's included (architect 2026-09-26; invoked before
+    // paint_marker_stems), as its strip half paints under the flags: the
+    // whole playhead behind every marker surface.
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_marker_stems and paint_playheads: the scanner draws OVER the stems

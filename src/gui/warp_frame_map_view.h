@@ -85,12 +85,10 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
-// flags paint the row-5 red class (kMarkerFlagFillRed / kMarkerFlagEdgeRed at
-// rest, the Sel pair on a selected marker's addressed cell since 2026-09-16,
-// stem kMarkerStemRed at rest, kMarkerFlagFillRedSel selected and
-// kPlayheadStem on the focus) — the swap moves
-// the class's BRIGHTNESS and never its
-// hue, so the cue is never masked. `red` is a PAINT cue with two meanings: the
+// flags paint the row-5 red class (kMarkerFlagFillRed / kMarkerFlagEdgeRed,
+// stem kMarkerStemRed; a selected marker's addressed cell and stem are white
+// like every class's since 2026-09-26, its other cells staying red, so the
+// cue is never masked). `red` is a PAINT cue with two meanings: the
 // render normalizes this marker, OR this marker shares its frame with another.
 // Three contributors, all computed SILENTLY from the display path (no resolver
 // run, no stderr, no frozen-parser dependency): (1) the exact-frame COLLAPSE —

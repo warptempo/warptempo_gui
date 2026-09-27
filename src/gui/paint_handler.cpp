@@ -5115,33 +5115,27 @@ void GuiPaintHandler::paint_playhead_head_and_run(cairo_t* cr) {
     // needs, so the crossing has no constant of its own any more: the tick
     // simply shows through the alpha. The alpha never accumulates, because
     // every repaint of this band first refills the lane ground: this pass runs
-    // in on_redraw's top-strip gate right behind paint_ruler_row, whose first
-    // act is that fill, and never without it.
+    // in on_redraw's top-strip gate directly after paint_ruler_row, whose
+    // first act is that fill, and never without it.
     //
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PASS'S TOO: a
     // 1px kPlayheadStem run from the marker lane's top to the waveform top,
     // where render_playhead's waveform segment (paint_playheads) begins, so
     // head, column and stem read as one unbroken object.
     //
-    // THE WHOLE PLAYHEAD SITS ABOVE EVERY MARKER SURFACE (architect
-    // 2026-09-26: "for consistency, let's make the whole playhead and its stem
-    // sit higher than markers, incl flags, throughout"). So this pass runs
-    // AFTER the flag blit (paint_flag_annotations), and the run crosses
-    // whatever the lane holds at its column — a flag box, an iteration bound
-    // cell, the drag's riding flag, the `h` view's diff flags — as the
-    // waveform segment crosses every marker stem; a coincident marker's flag
-    // shows the run down its fill's leftmost column (the marker's own column,
-    // its stem's; the flag's border stands just left of it). Only the open
-    // flag editor's box and the floating chrome (the keyboard slot, the
-    // notification cards, the dropdown, the modal row, the tooltip) paint
-    // above it. The HEAD needs no
-    // ordering of its own against the flags — its band is the ruler's, and no
-    // flag leaves the marker lane — so it moved with the run for the object's
-    // sake, and composites over the ruler's ticks exactly as it did inside the
-    // ruler pass: the flag surface is transparent over the ruler band, so
-    // nothing between the two passes paints there. (Until 2026-09-26 the run
-    // painted inside paint_ruler_row, before the flag blit, under the flags —
-    // the hidden-by-marker model the ruling retires.)
+    // THE WHOLE PLAYHEAD SITS BEHIND EVERY MARKER SURFACE (architect
+    // 2026-09-26, the hidden-by-marker model: the flags already overlap one
+    // another, later over earlier, and a line crossing them cost more of the
+    // lane's tight space than it bought). So this pass runs BEFORE the flag
+    // blit (paint_flag_annotations), and whatever the lane holds at its
+    // column — a flag box, an iteration bound cell, the drag's riding flag,
+    // the `h` view's diff flags — covers the run, as every marker stem
+    // covers the waveform segment; no coincidence suppression is needed.
+    // The HEAD needs no ordering of its own against the flags — its band is
+    // the ruler's, and no flag leaves the marker lane — so it paints with
+    // the run for the object's sake, over the ruler's ticks: the flag surface
+    // is transparent over the ruler band, so the blit after it leaves the
+    // head's pixels as they are.
     //
     // The whole object is the RESTING CURSOR'S: the `h` view, the render
     // player and the audition reach it through this one block, and the scanner
@@ -5815,9 +5809,10 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // THE RING WEARS THE PLAYHEAD STEM'S WHITE, kPlayheadStem, ALWAYS
     // (architect 2026-09-26, superseding the same day's highlight shade of the
     // reset's class): only the focused reset has the overlay
-    // (Selection::phase_overlay_subject), and the focus's stem is that white
-    // (resolve_marker_stem, render.cpp), so the ring and the stem it starts from
-    // read as one object, red class or not. A constant colour, so the ring's
+    // (Selection::phase_overlay_subject), the focus is a member of the
+    // selection, and every selected marker's stem is that white
+    // (resolve_marker_stem, render.cpp), so the ring and the stem it starts
+    // from read as one object, red class or not. A constant colour, so the ring's
     // damage is its visibility's alone (the selection, the focus, the mode),
     // each of which misses the flag cache's fingerprint, whose rebuild
     // damages the waveform with the strip (maybe_rebuild_flag_cache,
@@ -5969,9 +5964,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
-// what stems and in what colour (the focused marker's stem in the playhead
-// stem's white, a selected one in its class's Sel fill, architect 2026-09-26)
-// — is at the declaration.
+// what stems and in what colour (every selected marker's stem in the playhead
+// stem's white, architect 2026-09-26) — is at the declaration.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its flag box's LEFT EDGE, and that column was
@@ -5987,14 +5981,13 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // borders when row 6 adds them, the same z-intent the playhead stem records: a
 // stem is a boundary line, not something the borders clip.
 //
-// Z-ORDER (architect 2026-09-23, made unconditional 2026-09-26): the stems
-// paint UNDER the playhead's stem, which follows this pass, ALWAYS — where the
-// playhead's column is a marker's, the playhead's white paints over that
-// marker's stem — so a dense run of stems at a coarse zoom never hides a
-// playhead standing near them; the whole playhead sits above every marker
-// surface, its lane run over the flag boxes as this segment over the stems
-// (architect 2026-09-26). The full sequence is the paint-order block in
-// on_redraw.
+// Z-ORDER (architect 2026-09-26): the stems paint OVER the playhead's stem,
+// which precedes this pass, ALWAYS — where the playhead's column is a
+// marker's, that marker's stem covers the playhead's there, with no
+// suppression of either — as the flags cover the playhead's head-and-run in
+// the strip: the whole playhead sits behind every marker surface. Only the
+// scanner paints over the stems (paint_scanner, after this pass). The full
+// sequence is the paint-order block in on_redraw.
 void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     if (app.marker_stems.empty()) return;
@@ -6004,10 +5997,10 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // marker's red class already does — the flash borrows that class's stem,
     // kMarkerStemRed, it does not invent a colour, so #da4453 either way. The
     // flash stem stays the red class's REST stem although the flag's flash
-    // took the class's BRIGHT pair on 2026-09-16 and the focus's stem is
-    // white since 2026-09-26: the flash override is its own ruling and was
-    // left as it stood. A playhead standing on the flashing marker paints its
-    // own white over this stem (paint_playheads, after this pass).
+    // took the class's derived BRIGHT pair on 2026-09-16 and a selected
+    // marker's stem is white since 2026-09-26: the flash override is its own
+    // ruling and was left as it stood. A playhead standing on the flashing
+    // marker sits under this stem (paint_playheads, before this pass).
     //
     // IT IS A PAINT-TIME OVERRIDE, mirroring how the flash face itself is stored
     // and painted: render_flag_editor_box resolves the marker's ordinary face
@@ -6156,13 +6149,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // only a line: the dead triangle branch is deleted, and with it the lane
     // rect this call used to thread through to it.
 
-    // THE WHOLE CURSOR PAINTS OVER EVERY MARKER SURFACE (architect
+    // THE WHOLE CURSOR PAINTS BEHIND EVERY MARKER SURFACE (architect
     // 2026-09-26 — see the paint-order block in on_redraw). In the waveform
-    // this segment paints OVER the marker STEMS (architect 2026-09-23),
-    // invoked after paint_marker_stems, so a dense run of stems at a coarse
-    // zoom cannot hide it — a marker's stem on its own column included
-    // (architect 2026-09-26); in the strip its head and marker-lane run paint
-    // over the flags. Gated on the waveform OR the top strip being exposed:
+    // this segment paints UNDER the marker STEMS, invoked before
+    // paint_marker_stems, so a marker's stem on the cursor's own column
+    // covers it there; in the strip its head and marker-lane run paint under
+    // the flags. Gated on the waveform OR the top strip being exposed:
     // the cursor's HEAD and marker-lane run live in the strip
     // (paint_playhead_head_and_run) and this stem in the waveform, and the two
     // halves of one line repaint together whatever the damage shape — the
@@ -6177,12 +6169,11 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form, drawn at the resting cursor column whatever the selection and
     // whatever the region are doing — a 1px line painted solid straight over the
-    // plate ink. WITHOUT EXCEPTION SINCE 2026-09-26 (architect): the
-    // coincident-marker suppression that stood from 2026-08-01 — where a
-    // marker's stem stood on the playhead's frame the playhead's stem yielded
-    // to it — is deleted, so the playhead's white paints over a coincident
-    // marker's stem as over any other, the way the `h` view's diff stems
-    // always read.
+    // plate ink. WITHOUT EXCEPTION (architect 2026-09-26): no
+    // coincident-marker suppression — the one that stood from 2026-08-01 is
+    // deleted — and none is needed, because the marker stems paint after
+    // this pass: a coincident marker's stem simply covers the playhead's
+    // column, the way a coincident flag covers its lane run.
     //
     // The three-way chain that used to live here is gone with the SPAN FORM: the
     // region is no longer a playhead at all (it IS THE TRIM — a ground recolor
@@ -6191,9 +6182,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // bare `[`), so it hides
     // nothing and suppresses nothing, and the split half-triangle renderer is
     // deleted outright. The non-empty-selection suppression is
-    // gone too: a cursor resting ON the focused marker paints whole, its run
-    // crossing that marker's flag and its segment that marker's stem — and
-    // when the arrows move the focused marker the cursor rides along VISIBLY,
+    // gone too: a cursor resting ON the focused marker sits behind that
+    // marker's flag and stem, which is the hidden-by-marker model — and when
+    // the arrows move the focused marker the cursor rides along under it,
     // which is the lane model's honest reading.
     // The region ground still paints under the plate (paint_region_ground); the
     // cursor line crosses it exactly as it crosses waveform ink.
@@ -6207,11 +6198,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // color at this surface: the head above it is the playhead's identity, and
     // the stem is that head's line continued down through the waveform.
     //
-    // Z-INTENT (architect 2026-09-23 and 2026-09-26): this segment goes down
-    // OVER the marker stems painted before it, and the marker-lane run above
-    // it goes OVER the flag boxes (paint_playhead_head_and_run, after the
-    // flag blit). At a coincident column it paints over the marker's stem;
-    // the focused marker's stem is the same white, so the pair reads as one
+    // Z-INTENT (architect 2026-09-26: the playhead covering markers cost
+    // too much where flags already overlap one another): this segment goes
+    // down UNDER the marker stems painted after it, and the marker-lane run
+    // above it goes UNDER the flag boxes (paint_playhead_head_and_run, before
+    // the flag blit). At a coincident column the marker's stem covers it; a
+    // selected marker's stem is the same white, so the pair reads as one
     // line. The stem is drawn to run OVER the waveform's own borders: it is a
     // boundary line like the marker stems beside it, not a thing the borders
     // clip.
@@ -6225,9 +6217,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // BEFORE paint_marker_stems, so every always-on marker stem overpainted the
 // moving line's column: at our marker density the scanner blinked out
 // repeatedly as it crossed the song. Its own pass, invoked after the stems, was
-// the fix. The resting cursor followed it above the stems on 2026-09-23 (the
-// ruling is at the paint-order block in on_redraw) and paints just before this
-// pass.
+// the fix. Its z is UNCHANGED by the 2026-09-26 ruling that put the resting
+// cursor back under every marker surface (the paint-order block in
+// on_redraw): the moving line still crosses the stems it plays past.
 //
 // SO THE SCANNER IS TOPMOST IN THE WAVEFORM AREA while it runs — over the
 // stems, over the cursor where they overlap, over the plate and the region
@@ -6528,8 +6520,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   buffer in a DARK INSET FIELD (editor.png's look), then OK and Cancel. The
 //   field is the existing text_editor machinery — selection, caret,
 //   click-to-caret, byte-identical editing — and the red flash RECOLORS THE
-//   FIELD in the marker-flag red class's BRIGHT pair (the one invalid red,
-//   which IS the bright red since that class gained a rest pair 2026-09-16 —
+//   FIELD in the marker-flag red class's derived BRIGHT pair (the one invalid
+//   red, which no marker wears: red at rest takes its calm pair since
+//   2026-09-16 and a selected marker the white pair since 2026-09-26 —
 //   called not copied).
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
@@ -7608,10 +7601,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // state paints the interior in the marker-flag red class's BRIGHT
         // pair (fill under its 1px top edge, the flag anatomy's own order),
         // so there is ONE invalid red in the product and no second box. IT IS
-        // THE `Sel` PAIR SINCE 2026-09-16, when the architect gave that class
-        // a calm REST pair for a resting coincident marker and left the bright
-        // one as the flash: the invalid red IS the bright red, called not
-        // copied, so the two cannot drift. THE TOP EDGE IS
+        // THE CLASS'S DERIVED `Sel` PAIR, which no marker wears: the class
+        // took a calm REST pair on 2026-09-16 and selection went white on
+        // 2026-09-26, leaving the bright red the flash's alone, called not
+        // copied, so the flag editor's flash and this one cannot drift. THE TOP EDGE IS
         // CLIPPED TO THE ROUNDED INTERIOR (2026-08-13, when the box grew
         // corners): a straight 1px band across a rounded box would poke out
         // past both upper corners. Clipping it keeps the anatomy the flag
@@ -8831,18 +8824,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: the lane
         //      ground, the window's bar, the two endcaps and the midpoint mark.
-        //   6. the MARKER STEMS (waveform).
-        //   7. the CURSOR's WAVEFORM stem segment (paint_playheads — the head
-        //      and the marker-lane run are step 11's), over the marker stems.
-        //   8. the SCANNER (waveform).
+        //   6. the CURSOR's WAVEFORM stem segment (paint_playheads — the head
+        //      and the marker-lane run are step 10's), under the marker stems.
+        //   7. the MARKER STEMS (waveform), over the cursor's segment.
+        //   8. the SCANNER (waveform), over both.
         //   9. the RULER lane — ticks and labels.
-        //  10. the FLAG BLIT — every marker-lane surface but the open
+        //  10. the cursor's HEAD on the ruler's bottom rows (translucent,
+        //      clear of the labels, over a major tick's rise) and its column
+        //      through the marker lane, UNDER THE FLAGS
+        //      (paint_playhead_head_and_run; the reasoning is at that pass).
+        //  11. the FLAG BLIT — every marker-lane surface but the open
         //      editor's box: the live flags and their iteration bound cells,
         //      the drag's riding flag, the `h` view's diff flags.
-        //  11. the cursor's HEAD on the ruler's bottom rows (translucent,
-        //      clear of the labels, over a major tick's rise) and its column
-        //      through the marker lane, OVER THE FLAGS
-        //      (paint_playhead_head_and_run; the reasoning is at that pass).
         //  12. the strip-drag anchor stem (waveform, mid-gesture only).
         //  13. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
@@ -8865,8 +8858,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      that skipped a frame would strand them (the reasoning is at
         //      step 3). The overdraw is a mode's cost, paid only while the
         //      panel stands.
-        //  14. the flag editor's box (over the playhead's run, step 11: a
-        //      text field with its caret), then THE NOTIFICATION CARDS
+        //  14. the flag editor's box, then THE NOTIFICATION CARDS
         //      (paint_notifications, 2026-08-29 — the top-right stack, above
         //      every lane and the keyboard slot), then the dropdown — the
         //      floating surfaces, after every pass above and outside this
@@ -8889,21 +8881,20 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     overlay contributes no ground at all (architect 2026-07-27): its
         //     1px RING is its whole visual, and a boundary line paints AFTER
         //     the plate, crossing the ink like the stems do.
-        //   THE WHOLE PLAYHEAD OVER EVERY MARKER SURFACE (architect
-        //     2026-09-26: "for consistency, let's make the whole playhead and
-        //     its stem sit higher than markers, incl flags, throughout") — the
-        //     cursor's waveform segment paints over every marker stem, a
-        //     coincident marker's own included, and its head and marker-lane
-        //     run paint over every flag, bound cell and diff flag, so at a
-        //     coarse zoom a dense run of markers never hides WHERE THE
-        //     PLAYHEAD IS, and a cursor resting on a marker crosses its flag
-        //     rather than hiding behind it. The focused marker's stem wears
-        //     the same white (kPlayheadStem), so a coincident pair reads as
-        //     one line. A SELECTION adds no playhead-like mark of its own, its
-        //     whole cue being its members' BRIGHTENED FLAGS (the class
-        //     ladder's brighter pair) and Sel-fill stems, the focus's white,
-        //     with the landed cursor on the focus. (2026-08-01 lifted the SCANNER above the stems, so
-        //     the moving line does not blink out at every marker it crosses.)
+        //   THE WHOLE PLAYHEAD BEHIND EVERY MARKER SURFACE (architect
+        //     2026-09-26, the hidden-by-marker model restored whole: the flags
+        //     already overlap one another, later over earlier, and the lane's
+        //     space is too tight for a line to cross them) — the cursor's
+        //     waveform segment paints under every marker stem and its head
+        //     and marker-lane run under every flag, bound cell and diff flag,
+        //     so a cursor resting on a marker sits hidden behind it, a
+        //     coincident marker's stem covering the cursor's with no
+        //     suppression of either. A SELECTION adds no playhead-like mark
+        //     of its own, its whole cue being its members' WHITE addressed
+        //     cells and WHITE stems (SELECTION IS WHITE, render.h), with the
+        //     landed cursor on the focus. (2026-08-01 lifted the SCANNER
+        //     above the stems, so the moving line does not blink out at every
+        //     marker it crosses; the 2026-09-26 ruling leaves it there.)
 
         if (rects_intersect(exposed, wave_paint)) {
             // THE REGION HIGHLIGHT'S TWO HALVES, straddling the blit.
@@ -8918,7 +8909,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // lifts the whole picture rather than only the ground behind it.
             paint_region_ink(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
-            // visual — over the plate and under trim
+            // visual — over the plate and under trim, the cursor
             // and the stems; the focused reset's own stem, the same white,
             // paints over the left seam.
             paint_phase_reset_overlay_ring(cr, area);
@@ -8936,23 +8927,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_trim(cr, area, top_strip);
         }
 
-        // MARKER STEMS BEFORE THE CURSOR (architect 2026-09-23, whole since
-        // 2026-09-26): the cursor's waveform stem paints over them, a
-        // coincident marker's stem as every other, and its head and lane run
-        // go over the flag blit below the same way (the paint-order block
-        // above). The stems are the flags' waveform half.
-        if (rects_intersect(exposed, wave_paint)) {
-            paint_marker_stems(cr, area);
-        }
-
-        // The CURSOR'S WAVEFORM SEGMENT AFTER THE MARKER STEMS (the
-        // playhead-over-markers ruling, architect 2026-09-23 and 2026-09-26):
-        // its line paints over every marker stem. Everything laid down before
-        // it — the region ground, the plate, the region ink, the phase-reset
-        // overlay ring, the trim lane — stays under it as before. Its strip
-        // half (the head and the marker-lane run) is a later pass, after the
-        // flag blit (paint_playhead_head_and_run, below). (The scanner used to
-        // ride along in this pass and now paints after it, below —
+        // The CURSOR'S WAVEFORM SEGMENT BEFORE THE MARKER STEMS (the
+        // playhead-behind-markers ruling, architect 2026-09-26): every marker
+        // stem paints over it, a coincident marker's included. Everything laid
+        // down before it — the region ground, the plate, the region ink, the
+        // phase-reset overlay ring, the trim lane — stays under it. Its strip
+        // half (the head and the marker-lane run) paints before the flag blit
+        // the same way (paint_playhead_head_and_run, below). (The scanner used
+        // to ride along in this pass and now paints after the stems, below —
         // waveform-only either way, so its stacking against the lanes never
         // entered the question.) Gated on area OR top_strip, so the segment
         // and the strip half repaint together whatever the damage shape.
@@ -8961,13 +8943,21 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_playheads(cr, area);
         }
 
-        // THE SCANNER LAST OF THE WAVEFORM VERTICALS (architect 2026-08-01):
-        // the moving line paints AFTER the stems, so it crosses them instead of
-        // being erased column by column as it sweeps past every marker. Only the
-        // scanner moved then; since 2026-09-23 the cursor paints over the stems
-        // too, just before this pass. Where the two playheads meet the scanner
-        // is on top. Waveform-only — no head, no lane run, and no flag reaches
-        // the waveform — so no top_strip arm and no stacking against the flags.
+        // MARKER STEMS AFTER THE CURSOR (architect 2026-09-26): they cover
+        // its waveform segment, as the flag blit below covers its head and
+        // lane run (the paint-order block above). The stems are the flags'
+        // waveform half.
+        if (rects_intersect(exposed, wave_paint)) {
+            paint_marker_stems(cr, area);
+        }
+
+        // THE SCANNER LAST OF THE WAVEFORM VERTICALS (architect 2026-08-01,
+        // unchanged by the 2026-09-26 ruling): the moving line paints AFTER
+        // the stems, so it crosses them instead of being erased column by
+        // column as it sweeps past every marker, and after the cursor, so
+        // where the two playheads meet the scanner is on top. Waveform-only —
+        // no head, no lane run, and no flag reaches the waveform — so no
+        // top_strip arm and no stacking against the flags.
         if (rects_intersect(exposed, wave_paint)) {
             paint_scanner(cr, area);
         }
@@ -8976,14 +8966,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // The ruler paints BEFORE the flags: its ticks descend past the
             // marker lane's top and must sit UNDER whatever that lane draws.
             paint_ruler_row(cr);
-            paint_flag_annotations(cr, top_strip);
-            // THE PLAYHEAD'S STRIP HALF AFTER THE FLAGS (architect
+            // THE PLAYHEAD'S STRIP HALF BEFORE THE FLAGS (architect
             // 2026-09-26): the head on the ruler's bottom rows and the run
-            // through the marker lane paint over every flag, as the waveform
-            // segment paints over every stem. In THIS gate, behind the ruler
-            // pass, and never without it: the head's alpha composites over
-            // the ground that pass just refilled, so it cannot accumulate.
+            // through the marker lane paint under every flag, as the
+            // waveform segment paints under every stem. In THIS gate,
+            // directly after the ruler pass and never without it: the head's
+            // alpha composites over the ground that pass just refilled, so it
+            // cannot accumulate.
             paint_playhead_head_and_run(cr);
+            paint_flag_annotations(cr, top_strip);
         }
 
         // Strip-drag anchor stem: over the plate/stems in the waveform area
@@ -8994,9 +8985,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // the anchor has none). The anchor shows only mid-strip-drag, so
         // this overlap is transient and the pivot affordance reading on top is
         // acceptable. The flag editor's box likewise ends up after the
-        // playheads, and in the marker lane it DOES cover the cursor's run
-        // where the two meet: the open editor is a text field with a caret,
-        // the one marker-lane surface that stays above the playhead.
+        // playheads, over the cursor's marker-lane run like every flag.
         if (rects_intersect(exposed, wave_paint)) {
             paint_strip_drag_anchor(cr, area);
         }
@@ -9045,9 +9034,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // tooltip can arm under it.
     //
     // THE OPEN FLAG EDITOR'S BOX PAINTS HERE, ahead of those two and after every
-    // pass above — including the flag blit it must cover, and the cursor's
-    // marker-lane run, which it covers where the two meet (the paint-order
-    // block, step 14) — and UNCONDITIONALLY,
+    // pass above — including the flag blit it must cover — and UNCONDITIONALLY,
     // for the floating surfaces' own reason: it publishes the geometry the
     // pointer path grabs, and a run that skipped would strand a stale box. Off
     // the damage the outer Cairo clip makes it free, and with no editor open it

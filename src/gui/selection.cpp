@@ -111,9 +111,9 @@ void Selection::damage_overlay_on_subject_change(
 // (a collapse that then refuses, a membership toggle across the 1<->2 line).
 // Every enabled marker stems, always, so a selection change moves no stem. It
 // does RECOLOUR one (architect 2026-09-23 and 2026-09-26: a selected marker's
-// stem wears its class's Sel fill and the focus's the playhead stem's white,
-// resolve_marker_stem), and that repaint is not the mutators' to owe: the flag
-// cache's selection fingerprint (members and focus) misses, the rebuild
+// stem wears the playhead stem's white, resolve_marker_stem), and that
+// repaint is not the mutators' to owe: the flag cache's selection
+// fingerprint (members and focus) misses, the rebuild
 // republishes the stash, and
 // its own damage covers the waveform with the strip (maybe_rebuild_flag_cache,
 // waveform_cache.cpp). The phase-overlay pair above is untouched — its subject

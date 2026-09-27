@@ -173,7 +173,7 @@ namespace {
 // (pointer-hit-testing.md's placement-lanes section); its dedicated zoom
 // entry and its one-day region former both died 2026-08-12) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the
-// playhead's column over them — the head sat on this lane's bottom rows from
+// playhead's column under them — the head sat on this lane's bottom rows from
 // the row-5 live test until 2026-09-23), whose bottom edge is the
 // waveform top. ALL SIX ride the gui_scale axis: row 5 retired the last
 // font-scaled lanes in this strip. The BOTTOM strip is ONE LANE: THE UNIFIED
@@ -1228,7 +1228,7 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     // its top-strip half above — the aliased head on the ruler lane's bottom
     // rows (since 2026-09-23; the ruling is at the paint site,
     // paint_playhead_head_and_run) and the column's run through the marker
-    // lane beneath it, over the flags. That top-strip half is where the
+    // lane beneath it, under the flags. That top-strip half is where the
     // cursor's non-waveform pixels live, and the envelope
     // covers the whole lane band above the waveform rather than tracking the
     // head's own rows, exactly as Viewport::invalidate_waveform_area (the
