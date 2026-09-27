@@ -6174,6 +6174,20 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // one pixel apart, and nudging or dragging the marker made the pair flicker
 // between one line and two. Suppression removes the second line rather than
 // trying to make two roundings agree.
+// A TRACE (2026-09-26) FOUND THAT PREMISE STALE since the very 2026-08-01 fix
+// cited above: maybe_rebuild_flag_cache (waveform_cache.cpp) and
+// plate_viewport_basis now read the SAME wf_cache.fp_* fields — fp_vp_start,
+// fp_vp_end and fp_area_w for the spp both use, fp_warp_frame_map for the
+// target view's frame mapping — and a coincident marker's paint sample equals
+// the cursor, so both columns come from the identical expression; no ±1 can
+// arise between them at rest. The only remaining divergence is a transient
+// plate-map lag in target view: playhead_cursor_sample is stamped into the
+// active domain at the moment it is set (through the LIVE warp frame map),
+// while a target-view flag's column crosses wf_cache.fp_warp_frame_map, the
+// worker-published snapshot — so a warp edit whose plate rebuild (resize,
+// load) has not yet landed can still show the old one-pixel split for the
+// span the rebuild covers. The suppression stands as the ruled z-order (the
+// marker's stem wins its column), not as a rounding repair.
 //
 // A STATE COMPARE, NEVER A PIXEL ONE: the qualifying test is the LAND's own
 // exact-int64 formula — clamp_playhead_to_live_domain(source_frame_to_active_-

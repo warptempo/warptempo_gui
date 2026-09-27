@@ -715,6 +715,20 @@ inline constexpr GuiColor kMarkerFlagEdge        = hex(0x563165);
 inline constexpr GuiColor kMarkerFlagFillSel     = hex(0xC974ED);
 inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
 
+// THE DERIVATION (verified 2026-09-26): every marker pair in this palette
+// follows kdenlive's own Qt QColor derivation from its base fill — edge =
+// fill.darker(180); selected fill = fill.lighter(130) (value ×1.3, the excess
+// past 255 taken off the saturation, which is why red's #ff6c7b is not a
+// plain scaling); selected edge = selected fill.darker(180). Reproduced
+// exactly in QColor's 16-bit integer arithmetic for all sixteen sampled
+// values — warp 9B59B6/563165/C974ED/704083, red DA4453/79262E/FF6C7B/8E3C44,
+// the retired orange F47750/88422C/FFAC92/8E5F51, the history green
+// 1ABC9C/0E6857/22F4CB/138871 — and the phase-reset blue's RECORDED
+// DERIVATIONS below (3DAEE9/226181/73CFFF/40738E) are the same rule.
+// kdenlive's nine marker category bases — #9b59b6 #3daee9 #1abc9c #1cdc9a
+// #c9ce3b #fdbc4b #f39c1f #f47750 #da4453 — are the palette any new pair
+// would be derived from.
+//
 // THE RED CLASS HAS A REST PAIR AND A SELECTED PAIR, LIKE EVERY OTHER CLASS
 // (architect 2026-09-16). Until then red was ONE pair — the BRIGHT one below —
 // painted whether or not the marker was selected, on the reading that a
@@ -792,7 +806,9 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // PROVENANCE: #3daee9 is the Breeze highlight blue, the palette's one sampled
 // value; the other three are RECORDED DERIVATIONS off it in the relationships
 // the marker crops showed between their own four — the edge a darkened shade
-// of the fill, the selected pair a lifted fill over a mid-darkness edge.
+// of the fill, the selected pair a lifted fill over a mid-darkness edge. (The
+// derivation itself — kdenlive's own QColor darker(180) / lighter(130) rule —
+// is spelled once, at kMarkerFlagFill above.)
 //
 // RED STAYS RED ON EVERY COLUMN (kMarkerFlagFillRed / kMarkerFlagEdgeRed and
 // their Sel pair, resolve_flag_face's first live arm, asked before the
@@ -1022,7 +1038,7 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // strength. On the brighter dimmed pairs it lands where the ruling asked: the
 // selected flag 1.80, the red class 1.59 at rest and 1.81 selected (it gained
 // its rest pair 2026-09-16; the 1.81 is the bright pair the whole class used
-// to wear). (THE PHASE-RESET FLAG BOX reads ~1.90 against its own #274557 —
+// to wear). (THE PHASE-RESET FLAG BOX reads ~1.90 against its own #274657 —
 // a lighter blue fill whose ceiling is 2.10, headroom the calm purple does not
 // have — off the generic mix_color call resolve_flag_face feeds it, no
 // constant of its own and the fraction unchanged.) ONE
