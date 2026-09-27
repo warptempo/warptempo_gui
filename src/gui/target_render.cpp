@@ -778,10 +778,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // command killed it, parked and promoted its own "Rendering..." into
         // the slot, and erasing that would take down a line this render never
         // wrote. Only the preview writes "Updating...", so no case here depends
-        // on clearing another owner's string. (A mirror running beside it is no
-        // case at all: its "Synchronizing..." is derived below the slot rather
-        // than written into it — process_line_text, paint_handler.cpp — so this
-        // clear uncovers that line instead of touching it.)
+        // on clearing another owner's string.
         //
         // HELD DURING A RUN: mid-run this branch is the CANCELLED outcome of the
         // render the next trigger just killed, and its successor is already
@@ -899,9 +896,7 @@ void GuiTargetRender::complete_successful_buffer(
     // refusal, on_render_done's failure arm and cancel_in_flight_update): an
     // empty slot and a sibling's string — an archival "Rendering..." — are both
     // left alone, because a preview that never wrote the cell has nothing of
-    // its own there to erase. A running mirror's "Synchronizing..." is not a
-    // sibling in the slot: it is derived below it (process_line_text,
-    // paint_handler.cpp) and this clear uncovers it. The reuse rungs are exactly that case: they
+    // its own there to erase. The reuse rungs are exactly that case: they
     // reach this tail with the label never stamped, a synchronous cache or
     // artifact hit resolving without going asynchronous, so nothing was shown.
     //

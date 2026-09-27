@@ -419,8 +419,7 @@ struct Viewport {
     // ROW 8'S STATE CELL — the clock's neighbour (architect 2026-08-29, the
     // evening the STATUS BAR folded back into this row). The cell carries what
     // is TRUE RIGHT NOW: the `h` walk line, else the process line — the
-    // render / batch / loading progress string, or, when that is empty and a
-    // mirror is running, the derived `Synchronizing...`. So this is the owner
+    // render / batch / loading progress string. So this is the owner
     // for every route that changes what those answer — and, since 2026-09-09,
     // for the one route that flips the CLOCK'S DIRTY SUFFIX, the lane's other
     // piece of state (the inventory below). (The bar was the window's last lane
@@ -442,10 +441,10 @@ struct Viewport {
     // is this row's too, with its own cell owner below — and this rect covers
     // that one as a superset).
     //
-    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-09 —
+    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-27 —
     // membership is "this route changes what the LANE shows", which is the
-    // progress line's writers, the mirror's two edges and the dirty mark's one
-    // transition owner, twelve sites:
+    // progress line's writers and the dirty mark's one transition owner, ten
+    // sites:
     //   * input_render_dispatch's THREE (the promote, the BATCH'S OWN WRITE at
     //     each cell's dispatch — which took the park's retraction's place in
     //     this list on 2026-09-11, a sweep's line being state — and
@@ -454,12 +453,6 @@ struct Viewport {
     //     clear, the TWO context-ending clears — the target view leaving and
     //     the T->S exit — the render-done failure clear and the completion
     //     tail's guarded one);
-    //   * input_key_dispatch's TWO, the synchronization's dispatch and its
-    //     completion. Those two write no string at all: the mirror's
-    //     `Synchronizing...` is DERIVED at the reader out of the worker's
-    //     busy bit, below whatever the progress line holds
-    //     (process_line_text, paint_handler.cpp), so the pair damages the
-    //     lane on the two edges where that bit changes and nothing else;
     //   * undo's ONE, Undo::recompute_dirty's tail — THE DIRTY MARK (architect
     //     2026-09-09), row 8's `*` on the clock's own run. It is the one
     //     member that is not a cell string at all: the painter reads app.dirty
@@ -581,7 +574,7 @@ struct Viewport {
     // the trim commit writers all kept their clock call above and dropped the
     // other one. Nothing on this row pairs with a second surface any more —
     // the STATE CELL that replaced the readout is damaged by the progress
-    // line's writers and the mirror's two edges (invalidate_status_cell_area
+    // line's writers and the dirty mark's owner (invalidate_status_cell_area
     // above, whose inventory is authoritative), and its rect
     // is this row's whole lane, which covers this cell as a superset where a
     // route does spell both.) Routes that damage the

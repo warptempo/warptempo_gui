@@ -65,22 +65,6 @@ namespace {
 // when the save owner began raising it from save_ops.cpp: the account of its
 // readers is there.)
 
-// THE SYNCHRONIZATION-RUNNING SENTENCE, ONE LITERAL (2026-09-02, the
-// four-tier review's R-14). THREE READERS in this file — the act's own
-// single-in-flight refusal (synchronize_to_external_storage, whose sentence it
-// was); the Open project picker's open act, which refuses a reopen for the
-// same reason it refuses one under a publishing checkpoint: the session
-// teardown JOINS this worker after forgetting its completion fd, so a reopen
-// mid-mirror freezes the GUI for as long as the stick takes and drops the
-// verdict a failing mirror owed the user; and, since 2026-09-04, the close
-// road's own gate (close_refused_by_external_sync), which is that same
-// reasoning carried to the quit, where the teardown's join has no window left
-// to report into at all. All three meet ONE bit at
-// GuiExternalSyncWorker::is_busy, so the sites cannot disagree about what
-// "running" means; the wording is the ACT's because it names what is running.
-constexpr const char* kSyncRunning =
-    "A synchronization is already running";
-
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
 // spec's ordinary command-line front end. True iff the folder is gone from
 // disk afterwards.
@@ -304,17 +288,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // brackets with every other per-project posture, the same thing Ctrl+O's
     // reopen does.
     const bool is_revert_project = is_revert_project_key(key, mods);
-    // SYNCHRONIZE TO EXTERNAL STORAGE, bare `\` since 2026-08-31. It is
-    // admitted on the header's own standard and was already read-only-legal
-    // through its menu row, which carries no gate of this kind: the act
-    // AUTHORS NOTHING — it reads two output folders and writes OUTSIDE the
-    // project entirely, onto the folder `sync_path` names — so the lock has
-    // nothing to protect from it. Bare-exact through the shared predicate the
-    // dispatch arm reads, so the key and this gate cannot drift. NO FACE
-    // FOLLOWS IT: the act's one button is a MENU ROW, which the lock never
-    // greys because this admission holds (its own greys are the act's
-    // external_sync_refusal, dropdown_item_enabled).
-    const bool is_sync_external = is_sync_external_key(key, mods);
     const bool is_play_pause = is_play_pause_key(key, mods);
     // THE A/B AUDITION (2026-08-26) is admitted on the header's own standard:
     // it plays and switches tabs — playback and navigation, both already on
@@ -585,7 +558,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
     // 2026-08-07 — see is_trim_maximize above.
-    return !(is_o || is_open_project || is_revert_project || is_sync_external ||
+    return !(is_o || is_open_project || is_revert_project ||
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
              is_home_end || is_page_updown ||
@@ -2852,9 +2825,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // this predicate is what admits File's Ctrl+Q — and, since 2026-08-29, its
 // Ctrl+O — in there. THE FILE MENU HAS NO DEAD ROW IN THE VIEW as of that day
 // (architect, "admit both"): Open project rides this admission, Revert beside
-// it since 2026-09-13, Quit always did, and Synchronize's act carries no history-mode refusal at all — its own
-// bare `\` riding this admission too since 2026-08-31, so the row and its
-// chord answer the view alike.
+// it since 2026-09-13, and Quit always did.
 // (It admitted the deleted Navigation menu's zoom, zoom-out and overview rows
 // the same way, refusing nothing else on it — its remaining four were claimed
 // one line above as the mode's own vocabulary — while the row whose chord means
@@ -3019,16 +2990,15 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // (the tab row's first pixel 2026-09-03..09) — so a Cancel or an
     // Esc leaves the view exactly as it stood, this view owning no navigation
     // state to disturb. Until this date the chord fell through this list as a
-    // consumed no-op, which made two of the File menu's three rows dead in
-    // here while the third was live.
+    // consumed no-op, which left the File menu's Open row dead in here.
     //
     // IT IS THE SHARED PREDICATE'S SHAPE and not a second spelling of it
     // (is_open_project_key, gui_input.h — ctrl-exact, so Ctrl+Shift+O stays
     // the strict rule's consumed no-op here as everywhere), which is also what
     // keeps this admission and the read-only allowlist's answering the same
     // question the same way. THE FILE ANCHOR'S FACE READS THIS LINE by the
-    // derived partition: with Quit, Open and — since 2026-08-31 — Synchronize
-    // all admitted, every row of that menu is live in the view.
+    // derived partition: with Quit, Open and Revert all admitted, every row of
+    // that menu is live in the view.
     const bool is_open_project = is_open_project_key(key, mods);
     // FILE → REVERT IS ADMITTED BESIDE IT (Ctrl+Alt+O, architect 2026-09-13,
     // the planner's default): the same act on the session as a whole aimed at
@@ -3036,15 +3006,6 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // reopen tears this view down as Ctrl+Q's exit does — and the File menu
     // keeps no dead row in the view.
     const bool is_revert_project = is_revert_project_key(key, mods);
-    // SYNCHRONIZE IS ADMITTED TOO, bare `\` since 2026-08-31, and it needs no
-    // argument of its own: the ACT has run in the view since 2026-08-29
-    // (architect, "admit both") through the File menu's row, whose road meets
-    // no gate here at all, so refusing the key would make the row and its
-    // chord disagree — the one thing an allowlist may not do. The act's own
-    // reasoning is the easy one: it authors nothing, stops no playback, writes
-    // outside the project entirely, and its sentences are notification cards,
-    // which this mode cannot hide.
-    const bool is_sync_external = is_sync_external_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
     // bare-exact, read off its own arm in on_key: the three absolute selectors
     // on bare 1/2/3, which compose the `t`/`p` handler bodies
@@ -3092,8 +3053,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     return !(is_zero || is_page_updown ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
-             is_save || is_ctrl_q || is_open_project || is_revert_project ||
-             is_sync_external);
+             is_save || is_ctrl_q || is_open_project || is_revert_project);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
@@ -4160,8 +4120,7 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 bool GuiInputHandler::any_text_editor_active() const {
     // The five kinds' one membership, AppState::text_editor_session (the
     // settings and commit-title editors and the top-strip editor in every
-    // kind) — shared since 2026-09-24 with the Synchronize act's ladder
-    // (external_sync_refusal), a free function the File row's face reads.
+    // kind).
     return app.text_editor_session() != 0;
 }
 
@@ -6810,14 +6769,14 @@ void GuiInputHandler::open_project_commit(int index) {
     const std::string name =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
 
-    // THE FIVE REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
+    // THE THREE REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
     // in the `h` view like anywhere else — they were the status chain's
     // transient tier for one day, invisible under the view's own line — and
     // the picker STAYS OPEN on every one of them, which is the answer the
     // user can act on: press another row, or Esc. EACH IS A GuiFailure
     // (failure.h, 2026-09-02): the card raises the display clause and the
-    // stderr line prints the diagnostic — the same words for the two state
-    // refusals and the project model's (which name folders and stems, never
+    // stderr line prints the diagnostic — the same words for the state
+    // refusal and the project model's (which name folders and stems, never
     // a path), and the FULL PATH where the dry run's clause names a file the
     // card names by the project's folder-and-file form.
     auto refuse = [&](const GuiFailure& failure) {
@@ -6838,28 +6797,6 @@ void GuiInputHandler::open_project_commit(int index) {
     // refusals, so the answer is one line and another Enter.
     if (app.history_checkpoint_in_flight) {
         refuse(plain_failure(kCheckpointPublishing));
-        return;
-    }
-
-    // NOR WHILE A SYNCHRONIZATION IS RUNNING (2026-09-02, the four-tier
-    // review's R-14), the checkpoint's own reasoning one worker over and in
-    // the act's own words: the teardown JOINS this worker too (main.cpp's
-    // run_project, after it has forgotten every worker's completion fd), so a
-    // reopen mid-mirror freezes the GUI for as long as the copies take — a
-    // stick's seconds — and the verdict a FAILING mirror owed the user goes to
-    // stderr alone, invisible on the tablet. The bit is the act's own
-    // single-in-flight test (GuiExternalSyncWorker::is_busy,
-    // synchronize_to_external_storage's), asked here rather than mirrored, and
-    // it falls by itself. THE PICKER STAYS OPEN, like its other three
-    // refusals, so the answer is one line and another Enter.
-    // The close road gates on the same bit since 2026-09-04
-    // (close_refused_by_external_sync, at request_close's head), and this arm
-    // is not made redundant by it: the reopen reaches that road only past
-    // close_picker and past the seated reopen name, so refusing here is what
-    // keeps the picker standing with its answer instead of closing over a
-    // quit that will not happen. Same predicate, same sentence, earlier place.
-    if (external_sync_worker.is_busy()) {
-        refuse(plain_failure(kSyncRunning));
         return;
     }
 
@@ -6951,8 +6888,7 @@ void GuiInputHandler::revert_project() {
     // THE REOPEN, named on the project that is open. The prompt's Cancel
     // leaves the seated name behind harmlessly, as the picker's does: the loop
     // reads it only after run() returns, and run() returns for a reopen only
-    // through this request's own completion. A running synchronization refuses
-    // at the close road's head, with its card, before anything closes.
+    // through this request's own completion.
     app.reopen_project = project->name;
     prompt.request_close(GuiCloseTarget::Revert);
 }
@@ -7086,12 +7022,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // the same step the compositor's close takes, stated once there rather
     // than here, so the two roads cannot drift. It is the File menu's Quit
     // row too, that anchor being live above the band again since 2026-09-03
-    // evening. THE SET STAYS ONE: Synchronize's row calls its own gated body
-    // and never this router, and Ctrl+O — the Open Project row's chord, which
+    // evening. THE SET STAYS ONE: Ctrl+O — the Open Project row's chord, which
     // is this very picker — is consumed by the catch-all below, the mode
     // answering about itself in silence; Ctrl+Alt+O, the Revert row's chord,
-    // dies there the same way, exactly as Open's does. (Bare `\` was a second fall-through
-    // for the one day of 2026-09-02, when every row had to be its chord.)
+    // dies there the same way, exactly as Open's does.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
@@ -7402,8 +7336,8 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     // same step the compositor's close takes, stated once there rather than
     // here. It is the File menu's Quit row too since 2026-09-03 evening, that
     // anchor being live above the band on this content as on the other two;
-    // nothing else needs a fall-through, Synchronize's row calling its own
-    // gated body and Ctrl+O and Ctrl+Alt+O dying in the catch-all's silence
+    // nothing else needs a fall-through, Ctrl+O and Ctrl+Alt+O dying in the
+    // catch-all's silence
     // (the picker's own record of that reasoning is one router up).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
@@ -7451,181 +7385,6 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     }
 }
 
-// -- SYNCHRONIZE TO EXTERNAL STORAGE (the contract is at the declaration) ---
-
-// (The mirror's process line lives nowhere here. A running mirror is state —
-// true right now, replaced as it changes, never timed out — so it belongs
-// beside the cell's other process strings rather than on a card (architect
-// 2026-09-04), and the dispatch notice it replaced was dropped in 2026-08-29
-// for being exactly that fact on the event surface. It is DERIVED at the one
-// reader out of GuiExternalSyncWorker::is_busy rather than written into the
-// shared slot here: the spelling, the yield to a render's line and the reason
-// a written one could not stay true are all at process_line_text,
-// paint_handler.cpp. The two sites below own the DAMAGE for it and nothing
-// else.)
-
-// The close road's synchronization gate. The contract, the reasoning and the
-// inventory of roads it covers are at the declaration (input_handler.h); this
-// body is the predicate and the sentence, and it owns neither.
-bool GuiInputHandler::close_refused_by_external_sync() {
-    if (!close_blocked_by_external_sync(external_sync_worker)) return false;
-    notifications.notify(AppState::NotificationClass::Normal, kSyncRunning);
-    return true;
-}
-
-// The act's GUI half: the gates, the destination, the capture, the dispatch.
-// TWO ROADS REACH IT and neither restates anything: the File menu's
-// Synchronize row, whose release has already closed the popup and calls this
-// directly, and BARE BACKSLASH on the ordinary dispatch since 2026-08-31
-// (is_sync_external_key, gui_input.h). The gates below are what let the row
-// have no chord of its own for four days and what the key needs none of its
-// own beyond its place in on_key.
-void GuiInputHandler::synchronize_to_external_storage() {
-    // The Open project row's own gates, mirrored: a menu row's refusals belong
-    // to the menu, not to the act. Each returns without touching playback —
-    // and neither does the act itself, which is silent and changes no audio.
-    // (THE `h` VIEW'S REFUSAL WENT WITH THE OPEN ROW'S — architect 2026-08-29,
-    // "admit both", so the File menu has no dead row in the view. This act was
-    // always the easier admission of the two: it is READ-ONLY-LEGAL already,
-    // authors nothing, stops no playback and writes outside the project
-    // entirely, so a viewer running it is a viewer copying files.)
-    // THE CHEAP REFUSALS ARE ONE LADDER, external_sync_refusal (below the
-    // body), the one decision the File menu's Synchronize row greys on
-    // (architect 2026-09-24): the silent ones first — a modal standing, a
-    // load in flight, nothing loaded — then the two that card.
-    const ExternalSyncRefusal refusal =
-        external_sync_refusal(app, external_sync_worker);
-    if (refusal == ExternalSyncRefusal::Silent) return;
-
-    // EVERY SENTENCE THIS ACT WRITES IS A NOTIFICATION CARD (2026-08-29) —
-    // the unset-key refusal, the already-running answer and the worker's
-    // FAILURES on the way back (on_external_sync_complete) — visible in the
-    // `h` view like anywhere else; they were the status chain's transient
-    // tier for one day, invisible under the view's own line. THE DISPATCH
-    // NOTICE WAS DROPPED with the move — "Synchronizing to …" was a process
-    // line, state rather than an event — and the state surface took it on
-    // 2026-09-04: `Synchronizing...` in row 8's state cell for as long as the
-    // worker runs, the same fact on the surface that owns it — DERIVED there
-    // out of the worker's busy bit rather than written into the cell, so the
-    // yield to a render's line holds for every ordering of the two acts (the
-    // derivation and its reasoning are at process_line_text,
-    // paint_handler.cpp; the damage for it is at the dispatch below and at
-    // the completion). AND SINCE
-    // 2026-08-30 A SUCCESS SAYS NOTHING AT ALL (the
-    // architect's ruling, the render's precedent), so the only sentences left
-    // are refusals — which is why this act, when it works, is one menu press
-    // and silence. THE WORKER'S FAILURES ARE STILL LOUD on stderr too —
-    // run_external_sync's one refusal owner writes every failing line there
-    // beside the verdict (logcat on the tablet).
-    auto report = [&](std::string line) {
-        notifications.notify(AppState::NotificationClass::Normal, std::move(line));
-    };
-
-    // SINGLE ACT IN FLIGHT, answered in words on the KEY: the menu row greys
-    // while one runs (2026-09-24), so the card is bare `\`'s.
-    if (refusal == ExternalSyncRefusal::Running) {
-        report(kSyncRunning);
-        return;
-    }
-
-    // THE DESTINATION IS THE DEVICE CONFIG'S, told and not found (architect
-    // 2026-08-30): `sync_path`, the loop's one DeviceConfig, read here and
-    // handed to the job whole — the act composes `<sync_path>/<project
-    // name>/` and looks for nothing. IT WAS THE SEAM'S ANSWER for three days
-    // (`GuiPlatform::removable_volume`, deleted with its two backends'
-    // discoveries): the finding rule worked on the laptop and could not work
-    // on the tablet at all, and where a machine's removable storage is
-    // mounted is exactly the kind of per-device fact that file is for
-    // (device_config.h).
-    //
-    // AN EMPTY KEY IS THE DEVICE SAYING IT HAS NO DESTINATION — "not set up
-    // on this device", the first-run template's own value — and the card
-    // names THE KEY BY ITS SPELLING (`sync_path is not set`): a config key is
-    // named the way it is written in the file everywhere in the product, so
-    // the sentence tells the reader exactly what to add. Nothing runs.
-    // (The row greys on it too — permanently on the tablet, whose key stays
-    // empty — so this card is the key's alone.)
-    if (refusal == ExternalSyncRefusal::NoSyncPath) {
-        report("sync_path is not set");
-        return;
-    }
-    const std::string& sync_path = app.device_config->sync_path;
-
-    // THE JOB, captured whole by value on this thread. TWO FOLDERS AND NO
-    // TITLE (architect 2026-09-02): the job carries `render/` and `tmp/`
-    // themselves — the deliverable folder through the parser's one owner, the
-    // batch root through the GUI's — and the act LISTS them, so the set it
-    // mirrors is the set the disk holds. The title is not a term of it: a
-    // composed `render/<title>.wav` made the mirror's set and
-    // prune_render_folder's definition (renders_dir.h) two rules that had to
-    // agree, and between a retitle and the next render they did not — the disk
-    // kept the old wav, the stick lost it and nothing was copied in its place.
-    // The prune is still what keeps the folder to one pair; it simply runs on
-    // its own trigger now, and the next Synchronize follows the folder there.
-    GuiExternalSyncJob job;
-    job.sync_root    = std::filesystem::path(sync_path);
-    job.project_name = app.project_name;
-    job.render_root  = render_output_directory(app.source_audio_path);
-    job.batch_root   = project_batch_root(app.source_audio_path);
-    // The project folder itself — the source's own parent, the project
-    // model's rule — so the act can name every project-side path relative to
-    // it (the basename rule at external_sync.h's rule 1).
-    job.project_dir  =
-        std::filesystem::path(app.source_audio_path).parent_path();
-
-    external_sync_worker.dispatch(
-        std::move(job),
-        [this](GuiExternalSyncOutcome outcome) {
-            on_external_sync_complete(std::move(outcome));
-        });
-
-    // The state cell gains a line at this press and loses one at the
-    // completion, and this act spells the damage for both while writing
-    // neither. The synchronization yields the cell to a render, the batch
-    // queue or the startup load — the render's progress line is both the more
-    // frequent and the more informative state, and that is a ruling rather
-    // than an implementation note (architect 2026-09-04) — and the yield is
-    // read at the painter now, out of the worker's own single-in-flight bit,
-    // so it holds for every ordering of the two acts instead of only for the
-    // two a written line could cover. The damage is unconditional and asked
-    // after the dispatch, so the bit the reader answers is already up when the
-    // next paint runs; it goes through the one owner,
-    // invalidate_status_cell_area, which covers the bottom row's lane whole.
-    viewport.invalidate_status_cell_area();
-}
-
-// The verdict, back on the main thread (the platform's completion eventfd,
-// main.cpp's wiring).
-//
-// A SUCCESS SAYS NOTHING (architect 2026-08-30, "if it succeeds, we don't
-// necessarily need [a notice]") — the render's own precedent, a render served
-// silently publishing silently — so only a FAILURE raises, and the worker
-// composed it: THIS THREAD RAISES ITS DISPLAY CLAUSE, the path named relative
-// to the mirror's roots, the worker having printed the diagnostic with the
-// full path at the refusal (GuiFailure, failure.h). It is a NORMAL card and
-// never the critical class: a failed mirror is retried by pressing the row
-// again, while the critical class is the checkpoint act's alone (the reason
-// at the declaration). A successful act carries an empty failure by
-// construction (GuiExternalSyncOutcome), so this fork and that emptiness are
-// one statement and neither invents the other.
-// The Synchronize act's ladder; the contract is at the declaration
-// (input_handler.h).
-ExternalSyncRefusal external_sync_refusal(const AppState& app,
-                                          const GuiExternalSyncWorker& sync) {
-    // A modal owns input (keyboard_modal_editor_active's membership, read
-    // off the AppState) — the act's own first gate, silent.
-    if (app.prompt.active || app.text_editor_session() != 0)
-        return ExternalSyncRefusal::Silent;
-    if (app.loading) return ExternalSyncRefusal::Silent;
-    // Nothing loaded is nothing to mirror.
-    if (app.source_audio_path.empty() || app.project_name.empty())
-        return ExternalSyncRefusal::Silent;
-    if (sync.is_busy()) return ExternalSyncRefusal::Running;
-    if (app.device_config->sync_path.empty())
-        return ExternalSyncRefusal::NoSyncPath;
-    return ExternalSyncRefusal::None;
-}
-
 // THE DROPDOWN ITEMS' ONE ENABLED VERDICT (architect 2026-09-24, the truthful
 // menus; the contract is at the declaration, app_state.h). Each row greys on
 // its command's CHEAP refusals, read off the act's own predicates; the
@@ -7640,15 +7399,12 @@ ExternalSyncRefusal external_sync_refusal(const AppState& app,
 //     which also cover the opener's own terms (the picker already standing
 //     is the overlay, a load in flight the load). The chosen folder's
 //     resolve and dry run are the commit's, not mirrored.
-//   * Revert (Ctrl+Alt+O): the two head gates; a checkpoint publishing
-//     (revert_project's first refusal); a running mirror (the close road's
-//     gate, close_blocked_by_external_sync). resolve_project and
+//   * Revert (Ctrl+Alt+O): the two head gates and a checkpoint publishing
+//     (revert_project's first refusal). resolve_project and
 //     source_load_dry_run are not mirrored.
-//   * Synchronize to External Storage (its row calls the act directly):
-//     external_sync_refusal, the act's whole cheap ladder — which on the
-//     tablet, whose sync_path stays empty, greys the row for good.
-//   * Quit (Ctrl+Q): a running mirror alone. Ctrl+Q passes every head gate
-//     (the overlay routers, the load and the editor gate all admit it).
+//   * Quit (Ctrl+Q): never grey. Ctrl+Q passes every head gate (the overlay
+//     routers, the load and the editor gate all admit it), and the quit
+//     itself refuses nothing cheap.
 //
 //   EDIT (all three need the chord to reach handle_mode_keys)
 //   * the two head gates; the `h` view's allowlist (history_mode_key_blocked
@@ -7666,29 +7422,24 @@ ExternalSyncRefusal external_sync_refusal(const AppState& app,
 // can be open under one — a prompt or a dialog editor veils the anchor press,
 // and toggle_dropdown's open ENDS the pointer-transparent flag editor — so a
 // modal term could only ever grey an ANCHOR, and falsely: pressing Edit with
-// a flag edit standing ends the edit and opens onto live rows. (The
-// Synchronize ladder carries its act's own modal term; File's anchor is
-// live through Quit whatever it answers.)
+// a flag edit standing ends the edit and opens onto live rows. (File's
+// anchor is live through Quit whatever it answers.)
 bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
-                           const GuiExternalSyncWorker& sync,
                            DropdownMenu menu, int item) {
     if (item < 0 || item >= dropdown_item_count(menu)) return false;
     const bool no_audio = no_audio_to_dispatch_on(a, audio.total_frames());
     if (!dropdown_is_command_menu(menu)) return !no_audio;
     const CommandPopupItem& it = command_popup_item(menu, item);
-    if (it.act == GuiPopupAct::SyncExternal)
-        return external_sync_refusal(a, sync) == ExternalSyncRefusal::None;
     GuiInputState chord{};
     chord.ctrl  = it.ctrl;
     chord.shift = it.shift;
     chord.alt   = it.alt;
     if (it.key == GuiKeys::Q && chord.ctrl && !chord.shift && !chord.alt)
-        return !close_blocked_by_external_sync(sync);
+        return true;
     if (folder_overlay_stands(a) || no_audio) return false;
     if (is_open_project_key(it.key, chord)) return true;
     if (is_revert_project_key(it.key, chord))
-        return !a.history_checkpoint_in_flight &&
-               !close_blocked_by_external_sync(sync);
+        return !a.history_checkpoint_in_flight;
     if (a.history_mode.active && !history_mode_owns_key(it.key, chord) &&
         history_mode_key_blocked(it.key, chord, a))
         return false;
@@ -7700,20 +7451,6 @@ bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
     // A row this list does not name answers live — the face it had before
     // the ruling — rather than greying on a refusal nobody has written.
     return true;
-}
-
-void GuiInputHandler::on_external_sync_complete(
-        GuiExternalSyncOutcome outcome) {
-    // The process line comes down here, and it comes down by itself: the
-    // worker is already Idle when this callback runs (on_completion_event
-    // stores the state before it fires the callback), so the reader's fallback
-    // has stopped answering and this only has to ask for the paint. Nothing is
-    // erased, which is the point — a render dispatched while the mirror ran
-    // owns the cell's string, and the mirror never owned one to give back.
-    viewport.invalidate_status_cell_area();
-    if (outcome.ok) return;
-    notifications.notify(AppState::NotificationClass::Normal,
-                         std::move(outcome.failure.display));
 }
 
 // P / I / K / L letter-key handlers. See the declaration for the chord list.
@@ -8388,9 +8125,8 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // ROW, the anchor being live above the band again since 2026-09-03
     // evening, and on the TABLET it is the player's first quit road of any
     // kind — there is no keyboard there and the row is now reachable.
-    // THE SET STAYS TWO: bare `\` needs no fall-through, Synchronize's row
-    // calling its own gated body directly, and Ctrl+O and Ctrl+Alt+O are the
-    // two File rows this router answers with the catch-all's silence — chords
+    // THE SET STAYS TWO: Ctrl+O and Ctrl+Alt+O are the two File rows this
+    // router answers with the catch-all's silence — chords
     // bound outside the mode and meaning nothing inside it, the unbound-keys
     // ruling. (Both were fall-throughs for the one day of 2026-09-02, when
     // every row had to be its chord here.)
@@ -8640,8 +8376,8 @@ void GuiInputHandler::copy_focused_marker_value() {
     // 2026-09-13): reading what was copied otherwise needs a terminal or a
     // text editor, and a card is an event, so no state surface returns. The
     // value is the very `payload` handed to the clipboard, single-quoted as
-    // every named thing on a card is. The save, a render and a Synchronize
-    // stay silent by ruling: each has its own visible answer (row 8's clock
+    // every named thing on a card is. The save and a render stay silent by
+    // ruling: each has its own visible answer (row 8's clock
     // suffix — the `*` a save clears — and the file on disk). THE BUTTON
     // INHERITS IT: the bottom row's Copy resolved value dispatches this same
     // bare `j` through on_key at its lift, so the sentence lives once and both

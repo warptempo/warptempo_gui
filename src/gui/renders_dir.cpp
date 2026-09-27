@@ -177,8 +177,7 @@ void prune_render_folder(const std::string& source_audio_path,
     if (!std::filesystem::is_directory(dir, ec)) return;
 
     // CLASSIFY WHOLE, THEN REMOVE. A removal inside the walk would change the
-    // directory a live directory_iterator is reading; the mirror's own
-    // deletion pass is two passes for the same reason (external_sync.h rule 1).
+    // directory a live directory_iterator is reading.
     // The walk never throws (directory_walk.h) and stops at the first fault —
     // every entry it did reach is a positive identification, so the list below
     // is removed whatever `ec` ended up holding, and nothing past the fault is.

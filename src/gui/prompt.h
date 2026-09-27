@@ -57,16 +57,14 @@ struct GuiPrompt {
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this prompt by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
-    // the settings editor's own shape). THREE READERS: the load
+    // the settings editor's own shape). TWO READERS: the load
     // confirmation, whose OK and Cancel reach the acts that live on
     // GuiInputHandler (confirm_load_in_place, cancel_load_in_place)
     // — the three load acts being private to that struct — and
     // request_close's own closing steps
     // (close_picker, close_stats_panel and close_modal_editors_no_commit),
     // the picker's close, the panel's and each editor's exit body living
-    // there beside the surfaces themselves; and, since 2026-09-04, that same
-    // road's refusal (close_refused_by_external_sync), whose predicate is the
-    // synchronization worker the input handler holds.
+    // there beside the surfaces themselves.
     GuiInputHandler*      input = nullptr;
 
     GuiPrompt(AppState&             app_,
@@ -100,17 +98,9 @@ struct GuiPrompt {
     // what differs is the target.
     //
     // THE REVERT TARGET ASKS A DIFFERENT QUESTION AND NOTHING ELSE: every step
-    // above and the refusal below run for it unchanged, and a dirty session is
+    // above runs for it unchanged, and a dirty session is
     // asked the discard-only confirmation (open_revert_confirm) where the other
     // two targets ask the unsaved-work question.
-    //
-    // It can also refuse (architect 2026-09-04): a running Synchronize to
-    // external storage stops the close dead at this road's head, above every
-    // step named above, so nothing is torn down and no question is asked. The
-    // mirror's worker has no cancel, and its join must never run under a live
-    // window. The gate is one call through the back-pointer
-    // (close_refused_by_external_sync), which owns the predicate, the card
-    // and the reasoning; every target meets it.
     void request_close(GuiCloseTarget target);
     void activate_response(char k);
 

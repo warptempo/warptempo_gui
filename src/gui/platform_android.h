@@ -15,7 +15,7 @@
 // presentation — THE ANDROID BACKEND, the glass half of the seam whose other
 // implementation is platform_wayland.h's. It runs inside a NativeActivity over the NDK's stock android_native_app_glue:
 // the glue's thread owns an ALooper, this class adds its own periodic timerfd
-// and the five worker eventfds to it, paints cairo into a persistent ARGB32
+// and the four worker eventfds to it, paints cairo into a persistent ARGB32
 // backbuffer and blits the damaged rectangle into ANativeWindow_lock's buffer
 // AT THE CONTENT RECT'S ORIGIN (the window the GUI sees is the band inside the
 // system bars; the rule and its two translation points are at origin_x_).
@@ -34,15 +34,8 @@
 // per-device preferences file (device_config.h) needs a first-run template only
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
-// is the one portable body driving either (the loop contract, platform.h). It
-// grew twice more on 2026-08-28, both on both sides: removable_volume(), the
-// Synchronize to external storage act's destination — WHICH LEFT AGAIN
-// 2026-08-30, the act's destination being told to it by the device config's
-// `sync_path` key now rather than found, so the seam is one member smaller
-// than it was and neither backend goes looking for a volume — and
-// set_sync_worker_completion_fd, that act's worker taking
-// the loop's fifth watched eventfd beside the other four. IT LAST GREW THE
-// SAME DAY, twice, by the car's pair (gui_media.h carries their vocabulary;
+// is the one portable body driving either (the loop contract, platform.h). IT
+// LAST GREW ON 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
 // the mechanism is platform-seam.md's car section): set_on_media_command, the
 // hook the loop fires with each head-unit button the Java sliver's
 // MediaSession hands down — stored and never fired on Wayland, which is the
@@ -123,19 +116,6 @@ public:
     // private internal directory by android_main before gui_main runs, beside
     // the cache home it has always set.
     static DeviceConfig device_config_defaults();
-
-    // (THE ONE MOUNTED REMOVABLE VOLUME stood here from 2026-08-28 until
-    // 2026-08-30 as `removable_volume()`: this backend read the
-    // `/storage/<name>` mount points out of `/proc/self/mounts` — the MOUNT
-    // TABLE and not `opendir("/storage")`, that directory being traversable
-    // but not listable by this app's uid. THE DESTINATION IS CONFIGURED NOW,
-    // the device config's `sync_path` key, and the member is deleted on both
-    // sides. On THIS device it changes nothing yet and admits why: this One UI
-    // build mounts the OTG stick with `mountFlags=0`, so no `/storage/<uuid>`
-    // view exists for any app to find OR to be told about, and the tablet's
-    // `sync_path` stays empty until a writable destination exists there. The
-    // whole record, the measurement and the SAF contingency are in
-    // platform-seam.md's Synchronize section.)
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-only with no titlebar, so this setter stores nothing and
@@ -386,9 +366,6 @@ public:
     void set_history_prefetch_completion_fd(int fd,
                                             std::function<void()> on_event);
 
-    // And the SEVENTH, the Synchronize to external storage act's worker.
-    void set_sync_worker_completion_fd(int fd, std::function<void()> on_event);
-
     // -- THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS -------------------------
     //
     // DOES THIS PLATFORM WANT THE GUI TO PAINT A KEYBOARD? Android answers YES,
@@ -606,7 +583,7 @@ private:
     // this.
     bool initial_resize_owed_ = false;
 
-    // THE DEFERRABLE SOURCES — the timer, the five workers and the car's
+    // THE DEFERRABLE SOURCES — the timer, the four workers and the car's
     // media eventfd below — recorded by the drain and consumed by the
     // loop pass's tail. They are MEMBERS rather than locals because the drain
     // hands the looper's events back in readiness order while the ORDER THEY
@@ -614,7 +591,7 @@ private:
     // completion that arrive mid-drain are recorded here and dispatched at the
     // pass's tail, after the window-system sources are empty.
     bool timer_fired_ = false;
-    bool worker_fired_[5] = {false, false, false, false, false};
+    bool worker_fired_[4] = {false, false, false, false};
     // The media command source's own readiness flag, the same shape: recorded
     // by the drain, consumed by pump() after the worker completions.
     bool media_fired_ = false;
@@ -625,7 +602,7 @@ private:
     // mutex that also guards the sink pointer it reaches this object through,
     // then writes media_command_fd_ — an eventfd this object CREATES in init()
     // and closes in shutdown(), watched on the looper under its own ident for
-    // the process's life (unlike the five worker fds, which are per project).
+    // the process's life (unlike the four worker fds, which are per project).
     // pump() swaps the queue out under the same mutex and fires the hook per
     // command on the glue thread, outside the lock.
     int                          media_command_fd_ = -1;
@@ -669,10 +646,6 @@ private:
     // History-prefetch ready fd. Same lifetime story again.
     int  history_prefetch_completion_fd_ = -1;
     std::function<void()> on_history_prefetch_ready_;
-
-    // Synchronization-worker completion fd. Same lifetime story again.
-    int  sync_worker_completion_fd_ = -1;
-    std::function<void()> on_sync_worker_completion_;
 
     // -- The clipboard's ROAD-ABSENT payload (see clipboard_set_text) --
     // Written and read ONLY while clipboard_road_open() is false — a failed
@@ -744,7 +717,7 @@ private:
     // Add one fd to the glue's looper under `ident`; a negative fd is the
     // "nothing registered" answer and is a silent no-op. SEVEN REGISTRATIONS
     // GO THROUGH IT (re-grepped 2026-08-28): the timerfd and the car's media
-    // eventfd, both once per PROCESS in init(), and the FIVE worker
+    // eventfd, both once per PROCESS in init(), and the FOUR worker
     // completion fds, each re-registered per project by its own
     // set_*_worker_completion_fd setter. unwatch_fd is its counterpart at
     // shutdown (a looper holding a closed fd is the one thing teardown must
@@ -754,7 +727,7 @@ private:
     // Drain the looper into the flag members above. Window-system sources
     // (the glue's cmd pipe and input queue) are processed ON THE SPOT — their
     // process() bodies are the glue's own and deferring one would mean holding
-    // an unfinished AInputEvent — while the timer, the five worker fds and the
+    // an unfinished AInputEvent — while the timer, the four worker fds and the
     // car's media eventfd are only recorded. `timeout_ms` is -1 to block for the first event and 0 to take
     // whatever is already there.
     void drain_looper(int timeout_ms);

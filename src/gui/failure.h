@@ -22,8 +22,7 @@
 // by parsing the composed English of one clause into the other — a path with
 // a quote or a colon in it would defeat any such reduction, and the codex
 // review named exactly that. Where a failure crosses a thread (the render
-// worker's completion, the Synchronize worker's verdict, the history scan's
-// result) this STRUCT rides the completion, so the GUI thread chooses which
+// worker's completion, the history scan's result) this STRUCT rides the completion, so the GUI thread chooses which
 // clause it raises and the worker prints the other.
 //
 //   diagnostic — the stderr line's clause: full paths, every word, the
@@ -34,8 +33,7 @@
 //
 // EACH FAMILY KEEPS ITS OWN NAMING RULE and hands the shown spelling in: the
 // project's files through shown_project_path (device_config.h — the folder
-// and the file, `render/x.wav`, `3_bpm/01.settings`), the Synchronize mirror's
-// paths relative to its two roots (`shown`, external_sync.cpp), the open
+// and the file, `render/x.wav`, `3_bpm/01.settings`), the open
 // project's own sidecars by bare basename (save_ops.cpp), a batch folder by
 // its name (renders_dir.h). The three composers below only ASSEMBLE the two
 // clauses from the parts; they decide no name. `plain_failure` is the
@@ -72,9 +70,8 @@ inline GuiFailure path_failure(std::string_view             before,
 }
 
 // "<before>'<a>'<between>'<b>'<after>" — the two-path sentence (a rename's
-// staging and final names, the mirror's two sources that would fold onto one
-// destination entry, the dry run's settings file and the output it would
-// make collide with the source).
+// staging and final names, the dry run's settings file and the output it
+// would make collide with the source).
 inline GuiFailure two_path_failure(std::string_view             before,
                                    const std::filesystem::path& full_a,
                                    std::string_view             shown_a,

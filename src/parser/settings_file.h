@@ -209,10 +209,10 @@ struct SettingsFile {
     // config (src/gui/device_config.h, which owns their types, their grammars
     // and their semantics now), the fourth to retirement. `audio_player` then
     // RETIRED THERE TOO on 2026-08-28, with the in-app render player that
-    // replaced the spawn (architect approval 2026-08-28, comment-only), which
-    // left that config four keys until `sync_path` made it FIVE on 2026-08-30
-    // — no field of this struct's ever having been that one (architect
-    // approval 2026-08-30, comment only). Nothing in either
+    // replaced the spawn (architect approval 2026-08-28, comment-only); that
+    // config's keys are enumerated at `kDeviceConfigKeys`
+    // (src/gui/device_config.cpp), none of them a field of this struct's
+    // (architect approval 2026-09-27, comment only). Nothing in either
     // product sizes text from a setting, nothing in either product plays at a
     // speed other than the source's own, nothing in either product spawns a
     // player, and the repository that is the

@@ -17,18 +17,12 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SIX keys since
-// 2026-09-27, when the lit plate's four ink keys and `waveform_widening` left
-// with the values constexpr in render.h, and the inner bar's three tuning
-// keys, which stood after sync_path for the rest of that day, left with
-// theirs constexpr in waveform_gain.cpp, as the S Pen's plane pair, which
-// stood there later that day, left with its two constexpr in
-// platform_android.cpp; the fuller count's succession — up
-// to seventeen with the tuning phases of 2026-09-23..27 — is the header's
-// record and git's). THE ORDER IS THE
-// ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
-// projects_repo, projects_path, last_project, sync_path — the sixth placed
-// right after gui_scale (architect 2026-09-13). The scanner takes it as a
+// set the shared scanner enforces after the loop (FIVE keys; the count's
+// succession, up to seventeen with the tuning phases of 2026-09-23..27, is
+// the header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
+// with the fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
+// last_project — max_waveform_height placed right after gui_scale (architect
+// 2026-09-13). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -41,7 +35,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_repo",
     "projects_path",
     "last_project",
-    "sync_path",
 };
 
 } // namespace
@@ -97,11 +90,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "last_project") {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
-        } else if (k == "sync_path") {
-            // Verbatim, and blank on a device with no destination — the
-            // reader accepted it as empty or as an absolute path, and nothing
-            // in the program rewrites it.
-            s += cfg.sync_path;
         }
         s += '\n';
     }
@@ -185,16 +173,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                     "must be one folder name, not a path");
             }
             out.last_project = value;
-            return {};
-        }
-        if (key == "sync_path") {
-            // Empty, or an absolute path under the shared path grammar — the
-            // one owner in the header, where the empty form's meaning ("not
-            // set up on this device") is stated.
-            if (!is_sync_path(value)) {
-                return bad_value(ln, key, value, kSyncPathGrammarReason);
-            }
-            out.sync_path = value;
             return {};
         }
         return warptempo_parse::prefix_line_error(

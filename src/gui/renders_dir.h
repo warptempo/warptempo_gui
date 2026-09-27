@@ -38,8 +38,8 @@
 inline constexpr const char* kBatchFolderName = "tmp";
 
 // `<source parent>/tmp` — the batch root every batch dispatcher creates into,
-// the RENDER PLAYER lists (its `tmp/` folders) and the Synchronize act
-// mirrors, and the load in place's tail trashes.
+// the RENDER PLAYER lists (its `tmp/` folders) and the load in place's tail
+// trashes.
 std::filesystem::path project_batch_root(const std::string& source_audio_path);
 
 // THE BATCH ROOT'S NUMBERING (moved here 2026-09-15, from a private static of
@@ -100,14 +100,9 @@ inline GuiFailure render_folder_creation_failure(
 //
 // THE DEFINITION: `render/` holds THE CURRENT TITLE'S DELIVERABLE AND NOTHING
 // ELSE — `<title>.wav` and its `<title>.fingerprint` — and THIS IS THE ONE
-// PLACE THAT DEFINITION LIVES since 2026-09-02. The Synchronize mirror does
-// not restate it: it LISTS `render/` and ships what is there (external_sync.h
-// rule 1), so the stick equals the disk whatever this prune has or has not
-// got round to. A retitle therefore leaves the previous title's pair standing
-// on both sides — mirrored as it stands, and gone from the stick on the first
-// Synchronize after this prune takes it off disk — rather than being swept
-// off the volume while it still sits in the project. (It was for the PLAYER
-// to list too until 2026-09-01, when the player moved inside `tmp/`.)
+// PLACE THAT DEFINITION LIVES. A retitle leaves the previous title's pair
+// standing until this prune takes it off disk. (It was for the PLAYER to list
+// too until 2026-09-01, when the player moved inside `tmp/`.)
 //
 // ONE CALLER, re-derived by grep 2026-09-01 and named at the site that makes
 // it: THE DELIVERABLE'S PUBLISH (the single archival render's GUI-thread
@@ -124,15 +119,7 @@ inline GuiFailure render_folder_creation_failure(
 // `tmp/` — it never lists `render/` now, so that question is deleted whole
 // (the ruling and his rationale are at the head of render_player.h). WHAT THE
 // DEFINITION LOSES IS PROMPTNESS, NOT REACH: a stale pair survives until the
-// next deliverable publishes rather than until whichever trigger came first,
-// and the Synchronize mirror — which ships `render/`'s CONTENTS, whatever they
-// are — carries that lateness onto the stick and clears it there on its next
-// run, so the two sides hold the same files either way. (The mirror carried a
-// COMPOSED `render/<title>.wav` until 2026-09-02 and so had to agree with this
-// prune BY RULE — and between a retitle and the next render it did not, the
-// stick losing a file the disk still held. It lists the folder now and agrees
-// with it by construction; the sentence above is the same sentence, and it is
-// true of a stick as well as of a disk.)
+// next deliverable publishes rather than until whichever trigger came first.
 //
 // WARPTEMPO_CLI GETS NO PRUNE — the FIRST of the CLI's four recorded
 // asymmetries, which are enumerated once at `cli_main.cpp`'s publish and

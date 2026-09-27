@@ -1,7 +1,6 @@
 #include "paint_handler.h"
 #include "target_render.h"
 #include "notifications.h"
-#include "external_sync.h"   // GuiExternalSyncWorker::is_busy, the process line's fallback
 
 #include "gui_font.h"
 #include "folder_overlay.h"
@@ -321,8 +320,7 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 // site states its own class and points here.
 //
 //   * A CONTROL'S NAME IS TITLE CASE — a dropdown item ("Open Project",
-//     "Synchronize to External Storage", "Paste Phase Reset State", "AV Sync
-//     Stats"), a modal row's WORD button ("Copy to
+//     "Paste Phase Reset State", "Max Waveform Height"), a modal row's WORD button ("Copy to
 //     Clipboard"), a panel's title, and A TOOLTIP THAT NAMES A GLYPH BUTTON'S
 //     ACT ("Drop Marker (S)", "Go to Start (Home)", "Toggle Grid Iterations (I)").
 //     The evidence is kdenlive's own: the Title Case hover on an icon button
@@ -361,8 +359,8 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
 //     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
-//     literal settings and config KEY names shown as keys ("sync_path is not
-//     set"), and the routing/category tokens that are data rather than prose.
+//     literal settings and config KEY names shown as keys (`projects_path`),
+//     and the routing/category tokens that are data rather than prose.
 //   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Return, Backspace,
 //     PgUp, PgDown, Space, Tab, Home, End — with a BARE LETTER UPPERCASE and
 //     punctuation naming the CAP rather than the stamped symbol ("Shift+/").
@@ -890,15 +888,13 @@ AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
     const GuiTargetRender& target_render,
-    const GuiExternalSyncWorker& external_sync_worker,
     RedesignButton id, const GuiRect& rect) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
     if (clip_covers_drawable(cr, app, rect)) {
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
-                                                playback, target_render,
-                                                external_sync_worker, id);
+                                                playback, target_render, id);
         face.selected = redesign_button_selected(app, id);
         face.glyph_swapped = redesign_button_glyph_swapped(app, id);
     }
@@ -1347,7 +1343,7 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // (content = 57 indent + widest label + [13 gap + widest accelerator] + 30
 // right margin − 8 chrome, at 100%):
 //
-//   File       "Synchronize to External Storage" | "Ctrl+Q"   -> content
+//   File       "Open Project" | "Ctrl+Alt+O"                  -> estimate FLOOR
 //   Settings   "Projects Repository" (no column)              -> estimate FLOOR
 //   Edit       "Paste Phase Reset State" | "Ctrl+Alt+Shift+P"  -> content
 //              (374 at 100%, past the floor; the widest row since the
@@ -1393,17 +1389,16 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // box's width in either spelling; the 2026-08-31 rebrand's one owed check
 // was never in doubt, only which term won.
 //
-// FILE LEFT THE FLOOR ON 2026-08-27. It was one row of "Quit" beside "Ctrl+Q"
-// when the table above was written and asked 168; it carries FOUR rows now —
-// "Open Project" | "Ctrl+O", "Revert" | "Ctrl+Alt+O" (2026-09-13),
-// "Synchronize to External Storage" | "\\" (its
-// accelerator since 2026-08-31; the row was chord-less before it) and
-// "Quit" | "Ctrl+Q" — and the Synchronize label's shaped
-// run puts its content past the 242, so that popup is DERIVED at every scale
-// now like Settings and Edit. NO NUMBER IS STATED FOR IT HERE: the ink is the
-// shaper's and the rows are app_state.h's (kFilePopupItems), so a figure
-// written down here would go stale the next time either moves, and which TERM
-// WINS is the only thing this table has to say. (The deleted NAVIGATION menu was the
+// FILE: one row of "Quit" beside "Ctrl+Q" when the table above was written,
+// asking 168; it carries THREE rows now — "Open Project" | "Ctrl+O",
+// "Revert" | "Ctrl+Alt+O" (2026-09-13) and "Quit" | "Ctrl+Q" — whose widest
+// label and widest accelerator put the content ask near the 242, by the
+// advance-width estimate; unmeasured, and it does not have to be: the
+// painter takes the larger of the two terms at every paint. NO NUMBER IS
+// STATED FOR IT HERE: the ink is the shaper's and the rows are app_state.h's
+// (kFilePopupItems), so a figure written down here would go stale the next
+// time either moves, and which TERM WINS is the only thing this table has to
+// say. (The deleted NAVIGATION menu was the
 // one that never reached it: its accelerator column put content at 57 + 117
 // ("Previous marker") + 13 + 101 ("Ctrl+Shift+Tab") + 30 − 8 = 310, already
 // past both floors, so its box stayed 318px wide. That measurement is kept
@@ -1727,7 +1722,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, external_sync_worker,
+            cr, app, audio, playback, target_render,
             def.id,
             GuiRect{x, row.y, btn_w, content_h});
 
@@ -1988,7 +1983,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             // reads, the box is what the eye sees, and the second is the
             // first less its two vertical margins, nowhere restated.
             AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, audio, playback, target_render, external_sync_worker,
+                cr, app, audio, playback, target_render,
                 kViewBarButtons[i].id, GuiRect{vx, row.y, btn_w, content_h});
             const GuiRect box = view_bar_face_rect(face.rect, mar);
 
@@ -2334,7 +2329,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             // RECT IS THE TAB'S OWN BOX — the hit rect — never the extended
             // fill an unselected tab paints under its neighbour.
             AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, audio, playback, target_render, external_sync_worker,
+                cr, app, audio, playback, target_render,
                 def.id,
                 GuiRect{x, content_y, tab_w, content_h});
             boxes[i].x        = x;
@@ -2663,59 +2658,6 @@ static std::string history_walk_line(AppState& app) {
     return line;
 }
 
-// -- process_line_text ------------------------------------------------------
-//
-// Row 8's process line, composed at the reader rather than stored, and the one
-// site that knows the mirror has a line at all. The cell carries what is true
-// right now, so the two facts it can report are asked in the order in which
-// they outrank one another: a render, a batch cell or the startup load has
-// written its own string into the shared slot, and that string wins for as
-// long as it stands; otherwise a synchronization to external storage is
-// running and the cell says so; otherwise there is nothing to report.
-//
-// The mirror's line is derived here because a written one could not stay true.
-// It was written at the dispatch into an empty cell and cleared at the
-// completion while the cell still held its own string (architect 2026-09-04,
-// the yield), which is right for the two orderings that ruling was reasoned on
-// and wrong for the other two. A render started after the mirror took the cell
-// and then cleared it at its own end, leaving the cell blank with the copying
-// still going; and a mirror started while a render's line stood never wrote at
-// all, so nothing appeared when that line went. Everything involved runs on the
-// GUI thread, so it was a precedence gap and not a race. Deriving closes both:
-// the render's line wins exactly while it stands and the mirror's is back the
-// moment it goes, with no stack, no priority enum, and no second writer for the
-// slot's owners to disagree with.
-//
-// The `h` walk line's precedence over the whole answer is unchanged and is
-// decided by the caller, which asks the mode first; this composes the
-// process-line operand alone.
-//
-// Damage stays the changing route's own business and no route gained or lost
-// one: the render side's writes and its ownership-tested clears already damage
-// the cell (input_render_dispatch and target_render, the clears invalidating
-// while the longer string is still the one this would return), and the mirror's
-// dispatch and completion invalidate without touching the string at all.
-//
-// The bit asked here is the act's own single-in-flight bit, which stays up
-// through the brief CompletionPending window between the worker signalling and
-// the GUI thread consuming the eventfd — so the line can outlive the last file
-// copy by a frame or two. That is the same bit and the same window the quit
-// gate refuses on (close_refused_by_external_sync), and the two saying the same
-// thing at the same instant is worth more here than a line that goes out early.
-//
-// The mirror's spelling wears the three ASCII periods both its neighbours wear
-// (`Loading...`, `Updating...`): the cell is the product's monospace surface
-// and the ASCII-in-grammars rule governs the spelling. The constant has one
-// reader, the body just below.
-constexpr const char* kSyncProgressLine = "Synchronizing...";
-
-static std::string process_line_text(const AppState& app,
-                                     const GuiExternalSyncWorker& sync) {
-    if (!app.queue_progress_text.empty()) return app.queue_progress_text;
-    if (sync.is_busy()) return kSyncProgressLine;
-    return std::string();
-}
-
 // (GuiPaintHandler::paint_status_bar IS DELETED — architect 2026-08-29, the
 // evening of the day the STATUS BAR landed. The bar was the window's last
 // lane, three bands on the row-7 crop's measure, carrying the process line or
@@ -2947,7 +2889,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         first = false;
 
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, external_sync_worker,
+            cr, app, audio, playback, target_render,
             def.id,
             GuiRect{x, btn_y, btn, btn});
 
@@ -3636,7 +3578,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // toggle relies on and now relies on up in row 4.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, external_sync_worker,
+            cr, app, audio, playback, target_render,
             def.id,
             GuiRect{x, btn_y, btn, btn});
 
@@ -4010,12 +3952,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         if (app.history_mode.active) {
             state = history_walk_line(app);
         } else {
-            // The process line — the render/batch/queue status, the startup
-            // "Loading..." line and the running mirror's, composed above and
-            // empty when there is nothing to report. It is one of the reasons
-            // this body runs on every frame class (it is the only feedback on
-            // the loading frame).
-            state = process_line_text(app, external_sync_worker);
+            // The process line — the render/batch/queue status and the
+            // startup "Loading..." line, empty when there is nothing to
+            // report. It is one of the reasons this body runs on every frame
+            // class (it is the only feedback on the loading frame).
+            state = app.queue_progress_text;
         }
         const double x0 = static_cast<double>(cell_x);
         // THE CLOCK, UNCLIPPED, AND THE DIRTY MARK INSIDE ITS RUN; the pair's
@@ -4682,11 +4623,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // with an accelerator column and no edit in this body at all.
     //
     // The authored minimum applies to both — it is the item box's floor and the
-    // reason a menu of short labels still reads as a menu. It gave the FILE
-    // menu its whole width while its rows were short, and stopped doing so on
-    // 2026-08-27, when "Synchronize to External Storage" joined its rows and
-    // its own content won; the expression is unchanged either way, the floor
-    // and the shaped run simply trading which one wins. (The deleted NAVIGATION
+    // reason a menu of short labels still reads as a menu. Whether it or a
+    // menu's own content wins is the expression's answer at every paint, the
+    // floor and the shaped run simply trading which one wins. (The deleted NAVIGATION
     // menu's long labels never reached the floor either, which is how the two
     // were shown to compose.)
     const int pad_l    = scaled_px(kPopupLabelIndentPx);
@@ -4742,8 +4681,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // window's foot still publishes on the repair's own frame.
     bool enabled[kDropdownMaxItemCount] = {};
     for (int i = 0; i < count; ++i)
-        enabled[i] = dropdown_item_enabled(app, audio, external_sync_worker,
-                                           menu, i);
+        enabled[i] = dropdown_item_enabled(app, audio, menu, i);
     if (clip_covers_drawable(cr, app, app.dropdown.rect)) {
         for (int i = 0; i < count; ++i)
             app.dropdown.item_enabled[static_cast<size_t>(i)] = enabled[i];
@@ -4857,8 +4795,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // for the Navigation menu's seven rows, and once that menu retired
         // (2026-08-15) File's "Ctrl+Q" carried it alone for a time — the reach
         // has widened since with every popup item table that sets a hotkey
-        // string (File's "Ctrl+O", 2026-08-28, and its chord-less "\\" for
-        // Synchronize, 2026-08-31; Edit's three propagate chords, 2026-08-20), so
+        // string (File's "Ctrl+O", 2026-08-28, and "Ctrl+Alt+O", 2026-09-13;
+        // Edit's three propagate chords, 2026-08-20), so
         // the optional term above is exercised by whichever live menu's rows
         // carry one — which is the whole reason the term was driven off the
         // item TABLE rather than off the menu enumerator or a single row.
@@ -6667,7 +6605,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
-                                external_sync_worker, def.id,
+                                def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         // The RIGHT BLOCK's three groups stand down with them — the MARKER
@@ -6680,17 +6618,17 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
         // row's again.
         for (const TransportRowDef& def : kMarkerVerbGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
-                                external_sync_worker, def.id,
+                                def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kTransportWalkGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
-                                external_sync_worker, def.id,
+                                def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kTransportArrowGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
-                                external_sync_worker, def.id,
+                                def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};

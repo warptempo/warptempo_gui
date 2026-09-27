@@ -64,13 +64,10 @@ void GuiRenderPlayer::refuse_decode(const std::filesystem::path& path,
 // listed `render` and `tmp` as two rows, the `Folder::Deliverable` listing
 // under it, and the `..` row every non-root listing carried. THE PRUNE ITSELF
 // STAYS AND HAS ONE TRIGGER NOW, the deliverable's publish (the succession is
-// at prune_render_folder, renders_dir.h). TWO THINGS ARE DELIBERATELY
-// UNTOUCHED: the deliverable's PUBLISH ROAD — the archival render still writes
-// `render/<title>.wav` and prunes the folder at its completion — and THE
-// SYNCHRONIZE MIRROR, which still ships `render/`'s CONTENTS beside every
-// `tmp/` batch folder — every regular `.wav` it holds, listed rather than
-// composed from the title since 2026-09-02 (external_sync.h). Only the PLAYER
-// stops looking at `render/`.
+// at prune_render_folder, renders_dir.h). THE DELIVERABLE'S PUBLISH ROAD IS
+// DELIBERATELY UNTOUCHED — the archival render still writes
+// `render/<title>.wav` and prunes the folder at its completion. Only the
+// PLAYER stops looking at `render/`.
 
 bool GuiRenderPlayer::has_playable_render() const {
     return !renders_dir.enumerate_render_entries().empty();
@@ -577,8 +574,7 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // THE PROBE'S ANSWER IS STALE BY CONSTRUCTION: wav_read_full REOPENS the
     // path, so the file object it decoded need not be the one probed here — a
     // wav republished between the two opens (every writer in this tree
-    // publishes by rename: the render's own staging, the Synchronize act,
-    // wts) is a different file at the same name. The probe is kept as the
+    // publishes by rename: the render's own staging, wts) is a different file at the same name. The probe is kept as the
     // CHEAP EARLY REFUSAL — it is what lets the allocation policy
     // (checked_audio_sample_count) answer on a header before any payload is
     // read — and the post-decode check below is what the bind rests on,

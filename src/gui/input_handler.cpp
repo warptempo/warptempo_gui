@@ -305,16 +305,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // at route_render_player_key), and only Ctrl+S and Ctrl+Q fall through to
     // the ordinary dispatch — Ctrl+S to the save, which touches no transport,
     // and Ctrl+Q with the player already closed, so the quit road runs on the
-    // ordinary state. THE FILE MENU'S FOUR ROWS AGREE WITH THAT SET, which
+    // ordinary state. THE FILE MENU'S THREE ROWS AGREE WITH THAT SET, which
     // is why it needs no more of them: Quit rides the Ctrl+Q fall-through,
-    // Synchronize's row calls its own gated body directly (the recorded
-    // exception at GuiPopupAct), and Open Project and Revert dispatch Ctrl+O
-    // and Ctrl+Alt+O, which the catch-all consumes in silence — two rows of
-    // four doing nothing, which is not the "opens onto nothing" the anchor's
-    // own gate kills a menu for.
-    // (Ctrl+O and bare `\` fell through for the one day of 2026-09-02, when
-    // the rows had to agree with their chords; the direct-call row and the
-    // silence rule make that unnecessary now.) No editor and no
+    // and Open Project and Revert dispatch Ctrl+O and Ctrl+Alt+O, which the
+    // catch-all consumes in silence — two rows of three doing nothing, which
+    // is not the "opens onto nothing" the anchor's own gate kills a menu for.
+    // (Ctrl+O fell through for the one day of 2026-09-02, when the rows had
+    // to agree with their chords; the silence rule makes that unnecessary
+    // now.) No editor and no
     // gesture of any OTHER surface can stand under it (its opener refuses
     // under every editor; the veil arms none), so the gates below never
     // contend with it — its own two arms are this block's business, below.
@@ -355,8 +353,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // already closed by the close road), Ctrl+S consumed by the router as the
     // save (in the `h` view the ordinary Ctrl+S is the commit-title editor,
     // which must not open over a picker). The File menu above the band reads
-    // the same way it does under the player: Quit falls through, Synchronize
-    // calls its own body, Open Project is the silent no-op — and here that
+    // the same way it does under the player: Quit falls through, Open Project
+    // is the silent no-op — and here that
     // last one is the picker answering about itself. The gesture clause is the player's
     // own: the overlay's row press arm is a member of
     // any_pointer_gesture_active under every owner, and while it stands
@@ -1411,32 +1409,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // predicate (is_revert_project_key, gui_input.h); not repeat-eligible.
     if (is_revert_project_key(key, mods)) {
         revert_project();
-        return;
-    }
-
-    // BARE BACKSLASH — SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-31).
-    // The File menu's one CHORD-LESS row joins the keyboard: its binding was
-    // REFUSED in 2026-08-27 rather than deferred (Ctrl+Alt+Shift+R keeping its
-    // meaning), and `\` costs that family nothing, being a key the product
-    // bound nowhere. IT SITS BESIDE OPEN AND QUIT for the same reason they sit
-    // together — the acts on the session as a whole — and the placement is
-    // otherwise free: every state that must refuse the act refuses it ABOVE
-    // this line (a standing prompt, the player's, the picker's and the AV
-    // Sync Stats panel's routers, an
-    // open dropdown, the editor text drag, any keyboard-modal editor) or
-    // INSIDE THE ACT'S OWN BODY, which is where the menu row's road has always
-    // met them (the modal refusals, the loading state, no source loaded, the
-    // single act in flight, and every sentence the act says). Nothing is
-    // restated here, and the row keeps calling that body directly — the key
-    // and the row are two roads to ONE act, not two acts.
-    // THE `h` VIEW ADMITS IT (the mode's allowlist, on the 2026-08-29 "admit
-    // both" ruling that seated Ctrl+O beside Ctrl+Q there): the row already
-    // ran in the view, so the key had to. Bare-exact through the shared
-    // predicate the two allowlists read, so the arm and the gates cannot
-    // drift. Not repeat-eligible: that gate is an allowlist of the stepping
-    // keys and this one is not on it, so a held `\` mirrors once.
-    if (is_sync_external_key(key, mods)) {
-        synchronize_to_external_storage();
         return;
     }
 

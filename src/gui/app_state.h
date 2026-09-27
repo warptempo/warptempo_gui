@@ -30,7 +30,6 @@
 #include <vector>
 
 class GuiAudio;
-class GuiExternalSyncWorker;
 struct GuiTargetRender;
 
 // Zoom level numbering: the range constants (kMinZoom, kMaxZoom) live in
@@ -3329,7 +3328,7 @@ redesign_button_hover_fade_kind(RedesignButton b) {
 // paint_handler.cpp; "GUI Scale" and "URL" keep their acronym caps under it)
 // with the SETTINGS KEY the click prefills into the editor, and
 // `separator_before` marks the one place the two categories part: the four
-// SIDECAR keys a hand edits (the metadata), then the five editable DEVICE CONFIG keys
+// SIDECAR keys a hand edits (the metadata), then the four editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
 // `last_project` is the program's own and has no row).
 //
@@ -3366,16 +3365,15 @@ struct SettingsPopupItem {
 // 2026-09-14), the picture's gain varying over source time since (the
 // continuous curve derived from the source since 2026-09-23).
 //
-// THE DEVICE HALF IS FIVE SINCE 2026-09-13, when `Max Waveform Height` joined
-// right after `GUI Scale` in kDeviceConfigKeys' order (architect; it commits
-// through commit_device_setting and relays out live). IT WAS FOUR FROM
-// 2026-09-02 (architect, R-22): the three
-// gesture-less device keys — `Projects Repository`, `Projects Path`, `Sync
-// Path` — joined `GUI Scale` as rows, each opening the settings editor
+// THE DEVICE HALF IS FOUR: `GUI Scale`, then `Max Waveform Height` right
+// after it in kDeviceConfigKeys' order (architect 2026-09-13; it commits
+// through commit_device_setting and relays out live), then the two
+// gesture-less device keys `Projects Repository` and `Projects Path`
+// (architect 2026-09-02, R-22), each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
 // answers all of them off the live struct) and committing through the device
 // config's writer under the key's own grammar (commit_device_setting,
-// settings_editor.cpp). The two path rows are the first whose Tab completion
+// settings_editor.cpp). The Projects Path row is the one whose Tab completion
 // is the FILESYSTEM's rather than a recall (complete_path_value). The two
 // halves are ordered SIDECAR THEN DEVICE, the one separator between them —
 // which moved `GUI Scale` from the first row to the device group's head, the
@@ -3389,7 +3387,6 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Max Waveform Height", "max_waveform_height", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
-    {"Sync Path",           "sync_path",     false},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
@@ -3418,50 +3415,15 @@ inline constexpr int kSettingsPopupItemCount =
 // composed the chord from all three bits, so nothing here needed changing —
 // but no item had ever set it before, which is worth knowing if an alt row ever
 // misbehaves).
-// WHAT A COMMAND ROW DISPATCHES. `Chord` is the standing model — THE ITEM IS
-// ITS KEY, dispatched through on_key so every keyboard gate applies (the rule
-// is stated at kFilePopupItems and at the release body,
-// finish_dropdown_release). THE OTHER ONE IS `SyncExternal`, the File menu's
-// Synchronize row, whose RELEASE CALLS THE ACT DIRECTLY: that act carries the
-// gates a chord would have met — the modal refusals, the `h` view, the loading
-// state — in its own body, which is what made a chord-less row possible in the
-// first place (architect 2026-08-27: the binding was REFUSED outright,
-// Ctrl+Alt+Shift+R keeping its meaning).
-//
-// IT KEPT THIS SHAPE WHEN THE ACT GAINED A KEY (architect 2026-08-31, bare
-// `\`), and the difference from Open's 2026-08-28 case is why. Open's chord was
-// merely DEFERRED, so its row had never been anything but a chord row waiting
-// for its chord, and the enumerator went with the wait; this act's binding was
-// REFUSED, and its body was BUILT to answer for itself. Both roads reach that
-// one body — the row calling it, the key reaching it from on_key — so they are
-// two callers of one act rather than two acts, the `key` field below stays
-// unread on this row (the fork is above the chord composition), and the
-// enumerator keeps its producer. A future act that genuinely cannot have a
-// chord takes this same shape.
-//
-// IT WAS TWO UNTIL 2026-08-28: `OpenProject` (File → Open Project) sat beside it while
-// Open's chord was merely DEFERRED rather than refused, and the architect then
-// bound it to Ctrl+O — the one spelling the convention allows, bare `o` being
-// the read-only toggle and the two neighbours rather than partners. So Open is
-// an ordinary `Chord` row now, dispatching through on_key like Quit, and the
-// enumerator is deleted rather than left producer-less. A future act that
-// genuinely cannot have a chord takes SyncExternal's shape.
-//
-// ONE MORE JOINED AND LEFT THE SAME DAY, 2026-09-03: `AvSyncStats`, the Help
-// menu's one row, stood as a second member of that class from the panel's
-// landing that morning until the architect gave the act Shift+L that evening
-// ("bare `l` opens the player, Shift+L the AV sync stats"). The row became an
-// ordinary `Chord` row, dispatching its chord through on_key like Quit and
-// Open, and the enumerator was deleted rather than left producer-less — Open's
-// own 2026-08-28 succession exactly, and for the same reason: an act that has
-// a chord has no business forking the release. (The Help menu itself was
-// deleted with the top strip relayout on 2026-09-09; the chord and the Play
-// renders button's shifted press are the panel's two roads.) Nothing about the opener
-// changed, its body still carrying every gate the chord meets. So the class
-// has ONE MEMBER AGAIN, SyncExternal, and a future act that genuinely cannot
-// have a chord takes its shape.
-enum class GuiPopupAct : uint8_t { Chord, SyncExternal };
-
+// WHAT A COMMAND ROW DISPATCHES: ITS KEY. Every row IS ITS CHORD, dispatched
+// through on_key so every keyboard gate applies (the rule is stated at
+// kFilePopupItems and at the release body, finish_dropdown_release), which is
+// why the item carries no act of its own: the chord is the whole of what the
+// release needs. Open Project's row called its opener directly for the one day
+// its chord was deferred (2026-08-27..28) and the AV Sync Stats row for the
+// hours before Shift+L (2026-09-03); each became an ordinary chord row the
+// day its act took a key, because an act that has a chord has no business
+// forking the release.
 struct CommandPopupItem {
     const char* label;
     const char* hotkey;   // the accelerator column's text, right-aligned
@@ -3470,11 +3432,10 @@ struct CommandPopupItem {
     bool        shift;
     bool        alt;
     bool        separator_before;
-    GuiPopupAct act = GuiPopupAct::Chord;
 };
 
-// THE FILE DROPDOWN'S ITEMS — FOUR ROWS since 2026-09-13 (three from
-// 2026-08-27), in two categories over one separator: **Open Project** first
+// THE FILE DROPDOWN'S ITEMS — THREE ROWS, in two categories over one
+// separator: **Open Project** first
 // (architect 2026-08-27, the
 // project model's one pointer home on both platforms; the label is the
 // architect's own, R8: "we would call it open project instead of open file",
@@ -3483,44 +3444,25 @@ struct CommandPopupItem {
 // after it (architect 2026-09-13, Ctrl+Alt+O: reopen the CURRENT project to its
 // last saved state, discarding unsaved changes and the undo history —
 // GuiInputHandler::revert_project; on the tablet this row is the act's only
-// road, dispatching the chord through on_key with no key pressed), and
-// **Synchronize to External Storage** under
-// those (architect
-// 2026-08-27, `render/`'s contents and the batch cells mirrored onto the
-// device config's `sync_path` — the act is external_sync.h's, and this row is one of
-// TWO ROADS TO THAT ONE BODY since bare `\` joined 2026-08-31 (the chord's arm
-// in input_handler.cpp's on_key, its predicate `is_sync_external_key` in
-// gui_input.h) — the row still calls the body directly, on either platform),
-// then **Quit** (architect 2026-08-13, the
+// road, dispatching the chord through on_key with no key pressed), then
+// **Quit** (architect 2026-08-13, the
 // standard home for it and where kdenlive keeps it). Save and Render stay the
 // icon row's, and the menu is deliberately minimal. The separator parts the
-// two categories, the three acts on the project from an exit, exactly as
+// two categories, the two acts on the project from an exit, exactly as
 // kdenlive's own File menu does.
 //
-// THREE OF THE FOUR ARE THEIR CHORDS, dispatched through on_key so the keyboard
+// ALL THREE ARE THEIR CHORDS, dispatched through on_key so the keyboard
 // route's own gates and body serve the row with nothing restated: QUIT IS
 // Ctrl+Q — the drag-modal hatch, the dirty prompt and the WM-close ordering are
 // all the key's — and OPEN IS Ctrl+O since 2026-08-28, when the architect gave
 // the project picker the one spelling the convention allows (bare `o` is the
 // read-only toggle; the two are neighbours on one letter, not partners). Open's
-// row was the `OpenProject` GuiPopupAct until that date, calling the opener
-// directly because no key bound it, and the enumerator died with the binding.
+// row called the opener directly until that date because no key bound it.
 // REVERT IS Ctrl+Alt+O from its landing (2026-09-13), an ordinary chord row
 // like Open's.
-// ALL HAVE A CHORD SINCE 2026-08-31, when the architect gave Synchronize
-// BARE BACKSLASH — a spelling the product bound nowhere, so the render family
-// keeps Ctrl+Alt+Shift+R exactly as his 2026-08-27 refusal intended. ITS ROW IS
-// STILL THE ONE THAT DOES NOT DISPATCH ITS KEY: the release calls
-// GuiInputHandler::synchronize_to_external_storage directly, that act carrying
-// in its own body the gates a chord would have met, and the key reaches the
-// same body from on_key — two roads to one act (the shape's record is at
-// GuiPopupAct).
 // EVERY ROW RUNS IN THE `h` HISTORY VIEW (architect 2026-08-29, "admit
 // both"): Ctrl+Q always did, Ctrl+O joined the mode's allowlist that day
-// (Ctrl+Alt+O beside it at its landing, 2026-09-13), and
-// the Synchronize act has carried no history-mode refusal since the same
-// ruling — its bare `\` joining that allowlist beside the other two on
-// 2026-08-31, so the row and its chord answer the view alike. The menu has no
+// and Ctrl+Alt+O beside it at its landing, 2026-09-13. The menu has no
 // dead row in there.
 //
 // IT DISPLAYS ITS HOTKEY, by explicit architect design and against nothing: the
@@ -3536,12 +3478,9 @@ struct CommandPopupItem {
 // its only rows in the deleted ITERATIONS table ("M", "I", whose spelling the
 // two icon-row tooltips carry now) and is the PRODUCT'S spelling since
 // 2026-09-01, stated once at spell_chord's head (gui_input.h) and followed by
-// the tooltips too, so this column no longer contrasts with anything. The
-// Synchronize row's accelerator is `\` since 2026-08-31, the bare-letter
-// convention one punctuation key over. NO ROW IN THIS TABLE CARRIES A NULL
-// HOTKEY NOW, though the painter still reads the field per row (a null hotkey
-// paints no accelerator on that row alone) — there were two such rows until
-// Open took its chord on 2026-08-28 and one until Synchronize took its.
+// the tooltips too, so this column no longer contrasts with anything. NO ROW
+// IN THIS TABLE CARRIES A NULL HOTKEY, though the painter still reads the
+// field per row (a null hotkey paints no accelerator on that row alone).
 //
 // AN ITEM GREYS WHEN ITS COMMAND WOULD REFUSE, on the command's CHEAP
 // refusals (architect 2026-09-24, the truthful menus): each row's face reads
@@ -3564,12 +3503,6 @@ struct CommandPopupItem {
 inline constexpr CommandPopupItem kFilePopupItems[] = {
     {"Open Project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
     {"Revert",       "Ctrl+Alt+O", GuiKeys::O, true, false, true, false},
-    // The `key` field stays 0 on this row and is never read: the release
-    // forks on `act` above the chord composition and calls the act itself
-    // (the record is at GuiPopupAct). Its chord, bare `\`, lives on the
-    // keyboard's own road and is advertised here by the accelerator alone.
-    {"Synchronize to External Storage", "\\", 0, false, false, false, false,
-     GuiPopupAct::SyncExternal},
     {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
 };
 inline constexpr int kFilePopupItemCount =
@@ -3599,11 +3532,11 @@ inline constexpr int kFilePopupItemCount =
 // with it), so the relocation removed no pointer road from the family.
 //
 // EVERY ROW DISPLAYS ITS HOTKEY, the accelerator column File's one row has
-// carried alone since 2026-08-15 — the column has SEVEN producers today
-// (re-derived 2026-09-23: File's four rows and this menu's three), and its
+// carried alone since 2026-08-15 — the column has SIX producers today
+// (re-derived 2026-09-27: File's three rows and this menu's three), and its
 // metrics and layout term are unchanged throughout every move of that number.
 // The spelling convention is the crop's: modifiers spelled out with `+`, and a
-// non-letter key written as itself (`\`).
+// non-letter key written as itself.
 //
 // EACH ROW GREYS ON ITS CHORD'S CHEAP REFUSALS (architect 2026-09-24; the
 // rule is stated in full at kFilePopupItems): the column not W, the selection
@@ -3664,13 +3597,13 @@ inline constexpr int kEditPopupItemCount =
 // strip relayout. From 2026-09-03 kHelpPopupItems held ONE ROW, "AV Sync
 // Stats", Title Case, which was its chord like every other command row —
 // Shift+L, dispatched through on_key, bare `l`'s shifted twin — after a few
-// chord-less hours in SyncExternal's shape. The anchor went on the Iterations
+// chord-less hours calling its opener directly. The anchor went on the Iterations
 // menu's own precedent: a command with an icon-row road does not also live
 // in the menu row, and the panel keeps both of its other roads untouched —
 // the chord (is_av_sync_stats_key, toggle_av_sync_stats) and the Play renders
 // button's shift-click or long press (redesign_button_shift_admits). NOT ONE
 // ACT WAS REMOVED; the menu row is File / Edit / Settings, Settings its last
-// anchor again, and the accelerator column's producers are File's four rows
+// anchor again, and the accelerator column's producers are File's three rows
 // and Edit's three.)
 
 // (THE NAVIGATION DROPDOWN'S ITEMS ARE DELETED — architect 2026-08-15. From
@@ -5088,13 +5021,12 @@ struct AppState {
 
     // THE LIVE DEVICE CONFIG, the loop's one struct (main.cpp), reached by
     // pointer: the commits that write that file (apply_gui_scale, and the
-    // settings editor's one device-key body for `projects_repo=`,
-    // `projects_path=` and `sync_path=`) mirror their value into it and hand
-    // it to write_device_config, and the three keys with no live field of
-    // their own — `projects_path`, `last_project`, `sync_path` — are read
-    // from it where they are needed (the Open project picker's rows, the
-    // startup and reopen choice, the Synchronize act's destination, the
-    // editor's recall). Seated at each AppState's construction by
+    // settings editor's one device-key body for `projects_repo=` and
+    // `projects_path=`) mirror their value into it and hand it to
+    // write_device_config, and the two keys with no live field of their own
+    // — `projects_path` and `last_project` — are read from it where they are
+    // needed (the Open project picker's rows, the startup and reopen choice,
+    // the editor's recall). Seated at each AppState's construction by
     // gui_main and never null while the GUI runs; the ownership rationale is
     // the callers inventory at write_device_config, device_config.h.
     DeviceConfig* device_config = nullptr;
@@ -5111,12 +5043,12 @@ struct AppState {
     // resolved project and assigns it here beside the window title; nothing
     // else writes it. FOUR READERS, re-derived by grep: the OPEN PROJECT
     // PICKER (its "already open" no-op and the row its band opens on), FILE →
-    // REVERT (GuiInputHandler::revert_project, which reopens this name), the
-    // EXTERNAL-SYNC job, which names the mirror's folder on the volume with
-    // it, and the RENDER PLAYER's media push, where it is the head unit's
-    // ALBUM — the console's dim top line, the folder riding ARTIST below it —
+    // REVERT (GuiInputHandler::revert_project, which reopens this name), and
+    // the two media pushes, where it is the head unit's ALBUM — the console's
+    // dim top line: the RENDER PLAYER's, the folder riding ARTIST below it
     // beside the bare name of the playing or highlighted item as the title
-    // (GuiRenderPlayer::publish_media_state).
+    // (GuiRenderPlayer::publish_media_state), and the CAR TRANSPORT's with
+    // the player closed (car_transport.cpp).
     std::string project_name;
 
     // THE REOPEN REQUEST: the project NAME to reopen, set once the folder has
@@ -6981,8 +6913,8 @@ struct AppState {
         // THE ITEMS' ENABLED BITS AS PAINTED (2026-09-24, the truthful
         // menus) — the stash the per-tick comparator (main.cpp) holds against
         // the live verdict (dropdown_item_enabled), so an open menu whose rows
-        // change verdict with no damage of their own — a mirror finishing, a
-        // checkpoint landing, a load ending — repaints within one tick with no
+        // change verdict with no damage of their own — a checkpoint landing,
+        // a load ending — repaints within one tick with no
         // writer spelling the damage. AS-PAINTED, NOT AS-COMPUTED: paint_dropdown
         // republishes it only when the current clip covers the whole box,
         // publish_button_face's rule for the roster's own bits. IT IS ALSO
@@ -8356,14 +8288,8 @@ struct AppState {
     // through it), and this string is back on screen the moment the view
     // closes.
     //
-    // THE MIRROR'S LINE IS NOT IN HERE and never reaches this string: a
-    // running synchronization to external storage says `Synchronizing...` in
-    // the same cell, but that line is DERIVED at the one reader out of
-    // GuiExternalSyncWorker::is_busy, below whatever this string holds
-    // (process_line_text, paint_handler.cpp, which owns the spelling and the
-    // reasoning). So the writers of this string are the render side and the
-    // startup load alone, each clearing what it wrote, and the mirror can
-    // neither be overwritten by them nor overwrite them.
+    // The writers of this string are the render side and the startup load
+    // alone, each clearing what it wrote.
     std::string queue_progress_text;
 
     // One-slot pending archival render command. An archival dispatch
@@ -8940,7 +8866,7 @@ struct AppState {
 //     tooltip owner survives while a dialog surface is live and the stash
 //     that armed it stands (input_pointer.cpp)
 //   wheel_context — the wheel context (input_handler.cpp)
-//   dropdown_item_enabled — every item greys but Synchronize and Quit
+//   dropdown_item_enabled — every item greys but Quit
 //     (input_key_dispatch.cpp)
 //   GuiCarTransport::admits — the car transport refuses (car_transport.cpp)
 //   view_bar_focused — the view bar's focus answer (below)
@@ -11952,7 +11878,7 @@ inline const ViewState& active_view_state(const AppState& a) {
 // EVERYTHING THE READ-ONLY LOCK REFUSES THE ITERATION LOCK REFUSES TOO WITH
 // TWO NAMED EXCEPTIONS, and nearly everything it admits the iteration lock
 // admits: navigation, playback, the trim gestures and `Shift+0`,
-// Ctrl+S, both render chords, Synchronize, Open project and the quit. WHAT
+// Ctrl+S, both render chords, Open project and the quit. WHAT
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
 // bound axis addressed, bare `i` itself (the off edge must always be
 // reachable) and
@@ -13768,7 +13694,6 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // (input_key_dispatch.cpp, beside the acts). The keyboard chords are
 // unchanged: they still card their refusals.
 bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
-                           const GuiExternalSyncWorker& sync,
                            DropdownMenu menu, int item);
 
 // THE MENU ANCHOR'S ONE VERDICT — row 1's File, Edit and Settings — read by
@@ -13798,7 +13723,6 @@ bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
 // It replaces menu_anchor_dead_in_mode (2026-09-02 .. 2026-09-24), which
 // carried the first clause alone; the two clauses are one verdict now.
 inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
-                             const GuiExternalSyncWorker& sync,
                              RedesignButton b) {
     DropdownMenu menu = DropdownMenu::None;
     for (const DropdownMenu m : kDropdownMenus)
@@ -13808,7 +13732,7 @@ inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
         (folder_overlay_stands(a) || a.history_mode.active))
         return false;
     for (int i = 0; i < dropdown_item_count(menu); ++i)
-        if (dropdown_item_enabled(a, audio, sync, menu, i)) return true;
+        if (dropdown_item_enabled(a, audio, menu, i)) return true;
     return false;
 }
 
@@ -14394,18 +14318,15 @@ inline bool redesign_button_enabled(const AppState& a,
                                     int64_t total_frames,
                                     const GuiPlayback& playback,
                                     const GuiTargetRender& target_render,
-                                    const GuiExternalSyncWorker& sync,
                                     RedesignButton b) {
     // THE THREE MENU ANCHORS ANSWER FIRST, IN EVERY STATE, FROM THEIR ONE
     // VERDICT (menu_anchor_live, above: the mode partition, then "an anchor
     // greys when every item under it greys" — architect 2026-09-24). Ranked
     // ahead of the load and the overlay below because both of those grey
     // everything else while File stays live through Quit, and the verdict
-    // already says so from the items. The `sync` parameter is the anchors'
-    // alone: the File items' Synchronize, Revert and Quit read the worker's
-    // busy bit.
+    // already says so from the items.
     if (redesign_button_is_menu_anchor(b))
-        return menu_anchor_live(a, audio, sync, b);
+        return menu_anchor_live(a, audio, b);
     // THE LOAD GREYS THE ROSTER (architect 2026-09-24): while there is no
     // piece to dispatch on — a load in flight, or the blank window before the
     // startup load — every chord but Ctrl+Q drops at on_key's own head gate,

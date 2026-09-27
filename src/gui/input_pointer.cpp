@@ -1170,8 +1170,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // SETTINGS is dead because its rows reach a modal by a DIRECT call the view
 // has no place for; EDIT because every one of its rows is a chord the view's
 // allowlist drops (ITERATIONS and HELP answered the same way while they
-// stood); FILE (2026-08-13) is LIVE — its four rows are Ctrl+O, Ctrl+Alt+O,
-// bare `\` and Ctrl+Q, all admitted, so its menu works in there.
+// stood); FILE (2026-08-13) is LIVE — its three rows are Ctrl+O, Ctrl+Alt+O
+// and Ctrl+Q, all admitted, so its menu works in there.
 // (NAVIGATION was a third entry, LIVE from 2026-08-08 — the architect ruled its
 // menu open in the view, the toggle stopped refusing it, and every one of its
 // seven rows was a chord that met the mode's own gates through on_key, so
@@ -1328,13 +1328,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   derived: an anchor has no chord to ask about, so the anchor arms
 //   answer ONE criterion by hand — an anchor is dead iff every row of its menu
 //   is dead — and File is the one that answers it the other way. ITS MENU IS
-//   FOUR ROWS NOW AND ALL FOUR ARE LIVE IN THE VIEW (architect 2026-08-29,
+//   THREE ROWS NOW AND ALL THREE ARE LIVE IN THE VIEW (architect 2026-08-29,
 //   "admit both"): Ctrl+Q always was, Ctrl+O joined the mode's allowlist that
-//   day, Revert's Ctrl+Alt+O beside it at its 2026-09-13 landing, and
-//   Synchronize's act carries no history-mode refusal at all — its
-//   own bare `\` joining that allowlist 2026-08-31, so the row and its chord
-//   answer the view alike. Two of the then three were
-//   consumed nothings from their 2026-08-28 landing until that ruling, the state
+//   day, and Revert's Ctrl+Alt+O beside it at its 2026-09-13 landing. Open was
+//   a consumed nothing from its 2026-08-28 landing until that ruling, the state
 //   this arm's own criterion would have greyed the anchor for had an anchor
 //   been derivable at all. (THE NAVIGATION ANCHOR was the
 //   other live one, from 2026-08-08 on that same reasoning, and it left
@@ -5490,7 +5487,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // dropdown is a pointer affordance for an existing road, never a
                 // second one (the Help menu's one row was that road's
                 // exception for a few hours of 2026-09-03, and the menu itself
-                // went on 2026-09-09; the record is at GuiPopupAct). (A THIRD
+                // went on 2026-09-09; the record is at CommandPopupItem). (A THIRD
                 // anchor, Navigation, was spelled here from
                 // 2026-08-02 until 2026-08-15, and its deletion is what makes
                 // that principle load-bearing rather than decorative: every one
@@ -8591,8 +8588,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // refusals) applies identically. An item whose command would refuse
         // cheaply never gets here — it is greyed and the derive above dropped
         // it (2026-09-24) — and an expensive refusal cards from the act. No
-        // stop, no modal, nothing restated here. TWO OF
-        // THREE OF THE FILE MENU'S FOUR ROWS RIDE THIS BODY WHOLE (Revert, on
+        // stop, no modal, nothing restated here.
+        // ALL THREE OF THE FILE MENU'S ROWS RIDE THIS BODY WHOLE (Revert, on
         // Ctrl+Alt+O, since 2026-09-13, reaching its one act the way Open does):
         // Ctrl+Q reaches on_key's own close route — the drag-modal hatch, the
         // dirty prompt, the WM-close ordering — with no second body anywhere,
@@ -8610,31 +8607,6 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // command's cheap refusals, the `h` view's allowlist among them.
         const CommandPopupItem& it = command_popup_item(menu, armed);
         close_dropdown();
-        // THE ONE ROW THAT DOES NOT DISPATCH ITS KEY (the File menu's
-        // Synchronize to external storage): its binding was REFUSED rather
-        // than deferred, so this release was written to call the act directly
-        // and the act carries the gates a chord would have met in its own
-        // body — the modal refusals, the `h` view, the loading state
-        // (synchronize_to_external_storage's declaration). THE ACT HAS A KEY
-        // SINCE 2026-08-31 (bare `\`) AND THIS FORK STAYS: both roads reach
-        // that one body, so the row keeps the shorter one and the row's `key`
-        // field stays unread (the record is at GuiPopupAct, app_state.h).
-        // Still CLOSE FIRST, THEN ACT, for the reason above.
-        // (THE FILE MENU'S OPEN ROW LEFT THIS FORK on 2026-08-28, when the
-        // architect bound the prompt to Ctrl+O: it is an ordinary chord row now
-        // and rides the dispatch below like Quit, which is the standing model.)
-        if (it.act == GuiPopupAct::SyncExternal) {
-            synchronize_to_external_storage();
-            return true;
-        }
-        // (THE HELP MENU'S AV SYNC STATS ROW stood in this fork for the hours
-        // of 2026-09-03 between the panel's landing and its binding. The act
-        // has Shift+L now, so the row rides the dispatch below like Quit and
-        // Open, and its arm is deleted rather than left beside a chord — the
-        // Open row's own 2026-08-28 succession. Closing first still matters
-        // for it: the panel takes the modal row and the whole window, and the
-        // popup must not stand under it even for a frame, which the dispatch
-        // below gets from this body's own ordering.)
         GuiInputState chord{};
         chord.ctrl  = it.ctrl;
         chord.shift = it.shift;
@@ -8648,7 +8620,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // about the lock either way: the editor refused on a read-only ACTIVE tab
     // from 2026-08-07 to that date, and the lock now governs the KEYS at their
     // own commit arms instead — the four sidecar rows are engine keys and say
-    // the lock's sentence when they commit, while the five device rows commit
+    // the lock's sentence when they commit, while the four device rows commit
     // regardless (the account is at GuiSettingsEditor::open). The modal
     // playback stop stays at that opener, where it moved off this line in
     // 2026-08-07. THE ITEMS GREY DURING A LOAD ALONE (2026-09-24,

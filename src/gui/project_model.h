@@ -71,7 +71,7 @@
 //
 // WHAT THIS DISSOLVES, recorded because each was an open question once: which
 // render to print is the deliverable in `render/` (batches are auditions);
-// where on the stick is the root; there is no recents list — `last_project`
+// there is no recents list — `last_project`
 // plus a dozen folder names is the whole of it; the picker's candidates are
 // built when it opens and never kept fresh; source versus render is the
 // sidecar stem versus the two output folders; and how the tablet knows the

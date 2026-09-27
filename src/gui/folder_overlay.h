@@ -45,9 +45,9 @@
 // be enabled — everything else like what we do with history ... Leave that
 // for the player, the picker and the AV stats"). So FILE IS LIVE above the
 // band on every content — its press exempted from the three veils at
-// press_on_live_menu_anchor, its menu opening onto Quit and Synchronize (Open
-// Project and Revert grey there since 2026-09-24, the overlay's routers
-// consuming their chords) — while Edit and Settings grey through
+// press_on_live_menu_anchor, its menu opening onto Quit (Open Project and
+// Revert grey there since 2026-09-24, the overlay's routers consuming their
+// chords) — while Edit and Settings grey through
 // menu_anchor_live and refuse on that painted face, the
 // view bar's three grey through redesign_button_enabled's first arm — shown
 // by the bar's own inactive ground (view_bar_focused) and, since 2026-09-10,

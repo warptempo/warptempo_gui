@@ -313,18 +313,18 @@ constexpr int kStatusBarAirPx = 14;
 // ---------------------------------------------------------------------------
 
 // LOOPER_ID_MAIN (1) and LOOPER_ID_INPUT (2) are the glue's; everything from
-// LOOPER_ID_USER (3) up is ours. The five worker slots are contiguous so the
+// LOOPER_ID_USER (3) up is ours. The four worker slots are contiguous so the
 // dispatch can index them, and the ORDER they are dispatched in is the Wayland
-// loop's order (async renderer, waveform, checkpoint, prefetch,
-// synchronization). THE MEDIA COMMAND SOURCE IS NOT A SIXTH WORKER SLOT: the
+// loop's order (async renderer, waveform, checkpoint, prefetch). THE MEDIA
+// COMMAND SOURCE IS NOT A FIFTH WORKER SLOT: the
 // worker fds are per project (re-registered each session, forgotten at its
 // tail), while the car's eventfd is this backend's own and lives with the
 // process like the timer, so it takes the ident after the worker range and
 // is watched once in init() and unwatched in shutdown().
 constexpr int kIdentTimer   = LOOPER_ID_USER;       // 3
-constexpr int kIdentWorker0 = LOOPER_ID_USER + 1;   // 4..8
-constexpr int kWorkerCount  = 5;
-constexpr int kIdentMedia   = LOOPER_ID_USER + 1 + kWorkerCount;   // 9
+constexpr int kIdentWorker0 = LOOPER_ID_USER + 1;   // 4..7
+constexpr int kWorkerCount  = 4;
+constexpr int kIdentMedia   = LOOPER_ID_USER + 1 + kWorkerCount;   // 8
 
 // THE MEDIA COMMAND SINK, reached from the JNI entry below on the UI thread.
 // ONE MUTEX GUARDS THE POINTER, THE QUEUE BEHIND IT AND THE WAKE EVENTFD'S
@@ -540,14 +540,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     }
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
     cfg.projects_repo = kDefaultProjectsRepo;
-    // THE MIRROR'S DESTINATION IS EMPTY HERE TOO, and on this device it is
-    // empty for longer: no writable removable destination exists at all while
-    // this One UI build mounts the OTG stick with `mountFlags=0` (no
-    // `/storage/<uuid>` view for any app, measured 2026-08-28), so the
-    // Synchronize act says `sync_path is not set` until there is a folder to
-    // name. The grammar and the empty form's meaning are at is_sync_path
-    // (device_config.h).
-    cfg.sync_path     = "";
     cfg.last_project  = "";
     return cfg;
 }
@@ -976,12 +968,10 @@ void GuiPlatform::shutdown() {
     unwatch_fd(waveform_worker_completion_fd_);
     unwatch_fd(history_worker_completion_fd_);
     unwatch_fd(history_prefetch_completion_fd_);
-    unwatch_fd(sync_worker_completion_fd_);
     worker_completion_fd_           = -1;
     waveform_worker_completion_fd_  = -1;
     history_worker_completion_fd_   = -1;
     history_prefetch_completion_fd_ = -1;
-    sync_worker_completion_fd_      = -1;
     destroy_backbuffer();
     window_ = nullptr;
     app_    = nullptr;
@@ -1302,7 +1292,7 @@ void GuiPlatform::unwatch_fd(int fd) {
  * THE DRAIN. The window-system sources (the glue's cmd pipe and its input
  * queue) are processed ON THE SPOT — their process() bodies are the glue's own,
  * and deferring one would mean holding an unfinished AInputEvent — while the
- * timer, the FIVE worker fds and the car's media eventfd are only RECORDED,
+ * timer, the FOUR worker fds and the car's media eventfd are only RECORDED,
  * because the looper hands events back in readiness order and the order they
  * are acted on in is policy (see pump). Drained to empty at timeout 0 after
  * the first poll, so a busy source can never starve the repaint.
@@ -1340,8 +1330,7 @@ void GuiPlatform::drain_looper(int timeout_ms) {
             const int fds[kWorkerCount] = {worker_completion_fd_,
                                            waveform_worker_completion_fd_,
                                            history_worker_completion_fd_,
-                                           history_prefetch_completion_fd_,
-                                           sync_worker_completion_fd_};
+                                           history_prefetch_completion_fd_};
             if (fds[slot] >= 0) {
                 uint64_t cnt = 0;
                 (void)read(fds[slot], &cnt, sizeof(cnt));
@@ -1377,7 +1366,7 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *   1. the window-system sources, drained to empty (drain_looper);
  *   2. the TICK: on_tick_ then input_.tick(), in that order — the core's own
  *      fixed order (key repeat, then the touch window) is inside tick();
- *   3. the five worker completions, in registration order;
+ *   3. the four worker completions, in registration order;
  *   4. the MEDIA COMMANDS, drained under the mutex and dispatched outside it,
  *      after the workers and before the settled hook, so a car button acts and
  *      its frame paints in this same pass (the reasoning is at the block);
@@ -1421,7 +1410,6 @@ void GuiPlatform::pump() {
             case 1: if (on_waveform_worker_completion_) on_waveform_worker_completion_(); break;
             case 2: if (on_history_worker_completion_)  on_history_worker_completion_();  break;
             case 3: if (on_history_prefetch_ready_)     on_history_prefetch_ready_();     break;
-            default: if (on_sync_worker_completion_)    on_sync_worker_completion_();     break;
         }
     }
 
@@ -2445,12 +2433,6 @@ void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void(
     history_prefetch_completion_fd_ = fd;
     on_history_prefetch_ready_ = std::move(on_event);
     watch_fd(fd, kIdentWorker0 + 3);
-}
-void GuiPlatform::set_sync_worker_completion_fd(int fd, std::function<void()> on_event) {
-    unwatch_fd(sync_worker_completion_fd_);
-    sync_worker_completion_fd_ = fd;
-    on_sync_worker_completion_ = std::move(on_event);
-    watch_fd(fd, kIdentWorker0 + 4);
 }
 
 // -- The input doors: every one of them is the core's, forwarded --

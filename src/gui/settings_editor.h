@@ -23,26 +23,26 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FIVE editable ones the per-device config carries — gui_scale and
+// FOUR editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
-// since 2026-09-02 (architect, the four-tier review's R-22) projects_path and
-// sync_path, which had been hand-edited only, and since 2026-09-13
-// max_waveform_height (the config's sixth key, last_project, is the
+// since 2026-09-02 (architect, the four-tier review's R-22) projects_path,
+// which had been hand-edited only, and since 2026-09-13
+// max_waveform_height (the config's fifth key, last_project, is the
 // program's own and has no editor; `audio_player`, once
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
-// 1. The four device keys other than the scale — max_waveform_height,
-//    projects_repo, projects_path, sync_path — in ONE body,
+// 1. The three device keys other than the scale — max_waveform_height,
+//    projects_repo, projects_path — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (red flash and card on refusal), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
 //    that write is the whole persist, Ctrl+S carrying only the sidecar keys.
-//    projects_repo and sync_path are in force at once (every reader reads the
+//    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; max_waveform_height is in force at once, the body handing it to
-//    apply_max_waveform_height for the live relayout. gui_scale, the fifth
+//    apply_max_waveform_height for the live relayout. gui_scale, the fourth
 //    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
 //    is to reach one.
@@ -139,7 +139,7 @@ struct GuiSettingsEditor {
     // text included since the 2026-08-02 relaxation (the old non-ASCII
     // exception is closed; the remaining edge is stated at the definition).
     // No-op when the value side is already non-empty, when there is no `=`, or
-    // when the key is unknown — EXCEPT on the two path keys (2026-09-02), where
+    // when the key is unknown — EXCEPT on the path key (2026-09-02), where
     // a NON-EMPTY value side is a path prefix and Tab completes it against the
     // filesystem through complete_path_value below.
     //
@@ -154,20 +154,20 @@ struct GuiSettingsEditor {
     bool autocomplete_value();
 
 private:
-    // THE THREE GESTURE-LESS DEVICE KEYS' COMMIT — `projects_repo=`,
-    // `projects_path=`, `sync_path=` — in one body (the head's item 1).
+    // THE THREE DEVICE KEYS' COMMIT — `max_waveform_height=`,
+    // `projects_repo=`, `projects_path=` — in one body (the head's item 1).
     // Returns true when `key` is one of the three, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // red-flashed); false otherwise, so commit() goes on to the routers.
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
-    // THE PATH COMPLETER (2026-09-02), autocomplete_value's arm for the two
-    // path keys — `projects_path` and `sync_path` — when the value side is
+    // THE PATH COMPLETER (2026-09-02), autocomplete_value's arm for the path
+    // key — `projects_path` — when the value side is
     // NON-EMPTY: the value side is split at its last `/`, the directory the
     // head names is listed afresh (absolute only, the grammar's own rule; a
     // relative head completes nothing, and so does a listing error), the
-    // DIRECTORIES whose names start with the tail (byte compare — both keys
-    // name folders) are the matches, and the buffer advances by their longest
+    // DIRECTORIES whose names start with the tail (byte compare — the key
+    // names a folder) are the matches, and the buffer advances by their longest
     // common prefix past the tail, a single match taking a trailing `/`.
     // Nothing is cached. The append rides text_editor::replace_selection — the
     // one incoming filter — so the bytes are UTF-8-transparent exactly as a

@@ -19,7 +19,7 @@
 //              act's own refusals and the player's two before them, the
 //              player's opener and decode refusals, the propagate pastes'
 //              "Stopped at …" reports, the picker's
-//              three refusals, Synchronize's refusals, "Target render
+//              three refusals, "Target render
 //              failed", "History is unavailable", and — since 2026-08-30 —
 //              THE GATES' OWN CARDS, the swallowed press answered by the
 //              state that swallowed it (the editor gate, the FIVE drag gates
@@ -57,7 +57,7 @@
 //              until its X or that same Esc; no clock.
 //
 // WHAT IS NOT A CARD, by ruling. ALMOST EVERY SUCCESS: a render's completion
-// ("that would get annoying"), a Synchronize that mirrored the project, a
+// ("that would get annoying"), a
 // propagate walk that pasted what it had, and THE SAVE — an act that did what
 // was asked says nothing, its result being on screen, the save's being the
 // dirty mark going out (architect 2026-08-30: "the disc
@@ -263,12 +263,8 @@
 // is two sentences the moment one of them is edited. Everything else stays a
 // literal where it fires (a sentence with ONE producer has nothing to agree
 // with), and a family whose several sites share ONE translation unit keeps its
-// constant there (kKeysDuringDrag and, since 2026-09-02, kSyncRunning, which
-// the Open project picker's act began raising beside the mirror's own
-// single-in-flight refusal and which the close road's gate joined on
-// 2026-09-04, both still in that one file; the two mode
-// routers' catch-all tails were a third until their catch-alls went silent
-// with the unbound-keys ruling). A THIRD HOME EXISTS for a sentence that
+// constant there (kKeysDuringDrag; the two mode routers' catch-all tails were
+// a second until their catch-alls went silent with the unbound-keys ruling). A THIRD HOME EXISTS for a sentence that
 // belongs beside the VERDICT it spells rather than beside its one raiser: the
 // grid-iteration sweep's three cards live at app_state.h next to
 // iteration_sweep_plan, the owner whose refusal each of them names, because

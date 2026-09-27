@@ -55,26 +55,13 @@ public:
     // BACKEND is born with, stamped into
     // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
     // file there and never consulted again (device_config.h owns the file, its
-    // schema and its six keys). It is a PLATFORM FACT and lives on the seam for
+    // schema and its five keys). It is a PLATFORM FACT and lives on the seam for
     // exactly that reason: the scale a panel wants and where on THIS device the
     // projects live are
     // answers only the backend has, and routing them through here is what keeps
     // the GUI proper free of the `#ifdef` the alternative would need. STATIC because it is asked before any window
     // exists — gui_main resolves the config ahead of init().
     static DeviceConfig device_config_defaults();
-
-    // (THE ONE MOUNTED REMOVABLE VOLUME stood here from 2026-08-27 until
-    // 2026-08-30 as `removable_volume()`, the seam's fourth per-backend
-    // answer: Synchronize to external storage found its destination — the
-    // udisks mount points under `/run/media/<user>/` here, the
-    // `/storage/<name>` mount table lines on Android — rather than being told
-    // it. THE DESTINATION IS CONFIGURED NOW, the device config's `sync_path`
-    // key (device_config.h), so this member and both discoveries are DELETED:
-    // where a machine mounts a stick is still a per-device fact, and the
-    // per-device facts file is where it belongs. The finding rule worked here
-    // and could not work on the tablet at all, that build mounting the OTG
-    // stick invisibly to every app; the whole record is in
-    // platform-seam.md's Synchronize section.)
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
@@ -479,12 +466,6 @@ public:
     void set_history_prefetch_completion_fd(int fd,
                                             std::function<void()> on_event);
 
-    // And the SEVENTH, the Synchronize to external storage act's worker
-    // (2026-08-27). The poll set grows a seventh pollfd; on POLLIN the loop
-    // reads the counter and invokes this callback (routes to
-    // GuiExternalSyncWorker::on_completion_event).
-    void set_sync_worker_completion_fd(int fd, std::function<void()> on_event);
-
     // -- THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS (2026-08-27) ------------
     //
     // DOES THIS PLATFORM WANT THE GUI TO PAINT A KEYBOARD? Wayland answers
@@ -860,11 +841,6 @@ private:
     // worker is registered.
     int  history_prefetch_completion_fd_ = -1;
     std::function<void()> on_history_prefetch_ready_;
-
-    // Synchronization-worker completion fd. Same lifetime story again; -1 when
-    // no synchronization worker is registered.
-    int  sync_worker_completion_fd_ = -1;
-    std::function<void()> on_sync_worker_completion_;
 
     // -- The system clipboard (the CLIPBOARD selection) --
     // The device is created against the seat, so it is recreated when a seat

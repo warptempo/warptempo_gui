@@ -238,9 +238,7 @@ void GuiInputHandler::finalize_render_run() {
     // never promoted and so erases nothing here, and a sibling's string in the
     // slot is not ours to take down: a preview's
     // "Updating..." belongs to the run hold and is cleared by its own owner.
-    // The mirror's "Synchronizing..." is not in the slot at all — it is derived
-    // below whatever the slot holds (process_line_text, paint_handler.cpp) —
-    // so this clear simply uncovers it where a mirror is running. Invalidate before the
+    // Invalidate before the
     // clear — invalidate_status_cell_area covers the bottom row's lane whole,
     // the label's home since 2026-08-29's fold, the one-day status bar's that
     // morning and the tab row's from 2026-08-13, and the label lives nowhere
@@ -475,10 +473,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             // not the request's: the definition is "the current title's" and
             // this prune is the ONLY place it lives (prune_render_folder,
             // renders_dir.h — THIS IS ITS ONE TRIGGER since the player stopped
-            // listing `render/` on 2026-09-01). The Synchronize mirror does
-            // not restate it: since 2026-09-02 it LISTS `render/` and ships
-            // whatever is there, so the stick follows this prune rather than
-            // agreeing with it by a rule of its own (external_sync.h rule 1).
+            // listing `render/` on 2026-09-01).
             // A TITLE EDITED IN THE SETTINGS EDITOR WHILE THIS RENDER RAN
             // TAKES THE RENDER'S OWN DELIVERABLE WITH IT, AND THAT IS
             // ACCEPTED ADVERSARIAL (architect 2026-09-02): the pair just
@@ -502,8 +497,8 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             //             reaching engine work at all means the fingerprint on
             //             disk did not match this recipe, so what would
             //             survive is a deliverable that no longer matches the
-            //             authored state and would be mirrored to the stick as
-            //             if it did. Silence plus a plausible wav is the shape
+            //             authored state and would be played as if it did.
+            //             Silence plus a plausible wav is the shape
             //             that misleads; an absent wav cannot. FOR THE SIX
             //             PRE-RUNG PRODUCERS IT IS UNATTESTED RATHER THAN
             //             STALE (recorded 2026-09-02): the probe, the

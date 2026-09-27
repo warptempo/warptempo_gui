@@ -105,10 +105,8 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // trigger stays — prune_render_folder, renders_dir.h). AND THE `..` ROW LEAVES
 // THE LISTINGS: going up is a BUTTON on the modal row beside Repeat one, its
 // act up(), its key twin Backspace unchanged, greying at the root through the
-// wall's one owner (render_player_up_actionable). Neither the deliverable's
-// PUBLISH road nor the SYNCHRONIZE mirror is touched — the mirror still ships
-// `render/`'s contents beside every batch folder; only the PLAYER stops
-// looking at it.
+// wall's one owner (render_player_up_actionable). The deliverable's PUBLISH
+// road is not touched; only the PLAYER stops looking at `render/`.
 // The state it moves is AppState::render_player and AppState::folder_overlay
 // (app_state.h, where every field is described); this struct owns the acts.
 //
@@ -761,8 +759,7 @@ struct GuiRenderPlayer {
     // returns without pushing, and the session stands for the app's life with
     // the car transport publishing while this player is closed. THE
     // SILENCE IS METADATA AND NEVER A FILE: a silent wav on disk would be
-    // listed by the player, mirrored by Synchronize and played by the
-    // auto-advance.
+    // listed by the player and played by the auto-advance.
     //
     // THE EDGE INVENTORY, re-derived by grep at each retell (EIGHT call sites
     // across SEVEN functions since 2026-09-17, when close()'s inactive push

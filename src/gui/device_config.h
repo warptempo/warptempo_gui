@@ -9,7 +9,7 @@
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Six keys live here and nowhere else:
+// piece (architect 2026-08-27). Five keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -20,15 +20,11 @@
 //                            projects (project_model.h owns the model)
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
-//   sync_path=<path>         the ABSOLUTE folder Synchronize to external
-//                            storage mirrors this project into, or EMPTY for
-//                            "not set up on this device" (external_sync.h)
 //
-// THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
-// with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
-// the waveform picture's keys stood after sync_path from 2026-09-23 until
-// the last of them left 2026-09-25, and the ink and widening tuning keys
-// stood there 2026-09-25..27, below);
+// THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
+// max_waveform_height, 2026-09-13, placed right after gui_scale; the tuning
+// phases' keys stood at the end from 2026-09-23 until the last of them left
+// 2026-09-27, below);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -49,22 +45,11 @@
 // so `projects_repo` left the sidecar too (architect approval 2026-08-27, the
 // fifth grant on settings_file.{h,cpp}); and what was opened last is what lets
 // the tablet, which has no command line, open the right piece without a picker
-// at startup. `sync_path` JOINED THEM 2026-08-30 for the same reason said in
-// its bluntest form: where a machine's removable storage is mounted is a fact
-// about the machine. The key REPLACED A DISCOVERY — the Synchronize act found
-// the one mounted removable volume rather than being told (`/run/media/<user>/`
-// on the laptop, `/storage/<name>` on the tablet) — and the finding rule worked
-// on the laptop and COULD NOT WORK ON THE TABLET AT ALL, this One UI build
-// mounting the OTG stick with `mountFlags=0` so that no `/storage/<uuid>` view
-// exists for any app (measured 2026-08-28). A per-device destination is a
-// per-device fact, which is what this file is for, and a configured path is
-// what every desktop mirror does; the discovery is deleted whole, so the act
-// has ONE road to its destination and no fallback chain (external_sync.h).
-// `max_waveform_height` JOINED 2026-09-13 (architect): the waveform's cap had
+// at startup. `max_waveform_height` JOINED 2026-09-13 (architect): the waveform's cap had
 // been the render.h constant kWaveformMaxHeightPx = 500 since commit B, and
 // how tall a waveform wants to be is a fact about the PANEL — a tall external
 // monitor and the tablet's content rect answer differently — so the cap became
-// this file's sixth key, both templates stamping the old constant's 500.
+// a key of this file, both templates stamping the old constant's 500.
 // THE WAVEFORM PICTURE'S KEYS came and went (architect): the leveler's
 // `waveform_gain_*` joined 2026-09-23 and the expander's `waveform_expander_*`
 // 2026-09-24 for a tuning phase, eleven at the end, and all eleven LEFT
@@ -116,6 +101,11 @@
 // 85 and 100 raw AXIS_DISTANCE counts, now constexpr beside the latch
 // (kPenPlaneEnter / kPenPlaneExit, platform_android.cpp). A config still
 // carrying any of the three is unknown-key fatal, no migration.
+// `sync_path` CAME AND WENT 2026-08-30..09-27 (architect): the destination
+// folder of the Synchronize act, which mirrored a project's renders onto a
+// USB stick for the car. The architect struck the act and the key together
+// 2026-09-27, the tablet now being the car's source; a config still carrying
+// the key is unknown-key fatal, no migration.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -129,7 +119,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the five keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -141,8 +131,8 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// max_waveform_height, projects_repo, projects_path, last_project, sync_path)
-// and it is what
+// max_waveform_height, projects_repo, projects_path, last_project) and it is
+// what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -157,11 +147,11 @@
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect, the
 // four-tier review's R-22): the Settings dropdown carries `GUI Scale`,
-// `Max Waveform Height` (since 2026-09-13), `Projects Repository`, `Projects
-// Path` and `Sync Path` as rows that open the
+// `Max Waveform Height` (since 2026-09-13), `Projects Repository` and
+// `Projects Path` as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
-// writer under the key's own grammar below. Until that day the two path keys
-// were hand-edited only, and HELP told the user to edit `sync_path` without
+// writer under the key's own grammar below. Until that day the path keys
+// were hand-edited only, and HELP told the user to edit one without
 // telling him to quit first — which mattered, because A HAND EDIT UNDER A
 // RUNNING APP IS CLOBBERED BY THE NEXT IN-APP COMMIT (R-6): the live struct is
 // the truth and every commit rewrites the whole file from it. That stays so,
@@ -172,12 +162,12 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// six.
+// five.
 //
-// TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
-// below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
-// "not set up on this device". (`projects_repo` also ADMITS empty, being free
-// text, but empty is just a value there — one that never matches a remote.)
+// ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
+// below: `last_project` empty is "nothing opened yet". (`projects_repo` also
+// ADMITS empty, being free text, but empty is just a value there — one that
+// never matches a remote.)
 // The key is still REQUIRED in every case: the file admits no absent state,
 // only an empty VALUE.
 //
@@ -188,7 +178,6 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    std::string sync_path;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -265,15 +254,14 @@ inline constexpr const char* kMaxWaveformHeightGrammarReason =
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
 // no other grammar surface in the product consults either. ONE owner, TWO
-// askers below: the shared path value grammar (which the file's two path keys
-// are) and the project name's.
+// askers below: the path value grammar and the project name's.
 inline constexpr bool is_config_whitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n' ||
            c == '\v' || c == '\f' || c == '\r';
 }
 
-// THE PATH VALUE GRAMMAR — the ONE owner for both path keys (`projects_path`
-// below and `sync_path` under it): non-empty, ABSOLUTE, carrying NO LINE
+// THE PATH VALUE GRAMMAR — the ONE owner for the path key (`projects_path`,
+// below): non-empty, ABSOLUTE, carrying NO LINE
 // SEPARATOR anywhere (`\n` or `\r`) and NO ASCII WHITESPACE at either edge,
 // and taken verbatim otherwise. A path may legitimately hold a space in the
 // middle of a component, so only the edges are refused.
@@ -283,16 +271,15 @@ inline constexpr bool is_config_whitespace(char c) {
 // `key=value` with NO ESCAPING, so a value carrying a line separator cannot be
 // serialized at all, and an edge space is serializable but not canonical — and
 // it would compose a DIFFERENT folder than the one the hand meant to name,
-// silently, which is the mirror's own worst case. `\r` HAS A REAL PRODUCER:
+// silently. `\r` HAS A REAL PRODUCER:
 // std::getline strips the `\n` of a CRLF line and leaves the `\r` on the
 // value, so a config saved by a Windows editor refuses out loud here instead
 // of aiming an act at `<path>\r`.
 //
-// EXISTENCE IS DELIBERATELY NOT A GRAMMAR QUESTION for either key: a
-// `projects_path` that names no folder is startup's own "No project under
-// <projects_path>" answer (project_model.h) and a `sync_path` that names no
-// folder is the mirror's own destination refusal (external_sync.h) — the
-// config is right about WHERE, and the thing may simply not be there yet.
+// EXISTENCE IS DELIBERATELY NOT A GRAMMAR QUESTION: a `projects_path` that
+// names no folder is startup's own "No project under <projects_path>" answer
+// (project_model.h) — the config is right about WHERE, and the thing may
+// simply not be there yet.
 inline bool is_config_path_value(const std::string& v) {
     if (v.empty()) return false;
     if (v.find('\n') != std::string::npos) return false;
@@ -318,8 +305,6 @@ inline bool is_projects_path(const std::string& v) {
 // against a value that plainly is one.
 inline constexpr const char* kProjectsPathGrammarReason =
     "must be an absolute path with no whitespace at either edge";
-inline constexpr const char* kSyncPathGrammarReason =
-    "must be empty or an absolute path with no whitespace at either edge";
 inline constexpr const char* kProjectsRepoGrammarReason =
     "must not carry a line separator";
 
@@ -332,7 +317,7 @@ inline constexpr const char* kProjectsRepoGrammarReason =
 // recheck normalizes the value against the local clone's own `origin` and
 // refuses the mismatch there, which is a far better place to judge it than a
 // reader that cannot see the clone. The `\r` clause has the same real
-// producer the path keys' has (std::getline on a CRLF-saved file) and joined
+// producer the path key's has (std::getline on a CRLF-saved file) and joined
 // 2026-09-02 when the key gained this predicate — before it the reader took
 // the value with no test at all, and the editor's own filter had always
 // dropped control bytes, so the only value the clause newly refuses is a
@@ -343,33 +328,9 @@ inline bool is_projects_repo(const std::string& v) {
     return true;
 }
 
-// THE sync_path GRAMMAR (architect 2026-08-30) — the path value grammar, OR
-// EMPTY.
-//
-// EMPTY MEANS "NOT SET UP ON THIS DEVICE" and is the one absent state this
-// file admits beside `last_project`'s: the Synchronize act then says
-// `sync_path is not set` on a notification card and runs nothing
-// (synchronize_to_external_storage, input_key_dispatch.cpp). It is the
-// FIRST-RUN TEMPLATE'S value on both backends, because neither a laptop nor a
-// tablet can be guessed at: where a stick gets mounted is the machine's
-// answer, and a wrong guess would aim a mirror — its creates, its copies and
-// its removals — at a folder the user never named.
-//
-// THE KEY IS SET IN-APP SINCE 2026-09-02 (architect, R-22): the Settings
-// dropdown's `Sync path` row opens the settings editor on `sync_path=` and the
-// commit writes this file under this very predicate — the template stamps it
-// empty, the user types the path once (`/run/media/<user>/<stick>` on the
-// laptop), and the act reads the LIVE struct, so the value is in force at the
-// next `\` with no relaunch. A hand edit (with the app quit) is the other
-// road. The writers' inventory is at write_device_config.
-inline bool is_sync_path(const std::string& v) {
-    return v.empty() || is_config_path_value(v);
-}
-
 // HOW A PATH UNDER THE PROJECTS PATH IS NAMED IN A SENTENCE — the basename
 // rule's composer for everything the project model and the loaders say
-// (messaging.md; `external_sync.cpp`'s `shown` is the mirror's own, relative
-// to its two roots). A sentence that carries a path names THE PROJECT FOLDER
+// (messaging.md). A sentence that carries a path names THE PROJECT FOLDER
 // AND THE FILE — `550 - 1/07 - Menuetto.settings` — and never the projects
 // path itself, because every one of those sentences is one line on a
 // notification card that CLIPS, and the leading `/home/.../projects/` is the
@@ -481,14 +442,13 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
-// (re-greped 2026-09-13 with the sixth key):
+// THREE CALL SITES CARRY THE FIVE KEY COMMITS, and this is their inventory
+// (re-greped 2026-09-27):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves four keys —
-// `max_waveform_height=`, `projects_repo=`, `projects_path=` and `sync_path=`
+// the settings editor's ONE device-key body, which serves three keys —
+// `max_waveform_height=`, `projects_repo=` and `projects_path=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the cap's
-// arm joined 2026-09-13, the two path arms 2026-09-02 under R-22, and the
-// `audio_player=` arm retired with its key 2026-08-28); and gui_main's
+// arm joined 2026-09-13, the path arm 2026-09-02 under R-22); and gui_main's
 // `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value
@@ -501,8 +461,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
-// both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path and a blank last_project),
+// both stamp a max_waveform_height of 500, kDefaultProjectsRepo and a blank
+// last_project),
 // so a first run on either device lands a
 // file that is
 // already right for it and the user edits

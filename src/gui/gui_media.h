@@ -141,8 +141,7 @@ struct GuiMediaState {
     // exactly one push, the close's inactive one, and that push is deleted —
     // 2026-09-17.)  THE
     // SILENCE IS METADATA AND NEVER A FILE — a silent wav on disk would be
-    // listed by the player, mirrored by Synchronize and played by the
-    // auto-advance.
+    // listed by the player and played by the auto-advance.
     //
     // WITH THE PLAYER CLOSED: WHERE THE SESSION STANDS, SPELLED AS A BATCH
     // CELL'S BASENAME IS — "<index>_<distance>", "5_+2" (the live state's

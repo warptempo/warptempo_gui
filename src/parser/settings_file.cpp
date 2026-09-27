@@ -342,12 +342,9 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // an in-app render player that decodes a wav and plays it through the
     // product's own engine on both devices, so there is no player binary to
     // name anywhere. The key, its blank opt-out, the settings editor's arm and
-    // the spawn itself are deleted, and the device config is FIVE keys —
-    // `gui_scale`, `projects_repo`, `projects_path`, `last_project`,
-    // `sync_path` — in the writer's own order, having been four from that
-    // retirement until `sync_path` joined on 2026-08-30 to name the folder
-    // Synchronize to external storage mirrors into (architect approval
-    // 2026-08-30, comment only). It was
+    // the spawn itself are deleted; the device config's keys are enumerated
+    // at `kDeviceConfigKeys` (src/gui/device_config.cpp; architect approval
+    // 2026-09-27, comment only). It was
     // never the CLI's key in either home.
     //
     // `projects_repo` (architect approval 2026-08-27, the fifth grant on this

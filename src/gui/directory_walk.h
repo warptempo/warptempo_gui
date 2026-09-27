@@ -19,8 +19,7 @@
 // of the loop, and the GUI has no handler anywhere above it, so the process
 // dies. The events are ordinary here, not adversarial: `l` prunes and lists
 // `render/` and `tmp/` on a project the sync script or the trash road is
-// editing under it, a render dispatch scans the batch root, an OTG stick is
-// pulled mid-listing.
+// editing under it, a render dispatch scans the batch root.
 //
 // THE CONTRACT. Construct with `ec`; walk to the end; increment with `ec` and
 // stop at the FIRST error; hand every entry to `fn` in between. `ec` is the
@@ -49,24 +48,19 @@
 //     render_cache.cpp         RenderCache::sweep_orphans — the stale PID dirs
 //
 //   THEIR OWN, EACH FOR A REASON
-//     external_sync.cpp        walk_directory — the same shape plus TWO things
-//                              this owner does not have: a callback that
-//                              REPORTS A FAULT STRING and stops the walk at
-//                              once (the mirror's rule 1), and an
-//                              `optional_root` ENOENT carve-out on the
-//                              directory itself. It is the sibling, not a
-//                              duplicate: the mirror's faults are sentences,
-//                              not error codes.
 //     project_model.cpp        resolve_project — refuses MID-WALK with the
 //                              offending entry's own sentence ("Cannot read
 //                              '<name>' in '<folder>'"), which a void callback
 //                              cannot return.
+//     history_folder.cpp       list_history_folder_members — an unlistable
+//                              folder is its own GuiFailure, and the
+//                              increment's fault is read past the loop so a
+//                              truncated listing is never taken as the whole.
+//     settings_editor.cpp      complete_path_value — the path completer, which
+//                              completes nothing on any fault (a Tab that
+//                              walks the ring) and so has no fault to report.
 //
-// (A THIRD STOOD HERE UNTIL 2026-08-30: platform_wayland.cpp's
-// removable_volume, whose per-entry symlink or status fault refused the whole
-// question with its own sentence. It went with the discovery itself — the
-// mirror's destination is the device config's `sync_path` now, told and not
-// found — and no backend walks a directory any more.)
+// No backend walks a directory.
 //
 // This header is GUI-side and header-only on purpose: the frozen directories
 // walk no directories, and there is nothing here to link.

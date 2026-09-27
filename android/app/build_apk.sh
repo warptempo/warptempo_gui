@@ -46,12 +46,26 @@ KEYPASS="android"
 # --- 0. the debug keystore ------------------------------------------------
 # The AOSP android/androiddebugkey/android triple, shared with the M2 spike so
 # both APKs come off one key. Android identifies an app by (package, signing
-# cert): losing this key means uninstall-and-lose-data rather than
-# upgrade-in-place, so BACK IT UP.
+# cert): an APK signed by any other key will not install over the app, and
+# uninstalling it to make room wipes the tablet's projects. So A MISSING
+# KEYSTORE IS NEVER MINTED SILENTLY -- after a botched restore that would
+# yield exactly such an APK. The script stops and names the two backups
+# instead. A fresh key is minted only on an explicit WT_NEW_KEYSTORE=1, which
+# means a brand-new app identity (a fresh install, the old one's data gone).
 if [ -f "$KEYSTORE" ]; then
     wt_say "keystore present: $KEYSTORE"
+elif [ "${WT_NEW_KEYSTORE:-}" != "1" ]; then
+    wt_die "no keystore at $KEYSTORE -- restore it, do not mint one: the app's
+    identity is this key, and an APK signed by a new one cannot install over
+    the app (uninstalling wipes the tablet's projects). Backups:
+        ~/.pc/distro/files/android/.android/debug.keystore
+        ~/.pc/distro/tablet/debug.keystore.bak
+    Restore with, e.g.:
+        mkdir -p \"$(dirname "$KEYSTORE")\"
+        cp ~/.pc/distro/files/android/.android/debug.keystore \"$KEYSTORE\"
+    Only for a brand-new app identity: WT_NEW_KEYSTORE=1 bash $0"
 else
-    wt_say "creating debug keystore: $KEYSTORE"
+    wt_say "WT_NEW_KEYSTORE=1: creating a NEW debug keystore: $KEYSTORE"
     mkdir -p "$(dirname "$KEYSTORE")"
     "$WT_JDK/bin/keytool" -genkeypair -v \
         -keystore "$KEYSTORE" \

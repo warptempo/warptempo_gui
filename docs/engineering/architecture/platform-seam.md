@@ -14,26 +14,26 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (77 declarations as of 2026-09-03 — 13 `using` aliases and 64
+  public API (76 declarations as of 2026-09-27 — 13 `using` aliases and 63
   members including the constructor and destructor — counted over the
   `public:` section of each header with `//` comments and blank lines
   stripped: the semicolon-terminated declarations, plus the three one-line
   inline accessors that end in `}` rather than `;`, which the count has
   always included and which the words "semicolon-terminated" alone used to
   leave out. The identity is proved by diffing those two stripped sections,
-  which come out line-for-line equal — 90 lines each at this writing, the
-  count being 77 because three declarations wrap (`set_touch_nav_hooks`'s
+  which come out line-for-line equal — 89 lines each at this writing, the
+  count being 76 because three declarations wrap (`set_touch_nav_hooks`'s
   twelve lines since the caret trio and the editor-field query joined it on
   2026-09-05, and one wrapped line each in `set_history_prefetch_completion_fd`
   and `synthesize_key`). The
   count FELL BY ONE on 2026-08-30, `removable_volume` retiring with the
-  mirror's discovery — Synchronize is told its destination by the device
-  config's `sync_path` now, so neither backend goes looking for a volume —
-  ROSE BY ONE on 2026-09-02 with `display_lead_ns`, FELL BY ONE AGAIN on
+  mirror's discovery, ROSE BY ONE on 2026-09-02 with `display_lead_ns`, FELL BY ONE AGAIN on
   2026-09-03 when that member went with the playback leads (the Playback seam
   below), and ROSE BY TWO the same day with the AV sync panel's pair,
   `set_display_measurement` and `display_stats` (the Display measurement seam
-  below). Re-derive it; never decrement the number you find.
+  below), and FELL BY ONE on 2026-09-27 with
+  `set_sync_worker_completion_fd`, Synchronize being struck (settings.md).
+  Re-derive it; never decrement the number you find.
   There is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
   answered differently, which is the seam's own shape rather than an
@@ -90,11 +90,9 @@ contract. The port split them:
   → worker completions in registration order → the settled hook →
   paint-if-dirty — and the touch window is ALSO checked eagerly at the head
   of every touch event (without which a fast tap resolves a tick late).
-  Wayland polls the display fd + timerfd + five worker eventfds (the `pfds`
-  array is 7 slots; `pfds[6]` is the fifth worker eventfd,
-  `set_sync_worker_completion_fd` — the Synchronize to external storage
-  act's, below); Android puts the same fds on the glue's ALooper
-  (`kWorkerCount` = 5) and, since the car's arc, ONE MORE SOURCE OF ITS OWN
+  Wayland polls the display fd + timerfd + four worker eventfds (the `pfds`
+  array is 6 slots); Android puts the same fds on the glue's ALooper
+  (`kWorkerCount` = 4) and, since the car's arc, ONE MORE SOURCE OF ITS OWN
   — the media command eventfd under `kIdentMedia` (`LOOPER_ID_USER + 1 +
   kWorkerCount`), per PROCESS like the timer rather than per project like
   the workers, drained in `pump()` after the worker completions and before
@@ -335,17 +333,15 @@ drag coordinates floor instead of truncating.
   shape `ensure_device_available_for_play` already set.)
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. The SIX keys it stamps are per-DEVICE preferences
+  both-sides member. The FIVE keys it stamps are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the clone's own `projects/`, Android 225 %
   and `<externalDataPath>/projects`; both stamp `max_waveform_height=500`
   (the waveform cap, the retired `kWaveformMaxHeightPx`'s value),
   `kDefaultProjectsRepo` and a
-  blank `last_project` AND a blank `sync_path` — neither template guesses a
-  destination for the mirror, a wrong guess aiming its creates, copies and
-  removals at a folder the user never named. (Keys the template no longer
-  stamps: the lit plate's ink keys `fg_color` / `bg_color`, 2026-09-26 for
+  blank `last_project`. (Keys the template no longer
+  stamps: `sync_path`, struck with Synchronize 2026-09-27 — settings.md; the lit plate's ink keys `fg_color` / `bg_color`, 2026-09-26 for
   their tuning phase, struck at its close — settings.md; the S Pen's plane
   keys, the single `pen_plane_distance` and then the pair `pen_plane_enter` /
   `pen_plane_exit`, 2026-09-27 for theirs, struck at its close the same day
@@ -616,196 +612,18 @@ their lamp bits — together with the letter caps, every one of which turns
 capital while the arm stands. No new colour; the caps pair's stateful glyph is
 what the face replaced.
 
-## Synchronize to external storage
+## Synchronize to external storage (struck 2026-09-27)
 
-`GuiPopupAct::SyncExternal`, the File menu's row (architect 2026-08-27, landed
-2026-08-28 in `b92ea097`/`95ea84d4`), mirrors the open project onto the folder
-the DEVICE CONFIG names. It was the menu's ONE CHORD-LESS ROW until 2026-08-31,
-when the architect gave the act BARE BACKSLASH — a spelling the product bound
-nowhere, so the render family keeps `Ctrl+Alt+Shift+R` exactly as his refusal
-of a binding in 2026-08-27 intended. The row still calls the act directly
-rather than dispatching that chord (the act's body carries the gates), so the
-two are roads to one body, and both allowlists — read-only and the `h` view's —
-admit the key.
-
-**THE DESTINATION IS TOLD, NOT FOUND** (architect 2026-08-30). It is
-`sync_path`, the device config's fifth key (`settings.md`'s device-config
-section and `device_config.h` own its grammar: EMPTY, or an absolute path
-under the shared path-value rules), and the act composes
-`<sync_path>/<project name>/`. It was DISCOVERED for three days —
-`GuiPlatform::removable_volume()` per backend over the one counting rule
-`sole_removable_volume` — and that rule worked on the laptop and COULD NOT
-WORK ON THE TABLET AT ALL (the open device fact below). A per-device
-destination is a per-device fact, which is what the device config is for, and
-a configured path is what every desktop mirror does; the seam member, both
-discoveries, the counting rule and its two sentences (`No removable volume
-mounted`, `Several removable volumes mounted: a, b`) are DELETED, so the act
-has one road to its destination and no fallback chain.
-
-The lift runs `GuiInputHandler::synchronize_to_external_storage`
-(`input_key_dispatch.cpp`), which refuses silently through the Open row's own
-gates (a prompt or editor standing, a load in progress) and with nothing
-loaded; it is LEGAL ON A READ-ONLY TAB, ADMITTED IN THE `h` VIEW (2026-08-29)
-and STOPS NO PLAYBACK, since it authors nothing and writes outside the project
-entirely. A second dispatch while one is already running writes
-`A synchronization is already running` to a notification card and stops there — the
-checkpoint act's own single-in-flight shape, answered in words on the key
-(the menu row greys while one runs, since 2026-09-24). Then the destination: an EMPTY `sync_path` is the device
-saying it has none and answers `sync_path is not set` on a card — THE KEY BY
-ITS OWN SPELLING, a config key being named the way it is written in the file
-everywhere in the product — and nothing runs. Passing both, it composes the
-job — the sync root, the project name and folder, and the project's TWO
-OUTPUT FOLDERS THEMSELVES, `render/` and `tmp/` (the title is not a term of the
-act: the mirror LISTS those folders, architect 2026-09-02) — and dispatches to
-`GuiExternalSyncWorker`; nothing says the act has
-started (a process line is state, and the verdict follows within seconds).
-
-THE MIRROR'S LAYOUT AND SCOPE are `external_sync.h`'s whole statement:
-`<sync_path>/<project name>/` holds every regular `.wav` out of `render/`
-directly and each `tmp/` batch folder AS ITSELF (folder name and NN numbering
-verbatim), wav files only — no sidecars, no `.fingerprint`, no `peaks/`, the
-stick being played from and not authored in. **THE SET IS THE FOLDERS' REAL
-CONTENTS** (architect 2026-09-02): the act reads `render/` the same way it
-reads a batch cell, through the one listing rule `list_wav_files`, so the stick
-equals the disk by construction. It COMPOSED `render/<live title>.wav` until
-that day, which made the mirror's set and `prune_render_folder`'s definition
-two rules that had to agree, and between a retitle and the next render they did
-not: the disk kept the old wav, the stick lost it, nothing was copied in its
-place and the act said nothing. The prune is a separate act with its own
-trigger now, and the mirror simply follows the folder — a stale pair is
-mirrored as it stands and leaves the stick on the first Synchronize after the
-prune takes it off disk. An absent `render/` is an empty set, never a refusal;
-the act creates nothing on the source side. Copies run first; afterward every file and folder
-under that one destination folder which is not in the set is deleted, so an
-act interrupted mid-way (a pulled stick, a killed process) leaves the stick
-with at most EXTRA files, never fewer. The scope is that destination folder
-alone, never the sync path itself or another project's folder under it, which is
-what lets one stick carry several projects side by side. Nothing is skipped
-or retried on an mtime guess: the stick is carried between two clocks, so
-every file is copied on every act — each onto a staging sibling that is
-renamed onto the final name only once the copy is complete, so a failed or
-interrupted copy leaves the previous file on the stick whole.
-
-THE FIVE STRICTNESS RULES are `external_sync.h`'s head, stated there once and
-nowhere else: the mirror deletes only against a listing it finished (any
-enumeration or status error other than an absent optional root ends the act
-before a single deletion, a destination-side one included, which therefore
-cannot report success — SO THE DELETION IS TWO PASSES, classifying the whole
-destination into kept, unkept link and unkept subtree, top level and then each
-kept batch folder, before its first removal, which is also why no
-`directory_iterator` is ever live while its own directory is being changed); no
-symlink is ever followed ON EITHER SIDE, which makes the scope claim above true by
-construction (THE SYNC ROOT ITSELF IS THE FIRST NAME CHECKED, every path in the act
-being composed under it, and a link at one of the act's own names is a REFUSAL
-and not a deletion, an unkept link being removed as a link; SINCE 2026-08-30
-that check is also where a destination that is simply NOT THERE answers — an
-unplugged stick or a mistyped `sync_path` refuses `'<name>' is not a
-directory`, the act never creating its own sync root; and SINCE 2026-09-02 the
-SOURCE side is in the rule too — the classifiers followed links until then,
-so a symlinked `render/`, `tmp/` or batch folder was walked and a symlinked
-`x.wav` was copied through, which HELP already promised against: the three
-roots the act opens and the wavs it copies refuse on a link, while a link the
-act would neither walk nor copy is simply not in the set, the same line the
-destination side draws) — the checks run at
-the act's start and not again at each use, that check-then-use window being an
-ACCEPTED COST, a hand on a mounted stick mid-act and so the adversarial class
-this product never backstops; every copy is staged; what is kept is kept by
-filesystem identity (`std::filesystem::equivalent`) rather than by spelling, the
-stick being case-insensitive vfat; and — THE FIFTH, 2026-09-02, rule 1's
-copy-side twin — a SET THE DESTINATION COULD NOT HOLD APART is refused before
-anything is created or copied: two desired entries of one destination
-directory whose names fold together under an ASCII case fold are two files on
-the project's case-sensitive filesystem and ONE entry on the stick, so the
-act ends with `'<a>' and '<b>' would be one file at the destination` (the
-fourth fixed sentence) instead of letting the second rename replace the first
-and the identity test keep the survivor as either, silently and successfully.
-
-WHAT A FAILURE LEAVES is `external_sync.h`'s (a)(b)(c) and nothing stronger:
-(a) no deletion runs at all unless every copy succeeded and the destination
-classification finished; (b) a copy-phase failure leaves every replacement
-completed before it standing, each having been its own rename, and the file it
-failed on holding its previous contents whole; (c) a deletion-phase failure
-leaves the removals before it done and the rest undone, each removal being its
-own act and an unkept subtree's `remove_all` able to stop part-way itself. The
-act is not transactional and rolls nothing back: pressing the row again is the
-whole recovery.
-
-THE WORKER, `GuiExternalSyncWorker` (`external_sync.{h,cpp}`), is shaped
-exactly like `GuiHistoryCommitWorker`: its own thread, a condition variable,
-one completion eventfd the platform polls. SINGLE JOB IN FLIGHT structurally,
-and NO CANCEL — `shutdown()` JOINS an act already running rather than
-interrupting it, a copy left half-written being worse than a mirror caught
-between its copies and its deletions. The worker's own verdict lands back on
-the main thread through `on_external_sync_complete`, which raises a NORMAL
-notification card and nothing else (2026-08-29; the status chain's transient
-tier for one day before that) — AND ONLY ON A FAILURE. **A SUCCESSFUL
-SYNCHRONIZATION SAYS NOTHING** (architect 2026-08-30: "if it succeeds, we
-don't necessarily need [a notice]"), the render's own precedent, a render
-served silently publishing silently; the count sentence `Synchronized <N>
-file(s) to <path>` that stood from 2026-08-28 is DELETED from the outcome, not
-merely unraised, so a successful verdict carries an empty message by
-construction. On the first failure of any kind the card names the path it was
-reading or writing and the system's own words (`Cannot read '<path>': <...>`
-/ `Could not copy '<path>': <...>` / `Could not remove '<path>': <...>`), or
-one of the FOUR fixed lines (the symlink rule's own three, `'<path>' is a
-symbolic link` — which a SOURCE root, a `tmp/` entry or a `.wav` earns since
-2026-09-02 exactly as a destination name does — / `'<path>' is not a
-directory` / `'<path>' is not a regular file`, the second
-of which is also the unplugged stick's and the mistyped path's answer; and the
-fold rule's `'<a>' and '<b>' would be one file at the destination`) — every
-`<path>` named RELATIVE TO THE MIRROR'S TWO ROOTS (`<sync path's last
-component>/…` on the stick, the path under the project folder in the project;
-the full path is on
-stderr), the basename rule of the cards. A FAILURE IS A NORMAL CARD, never
-the critical class — that class is the checkpoint act's, whose failure needs
-the terminal; a failed synchronization is retried by pressing the row again.
-
-THE SEAM GREW TWO MEMBERS FOR IT, and ONE OF THEM HAS SINCE LEFT.
-`GuiPlatform::removable_volume()` — static like `device_config_defaults`, each
-backend owning its discovery over the one shared counting rule — was the
-destination's answer from 2026-08-28 until 2026-08-30, when the destination
-became the device config's `sync_path` and the member, both discoveries and the
-counting rule were deleted whole (the ruling is at the head of this section).
-WHAT THE TWO DISCOVERIES MEASURED IS KEPT, because it is why the key exists:
-the laptop read the directory entries under `/run/media/<user>/`, the udisks
-mount root, which worked; ANDROID read the `/storage/<name>` mount points out
-of the process's own mount table (`/proc/self/mounts`) and NOT
-`opendir("/storage")`, because `/storage` is `drwx--x--x` to the app's uid —
-TRAVERSABLE BUT NOT LISTABLE — so a listing there answers EACCES, a permission
-the app was denied and not an empty device (measured on the tablet 2026-08-28
-with the stick mounted: the listing road answered `No removable volume mounted`
-where the mount-table road answered correctly). Even the working road found
-nothing there, for the open device fact below.
-
-THE ONE MEMBER THAT REMAINS, declared identically on both backends (contract at
-`platform_wayland.h`, which owns it):
-
-- **`set_sync_worker_completion_fd`** — the FIFTH worker completion eventfd,
-  ordinary in shape (store the fd, store the callback) beside the async
-  render, waveform, checkpoint and history-prefetch workers' own setters.
-  Retelling the loop contract's own inventory (section C, above): Wayland's
-  `pfds` array is now 7 slots (the display fd, the timerfd, five worker
-  eventfds — `pfds[6]` is this one); Android's `kWorkerCount` is 5,
-  dispatched in registration order (async renderer, waveform, checkpoint,
-  prefetch, synchronization) over the glue's ALooper idents
-  `kIdentWorker0 .. kIdentWorker0+4`.
-
-THE OPEN DEVICE FACT: on this One UI build the OTG stick mounts with
-`mountFlags=0`, not VISIBLE, so no `/storage/<uuid>` view exists for ANY app.
-That is what the discovery could not get around and it is what the key does
-not get around either — a path that does not exist cannot be configured, so
-THE TABLET'S `sync_path` STAYS EMPTY and the act answers `sync_path is not
-set` there until a writable destination exists (2026-08-28, unchanged by the
-2026-08-30 move; what the move bought is that the LAPTOP now names its stick
-instead of hunting for it, and that the tablet's refusal names the thing the
-user would have to set). THE SAF ROAD THROUGH THE JAVA SLIVER — a Storage
-Access Framework picker (`ACTION_OPEN_DOCUMENT_TREE`) granting a scoped tree
-URI regardless of `mountFlags` — is the design's named contingency for this,
-IS NOT BUILT and NEEDS AN ARCHITECT RULING; it would reach the stick through a
-tree URI rather than through a path, so it is not something `sync_path` can
-name.
-What the shell showed, 2026-08-28: `sm list-volumes` — `public:8,81 mounted
-067C-8690`; `dumpsys mount` — `mountFlags=0`, `path=/mnt/media_rw/067C-8690`.
+STRUCK WHOLE (architect 2026-09-27), the tablet being the car's source now:
+the act (bare `\` and File → Synchronize to External Storage, which mirrored
+a project's `render/` and batch folders onto a USB stick under
+`<sync_path>/<project>/`), its worker `GuiExternalSyncWorker`
+(`external_sync.{h,cpp}`, deleted), the close road's refusal while it ran,
+row 8's `Synchronizing...` line, the device key `sync_path` and the seam's
+`set_sync_worker_completion_fd` (the loop's fifth worker eventfd). `\` is
+unbound. A config still carrying `sync_path=` is unknown-key fatal, no
+migration (settings.md). The act's design, the per-backend discoveries it
+replaced on 2026-08-30 and the tablet's OTG measurements are in git history.
 
 ## The content rect is the window
 
@@ -1313,11 +1131,8 @@ every window adoption; the backend ticks at 5 ms, the Wayland rule's own half
 of the pinned refresh period, where it took the 60 Hz fallback's 8 ms until
 2026-08-27), PAGE_SIZE 4096 (the
 16 KB alignment is headroom), `/storage` is 0711 (traversable, never
-listable — discovery through `/proc/mounts`), the OTG stick mounts with
-`mountFlags=0` and no `/storage/<uuid>` view for any app (Synchronize to
-external storage refuses on the tablet until this is solved, 2026-08-28;
-`sm list-volumes`: `public:8,81 mounted 067C-8690`; `dumpsys mount`:
-`mountFlags=0`, `path=/mnt/media_rw/067C-8690`), one USB-C port (cable and
+listable), the OTG stick mounts with `mountFlags=0` and no `/storage/<uuid>`
+view for any app (measured 2026-08-28), one USB-C port (cable and
 any OTG device are mutually exclusive; wireless adb for the rest),
 `block_usb_lock` blocks USB while locked (reads like Auto Blocker; is
 not). The provisioning log is the architect's, outside the repo.

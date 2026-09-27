@@ -790,8 +790,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // (2026-09-01, U4).
         case GuiKeys::Comma: case GuiKeys::Period:
             return (bare || sh) && history_view;
-        // Synchronize to external storage (2026-08-31).
-        case GuiKeys::Backslash: return bare;
 
         // Play from the playhead, and the A/B audition.
         case GuiKeys::Space: return bare || sh;
@@ -911,10 +909,6 @@ static_assert(!chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Minus, GuiInputState{}, false),
               "`=` and `-` are unbound: the stepped zoom and its buttons were "
               "removed 2026-09-25, zoom being on every surface");
-static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::Backslash,
-                                  GuiInputState{true, false, false}, false),
-              "Synchronize is bare backslash and no decoration of it");
 // `l` is the one letter whose two forms are two contents of one band, so its
 // anchor witnesses the "only" whole: the two positives, then EVERY non-bare,
 // non-shift-only combination of the three modifiers as a negative. A widening
@@ -1114,27 +1108,6 @@ inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
 // road to it. Not repeat-eligible, so a held chord reverts once.
 inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && mods.alt;
-}
-
-// True for the chord that runs SYNCHRONIZE TO EXTERNAL STORAGE (architect
-// 2026-08-31): BARE BACKSLASH exactly — no ctrl, no shift, no alt. Synchronize
-// was the File menu's ONE CHORD-LESS ROW from its 2026-08-27 landing (the
-// architect refusing a binding then rather than deferring one, Ctrl+Alt+Shift+R
-// keeping its meaning), and this is the row joining the keyboard: `\` is a key
-// the product bound nowhere and carries no convention to honour, so it costs
-// no chord from the render family. The act is
-// GuiInputHandler::synchronize_to_external_storage, whose own body carries
-// every gate (the modal refusals, the loading state, no source loaded, the
-// single act in flight) — which is why the key needs none of its own beyond
-// its place in the dispatch. THREE READERS, the shape shared so none can
-// drift: on_key's dispatch arm (input_handler.cpp), the read-only allowlist
-// (read_only_key_blocked — ADMITTED, the act authoring nothing and writing
-// outside the project entirely) and the `h` view's allowlist
-// (history_mode_key_blocked — ADMITTED, on the 2026-08-29 "admit both" ruling
-// that put Ctrl+O beside Ctrl+Q there; the menu's row already ran in the view
-// through its own body).
-inline bool is_sync_external_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
 // True for the chord that DROPS A PHASE RESET FROM THE WARP COLUMN'S EITHER
