@@ -682,15 +682,10 @@ constexpr double kTabMinWidthPx      = 58.0;  // see the reconstruction above
 // Selection is a FACE, not a size.
 constexpr double kTabTrimHeightPx    = 3.0;   // the selected tab's blue top
 constexpr double kTabBorderPx        = 1.0;   // side borders / the base line
-// The selected tab's top corners round at r = 5, and that is MEASURED, not
-// assumed: integrating the row_3_tab_selected.png corner's uncovered area
-// against a quarter-disc gives 1.453 px^2 in row 1 for r = 5 against the crop's
-// measured 1.453 (r = 4 predicts 1.204), and rows 0 and 2 agree to within a
-// hundredth. It also puts the tab in the same corner family as row 1's hover
-// pill and row 2's hover outline, both r = 5. The arc's uncovered pixels show
-// whatever is behind them, which here is the row ground the lane fill already
-// laid down.
-constexpr double kTabCornerRadiusPx  = 5.0;
+// (The corner radius, kTabCornerRadiusPx, and its two scaled readings — the
+// radius and the SPILL an unselected tab paints under its selected neighbour
+// — live in render.h beside the lane metrics, because the hover fade's damage
+// (tick_hover_fades) must cover the spill too and reads the same owner.)
 // (THE LOCK SLOT IS DELETED — architect 2026-08-14, "we should move the icon
 // out of the tab and into the icon row, then show the current tab's readonly
 // value". From 2026-08-01 every tab reserved a permanent pcmanfm-style
@@ -2269,10 +2264,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     const int min_w    = scaled_px(kTabMinWidthPx);
     const int trim_h   = std::max(1, scaled_px(kTabTrimHeightPx));
     const int line_w   = std::max(1, scaled_px(kTabBorderPx));
-    // ONE radius, three uses (the block above); nearbyint like every other
-    // scaled length, and its integer form is the spill's whole-pixel extent.
-    const double radius = std::nearbyint(kTabCornerRadiusPx * gui_scale_factor());
-    const int    spill  = static_cast<int>(radius);
+    // ONE radius, three uses (the block above) — render.h's two accessors,
+    // which the hover fade's damage reads too.
+    const double radius = tab_corner_radius_px();
+    const int    spill  = tab_spill_px();
 
     // THE WALK: tabs flush from the lane's left edge, adjacent, margin zero. A
     // tab's width is the LARGER of its two paddings around the shaped label and

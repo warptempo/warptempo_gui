@@ -5791,8 +5791,10 @@ struct AppState {
         // level advanced by the tick. KEYED TO THE BUTTON'S IDENTITY by
         // construction — one slot per roster button — so a tail can only
         // ever paint on the button that left it; it is cut when the button
-        // goes dead under it or stops being painted. Row 1's menu anchors
-        // never stamp one.
+        // goes dead under it — at the edge, or mid-tail by the tick, which
+        // reads `enabled` before each advance, so a re-enable revives no old
+        // tail — or stops being painted. Row 1's menu anchors never stamp
+        // one.
         HoverFade fade{};
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
@@ -6357,7 +6359,8 @@ struct AppState {
     // SESSION (`modal_dialog_fades_session`), so a fade outlives neither its
     // dialog nor a change of dialog: reset_modal_dialog_face_state drops them
     // with the face indices, and the tick drops a set whose session is no
-    // longer the one on screen.
+    // longer the one on screen and cuts a button's tail once the painter
+    // publishes that button dead.
     std::vector<HoverFade> modal_dialog_button_fades;
     HoverFade              modal_dialog_field_fade{};
     uint64_t               modal_dialog_fades_session = 0;

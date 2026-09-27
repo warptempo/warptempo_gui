@@ -7326,16 +7326,38 @@ void GuiInputHandler::stamp_redesign_button_hover_fade(RedesignButton id,
         app.hover_fades_running = true;
 }
 
+// THE RECT A ROSTER FADE FRAME DAMAGES — the face's own published rect, which
+// contains everything a tool button paints, EXCEPT ON A TAB: an unselected
+// tab's fill runs tab_spill_px() under its selected neighbour (paint_tab_row)
+// and shows through that tab's antialiased shared corner, so its fade lives
+// in those pixels too. A tab's damage therefore widens by the spill on both
+// sides — the spill runs toward whichever side the selected tab stands on,
+// and a selected tab repaints over its neighbour's spill — clipped to the tab
+// lane. The spill is render.h's owner, the painter's own quantity.
+static GuiRect redesign_button_fade_damage_rect(const AppState&  app,
+                                                RedesignButton  id,
+                                                const GuiRect&  r) {
+    if (!redesign_button_is_tab(id)) return r;
+    const GuiRect lane  = top_tab_row_area(app);
+    const int     spill = tab_spill_px();
+    const int     x0    = std::max(r.x - spill, lane.x);
+    const int     x1    = std::min(r.x + r.w + spill, lane.x + lane.w);
+    if (x1 <= x0) return r;
+    return GuiRect{x0, r.y, x1 - x0, r.h};
+}
+
 // THE HOVER FADES' CLOCK — the tick's one tenant for them (main.cpp, right
 // after the roster's hover recompute, on every tick past the startup load,
 // gestures included: a fade is time, not a pointer fact). ONE BIT WHEN IDLE:
 // with AppState::hover_fades_running false this returns at once, so a settled
 // GUI pays no walk and no repaint. While any fade runs it walks the three
 // fading surfaces, advances each running fade to the tick's clock and damages
-// THAT FACE'S OWN RECT, and only when its painted level changed — at most
-// kHoverFadeSteps repaints per fade, never one per tick (Android's loop has no
-// vsync pacing, so a per-tick damage would post at the tick's rate), and never
-// the whole strip the edge writers damage.
+// THAT FACE'S OWN PAINT — its published rect, a tab's widened by the spill it
+// paints under its neighbour (redesign_button_fade_damage_rect) — and only
+// when its painted level changed: at most kHoverFadeSteps repaints per fade,
+// never one per tick (Android's loop has no vsync pacing, so a per-tick
+// damage would post at the tick's rate), and never the whole strip the edge
+// writers damage.
 //
 // A FACE THAT IS GONE TAKES ITS FADE WITH IT, here as a second line behind
 // the surfaces' own drops: a roster button that publishes no rect (the bottom
@@ -7343,6 +7365,16 @@ void GuiInputHandler::stamp_redesign_button_hover_fade(RedesignButton id,
 // painted one is dropped whole, and a slot past the painted row's buttons is
 // cut; a close fade whose card is no longer painted is erased. So a tail can
 // never paint on a different button than the one that left it.
+//
+// A FACE THAT WENT DEAD UNDER ITS TAIL IS CUT, the edges' own rule carried to
+// the frames between them: before a roster or modal fade advances, the walk
+// reads the face's PAINTED enabled bit (RedesignButtonFace::enabled, the
+// modal row's published ModalDialogButton::enabled) and a dead face's fade is
+// cut to the settled look for its hover bit — at rest for a tail — and leaves
+// the running set, so no frame is spent on an animation the painters gate
+// off, and a face enabled again inside the interval has no old tail to
+// revive: its next hover edge starts fresh. A cut that changes the painted
+// level damages the face as an advance does.
 //
 // PAINT ONLY — the strictly-as-painted rule is untouched: nothing this writes
 // is read by a press, a cursor, a tooltip or a hit test (the rule is stated
@@ -7359,7 +7391,16 @@ void GuiInputHandler::tick_hover_fades() {
             hover_fade_cut(f.fade, f.hovered);
             continue;
         }
-        if (hover_fade_advance(f.fade, now)) viewport.invalidate_rect(f.rect);
+        const GuiRect damage = redesign_button_fade_damage_rect(
+            app, static_cast<RedesignButton>(i), f.rect);
+        if (!f.enabled) {
+            const int before = hover_fade_steps(f.fade);
+            hover_fade_cut(f.fade, f.hovered);
+            if (hover_fade_steps(f.fade) != before)
+                viewport.invalidate_rect(damage);
+            continue;
+        }
+        if (hover_fade_advance(f.fade, now)) viewport.invalidate_rect(damage);
         running = running || f.fade.running;
     }
 
@@ -7373,6 +7414,14 @@ void GuiInputHandler::tick_hover_fades() {
             if (!fd.running) continue;
             if (i >= dlg.buttons.size()) {
                 hover_fade_cut(fd, false);
+                continue;
+            }
+            if (!dlg.buttons[i].enabled) {
+                const int before = hover_fade_steps(fd);
+                hover_fade_cut(fd,
+                               static_cast<int>(i) == app.modal_dialog_hovered);
+                if (hover_fade_steps(fd) != before)
+                    viewport.invalidate_rect(dlg.buttons[i].rect);
                 continue;
             }
             if (hover_fade_advance(fd, now))

@@ -1751,6 +1751,29 @@ inline int tab_row_h_px() {
     return tab_row_content_h_px() + tab_row_margin_bottom_h_px();
 }
 
+// THE TABS' ONE CORNER RADIUS (Breeze's Frame_FrameRadius; paint_tab_row's
+// head carries the geometry): the selected tab's top corners, an unselected
+// tab's outer corner, and the SPILL — how far an unselected tab's fill runs
+// under its selected neighbour, the pixels that show through that tab's
+// antialiased shared corner. r = 5 is MEASURED, not assumed: integrating the
+// row_3_tab_selected.png corner's uncovered area against a quarter-disc gives
+// 1.453 px^2 in row 1 for r = 5 against the crop's measured 1.453 (r = 4
+// predicts 1.204), and rows 0 and 2 agree to within a hundredth. It also puts
+// the tab in the same corner family as row 1's hover pill and row 2's hover
+// outline, both r = 5. The arc's uncovered pixels show whatever is behind
+// them, which here is the row ground the lane fill already laid down.
+// TWO READERS, ONE OWNER: the painter, and the hover fade's damage
+// (tick_hover_fades), which must repaint the spill with the tab it belongs
+// to — a fading tab's colour lives in those pixels too.
+inline constexpr double kTabCornerRadiusPx = 5.0;
+inline double tab_corner_radius_px() {
+    return std::nearbyint(kTabCornerRadiusPx * gui_scale_factor());
+}
+// The spill's whole-pixel extent: the radius's integer form.
+inline int tab_spill_px() {
+    return static_cast<int>(tab_corner_radius_px());
+}
+
 // Authored pixel geometry of the ICON ROW — the top strip's lane 1 since
 // 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
@@ -2632,8 +2655,9 @@ inline int tooltip_damage_h_px() {
 // animation time at its last hover edge, so the level at any instant is
 // derived (hover_fade_time), never integrated per frame. The ONE clock is the
 // run loop's tick (GuiInputHandler::tick_hover_fades), which advances every
-// running fade's published `level` and damages a face's own rect only when
-// its PAINTED level changes — at most kHoverFadeSteps repaints per fade,
+// running fade's published `level` and damages a face's own paint (its rect;
+// a tab's widened by the spill under its neighbour) only when its PAINTED
+// level changes — at most kHoverFadeSteps repaints per fade,
 // which matters on Android where nothing paces the loop to the panel — and
 // does nothing but test one bit when no fade runs. The painters read `level`
 // through hover_fade_steps and nothing else.

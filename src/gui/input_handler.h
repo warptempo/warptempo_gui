@@ -1449,8 +1449,9 @@ struct GuiInputHandler {
     // model is at render.h's HoverFade). The roster's edge stamp, called by the
     // two writers above on every flip of a button's `hovered` bit; the tick's
     // advance (main.cpp), which is one bit test while no fade runs and damages
-    // a face's own rect only when its painted level changes. Both are paint
-    // state only — no input road reads a fade.
+    // a face's own paint (its rect, a tab's widened by its spill) only when
+    // its painted level changes, and cuts a face painted dead mid-tail. Both
+    // are paint state only — no input road reads a fade.
     void stamp_redesign_button_hover_fade(RedesignButton id, int64_t now);
     void tick_hover_fades();
 
