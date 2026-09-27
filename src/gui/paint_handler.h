@@ -909,16 +909,12 @@ private:
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
-    // TWO PAINT-TIME COLOUR OVERRIDES. The open flag editor's invalid-commit
-    // RED FLASH reaches its marker's stem (2026-08-01), so a flashing flag and
-    // its stem agree. It is applied here rather than published into the
+    // ONE PAINT-TIME COLOUR OVERRIDE, and one only (2026-08-01): the open flag
+    // editor's invalid-commit RED FLASH reaches its marker's stem, so a flashing
+    // flag and its stem agree. It is applied here rather than published into the
     // stash because that is how the flash face itself works — an override over
     // the resolved class, per frame, out of any cache (the definition carries
-    // the reasoning and the damage story). And THE FOCUSED STEM IS WHITE OVER
-    // THE INK (the architect's 2026-09-27 experiment): the one focused
-    // marker's stem paints kPlayheadStem on the rows where the blitted plate
-    // has ink under it, its own colour elsewhere; the flash wins over it (the
-    // definition carries the ink test and the basis argument).
+    // the reasoning and the damage story).
     //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag

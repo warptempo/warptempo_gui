@@ -3514,19 +3514,10 @@ struct FlagLaneRects {
 // second click surface of its marker; that surface is deleted — stems are
 // pointer-inert, the seventh glass ruling — so the stash is paint-only again
 // and `marker_index` serves the painter's identity bookkeeping alone.)
-// `focused` IS THE FOCUS AS THE PAINTER READ IT (the architect's 2026-09-27
-// experiment, the white-over-ink stem; the rule is at
-// GuiPaintHandler::paint_marker_stems): true on the ONE entry whose index is
-// the focus the pass was handed — app.last_selected_marker on the live
-// columns, app.history_mode.focus on the `h` diff lane (the focus alone, never
-// the `h` lane's selection, which shares the focus's face) — so the bit
-// promotes with the stems it describes and never names a row of the other
-// column or of the store behind the diff lane.
 struct MarkerStem {
     int      marker_index;
     double   x;
     GuiColor color;
-    bool     focused;
 };
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an
