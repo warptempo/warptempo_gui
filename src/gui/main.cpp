@@ -382,7 +382,7 @@ namespace {
 // outline — spanning both, so a gap there would have cut one asset through its
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
 // inside ONE lane, and the playhead's triangle became the aliased head (on the
-// ruler lane's bottom rows since 2026-09-23, paint_playhead_head_and_run). No seam is exempt any more — every seam (the
+// ruler lane's bottom rows since 2026-09-23, paint_ruler_row). No seam is exempt any more — every seam (the
 // window top|menu seam, TIGHT since 2026-09-09 — it was GAP 1's band
 // 2026-09-03..09 — menu|icon, tight and borderless since 2026-09-09 (the
 // menu|tab seam it replaced was tight from 2026-09-03 and GAP 1's band from
@@ -1053,7 +1053,7 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // (samples_visible), a whole number of frames. A frame in the song's last
     // half-column still rounds to grid point w, one past the last column, so
     // at the wall it is off the edge: the playhead shows only its ruler
-    // head's left half there (the half-head rule, paint_playhead_head_and_run), a marker
+    // head's left half there (the half-head rule, paint_ruler_row), a marker
     // only its flag's left border (the flag iterator's cull, render.cpp), and no
     // position nudge or drop at the playhead authors a marker there
     // (source_frame_off_right_edge, warp_frame_map_view.h, which reads this
@@ -1226,10 +1226,9 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's stem inside the waveform AND
     // its top-strip half above — the aliased head on the ruler lane's bottom
-    // rows (since 2026-09-23; the ruling is at the paint site,
-    // paint_playhead_head_and_run) and the column's run through the marker
-    // lane beneath it, under the flags. That top-strip half is where the
-    // cursor's non-waveform pixels live, and the envelope
+    // rows (since 2026-09-23; the ruling is at the paint site, paint_ruler_row)
+    // and the column's run through the marker lane beneath it. That top-strip
+    // half is where the cursor's non-waveform pixels live, and the envelope
     // covers the whole lane band above the waveform rather than tracking the
     // head's own rows, exactly as Viewport::invalidate_waveform_area (the
     // discrete moves' damage) starts at the window top.
@@ -2737,7 +2736,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE HOLD LAMP ON THE PLAYHEAD HEAD (architect 2026-09-24), the
         // roster comparator's own mechanism for one more stateful face: the
         // head paints white while AppState::camera_hold stands and grey when
-        // it does not (paint_playhead_head_and_run), and the bit flips inside camera
+        // it does not (paint_ruler_row), and the bit flips inside camera
         // writes that do not always damage the ruler lane — bare `c` on an
         // already-centred playhead arms it and moves nothing, the nudge
         // keeps it, the chokepoint clears it on writes that may not touch the
@@ -3421,7 +3420,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its ten keys describe the MACHINE, not the piece, so they live in
+    // Its six keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's
@@ -3467,17 +3466,6 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE FOUR MARKER CLASSES' BASES, the tuning phase's marker_color_* keys
-    // (architect 2026-09-26): installed ONCE here, before the first project
-    // loads and so before the first flag paints, and never again — the keys
-    // have no in-app writer, a retune is a config edit and a relaunch. That
-    // is why no cached surface needs a colour term (the contract at
-    // marker_palette, render.h).
-    set_marker_base_colors(MarkerBaseColors{
-        device_config.marker_color_warp,
-        device_config.marker_color_phase_reset,
-        device_config.marker_color_history_add,
-        device_config.marker_color_history_remove});
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

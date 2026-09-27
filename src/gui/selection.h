@@ -120,12 +120,9 @@ struct Selection {
     // selected-marker stem, because that stem was a SELECTION visual that could
     // appear, move or vanish with no other repaint. Every enabled marker stems,
     // always, so no stem appears or vanishes with the selection; a selected
-    // marker's stem wears its class's Sel fill and the focus's the playhead
-    // stem's white (resolve_marker_stem, render.cpp; architect 2026-09-26),
-    // and that colour change needs no
-    // owner here: the flag cache's selection
-    // fingerprint (the members and the focus, hash_selection) rebuilds the
-    // stash and its rebuild damages the waveform with the strip
+    // marker's stem BRIGHTENS with its flag (architect 2026-09-23), and that
+    // colour change needs no owner here: the flag cache's selection fingerprint
+    // rebuilds the stash and its rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp). The overlay owner above
     // stands.
 };

@@ -110,12 +110,9 @@ void Selection::damage_overlay_on_subject_change(
 // was a SELECTION cue that could appear, move or vanish with no other repaint
 // (a collapse that then refuses, a membership toggle across the 1<->2 line).
 // Every enabled marker stems, always, so a selection change moves no stem. It
-// does RECOLOUR one (architect 2026-09-23 and 2026-09-26: a selected marker's
-// stem wears its class's Sel fill and the focus's the playhead stem's white,
-// resolve_marker_stem), and that repaint is not the mutators' to owe: the
-// flag cache's selection
-// fingerprint (members and focus) misses, the rebuild
-// republishes the stash, and
+// does RECOLOUR one (architect 2026-09-23: a selected marker's stem wears its
+// flag's bright fill), and that repaint is not the mutators' to owe: the flag
+// cache's selection fingerprint misses, the rebuild republishes the stash, and
 // its own damage covers the waveform with the strip (maybe_rebuild_flag_cache,
 // waveform_cache.cpp). The phase-overlay pair above is untouched — its subject
 // really is the focus.
@@ -250,9 +247,8 @@ void Selection::collapse_to_focused() {
     // which the 2+ -> 1 case here triggers. (A collapse used to owe the
     // selected-marker stem's APPEAR a damage as well — the fine-tuning callers
     // can collapse then REFUSE and full-invalidate nothing — but no stem appears
-    // or vanishes with the selection any more, and a stem's recolour on a
-    // membership or focus change rides the flag cache rebuild's waveform
-    // damage.)
+    // or vanishes with the selection any more, and the selected stem's
+    // brightening rides the flag cache rebuild's waveform damage.)
     damage_overlay_on_subject_change(old_subject);
 }
 

@@ -5,7 +5,6 @@
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
-#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -18,17 +17,16 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (TEN keys since
-// 2026-09-26, when the four marker colour keys arrived after sync_path for
-// their tuning phase; the fuller count's succession —
+// set the shared scanner enforces after the loop (SIX keys since
+// 2026-09-26, when the lit plate's two ink keys `fg_color` / `bg_color` left
+// with the values constexpr in render.h; the fuller count's succession —
 // two, five, four, five, six, as many as seventeen with the waveform
 // picture's tunables of 2026-09-23/24, six, as many as eleven and then eight
-// on 2026-09-25, eight again with the tuning keys of 2026-09-25/26, six when
-// they closed — is the header's record and git's). THE ORDER IS THE
+// on 2026-09-25, eight again with the tuning keys of 2026-09-25/26 — is the
+// header's record and git's). THE ORDER IS THE
 // ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
 // projects_repo, projects_path, last_project, sync_path — the sixth placed
-// right after gui_scale (architect 2026-09-13), the four marker colour keys
-// after sync_path (2026-09-26). The scanner takes it as a
+// right after gui_scale (architect 2026-09-13). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -42,10 +40,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
-    "marker_color_warp",
-    "marker_color_phase_reset",
-    "marker_color_history_add",
-    "marker_color_history_remove",
 };
 
 } // namespace
@@ -59,30 +53,6 @@ std::string format_gui_scale_percent(int percent) {
 std::string format_max_waveform_height(int authored_px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", authored_px);
-    return std::string(buf);
-}
-
-GuiColor parse_config_colour(std::string_view v) {
-    // The grammar has admitted exactly `#` and six lower-case hex digits, so
-    // every digit maps and the value fits 24 bits.
-    uint32_t rgb = 0;
-    for (size_t i = 1; i < v.size(); ++i) {
-        const char c = v[i];
-        const uint32_t d = (c >= '0' && c <= '9')
-                               ? static_cast<uint32_t>(c - '0')
-                               : static_cast<uint32_t>(c - 'a' + 10);
-        rgb = (rgb << 4) | d;
-    }
-    return hex(rgb);
-}
-
-std::string format_config_colour(GuiColor c) {
-    const auto byte = [](double ch) {
-        return static_cast<unsigned>(std::nearbyint(ch * 255.0));
-    };
-    char buf[16];
-    std::snprintf(buf, sizeof(buf), "#%02x%02x%02x",
-                  byte(c.r), byte(c.g), byte(c.b));
     return std::string(buf);
 }
 
@@ -130,16 +100,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
-        } else if (k == "marker_color_warp") {
-            // The four colour keys through the one serializer, which writes
-            // the canonical lower-case spelling the reader demands.
-            s += format_config_colour(cfg.marker_color_warp);
-        } else if (k == "marker_color_phase_reset") {
-            s += format_config_colour(cfg.marker_color_phase_reset);
-        } else if (k == "marker_color_history_add") {
-            s += format_config_colour(cfg.marker_color_history_add);
-        } else if (k == "marker_color_history_remove") {
-            s += format_config_colour(cfg.marker_color_history_remove);
         }
         s += '\n';
     }
@@ -233,22 +193,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kSyncPathGrammarReason);
             }
             out.sync_path = value;
-            return {};
-        }
-        GuiColor* colour = key == "marker_color_warp" ? &out.marker_color_warp
-            : key == "marker_color_phase_reset" ? &out.marker_color_phase_reset
-            : key == "marker_color_history_add" ? &out.marker_color_history_add
-            : key == "marker_color_history_remove"
-                ? &out.marker_color_history_remove
-                : nullptr;
-        if (colour != nullptr) {
-            // `#` and six lower-case hex digits, one canonical spelling,
-            // through the one grammar owner in the header; then the one
-            // parser. No key constrains another.
-            if (!is_config_colour(value)) {
-                return bad_value(ln, key, value, kConfigColourGrammarReason);
-            }
-            *colour = parse_config_colour(value);
             return {};
         }
         return warptempo_parse::prefix_line_error(

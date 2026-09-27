@@ -3235,8 +3235,7 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // `separator_before` marks the one place the two categories part: the four
 // SIDECAR keys a hand edits (the metadata), then the five editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
-// `last_project` is the program's own and the four marker_color_* keys are
-// hand-edited, and none of them has a row).
+// `last_project` is the program's own and has no row).
 //
 // It lives here rather than in the painter because three domains read it — the
 // painter (labels, layout), the press claim (which key a click prefills) and
@@ -4753,7 +4752,7 @@ struct AppState {
     bool    camera_hold            = false;
     // THE HOLD LAMP'S LAST-SEEN BIT (architect 2026-09-24): the value of
     // camera_hold the per-tick face comparator (main.cpp) last damaged the
-    // ruler lane for, so the playhead head (paint_playhead_head_and_run) repaints white
+    // ruler lane for, so the playhead head (paint_ruler_row) repaints white
     // or grey on every flip of the bit — which the writers above spell no
     // damage for. Written by that comparator alone; read by nothing else.
     bool    camera_hold_lamp_last  = false;
@@ -5266,11 +5265,9 @@ struct AppState {
     // STEMS NEVER APPEAR OR VANISH WITH THE SELECTION (row 5, architect). Every
     // ENABLED marker of the active column stems, always
     // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash); a
-    // disabled marker stems never. A selected marker's stem wears its
-    // class's Sel fill and the focus's the playhead stem's white
-    // (kPlayheadStem; resolve_marker_stem, architect 2026-09-26), so
-    // selection's cue is the flags' bright addressed cells and the bright
-    // stems beneath them (THE FOCUS IS WHITE, render.h). The successive apparatus this
+    // disabled marker stems never. A selected marker's stem wears its flag's
+    // bright fill (architect 2026-09-23), so selection's cue is the flags'
+    // bright colour pair and the stems beneath them. The successive apparatus this
     // replaces is worth naming once, because each layer was deleted for the same
     // reason the next one was: the conditional stem's hover/pin arms
     // (harvested 2026-07-25 for always-on-for-a-singleton), then the singleton
@@ -5726,8 +5723,8 @@ struct AppState {
     // move on screen), so the stash that describes it promotes with it. The
     // rebuild's own damage is the full strip+waveform rect, so the promoting
     // frame repaints the whole lane and every stem. Every reader — the hit
-    // walk (topmost_flag_rect, app_state.cpp) and the stem painter — reads
-    // THESE promoted copies; nothing
+    // walk (topmost_flag_rect, app_state.cpp), the stem painter and the
+    // playhead's stem suppression — reads THESE promoted copies; nothing
     // reads the staged pair but the promote.
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
@@ -5738,9 +5735,11 @@ struct AppState {
     // into view from past either edge publishes no stem) — a disabled marker has no stem ever, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode means one
     // per diff flag, that lane's classes all stemming. Since the stems-inert
-    // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its one
-    // reader is the per-frame stem painter (GuiPaintHandler::
-    // paint_marker_stems), the pointer never reads it (hit_test_marker_stem is deleted —
+    // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its two
+    // readers are the per-frame stem painter (GuiPaintHandler::
+    // paint_marker_stems) and the playhead's white-stem suppression decider
+    // (GuiPaintHandler::playhead_stem_suppressed — a paint decision, not a
+    // surface), the pointer never reads it (hit_test_marker_stem is deleted —
     // the record is at its retired site far below), and only `flag_hit_rects`
     // still answers clicks.
     //
@@ -10338,7 +10337,11 @@ inline bool iteration_column_lit(const AppState& app, char column) {
 // and hand the arrows a bound to step on a marker the sweep never reads.
 // marker_walk_step (below) is one of its readers; another is
 // value_drag_target's bound arm (2026-09-10), which asks the same question
-// for the same reason — a drag must not step a bound on a flag showing none.
+// for the same reason — a drag must not step a bound on a flag showing none;
+// the third is the phase-reset lead-in ring's selection bit
+// (phase_reset_overlay_band, paint_handler.cpp, 2026-09-23), which must light
+// the ring exactly when the flag pass lights the reset's stem, and the pass's
+// bright-cell fallback turns on whether the addressed bound cell is painted.
 //
 // THE PAINTER SPELLS THE SAME COMPOSITION ACROSS ITS PARAMETER BOUNDARY, and
 // cannot call this: render_flags / render_phase_reset_flags take their store,
@@ -12273,8 +12276,8 @@ inline int active_marker_count(const AppState& a) {
 // THE ACTIVE COLUMN'S MARKER FRAME AT `idx` — the authored SOURCE frame, the
 // one field both columns share, and the NAVIGATION readers' one store
 // selector (architect 2026-09-15): the walk's seat and landing, the marker
-// reseat, the coincidence auto-select, the undo restore's visual tail and the
-// nudge face. It is the frame and nothing
+// reseat, the coincidence auto-select, the undo restore's visual tail, the
+// nudge face and the playhead stem suppression. It is the frame and nothing
 // else — every other field differs per column, and a reader wanting one binds
 // its own store. PRECONDITION: idx in [0, active_marker_count(a)); callers
 // bound it through that owner first.
