@@ -1,15 +1,17 @@
 #pragma once
 
 #include "failure.h"
+#include "render.h"    // GuiColor and kMarkerColor*Default, the marker keys' defaults
 
 #include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Six keys live here and nowhere else:
+// piece (architect 2026-08-27). Ten keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -23,12 +25,19 @@
 //   sync_path=<path>         the ABSOLUTE folder Synchronize to external
 //                            storage mirrors this project into, or EMPTY for
 //                            "not set up on this device" (external_sync.h)
+//   marker_color_warp=#rrggbb            the BASE of each marker class, for
+//   marker_color_phase_reset=#rrggbb     a TUNING PHASE (below): warp, phase
+//   marker_color_history_add=#rrggbb     reset, and the `h` view's added and
+//   marker_color_history_remove=#rrggbb  removed diff classes; the grammar
+//                                        at is_config_colour
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the waveform picture's keys stood after sync_path from 2026-09-23 until
 // the last of them left 2026-09-25, and the ink tuning keys stood there
-// 2026-09-25/26, below);
+// 2026-09-25/26, below; the four marker colour keys stand there since
+// 2026-09-26, in the order the lane's columns and the `h` view's two classes
+// are told in render.h);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -85,6 +94,19 @@
 // inks), closed by eye on #1b9e84 over #1c816b, now constexpr in render.h
 // (kWaveformForegroundInk over kWaveformInk). A config still carrying any of
 // them is unknown-key fatal, no migration.
+// THE FOUR MARKER COLOUR KEYS ARRIVED 2026-09-26 (architect), A TUNING PHASE
+// the architect may close by striking them: each marker class is ONE base
+// colour and its other three shades are derived in code (derive_marker_shades,
+// render.h's marker lane block, which owns the rule), so a retune is a config
+// edit and a relaunch. The live RED class is not keyed; it stays constexpr.
+// Like the colour keys before them they have NO IN-APP ROAD — not in the
+// settings editor, not a Settings dropdown row — and are read ONCE, at
+// startup, into the process-wide marker palette (set_marker_base_colors,
+// render.h), which nothing mutates after; every in-app commit carries them
+// through verbatim from the live struct. Both templates stamp the sampled
+// kdenlive category colours the classes wore as constants
+// (kMarkerColor*Default: #9b59b6, #f47750, #1abc9c, #da4453). A config
+// lacking any of them is missing-key fatal, no migration.
 // THE TWO LEVEL KEYS CAME AND WENT 2026-09-25 (architect):
 // `waveform_magnification_foreground_db` and
 // `waveform_magnification_background_db` (earlier the same day
@@ -112,7 +134,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the ten keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -124,8 +146,8 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// max_waveform_height, projects_repo, projects_path, last_project, sync_path)
-// and it is what
+// max_waveform_height, projects_repo, projects_path, last_project, sync_path,
+// then the four marker_color_* keys) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -151,11 +173,13 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
-// writes — it is the program's own.
+// writes — it is the program's own — and the four marker colour keys have
+// none either, being the tuning phase's hand-edited surface (with the app
+// quit, the R-6 rule above).
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// six.
+// ten.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -172,6 +196,10 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     std::string sync_path;
+    GuiColor    marker_color_warp           = kMarkerColorWarpDefault;
+    GuiColor    marker_color_phase_reset    = kMarkerColorPhaseResetDefault;
+    GuiColor    marker_color_history_add    = kMarkerColorHistoryAddDefault;
+    GuiColor    marker_color_history_remove = kMarkerColorHistoryRemoveDefault;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -244,6 +272,37 @@ inline constexpr const char* kGuiScaleGrammarReason =
     "must be an integer in [50, 350] in canonical spelling";
 inline constexpr const char* kMaxWaveformHeightGrammarReason =
     "must be an integer in [0, 9999] in canonical spelling";
+
+// THE COLOUR GRAMMAR — the ONE owner for the four marker_color_* keys
+// (architect 2026-09-26, the marker colours' tuning phase): exactly seven
+// characters, `#` then six LOWER-CASE hex digits, `#9b59b6`. One canonical
+// spelling, as each numeric key has one: `#9B59B6`, `9b59b6`, `#9b5` and
+// `#9b59b6ff` all refuse, because format_config_colour writes lower case and
+// nothing else, and a file this program wrote must read back byte for byte.
+// No alpha — the palette is opaque (render.h).
+inline constexpr bool is_config_colour(std::string_view v) {
+    if (v.size() != 7 || v[0] != '#') return false;
+    for (size_t i = 1; i < 7; ++i) {
+        const char c = v[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
+    }
+    return true;
+}
+
+// The colour keys' reason, spelled once for the config reader's `bad_value`
+// line (its one reader — the keys have no editor).
+inline constexpr const char* kConfigColourGrammarReason =
+    "must be '#' and six lower-case hex digits";
+
+// THE ONE PARSER for a colour key's value: a value is_config_colour admits,
+// as the GuiColor hex() builds from it (each channel n/255 exactly). Asked by
+// the config reader alone, after the grammar.
+GuiColor parse_config_colour(std::string_view v);
+
+// THE ONE SERIALIZER: `#rrggbb`, lower case, each channel rounded to a byte
+// with std::nearbyint — exact for every colour parse_config_colour builds, so
+// the round trip is byte-exact. The config writer's alone.
+std::string format_config_colour(GuiColor c);
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -464,7 +523,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
+// THREE CALL SITES CARRY THE SIX KEY COMMITS (the four marker colour keys
+// have none: every write carries them verbatim from the live struct), and
+// this is their inventory
 // (re-greped 2026-09-13 with the sixth key):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves four keys —
@@ -485,7 +546,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path and a blank last_project),
+// sync_path, a blank last_project and the four kMarkerColor*Default bases),
 // so a first run on either device lands a
 // file that is
 // already right for it and the user edits

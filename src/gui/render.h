@@ -103,9 +103,14 @@ struct TrimRange {
 // constant here and in the redesign blocks below is constexpr, there are no
 // user-settable colors, nothing is read from ~/.config, and a retune is a
 // recompile. Every painted surface in the product takes its value from one of
-// these constants, WITH NO EXCEPTION: the waveform's inks were device-config
-// keys for short tuning phases (2026-09-25/26) and are constexpr at row 6
-// below, on the values the architect closed them on by eye.
+// these constants, WITH ONE EXCEPTION, A TUNING PHASE (architect 2026-09-26):
+// the BASES of the four marker classes — warp, phase reset, and the `h`
+// view's added and removed — are device-config keys, installed once at
+// startup into the process-wide marker palette (marker_palette(), the marker
+// lane block below), each class's other three shades derived in code. The
+// waveform's inks were device-config keys for short tuning phases
+// (2026-09-25/26) and are constexpr at row 6 below, on the values the
+// architect closed them on by eye.
 //
 // WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
 // residue. The palette used to be 23 MUTABLE globals overwritten once at startup
@@ -710,10 +715,200 @@ inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 //
 // The RED crop is 56x17 and supplies COLORS ONLY — its dimensions are the
 // regular class's (the architect's own instruction).
-inline constexpr GuiColor kMarkerFlagFill        = hex(0x9B59B6);
-inline constexpr GuiColor kMarkerFlagEdge        = hex(0x563165);
-inline constexpr GuiColor kMarkerFlagFillSel     = hex(0xC974ED);
-inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
+//
+// ONE BASE PER MARKER CLASS, THE OTHER THREE SHADES DERIVED (architect
+// 2026-09-26). A class is ONE colour, its rest FILL; its top EDGE, its
+// SELECTED fill and its selected edge follow from it by kdenlive's own rule,
+// which is Qt's QColor arithmetic:
+//   fill      = base
+//   edge      = QColor(fill).darker(180)
+//   fill_sel  = QColor(fill).lighter(130)
+//   edge_sel  = QColor(fill_sel).darker(180)
+// derive_marker_shades is the one owner and it is QColor's own INTEGER
+// algorithm, not an HSV approximation: 16-bit channels (byte x 257), toHsv
+// in float with the hue in centidegrees and s, v in 0..65535, lighter and
+// darker scaling v in integers (lighter spilling any overflow past 65535 out
+// of the saturation), back to 16-bit RGB, and to a byte through Qt's own
+// divide by 257. edge_sel is taken from fill_sel's 16-bit value, as a QColor
+// chain takes it. So derived, the four sampled crop ladders (purple, red,
+// orange, green: sixteen values) are reproduced EXACTLY, pinned by
+// static_asserts in render.cpp; a chain through bytes misses two of them by
+// one.
+//
+// THE BASES OF FOUR CLASSES ARE DEVICE-CONFIG KEYS FOR A TUNING PHASE
+// (architect 2026-09-26; the schema is device_config.h's): marker_color_warp,
+// marker_color_phase_reset, marker_color_history_add and
+// marker_color_history_remove, each defaulting to the sampled kdenlive
+// category colour its class wore as a constant (kMarkerColor*Default below).
+// gui_main installs them ONCE at startup, before the first project loads,
+// through set_marker_base_colors, and nothing mutates the palette after — so
+// no cached surface can hold a stale shade and no fingerprint carries colour;
+// every reader asks marker_palette() at paint time. Contrast figures in this
+// block are at the defaults. THE RED CLASS IS NOT IN THE PHASE: it stays
+// constexpr, derived at compile time from #da4453 (kMarkerRedShades, below).
+struct MarkerShades {
+    GuiColor fill;
+    GuiColor edge;
+    GuiColor fill_sel;
+    GuiColor edge_sel;
+};
+
+namespace qcolor_shade {
+
+// QColor's own storage: 16-bit RGB channels, and HSV with the hue in
+// centidegrees (65535 = achromatic) and s, v in 0..65535.
+struct Rgb16 { int r; int g; int b; };
+struct Hsv16 { int h; int s; int v; };
+
+inline constexpr float abs_f(float x) { return x < 0.0f ? -x : x; }
+// qRound on a float.
+inline constexpr int round_f(float x) {
+    return x >= 0.0f ? static_cast<int>(x + 0.5f)
+                     : static_cast<int>(x - 0.5f);
+}
+// qFuzzyCompare on floats.
+inline constexpr bool fuzzy_equal(float a, float b) {
+    const float m = abs_f(a) < abs_f(b) ? abs_f(a) : abs_f(b);
+    return abs_f(a - b) * 100000.0f <= m;
+}
+
+// QColor::toHsv from Rgb.
+inline constexpr Hsv16 to_hsv(Rgb16 c) {
+    const float r = static_cast<float>(c.r) / 65535.0f;
+    const float g = static_cast<float>(c.g) / 65535.0f;
+    const float b = static_cast<float>(c.b) / 65535.0f;
+    const float mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+    const float mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+    const float delta = mx - mn;
+    Hsv16 o{0, 0, round_f(mx * 65535.0f)};
+    if (abs_f(delta) <= 0.00001f) {   // qFuzzyIsNull: achromatic
+        o.h = 65535;
+        o.s = 0;
+        return o;
+    }
+    o.s = round_f((delta / mx) * 65535.0f);
+    float hue = 0.0f;
+    if (fuzzy_equal(r, mx)) {
+        hue = (g - b) / delta;
+    } else if (fuzzy_equal(g, mx)) {
+        hue = 2.0f + (b - r) / delta;
+    } else {
+        hue = 4.0f + (r - g) / delta;
+    }
+    hue *= 60.0f;
+    if (hue < 0.0f) hue += 360.0f;
+    o.h = round_f(hue * 100.0f);
+    return o;
+}
+
+// QColor::toRgb from Hsv.
+inline constexpr Rgb16 to_rgb(Hsv16 c) {
+    if (c.s == 0 || c.h == 65535) return Rgb16{c.v, c.v, c.v};
+    const float h = c.h == 36000 ? 0.0f : static_cast<float>(c.h) / 6000.0f;
+    const float s = static_cast<float>(c.s) / 65535.0f;
+    const float v = static_cast<float>(c.v) / 65535.0f;
+    const int   i = static_cast<int>(h);
+    const float f = h - static_cast<float>(i);
+    const float p = v * (1.0f - s);
+    const auto ch = [](float x) { return round_f(x * 65535.0f); };
+    if (i & 1) {
+        const float q = v * (1.0f - (s * f));
+        switch (i) {
+            case 1:  return Rgb16{ch(q), ch(v), ch(p)};
+            case 3:  return Rgb16{ch(p), ch(q), ch(v)};
+            default: return Rgb16{ch(v), ch(p), ch(q)};   // 5
+        }
+    }
+    const float t = v * (1.0f - (s * (1.0f - f)));
+    switch (i) {
+        case 0:  return Rgb16{ch(v), ch(t), ch(p)};
+        case 2:  return Rgb16{ch(p), ch(v), ch(t)};
+        default: return Rgb16{ch(t), ch(p), ch(v)};       // 4
+    }
+}
+
+// QColor::lighter and QColor::darker for a factor of at least 100 (the two
+// this file asks are 130 and 180).
+inline constexpr Rgb16 lighter(Rgb16 c, int factor) {
+    Hsv16 hsv = to_hsv(c);
+    int v = (factor * hsv.v) / 100;
+    if (v > 65535) {
+        hsv.s -= v - 65535;
+        if (hsv.s < 0) hsv.s = 0;
+        v = 65535;
+    }
+    hsv.v = v;
+    return to_rgb(hsv);
+}
+inline constexpr Rgb16 darker(Rgb16 c, int factor) {
+    Hsv16 hsv = to_hsv(c);
+    hsv.v = (hsv.v * 100) / factor;
+    return to_rgb(hsv);
+}
+
+// A GuiColor's byte (every palette colour is n/255 exactly), and QColor's
+// setRgb widening of it; then qt_div_257, QColor::red()'s narrowing back.
+inline constexpr int byte_of(double channel) {
+    return static_cast<int>(channel * 255.0 + 0.5);
+}
+inline constexpr Rgb16 widen(GuiColor c) {
+    return Rgb16{byte_of(c.r) * 257, byte_of(c.g) * 257, byte_of(c.b) * 257};
+}
+inline constexpr int div_257(int x) { return (x - (x >> 8) + 0x80) >> 8; }
+inline constexpr GuiColor narrow(Rgb16 c) {
+    return GuiColor{static_cast<double>(div_257(c.r)) / 255.0,
+                    static_cast<double>(div_257(c.g)) / 255.0,
+                    static_cast<double>(div_257(c.b)) / 255.0};
+}
+
+} // namespace qcolor_shade
+
+// THE ONE DERIVATION of a marker class's four shades from its base (the rule
+// above). constexpr, so the red class derives at compile time and the four
+// keyed classes at install.
+inline constexpr MarkerShades derive_marker_shades(GuiColor base) {
+    using namespace qcolor_shade;
+    const Rgb16 fill     = widen(base);
+    const Rgb16 fill_sel = lighter(fill, 130);
+    return MarkerShades{narrow(fill), narrow(darker(fill, 180)),
+                        narrow(fill_sel), narrow(darker(fill_sel, 180))};
+}
+
+// THE FOUR KEYS' DEFAULTS — the kdenlive category colours sampled off the
+// crops (the WARP class's purple here, the rest at their classes' blocks
+// below): what both first-run templates stamp and what the palette holds
+// until gui_main installs the config's.
+inline constexpr GuiColor kMarkerColorWarpDefault           = hex(0x9B59B6);
+inline constexpr GuiColor kMarkerColorPhaseResetDefault     = hex(0xF47750);
+inline constexpr GuiColor kMarkerColorHistoryAddDefault     = hex(0x1ABC9C);
+inline constexpr GuiColor kMarkerColorHistoryRemoveDefault  = hex(0xDA4453);
+
+// The four keyed bases, as the device config carries them.
+struct MarkerBaseColors {
+    GuiColor warp;
+    GuiColor phase_reset;
+    GuiColor history_add;
+    GuiColor history_remove;
+};
+
+// The four keyed classes' derived shades — the process-wide marker palette.
+struct MarkerPalette {
+    MarkerShades warp;
+    MarkerShades phase_reset;
+    MarkerShades history_add;
+    MarkerShades history_remove;
+};
+
+// INSTALLED ONCE, NEVER MUTATED: gui_main calls set_marker_base_colors with
+// the device config's four bases at startup, beside set_gui_scale_percent and
+// before the first project loads, and nothing calls it again (the keys have
+// no in-app writer; a retune is a config edit and a relaunch). It derives
+// each class through derive_marker_shades. Until then marker_palette() holds
+// the defaults' derivation, so a process that never installs paints the
+// defaults. marker_palette() is the one reader road for the warp,
+// phase-reset and history classes' shades.
+void                 set_marker_base_colors(const MarkerBaseColors& bases);
+const MarkerPalette& marker_palette();
 
 // THE RED CLASS HAS A REST PAIR AND A SELECTED PAIR, LIKE EVERY OTHER CLASS
 // (architect 2026-09-16). Until then red was ONE pair — the BRIGHT one below —
@@ -727,14 +922,15 @@ inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
 // no new term: a selected red marker lifts exactly as a selected calm one
 // does, its other cells staying calm.
 //
-// PROVENANCE IS THE HISTORY VIEW'S OWN REMOVED LADDER: the dull pair is the
-// UNSELECTED removed crop's (row_5_lane_3_marker_red_unselected.png) and the
-// bright pair the SELECTED one's, which is the ladder the live class was a
-// mixture of before this ruling (the record is at kHistoryRemoved* below,
-// where the audit that mixture was queued for is closed). The four values are
-// SPELLED HERE as this class's own constants and the history view spells its
-// own: two facts that agree, not one fact referenced twice — the hard-coded
-// rule.
+// PROVENANCE IS THE REMOVED CROPS' LADDER, AND THE CLASS IS CONSTEXPR: its
+// base is #da4453, the UNSELECTED removed crop's fill
+// (row_5_lane_3_marker_red_unselected.png), and derive_marker_shades gives
+// the other three at compile time — exactly the unselected crop's edge and
+// the SELECTED crop's pair. The red class is NOT a device key (architect
+// 2026-09-26): the history view's removed class has its own key
+// (marker_color_history_remove), whose default is the same base, and a
+// retune of that key moves the `h` lane alone — two facts that agree at the
+// default, not one fact referenced twice.
 //
 // THE BRIGHT PAIR IS ALSO THE PRODUCT'S ONE INVALID RED — the red flash a
 // refused commit paints, on the flag editor's unrolled box and on the dialog
@@ -743,10 +939,12 @@ inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
 // kModalFieldGround below): the invalid red IS the bright red by ruling, one
 // fact with one constant, so a retune of the bright pair moves the flash with
 // it and the two can never drift.
-inline constexpr GuiColor kMarkerFlagFillRed     = hex(0xDA4453);
-inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x79262E);
-inline constexpr GuiColor kMarkerFlagFillRedSel  = hex(0xFF6C7B);
-inline constexpr GuiColor kMarkerFlagEdgeRedSel  = hex(0x8E3C44);
+inline constexpr MarkerShades kMarkerRedShades =
+    derive_marker_shades(hex(0xDA4453));
+inline constexpr GuiColor kMarkerFlagFillRed     = kMarkerRedShades.fill;
+inline constexpr GuiColor kMarkerFlagEdgeRed     = kMarkerRedShades.edge;
+inline constexpr GuiColor kMarkerFlagFillRedSel  = kMarkerRedShades.fill_sel;
+inline constexpr GuiColor kMarkerFlagEdgeRedSel  = kMarkerRedShades.edge_sel;
 // The RED class's REST STEM is its own constant: #da4453 is the architect's own
 // explicit value for it. THE STEM FOLLOWS THE SELECTION BIT AS THE FILL DOES
 // (architect 2026-09-23, reversing the calm-stem rule: "make the stems the same
@@ -756,10 +954,10 @@ inline constexpr GuiColor kMarkerFlagEdgeRedSel  = hex(0x8E3C44);
 // class AND the selection bit for the stem exactly as for the fill, so a
 // selected red marker stems in kMarkerFlagFillRedSel and a resting one in this
 // constant, and every other class stems in its column's pair's fill, bright
-// when selected. Since 2026-09-16 this constant EQUALS the red class's rest
-// fill, by coincidence of provenance rather than by derivation — both are the
-// unselected removed crop's fill, arrived at separately — so it stays its own
-// constant and a retune of one is not a retune of the other.
+// when selected. This constant EQUALS the red class's base, by coincidence of
+// provenance rather than by derivation — both are the unselected removed
+// crop's fill, arrived at separately — so it stays its own constant and a
+// retune of one is not a retune of the other.
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
 // THE SEAM COLUMN between a flag box and the cell to its right is a 1px
@@ -776,8 +974,8 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
 // THE PHASE-RESET FLAG BOX'S PAIRS — ORANGE, AGAIN SINCE 2026-09-26
 // (architect): the phase-reset column's flag box — default and selected
-// classes, and the disabled blend of both — paints in the orange of the
-// architect's own choosing. THE SUCCESSION: Breeze's highlight blue 2026-09-15,
+// classes, and the disabled blend of both — paints in orange by default,
+// the base now the marker_color_phase_reset key's. THE SUCCESSION: Breeze's highlight blue 2026-09-15,
 // orange 2026-09-16, blue 2026-09-17, orange again 2026-09-26. THE PALETTE
 // HOLDS TWO COLUMNS (architect 2026-09-23): the warp column's purple and this
 // orange, each through the one class ladder (FlagColumnFace,
@@ -786,14 +984,16 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // away from: an error on a regular view is meant to be worked away, so the two
 // never mean the same thing for long.
 //
-// PROVENANCE: ALL FOUR ARE SAMPLED, none derived — from the architect's own
-// crops tmp/keep/screenshots/orange-unselected.png and
+// PROVENANCE OF THE DEFAULT: the architect's own crops
+// tmp/keep/screenshots/orange-unselected.png and
 // tmp/keep/screenshots/orange-selected.png (56x17 each, the red crop's own
 // dimensions), read the way every marker crop in this block is read: ROW 0 is
 // the 1px TOP EDGE, rows 1+ are the FILL, and the crops' own edge column
 // samples to kMarkerFlagBorder #131516 — one more agreeing sample.
 //   unselected  fill #f47750  edge #88422c
 //   selected    fill #ffac92  edge #8e5f51
+// The unselected fill is kMarkerColorPhaseResetDefault; derive_marker_shades
+// reproduces the other three exactly.
 //
 // RED STAYS RED ON EVERY COLUMN (kMarkerFlagFillRed / kMarkerFlagEdgeRed and
 // their Sel pair, resolve_flag_face's first live arm, asked before the
@@ -802,8 +1002,8 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // (architect 2026-09-23). THE PHASE-RESET LEAD-IN RING on the waveform ALWAYS
 // WEARS THE HIGHLIGHT SHADE OF ITS RESET'S CLASS (architect 2026-09-26: only
 // a selected marker can have the overlay, superseding the 2026-09-23 rule
-// that the ring brightened with its stem): the Sel fill kPhaseResetFlagFillSel,
-// or kMarkerFlagFillRedSel for a reset in the column's red set
+// that the ring brightened with its stem): the column's Sel fill
+// (marker_palette().phase_reset.fill_sel), or kMarkerFlagFillRedSel for a reset in the column's red set
 // (paint_phase_reset_overlay_ring, paint_handler.cpp, through
 // phase_reset_ring_color). THE BOUND (hop) CELLS ON
 // THIS COLUMN WEAR THIS PAIR TOO (architect 2026-09-21: the cells wear their
@@ -814,10 +1014,6 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // the same class ladder as the reset's own flag box (disabled > red >
 // default, the addressed cell bright in the Sel pair). The argument stays
 // required, never defaulted (warp is never the unmarked default).
-inline constexpr GuiColor kPhaseResetFlagFill    = hex(0xF47750);
-inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x88422C);
-inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0xFFAC92);
-inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x8E5F51);
 
 // THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
 // (architect 2026-08-20, and it is a MEASUREMENT rather than a taste call: he
@@ -838,8 +1034,8 @@ inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x8E5F51);
 // surfaces are the only SATURATED FILLS the product paints text on. Two facts,
 // two constants.
 //
-// WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
-// replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
+// WHAT IT BUYS, per class at the default bases (black against the fill,
+// versus the #fcfcfc it replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
 // gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, the
 // red class 4.93 vs 4.15 at rest and 7.68 vs 2.66 selected, the PHASE-RESET
 // column's orange 7.60 vs 2.69 and 11.6 vs 1.77 selected, the diff lane's
@@ -903,45 +1099,37 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 //   green selected    fill #22f4cb  edge #138871
 //   red   unselected  fill #da4453  edge #79262e
 //   red   selected    fill #ff6c7b  edge #8e3c44
+// The two unselected fills are the defaults of the classes' keys,
+// marker_color_history_add and marker_color_history_remove
+// (kMarkerColorHistoryAddDefault / kMarkerColorHistoryRemoveDefault), and
+// derive_marker_shades reproduces the other six exactly; the painter reads
+// marker_palette().history_add / .history_remove.
 //
 // SELECTION HERE IS THE MODE'S OWN FOCUS — at most one diff flag, set by a plain
 // click on it — and it is the same color swap the live lane's selection is,
-// which is why the crops come in pairs and both pairs are constants.
+// which is why the crops come in pairs.
 //
 // THE DISABLED AXIS RIDES OVER THESE FOUR PAIRS (architect 2026-08-22) with no
 // fifth pair and no constant of its own: a half whose line is disabled in its own
 // side's commit damps the pair the swap above already chose, through the LIVE
 // lane's mix owner at kMarkerDisabledMix over kRedesignContentGround. A recorded
 // DERIVATION rather than a measurement — no crop shows a disabled diff flag, so
-// what these eight values pin down is this mode's LIVE ladder exactly as
+// what the eight sampled values pin down is this mode's LIVE ladder exactly as
 // measured, and the dimmed rendition is the marker lane's own rule reaching a
 // second set of inks.
 //
-// THE RED PAIR IS SAMPLED AFRESH RATHER THAN REUSED, deliberately, even though
-// its values now coincide with the live red class's pair for pair: the two are
-// TWO FACTS THAT AGREE, each spelled at its own constant, which is this
-// palette's hard-coded rule — a retune of one is not a retune of the other.
-// THE AUDIT THIS PARAGRAPH QUEUED IS CLOSED (architect 2026-09-16): the live
-// class used to be a MIXTURE of the two red crops — kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed held the SELECTED crop's pair and kMarkerStemRed the
-// UNSELECTED crop's fill, so three constants could not be re-read as a ladder
-// — and the live class now carries BOTH crops as its rest pair and its
-// selected pair, read on the selection bit exactly as this mode's focus swap
-// reads its own. THE STEM FOLLOWS THE SAME SWAP (architect 2026-09-23, the
+// THE REMOVED CLASS IS NOT THE LIVE RED CLASS, deliberately, even though at
+// the default they coincide shade for shade: the live red class is constexpr
+// (kMarkerRedShades) and this one is its key's, TWO FACTS THAT AGREE at the
+// default — a retune of one is not a retune of the other. Both carry the two
+// red crops as a rest pair and a selected pair, read on the selection bit
+// exactly as this mode's focus swap reads its own. THE STEM FOLLOWS THE SAME SWAP (architect 2026-09-23, the
 // live lane's rule reaching this one so the two ladders agree on what
 // selection does to a stem): a focused or selected diff flag stems in its
 // class's Sel fill, a resting one in the class's rest fill.
 //
 // THE GREENS ARE THIS VIEW'S ALONE, so a live flag can never read as a diff
 // flag. Nothing outside this mode paints them.
-inline constexpr GuiColor kHistoryAddedFill      = hex(0x1ABC9C);
-inline constexpr GuiColor kHistoryAddedEdge      = hex(0x0E6857);
-inline constexpr GuiColor kHistoryAddedFillSel   = hex(0x22F4CB);
-inline constexpr GuiColor kHistoryAddedEdgeSel   = hex(0x138871);
-inline constexpr GuiColor kHistoryRemovedFill    = hex(0xDA4453);
-inline constexpr GuiColor kHistoryRemovedEdge    = hex(0x79262E);
-inline constexpr GuiColor kHistoryRemovedFillSel = hex(0xFF6C7B);
-inline constexpr GuiColor kHistoryRemovedEdgeSel = hex(0x8E3C44);
 
 // THE BOX'S 1px LEFT BORDER (architect 2026-08-02). COLUMN 0 of all three
 // marker crops is #131516 for the crop's whole height: identical in the
@@ -991,7 +1179,7 @@ inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 // THIS FRACTION IS THE SURFACES' — fill, top edge and left border, on the flag,
 // the cells AND, since 2026-08-22, the `h` view's DIFF FLAGS, whose halves
 // dim by their own commit side's disable bit through these same expressions over
-// the kHistoryAdded*/kHistoryRemoved* inks (render_history_diff_flags owns that
+// the history classes' shades (render_history_diff_flags owns that
 // ruling; the derivation is the live lane's, applied to another set of inks, so
 // no constant of its own was born). The LABEL took this fraction too until
 // 2026-08-20 and takes its own now (the constant directly below); the surfaces
@@ -1044,7 +1232,7 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 //
 // Row 6 itself took only the ground and the ink; the waveform area's OTHER
 // tunables did not outlast the same day's work: the region highlight re-derived
-// onto kWaveformRegionCanvas, the phase-reset overlay ring onto kMarkerFlagFill,
+// onto kWaveformRegionCanvas, the phase-reset overlay ring onto the warp flag fill,
 // the marker classes onto the row-5 kMarkerFlag* constants, and the trim lane
 // onto its own sampled surfaces. THE WHOLE TUNABLE SYSTEM RETIRED THE NEXT DAY
 // (2026-08-02) — every key above is deleted along with the loader and the config
@@ -1067,7 +1255,7 @@ inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 // THE LIT PLATE'S FOREGROUND, the inner bar's ink (architect 2026-09-26,
 // closing the tuning phase by eye): DERIVED, not sampled — the 1:1 blend of
 // kWaveformInk (28, 129, 107) and kdenlive's teal marker category #1abc9c
-// (26, 188, 156), the same sampled byte kHistoryAddedFill carries, each
+// (26, 188, 156), the sampled byte kMarkerColorHistoryAddDefault carries, each
 // channel through std::nearbyint (round half to even): (27, 158.5 -> 158,
 // 131.5 -> 132). The full teal read "a little bright" and dulled the
 // unmagnified plate beside it; the half blend is "less tiring on long
@@ -3513,9 +3701,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              2026-09-23); border kMarkerFlagBorder undamped, like every
 //              live class. RED STAYS RED ON BOTH COLUMNS — the column
 //              fork below never reaches this arm.
-//   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box and its
-//              bound cells, or
-//              kPhaseResetFlagFill / kPhaseResetFlagEdge on the PHASE-RESET
+//   Otherwise: the warp shades' fill / edge (marker_palette().warp) on the
+//              WARP flag box and its bound cells, or the phase-reset
+//              shades' (marker_palette().phase_reset) on the PHASE-RESET
 //              flag box and its bound cells (architect 2026-09-21: the cells
 //              wear their own column's hue, superseding the 2026-09-15
 //              purple on either column) (`FlagColumnFace`,
@@ -3555,7 +3743,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // is bright instead, so a selected marker always shows its selection, and
 // shows it once: while a field stands, the FIELD is where its own cell's
 // brightness lives. The rule is stated once at
-// the selected pair's palette block (kMarkerFlagFillSel) and applies on both
+// the marker lane's palette block (the selection swap) and applies on both
 // columns — a phase reset's bound cells are cells too. Disabled and red
 // blend cell by cell through the same ladders; the border reads the class
 // alone and the stem the flag box's face, so it brightens exactly when the
@@ -3846,7 +4034,8 @@ void render_phase_reset_flags(cairo_t* cr,
 // asks the one class ladder (resolve_flag_face, render.cpp) for a live
 // reset's SELECTED stem rather than restating it, which IS the bright fill:
 // kMarkerFlagFillRedSel when `red` (the column's red set,
-// phase_reset_red_flag_set_cached), kPhaseResetFlagFillSel otherwise — the
+// phase_reset_red_flag_set_cached), the column's Sel fill otherwise
+// (marker_palette().phase_reset.fill_sel) — the
 // colour the reset's own stem wears while its payload is the addressed cell.
 // No disabled arm, a disabled reset painting neither stem nor ring.
 GuiColor phase_reset_ring_color(bool red);

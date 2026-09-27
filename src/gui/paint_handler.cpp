@@ -5792,7 +5792,8 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // (architect 2026-09-26: only a selected marker can have the overlay,
     // superseding the 2026-09-23 rule that the ring brightened with its stem):
     // kMarkerFlagFillRedSel when the reset is in the column's red set
-    // (band.red), kPhaseResetFlagFillSel otherwise — the bright fill a
+    // (band.red), the phase-reset column's Sel fill otherwise
+    // (marker_palette().phase_reset.fill_sel) — the bright fill a
     // selected reset's stem wears. phase_reset_ring_color asks the one class
     // ladder for that selected stem rather than restating it. DAMAGE: this
     // pass paints live in on_redraw from app state, never from a cached

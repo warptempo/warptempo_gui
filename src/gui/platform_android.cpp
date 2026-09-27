@@ -549,6 +549,13 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
+    // THE FOUR MARKER CLASSES' BASES, the tuning phase's defaults (architect
+    // 2026-09-26; the rule at render.h's marker lane block), the same on both
+    // templates: the sampled kdenlive category colours.
+    cfg.marker_color_warp           = kMarkerColorWarpDefault;
+    cfg.marker_color_phase_reset    = kMarkerColorPhaseResetDefault;
+    cfg.marker_color_history_add    = kMarkerColorHistoryAddDefault;
+    cfg.marker_color_history_remove = kMarkerColorHistoryRemoveDefault;
     return cfg;
 }
 

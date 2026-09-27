@@ -1233,10 +1233,10 @@ struct FlagFace {
 // WHICH COLUMN'S DEFAULT/SELECTED PAIR THIS FACE WEARS (architect 2026-09-15,
 // retold the same day on the naming-symmetry ruling: warp is never the
 // unmarked default, so this is a REQUIRED argument at every call, never a
-// defaulted bool). The phase-reset flag box paints in the column's ORANGE —
-// all four sampled from the architect's crops
-// (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
-// box and the warp column's bound cells stay on kMarkerFlagFill's purple,
+// defaulted bool). The phase-reset flag box paints in the column's shades
+// (marker_palette().phase_reset, orange at the default, render.h); the warp
+// flag box and the warp column's bound cells stay on the warp shades (purple
+// at the default),
 // and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS ORANGE (architect
 // 2026-09-21, superseding the 2026-09-15 purple-on-either-column choice: the
 // cells wear their own column's hue) — every bound-cell call site passes the
@@ -1250,18 +1250,12 @@ enum class FlagColumnFace { Warp, PhaseReset };
 // below cannot pick differently.
 static void flag_column_pair(FlagColumnFace column_face, bool selected,
                              GuiColor& fill, GuiColor& edge) {
-    switch (column_face) {
-        case FlagColumnFace::Warp:
-            fill = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
-            edge = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
-            return;
-        case FlagColumnFace::PhaseReset:
-            fill = selected ? kPhaseResetFlagFillSel : kPhaseResetFlagFill;
-            edge = selected ? kPhaseResetFlagEdgeSel : kPhaseResetFlagEdge;
-            return;
-    }
-    fill = kMarkerFlagFill;
-    edge = kMarkerFlagEdge;
+    const MarkerPalette& palette = marker_palette();
+    const MarkerShades& shades = column_face == FlagColumnFace::PhaseReset
+                                     ? palette.phase_reset
+                                     : palette.warp;
+    fill = selected ? shades.fill_sel : shades.fill;
+    edge = selected ? shades.edge_sel : shades.edge;
 }
 
 FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
@@ -1488,8 +1482,8 @@ void render_flag_boxes_impl(
     // WHICH COLUMN'S FLAG BOX THIS IS, REQUIRED rather than defaulted (the
     // naming-symmetry ruling: warp is never the unmarked default) — render_flags
     // passes `FlagColumnFace::Warp`, render_phase_reset_flags passes
-    // `FlagColumnFace::PhaseReset` (the phase-reset orange,
-    // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h). It reaches the
+    // `FlagColumnFace::PhaseReset` (the phase-reset shades,
+    // marker_palette().phase_reset, render.h). It reaches the
     // resting flag-box face below AND THE TWO BOUND CELLS (architect
     // 2026-09-21: the cells wear their own column's hue — purple on W,
     // orange on P).
@@ -2183,14 +2177,12 @@ void render_history_diff_flags(
             // kRedesignContentGround, the marker lane's own ground — applied to
             // this lane's inks. No constant is born here: the derivation is the
             // one already ruled, reaching a second set of colours.
-            GuiColor removed_fill =
-                focused ? kHistoryRemovedFillSel : kHistoryRemovedFill;
-            GuiColor removed_edge =
-                focused ? kHistoryRemovedEdgeSel : kHistoryRemovedEdge;
-            GuiColor added_fill =
-                focused ? kHistoryAddedFillSel : kHistoryAddedFill;
-            GuiColor added_edge =
-                focused ? kHistoryAddedEdgeSel : kHistoryAddedEdge;
+            const MarkerShades& removed = marker_palette().history_remove;
+            const MarkerShades& added   = marker_palette().history_add;
+            GuiColor removed_fill = focused ? removed.fill_sel : removed.fill;
+            GuiColor removed_edge = focused ? removed.edge_sel : removed.edge;
+            GuiColor added_fill   = focused ? added.fill_sel : added.fill;
+            GuiColor added_edge   = focused ? added.edge_sel : added.edge;
             if (removed_disabled) {
                 removed_fill = mix_color(removed_fill, kRedesignContentGround,
                                          kMarkerDisabledMix);
@@ -2405,13 +2397,12 @@ void render_history_diff_flags(
                     !pair && (w_removed > 0 ? removed_disabled
                                             : added_disabled);
                 if (!single_disabled) {
+                    const MarkerShades& shades =
+                        f.removed ? marker_palette().history_remove
+                                  : marker_palette().history_add;
                     out_stems->push_back(
                         MarkerStem{i, static_cast<double>(bx),
-                                   f.removed
-                                       ? (focused ? kHistoryRemovedFillSel
-                                                  : kHistoryRemovedFill)
-                                       : (focused ? kHistoryAddedFillSel
-                                                  : kHistoryAddedFill)});
+                                   focused ? shades.fill_sel : shades.fill});
                 }
             }
         });
@@ -2450,6 +2441,51 @@ int waveform_max_h_px() {
     if (g_max_waveform_height_px <= 0) return std::numeric_limits<int>::max();
     return scaled_px(g_max_waveform_height_px, 1);
 }
+
+// THE DERIVATION REPRODUCES THE SIXTEEN SAMPLED CROP VALUES EXACTLY — the
+// four kdenlive ladders (fill, edge, selected fill, selected edge) off the
+// marker crops, each from its base alone (the rule at derive_marker_shades,
+// render.h).
+namespace {
+    constexpr uint32_t rgb24_of(GuiColor c) {
+        return (static_cast<uint32_t>(qcolor_shade::byte_of(c.r)) << 16) |
+               (static_cast<uint32_t>(qcolor_shade::byte_of(c.g)) <<  8) |
+                static_cast<uint32_t>(qcolor_shade::byte_of(c.b));
+    }
+    constexpr bool derives_to(uint32_t base, uint32_t edge, uint32_t fill_sel,
+                              uint32_t edge_sel) {
+        const MarkerShades m = derive_marker_shades(hex(base));
+        return rgb24_of(m.fill) == base && rgb24_of(m.edge) == edge &&
+               rgb24_of(m.fill_sel) == fill_sel &&
+               rgb24_of(m.edge_sel) == edge_sel;
+    }
+    static_assert(derives_to(0x9B59B6, 0x563165, 0xC974ED, 0x704083));  // purple
+    static_assert(derives_to(0xDA4453, 0x79262E, 0xFF6C7B, 0x8E3C44));  // red
+    static_assert(derives_to(0xF47750, 0x88422C, 0xFFAC92, 0x8E5F51));  // orange
+    static_assert(derives_to(0x1ABC9C, 0x0E6857, 0x22F4CB, 0x138871));  // green
+
+    constexpr MarkerPalette derive_marker_palette(const MarkerBaseColors& b) {
+        return MarkerPalette{derive_marker_shades(b.warp),
+                             derive_marker_shades(b.phase_reset),
+                             derive_marker_shades(b.history_add),
+                             derive_marker_shades(b.history_remove)};
+    }
+
+    // The process-wide marker palette — the four keyed classes' shades,
+    // installed once by gui_main at startup and never mutated after (the
+    // contract is at the declaration, render.h). It starts at the defaults'
+    // derivation, constant-initialized, so no static initializer can read it
+    // unset.
+    constinit MarkerPalette g_marker_palette =
+        derive_marker_palette(MarkerBaseColors{
+            kMarkerColorWarpDefault, kMarkerColorPhaseResetDefault,
+            kMarkerColorHistoryAddDefault, kMarkerColorHistoryRemoveDefault});
+} // namespace
+
+void set_marker_base_colors(const MarkerBaseColors& bases) {
+    g_marker_palette = derive_marker_palette(bases);
+}
+const MarkerPalette& marker_palette() { return g_marker_palette; }
 
 // (THE TIP-DOWN TRIANGLE MASK IS GONE — 2026-08-02. build_triangle_mask,
 // playhead_triangle_mask and their two file-scope cache globals built an
