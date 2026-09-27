@@ -262,7 +262,8 @@ void render_waveform(cairo_surface_t* dest,
 
     // THE VISUAL MAGNIFICATION, a function of source time: each column's
     // OUTER scale is the derived curve's gain at the column's centre source
-    // frame, its INNER scale the compressor's scale at the same frame, and
+    // frame, its INNER scale the compressor's scale times the foreground
+    // gain at the same frame (folded together at the derivation), and
     // both take the expander's multiplier over the column's working columns.
     // The contract (the two bars' order and inks, the coarse-zoom centre rule
     // and the expander's smallest-reduction rule) is at this function's
@@ -493,12 +494,13 @@ void render_waveform(cairo_surface_t* dest,
         // LIT: THE OUTER, the column's raw extremes times the curve's gain at
         // the column's centre source frame and the expander's largest
         // multiplier over the working columns [s0, s1) spans; THE INNER, the
-        // same extremes times the compressor's scale at the same frame and
-        // the same multiplier. Each is clamped to the sample domain [-1, 1]
+        // same extremes times the inner scale (the compressor's times the
+        // foreground gain) at the same frame and the same multiplier. Each is clamped to the sample domain [-1, 1]
         // BEFORE it becomes rows: the clamp is what makes a magnified forte
         // clip flat against the lane's edges instead of running off into row
-        // arithmetic (the inner's scale is at most 1, so its clamp is a
-        // no-op kept for the one shape). A PICTURE gain: the samples
+        // arithmetic (the inner's scale, c x G, is at most 1 unless the
+        // foreground gain is positive, and then its clamp holds it at the
+        // edge too). A PICTURE gain: the samples
         // themselves are untouched, here and everywhere. The outer is
         // written here in the plate's ink; the inner's rows are held for the
         // write pass below, which paints it over the outer with its outline.

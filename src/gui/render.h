@@ -2917,17 +2917,20 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 //
 //   OUTER (painted first) = raw x g x E, in kWaveformInk, no outline — the
 //                           levelled, expanded bar;
-//   INNER (painted over)  = raw x c x E, in kWaveformInk outlined in
+//   INNER (painted over)  = raw x c x G x E, in kWaveformInk outlined in
 //                           kWaveformForegroundOutline — the source's bar
 //                           DOWNWARD-COMPRESSED.
 //
 // g is the leveler's gain at the column's centre source frame
-// (waveform_gain_at), c the compressor's scale there (waveform_inner_scale_at,
-// the inner bar's stage on the window loudness L — waveform_gain.h owns
-// both), and E the expander's largest multiplier over the working columns
+// (waveform_gain_at), c x G the inner bar's scale there
+// (waveform_inner_scale_at: c the compressor's, the inner bar's stage on the
+// window loudness L, and G the flat foreground gain folded into it at the
+// derivation, a tuning key since 2026-09-27 — waveform_gain.h owns them
+// all), and E the expander's largest multiplier over the working columns
 // the column spans (waveform_expander_multiplier_over) — ON BOTH BARS, so the
-// gap between them is g / c, a pure function of L, and the inner never
-// stands out of the outer. Each bar's tips are CLAMPED to [-1, 1] before
+// gap between them is g / (c x G), a pure function of L, and at G <= 1 the
+// inner never stands out of the outer (a positive G may, in the quiet
+// passages, accepted for the tuning phase). Each bar's tips are CLAMPED to [-1, 1] before
 // they become rows, and each keeps the >=1px floor. The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
 // reading is the source's bar, the same ink as the levelled bar behind it and
@@ -2997,7 +3000,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // read,
 // the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
-// lamp). The outline adds one row-extent pair per column for the inner, held
+// lamp and carries the inner bar's three numbers). The outline adds one row-extent pair per column for the inner, held
 // for the call so the write can see both neighbours, and a handful of
 // compares.
 //

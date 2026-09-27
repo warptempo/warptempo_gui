@@ -228,11 +228,13 @@ bool waveform_magnified(const AppState& app);
 // lamp can always be put out.
 bool waveform_magnification_toggle_actionable(const GuiAudio& audio);
 
-// THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity
-// (kWaveformGainVersion) while the picture is magnified, 0 while it is flat —
-// the curve being a pure function of the one immutable source and the
-// rule's hard-coded constants (waveform_gain.cpp), the version alone names it
-// (nothing derived from the gain is persisted across launches; the record is
+// THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity while the
+// picture is magnified, 0 while it is flat — the curve being a pure function
+// of the one immutable source, the rule's hard-coded constants
+// (waveform_gain.cpp) and the inner bar's three numbers (a tuning phase,
+// 2026-09-27), the field is kWaveformGainVersion hashed with those three (the
+// live device config's `waveform_inner`, which nothing writes after startup;
+// nothing derived from the gain is persisted across launches, the record is
 // at kWaveformGainVersion). ONE PLACE, so the picture caches' existing hash keys
 // re-render on every flip with no per-caller code: the plate fingerprint
 // carries it beside the viewport geometry, and the lamp's one setter kicks
