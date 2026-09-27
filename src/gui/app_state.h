@@ -4753,7 +4753,7 @@ struct AppState {
     bool    camera_hold            = false;
     // THE HOLD LAMP'S LAST-SEEN BIT (architect 2026-09-24): the value of
     // camera_hold the per-tick face comparator (main.cpp) last damaged the
-    // ruler lane for, so the playhead head (paint_ruler_row) repaints white
+    // ruler lane for, so the playhead head (paint_playhead_head_and_run) repaints white
     // or grey on every flip of the bit — which the writers above spell no
     // damage for. Written by that comparator alone; read by nothing else.
     bool    camera_hold_lamp_last  = false;

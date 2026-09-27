@@ -173,7 +173,7 @@ namespace {
 // (pointer-hit-testing.md's placement-lanes section); its dedicated zoom
 // entry and its one-day region former both died 2026-08-12) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the
-// playhead's column under them — the head sat on this lane's bottom rows from
+// playhead's column over them — the head sat on this lane's bottom rows from
 // the row-5 live test until 2026-09-23), whose bottom edge is the
 // waveform top. ALL SIX ride the gui_scale axis: row 5 retired the last
 // font-scaled lanes in this strip. The BOTTOM strip is ONE LANE: THE UNIFIED
@@ -382,7 +382,7 @@ namespace {
 // outline — spanning both, so a gap there would have cut one asset through its
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
 // inside ONE lane, and the playhead's triangle became the aliased head (on the
-// ruler lane's bottom rows since 2026-09-23, paint_ruler_row). No seam is exempt any more — every seam (the
+// ruler lane's bottom rows since 2026-09-23, paint_playhead_head_and_run). No seam is exempt any more — every seam (the
 // window top|menu seam, TIGHT since 2026-09-09 — it was GAP 1's band
 // 2026-09-03..09 — menu|icon, tight and borderless since 2026-09-09 (the
 // menu|tab seam it replaced was tight from 2026-09-03 and GAP 1's band from
@@ -1053,7 +1053,7 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // (samples_visible), a whole number of frames. A frame in the song's last
     // half-column still rounds to grid point w, one past the last column, so
     // at the wall it is off the edge: the playhead shows only its ruler
-    // head's left half there (the half-head rule, paint_ruler_row), a marker
+    // head's left half there (the half-head rule, paint_playhead_head_and_run), a marker
     // only its flag's left border (the flag iterator's cull, render.cpp), and no
     // position nudge or drop at the playhead authors a marker there
     // (source_frame_off_right_edge, warp_frame_map_view.h, which reads this
@@ -1226,9 +1226,10 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's stem inside the waveform AND
     // its top-strip half above — the aliased head on the ruler lane's bottom
-    // rows (since 2026-09-23; the ruling is at the paint site, paint_ruler_row)
-    // and the column's run through the marker lane beneath it. That top-strip
-    // half is where the cursor's non-waveform pixels live, and the envelope
+    // rows (since 2026-09-23; the ruling is at the paint site,
+    // paint_playhead_head_and_run) and the column's run through the marker
+    // lane beneath it, over the flags. That top-strip half is where the
+    // cursor's non-waveform pixels live, and the envelope
     // covers the whole lane band above the waveform rather than tracking the
     // head's own rows, exactly as Viewport::invalidate_waveform_area (the
     // discrete moves' damage) starts at the window top.
@@ -2736,7 +2737,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE HOLD LAMP ON THE PLAYHEAD HEAD (architect 2026-09-24), the
         // roster comparator's own mechanism for one more stateful face: the
         // head paints white while AppState::camera_hold stands and grey when
-        // it does not (paint_ruler_row), and the bit flips inside camera
+        // it does not (paint_playhead_head_and_run), and the bit flips inside camera
         // writes that do not always damage the ruler lane — bare `c` on an
         // already-centred playhead arms it and moves nothing, the nudge
         // keeps it, the chokepoint clears it on writes that may not touch the

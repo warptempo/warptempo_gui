@@ -661,7 +661,7 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // white, and dark it keeps kPlayheadHead's grey — the posture read where the
 // eye already is, the centre column, at no cost in height. A STATE COLOUR,
 // NOT A CLASS (the accent_for_focus idiom: a named constant and a fork at the
-// painter, paint_ruler_row): the marker classes' ladder DISABLED > RED >
+// painter, paint_playhead_head_and_run): the marker classes' ladder DISABLED > RED >
 // default is untouched and the head joins none of it. The held head takes
 // the SAME kPlayheadHeadAlpha — the head stays translucent in both states, so
 // the one alpha exception stays one. The stem, the scanner and the column do
@@ -2671,7 +2671,7 @@ inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
     9, 8, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1
 };
 // ONE DEVICE ROW'S HALF-WIDTH, the ONE expression the head's painter
-// (paint_ruler_row, its one reader) fills its rows with. A device row picks
+// (paint_playhead_head_and_run, its one reader) fills its rows with. A device row picks
 // its SOURCE row by the inverse scale (so the transcribed shape survives
 // scaling as steps, not slopes) and that row's authored half
 // takes the tree's one conversion. `s` is the caller's gui_scale_factor(); it
@@ -3208,9 +3208,9 @@ void render_waveform(cairo_surface_t* dest,
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02). It used to carry a
 // `draw_triangle` flag and a `triangle_lane` rect for an inverted-triangle
 // indicator stamped from a cached mask above the stem: row 5 replaced the
-// cursor's tip-down triangle with the aliased head that paint_ruler_row
-// draws (with the column's marker-lane run beside it, the ruling at that
-// block) — and every caller had passed `false` ever since. The branch,
+// cursor's tip-down triangle with the aliased head that
+// paint_playhead_head_and_run draws (with the column's marker-lane run
+// beside it, the ruling at that pass) — and every caller had passed `false` ever since. The branch,
 // the mask and the lane rect are all deleted; both callers were already
 // line-only, so no painted pixel moves. (The complementary triangle-only form
 // was retired with the selected-marker focus triangle when the singleton's
