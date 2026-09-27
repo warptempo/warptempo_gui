@@ -6219,6 +6219,16 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 //     rests exactly coincident) and what every marker click, Tab jump and
 //     coincidence auto-select leave behind too.
 //
+// IN THE HISTORY VIEW (`h`) THE PLAYHEAD YIELDS TO A COINCIDENT DIFF STEM
+// exactly as it yields to a marker's stem live (architect 2026-09-27). There
+// the stash is the diff lane's (render_history_diff_flags), its marker_index
+// an index into app.history_mode.flags, so that arm qualifies a stem by its
+// diff flag's own time_frame — an authored SOURCE frame, which the lane maps
+// through the same warp frame map a live marker's takes — under the same
+// land formula, which is the one the mode's own lands run
+// (land_playhead_on_source_frame). Index-guarded against the flags vector; it
+// has no drag arm, the mode consuming every authoring gesture.
+//
 // SCOPE NOTE, deliberately WIDER than "the focused marker": any marker with a
 // painted stem suppresses, focused or not. The artifact is the same ±1 wherever
 // the playhead stands on a marker, the display is that marker's stem either way,
@@ -6230,6 +6240,30 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 bool GuiPaintHandler::playhead_stem_suppressed() const {
     if (app.marker_stems.empty()) return false;
 
+    // THE LAND'S OWN FORMULA, the one coincidence test both arms below call.
+    const auto coincident = [&](int64_t source_frame) {
+        return clamp_playhead_to_live_domain(
+                   source_frame_to_active_domain(app, audio, source_frame),
+                   app, audio) == app.playhead_cursor_sample;
+    };
+
+    // THE HISTORY ARM. The stash's index domain follows its painter
+    // (AppState::marker_stems): in the mode it indexes history_mode.flags, so
+    // the stem qualifies by its DIFF FLAG's frame and never by a live store
+    // row. No drag arm: the mode consumes every authoring gesture, so no
+    // marker drag tows the playhead here.
+    if (app.history_mode.active) {
+        const int n = static_cast<int>(app.history_mode.flags.size());
+        for (const MarkerStem& stem : app.marker_stems) {
+            const int i = stem.marker_index;
+            if (i < 0 || i >= n) continue;
+            if (coincident(app.history_mode.flags[
+                    static_cast<std::size_t>(i)].time_frame))
+                return true;
+        }
+        return false;
+    }
+
     // The dragged marker, or -1. The view compare is a statement, not a repair:
     // the drag-modal gate swallows `p`, so a live drag's mode is always the
     // active column — the stash indices this compares against are that column's.
@@ -6238,12 +6272,6 @@ bool GuiPaintHandler::playhead_stem_suppressed() const {
          !app.drag.dragging_markers.empty())
             ? app.drag.dragging_markers[0]
             : -1;
-
-    const auto coincident = [&](int64_t source_frame) {
-        return clamp_playhead_to_live_domain(
-                   source_frame_to_active_domain(app, audio, source_frame),
-                   app, audio) == app.playhead_cursor_sample;
-    };
 
     // The stash is the ACTIVE column's (both columns publish one), so the
     // store is the active one through its selector pair (active_marker_count /
