@@ -570,21 +570,26 @@ exactly the folders that WILL open, so an invalid folder is simply absent from
 it rather than refused at the tap. Either way a filesystem
 refusal — including the mode-770 one below — carries the system's own words.
 
-The producer is `~/.pc/bash/wts` (personal tooling, outside the repo): `wts tp`
-from a project folder pushes it, `wts fp` brings the sidecars and renders home
-and commits them. **`wts` still writes a `current` file on every push, and
-nothing in the app reads it any more** — as of 2026-08-28 the script still
-emits it; it is personal tooling outside the repo and is updated on its own
-schedule, and the file sits harmlessly in `<externalDataPath>` until then.
-Placing one by hand is the same four pushes plus the folder name:
+The producer is `~/.pc/bash/wts` (personal tooling, outside the repo, the
+architect's to run; its recipe is `~/.pc/distro/tablet/tablet_setup.txt`), three
+verbs since arc 5 (2026-09-27): `wts setup` places the tablet's CLONE of
+github.com/warptempo/warptempo_projects — a fresh clone made on the laptop, its
+`.git` and tracked tree pushed so that `<externalDataPath>` is the clone's root
+and `projects/` its pieces — with the clone config the tablet's storage needs
+(`core.filemode=false`, `core.symlinks=false`, `core.ignorecase=true`, the
+commit identity, origin over `ssh.github.com:443`), the tablet's deploy key into
+`files/warptempo_gui/` through `run-as`, the device config's `projects_repo`
+line, and the audio; `wts tt` pushes each piece's source `.wav` (audio only);
+`wts ft` brings the `render/` deliverables home (renders only). The sidecars
+never travel by wts: the app commits, pushes and pulls them (github-recheck.md).
+The `current` file an older wts wrote is read by nothing; `wts setup` deletes
+it with the exported `history/` folders and any `.magnificationlevelmarkers`. Placing a
+source by hand is one push plus the chmod below:
 
 ```bash
 FAR=/sdcard/Android/data/com.warptempo.gui/files
-adb push "<src>.wav"              "$FAR/projects/<name>/"
-adb push "<src>.warpmarkers"      "$FAR/projects/<name>/"
-adb push "<src>.phaseresetmarkers" "$FAR/projects/<name>/"
-adb push "<src>.settings"         "$FAR/projects/<name>/"
-adb shell "find '$FAR/projects' -type d -exec chmod 777 {} +"
+adb push "<src>.wav" "$FAR/projects/<name>/"
+adb shell "find '$FAR/projects' -type d \( -user shell -exec chmod 777 {} + -o -prune \)"
 ```
 
 **The chmod is load-bearing.** `files/` belongs to the app, so a file pushed
@@ -596,14 +601,14 @@ EACCES made it die at launch saying `current` names no folder (measured on the
 device 2026-08-27); since the project model landed the same permission failure
 surfaces as `resolve_project`'s own "Permission denied" on whichever folder
 it hit. `chmod` does take on this device's external storage, so one pass over
-the directories is the whole fix; the files under them are already
-world-readable. `wts tp` runs it after every push.
+the shell-owned directories (`.git`'s included) is the whole fix; the files
+under them are already world-readable. Every wts verb that pushes runs it.
 
 **THE SIDECAR TRAVELS VERBATIM since 2026-08-27.** `gui_scale` left the
 `.settings` for the per-device config that day (`$XDG_CONFIG_HOME/warptempo_gui/
-config`, which `android_main` points at the app's internal dir), so the pushed
-copy carries no opinion about the tablet's screen and `wts tp` no longer rewrites
-it on the way over — nor `wts fp` on the way back. The tablet's scale is written
+config`, which `android_main` points at the app's internal dir), so a sidecar
+carries no opinion about either device's screen and one the other device
+committed is used as it is, byte for byte. The tablet's scale is written
 once, by the app itself, on its first launch after an install onto a clean
 internal dir: `gui_scale=225`, from the backend's own first-run template. Editing
 it later is `:gui_scale=` in the settings prompt on the device, which rewrites

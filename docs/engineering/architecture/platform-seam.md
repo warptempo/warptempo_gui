@@ -1086,8 +1086,11 @@ owns the reasoning): the tablet's clone lives on external storage, which the
 app sees through FUSE with the LOWER owner, and it has two legitimate writer
 uids by design — adb's shell places the clone and the audio, the app writes
 the sidecars — so a shell-owned `.git` would otherwise refuse every git
-question. The clone itself and the deploy key are placed by hand (the
-planner's and the architect's procedure, outside the code). THE TABLET READS
+question. The clone itself and the deploy key are placed by `wts setup` (the
+architect's `~/.pc/bash/wts`, outside the repo; its recipe is
+`~/.pc/distro/tablet/tablet_setup.txt`), which also sets the clone config the
+storage needs (`core.filemode=false`, `core.symlinks=false`,
+`core.ignorecase=true`) and the commit identity. THE TABLET READS
 ITS OWN CLONE since arc 4b (2026-09-27): the exported-history folder road that
 served it from 2026-09-17 is deleted, and the GitHub status, the fetch-first
 checkpoint and the pull (github-recheck.md) run on both devices through the
