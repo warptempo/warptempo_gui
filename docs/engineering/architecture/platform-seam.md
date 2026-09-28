@@ -596,9 +596,9 @@ it, the row's Cancel button its only other reach — and THE FIELD-LESS LIST IS
 THE ONLY ROAD ON BOTH BACKENDS: the typed prompt was deleted rather than left
 as the laptop's second road, so no name is typed anywhere for this act.
 The key stays for every OTHER prompt's completion and ring walk.
-The symbol layer's SECOND SPACE is not that row's leading slot either but a
-deliberate duplicate CHARACTER key beside its `_`, so a hand already in the
-symbol layer for the `/` of `12 7/8` need not go looking for the bar. The function keys wore unmodified Breeze glyphs for their first day
+The symbol layer duplicates nothing of the shared bottom row (architect
+2026-09-28); its former duplicate `.`, `,` and Space slots carry `@`, `!` and
+`$`. The function keys wore unmodified Breeze glyphs for their first day
 and read OVERSIZED beside the letter caps — a 22-unit icon scaled to the key's
 own height beside a 12pt letter — and a full-width row has room for words, so
 they wear words. THE WORD A FUNCTION KEY WEARS IS THE KEY'S NAME (planner 2026-09-01, under the capitalization sweep): all five say what they ARE — Shift, Backspace, Return, Esc, Tab — in the product's one key spelling (`spell_chord`'s head, `gui_input.h`). They said what they DO from 2026-08-27, which is why the Enter cap read "Enter" and the Escape key read "Cancel"; the first took its Qt name that day and the second followed the same evening, one act-named cap beside four key-named ones being exactly the exception this product no longer keeps. `onscreen_keyboard::cap_word` is the words' ONE owner,

@@ -145,15 +145,13 @@ inline constexpr KeyDef kLetterRow2[] = {
 // this band, so the keyboard does not paint there at all and the gesture is
 // File → Open project, tap the project's row — the tap's lift both highlights
 // and opens it, the row's Cancel button its only other reach. What the key
-// serves is
-// every prompt a finger can raise — the settings editor's value recall and
-// the ring walk on the dialogs that publish buttons. Its SPACE key and its comma are
-// deliberate DUPLICATES of row 3's, which is layer-blind — a hand already in
-// the symbol layer for the `/` of `+7/8` should not have to look for the
-// space bar, and a physical keyboard's own numpad settles that a second
-// painted key onto the same synthesize_key road is not a second road. (There
-// is no blank slot on either layer any more, so the table has no role for
-// one.)
+// serves is every prompt a finger can raise — the settings editor's value
+// recall and the ring walk on the dialogs that publish buttons.
+//
+// THE SYMBOL PAGE CARRIES NO DUPLICATE OF THE SHARED BOTTOM ROW (architect
+// 2026-09-28): row 3 is layer-blind, so `.`, `,` and Space are always one row
+// down and never repeated here. `@` (the leading slot of row 1) serves the
+// BPM function's entry; `!` and `$` (row 2) complete common ASCII.
 inline constexpr KeyDef kSymbolRow0[] = {
     {Role::Character, '1'}, {Role::Character, '2'}, {Role::Character, '3'},
     {Role::Character, '4'}, {Role::Character, '5'}, {Role::Character, '6'},
@@ -161,15 +159,15 @@ inline constexpr KeyDef kSymbolRow0[] = {
     {Role::Character, '0'},
 };
 inline constexpr KeyDef kSymbolRow1[] = {
-    {Role::Character, '.'}, {Role::Character, '/'}, {Role::Character, '+'},
+    {Role::Character, '@'}, {Role::Character, '/'}, {Role::Character, '+'},
     {Role::Character, '-'}, {Role::Character, '*'}, {Role::Character, ':'},
     {Role::Character, '#'}, {Role::Character, '|'}, {Role::Character, '\''},
 };
 inline constexpr KeyDef kSymbolRow2[] = {
     {Role::Tab, '\0', 6},
-    {Role::Character, ','}, {Role::Character, ';'}, {Role::Character, '='},
+    {Role::Character, '!'}, {Role::Character, ';'}, {Role::Character, '='},
     {Role::Character, '['}, {Role::Character, ']'}, {Role::Character, '_'},
-    {Role::Character, ' '},
+    {Role::Character, '$'},
     {Role::Backspace, '\0', 6},
 };
 
@@ -218,8 +216,7 @@ inline constexpr uint32_t kStableCodeBase = 1;
 // the synthesized-hold end compare against (contract at GuiInputCore::
 // key_event). It is the key's PLACE in this table — layer, row, column, off the
 // base above — and deliberately not the keysym: two layers put different
-// characters on one slot, and one character (space, the comma) sits in two
-// slots, so only the place is unique per key. Bounded by
+// characters on one slot, so only the place is unique per key. Bounded by
 // kStableCodeBase + 2*kRowCount*kMaxRowKeys = 97.
 inline constexpr uint32_t key_index(bool symbol_layer, int row, int col) {
     return kStableCodeBase + static_cast<uint32_t>(
