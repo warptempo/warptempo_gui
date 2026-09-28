@@ -864,8 +864,9 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
 // button — so the very same masking edge (a click act's stop, or the natural
 // end-of-song teardown, damaging only the clock cell) now flips that button's
 // GLYPH under a clip that redraws no button. Same gate, same repair, the third
-// bit; `glyph_swapped` is stashed here for exactly that reason and its whole
-// argument is at the predicate (app_state.h).
+// term; `glyph` (the glyph index since Save grew a third, 2026-09-27) is
+// stashed here for exactly that reason and its whole argument is at the
+// predicate (app_state.h).
 //
 // AND THE INPUT CLAIMS ON THESE BITS (architect 2026-09-24, strictly
 // as-painted): the roster's press, lift, hold-repeat, menu-row slide and
@@ -896,7 +897,7 @@ AppState::RedesignButtonFace& publish_button_face(
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                                 playback, target_render, id);
         face.selected = redesign_button_selected(app, id);
-        face.glyph_swapped = redesign_button_glyph_swapped(app, id);
+        face.glyph = redesign_button_glyph(app, id);
     }
     return face;
 }
@@ -1208,7 +1209,11 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
     switch (b) {
         // SAVE, in the history view (where Ctrl+S IS the checkpoint act) and
         // while a checkpoint publishes.
-        case RedesignButton::Save:   return icons::Icon::VcsCommit;
+        // THE PULL GLYPH (vcs-pull, 2026-09-27) is Save's third, in the view
+        // while the GitHub status reads Behind (redesign_button_glyph).
+        case RedesignButton::Save:
+            return redesign_button_glyph(app, b) == 2 ? icons::Icon::VcsPull
+                                                      : icons::Icon::VcsCommit;
         // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph
         // while a render or sweep is live — dialog-cancel, the circle-slash,
         // transcribed for row 8's short-lived Esc button and kept for exactly
@@ -2576,7 +2581,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 // cell before that. While the mode stands this line is what that cell is for.
 //
 // THE SHAPE: the commit's position in the walk and its short SHA, then the
-// scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own sign
+// scale — `Scale: [-]<then token> [+]<now token>` — then `GitHub: <word>`
+// (below), in the lane's own sign
 // vocabulary and through the lane's own spelling owner (history_diff_label),
 // so this line and the flags cannot come to bracket differently. (The
 // "bottom-left corner" of the mode's record read bottom-RIGHT from the
@@ -2654,6 +2660,19 @@ static std::string history_walk_line(AppState& app) {
         line += ' ';
         line += history_diff_label("[+]", /*disabled=*/false,
                                    d->now_scale_token);
+    }
+    // THE GITHUB SEGMENT, LAST (architect 2026-09-27): how this device stands
+    // against GitHub as of the last check — `GitHub: checking...` / `up to
+    // date` / `ahead` / `behind` / `diverged` / `offline` / `refused`
+    // (github_status_word) — in the line's own `Label: value` shape, on BOTH
+    // walks, because what Ctrl+S does in the view depends on it whichever walk
+    // is showing. A visit with no clone (the local fallback) has no segment,
+    // and neither has an Unchecked status.
+    if (history_remote_walk_available(app)) {
+        if (const char* word = github_status_word(app.github_status)) {
+            line += " GitHub: ";
+            line += word;
+        }
     }
     return line;
 }

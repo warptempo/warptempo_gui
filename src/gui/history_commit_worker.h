@@ -3,6 +3,7 @@
 #include "history_diff.h"
 
 #include <atomic>
+#include <memory>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -10,36 +11,65 @@
 #include <string>
 #include <thread>
 
-// THE CHECKPOINT ACT'S BACKGROUND WORKER (architect 2026-08-07).
+// THE REPOSITORY'S BACKGROUND WORKER — the checkpoint act and the GitHub
+// check (architect 2026-08-07; the check 2026-09-27).
 //
-// The Save-and-Commit act stages, commits and pushes through libgit2
-// (git_repo.h), and the push in particular is a network act that can take seconds
-// — long enough that running it on the GUI thread froze the window over work
-// the user has no reason to wait for. THE SAVE IS THE PART THAT MUST BE
+// The Save-and-Commit act fetches, stages, commits and pushes through libgit2
+// (git_repo.h), and the network steps in particular can take seconds — long
+// enough that running them on the GUI thread froze the window over work the
+// user has no reason to wait for. THE SAVE IS THE PART THAT MUST BE
 // SYNCHRONOUS (it is the user's own bytes, and its failure refuses the act);
 // everything after it is repository housekeeping, so it happens here while the
 // user keeps working. GuiInputHandler::run_history_commit owns the split and
 // states what is captured.
 //
-// SINGLE JOB IN FLIGHT, structurally: the caller refuses a second act while one
-// is running (AppState::history_checkpoint_in_flight, the GUI-side mirror of
-// is_busy() below), and a dispatch that arrives busy anyway is a programming
-// error this class logs and drops rather than racing.
+// ONE WORKER, TWO JOB KINDS. The CHECK (check_github, history_diff.h) fetches
+// and compares at every project open and every `h` entry; the CHECKPOINT runs
+// the act. Both can write the remote-tracking ref (a fetch, a push), so they
+// share this ONE thread and its ONE job slot: two network jobs never race for
+// that ref's lock, by construction. The CHECKPOINT kind alone locks the save
+// out (AppState::history_checkpoint_in_flight); a check locks out nothing.
 //
-// SHAPED EXACTLY LIKE GuiAsyncRenderer, deliberately: own std::thread, a
-// condition variable for the wake, and an eventfd the platform run loop polls,
-// whose POLLIN makes the GUI thread call on_completion_event() and run the
-// stored callback on the MAIN thread. The one difference is that there is no
-// cancel token — the act's git steps must not be abandoned half-way (the push
-// is bounded by git_repo.cpp's time limit), so shutdown() JOINS an in-flight
-// checkpoint instead of interrupting
-// it (the state is already saved to disk by then, so waiting loses nothing).
+// SINGLE JOB IN FLIGHT, structurally: the callers dispatch only while
+// is_busy() is false (a checkpoint's admission reads the in-flight bit and the
+// GitHub status, which reads Checking while a check runs), and a dispatch
+// that arrives busy anyway is a programming error this class logs and drops
+// rather than racing.
+//
+// SHAPED LIKE GuiAsyncRenderer: own std::thread, a condition variable for the
+// wake, and an eventfd the platform run loop polls, whose POLLIN makes the GUI
+// thread call on_completion_event() and run the stored callback on the MAIN
+// thread.
+//
+// SHUTDOWN TREATS THE TWO KINDS DIFFERENTLY (architect 2026-09-27: quit and a
+// project switch NEVER WAIT on a check). A CHECKPOINT in flight is JOINED — its
+// git steps must not be abandoned half-way, the user's state is already on
+// disk, and the push is bounded by git_repo.cpp's time limit. A CHECK in
+// flight is ABANDONED: its cancel token is set (the fetch stops at libgit2's
+// next callback, so it writes no ref after that) and the thread is DETACHED,
+// so a connect hanging on a black-holed route holds nothing. That is safe
+// because everything the thread touches lives in a shared block it co-owns
+// (Shared below) — never this object — and because an abandoned thread never
+// writes the eventfd: the write and the close both happen under the block's
+// mutex, the write only while the block is not abandoned. Its answer is
+// discarded; the next session checks afresh. What an abandoned check can
+// still leave behind is libgit2's own: a fetch cancelled mid-download removes
+// its temporary pack, and a ref update in progress at the very instant of the
+// cancel lands (the fetched value, which is correct) — and the next session's
+// check or act, running while the abandoned one is still unwinding, could
+// meet that ref's lock once and read Offline, which its next check clears.
 //
 // THE JOB IS CAPTURED WHOLE, BY VALUE. The worker touches no AppState, no
 // audio, no marker store — only the strings below — so the user may edit,
 // render and even load in place while a checkpoint publishes, and what lands is
 // what was on screen when the act ran.
+enum class GuiHistoryJobKind { Checkpoint, Check };
+
 struct GuiHistoryCommitJob {
+    GuiHistoryJobKind kind = GuiHistoryJobKind::Checkpoint;
+    // THE CHECK'S TWO INPUTS: the loaded source (the clone is derived from it
+    // on the worker, check_github) and the setting the guard compares.
+    std::string       source_audio_path;
     // The clone the act runs in, derived from the loaded source and captured on
     // the main thread with everything else (history_diff.h owns the derivation).
     std::string       repo_root;
@@ -50,9 +80,17 @@ struct GuiHistoryCommitJob {
     GuiHistoryNowSide bytes;              // the three sidecar texts to write
 };
 
+// WHAT A JOB ANSWERED: the act's verdict (a Checkpoint's alone) and the GitHub
+// status its fetch read (both kinds; Unchecked where there was none).
+struct GuiHistoryJobResult {
+    GuiHistoryJobKind       kind    = GuiHistoryJobKind::Checkpoint;
+    GuiHistoryCommitOutcome outcome = GuiHistoryCommitOutcome::CommitFailed;
+    GuiGitHubStatus         github  = GuiGitHubStatus::Unchecked;
+};
+
 class GuiHistoryCommitWorker {
 public:
-    using DoneCallback = std::function<void(GuiHistoryCommitOutcome)>;
+    using DoneCallback = std::function<void(GuiHistoryJobResult)>;
 
     GuiHistoryCommitWorker();
     ~GuiHistoryCommitWorker();
@@ -66,17 +104,17 @@ public:
     bool init();
 
     // Stop the worker and close the eventfd. Idempotent, safe after a failed
-    // init, and called from the destructor. IT BLOCKS UNTIL AN IN-FLIGHT
-    // CHECKPOINT FINISHES — a quit must not abandon a commit or a push mid-step,
-    // and the user's own state is already on disk (the act saves first), so the
-    // wait costs a moment and never any work.
+    // init, and called from the destructor. A CHECKPOINT IN FLIGHT IS WAITED
+    // OUT — a quit must not abandon a commit or a push mid-step, and the
+    // user's own state is already on disk (the act saves first); A CHECK IN
+    // FLIGHT IS ABANDONED and never waited on (the class head owns both).
     void shutdown();
 
     // The eventfd the platform layer polls for completion. -1 before init().
-    int completion_fd() const { return completion_fd_; }
+    int completion_fd() const;
 
     // Run `job` on the worker. `on_done` fires on the MAIN thread from
-    // on_completion_event with the act's own verdict.
+    // on_completion_event with the job's own result.
     void dispatch(GuiHistoryCommitJob job, DoneCallback on_done);
 
     // Called by the platform layer when the completion eventfd fires (the
@@ -89,26 +127,25 @@ public:
 private:
     enum class State : int { Idle, Running, CompletionPending };
 
-    void worker_loop();
-    void signal_completion();
+    // EVERYTHING THE THREAD TOUCHES, co-owned by the thread so an abandoned
+    // (detached) thread outlives this object safely.
+    struct Shared {
+        std::mutex              mtx;
+        std::condition_variable cv;
+        std::atomic<int>        state{static_cast<int>(State::Idle)};
+        bool                    stop      = false;  // under mtx
+        bool                    abandoned = false;  // under mtx
+        std::atomic<bool>       cancel{false};
+        std::optional<GuiHistoryCommitJob> pending_job;   // under mtx
+        GuiHistoryJobKind       running_kind = GuiHistoryJobKind::Checkpoint;
+        GuiHistoryJobResult     result;                   // under mtx
+        int                     completion_fd = -1;       // under mtx
+    };
 
+    static void worker_loop(std::shared_ptr<Shared> shared);
+
+    std::shared_ptr<Shared> shared_;
     std::thread             worker_;
-    std::mutex              mtx_;
-    std::condition_variable cv_;
-
-    std::atomic<int>  state_{static_cast<int>(State::Idle)};
-    std::atomic<bool> stop_worker_{false};
-
-    // Job slot. Written by the GUI thread at dispatch (Idle -> Running), read
-    // by the worker after the cv wake; on_done_ is read back by the GUI thread
-    // at completion (CompletionPending -> Idle).
-    std::optional<GuiHistoryCommitJob> pending_job_;
-    DoneCallback                       on_done_;
-
-    // Written by the worker just before signal_completion, read by the GUI
-    // thread in on_completion_event.
-    GuiHistoryCommitOutcome last_outcome_ =
-        GuiHistoryCommitOutcome::CommitFailed;
-
-    int completion_fd_ = -1;
+    // Main thread only: set at dispatch, taken at the completion event.
+    DoneCallback            on_done_;
 };

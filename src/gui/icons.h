@@ -77,6 +77,11 @@ enum class Icon {
     // save chord; the WORDS moved off the button whole when row 2's labeled
     // faces died at the 2026-08-12 relayout — the glyph swap says it now.
     VcsCommit,           // Save, in the history view and while publishing
+    // SAVE'S THIRD face (architect 2026-09-27): in the history view while the
+    // GitHub status reads Behind, Ctrl+S PULLS, and the button wears Breeze's
+    // actions/22/vcs-pull — the arrow down onto the bar (the swap's owner is
+    // redesign_button_icon, its hint "Pull (Ctrl+S)").
+    VcsPull,             // Save, in the history view while GitHub is ahead
     // Row 4, the icon row.
     //
     // (THE TWO VIEW LAMPS' FACES — document-import and chronometer-start,
@@ -444,9 +449,10 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 48 SINCE THE STEPPED ZOOM BUTTONS' REMOVAL (architect 2026-09-25),
-// re-counted off the enumerators above: zoom-in and zoom-out left with the
-// Zoom In / Zoom Out buttons that wore them. It was 50 from the follow lamp's
+// 49 SINCE THE PULL (architect 2026-09-27): vcs-pull joined as Save's third
+// face. It was 48 from THE STEPPED ZOOM BUTTONS' REMOVAL (architect
+// 2026-09-25), re-counted off the enumerators above: zoom-in and zoom-out
+// left with the Zoom In / Zoom Out buttons that wore them. It was 50 from the follow lamp's
 // return (2026-09-23, evening): go-jump returned with the button that wears
 // it. It was 49 from the follow lamp's and the hold-column nudges'
 // deletion earlier that day: go-jump and the two turns of snap-nodes-midpoint
@@ -482,7 +488,7 @@ enum class Icon {
 // leaving restates this number. It held at 50 through 2026-09-24's swap,
 // when zoom-in-y replaced zoom-out-y on the Waveform Magnification lamp at
 // its reversal, one glyph out and one in.
-inline constexpr int kIconCount = 48;
+inline constexpr int kIconCount = 49;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

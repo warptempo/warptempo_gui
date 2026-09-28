@@ -3938,6 +3938,12 @@ enum class DialogTrigger {
     // arm with nothing to fork on. It asks because that paste CLEARS the
     // destination blocks' existing resets.
     PASTE_CONFIRM,
+    // THE PULL'S QUESTION (architect 2026-09-27): "Reload this piece from
+    // GitHub's newer checkpoint?", Reload / Keep / Cancel with passive focus
+    // on Cancel (a three-way, not a confirmation — Reload discards the
+    // session). Raised by Ctrl+S in the `h` view, only when the pull changes
+    // the open piece; the plan waits at AppState::pending_history_pull.
+    PULL_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
     // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
     // 2026-08-29): the RENDER PLAYER's — raised by its Load in place button or
@@ -5715,7 +5721,9 @@ struct AppState {
         bool    hovered       = false;
         bool    enabled       = true;
         bool    selected      = false;
-        bool    glyph_swapped = false;
+        // The painted glyph's index (redesign_button_glyph: 0 the table
+        // glyph, 1 the second, 2 Save's third) — the third stashed term.
+        int     glyph         = 0;
         // THE HOVER FADE (render.h's HoverFade, architect 2026-09-27): paint
         // state only, its edges stamped by the two writers of `hovered`
         // (recompute_redesign_button_hover and clear_redesign_button_hover)
@@ -7199,8 +7207,9 @@ struct AppState {
     // dirty cleared with it) and only then writes the live authoring state as
     // the three sidecars into the piece's directory in the projects repository,
     // commits those three paths alone under the entered title and pushes
-    // (commit_history_checkpoint, history_diff.h — the product's ONE mutating
-    // git route, and its only writer outside the user's own save). A FAILED SAVE
+    // (commit_history_checkpoint, history_diff.h — fetching first and refusing
+    // before any write if GitHub has moved; with the GitHub check's fetch and
+    // the pull, one of the product's three mutating git routes). A FAILED SAVE
     // REFUSES THE WHOLE ACT before any of that, one stderr line and nothing
     // committed; run_history_commit (input_key_dispatch.cpp) owns the order, the
     // refusal and the coincident-path reasoning. NEITHER RENDER CHORD is
@@ -7257,7 +7266,8 @@ struct AppState {
     // CONSTRUCTION: the two gates above refuse every route that could change the
     // markers or the engine settings for the whole life of the session EXCEPT
     // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+S (the
-    // commit act, on Ctrl+Alt+R until 2026-08-08) and bare `v` (the revert
+    // commit act, on Ctrl+Alt+R until 2026-08-08, or the pull while GitHub is
+    // ahead, 2026-09-27) and bare `v` (the revert
     // act, on Ctrl+H until 2026-09-01;
     // membership re-derived 2026-08-06)
     // — and every one of those closes the view as it ends, so no session
@@ -8134,6 +8144,29 @@ struct AppState {
     // coincident workflow a concurrent Ctrl+S writes those same paths through
     // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
+
+    // THE GITHUB STATUS (architect 2026-09-27; GuiGitHubStatus, history_diff.h,
+    // owns the states and their meanings) — how this device's branch stands
+    // against GitHub as of the last fetch. PER PROJECT, born Unchecked with
+    // this AppState, written on the MAIN THREAD alone: Checking when a check
+    // is dispatched (GuiInputHandler::dispatch_github_check — every project
+    // open and every `h` entry), the check's reading at its completion, the
+    // checkpoint act's own fetched reading at its completion, and UpToDate
+    // when a pull lands. READ BY row 8's `h` walk line (its `GitHub: <word>`
+    // segment), by the Save button's face in the view (its grey, and the Pull
+    // glyph while Behind — history_checkpoint_actionable,
+    // history_pull_actionable, redesign_button_glyph) and by Ctrl+S's act
+    // there (open_history_commit_editor), which forks on it.
+    GuiGitHubStatus github_status = GuiGitHubStatus::Unchecked;
+
+    // THE PULL PARKED UNDER ITS QUESTION (architect 2026-09-27): a pull that
+    // changes the open piece asks "Reload this piece from GitHub's newer
+    // checkpoint?" (DialogTrigger::PULL_CONFIRM), and the plan the press made
+    // waits here for the answer — Reload and Keep run it
+    // (GuiInputHandler::answer_history_pull), Cancel drops it. Self-contained
+    // (it carries the clone, the directory and the base name), so a view
+    // closed under the question leaves nothing it needs behind.
+    std::optional<GuiHistoryPullPlan> pending_history_pull;
 
     // -- THE NOTIFICATION STACK (architect design 2026-08-29) -------------
     //
@@ -13044,12 +13077,12 @@ inline bool history_revert_actionable(const AppState& a) {
 
 // DID THIS VISIT'S REMOTE WALK BOOTSTRAP? — the ONE predicate for "git can be
 // asked about this piece", and the GUI's whole vocabulary for it (architect
-// 2026-09-04, from the car: on the tablet there is no git binary at all, and
-// bare `h` used to card `could not ask git which clone holds '550 - 1'` and
-// refuse). LOCAL HISTORY IS THE FALLBACK now — the view opens on the session's
-// own undo/redo timeline — so what needs git is refused HERE and truthfully,
+// 2026-09-04: a visit whose bootstrap refuses — a source in no clone, a clone
+// that is not the projects home — used to card the reason and open nothing).
+// LOCAL HISTORY IS THE FALLBACK now — the view opens on the session's own
+// undo/redo timeline — so what needs git is refused HERE and truthfully,
 // while everything the local walk supports works exactly as it does when `g`
-// chooses it on the laptop.
+// chooses it.
 //
 // IT IS THE ENTRY'S STORED VERDICT AND NOTHING RUNS GIT TO ASK IT:
 // GuiHistoryDiff::init answers the bootstrap once per entry and keeps both the
@@ -13057,25 +13090,17 @@ inline bool history_revert_actionable(const AppState& a) {
 // A run that succeeds under a standing visit does not change it — the next `h`
 // bootstraps afresh.
 //
-// IT IS TRUE ON THE FOLDER ROAD (architect 2026-09-17): an exported history
-// folder IS a bootstrapped commit walk — it has members, it walks, it loads in
-// place — so the lamp toggles it and `g` reaches it exactly as a clone's walk.
-// What that road cannot do is take a CHECKPOINT, and that is its own term, one
-// predicate down (history_checkpoint_road_available), never this one.
-//
-// FOUR READERS, re-greped on this name 2026-09-17 and paired act-to-face so
+// ITS READERS, re-greped on this name 2026-09-27 and paired act-to-face so
 // no glyph can disagree with its key: the WALK LAMP'S ACT
 // (GuiInputHandler::set_history_delta, which refuses a switch toward the
 // remote walk and cards the reason) and its FACE (redesign_button_enabled's
 // HistoryWalk arm); the CHECKPOINT ACT (open_history_commit_editor, which
-// cards this fact as its OUTERMOST premise, directly above its road arm); and
-// the FAILED-SCAN ARRIVAL (on_history_prefetch_ready), which is the odd one
-// out — it does not refuse an act but CARVES A FALLBACK VISIT OUT of the
-// closer that ends a visit whose remote premise failed, such a visit never
-// having had that premise. IT WAS FIVE UNTIL 2026-09-17: SAVE'S FACE read it
-// through history_checkpoint_actionable and now reads the ROAD predicate
-// below instead, which IMPLIES this one — so the face answers both terms in
-// one read and the act's two arms stay paired with it. The
+// cards this fact as its OUTERMOST premise) and SAVE'S FACE through the two
+// predicates below; row 8's GitHub SEGMENT (history_walk_line), which stands
+// only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
+// (on_history_prefetch_ready), which is the odd one out — it does not refuse
+// an act but CARVES A FALLBACK VISIT OUT of the closer that ends a visit whose
+// remote premise failed, such a visit never having had that premise. The
 // reason itself is the session's own
 // (history_mode.session.unavailable_reason(), whose display clause the cards
 // carry and whose kHistoryUnavailable prefix is the one composer).
@@ -13083,48 +13108,58 @@ inline bool history_remote_walk_available(const AppState& a) {
     return a.history_mode.session.available();
 }
 
-// CAN THIS WALK TAKE A CHECKPOINT? — the commit walk bootstrapped AND on the
-// git road (GuiHistoryDiff::takes_checkpoint). An exported history folder is
-// walked exactly as the clone's history is, but it is a derivation, not a
-// clone: there is nothing to commit into (architect 2026-09-17, ruling at
-// history_folder.h). TWO READERS, paired act-to-face: the CHECKPOINT ACT's
-// road arm (open_history_commit_editor, which cards kHistoryFolderNoCheckpoint)
-// and Save's face through history_checkpoint_actionable.
-inline bool history_checkpoint_road_available(const AppState& a) {
-    return a.history_mode.session.takes_checkpoint();
+// IS SAVE THE PULL? (architect 2026-09-27) — inside the `h` view, on a visit
+// with a clone, while the GitHub status reads BEHIND: Ctrl+S fast-forwards to
+// what the last check fetched (GuiInputHandler::run_history_pull_press), and
+// the Save button wears IconVcsPull and "Pull (Ctrl+S)". The glyph's one
+// source (redesign_button_glyph's Save arm) and the pull's admission below.
+inline bool history_save_is_pull(const AppState& a) {
+    return a.history_mode.active && history_remote_walk_available(a) &&
+           a.github_status == GuiGitHubStatus::Behind;
+}
+
+// WOULD THE PULL ACT? — the pull face with no checkpoint publishing (the
+// in-flight bit outlives the view; the pull and the act share one clone).
+// Read by Save's face alone; the act answers the same terms at its own forks.
+inline bool history_pull_actionable(const AppState& a) {
+    return history_save_is_pull(a) && !a.history_checkpoint_in_flight;
 }
 
 // WOULD THE SAVE-AND-COMMIT ACT ACT? — the checkpoint act's own session terms
-// in one word (architect 2026-09-01): something to commit (the head
-// delta, measured once per visit) and no checkpoint already publishing (single
-// in flight, a bit that OUTLIVES the view, which is why this takes the whole
-// AppState rather than the mode struct) — AND, since 2026-09-04, A REMOTE WALK
-// ON THE GIT ROAD TO COMMIT INTO, the act's outermost premise: a visit standing
-// on the local fallback has no clone this program could ask about, and one
-// standing on an EXPORTED HISTORY FOLDER (2026-09-17) has a walk but no clone
-// either — an export is a derivation — so the button greys and the chord cards
-// whichever of the two reasons applies. ONE TERM covers both, the road
-// predicate above implying availability.
+// in one word (architect 2026-09-01; the GitHub term 2026-09-27): the mode
+// standing on a visit with a clone to commit into (history_remote_walk_-
+// available — a visit on the local fallback has none), no checkpoint already
+// publishing (single in flight, a bit that OUTLIVES the view, which is why
+// this takes the whole AppState rather than the mode struct), and a GITHUB
+// STATUS THAT ADMITS A COMMIT: UP TO DATE with something to commit (the head
+// delta, measured once per visit), or AHEAD — a committed-but-unpushed branch,
+// whose Ctrl+S retries the push through the act's clean-but-owing arm, so
+// AHEAD BYPASSES THE HEAD DELTA (the session equals the unpushed commit, and
+// the push is still owed). Every other status greys the face — Checking,
+// Offline, Refused, Diverged and Unchecked, each carded by the key at the act
+// (open_history_commit_editor) — and Behind is the PULL's face instead
+// (history_pull_actionable above). So an offline device takes no checkpoint,
+// on the laptop too (architect 2026-09-27, symmetric): outside the view Ctrl+S
+// is the plain save always.
 //
 // IT EXISTS BECAUSE THE ALLOWLIST STOPPED CARRYING THOSE TERMS. Ctrl+S was
-// admitted into the `h` view's vocabulary only while both held from 2026-08-08
-// until 2026-09-01 — one decision that refused the key and, through the derived
-// partition, greyed the button — and the architect ruled that shape out: a
-// membership test carrying state makes the gate's generic "Ctrl+S is not
-// available in the history view" answer a chord the view exists to run, which
-// is a lie about the vocabulary. So the ACT answers now
-// (open_history_commit_editor: the publishing card, then the one-dimensional
-// silence for an empty delta) and the FACE reads this predicate — the same two
-// terms, composed once, in the act's own order.
+// admitted into the `h` view's vocabulary only while its terms held from
+// 2026-08-08 until 2026-09-01 — one decision that refused the key and, through
+// the derived partition, greyed the button — and the architect ruled that
+// shape out: a membership test carrying state makes the gate's generic
+// "Ctrl+S is not available in the history view" answer a chord the view
+// exists to run, which is a lie about the vocabulary. So the ACT answers now
+// (open_history_commit_editor) and the FACE reads this predicate.
 // ONE READER: redesign_button_enabled's Save arm (scoped to the mode, the
-// button being the plain disk save everywhere else). The tooltip's in-flight
-// override was the second, reading the bit directly to name what was
-// happening; it went on 2026-09-12, when a tooltip stopped reporting a state.
+// button being the plain disk save everywhere else).
 inline bool history_checkpoint_actionable(const AppState& a) {
-    return a.history_mode.active &&
-           history_checkpoint_road_available(a) &&
-           !a.history_mode.head_delta_empty &&
-           !a.history_checkpoint_in_flight;
+    if (!a.history_mode.active || !history_remote_walk_available(a) ||
+        a.history_checkpoint_in_flight) {
+        return false;
+    }
+    if (a.github_status == GuiGitHubStatus::Ahead) return true;
+    return a.github_status == GuiGitHubStatus::UpToDate &&
+           !a.history_mode.head_delta_empty;
 }
 
 // THE WALK'S TWO WALLS, one predicate per direction (architect 2026-08-30):
@@ -15482,10 +15517,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // OUTSIDE THE VIEW THE TERM IS VACUOUS by construction — the predicate
         // carries the mode bit — the button being the plain disk save there,
         // which has no delta to ask about.
+        //
+        // AND IN THE VIEW THE GITHUB STATUS IS A TERM (architect 2026-09-27):
+        // the face is live where the chord would commit, retry the push or
+        // PULL (history_checkpoint_actionable, history_pull_actionable), and
+        // grey on Checking, Offline, Refused, Diverged and Unchecked, whose
+        // cards are the key's.
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
-                   (!a.history_mode.active || history_checkpoint_actionable(a));
+                   (!a.history_mode.active ||
+                    history_checkpoint_actionable(a) ||
+                    history_pull_actionable(a));
         // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-CURRENT-VIEW
         // LAMP (architect 2026-09-04; its question the view since 2026-09-22),
         // and it is the truthful-button rule's own shape: with the lamp lit
@@ -15853,12 +15896,24 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // roster (where a new button must be forced to state its row) but a list of
 // the four buttons that HAVE a second glyph, so the honest default for a new
 // button is "wears its table icon".
-inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
+//
+// SAVE HAS THREE GLYPHS SINCE 2026-09-27, the one wider subject, so the
+// answer is a GLYPH INDEX and the stash (RedesignButtonFace::glyph) holds it:
+// 0 is the table glyph, 1 the button's second, 2 its third — Save's Pull
+// alone. redesign_button_glyph_swapped below is the binary reading every
+// two-glyph button's reader asks.
+inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
     switch (b) {
         // SAVE wears the commit glyph in the history view (where Ctrl+S IS the
-        // checkpoint act) and while a checkpoint publishes.
+        // checkpoint act) and while a checkpoint publishes — and the PULL
+        // glyph in the view while the GitHub status reads Behind, where
+        // Ctrl+S pulls (history_save_is_pull).
         case RedesignButton::Save:
-            return a.history_checkpoint_in_flight || a.history_mode.active;
+            if (!a.history_checkpoint_in_flight && history_save_is_pull(a)) {
+                return 2;
+            }
+            return (a.history_checkpoint_in_flight || a.history_mode.active)
+                       ? 1 : 0;
         // RENDER WEARS THE CANCEL GLYPH WHILE AN EXPLICIT RENDER ACT IS LIVE
         // (architect 2026-08-11: "change the render button into a cancel
         // button when there's something rendering... it doesn't need to exist
@@ -15913,6 +15968,10 @@ inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
         default:
             return false;
     }
+}
+
+inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
+    return redesign_button_glyph(a, b) != 0;
 }
 
 // THE PRESSED FACE'S ONE TEST — is this roster button's click face down? True
@@ -16933,6 +16992,14 @@ inline RedesignTooltipText redesign_button_tooltip(
     // the whole class left this overload: a greyed button states no reason,
     // and the two keys' cards, which append the clone-specific clause a
     // constant line could not carry, are where the fact is said.)
+    // THE PULL (architect 2026-09-27): while the button is PAINTED as Pull
+    // (its stashed glyph, the Render hint's as-painted rule) the hint names
+    // that act.
+    if (b == RedesignButton::Save &&
+        a.redesign_buttons[static_cast<size_t>(RedesignButton::Save)].glyph ==
+            2) {
+        return {"Pull (Ctrl+S)", nullptr};
+    }
     if (b == RedesignButton::Save && a.history_mode.active) {
         return {"Save and Commit (Ctrl+S)", nullptr};
     }
@@ -16966,7 +17033,7 @@ inline RedesignTooltipText redesign_button_tooltip(
     // repaints this hint from the new painted bit.
     if (b == RedesignButton::Render &&
         a.redesign_buttons[static_cast<size_t>(RedesignButton::Render)]
-            .glyph_swapped) {
+                .glyph != 0) {
         return {"Cancel", nullptr};
     }
     // RENDER WITH THE MODE ON NAMES THE SWEEP, in every state. (IT FORKED ON

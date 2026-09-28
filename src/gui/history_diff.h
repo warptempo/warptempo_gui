@@ -6,6 +6,7 @@
 #include "warpmarkers.h"
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -42,18 +43,6 @@ class GuiHistoryPrefetch;
 // to the press that opens the view.
 inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 
-// THE EXPORTED HISTORY TAKES NO CHECKPOINT (architect 2026-09-17). The commit
-// walk has a second road — a `history/` folder the laptop exported into the
-// project, walked with no git at all (history_folder.h owns the format and the
-// ruling) — and a derivation is not a clone: there is nothing to commit into.
-// ONE READER, the CHECKPOINT ACT (open_history_commit_editor), which cards it
-// where its remote-walk arm cards kHistoryUnavailable; the Save-and-Commit
-// face greys on the SAME predicate one composition away
-// (history_checkpoint_road_available, app_state.h), so the key says the reason
-// and the grey is the button's message.
-inline constexpr const char* kHistoryFolderNoCheckpoint =
-    "An exported history takes no checkpoint";
-
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
 //
 // The architect commits his working checkpoints of a piece into an
@@ -86,17 +75,6 @@ inline constexpr const char* kHistoryFolderNoCheckpoint =
 // refuse the load-in-place anyway, and a foreign copy of a sidecar name
 // elsewhere in the
 // tree can no longer make the match ambiguous.)
-//
-// THE COMMIT WALK HAS A SECOND ROAD SINCE 2026-09-17, and every paragraph
-// above describes the GIT one. If the source's parent folder carries a
-// `history/` directory, the walk reads THAT — one folder per exported
-// checkpoint, the three sidecars inside it under their real names — and runs no
-// git at all: the match, the walk, the per-commit tree resolution and the
-// branch are all git's own questions and none of them is asked there. The
-// format, the fork and the reason the tablet needs it live in history_folder.h;
-// what this module keeps is the WALK — the same members, the same strict load
-// gate, the same deltas, the same `'` act — with GuiHistoryWalkRoad naming
-// which half of this file a given session is using.
 //
 // THE BRANCH IS THE LOCAL ONE, `HEAD`, not `origin/main` — because this module
 // WRITES checkpoints now (the commit act below) and a checkpoint whose push
@@ -169,21 +147,21 @@ inline constexpr const char* kHistoryFolderNoCheckpoint =
 // authoring after init keeps seeing the init-moment answer. The mode's entry
 // is the natural re-init point.
 //
-// READ-ONLY BY CONSTRUCTION WITH ONE FENCED EXCEPTION. Every git question
+// READ-ONLY BY CONSTRUCTION WITH THREE FENCED EXCEPTIONS. Every git question
 // goes through the one git road, GuiGitRepo (git_repo.h — libgit2 in process,
-// no subprocess and no shell), and every route in this module but the commit
-// act asks only its READS — discovery, HEAD, the origin's configured URLs, the
-// walk, a commit's changed paths, its tree and its blobs — and writes no file,
-// no ref and no index entry. THE COMMIT ACT (commit_history_checkpoint, below)
-// is the one writer in the product's whole git surface: it writes the three
-// sidecars into the piece's directory in the working tree and calls the seam's
-// three MUTATORS — stage, commit, push — which sit in their own section there
-// with that act their one caller, so which calls mutate stays answerable by
-// reading the call sites rather than by trusting a runtime guard. THE FOLDER
-// ROAD RUNS NO GIT AT ALL, so this list is unchanged by it: it lists a
-// directory and reads three files per member, and the one mutating route stays
-// the commit act — which that road refuses outright
-// (kHistoryFolderNoCheckpoint above).
+// no subprocess and no shell), and every route in this module but three asks
+// only its READS — discovery, HEAD, the origin's configured URLs, the walk, a
+// commit's changed paths, its tree and its blobs, the branch against its
+// upstream — and writes no file, no ref and no index entry. The three writers
+// call the seam's five MUTATORS, which sit in their own section there, so
+// which calls mutate stays answerable by reading the call sites rather than
+// by trusting a runtime guard: THE COMMIT ACT (commit_history_checkpoint,
+// below) writes the three sidecars into the piece's directory and fetches,
+// stages, commits and pushes; THE GITHUB CHECK (check_github) fetches, which
+// writes the remote-tracking refs and nothing the walk reads; THE PULL
+// (run_history_pull) fast-forwards the branch, its index and its files. THE
+// WALK STILL READS THE LOCAL BRANCH (the paragraph above): a fetch moves
+// `origin/<branch>`, never what `h` walks.
 
 // THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
 // against two different "other sides", and the view offers both.
@@ -497,15 +475,8 @@ struct GuiHistorySidecarBlob {
 
 // One commit's three sidecars, read whole.
 struct GuiHistoryCommitSidecars {
-    // The commit's full 40-char SHA — and, ON THE
-    // FOLDER ROAD, the member's seven-character sha7, which is the whole name
-    // an export carries (history_folder.h).
+    // The commit's full 40-char SHA.
     std::string sha;
-    // THE FOLDER ROAD'S MEMBER ADDRESS, the member folder's absolute path;
-    // EMPTY on the git road, where `sha` IS the address. ONE READER: the `'`
-    // act (GuiInputHandler::load_history_commit_in_place) through
-    // GuiHistoryDiff::member_folder_at.
-    std::string folder;
     GuiHistorySidecarBlob warpmarkers;
     GuiHistorySidecarBlob phaseresetmarkers;
     GuiHistorySidecarBlob settings;
@@ -604,12 +575,6 @@ struct GuiHistoryCommitLoad {
 // `repo_root` is the clone to read in — the session's own derived root
 // (GuiHistoryWalkHeader::repo_root), which the scan carries into its per-candidate
 // gating and GuiHistoryDiff::repo_root() hands to the `'` act.
-//
-// IT IS THE GIT ROAD'S GATE. Its twin over an exported history folder is
-// load_history_folder_member_strict (history_folder.h): the same three strict
-// loaders and the same first-error verdict over FILES under their real names,
-// so that road needs no staging — and the two are what make walk membership
-// one idea on both roads.
 bool load_commit_sidecars_strict(const std::string&    repo_root,
                                  const std::string&    spelling,
                                  const std::string&    base_name,
@@ -622,21 +587,7 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
 // inline and what the prefetch worker now does off-thread. It lives HERE, in
 // the module that owns every git call, so the worker file owns only threading:
 // the read/write fence stays "which function a call site names", and the
-// prefetch names none of the mutating one. (The two entry points below —
-// resolve_history_walk_header and scan_history_walk — serve BOTH roads since
-// 2026-09-17 and hand the folder one off to history_folder.h; everything
-// between them that names git is the git road's.)
-
-// WHICH BACKEND OF THE COMMIT WALK A HEADER DESCRIBES (architect 2026-09-17).
-// Git is the clone the source sits in, read through libgit2, and every
-// paragraph at the head of this file is about it. Folder is an EXPORTED
-// history a project carries — `<project>/history/<seq>_<sha7>/` — read with no
-// git at all; its format, its generator and the ruling that a derivation takes
-// no checkpoint live in history_folder.h.
-enum class GuiHistoryWalkRoad {
-    Git,
-    Folder,
-};
+// prefetch names none of the mutating one.
 
 // WHERE THE PIECE LIVES, or why it cannot be found — the walk's cheap half: the
 // CLONE the source is in, the projects-home guard, the source's base-name
@@ -644,11 +595,6 @@ enum class GuiHistoryWalkRoad {
 // the root derivation's discovery and the guard's reads of the origin's
 // configured URLs. `unavailable_reason` carries the one line the mode
 // prints when it refuses, in the exact shape it always had.
-//
-// THAT IS THE GIT ROAD'S HALF, and it is asked SECOND: the resolver looks for
-// an exported history folder first, and a project that has one gets a Folder
-// header with the base name filled, no git run and none of the fields below
-// consulted (`road` owns the fork; history_folder.h owns the road).
 //
 // `repo_root` IS DERIVED FROM THE SOURCE (architect 2026-08-11, superseding the
 // compiled-in absolute path): the clone containing the loaded file, canonical and
@@ -675,23 +621,12 @@ struct GuiHistoryWalkHeader {
     bool        ok = false;
     bool        read_failed = false;
     GuiFailure  unavailable_reason;
-    // WHICH ROAD THIS HEADER DESCRIBES, and the whole fork: the resolver asks
-    // for an exported folder BEFORE it derives a clone, so a project carrying
-    // one is walked from it on every backend (history_folder.h).
-    GuiHistoryWalkRoad road = GuiHistoryWalkRoad::Git;
-    // The exported history folder, absolute — set on the Folder road and EMPTY
-    // on the Git one.
-    std::string history_folder;
-    // WHICH CLONE AND WHERE THE PIECE LIVES — the GIT ROAD'S two answers, and
-    // EMPTY on the Folder road, where neither question is asked. Their one
-    // consumer is the CHECKPOINT ACT (the commit worker's job, and the title's
-    // default off the directory's leaf), and the checkpoint never runs on that
-    // road — an export is a derivation, not a clone
-    // (kHistoryFolderNoCheckpoint above).
+    // WHICH CLONE AND WHERE THE PIECE LIVES. Their consumers are the
+    // CHECKPOINT ACT (the commit worker's job, and the title's default off the
+    // directory's leaf) and the PULL (its plan).
     std::string repo_root;
-    // THE SIDECAR BASE NAME IS BOTH ROADS', derived the one way from the
-    // source's own stem: it is what names the three files inside a member,
-    // wherever the member is read from.
+    // THE SIDECAR BASE NAME, derived from the source's own stem: it is what
+    // names the three files inside a checkpoint.
     std::string base_name;
     std::string project_directory;
 };
@@ -736,18 +671,12 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
 GuiHistoryWalkHeader resolve_history_walk_header(
     const std::string& source_audio_path, const std::string& projects_repo);
 
-// THE WALK'S STALENESS WITNESS, ON EITHER ROAD, empty when it cannot be read.
-// A run describes the history as of one tip, and an entry that finds the tip
-// moved kicks a fresh run rather than trusting the old one.
+// THE WALK'S STALENESS WITNESS — the commit HEAD resolves to, full SHA — empty
+// when it cannot be read. A run describes the history as of one tip, and an
+// entry that finds the tip moved (a checkpoint, a pull, a terminal commit)
+// kicks a fresh run rather than trusting the old one.
 //
-// ON THE GIT ROAD it is the commit HEAD resolves to, full SHA. ON THE FOLDER ROAD
-// it is THE NEWEST MEMBER'S FOLDER NAME (`<seq>_<sha7>`), which moves exactly
-// when the export grows, or the empty string when the folder lists no member
-// at all — an empty tip re-scans at every `h`, which over a listing of nothing
-// costs nothing and keys on nothing.
-//
-// IT TAKES THE SOURCE, NOT A ROOT, and derives the clone (or finds the folder)
-// itself — both its callers (the prefetch worker before a run, the `h` entry's
+// IT TAKES THE SOURCE, NOT A ROOT, and derives the clone itself — both its callers (the prefetch worker before a run, the `h` entry's
 // staleness test) ask before any header exists, so there is no root in hand for
 // them to pass. A derivation that refuses answers the empty string, which is the
 // same "could not be read" the tip read itself answers with, and the caller
@@ -781,10 +710,7 @@ std::string read_history_walk_tip(const std::string& source_audio_path);
 // could not be read. Every one of them is a read that never answered — never a
 // history that is empty. (A source simply NOT IN A CLONE is not on this list: it
 // is an ordinary header refusal, an answer rather than the absence of one.)
-// THE FOLDER ROAD ADDS EXACTLY ONE ARM to this list and has no other: THE
-// EXPORTED HISTORY FOLDER COULD NOT BE LISTED (list_history_folder_members,
-// history_folder.h) — the same shape, a read that did not answer, while an
-// empty folder is the ruled empty walk. (A per-CANDIDATE failure is not on
+// (A per-CANDIDATE failure is not on
 // this list and never ends the run: it hides that commit on the counted line's
 // terms, the walk's own load gate doing what it always did.) A failed run is a
 // terminal matter under the sanctioned-use ruling: the mode refuses entry with
@@ -919,32 +845,8 @@ public:
     // covers is a run failing WHILE THE VIEW STANDS.
     bool walk_finished_empty() const;
 
-    // Full 40-char SHA, newest first — the member's sha7 on the folder road,
-    // where that is the whole name an export carries. Empty for an
-    // out-of-range index.
+    // Full 40-char SHA, newest first. Empty for an out-of-range index.
     const std::string& sha_at(std::size_t index) const;
-
-    // WHICH ROAD THIS VISIT BOUND TO, the header's own answer kept for the
-    // visit (history_folder.h owns what the Folder road is). Its readers are
-    // the `'` act, which loads a member by its address, and takes_checkpoint
-    // below.
-    GuiHistoryWalkRoad road() const { return road_; }
-
-    // THE FOLDER ROAD'S MEMBER ADDRESS at an index — the member folder's
-    // absolute path, sha_at's shape and empty out of range. Empty on the git
-    // road too, where the SHA is the address. ONE READER, the `'` act
-    // (GuiInputHandler::load_history_commit_in_place).
-    const std::string& member_folder_at(std::size_t index) const;
-
-    // CAN THIS WALK TAKE A CHECKPOINT? — the commit walk bootstrapped AND on
-    // the git road. An exported history folder is walked exactly as the
-    // clone's history is, but it is a derivation, not a clone: there is
-    // nothing to commit into (architect 2026-09-17, the ruling at
-    // history_folder.h). The GUI spells it history_checkpoint_road_available
-    // (app_state.h), which carries the reader inventory.
-    bool takes_checkpoint() const {
-        return available_ && road_ == GuiHistoryWalkRoad::Git;
-    }
 
     // The commit's delta IN ONE OF THE TWO READINGS (GuiHistoryCompare above),
     // computed on first call and cached per (index, compare) — the two answers
@@ -980,14 +882,9 @@ public:
     //
     // `repo_root()` is the absolute, canonical root every git call this session
     // makes runs against (architect 2026-08-11 — derived from the loaded source,
-    // never compiled in). It is what the view's two mutating routes take: the `'`
-    // load-in-place hands it to load_commit_sidecars_strict, and Save and commit
-    // carries it onto the checkpoint worker.
-    //
-    // ON THE FOLDER ROAD the clone and the directory are EMPTY and the base
-    // name alone is filled (the header's own fields say why): the `'` act
-    // takes the member's folder instead, and the checkpoint act does not run
-    // there at all.
+    // never compiled in). It is what the view's mutating routes take: the `'`
+    // load-in-place hands it to load_commit_sidecars_strict, Save and commit
+    // carries it onto the checkpoint worker, and the pull plans against it.
     const std::string& repo_root() const { return repo_root_; }
     const std::string& sidecar_base_name() const { return base_name_; }
     const std::string& project_directory() const { return project_directory_; }
@@ -1018,13 +915,6 @@ private:
 
     bool              available_ = false;
     GuiFailure        unavailable_reason_;
-    // WHICH ROAD THIS VISIT BOUND TO — the header's own answer, kept for the
-    // visit's whole life beside the three strings below and cleared with them,
-    // and read by road() and takes_checkpoint. THE FOLDER ITSELF IS NOT KEPT:
-    // a member's address is the member's own
-    // (GuiHistoryCommitSidecars::folder, which member_folder_at hands the `'`
-    // act), so the session has nothing left to ask the folder for.
-    GuiHistoryWalkRoad road_ = GuiHistoryWalkRoad::Git;
     std::string       repo_root_;
     std::string       base_name_;
     std::string       project_directory_;
@@ -1250,7 +1140,7 @@ private:
     std::array<std::vector<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };
 
-// -- THE COMMIT ACT — the product's one mutating git route ------------------
+// -- THE COMMIT ACT — the first of the three mutating git routes ------------
 //
 // What the mode reads, it can now also WRITE: while the history mode stands,
 // Ctrl+S saves the piece and commits the live authoring state into its directory
@@ -1278,14 +1168,14 @@ private:
 // spelling, and it has exactly one reader — the editor's opener.
 std::string history_checkpoint_title(const std::string& project_directory);
 
-// HOW FAR THE ACT GOT — five answers over ONE sanctioned path (the act's own head
-// in the .cpp owns the model; this says what each value means to the caller).
-// Each is the verdict of the step that ended the act.
+// HOW FAR THE ACT GOT — eight answers over ONE sanctioned path (the act's own
+// head in the .cpp owns the model; this says what each value means to the
+// caller). Each is the verdict of the step that ended the act.
 //
-// WriteFailed — NOTHING REACHED THE REPOSITORY. The three sidecars could not be
+// WriteFailed — NOTHING WAS COMMITTED. The three sidecars could not be
 // written, or the act refused before writing them at all: the clone would not
-// open, or a DETACHED HEAD, which is unsanctioned use and throws here, since
-// there is no branch to publish onto.
+// open, a DETACHED HEAD (unsanctioned use, which throws here, since there is
+// no branch to publish onto), or a branch its fetch could not compare.
 //
 // CommitFailed — A STEP REFUSED BEFORE ANYTHING WAS PUBLISHED, and the three
 // files are sitting in the working tree where `git status` shows them and a hand
@@ -1299,24 +1189,84 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // one clean ending beside Committed and the caller treats the two alike.
 //
 // CommittedNotPushed — THE BYTES ARE IN THE LOCAL BRANCH AND THE PUSH DID NOT
-// LAND: the guard refused the destination, or the push failed — no deploy key,
-// the key refused, a host key off the pin, an http(s) remote, a remote that has
-// moved (non-fast-forward), a server-side rejection, the time bound. The fix is
-// `git push` in the terminal (after `git pull --ff-only` for a moved remote);
-// the next act finds the branch still ahead and pushes it, which is also how a
-// push made IN THE TERMINAL is recognized.
+// LAND: no deploy key, the key refused, a host key off the pin, a remote that
+// moved in the seconds since the act's fetch (non-fast-forward), a
+// server-side rejection, the time bound. The GitHub status reads Ahead, and
+// Ctrl+S in the `h` view retries: the act's clean-but-owing arm finds the
+// branch still ahead and pushes it (which is also how a push made IN THE
+// TERMINAL is recognized — the branch is no longer ahead).
 //
 // Committed — THE CHECKPOINT IS IN THE BRANCH AND THE BRANCH IS PUBLISHED: the
 // push succeeded and the remote accepted the ref. It covers both push arms —
 // the commit this act just made, and a branch the pre-flight found already
 // ahead with these bytes clean.
+// THE THREE PRE-COMMIT REFUSALS (architect 2026-09-27, the act fetching
+// first): each ends the act BEFORE the three sidecars are written or anything
+// is committed — the prelude save has landed, the repository has only the
+// fetch's refs.
+//
+// RemoteMoved — the fetch found GitHub ahead of this branch (the branch is
+// behind, or both have moved): committing on top would diverge.
+//
+// RemoteUnreachable — the fetch could not reach GitHub.
+//
+// RemoteRefused — GitHub declined this device (no deploy key, the key
+// refused, a host key off the pin), or the projects-home guard refused the
+// clone's remotes.
 enum class GuiHistoryCommitOutcome {
     WriteFailed,
     NothingToCommit,
     CommitFailed,
     CommittedNotPushed,
     Committed,
+    RemoteMoved,
+    RemoteUnreachable,
+    RemoteRefused,
 };
+
+// THE GITHUB STATUS (architect 2026-09-27) — how this device's branch stands
+// against GitHub, as of the last fetch. Row 8's `h` walk line says it as
+// `GitHub: <word>` (github_status_word), and it selects what Ctrl+S does in
+// the view: UpToDate commits, Ahead commits or retries the push, Behind
+// pulls, and the rest refuse with a card.
+//   Unchecked — no reading: the project's first check has not been
+//               dispatched, or the check could not classify (no clone, a
+//               detached or unborn HEAD, no upstream, a read that did not
+//               answer). Row 8 shows no segment.
+//   Checking  — a check is on the worker.
+//   UpToDate  — nothing either way.
+//   Ahead     — this branch has commits GitHub has not (a push that failed),
+//               or its upstream's remote-tracking ref is gone.
+//   Behind    — GitHub has commits this branch has not; the pull's case.
+//   Diverged  — both have moved; fast-forward only, so no in-app answer.
+//   Offline   — the fetch could not reach GitHub.
+//   Refused   — GitHub declined this device, or the guard refused the clone.
+enum class GuiGitHubStatus {
+    Unchecked,
+    Checking,
+    UpToDate,
+    Ahead,
+    Behind,
+    Diverged,
+    Offline,
+    Refused,
+};
+
+// Row 8's word for a status — "checking...", "up to date", "ahead",
+// "behind", "diverged", "offline", "refused" — or null for Unchecked.
+const char* github_status_word(GuiGitHubStatus status);
+
+// THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
+// at every project open and every `h` entry: derive the clone from the source
+// (resolve_history_walk_header, the guard included), read the branch, FETCH
+// from the guard's validated fetch url (GuiGitRepo::fetch_origin), and compare
+// the branch with its upstream. The reading, or Unchecked where there is none
+// (GuiGitHubStatus). Offline and Refused print their cause on one stderr
+// line. `cancel` is the worker's abandon token: a set token ends the fetch at
+// its next callback and answers Unchecked, which nobody reads.
+GuiGitHubStatus check_github(const std::string&       source_audio_path,
+                             const std::string&       projects_repo,
+                             const std::atomic<bool>& cancel);
 
 // WRITE THE THREE SIDECARS AND COMMIT THEM. `repo_root` is the clone the act runs
 // in — the session's own derived root (GuiHistoryWalkHeader::repo_root, carried
@@ -1338,11 +1288,11 @@ enum class GuiHistoryCommitOutcome {
 // captured on the main thread, this function reads no shared state, and its
 // stderr lines print from the worker thread in the same order they always did.
 //
-// `projects_repo` is the setting's own value, and it is here because THE PUSH
-// CONSUMES THE VALIDATED DESTINATION: the same guard init() runs as the mode's
-// gate is asked again at the mutating boundary, and the URL it validates there
-// is pinned onto the push's own remote instance rather than re-resolved from the mutable
-// remote name — so a config changed since the mode opened cannot publish to a
+// `projects_repo` is the setting's own value, and it is here because THE FETCH
+// AND THE PUSH CONSUME THE VALIDATED URLS: the same guard init() runs as the
+// mode's gate is asked again at the mutating boundary, and the URLs it
+// validates there are pinned onto the fetch's and the push's own remote
+// instance rather than re-resolved from the mutable remote name — so a config changed since the mode opened cannot publish to a
 // repository the user never confirmed, and neither can one changed between the
 // check and the push. The publication's other term is bound the same way:
 // the BRANCH is read once at act start — the act's ONLY reading of the symbolic
@@ -1353,14 +1303,82 @@ enum class GuiHistoryCommitOutcome {
 // EACH STEP'S OWN VERDICT DECIDES (architect 2026-09-06, superseding the strict
 // model of 2026-08-09 whole), the way every git front-end decides; nothing
 // observes the repository afterwards to learn what a step did. The act's head in
-// the .cpp owns the ruling, the five steps and the one accepted imprecision.
+// the .cpp owns the ruling, the steps and the one accepted imprecision.
 //
 // IT CREATES NO DIRECTORY AND NEEDS NONE: `project_directory` is the folder the
 // SOURCE is sitting in, so it exists by construction. The first checkpoint of a
 // brand-new piece is still an ordinary act of this view — put the piece in its
 // own folder under `projects/` and Save and commit does the rest — exactly as
 // the first checkpoint after a schema change is.
+//
+// `github` IS THE ACT'S OWN READING, handed back for the GitHub status: the
+// reading its fetch-first step took (UpToDate, Ahead, Behind, Diverged,
+// Offline or Refused), or Unchecked when the act ended before that step.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& repo_root, const std::string& project_directory,
     const std::string& base_name, const std::string& projects_repo,
-    const GuiHistoryNowSide& bytes, const std::string& title);
+    const GuiHistoryNowSide& bytes, const std::string& title,
+    GuiGitHubStatus& github);
+
+// -- THE PULL (architect 2026-09-27) -----------------------------------------
+//
+// BEHIND, Ctrl+S in the `h` view is PULL: a FAST-FORWARD of the checked-out
+// branch to the remote-tracking ref THE LAST CHECK FETCHED, synchronous on
+// the main thread and NETWORK-FREE (the ref is local; nothing is fetched
+// again). Fast-forward only: a branch that is not strictly behind refuses.
+// Two steps, a question between them when the pull changes the open piece
+// (GuiInputHandler::run_history_pull_press owns the question).
+
+// WHAT THE PRESS FOUND. `touches_open_piece` is whether the pull changes any
+// of the open piece's three sidecars (its directory's `<base><ext>`), the
+// question's one condition. The plan carries everything the pull needs, so it
+// can stand parked under the question.
+struct GuiHistoryPullPlan {
+    std::string repo_root;
+    std::string project_directory;
+    std::string base_name;
+    std::string branch;
+    std::string from_sha;   // the branch's tip at the press
+    std::string to_sha;     // the upstream's remote-tracking tip
+    bool        touches_open_piece = false;
+};
+
+// Ready: the branch is strictly behind (0 ahead, >0 behind) and the plan is
+// filled. Moved: it is not, and `reading` is what it is instead (UpToDate,
+// Ahead or Diverged; Unchecked for no upstream). Unreadable: a read did not
+// answer.
+enum class GuiHistoryPullPlanVerdict { Ready, Moved, Unreadable };
+GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
+                                            const std::string&   project_directory,
+                                            const std::string&   base_name,
+                                            GuiHistoryPullPlan&  plan,
+                                            GuiGitHubStatus&     reading);
+
+// THE PULL ITSELF (GuiGitRepo::fast_forward's four steps). `reload` forces
+// all three of the open piece's sidecars to the pulled checkpoint's bytes;
+// otherwise (Keep) the three keep their working-tree bytes and every other
+// changed path is pulled. It re-reads the branch and the upstream first, so a
+// terminal commit or pull since the press refuses as Moved with nothing
+// written.
+//   Pulled        — the branch, the index and the files are the upstream's.
+//   Moved         — the branch or the upstream moved since the plan.
+//   Unreadable    — a read failed before anything was written.
+//   Conflict      — another path the pull changes has local changes (or an
+//                   untracked file in the way); nothing was written, and
+//                   `conflict_piece` names the piece folder (or the path).
+//   FilesFailed   — the working tree was partly written; the branch did not
+//                   move.
+//   BranchFailed  — the files and perhaps the index are the upstream's; the
+//                   branch did not move.
+// Every arm but Pulled prints one stderr line.
+enum class GuiHistoryPullOutcome {
+    Pulled,
+    Moved,
+    Unreadable,
+    Conflict,
+    FilesFailed,
+    BranchFailed,
+};
+GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan& plan,
+                                       bool                      reload,
+                                       std::string&              conflict_piece);

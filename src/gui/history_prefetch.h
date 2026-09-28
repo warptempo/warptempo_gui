@@ -157,9 +157,8 @@ public:
     const std::string& subject_projects_repo() const { return subject_repo_; }
 
     // The walk tip the current run was built against, empty until the run's
-    // header arrives — the branch tip on the git road, the newest exported
-    // member's folder name on the folder one (read_history_walk_tip owns
-    // both). The third staleness term: an entry compares it against a live
+    // header arrives — the branch tip (read_history_walk_tip). The third
+    // staleness term: an entry compares it against a live
     // read_history_walk_tip().
     const std::string& tip_sha() const { return tip_sha_; }
 

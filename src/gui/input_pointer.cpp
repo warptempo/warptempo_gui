@@ -8176,7 +8176,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect
         // 2026-08-11) — THE ROSTER'S ONE RULED EXCEPTION TO "THE BUTTON IS ITS
         // CHORD": while the face is PAINTED as Cancel (its stashed
-        // glyph_swapped bit, whose Render arm at redesign_button_glyph_swapped
+        // glyph, whose Render arm at redesign_button_glyph
         // is queue_running and holds the face's contract) the lift runs THE
         // CANCEL ACT ITSELF, the Esc
         // arm's own body, and dispatches no chord at all. The divergence is
@@ -8200,7 +8200,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // the honest reading — the face says Cancel for the whole hold, and a
         // button that changed its act at some invisible mark while its label
         // stood still would be the lie this exception exists to prevent.
-        if (tc.id == RedesignButton::Render && face.glyph_swapped) {
+        if (tc.id == RedesignButton::Render && face.glyph != 0) {
             // BOTH HALVES OF THE FACE-MIRRORS-THE-ACT HONESTY (architect
             // 2026-09-24, strictly as-painted): the CLAIM reads the painted
             // glyph, so a lift on a painted Cancel never dispatches a render;

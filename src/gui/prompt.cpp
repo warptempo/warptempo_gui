@@ -21,7 +21,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
-        // Both are dispatched directly by activate_response, outside
+    case DialogTrigger::PULL_CONFIRM:
+        // All three are dispatched directly by activate_response, outside
         // proceed.
         break;
     }
@@ -150,6 +151,26 @@ void GuiPrompt::activate_response(char k) {
         return;
     }
 
+    if (trigger == DialogTrigger::PULL_CONFIRM) {
+        // THE PULL'S QUESTION (architect 2026-09-27): `r` Reload and `k` Keep
+        // run the parked plan through the input handler; Escape drops it. The
+        // prompt closes first either way, so the pull runs on the ordinary
+        // modal state (and Reload's reopen asks nothing more).
+        if (k == 'r' || k == 'k') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->answer_history_pull(k == 'r');
+            return;
+        }
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->cancel_history_pull();
+            return;
+        }
+        return;
+    }
+
     if (trigger == DialogTrigger::REVERT_CONFIRM) {
         // OK completes the revert through proceed (close_target_ is Revert,
         // seated by the request that raised this); Escape keeps the authored
@@ -242,7 +263,7 @@ void GuiPrompt::cancel_paste_confirmation() {
 // share identical behaviour; what differs between them is the target, seated
 // here for proceed — and, for Revert alone, the question a dirty session is
 // asked.
-void GuiPrompt::request_close(GuiCloseTarget target) {
+void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     if (app.prompt.active) return; // already gated; ignore re-entry
     // THE RENDER PLAYER COMES DOWN FIRST, on every road into this one: the
     // mode's transport is stopped, the view's buffer rebound and the overlay
@@ -272,7 +293,7 @@ void GuiPrompt::request_close(GuiCloseTarget target) {
     // stand), stated once at close_modal_editors_no_commit and idempotent.
     if (input != nullptr) input->close_modal_editors_no_commit();
     close_target_ = target;
-    if (!app.dirty)
+    if (!app.dirty || question_asked)
         proceed(DialogTrigger::CLOSE_WINDOW);
     else if (target == GuiCloseTarget::Revert)
         open_revert_confirm();

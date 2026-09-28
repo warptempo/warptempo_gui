@@ -6,8 +6,6 @@
 // Every git question this module asks goes through the one git road
 // (libgit2 in process); this file keeps the policy.
 #include "git_repo.h"
-// The commit walk's second road — the exported history folder, git-free.
-#include "history_folder.h"
 #include "history_prefetch.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
@@ -118,7 +116,8 @@ constexpr std::string_view kScaleKeyPrefix = "scale=";
 // public entry point below opens its own handle on the clone it is handed —
 // never shared across threads (the seam's head owns that rule) — and the scan
 // holds one handle for its whole run. The seam's reads write nothing; its
-// three mutators have ONE caller, the commit act at the foot of this file.
+// five mutators have THREE callers, all at the foot of this file: the commit
+// act, the GitHub check and the pull.
 
 // ---------------------------------------------------------------------------
 // text helpers
@@ -620,7 +619,9 @@ std::string clone_name(const std::string& repo_root) {
 // them could be named. An empty list has nothing to pin and is refused here
 // rather than left to the push. The pinned URL is used verbatim, so a
 // `url.<base>.insteadOf` / `pushInsteadOf` rule cannot move the push either:
-// what this guard blesses is where the push goes.
+// what this guard blesses is where the push goes. `fetch_source` is the same
+// idea for a FETCH (the GitHub check's and the act's own): the fetch url just
+// validated, which the fetch sets on its own remote instance.
 //
 // ITS REASONS ARE LOWERCASE, like every other reason in this file: both of
 // its consumers APPEND (the mode's entry composes "History is unavailable: " and
@@ -636,9 +637,11 @@ bool clone_is_projects_home(const GuiGitRepo&  repo,
                             const std::string& repo_root,
                             const std::string& projects_repo,
                             GuiFailure&        reason,
-                            std::string*       destination = nullptr) {
+                            std::string*       destination = nullptr,
+                            std::string*       fetch_source = nullptr) {
     reason = GuiFailure{};
     if (destination != nullptr) destination->clear();
+    if (fetch_source != nullptr) fetch_source->clear();
     const std::string setting_norm = normalize_repo_url(projects_repo);
     if (setting_norm.empty()) {
         reason = plain_failure("the projects_repo setting is empty");
@@ -687,6 +690,7 @@ bool clone_is_projects_home(const GuiGitRepo&  repo,
         return false;
     }
     if (destination != nullptr) *destination = first_push_url;
+    if (fetch_source != nullptr) *fetch_source = trim_trailing_ws(remote_raw);
     return true;
 }
 
@@ -1348,62 +1352,20 @@ GuiHistoryWalkHeader resolve_history_walk_header(
         h.ok = false;
         h.read_failed = read_failed;
         h.unavailable_reason = std::move(why);
-        h.road = GuiHistoryWalkRoad::Git;
-        h.history_folder.clear();
         h.repo_root.clear();
         h.base_name.clear();
         h.project_directory.clear();
         return h;
     };
 
-    // THE SIDECAR BASE NAME IS THE SOURCE'S OWN STEM on both roads — the one
-    // derivation rule the loader uses when it builds <base>.warpmarkers and
-    // its three siblings beside the WAV (file_loader.cpp's companion-file
-    // block). The corpus and the export both name their files by exactly that,
-    // so mirroring the rule is what makes the filename match work on names
-    // full of periods and commas.
+    // THE SIDECAR BASE NAME IS THE SOURCE'S OWN STEM — the one derivation
+    // rule the loader uses when it builds <base>.warpmarkers and its two
+    // siblings beside the WAV (file_loader.cpp's companion-file block). The
+    // corpus names its files by exactly that, so mirroring the rule is what
+    // makes the filename match work on names full of periods and commas.
     //
-    // IT IS DERIVED HERE, ABOVE THE FORK, because the Folder road needs it too
-    // and its own refusal is the same sentence either way.
-    auto base_name_of_source = [&]() {
-        return std::filesystem::path(source_audio_path).stem().string();
-    };
-    auto no_base_name = [&]() {
-        const std::filesystem::path given(source_audio_path);
-        return unavailable(path_failure("the source path has no base name: ",
-                                        given, shown_project_path(given), ""));
-    };
-
-    // THE EMPTY SOURCE STILL REFUSES FIRST, AND THROUGH THE SAME ARM it always
-    // did: history_folder_of_source answers EMPTY for it (there is no parent
-    // folder to look in), so the press falls to the clone derivation below and
-    // gets `no source is loaded` in resolve_repo_root_for_source's own words.
-    // No second producer of that sentence.
-    //
-    // THE FOLDER OUTRANKS GIT, AND THERE IS NO BACKEND TERM IN IT (architect
-    // 2026-09-17): a project carrying an exported history is walked from that
-    // export on every backend, the laptop included — the laptop simply never
-    // has one, its exporter writing to scratch and pushing. The whole decision
-    // is whether `<the source's parent>/history` is a directory
-    // (history_folder_of_source, the one place the filesystem is asked), and
-    // it is asked AHEAD of the clone derivation so a folder the user put there
-    // is never second-guessed by a clone that happens to exist around it.
-    //
-    // THE PROJECTS-HOME GUARD IS GIT'S OWN AND IS NOT ASKED HERE. It answers
-    // WHICH REPOSITORY the clone on this disk is, because the clone is only
-    // the transport for a history kept elsewhere; an export IS the history,
-    // sitting inside the project it describes, so there is no second
-    // repository for it to be confused with.
-    const std::string folder = history_folder_of_source(source_audio_path);
-    if (!folder.empty()) {
-        h.road           = GuiHistoryWalkRoad::Folder;
-        h.history_folder = folder;
-        h.base_name      = base_name_of_source();
-        if (h.base_name.empty()) return no_base_name();
-        h.ok = true;
-        return h;
-    }
-
+    // THE EMPTY SOURCE REFUSES FIRST, through the clone derivation below, in
+    // resolve_repo_root_for_source's own words (`no source is loaded`).
     // THE CLONE FIRST, because every question below it is asked of a repository
     // and there is no repository until this answers (architect 2026-08-11,
     // replacing the compiled-in path's is_directory probe: the root is derived
@@ -1447,10 +1409,12 @@ GuiHistoryWalkHeader resolve_history_walk_header(
         return unavailable(std::move(guard_reason));
     }
 
-    // The sidecar base name, through the one derivation above — the rule and
-    // its refusal are the same on both roads.
-    h.base_name = base_name_of_source();
-    if (h.base_name.empty()) return no_base_name();
+    h.base_name = std::filesystem::path(source_audio_path).stem().string();
+    if (h.base_name.empty()) {
+        const std::filesystem::path given(source_audio_path);
+        return unavailable(path_failure("the source path has no base name: ",
+                                        given, shown_project_path(given), ""));
+    }
 
     // THE SOURCE'S FOLDER IS THE PROJECT DIRECTORY, AND THAT IS THE WHOLE RULE
     // (architect 2026-08-09). A piece lives in its own folder under the clone's
@@ -1498,28 +1462,6 @@ GuiHistoryWalkHeader resolve_history_walk_header(
 }
 
 std::string read_history_walk_tip(const std::string& source_audio_path) {
-    // THE ROAD IS ASKED HERE TOO, and by the same one owner the resolver asks
-    // (history_folder_of_source): the staleness key has to describe the walk
-    // the entry is about to bind to, so a project carrying an export is keyed
-    // on THAT and never on a clone's branch tip.
-    //
-    // THE FOLDER ROAD'S TIP IS THE NEWEST MEMBER'S FOLDER NAME, read through
-    // the one listing owner rather than a second walk of the directory — so a
-    // non-member entry is reported in the listing's own words here as well.
-    // An unlistable folder and one holding no member both answer the empty
-    // string, which is the same "could not be read" every caller already
-    // treats as stale.
-    const std::string folder = history_folder_of_source(source_audio_path);
-    if (!folder.empty()) {
-        std::vector<GuiHistoryFolderMember> members;
-        GuiFailure                          why;
-        if (!list_history_folder_members(folder, members, why) ||
-            members.empty()) {
-            return std::string();
-        }
-        return std::filesystem::path(members.front().path).filename().string();
-    }
-
     // IT DERIVES THE ROOT ITSELF, both its callers asking before any header
     // exists (the declaration owns why). A derivation that refuses, a clone
     // that will not open and an unborn branch all answer the same empty string
@@ -1543,11 +1485,6 @@ void scan_history_walk(
         resolve_history_walk_header(source_audio_path, projects_repo);
     const std::string repo_root   = header.repo_root;
     const std::string base_name   = header.base_name;
-    // Copied out beside the base name, and for the same reason: the header is
-    // MOVED into on_header below, so everything this body still needs is taken
-    // first.
-    const std::string        history_folder = header.history_folder;
-    const GuiHistoryWalkRoad road           = header.road;
     const bool        ok          = header.ok;
     const bool        read_failed = header.read_failed;
     const GuiFailure  header_why  = header.unavailable_reason;
@@ -1576,17 +1513,6 @@ void scan_history_walk(
             result.unavailable_reason = header_why;
         }
         on_done(std::move(result));
-        return;
-    }
-
-    // THE ROAD FORKS HERE AND NOWHERE ELSE IN THIS BODY (architect
-    // 2026-09-17). Past the header the two walks answer the same three
-    // callbacks over the same member type, so the folder road is its own body
-    // in its own file (scan_history_folder_walk, history_folder.h) and
-    // everything below this line is git's, unchanged.
-    if (road == GuiHistoryWalkRoad::Folder) {
-        scan_history_folder_walk(history_folder, base_name, abandoned,
-                                 on_member, on_done);
         return;
     }
 
@@ -1707,7 +1633,6 @@ bool GuiHistoryDiff::init(const AppState&           app,
                           const GuiHistoryPrefetch& prefetch) {
     available_ = false;
     unavailable_reason_ = GuiFailure{};
-    road_ = GuiHistoryWalkRoad::Git;
     repo_root_.clear();
     base_name_.clear();
     project_directory_.clear();
@@ -1730,7 +1655,6 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // the local walk's, not the commit walk's).
     auto unavailable = [this](GuiFailure why) {
         unavailable_reason_ = std::move(why);
-        road_ = GuiHistoryWalkRoad::Git;
         repo_root_.clear();
         base_name_.clear();
         project_directory_.clear();
@@ -1763,7 +1687,6 @@ bool GuiHistoryDiff::init(const AppState&           app,
         if (!prefetch.header().ok) {
             return unavailable(prefetch.header().unavailable_reason);
         }
-        road_              = prefetch.header().road;
         repo_root_         = prefetch.header().repo_root;
         base_name_         = prefetch.header().base_name;
         project_directory_ = prefetch.header().project_directory;
@@ -1772,7 +1695,6 @@ bool GuiHistoryDiff::init(const AppState&           app,
             resolve_history_walk_header(app.source_audio_path,
                                         app.projects_repo);
         if (!h.ok) return unavailable(h.unavailable_reason);
-        road_              = h.road;
         repo_root_         = h.repo_root;
         base_name_         = h.base_name;
         project_directory_ = h.project_directory;
@@ -1842,13 +1764,6 @@ const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
     const std::deque<GuiHistoryCommitSidecars>& m = members();
     if (index >= m.size()) return kNone;
     return m[index].sha;
-}
-
-const std::string& GuiHistoryDiff::member_folder_at(std::size_t index) const {
-    static const std::string kNone;
-    const std::deque<GuiHistoryCommitSidecars>& m = members();
-    if (index >= m.size()) return kNone;
-    return m[index].folder;
 }
 
 // THE TYPED LINE DIFF OF ONE PAIR OF SIDES (the contract is at the
@@ -2276,7 +2191,8 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
 }
 
 // ---------------------------------------------------------------------------
-// THE COMMIT ACT — the product's one mutating git route
+// THE COMMIT ACT — the first of the product's three mutating git routes
+// (the GitHub check and the pull follow it)
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -2327,9 +2243,17 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // `commit-msg`, no `post-commit`, no `pre-push`; the projects repository has
 // none, and the act does not look for them.
 //
-// THE FIVE STEPS, each numbered at its own site below:
+// THE STEPS, each numbered at its own site below:
 //   (1) CAPTURE — the branch read ONCE. Detached (or unborn) refuses
 //       immediately.
+//   (1a) THE GUARD — the projects-home guard, whose validated URLs the fetch
+//       and the push consume. A refusal is RemoteRefused.
+//   (1b) FETCH FIRST (architect 2026-09-27) — GitHub's newest state, before
+//       anything is written: unreachable is RemoteUnreachable, declined is
+//       RemoteRefused, and a branch BEHIND the fetched upstream (or diverged
+//       from it) is RemoteMoved — fast-forward only, so a checkpoint is never
+//       committed on top of a stale base. The prelude save has landed either
+//       way; this is the plain save's ending.
 //   (2) WRITE the three sidecars.
 //   (3) PRE-FLIGHT — one status read over those three paths, which answers
 //       BOTH questions the act needs: are the paths dirty, and does the branch
@@ -2349,20 +2273,21 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // THE ONE ACCEPTED IMPRECISION, recorded rather than worked around: a PUSH that
 // fails at the time bound (git_repo.cpp's kServerTimeoutMs) after the server
 // had taken it is reported CommittedNotPushed although it landed — the next
-// act's pre-flight is the correction, finding the branch no longer ahead and
-// reporting NothingToCommit. A REMOTE THAT HAS MOVED (a checkpoint pushed from
-// another clone) refuses the push as non-fast-forward, CommittedNotPushed too:
-// the fix is `git pull --ff-only && git push` in the terminal, fast-forward
-// only, so the history stays linear. A FAILED PUSH is fixed in the terminal, or
-// by the next act, which finds the branch still ahead and pushes it; never by an
-// in-app retry. OUT-OF-APP GIT UNDER projects/ is unsanctioned use: a commit
-// racing this act may yield a blunt error rather than a graded diagnosis
-// (github-recheck.md carries the history of what this replaced).
+// check or act is the correction, finding the branch no longer ahead. A REMOTE
+// THAT MOVED IN THE SECONDS SINCE THE ACT'S OWN FETCH (a checkpoint pushed from
+// another device) refuses the push as non-fast-forward, CommittedNotPushed
+// too — the accepted window; the next check reads Diverged. A FAILED PUSH IS
+// RETRIED IN THE APP (architect 2026-09-27, superseding "never by an in-app
+// retry" of 2026-08-09): the status reads Ahead, and Ctrl+S in the `h` view
+// runs this act again, whose clean-but-owing arm pushes the branch. OUT-OF-APP
+// GIT UNDER projects/ is unsanctioned use: a commit racing this act may yield
+// a blunt error rather than a graded diagnosis (github-recheck.md carries the
+// history of what this replaced).
 //
 // THE PROJECTS-HOME GUARD STAYS, and it is not an outcome observation — it is
 // the FENCE that keeps a checkpoint from publishing to the wrong place. It runs
-// at the mutating boundary, immediately before the push, and the push goes to
-// THE URL IT JUST VALIDATED (step 5 owns the pinning).
+// at the mutating boundary, first (step 1a), and the fetch and the push go to
+// THE URLS IT JUST VALIDATED.
 //
 // WHAT THE COMMIT CANNOT CARRY: its tree is HEAD's with the three paths laid
 // over it and nothing else (GuiGitRepo::commit_paths, `git commit -- <paths>`),
@@ -2400,7 +2325,9 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& repo_root, const std::string& project_directory,
     const std::string& base_name, const std::string& projects_repo,
-    const GuiHistoryNowSide& bytes, const std::string& title) {
+    const GuiHistoryNowSide& bytes, const std::string& title,
+    GuiGitHubStatus& github) {
+    github = GuiGitHubStatus::Unchecked;
 
     // THE ONE HANDLE the act runs on, this worker's own. A clone that will not
     // open has taken nothing, which is what WriteFailed says.
@@ -2428,6 +2355,76 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                      "warptempo_gui: Checkpoint refused: HEAD is detached, "
                      "check out a branch in the terminal\n");
         return GuiHistoryCommitOutcome::WriteFailed;
+    }
+
+    // (1a) THE GUARD, at the mutating boundary: the clone's remotes must be
+    // the configured projects home, and the fetch below and the push at (5)
+    // go to the URLs it validates, set on their own remote instances and never
+    // re-resolved from the mutable name `origin`.
+    GuiFailure  guard_reason;
+    std::string destination;
+    std::string fetch_source;
+    if (!clone_is_projects_home(*repo, repo_root, projects_repo, guard_reason,
+                                &destination, &fetch_source)) {
+        std::fprintf(stderr, "warptempo_gui: Checkpoint refused: %s\n",
+                     guard_reason.diagnostic.c_str());
+        github = GuiGitHubStatus::Refused;
+        return GuiHistoryCommitOutcome::RemoteRefused;
+    }
+
+    // (1b) FETCH FIRST, and refuse before any write if GitHub has moved: the
+    // act commits on top of the newest checkpoint or not at all.
+    {
+        const GuiGitFetch fetched =
+            repo->fetch_origin(fetch_source, /*cancel=*/nullptr, diag);
+        if (fetched == GuiGitFetch::Refused) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Checkpoint refused: GitHub refused "
+                         "this device (%s)\n",
+                         diag.c_str());
+            github = GuiGitHubStatus::Refused;
+            return GuiHistoryCommitOutcome::RemoteRefused;
+        }
+        if (fetched != GuiGitFetch::Fetched) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Checkpoint refused: GitHub cannot be "
+                         "reached (%s)\n",
+                         diag.c_str());
+            github = GuiGitHubStatus::Offline;
+            return GuiHistoryCommitOutcome::RemoteUnreachable;
+        }
+        const GuiGitUpstream up = repo->compare_with_upstream(branch);
+        switch (up.reading) {
+        case GuiGitUpstream::Reading::Unreadable:
+            std::fprintf(stderr,
+                         "warptempo_gui: Checkpoint refused: could not compare "
+                         "'%s' with its upstream\n",
+                         branch.c_str());
+            return GuiHistoryCommitOutcome::WriteFailed;
+        case GuiGitUpstream::Reading::NoUpstream:
+            break;
+        case GuiGitUpstream::Reading::Gone:
+            github = GuiGitHubStatus::Ahead;
+            break;
+        case GuiGitUpstream::Reading::Compared:
+            if (up.behind > 0) {
+                github = (up.ahead > 0) ? GuiGitHubStatus::Diverged
+                                        : GuiGitHubStatus::Behind;
+                std::fprintf(stderr,
+                             "warptempo_gui: Checkpoint refused: GitHub has "
+                             "%zu newer checkpoint(s) than '%s'%s\n",
+                             up.behind, branch.c_str(),
+                             (up.ahead > 0)
+                                 ? ", and this device has its own: fast-forward "
+                                   "only, so resolve it in a terminal"
+                                 : "; pull them first (Ctrl+S in the history "
+                                   "view)");
+                return GuiHistoryCommitOutcome::RemoteMoved;
+            }
+            github = (up.ahead > 0) ? GuiGitHubStatus::Ahead
+                                    : GuiGitHubStatus::UpToDate;
+            break;
+        }
     }
 
     // kSidecarExtensions order, which is what pairs each text with its path.
@@ -2517,21 +2514,11 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         return GuiHistoryCommitOutcome::NothingToCommit;
     }
 
-    // THE DESTINATION IS THE GUARD'S OWN ANSWER: the projects-home guard runs
-    // here, at the MUTATING BOUNDARY, and this act pushes to THE URL IT JUST
-    // VALIDATED, set on the push's own remote instance (never written to the
-    // clone's config) so the mutable name `origin` is not resolved again. The
-    // named remote still carries the push, so its remote-tracking ref updates,
-    // which is what the NEXT act's pre-flight reads.
-    GuiFailure  guard_reason;
-    std::string destination;
-    if (!clone_is_projects_home(*repo, repo_root, projects_repo, guard_reason,
-                                &destination)) {
-        std::fprintf(stderr, "warptempo_gui: Push refused: %s\n",
-                     guard_reason.diagnostic.c_str());
-        return GuiHistoryCommitOutcome::CommittedNotPushed;
-    }
-
+    // THE DESTINATION IS THE GUARD'S OWN ANSWER (step 1a): this act pushes to
+    // THE URL IT VALIDATED, set on the push's own remote instance (never
+    // written to the clone's config) so the mutable name `origin` is not
+    // resolved again. The named remote still carries the push, so its
+    // remote-tracking ref updates, which is what every later reading compares.
     // THE REFSPEC IS THE CAPTURED BRANCH AT BOTH ENDS, never `HEAD` and never a
     // sha: the branch is what the act publishes, and both push arms — the commit
     // it just made and the commits that were already pending — want the same
@@ -2542,10 +2529,294 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         // rejection, the time bound — each in its own words here.
         std::fprintf(stderr, "warptempo_gui: Push failed: %s\n",
                      diag.empty() ? "libgit2 reported nothing" : diag.c_str());
+        github = GuiGitHubStatus::Ahead;
         return GuiHistoryCommitOutcome::CommittedNotPushed;
     }
+    github = GuiGitHubStatus::UpToDate;
 
     std::fprintf(stderr, "warptempo_gui: Pushed '%s' to origin\n",
                  branch.c_str());
     return GuiHistoryCommitOutcome::Committed;
+}
+
+// ---------------------------------------------------------------------------
+// the GitHub check
+// ---------------------------------------------------------------------------
+
+const char* github_status_word(GuiGitHubStatus status) {
+    switch (status) {
+    case GuiGitHubStatus::Unchecked: return nullptr;
+    case GuiGitHubStatus::Checking:  return "checking...";
+    case GuiGitHubStatus::UpToDate:  return "up to date";
+    case GuiGitHubStatus::Ahead:     return "ahead";
+    case GuiGitHubStatus::Behind:    return "behind";
+    case GuiGitHubStatus::Diverged:  return "diverged";
+    case GuiGitHubStatus::Offline:   return "offline";
+    case GuiGitHubStatus::Refused:   return "refused";
+    }
+    return nullptr;
+}
+
+// THE CHECK IS ADVISORY: it owns no failure. Every answer is a status, the
+// two failing ones printing their cause on one stderr line (the screen's word
+// is the state; the terminal carries why), and a check that cannot classify
+// answers Unchecked in silence — the `h` entry has already said on stderr why
+// that visit has no remote walk.
+GuiGitHubStatus check_github(const std::string&       source_audio_path,
+                             const std::string&       projects_repo,
+                             const std::atomic<bool>& cancel) {
+    // THE CLONE AND THE GUARD, through the header's own derivation — the same
+    // answer the `h` entry binds to. A guard refusal is Refused (the clone's
+    // remotes are not the projects home); any other header refusal has no
+    // clone to ask and answers Unchecked.
+    const GuiHistoryRepoRoot root =
+        resolve_repo_root_for_source(source_audio_path);
+    if (!root.ok) return GuiGitHubStatus::Unchecked;
+    GuiFailure                open_reason;
+    std::optional<GuiGitRepo> repo = open_clone_for(root.path, open_reason);
+    if (!repo) return GuiGitHubStatus::Unchecked;
+    GuiFailure  guard_reason;
+    std::string fetch_source;
+    if (!clone_is_projects_home(*repo, root.path, projects_repo, guard_reason,
+                                nullptr, &fetch_source)) {
+        std::fprintf(stderr, "warptempo_gui: GitHub refused: %s\n",
+                     guard_reason.diagnostic.c_str());
+        return GuiGitHubStatus::Refused;
+    }
+    const std::string branch = repo->head_branch();
+    if (branch.empty()) return GuiGitHubStatus::Unchecked;
+
+    std::string       diag;
+    const GuiGitFetch fetched = repo->fetch_origin(fetch_source, &cancel, diag);
+    switch (fetched) {
+    case GuiGitFetch::Cancelled:
+        return GuiGitHubStatus::Unchecked;
+    case GuiGitFetch::Refused:
+        std::fprintf(stderr, "warptempo_gui: GitHub refused: %s\n",
+                     diag.c_str());
+        return GuiGitHubStatus::Refused;
+    case GuiGitFetch::Unreachable:
+        std::fprintf(stderr, "warptempo_gui: GitHub offline: %s\n",
+                     diag.c_str());
+        return GuiGitHubStatus::Offline;
+    case GuiGitFetch::Fetched:
+        break;
+    }
+    const GuiGitUpstream up = repo->compare_with_upstream(branch);
+    switch (up.reading) {
+    case GuiGitUpstream::Reading::Unreadable:
+    case GuiGitUpstream::Reading::NoUpstream:
+        return GuiGitHubStatus::Unchecked;
+    case GuiGitUpstream::Reading::Gone:
+        return GuiGitHubStatus::Ahead;
+    case GuiGitUpstream::Reading::Compared:
+        break;
+    }
+    if (up.ahead > 0 && up.behind > 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: GitHub diverged: '%s' is %zu ahead and "
+                     "%zu behind its upstream\n",
+                     branch.c_str(), up.ahead, up.behind);
+        return GuiGitHubStatus::Diverged;
+    }
+    if (up.behind > 0) return GuiGitHubStatus::Behind;
+    if (up.ahead > 0) return GuiGitHubStatus::Ahead;
+    return GuiGitHubStatus::UpToDate;
+}
+
+// ---------------------------------------------------------------------------
+// the pull
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// THE STRICT FAST-FORWARD CASE, read from the local refs: the branch, its tip
+// and the upstream's remote-tracking tip, strictly behind. `reading` is the
+// status the refs show when they are not that case.
+GuiHistoryPullPlanVerdict read_pull_refs(const GuiGitRepo&  repo,
+                                         std::string&       branch,
+                                         std::string&       from_sha,
+                                         std::string&       to_sha,
+                                         GuiGitHubStatus&   reading) {
+    reading = GuiGitHubStatus::Unchecked;
+    branch  = repo.head_branch();
+    if (branch.empty()) return GuiHistoryPullPlanVerdict::Moved;
+    const GuiGitUpstream up = repo.compare_with_upstream(branch);
+    switch (up.reading) {
+    case GuiGitUpstream::Reading::Unreadable:
+        return GuiHistoryPullPlanVerdict::Unreadable;
+    case GuiGitUpstream::Reading::NoUpstream:
+        return GuiHistoryPullPlanVerdict::Moved;
+    case GuiGitUpstream::Reading::Gone:
+        reading = GuiGitHubStatus::Ahead;
+        return GuiHistoryPullPlanVerdict::Moved;
+    case GuiGitUpstream::Reading::Compared:
+        break;
+    }
+    if (up.ahead > 0 || up.behind == 0) {
+        reading = (up.ahead > 0 && up.behind > 0) ? GuiGitHubStatus::Diverged
+                  : (up.ahead > 0)                ? GuiGitHubStatus::Ahead
+                                                  : GuiGitHubStatus::UpToDate;
+        return GuiHistoryPullPlanVerdict::Moved;
+    }
+    reading  = GuiGitHubStatus::Behind;
+    from_sha = repo.head_commit();
+    to_sha   = up.upstream_sha;
+    if (from_sha.empty() || to_sha.empty()) {
+        return GuiHistoryPullPlanVerdict::Unreadable;
+    }
+    return GuiHistoryPullPlanVerdict::Ready;
+}
+
+// THE OPEN PIECE'S THREE PATHS, the checkpoint act's own (checkpoint_paths).
+bool is_open_piece_path(const std::vector<std::string>& open,
+                        const std::string&              path) {
+    for (const std::string& p : open) {
+        if (p == path) return true;
+    }
+    return false;
+}
+
+}  // namespace
+
+GuiHistoryPullPlanVerdict plan_history_pull(const std::string&  repo_root,
+                                            const std::string&  project_directory,
+                                            const std::string&  base_name,
+                                            GuiHistoryPullPlan& plan,
+                                            GuiGitHubStatus&    reading) {
+    plan = GuiHistoryPullPlan{};
+    std::string                     diag;
+    const std::optional<GuiGitRepo> repo = GuiGitRepo::open(repo_root, diag);
+    if (!repo) {
+        reading = GuiGitHubStatus::Unchecked;
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull failed: could not open the clone at "
+                     "'%s' (%s)\n",
+                     repo_root.c_str(), diag.c_str());
+        return GuiHistoryPullPlanVerdict::Unreadable;
+    }
+    const GuiHistoryPullPlanVerdict v = read_pull_refs(
+        *repo, plan.branch, plan.from_sha, plan.to_sha, reading);
+    if (v != GuiHistoryPullPlanVerdict::Ready) {
+        if (v == GuiHistoryPullPlanVerdict::Unreadable) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Pull failed: could not read the "
+                         "branch against its upstream\n");
+        }
+        return v;
+    }
+    plan.repo_root         = repo_root;
+    plan.project_directory = project_directory;
+    plan.base_name         = base_name;
+    // DOES THE PULL CHANGE THE OPEN PIECE — the tree-to-tree diff from the tip
+    // to the upstream over the piece's three paths, the question's one
+    // condition.
+    const std::vector<std::string> open =
+        checkpoint_paths(project_directory, base_name);
+    std::vector<std::string> touched;
+    if (!repo->paths_changed_between(
+            plan.from_sha, plan.to_sha,
+            [&open](std::string_view p) {
+                return is_open_piece_path(open, std::string(p));
+            },
+            touched)) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull failed: could not diff '%s' with "
+                     "its upstream\n",
+                     plan.branch.c_str());
+        return GuiHistoryPullPlanVerdict::Unreadable;
+    }
+    plan.touches_open_piece = !touched.empty();
+    return GuiHistoryPullPlanVerdict::Ready;
+}
+
+GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan& plan,
+                                       bool                      reload,
+                                       std::string&              conflict_piece) {
+    conflict_piece.clear();
+    std::string               diag;
+    std::optional<GuiGitRepo> repo = GuiGitRepo::open(plan.repo_root, diag);
+    if (!repo) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull failed: could not open the clone at "
+                     "'%s' (%s)\n",
+                     plan.repo_root.c_str(), diag.c_str());
+        return GuiHistoryPullOutcome::Unreadable;
+    }
+    // THE REFS AGAIN, at the act: the question may have stood for minutes,
+    // and a terminal commit or pull in that time changes what a fast-forward
+    // would mean.
+    std::string     branch, from_sha, to_sha;
+    GuiGitHubStatus reading;
+    const GuiHistoryPullPlanVerdict v =
+        read_pull_refs(*repo, branch, from_sha, to_sha, reading);
+    if (v == GuiHistoryPullPlanVerdict::Unreadable) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull failed: could not read the branch "
+                     "against its upstream\n");
+        return GuiHistoryPullOutcome::Unreadable;
+    }
+    if (v != GuiHistoryPullPlanVerdict::Ready || branch != plan.branch ||
+        from_sha != plan.from_sha || to_sha != plan.to_sha) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull refused: the branch or its upstream "
+                     "moved since the press\n");
+        return GuiHistoryPullOutcome::Moved;
+    }
+
+    // RELOAD FORCES ALL THREE of the open piece's sidecars, including any the
+    // pull does not change, so the reopened screen is exactly the pulled
+    // checkpoint and never a mixture with the session's drift; KEEP excludes
+    // all three, so their working-tree bytes stay the session's.
+    const std::vector<std::string> open =
+        checkpoint_paths(plan.project_directory, plan.base_name);
+    const std::vector<std::string> none;
+    std::string                    conflict_path;
+    const GuiGitFastForward ff = repo->fast_forward(
+        branch, from_sha, to_sha, reload ? none : open, reload ? open : none,
+        conflict_path, diag);
+    switch (ff) {
+    case GuiGitFastForward::Done:
+        std::fprintf(stderr,
+                     "warptempo_gui: Pulled '%s' to %s (%s)\n",
+                     branch.c_str(), short_sha(to_sha).c_str(),
+                     reload ? "this piece reloaded" : "this piece kept");
+        return GuiHistoryPullOutcome::Pulled;
+    case GuiGitFastForward::NotStarted:
+        std::fprintf(stderr, "warptempo_gui: Pull failed: %s\n", diag.c_str());
+        return GuiHistoryPullOutcome::Unreadable;
+    case GuiGitFastForward::Conflict: {
+        // THE PIECE IS NAMED BY ITS FOLDER — `projects/<piece>/...`'s second
+        // component — or, for a path outside the corpus, by the path itself.
+        const std::string path = conflict_path.empty() ? "?" : conflict_path;
+        std::string       piece = path;
+        if (path.compare(0, kProjectsPrefix.size(), kProjectsPrefix) == 0) {
+            const std::size_t end = path.find('/', kProjectsPrefix.size());
+            if (end != std::string::npos) {
+                piece = path.substr(kProjectsPrefix.size(),
+                                    end - kProjectsPrefix.size());
+            }
+        }
+        conflict_piece = piece;
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull refused: '%s' has changes not "
+                     "committed; nothing was changed (%s)\n",
+                     path.c_str(), diag.c_str());
+        return GuiHistoryPullOutcome::Conflict;
+    }
+    case GuiGitFastForward::FilesFailed:
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull failed: the files were partly "
+                     "updated and '%s' did not move (%s)\n",
+                     branch.c_str(), diag.c_str());
+        return GuiHistoryPullOutcome::FilesFailed;
+    case GuiGitFastForward::BranchFailed:
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull failed: the files were updated but "
+                     "'%s' did not move; 'git reset --soft %s' in the "
+                     "terminal finishes it (%s)\n",
+                     branch.c_str(), short_sha(to_sha).c_str(), diag.c_str());
+        return GuiHistoryPullOutcome::BranchFailed;
+    }
+    return GuiHistoryPullOutcome::Unreadable;
 }

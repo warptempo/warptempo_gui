@@ -17,7 +17,6 @@
                                    // deliverable folder)
 #include "renders_dir.h"     // project_batch_root (the sync act's batch root)
 #include "history_diff.h"
-#include "history_folder.h"  // the `'` act's folder-road gate and its member
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
 #include "phase_reset_propagate.h"  // format_domain_timestamp (the family's one register)
 #include "paint_handler.h"
@@ -1315,12 +1314,13 @@ void GuiInputHandler::republish_history_lane_now() {
 // bootstrap's reason, and both faces grey off the one predicate
 // (history_remote_walk_available, app_state.h). SO THE ENTRY RAISES NO CARD —
 // init() has already put its one line on stderr naming the reason, and the lit
-// local lamp beside a greyed Save is the cue that this visit has no git.
+// local lamp beside a greyed Save is the cue that this visit has no git. (The
+// tablet has its own clone since 2026-09-27, so this fallback is for a source
+// outside every clone, or a clone that is not the projects home.)
 //
-// THE TABLET OPENS ON THE FOLDER ROAD WHERE THE PROJECT CARRIES AN EXPORT
-// (2026-09-17): the commit walk reads `<project>/history/` and bootstraps with
-// no git at all (history_folder.h), so this fallback is now for a project with
-// NEITHER a folder nor a clone.
+// EVERY ENTRY CHECKS GITHUB (architect 2026-09-27): a visit that bootstrapped
+// a clone dispatches the GitHub check (dispatch_github_check), so row 8's
+// `GitHub:` segment is at most one visit old.
 void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
     // prefetch store now, and a store describing another source, another
@@ -1413,6 +1413,10 @@ void GuiInputHandler::open_history_mode_fresh() {
     // day, the trim bar's double-click having gone back to the ordinary span
     // framing.)
     app.history_mode = std::move(fresh);
+    // THE GITHUB CHECK, at every entry that bootstrapped a clone (the ruling
+    // is at the head of this owner): the status reads Checking until the
+    // worker answers, and Save's face greys meanwhile.
+    if (history_remote_walk_available(app)) dispatch_github_check();
     measure_history_head_delta();
     drop_lane_stash_across_history_edge();
     // AND THE LANE IS REPUBLISHED IN THIS PRESS (2026-08-07): the view opens
@@ -1528,9 +1532,6 @@ void GuiInputHandler::kick_history_prefetch() {
 // root to read against any more) and one for the tip itself — which is still the
 // whole of what an ordinary entry pays in git, against the walk plus a strict
 // load per candidate it used to.
-// ON THE FOLDER ROAD IT IS A DIRECTORY LISTING and no git at all, the newest
-// exported member's folder name being that walk's tip (read_history_walk_tip
-// owns both spellings).
 void GuiInputHandler::kick_history_prefetch_if_stale() {
     const bool same_subject =
         history_prefetch.subject_source_path() == app.source_audio_path &&
@@ -1602,8 +1603,8 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // below — it never had the premise this closer protects.
 //
 // AND IT RETIRES THE VIEW'S OWN STANDING QUESTION BEFORE IT CLOSES (2026-08-29).
-// TWO SURFACES CAN BE UP WHEN THIS FIRES, and the visit's end has to answer for
-// both:
+// THREE SURFACES CAN BE UP WHEN THIS FIRES, and the visit's end has to answer for
+// each:
 //   * THE LOAD CONFIRMATION raised by bare `'` on the viewed member
 //     (history_load_in_place). close_history_mode's whole-struct reset clears
 //     pending_load_member, so a question left painted would name a subject that
@@ -1618,6 +1619,10 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //     editor is not a question about a member) and whose Enter then meets
 //     run_history_commit's own !active arm, which says "History is unavailable"
 //     on a notification card rather than returning in silence.
+//   * THE PULL'S QUESTION (PULL_CONFIRM, 2026-09-27), which is left standing
+//     too: its plan is parked whole on AppState (pending_history_pull — the
+//     clone, the directory, the base name and both commits), so its answers
+//     need nothing the close takes, and the pull re-reads the refs at the act.
 // The FILE MENU's standing-menu decision is above, and unchanged.
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
@@ -3061,9 +3066,9 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
 //
-// The act itself is commit_history_checkpoint (history_diff.h): the three
-// writes, the three-path commit, the push, and every stderr line about
-// them. What lives here is the QUESTION in front of it (the commit-title
+// The act itself is commit_history_checkpoint (history_diff.h): the fetch
+// first, the three writes, the three-path commit, the push, and every stderr
+// line about them. What lives here is the QUESTION in front of it (the commit-title
 // editor, 2026-08-07), THE SAVE in front of that (2026-08-04 — the act is "Save
 // and Commit" now), the CLOSE behind the save (2026-08-05, re-partitioned
 // 2026-08-07), and the DISPATCH onto the background worker with the report that
@@ -3087,6 +3092,11 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // directory, and there is no commit to offer. Neither is reachable from the one
 // call site (the chord is admitted only while the mode stands, and an available
 // session always carries both strings), which is why they are silent.
+//
+// AND THE GITHUB STATUS FORKS IT (architect 2026-09-27; the fork is in the
+// body): Checking, Offline, Refused, Unchecked and Diverged each card their
+// sentence; Behind is the PULL (run_history_pull_press); Ahead with nothing
+// new to commit skips the question and retries the push at once.
 //
 // THE TWO SESSION REFUSALS ARE THIS ACT'S OWN SINCE 2026-09-01 (architect: a
 // gate's membership is the chord's alone, so a chord the mode owns says its
@@ -3129,28 +3139,71 @@ void GuiInputHandler::open_history_commit_editor() {
                 app.history_mode.session.unavailable_reason().display);
         return;
     }
-    // AND A WALK THERE IS NOTHING TO COMMIT INTO, the same premise on its
-    // other road (architect 2026-09-17): a visit reading an EXPORTED history
-    // folder has a bootstrapped walk and no clone — an export is a derivation
-    // of a history kept elsewhere (history_folder.h) — so the act refuses with
-    // the fact stated. A CARD, not a silence: the fact is the FOLDER'S, not a
-    // state the view is showing, so nothing on screen says it. Save greys on
-    // the same predicate, composed once at history_checkpoint_actionable.
-    if (!history_checkpoint_road_available(app)) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kHistoryFolderNoCheckpoint);
-        return;
-    }
     if (app.history_checkpoint_in_flight) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kCheckpointPublishing);
         return;
     }
-    if (app.history_mode.head_delta_empty) return;
+    // THE GITHUB STATUS SELECTS WHAT THE CHORD IS (architect 2026-09-27;
+    // GuiGitHubStatus, history_diff.h): UP TO DATE commits, AHEAD commits or
+    // retries the push, BEHIND pulls, and every other status refuses with its
+    // own card — the Save face greys on the same terms
+    // (history_checkpoint_actionable / history_pull_actionable, app_state.h),
+    // so the key says the reason and the grey is the button's message.
+    switch (app.github_status) {
+    case GuiGitHubStatus::Checking:
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "GitHub is still being checked");
+        return;
+    case GuiGitHubStatus::Offline:
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "GitHub cannot be reached");
+        return;
+    case GuiGitHubStatus::Refused:
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "GitHub refused this device");
+        return;
+    case GuiGitHubStatus::Unchecked:
+        // No reading at all: the check could not classify this clone (a
+        // detached or unborn HEAD, no upstream, a read that did not answer),
+        // and its entry line on stderr says which.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "GitHub has not been checked");
+        return;
+    case GuiGitHubStatus::Diverged:
+        // FAST-FORWARD ONLY: no in-app resolution. The fix is named on stderr.
+        std::fprintf(stderr,
+            "warptempo_gui: Save and Commit refused: this device and GitHub "
+            "have both moved; on the laptop run 'git pull --rebase' in the "
+            "projects clone, on the tablet carry its sidecars to the laptop, "
+            "commit them there and re-place the tablet's clone\n");
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "This device and GitHub have both moved");
+        return;
+    case GuiGitHubStatus::Behind:
+        run_history_pull_press();
+        return;
+    case GuiGitHubStatus::Ahead:
+    case GuiGitHubStatus::UpToDate:
+        break;
+    }
     const std::string& dir = app.history_mode.session.project_directory();
     if (dir.empty() || app.history_mode.session.sidecar_base_name().empty()) {
         return;
     }
+    // AHEAD BYPASSES THE HEAD DELTA (architect 2026-09-27, superseding the
+    // 2026-08-09 "no in-app retry"): the branch carries a commit GitHub has
+    // not — a push that failed — and the chord RETRIES THE PUSH. With nothing
+    // new to commit there is no title to ask for, so the act runs at once
+    // under the default title (which a clean act never reads) and its
+    // clean-but-owing arm pushes; with a delta, the editor asks as ever and
+    // the act commits and pushes both.
+    if (app.github_status == GuiGitHubStatus::Ahead &&
+        app.history_mode.head_delta_empty) {
+        run_history_commit(history_checkpoint_title(dir));
+        return;
+    }
+    if (app.history_mode.head_delta_empty) return;
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.commit_title_editor,
                        /*target=*/0,
@@ -3410,10 +3463,11 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     // reporting a state (redesign_button_enabled and
     // redesign_button_glyph_swapped are the live readers), mirroring the save
     // lockout above.
+    job.kind = GuiHistoryJobKind::Checkpoint;
     history_commit_worker.dispatch(
         std::move(job),
-        [this](GuiHistoryCommitOutcome outcome) {
-            on_history_checkpoint_complete(outcome);
+        [this](GuiHistoryJobResult result) {
+            on_history_checkpoint_complete(result.outcome, result.github);
         });
 }
 
@@ -3458,12 +3512,17 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // Every step answers its own verdict now, so every question the act asks gets an
 // answer and that verdict is deleted.
 //
-// THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, and since 2026-08-09 no
-// in-app retry either: a checkpoint that committed and failed to push is pushed
-// FROM THE TERMINAL, and the next checkpoint act notices — its pre-flight finds
-// the branch still ahead of its remote and pushes it, so a hand-push is what
-// leaves it nothing to do. That is the model's whole shape: the act does the
-// sanctioned thing or it throws, and the fixing happens where git lives.
+// THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, AND THE RETRY IS THE
+// ACT ITSELF (architect 2026-09-27, superseding the 2026-08-09 "no in-app
+// retry"): a checkpoint that committed and failed to push leaves the GitHub
+// status AHEAD, and Ctrl+S in the `h` view runs the act again, whose
+// pre-flight finds the branch still ahead of its remote and pushes it.
+//
+// THE GITHUB STATUS TAKES THE ACT'S OWN READING (`github`, the reading its
+// fetch-first step took, and its push's verdict): UpToDate after a push or an
+// in-sync ending, Ahead after a failed push, Behind / Diverged / Offline /
+// Refused from the three pre-commit refusals. An act that ended before its
+// fetch leaves the status as it stood.
 //
 // AND NOTHING ASYNCHRONOUS RAISES A MODAL WITHOUT CLEARING THE WAY FIRST, which
 // is what retired a whole family of guards this function used to owe (the parked
@@ -3476,8 +3535,9 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // card can be pushed from any clock at all, because it takes nothing from
 // anyone.
 void GuiInputHandler::on_history_checkpoint_complete(
-        GuiHistoryCommitOutcome outcome) {
+        GuiHistoryCommitOutcome outcome, GuiGitHubStatus github) {
     app.history_checkpoint_in_flight = false;
+    if (github != GuiGitHubStatus::Unchecked) app.github_status = github;
 
     // RE-WARM THE WALK FOR EVERY OUTCOME THAT MAY HAVE MOVED HEAD (2026-08-07,
     // membership re-derived 2026-08-09 and 2026-09-27). The prefetch store
@@ -3487,8 +3547,9 @@ void GuiInputHandler::on_history_checkpoint_complete(
     //   reaches its push arm over CLEAN paths the branch was merely ahead with,
     //   where this act committed nothing and HEAD is where the scan already
     //   found it, so the kick is free there.
-    //   THREE PROVABLY DID NOT: WriteFailed never reaches git at all (a clone
-    //   that would not open, a detached refusal or a failed write),
+    //   SIX PROVABLY DID NOT: WriteFailed never commits (a clone that would
+    //   not open, a detached refusal, an uncomparable branch or a failed
+    //   write), the three pre-commit refusals end before the write,
     //   NothingToCommit is the clean, not-ahead ending, which stages and
     //   commits nothing by construction, and CommitFailed is a stage or a
     //   commit that refused — moving the branch is the commit step's LAST act
@@ -3534,14 +3595,171 @@ void GuiInputHandler::on_history_checkpoint_complete(
             "Checkpoint failed: files written but not committed");
         break;
     case GuiHistoryCommitOutcome::CommittedNotPushed:
-        // The bytes are in the branch and the push did not land. The fix is
-        // `git push` in the terminal; the card stands until the user closes it.
-        // ONE CLAUSE like its two siblings (2026-09-01): it read "Checkpoint
-        // committed; push failed", the one semicolon among the verdicts.
+        // The bytes are in the branch and the push did not land. The status
+        // reads Ahead and Ctrl+S in the `h` view retries; the card stands until
+        // the user closes it. ONE CLAUSE like its siblings (2026-09-01): it
+        // read "Checkpoint committed; push failed", the one semicolon among
+        // the verdicts.
         notifications.notify(AppState::NotificationClass::Critical, "Checkpoint committed but not pushed");
+        break;
+    // THE THREE PRE-COMMIT REFUSALS (architect 2026-09-27, the act fetching
+    // first): critical like the family, the act being asynchronous. The save
+    // has landed; nothing was committed.
+    case GuiHistoryCommitOutcome::RemoteMoved:
+        notifications.notify(AppState::NotificationClass::Critical,
+                             "Checkpoint refused: GitHub has newer checkpoints");
+        break;
+    case GuiHistoryCommitOutcome::RemoteUnreachable:
+        notifications.notify(AppState::NotificationClass::Critical,
+                             "Checkpoint refused: GitHub cannot be reached");
+        break;
+    case GuiHistoryCommitOutcome::RemoteRefused:
+        notifications.notify(AppState::NotificationClass::Critical,
+                             "Checkpoint refused: GitHub refused this device");
         break;
     }
 }
+
+// -- THE GITHUB CHECK AND THE PULL (architect 2026-09-27) --------------------
+
+void GuiInputHandler::dispatch_github_check() {
+    if (history_commit_worker.is_busy()) return;
+    GuiHistoryCommitJob job;
+    job.kind              = GuiHistoryJobKind::Check;
+    job.source_audio_path = app.source_audio_path;
+    job.projects_repo     = app.projects_repo;
+    app.github_status     = GuiGitHubStatus::Checking;
+    // The walk line and Save's face read the status: the face through the
+    // tick's comparator, the line through this damage while the view stands.
+    if (app.history_mode.active) viewport.invalidate_all();
+    history_commit_worker.dispatch(
+        std::move(job),
+        [this](GuiHistoryJobResult result) {
+            on_github_check_complete(result.github);
+        });
+}
+
+// THE CHECK'S ANSWER, on the main thread. ADVISORY: a status and nothing else
+// — no card (the failing readings printed their cause on stderr from the
+// worker), and the row-8 word and Save's face are the whole report.
+void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
+    app.github_status = status;
+    if (app.history_mode.active) viewport.invalidate_all();
+}
+
+// THE PULL'S PRESS (architect 2026-09-27) — Ctrl+S in the `h` view with the
+// GitHub status BEHIND, reached from open_history_commit_editor's status
+// fork. SYNCHRONOUS AND NETWORK-FREE: the plan reads the local refs the last
+// check fetched (plan_history_pull) and refuses unless the branch is still
+// strictly behind them — a terminal commit or pull since the check is
+// `Pull refused: this device has moved`, the status taking what the refs now
+// show. THE QUESTION IS ASKED ONLY WHEN THE PULL CHANGES THE OPEN PIECE, and
+// only here, by the key — never by an asynchronous arrival: "Reload this
+// piece from GitHub's newer checkpoint?", Reload / Keep / Cancel with passive
+// focus on Cancel (a three-way, not a confirmation — Reload discards the
+// session). A pull that leaves the open piece alone runs at once: the face
+// said Pull, and nothing on screen changes.
+void GuiInputHandler::run_history_pull_press() {
+    if (!app.history_mode.active) return;
+    GuiHistoryPullPlan              plan;
+    GuiGitHubStatus                 reading = app.github_status;
+    const GuiHistoryPullPlanVerdict v       = plan_history_pull(
+        app.history_mode.session.repo_root(),
+        app.history_mode.session.project_directory(),
+        app.history_mode.session.sidecar_base_name(), plan, reading);
+    if (v == GuiHistoryPullPlanVerdict::Unreadable) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Pull failed: nothing was changed");
+        return;
+    }
+    if (v == GuiHistoryPullPlanVerdict::Moved) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull refused: the branch is no longer "
+                     "strictly behind its upstream\n");
+        app.github_status = reading;
+        viewport.invalidate_all();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Pull refused: this device has moved");
+        return;
+    }
+    if (!plan.touches_open_piece) {
+        execute_history_pull(plan, /*reload=*/false);
+        return;
+    }
+    app.pending_history_pull = std::move(plan);
+    playback_lifecycle.stop_playback_for_modal_open();
+    app.prompt.present("Reload this piece from GitHub's newer checkpoint?",
+                       {'r', 'k', '\x1b'},
+                       {"Reload", "Keep", "Cancel"},
+                       DialogTrigger::PULL_CONFIRM,
+                       PromptInitialFocus::LastButton);
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::answer_history_pull(bool reload) {
+    if (!app.pending_history_pull) return;
+    const GuiHistoryPullPlan plan = std::move(*app.pending_history_pull);
+    app.pending_history_pull.reset();
+    execute_history_pull(plan, reload);
+}
+
+void GuiInputHandler::cancel_history_pull() {
+    app.pending_history_pull.reset();
+}
+
+// THE PULL ITSELF, and its report. RELOAD forces all three of the open
+// piece's sidecars to the pulled checkpoint and reopens the project through
+// the Revert road with no second question (the prompt was it), so undo and
+// unsaved edits go; KEEP moves the branch and every other file and leaves the
+// session exactly as it was — no `*`, row 8's mark meaning unsaved-to-disk and
+// the disk still holding the last save: the drift is a GIT fact, which the
+// next `h` shows as the delta against the pulled checkpoint and the next Save
+// and Commit records. EITHER WAY THE VIEW CLOSES (the walk and the head delta
+// just changed; every mutator closes the view, the rule that keeps
+// head_delta_empty static) and the walk is re-warmed through the funnel, HEAD
+// having moved. Success is silent; the status reads UpToDate.
+void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
+                                           bool                      reload) {
+    std::string                 conflict_piece;
+    const GuiHistoryPullOutcome outcome =
+        run_history_pull(plan, reload, conflict_piece);
+    switch (outcome) {
+    case GuiHistoryPullOutcome::Pulled:
+        app.github_status = GuiGitHubStatus::UpToDate;
+        if (app.history_mode.active) close_history_mode();
+        kick_history_prefetch();
+        viewport.invalidate_all();
+        if (reload) revert_project(/*question_asked=*/true);
+        return;
+    case GuiHistoryPullOutcome::Moved:
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Pull refused: this device has moved");
+        return;
+    case GuiHistoryPullOutcome::Conflict:
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Pull refused: '" + conflict_piece +
+                                 "' has changes not committed");
+        return;
+    case GuiHistoryPullOutcome::Unreadable:
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Pull failed: nothing was changed");
+        return;
+    case GuiHistoryPullOutcome::FilesFailed:
+    case GuiHistoryPullOutcome::BranchFailed:
+        // THE FILES MOVED AND THE BRANCH DID NOT — the one pull failure that
+        // leaves the clone for the user to finish by hand (stderr says what
+        // happened), so it is CRITICAL. The view closes: the walk it was
+        // measured against no longer describes the working tree.
+        if (app.history_mode.active) close_history_mode();
+        kick_history_prefetch();
+        viewport.invalidate_all();
+        notifications.notify(
+            AppState::NotificationClass::Critical,
+            "Pull failed: the files were updated but the branch did not move");
+        return;
+    }
+}
+
 
 namespace {
 
@@ -5823,21 +6041,17 @@ bool GuiInputHandler::load_render_entry_in_place(
 // it the "short SHA pasted out of GitHub's web UI" use case, retired with the
 // load prompt's field (architect R23). ONE STATE IN, ONE STATE OUT: the four
 // sidecars THAT checkpoint carried become the live session, in memory, and the
-// disk is never touched — not the corpus, not the export, not the working
-// sidecars, not tmp/.
+// disk is never touched — not the corpus, not the working sidecars, not tmp/.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
 // contract load_render_entry_in_place states and this path mirrors: ONE call,
-// THE GATE OF THE ROAD THIS VISIT BOUND TO — load_commit_sidecars_strict
-// (history_diff.h) for a clone, load_history_folder_member_strict
-// (history_folder.h) for an exported history folder — each being the address
-// resolution, the missing-sidecar refusals and the four STRICT WHOLE-FILE
-// LOADERS in one predicate, and each being WALK MEMBERSHIP on its own road
-// (2026-08-04 for the first, 2026-09-17 for the second). So a walk member
-// passes by construction and every refusal arm (an unresolvable spelling, a
-// partial checkpoint, an ambiguous per-commit path resolution, a member folder
-// that has moved, a sidecar the loaders refuse) can fire only on a change
-// under the walk between the scan and the act. That strictness is the point
+// load_commit_sidecars_strict (history_diff.h) — the address resolution, the
+// missing-sidecar refusals and the STRICT WHOLE-FILE LOADERS in one
+// predicate, and WALK MEMBERSHIP itself (2026-08-04). So a walk member passes
+// by construction and every refusal arm (an unresolvable spelling, a partial
+// checkpoint, an ambiguous per-commit path resolution, a sidecar the loaders
+// refuse) can fire only on a change under the walk between the scan and the
+// act. That strictness is the point
 // rather than a side effect — exactly the parse-gating the architect ruled,
 // and the reason no second, looser grammar is written anywhere on this path. A
 // refusal is one stderr line naming its cause with the file it is about (first
@@ -5846,7 +6060,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // line having outranked the transient tier a refusal would have written).
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: a checkpoint
-// is three sidecars and no audio at all, on either road, so the LOADED SOURCE IS
+// is three sidecars and no audio at all, so the LOADED SOURCE IS
 // THE SOURCE — this loads a recipe in place for the file already open, exactly
 // as the mode's
 // diff measures a checkpoint against the session for that same file. The render-entry
@@ -5890,51 +6104,31 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 
     // THE MEMBER'S ADDRESS IS READ HERE, INSIDE THE ACT AND AHEAD OF THE CLOSE
     // (2026-09-17): the close drops the session these accessors read, so the
-    // caller hands over an INDEX and the two spellings of an address are
-    // resolved at the one place that knows the road.
+    // caller hands over an INDEX and the SHA is resolved here.
     //
-    // THE GIT ROAD'S address is the store's full SHA and the clone is the
-    // session's own, derived from the loaded source at init (history_diff.h),
-    // so the `'` act reads the same repository the lane was built from. The
-    // SHA is all the gate takes: the session's matched directory was a
-    // parameter until 2026-08-09, when the folder a commit is about became the
-    // folder that COMMIT TOUCHED rather than a tie the session could break —
-    // so a commit touching this base name in two directories refuses instead
-    // of resolving to whichever one this session happens to sit in, and one
-    // touching it nowhere refuses too.
+    // The address is the store's full SHA and the clone is the session's own,
+    // derived from the loaded source at init (history_diff.h), so the `'` act
+    // reads the same repository the lane was built from. The SHA is all the
+    // gate takes: the session's matched directory was a parameter until
+    // 2026-08-09, when the folder a commit is about became the folder that
+    // COMMIT TOUCHED rather than a tie the session could break — so a commit
+    // touching this base name in two directories refuses instead of resolving
+    // to whichever one this session happens to sit in, and one touching it
+    // nowhere refuses too.
     //
-    // THE FOLDER ROAD'S address is the member FOLDER, and its gate is that
-    // road's own twin of the same one predicate (load_history_folder_member_-
-    // strict, history_folder.h): the three files sit under their real names, so
-    // there is no spelling to resolve and no staging. `seq` is the listing's
-    // order term and the load never reads it, so this builds the member with a
-    // zero rather than asking the session for a parsed triple.
-    //
-    // VALIDATE BEFORE MUTATE ON BOTH: the strict load runs AGAIN here, at the
-    // act, because the clone or the folder may have changed since the scan
-    // gated this member — the refusal is whole, one stderr line and one card,
-    // with nothing touched and the view standing.
+    // VALIDATE BEFORE MUTATE: the strict load runs AGAIN here, at the act,
+    // because the clone may have changed since the scan gated this member —
+    // the refusal is whole, one stderr line and one card, with nothing touched
+    // and the view standing.
     GuiHistoryCommitLoad loaded;
     GuiFailure           failure;
-    bool                 gated = false;
-    if (app.history_mode.session.road() == GuiHistoryWalkRoad::Folder) {
-        GuiHistoryFolderMember entry;
-        entry.path = app.history_mode.session.member_folder_at(member);
-        entry.sha7 = app.history_mode.session.sha_at(member);
-        gated = load_history_folder_member_strict(entry, base_name, loaded,
-                                                  failure);
-    } else {
-        gated = load_commit_sidecars_strict(
-            app.history_mode.session.repo_root(),
-            app.history_mode.session.sha_at(member), base_name, loaded,
-            failure);
-    }
+    const bool           gated = load_commit_sidecars_strict(
+        app.history_mode.session.repo_root(),
+        app.history_mode.session.sha_at(member), base_name, loaded, failure);
     if (!gated) {
         // The two clauses of the one refusal (GuiFailure, failure.h): the
-        // line keeps every path in full, the card names the sidecar the way
-        // its road names one — a committed blob by its repo-relative path, an
-        // exported file by `history/<seq>_<sha7>/<file>` — and a folder by its
-        // own name.
+        // line keeps every path in full, the card names a committed sidecar by
+        // its repo-relative path.
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      failure.diagnostic.c_str());
         notifications.notify(AppState::NotificationClass::Normal,
@@ -6856,7 +7050,7 @@ void GuiInputHandler::open_project_commit(int index) {
 // the open project's own name for gui_main's loop and asks the close road with
 // the REVERT target, whose only difference from REOPEN is the question a dirty
 // session is asked (GuiPrompt::request_close).
-void GuiInputHandler::revert_project() {
+void GuiInputHandler::revert_project(bool question_asked) {
     auto refuse = [&](const GuiFailure& failure) {
         std::fprintf(stderr, "warptempo_gui: Revert refused: %s\n",
                      failure.diagnostic.c_str());
@@ -6893,7 +7087,7 @@ void GuiInputHandler::revert_project() {
     // reads it only after run() returns, and run() returns for a reopen only
     // through this request's own completion.
     app.reopen_project = project->name;
-    prompt.request_close(GuiCloseTarget::Revert);
+    prompt.request_close(GuiCloseTarget::Revert, question_asked);
 }
 
 // THE `h` VIEW'S LOAD IN PLACE — bare `'` there, and its road alone (architect

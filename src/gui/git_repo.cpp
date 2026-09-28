@@ -10,19 +10,21 @@
 
 namespace {
 
-// THE PUSH'S TIME BOUND, both halves at one value: libgit2's connect timeout
+// THE NETWORK TIME BOUND, both halves at one value: libgit2's connect timeout
 // and its read/write timeout on the server connection, which reaches the SSH
 // session itself (libssh2's own session timeout), so a black-holed route or a
-// server that stops answering mid-exchange fails the push instead of holding
-// it. Thirty seconds is chosen against the push, the one network step — a few
-// kilobytes over SSH, well under a second on a working link — so the bound can
-// only fire on something that is not going to finish. What a hang would hold
-// is the checkpoint worker and a quit's join of it (the act runs off the GUI
-// thread, GuiHistoryCommitWorker); every other git question this product asks
-// is local and needs no bound.
+// server that stops answering mid-exchange fails the fetch or the push instead
+// of holding it. Thirty seconds is chosen against the two network steps — a
+// few kilobytes over SSH, well under a second on a working link — so the bound
+// can only fire on something that is not going to finish. Both run on the
+// checkpoint worker, off the GUI thread (GuiHistoryCommitWorker): a hang holds
+// a checkpoint's join at quit for at most the bound, and a CHECK's not at all
+// (the worker abandons a check in flight). Every other git question this
+// product asks is local and needs no bound.
 constexpr int kServerTimeoutMs = 30000;
 
-// THE DEPLOY KEY (architect 2026-09-27): the GUI pushes with a key of its own,
+// THE DEPLOY KEY (architect 2026-09-27): the GUI fetches and pushes with a key
+// of its own,
 // registered on the projects repository with write access, never the account
 // key an interactive ssh would offer. Two files BESIDE THE DEVICE CONFIG — the
 // directory device_config_path() names, which is `$XDG_CONFIG_HOME/
@@ -190,10 +192,13 @@ bool per_parent_accepted_paths(git_repository* repo, const git_commit* commit,
 }
 
 // ---------------------------------------------------------------------------
-// the push's callbacks
+// the remote session's callbacks (the fetch's and the push's)
 // ---------------------------------------------------------------------------
 
-struct PushState {
+// ONE REMOTE SESSION'S STATE, shared by the fetch and the push: the deploy
+// key's two paths, what the callbacks learned about a failure, and the
+// caller's cancel token (a fetch's alone; a push is never cancelled).
+struct RemoteState {
     std::string public_key;
     std::string private_key;
     int         credential_asks = 0;
@@ -201,6 +206,14 @@ struct PushState {
     bool        key_not_offered    = false;  // the server takes no SSH key
     bool        host_key_refused   = false;
     std::string rejected;  // a server-side refusal of the ref, verbatim
+    const std::atomic<bool>* cancel = nullptr;
+    bool cancelled() const {
+        return cancel != nullptr && cancel->load(std::memory_order_relaxed);
+    }
+    // GitHub declined this device — the refusals no retry fixes.
+    bool refused() const {
+        return credential_refused || key_not_offered || host_key_refused;
+    }
 };
 
 std::string base64_unpadded(const unsigned char* bytes, std::size_t n) {
@@ -221,14 +234,15 @@ std::string base64_unpadded(const unsigned char* bytes, std::size_t n) {
 }
 
 // THE CREDENTIAL IS THE DEPLOY KEY AND NOTHING ELSE. SSH key authentication
-// only (an https remote never reaches here — push_branch refuses it first),
-// and ONE OFFER: libgit2 asks again when the server refuses a key, and a
-// second answer would be the same key refused forever, so the second ask ends
-// the push.
-int push_credentials(git_credential** out, const char* /*url*/,
-                     const char* username_from_url, unsigned int allowed_types,
-                     void* payload) {
-    PushState& state = *static_cast<PushState*>(payload);
+// only (an https remote never reaches here — open_remote_session refuses it
+// first), and ONE OFFER: libgit2 asks again when the server refuses a key, and
+// a second answer would be the same key refused forever, so the second ask
+// ends the fetch or the push.
+int remote_credentials(git_credential** out, const char* /*url*/,
+                       const char* username_from_url, unsigned int allowed_types,
+                       void* payload) {
+    RemoteState& state = *static_cast<RemoteState*>(payload);
+    if (state.cancelled()) return GIT_EUSER;
     if ((allowed_types & GIT_CREDENTIAL_SSH_KEY) == 0) {
         state.key_not_offered = true;
         return GIT_EUSER;
@@ -256,9 +270,10 @@ bool is_github_host(const char* host) {
     return false;
 }
 
-int push_certificate_check(git_cert* cert, int /*valid*/, const char* host,
-                           void* payload) {
-    PushState& state = *static_cast<PushState*>(payload);
+int remote_certificate_check(git_cert* cert, int /*valid*/, const char* host,
+                             void* payload) {
+    RemoteState& state = *static_cast<RemoteState*>(payload);
+    if (state.cancelled()) return GIT_EUSER;
     bool match = false;
     if (cert != nullptr && cert->cert_type == GIT_CERT_HOSTKEY_LIBSSH2 &&
         is_github_host(host)) {
@@ -282,12 +297,77 @@ int push_certificate_check(git_cert* cert, int /*valid*/, const char* host,
 // callback a rejected push would read as published.
 int push_update_reference(const char* refname, const char* status,
                           void* payload) {
-    PushState& state = *static_cast<PushState*>(payload);
+    RemoteState& state = *static_cast<RemoteState*>(payload);
     if (status != nullptr && state.rejected.empty()) {
         state.rejected = std::string(refname != nullptr ? refname : "?") +
                          " rejected: " + status;
     }
     return 0;
+}
+
+// THE FETCH'S CANCEL POINTS: every progress report and every ref update asks
+// the token, so a cancelled fetch stops at the next thing libgit2 tells it
+// (a ref update is reported after it is written, so the answer there stops
+// the ones after it).
+int fetch_sideband(const char* /*str*/, int /*len*/, void* payload) {
+    return static_cast<RemoteState*>(payload)->cancelled() ? GIT_EUSER : 0;
+}
+int fetch_transfer_progress(const git_indexer_progress* /*stats*/,
+                            void* payload) {
+    return static_cast<RemoteState*>(payload)->cancelled() ? GIT_EUSER : 0;
+}
+int fetch_update_refs(const char* /*refname*/, const git_oid* /*a*/,
+                      const git_oid* /*b*/, git_refspec* /*spec*/,
+                      void* payload) {
+    return static_cast<RemoteState*>(payload)->cancelled() ? GIT_EUSER : 0;
+}
+
+// THE SESSION'S PRELUDE, the fetch's and the push's alike: SSH ONLY
+// (architect 2026-09-27) — the deploy key is the one credential this program
+// holds, and an http(s) remote would need a token it has not; both SSH
+// spellings pass, scp-style `git@github.com:...` and the URL form
+// `ssh://git@ssh.github.com:443/...` both clones name (kGitHubHosts). NO KEY IS
+// A REFUSAL BEFORE ANY CONNECTION, never a crash, the path going to `diag`.
+// Fills the key paths into `state`; false with `diag` set.
+bool prepare_remote_session(const std::string& url, RemoteState& state,
+                            std::string& diag) {
+    if (url.rfind("https://", 0) == 0 || url.rfind("http://", 0) == 0) {
+        diag = "'" + url + "' is not an SSH remote; only SSH is supported";
+        return false;
+    }
+    const std::filesystem::path config = device_config_path();
+    if (config.empty()) {
+        diag = "no config home for the deploy key";
+        return false;
+    }
+    const std::filesystem::path dir = config.parent_path();
+    state.private_key = (dir / kDeployKeyName).string();
+    state.public_key  = (dir / kDeployKeyPublicName).string();
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(state.private_key, ec)) {
+        diag = "no deploy key at " + state.private_key;
+        return false;
+    }
+    if (!std::filesystem::is_regular_file(state.public_key, ec)) {
+        diag = "no deploy key at " + state.public_key;
+        return false;
+    }
+    return true;
+}
+
+// The callbacks' account of a failed session, in the push's long-standing
+// words.
+std::string remote_failure(const RemoteState& state, const char* fallback) {
+    if (state.host_key_refused) {
+        return "GitHub's host key did not match the pinned key";
+    }
+    if (state.key_not_offered) {
+        return "the remote offers no SSH key authentication";
+    }
+    if (state.credential_refused) {
+        return "the deploy key at " + state.private_key + " was refused";
+    }
+    return last_error(fallback);
 }
 
 }  // namespace
@@ -302,7 +382,7 @@ void gui_git_init() {
     // ~/.gitconfig sets it) is a key libgit2 does not read, so the durability
     // it asks for is this process-wide switch instead.
     git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 1);
-    // The push's time bound (kServerTimeoutMs owns the reasoning).
+    // The network time bound (kServerTimeoutMs owns the reasoning).
     git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, kServerTimeoutMs);
     git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, kServerTimeoutMs);
     // OWNER VALIDATION OFF, on both devices (architect 2026-09-27). libgit2
@@ -626,7 +706,7 @@ GuiGitPathStatus GuiGitRepo::status_of(const std::vector<std::string>& paths,
 }
 
 // ---------------------------------------------------------------------------
-// THE FENCE — the three mutations, the checkpoint act their one caller
+// THE FENCE — the five mutations and their three callers (git_repo.h)
 // ---------------------------------------------------------------------------
 
 bool GuiGitRepo::stage_paths(const std::vector<std::string>& paths,
@@ -742,38 +822,8 @@ bool GuiGitRepo::push_branch(const std::string& branch,
                              const std::string& destination_url,
                              std::string&       diag) {
     diag.clear();
-
-    // SSH ONLY (architect 2026-09-27): the deploy key is the one credential
-    // this program holds, and an http(s) remote would need a token it has not.
-    // Both SSH spellings pass: scp-style `git@github.com:...` and the URL form
-    // `ssh://git@ssh.github.com:443/...` both clones name (kGitHubHosts).
-    if (destination_url.rfind("https://", 0) == 0 ||
-        destination_url.rfind("http://", 0) == 0) {
-        diag = "'" + destination_url + "' is not an SSH remote; only SSH is "
-               "supported";
-        return false;
-    }
-
-    // NO KEY IS A REFUSAL BEFORE ANY CONNECTION, never a crash: the commit is
-    // local and whole, and the path goes to stderr.
-    const std::filesystem::path config = device_config_path();
-    if (config.empty()) {
-        diag = "no config home for the deploy key";
-        return false;
-    }
-    PushState state;
-    const std::filesystem::path dir = config.parent_path();
-    state.private_key = (dir / kDeployKeyName).string();
-    state.public_key  = (dir / kDeployKeyPublicName).string();
-    std::error_code ec;
-    if (!std::filesystem::is_regular_file(state.private_key, ec)) {
-        diag = "no deploy key at " + state.private_key;
-        return false;
-    }
-    if (!std::filesystem::is_regular_file(state.public_key, ec)) {
-        diag = "no deploy key at " + state.public_key;
-        return false;
-    }
+    RemoteState state;
+    if (!prepare_remote_session(destination_url, state, diag)) return false;
 
     git_remote* r_raw = nullptr;
     if (git_remote_lookup(&r_raw, repo_, "origin") < 0) {
@@ -789,8 +839,8 @@ bool GuiGitRepo::push_branch(const std::string& branch,
 
     git_push_options opts;
     git_push_options_init(&opts, GIT_PUSH_OPTIONS_VERSION);
-    opts.callbacks.credentials           = push_credentials;
-    opts.callbacks.certificate_check     = push_certificate_check;
+    opts.callbacks.credentials           = remote_credentials;
+    opts.callbacks.certificate_check     = remote_certificate_check;
     opts.callbacks.push_update_reference = push_update_reference;
     opts.callbacks.payload               = &state;
 
@@ -800,15 +850,7 @@ bool GuiGitRepo::push_branch(const std::string& branch,
     const git_strarray refspecs{&spec_ptr, 1};
 
     if (git_remote_push(remote.get(), &refspecs, &opts) < 0) {
-        if (state.host_key_refused) {
-            diag = "GitHub's host key did not match the pinned key";
-        } else if (state.key_not_offered) {
-            diag = "the remote offers no SSH key authentication";
-        } else if (state.credential_refused) {
-            diag = "the deploy key at " + state.private_key + " was refused";
-        } else {
-            diag = last_error("the push failed");
-        }
+        diag = remote_failure(state, "the push failed");
         return false;
     }
     if (!state.rejected.empty()) {
@@ -816,4 +858,224 @@ bool GuiGitRepo::push_branch(const std::string& branch,
         return false;
     }
     return true;
+}
+
+GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
+                                     const std::atomic<bool>* cancel,
+                                     std::string&             diag) {
+    diag.clear();
+    RemoteState state;
+    state.cancel = cancel;
+    if (!prepare_remote_session(source_url, state, diag)) {
+        return GuiGitFetch::Refused;
+    }
+    git_remote* r_raw = nullptr;
+    if (git_remote_lookup(&r_raw, repo_, "origin") < 0) {
+        diag = last_error("no remote 'origin'");
+        return GuiGitFetch::Refused;
+    }
+    Owned<git_remote> remote(r_raw);
+    // THE URL IS THE GUARD'S: set on this fetch's own remote instance, never
+    // re-resolved from the configuration or rewritten by an `insteadOf` rule.
+    if (git_remote_set_instance_url(remote.get(), source_url.c_str()) < 0) {
+        diag = last_error("could not set the fetch URL");
+        return GuiGitFetch::Unreachable;
+    }
+
+    git_fetch_options opts;
+    git_fetch_options_init(&opts, GIT_FETCH_OPTIONS_VERSION);
+    opts.download_tags     = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+    opts.update_fetchhead  = 0;
+    opts.callbacks.credentials       = remote_credentials;
+    opts.callbacks.certificate_check = remote_certificate_check;
+    opts.callbacks.sideband_progress = fetch_sideband;
+    opts.callbacks.transfer_progress = fetch_transfer_progress;
+    opts.callbacks.update_refs       = fetch_update_refs;
+    opts.callbacks.payload           = &state;
+
+    // The configured refspec (null), which is what moves
+    // refs/remotes/origin/<branch> — the ref every ahead/behind reads.
+    if (git_remote_fetch(remote.get(), nullptr, &opts, nullptr) < 0) {
+        if (state.cancelled()) {
+            diag = "cancelled";
+            return GuiGitFetch::Cancelled;
+        }
+        diag = remote_failure(state, "the fetch failed");
+        return state.refused() ? GuiGitFetch::Refused
+                               : GuiGitFetch::Unreachable;
+    }
+    if (state.cancelled()) {
+        diag = "cancelled";
+        return GuiGitFetch::Cancelled;
+    }
+    return GuiGitFetch::Fetched;
+}
+
+GuiGitUpstream GuiGitRepo::compare_with_upstream(
+        const std::string& branch) const {
+    GuiGitUpstream out;
+    if (branch.empty()) {
+        out.reading = GuiGitUpstream::Reading::NoUpstream;
+        return out;
+    }
+    const std::string local_ref = "refs/heads/" + branch;
+    git_oid local;
+    if (git_reference_name_to_id(&local, repo_, local_ref.c_str()) < 0) {
+        return out;  // Unreadable
+    }
+    OwnedBuf upstream;
+    const int urc =
+        git_branch_upstream_name(&upstream.buf, repo_, local_ref.c_str());
+    if (urc == GIT_ENOTFOUND) {
+        out.reading = GuiGitUpstream::Reading::NoUpstream;
+        return out;
+    }
+    if (urc < 0) return out;
+    git_oid up;
+    const int trc = git_reference_name_to_id(&up, repo_, upstream.buf.ptr);
+    if (trc == GIT_ENOTFOUND) {
+        out.reading = GuiGitUpstream::Reading::Gone;
+        return out;
+    }
+    if (trc < 0) return out;
+    if (git_graph_ahead_behind(&out.ahead, &out.behind, repo_, &local, &up) <
+        0) {
+        return out;
+    }
+    out.upstream_sha = oid_hex(up);
+    out.reading      = GuiGitUpstream::Reading::Compared;
+    return out;
+}
+
+bool GuiGitRepo::paths_changed_between(const std::string&        from_sha,
+                                       const std::string&        to_sha,
+                                       const GuiGitPathFilter&   accept,
+                                       std::vector<std::string>& paths) const {
+    paths.clear();
+    Owned<git_commit> from = lookup_commit(repo_, from_sha);
+    Owned<git_commit> to   = lookup_commit(repo_, to_sha);
+    if (!from || !to) return false;
+    Owned<git_tree> from_tree = tree_of(from.get());
+    Owned<git_tree> to_tree   = tree_of(to.get());
+    if (!from_tree || !to_tree) return false;
+    return diff_accepted_paths(repo_, from_tree.get(), to_tree.get(), accept,
+                               paths);
+}
+
+GuiGitFastForward GuiGitRepo::fast_forward(
+        const std::string& branch, const std::string& from_sha,
+        const std::string& to_sha, const std::vector<std::string>& exclude,
+        const std::vector<std::string>& force, std::string& conflict_path,
+        std::string& diag) {
+    conflict_path.clear();
+    diag.clear();
+    git_oid from_oid, to_oid;
+    if (!parse_full_oid(from_sha, from_oid) || !parse_full_oid(to_sha, to_oid)) {
+        diag = "not a full commit name";
+        return GuiGitFastForward::NotStarted;
+    }
+    Owned<git_commit> to = lookup_commit(repo_, to_sha);
+    if (!to) {
+        diag = last_error("could not read the commit to move to");
+        return GuiGitFastForward::NotStarted;
+    }
+    Owned<git_tree> to_tree = tree_of(to.get());
+    if (!to_tree) {
+        diag = last_error("could not read its tree");
+        return GuiGitFastForward::NotStarted;
+    }
+    std::vector<std::string> changed;
+    if (!paths_changed_between(from_sha, to_sha,
+                               [](std::string_view) { return true; },
+                               changed)) {
+        diag = last_error("could not diff the two commits");
+        return GuiGitFastForward::NotStarted;
+    }
+    auto listed = [](const std::vector<std::string>& list,
+                     const std::string& p) {
+        for (const std::string& q : list) {
+            if (q == p) return true;
+        }
+        return false;
+    };
+    std::vector<std::string> safe;
+    for (const std::string& p : changed) {
+        if (!listed(exclude, p) && !listed(force, p)) safe.push_back(p);
+    }
+
+    // (1) SAFE: libgit2 compares every named path's working-tree file and
+    // index entry against the baseline — the checked-out tree, `from_sha`'s —
+    // and refuses the WHOLE checkout, before writing anything, when one differs
+    // or an untracked file stands in the way. The notify callback names the
+    // first such path. Paths are literal (no pathspec matching).
+    if (!safe.empty()) {
+        std::vector<char*> specs;
+        for (std::string& p : safe) specs.push_back(p.data());
+        git_checkout_options co;
+        git_checkout_options_init(&co, GIT_CHECKOUT_OPTIONS_VERSION);
+        co.checkout_strategy =
+            GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+        co.paths.strings = specs.data();
+        co.paths.count   = specs.size();
+        co.notify_flags  = GIT_CHECKOUT_NOTIFY_CONFLICT;
+        co.notify_cb = [](git_checkout_notify_t, const char* path,
+                          const git_diff_file*, const git_diff_file*,
+                          const git_diff_file*, void* payload) -> int {
+            std::string& first = *static_cast<std::string*>(payload);
+            if (first.empty() && path != nullptr) first = path;
+            return 0;
+        };
+        co.notify_payload = &conflict_path;
+        const int rc = git_checkout_tree(
+            repo_, reinterpret_cast<const git_object*>(to_tree.get()), &co);
+        if (rc == GIT_ECONFLICT || (rc < 0 && !conflict_path.empty())) {
+            diag = last_error("the checkout met local changes");
+            return GuiGitFastForward::Conflict;
+        }
+        if (rc < 0) {
+            diag = last_error("the checkout failed");
+            return GuiGitFastForward::FilesFailed;
+        }
+    }
+    // (2) FORCED, whatever the working tree holds.
+    if (!force.empty()) {
+        std::vector<std::string> owned = force;
+        std::vector<char*>       specs;
+        for (std::string& p : owned) specs.push_back(p.data());
+        git_checkout_options co;
+        git_checkout_options_init(&co, GIT_CHECKOUT_OPTIONS_VERSION);
+        co.checkout_strategy =
+            GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+        co.paths.strings = specs.data();
+        co.paths.count   = specs.size();
+        if (git_checkout_tree(
+                repo_, reinterpret_cast<const git_object*>(to_tree.get()),
+                &co) < 0) {
+            diag = last_error("the forced checkout failed");
+            return GuiGitFastForward::FilesFailed;
+        }
+    }
+    // (3) THE INDEX IS THE NEW TREE, whole.
+    git_index* i_raw = nullptr;
+    if (git_repository_index(&i_raw, repo_) < 0) {
+        diag = last_error("could not open the index");
+        return GuiGitFastForward::BranchFailed;
+    }
+    Owned<git_index> index(i_raw);
+    if (git_index_read_tree(index.get(), to_tree.get()) < 0 ||
+        git_index_write(index.get()) < 0) {
+        diag = last_error("could not write the index");
+        return GuiGitFastForward::BranchFailed;
+    }
+    // (4) THE BRANCH MOVES, only from the commit the pull was planned on.
+    git_reference* moved = nullptr;
+    const std::string ref = "refs/heads/" + branch;
+    if (git_reference_create_matching(&moved, repo_, ref.c_str(), &to_oid,
+                                      /*force=*/1, &from_oid,
+                                      "pull: fast-forward") < 0) {
+        diag = last_error("could not move the branch");
+        return GuiGitFastForward::BranchFailed;
+    }
+    git_reference_free(moved);
+    return GuiGitFastForward::Done;
 }

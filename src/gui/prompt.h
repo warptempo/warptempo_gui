@@ -101,7 +101,12 @@ struct GuiPrompt {
     // above runs for it unchanged, and a dirty session is
     // asked the discard-only confirmation (open_revert_confirm) where the other
     // two targets ask the unsaved-work question.
-    void request_close(GuiCloseTarget target);
+    //
+    // `question_asked` SKIPS THE QUESTION, for the one road that has asked its
+    // own already: the pull's Reload (architect 2026-09-27), whose prompt
+    // "Reload this piece from GitHub's newer checkpoint?" is the discard
+    // question, completes its Revert with no second one.
+    void request_close(GuiCloseTarget target, bool question_asked = false);
     void activate_response(char k);
 
     // (NO COMMIT CONFIRMATION HERE ANY MORE. The `h` history view's

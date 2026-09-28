@@ -1429,10 +1429,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     }
     // THE CHECKPOINT WORKER (2026-08-07): the `h` history view's Save-and-Commit
     // act runs its git steps here instead of on the GUI thread, which used to
-    // freeze the window for as long as the remote took. Single job in flight,
-    // completion delivered through its own eventfd below, and shutdown() JOINS
-    // an act in progress at quit (the state is saved before the act is
-    // dispatched at all, so the wait loses nothing).
+    // freeze the window for as long as the remote took, and so does the GitHub
+    // check (2026-09-27). Single job in flight, completion delivered through
+    // its own eventfd below; shutdown() JOINS an act in progress at quit (the
+    // state is saved before the act is dispatched at all, so the wait loses
+    // nothing) and abandons a check.
     GuiHistoryCommitWorker history_commit_worker;
     if (!history_commit_worker.init()) {
         std::fprintf(stderr,
@@ -2404,6 +2405,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // the GUI thread one queue push — everything else happens on the
             // worker while the user is still looking at the first frame.
             input_handler.kick_history_prefetch();
+            // THE GITHUB CHECK AT PROJECT OPEN (architect 2026-09-27): a fetch
+            // and a compare on the checkpoint worker, so the first `h` of the
+            // session already knows how this device stands against GitHub.
+            // A quit or a project switch never waits on it (the worker
+            // abandons a check in flight, history_commit_worker.h).
+            input_handler.dispatch_github_check();
             return;  // loaded state paints on the next tick
         }
 
@@ -2654,8 +2661,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                       app, audio, audio.total_frames(),
                                       playback, target_render, id) ||
                     f.selected != redesign_button_selected(app, id) ||
-                    f.glyph_swapped !=
-                        redesign_button_glyph_swapped(app, id);
+                    f.glyph != redesign_button_glyph(app, id);
                 if (!drifted) continue;
                 if (redesign_button_in_transport_row(id))
                     drift_transport = true;
@@ -2676,19 +2682,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // glyph republishes the bit before the tooltip paints and so
             // repaints the hint from it (viewport.h's floating-surface damage
             // rule). Asked outside the walk, which stops once both strips
-            // have drifted.
-            const int render_i = static_cast<int>(RedesignButton::Render);
+            // have drifted. SAVE'S HINT FOLLOWS ITS PAINTED GLYPH THE SAME WAY
+            // since 2026-09-27 ("Pull" over the pull glyph), so the one test
+            // serves both owners.
+            const int tip_i = app.redesign_tooltip.owner.index;
+            const bool tip_reads_glyph =
+                tip_i == static_cast<int>(RedesignButton::Render) ||
+                tip_i == static_cast<int>(RedesignButton::Save);
             if (app.redesign_tooltip.visible &&
                 app.redesign_tooltip.owner.surface ==
                     AppState::RedesignTooltip::Surface::Roster &&
-                app.redesign_tooltip.owner.index == render_i &&
-                app.redesign_buttons[static_cast<size_t>(render_i)]
-                        .glyph_swapped !=
-                    redesign_button_glyph_swapped(app,
-                                                  RedesignButton::Render)) {
+                tip_reads_glyph &&
+                app.redesign_buttons[static_cast<size_t>(tip_i)].glyph !=
+                    redesign_button_glyph(app,
+                                          static_cast<RedesignButton>(tip_i))) {
                 viewport.invalidate_rect(app.redesign_tooltip.rect);
                 const GuiRect band =
-                    redesign_button_in_transport_row(RedesignButton::Render)
+                    redesign_button_in_transport_row(
+                        static_cast<RedesignButton>(tip_i))
                         ? GuiRect{0,
                                   bottom_row_area(app).y -
                                       tooltip_damage_h_px(),
@@ -3386,7 +3397,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Blocks on an in-flight checkpoint rather than abandoning it mid-act (a
     // push is bounded by git_repo.cpp's time limit); the piece is already saved
     // (the act saves before it dispatches), so the wait costs a moment and
-    // never any work.
+    // never any work. A GITHUB CHECK in flight is abandoned instead — cancelled
+    // and detached, never waited on (history_commit_worker.h).
     history_commit_worker.shutdown();
     // The prefetch abandons its scan at the next candidate boundary rather than
     // being waited out: it writes nothing anywhere.

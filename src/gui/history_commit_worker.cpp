@@ -15,120 +15,167 @@ GuiHistoryCommitWorker::~GuiHistoryCommitWorker() {
 }
 
 bool GuiHistoryCommitWorker::init() {
-    completion_fd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-    if (completion_fd_ < 0) {
+    const int fd = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (fd < 0) {
         std::fprintf(stderr,
             "warptempo_gui: eventfd() failed for the checkpoint worker: %s\n",
             std::strerror(errno));
         return false;
     }
-    stop_worker_.store(false);
-    worker_ = std::thread(&GuiHistoryCommitWorker::worker_loop, this);
+    shared_ = std::make_shared<Shared>();
+    shared_->completion_fd = fd;
+    worker_ = std::thread(&GuiHistoryCommitWorker::worker_loop, shared_);
     return true;
 }
 
+int GuiHistoryCommitWorker::completion_fd() const {
+    if (!shared_) return -1;
+    std::lock_guard<std::mutex> lk(shared_->mtx);
+    return shared_->completion_fd;
+}
+
 void GuiHistoryCommitWorker::shutdown() {
+    if (!shared_) return;
     if (worker_.joinable()) {
-        // NO CANCEL, BY DESIGN — the loop below finishes the checkpoint it is
-        // running and only then sees the stop flag, so the join waits it out.
-        // The act's git steps must not be abandoned part-way,
-        // and the user's own state was written to disk before the act was
-        // dispatched at all.
+        // THE TWO KINDS PART HERE (the class head owns the ruling): a CHECK
+        // on the thread is abandoned — cancelled and detached, never waited
+        // on — and anything else is joined: a checkpoint runs to its end, and
+        // an idle loop or a finished job returns at once.
+        bool abandon = false;
         {
-            std::lock_guard<std::mutex> lk(mtx_);
-            stop_worker_.store(true);
+            std::lock_guard<std::mutex> lk(shared_->mtx);
+            shared_->stop = true;
+            if (shared_->state.load() == static_cast<int>(State::Running) &&
+                shared_->running_kind == GuiHistoryJobKind::Check) {
+                abandon            = true;
+                shared_->abandoned = true;
+                shared_->cancel.store(true);
+            }
         }
-        cv_.notify_all();
-        worker_.join();
+        shared_->cv.notify_all();
+        if (abandon) {
+            std::fprintf(stderr,
+                "warptempo_gui: GitHub check abandoned at the session's end\n");
+            worker_.detach();
+        } else {
+            worker_.join();
+        }
     }
-    if (completion_fd_ >= 0) {
-        ::close(completion_fd_);
-        completion_fd_ = -1;
+    // THE FD CLOSES UNDER THE MUTEX, with the block marked abandoned, so a
+    // detached thread finishing later can never write into a closed — or
+    // reused — descriptor.
+    {
+        std::lock_guard<std::mutex> lk(shared_->mtx);
+        shared_->abandoned = true;
+        if (shared_->completion_fd >= 0) {
+            ::close(shared_->completion_fd);
+            shared_->completion_fd = -1;
+        }
     }
+    shared_.reset();
+    on_done_ = nullptr;
 }
 
 void GuiHistoryCommitWorker::dispatch(GuiHistoryCommitJob job,
                                       DoneCallback         on_done) {
-    // The caller serializes: a second act is refused while one is in flight
-    // (the key's admission and the button's face read the same bit). Arriving
-    // here busy is a programming error — say so and drop, never race.
-    if (state_.load() != static_cast<int>(State::Idle)) {
+    // The callers serialize: nothing dispatches while a job is in flight (the
+    // key's admission and the button's face read the in-flight bit and the
+    // GitHub status). Arriving here busy is a programming error — say so and
+    // drop, never race.
+    if (!shared_ ||
+        shared_->state.load() != static_cast<int>(State::Idle)) {
         std::fprintf(stderr,
             "warptempo_gui: Checkpoint worker dispatch while busy "
             "(state=%d): the request was dropped\n",
-            state_.load());
+            shared_ ? shared_->state.load() : -1);
         return;
     }
 
+    on_done_ = std::move(on_done);
     {
-        std::lock_guard<std::mutex> lk(mtx_);
-        pending_job_ = std::move(job);
-        on_done_     = std::move(on_done);
-        state_.store(static_cast<int>(State::Running));
+        std::lock_guard<std::mutex> lk(shared_->mtx);
+        shared_->running_kind = job.kind;
+        shared_->pending_job  = std::move(job);
+        shared_->state.store(static_cast<int>(State::Running));
     }
-    cv_.notify_one();
+    shared_->cv.notify_one();
 }
 
 bool GuiHistoryCommitWorker::is_busy() const {
-    const int s = state_.load();
+    if (!shared_) return false;
+    const int s = shared_->state.load();
     return s == static_cast<int>(State::Running) ||
            s == static_cast<int>(State::CompletionPending);
 }
 
-void GuiHistoryCommitWorker::worker_loop() {
+void GuiHistoryCommitWorker::worker_loop(std::shared_ptr<Shared> shared) {
     while (true) {
         GuiHistoryCommitJob job;
         {
-            std::unique_lock<std::mutex> lk(mtx_);
-            cv_.wait(lk, [this]() {
-                return stop_worker_.load() ||
-                       state_.load() == static_cast<int>(State::Running);
+            std::unique_lock<std::mutex> lk(shared->mtx);
+            shared->cv.wait(lk, [&shared]() {
+                return shared->stop ||
+                       shared->state.load() ==
+                           static_cast<int>(State::Running);
             });
-            if (stop_worker_.load() &&
-                state_.load() != static_cast<int>(State::Running)) {
-                return;
+            if (shared->state.load() != static_cast<int>(State::Running)) {
+                return;  // stopped with nothing to run
             }
-            job = std::move(*pending_job_);
-            pending_job_.reset();
+            job = std::move(*shared->pending_job);
+            shared->pending_job.reset();
         }
 
-        // THE ACT ITSELF, unchanged and whole (history_diff.h): the three
-        // writes, the three-path commit, the push, and every stderr line
-        // about them — which now print from this thread, which is fine, they
-        // are the same lines in the same order.
-        last_outcome_ = commit_history_checkpoint(
-            job.repo_root, job.project_directory, job.base_name,
-            job.projects_repo, job.bytes, job.title);
+        GuiHistoryJobResult result;
+        result.kind = job.kind;
+        if (job.kind == GuiHistoryJobKind::Check) {
+            // THE CHECK (history_diff.h): fetch and compare. Its cancel token
+            // is the abandon's (shutdown above).
+            result.github = check_github(job.source_audio_path,
+                                         job.projects_repo, shared->cancel);
+        } else {
+            // THE ACT ITSELF, unchanged and whole (history_diff.h): the fetch
+            // first, the three writes, the three-path commit, the push, and
+            // every stderr line about them.
+            result.outcome = commit_history_checkpoint(
+                job.repo_root, job.project_directory, job.base_name,
+                job.projects_repo, job.bytes, job.title, result.github);
+        }
 
-        state_.store(static_cast<int>(State::CompletionPending));
-        signal_completion();
-    }
-}
-
-void GuiHistoryCommitWorker::signal_completion() {
-    if (completion_fd_ < 0) return;
-    const uint64_t one = 1;
-    ssize_t n = ::write(completion_fd_, &one, sizeof(one));
-    if (n != static_cast<ssize_t>(sizeof(one))) {
-        std::fprintf(stderr,
-            "warptempo_gui: Checkpoint worker eventfd write failed: %s\n",
-            std::strerror(errno));
+        {
+            std::lock_guard<std::mutex> lk(shared->mtx);
+            shared->result = result;
+            shared->state.store(static_cast<int>(State::CompletionPending));
+            // AN ABANDONED BLOCK IS NEVER SIGNALLED: its session is gone, and
+            // its descriptor with it (shutdown closes it under this mutex).
+            if (!shared->abandoned && shared->completion_fd >= 0) {
+                const uint64_t one = 1;
+                const ssize_t  n =
+                    ::write(shared->completion_fd, &one, sizeof(one));
+                if (n != static_cast<ssize_t>(sizeof(one))) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: Checkpoint worker eventfd write "
+                        "failed: %s\n",
+                        std::strerror(errno));
+                }
+            }
+            if (shared->abandoned) return;
+        }
     }
 }
 
 void GuiHistoryCommitWorker::on_completion_event() {
-    if (state_.load() != static_cast<int>(State::CompletionPending)) {
+    if (!shared_ ||
+        shared_->state.load() != static_cast<int>(State::CompletionPending)) {
         // Spurious wakeup or platform race — nothing to do.
         return;
     }
-
-    const GuiHistoryCommitOutcome outcome = last_outcome_;
-    DoneCallback cb;
+    GuiHistoryJobResult result;
     {
-        std::lock_guard<std::mutex> lk(mtx_);
-        cb = std::move(on_done_);
-        on_done_ = nullptr;
-        state_.store(static_cast<int>(State::Idle));
+        std::lock_guard<std::mutex> lk(shared_->mtx);
+        result = shared_->result;
+        shared_->state.store(static_cast<int>(State::Idle));
     }
-    if (cb) cb(outcome);
+    DoneCallback cb = std::move(on_done_);
+    on_done_        = nullptr;
+    if (cb) cb(result);
 }

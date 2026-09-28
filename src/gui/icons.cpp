@@ -337,6 +337,19 @@ constexpr IconPath kVcsCommitPaths[] = {
      "-2.5 2.5 2.5 2.5 0 0 1 -2.5-2.5 2.5 2.5 0 0 1 2.5-2.5z"},
 };
 
+// vcs-pull (2026-09-27), Save's face while the GitHub status reads Behind:
+// three sibling paths, each carrying the class and fill itself, so each
+// resolves to #fcfcfc like the pair above.
+constexpr IconPath kVcsPullPaths[] = {
+    {kIconText, "m6 16h9v3h-9z"},
+    {kIconText, "m10 3h1v11h-1z"},
+    {kIconText,
+     "m6.5 9.7929688-0.7070312 0.7070312 0.3535156 0.353516 4.3535156 "
+     "4.353515 4.353516-4.353515 0.353515-0.353516-0.707031-0.7070312"
+     "-0.353516 0.3535152-3.646484 3.646485-3.6464844-3.646485-0.3535156"
+     "-0.3535152z"},
+};
+
 constexpr IconPath kVcsDiffPaths[] = {
     {kIconText,
      "m5.5 4a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 "
@@ -1010,6 +1023,7 @@ constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
 constexpr IconDef kUnlock             {22.0, kUnlockPaths,              1};
 constexpr IconDef kVcsCommit          {22.0, kVcsCommitPaths,           3};
+constexpr IconDef kVcsPull            {22.0, kVcsPullPaths,             3};
 constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
 constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
 constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
@@ -1060,6 +1074,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;
         case Icon::VcsCommit:           return kVcsCommit;
+        case Icon::VcsPull:             return kVcsPull;
         case Icon::VcsDiff:             return kVcsDiff;
         case Icon::GoPrevious:          return kGoPrevious;
         case Icon::GoNext:              return kGoNext;

@@ -12,18 +12,24 @@
 // handle, and <git2.h> is included by git_repo.cpp alone.
 //
 // THE FENCE IS WHICH FUNCTION A CALL SITE NAMES: GuiGitRepo's reads write no
-// file, no ref and no index entry, and the three MUTATORS sit in their own
-// section below with ONE caller, the checkpoint act
-// (commit_history_checkpoint, history_diff.h). Nothing else in the product
-// changes a repository.
+// file, no ref and no index entry, and the FIVE MUTATORS — stage, commit,
+// push, fetch, fast-forward — sit in their own section below with THREE
+// callers, each in history_diff.cpp: the checkpoint act
+// (commit_history_checkpoint) stages, commits, fetches and pushes; the GitHub
+// check (check_github) fetches; the pull (run_history_pull) fast-forwards.
+// Nothing else in the product changes a repository.
 //
 // THREADS. A GuiGitRepo is ONE HANDLE FOR ONE THREAD and is never shared: the
 // main thread, the prefetch worker and the checkpoint worker each open their
 // own for every question they ask (opening is cheap and every question is
 // one-shot), and the prefetch scan holds one handle for its whole run on its
 // own thread. Their concurrent access to the one clone is the accepted overlap
-// GuiHistoryPrefetch records; libgit2 takes the same lock files git does.
+// GuiHistoryPrefetch records; libgit2 takes the same lock files git does. The
+// network mutators (fetch, push) run on the checkpoint worker alone, one job at
+// a time, so two of them never race for the remote-tracking ref's lock.
 
+#include <atomic>
+#include <cstddef>
 #include <optional>
 #include <functional>
 #include <string>
@@ -35,7 +41,7 @@ struct git_repository;
 // ONCE PER PROCESS, on the main thread, before any project's workers start
 // (gui_main). It initializes libgit2 and sets its four process-wide options,
 // each recorded at its site: durable object writes, the connect and
-// read/write timeouts that bound a push, and owner validation off.
+// read/write timeouts that bound a fetch and a push, and owner validation off.
 void gui_git_init();
 
 // WHICH CLONE HOLDS `dir` — the three answers the root derivation
@@ -60,6 +66,32 @@ enum class GuiGitPathStatus {
     Clean,        // every named path matches the checked-out tip
     Dirty,        // at least one differs, or is untracked
 };
+
+// HOW THE CHECKED-OUT BRANCH STANDS AGAINST ITS UPSTREAM'S REMOTE-TRACKING
+// REF, as of the last fetch (no network: the ref is what the fetch left).
+// `Compared` carries the counts and the upstream's commit; `NoUpstream` is a
+// branch with none configured (or a detached / unborn HEAD); `Gone` is an
+// upstream configured whose remote-tracking ref does not exist; `Unreadable`
+// is a read that did not answer.
+struct GuiGitUpstream {
+    enum class Reading { Compared, NoUpstream, Gone, Unreadable };
+    Reading     reading = Reading::Unreadable;
+    std::string upstream_sha;  // Compared only, full 40-hex
+    std::size_t ahead  = 0;
+    std::size_t behind = 0;
+};
+
+// HOW A FETCH ENDED. `Refused` is GitHub declining this device — no deploy
+// key, the key refused, a host key off the pin, a non-SSH URL — which no
+// retry fixes; `Unreachable` is every other failure (DNS, connect, the time
+// bound, a dropped session); `Cancelled` is the caller's cancel token.
+enum class GuiGitFetch { Fetched, Unreachable, Refused, Cancelled };
+
+// HOW A FAST-FORWARD ENDED (GuiGitRepo::fast_forward). `NotStarted` and
+// `Conflict` wrote nothing; `FilesFailed` and `BranchFailed` stopped after the
+// working tree was (partly) written, with the branch where it was.
+enum class GuiGitFastForward { Done, NotStarted, Conflict, FilesFailed,
+                               BranchFailed };
 
 class GuiGitRepo {
 public:
@@ -139,8 +171,21 @@ public:
                                bool&                           publication_owed,
                                std::string&                    diag) const;
 
-    // ---- THE FENCE: the three mutations. The checkpoint act is their only
-    // caller, in this order. -------------------------------------------------
+    // THE BRANCH AGAINST ITS UPSTREAM (GuiGitUpstream above), read from the
+    // local refs alone. `branch` is a short name (head_branch's answer).
+    GuiGitUpstream compare_with_upstream(const std::string& branch) const;
+
+    // EVERY PATH that differs between two commits' trees, both named by full
+    // 40-hex, that `accept` takes — a deletion reporting the path it removed,
+    // no rename detection. False when either commit cannot be read.
+    bool paths_changed_between(const std::string& from_sha,
+                               const std::string& to_sha,
+                               const GuiGitPathFilter& accept,
+                               std::vector<std::string>& paths) const;
+
+    // ---- THE FENCE: the five mutations. The checkpoint act stages, commits,
+    // fetches and pushes; the GitHub check fetches; the pull fast-forwards.
+    // -------------------------------------------------------------------------
 
     // Stage the working tree's `paths` into the index (`git add`). An untracked
     // path becomes tracked. False with `diag`.
@@ -170,6 +215,41 @@ public:
     // NO HOOK RUNS.
     bool push_branch(const std::string& branch,
                      const std::string& destination_url, std::string& diag);
+
+    // FETCH `origin`'s configured refspec from `source_url` — the URL the
+    // projects-home guard just validated, set on this fetch alone like the
+    // push's destination — so the remote-tracking refs follow the remote. No
+    // tags, no FETCH_HEAD. The push's transport rules exactly: SSH only, the
+    // deploy key, the pinned host keys, the time bound. `cancel`, when not
+    // null, is asked at every callback libgit2 makes (credentials, the host
+    // key, each progress report, each ref update), and a set token ends the
+    // fetch there as Cancelled — so a cancelled fetch writes no ref after the
+    // callback that saw the token. `diag` carries the cause of every failure.
+    GuiGitFetch fetch_origin(const std::string&       source_url,
+                             const std::atomic<bool>* cancel,
+                             std::string&             diag);
+
+    // FAST-FORWARD the checked-out `branch` from `from_sha` (its tip now) to
+    // `to_sha` (a descendant), NETWORK-FREE, in four steps:
+    //   1. every path the two trees differ on, but `exclude` and `force`, is
+    //      checked out SAFELY: a path whose working-tree file or index entry
+    //      differs from `from_sha`'s, or an untracked file in the way, refuses
+    //      the whole step before anything is written (Conflict, the first such
+    //      path in `conflict_path`);
+    //   2. every path in `force` is checked out FORCED, whatever the working
+    //      tree holds;
+    //   3. the index becomes `to_sha`'s tree, whole;
+    //   4. the branch ref moves, only if it still names `from_sha`.
+    // A path in `exclude` keeps its working-tree bytes (the index still takes
+    // the new tree's entry, so git sees the kept bytes as a change on top).
+    // No hook runs.
+    GuiGitFastForward fast_forward(const std::string&              branch,
+                                   const std::string&              from_sha,
+                                   const std::string&              to_sha,
+                                   const std::vector<std::string>& exclude,
+                                   const std::vector<std::string>& force,
+                                   std::string&                    conflict_path,
+                                   std::string&                    diag);
 
 private:
     explicit GuiGitRepo(git_repository* repo) : repo_(repo) {}

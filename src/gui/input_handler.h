@@ -1757,6 +1757,13 @@ struct GuiInputHandler {
     // and history_load_in_place.
     void confirm_load_in_place();
     void cancel_load_in_place();
+    // THE PULL QUESTION'S THREE ANSWERS (architect 2026-09-27), called by
+    // GuiPrompt through its back-pointer when PULL_CONFIRM answers: Reload
+    // (`reload` true) and Keep run the parked plan
+    // (AppState::pending_history_pull) through run_history_pull; Cancel drops
+    // it and changes nothing.
+    void answer_history_pull(bool reload);
+    void cancel_history_pull();
 
     // WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half (2026-08-28):
     // every standing keyboard-modal editor abandoned without committing, each
@@ -2835,7 +2842,11 @@ private:
     // `h` view (the three allowlists admit is_revert_project_key); unreachable
     // under the three list owners, whose routers consume the chord and the
     // File menu's Revert row with it.
-    void revert_project();
+    //
+    // `question_asked` IS THE PULL'S RELOAD (architect 2026-09-27): its own
+    // prompt already asked whether to discard the session, so the revert
+    // reopens with no second question (GuiPrompt::request_close's flag).
+    void revert_project(bool question_asked = false);
     void picker_open_highlight();
     void picker_set_highlight(int index);
     void picker_move_highlight(int delta);
@@ -3090,14 +3101,13 @@ private:
     // untouched. `member` is the VIEWED index (the one caller,
     // confirm_load_in_place, hands it the index it parked; the typed spelling
     // retired with the load prompt's field), and the ACT reads that member's
-    // ADDRESS — a commit SHA on the git road, a member FOLDER on the exported
-    // one (history_folder.h) — because the two roads spell it differently and
-    // the close inside the act drops the session that holds either.
+    // ADDRESS — its commit SHA — because the close inside the act drops the
+    // session that holds it.
     // Validate-before-mutate like its sibling: the address, the three-sidecar
     // presence and all three STRICT whole-file parses run before any store is
     // written, each failure returning false with one stderr line naming the
-    // cause and the file. No wav is compared (neither a commit nor an export
-    // carries audio — the loaded source is the source), no tmp/ wipe and so
+    // cause and the file. No wav is compared (a commit carries no
+    // audio — the loaded source is the source), no tmp/ wipe and so
     // no running-render guard, and the mode itself closes as part of the act.
     // Gated on the mode standing: the sidecar base name is the session's.
     // Full behaviour paragraph at the definition.
@@ -4380,7 +4390,15 @@ private:
     void select_history_diff_flags_modified(int hit, bool extend);
     void close_history_mode();
     void run_history_commit(const std::string& title);
-    void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome);
+    void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome,
+                                        GuiGitHubStatus         github);
+    // THE PULL (architect 2026-09-27): Ctrl+S in the `h` view while the GitHub
+    // status reads Behind. The press plans it (plan_history_pull, local and
+    // synchronous), asks the question only when the pull changes the open
+    // piece, and runs it (execute_history_pull) at once otherwise.
+    void run_history_pull_press();
+    void execute_history_pull(const GuiHistoryPullPlan& plan, bool reload);
+    void on_github_check_complete(GuiGitHubStatus status);
     void run_history_revert();
     // THE HEAD DELTA'S ONE MEASUREMENT SITE (2026-08-07). Called at the entry
     // and again at every prefetch drain that appended a member or ended the
@@ -4397,6 +4415,13 @@ public:
     // proof, and the deferral bit that stood for the case none of them
     // produces was deleted producer-less 2026-08-29).
     void kick_history_prefetch();
+    // THE GITHUB CHECK'S ONE DISPATCH (architect 2026-09-27): at every project
+    // open (main.cpp's load tail, beside the prefetch kick) and every `h`
+    // entry that bootstrapped a clone. The status reads Checking until the
+    // worker answers (on_github_check_complete). A worker already busy
+    // dispatches nothing: a check in flight answers soon, and a checkpoint's
+    // completion writes its own reading.
+    void dispatch_github_check();
     // The same question with the staleness test in front of it: kick only when
     // the store describes another source, another projects_repo, or a branch tip
     // that has moved. Public for symmetry with the funnel; its one caller is the

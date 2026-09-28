@@ -52,10 +52,6 @@
 //                              offending entry's own sentence ("Cannot read
 //                              '<name>' in '<folder>'"), which a void callback
 //                              cannot return.
-//     history_folder.cpp       list_history_folder_members — an unlistable
-//                              folder is its own GuiFailure, and the
-//                              increment's fault is read past the loop so a
-//                              truncated listing is never taken as the whole.
 //     settings_editor.cpp      complete_path_value — the path completer, which
 //                              completes nothing on any fault (a Tab that
 //                              walks the ring) and so has no fault to report.

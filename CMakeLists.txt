@@ -165,28 +165,23 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/renders_dir.cpp
     src/gui/save_ops.cpp
     # GUI-ONLY: the GitHub recheck's history model reads the projects
-    # repository's corpus AND owns the product's one mutating git route (the
-    # commit act's stage/commit/push). Like text_shape.cpp and icons.cpp it is
+    # repository's corpus AND owns the product's three mutating git routes
+    # (the checkpoint act, the GitHub check's fetch, the pull). Like text_shape.cpp and icons.cpp it is
     # deliberately in none of the four shared per-directory source lists —
     # warptempo_cli must never carry it. Its git questions go through
     # git_repo.cpp below.
     src/gui/history_diff.cpp
     # THE ONE GIT ROAD (architect 2026-09-27): libgit2 in process, the history
-    # module's only way into a repository, with the push's deploy key and
-    # host-key pin. The one file that includes <git2.h>, so the one file that
+    # module's only way into a repository, with the fetch's and the push's
+    # deploy key and host-key pin. The one file that includes <git2.h>, so the one file that
     # needs libgit2 — found in each platform branch below: the system's on
     # Linux, the cross-built static one (android/deps/80_libgit2.sh) on Android.
     src/gui/git_repo.cpp
     # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
-    # runs that file's one mutating git route off the GUI thread.
+    # runs that file's network git routes (the checkpoint act, the GitHub
+    # check) off the GUI thread. warptempo_cli reads no history of any kind.
     src/gui/history_commit_worker.cpp
     src/gui/history_prefetch.cpp
-    # GUI-ONLY like the two above: the commit walk's SECOND ROAD, the exported
-    # history folder a project may carry (architect 2026-09-17). It runs no git
-    # at all — it is a directory listing and four file reads per member — and
-    # it is what gives the tablet, which has no clone, the committed history.
-    # warptempo_cli reads no history of any kind.
-    src/gui/history_folder.cpp
     src/gui/settings_editor.cpp
     src/gui/active_views.cpp
     src/gui/ab_audition.cpp

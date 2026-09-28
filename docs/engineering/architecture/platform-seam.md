@@ -1087,22 +1087,24 @@ app sees through FUSE with the LOWER owner, and it has two legitimate writer
 uids by design — adb's shell places the clone and the audio, the app writes
 the sidecars — so a shell-owned `.git` would otherwise refuse every git
 question. The clone itself and the deploy key are placed by hand (the
-planner's and the architect's procedure, outside the code); until a piece sits
-in a clone, the tablet's `h` takes the roads the paragraph below and
-github-recheck.md describe.
+planner's and the architect's procedure, outside the code). THE TABLET READS
+ITS OWN CLONE since arc 4b (2026-09-27): the exported-history folder road that
+served it from 2026-09-17 is deleted, and the GitHub status, the fetch-first
+checkpoint and the pull (github-recheck.md) run on both devices through the
+same code — fetch and push alike on the checkpoint worker, a check in flight
+abandoned rather than waited on at a quit or a project switch.
 
-**AND `h` WORKS ON THE TABLET SINCE 2026-09-04, ON THE LOCAL WALK** (architect,
-from the car on the first real road test, SUPERSEDING "bare `h` REFUSES there,
-with the entry's own `History is unavailable: <reason>` card, and the mode's
-buttons grey with it"). The view opens on the session's own undo/redo timeline
-read as states, and everything that walk supports works there exactly as it
-does when bare `g` chooses it on the laptop — `,` / `.`, the diff lane, `'`,
-bare `v`, the paired march, Ctrl+Tab. WHAT NEEDS GIT IS REFUSED TRUTHFULLY: the
-walk lamp greys and bare `g` cards the bootstrap's own reason, Save and Commit
-greys and Ctrl+S cards the same, and the entry itself says nothing on screen
-(one stderr line, as ever). github-recheck.md's own section owns the ruling;
-HELP's history section says so, this being one of the few places behaviour
-differs by host.
+**AND `h` OPENS ON THE LOCAL WALK WHERE THERE IS NO CLONE** (architect
+2026-09-04, from the car on the first real road test, when the tablet had no
+git at all; SUPERSEDING "bare `h` REFUSES there"). THE FALLBACK STAYS, for a
+source outside every clone, on either device: the view opens on the session's
+own undo/redo timeline read as states, and everything that walk supports works
+there exactly as it does when bare `g` chooses it — `,` / `.`, the diff lane,
+`'`, bare `v`, the paired march, Ctrl+Tab. WHAT NEEDS GIT IS REFUSED
+TRUTHFULLY: the walk lamp greys and bare `g` cards the bootstrap's own reason,
+Save and Commit greys and Ctrl+S cards the same, and the entry itself says
+nothing on screen (one stderr line, as ever). github-recheck.md's own section
+owns the ruling.
 
 ## Device facts (Galaxy Tab S10 FE, SM-X520)
 
