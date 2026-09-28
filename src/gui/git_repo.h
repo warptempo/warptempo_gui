@@ -70,16 +70,10 @@ GuiGitRoot gui_git_discover_root(const std::string& dir, std::string& root,
 // without a colon after a slash), git's `<transport>::<address>` helpers, an
 // scp-style spelling with no user, and anything carrying whitespace or a
 // control character. Lexical: nothing is resolved and no host is judged here
-// (the host-key pin at the connection is that answer, git_repo.cpp).
-//
-// TWO ASKERS OF THE ONE PREDICATE: the projects-home guard
-// (clone_is_projects_home, history_diff.cpp) asks it of the fetch url and of
-// every push url BEFORE it normalizes them — normalization drops the scheme,
-// so a `git://` spelling of the right repository would otherwise compare
-// equal — and so refuses before the checkpoint act writes anything; and the
-// remote session's own prelude asks it again of the one URL a fetch or a push
-// is handed, the seam's contract for every URL that reaches libgit2's
-// transport selection.
+// (the host-key pin at the connection is that answer, git_repo.cpp). ASKED
+// ONCE, by the remote session's prelude, of the one URL a fetch or a push is
+// handed: a non-SSH URL fails there, before any connection, its cause on
+// stderr.
 bool gui_git_is_ssh_url(std::string_view url);
 
 // A path predicate over repo-relative paths in git's own spelling (forward
@@ -95,30 +89,16 @@ enum class GuiGitPathStatus {
     Dirty,        // at least one differs, or is untracked
 };
 
-// THE ONE TRACKING REF (codex round 2 over the git arc, 2026-09-28): the
-// branch `<b>` is compared with `refs/remotes/origin/<b>` AND NOTHING ELSE —
-// the ref fetch_origin and push_branch each write explicitly (the only ref
-// either writes; round 3, 2026-09-28) — never with whatever the branch's
-// configured upstream resolves to through a remote's configured refspec, and
-// no configured `remote.origin.fetch` refspec steers any ref write. So the configuration is a precondition, not a
-// source: the branch must TRACK ORIGIN'S SAME-NAMED BRANCH
-// (`branch.<b>.remote` = `origin` and `branch.<b>.merge` = `refs/heads/<b>`),
-// and anything else — no upstream at all, another remote, another branch — is
-// Nonconforming, `why` naming what the configuration says. Unreadable is a
-// configuration that could not be read.
-enum class GuiGitTracking { Conforms, Nonconforming, Unreadable };
-
-// HOW THE CHECKED-OUT BRANCH STANDS AGAINST `refs/remotes/origin/<b>`, as of
-// the last fetch (no network: the ref is what the fetch left). `Compared`
-// carries the counts and the tracking ref's commit; `Nonconforming` is a
-// branch that does not track origin's same-named branch (GuiGitTracking, its
-// `why` carried here); `Gone` is a conforming branch whose tracking ref does
-// not exist; `Unreadable` is a read that did not answer.
+// HOW THE CHECKED-OUT BRANCH `<b>` STANDS AGAINST `refs/remotes/origin/<b>`
+// — THE ONE TRACKING REF, read by name, the ref fetch_origin writes and the
+// push through `origin` updates — as of the last fetch (no network: the ref
+// is what the fetch left). `Compared` carries the counts and the tracking
+// ref's commit; `Unreadable` is a read that did not answer, the tracking ref
+// missing included (a clone always has it).
 struct GuiGitUpstream {
-    enum class Reading { Compared, Nonconforming, Gone, Unreadable };
+    enum class Reading { Compared, Unreadable };
     Reading     reading = Reading::Unreadable;
     std::string upstream_sha;  // Compared only, full 40-hex
-    std::string why;           // Nonconforming only
     std::size_t ahead  = 0;
     std::size_t behind = 0;
 };
@@ -135,16 +115,6 @@ struct GuiGitUpstream {
 enum class GuiGitFetch {
     Fetched, Unreachable, Refused, LocalFailed, Cancelled
 };
-
-// HOW A PUSH ENDED (GuiGitRepo::push_branch). `Pushed`: the server accepted
-// the branch and `refs/remotes/origin/<branch>` now names what it accepted.
-// `PushedTrackingUnmoved`: the server accepted it, but the tracking ref no
-// longer named the tip the caller's fetch left (something outside this
-// process moved it) or could not be written, so it was left as it stood —
-// published, with the reading unknown until the next fetch. `Failed`: nothing
-// was published that the server confirmed — every failure, a server-side
-// rejection included; `diag` carries the cause.
-enum class GuiGitPush { Pushed, PushedTrackingUnmoved, Failed };
 
 // HOW A FAST-FORWARD ENDED (GuiGitRepo::fast_forward). `NotStarted` and
 // `Conflict` wrote nothing; the three failures after them stopped with the
@@ -230,25 +200,17 @@ public:
     // Dirty when any differs from the checked-out commit in the index or the
     // working tree, or is untracked. `publication_owed` answers the second
     // question in the same read — does `branch` (`main`, the only branch)
-    // OWE ORIGIN A PUSH: it is AHEAD of `refs/remotes/origin/<branch>`, or that
-    // ref is GONE (compare_with_origin's reading, the one owner). A branch
-    // that does not track origin's same-named branch is Unavailable, `diag`
-    // naming why — the act has refused that configuration before this read,
-    // so it answers only a configuration changed mid-act. `diag` carries
-    // libgit2's words on every other Unavailable.
+    // OWE ORIGIN A PUSH: it is AHEAD of `refs/remotes/origin/<branch>`
+    // (compare_with_origin's reading, the one owner). `diag` carries
+    // libgit2's words on Unavailable.
     GuiGitPathStatus status_of(const std::vector<std::string>& paths,
                                const std::string&              branch,
                                bool&                           publication_owed,
                                std::string&                    diag) const;
 
-    // DOES `branch` TRACK ORIGIN'S SAME-NAMED BRANCH (GuiGitTracking above),
-    // read from the configuration alone. `why` is set on Nonconforming.
-    GuiGitTracking branch_tracking(const std::string& branch,
-                                   std::string&       why) const;
-
     // THE BRANCH AGAINST `refs/remotes/origin/<branch>` (GuiGitUpstream above),
-    // read from the local refs alone, branch_tracking asked first. `branch` is
-    // a short name (head_branch's answer).
+    // read from the local refs alone. `branch` is a short name (head_branch's
+    // answer).
     GuiGitUpstream compare_with_origin(const std::string& branch) const;
 
     // EVERY PATH that differs between two commits' trees, both named by full
@@ -280,48 +242,32 @@ public:
                       const std::string& title, std::string& diag);
 
     // PUSH `refs/heads/<branch>` to the same ref at `destination_url` — the
-    // URL the projects-home guard just validated, used verbatim (no
-    // `insteadOf` rewrite) — on an UNNAMED remote instance, the fetch's own
-    // construction (codex round 3 over the git arc, 2026-09-28): a push
-    // through the named `origin` makes libgit2 update local refs through
-    // `origin`'s CONFIGURED fetch refspecs after it — measured: a configured
-    // `+refs/heads/main:refs/heads/archive` force-moved a local branch to the
-    // pushed commit and left `refs/remotes/origin/main` where it was — so
-    // nothing in `remote.origin.*` takes part and libgit2 writes no ref. THE
-    // ONE TRACKING REF IS MOVED HERE INSTEAD, explicitly: once the server has
-    // accepted the ref, `refs/remotes/origin/<branch>` is set to the commit
-    // libgit2 negotiated to send, and only if it still names
-    // `tracking_before` — the tip the act's own fetch left, full 40-hex, or
-    // empty for a ref that must not exist. Never forced: a remote that has
-    // moved is refused as non-fast-forward. SSH ONLY (scp-style or ssh://,
-    // port 22 or GitHub's port 443), with the DEPLOY KEY beside the device
-    // config and GitHub's three published host keys pinned (git_repo.cpp owns
-    // all three rules). NO HOOK RUNS. GuiGitPush names the three endings.
-    GuiGitPush push_branch(const std::string& branch,
-                           const std::string& destination_url,
-                           const std::string& tracking_before,
-                           std::string&       diag);
+    // URL the projects-home guard just validated, set on this push alone and
+    // never re-resolved from the remote name or rewritten by an `insteadOf`
+    // rule — through the remote `origin`, so libgit2 moves its remote-tracking
+    // ref `refs/remotes/origin/<branch>` to what the server accepted. Never
+    // forced: a remote that has moved is refused as non-fast-forward. SSH ONLY
+    // (scp-style or ssh://, port 22 or GitHub's port 443), with the DEPLOY KEY
+    // beside the device config and GitHub's three published host keys pinned
+    // (git_repo.cpp owns all three rules). False with `diag` for every
+    // failure, a server-side rejection included. NO HOOK RUNS.
+    bool push_branch(const std::string& branch,
+                     const std::string& destination_url,
+                     std::string&       diag);
 
     // FETCH ONE BRANCH INTO ITS ONE TRACKING REF: `refs/heads/<branch>` from
-    // `source_url` — the URL the projects-home guard just validated — into
-    // `refs/remotes/origin/<branch>`, the ref compare_with_origin reads, by the
-    // EXPLICIT refspec `+refs/heads/<branch>:refs/remotes/origin/<branch>` on
-    // an UNNAMED remote instance (codex round 2 over the git arc, 2026-09-28).
-    // Unnamed, because a named remote handed an explicit refspec still makes
-    // libgit2's "opportunistic" updates through `origin`'s CONFIGURED fetch
-    // refspecs — measured: a configured `+refs/heads/main:refs/heads/hijack`
-    // wrote a local branch — so NOTHING IN `remote.origin.*` BUT THE URL THE
-    // GUARD READ takes part: no configured refspec, no prune, no tag option,
-    // no `insteadOf` rewrite (the URL is used verbatim). THE ONE REF FOLLOWS
-    // THE REMOTE: a branch GitHub no longer advertises removes it (the prune a
-    // pruning fetch would make), so the reading is Gone rather than a stale
-    // tip. No tags, no FETCH_HEAD. The push's transport rules exactly: SSH
-    // only, the deploy key, the pinned host keys, the time bound. `cancel`,
-    // when not null, is asked at every callback libgit2 makes (credentials, the
-    // host key, each progress report, each ref update) and once more before the
-    // prune, and a set token ends the fetch there as Cancelled — so a cancelled
-    // fetch writes no ref after the callback that saw the token. `diag` carries
-    // the cause of every failure.
+    // `source_url` — the URL the projects-home guard just validated, used
+    // verbatim (no `insteadOf` rewrite) — into `refs/remotes/origin/<branch>`,
+    // the ref compare_with_origin reads, by the EXPLICIT refspec
+    // `+refs/heads/<branch>:refs/remotes/origin/<branch>` on an UNNAMED remote
+    // instance, so the fetch writes that one ref and nothing configured under
+    // `remote.origin.*` adds another. No tags, no FETCH_HEAD, no prune. The
+    // push's transport rules exactly: SSH only, the deploy key, the pinned
+    // host keys, the time bound. `cancel`, when not null, is asked at every
+    // callback libgit2 makes (credentials, the host key, each progress report,
+    // each ref update), and a set token ends the fetch there as Cancelled — so
+    // a cancelled fetch writes no ref after the callback that saw the token.
+    // `diag` carries the cause of every failure.
     GuiGitFetch fetch_origin(const std::string&       source_url,
                              const std::string&       branch,
                              const std::atomic<bool>* cancel,
@@ -362,14 +308,13 @@ public:
     //   `<gitdir>/index.lock`                      — stage, the fast-forward
     //   `refs/heads/<branch>.lock`                 — commit, the fast-forward
     //   `refs/remotes/origin/<branch>.lock`        — fetch, push
-    //   `packed-refs.lock`                         — the fetch's removal of a
-    //                                                packed tracking ref
     //   `objects/pack/pack_git2_*`                 — the fetch's temporary
     //                                                pack and its index's lock
     // Not HEAD.lock (a commit on HEAD locks the branch it names, not HEAD),
-    // no reflog lock (a reflog is appended to, never locked), no `.keep`
-    // (libgit2 writes none) and no lock beside a working-tree file (a
-    // checkout writes a blob in place; only a merge-conflict write takes a
+    // no packed-refs.lock (only a ref deletion takes it, and none of the five
+    // deletes a ref), no reflog lock (a reflog is appended to, never locked),
+    // no `.keep` (libgit2 writes none) and no lock beside a working-tree file
+    // (a checkout writes a blob in place; only a merge-conflict write takes a
     // lock, and the fast-forward makes none). Each removal prints one stderr
     // line naming the path; an absent file is the ordinary case and prints
     // nothing. THE CALLER owns "once per clone per process, before this

@@ -537,11 +537,9 @@ std::string project_directory_of_source(const std::string& repo_root,
 // names, so it reduces to `github.com` — the one host alias, kGitHubSshHost.
 //
 // IT IS AN IDENTITY, NEVER A TRANSPORT: dropping the scheme is exactly what
-// makes two spellings of one repository compare equal, so it is also what
-// would make a `git://` or `file://` spelling of the projects home pass. The
-// guard therefore asks the transport of the clone's own URLs FIRST
-// (gui_git_is_ssh_url, git_repo.h) and compares identities only after; the
-// setting (projects_repo) is an identity and carries no transport to ask.
+// makes two spellings of one repository compare equal. The transport is asked
+// once, of the one URL a fetch or a push is handed, at the remote session's
+// seam (gui_git_is_ssh_url, git_repo.h), where a non-SSH URL is a hard fail.
 constexpr std::string_view kGitHubSshHost = "ssh.github.com";
 
 std::string normalize_repo_url(const std::string& raw) {
@@ -598,10 +596,9 @@ std::string clone_name(const std::string& repo_root) {
 }
 
 // IS THIS CLONE THE CONFIGURED PROJECTS HOME — asked of the clone's FETCH url
-// and of EVERY EFFECTIVE PUSH url: each must be an SSH remote (the transport,
-// parsed before normalization — gui_git_is_ssh_url) and normalize equal to the
-// setting. False with `reason` set names the first disagreement in the user's
-// own spellings.
+// and of EVERY EFFECTIVE PUSH url: each must normalize equal to the setting.
+// False with `reason` set names the first disagreement in the user's own
+// spellings.
 //
 // The fetch url (`remote.origin.url`) is not where a push has to go:
 // `remote.origin.pushurl` overrides it and may be set more than once, so a
@@ -667,18 +664,6 @@ bool clone_is_projects_home(const GuiGitRepo&  repo,
                               " has no 'origin' remote");
         return false;
     }
-    // THE TRANSPORT FIRST, then the identity (gui_git_is_ssh_url, git_repo.h):
-    // normalization drops the scheme, so `git://github.com/<the repo>` — git's
-    // unauthenticated transport, which neither the deploy key nor the host-key
-    // pin would ever touch — names the right repository and would compare
-    // equal. A spelling that is not SSH refuses here, before any fetch, write
-    // or push, whatever repository it names.
-    if (!gui_git_is_ssh_url(trim_trailing_ws(remote_raw))) {
-        reason = path_failure("the clone at ", root, shown_root,
-                              " has origin '" + trim_trailing_ws(remote_raw) +
-                                  "', which is not an SSH remote");
-        return false;
-    }
     if (normalize_repo_url(remote_raw) != setting_norm) {
         reason = path_failure("the projects_repo setting names '" +
                                   projects_repo + "' but the clone at ",
@@ -698,12 +683,6 @@ bool clone_is_projects_home(const GuiGitRepo&  repo,
     for (const std::string& raw : push_urls) {
         const std::string one = trim_trailing_ws(raw);
         if (one.empty()) continue;
-        if (!gui_git_is_ssh_url(one)) {
-            reason = path_failure("the clone at ", root, shown_root,
-                                  " pushes 'origin' to '" + one +
-                                      "', which is not an SSH remote");
-            return false;
-        }
         if (normalize_repo_url(one) != setting_norm) {
             reason = path_failure("the projects_repo setting names '" +
                                       projects_repo + "' but the clone at ",
@@ -2311,23 +2290,13 @@ std::vector<std::string> checkpoint_paths(const std::string& project_directory,
 
 // THE STATUS THE REFS SHOW NOW: the checked-out `branch` against
 // `refs/remotes/origin/<branch>` (compare_with_origin), no network — the
-// check's reading after its fetch, and the checkpoint's after a push that
-// left the tracking ref as it stood. Refused and Diverged print their cause on
-// one stderr line; a reading that does not answer is Unchecked.
+// check's reading after its fetch. Diverged prints its cause on one stderr
+// line; a reading that does not answer is Unchecked.
 GuiGitHubStatus github_status_from_refs(const GuiGitRepo&  repo,
                                         const std::string& branch) {
     const GuiGitUpstream up = repo.compare_with_origin(branch);
-    switch (up.reading) {
-    case GuiGitUpstream::Reading::Unreadable:
+    if (up.reading != GuiGitUpstream::Reading::Compared) {
         return GuiGitHubStatus::Unchecked;
-    case GuiGitUpstream::Reading::Nonconforming:
-        std::fprintf(stderr, "warptempo_gui: GitHub refused: %s\n",
-                     up.why.c_str());
-        return GuiGitHubStatus::Refused;
-    case GuiGitUpstream::Reading::Gone:
-        return GuiGitHubStatus::Ahead;
-    case GuiGitUpstream::Reading::Compared:
-        break;
     }
     if (up.ahead > 0 && up.behind > 0) {
         std::fprintf(stderr,
@@ -2382,9 +2351,7 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //   (1a) THE GUARD — the projects-home guard, whose validated URLs the fetch
 //       and the push consume. A refusal is RemoteRefused.
 //   (1b) FETCH FIRST (architect 2026-09-27) — GitHub's newest state, before
-//       anything is written: a branch not tracking `origin/<branch>` is
-//       RemoteRefused before the fetch (GuiGitTracking), unreachable is
-//       RemoteUnreachable, a fetch this clone failed (a write, a lock, a
+//       anything is written: unreachable is RemoteUnreachable, a fetch this clone failed (a write, a lock, a
 //       full disk; GuiGitFetch::LocalFailed) is WriteFailed, declined is
 //       RemoteRefused, and a branch BEHIND
 //       `refs/remotes/origin/<branch>` (or diverged from it) is RemoteMoved —
@@ -2394,14 +2361,13 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //   (2) WRITE the three sidecars.
 //   (3) PRE-FLIGHT — one status read over those three paths, which answers
 //       BOTH questions the act needs: are the paths dirty, and does the branch
-//       OWE ORIGIN A PUSH (ahead of `refs/remotes/origin/<branch>`, or that
-//       ref gone).
+//       OWE ORIGIN A PUSH (ahead of `refs/remotes/origin/<branch>`).
 //   (4) DIRTY — stage, then commit the three paths under the caller's title;
 //       a failure on either is CommitFailed with libgit2's words on stderr.
 //   (5) PUSH — iff a commit was just made OR the branch already owed one,
-//       through an unnamed remote on the guard's URL, then
-//       `refs/remotes/origin/<branch>` moved explicitly to the commit the
-//       server accepted (GuiGitRepo::push_branch). A failure is
+//       through `origin` with the guard's URL set on the push alone, libgit2
+//       moving `refs/remotes/origin/<branch>` to what the server accepted
+//       (GuiGitRepo::push_branch). A failure is
 //       CommittedNotPushed, success is Committed. Clean paths and
 //       nothing to publish is NothingToCommit, and the act runs no mutation at
 //       all.
@@ -2491,8 +2457,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
     // (1) MAIN IS THE ONLY BRANCH (kProjectsBranch): HEAD anywhere else —
     // another branch, or detached — is refused here, before anything is
-    // written, as RemoteRefused with the status Refused (the tracking
-    // refusal's own vocabulary below), the stderr line naming what HEAD is.
+    // written, as RemoteRefused with the status Refused (the guard's own
+    // vocabulary below), the stderr line naming what HEAD is.
     {
         std::string why;
         if (!head_on_main(*repo, why)) {
@@ -2506,8 +2472,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
     // (1a) THE GUARD, at the mutating boundary: the clone's remotes must be
     // the configured projects home, and the fetch below and the push at (5)
-    // go to the URLs it validates, set on their own remote instances and never
-    // re-resolved from the mutable name `origin`.
+    // go to the URLs it validates, set on the fetch's and the push's own
+    // remote instances and never re-resolved from `origin`'s configuration.
     GuiFailure  guard_reason;
     std::string destination;
     std::string fetch_source;
@@ -2522,34 +2488,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // (1b) FETCH FIRST, and refuse before the COMMIT if GitHub has moved (the
     // ordinary disk save already stands by this point; architect 2026-09-28:
     // the refusal is no stage, no commit, no push, never a withheld save):
-    // the act commits on top of the newest checkpoint or not at all. THE
-    // BRANCH MUST TRACK ORIGIN'S SAME-NAMED BRANCH before anything is fetched
-    // (codex round 2 over the git arc, 2026-09-28; GuiGitTracking): the fetch
-    // writes `refs/remotes/origin/<branch>` alone and the comparison reads it
-    // alone, so a clone configured to track anything else is refused as the
-    // guard's refusals are — RemoteRefused, the status Refused. THE TIP THE
-    // FETCH LEFT is kept (`tracking_before`, empty for a ref GitHub no longer
-    // has): the push at (5) moves the tracking ref only from it.
-    std::string tracking_before;
+    // the act commits on top of the newest checkpoint or not at all.
     {
-        auto refuse_tracking = [&github](const std::string& why) {
-            std::fprintf(stderr, "warptempo_gui: Checkpoint refused: %s\n",
-                         why.c_str());
-            github = GuiGitHubStatus::Refused;
-            return GuiHistoryCommitOutcome::RemoteRefused;
-        };
-        std::string          why;
-        const GuiGitTracking tracking = repo->branch_tracking(branch, why);
-        if (tracking == GuiGitTracking::Unreadable) {
-            std::fprintf(stderr,
-                         "warptempo_gui: Checkpoint refused: could not read "
-                         "what '%s' tracks\n",
-                         branch.c_str());
-            return GuiHistoryCommitOutcome::WriteFailed;
-        }
-        if (tracking == GuiGitTracking::Nonconforming) {
-            return refuse_tracking(why);
-        }
         const GuiGitFetch fetched =
             repo->fetch_origin(fetch_source, branch, /*cancel=*/nullptr, diag);
         if (fetched == GuiGitFetch::Refused) {
@@ -2580,38 +2520,29 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
             return GuiHistoryCommitOutcome::RemoteUnreachable;
         }
         const GuiGitUpstream up = repo->compare_with_origin(branch);
-        switch (up.reading) {
-        case GuiGitUpstream::Reading::Unreadable:
+        if (up.reading != GuiGitUpstream::Reading::Compared) {
             std::fprintf(stderr,
                          "warptempo_gui: Checkpoint refused: could not compare "
                          "'%s' with 'origin/%s'\n",
                          branch.c_str(), branch.c_str());
             return GuiHistoryCommitOutcome::WriteFailed;
-        case GuiGitUpstream::Reading::Nonconforming:
-            return refuse_tracking(up.why);
-        case GuiGitUpstream::Reading::Gone:
-            github = GuiGitHubStatus::Ahead;
-            break;
-        case GuiGitUpstream::Reading::Compared:
-            if (up.behind > 0) {
-                github = (up.ahead > 0) ? GuiGitHubStatus::Diverged
-                                        : GuiGitHubStatus::Behind;
-                std::fprintf(stderr,
-                             "warptempo_gui: Checkpoint refused: GitHub has "
-                             "%zu newer checkpoint(s) than '%s'%s\n",
-                             up.behind, branch.c_str(),
-                             (up.ahead > 0)
-                                 ? ", and this device has its own: fast-forward "
-                                   "only, so resolve it in a terminal"
-                                 : "; pull them first (Ctrl+S in the history "
-                                   "view)");
-                return GuiHistoryCommitOutcome::RemoteMoved;
-            }
-            github = (up.ahead > 0) ? GuiGitHubStatus::Ahead
-                                    : GuiGitHubStatus::UpToDate;
-            tracking_before = up.upstream_sha;
-            break;
         }
+        if (up.behind > 0) {
+            github = (up.ahead > 0) ? GuiGitHubStatus::Diverged
+                                    : GuiGitHubStatus::Behind;
+            std::fprintf(stderr,
+                         "warptempo_gui: Checkpoint refused: GitHub has "
+                         "%zu newer checkpoint(s) than '%s'%s\n",
+                         up.behind, branch.c_str(),
+                         (up.ahead > 0)
+                             ? ", and this device has its own: fast-forward "
+                               "only, so resolve it in a terminal"
+                             : "; pull them first (Ctrl+S in the history "
+                               "view)");
+            return GuiHistoryCommitOutcome::RemoteMoved;
+        }
+        github = (up.ahead > 0) ? GuiGitHubStatus::Ahead
+                                : GuiGitHubStatus::UpToDate;
     }
 
     // kSidecarExtensions order, which is what pairs each text with its path.
@@ -2691,9 +2622,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // just made is the ordinary case; a branch the pre-flight found OWING
     // PUBLICATION is the other, and it is why the clean arm is not an early
     // return: the bytes were already committed (by a previous act whose push
-    // failed, or in the terminal) or the upstream branch has gone away under
-    // them, and publishing them is exactly what a git front-end does with
-    // pending commits.
+    // failed, or in the terminal), and publishing them is exactly what a git
+    // front-end does with pending commits.
     if (!committed && !publication_owed) {
         std::fprintf(stderr,
                      "warptempo_gui: Nothing to commit: the checkpoint is "
@@ -2702,20 +2632,15 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     }
 
     // THE DESTINATION IS THE GUARD'S OWN ANSWER (step 1a): this act pushes to
-    // THE URL IT VALIDATED, on the push's own UNNAMED remote instance (never
-    // written to the clone's config), so neither the mutable name `origin` nor
-    // any configured refspec of it takes part. THE ONE TRACKING REF FOLLOWS
-    // EXPLICITLY: push_branch sets `refs/remotes/origin/<branch>` to the
-    // commit the server accepted, only from `tracking_before` (the tip step
-    // 1b's fetch left), and writes no other ref — which is what makes the
-    // UpToDate below the reading every later comparison makes.
+    // THE URL IT VALIDATED, set on `origin` for this push alone (never written
+    // to the clone's config), and libgit2 moves `refs/remotes/origin/<branch>`
+    // to what the server accepted — which is what makes the UpToDate below
+    // the reading every later comparison makes.
     // THE REFSPEC IS MAIN AT BOTH ENDS, never `HEAD` and never a sha: the
     // branch is what the act publishes, and both push arms — the commit it
     // just made and the commits that were already pending — want the same
     // thing sent. Nothing forces.
-    const GuiGitPush pushed =
-        repo->push_branch(branch, destination, tracking_before, diag);
-    if (pushed == GuiGitPush::Failed) {
+    if (!repo->push_branch(branch, destination, diag)) {
         // THE PUSH'S REFUSAL IS THE VERDICT — a remote that has moved since
         // the fetch, a server-side rejection, the time bound, or (only if it
         // changed since the fetch met it) the key or the host key — each in
@@ -2724,18 +2649,6 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                      diag.empty() ? "libgit2 reported nothing" : diag.c_str());
         github = GuiGitHubStatus::Ahead;
         return GuiHistoryCommitOutcome::CommittedNotPushed;
-    }
-    if (pushed == GuiGitPush::PushedTrackingUnmoved) {
-        // PUBLISHED, but the tracking ref was moved by something outside this
-        // process since the fetch (or could not be written), so it is left as
-        // it stands and the status is what the refs now show — never an
-        // UpToDate the ref every comparison reads would contradict.
-        std::fprintf(stderr,
-                     "warptempo_gui: Pushed '%s' to origin, but "
-                     "'origin/%s' was left as it stood (%s)\n",
-                     branch.c_str(), branch.c_str(), diag.c_str());
-        github = github_status_from_refs(*repo, branch);
-        return GuiHistoryCommitOutcome::Committed;
     }
     github = GuiGitHubStatus::UpToDate;
 
@@ -2801,20 +2714,6 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
         }
     }
     const std::string branch = kProjectsBranch;
-    // THE BRANCH MUST TRACK ORIGIN'S SAME-NAMED BRANCH (GuiGitTracking) before
-    // anything is fetched or reported: the fetch writes that one ref and the
-    // reading compares it alone.
-    std::string why;
-    switch (repo->branch_tracking(branch, why)) {
-    case GuiGitTracking::Conforms:
-        break;
-    case GuiGitTracking::Nonconforming:
-        std::fprintf(stderr, "warptempo_gui: GitHub refused: %s\n",
-                     why.c_str());
-        return GuiGitHubStatus::Refused;
-    case GuiGitTracking::Unreadable:
-        return GuiGitHubStatus::Unchecked;
-    }
 
     std::string       diag;
     const GuiGitFetch fetched =
@@ -2853,8 +2752,7 @@ namespace {
 // THE STRICT FAST-FORWARD CASE, read from the local refs: the branch, its tip
 // and `refs/remotes/origin/<branch>`'s tip (compare_with_origin, the check's
 // one ref), strictly behind. `reading` is the status the refs show when they
-// are not that case — Refused, with its cause on stderr, for a branch that no
-// longer tracks origin's same-named branch.
+// are not that case — Refused, with its cause on stderr, for HEAD off main.
 GuiHistoryPullPlanVerdict read_pull_refs(const GuiGitRepo&  repo,
                                          std::string&       branch,
                                          std::string&       from_sha,
@@ -2862,7 +2760,7 @@ GuiHistoryPullPlanVerdict read_pull_refs(const GuiGitRepo&  repo,
                                          GuiGitHubStatus&   reading) {
     reading = GuiGitHubStatus::Unchecked;
     // MAIN IS THE ONLY BRANCH (kProjectsBranch): HEAD anywhere else is
-    // Refused, as a branch tracking the wrong ref is.
+    // Refused.
     {
         std::string why;
         if (!head_on_main(repo, why)) {
@@ -2874,19 +2772,8 @@ GuiHistoryPullPlanVerdict read_pull_refs(const GuiGitRepo&  repo,
     }
     branch = kProjectsBranch;
     const GuiGitUpstream up = repo.compare_with_origin(branch);
-    switch (up.reading) {
-    case GuiGitUpstream::Reading::Unreadable:
+    if (up.reading != GuiGitUpstream::Reading::Compared) {
         return GuiHistoryPullPlanVerdict::Unreadable;
-    case GuiGitUpstream::Reading::Nonconforming:
-        std::fprintf(stderr, "warptempo_gui: Pull refused: %s\n",
-                     up.why.c_str());
-        reading = GuiGitHubStatus::Refused;
-        return GuiHistoryPullPlanVerdict::Refused;
-    case GuiGitUpstream::Reading::Gone:
-        reading = GuiGitHubStatus::Ahead;
-        return GuiHistoryPullPlanVerdict::Moved;
-    case GuiGitUpstream::Reading::Compared:
-        break;
     }
     if (up.ahead > 0 || up.behind == 0) {
         reading = (up.ahead > 0 && up.behind > 0) ? GuiGitHubStatus::Diverged

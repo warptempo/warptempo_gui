@@ -3525,8 +3525,8 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // main and the guard's refusals, which end the act before its fetch. Only an
 // act answering Unchecked leaves the status as it stood: one that ended as
 // WriteFailed before any reading was taken (the clone would not open, the
-// tracking configuration could not be read, the fetch failed in the clone
-// itself, the comparison after it could not be read).
+// fetch failed in the clone itself, the comparison after it could not be
+// read).
 //
 // AND NOTHING ASYNCHRONOUS RAISES A MODAL WITHOUT CLEARING THE WAY FIRST, which
 // is what retired a whole family of guards this function used to owe (the parked
@@ -3552,9 +3552,9 @@ void GuiInputHandler::on_history_checkpoint_complete(
     //   where this act committed nothing and HEAD is where the scan already
     //   found it, so the kick is free there.
     //   SIX PROVABLY DID NOT: WriteFailed never commits (a clone that would
-    //   not open, a tracking it could not read, an uncomparable branch or a
-    //   failed write), the three pre-commit refusals (RemoteRefused, a
-    //   detached HEAD's among them) end before the write,
+    //   not open, an uncomparable branch or a failed write), the three
+    //   pre-commit refusals (RemoteRefused, a detached HEAD's among them) end
+    //   before the write,
     //   NothingToCommit is the clean, not-ahead ending, which stages and
     //   commits nothing by construction, and CommitFailed is a stage or a
     //   commit that refused — moving the branch is the commit step's LAST act
@@ -3687,9 +3687,9 @@ void GuiInputHandler::run_history_pull_press() {
                              "Pull refused: this device has moved");
         return;
     }
-    // A BRANCH THAT NO LONGER TRACKS ORIGIN'S SAME-NAMED BRANCH (a terminal
-    // edit since the check): the status reads Refused, and the card is the
-    // one Ctrl+S says under that status. The cause is on stderr.
+    // HEAD NO LONGER ON MAIN (a terminal checkout since the check): the
+    // status reads Refused, and the card is the one Ctrl+S says under that
+    // status. The cause is on stderr.
     if (v == GuiHistoryPullPlanVerdict::Refused) {
         app.github_status = reading;
         viewport.invalidate_all();

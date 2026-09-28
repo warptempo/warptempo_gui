@@ -1179,8 +1179,7 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // repository could not be written, or the act refused before writing them
 // there at all (the ordinary disk save beside the source already stands by
 // this point, architect 2026-09-28: this write is the git-side copy alone):
-// the clone would not open, a tracking configuration that could not be read,
-// a fetch that failed IN THIS CLONE rather than on the network (a write, a
+// the clone would not open, a fetch that failed IN THIS CLONE rather than on the network (a write, a
 // lock, a full disk: GuiGitFetch::LocalFailed, git_repo.h), or a branch its
 // fetch could not compare. The GitHub status stays as it stood.
 //
@@ -1222,8 +1221,7 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // RemoteRefused — GitHub declined this device at the act's own fetch (no
 // deploy key, the key refused, a host key off the pin — the push's credential
 // and pin, met here first), the projects-home guard refused the clone's
-// remotes, or the branch does not track origin's same-named branch
-// (GuiGitTracking, git_repo.h; refused before the fetch).
+// remotes, or HEAD is not on main.
 enum class GuiHistoryCommitOutcome {
     WriteFailed,
     NothingToCommit,
@@ -1246,15 +1244,13 @@ enum class GuiHistoryCommitOutcome {
 //               rather than on the network). Row 8 shows no segment.
 //   Checking  — a check is on the worker.
 //   UpToDate  — nothing either way.
-//   Ahead     — this branch has commits GitHub has not (a push that failed),
-//               or `refs/remotes/origin/<branch>` is gone.
+//   Ahead     — this branch has commits GitHub has not (a push that failed).
 //   Behind    — GitHub has commits this branch has not; the pull's case.
 //   Diverged  — both have moved; fast-forward only, so no in-app answer.
 //   Offline   — the fetch could not reach GitHub.
 //   Refused   — GitHub declined this device, the guard refused the clone's
-//               remotes, HEAD is not on main (another branch, or detached:
-//               main is the only branch, architect 2026-09-28), or main does
-//               not track origin's main (GuiGitTracking, git_repo.h).
+//               remotes, or HEAD is not on main (another branch, or
+//               detached: main is the only branch, architect 2026-09-28).
 enum class GuiGitHubStatus {
     Unchecked,
     Checking,
@@ -1275,8 +1271,8 @@ const char* github_status_word(GuiGitHubStatus status);
 // (resolve_history_walk_header, the guard included), read the branch, FETCH
 // the branch's one ref from the guard's validated fetch url
 // (GuiGitRepo::fetch_origin — `refs/heads/<branch>` into
-// `refs/remotes/origin/<branch>`, the branch refused first unless it tracks
-// exactly that), and compare the branch with that ref (compare_with_origin).
+// `refs/remotes/origin/<branch>`), and compare the branch with that ref
+// (compare_with_origin).
 // The reading, or Unchecked where there is none
 // (GuiGitHubStatus). Offline and Refused print their cause on one stderr
 // line, and so does a fetch that failed in the clone (GuiGitFetch::
@@ -1311,9 +1307,9 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
 // AND THE PUSH CONSUME THE VALIDATED URLS: the same guard init() runs as the
 // mode's gate is asked again at the mutating boundary, and the URLs it
 // validates there are pinned onto the fetch's and the push's own remote
-// instance rather than re-resolved from the mutable remote name — so a config changed since the mode opened cannot publish to a
-// repository the user never confirmed, and neither can one changed between the
-// check and the push. The publication's other term is THE BRANCH, AND IT IS
+// instance rather than re-resolved from the remote's configured URL — so a
+// config changed since the mode opened cannot publish to a repository the user
+// never confirmed. The publication's other term is THE BRANCH, AND IT IS
 // MAIN, the only branch (architect 2026-09-28): a HEAD anywhere else is
 // refused at the act's entry (RemoteRefused, the status Refused), and the push
 // names `main` at both ends of its refspec.
@@ -1332,10 +1328,8 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
 // `github` IS THE ACT'S OWN READING, handed back for the GitHub status: the
 // reading its fetch-first step took (UpToDate, Ahead, Behind, Diverged,
 // Offline or Refused), or Unchecked when the act ended before that step;
-// after a push, UpToDate once the push has moved `refs/remotes/origin/<b>` to
-// the commit the server accepted, Ahead when it failed, and the refs' own
-// reading when the push landed but the tracking ref was left as it stood
-// (GuiGitPush::PushedTrackingUnmoved).
+// after a push, UpToDate once libgit2 has moved `refs/remotes/origin/<b>` to
+// the commit the server accepted, and Ahead when it failed.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& repo_root, const std::string& project_directory,
     const std::string& base_name, const std::string& projects_repo,
@@ -1368,8 +1362,7 @@ struct GuiHistoryPullPlan {
 // Ready: the branch is strictly behind `refs/remotes/origin/<branch>` (0
 // ahead, >0 behind) and the plan is filled. Moved: it is not, and `reading` is
 // what it is instead (UpToDate, Ahead or Diverged). Refused: HEAD is not on
-// main (the only branch), or main no longer tracks origin's main
-// (GuiGitTracking, git_repo.h), `reading` Refused and the cause on stderr.
+// main (the only branch), `reading` Refused and the cause on stderr.
 // Unreadable: a read did not answer.
 enum class GuiHistoryPullPlanVerdict { Ready, Moved, Refused, Unreadable };
 GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
@@ -1390,8 +1383,7 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 // refs no longer describe. `reading` is Unchecked on every other outcome.
 //   Pulled        — the branch, the index and the files are the upstream's.
 //   Moved         — the branch or the upstream moved since the plan.
-//   Refused       — the branch no longer tracks origin's same-named branch;
-//                   nothing was written.
+//   Refused       — HEAD is no longer on main; nothing was written.
 //   Unreadable    — a read failed before anything was written.
 //   Conflict      — another path the pull changes has local changes (or an
 //                   untracked file in the way); nothing was written, and
