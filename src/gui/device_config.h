@@ -39,12 +39,13 @@
 // on both devices, so there is no spawnable player to name; a config still
 // carrying the key is unknown-key fatal, no migration, the architect's
 // ruling.) THE OTHER THREE JOINED 2026-08-27 with the project model:
-// where the projects live is a fact about the device (the clone's `projects/`
-// on the laptop, the app's external files dir on the tablet); which repository
-// is the projects home is ONE user's ONE repo, not a property of each piece,
-// so `projects_repo` left the sidecar too (architect approval 2026-08-27, the
-// fifth grant on settings_file.{h,cpp}); and what was opened last is what lets
-// the tablet, which has no command line, open the right piece without a picker
+// where the projects live is a fact about the device (the projects clone's
+// `projects/` on the laptop, the app's external files dir on the tablet);
+// which repository is the projects home is ONE user's ONE repo, not a
+// property of each piece, so `projects_repo` left the sidecar too (architect
+// approval 2026-08-27, the fifth grant on settings_file.{h,cpp}); and what
+// was opened last is what lets the tablet, which has no command line, open
+// the right piece without a picker
 // at startup. `max_waveform_height` JOINED 2026-09-13 (architect): the waveform's cap had
 // been the render.h constant kWaveformMaxHeightPx = 500 since commit B, and
 // how tall a waveform wants to be is a fact about the PANEL — a tall external
@@ -186,9 +187,13 @@ struct DeviceConfig {
 // sidecar no longer references it, and AppState's own field reads it so a
 // session that has not read the config yet names the same repository the
 // template stamps. It is NOT a load fallback — the key is required, so a
-// config either names a repository (blank included) or refuses.
+// config either names a repository (blank included) or refuses. THE PROJECTS
+// REPOSITORY IS ITS OWN, SEPARATE AND PUBLIC (architect 2026-09-27): the
+// pieces' sidecar history lives in warptempo_projects, laid out as
+// `projects/<piece>/` inside it, and this program's own repository ignores
+// `projects/` (github-recheck.md).
 inline constexpr const char* kDefaultProjectsRepo =
-    "github.com/warptempo/warptempo_gui";
+    "github.com/warptempo/warptempo_projects";
 
 // THE gui_scale RANGE — the ONE owner, moved here from the `.settings` schema
 // 2026-08-27 with the key (architect approval 2026-08-27). Both askers call it
@@ -459,7 +464,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
-// a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
+// a GUI one: the laptop wants 100 % and the projects clone's `projects/`
+// (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo and a blank
 // last_project),

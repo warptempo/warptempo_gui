@@ -10,10 +10,10 @@
 // THE PROJECT MODEL (architect 2026-08-27): A PROJECT IS A FOLDER DIRECTLY
 // UNDER THE PROJECTS PATH, one level deep, and the folder's NAME is the
 // project's name ("550 - 1"). `projects_path` is a DEVICE CONFIG key
-// (device_config.h) — the laptop's is the clone's own `projects/`, the tablet's
-// the app's external files dir's `projects/`, exactly the folder the sync
-// convention pushes into — and this file owns the three questions the model
-// asks of a filesystem and nothing else: what a folder's SOURCE is, which
+// (device_config.h) — the laptop's is the projects clone's `projects/`, the
+// tablet's the app's external files dir's `projects/`, exactly the folder the
+// sync convention pushes into — and this file owns the three questions the
+// model asks of a filesystem and nothing else: what a folder's SOURCE is, which
 // folders there are, and which one the program opens at startup. It creates
 // nothing and reads no sidecar's CONTENT; the strict readers are the loaders'
 // (file_loader.{h,cpp} and the frozen parser behind it).

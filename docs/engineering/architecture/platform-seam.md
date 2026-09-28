@@ -336,7 +336,8 @@ drag coordinates floor instead of truncating.
   both-sides member. The FIVE keys it stamps are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
-  the laptop answers 100 % and the clone's own `projects/`, Android 225 %
+  the laptop answers 100 % and the projects clone's `projects/`
+  (`$HOME/.warptempo/warptempo_projects/projects`, github-recheck.md), Android 225 %
   and `<externalDataPath>/projects`; both stamp `max_waveform_height=500`
   (the waveform cap, the retired `kWaveformMaxHeightPx`'s value),
   `kDefaultProjectsRepo` and a

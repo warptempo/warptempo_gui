@@ -57,7 +57,9 @@ inline constexpr const char* kHistoryFolderNoCheckpoint =
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
 //
 // The architect commits his working checkpoints of a piece into an
-// ARCHITECT-ONLY corpus in this repository, as the same three sidecars a
+// ARCHITECT-ONLY corpus in the projects repository (its own, separate from
+// this program's and public, architect 2026-09-27; the pieces sit at
+// `projects/<piece>/` inside it), as the same three sidecars a
 // source WAV carries beside it (`<base>.settings`, `<base>.warpmarkers`,
 // `<base>.phaseresetmarkers`, named by the source's own base name). The
 // recheck reads that history back: for each of the last commits that touched

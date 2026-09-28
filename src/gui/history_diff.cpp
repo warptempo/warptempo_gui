@@ -481,9 +481,9 @@ bool git_output(const std::string& root, const std::vector<std::string>& args,
 // ignored — so the act decided its successes by OBSERVING the repository
 // afterwards instead: a moved branch tip for the commit, a remote-tracking ref
 // carrying the checkpoint for the push. The spawn conversion made the status
-// readable at both entry points, this repository runs no hooks, and the
-// observation machinery was the last asymmetry between them; it is deleted, and
-// what a caller reads here is what git said about its own run.
+// readable at both entry points, the projects repository runs no hooks, and
+// the observation machinery was the last asymmetry between them; it is deleted,
+// and what a caller reads here is what git said about its own run.
 //
 // SO THE THREE VERDICTS MEAN EXACTLY WHAT THEY MEAN ABOVE (GitRun owns the
 // contract): `Ran` is git having exited zero and IS the step having happened,
@@ -1200,9 +1200,9 @@ std::string project_directory_of_source(const std::string& repo_root,
 // Reduce a repository spelling to bare host/path so the settings key and the
 // clone's own remote can be compared as the same thing:
 //
-//   git@github.com:warptempo/warptempo_gui.git  ->  github.com/warptempo/warptempo_gui
-//   https://github.com/warptempo/warptempo_gui  ->  github.com/warptempo/warptempo_gui
-//   ssh://git@github.com/warptempo/x.git/       ->  github.com/warptempo/x
+//   git@github.com:warptempo/warptempo_projects.git  ->  github.com/warptempo/warptempo_projects
+//   https://github.com/warptempo/warptempo_projects  ->  github.com/warptempo/warptempo_projects
+//   ssh://git@github.com/warptempo/x.git/            ->  github.com/warptempo/x
 //
 // A scheme goes, userinfo goes, an scp-style host:path colon becomes the path
 // separator it means, and a trailing `.git` and any trailing slashes go. An
@@ -3325,8 +3325,9 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // 2026-08-09, superseding the graded machinery of 2026-08-04..09 whole: the
 // attribution walk, the retry family, the subject selector, the byte gates and
 // the witness grading are all deleted). The install scripts guarantee ssh and
-// git, the wrapper owns every code commit (and excludes projects/), and the
-// corpus is app-written — so the act stops distinguishing deviation cases and
+// git, the projects repository is the app's alone (the code lives in its own
+// repository, which ignores projects/, architect 2026-09-27), and the corpus
+// is app-written — so the act stops distinguishing deviation cases and
 // stops trying to recover from them. It is minimal but airtight: it does the one
 // thing, and where the repository does not answer the way sanctioned use
 // implies, it says so and stops.
@@ -3342,13 +3343,13 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // mutating runner could not read a child's exit status, and an act that cannot
 // ask git how it went has to look at what git left behind. The spawn conversion
 // made the status readable at both entry points, the capture side already lived
-// on it, and this repository runs no hooks — so the observation machinery was
-// the last asymmetry between the two runners, and it is gone: the tip reads and
-// the tip compare, the containment walk and the push verify, the clean arm's
-// containment read and the pre-flight's branch tripwire, all deleted with the
-// `Unconfirmed` verdict they produced between them. Every question this act
-// asks git now gets an exit status back, so there is nothing left it cannot
-// answer.
+// on it, and the projects repository runs no hooks — so the observation
+// machinery was the last asymmetry between the two runners, and it is gone: the
+// tip reads and the tip compare, the containment walk and the push verify, the
+// clean arm's containment read and the pre-flight's branch tripwire, all
+// deleted with the `Unconfirmed` verdict they produced between them. Every
+// question this act asks git now gets an exit status back, so there is nothing
+// left it cannot answer.
 //
 // THE FIVE STEPS, each numbered at its own site below:
 //   (1) CAPTURE — the symbolic branch read ONCE. Detached refuses immediately.

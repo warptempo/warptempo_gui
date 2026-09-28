@@ -28,13 +28,6 @@ tools/build/
 # attach (fftw is GPL, cairo LGPL/MPL) — architect ruling 2026-08-23
 android/prebuilt/
 
-# projects
-projects/*/*.fingerprint
-projects/*/*.peaks
-projects/*/*.wav
-projects/*/peaks/
-projects/*/render/
-projects/*/score/
-projects/*/tmp/
-projects/*/wt*
-projects/*test
+# projects: their own repository (github.com/warptempo/warptempo_projects),
+# checked out beside this one at ~/.warptempo/warptempo_projects
+projects/

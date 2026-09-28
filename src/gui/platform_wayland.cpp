@@ -683,8 +683,9 @@ GuiPlatform::~GuiPlatform() {
 // design baseline scale (until 2026-08-28 also audacious as the `l` command's
 // player, the value the `.settings` first-open template had stamped until the
 // key moved here 2026-08-27; the key retired whole with the in-app render
-// player) and THE CLONE'S OWN `projects/` as the projects path
-// (`$HOME/.warptempo/warptempo_gui/projects`),
+// player) and THE PROJECTS CLONE'S `projects/` as the projects path
+// (`$HOME/.warptempo/warptempo_projects/projects` — the projects repository
+// is its own, checked out beside this program's, architect 2026-09-27),
 // resolved at stamp time into an absolute literal, since the file is meant to
 // be read and edited by hand and should say where the projects are rather
 // than how to find out. With no HOME the stamp is deliberately left EMPTY:
@@ -700,7 +701,7 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.max_waveform_height = 500;
     if (const char* home = std::getenv("HOME"); home && home[0]) {
         cfg.projects_path =
-            std::string(home) + "/.warptempo/warptempo_gui/projects";
+            std::string(home) + "/.warptempo/warptempo_projects/projects";
     }
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
