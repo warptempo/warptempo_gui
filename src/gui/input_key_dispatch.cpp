@@ -1111,7 +1111,7 @@ void GuiInputHandler::close_history_mode() {
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
-    // with it, and row 8's state cell rewrites its `n/N shortsha` walk line.
+    // with it, and row 8's state cell rewrites its `x/y` walk line.
     // Narrow damage would have to know all three, and none of them is worth a
     // rect. It covers the republication's own damage too, which is why the
     // rebuild above emits its own and nothing here has to widen for it.
@@ -7182,8 +7182,7 @@ void GuiInputHandler::history_load_in_place() {
     // the two subjects is standing (the player's entry, or this member).
     app.history_mode.pending_load_member = member;
     // The member in the ONE spelling both walks share (member_label — the
-    // short SHA on the Remote tab, the displayed number on the Local one), so
-    // the question names the member exactly as the mode's own corner does.
+    // short SHA on the Remote tab, the displayed number on the Local one).
     // Cancel LAST, the escape sentinel every prompt derives its Esc from; the
     // FIRST button takes the passive focus on both its subjects, as on the
     // revert confirmation (PromptInitialFocus).

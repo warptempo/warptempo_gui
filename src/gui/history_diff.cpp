@@ -2235,9 +2235,8 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
     // rather than pairing against a side that does not exist.
     if (then_side == nullptr || now_side == nullptr) return nullptr;
 
-    // NO SHA: a timeline state has no name, and the corner reads the empty string
-    // rather than being told separately (on the Local tab the corner shows
-    // `n/N` alone).
+    // NO SHA: a timeline state has no name, so the delta carries the empty
+    // string rather than an invented one.
     slots[index] = compute_commit_delta(
         std::string(), then_side->warpmarkers_text,
         then_side->phaseresetmarkers_text, then_side->settings_text,

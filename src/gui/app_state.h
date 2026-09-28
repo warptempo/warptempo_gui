@@ -6948,8 +6948,9 @@ struct AppState {
     // same-frame pair (red half then, green half now). The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
     // marker stands exactly where it stood. The bottom row's right-aligned
-    // status corner (section C) carries the commit's position, its short SHA
-    // and its `scale=` value.
+    // status corner (section C) carries the member's position and its
+    // `scale=` value (the short SHA left that line 2026-09-28;
+    // history_walk_line, paint_handler.cpp, owns its shape).
     //
     // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
     // load-in-place gate itself — each candidate commit's three sidecars must
@@ -7131,9 +7132,9 @@ struct AppState {
     // its framing double-click were on that list until 2026-08-18, when the bar
     // went back to displaying the tab's own trim window in the view and the
     // double-click went back to framing it: neither reads the delta at all
-    // now.) THREE surfaces are not,
-    // and each says why at its own site: the corner's SHA token (an undo entry
-    // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS
+    // now.) The corner itself is wholly source-agnostic since its SHA token
+    // left it (2026-09-28). TWO surfaces are not,
+    // and each says why at its own site: the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS
     // wherever the active walk carries a member and FORKS ON THE
     // SOURCE — its confirmation names the viewed member in the walk's own
     // spelling (member_label below: a short SHA on the Remote tab, a member
@@ -7699,14 +7700,12 @@ struct AppState {
         // The three questions every walk-facing reader asks — how many members,
         // where am I, and what does the lane show — answered once for the live
         // source instead of forked at each site. What is NOT here is anything
-        // PER-VOCABULARY by intent: the corner's SHA token is the commit
-        // walk's alone (an undo entry has no commit to name), and the `'`
-        // load's ACT forks on the source at its one confirm site
-        // (GuiInputHandler::confirm_load_in_place) because a different function
-        // loads each walk's member. WHAT IS SHARED is the member's SPELLING,
-        // member_label below — the one owner of how a member is named to the
-        // user on either walk, read by the corner and by the confirmation's
-        // own question alike.
+        // PER-VOCABULARY by intent: the `'` load's ACT forks on the source at
+        // its one confirm site (GuiInputHandler::confirm_load_in_place)
+        // because a different function loads each walk's member. WHAT IS
+        // SHARED is the member's SPELLING, member_label below — the one owner
+        // of how a member is named to the user on either walk, read by the
+        // confirmation's own question.
 
         // How many members the ACTIVE walk carries — the `n/N` denominator.
         std::size_t walk_count() const {
@@ -7755,10 +7754,11 @@ struct AppState {
         // walk the member's displayed NUMBER — member_number above, the
         // corner's own `n/N` arithmetic, the only name a local member has; on
         // the COMMIT walk the seven-character SHA every user-facing line
-        // spells (short_sha, history_diff.h). The corner's SHA token reads it
-        // too, so the confirmation's question and the corner cannot spell one
-        // member two ways. Empty for an out-of-range commit index (sha_at's own
-        // answer), which is exactly the empty walk.
+        // spells (short_sha, history_diff.h). Its reader is the `'`
+        // confirmation's question; the corner names no member since
+        // 2026-09-28 (its position is member_number's alone). Empty for an
+        // out-of-range commit index (sha_at's own answer), which is exactly
+        // the empty walk.
         std::string member_label(std::size_t member) const {
             if (source == GuiHistoryWalkSource::Local)
                 return std::to_string(member_number(member));

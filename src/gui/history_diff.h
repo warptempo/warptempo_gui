@@ -456,8 +456,8 @@ GuiHistoryNowSide build_history_now_side(const AppState& app);
 // than four.
 //
 // `sha` is always the VIEWED member's, and EMPTY on the local walk: an undo
-// entry has no name, and the corner reads the emptiness rather than inventing
-// one (on the Local tab the corner shows `n/N` alone).
+// entry has no name, and the delta carries the emptiness rather than
+// inventing one.
 GuiHistoryCommitDelta compute_commit_delta(
     const std::string& sha,
     const std::string& then_warp,
@@ -486,7 +486,7 @@ struct GuiHistoryCommitSidecars {
 };
 
 // THE SEVEN-CHARACTER SPELLING every user-facing line uses for a commit —
-// the corner's SHA token and the `'` load confirmation's question through
+// the `'` load confirmation's question through
 // AppState::HistoryMode::member_label, and every reason this module composes.
 // The full SHA is returned unchanged when it is shorter than seven, which no
 // git answer is.

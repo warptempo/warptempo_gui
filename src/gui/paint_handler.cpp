@@ -2580,15 +2580,24 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 // clock's neighbour since 2026-08-29's fold, the one-day status bar's LEFT
 // cell before that. While the mode stands this line is what that cell is for.
 //
-// THE SHAPE: the commit's position in the walk and its short SHA, then the
-// scale — `Scale: [-]<then token> [+]<now token>` — then `GitHub: <word>`
-// (below), in the lane's own sign
-// vocabulary and through the lane's own spelling owner (history_diff_label),
-// so this line and the flags cannot come to bracket differently. (The
-// "bottom-left corner" of the mode's record read bottom-RIGHT from the
-// 2026-08-12 unification, TOP-RIGHT while the status chain sat in the tab row,
-// bottom-LEFT on the one-day status bar, and reads BOTTOM-CENTRE now, beside
-// the clock — the same line, four surfaces.)
+// THE SHAPE (architect 2026-09-28): SEGMENTS SEPARATED BY ` | `, every one
+// alike — the POSITION `x/y`, then the SCALE segment
+// `Scale: [-]<then token> [+]<now token>` when the scale changed, then the
+// GITHUB segment `GitHub: <word>` when there is one (below) — so an absent
+// segment leaves no separator behind it and nothing leads or trails:
+// `12/14 | Scale: [-]1.0 [+]1.1 | GitHub: up to date`, `03/14 | GitHub:
+// behind`, `007/114`. The same shape on BOTH walks. The scale segment speaks
+// the lane's own sign vocabulary through the lane's own spelling owner
+// (history_diff_label), so this line and the flags cannot come to bracket
+// differently. (The "bottom-left corner" of the mode's record read
+// bottom-RIGHT from the 2026-08-12 unification, TOP-RIGHT while the status
+// chain sat in the tab row, bottom-LEFT on the one-day status bar, and reads
+// BOTTOM-CENTRE now, beside the clock — the same line, four surfaces.)
+//
+// THE LINE NAMES NO COMMIT (architect 2026-09-28): the short SHA left it, so
+// the position is the line's only reference to the member on either walk.
+// The member's NAME still has its one owner, HistoryMode::member_label
+// (app_state.h), which the `'` load confirmation reads — the line does not.
 //
 // THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect 2026-08-05,
 // superseding the arc's unchanged-token report): a value that both sides agree
@@ -2600,23 +2609,21 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 // strict-load clean, and kept as the least-surprising shape rather than a
 // refusal.
 //
-// THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads the viewed
+// THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `x/y` reads the viewed
 // member's DISPLAYED NUMBER and the walk's count, so a Local tab counts the
 // session's own timeline states with the same two numbers in the same place.
 // THE COUNT RUNS UPWARD FROM THE PIECE'S PAST since 2026-09-17 — the oldest
-// member is 1 and the newest is N — and the arithmetic that turns the walk's
+// member is 1 and the newest is y — and the arithmetic that turns the walk's
 // index into that number has ONE OWNER, HistoryMode::member_number
-// (app_state.h), which the `'` confirmation's own naming reads too. THE SHA IS
-// THE COMMIT WALK'S ALONE, and
-// deliberately named rather than routed through an accessor: an undo entry has
-// no commit, so the token simply does not appear on the Local tab — the
-// empty-sha test below is that fact rather than a second branch.
+// (app_state.h). THE NUMBER IS ZERO-PADDED to the count's digit count
+// (architect 2026-09-28): `03/14`, `007/114`, `1/1`, `0/0` — the position
+// keeps one width while `,` / `.` walk, so the segments after it hold still.
 //
 // The reference is non-const because both walks COMPUTE THEIR DELTA LAZILY AND
 // CACHE IT (displayed_delta, app_state.h) — the composition itself writes
 // nothing.
 static std::string history_walk_line(AppState& app) {
-    std::string line;
+    static constexpr const char* kSegmentSeparator = " | ";
     const std::size_t count = app.history_mode.walk_count();
     // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing at
     // all: a blank cell beside a blank lane says only that the cell has stopped
@@ -2628,22 +2635,13 @@ static std::string history_walk_line(AppState& app) {
     // `1/1` — one state compared against itself. The zero arm therefore
     // describes the commit side alone now, and it lives inside member_number
     // with the counting it belongs to rather than as a test of this line's own.
-    line += std::to_string(
+    const std::string total = std::to_string(count);
+    std::string line = std::to_string(
         app.history_mode.member_number(app.history_mode.walk_index()));
+    if (line.size() < total.size())
+        line.insert(0, total.size() - line.size(), '0');
     line += '/';
-    line += std::to_string(count);
-    if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
-        // THE ONE SPELLING OWNER (member_label, app_state.h): the short SHA the
-        // `'` load confirmation names too. Empty for an out-of-range index,
-        // which is exactly the empty walk, so the count needs no test of its
-        // own here.
-        const std::string label =
-            app.history_mode.member_label(app.history_mode.index);
-        if (!label.empty()) {
-            line += ' ';
-            line += label;
-        }
-    }
+    line += total;
     const GuiHistoryCommitDelta* d =
         app.history_mode.displayed_delta(app.history_compare());
     // No unavailable-delta arm: walk membership is the strict whole-set load
@@ -2651,9 +2649,9 @@ static std::string history_walk_line(AppState& app) {
     // has a real delta — the old `Ambiguous` token died with the display
     // machinery it named.
     if (d && d->scale_changed) {
-        // The position always precedes it now (`0/0` at worst), so the
-        // separator is unconditional.
-        line += ' ';
+        // The position always precedes it (`0/0` at worst), so the separator
+        // is unconditional.
+        line += kSegmentSeparator;
         line += "Scale: ";
         line += history_diff_label("[-]", /*disabled=*/false,
                                    d->then_scale_token);
@@ -2670,7 +2668,8 @@ static std::string history_walk_line(AppState& app) {
     // and neither has an Unchecked status.
     if (history_remote_walk_available(app)) {
         if (const char* word = github_status_word(app.github_status)) {
-            line += " GitHub: ";
+            line += kSegmentSeparator;
+            line += "GitHub: ";
             line += word;
         }
     }
