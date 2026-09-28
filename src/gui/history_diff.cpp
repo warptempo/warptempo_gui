@@ -2399,8 +2399,10 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         return GuiHistoryCommitOutcome::RemoteRefused;
     }
 
-    // (1b) FETCH FIRST, and refuse before any write if GitHub has moved: the
-    // act commits on top of the newest checkpoint or not at all.
+    // (1b) FETCH FIRST, and refuse before the COMMIT if GitHub has moved (the
+    // ordinary disk save already stands by this point; architect 2026-09-28:
+    // the refusal is no stage, no commit, no push, never a withheld save):
+    // the act commits on top of the newest checkpoint or not at all.
     {
         const GuiGitFetch fetched =
             repo->fetch_origin(fetch_source, /*cancel=*/nullptr, diag);

@@ -7208,7 +7208,10 @@ struct AppState {
     // the three sidecars into the piece's directory in the projects repository,
     // commits those three paths alone under the entered title and pushes
     // (commit_history_checkpoint, history_diff.h — fetching first and refusing
-    // before any write if GitHub has moved; with the GitHub check's fetch and
+    // before the COMMIT if GitHub has moved, the save above already standing
+    // by then (architect 2026-09-28: withholding it solves nothing, since
+    // Ctrl+S outside `h` saves anyway; the situation is accepted and resolved
+    // by the pull); with the GitHub check's fetch and
     // the pull, one of the product's three mutating git routes). A FAILED SAVE
     // REFUSES THE WHOLE ACT before any of that, one stderr line and nothing
     // committed; run_history_commit (input_key_dispatch.cpp) owns the order, the

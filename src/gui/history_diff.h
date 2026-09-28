@@ -1173,10 +1173,13 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // head in the .cpp owns the model; this says what each value means to the
 // caller). Each is the verdict of the step that ended the act.
 //
-// WriteFailed — NOTHING WAS COMMITTED. The three sidecars could not be
-// written, or the act refused before writing them at all: the clone would not
-// open, a DETACHED HEAD (unsanctioned use, which throws here, since there is
-// no branch to publish onto), or a branch its fetch could not compare.
+// WriteFailed — NOTHING WAS COMMITTED. The three sidecars into the projects
+// repository could not be written, or the act refused before writing them
+// there at all (the ordinary disk save beside the source already stands by
+// this point, architect 2026-09-28: this write is the git-side copy alone):
+// the clone would not open, a DETACHED HEAD (unsanctioned use, which throws
+// here, since there is no branch to publish onto), or a branch its fetch
+// could not compare.
 //
 // CommitFailed — A STEP REFUSED BEFORE ANYTHING WAS PUBLISHED, and the three
 // files are sitting in the working tree where `git status` shows them and a hand
