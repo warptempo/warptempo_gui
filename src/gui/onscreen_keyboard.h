@@ -127,12 +127,14 @@ inline constexpr KeyDef kLetterRow2[] = {
     {Role::Backspace, '\0', 6},
 };
 
-// THE SYMBOL LAYER'S THREE. Digits on row 0 in order; the grammars' symbols
-// below them, the arithmetic and separator family on row 1 and the brackets and
-// joiners on row 2. THE SET IS THE PRODUCT'S OWN GRAMMARS, not a general
-// symbol page: `.` and the digits spell a tempo, `#` disables a marker,
-// `+ - [ ] ,` are the iteration bracket, `/` `_` `:` `=` `;` `'` `|` `*`
-// cover the settings keys, the commit titles and the render-entry paths.
+// THE SYMBOL LAYER'S THREE. Digits on row 0 in order; the page follows
+// plasma-keyboard / Qt Virtual Keyboard's page 1 order (the `&123` lineage)
+// as far as 16 slots allow, keeping the product's grammar characters
+// (digits, `+ - * : @ [ ] = _ /` and `?` for `url=` values; `.`, `,` and
+// Space on the shared bottom row) and filling from Plasma's page 2 order
+// (`$ = [ ]`). `#` and `|` are not typed anywhere (the flag editor composes
+// both from the marker, flag_editor.cpp) and `;` is in no grammar, so
+// neither is on the page.
 //
 // ROW 2'S LEADING SLOT IS TAB (architect 2026-08-27, with the project model):
 // the letter layer's Shift position, and the one key the letter layer has no
@@ -150,8 +152,7 @@ inline constexpr KeyDef kLetterRow2[] = {
 //
 // THE SYMBOL PAGE CARRIES NO DUPLICATE OF THE SHARED BOTTOM ROW (architect
 // 2026-09-28): row 3 is layer-blind, so `.`, `,` and Space are always one row
-// down and never repeated here. `@` (the leading slot of row 1) serves the
-// BPM function's entry; `!` and `$` (row 2) complete common ASCII.
+// down and never repeated here.
 inline constexpr KeyDef kSymbolRow0[] = {
     {Role::Character, '1'}, {Role::Character, '2'}, {Role::Character, '3'},
     {Role::Character, '4'}, {Role::Character, '5'}, {Role::Character, '6'},
@@ -159,15 +160,15 @@ inline constexpr KeyDef kSymbolRow0[] = {
     {Role::Character, '0'},
 };
 inline constexpr KeyDef kSymbolRow1[] = {
-    {Role::Character, '@'}, {Role::Character, '/'}, {Role::Character, '+'},
-    {Role::Character, '-'}, {Role::Character, '*'}, {Role::Character, ':'},
-    {Role::Character, '#'}, {Role::Character, '|'}, {Role::Character, '\''},
+    {Role::Character, '@'}, {Role::Character, '$'}, {Role::Character, '*'},
+    {Role::Character, '_'}, {Role::Character, '-'}, {Role::Character, '+'},
+    {Role::Character, '('}, {Role::Character, ')'}, {Role::Character, '='},
 };
 inline constexpr KeyDef kSymbolRow2[] = {
     {Role::Tab, '\0', 6},
-    {Role::Character, '!'}, {Role::Character, ';'}, {Role::Character, '='},
-    {Role::Character, '['}, {Role::Character, ']'}, {Role::Character, '_'},
-    {Role::Character, '$'},
+    {Role::Character, '['}, {Role::Character, ']'}, {Role::Character, '\''},
+    {Role::Character, ':'}, {Role::Character, '/'}, {Role::Character, '!'},
+    {Role::Character, '?'},
     {Role::Backspace, '\0', 6},
 };
 
