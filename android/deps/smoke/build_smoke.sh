@@ -6,8 +6,11 @@
 # place the alignment is observable (a static archive has no LOAD segments; the
 # property is created at link time and NDK r28+ makes it the default).
 #
-# The output never runs. A clean link is the claim: five libraries, their
-# headers and bionic all agree.
+# The output never runs. A clean link is the claim: eight libraries, their
+# headers and bionic all agree -- under -Wl,--no-undefined, as the product
+# links, so an unresolved symbol is a failure here rather than at dlopen. Then
+# the ed25519 check (the deploy key's type must be linked in) and DT_NEEDED
+# (nothing beyond bionic: the git stack adds no shared library).
 set -euo pipefail
 . "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../toolchain" && pwd)/00_env.sh"
 
@@ -16,10 +19,11 @@ mkdir -p "$out"
 src="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/smoke.cpp"
 
 pc="$WT_PKGCONFIG_WRAPPER"
-cflags="$("$pc" --cflags cairo cairo-ft harfbuzz freetype2 fftw3)"
+cflags="$("$pc" --cflags cairo cairo-ft harfbuzz freetype2 fftw3 libgit2 libssh2)"
 # --static: the staging prefix is static-only, so the Libs.private chains
-# (cairo -> pixman -> freetype -> m) must come through.
-libs="$("$pc" --static --libs cairo cairo-ft harfbuzz freetype2 fftw3)"
+# (cairo -> pixman -> freetype -> m; libgit2 -> libssh2 -> libcrypto) must
+# come through.
+libs="$("$pc" --static --libs cairo cairo-ft harfbuzz freetype2 fftw3 libgit2 libssh2)"
 # fftw3_threads ships no .pc upstream (Makefile.am installs only fftw3.pc), which
 # is exactly why the product finds it with find_library. Name it by hand.
 libs="$libs -lfftw3_threads"
@@ -35,12 +39,21 @@ for api in "$WT_API" "$WT_TARGET_SDK"; do
     # produces exactly ONE .so, which is the case where static libc++ is right.
     "$cxx" -fPIC -shared -O3 -ffp-contract=off -std=c++23 \
         -static-libstdc++ \
+        -Wl,--no-undefined \
         -o "$so" "$src" \
-        $cflags -L"$WT_PREFIX/lib" $libs -lm \
+        $cflags -L"$WT_PREFIX/lib" -Wl,--start-group $libs -Wl,--end-group -lm \
         || { wt_warn "link FAILED at API $api"; fail=1; continue; }
 
     wt_say "ok: $so"
     "$READELF" -h "$so" | grep -E 'Machine|Type:'
+
+    # ED25519 made it through the link, not just into libssh2.a.
+    syms="$("$NM" --defined-only "$so" 2>/dev/null || true)"
+    case "$syms" in
+        *" _libssh2_ed25519_sign"*) wt_say "ed25519 linked in at API $api" ;;
+        *) wt_warn "no _libssh2_ed25519_sign in $so"; fail=1 ;;
+    esac
+    printf '  DT_NEEDED: %s\n' "$("$READELF" -d "$so" | grep NEEDED | grep -oE '\[[^]]+\]' | tr '\n' ' ')"
 
     # The research doc's check: expect "align 2**14" on every LOAD segment.
     aligns="$("$OBJDUMP" -p "$so" | grep -A1 'LOAD' | grep -oE 'align 2\*\*[0-9]+' | sort -u)"

@@ -174,8 +174,8 @@ set(WARPTEMPO_GUI_SOURCES
     # THE ONE GIT ROAD (architect 2026-09-27): libgit2 in process, the history
     # module's only way into a repository, with the push's deploy key and
     # host-key pin. The one file that includes <git2.h>, so the one file that
-    # needs libgit2 — found in the Linux branch below; the Android branch finds
-    # none yet, and this file is what fails to compile there until it does.
+    # needs libgit2 — found in each platform branch below: the system's on
+    # Linux, the cross-built static one (android/deps/80_libgit2.sh) on Android.
     src/gui/git_repo.cpp
     # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
     # runs that file's one mutating git route off the GUI thread.
@@ -224,8 +224,9 @@ set(WARPTEMPO_GUI_SOURCES
 #  entry point and calls the same gui_main the Linux main() does.
 #
 #  NO WAYLAND, NO XKB, NO JACK, NO wayland-scanner is discovered here — none
-#  of them exists on the platform. The four dependencies that DO cross are
-#  found through the M1 sysroot's own .pc files: android/app/configure.sh
+#  of them exists on the platform. The dependencies that DO cross (the four
+#  graphics libraries, fftw, and the git stack) are found through the M1
+#  sysroot's own .pc files: android/app/configure.sh
 #  passes PKG_CONFIG_EXECUTABLE (the toolchain's wrapper, which hard-forces
 #  PKG_CONFIG_LIBDIR at android/prebuilt/<abi>) and FFTW3_THREADS_LIB (whose
 #  find_library above cannot search a sysroot the NDK toolchain file has
@@ -244,6 +245,13 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # harfbuzz carry it transitively — because the static link needs its
     # archive named explicitly inside the group below.
     pkg_check_modules(WT_ANDROID_GFX REQUIRED cairo cairo-ft harfbuzz freetype2)
+    # The history view's git (git_repo.cpp), as on Linux: libgit2 with its SSH
+    # transport. Static like everything here; libgit2.pc's Requires.private
+    # names libssh2, whose own .pc names libcrypto, so --static (the
+    # STATIC_LDFLAGS below) carries the whole chain -lgit2 -lssh2 -lcrypto -ldl.
+    # zlib is libgit2's bundled copy, so the chain adds nothing to DT_NEEDED
+    # (android/deps/80_libgit2.sh owns the build's choices).
+    pkg_check_modules(WT_ANDROID_GIT REQUIRED libgit2)
 
     # The NDK's stock android_native_app_glue. It is COMPILED IN PLACE from
     # the NDK rather than vendored: r29's process_input already drains its
@@ -283,6 +291,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         ${WARPTEMPO_GLUE_DIR}
         ${FFTW3_INCLUDE_DIRS}
         ${WT_ANDROID_GFX_INCLUDE_DIRS}
+        ${WT_ANDROID_GIT_INCLUDE_DIRS}
     )
     # -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ IS LOAD-BEARING and is
     # mentioned in no NDK document: without it bionic marks every symbol newer
@@ -298,11 +307,13 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # freetype, freetype's autohinter reaches back into harfbuzz), which a
     # single-pass static link cannot resolve on its own. --no-undefined makes a
     # missing symbol a BUILD failure rather than something the device's loader
-    # discovers at launch.
+    # discovers at launch. The git chain sits inside the same group for the
+    # same reason (its archives are ordered by pkg-config, not by hand).
     target_link_libraries(warptempo_gui PRIVATE
         -Wl,--no-undefined
         -Wl,--start-group
         ${WT_ANDROID_GFX_STATIC_LDFLAGS}
+        ${WT_ANDROID_GIT_STATIC_LDFLAGS}
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}
         -Wl,--end-group

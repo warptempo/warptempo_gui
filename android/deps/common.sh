@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Shared bits for the five dependency builds. Source it, never execute it.
+# Shared bits for the eight dependency builds. Source it, never execute it.
 #
 # Source tarballs are pinned by SHA-256. Provenance for each pin is recorded in
-# android/NOTES.md; four of the five are cross-checked against an independent
+# android/NOTES.md; seven of the eight are cross-checked against an independent
 # publisher (Arch PKGBUILD / Debian .dsc).
 
 set -u
@@ -36,6 +36,29 @@ CAIRO_VER=1.18.4
 CAIRO_TAR=cairo-$CAIRO_VER.tar.xz
 CAIRO_URL=http://deb.debian.org/debian/pool/main/c/cairo/cairo_${CAIRO_VER}.orig.tar.xz
 CAIRO_SHA256=445ed8208a6e4823de1226a74ca319d3600e83f6369f99b14265006599c32ccb
+
+# The history view's git (src/gui/git_repo.cpp): OpenSSL -> libssh2 -> libgit2,
+# each the laptop's own version, so both devices run the same git code.
+# OpenSSL's pin equals upstream's .sha256 file AND Arch's PKGBUILD sha256sums.
+OPENSSL_VER=3.6.4
+OPENSSL_TAR=openssl-$OPENSSL_VER.tar.gz
+OPENSSL_URL=https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VER/$OPENSSL_TAR
+OPENSSL_SHA256=9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef
+
+# libssh2's pin equals Debian's libssh2_1.11.1-6.dsc (.orig.tar.gz, 1093012
+# bytes); upstream's .asc could not be checked for want of the signing key.
+LIBSSH2_VER=1.11.1
+LIBSSH2_TAR=libssh2-$LIBSSH2_VER.tar.gz
+LIBSSH2_URL=https://libssh2.org/download/$LIBSSH2_TAR
+LIBSSH2_SHA256=d9ec76cbe34db98eec3539fe2c899d26b0c837cb3eb466a56b0f109cabf658f7
+
+# libgit2 publishes no release tarball of its own: this is GitHub's tag
+# archive, cached under a versioned name (the URL's own v1.9.7.tar.gz names
+# nothing). Arch's PKGBUILD b2sum for the same URL matches the file.
+LIBGIT2_VER=1.9.7
+LIBGIT2_TAR=libgit2-$LIBGIT2_VER.tar.gz
+LIBGIT2_URL=https://github.com/libgit2/libgit2/archive/refs/tags/v$LIBGIT2_VER.tar.gz
+LIBGIT2_SHA256=1a4fbe7589e814777ae76b64734ad80f4ecad22cd33a22682a2aaea4ae5375e7
 
 # --- helpers --------------------------------------------------------------
 WT_SRCDIR="$WT_WORK/src"
@@ -74,6 +97,29 @@ wt_meson_common=(
     --buildtype release
     --default-library static
     --wrap-mode=nofallback
+)
+
+# Every CMake configure in this tree (libssh2, libgit2) passes these: the NDK's
+# own toolchain file at the sysroot's ABI and API; CMAKE_BUILD_TYPE EMPTY with
+# the flags spelled out, so the options are exactly WT_OPT_FLAGS (a Release
+# type would add a second -O and -DNDEBUG), as every other dependency here is
+# built; and the staging prefix as both the install prefix and the ONE place
+# find_* may look (the toolchain file sets the find modes to ONLY, so a path
+# outside CMAKE_FIND_ROOT_PATH is never searched, and a host library can never
+# be found). PKG_CONFIG_EXECUTABLE is the wrapper, for the same reason meson
+# gets it through the cross file.
+wt_cmake_common=(
+    -G Ninja
+    -DCMAKE_TOOLCHAIN_FILE="$WT_NDK/build/cmake/android.toolchain.cmake"
+    -DANDROID_ABI="$WT_ABI"
+    -DANDROID_PLATFORM="android-$WT_API"
+    -DCMAKE_BUILD_TYPE=
+    -DCMAKE_C_FLAGS="$WT_OPT_FLAGS"
+    -DCMAKE_INSTALL_PREFIX="$WT_PREFIX"
+    -DCMAKE_INSTALL_LIBDIR=lib
+    -DCMAKE_PREFIX_PATH="$WT_PREFIX"
+    -DCMAKE_FIND_ROOT_PATH="$WT_PREFIX"
+    -DPKG_CONFIG_EXECUTABLE="$WT_PKGCONFIG_WRAPPER"
 )
 
 wt_check_lib() {  # <libfoo.a> [more...]

@@ -1041,10 +1041,12 @@ arms; `-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__` mandatory; no
 are STATIC from `android/prebuilt/arm64-v8a` (gitignored; rebuilt by
 `android/deps/build_all.sh` from pinned checksummed sources — fftw double
 +NEON+threads, freetype without fontconfig, harfbuzz, pixman, cairo
-image+ft); DT_NEEDED is exactly the NDK stable-ABI set — `libdl libm
+image+ft, and since 2026-09-27 the git stack, OpenSSL's libcrypto → libssh2 →
+libgit2 with its zlib bundled); DT_NEEDED is exactly the NDK stable-ABI set — `libdl libm
 libaaudio libandroid libnativewindow liblog libc`, `libnativewindow` since the
 frame-rate pin (`ANativeWindow_setFrameRate` lives there rather than in
-libandroid), and nothing to ship beside the app. targetSdk is PINNED
+libandroid), and nothing to ship beside the app — UNCHANGED by the git stack,
+measured on the linked image. targetSdk is PINNED
 at 34 (Android gates behavior on it; sideload has no ceiling), the whole
 freeze story: a decade-later replacement tablet runs the same APK. It was 35
 until 2026-08-27, when the system bars came back and 35's edge-to-edge
@@ -1054,22 +1056,40 @@ platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
 runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
 
-WHAT THE APK DOES NOT CARRY YET: GIT (recorded 2026-09-02, the four-tier
-review's R-18; retold 2026-09-27). The GitHub recheck asks git through
-libgit2 IN PROCESS since 2026-09-27 (`src/gui/git_repo.cpp`, the one file
-that includes `<git2.h>`; github-recheck.md), and libgit2 is found in the
-Linux branch alone. `git_repo.cpp` sits in the shared source list, so THE
-ANDROID BUILD FAILS — that file cannot compile without `<git2.h>` — until
-the cross-built libgit2 (with libssh2 over OpenSSL, whose ed25519 support
-the deploy key needs) joins `android/prebuilt` and the Android branch finds
-it (architect 2026-09-27: the tablet may stay broken until then; NO STUB).
-The last APK built before that day still runs the spawned-`git` road, and,
-the tablet having no `git` binary, the remote walk's very first question —
-which clone holds the source — has no answer there. Once it builds, the seam
-needs nothing per backend: the deploy key resolves beside the device config
-(`files/warptempo_gui/` here), the host-key pin is the same three keys, and
-the commit identity will come from the tablet clone's own `.git/config`,
-written at clone time (architect 2026-09-27; no identity constant in code).
+GIT ON THE TABLET (arc 4, architect 2026-09-27). The GitHub recheck asks
+git through libgit2 IN PROCESS (`src/gui/git_repo.cpp`, the one file that
+includes `<git2.h>`, in the shared source list; github-recheck.md), and the
+APK carries it: libgit2 1.9.7 over libssh2 1.11.1 over OpenSSL 3.6.4's
+libcrypto — the laptop's own three versions, so both devices run the same git
+code — cross-built static into `android/prebuilt` by
+`android/deps/{60_openssl,70_libssh2,80_libgit2}.sh` and linked inside the
+product's one `--start-group` under `--no-undefined` (the CMake Android arm
+asks pkg-config for `libgit2`, whose `.pc` carries the chain).
+`android/NOTES.md` §14 owns the build's choices: HTTPS OFF (the push is SSH
+only), zlib BUNDLED (the NDK's `libz.so` would have added a DT_NEEDED line for
+nothing), THREADS ON (three threads call libgit2), ED25519 IN (the deploy
+key's type). THE SIZE WAS ACCEPTED as the plain OpenSSL build (architect
+2026-09-27, over a trimmed one 1.4 MB smaller): the stripped `.so` went
+7.2 → 14.7 MB and the APK 7.9 → 15.4 MB. THE MANIFEST DECLARES `INTERNET`
+since the same day — without it the app's process is outside the inet group,
+`socket(AF_INET)` fails with EACCES and DNS is refused, so every network step
+would fail before reaching GitHub; it is a normal permission, granted at
+install. The seam needs nothing per backend: `$HOME` is the internal
+`files/` (no `.gitconfig`, no `.ssh`), the deploy key resolves beside the
+device config (`files/warptempo_gui/` here), the host-key pin is the same three
+keys whatever the negotiation (an empty known_hosts negotiates ECDSA), the
+commit identity comes from the tablet clone's own `.git/config` (architect
+2026-09-27; no identity constant in code), the fsync switch and the 30 s
+server timeouts are the same code, and SIGPIPE is ignored in `gui_main` for
+both backends. OWNER VALIDATION IS OFF on both devices (`gui_git_init`, which
+owns the reasoning): the tablet's clone lives on external storage, which the
+app sees through FUSE with the LOWER owner, and it has two legitimate writer
+uids by design — adb's shell places the clone and the audio, the app writes
+the sidecars — so a shell-owned `.git` would otherwise refuse every git
+question. The clone itself and the deploy key are placed by hand (the
+planner's and the architect's procedure, outside the code); until a piece sits
+in a clone, the tablet's `h` takes the roads the paragraph below and
+github-recheck.md describe.
 
 **AND `h` WORKS ON THE TABLET SINCE 2026-09-04, ON THE LOCAL WALK** (architect,
 from the car on the first real road test, SUPERSEDING "bare `h` REFUSES there,

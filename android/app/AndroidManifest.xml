@@ -30,6 +30,14 @@
        need, and declaring it now keeps the manifest stable across that landing. -->
   <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
+  <!-- THE HISTORY VIEW'S GIT TALKS TO GITHUB (src/gui/git_repo.cpp: libgit2
+       over SSH with the device's deploy key). Without this permission the
+       app's process is not in the inet group: socket(AF_INET) fails with
+       EACCES and DNS is refused, so every network step git takes would fail
+       before reaching GitHub. A normal permission, granted at install and on
+       an update install; nothing to grant by hand. -->
+  <uses-permission android:name="android.permission.INTERNET" />
+
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 

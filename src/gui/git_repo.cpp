@@ -42,6 +42,14 @@ constexpr const char* kDeployKeyPublicName = "deploy_key.pub";
 // tablet's) negotiates ECDSA. LIBGIT2'S OWN VALIDITY VERDICT — that same
 // known_hosts file — IS IGNORED, so the file can neither widen nor narrow the
 // pin and the answer is the same on every device.
+//
+// TWO HOST NAMES, ONE SERVER (architect 2026-09-27): `github.com` on port 22,
+// and `ssh.github.com`, GitHub's SSH over port 443 — the same service with the
+// same three keys and the same deploy keys, published for networks that block
+// port 22 (docs.github.com, "Using SSH over the HTTPS port"), which is the
+// remote both clones name (ssh://git@ssh.github.com:443/...). Measured on the
+// day: `ssh-keyscan -p 443 ssh.github.com` presents exactly the three
+// fingerprints below. The name is libgit2's parsed host, without the port.
 struct PinnedHostKey {
     git_cert_ssh_raw_type_t type;
     const char*             sha256;  // base64, unpadded
@@ -54,7 +62,7 @@ constexpr PinnedHostKey kGitHubHostKeys[] = {
     {GIT_CERT_SSH_RAW_TYPE_RSA,
      "uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s"},
 };
-constexpr std::string_view kGitHubHost = "github.com";
+constexpr std::string_view kGitHubHosts[] = {"github.com", "ssh.github.com"};
 
 // ---------------------------------------------------------------------------
 // ownership
@@ -130,7 +138,11 @@ bool diff_accepted_paths(git_repository* repo, git_tree* old_tree,
                          git_tree* new_tree, const GuiGitPathFilter& accept,
                          std::vector<std::string>& out) {
     out.clear();
-    git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+    // The init FUNCTIONS, not the *_INIT macros, here and at the status read:
+    // the macros spell a partial brace initializer, which the NDK's clang
+    // reports under -Wextra (missing-field-initializers) where GCC does not.
+    git_diff_options opts;
+    git_diff_options_init(&opts, GIT_DIFF_OPTIONS_VERSION);
     opts.flags |= GIT_DIFF_SKIP_BINARY_CHECK;
     git_diff* raw = nullptr;
     if (git_diff_tree_to_tree(&raw, repo, old_tree, new_tree, &opts) < 0) {
@@ -232,15 +244,24 @@ int push_credentials(git_credential** out, const char* /*url*/,
                                       state.private_key.c_str(), nullptr);
 }
 
-// THE HOST-KEY PIN: the server must be github.com presenting the published key
-// of the type it negotiated, compared by SHA-256 fingerprint. `valid` (libgit2's
-// known_hosts verdict) is never read — kGitHubHostKeys owns why.
+// THE HOST-KEY PIN: the server must be GitHub — one of kGitHubHosts —
+// presenting the published key of the type it negotiated, compared by SHA-256
+// fingerprint. `valid` (libgit2's known_hosts verdict) is never read —
+// kGitHubHostKeys owns why.
+bool is_github_host(const char* host) {
+    if (host == nullptr) return false;
+    for (std::string_view h : kGitHubHosts) {
+        if (std::string_view(host) == h) return true;
+    }
+    return false;
+}
+
 int push_certificate_check(git_cert* cert, int /*valid*/, const char* host,
                            void* payload) {
     PushState& state = *static_cast<PushState*>(payload);
     bool match = false;
     if (cert != nullptr && cert->cert_type == GIT_CERT_HOSTKEY_LIBSSH2 &&
-        host != nullptr && std::string_view(host) == kGitHubHost) {
+        is_github_host(host)) {
         const auto* hk = reinterpret_cast<const git_cert_hostkey*>(cert);
         if ((hk->type & GIT_CERT_SSH_SHA256) != 0 &&
             (hk->type & GIT_CERT_SSH_RAW) != 0) {
@@ -284,6 +305,22 @@ void gui_git_init() {
     // The push's time bound (kServerTimeoutMs owns the reasoning).
     git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, kServerTimeoutMs);
     git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, kServerTimeoutMs);
+    // OWNER VALIDATION OFF, on both devices (architect 2026-09-27). libgit2
+    // refuses a clone whose work tree or .git is owned by anyone but this
+    // process's user (or root) — git's safe.directory rule, whose premise
+    // (CVE-2022-24765) is a HOSTILE USER's repository above a victim's working
+    // directory: the owner is taken to be the only trusted writer. That
+    // premise does not hold on the tablet, whose clone lives on external
+    // storage with TWO LEGITIMATE WRITER UIDS BY DESIGN — adb's shell places
+    // the audio and the clone itself, the app writes the sidecars — so its
+    // shell-owned .git would read "not owned by current user" and every git
+    // question would fail as "History is unavailable", and any later adb push
+    // under .git would do the same again. On the laptop, a single-user
+    // machine, there is no hostile user for the rule to guard against. The
+    // clone opened is always the one derived from the loaded source
+    // (resolve_repo_root_for_source), never a directory the process wandered
+    // into.
+    git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
 }
 
 GuiGitRoot gui_git_discover_root(const std::string& dir, std::string& root,
@@ -521,7 +558,8 @@ GuiGitPathStatus GuiGitRepo::status_of(const std::vector<std::string>& paths,
     std::vector<char*> specs;
     specs.reserve(paths.size());
     for (const std::string& p : paths) specs.push_back(const_cast<char*>(p.c_str()));
-    git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+    git_status_options opts;
+    git_status_options_init(&opts, GIT_STATUS_OPTIONS_VERSION);
     opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
     // Untracked paths count (a sidecar new to its folder is exactly that) —
     // and a path inside an UNTRACKED FOLDER (a new piece's) is reported as
@@ -707,6 +745,8 @@ bool GuiGitRepo::push_branch(const std::string& branch,
 
     // SSH ONLY (architect 2026-09-27): the deploy key is the one credential
     // this program holds, and an http(s) remote would need a token it has not.
+    // Both SSH spellings pass: scp-style `git@github.com:...` and the URL form
+    // `ssh://git@ssh.github.com:443/...` both clones name (kGitHubHosts).
     if (destination_url.rfind("https://", 0) == 0 ||
         destination_url.rfind("http://", 0) == 0) {
         diag = "'" + destination_url + "' is not an SSH remote; only SSH is "

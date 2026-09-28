@@ -4,7 +4,7 @@
 // static archives and pkg-config all agreeing).
 //
 // It is never run -- the device may not even be present. What it proves is that
-// the five libraries resolve against each other and against bionic.
+// the eight libraries resolve against each other and against bionic.
 
 #include <cairo.h>
 #include <cairo-ft.h>
@@ -13,6 +13,8 @@
 #include FT_FREETYPE_H
 #include <hb.h>
 #include <hb-ft.h>
+#include <git2.h>
+#include <libssh2.h>
 
 #include <cstdio>
 
@@ -22,6 +24,11 @@
 static void *const kFaceEntryPoints[] = {
     reinterpret_cast<void *>(&cairo_ft_font_face_create_for_ft_face),
     reinterpret_cast<void *>(&hb_ft_font_create_referenced),
+    // The git road's two network entry points (git_repo.cpp): the push, and
+    // the deploy key's credential. Resolving them drags in libgit2's SSH
+    // transport, hence libssh2, hence libcrypto.
+    reinterpret_cast<void *>(&git_remote_push),
+    reinterpret_cast<void *>(&git_credential_ssh_key_new),
 };
 
 extern "C" int warptempo_android_smoke(void) {
@@ -55,8 +62,19 @@ extern "C" int warptempo_android_smoke(void) {
     cairo_surface_destroy(surf);
     if (st != CAIRO_STATUS_SUCCESS) return 6;
 
-    std::printf("cairo %s / harfbuzz %s / freetype ok / fftw %p\n",
+    // libgit2 over libssh2 over libcrypto: the process-wide switches
+    // gui_git_init sets, owner validation among them.
+    if (git_libgit2_init() < 0) return 7;
+    git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
+    int major = 0, minor = 0, rev = 0;
+    git_libgit2_version(&major, &minor, &rev);
+    const int features = git_libgit2_features();
+    git_libgit2_shutdown();
+    if ((features & GIT_FEATURE_SSH) == 0 || (features & GIT_FEATURE_THREADS) == 0) return 8;
+
+    std::printf("cairo %s / harfbuzz %s / freetype ok / fftw %p / libgit2 %d.%d.%d / libssh2 %s\n",
                 cairo_version_string(), hb_version_string(),
-                static_cast<const void *>(kFaceEntryPoints));
+                static_cast<const void *>(kFaceEntryPoints), major, minor, rev,
+                libssh2_version(0));
     return 0;
 }

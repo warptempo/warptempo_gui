@@ -33,9 +33,9 @@
 struct git_repository;
 
 // ONCE PER PROCESS, on the main thread, before any project's workers start
-// (gui_main). It initializes libgit2 and sets its three process-wide options,
-// each recorded at its definition: durable object writes, and the connect and
-// read/write timeouts that bound a push.
+// (gui_main). It initializes libgit2 and sets its four process-wide options,
+// each recorded at its site: durable object writes, the connect and
+// read/write timeouts that bound a push, and owner validation off.
 void gui_git_init();
 
 // WHICH CLONE HOLDS `dir` — the three answers the root derivation
@@ -163,8 +163,9 @@ public:
     // never re-resolved from the remote name or rewritten by an `insteadOf`
     // rule — through the remote `origin`, so its remote-tracking ref follows.
     // Never forced: a remote that has moved is refused as non-fast-forward.
-    // SSH ONLY, with the DEPLOY KEY beside the device config and GitHub's
-    // three published host keys pinned (git_repo.cpp owns all three rules).
+    // SSH ONLY (scp-style or ssh://, port 22 or GitHub's port 443), with the
+    // DEPLOY KEY beside the device config and GitHub's three published host
+    // keys pinned (git_repo.cpp owns all three rules).
     // False with `diag` for every failure, a server-side rejection included.
     // NO HOOK RUNS.
     bool push_branch(const std::string& branch,

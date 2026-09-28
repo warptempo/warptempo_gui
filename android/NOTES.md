@@ -29,7 +29,7 @@ package was used, so no system-wide config changed.
 | Source + build trees | — | `~/.local/android/work` |
 | Generated meson cross file | — | `~/.local/android/meson/android-aarch64.ini` |
 | Generated pkg-config wrapper | — | `~/.local/android/bin/pkg-config-android` |
-| **Dependency sysroot** | — | **`android/prebuilt/arm64-v8a` (in-repo, 11 MB)** |
+| **Dependency sysroot** | — | **`android/prebuilt/arm64-v8a` (in-repo, gitignored; 11 MB, 42 MB since the git stack joined, §14)** |
 
 **NDK r29 is the newest STABLE NDK.** The SDK repository manifest lists
 `ndk;30.0.14904198` and `ndk;30.0.15729638` under a "stable" channel ref, but
@@ -75,8 +75,11 @@ android/deps/
   30_harfbuzz.sh         harfbuzz 14.3.1
   40_pixman.sh           pixman 0.46.4
   50_cairo.sh            cairo 1.18.4
-  build_all.sh           the five in dependency order, then the smoke TU
-  smoke/smoke.cpp        one TU including all five headers
+  60_openssl.sh          OpenSSL 3.6.4 (libcrypto for libssh2; §14)
+  70_libssh2.sh          libssh2 1.11.1 over OpenSSL
+  80_libgit2.sh          libgit2 1.9.7 over libssh2
+  build_all.sh           the eight in dependency order, then the smoke TU
+  smoke/smoke.cpp        one TU including all eight headers
   smoke/build_smoke.sh   compile+link at two API levels, then the 16 KB check
 
 android/prebuilt/arm64-v8a/   include/ lib/ lib/pkgconfig/ lib/cmake/  (the output)
@@ -229,6 +232,9 @@ job, confirmed on a real link that pulls in all five static libraries. The
 | `harfbuzz-14.3.1.tar.xz` | `9dae9538…94f7` | github.com/harfbuzz/harfbuzz releases | **none available** (see below) |
 | `pixman-0.46.4.tar.gz` | `d09c44eb…591c` | deb.debian.org pool | Debian `pixman_0.46.4-1.dsc` sha256 ✔ |
 | `cairo-1.18.4.tar.xz` | `445ed820…2ccb` | deb.debian.org pool | Debian `cairo_1.18.4-3.dsc` sha256 ✔ |
+| `openssl-3.6.4.tar.gz` | `9bffaa1a…333ef` | github.com/openssl/openssl releases | upstream `.sha256` file AND Arch `openssl` PKGBUILD sha256sums ✔ |
+| `libssh2-1.11.1.tar.gz` | `d9ec76cb…58f7` | libssh2.org | Debian `libssh2_1.11.1-6.dsc` (`.orig.tar.gz`, 1093012 bytes) ✔ |
+| `libgit2-1.9.7.tar.gz` | `1a4fbe75…75e7` | github.com/libgit2 tag archive (`v1.9.7.tar.gz`) | Arch `libgit2` PKGBUILD b2sum ✔ |
 
 **DEVIATION — cairo and pixman do not come from cairographics.org.** That host
 is unreachable from this machine (DNS resolves to 131.252.210.176, every HTTPS
@@ -1508,3 +1514,105 @@ off-device with a scratchpad harness that links the real
 centred as designed, surface 2304x407 seated at y=927 flush on the bottom row at
 1334, and all five new glyphs render. **The device drive — open the flag editor,
 type, commit, hold backspace — is owed.**
+
+## 14. Git on the tablet — OpenSSL, libssh2, libgit2 (arc 4, 2026-09-27)
+
+The history view's git is libgit2 IN PROCESS (`src/gui/git_repo.cpp`, the one
+file that includes `<git2.h>`), and `git_repo.cpp` sits in the shared source
+list, so the Android build needs libgit2 with its SSH transport. Three more
+static libraries, a straight line after the first five and independent of
+them: **OpenSSL → libssh2 → libgit2**, each the laptop's own version, so both
+devices run the same git code. Built by `60_openssl.sh`, `70_libssh2.sh`,
+`80_libgit2.sh`; every flag's reason is in its script's head comment.
+
+### 14.1 Pins and provenance
+
+The three rows in §6. OpenSSL 3.6.4 is checked against upstream's own
+`.sha256` file and Arch's PKGBUILD; libssh2 1.11.1 against Debian's `.dsc`
+(its `.asc` is present but the signing key is not, so gpg could not check it —
+the Debian pin is the independent one, as for pixman and cairo); libgit2 1.9.7
+publishes no release tarball, so the pin is GitHub's tag archive, cached under
+the versioned name `libgit2-1.9.7.tar.gz`, and Arch's b2sum for that same URL
+matches the file.
+
+### 14.2 The choices
+
+- **OpenSSL: only libcrypto is linked.** libssh2 signs, verifies and
+  key-exchanges with it; nothing reaches TLS, because libgit2 is built with
+  HTTPS off. `build_libs` still produces `libssl.a` (no switch builds libcrypto
+  alone); it sits in the prefix unreferenced. THE PLAIN BUILD (architect
+  2026-09-27): some thirty more `no-<alg>` switches measured 1.4 MB off the
+  stripped `.so` and were judged a maintenance surface not worth it. OpenSSL is
+  configured with its OWN android-arm64 recipe in a CLEAN environment: an
+  environment `CFLAGS` REPLACES Configure's target flag set rather than adding
+  to it, so `00_env.sh`'s exported compiler variables are unset for the
+  Configure and make steps and the flags ride the Configure line (the
+  generated Makefile reads `CC=aarch64-linux-android30-clang`,
+  `CFLAGS=-Wall -O3 -O3 -fstack-protector-strong -ffp-contract=off`).
+- **ED25519 IS IN** — the deploy key's type. libssh2 enables it for OpenSSL
+  ≥ 1.1.1 with no switch; `70_libssh2.sh` checks `_libssh2_ed25519_sign` and
+  `_libssh2_curve25519_new` in the archive and the smoke link checks the former
+  in the linked image.
+- **HTTPS OFF.** The product refuses an http(s) remote before connecting (it
+  holds no token), so libgit2 needs OpenSSL for nothing; `USE_SHA256=Builtin` is
+  then REQUIRED (SHA-256 otherwise defaults to the HTTPS backend), SHA-1 is the
+  collision-detecting builtin. The plain-http transport and its llhttp still
+  compile (no switch exists) and nothing reaches them. `80_libgit2.sh` reads
+  the generated `git2_features.h` back and refuses a build with `GIT_HTTPS`.
+- **zlib: libgit2's BUNDLED copy.** The NDK's `libz.so` would also work (stable
+  ABI) but would add a line to the product's DT_NEEDED for nothing. libssh2
+  needs `CMAKE_DISABLE_FIND_PACKAGE_ZLIB=ON` beside
+  `ENABLE_ZLIB_COMPRESSION=OFF`: its OpenSSL arm calls `find_package(ZLIB)`
+  unconditionally and would write `-lz` into `libssh2.pc` although no libssh2
+  object references zlib (`70_libssh2.sh` refuses a `.pc` naming `-lz`). No
+  `OPENSSL_USE_STATIC_LIBS`: the prefix is static-only, so there is nothing
+  else to find (the survey's note that it breaks configure beside the zlib
+  switch did not reproduce here — measured, configure succeeds either way).
+- **Threads ON, required**: the main thread, the prefetch worker and the
+  checkpoint worker each call libgit2 (git_repo.h's THREADS paragraph).
+  Bionic keeps pthreads in libc, so configure's "pthread_create in pthreads —
+  not found" is expected.
+- Regex and http-parser builtin; no NTLM, GSSAPI or iconv.
+- Both CMake builds share `wt_cmake_common` (common.sh): the NDK toolchain file
+  at the sysroot's ABI and API, an EMPTY build type with `WT_OPT_FLAGS` spelled
+  out, the prefix as the only find root, and the pkg-config wrapper — through
+  which libgit2 finds libssh2, so `libgit2.pc` says `Requires.private: libssh2`
+  and `pkg-config --static --libs libgit2` yields the whole chain
+  (`-lgit2 -pthread -lssh2 -lcrypto -ldl`). The product's CMake arm therefore
+  names `libgit2` alone.
+
+### 14.3 Build time and sizes (this laptop, 2026-09-27)
+
+| Step | Wall time | Archive |
+|---|---|---|
+| `60_openssl.sh` | 58 s | `libcrypto.a` 11.5 MB (+ `libssl.a` 2.1 MB, unlinked) |
+| `70_libssh2.sh` | 4 s | `libssh2.a` 2.5 MB |
+| `80_libgit2.sh` | 11 s | `libgit2.a` 12.5 MB |
+
+The three were run on their own over the existing five (they wipe only their
+own build trees; `build_all.sh` runs all eight and is idempotent).
+
+THE PRODUCT (R-A, accepted): the stripped `libwarptempo_gui.so` grew from
+7,172,056 to **14,686,488 bytes**, the APK from 7,930,496 to **15,442,560
+bytes** (the `.so` is stored, `-0`). DT_NEEDED is UNCHANGED —
+`libdl libm libaaudio libandroid libnativewindow liblog libc` — and every LOAD
+segment is still `align 2**14`.
+
+### 14.4 The smoke link
+
+`smoke.cpp` now also includes `<git2.h>` and `<libssh2.h>`, takes the address
+of `git_remote_push` and `git_credential_ssh_key_new`, and calls
+`git_libgit2_init`, `GIT_OPT_SET_OWNER_VALIDATION`, `git_libgit2_features`
+(SSH and THREADS required) and `libssh2_version`. `build_smoke.sh` links it
+with `-Wl,--no-undefined` inside one `--start-group`, as the product links,
+then checks ed25519 in the image and prints DT_NEEDED: `libdl libm libc` at
+both API levels, 16 KB aligned.
+
+### 14.5 What is NOT verified
+
+Nothing git-related has run on the device yet: installing is the planner's, at
+the arc's end. The app also needs the INTERNET permission (the manifest carries
+it since this arc; without it the process is outside the inet group and every
+socket fails with EACCES), a placed clone and the deploy key in
+`files/warptempo_gui/` (platform-seam.md, github-recheck.md).
+

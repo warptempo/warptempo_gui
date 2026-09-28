@@ -524,17 +524,24 @@ std::string project_directory_of_source(const std::string& repo_root,
 //   git@github.com:warptempo/warptempo_projects.git  ->  github.com/warptempo/warptempo_projects
 //   https://github.com/warptempo/warptempo_projects  ->  github.com/warptempo/warptempo_projects
 //   ssh://git@github.com/warptempo/x.git/            ->  github.com/warptempo/x
+//   ssh://git@ssh.github.com:443/warptempo/x.git     ->  github.com/warptempo/x
 //
 // A scheme goes, userinfo goes, an scp-style host:path colon becomes the path
-// separator it means, and a trailing `.git` and any trailing slashes go. An
-// explicit PORT is the one spelling this does not model (`host:22/path` would
-// read the port as a path component) — no such remote exists here and adding
-// the case would buy nothing but a branch to be wrong in.
+// separator it means, and a trailing `.git` and any trailing slashes go. In the
+// URL FORM (a scheme present) a colon before the first slash is a PORT and goes
+// too: the port is how the transport reaches the host, not which repository it
+// names. And GitHub's SSH-over-443 host is GitHub (architect 2026-09-27: both
+// clones' origin is `ssh://git@ssh.github.com:443/...`, for networks that
+// block port 22): `ssh.github.com` serves the same repositories under the same
+// names, so it reduces to `github.com` — the one host alias, kGitHubSshHost.
+constexpr std::string_view kGitHubSshHost = "ssh.github.com";
+
 std::string normalize_repo_url(const std::string& raw) {
     std::string s = trim_trailing_ws(raw);
 
-    const std::size_t scheme = s.find("://");
-    if (scheme != std::string::npos) s = s.substr(scheme + 3);
+    const std::size_t scheme   = s.find("://");
+    const bool        url_form = scheme != std::string::npos;
+    if (url_form) s = s.substr(scheme + 3);
 
     const std::size_t first_slash = s.find('/');
     const std::size_t at          = s.find('@');
@@ -543,11 +550,24 @@ std::string normalize_repo_url(const std::string& raw) {
         s = s.substr(at + 1);
     }
 
-    // scp-style `host:path` — only when no '/' precedes the ':'.
+    // A colon before the first slash: the URL form's `host:port`, whose port
+    // goes, or the scp-style `host:path`, whose colon is the path separator.
     const std::size_t colon = s.find(':');
     if (colon != std::string::npos) {
         const std::size_t slash = s.find('/');
-        if (slash == std::string::npos || colon < slash) s[colon] = '/';
+        if (slash == std::string::npos || colon < slash) {
+            if (url_form) {
+                s.erase(colon, slash == std::string::npos ? std::string::npos
+                                                          : slash - colon);
+            } else {
+                s[colon] = '/';
+            }
+        }
+    }
+
+    const std::size_t host_end = s.find('/');
+    if (std::string_view(s).substr(0, host_end) == kGitHubSshHost) {
+        s.replace(0, kGitHubSshHost.size(), "github.com");
     }
 
     while (!s.empty() && s.back() == '/') s.pop_back();
