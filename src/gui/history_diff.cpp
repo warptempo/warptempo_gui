@@ -70,12 +70,10 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 // freshness (GuiGitRepo::walk_head and head_commit), so the mode's readers
 // cannot come to mean different things.
 //
-// THE COMMIT ACT READS HEAD'S BRANCH NAME EXACTLY ONCE, and then names
-// `refs/heads/<that name>` at both ends of its push refspec. Reading HEAD again
-// at the push would let a checkout mid-act publish onto a branch the act never
-// looked at; reading it once cannot. The read-only mode has no such exposure: it
-// publishes nothing, and a checkout under it simply shows the branch that is now
-// checked out.
+// MAIN IS THE ONLY BRANCH (architect 2026-09-28; kProjectsBranch below): the
+// check, the commit act and the pull refuse at their entry a HEAD that is not
+// on `main` — another branch, or detached — and name what HEAD is on stderr.
+// The read-only mode reads whatever HEAD is: it publishes nothing.
 //
 // The projects_repo guard is unaffected either way: it asks which REPOSITORY
 // this clone is, not how fresh it is.
@@ -2253,6 +2251,29 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
 
 namespace {
 
+// MAIN IS THE ONLY BRANCH (architect 2026-09-28: "there are no branches" —
+// `main` is the only branch in all his repositories). The check, the
+// checkpoint act and the pull refuse at their entry a HEAD anywhere else —
+// another branch, or detached (or a `main` with no commit) — in the refused
+// vocabulary: the status Refused, the act RemoteRefused, the pull Refused,
+// the stderr line naming what HEAD is. Nothing past the entry re-asks: a
+// terminal switching branches while an act runs is outside sanctioned use.
+// The seam's calls keep the name as a value (the fetch refspec, the tracking
+// ref, the push), and this is the one value they are handed.
+constexpr const char* kProjectsBranch = "main";
+
+// IS HEAD ON MAIN — HEAD names `refs/heads/main` at a commit. False with
+// `why`, one clause for the stderr line, naming what HEAD is instead.
+bool head_on_main(const GuiGitRepo& repo, std::string& why) {
+    const std::string branch = repo.head_branch();
+    if (branch == kProjectsBranch) return true;
+    why = branch.empty()
+              ? std::string("HEAD is not on 'main' (detached, or 'main' has no "
+                            "commit); main is the only branch")
+              : "HEAD is on '" + branch + "'; main is the only branch";
+    return false;
+}
+
 // THE THREE COMMITTED PATHS a piece's checkpoint occupies, in kSidecarExtensions
 // order (which is what pairs each path with its text). One owner: the act writes
 // them, asks the status about them, stages them and commits them, and all four
@@ -2332,8 +2353,9 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // none, and the act does not look for them.
 //
 // THE STEPS, each numbered at its own site below:
-//   (1) CAPTURE — the branch read ONCE. Detached (or unborn) refuses
-//       immediately.
+//   (1) MAIN — the only branch (architect 2026-09-28): HEAD on any other
+//       branch, or detached, refuses immediately as RemoteRefused (the
+//       status Refused).
 //   (1a) THE GUARD — the projects-home guard, whose validated URLs the fetch
 //       and the push consume. A refusal is RemoteRefused.
 //   (1b) FETCH FIRST (architect 2026-09-27) — GitHub's newest state, before
@@ -2440,21 +2462,20 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         return GuiHistoryCommitOutcome::WriteFailed;
     }
 
-    // (1) THE BRANCH, READ ONCE — the act's ONLY reading of the mutable symbolic
-    // HEAD. It is what the push's refspec names at both ends, and reading HEAD
-    // again at the push would let a checkout mid-act publish onto a branch the
-    // act never looked at.
-    //
-    // A DETACHED HEAD IS UNSANCTIONED USE AND THROWS HERE, before anything is
-    // written: the act publishes onto a branch, and there is no branch. Nothing
-    // has reached the repository, which is what WriteFailed says.
-    const std::string branch = repo->head_branch();
-    if (branch.empty()) {
-        std::fprintf(stderr,
-                     "warptempo_gui: Checkpoint refused: HEAD is detached, "
-                     "check out a branch in the terminal\n");
-        return GuiHistoryCommitOutcome::WriteFailed;
+    // (1) MAIN IS THE ONLY BRANCH (kProjectsBranch): HEAD anywhere else —
+    // another branch, or detached — is refused here, before anything is
+    // written, as RemoteRefused with the status Refused (the tracking
+    // refusal's own vocabulary below), the stderr line naming what HEAD is.
+    {
+        std::string why;
+        if (!head_on_main(*repo, why)) {
+            std::fprintf(stderr, "warptempo_gui: Checkpoint refused: %s\n",
+                         why.c_str());
+            github = GuiGitHubStatus::Refused;
+            return GuiHistoryCommitOutcome::RemoteRefused;
+        }
     }
+    const std::string branch = kProjectsBranch;
 
     // (1a) THE GUARD, at the mutating boundary: the clone's remotes must be
     // the configured projects home, and the fetch below and the push at (5)
@@ -2650,9 +2671,9 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // commit the server accepted, only from `tracking_before` (the tip step
     // 1b's fetch left), and writes no other ref — which is what makes the
     // UpToDate below the reading every later comparison makes.
-    // THE REFSPEC IS THE CAPTURED BRANCH AT BOTH ENDS, never `HEAD` and never a
-    // sha: the branch is what the act publishes, and both push arms — the commit
-    // it just made and the commits that were already pending — want the same
+    // THE REFSPEC IS MAIN AT BOTH ENDS, never `HEAD` and never a sha: the
+    // branch is what the act publishes, and both push arms — the commit it
+    // just made and the commits that were already pending — want the same
     // thing sent. Nothing forces.
     const GuiGitPush pushed =
         repo->push_branch(branch, destination, tracking_before, diag);
@@ -2729,8 +2750,17 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
                      guard_reason.diagnostic.c_str());
         return GuiGitHubStatus::Refused;
     }
-    const std::string branch = repo->head_branch();
-    if (branch.empty()) return GuiGitHubStatus::Unchecked;
+    // MAIN IS THE ONLY BRANCH (kProjectsBranch): HEAD anywhere else —
+    // another branch, or detached — reads Refused, its cause on stderr.
+    {
+        std::string why;
+        if (!head_on_main(*repo, why)) {
+            std::fprintf(stderr, "warptempo_gui: GitHub refused: %s\n",
+                         why.c_str());
+            return GuiGitHubStatus::Refused;
+        }
+    }
+    const std::string branch = kProjectsBranch;
     // THE BRANCH MUST TRACK ORIGIN'S SAME-NAMED BRANCH (GuiGitTracking) before
     // anything is fetched or reported: the fetch writes that one ref and the
     // reading compares it alone.
@@ -2783,8 +2813,18 @@ GuiHistoryPullPlanVerdict read_pull_refs(const GuiGitRepo&  repo,
                                          std::string&       to_sha,
                                          GuiGitHubStatus&   reading) {
     reading = GuiGitHubStatus::Unchecked;
-    branch  = repo.head_branch();
-    if (branch.empty()) return GuiHistoryPullPlanVerdict::Moved;
+    // MAIN IS THE ONLY BRANCH (kProjectsBranch): HEAD anywhere else is
+    // Refused, as a branch tracking the wrong ref is.
+    {
+        std::string why;
+        if (!head_on_main(repo, why)) {
+            std::fprintf(stderr, "warptempo_gui: Pull refused: %s\n",
+                         why.c_str());
+            reading = GuiGitHubStatus::Refused;
+            return GuiHistoryPullPlanVerdict::Refused;
+        }
+    }
+    branch = kProjectsBranch;
     const GuiGitUpstream up = repo.compare_with_origin(branch);
     switch (up.reading) {
     case GuiGitUpstream::Reading::Unreadable:

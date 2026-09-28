@@ -1238,8 +1238,7 @@ enum class GuiHistoryCommitOutcome {
 // pulls, and the rest refuse with a card.
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
-//               detached or unborn HEAD, a read that did not answer). Row 8
-//               shows no segment.
+//               read that did not answer). Row 8 shows no segment.
 //   Checking  — a check is on the worker.
 //   UpToDate  — nothing either way.
 //   Ahead     — this branch has commits GitHub has not (a push that failed),
@@ -1248,8 +1247,9 @@ enum class GuiHistoryCommitOutcome {
 //   Diverged  — both have moved; fast-forward only, so no in-app answer.
 //   Offline   — the fetch could not reach GitHub.
 //   Refused   — GitHub declined this device, the guard refused the clone's
-//               remotes, or the branch does not track origin's same-named
-//               branch (GuiGitTracking, git_repo.h).
+//               remotes, HEAD is not on main (another branch, or detached:
+//               main is the only branch, architect 2026-09-28), or main does
+//               not track origin's main (GuiGitTracking, git_repo.h).
 enum class GuiGitHubStatus {
     Unchecked,
     Checking,
@@ -1306,11 +1306,10 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
 // validates there are pinned onto the fetch's and the push's own remote
 // instance rather than re-resolved from the mutable remote name — so a config changed since the mode opened cannot publish to a
 // repository the user never confirmed, and neither can one changed between the
-// check and the push. The publication's other term is bound the same way:
-// the BRANCH is read once at act start — the act's ONLY reading of the symbolic
-// HEAD — and it names BOTH ENDS of the push refspec, so a checkout mid-act cannot
-// make the act publish onto a branch it never looked at (the .cpp's push leg owns
-// both).
+// check and the push. The publication's other term is THE BRANCH, AND IT IS
+// MAIN, the only branch (architect 2026-09-28): a HEAD anywhere else is
+// refused at the act's entry (RemoteRefused, the status Refused), and the push
+// names `main` at both ends of its refspec.
 //
 // EACH STEP'S OWN VERDICT DECIDES (architect 2026-09-06, superseding the strict
 // model of 2026-08-09 whole), the way every git front-end decides; nothing
@@ -1361,8 +1360,8 @@ struct GuiHistoryPullPlan {
 
 // Ready: the branch is strictly behind `refs/remotes/origin/<branch>` (0
 // ahead, >0 behind) and the plan is filled. Moved: it is not, and `reading` is
-// what it is instead (UpToDate, Ahead or Diverged; Unchecked for a detached
-// HEAD). Refused: the branch no longer tracks origin's same-named branch
+// what it is instead (UpToDate, Ahead or Diverged). Refused: HEAD is not on
+// main (the only branch), or main no longer tracks origin's main
 // (GuiGitTracking, git_repo.h), `reading` Refused and the cause on stderr.
 // Unreadable: a read did not answer.
 enum class GuiHistoryPullPlanVerdict { Ready, Moved, Refused, Unreadable };

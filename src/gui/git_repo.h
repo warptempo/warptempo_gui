@@ -216,7 +216,7 @@ public:
     // THE PRE-FLIGHT over `paths`, each named LITERALLY (no glob matching):
     // Dirty when any differs from the checked-out commit in the index or the
     // working tree, or is untracked. `publication_owed` answers the second
-    // question in the same read — does `branch` (the act's captured branch)
+    // question in the same read — does `branch` (`main`, the only branch)
     // OWE ORIGIN A PUSH: it is AHEAD of `refs/remotes/origin/<branch>`, or that
     // ref is GONE (compare_with_origin's reading, the one owner). A branch
     // that does not track origin's same-named branch is Unavailable, `diag`
