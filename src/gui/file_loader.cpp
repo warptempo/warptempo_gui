@@ -78,6 +78,14 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
 
 std::optional<GuiFailure> source_load_dry_run(
         const std::filesystem::path& source) {
+    std::filesystem::path parent = source.parent_path();
+    if (parent.empty()) parent = std::filesystem::path(".");
+    return source_load_dry_run(source, parent);
+}
+
+std::optional<GuiFailure> source_load_dry_run(
+        const std::filesystem::path& source,
+        const std::filesystem::path& sidecar_dir) {
     // EVERY REASON BELOW IS TWO CLAUSES (GuiFailure, failure.h — the
     // universal shape since 2026-09-02): the display is a NOTIFICATION
     // CARD'S ONE LINE — the Open project picker's third refusal — so every
@@ -121,8 +129,9 @@ std::optional<GuiFailure> source_load_dry_run(
                             ": " + samples.error());
     }
 
-    std::filesystem::path parent = source.parent_path();
-    if (parent.empty()) parent = std::filesystem::path(".");
+    // The sidecars' folder: the source's own on every road but the pull's
+    // reload gate, which hands its scratch staging (the declaration).
+    const std::filesystem::path& parent = sidecar_dir;
     const std::string stem = source.stem().string();
     const std::filesystem::path wm_path =
         sidecar_path(parent, stem, kSidecarWarp);

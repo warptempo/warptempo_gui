@@ -26,7 +26,10 @@
 // own thread. Their concurrent access to the one clone is the accepted overlap
 // GuiHistoryPrefetch records; libgit2 takes the same lock files git does. The
 // network mutators (fetch, push) run on the checkpoint worker alone, one job at
-// a time, so two of them never race for the remote-tracking ref's lock.
+// a time, each job holding the process-owned repository lane
+// (history_commit_worker.cpp) for its whole run — so no two of them ever
+// overlap on the remote-tracking refs, an abandoned check of a closed session
+// included.
 
 #include <atomic>
 #include <cstddef>
@@ -53,6 +56,28 @@ void gui_git_init();
 enum class GuiGitRoot { Found, NotAClone, CouldNotAsk };
 GuiGitRoot gui_git_discover_root(const std::string& dir, std::string& root,
                                  std::string& diag);
+
+// THE TRANSPORT, READ OFF A REMOTE URL BEFORE ANYTHING ELSE IS ASKED OF IT —
+// SSH ONLY (architect 2026-09-27; the parse 2026-09-28). True for exactly the
+// two spellings an SSH remote has: the URL form `ssh://[user@]host[:port]/path`
+// and git's scp-style `user@host:path` (no slash before the first colon, a user
+// and a host both named). EVERY OTHER SPELLING IS FALSE — `git://` (git's
+// unauthenticated transport: no deploy key, no host-key pin), `file://`,
+// `http(s)://`, `git+ssh://` and every other scheme, a bare path (with or
+// without a colon after a slash), git's `<transport>::<address>` helpers, an
+// scp-style spelling with no user, and anything carrying whitespace or a
+// control character. Lexical: nothing is resolved and no host is judged here
+// (the host-key pin at the connection is that answer, git_repo.cpp).
+//
+// TWO ASKERS OF THE ONE PREDICATE: the projects-home guard
+// (clone_is_projects_home, history_diff.cpp) asks it of the fetch url and of
+// every push url BEFORE it normalizes them — normalization drops the scheme,
+// so a `git://` spelling of the right repository would otherwise compare
+// equal — and so refuses before the checkpoint act writes anything; and the
+// remote session's own prelude asks it again of the one URL a fetch or a push
+// is handed, the seam's contract for every URL that reaches libgit2's
+// transport selection.
+bool gui_git_is_ssh_url(std::string_view url);
 
 // A path predicate over repo-relative paths in git's own spelling (forward
 // slashes, no leading slash). The history module's one sidecar predicate
@@ -88,10 +113,15 @@ struct GuiGitUpstream {
 enum class GuiGitFetch { Fetched, Unreachable, Refused, Cancelled };
 
 // HOW A FAST-FORWARD ENDED (GuiGitRepo::fast_forward). `NotStarted` and
-// `Conflict` wrote nothing; `FilesFailed` and `BranchFailed` stopped after the
-// working tree was (partly) written, with the branch where it was.
+// `Conflict` wrote nothing; the three failures after them stopped with the
+// branch where it was, each at its own step so each has its own recovery:
+// `FilesFailed` — the working tree partly written (step 1 or 2), the index
+// untouched; `IndexFailed` — the working tree written, the index NOT (step 3:
+// libgit2 writes the index through a lock file, so a failed write leaves the
+// old one whole); `BranchFailed` — the working tree and the index written, the
+// branch ref not moved (step 4).
 enum class GuiGitFastForward { Done, NotStarted, Conflict, FilesFailed,
-                               BranchFailed };
+                               IndexFailed, BranchFailed };
 
 class GuiGitRepo {
 public:

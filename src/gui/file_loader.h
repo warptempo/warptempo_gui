@@ -141,6 +141,20 @@ struct GuiFileLoader {
 std::optional<GuiFailure> source_load_dry_run(
     const std::filesystem::path& source);
 
+// THE SAME DRY RUN WITH THE SIDECARS READ FROM `sidecar_dir` in place of the
+// source's own folder — every other term unchanged: the source is probed where
+// it is, the render-output collision is asked against its real path, and the
+// walls are its frame count and rate. Its one caller is the pull's RELOAD
+// (GuiInputHandler::execute_history_pull, through run_history_pull's reopen
+// gate), which stages the upstream's three sidecars for the open piece in a
+// scratch folder named like the piece's own, so the reopen the pull promises
+// is judged by the very checks the Revert road will run BEFORE the pull writes
+// anything. A sentence naming a sidecar names it by `sidecar_dir`'s leaf and
+// the file — the piece's folder name, by that staging.
+std::optional<GuiFailure> source_load_dry_run(
+    const std::filesystem::path& source,
+    const std::filesystem::path& sidecar_dir);
+
 // Apply a parsed settings file's engine block and the scalar session prefs
 // (active_audio_view, active_markers_view, active_tab_view) into `app`. VALUES ONLY — no side effects: the
 // caller runs on_resize itself, owning its own side-effect timing. (The list

@@ -324,14 +324,23 @@ int fetch_update_refs(const char* /*refname*/, const git_oid* /*a*/,
 
 // THE SESSION'S PRELUDE, the fetch's and the push's alike: SSH ONLY
 // (architect 2026-09-27) — the deploy key is the one credential this program
-// holds, and an http(s) remote would need a token it has not; both SSH
+// holds and the host-key pin the one proof of the server, and neither exists on
+// any other transport: an http(s) remote would need a token this program has
+// not, and `git://` is unauthenticated end to end. The transport is PARSED
+// (gui_git_is_ssh_url), never inferred from what the spelling is not: both SSH
 // spellings pass, scp-style `git@github.com:...` and the URL form
-// `ssh://git@ssh.github.com:443/...` both clones name (kGitHubHosts). NO KEY IS
-// A REFUSAL BEFORE ANY CONNECTION, never a crash, the path going to `diag`.
-// Fills the key paths into `state`; false with `diag` set.
+// `ssh://git@ssh.github.com:443/...` both clones name (kGitHubHosts), and
+// everything else refuses here, before a remote is looked up. The guard
+// (clone_is_projects_home) has already asked the same predicate of this URL,
+// so in the product this arm is the seam's own contract rather than the first
+// refusal; it is kept because it is the last point before libgit2 chooses a
+// transport from the spelling, and a URL reaching it by any other road must
+// meet the same rule. NO KEY IS A REFUSAL BEFORE ANY CONNECTION, never a crash,
+// the path going to `diag`. Fills the key paths into `state`; false with
+// `diag` set.
 bool prepare_remote_session(const std::string& url, RemoteState& state,
                             std::string& diag) {
-    if (url.rfind("https://", 0) == 0 || url.rfind("http://", 0) == 0) {
+    if (!gui_git_is_ssh_url(url)) {
         diag = "'" + url + "' is not an SSH remote; only SSH is supported";
         return false;
     }
@@ -371,6 +380,50 @@ std::string remote_failure(const RemoteState& state, const char* fallback) {
 }
 
 }  // namespace
+
+// ---------------------------------------------------------------------------
+// the transport (git_repo.h owns the contract)
+// ---------------------------------------------------------------------------
+
+// libgit2 picks the transport from the spelling: a known scheme prefix, else
+// ANY colon makes it SSH (its scp-style reading), else a local directory. So
+// the two admitted shapes are the ones it reads as SSH, and each is parsed
+// strictly enough that nothing it would read another way gets through.
+bool gui_git_is_ssh_url(std::string_view url) {
+    if (url.empty()) return false;
+    for (const char c : url) {
+        const auto u = static_cast<unsigned char>(c);
+        if (u <= 0x20 || u == 0x7f) return false;
+    }
+    constexpr std::string_view kSshScheme = "ssh://";
+    if (url.starts_with(kSshScheme)) {
+        // ssh://[user@]host[:port]/path — a host and a path both named.
+        const std::string_view rest  = url.substr(kSshScheme.size());
+        const std::size_t      slash = rest.find('/');
+        if (slash == std::string_view::npos || slash + 1 == rest.size()) {
+            return false;
+        }
+        std::string_view  host = rest.substr(0, slash);
+        const std::size_t at   = host.rfind('@');
+        if (at != std::string_view::npos) host = host.substr(at + 1);
+        return !host.empty() && host.front() != ':';
+    }
+    // Every other scheme, and git's `<transport>::<address>` helper syntax.
+    if (url.find("://") != std::string_view::npos) return false;
+    if (url.find("::") != std::string_view::npos) return false;
+    // scp-style user@host:path — a colon with no slash before it (a slash
+    // first is a local path), a user and a host before it, a path after it.
+    const std::size_t colon = url.find(':');
+    if (colon == std::string_view::npos || colon + 1 == url.size()) {
+        return false;
+    }
+    const std::size_t slash = url.find('/');
+    if (slash != std::string_view::npos && slash < colon) return false;
+    const std::string_view authority = url.substr(0, colon);
+    const std::size_t      at        = authority.find('@');
+    return at != std::string_view::npos && at > 0 &&
+           at + 1 < authority.size();
+}
 
 // ---------------------------------------------------------------------------
 // process-wide
@@ -1059,13 +1112,13 @@ GuiGitFastForward GuiGitRepo::fast_forward(
     git_index* i_raw = nullptr;
     if (git_repository_index(&i_raw, repo_) < 0) {
         diag = last_error("could not open the index");
-        return GuiGitFastForward::BranchFailed;
+        return GuiGitFastForward::IndexFailed;
     }
     Owned<git_index> index(i_raw);
     if (git_index_read_tree(index.get(), to_tree.get()) < 0 ||
         git_index_write(index.get()) < 0) {
         diag = last_error("could not write the index");
-        return GuiGitFastForward::BranchFailed;
+        return GuiGitFastForward::IndexFailed;
     }
     // (4) THE BRANCH MOVES, only from the commit the pull was planned on.
     git_reference* moved = nullptr;

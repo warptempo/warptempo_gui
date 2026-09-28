@@ -3718,11 +3718,29 @@ void GuiInputHandler::cancel_history_pull() {
 // just changed; every mutator closes the view, the rule that keeps
 // head_delta_empty static) and the walk is re-warmed through the funnel, HEAD
 // having moved. Success is silent; the status reads UpToDate.
+//
+// RELOAD IS GATED ON ITS OWN REOPEN (run_history_pull's reopen gate): the pull
+// hands this body the upstream's sidecars for the open piece, staged, and the
+// gate answers them with the Revert road's own two refusals — the project
+// model, then the strict dry run against the live source with the sidecars
+// read from the staging (source_load_dry_run's sidecar-folder form, the EOF
+// walls included) — so a checkpoint the reopen would refuse is refused BEFORE
+// the pull writes anything, and the session stands as it was.
 void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
                                            bool                      reload) {
+    const GuiHistoryReopenGate reopen_gate =
+        [this](const std::filesystem::path& sidecar_dir)
+        -> std::optional<GuiFailure> {
+        const std::filesystem::path folder =
+            std::filesystem::path(app.device_config->projects_path) /
+            app.project_name;
+        auto project = resolve_project(folder);
+        if (!project) return plain_failure(project.error());
+        return source_load_dry_run(project->source, sidecar_dir);
+    };
     std::string                 conflict_piece;
     const GuiHistoryPullOutcome outcome =
-        run_history_pull(plan, reload, conflict_piece);
+        run_history_pull(plan, reload, reopen_gate, conflict_piece);
     switch (outcome) {
     case GuiHistoryPullOutcome::Pulled:
         app.github_status = GuiGitHubStatus::UpToDate;
@@ -3744,7 +3762,17 @@ void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
         notifications.notify(AppState::NotificationClass::Normal,
                              "Pull failed: nothing was changed");
         return;
+    case GuiHistoryPullOutcome::WouldNotLoad:
+        // THE REOPEN WOULD REFUSE THE PULLED PIECE, so nothing moved: the
+        // session, the files, the index and the branch are as they were, and
+        // stderr carries the dry run's own reason. Normal, like the other
+        // refusals that wrote nothing.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Pull refused: GitHub's checkpoint of this piece "
+                             "would not load");
+        return;
     case GuiHistoryPullOutcome::FilesFailed:
+    case GuiHistoryPullOutcome::IndexFailed:
     case GuiHistoryPullOutcome::BranchFailed:
         // THE FILES MOVED AND THE BRANCH DID NOT — the one pull failure that
         // leaves the clone for the user to finish by hand (stderr says what

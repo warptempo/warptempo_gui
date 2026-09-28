@@ -143,4 +143,24 @@ wt_fetch() {
     wt_say "checksum ok: $(basename "$dest")"
 }
 
+# wt_check_dt_needed <so> <lib.so ...>   -- THE DT_NEEDED ALLOWLIST, EXACT.
+# The linked image's NEEDED entries, normalized (the bare sonames, sorted,
+# duplicates folded), must be exactly the named set: an entry missing or an
+# entry extra is a failure, each named. An extra one is a shared library the
+# device may not have (the loader would refuse it at launch); a missing one
+# means the documented set no longer describes the image. Prints the set it
+# read; returns 1 on any difference, so the caller decides warn-or-die.
+wt_check_dt_needed() {
+    local so="$1" got want missing extra
+    shift
+    got="$("$READELF" -d "$so" | grep '(NEEDED)' | grep -oE '\[[^]]+\]' | tr -d '[]' | LC_ALL=C sort -u || true)"
+    want="$(printf '%s\n' "$@" | LC_ALL=C sort -u)"
+    printf '  DT_NEEDED: %s\n' "$(printf '%s' "$got" | tr '\n' ' ')"
+    missing="$(LC_ALL=C comm -13 <(printf '%s\n' "$got") <(printf '%s\n' "$want") | grep -v '^$' || true)"
+    extra="$(LC_ALL=C comm -23 <(printf '%s\n' "$got") <(printf '%s\n' "$want") | grep -v '^$' || true)"
+    [ -z "$missing" ] || wt_warn "DT_NEEDED of $(basename "$so") lacks: $(printf '%s' "$missing" | tr '\n' ' ')"
+    [ -z "$extra" ]   || wt_warn "DT_NEEDED of $(basename "$so") has extra: $(printf '%s' "$extra" | tr '\n' ' ')"
+    [ -z "$missing" ] && [ -z "$extra" ]
+}
+
 mkdir -p "$WT_CACHE" "$WT_WORK" "$WT_PREFIX"

@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -1366,10 +1367,16 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 //   Conflict      — another path the pull changes has local changes (or an
 //                   untracked file in the way); nothing was written, and
 //                   `conflict_piece` names the piece folder (or the path).
-//   FilesFailed   — the working tree was partly written; the branch did not
-//                   move.
-//   BranchFailed  — the files and perhaps the index are the upstream's; the
+//   FilesFailed   — the working tree was partly written; the index and the
 //                   branch did not move.
+//   IndexFailed   — the files are the upstream's (the open piece's three as
+//                   Reload or Keep left them); the index and the branch did
+//                   not move.
+//   BranchFailed  — the files and the index are the upstream's; the branch
+//                   did not move.
+//   WouldNotLoad  — RELOAD ONLY: the upstream's sidecar set for the open
+//                   piece fails the strict dry run the reopen would run
+//                   (`reopen_gate`); nothing was written.
 // Every arm but Pulled prints one stderr line.
 enum class GuiHistoryPullOutcome {
     Pulled,
@@ -1377,8 +1384,27 @@ enum class GuiHistoryPullOutcome {
     Unreadable,
     Conflict,
     FilesFailed,
+    IndexFailed,
     BranchFailed,
+    WouldNotLoad,
 };
-GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan& plan,
-                                       bool                      reload,
-                                       std::string&              conflict_piece);
+//
+// THE RELOAD'S REOPEN GATE (codex round 1 over the git arc, 2026-09-28): a
+// Reload promises to reopen the pulled checkpoint, and the reopen is the
+// Revert road, whose strict dry run can refuse — so the pull asks that dry run
+// FIRST, before it writes a file, the index or the ref. After the refs are
+// re-read, the upstream's sidecars for the open piece (whichever of the three
+// its tree carries — the presence rule is the dry run's own) are staged in a
+// per-call scratch folder named like the piece's folder, and `reopen_gate` is
+// handed that folder: it answers what the reopen would refuse (the caller runs
+// source_load_dry_run against the live source with the sidecars read from the
+// folder — file_loader.h), or nothing. A refusal is WouldNotLoad with nothing
+// written, the refusal's diagnostic on stderr. Keep never asks it: it neither
+// writes the open piece's sidecars nor reopens anything, so the session and
+// its files stay what they were whatever the upstream holds.
+using GuiHistoryReopenGate = std::function<std::optional<GuiFailure>(
+    const std::filesystem::path& sidecar_dir)>;
+GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
+                                       bool                        reload,
+                                       const GuiHistoryReopenGate& reopen_gate,
+                                       std::string&                conflict_piece);

@@ -200,8 +200,13 @@ wt_say "VERIFY 3/5 -- every LOAD segment 16 KB aligned (align 2**14)"
 "$OBJDUMP" -p "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -A2 LOAD
 
 echo
-wt_say "VERIFY 4/5 -- DT_NEEDED (nothing that would have to ship beside the app)"
-"$READELF" -d "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -E "NEEDED|SONAME"
+wt_say "VERIFY 4/5 -- DT_NEEDED is exactly the NDK stable-ABI set (nothing that would have to ship beside the app)"
+# The documented set (NOTES.md, platform-seam.md), compared exactly: an extra
+# entry or a missing one fails the build.
+wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" \
+    libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so liblog.so \
+    || wt_die "DT_NEEDED of $LIBNAME is not the allowlist (above)"
+"$READELF" -d "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -E "SONAME" || true
 
 echo
 wt_say "VERIFY 5/5 -- the launchable activity is the sliver, and classes.dex is aboard"

@@ -579,8 +579,16 @@ and `projects/` its pieces — with the clone config the tablet's storage needs
 (`core.filemode=false`, `core.symlinks=false`, `core.ignorecase=true`, the
 commit identity, origin over `ssh.github.com:443`), the tablet's deploy key into
 `files/warptempo_gui/` through `run-as`, the device config's `projects_repo`
-line, and the audio; `wts tt` pushes each piece's source `.wav` (audio only);
-`wts ft` brings the `render/` deliverables home (renders only). The sidecars
+line, and the audio — having first saved the tablet's existing `.git` WHOLE
+(verified file by file against the tablet's own sums, setup stopping with
+nothing deleted on any difference) and every file GitHub never had into one
+dated `~/.warptempo/wts_saved/` folder, since a checkpoint committed on the
+tablet but never pushed lives only in that `.git`; `wts tt` pushes each piece's
+source `.wav` (audio only); `wts ft` brings the `render/` deliverables home
+(renders only), each wav WITH ITS FINGERPRINT as one pair — both fetched and
+checked before either is published, the laptop's old fingerprint removed
+first, and a tablet wav with no fingerprint deleting the laptop's, which would
+otherwise describe another render. The sidecars
 never travel by wts: the app commits, pushes and pulls them (github-recheck.md).
 The `current` file an older wts wrote is read by nothing; `wts setup` deletes
 it with the exported `history/` folders and any `.magnificationlevelmarkers`. Placing a
@@ -1610,8 +1618,13 @@ of `git_remote_push` and `git_credential_ssh_key_new`, and calls
 `git_libgit2_init`, `GIT_OPT_SET_OWNER_VALIDATION`, `git_libgit2_features`
 (SSH and THREADS required) and `libssh2_version`. `build_smoke.sh` links it
 with `-Wl,--no-undefined` inside one `--start-group`, as the product links,
-then checks ed25519 in the image and prints DT_NEEDED: `libdl libm libc` at
-both API levels, 16 KB aligned.
+then checks ed25519 in the image and DT_NEEDED: `libdl libm libc` at both API
+levels, 16 KB aligned. THE DT_NEEDED CHECK IS AN EXACT ALLOWLIST (codex round 1
+over the git arc, 2026-09-28): `wt_check_dt_needed` (`toolchain/00_env.sh`)
+normalizes the image's NEEDED entries and fails on any entry missing from or
+extra to the named set — here bionic's three, and in `build_apk.sh`'s VERIFY
+4/5 the product's seven (`libdl libm libaaudio libandroid libnativewindow
+liblog libc`), where a difference stops the build before an APK is reported.
 
 ### 14.5 What is NOT verified
 

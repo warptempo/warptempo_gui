@@ -4216,10 +4216,10 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // 2026-09-02: the writer composes the failure's two clauses at its one
     // failure point (GuiFailure, failure.h), this site prints the diagnostic
     // and cards the display. It goes through THE LIVE CONFIG
-    // (AppState::device_config, the loop's one struct): the file holds
-    // six keys and is rewritten whole, and that struct is the one place
-    // all six are live at once, across every reopen (the ownership rule is at
-    // write_device_config, device_config.h).
+    // (AppState::device_config, the loop's one struct): the file holds every
+    // key of kDeviceConfigKeys (device_config.cpp) and is rewritten whole, and
+    // that struct is the one place all of them are live at once, across every
+    // reopen (the ownership rule is at write_device_config, device_config.h).
     app.gui_scale = percent;
     app.device_config->gui_scale = percent;
     if (auto failure = write_device_config(*app.device_config)) {

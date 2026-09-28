@@ -533,6 +533,13 @@ std::string project_directory_of_source(const std::string& repo_root,
 // clones' origin is `ssh://git@ssh.github.com:443/...`, for networks that
 // block port 22): `ssh.github.com` serves the same repositories under the same
 // names, so it reduces to `github.com` — the one host alias, kGitHubSshHost.
+//
+// IT IS AN IDENTITY, NEVER A TRANSPORT: dropping the scheme is exactly what
+// makes two spellings of one repository compare equal, so it is also what
+// would make a `git://` or `file://` spelling of the projects home pass. The
+// guard therefore asks the transport of the clone's own URLs FIRST
+// (gui_git_is_ssh_url, git_repo.h) and compares identities only after; the
+// setting (projects_repo) is an identity and carries no transport to ask.
 constexpr std::string_view kGitHubSshHost = "ssh.github.com";
 
 std::string normalize_repo_url(const std::string& raw) {
@@ -589,8 +596,10 @@ std::string clone_name(const std::string& repo_root) {
 }
 
 // IS THIS CLONE THE CONFIGURED PROJECTS HOME — asked of the clone's FETCH url
-// and of EVERY EFFECTIVE PUSH url, both normalized against the setting. False
-// with `reason` set names the first disagreement in the user's own spellings.
+// and of EVERY EFFECTIVE PUSH url: each must be an SSH remote (the transport,
+// parsed before normalization — gui_git_is_ssh_url) and normalize equal to the
+// setting. False with `reason` set names the first disagreement in the user's
+// own spellings.
 //
 // The fetch url (`remote.origin.url`) is not where a push has to go:
 // `remote.origin.pushurl` overrides it and may be set more than once, so a
@@ -656,6 +665,18 @@ bool clone_is_projects_home(const GuiGitRepo&  repo,
                               " has no 'origin' remote");
         return false;
     }
+    // THE TRANSPORT FIRST, then the identity (gui_git_is_ssh_url, git_repo.h):
+    // normalization drops the scheme, so `git://github.com/<the repo>` — git's
+    // unauthenticated transport, which neither the deploy key nor the host-key
+    // pin would ever touch — names the right repository and would compare
+    // equal. A spelling that is not SSH refuses here, before any fetch, write
+    // or push, whatever repository it names.
+    if (!gui_git_is_ssh_url(trim_trailing_ws(remote_raw))) {
+        reason = path_failure("the clone at ", root, shown_root,
+                              " has origin '" + trim_trailing_ws(remote_raw) +
+                                  "', which is not an SSH remote");
+        return false;
+    }
     if (normalize_repo_url(remote_raw) != setting_norm) {
         reason = path_failure("the projects_repo setting names '" +
                                   projects_repo + "' but the clone at ",
@@ -675,6 +696,12 @@ bool clone_is_projects_home(const GuiGitRepo&  repo,
     for (const std::string& raw : push_urls) {
         const std::string one = trim_trailing_ws(raw);
         if (one.empty()) continue;
+        if (!gui_git_is_ssh_url(one)) {
+            reason = path_failure("the clone at ", root, shown_root,
+                                  " pushes 'origin' to '" + one +
+                                      "', which is not an SSH remote");
+            return false;
+        }
         if (normalize_repo_url(one) != setting_norm) {
             reason = path_failure("the projects_repo setting names '" +
                                       projects_repo + "' but the clone at ",
@@ -2730,9 +2757,10 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&  repo_root,
     return GuiHistoryPullPlanVerdict::Ready;
 }
 
-GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan& plan,
-                                       bool                      reload,
-                                       std::string&              conflict_piece) {
+GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
+                                       bool                        reload,
+                                       const GuiHistoryReopenGate& reopen_gate,
+                                       std::string&                conflict_piece) {
     conflict_piece.clear();
     std::string               diag;
     std::optional<GuiGitRepo> repo = GuiGitRepo::open(plan.repo_root, diag);
@@ -2770,6 +2798,77 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan& plan,
     // all three, so their working-tree bytes stay the session's.
     const std::vector<std::string> open =
         checkpoint_paths(plan.project_directory, plan.base_name);
+
+    // THE REOPEN GATE, before anything is written (the declaration owns why).
+    if (reload && reopen_gate) {
+        std::vector<std::string> carried;
+        if (!repo->tree_paths(
+                to_sha,
+                [&open](std::string_view p) {
+                    return is_open_piece_path(open, std::string(p));
+                },
+                carried)) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Pull failed: could not read the tree "
+                         "of %s\n",
+                         short_sha(to_sha).c_str());
+            return GuiHistoryPullOutcome::Unreadable;
+        }
+        // THE STAGING, per call like the strict whole-set load's (the serial
+        // and the guard are that function's reasoning): a scratch root, and
+        // inside it a folder named like the piece's own, so a sentence the
+        // dry run composes names `<piece>/<file>` exactly as the reopen would.
+        static std::atomic<unsigned long long> pull_scratch_serial{0};
+        std::error_code ec;
+        const std::filesystem::path scratch_root =
+            std::filesystem::temp_directory_path(ec) /
+            ("warptempo_gui-pull-" +
+             std::to_string(static_cast<long>(::getpid())) + "-" +
+             short_sha(to_sha) + "-" +
+             std::to_string(pull_scratch_serial.fetch_add(1)));
+        if (ec) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Pull failed: no temporary directory "
+                         "to check the checkpoint in (%s)\n",
+                         ec.message().c_str());
+            return GuiHistoryPullOutcome::Unreadable;
+        }
+        ScratchDirGuard guard(scratch_root);
+        std::string piece_leaf =
+            std::filesystem::path(plan.project_directory).filename().string();
+        if (piece_leaf.empty()) piece_leaf = "piece";
+        const std::filesystem::path staged = scratch_root / piece_leaf;
+        std::filesystem::create_directories(staged, ec);
+        if (ec) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Pull failed: could not create '%s' "
+                         "(%s)\n",
+                         staged.string().c_str(), ec.message().c_str());
+            return GuiHistoryPullOutcome::Unreadable;
+        }
+        for (const std::string& path : carried) {
+            std::string bytes;
+            const std::string leaf =
+                std::filesystem::path(path).filename().string();
+            if (!repo->read_blob(to_sha, path, bytes) ||
+                !atomic_write_string_to_path((staged / leaf).string(), bytes)) {
+                std::fprintf(stderr,
+                             "warptempo_gui: Pull failed: could not stage "
+                             "'%s' from %s\n",
+                             path.c_str(), short_sha(to_sha).c_str());
+                return GuiHistoryPullOutcome::Unreadable;
+            }
+        }
+        if (std::optional<GuiFailure> refusal = reopen_gate(staged)) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Pull refused: GitHub's checkpoint %s "
+                         "of this piece would not reopen, so nothing was "
+                         "changed: %s\n",
+                         short_sha(to_sha).c_str(),
+                         refusal->diagnostic.c_str());
+            return GuiHistoryPullOutcome::WouldNotLoad;
+        }
+    }
     const std::vector<std::string> none;
     std::string                    conflict_path;
     const GuiGitFastForward ff = repo->fast_forward(
@@ -2804,17 +2903,34 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan& plan,
                      path.c_str(), diag.c_str());
         return GuiHistoryPullOutcome::Conflict;
     }
+    // EACH LATE FAILURE NAMES THE RECOVERY FOR THE STEP IT STOPPED AT
+    // (GuiGitFastForward): the files are the upstream's (the open piece's
+    // three as Reload or Keep left them) and what is left is to bring the
+    // index and the branch along WITHOUT touching the working tree. With the
+    // index unwritten that is a MIXED reset — HEAD and the index to the
+    // upstream, the files kept — since a soft reset would move HEAD over the
+    // old index and show the pull as staged changes; with only the branch
+    // unwritten, the index is already the upstream's tree and a SOFT reset
+    // moves the branch alone. Neither is run in-app: a step that just failed
+    // on this clone is not retried behind the user's back.
     case GuiGitFastForward::FilesFailed:
         std::fprintf(stderr,
                      "warptempo_gui: Pull failed: the files were partly "
                      "updated and '%s' did not move (%s)\n",
                      branch.c_str(), diag.c_str());
         return GuiHistoryPullOutcome::FilesFailed;
-    case GuiGitFastForward::BranchFailed:
+    case GuiGitFastForward::IndexFailed:
         std::fprintf(stderr,
                      "warptempo_gui: Pull failed: the files were updated but "
-                     "'%s' did not move; 'git reset --soft %s' in the "
-                     "terminal finishes it (%s)\n",
+                     "the index and '%s' did not move; 'git reset %s' in the "
+                     "terminal finishes it, keeping the files (%s)\n",
+                     branch.c_str(), short_sha(to_sha).c_str(), diag.c_str());
+        return GuiHistoryPullOutcome::IndexFailed;
+    case GuiGitFastForward::BranchFailed:
+        std::fprintf(stderr,
+                     "warptempo_gui: Pull failed: the files and the index "
+                     "were updated but '%s' did not move; 'git reset --soft "
+                     "%s' in the terminal finishes it (%s)\n",
                      branch.c_str(), short_sha(to_sha).c_str(), diag.c_str());
         return GuiHistoryPullOutcome::BranchFailed;
     }

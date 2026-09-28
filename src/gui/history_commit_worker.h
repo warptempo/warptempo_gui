@@ -26,9 +26,11 @@
 // ONE WORKER, TWO JOB KINDS. The CHECK (check_github, history_diff.h) fetches
 // and compares at every project open and every `h` entry; the CHECKPOINT runs
 // the act. Both can write the remote-tracking ref (a fetch, a push), so they
-// share this ONE thread and its ONE job slot: two network jobs never race for
-// that ref's lock, by construction. The CHECKPOINT kind alone locks the save
-// out (AppState::history_checkpoint_in_flight); a check locks out nothing.
+// share this ONE thread and its ONE job slot: two network jobs of one session
+// never race for that ref, by construction — and across sessions the
+// repository lane (below) keeps an abandoned check and the next session's
+// jobs apart. The CHECKPOINT kind alone locks the save out
+// (AppState::history_checkpoint_in_flight); a check locks out nothing.
 //
 // SINGLE JOB IN FLIGHT, structurally: the callers dispatch only while
 // is_busy() is false (a checkpoint's admission reads the in-flight bit and the
@@ -55,9 +57,13 @@
 // discarded; the next session checks afresh. What an abandoned check can
 // still leave behind is libgit2's own: a fetch cancelled mid-download removes
 // its temporary pack, and a ref update in progress at the very instant of the
-// cancel lands (the fetched value, which is correct) — and the next session's
-// check or act, running while the abandoned one is still unwinding, could
-// meet that ref's lock once and read Offline, which its next check clears.
+// cancel lands (libgit2 reports a ref update only after writing it). THAT LAST
+// WRITE IS WHY EVERY JOB HOLDS THE PROCESS-OWNED REPOSITORY LANE
+// (repository_lane, history_commit_worker.cpp) for its whole run: the lane
+// outlives this object and its session, so the next session's first job waits
+// on its own worker thread until the abandoned one has fully unwound, and an
+// old fetch's tip can never land after a newer one. The GUI thread never takes
+// it: quit and a project switch still never wait on a check.
 //
 // THE JOB IS CAPTURED WHOLE, BY VALUE. The worker touches no AppState, no
 // audio, no marker store — only the strings below — so the user may edit,

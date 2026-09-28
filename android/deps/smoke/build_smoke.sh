@@ -53,7 +53,13 @@ for api in "$WT_API" "$WT_TARGET_SDK"; do
         *" _libssh2_ed25519_sign"*) wt_say "ed25519 linked in at API $api" ;;
         *) wt_warn "no _libssh2_ed25519_sign in $so"; fail=1 ;;
     esac
-    printf '  DT_NEEDED: %s\n' "$("$READELF" -d "$so" | grep NEEDED | grep -oE '\[[^]]+\]' | tr '\n' ' ')"
+    # EXACTLY bionic's three (NOTES.md §2): the git stack and every other
+    # dependency are static, so anything else here is a library to ship.
+    if wt_check_dt_needed "$so" libc.so libdl.so libm.so; then
+        wt_say "DT_NEEDED is exactly libc libdl libm at API $api"
+    else
+        fail=1
+    fi
 
     # The research doc's check: expect "align 2**14" on every LOAD segment.
     aligns="$("$OBJDUMP" -p "$so" | grep -A1 'LOAD' | grep -oE 'align 2\*\*[0-9]+' | sort -u)"
