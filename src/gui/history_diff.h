@@ -160,8 +160,10 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // below) writes the three sidecars into the piece's directory and fetches,
 // stages, commits and pushes; THE GITHUB CHECK (check_github) fetches, which
 // writes `refs/remotes/origin/<branch>` and nothing the walk reads; THE PULL
-// (run_history_pull) fast-forwards the branch, its index and its files. THE
-// WALK STILL READS THE LOCAL BRANCH (the paragraph above): a fetch moves
+// (run_history_pull) fast-forwards the branch, its index and its files. The
+// act and the check also run the cold-start lock recovery when they open the
+// clone (GuiGitRepo::clear_stale_locks: the lock and temporary files a death
+// mid-write leaves, once per clone per process). THE WALK STILL READS THE LOCAL BRANCH (the paragraph above): a fetch moves
 // `origin/<branch>`, never what `h` walks.
 
 // THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
@@ -1177,9 +1179,10 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // repository could not be written, or the act refused before writing them
 // there at all (the ordinary disk save beside the source already stands by
 // this point, architect 2026-09-28: this write is the git-side copy alone):
-// the clone would not open, a DETACHED HEAD (unsanctioned use, which throws
-// here, since there is no branch to publish onto), or a branch its fetch
-// could not compare.
+// the clone would not open, a tracking configuration that could not be read,
+// a fetch that failed IN THIS CLONE rather than on the network (a write, a
+// lock, a full disk: GuiGitFetch::LocalFailed, git_repo.h), or a branch its
+// fetch could not compare. The GitHub status stays as it stood.
 //
 // CommitFailed — A STEP REFUSED BEFORE ANYTHING WAS PUBLISHED, and the three
 // files are sitting in the working tree where `git status` shows them and a hand
@@ -1213,7 +1216,8 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // RemoteMoved — the fetch found GitHub ahead of this branch (the branch is
 // behind, or both have moved): committing on top would diverge.
 //
-// RemoteUnreachable — the fetch could not reach GitHub.
+// RemoteUnreachable — the fetch could not reach GitHub (a failure in the clone
+// itself is WriteFailed above).
 //
 // RemoteRefused — GitHub declined this device at the act's own fetch (no
 // deploy key, the key refused, a host key off the pin — the push's credential
@@ -1238,7 +1242,8 @@ enum class GuiHistoryCommitOutcome {
 // pulls, and the rest refuse with a card.
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
-//               read that did not answer). Row 8 shows no segment.
+//               read that did not answer, a fetch that failed in the clone
+//               rather than on the network). Row 8 shows no segment.
 //   Checking  — a check is on the worker.
 //   UpToDate  — nothing either way.
 //   Ahead     — this branch has commits GitHub has not (a push that failed),
@@ -1274,8 +1279,10 @@ const char* github_status_word(GuiGitHubStatus status);
 // exactly that), and compare the branch with that ref (compare_with_origin).
 // The reading, or Unchecked where there is none
 // (GuiGitHubStatus). Offline and Refused print their cause on one stderr
-// line. `cancel` is the worker's abandon token: a set token ends the fetch at
-// its next callback and answers Unchecked, which nobody reads.
+// line, and so does a fetch that failed in the clone (GuiGitFetch::
+// LocalFailed), which answers Unchecked. `cancel` is the worker's abandon
+// token: a set token ends the fetch at its next callback and answers
+// Unchecked, which nobody reads.
 GuiGitHubStatus check_github(const std::string&       source_audio_path,
                              const std::string&       projects_repo,
                              const std::atomic<bool>& cancel);

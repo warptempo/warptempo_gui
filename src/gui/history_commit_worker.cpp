@@ -29,6 +29,11 @@ namespace {
 // unchanged; a checkpoint in flight is joined as it always was, and a
 // checkpoint that is still waiting for the lane is part of that join).
 //
+// THE COLD-START LOCK RECOVERY RUNS INSIDE IT (recover_stale_locks_once,
+// history_diff.cpp: the first job to open a clone clears the lock files an
+// earlier run's death left), so no job of this process is writing while it
+// runs.
+//
 // NEVER DESTROYED: a detached check may still hold it while the process runs
 // its static destructors at exit, so it is a leaked heap object rather than a
 // static with a destructor.

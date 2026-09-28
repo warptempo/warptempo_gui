@@ -3521,8 +3521,12 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // THE GITHUB STATUS TAKES THE ACT'S OWN READING (`github`, the reading its
 // fetch-first step took, and its push's verdict): UpToDate after a push or an
 // in-sync ending, Ahead after a failed push, Behind / Diverged / Offline /
-// Refused from the three pre-commit refusals. An act that ended before its
-// fetch leaves the status as it stood.
+// Refused from the three pre-commit refusals — Refused too for a HEAD off
+// main and the guard's refusals, which end the act before its fetch. Only an
+// act answering Unchecked leaves the status as it stood: one that ended as
+// WriteFailed before any reading was taken (the clone would not open, the
+// tracking configuration could not be read, the fetch failed in the clone
+// itself, the comparison after it could not be read).
 //
 // AND NOTHING ASYNCHRONOUS RAISES A MODAL WITHOUT CLEARING THE WAY FIRST, which
 // is what retired a whole family of guards this function used to owe (the parked

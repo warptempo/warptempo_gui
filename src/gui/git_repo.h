@@ -17,7 +17,10 @@
 // callers, each in history_diff.cpp: the checkpoint act
 // (commit_history_checkpoint) stages, commits, fetches and pushes; the GitHub
 // check (check_github) fetches; the pull (run_history_pull) fast-forwards.
-// Nothing else in the product changes a repository.
+// Beside them stands ONE CLEANUP, clear_stale_locks, which removes only the
+// lock and temporary files those five leave when the process dies mid-write,
+// once per clone per process (its own comment below). Nothing else in the
+// product changes a repository.
 //
 // THREADS. A GuiGitRepo is ONE HANDLE FOR ONE THREAD and is never shared: the
 // main thread, the prefetch worker and the checkpoint worker each open their
@@ -122,9 +125,16 @@ struct GuiGitUpstream {
 
 // HOW A FETCH ENDED. `Refused` is GitHub declining this device — no deploy
 // key, the key refused, a host key off the pin, a non-SSH URL — which no
-// retry fixes; `Unreachable` is every other failure (DNS, connect, the time
-// bound, a dropped session); `Cancelled` is the caller's cancel token.
-enum class GuiGitFetch { Fetched, Unreachable, Refused, Cancelled };
+// retry fixes; `LocalFailed` is THIS CLONE failing the fetch (codex round 6
+// over the git arc, 2026-09-28): a write, a lock or a full disk once GitHub's
+// host key has been accepted, or a local step before or after the session —
+// the network was never the cause, so no retry of it helps (git_repo.cpp's
+// local_fetch_failure owns the classification); `Unreachable` is every other
+// failure (DNS, connect, the time bound, a dropped session); `Cancelled` is
+// the caller's cancel token.
+enum class GuiGitFetch {
+    Fetched, Unreachable, Refused, LocalFailed, Cancelled
+};
 
 // HOW A PUSH ENDED (GuiGitRepo::push_branch). `Pushed`: the server accepted
 // the branch and `refs/remotes/origin/<branch>` now names what it accepted.
@@ -335,6 +345,34 @@ public:
                                    const std::vector<std::string>& force,
                                    std::string&                    conflict_path,
                                    std::string&                    diag);
+
+    // ---- THE COLD-START LOCK RECOVERY (codex round 6 over the git arc,
+    // 2026-09-28). Normal use includes the app being killed (Android kills a
+    // backgrounded app) or the device losing power in the middle of one of
+    // the five mutators above, and libgit2 removes its lock files only on an
+    // ordinary return, so a death mid-write leaves one standing and every
+    // later write of that file refuses it (GIT_ELOCKED) — for good, since
+    // nothing in the app could clear it. Under the one-writer contract (this
+    // app is the clone's only writer, and one process runs it) a lock that
+    // stands when this process has not yet written is stale, so this removes
+    // EXACTLY WHAT THE FIVE CAN LEAVE in libgit2 1.9.7, and nothing else:
+    //   `<gitdir>/index.lock`                      — stage, the fast-forward
+    //   `refs/heads/<branch>.lock`                 — commit, the fast-forward
+    //   `refs/remotes/origin/<branch>.lock`        — fetch, push
+    //   `packed-refs.lock`                         — the fetch's removal of a
+    //                                                packed tracking ref
+    //   `objects/pack/pack_git2_*`                 — the fetch's temporary
+    //                                                pack and its index's lock
+    // Not HEAD.lock (a commit on HEAD locks the branch it names, not HEAD),
+    // no reflog lock (a reflog is appended to, never locked), no `.keep`
+    // (libgit2 writes none) and no lock beside a working-tree file (a
+    // checkout writes a blob in place; only a merge-conflict write takes a
+    // lock, and the fast-forward makes none). Each removal prints one stderr
+    // line naming the path; an absent file is the ordinary case and prints
+    // nothing. THE CALLER owns "once per clone per process, before this
+    // process's first write, holding the repository lane"
+    // (recover_stale_locks_once, history_diff.cpp).
+    void clear_stale_locks(const std::string& branch);
 
 private:
     explicit GuiGitRepo(git_repository* repo) : repo_(repo) {}

@@ -25,6 +25,7 @@
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <set>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -117,7 +118,8 @@ constexpr std::string_view kScaleKeyPrefix = "scale=";
 // never shared across threads (the seam's head owns that rule) — and the scan
 // holds one handle for its whole run. The seam's reads write nothing; its
 // five mutators have THREE callers, all at the foot of this file: the commit
-// act, the GitHub check and the pull.
+// act, the GitHub check and the pull — the first two also asking the
+// cold-start lock recovery (recover_stale_locks_once) when they open.
 
 // ---------------------------------------------------------------------------
 // text helpers
@@ -2274,6 +2276,26 @@ bool head_on_main(const GuiGitRepo& repo, std::string& why) {
     return false;
 }
 
+// THE COLD-START LOCK RECOVERY'S ONE ASKER (codex round 6 over the git arc,
+// 2026-09-28; GuiGitRepo::clear_stale_locks owns what is removed and why a
+// death mid-write leaves it). ONCE PER CLONE PER PROCESS, at the start of the
+// first job that opens it — the check and the checkpoint act each ask this
+// right after opening their handle, before anything is fetched or written —
+// so it runs before this process's first write to that clone and never
+// again. BOTH ASKERS RUN ONLY ON THE CHECKPOINT WORKER, HOLDING THE
+// PROCESS-OWNED REPOSITORY LANE (history_commit_worker.cpp), which is what
+// makes "no job of this process is writing" true here and what serializes
+// the set below; the pull, the one mutator off the worker, is admitted only
+// on a Behind that a job of its session wrote, so a job has always opened
+// the clone first. Keyed by the root the job derived. NEVER DESTROYED, the
+// lane's reason: a detached check may still be in here while the process
+// runs its static destructors.
+void recover_stale_locks_once(GuiGitRepo& repo, const std::string& repo_root) {
+    static std::set<std::string>* recovered = new std::set<std::string>;
+    if (!recovered->insert(repo_root).second) return;
+    repo.clear_stale_locks(kProjectsBranch);
+}
+
 // THE THREE COMMITTED PATHS a piece's checkpoint occupies, in kSidecarExtensions
 // order (which is what pairs each path with its text). One owner: the act writes
 // them, asks the status about them, stages them and commits them, and all four
@@ -2353,6 +2375,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // none, and the act does not look for them.
 //
 // THE STEPS, each numbered at its own site below:
+//   (0) THE COLD-START LOCK RECOVERY, right after the clone opens, the
+//       first time this process opens it (recover_stale_locks_once).
 //   (1) MAIN — the only branch (architect 2026-09-28): HEAD on any other
 //       branch, or detached, refuses immediately as RemoteRefused (the
 //       status Refused).
@@ -2361,7 +2385,9 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //   (1b) FETCH FIRST (architect 2026-09-27) — GitHub's newest state, before
 //       anything is written: a branch not tracking `origin/<branch>` is
 //       RemoteRefused before the fetch (GuiGitTracking), unreachable is
-//       RemoteUnreachable, declined is RemoteRefused, and a branch BEHIND
+//       RemoteUnreachable, a fetch this clone failed (a write, a lock, a
+//       full disk; GuiGitFetch::LocalFailed) is WriteFailed, declined is
+//       RemoteRefused, and a branch BEHIND
 //       `refs/remotes/origin/<branch>` (or diverged from it) is RemoteMoved —
 //       fast-forward only, so a checkpoint is never committed on top of a
 //       stale base. The prelude save has landed either
@@ -2461,6 +2487,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                      repo_root.c_str(), diag.c_str());
         return GuiHistoryCommitOutcome::WriteFailed;
     }
+    // (0) THE COLD-START LOCK RECOVERY, before anything below can write.
+    recover_stale_locks_once(*repo, repo_root);
 
     // (1) MAIN IS THE ONLY BRANCH (kProjectsBranch): HEAD anywhere else —
     // another branch, or detached — is refused here, before anything is
@@ -2532,6 +2560,17 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                          diag.c_str());
             github = GuiGitHubStatus::Refused;
             return GuiHistoryCommitOutcome::RemoteRefused;
+        }
+        // THIS CLONE FAILED THE FETCH (a write, a lock, a full disk —
+        // GuiGitFetch::LocalFailed), not the network: nothing was committed,
+        // the status stays as it stood, and the card names no remedy the
+        // network could give.
+        if (fetched == GuiGitFetch::LocalFailed) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Checkpoint failed: the fetch failed in "
+                         "this clone (%s)\n",
+                         diag.c_str());
+            return GuiHistoryCommitOutcome::WriteFailed;
         }
         if (fetched != GuiGitFetch::Fetched) {
             std::fprintf(stderr,
@@ -2742,6 +2781,8 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
     GuiFailure                open_reason;
     std::optional<GuiGitRepo> repo = open_clone_for(root.path, open_reason);
     if (!repo) return GuiGitHubStatus::Unchecked;
+    // THE COLD-START LOCK RECOVERY, before the fetch can write.
+    recover_stale_locks_once(*repo, root.path);
     GuiFailure  guard_reason;
     std::string fetch_source;
     if (!clone_is_projects_home(*repo, root.path, projects_repo, guard_reason,
@@ -2790,6 +2831,14 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
         std::fprintf(stderr, "warptempo_gui: GitHub offline: %s\n",
                      diag.c_str());
         return GuiGitHubStatus::Offline;
+    case GuiGitFetch::LocalFailed:
+        // THIS CLONE FAILED THE FETCH, not the network: no reading, and no
+        // new word — row 8 shows none, stderr says why.
+        std::fprintf(stderr,
+                     "warptempo_gui: GitHub not checked: the fetch failed in "
+                     "this clone: %s\n",
+                     diag.c_str());
+        return GuiGitHubStatus::Unchecked;
     case GuiGitFetch::Fetched:
         break;
     }

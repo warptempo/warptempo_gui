@@ -4,6 +4,7 @@
 
 #include <git2.h>
 
+#include <cstdio>
 #include <filesystem>
 #include <memory>
 #include <utility>
@@ -205,6 +206,10 @@ struct RemoteState {
     bool        credential_refused = false;
     bool        key_not_offered    = false;  // the server takes no SSH key
     bool        host_key_refused   = false;
+    // GITHUB'S HOST KEY WAS ACCEPTED: the connection stands, so a failure
+    // after it that libgit2 files as a local class is this clone's own
+    // (local_fetch_failure).
+    bool        connected          = false;
     std::string rejected;  // a server-side refusal of the ref, verbatim
     // THE PUSH'S OWN ACCOUNT of its one ref (push_branch): the ref it sends,
     // the commit libgit2 negotiated to send to it, and the server's
@@ -294,7 +299,10 @@ int remote_certificate_check(git_cert* cert, int /*valid*/, const char* host,
             }
         }
     }
-    if (match) return 0;
+    if (match) {
+        state.connected = true;
+        return 0;
+    }
     state.host_key_refused = true;
     return GIT_ECERTIFICATE;
 }
@@ -407,6 +415,33 @@ std::string remote_failure(const RemoteState& state, const char* fallback) {
         return "the deploy key at " + state.private_key + " was refused";
     }
     return last_error(fallback);
+}
+
+// A FETCH THAT FAILED IN THIS CLONE, NOT ON THE WIRE (GuiGitFetch::LocalFailed;
+// codex round 6 over the git arc, 2026-09-28): ONCE GITHUB'S HOST KEY HAS BEEN
+// ACCEPTED, a failure libgit2 files under a local class — the filesystem, a
+// ref, the object database, the repository or its configuration. A ref's
+// lock standing is GIT_ERROR_OS (probed 2026-09-28), and so is a full disk
+// writing the fetched pack (indexer.c's "cannot extend packfile"). The
+// connection is the condition because libgit2 files ONE transport failure
+// under GIT_ERROR_OS, the socket's own "failed to connect" (streams/socket.c),
+// and that can only happen before the host key is seen; after it, the wire's
+// failures are GIT_ERROR_NET / GIT_ERROR_SSH and a received pack that does not
+// index is GIT_ERROR_INDEXER, all left to Unreachable.
+bool local_fetch_failure(const RemoteState& state) {
+    const git_error* e = git_error_last();
+    if (!state.connected || e == nullptr) return false;
+    switch (e->klass) {
+    case GIT_ERROR_OS:
+    case GIT_ERROR_FILESYSTEM:
+    case GIT_ERROR_REFERENCE:
+    case GIT_ERROR_ODB:
+    case GIT_ERROR_REPOSITORY:
+    case GIT_ERROR_CONFIG:
+        return true;
+    default:
+        return false;
+    }
 }
 
 }  // namespace
@@ -995,7 +1030,7 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
     git_remote* r_raw = nullptr;
     if (git_remote_create_with_opts(&r_raw, source_url.c_str(), &create) < 0) {
         diag = last_error("could not set the fetch URL");
-        return GuiGitFetch::Unreachable;
+        return GuiGitFetch::LocalFailed;
     }
     Owned<git_remote> remote(r_raw);
 
@@ -1024,8 +1059,9 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
             return GuiGitFetch::Cancelled;
         }
         diag = remote_failure(state, "the fetch failed");
-        return state.refused() ? GuiGitFetch::Refused
-                               : GuiGitFetch::Unreachable;
+        if (state.refused()) return GuiGitFetch::Refused;
+        return local_fetch_failure(state) ? GuiGitFetch::LocalFailed
+                                          : GuiGitFetch::Unreachable;
     }
     if (state.cancelled()) {
         diag = "cancelled";
@@ -1036,11 +1072,13 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
     // nothing to fetch, and libgit2 reports that as success with the old
     // tracking ref standing — so the advertisement libgit2 kept from the
     // session is asked, and the ref is removed, as a pruning fetch removes it.
+    // Every failure from here on is local: the session is over and what is
+    // read or written is this clone's.
     const git_remote_head** heads = nullptr;
     std::size_t             count = 0;
     if (git_remote_ls(&heads, &count, remote.get()) < 0) {
         diag = last_error("could not read what the remote advertised");
-        return GuiGitFetch::Unreachable;
+        return GuiGitFetch::LocalFailed;
     }
     for (std::size_t i = 0; i < count; ++i) {
         if (heads[i] != nullptr && heads[i]->name != nullptr &&
@@ -1053,7 +1091,7 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
     if (lrc == GIT_ENOTFOUND) return GuiGitFetch::Fetched;
     if (lrc < 0) {
         diag = last_error("could not read the tracking ref");
-        return GuiGitFetch::Unreachable;
+        return GuiGitFetch::LocalFailed;
     }
     Owned<git_reference> stale(t_raw);
     if (state.cancelled()) {
@@ -1062,7 +1100,7 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
     }
     if (git_reference_delete(stale.get()) < 0) {
         diag = last_error("could not remove the stale tracking ref");
-        return GuiGitFetch::Unreachable;
+        return GuiGitFetch::LocalFailed;
     }
     return GuiGitFetch::Fetched;
 }
@@ -1278,4 +1316,46 @@ GuiGitFastForward GuiGitRepo::fast_forward(
     }
     git_reference_free(moved);
     return GuiGitFastForward::Done;
+}
+
+void GuiGitRepo::clear_stale_locks(const std::string& branch) {
+    namespace fs = std::filesystem;
+    // The index is the work tree's own (gitdir); refs, packed-refs and the
+    // object store are shared (commondir) — one directory in an ordinary
+    // clone.
+    const fs::path gitdir = git_repository_path(repo_);
+    const fs::path common = git_repository_commondir(repo_);
+    std::vector<fs::path> stale = {gitdir / "index.lock",
+                                   common / "packed-refs.lock"};
+    if (!branch.empty()) {
+        stale.push_back(common / "refs" / "heads" / (branch + ".lock"));
+        stale.push_back(common / "refs" / "remotes" / "origin" /
+                        (branch + ".lock"));
+    }
+    // THE FETCH'S INDEXER (libgit2 1.9.7, indexer.c): the pack streams into a
+    // temporary `pack_git2_<16 hex>` (git_futils_mktmp) and its index is
+    // written through a lock `pack_git2_<12 hex>idx.lock`, both renamed only
+    // once whole; the prefix is libgit2's alone (git's own are `tmp_pack_*`).
+    std::error_code ec;
+    for (fs::directory_iterator it(common / "objects" / "pack", ec), end;
+         !ec && it != end; it.increment(ec)) {
+        if (it->path().filename().string().rfind("pack_git2_", 0) == 0) {
+            stale.push_back(it->path());
+        }
+    }
+    for (const fs::path& p : stale) {
+        std::error_code sec;
+        if (!fs::is_regular_file(fs::symlink_status(p, sec))) continue;
+        if (fs::remove(p, sec)) {
+            std::fprintf(stderr,
+                         "warptempo_gui: removed '%s', left by an earlier run "
+                         "that ended mid-write\n",
+                         p.c_str());
+        } else if (sec) {
+            std::fprintf(stderr,
+                         "warptempo_gui: could not remove '%s', left by an "
+                         "earlier run that ended mid-write (%s)\n",
+                         p.c_str(), sec.message().c_str());
+        }
+    }
 }
