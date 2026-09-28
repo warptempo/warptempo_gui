@@ -579,11 +579,11 @@ and `projects/` its pieces — with the clone config the tablet's storage needs
 (`core.filemode=false`, `core.symlinks=false`, `core.ignorecase=true`, the
 commit identity, origin over `ssh.github.com:443`), the tablet's deploy key into
 `files/warptempo_gui/` through `run-as`, the device config's `projects_repo`
-line, and the audio — having first saved the tablet's existing `.git` WHOLE
-(verified file by file against the tablet's own sums, setup stopping with
-nothing deleted on any difference) and every file GitHub never had into one
-dated `~/.warptempo/wts_saved/` folder, since a checkpoint committed on the
-tablet but never pushed lives only in that `.git`; `wts tt` pushes each piece's
+line, and the audio — having first printed its whole plan (every file it
+deletes or copies over, the settings file, the audio) read-only and asked
+`Proceed? [y/N]`, the app not even stopped before a `y`; nothing is backed up
+(architect 2026-09-28: the confirmation is the insurance), so the tablet's old
+`.git` goes whole with any commit GitHub lacks; `wts tt` pushes each piece's
 source `.wav` (audio only); `wts ft` brings the `render/` deliverables home
 (renders only), each wav WITH ITS FINGERPRINT as one pair — both fetched and
 checked before either is published, the laptop's old fingerprint removed
