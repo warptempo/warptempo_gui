@@ -3165,8 +3165,8 @@ void GuiInputHandler::open_history_commit_editor() {
         return;
     case GuiGitHubStatus::Unchecked:
         // No reading at all: the check could not classify this clone (a
-        // detached or unborn HEAD, a read that did not answer),
-        // and its entry line on stderr says which.
+        // read that did not answer; a detached or unborn HEAD is Refused,
+        // head_on_main), and its entry line on stderr says which.
         notifications.notify(AppState::NotificationClass::Normal,
                              "GitHub has not been checked");
         return;
@@ -3548,8 +3548,9 @@ void GuiInputHandler::on_history_checkpoint_complete(
     //   where this act committed nothing and HEAD is where the scan already
     //   found it, so the kick is free there.
     //   SIX PROVABLY DID NOT: WriteFailed never commits (a clone that would
-    //   not open, a detached refusal, an uncomparable branch or a failed
-    //   write), the three pre-commit refusals end before the write,
+    //   not open, a tracking it could not read, an uncomparable branch or a
+    //   failed write), the three pre-commit refusals (RemoteRefused, a
+    //   detached HEAD's among them) end before the write,
     //   NothingToCommit is the clean, not-ahead ending, which stages and
     //   commits nothing by construction, and CommitFailed is a stage or a
     //   commit that refused — moving the branch is the commit step's LAST act

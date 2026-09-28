@@ -48,7 +48,8 @@
 // git steps must not be abandoned half-way, the user's state is already on
 // disk, and the push is bounded by git_repo.cpp's time limit. A CHECK in
 // flight is ABANDONED: its cancel token is set (the fetch stops at libgit2's
-// next callback, so it writes no ref after that) and the thread is DETACHED,
+// next callback, so it starts no ref update after that — one already in
+// progress may still land, below) and the thread is DETACHED,
 // so a connect hanging on a black-holed route holds nothing. That is safe
 // because everything the thread touches lives in a shared block it co-owns
 // (Shared below) — never this object — and because an abandoned thread never
