@@ -77,7 +77,7 @@ enum class Role : uint8_t {
     Enter,         // GuiKeys::Return
     Escape,        // GuiKeys::Escape
     Tab,           // GuiKeys::Tab, bare — the prompts' completion key
-    LayerToggle,   // the `&123` / `abc` key: flips the symbol layer
+    LayerToggle,   // the `&123` / `ABC` key: flips the symbol layer
 };
 
 // THE ROW IS FORTY QUARTER-UNITS WIDE. Every key's width is authored in
@@ -302,7 +302,9 @@ inline constexpr GuiKey keysym_of(char base) {
 // what says the arm is the key's ARMED FACE — kRedesignSelectedFill under a
 // kRedesignLine frame, the icon row's own lit-toggle face, which this key and
 // the layer toggle already wear off their lamp bits — and the letter caps
-// themselves, every one of which turns capital while the arm stands.
+// themselves, every one of which turns capital while the arm stands. The
+// layer toggle's own caps are Plasma's / Qt Virtual Keyboard's own spelling,
+// `&123` and `ABC` (architect 2026-09-28).
 inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
     switch (k.role) {
         case Role::Shift:       return "Shift";
@@ -310,7 +312,7 @@ inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
         case Role::Enter:       return "Return";
         case Role::Escape:      return "Esc";
         case Role::Tab:         return "Tab";
-        case Role::LayerToggle: return symbol_layer ? "abc" : "&123";
+        case Role::LayerToggle: return symbol_layer ? "ABC" : "&123";
         case Role::Character:   return k.ch == ' ' ? "Space" : nullptr;
     }
     return nullptr;

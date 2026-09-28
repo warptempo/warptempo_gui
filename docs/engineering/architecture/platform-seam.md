@@ -578,7 +578,7 @@ are gone with the seam, so the band's published height, its paint and its hit
 rect are one number by construction.
 
 EVERY CAP IS TEXT, on the one sans face at the product's one text size through
-the one shaping chokepoint — the letter caps, the layer toggle's `abc` / `&123`
+the one shaping chokepoint — the letter caps, the layer toggle's `ABC` / `&123`
 and the FUNCTION KEYS' WORDS alike: **Shift**, **Backspace**, **Space**,
 **Esc**, **Return**, **Tab** (the words are `cap_word`'s, retold here after the
 2026-09-01 capitalization sweep renamed the act-named pair — the paragraph
