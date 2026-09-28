@@ -164,14 +164,19 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/flag_editor.cpp
     src/gui/renders_dir.cpp
     src/gui/save_ops.cpp
-    # GUI-ONLY: the GitHub recheck's history model reads the repo's own
-    # projects/ corpus through git subprocesses AND owns the product's one
-    # mutating git route (the commit act's add/commit/push, behind a separate
-    # entry point in the same file). Like text_shape.cpp and icons.cpp it is
+    # GUI-ONLY: the GitHub recheck's history model reads the projects
+    # repository's corpus AND owns the product's one mutating git route (the
+    # commit act's stage/commit/push). Like text_shape.cpp and icons.cpp it is
     # deliberately in none of the four shared per-directory source lists —
-    # warptempo_cli must never carry it. It needs no dependency beyond the C++
-    # standard library and POSIX.
+    # warptempo_cli must never carry it. Its git questions go through
+    # git_repo.cpp below.
     src/gui/history_diff.cpp
+    # THE ONE GIT ROAD (architect 2026-09-27): libgit2 in process, the history
+    # module's only way into a repository, with the push's deploy key and
+    # host-key pin. The one file that includes <git2.h>, so the one file that
+    # needs libgit2 — found in the Linux branch below; the Android branch finds
+    # none yet, and this file is what fails to compile there until it does.
+    src/gui/git_repo.cpp
     # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
     # runs that file's one mutating git route off the GUI thread.
     src/gui/history_commit_worker.cpp
@@ -179,8 +184,8 @@ set(WARPTEMPO_GUI_SOURCES
     # GUI-ONLY like the two above: the commit walk's SECOND ROAD, the exported
     # history folder a project may carry (architect 2026-09-17). It runs no git
     # at all — it is a directory listing and four file reads per member — and
-    # it is what gives the tablet, which has no git binary, the committed
-    # history. warptempo_cli reads no history of any kind.
+    # it is what gives the tablet, which has no clone, the committed history.
+    # warptempo_cli reads no history of any kind.
     src/gui/history_folder.cpp
     src/gui/settings_editor.cpp
     src/gui/active_views.cpp
@@ -379,6 +384,9 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # Playback is a direct libjack client. JACK is required by policy; under
     # PipeWire this is satisfied by pipewire-jack.
     pkg_check_modules(JACK REQUIRED jack)
+    # The history view's git (src/gui/git_repo.cpp): libgit2, in process, with
+    # its SSH transport (libssh2) for the checkpoint push.
+    pkg_check_modules(LIBGIT2 REQUIRED libgit2)
 
     add_executable(warptempo_gui
         ${WARPTEMPO_GUI_SOURCES}
@@ -412,6 +420,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${HARFBUZZ_INCLUDE_DIRS}
         ${CAIRO_FT_INCLUDE_DIRS}
         ${JACK_INCLUDE_DIRS}
+        ${LIBGIT2_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
@@ -424,6 +433,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${HARFBUZZ_LIBRARIES}
         ${CAIRO_FT_LIBRARIES}
         ${JACK_LIBRARIES}
+        ${LIBGIT2_LIBRARIES}
         pthread
         dl
         m

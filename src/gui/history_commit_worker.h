@@ -12,8 +12,8 @@
 
 // THE CHECKPOINT ACT'S BACKGROUND WORKER (architect 2026-08-07).
 //
-// The Save-and-Commit act runs `git add`, `git commit` and `git push` as child
-// processes, and the push in particular is a network act that can take seconds
+// The Save-and-Commit act stages, commits and pushes through libgit2
+// (git_repo.h), and the push in particular is a network act that can take seconds
 // — long enough that running it on the GUI thread froze the window over work
 // the user has no reason to wait for. THE SAVE IS THE PART THAT MUST BE
 // SYNCHRONOUS (it is the user's own bytes, and its failure refuses the act);
@@ -30,8 +30,9 @@
 // condition variable for the wake, and an eventfd the platform run loop polls,
 // whose POLLIN makes the GUI thread call on_completion_event() and run the
 // stored callback on the MAIN thread. The one difference is that there is no
-// cancel token — the act's steps are git children that must not be abandoned
-// half-way, so shutdown() JOINS an in-flight checkpoint instead of interrupting
+// cancel token — the act's git steps must not be abandoned half-way (the push
+// is bounded by git_repo.cpp's time limit), so shutdown() JOINS an in-flight
+// checkpoint instead of interrupting
 // it (the state is already saved to disk by then, so waiting loses nothing).
 //
 // THE JOB IS CAPTURED WHOLE, BY VALUE. The worker touches no AppState, no
@@ -66,7 +67,7 @@ public:
 
     // Stop the worker and close the eventfd. Idempotent, safe after a failed
     // init, and called from the destructor. IT BLOCKS UNTIL AN IN-FLIGHT
-    // CHECKPOINT FINISHES — a quit must not abandon a `git commit` mid-child,
+    // CHECKPOINT FINISHES — a quit must not abandon a commit or a push mid-step,
     // and the user's own state is already on disk (the act saves first), so the
     // wait costs a moment and never any work.
     void shutdown();

@@ -7198,7 +7198,7 @@ struct AppState {
     // source through its one owner (GuiSaveOps::save — the same act Ctrl+S is,
     // dirty cleared with it) and only then writes the live authoring state as
     // the three sidecars into the piece's directory in the projects repository,
-    // commits them pathspec-scoped under the entered title and pushes
+    // commits those three paths alone under the entered title and pushes
     // (commit_history_checkpoint, history_diff.h — the product's ONE mutating
     // git route, and its only writer outside the user's own save). A FAILED SAVE
     // REFUSES THE WHOLE ACT before any of that, one stderr line and nothing
@@ -7236,8 +7236,8 @@ struct AppState {
     // acknowledge modal), and its two ENDINGS say what they have to say on
     // stderr and raise nothing. A FOURTH failure, Unconfirmed, stood from
     // 2026-08-09 until 2026-09-06 for an act that could establish neither the
-    // content nor the publication; the act decides on git's exit status now,
-    // so there is no question left it cannot answer.
+    // content nor the publication; each of the act's steps answers its own
+    // verdict now, so there is no question left it cannot answer.
     //
     // THE ACT CLOSES THE VIEW WHEN ITS SAVE LANDS (architect 2026-08-07,
     // superseding the checkpoint-in-the-repository partition of 2026-08-05,

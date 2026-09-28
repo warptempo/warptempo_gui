@@ -87,8 +87,7 @@ namespace {
 // THE VERDICT IS AN OBSERVATION OF THE FILESYSTEM rather than the child's exit
 // status, and that is a choice rather than a limitation: the act's question is
 // whether the folder is GONE, which is not the question gio's exit code answers
-// (the git runners in history_diff.cpp split the same way for the same reason,
-// and their comments own it). The wait still runs — it is what orders the
+// The wait still runs — it is what orders the
 // observation after the child, and it is also what keeps the child from sitting
 // as a zombie, SIGCHLD carrying its default disposition — and the status IS
 // honoured as a fast negative; what decides the ordinary case is that the
@@ -117,11 +116,14 @@ bool trash_directory(const std::filesystem::path& dir) {
                     const_cast<char*>("--"),  const_cast<char*>(path.c_str()),
                     nullptr};
 
-    // posix_spawnp, never fork(): the GUI carries several hundred megabytes of
-    // virtual address space and a fork would copy its page tables and mark every
-    // page copy-on-write, a cost the product stopped paying on 2026-09-06 (the
-    // capture helper in history_diff.cpp owns the reasoning and the measurement).
-    // The child runs no code of ours — the two /dev/null redirections are a
+    // posix_spawnp, never fork() (2026-09-06): the GUI carries several hundred
+    // megabytes of virtual address space, and fork() copies its page tables and
+    // marks every page copy-on-write, so the GUI thread then faults on its own
+    // writes — a stutter measured across the git subprocesses the history view
+    // spawned per commit until libgit2 replaced them. posix_spawnp runs the
+    // child under vfork semantics (no page-table copy, no COW) and the parent
+    // resumes once the child has exec'd or failed; this is the product's one
+    // spawn now. The child runs no code of ours — the two /dev/null redirections are a
     // file-actions object the spawn applies — so nothing here has to be
     // async-signal-safe. POSIX_SPAWN_USEVFORK is bionic's switch; glibc has used
     // CLONE_VFORK unconditionally since 2.24 and ignores the flag.
@@ -1477,7 +1479,7 @@ void GuiInputHandler::measure_history_head_delta() {
 // START A FRESH SCAN — the ONE funnel, and the one place the deferral lives.
 // Its three kickers, re-derived by grep on this name: main.cpp's startup load
 // tail (once the source has settled), on_history_checkpoint_complete for every
-// outcome that MAY have committed (three of the five — that site owns the
+// outcome that MAY have committed (two of the five — that site owns the
 // derivation), and kick_history_prefetch_if_stale below.
 //
 // IT SUPERSEDES WHATEVER IS RUNNING, and no caller has to ask: the store's kick
@@ -1521,10 +1523,11 @@ void GuiInputHandler::kick_history_prefetch() {
 // arrived while a view stood is flushed at the exit before any later entry can
 // reach this line.
 //
-// THE TIP READ IS TWO `rev-parse`s on this thread — one deriving the clone from
-// the loaded source (2026-08-11: there is no compiled-in root to read against any
-// more) and one for the tip itself — which is still the whole of what an ordinary
-// entry pays in git, against the log plus a strict load per candidate it used to.
+// THE TIP READ IS A DISCOVERY AND A HEAD READ on this thread, in process — one
+// deriving the clone from the loaded source (2026-08-11: there is no compiled-in
+// root to read against any more) and one for the tip itself — which is still the
+// whole of what an ordinary entry pays in git, against the walk plus a strict
+// load per candidate it used to.
 // ON THE FOLDER ROAD IT IS A DIRECTORY LISTING and no git at all, the newest
 // exported member's folder name being that walk's tip (read_history_walk_tip
 // owns both spellings).
@@ -1566,8 +1569,8 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // still costs nothing.
 //
 // AND A RUN THAT FINISHES FAILED ENDS THE VISIT (2026-08-09). The view's premise
-// is that this session knows the piece's history; a `git log` capture that could
-// not run means it does not, and the `0/0` blank lane would then be a LIE — it
+// is that this session knows the piece's history; a walk of the history that
+// could not be read means it does not, and the `0/0` blank lane would then be a LIE — it
 // says "no checkpoints" where the truth is "unknown" — with the act greyed and
 // no account anywhere of why. So the failure gets the refusal it would have got
 // a moment earlier: init's own one-line stderr shape, printed here from the
@@ -3059,7 +3062,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
 //
 // The act itself is commit_history_checkpoint (history_diff.h): the three
-// writes, the pathspec-scoped commit, the push, and every stderr line about
+// writes, the three-path commit, the push, and every stderr line about
 // them. What lives here is the QUESTION in front of it (the commit-title
 // editor, 2026-08-07), THE SAVE in front of that (2026-08-04 — the act is "Save
 // and Commit" now), the CLOSE behind the save (2026-08-05, re-partitioned
@@ -3266,8 +3269,8 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // that) instead of through a view left standing.
 //
 // AND THE ACT IS ASYNCHRONOUS FROM THAT POINT (same ruling). The save is the
-// user's own bytes and stays synchronous; the checkpoint is `git add`, `git
-// commit` and a network push, which used to freeze the window for as long as the
+// user's own bytes and stays synchronous; the checkpoint is a stage, a commit
+// and a network push, which used to freeze the window for as long as the
 // remote took. Everything the act needs is CAPTURED BY VALUE here, on the main
 // thread — the two path strings, the projects_repo setting, the title, and the
 // freshly rebuilt now side — and handed to GuiHistoryCommitWorker, so the user
@@ -3307,7 +3310,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // A FAILED SAVE REFUSES THE WHOLE ACT, and by construction rather than by
 // discipline: the refusal returns ABOVE commit_history_checkpoint, the only
 // remaining call in this body that writes bytes or runs git, so no
-// checkpoint-side write happens and no git child is spawned. That is
+// checkpoint-side write happens and no git is touched. That is
 // narrower than "nothing reaches the repository": the save's own three
 // writes are sequential, not cross-file transactional (save_ops.cpp), so a
 // save that fails partway through can leave earlier atomic renames on disk
@@ -3438,7 +3441,7 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 //   checkpoint already carried them and the branch was not ahead of its remote).
 //   Neither is a failure; each says what it has to say on stderr.
 //   THE THREE FAILURES — WriteFailed (nothing reached the repository at all),
-//   CommitFailed (git refused a step before anything was published) and
+//   CommitFailed (a step refused before anything was published) and
 //   CommittedNotPushed (the bytes are in the local branch and the push did not
 //   land). WHAT EACH ONE MEANS IS THE ENUM CONTRACT'S TO SAY, and it says it
 //   once (GuiHistoryCommitOutcome, history_diff.h) — this end of the wire needs
@@ -3450,10 +3453,10 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 //
 // THERE WERE FOUR FAILURES UNTIL 2026-09-06: `Unconfirmed` said the act could
 // establish neither the content nor the publication, and it existed because the
-// mutating runner could not read a child's exit status and the act had to
-// observe the repository instead — an observation that could not be made had no
-// verdict left to take. The status is read now, so every question the act asks
-// gets an answer and that verdict is deleted.
+// act could not read its steps' own verdicts and had to observe the repository
+// instead — an observation that could not be made had no verdict left to take.
+// Every step answers its own verdict now, so every question the act asks gets an
+// answer and that verdict is deleted.
 //
 // THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, and since 2026-08-09 no
 // in-app retry either: a checkpoint that committed and failed to push is pushed
@@ -3477,22 +3480,22 @@ void GuiInputHandler::on_history_checkpoint_complete(
     app.history_checkpoint_in_flight = false;
 
     // RE-WARM THE WALK FOR EVERY OUTCOME THAT MAY HAVE MOVED HEAD (2026-08-07,
-    // membership re-derived 2026-08-09). The prefetch store describes the
-    // repository as of one tip, so the next `h` must see a checkpoint this act
-    // made — and "made" is not the same set as "succeeded".
-    //   THREE MAY HAVE COMMITTED: Committed and CommittedNotPushed obviously
-    //   may have — each also reaches its push arm over CLEAN paths the branch
-    //   was merely ahead with, where this act committed nothing and HEAD is
-    //   where the scan already found it, so the kick is free there; and
-    //   CommitFailed may have, because the act reports it on a hung
-    //   `post-commit` hook whose commit had ALREADY landed (git moves HEAD
-    //   before running the hook — the recorded accepted imprecision).
-    //   TWO PROVABLY DID NOT: WriteFailed never reaches git at all (a detached
-    //   refusal or a failed write), and NothingToCommit is the clean, not-ahead
-    //   ending, which runs no add and no commit by construction.
-    // Kicking the two extra costs one scan on a rare failure and buys the walk
-    // being TRUE after it; the old membership left the next visit reading a
-    // pre-commit repository.
+    // membership re-derived 2026-08-09 and 2026-09-27). The prefetch store
+    // describes the repository as of one tip, so the next `h` must see a
+    // checkpoint this act made — and "made" is not the same set as "succeeded".
+    //   TWO MAY HAVE COMMITTED: Committed and CommittedNotPushed — each also
+    //   reaches its push arm over CLEAN paths the branch was merely ahead with,
+    //   where this act committed nothing and HEAD is where the scan already
+    //   found it, so the kick is free there.
+    //   THREE PROVABLY DID NOT: WriteFailed never reaches git at all (a clone
+    //   that would not open, a detached refusal or a failed write),
+    //   NothingToCommit is the clean, not-ahead ending, which stages and
+    //   commits nothing by construction, and CommitFailed is a stage or a
+    //   commit that refused — moving the branch is the commit step's LAST act
+    //   and no hook runs after it (libgit2, git_repo.h), so a refused commit
+    //   left HEAD where it was.
+    // Kicking CommittedNotPushed costs one scan on a rare failure and buys the
+    // walk being TRUE after it.
     //
     // THE KICK SUPERSEDES AN IN-FLIGHT SCAN rather than being swallowed by one,
     // and that is the funnel's own idiom rather than anything spelled here:
@@ -3507,8 +3510,8 @@ void GuiInputHandler::on_history_checkpoint_complete(
     // recorded at GuiHistoryPrefetch — and this kick is what rebuilds whatever
     // did. The view is normally already closed by now, but the funnel defers
     // rather than assumes.
-    if (outcome != GuiHistoryCommitOutcome::WriteFailed &&
-        outcome != GuiHistoryCommitOutcome::NothingToCommit) {
+    if (outcome == GuiHistoryCommitOutcome::Committed ||
+        outcome == GuiHistoryCommitOutcome::CommittedNotPushed) {
         kick_history_prefetch();
     }
 

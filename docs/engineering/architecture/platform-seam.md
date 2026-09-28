@@ -1054,12 +1054,22 @@ platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
 runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
 
-WHAT THE APK DOES NOT CARRY, and the one behaviour that follows (recorded
-2026-09-02, the four-tier review's R-18): GIT. The GitHub recheck shells out
-to a `git` binary, and there is none on the tablet, so the remote walk's very
-first question — which clone holds the source — has no answer there. THAT IS
-NOT A STUB OR AN OMISSION TO FILL: the checkpoint workflow is the authoring
-laptop's, the tablet being the glass the work is played and judged on.
+WHAT THE APK DOES NOT CARRY YET: GIT (recorded 2026-09-02, the four-tier
+review's R-18; retold 2026-09-27). The GitHub recheck asks git through
+libgit2 IN PROCESS since 2026-09-27 (`src/gui/git_repo.cpp`, the one file
+that includes `<git2.h>`; github-recheck.md), and libgit2 is found in the
+Linux branch alone. `git_repo.cpp` sits in the shared source list, so THE
+ANDROID BUILD FAILS — that file cannot compile without `<git2.h>` — until
+the cross-built libgit2 (with libssh2 over OpenSSL, whose ed25519 support
+the deploy key needs) joins `android/prebuilt` and the Android branch finds
+it (architect 2026-09-27: the tablet may stay broken until then; NO STUB).
+The last APK built before that day still runs the spawned-`git` road, and,
+the tablet having no `git` binary, the remote walk's very first question —
+which clone holds the source — has no answer there. Once it builds, the seam
+needs nothing per backend: the deploy key resolves beside the device config
+(`files/warptempo_gui/` here), the host-key pin is the same three keys, and
+the commit identity will come from the tablet clone's own `.git/config`,
+written at clone time (architect 2026-09-27; no identity constant in code).
 
 **AND `h` WORKS ON THE TABLET SINCE 2026-09-04, ON THE LOCAL WALK** (architect,
 from the car on the first real road test, SUPERSEDING "bare `h` REFUSES there,

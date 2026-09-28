@@ -14,11 +14,10 @@
 // THE HISTORY WALK'S PREFETCH STORE AND ITS WORKER (architect 2026-08-07).
 //
 // The `h` view's walk is LOAD-GATED — membership is the strict whole-set load
-// itself (history_diff.h) — so building it costs a `rev-list --count` and a
-// `git log`, then a `rev-parse` + a `show` for the touched directory + `ls-tree`
-// + three `show`s for the blobs + three strict parses PER CANDIDATE (six
-// children each since 2026-08-09, when the touched-directory evidence read
-// joined; two where that evidence refuses). That ran
+// itself (history_diff.h) — so building it costs a walk of the history, then a
+// diff for the touched directory + a tree listing + three blob reads + three
+// strict parses PER CANDIDATE (the tree and the blobs skipped where the touched
+// evidence refuses). That ran
 // synchronously at every `h`, which is what made the entry stall and what the
 // ruled depth of 20 was really buying. The architect's answer is this class: the
 // whole git half runs ONCE AT STARTUP on a background thread, UNCAPPED, and
@@ -48,13 +47,14 @@
 // arrive whenever they like and change nothing.
 //
 // CONCURRENCY WITH THE CHECKPOINT WORKER IS ACCEPTED, deliberately and with no
-// mechanism: every call this class makes is a git READ (`rev-parse`, `log`,
-// `ls-tree`, `show`) and the checkpoint act's `add`/`commit`/`push` may be
-// running beside it. A read that races a mutation sees the repository partway
-// through — an older `log`, a commit not yet listed — and the answer to that is
+// mechanism: every call this class makes is a git READ (GuiGitRepo's reads,
+// git_repo.h) and the checkpoint act's stage/commit/push may be running beside
+// it, each thread on its own libgit2 handle. A read that races a mutation sees
+// the repository partway through — an older HEAD, a commit not yet walked — and
+// the answer to that is
 // the RE-WARM rather than a lock: the act's completion kicks a fresh run for
-// every outcome that MAY have committed — three of the five, everything but the
-// two that provably run no commit — so whatever raced is rebuilt from the
+// every outcome that MAY have committed — two of the five, Committed and
+// CommittedNotPushed — so whatever raced is rebuilt from the
 // settled repository a moment later. That kick SUPERSEDES this run rather than
 // queueing behind it (the generation bump above is the whole mechanism), which
 // is what keeps a scan begun against the pre-commit tip from outliving it. (The `h` entry is refused outright while a
@@ -89,7 +89,7 @@ public:
     // THREE KICKERS, and the inventory is here because there is nowhere better
     // (membership re-derived 2026-08-09): the startup load's tail (main.cpp,
     // once the source has settled), the checkpoint act's completion for every
-    // outcome that MAY have committed (three of the five —
+    // outcome that MAY have committed (two of the five —
     // GuiInputHandler::on_history_checkpoint_complete owns that derivation), and
     // the `h` entry when the store is STALE. All three reach this through
     // GuiInputHandler::kick_history_prefetch, whose definition carries the
@@ -128,8 +128,8 @@ public:
     // checkpoint" (GuiHistoryDiff::walk_finished_empty).
     bool run_done() const { return done_; }
 
-    // AND WHETHER THAT FINISH WAS AN ANSWER. A run whose `git log` capture could
-    // not run ends DONE and NOT ok, carrying the one line the mode prints when
+    // AND WHETHER THAT FINISH WAS AN ANSWER. A run whose walk of the history
+    // could not be read ends DONE and NOT ok, carrying the one line the mode prints when
     // it refuses: an unread history is not an empty one, and with an empty walk
     // now OPENING the view and telling Save and commit there is everything to
     // checkpoint, the two had to stop being the same state (GuiHistoryScanResult,

@@ -18,6 +18,7 @@
 
 #include "app_state.h"
 #include "async_renderer.h"
+#include "git_repo.h"
 #include "history_commit_worker.h"
 #include "history_prefetch.h"
 #include "audio.h"
@@ -3382,9 +3383,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // can be answered Cancel, so the kill belongs here — where the session is
     // actually ending — rather than at the click that proposed it.
     async_renderer.shutdown();
-    // Blocks on an in-flight checkpoint rather than abandoning a git child
-    // mid-act; the piece is already saved (the act saves before it dispatches),
-    // so the wait costs a moment and never any work.
+    // Blocks on an in-flight checkpoint rather than abandoning it mid-act (a
+    // push is bounded by git_repo.cpp's time limit); the piece is already saved
+    // (the act saves before it dispatches), so the wait costs a moment and
+    // never any work.
     history_commit_worker.shutdown();
     // The prefetch abandons its scan at the next candidate boundary rather than
     // being waited out: it writes nothing anywhere.
@@ -3404,11 +3406,9 @@ int gui_main(const char* argument) {
     // (NO SIGCHLD DISPOSITION HERE. SIG_IGN stood at this point until
     // 2026-09-06 to auto-reap fire-and-forget children; the last such child —
     // the external audio player `l` used to spawn — left the roster 2026-08-28,
-    // and the three spawners that remain (git's two fenced entry points in
-    // history_diff.cpp, `gio trash` in input_key_dispatch.cpp) each wait on
-    // their own child. The DEFAULT disposition is what makes an exit status
-    // readable, which is how the capture helper tells a git that could not be
-    // exec'd from one that ran — see its head.)
+    // and the one spawner that remains (`gio trash` in input_key_dispatch.cpp)
+    // waits on its own child. The DEFAULT disposition is what makes that
+    // child's exit status readable.)
 
     // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
     // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is the
@@ -3419,13 +3419,18 @@ int gui_main(const char* argument) {
     // ignored that loop sees the short/failed write it is already written for
     // (abandon the transfer, close the fd, no state to unwind). libjack's
     // server socket is the same shape and inherits the same protection — it has
-    // no SIGPIPE-dependent behaviour of its own. THE CHILDREN INHERIT IT: an
-    // ignored disposition survives exec and posix_spawn resets nothing of its
-    // own here (no POSIX_SPAWN_SETSIGDEF in either spawner's attributes), and
-    // the roster's two spawners (git through history_diff.cpp, gio through
-    // trash_directory) run the child with the parent reading its output to the
-    // end or discarding it, so the child never meets a closed pipe.
+    // no SIGPIPE-dependent behaviour of its own, and neither has libgit2's SSH
+    // transport, whose socket to the remote a checkpoint push writes. THE
+    // CHILD INHERITS IT: an ignored disposition survives exec and posix_spawn
+    // resets nothing of its own here (no POSIX_SPAWN_SETSIGDEF in the one
+    // spawner's attributes, trash_directory's `gio trash`), and that child's
+    // output goes to /dev/null, so it never meets a closed pipe.
     std::signal(SIGPIPE, SIG_IGN);
+
+    // THE ONE GIT ROAD, initialized once for the whole process (git_repo.h):
+    // before the first project's workers start, since the prefetch and the
+    // checkpoint worker both reach libgit2 on their own threads.
+    gui_git_init();
 
     // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled
     // from ~/.config/warptempo_gui/colors.conf by load_color_config() at exactly

@@ -31,7 +31,7 @@ void GuiHistoryCommitWorker::shutdown() {
     if (worker_.joinable()) {
         // NO CANCEL, BY DESIGN — the loop below finishes the checkpoint it is
         // running and only then sees the stop flag, so the join waits it out.
-        // The act's git steps are children that must not be abandoned part-way,
+        // The act's git steps must not be abandoned part-way,
         // and the user's own state was written to disk before the act was
         // dispatched at all.
         {
@@ -93,7 +93,7 @@ void GuiHistoryCommitWorker::worker_loop() {
         }
 
         // THE ACT ITSELF, unchanged and whole (history_diff.h): the three
-        // writes, the pathspec-scoped commit, the push, and every stderr line
+        // writes, the three-path commit, the push, and every stderr line
         // about them — which now print from this thread, which is fine, they
         // are the same lines in the same order.
         last_outcome_ = commit_history_checkpoint(
