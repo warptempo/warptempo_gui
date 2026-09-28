@@ -27,7 +27,10 @@
 // magnification level markers column's deletion, architect approval
 // 2026-09-23). The project model's source rule (resolve_project), the
 // required-file rule below, and the GitHub recheck's per-commit sidecar match,
-// pathspecs and checkpoint paths (history_diff.cpp) all read it, and its ORDER
+// sidecar-path predicate (is_piece_sidecar_path, the filter the walk, a
+// commit's touched paths and its tree listing hand to their libgit2 reads in
+// git_repo.cpp) and checkpoint paths (history_diff.cpp) all read it (architect
+// approval 2026-09-27, comment only), and its ORDER
 // is the order the recheck indexes its per-sidecar arrays by (warp markers,
 // phase reset markers, settings) — and the order the refusal below names its
 // first missing member in.
