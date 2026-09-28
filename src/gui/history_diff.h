@@ -1325,7 +1325,11 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
 //
 // `github` IS THE ACT'S OWN READING, handed back for the GitHub status: the
 // reading its fetch-first step took (UpToDate, Ahead, Behind, Diverged,
-// Offline or Refused), or Unchecked when the act ended before that step.
+// Offline or Refused), or Unchecked when the act ended before that step;
+// after a push, UpToDate once the push has moved `refs/remotes/origin/<b>` to
+// the commit the server accepted, Ahead when it failed, and the refs' own
+// reading when the push landed but the tracking ref was left as it stood
+// (GuiGitPush::PushedTrackingUnmoved).
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& repo_root, const std::string& project_directory,
     const std::string& base_name, const std::string& projects_repo,

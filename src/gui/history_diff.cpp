@@ -15,10 +15,12 @@
 #include "warpmarkers.h"
 #include "warpmarkers_parse.h"
 
+#include <stdlib.h>  // mkdtemp
 #include <unistd.h>
 
 #include <algorithm>
 #include <atomic>
+#include <cerrno>
 #include <cstdio>
 #include <filesystem>
 #include <map>
@@ -1004,10 +1006,11 @@ namespace {
 
 // Removes its directory tree when it falls out of scope, on EVERY exit — the
 // refusals, the success, and a throw the allocations below could raise. Its
-// one user is the strict whole-set load's scratch staging
-// (load_commit_sidecars_strict), where the same guarantee written by hand
-// would be one `remove_all` per refusal arm and a leaked directory the first
-// time an arm was added without one.
+// two users are the scratch stagings make_scratch_dir creates (the strict
+// whole-set load's and the pull's reopen gate), where the same guarantee
+// written by hand would be one `remove_all` per refusal arm and a leaked
+// directory the first time an arm was added without one. It is armed only
+// with a directory THIS CALL CREATED, so it never removes one it found.
 struct ScratchDirGuard {
     std::filesystem::path dir;
     explicit ScratchDirGuard(std::filesystem::path d) : dir(std::move(d)) {}
@@ -1019,6 +1022,40 @@ struct ScratchDirGuard {
         std::filesystem::remove_all(dir, ec);
     }
 };
+
+// THE ONE SCRATCH ROOT OWNER (codex round 3 over the git arc, 2026-09-28):
+// a directory under the system temp dir, CREATED EXCLUSIVELY by this call and
+// so NEWLY MADE AND EMPTY — `mkdtemp`, which picks a random suffix for
+// `<stem>-XXXXXX` and creates it with mkdir, retrying on a name that exists,
+// so an existing directory is never accepted. A name built from the pid and a
+// process-local serial is not enough: the temp dir outlives a crash (Android
+// points TMPDIR at persistent app-private storage), a later process can reuse
+// the pid, and staging into a crashed call's leftover directory would hand the
+// loaders files the commit being judged does not carry. Unique across threads
+// and processes by the creation itself. `Made` sets `dir` to the new
+// directory; `CreateFailed` sets it to the pattern tried, `why` to the cause;
+// `NoTempDir` sets `why`.
+enum class ScratchDirMade { Made, NoTempDir, CreateFailed };
+ScratchDirMade make_scratch_dir(const std::string&     stem,
+                                std::filesystem::path& dir,
+                                std::string&           why) {
+    dir.clear();
+    why.clear();
+    std::error_code             ec;
+    const std::filesystem::path temp = std::filesystem::temp_directory_path(ec);
+    if (ec) {
+        why = ec.message();
+        return ScratchDirMade::NoTempDir;
+    }
+    std::string pattern = (temp / (stem + "-XXXXXX")).string();
+    if (::mkdtemp(pattern.data()) == nullptr) {
+        why = std::error_code(errno, std::generic_category()).message();
+        dir = pattern;
+        return ScratchDirMade::CreateFailed;
+    }
+    dir = pattern;
+    return ScratchDirMade::Made;
+}
 
 // The gate's contract and the reason it is ONE predicate live at the header
 // declaration. The body is the `'` act's own validation sequence, moved here
@@ -1076,38 +1113,30 @@ bool load_commit_sidecars_strict_in(const GuiGitRepo&     repo,
     // the bytes is the cheap way to keep the loaders themselves as the only
     // judges.
     //
-    // THE DIRECTORY IS THE CALL'S OWN SCRATCH: the system temp dir, one
-    // per-process per-CALL subdirectory, removed on every exit by the guard.
-    // NEVER the repository (the walk and the `'` act only ever read it) and
-    // NEVER beside the source (the working sidecars are the user's, and a read
-    // must not write near them).
-    //
-    // THE SERIAL IS WHAT MAKES IT PER-CALL RATHER THAN PER-COMMIT (2026-08-07,
-    // with the prefetch worker): pid + short sha collided as soon as two THREADS
-    // could ask about one commit at the same time — the worker gating a
-    // candidate while the main thread runs the `'` act on that same SHA — and
-    // the loser's guard would remove the winner's staged files mid-load. The
-    // counter is process-wide and atomic, so no two calls anywhere can name one
-    // directory.
-    static std::atomic<unsigned long long> scratch_serial{0};
-    std::error_code   ec;
-    const std::string leaf = "warptempo_gui-load-in-place-" +
-                             std::to_string(static_cast<long>(::getpid())) +
-                             "-" + snap.sha.substr(0, 7) + "-" +
-                             std::to_string(scratch_serial.fetch_add(1));
-    const std::filesystem::path scratch =
-        std::filesystem::temp_directory_path(ec) / leaf;
-    if (ec) {
-        return refuse("no temporary directory available: " + ec.message());
-    }
-    ScratchDirGuard guard(scratch);
-    std::filesystem::create_directories(scratch, ec);
-    if (ec) {
+    // THE DIRECTORY IS THE CALL'S OWN SCRATCH: one directory under the
+    // system temp dir that this call creates exclusively (make_scratch_dir,
+    // which owns why a pid-and-serial name was not enough), removed on every
+    // exit by the guard. NEVER the repository (the walk and the `'` act only
+    // ever read it) and NEVER beside the source (the working sidecars are the
+    // user's, and a read must not write near them). PER CALL, not per commit
+    // (2026-08-07, with the prefetch worker): the worker gating a candidate
+    // while the main thread runs the `'` act on that same SHA must never share
+    // a directory, and the exclusive creation is what guarantees it.
+    std::filesystem::path scratch;
+    std::string           why;
+    switch (make_scratch_dir("warptempo_gui-load-in-place-" +
+                                 snap.sha.substr(0, 7),
+                             scratch, why)) {
+    case ScratchDirMade::Made:
+        break;
+    case ScratchDirMade::NoTempDir:
+        return refuse("no temporary directory available: " + why);
+    case ScratchDirMade::CreateFailed:
         failure = path_failure("could not create ", scratch,
-                               scratch.filename().string(),
-                               ": " + ec.message());
+                               scratch.filename().string(), ": " + why);
         return false;
     }
+    ScratchDirGuard guard(scratch);
 
     // Staged under the sidecar's own leaf name, so the loaders see exactly the
     // filename shape they see beside a source. The reason on failure names the
@@ -2238,6 +2267,38 @@ std::vector<std::string> checkpoint_paths(const std::string& project_directory,
     return paths;
 }
 
+// THE STATUS THE REFS SHOW NOW: the checked-out `branch` against
+// `refs/remotes/origin/<branch>` (compare_with_origin), no network — the
+// check's reading after its fetch, and the checkpoint's after a push that
+// left the tracking ref as it stood. Refused and Diverged print their cause on
+// one stderr line; a reading that does not answer is Unchecked.
+GuiGitHubStatus github_status_from_refs(const GuiGitRepo&  repo,
+                                        const std::string& branch) {
+    const GuiGitUpstream up = repo.compare_with_origin(branch);
+    switch (up.reading) {
+    case GuiGitUpstream::Reading::Unreadable:
+        return GuiGitHubStatus::Unchecked;
+    case GuiGitUpstream::Reading::Nonconforming:
+        std::fprintf(stderr, "warptempo_gui: GitHub refused: %s\n",
+                     up.why.c_str());
+        return GuiGitHubStatus::Refused;
+    case GuiGitUpstream::Reading::Gone:
+        return GuiGitHubStatus::Ahead;
+    case GuiGitUpstream::Reading::Compared:
+        break;
+    }
+    if (up.ahead > 0 && up.behind > 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: GitHub diverged: '%s' is %zu ahead and "
+                     "%zu behind 'origin/%s'\n",
+                     branch.c_str(), up.ahead, up.behind, branch.c_str());
+        return GuiGitHubStatus::Diverged;
+    }
+    if (up.behind > 0) return GuiGitHubStatus::Behind;
+    if (up.ahead > 0) return GuiGitHubStatus::Ahead;
+    return GuiGitHubStatus::UpToDate;
+}
+
 }  // namespace
 
 std::string history_checkpoint_title(const std::string& project_directory) {
@@ -2290,8 +2351,11 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //       ref gone).
 //   (4) DIRTY — stage, then commit the three paths under the caller's title;
 //       a failure on either is CommitFailed with libgit2's words on stderr.
-//   (5) PUSH — iff a commit was just made OR the branch already owed one. A
-//       failure is CommittedNotPushed, success is Committed. Clean paths and
+//   (5) PUSH — iff a commit was just made OR the branch already owed one,
+//       through an unnamed remote on the guard's URL, then
+//       `refs/remotes/origin/<branch>` moved explicitly to the commit the
+//       server accepted (GuiGitRepo::push_branch). A failure is
+//       CommittedNotPushed, success is Committed. Clean paths and
 //       nothing to publish is NothingToCommit, and the act runs no mutation at
 //       all.
 //
@@ -2415,7 +2479,10 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // (codex round 2 over the git arc, 2026-09-28; GuiGitTracking): the fetch
     // writes `refs/remotes/origin/<branch>` alone and the comparison reads it
     // alone, so a clone configured to track anything else is refused as the
-    // guard's refusals are — RemoteRefused, the status Refused.
+    // guard's refusals are — RemoteRefused, the status Refused. THE TIP THE
+    // FETCH LEFT is kept (`tracking_before`, empty for a ref GitHub no longer
+    // has): the push at (5) moves the tracking ref only from it.
+    std::string tracking_before;
     {
         auto refuse_tracking = [&github](const std::string& why) {
             std::fprintf(stderr, "warptempo_gui: Checkpoint refused: %s\n",
@@ -2483,6 +2550,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
             }
             github = (up.ahead > 0) ? GuiGitHubStatus::Ahead
                                     : GuiGitHubStatus::UpToDate;
+            tracking_before = up.upstream_sha;
             break;
         }
     }
@@ -2575,15 +2643,20 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     }
 
     // THE DESTINATION IS THE GUARD'S OWN ANSWER (step 1a): this act pushes to
-    // THE URL IT VALIDATED, set on the push's own remote instance (never
-    // written to the clone's config) so the mutable name `origin` is not
-    // resolved again. The named remote still carries the push, so its
-    // remote-tracking ref updates, which is what every later reading compares.
+    // THE URL IT VALIDATED, on the push's own UNNAMED remote instance (never
+    // written to the clone's config), so neither the mutable name `origin` nor
+    // any configured refspec of it takes part. THE ONE TRACKING REF FOLLOWS
+    // EXPLICITLY: push_branch sets `refs/remotes/origin/<branch>` to the
+    // commit the server accepted, only from `tracking_before` (the tip step
+    // 1b's fetch left), and writes no other ref — which is what makes the
+    // UpToDate below the reading every later comparison makes.
     // THE REFSPEC IS THE CAPTURED BRANCH AT BOTH ENDS, never `HEAD` and never a
     // sha: the branch is what the act publishes, and both push arms — the commit
     // it just made and the commits that were already pending — want the same
     // thing sent. Nothing forces.
-    if (!repo->push_branch(branch, destination, diag)) {
+    const GuiGitPush pushed =
+        repo->push_branch(branch, destination, tracking_before, diag);
+    if (pushed == GuiGitPush::Failed) {
         // THE PUSH'S REFUSAL IS THE VERDICT — a remote that has moved since
         // the fetch, a server-side rejection, the time bound, or (only if it
         // changed since the fetch met it) the key or the host key — each in
@@ -2592,6 +2665,18 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                      diag.empty() ? "libgit2 reported nothing" : diag.c_str());
         github = GuiGitHubStatus::Ahead;
         return GuiHistoryCommitOutcome::CommittedNotPushed;
+    }
+    if (pushed == GuiGitPush::PushedTrackingUnmoved) {
+        // PUBLISHED, but the tracking ref was moved by something outside this
+        // process since the fetch (or could not be written), so it is left as
+        // it stands and the status is what the refs now show — never an
+        // UpToDate the ref every comparison reads would contradict.
+        std::fprintf(stderr,
+                     "warptempo_gui: Pushed '%s' to origin, but "
+                     "'origin/%s' was left as it stood (%s)\n",
+                     branch.c_str(), branch.c_str(), diag.c_str());
+        github = github_status_from_refs(*repo, branch);
+        return GuiHistoryCommitOutcome::Committed;
     }
     github = GuiGitHubStatus::UpToDate;
 
@@ -2678,29 +2763,7 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
     case GuiGitFetch::Fetched:
         break;
     }
-    const GuiGitUpstream up = repo->compare_with_origin(branch);
-    switch (up.reading) {
-    case GuiGitUpstream::Reading::Unreadable:
-        return GuiGitHubStatus::Unchecked;
-    case GuiGitUpstream::Reading::Nonconforming:
-        std::fprintf(stderr, "warptempo_gui: GitHub refused: %s\n",
-                     up.why.c_str());
-        return GuiGitHubStatus::Refused;
-    case GuiGitUpstream::Reading::Gone:
-        return GuiGitHubStatus::Ahead;
-    case GuiGitUpstream::Reading::Compared:
-        break;
-    }
-    if (up.ahead > 0 && up.behind > 0) {
-        std::fprintf(stderr,
-                     "warptempo_gui: GitHub diverged: '%s' is %zu ahead and "
-                     "%zu behind 'origin/%s'\n",
-                     branch.c_str(), up.ahead, up.behind, branch.c_str());
-        return GuiGitHubStatus::Diverged;
-    }
-    if (up.behind > 0) return GuiGitHubStatus::Behind;
-    if (up.ahead > 0) return GuiGitHubStatus::Ahead;
-    return GuiGitHubStatus::UpToDate;
+    return github_status_from_refs(*repo, branch);
 }
 
 // ---------------------------------------------------------------------------
@@ -2879,23 +2942,29 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
                          short_sha(to_sha).c_str());
             return GuiHistoryPullOutcome::Unreadable;
         }
-        // THE STAGING, per call like the strict whole-set load's (the serial
-        // and the guard are that function's reasoning): a scratch root, and
-        // inside it a folder named like the piece's own, so a sentence the
-        // dry run composes names `<piece>/<file>` exactly as the reopen would.
-        static std::atomic<unsigned long long> pull_scratch_serial{0};
-        std::error_code ec;
-        const std::filesystem::path scratch_root =
-            std::filesystem::temp_directory_path(ec) /
-            ("warptempo_gui-pull-" +
-             std::to_string(static_cast<long>(::getpid())) + "-" +
-             short_sha(to_sha) + "-" +
-             std::to_string(pull_scratch_serial.fetch_add(1)));
-        if (ec) {
+        // THE STAGING, per call like the strict whole-set load's, in a root
+        // this call creates exclusively (make_scratch_dir: never a crashed
+        // call's leftover, so the dry run judges exactly the files `to_sha`
+        // carries), and inside it a folder named like the piece's own, so a
+        // sentence the dry run composes names `<piece>/<file>` exactly as the
+        // reopen would.
+        std::filesystem::path scratch_root;
+        std::string           why;
+        switch (make_scratch_dir("warptempo_gui-pull-" + short_sha(to_sha),
+                                 scratch_root, why)) {
+        case ScratchDirMade::Made:
+            break;
+        case ScratchDirMade::NoTempDir:
             std::fprintf(stderr,
                          "warptempo_gui: Pull failed: no temporary directory "
                          "to check the checkpoint in (%s)\n",
-                         ec.message().c_str());
+                         why.c_str());
+            return GuiHistoryPullOutcome::Unreadable;
+        case ScratchDirMade::CreateFailed:
+            std::fprintf(stderr,
+                         "warptempo_gui: Pull failed: could not create '%s' "
+                         "(%s)\n",
+                         scratch_root.string().c_str(), why.c_str());
             return GuiHistoryPullOutcome::Unreadable;
         }
         ScratchDirGuard guard(scratch_root);
@@ -2903,12 +2972,13 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
             std::filesystem::path(plan.project_directory).filename().string();
         if (piece_leaf.empty()) piece_leaf = "piece";
         const std::filesystem::path staged = scratch_root / piece_leaf;
-        std::filesystem::create_directories(staged, ec);
-        if (ec) {
+        std::error_code             ec;
+        if (!std::filesystem::create_directory(staged, ec) || ec) {
             std::fprintf(stderr,
                          "warptempo_gui: Pull failed: could not create '%s' "
                          "(%s)\n",
-                         staged.string().c_str(), ec.message().c_str());
+                         staged.string().c_str(),
+                         ec ? ec.message().c_str() : "it already exists");
             return GuiHistoryPullOutcome::Unreadable;
         }
         for (const std::string& path : carried) {

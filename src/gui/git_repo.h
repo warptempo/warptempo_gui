@@ -94,9 +94,10 @@ enum class GuiGitPathStatus {
 
 // THE ONE TRACKING REF (codex round 2 over the git arc, 2026-09-28): the
 // branch `<b>` is compared with `refs/remotes/origin/<b>` AND NOTHING ELSE —
-// the ref fetch_origin writes and push_branch's destination names — never
-// with whatever the branch's configured upstream resolves to through a
-// remote's configured refspec. So the configuration is a precondition, not a
+// the ref fetch_origin and push_branch each write explicitly (the only ref
+// either writes; round 3, 2026-09-28) — never with whatever the branch's
+// configured upstream resolves to through a remote's configured refspec, and
+// no configured `remote.origin.fetch` refspec steers any ref write. So the configuration is a precondition, not a
 // source: the branch must TRACK ORIGIN'S SAME-NAMED BRANCH
 // (`branch.<b>.remote` = `origin` and `branch.<b>.merge` = `refs/heads/<b>`),
 // and anything else — no upstream at all, another remote, another branch — is
@@ -124,6 +125,16 @@ struct GuiGitUpstream {
 // retry fixes; `Unreachable` is every other failure (DNS, connect, the time
 // bound, a dropped session); `Cancelled` is the caller's cancel token.
 enum class GuiGitFetch { Fetched, Unreachable, Refused, Cancelled };
+
+// HOW A PUSH ENDED (GuiGitRepo::push_branch). `Pushed`: the server accepted
+// the branch and `refs/remotes/origin/<branch>` now names what it accepted.
+// `PushedTrackingUnmoved`: the server accepted it, but the tracking ref no
+// longer named the tip the caller's fetch left (something outside this
+// process moved it) or could not be written, so it was left as it stood —
+// published, with the reading unknown until the next fetch. `Failed`: nothing
+// was published that the server confirmed — every failure, a server-side
+// rejection included; `diag` carries the cause.
+enum class GuiGitPush { Pushed, PushedTrackingUnmoved, Failed };
 
 // HOW A FAST-FORWARD ENDED (GuiGitRepo::fast_forward). `NotStarted` and
 // `Conflict` wrote nothing; the three failures after them stopped with the
@@ -256,17 +267,27 @@ public:
                       const std::string& title, std::string& diag);
 
     // PUSH `refs/heads/<branch>` to the same ref at `destination_url` — the
-    // URL the projects-home guard just validated, set on this push alone and
-    // never re-resolved from the remote name or rewritten by an `insteadOf`
-    // rule — through the remote `origin`, so its remote-tracking ref follows.
-    // Never forced: a remote that has moved is refused as non-fast-forward.
-    // SSH ONLY (scp-style or ssh://, port 22 or GitHub's port 443), with the
-    // DEPLOY KEY beside the device config and GitHub's three published host
-    // keys pinned (git_repo.cpp owns all three rules).
-    // False with `diag` for every failure, a server-side rejection included.
-    // NO HOOK RUNS.
-    bool push_branch(const std::string& branch,
-                     const std::string& destination_url, std::string& diag);
+    // URL the projects-home guard just validated, used verbatim (no
+    // `insteadOf` rewrite) — on an UNNAMED remote instance, the fetch's own
+    // construction (codex round 3 over the git arc, 2026-09-28): a push
+    // through the named `origin` makes libgit2 update local refs through
+    // `origin`'s CONFIGURED fetch refspecs after it — measured: a configured
+    // `+refs/heads/main:refs/heads/archive` force-moved a local branch to the
+    // pushed commit and left `refs/remotes/origin/main` where it was — so
+    // nothing in `remote.origin.*` takes part and libgit2 writes no ref. THE
+    // ONE TRACKING REF IS MOVED HERE INSTEAD, explicitly: once the server has
+    // accepted the ref, `refs/remotes/origin/<branch>` is set to the commit
+    // libgit2 negotiated to send, and only if it still names
+    // `tracking_before` — the tip the act's own fetch left, full 40-hex, or
+    // empty for a ref that must not exist. Never forced: a remote that has
+    // moved is refused as non-fast-forward. SSH ONLY (scp-style or ssh://,
+    // port 22 or GitHub's port 443), with the DEPLOY KEY beside the device
+    // config and GitHub's three published host keys pinned (git_repo.cpp owns
+    // all three rules). NO HOOK RUNS. GuiGitPush names the three endings.
+    GuiGitPush push_branch(const std::string& branch,
+                           const std::string& destination_url,
+                           const std::string& tracking_before,
+                           std::string&       diag);
 
     // FETCH ONE BRANCH INTO ITS ONE TRACKING REF: `refs/heads/<branch>` from
     // `source_url` — the URL the projects-home guard just validated — into
