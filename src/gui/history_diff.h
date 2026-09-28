@@ -152,14 +152,14 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // goes through the one git road, GuiGitRepo (git_repo.h — libgit2 in process,
 // no subprocess and no shell), and every route in this module but three asks
 // only its READS — discovery, HEAD, the origin's configured URLs, the walk, a
-// commit's changed paths, its tree and its blobs, the branch against its
-// upstream — and writes no file, no ref and no index entry. The three writers
+// commit's changed paths, its tree and its blobs, the branch against
+// `origin/<branch>` — and writes no file, no ref and no index entry. The three writers
 // call the seam's five MUTATORS, which sit in their own section there, so
 // which calls mutate stays answerable by reading the call sites rather than
 // by trusting a runtime guard: THE COMMIT ACT (commit_history_checkpoint,
 // below) writes the three sidecars into the piece's directory and fetches,
 // stages, commits and pushes; THE GITHUB CHECK (check_github) fetches, which
-// writes the remote-tracking refs and nothing the walk reads; THE PULL
+// writes `refs/remotes/origin/<branch>` and nothing the walk reads; THE PULL
 // (run_history_pull) fast-forwards the branch, its index and its files. THE
 // WALK STILL READS THE LOCAL BRANCH (the paragraph above): a fetch moves
 // `origin/<branch>`, never what `h` walks.
@@ -1193,9 +1193,10 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // one clean ending beside Committed and the caller treats the two alike.
 //
 // CommittedNotPushed — THE BYTES ARE IN THE LOCAL BRANCH AND THE PUSH DID NOT
-// LAND: no deploy key, the key refused, a host key off the pin, a remote that
-// moved in the seconds since the act's fetch (non-fast-forward), a
-// server-side rejection, the time bound. The GitHub status reads Ahead, and
+// LAND, for what only the push can meet: a remote that moved in the seconds
+// since the act's fetch (non-fast-forward), a server-side rejection, the time
+// bound — and the deploy key or the host-key pin only if either changed in
+// those seconds, since the act's own fetch meets them first (RemoteRefused). The GitHub status reads Ahead, and
 // Ctrl+S in the `h` view retries: the act's clean-but-owing arm finds the
 // branch still ahead and pushes it (which is also how a push made IN THE
 // TERMINAL is recognized — the branch is no longer ahead).
@@ -1214,9 +1215,11 @@ std::string history_checkpoint_title(const std::string& project_directory);
 //
 // RemoteUnreachable — the fetch could not reach GitHub.
 //
-// RemoteRefused — GitHub declined this device (no deploy key, the key
-// refused, a host key off the pin), or the projects-home guard refused the
-// clone's remotes.
+// RemoteRefused — GitHub declined this device at the act's own fetch (no
+// deploy key, the key refused, a host key off the pin — the push's credential
+// and pin, met here first), the projects-home guard refused the clone's
+// remotes, or the branch does not track origin's same-named branch
+// (GuiGitTracking, git_repo.h; refused before the fetch).
 enum class GuiHistoryCommitOutcome {
     WriteFailed,
     NothingToCommit,
@@ -1235,16 +1238,18 @@ enum class GuiHistoryCommitOutcome {
 // pulls, and the rest refuse with a card.
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
-//               detached or unborn HEAD, no upstream, a read that did not
-//               answer). Row 8 shows no segment.
+//               detached or unborn HEAD, a read that did not answer). Row 8
+//               shows no segment.
 //   Checking  — a check is on the worker.
 //   UpToDate  — nothing either way.
 //   Ahead     — this branch has commits GitHub has not (a push that failed),
-//               or its upstream's remote-tracking ref is gone.
+//               or `refs/remotes/origin/<branch>` is gone.
 //   Behind    — GitHub has commits this branch has not; the pull's case.
 //   Diverged  — both have moved; fast-forward only, so no in-app answer.
 //   Offline   — the fetch could not reach GitHub.
-//   Refused   — GitHub declined this device, or the guard refused the clone.
+//   Refused   — GitHub declined this device, the guard refused the clone's
+//               remotes, or the branch does not track origin's same-named
+//               branch (GuiGitTracking, git_repo.h).
 enum class GuiGitHubStatus {
     Unchecked,
     Checking,
@@ -1263,8 +1268,11 @@ const char* github_status_word(GuiGitHubStatus status);
 // THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
 // at every project open and every `h` entry: derive the clone from the source
 // (resolve_history_walk_header, the guard included), read the branch, FETCH
-// from the guard's validated fetch url (GuiGitRepo::fetch_origin), and compare
-// the branch with its upstream. The reading, or Unchecked where there is none
+// the branch's one ref from the guard's validated fetch url
+// (GuiGitRepo::fetch_origin — `refs/heads/<branch>` into
+// `refs/remotes/origin/<branch>`, the branch refused first unless it tracks
+// exactly that), and compare the branch with that ref (compare_with_origin).
+// The reading, or Unchecked where there is none
 // (GuiGitHubStatus). Offline and Refused print their cause on one stderr
 // line. `cancel` is the worker's abandon token: a set token ends the fetch at
 // its next callback and answers Unchecked, which nobody reads.
@@ -1347,11 +1355,13 @@ struct GuiHistoryPullPlan {
     bool        touches_open_piece = false;
 };
 
-// Ready: the branch is strictly behind (0 ahead, >0 behind) and the plan is
-// filled. Moved: it is not, and `reading` is what it is instead (UpToDate,
-// Ahead or Diverged; Unchecked for no upstream). Unreadable: a read did not
-// answer.
-enum class GuiHistoryPullPlanVerdict { Ready, Moved, Unreadable };
+// Ready: the branch is strictly behind `refs/remotes/origin/<branch>` (0
+// ahead, >0 behind) and the plan is filled. Moved: it is not, and `reading` is
+// what it is instead (UpToDate, Ahead or Diverged; Unchecked for a detached
+// HEAD). Refused: the branch no longer tracks origin's same-named branch
+// (GuiGitTracking, git_repo.h), `reading` Refused and the cause on stderr.
+// Unreadable: a read did not answer.
+enum class GuiHistoryPullPlanVerdict { Ready, Moved, Refused, Unreadable };
 GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
                                             const std::string&   project_directory,
                                             const std::string&   base_name,
@@ -1363,9 +1373,15 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 // otherwise (Keep) the three keep their working-tree bytes and every other
 // changed path is pulled. It re-reads the branch and the upstream first, so a
 // terminal commit or pull since the press refuses as Moved with nothing
-// written.
+// written — AND HANDS BACK WHAT THE REFS NOW SHOW in `reading` (codex round 2
+// over the git arc, 2026-09-28), which the caller stores as the GitHub status
+// exactly as the press stores an immediate refusal's: the question may have
+// stood for minutes, and a face still saying Behind would spell an act the
+// refs no longer describe. `reading` is Unchecked on every other outcome.
 //   Pulled        — the branch, the index and the files are the upstream's.
 //   Moved         — the branch or the upstream moved since the plan.
+//   Refused       — the branch no longer tracks origin's same-named branch;
+//                   nothing was written.
 //   Unreadable    — a read failed before anything was written.
 //   Conflict      — another path the pull changes has local changes (or an
 //                   untracked file in the way); nothing was written, and
@@ -1384,6 +1400,7 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 enum class GuiHistoryPullOutcome {
     Pulled,
     Moved,
+    Refused,
     Unreadable,
     Conflict,
     FilesFailed,
@@ -1410,4 +1427,5 @@ using GuiHistoryReopenGate = std::function<std::optional<GuiFailure>(
 GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
                                        bool                        reload,
                                        const GuiHistoryReopenGate& reopen_gate,
-                                       std::string&                conflict_piece);
+                                       std::string&                conflict_piece,
+                                       GuiGitHubStatus&            reading);

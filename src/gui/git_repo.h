@@ -92,16 +92,29 @@ enum class GuiGitPathStatus {
     Dirty,        // at least one differs, or is untracked
 };
 
-// HOW THE CHECKED-OUT BRANCH STANDS AGAINST ITS UPSTREAM'S REMOTE-TRACKING
-// REF, as of the last fetch (no network: the ref is what the fetch left).
-// `Compared` carries the counts and the upstream's commit; `NoUpstream` is a
-// branch with none configured (or a detached / unborn HEAD); `Gone` is an
-// upstream configured whose remote-tracking ref does not exist; `Unreadable`
-// is a read that did not answer.
+// THE ONE TRACKING REF (codex round 2 over the git arc, 2026-09-28): the
+// branch `<b>` is compared with `refs/remotes/origin/<b>` AND NOTHING ELSE —
+// the ref fetch_origin writes and push_branch's destination names — never
+// with whatever the branch's configured upstream resolves to through a
+// remote's configured refspec. So the configuration is a precondition, not a
+// source: the branch must TRACK ORIGIN'S SAME-NAMED BRANCH
+// (`branch.<b>.remote` = `origin` and `branch.<b>.merge` = `refs/heads/<b>`),
+// and anything else — no upstream at all, another remote, another branch — is
+// Nonconforming, `why` naming what the configuration says. Unreadable is a
+// configuration that could not be read.
+enum class GuiGitTracking { Conforms, Nonconforming, Unreadable };
+
+// HOW THE CHECKED-OUT BRANCH STANDS AGAINST `refs/remotes/origin/<b>`, as of
+// the last fetch (no network: the ref is what the fetch left). `Compared`
+// carries the counts and the tracking ref's commit; `Nonconforming` is a
+// branch that does not track origin's same-named branch (GuiGitTracking, its
+// `why` carried here); `Gone` is a conforming branch whose tracking ref does
+// not exist; `Unreadable` is a read that did not answer.
 struct GuiGitUpstream {
-    enum class Reading { Compared, NoUpstream, Gone, Unreadable };
+    enum class Reading { Compared, Nonconforming, Gone, Unreadable };
     Reading     reading = Reading::Unreadable;
     std::string upstream_sha;  // Compared only, full 40-hex
+    std::string why;           // Nonconforming only
     std::size_t ahead  = 0;
     std::size_t behind = 0;
 };
@@ -192,18 +205,27 @@ public:
     // THE PRE-FLIGHT over `paths`, each named LITERALLY (no glob matching):
     // Dirty when any differs from the checked-out commit in the index or the
     // working tree, or is untracked. `publication_owed` answers the second
-    // question in the same read — does the checked-out branch OWE ITS UPSTREAM
-    // A PUSH: it is AHEAD of the upstream's remote-tracking ref, or the
-    // upstream is configured and that ref is GONE. A branch with no upstream,
-    // a detached HEAD and an unborn one owe nothing. `diag` carries libgit2's
-    // words on Unavailable.
+    // question in the same read — does `branch` (the act's captured branch)
+    // OWE ORIGIN A PUSH: it is AHEAD of `refs/remotes/origin/<branch>`, or that
+    // ref is GONE (compare_with_origin's reading, the one owner). A branch
+    // that does not track origin's same-named branch is Unavailable, `diag`
+    // naming why — the act has refused that configuration before this read,
+    // so it answers only a configuration changed mid-act. `diag` carries
+    // libgit2's words on every other Unavailable.
     GuiGitPathStatus status_of(const std::vector<std::string>& paths,
+                               const std::string&              branch,
                                bool&                           publication_owed,
                                std::string&                    diag) const;
 
-    // THE BRANCH AGAINST ITS UPSTREAM (GuiGitUpstream above), read from the
-    // local refs alone. `branch` is a short name (head_branch's answer).
-    GuiGitUpstream compare_with_upstream(const std::string& branch) const;
+    // DOES `branch` TRACK ORIGIN'S SAME-NAMED BRANCH (GuiGitTracking above),
+    // read from the configuration alone. `why` is set on Nonconforming.
+    GuiGitTracking branch_tracking(const std::string& branch,
+                                   std::string&       why) const;
+
+    // THE BRANCH AGAINST `refs/remotes/origin/<branch>` (GuiGitUpstream above),
+    // read from the local refs alone, branch_tracking asked first. `branch` is
+    // a short name (head_branch's answer).
+    GuiGitUpstream compare_with_origin(const std::string& branch) const;
 
     // EVERY PATH that differs between two commits' trees, both named by full
     // 40-hex, that `accept` takes — a deletion reporting the path it removed,
@@ -246,16 +268,28 @@ public:
     bool push_branch(const std::string& branch,
                      const std::string& destination_url, std::string& diag);
 
-    // FETCH `origin`'s configured refspec from `source_url` — the URL the
-    // projects-home guard just validated, set on this fetch alone like the
-    // push's destination — so the remote-tracking refs follow the remote. No
-    // tags, no FETCH_HEAD. The push's transport rules exactly: SSH only, the
-    // deploy key, the pinned host keys, the time bound. `cancel`, when not
-    // null, is asked at every callback libgit2 makes (credentials, the host
-    // key, each progress report, each ref update), and a set token ends the
-    // fetch there as Cancelled — so a cancelled fetch writes no ref after the
-    // callback that saw the token. `diag` carries the cause of every failure.
+    // FETCH ONE BRANCH INTO ITS ONE TRACKING REF: `refs/heads/<branch>` from
+    // `source_url` — the URL the projects-home guard just validated — into
+    // `refs/remotes/origin/<branch>`, the ref compare_with_origin reads, by the
+    // EXPLICIT refspec `+refs/heads/<branch>:refs/remotes/origin/<branch>` on
+    // an UNNAMED remote instance (codex round 2 over the git arc, 2026-09-28).
+    // Unnamed, because a named remote handed an explicit refspec still makes
+    // libgit2's "opportunistic" updates through `origin`'s CONFIGURED fetch
+    // refspecs — measured: a configured `+refs/heads/main:refs/heads/hijack`
+    // wrote a local branch — so NOTHING IN `remote.origin.*` BUT THE URL THE
+    // GUARD READ takes part: no configured refspec, no prune, no tag option,
+    // no `insteadOf` rewrite (the URL is used verbatim). THE ONE REF FOLLOWS
+    // THE REMOTE: a branch GitHub no longer advertises removes it (the prune a
+    // pruning fetch would make), so the reading is Gone rather than a stale
+    // tip. No tags, no FETCH_HEAD. The push's transport rules exactly: SSH
+    // only, the deploy key, the pinned host keys, the time bound. `cancel`,
+    // when not null, is asked at every callback libgit2 makes (credentials, the
+    // host key, each progress report, each ref update) and once more before the
+    // prune, and a set token ends the fetch there as Cancelled — so a cancelled
+    // fetch writes no ref after the callback that saw the token. `diag` carries
+    // the cause of every failure.
     GuiGitFetch fetch_origin(const std::string&       source_url,
+                             const std::string&       branch,
                              const std::atomic<bool>* cancel,
                              std::string&             diag);
 

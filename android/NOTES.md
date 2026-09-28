@@ -1633,4 +1633,3 @@ the arc's end. The app also needs the INTERNET permission (the manifest carries
 it since this arc; without it the process is outside the inet group and every
 socket fails with EACCES), a placed clone and the deploy key in
 `files/warptempo_gui/` (platform-seam.md, github-recheck.md).
-

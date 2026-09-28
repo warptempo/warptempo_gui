@@ -139,8 +139,8 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/viewport.cpp
     src/gui/selection.cpp
     src/gui/settings_io.cpp
-    # THE PER-DEVICE PREFERENCES FILE (2026-08-27: gui_scale, projects_path,
-    # projects_repo, last_project; audio_player retired 2026-08-28). GUI-ONLY
+    # THE PER-DEVICE PREFERENCES FILE (2026-08-27; its keys are
+    # kDeviceConfigKeys in device_config.cpp, the one list). GUI-ONLY
     # by construction: warptempo_cli never read any of them, and the file
     # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp

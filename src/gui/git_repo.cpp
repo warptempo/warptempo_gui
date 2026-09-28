@@ -683,8 +683,9 @@ bool GuiGitRepo::is_commit(const std::string& sha) const {
 }
 
 GuiGitPathStatus GuiGitRepo::status_of(const std::vector<std::string>& paths,
-                                       bool&        publication_owed,
-                                       std::string& diag) const {
+                                       const std::string& branch,
+                                       bool&              publication_owed,
+                                       std::string&       diag) const {
     publication_owed = false;
     diag.clear();
 
@@ -716,42 +717,23 @@ GuiGitPathStatus GuiGitRepo::status_of(const std::vector<std::string>& paths,
         if (e != nullptr && e->status != GIT_STATUS_CURRENT) dirty = true;
     }
 
-    // THE PUBLICATION READING: branch → its configured upstream → that
-    // remote-tracking ref (absent = GONE) → ahead of it or not.
-    if (git_repository_head_detached(repo_) == 0) {
-        git_reference* h_raw = nullptr;
-        const int hrc = git_repository_head(&h_raw, repo_);
-        if (hrc == 0) {
-            Owned<git_reference> head(h_raw);
-            OwnedBuf upstream;
-            const int urc = git_branch_upstream_name(
-                &upstream.buf, repo_, git_reference_name(head.get()));
-            if (urc == 0) {
-                git_oid up_oid;
-                const int trc = git_reference_name_to_id(&up_oid, repo_,
-                                                         upstream.buf.ptr);
-                if (trc == GIT_ENOTFOUND) {
-                    publication_owed = true;  // [gone]
-                } else if (trc < 0) {
-                    diag = last_error("could not read the upstream branch");
-                    return GuiGitPathStatus::Unavailable;
-                } else {
-                    const git_oid* local = git_reference_target(head.get());
-                    std::size_t ahead = 0, behind = 0;
-                    if (local == nullptr ||
-                        git_graph_ahead_behind(&ahead, &behind, repo_, local,
-                                               &up_oid) < 0) {
-                        diag = last_error("could not compare with the upstream");
-                        return GuiGitPathStatus::Unavailable;
-                    }
-                    publication_owed = ahead > 0;
-                }
-            } else if (urc != GIT_ENOTFOUND) {
-                diag = last_error("could not read the branch's upstream");
-                return GuiGitPathStatus::Unavailable;
-            }
-        } else if (hrc != GIT_EUNBORNBRANCH && hrc != GIT_ENOTFOUND) {
-            diag = last_error("could not read HEAD");
+    // THE PUBLICATION READING, compare_with_origin's own: the captured
+    // branch against `refs/remotes/origin/<branch>` — ahead of it, or the ref
+    // GONE, owes a push. No branch (a detached or unborn HEAD) owes nothing.
+    if (!branch.empty()) {
+        const GuiGitUpstream up = compare_with_origin(branch);
+        switch (up.reading) {
+        case GuiGitUpstream::Reading::Compared:
+            publication_owed = up.ahead > 0;
+            break;
+        case GuiGitUpstream::Reading::Gone:
+            publication_owed = true;
+            break;
+        case GuiGitUpstream::Reading::Nonconforming:
+            diag = up.why;
+            return GuiGitPathStatus::Unavailable;
+        case GuiGitUpstream::Reading::Unreadable:
+            diag = last_error("could not compare with origin's branch");
             return GuiGitPathStatus::Unavailable;
         }
     }
@@ -914,6 +896,7 @@ bool GuiGitRepo::push_branch(const std::string& branch,
 }
 
 GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
+                                     const std::string&       branch,
                                      const std::atomic<bool>* cancel,
                                      std::string&             diag) {
     diag.clear();
@@ -922,23 +905,30 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
     if (!prepare_remote_session(source_url, state, diag)) {
         return GuiGitFetch::Refused;
     }
-    git_remote* r_raw = nullptr;
-    if (git_remote_lookup(&r_raw, repo_, "origin") < 0) {
-        diag = last_error("no remote 'origin'");
+    if (branch.empty()) {
+        diag = "no branch to fetch";
         return GuiGitFetch::Refused;
     }
-    Owned<git_remote> remote(r_raw);
-    // THE URL IS THE GUARD'S: set on this fetch's own remote instance, never
-    // re-resolved from the configuration or rewritten by an `insteadOf` rule.
-    if (git_remote_set_instance_url(remote.get(), source_url.c_str()) < 0) {
+    // AN UNNAMED REMOTE ON THE GUARD'S URL (git_repo.h): no configured
+    // refspec to update opportunistically, no prune or tag option read from
+    // `remote.origin.*`, and SKIP_INSTEADOF so the URL is used verbatim.
+    git_remote_create_options create;
+    git_remote_create_options_init(&create, GIT_REMOTE_CREATE_OPTIONS_VERSION);
+    create.repository = repo_;
+    create.name       = nullptr;
+    create.flags      = GIT_REMOTE_CREATE_SKIP_INSTEADOF;
+    git_remote* r_raw = nullptr;
+    if (git_remote_create_with_opts(&r_raw, source_url.c_str(), &create) < 0) {
         diag = last_error("could not set the fetch URL");
         return GuiGitFetch::Unreachable;
     }
+    Owned<git_remote> remote(r_raw);
 
     git_fetch_options opts;
     git_fetch_options_init(&opts, GIT_FETCH_OPTIONS_VERSION);
     opts.download_tags     = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
     opts.update_fetchhead  = 0;
+    opts.prune             = GIT_FETCH_NO_PRUNE;
     opts.callbacks.credentials       = remote_credentials;
     opts.callbacks.certificate_check = remote_certificate_check;
     opts.callbacks.sideband_progress = fetch_sideband;
@@ -946,9 +936,14 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
     opts.callbacks.update_refs       = fetch_update_refs;
     opts.callbacks.payload           = &state;
 
-    // The configured refspec (null), which is what moves
-    // refs/remotes/origin/<branch> — the ref every ahead/behind reads.
-    if (git_remote_fetch(remote.get(), nullptr, &opts, nullptr) < 0) {
+    // THE ONE REFSPEC: origin's `<branch>` into the one ref every ahead/behind
+    // reads (compare_with_origin), forced like git's default refspec.
+    const std::string source  = "refs/heads/" + branch;
+    const std::string tracked = "refs/remotes/origin/" + branch;
+    std::string       spec    = "+" + source + ":" + tracked;
+    char*             spec_ptr = spec.data();
+    const git_strarray refspecs{&spec_ptr, 1};
+    if (git_remote_fetch(remote.get(), &refspecs, &opts, nullptr) < 0) {
         if (state.cancelled()) {
             diag = "cancelled";
             return GuiGitFetch::Cancelled;
@@ -961,31 +956,108 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string&       source_url,
         diag = "cancelled";
         return GuiGitFetch::Cancelled;
     }
+
+    // A BRANCH THE REMOTE NO LONGER ADVERTISES leaves the explicit refspec
+    // nothing to fetch, and libgit2 reports that as success with the old
+    // tracking ref standing — so the advertisement libgit2 kept from the
+    // session is asked, and the ref is removed, as a pruning fetch removes it.
+    const git_remote_head** heads = nullptr;
+    std::size_t             count = 0;
+    if (git_remote_ls(&heads, &count, remote.get()) < 0) {
+        diag = last_error("could not read what the remote advertised");
+        return GuiGitFetch::Unreachable;
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+        if (heads[i] != nullptr && heads[i]->name != nullptr &&
+            source == heads[i]->name) {
+            return GuiGitFetch::Fetched;
+        }
+    }
+    git_reference* t_raw = nullptr;
+    const int lrc = git_reference_lookup(&t_raw, repo_, tracked.c_str());
+    if (lrc == GIT_ENOTFOUND) return GuiGitFetch::Fetched;
+    if (lrc < 0) {
+        diag = last_error("could not read the tracking ref");
+        return GuiGitFetch::Unreachable;
+    }
+    Owned<git_reference> stale(t_raw);
+    if (state.cancelled()) {
+        diag = "cancelled";
+        return GuiGitFetch::Cancelled;
+    }
+    if (git_reference_delete(stale.get()) < 0) {
+        diag = last_error("could not remove the stale tracking ref");
+        return GuiGitFetch::Unreachable;
+    }
     return GuiGitFetch::Fetched;
 }
 
-GuiGitUpstream GuiGitRepo::compare_with_upstream(
+GuiGitTracking GuiGitRepo::branch_tracking(const std::string& branch,
+                                           std::string&       why) const {
+    why.clear();
+    if (branch.empty()) {
+        why = "HEAD names no branch";
+        return GuiGitTracking::Nonconforming;
+    }
+    git_config* raw = nullptr;
+    if (git_repository_config_snapshot(&raw, repo_) < 0) {
+        return GuiGitTracking::Unreadable;
+    }
+    Owned<git_config> cfg(raw);
+    // Each key read as git reads it (the last value wins), absent = "".
+    auto read = [&cfg](const std::string& key, std::string& value) {
+        value.clear();
+        OwnedBuf buf;
+        const int rc = git_config_get_string_buf(&buf.buf, cfg.get(),
+                                                 key.c_str());
+        if (rc == GIT_ENOTFOUND) return true;
+        if (rc < 0) return false;
+        value.assign(buf.buf.ptr, buf.buf.size);
+        return true;
+    };
+    std::string remote_name, merge;
+    if (!read("branch." + branch + ".remote", remote_name) ||
+        !read("branch." + branch + ".merge", merge)) {
+        return GuiGitTracking::Unreadable;
+    }
+    const std::string want_merge = "refs/heads/" + branch;
+    if (remote_name == "origin" && merge == want_merge) {
+        return GuiGitTracking::Conforms;
+    }
+    const std::string wanted = "'origin/" + branch + "'";
+    if (remote_name.empty() && merge.empty()) {
+        why = "'" + branch + "' tracks no upstream; it must track " + wanted;
+        return GuiGitTracking::Nonconforming;
+    }
+    const std::string merge_short =
+        (merge.rfind("refs/heads/", 0) == 0) ? merge.substr(11) : merge;
+    why = "'" + branch + "' tracks '" +
+          (remote_name.empty() ? std::string("?") : remote_name) + "/" +
+          (merge_short.empty() ? std::string("?") : merge_short) +
+          "'; it must track " + wanted;
+    return GuiGitTracking::Nonconforming;
+}
+
+GuiGitUpstream GuiGitRepo::compare_with_origin(
         const std::string& branch) const {
     GuiGitUpstream out;
-    if (branch.empty()) {
-        out.reading = GuiGitUpstream::Reading::NoUpstream;
+    switch (branch_tracking(branch, out.why)) {
+    case GuiGitTracking::Conforms:
+        break;
+    case GuiGitTracking::Nonconforming:
+        out.reading = GuiGitUpstream::Reading::Nonconforming;
         return out;
+    case GuiGitTracking::Unreadable:
+        return out;  // Unreadable
     }
     const std::string local_ref = "refs/heads/" + branch;
     git_oid local;
     if (git_reference_name_to_id(&local, repo_, local_ref.c_str()) < 0) {
         return out;  // Unreadable
     }
-    OwnedBuf upstream;
-    const int urc =
-        git_branch_upstream_name(&upstream.buf, repo_, local_ref.c_str());
-    if (urc == GIT_ENOTFOUND) {
-        out.reading = GuiGitUpstream::Reading::NoUpstream;
-        return out;
-    }
-    if (urc < 0) return out;
+    const std::string tracked = "refs/remotes/origin/" + branch;
     git_oid up;
-    const int trc = git_reference_name_to_id(&up, repo_, upstream.buf.ptr);
+    const int trc = git_reference_name_to_id(&up, repo_, tracked.c_str());
     if (trc == GIT_ENOTFOUND) {
         out.reading = GuiGitUpstream::Reading::Gone;
         return out;

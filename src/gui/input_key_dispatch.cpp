@@ -3165,7 +3165,7 @@ void GuiInputHandler::open_history_commit_editor() {
         return;
     case GuiGitHubStatus::Unchecked:
         // No reading at all: the check could not classify this clone (a
-        // detached or unborn HEAD, no upstream, a read that did not answer),
+        // detached or unborn HEAD, a read that did not answer),
         // and its entry line on stderr says which.
         notifications.notify(AppState::NotificationClass::Normal,
                              "GitHub has not been checked");
@@ -3682,6 +3682,16 @@ void GuiInputHandler::run_history_pull_press() {
                              "Pull refused: this device has moved");
         return;
     }
+    // A BRANCH THAT NO LONGER TRACKS ORIGIN'S SAME-NAMED BRANCH (a terminal
+    // edit since the check): the status reads Refused, and the card is the
+    // one Ctrl+S says under that status. The cause is on stderr.
+    if (v == GuiHistoryPullPlanVerdict::Refused) {
+        app.github_status = reading;
+        viewport.invalidate_all();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "GitHub refused this device");
+        return;
+    }
     if (!plan.touches_open_piece) {
         execute_history_pull(plan, /*reload=*/false);
         return;
@@ -3739,8 +3749,9 @@ void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
         return source_load_dry_run(project->source, sidecar_dir);
     };
     std::string                 conflict_piece;
+    GuiGitHubStatus             reading = GuiGitHubStatus::Unchecked;
     const GuiHistoryPullOutcome outcome =
-        run_history_pull(plan, reload, reopen_gate, conflict_piece);
+        run_history_pull(plan, reload, reopen_gate, conflict_piece, reading);
     switch (outcome) {
     case GuiHistoryPullOutcome::Pulled:
         app.github_status = GuiGitHubStatus::UpToDate;
@@ -3749,9 +3760,21 @@ void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
         viewport.invalidate_all();
         if (reload) revert_project(/*question_asked=*/true);
         return;
+    // THE TWO DELAYED REFUSALS take what the refs show NOW (`reading`,
+    // run_history_pull's re-read), as the press's immediate refusals do: the
+    // question may have stood for minutes, and the face must spell what the
+    // next press will do.
     case GuiHistoryPullOutcome::Moved:
+        app.github_status = reading;
+        viewport.invalidate_all();
         notifications.notify(AppState::NotificationClass::Normal,
                              "Pull refused: this device has moved");
+        return;
+    case GuiHistoryPullOutcome::Refused:
+        app.github_status = reading;
+        viewport.invalidate_all();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "GitHub refused this device");
         return;
     case GuiHistoryPullOutcome::Conflict:
         notifications.notify(AppState::NotificationClass::Normal,
