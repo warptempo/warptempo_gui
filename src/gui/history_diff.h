@@ -1406,7 +1406,8 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 //   WouldNotLoad  — RELOAD ONLY: the upstream's sidecar set for the open
 //                   piece fails the strict dry run the reopen would run
 //                   (`reopen_gate`); nothing was written.
-// Every arm but Pulled prints one stderr line.
+// Every arm but Pulled prints one stderr line; FilesFailed adds its recovery
+// on two more.
 enum class GuiHistoryPullOutcome {
     Pulled,
     Moved,

@@ -3127,21 +3127,32 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
                      path.c_str(), diag.c_str());
         return GuiHistoryPullOutcome::Conflict;
     }
-    // EACH LATE FAILURE NAMES THE RECOVERY FOR THE STEP IT STOPPED AT
-    // (GuiGitFastForward): the files are the upstream's (the open piece's
-    // three as Reload or Keep left them) and what is left is to bring the
-    // index and the branch along WITHOUT touching the working tree. With the
-    // index unwritten that is a MIXED reset — HEAD and the index to the
-    // upstream, the files kept — since a soft reset would move HEAD over the
-    // old index and show the pull as staged changes; with only the branch
-    // unwritten, the index is already the upstream's tree and a SOFT reset
-    // moves the branch alone. Neither is run in-app: a step that just failed
-    // on this clone is not retried behind the user's back.
+    // EACH LATE FAILURE NAMES ITS RECOVERY ON STDERR, none run in-app (a step
+    // that just failed on this clone is not retried behind the user's back).
+    // FILES FAILED (step 1 or 2) left an unknown subset of the working tree
+    // the upstream's over an untouched index and branch, so the recovery
+    // takes the files BACK to the index: on the laptop `git restore projects`
+    // in the clone and the pull again; on the tablet, which has no terminal,
+    // `wts setup` from the laptop re-places the clone. The pull is not made
+    // crash-transactional (architect 2026-09-28; github-recheck.md, THE
+    // PULL). INDEX FAILED and BRANCH FAILED left the files the upstream's
+    // (the open piece's three as Reload or Keep left them), and what is left
+    // is to bring the index and the branch along WITHOUT touching the working
+    // tree. With the index unwritten that is a MIXED reset — HEAD and the
+    // index to the upstream, the files kept — since a soft reset would move
+    // HEAD over the old index and show the pull as staged changes; with only
+    // the branch unwritten, the index is already the upstream's tree and a
+    // SOFT reset moves the branch alone.
     case GuiGitFastForward::FilesFailed:
         std::fprintf(stderr,
                      "warptempo_gui: Pull failed: the files were partly "
-                     "updated and '%s' did not move (%s)\n",
-                     branch.c_str(), diag.c_str());
+                     "updated and '%s' did not move (%s)\n"
+                     "warptempo_gui:   on the laptop: 'git -C %s restore "
+                     "projects' in the terminal, then pull again (Ctrl+S "
+                     "in h)\n"
+                     "warptempo_gui:   on the tablet: re-place the clone "
+                     "with 'wts setup' from the laptop\n",
+                     branch.c_str(), diag.c_str(), plan.repo_root.c_str());
         return GuiHistoryPullOutcome::FilesFailed;
     case GuiGitFastForward::IndexFailed:
         std::fprintf(stderr,
