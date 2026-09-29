@@ -321,7 +321,7 @@ struct Viewport {
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
     // TWO callers (re-greped 2026-09-25):
-    // the nav drag's zoom apply_nav_zoom_at
+    // the nav drag's zoom phase apply_nav_zoom_at
     // (pure zoom about the seated pivot — the viewport arrives unpanned) and
     // the two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —

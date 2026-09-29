@@ -133,7 +133,6 @@ void GuiWaveformWorker::worker_loop() {
                 job.area_h,
                 job.inset_px,
                 job.line_px,
-                job.plate_px,
                 *job.audio,
                 job.vp_start,
                 job.painter_spp,

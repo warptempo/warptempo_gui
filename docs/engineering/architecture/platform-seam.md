@@ -63,7 +63,7 @@ contract. The port split them:
 - **B — `GuiInputCore` (`input_core.{h,cpp}`)**, the product's platform-neutral
   input policy, existing ONCE: the touch translation state machine (the
   pan zone's window and the pointer on contact everywhere else, the region
-  hold, the nav frames and their zoom-band bit, the pen's tool tag, the hard-end
+  hold, the nav frames and their ctrl fork, the pen's tool tag, the hard-end
   contract), key-repeat synthesis and the
   bare-`e` left-click emulation, modifier and logical-pointer state, the
   notional-x / capture bookkeeping, the pointer-frame and deferred-motion
@@ -495,19 +495,27 @@ drag coordinates floor instead of truncating.
   four-tier review's R-18(a). Hardware keyboards are out of scope; the owned
   painted keyboard reaches the core through `synthesize_key`.
 - **The S Pen on Android** (architect 2026-09-25; the ruling is `touch.md`'s
-  pen section, AMENDED 2026-09-29 by its head section). The source gate
-  admits a touchscreen source and a stylus source (a mouse or touchpad stays
-  consumed), and `on_motion_event` reads TWO pen facts per event, each
-  through a door of the portable core so no Android type crosses the seam:
-  the TOOL TYPE (STYLUS or ERASER) rides `GuiInputCore::touch_down`'s
-  `GuiTouchTool` argument (Finger is the default the Wayland backend never
-  overrides; the core reads it for one rule, the pen is never a pinch
-  member); and the HOVER actions translate to `pointer_enter` /
-  `pointer_motion` / `pointer_leave` with a `pointer_frame` each
-  (`pen_hovering_` the one owner; hovers are dropped while any touch contact
-  is down and ANY first down, pen or finger, ends a standing hover, so the
-  doors never overlap), which is what runs the hover walk and the tooltip
-  dwell under a hovering pen. THE HOVER READS ONE PLANE since 2026-09-27
+  pen section). The source gate admits a touchscreen source and a stylus
+  source (a mouse or touchpad stays consumed), and `on_motion_event` reads
+  THREE pen facts per event, each through a door of the portable core so no
+  Android type crosses the seam: the TOOL TYPE (STYLUS or ERASER) rides
+  `GuiInputCore::touch_down`'s `GuiTouchTool` argument (Finger is the default
+  the Wayland backend never overrides); the BARREL BUTTON
+  (`AMOTION_EVENT_BUTTON_STYLUS_PRIMARY`, `BUTTON_SECONDARY` accepted beside
+  it) is the CTRL BIT through `set_modifiers` — this backend its second
+  producer, set before the event's delivery and ONLY FOR WHAT THE PEN OWNS
+  (its hover, or a gesture whose owner `GuiInputCore::touch_owner_tool`
+  reports as the pen — an ignored pen beside a finger passes "released"),
+  left unsampled on the pen's own lift (the final leg keeps the stroke's last
+  bit) and on a cancel, and dropped after the pen's lift, at a cancel
+  (unconditionally, by the backend's `pen_ctrl_` record), a hover exit, a
+  finger's first down and focus loss, the `BUTTON_PRESS` / `BUTTON_RELEASE`
+  actions carrying the mid-stroke edges; and the HOVER actions translate to
+  `pointer_enter` / `pointer_motion` / `pointer_leave` with a `pointer_frame`
+  each (`pen_hovering_` the one owner; hovers are dropped while any touch
+  contact is down and ANY first down, pen or finger, ends a standing hover, so
+  the doors never overlap), which is what runs the hover walk and the tooltip dwell under a
+  hovering pen. SINCE 2026-09-27 BOTH PEN RULES READ ONE PLANE
   (raw `AXIS_DISTANCE` counts, through the one predicate
   `pen_report_in_plane`, which owns the plane's latch and is asked once per
   pen-carrying event; WITH HYSTERESIS since the same day's glass pass, a
@@ -516,20 +524,18 @@ drag coordinates floor instead of truncating.
   `kPenPlaneExit` = 100, about 8.5 and 10 mm, constexpr beside the latch in
   the Android backend, the architect's glass-tuned numbers closing the
   same day's tuning phase, whose device keys and startup push are struck;
-  the latch's transitions are touch.md's pen section): a hover or a
-  side-button edge above it ends the hover (`pointer_leave` with
-  `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face). THE BARREL
-  BUTTON IS NOT READ SINCE 2026-09-29 (architect): it was the CTRL BIT
-  through `set_modifiers` from 2026-09-25 — this backend's second producer,
-  sampled for what the pen owned (`touch_owner_tool`, deleted with it) — and
-  two seam members carried the pen's retained zoom anchor
-  (`pen_lift_keeps_zoom_anchor`, `set_pen_zoom_anchor_release_hook`, deleted
-  from both backends); the one-finger zoom and its retained anchor are the
-  portable quarter rule now, GUI-side and identical on both backends
-  (touch.md's head section), and the core tells the GUI's nav end whether it
-  was a real lift (`set_touch_nav_hooks`' `end(lifted)`). VERIFIED ON THE
-  TABLET (architect 2026-09-25): every step of the protocol passed, and hover
-  shows the tooltips.
+  the latch's transitions are touch.md's pen section): a hover
+  or hovering button edge above it ends the hover (`pointer_leave` with
+  `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face) and drops the
+  Ctrl bit, and only an in-plane report is sampled. And two seam members
+  carry THE PEN'S RETAINED ZOOM ANCHOR to the GUI's seat
+  (`TouchNavZoomState`): the query `pen_lift_keeps_zoom_anchor`, which
+  `GuiInputHandler::end_touch_nav` asks at the gesture's end, and
+  `set_pen_zoom_anchor_release_hook`, fired where the anchor dies (the
+  inventory is at its Android declaration); the Wayland twins answer false
+  and never fire. VERIFIED ON THE TABLET (architect 2026-09-25): every step of
+  the protocol passed, the barrel button arrives and zooms, and hover shows
+  the tooltips.
 
 ## The on-screen keyboard
 

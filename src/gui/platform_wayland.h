@@ -225,8 +225,8 @@ public:
     // GuiInputCore::set_touch_nav_hooks, input_core.h.
     void set_touch_nav_hooks(
         std::function<void(const GuiTouchNavFrame&)> update,
-        std::function<void(bool lifted)> end,
-        std::function<GuiTouchNavZone(int x, int y)> pan_zone,
+        std::function<void()> end,
+        std::function<bool(int x, int y)> pan_zone,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end,
@@ -238,6 +238,17 @@ public:
     // TRUE WHILE ANY FINGER IS ON THE GLASS. Contract at
     // GuiInputCore::touch_contact_active, input_core.h.
     bool touch_contact_active() const;
+
+    // THE PEN'S RETAINED ZOOM ANCHOR — two seam members whose producer is the
+    // Android backend's S Pen alone (the contract, the rule and the release
+    // inventory are at platform_android.h's declarations; the GUI half is
+    // TouchNavZoomState, app_state.h). THIS BACKEND HAS NO PEN: the query
+    // answers false, so every touch nav end clears its seat exactly as it
+    // always did, and the release hook is accepted and never fired. They
+    // exist so the one consumer (main.cpp, GuiInputHandler::end_touch_nav)
+    // compiles against either backend unchanged.
+    bool pen_lift_keeps_zoom_anchor() const { return false; }
+    void set_pen_zoom_anchor_release_hook(std::function<void()> /*cb*/) {}
 
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
@@ -370,11 +381,25 @@ public:
     // Contract at GuiInputCore::set_capture_restore_x, input_core.h.
     void set_capture_restore_x(double surface_x);
 
+    // Contract at GuiInputCore::clear_capture_restore_x, input_core.h.
+    void clear_capture_restore_x();
+
+    // Contract at GuiInputCore::set_capture_restore_kind, input_core.h.
+    void set_capture_restore_kind(GuiCursorKind kind);
+
     // Contract at GuiInputCore::set_notional_x_frozen, input_core.h.
     void set_notional_x_frozen(bool frozen);
 
+    // Contract at GuiInputCore::set_notional_pointer_x, input_core.h.
+    void set_notional_pointer_x(double surface_x);
+
     // Contract at GuiInputCore::set_capture_wrap_span, input_core.h.
     void set_capture_wrap_span(double lo, double hi);
+
+    // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
+    // ANSWER TO "WHERE IS THE POINTER?". Contract at
+    // GuiInputCore::notional_pointer_x, input_core.h.
+    double notional_pointer_x() const;
 
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a

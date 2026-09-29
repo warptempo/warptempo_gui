@@ -2340,26 +2340,11 @@ inline int waveform_border_px() {
 // stem's own columns); and the lit plate's inner OUTLINE, an erosion at
 // distance t (outline_bar, render.cpp, t riding the plate job and its
 // fingerprint). The playhead HEAD widens each row by t − 1 on the right so it
-// stays centred on the stem (paint_ruler_row). And the waveform's PLATE
-// COLUMN, through its own owner below (2026-09-29).
+// stays centred on the stem (paint_ruler_row). NOT a reader: the plate
+// column, one device pixel by rule — resolution, not size — with its bar's
+// one-row floor.
 inline int waveform_line_px() {
     return scaled_px(1, 1);
-}
-// THE WAVEFORM PLATE COLUMN'S WIDTH (architect 2026-09-29, an AUDITION): each
-// bar of the plate is this many device columns wide — the line width, so 1 at
-// 100 % (the laptop's plate unchanged by construction) and 2 on the tablet.
-// A PICTURE CHANGE ONLY: the zoom map, the painted grid (q = painter spp,
-// still one device column per grid step), positions, hit testing and every
-// camera are untouched. render_waveform groups the device columns into plate
-// columns ANCHORED TO THE SONG — a plate column is the device columns whose
-// absolute grid index (from the song's frame 0 at the painted q) lies in
-// [G·p, G·p + p) — so a pan by one device column never regroups; a group
-// cut by the plate's left or right edge paints its visible part. The value
-// rides the plate job and its fingerprint beside the line width (the worker
-// reads no scale state). THE ONE OWNER: the rollback is `return 1;`, which
-// is byte for byte the one-device-pixel plate that stood until 2026-09-29.
-inline int waveform_plate_column_px() {
-    return waveform_line_px();
 }
 // THE LINE'S ONE PAINT: columns [col, col + waveform_line_px()) of a strip
 // whose columns are [0, area_w), at window x `area_x`, rows [y0, y1), as ONE
@@ -3069,23 +3054,6 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // pixels by its neighbours' extents and adds no pixel, so the silhouette is
 // unchanged.)
 //
-// A PLATE COLUMN IS `plate_px` DEVICE COLUMNS WIDE (architect 2026-09-29, an
-// audition; p = waveform_plate_column_px(), render.h's one owner, the job's
-// snapshot — the line width, 1 at 100 % and 2 on the tablet). The grid is
-// untouched: a device column is still one grid step, and the plate's
-// columns are GROUPS of p of them ANCHORED TO THE SONG — group G is the
-// device columns whose absolute grid index a = k0 + c (k0 the viewport's
-// lattice index, below) lies in [G·p, G·p + p), so its display span is
-// [g(G·p), g(G·p + p)), the lattice points of its own two ends, and it is
-// ONE READ over that span: one pyramid level chosen for the span's width,
-// one min/max, one gain and inner scale at its centre, one expander
-// multiplier over it. Every device column of the group paints the group's
-// bar. A group the plate's left or right edge cuts paints its visible part
-// alone, the read still its whole span, so a pan by one device column moves
-// the picture by one column and regroups nothing. At p = 1 a group is a
-// column and every expression below reduces to the one-column plate
-// exactly, byte for byte.
-//
 // THE ANTIALIASED RENDERER IS DELETED (architect 2026-08-01, at a side-by-side
 // against a snapshotted AA binary — "subtle but noticeable, I prefer without
 // it"). What went: the Wu-style tip polylines joining adjacent columns' tips,
@@ -3108,11 +3076,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // edge column missing an undrawn neighbour was under-covered against the same
 // audio rendered interior and shifted under a pan. A bar depends on nothing but
 // its own interval, so a column's pixel SET is a pure function of its own
-// group's span, the group a function of the absolute index k0+c alone — two
-// renders of the same columns at the same basis agree exactly. The AUTHORING
-// LATTICE below is untouched and is still what makes that span depend on the
-// global index alone. (With the lamp lit, which of the
-// inner bar's pixels wear its OUTLINE ink reads the neighbouring columns' rows within t —
+// (k0+c) span — two renders of the same columns at the same basis agree
+// exactly. The AUTHORING LATTICE below is untouched and is still what makes
+// that span depend on the global index alone. (With the lamp lit, which of the
+// inner bar's pixels wear its OUTLINE ink reads the two neighbouring columns' rows —
 // THE LIT OUTLINE, below — and at the plate's two side edges the missing
 // neighbour counts as inside, so an edge column's outline can differ from the
 // same audio rendered interior; every plate is a full render since the
@@ -3185,7 +3152,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // THE LIT OUTLINE (architect 2026-09-27) — THE INNER BAR'S TRUE CONTOUR,
 // `outline_px` THICK, ALIASED. `outline_px` is t = waveform_line_px() (render.h,
 // the job's snapshot): 1 at 100 %, 2 on the tablet — the outline is a LINE
-// and scales with gui_scale like the stems. A pixel of the inner's shape (the inner bars of all columns)
+// and scales with gui_scale like the stems, while the plate column stays one
+// device pixel. A pixel of the inner's shape (the inner bars of all columns)
 // is a BORDER pixel iff any pixel within t of it straight left, right, up or
 // down lies outside that shape — an erosion at distance t, the four-neighbour
 // test at t = 1, byte-identical there to the one-pixel contour. The outer bar
@@ -3203,16 +3171,12 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // gain one half; kForegroundGain's static_assert, waveform_gain.cpp) — so
 // every end is a true end of the shape. Each channel's lane is its own shape;
 // the other channel's pixels are never a neighbour. A bar up to 2t px tall
-// comes out all border; the >=1px floor stands. THE ALGORITHM is per DEVICE
-// column, from the row extents of the 2t + 1 device columns around it alone,
-// no 2D scan: a bar's interior is its rows [r0 + t, r1 - t], intersected with
-// the [r0, r1] of every in-plate device column within t on each side; its
-// border is the bar's rows above and below that interior (the whole bar when
-// the interior is empty). With the plate column p = t device columns wide
-// (2026-09-29) the distance t from any device column of a group reaches
-// exactly the two neighbouring groups, so every device column of a group
-// takes the same interior and a side of the contour where a neighbour group
-// is shorter is the whole group, t wide — the line width, no new rule.
+// comes out all border; the >=1px floor stands. THE ALGORITHM is per column,
+// from the row extents of the 2t + 1 columns around it alone, no 2D scan: a
+// bar's interior is its rows [r0 + t, r1 - t], intersected with the
+// [r0, r1] of every in-plate column within t on each side; its border is the
+// bar's rows above and below that interior (the whole bar when the interior
+// is empty).
 // The outline recolours pixels of the bar's own shape and adds none, each
 // written once with the fill's word or the outline's. paint_region_ink lifts
 // outline pixels as it lifts every opaque plate pixel, from the pixel's own
@@ -3318,7 +3282,6 @@ void render_waveform(cairo_surface_t* dest,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
                      int outline_px,
-                     int plate_px,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a waveform_line_px()-wide vertical LINE across `area` at the column

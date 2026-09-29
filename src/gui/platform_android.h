@@ -235,8 +235,8 @@ public:
     // GuiInputCore::set_touch_nav_hooks, input_core.h.
     void set_touch_nav_hooks(
         std::function<void(const GuiTouchNavFrame&)> update,
-        std::function<void(bool lifted)> end,
-        std::function<GuiTouchNavZone(int x, int y)> pan_zone,
+        std::function<void()> end,
+        std::function<bool(int x, int y)> pan_zone,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end,
@@ -248,6 +248,41 @@ public:
     // TRUE WHILE ANY FINGER IS ON THE GLASS. Contract at
     // GuiInputCore::touch_contact_active, input_core.h.
     bool touch_contact_active() const;
+
+    // THE PEN'S RETAINED ZOOM ANCHOR (architect 2026-09-27; touch.md's pen
+    // section): the laptop's Ctrl + left button held while the mouse is
+    // lifted off the table and set down again, carried onto the S Pen. The
+    // platform owns the pen facts (its button, its plane, its contacts) and
+    // the GUI owns the seat (TouchNavZoomState, app_state.h); these two
+    // members are the whole of the traffic between them. The Wayland
+    // backend's twins answer false and never fire, so the laptop is
+    // unchanged by construction.
+    //
+    // THE QUERY — TRUE ONLY WHILE THE PEN'S OWN LIFT IS BEING DELIVERED WITH
+    // ITS SIDE BUTTON HELD (the stroke's last sampled Ctrl bit, pen_ctrl_;
+    // the lift itself is unsampled) and no finger landed during the stroke,
+    // false at every other moment. GuiInputHandler::end_touch_nav asks it:
+    // a one-finger seat standing at that end is RETAINED rather than cleared.
+    bool pen_lift_keeps_zoom_anchor() const { return pen_lift_keeps_anchor_; }
+    // THE RELEASE HOOK — fired (null-safe) where a retained anchor must die,
+    // and this is the inventory (on_motion_event and on_app_cmd, by grep of
+    // release_pen_zoom_anchor):
+    //   (a) A FINGER'S CONTACT — every finger down, at the contact itself.
+    //       A finger landing while the PEN owns a live stroke is an ignored
+    //       contact: this still fires (taking a seat an earlier stroke
+    //       retained, inert on the live stroke's own), and the stroke is
+    //       marked so its lift keeps nothing;
+    //   (b) THE PEN LANDING WITHOUT ITS BUTTON (its DOWN, sampled released);
+    //   (c) THE FIRST IN-PLANE PEN REPORT SHOWING THE BUTTON UP, the plane
+    //       being pen_report_in_plane's latch (a hover report or hovering
+    //       button edge entering at or under kPenPlaneEnter and staying in
+    //       until one rises past kPenPlaneExit, and every contact report).
+    //       A button state reported ABOVE the plane, a HOVER_EXIT, or
+    //       nothing at all (out of range) changes nothing;
+    //   (d) THE HARD ENDS — a CANCEL and focus loss.
+    // The GUI's body (GuiInputHandler::release_pen_zoom_anchor) clears only a
+    // RETAINED seat, so a fire that meets a live gesture's seat is inert.
+    void set_pen_zoom_anchor_release_hook(std::function<void()> cb);
 
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
@@ -277,8 +312,8 @@ public:
     // zwp_pointer_constraints_v1 and feeds relative motion in as unbounded
     // virtual travel, and Android has no cursor to hide, no pointer to lock
     // and no relative stream — a finger is an absolute position or it is
-    // nothing. The gesture that asks for a capture (the nav drag, its pan and
-    // its zoom) then runs on real coordinates, which is the SAME degraded
+    // nothing. The gestures that ask for a capture (the ctrl strip drag and
+    // the grab-pan) then run on real coordinates, which is the SAME degraded
     // path the Wayland backend takes on a compositor advertising neither
     // optional protocol. The core's own capture state is deliberately NOT
     // seeded here — an uncaptured backend must leave pointer_captured() false
@@ -289,11 +324,26 @@ public:
     // Contract at GuiInputCore::set_capture_restore_x, input_core.h.
     void set_capture_restore_x(double surface_x);
 
+    // Contract at GuiInputCore::clear_capture_restore_x, input_core.h.
+    void clear_capture_restore_x();
+
+    // Contract at GuiInputCore::set_capture_restore_kind, input_core.h.
+    void set_capture_restore_kind(GuiCursorKind kind);
+
     // Contract at GuiInputCore::set_notional_x_frozen, input_core.h.
     void set_notional_x_frozen(bool frozen);
 
+    // Contract at GuiInputCore::set_notional_pointer_x, input_core.h.
+    void set_notional_pointer_x(double surface_x);
+
     // Contract at GuiInputCore::set_capture_wrap_span, input_core.h.
     void set_capture_wrap_span(double lo, double hi);
+
+    // THE POINTER'S NOTIONAL POSITION (surface x, px). Contract at
+    // GuiInputCore::notional_pointer_x, input_core.h. The field is live here
+    // too — the finger's translation writes it through the core — so the GUI's
+    // one answer to "where is the pointer?" stays answerable on glass.
+    double notional_pointer_x() const;
 
     // THE ONE DOOR TO THE CURSOR IMAGE, and on Android it has no image behind
     // it: there is no pointer, so the kind is REMEMBERED (the core's policy,
@@ -493,6 +543,14 @@ private:
     // down arms), so a first down's synthesized entry motion never meets a
     // pointer already "in".
     bool pen_hovering_ = false;
+    // THE STANDING CTRL BIT WAS SET BY THE PEN'S BUTTON (set_pen_ctrl's
+    // record): true from a sampled pen event reporting the button, while the
+    // pen owns what it would steer, until the pen's lift, a cancel, a hover
+    // exit or any pen report above the GUI's plane, a finger's first down or
+    // focus loss clears it. The clears read
+    // this record rather than the clearing event's own stylus metadata, so a
+    // cancel that no longer enumerates the pen still drops the bit.
+    bool pen_ctrl_ = false;
     // THE PEN IS A CONTACT ON THE GLASS: true from a down whose acting
     // pointer is the pen until its own lift, a cancel or focus loss. KEYED ON
     // THE ACTIONS, never on the distance axis (the driver writes distance 0
@@ -507,6 +565,14 @@ private:
     // owner only the hard ends write it, OUT: a cancel and focus loss, which
     // clear it unconditionally as they clear pen_on_glass_.
     bool pen_in_plane_ = false;
+    // A FINGER LANDED DURING THE PEN'S LIVE STROKE (release inventory (a) at
+    // set_pen_zoom_anchor_release_hook): set at such a finger's down, reset
+    // at the pen's first down; the stroke's lift then keeps no anchor.
+    bool pen_stroke_shared_ = false;
+    // pen_lift_keeps_zoom_anchor's answer: set immediately around the pen's
+    // own touch_up and false everywhere else.
+    bool pen_lift_keeps_anchor_ = false;
+    std::function<void()> pen_zoom_anchor_release_hook_;
 
     // THE FIRST on_resize_ FIRE IS OWED RATHER THAN MADE. init() adopts a
     // window that already exists (android_main waits for it), which is BEFORE
@@ -675,16 +741,24 @@ private:
     // Returns 1 when the event was consumed, 0 to let the system have it.
     int32_t on_input_event(struct AInputEvent* event);
     void on_motion_event(struct AInputEvent* event);
+    // THE PEN'S SIDE BUTTON THROUGH THE MODIFIER DOOR — the ctrl bit set to
+    // `held`, shift and alt carried through unchanged, super false (this
+    // backend's constant); a no-op when the bit already stands, and a
+    // release is a no-op unless the pen set the bit (pen_ctrl_ above). The
+    // door's second producer (the contract at GuiInputCore::set_modifiers).
+    void set_pen_ctrl(bool held);
     // END A PEN HOVER — the core's pointer_leave and its frame, iff one
     // stands (pen_hovering_ above).
     void end_pen_hover();
-    // THE GUI'S PLANE — the one predicate the pen's hover rule reads (the
-    // hover doors), and the owner of the plane's latch (pen_in_plane_): it
-    // UPDATES the latch as it answers, so it is asked exactly once per
-    // pen-carrying event (on_motion_event's one `pen_in_plane` const, its
-    // only caller). The two thresholds (kPenPlaneEnter / kPenPlaneExit), the
-    // transitions and the measured scale are at its definition,
-    // platform_android.cpp.
+    // THE GUI'S PLANE — the one predicate both pen rules read (the hover
+    // doors and the retained anchor's release), and the owner of the plane's
+    // latch (pen_in_plane_): it UPDATES the latch as it answers, so it is
+    // asked exactly once per pen-carrying event (on_motion_event's one
+    // `pen_in_plane` const, its only caller). The two thresholds
+    // (kPenPlaneEnter / kPenPlaneExit), the transitions and the measured
+    // scale are at its definition, platform_android.cpp.
     bool pen_report_in_plane(const struct AInputEvent* event, int32_t masked,
                              size_t pen_index);
+    // Fire the release hook (set_pen_zoom_anchor_release_hook), null-safe.
+    void release_pen_zoom_anchor();
 };

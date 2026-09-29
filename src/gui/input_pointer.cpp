@@ -266,10 +266,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // mode's allowlist and `c` is its own vocabulary — which the derived
     // partition answers with nothing hand-listed. THE STEPPED ZOOM BUTTONS
     // (bare `=` / `-`) WERE REMOVED 2026-09-25 (architect): zoom is on every
-    // surface — then the Ctrl+drag on the waveform, the two-finger pinch and
-    // the S Pen's button-held drag; since 2026-09-29 the drag from the
-    // waveform's zoom band on every surface, beside the pinch. ONE ADMITS A
-    // MODIFIER, SHIFT
+    // surface — the Ctrl+drag on the waveform, the two-finger pinch, the S
+    // Pen's button-held drag. ONE ADMITS A MODIFIER, SHIFT
     // (redesign_button_shift_admits): Full zoom out since 2026-09-22, its
     // shift-click or long press dispatching Shift+0, RESET TRIM; Center is
     // refused a modified click at the band gate. NEITHER REPEATS: the
@@ -692,11 +690,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // 2026-09-26, redesign_button_ctrl_admits /
     // redesign_button_ctrl_shift_admits): a modified press spells the
     // button's own key, so the ctrl-click dispatches Ctrl+Tab, the tab
-    // switch, and the ctrl-shift press Ctrl+Shift+Tab, the paired march — a
-    // real keyboard's modifiers (the S Pen's side button carried them on
-    // glass from 2026-09-26 until it stopped being the Ctrl bit, 2026-09-29).
-    // The tab row's roads to the same two chords stand beside these, and on
-    // glass they are the roads. The reverse cycle's other spelling, IsoLeftTab, is
+    // switch, and the ctrl-shift press Ctrl+Shift+Tab, the paired march — on
+    // glass the S Pen's side button with a tap and with a long press. The
+    // tab row's roads to the same two chords stand beside these. The reverse cycle's other spelling, IsoLeftTab, is
     // deliberately NOT a row: the dispatch is synthesized, so it goes out in
     // the Tab spelling every reader accepts. It does NOT repeat: its long
     // press is its shift (a held repeat would outrank it, ToolbarChord::repeats).
@@ -919,7 +915,7 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // horizontal zoom ... was designed to unify the motions for zoom on both
 // devices"): off a flag, a motionless click or tap there places the playhead
 // and the marker lane's empty-stretch double-click creates, and EVERY DRAG
-// DOES NOTHING — no grab-pan, no drag zoom, no shift sweep. The FLAG BOXES
+// DOES NOTHING — no grab-pan, no ctrl zoom, no shift sweep. The FLAG BOXES
 // carve themselves out (point_on_placement_lanes below, and the band walks'
 // own flag claims), and the TRIM BAR is a disjoint y-band that never answers
 // true here (it has its own claim and its own cue). Deliberately NOT the
@@ -959,9 +955,8 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
 // live views' being the same rect. The ruler and the marker lane's empty
 // stretches were its lane members from 2026-08-12 until 2026-09-25, when they
 // became placement surfaces (point_on_placement_lanes above). On it plain
-// drag = the grab-pan from the top and bottom quarters and the drag zoom from
-// the middle half (the quarter rule, nav_point_in_zoom_band below), motionless
-// click = the half's act, shift+drag = the sweep.
+// drag = grab-pan, motionless click = the half's act, shift+drag = the sweep,
+// ctrl+drag = the zoom.
 //
 // The waveform BAND spans the FULL WINDOW WIDTH (top.w), not the effective
 // width: the <=15 px inert right gutter counts as waveform by the user's
@@ -970,52 +965,19 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
 // off-deployment). The TRIM BAR, the lanes and the flexible GAP band are
 // outside it.
 //
-// FOUR READERS, re-derived by grep 2026-09-29: the press router's SHIFT sweep
-// claim, the pointer cursor map's Pan/Zoom zone, the `h` view's own press
-// router, and the TOUCH PAN ZONE (touch_point_in_pan_zone, the one-finger
-// pan surface by ruling, which must not drift from the mouse's — so a finger
-// on the lanes resolves to the pointer translation, where a tap places and a
-// drag does nothing). (Its CTRL zoom claim, the fifth, went with the Ctrl+drag
-// zoom, 2026-09-29.) The plain press's own arm is the band walk in
-// on_button_press rather than this predicate, because it also has to pick the
-// release act.
+// FIVE READERS, re-derived by grep 2026-09-25: the press router's SHIFT sweep
+// claim, its CTRL zoom claim, the pointer cursor map's Pan/Zoom zone, the `h`
+// view's own press router, and the TOUCH PAN ZONE (touch_point_in_pan_zone,
+// the one-finger pan surface by ruling, which must not drift from the
+// mouse's — so a finger on the lanes resolves to the pointer translation,
+// where a tap places and a drag does nothing). The plain press's own arm is
+// the band walk in on_button_press rather than this predicate, because it
+// also has to pick the release act.
 bool point_on_nav_surface(const AppState& app, int x, int y) {
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     return x >= area.x && x < top.x + top.w &&
            y >= area.y && y < area.y + area.h;
-}
-
-// THE WAVEFORM'S QUARTERS — THE ONE OWNER OF THE ZOOM BAND (architect
-// 2026-09-29, the quarter rule, on both devices, in both audio views and in
-// the `h` view; inverted 2026-09-29 at his first look): the waveform's
-// PAINTED height (waveform_area, the rect the plate is drawn in) splits in
-// quarters, and the MIDDLE HALF is the ZOOM BAND — a plain drag that begins
-// there is the drag zoom — while the TOP and BOTTOM quarter are the PAN BAND,
-// whose drag is the grab-pan. Asked only of a point the caller already knows
-// is on the navigation surface (the x span and the surface's own membership
-// are point_on_nav_surface's), so it reads y alone.
-// THE ARITHMETIC IS EXACT QUARTERS IN INTEGERS, with no division to round:
-// with r = y − area.y and h = area.h, a ROW is in the PAN band iff it lies
-// WHOLLY inside an outer quarter — 4·(r+1) <= h (the top quarter, [0, h/4))
-// or 4·r >= 3·h (the bottom quarter, [3h/4, h)) — and in the zoom band
-// otherwise, 4·(r+1) > h and 4·r < 3·h. So a row straddling a quarter line
-// falls to the ZOOM band on either side, and the two pan quarters are always
-// the same height, ⌊h/4⌋ rows each: at the laptop's 500 px rows 0..124 and
-// 375..499 pan and 125..374 zoom; at the tablet's 769, 192 rows each pan and
-// rows 192..576 zoom.
-// FOUR READERS, by grep 2026-09-29: the live press router's plain waveform
-// arm and the `h` view's (each stashing the answer on the pending as
-// ScrollDragState::zoom_band), the pointer cursor map (Zoom over the band, Pan
-// over the outer quarters), and the touch zone query (touch_nav_zone, whose
-// answer the platform holds for the stream as GuiTouchNavFrame::zoom_band).
-// The band is decided at the DOWN on every road and never re-asked
-// mid-gesture.
-bool nav_point_in_zoom_band(const AppState& app, int y) {
-    const GuiRect area = waveform_area(app);
-    const int64_t r = static_cast<int64_t>(y) - area.y;
-    const int64_t h = area.h;
-    return 4 * (r + 1) > h && 4 * r < 3 * h;
 }
 
 // Active-domain playhead frame at click column `col`: the single-rounding
@@ -2139,13 +2101,14 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // mode is PER-ZONE, and since 2026-08-07 it is the ONLY per-zone consumer
     // left — read-only was the other, and its trim refusals are deleted with the
     // ruling that trim is band rather than authored content. Under the mode the
-    // Pan and the Zoom (the plain drags of the mode's whole navigation surface,
-    // by band) stay live — they are its navigation
+    // Pan and the Zoom (the plain and ctrl drags on the mode's whole navigation
+    // surface) stay live — they are its navigation
     // vocabulary — while
     // the endcap/bridge drags and the two ctrl bound-set clicks are consumed
     // no-ops, so their cues must go. This term is what takes them: the ctrl arm
-    // and the ctrl+shift arm fall to the Arrow they return everywhere else;
-    // the plain arm takes the Arrow below. (The mode-scoped SCRUB cue this paragraph used to carry is
+    // falls to the surface's own Zoom-or-Arrow question and the ctrl+shift arm
+    // to the Arrow it already returns everywhere else; the plain arm takes the
+    // Arrow below. (The mode-scoped SCRUB cue this paragraph used to carry is
     // gone with the Scrub kind itself — 2026-08-13, the two halves becoming one
     // surface: Pan covers the whole waveform in every view, so there is no
     // crosshair left to scope.)
@@ -2161,20 +2124,19 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // waveform — both halves, every view — and nothing else. The lower half
     // joined 2026-08-13 when the press-time scrub became the motionless
     // release's act, which left the halves differing in that act alone. It is
-    // the plain drag's surface, the PAN from its top and bottom quarters and
-    // the ZOOM from its middle half (the quarter rule, 2026-09-29), and the two
-    // cues split it the same way. THE RULER AND THE MARKER LANE WEAR THE ARROW
+    // the plain drag's PAN surface and the ctrl drag's ZOOM surface, and both
+    // cues cover it whole. THE RULER AND THE MARKER LANE WEAR THE ARROW
     // (architect 2026-09-25, the lanes leaving the surface on both devices):
     // they are PLACEMENT SURFACES now, a motionless click their one act and
     // no drag armed there, and a click carries no cue anywhere in this map —
     // so they fall to the top strip's plain Arrow below, with no term of
-    // their own, as they do under ctrl.
+    // their own, as they do under ctrl (no zoom there any more).
     const bool on_nav_surface = point_on_nav_surface(app, x, y);
 
     // (ALT IS UNNAMED: its pointer vocabulary is EMPTY since 2026-08-12 — the
     // grab-pan it carried moved onto the plain drag and the alt press claims
     // nothing anywhere, so alt falls to the modified-combination Arrow below.)
-    // CTRL-EXACT: two claims, and the press path's own order between them.
+    // CTRL-EXACT: three claims, and the press path's own order between them.
     // Over the TRIM BAR ctrl sets the BEGIN bound — at the LIFT since
     // 2026-08-15, its crossing then handing over to a single-bound drag on that
     // bound (set_trim_bound_at_click_then_arm_drag) — boundary extension by
@@ -2182,18 +2144,26 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // Arrow (no
     // wheel zooms anywhere since 2026-09-14, every modified wheel a
     // swallowed no-op (GuiInputHandler::on_wheel), and the map answers what a
-    // PRESS would do in any case, no wheel being cued anywhere).
-    // Ctrl's other top-strip claim is the marker membership
+    // PRESS would do in any case, no wheel being cued anywhere);
+    // over the
+    // NAVIGATION SURFACE it is THE ONE NAV DRAG'S ZOOM MODIFIER (the
+    // live-ctrl model, 2026-08-14 — ScrollDragState): the hover cue promises
+    // exactly what a ctrl press or a mid-drag ctrl press buys, the zoom, on
+    // the surface that covers BOTH waveform halves and nothing else. Ctrl's
+    // other top-strip claim is the marker membership
     // toggle, which is not a drag and has no cue — the flag carve-out above.
-    // OVER THE NAVIGATION SURFACE CTRL IS THE ARROW since 2026-09-29: the
-    // Ctrl+drag zoom is removed (the zoom is the plain drag from the zoom
-    // band), so a ctrl press there arms nothing and promises nothing — the
-    // strict modifier rule's silent no-op, in the `h` view as everywhere.
+    // The `h` view ADMITS the zoom (its navigation vocabulary), so the cue
+    // stands in there over the view's own nav surface.
+    // (MID-GESTURE the map never runs — the capture hides the cursor for the
+    // drag's whole life, so a live ctrl edge shows nothing until the release,
+    // whose restored kind the mode switches re-stamp; the
+    // live-gesture-keeps-its-cue exception is for VISIBLE-cursor drags and
+    // needed no revision.)
     if (mods.ctrl && !mods.alt && !mods.shift) {
         if (trim_write_gestures_live)
             return trim_bound_click_frame(/*is_begin=*/true, x)
                        ? GuiCursorKind::TrimBoundBegin : GuiCursorKind::Arrow;
-        return GuiCursorKind::Arrow;
+        return on_nav_surface ? GuiCursorKind::Zoom : GuiCursorKind::Arrow;
     }
     // CTRL+SHIFT-EXACT: the TRIM BAR is its ONE claim in the whole product — the
     // END bound set, the begin set's mirror — so it takes the END cap's cue there
@@ -2213,24 +2183,17 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
 
     // PLAIN-EXACT from here.
     //
-    // THE NAVIGATION SURFACE WEARS ITS DRAG'S CUE, BY BAND (architect
-    // 2026-09-29, the quarter rule): the ZOOM over the middle half — the cue
-    // the Ctrl+drag zoom wore, promising the drag zoom a press there begins —
-    // and the PAN over the top and bottom quarters, the grab-pan's own. The one
-    // owner (nav_point_in_zoom_band) is the one the press stashes, so cue and
-    // gesture agree by construction, and the laptop shows the bands. The
-    // motionless click needs no cue, exactly as no click anywhere carries one,
-    // and that covers BOTH of the halves' click acts (the upper half's
-    // playhead placement and the lower half's audition scrub) in either band.
-    // That is the WHOLE waveform, in every view, and since 2026-09-25 nothing
-    // in the top strip: the ruler and the marker lane's empty stretches are
-    // placement surfaces, whose motionless click needs no cue for the same
-    // reason, and which arm no drag for a cue to promise. (IN THE DRAG the
-    // capture hides the cursor, and its release restores the band's own kind,
-    // stamped at the crossing.)
-    if (on_nav_surface)
-        return nav_point_in_zoom_band(app, y) ? GuiCursorKind::Zoom
-                                              : GuiCursorKind::Pan;
+    // THE NAVIGATION SURFACE WEARS THE PAN — the cue promises the drag, which
+    // is what the plain drag does there now; the motionless click needs no cue,
+    // exactly as no click anywhere carries one, and that covers BOTH of the
+    // halves' click acts (the upper half's playhead placement and the lower
+    // half's audition scrub). That is the WHOLE waveform, in every view — "the
+    // hand shows up in both the top and the bottom half" (architect
+    // 2026-08-13) — and since 2026-09-25 nothing in the top strip: the ruler
+    // and the marker lane's empty stretches are placement surfaces, whose
+    // motionless click needs no cue for the same reason, and which arm no
+    // drag for a cue to promise.
+    if (on_nav_surface) return GuiCursorKind::Pan;
     if (inside_top) {
         // THE TRIM BAR BAND, RESOLVED THROUGH THE ROUTER'S OWN TWO OWNERS
         // (architect 2026-08-03, closing the band-wide cue this used to paint):
@@ -2387,8 +2350,8 @@ void GuiInputHandler::refresh_pointer_cursor(GuiInputState mods) {
         pointer_cursor_kind(app.last_mouse_x, app.last_mouse_y, mods));
 }
 
-// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the zoom pivot's seat, its
-// re-derived column and the stem's restore column share, and the same bounds
+// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the notional column projection
+// and the zoom pivot's re-derived column share, and the same bounds
 // render_strip_anchor_stem draws the stem inside.
 static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     const double col_max =
@@ -2396,6 +2359,53 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     if (col < 0.0)     col = 0.0;
     if (col > col_max) col = col_max;
     return col;
+}
+
+// THE POINTER'S NOTIONAL COLUMN — the zoom pivot SEAT's one source, and A
+// PURE PROJECTION of the platform's notional pointer position into the
+// waveform's own bounds. The pivot seats WHEREVER THE CURSOR IS at the
+// ctrl-down, visible or invisible, and asks nothing about where the release
+// will put it; what the seat then STORES is the song frame under this column
+// (the ruling, the superseded seat that did ask, and why the held quantity is
+// a frame rather than this column are at ScrollDragState::anchor_sample).
+// NO STATE, NO ACCUMULATION, NO FORK ON WHETHER A CAPTURE IS LIVE:
+// the platform's position already answers both cases (uncaptured nothing is
+// virtual, so it simply IS the delivered position; captured it is the raw
+// relative stream accumulated and clamped per event), so this only changes
+// space — window x to waveform column — and re-clamps in the bounds THIS layer
+// owns, the platform knowing nothing about the waveform.
+// THAT THERE IS ONLY ONE POSITION IS THE POINT (codex round 17): a clamped
+// column accumulated HERE advanced once per DELIVERED motion, on the net
+// travel of a whole coalesced pointer frame, while the platform's advanced per
+// RAW event — and the two answers differ at a wall (raw +20 then -8 at the
+// right edge), permanently and silently, since interior motion preserves the
+// offset. The full record is at GuiInputCore::notional_pointer_x_.
+// Read on demand at each seat (the ctrl-armed press and every ctrl-down edge),
+// so it is current by construction: under a capture the raw events of the
+// frame being delivered have already been accumulated, and the settled-state
+// tail sees everything.
+// THE TWO CLAMPS COMPOSE, and the cost is bounded and correct: the platform
+// pins into the WINDOW and this pins into the WAVEFORM, whose rect starts at
+// x 0 and is the window width floored to a multiple of 16 — so the only span
+// where they disagree is the inert right gutter, at most 15 px, and a pointer
+// parked out there honestly has no waveform column of its own. The column
+// therefore holds at the last one until the pointer comes back onto the
+// waveform, which is what a projection of a real position means.
+// SO THE STEM AND THE CURSOR RESTORE CAN DIFFER BY THAT GUTTER — the stem
+// clamps into the WAVEFORM and the restore into the WINDOW — and NOTHING
+// PROMISES THEY AGREE: the stem is simply where the cursor was, not a
+// prediction of where it will go, so this is a difference and not an
+// inconsistency. It is ZERO PIXELS at any window width that is a multiple of
+// 16, which is every width either host runs (1920 and 1024, and 2560/3840
+// besides), so it is reachable only under a hand resize to an odd width. It is
+// NOT to be engineered around, and in particular the restore path takes no
+// waveform clamp: the gutter is a real place on the window even though it is
+// not a place on the waveform, and a pan-only release must be able to put the
+// cursor back there.
+double GuiInputHandler::nav_notional_col() const {
+    const GuiRect wf_area = waveform_area(app);
+    return clamp_col_into_waveform(
+        wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
 }
 
 // TELL THE CAPTURED POINTER ITS WRAP SPAN — the waveform's bounds, between
@@ -2423,11 +2433,17 @@ void GuiInputHandler::tell_capture_wrap_span() const {
 
 // THE ZOOM STEM'S COLUMN X — its column's ORIGIN in surface coordinates, not
 // a pixel centre, and the name says so because that distinction is the whole
-// reason this owner is shaped the way it is. One caller: the zoom body's
-// per-event restore stamp (apply_nav_zoom_at), which adds the +0.5 a cursor
-// wants — the pixel convention is the consumer's, the COLUMN is this owner's,
-// derived after the apply's edge rebind so the stem and the restored cursor
-// cannot name different columns.
+// reason this owner is shaped the way it is. One owner, two callers: the zoom
+// body's per-event restore stamp and the ctrl-up handover that hands this same
+// column to the pointer's notional position (sync_nav_drag_mode).
+// WHAT IS SHARED IS THE COLUMN, because that is the quantity that must never
+// diverge — one derivation, so the stem and the cursor cannot name different
+// columns. That is the sent-vs-stamped risk this owner exists to close, and it
+// is a WHOLE-COLUMN risk (a second derivation could read a stale viewport, or
+// the anchor before its edge rebind), never a sub-pixel one.
+// WHAT IS NOT SHARED IS THE PIXEL CONVENTION. A cursor position wants the
+// CENTRE of a pixel; a pointer position wants the coordinate. Each consumer
+// adds what it needs, at its own site.
 // RECOMPUTING FROM THE ANCHOR AFTER AN APPLY REPRODUCES THE COLUMN THAT APPLY
 // PIVOTED AT, INCLUDING A REBOUND ONE: the edge trick writes
 // anchor_sample = vp + clamped_col·spp, so this derivation inverts it exactly
@@ -2452,10 +2468,98 @@ double GuiInputHandler::nav_stem_column_x() const {
            clamp_col_into_waveform(wf_area, col);
 }
 
-// THE NAV DRAG'S ZOOM, one event of a ZOOM-BAND drag (the quarter rule —
-// contract at ScrollDragState, app_state.h): dx zooms plain linear off the
-// LIVE level about the seated pivot, and dy is DISCARDED — the same axis the
-// pan reads, with the BAND deciding what horizontal travel MEANS rather than
+// THE NAV DRAG'S ZOOM/PAN MODE SYNC — one body, two callers (the contract and
+// the reason there are two are at the declaration; both re-seat directions are
+// at ScrollDragState, app_state.h). Within the live gesture CTRL ALONE is read
+// — shift and alt bind nothing mid-drag and ride along inert.
+void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
+    ScrollDragState& sd = app.scroll_drag;
+    // A PLACEMENT LANE'S PENDING HAS NO ZOOM PHASE (2026-09-25): ctrl
+    // arriving over a held ruler or marker-lane press seats no pivot and
+    // paints no stem — the lanes arm no drag of either kind.
+    if (!sd.active || sd.placement_only || mods.ctrl == sd.zooming) return;
+    sd.zooming = mods.ctrl;
+    if (sd.zooming) {
+        // CTRL MEANS ONE THING: IT SEATS THE STEM WHERE THE CURSOR IS, FULL
+        // STOP (architect 2026-08-14, from the rig, undoing his own ctrl-down
+        // pop of hours earlier along with the whole teleport-on-clamp family:
+        // "I want to undo that idea"). The pop existed because a runaway pan
+        // used to leave the pointer PINNED at a wall, where a pivot can show
+        // only half of what a zoom is for; the hidden cursor now WRAPS to the
+        // waveform's opposite bound instead of pinning, so it is never out
+        // there to be brought back and the edge has nothing left to do but seat
+        // (GuiInputCore::notional_pointer_x_ carries the wrap's record).
+        //
+        // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
+        // persist-across-toggles experiment and its reason are recorded at
+        // ScrollDragState::anchor_sample). The notional column IS the
+        // pointer's clamped column, projected from the platform's one notional
+        // position at this instant, so the seat needs nothing kept current for
+        // it — and what is STORED is the song frame under that column, through
+        // the apply's own conversion so the seat and this phase's first event
+        // cannot disagree.
+        sd.anchor_sample = static_cast<double>(app.viewport_start_sample) +
+                           nav_notional_col() *
+                               painter_samples_per_pixel(
+                                   app, audio, waveform_area(app));
+        // The restore X is NOT stamped here: the stem override exists to land
+        // the released cursor on a stem the edge-rebind has pinned, and the
+        // zoom phase's own applies set it. Until one runs, the notional
+        // position is still the honest restore.
+        if (sd.moved) set_strip_capture_restore_kind(GuiCursorKind::Zoom);
+    } else if (sd.moved) {
+        // THE ZOOM PHASE'S DRIFT IS HANDED TO THE POINTER HERE, and that is
+        // what makes the override's clear honest: the fallback it falls back
+        // TO is now the stem. The phase froze the notional x at the ctrl-down
+        // column while the stem's column slid with the song frame it holds
+        // (every time clamp_viewport_start saturates), so clearing the
+        // override alone left the two naming different pixels and the cursor
+        // landed on whichever the user's release ORDER selected. Telling the
+        // platform the position — the fifth member of the told-not-inferred
+        // family, freeze-independent by class because it states a POSITION
+        // rather than accumulating a delta (GuiPlatform::set_notional_pointer_x)
+        // — makes both orders agree: with ctrl still held the release lands on
+        // the stem through the OVERRIDE, after a ctrl-up it lands on the stem
+        // through the NOTIONAL POSITION, and a pan that follows advances from
+        // there.
+        // NOT CONDITIONAL ON A CLAMP HAVING HAPPENED: where nothing saturated
+        // the stem never left the notional column, so this writes the value
+        // that was already there and costs nothing — asking would be a second
+        // predicate over a quantity that already answers.
+        // Ordering against the freeze release at this body's tail does not
+        // matter, and is stated rather than relied on silently: this write is
+        // not gated by the freeze (only the relative stream's accumulation is).
+        // WHAT IS HANDED OVER IS THE COLUMN'S OWN COORDINATE, not the pixel
+        // centre: a pointer position is not a pixel. So the value written back
+        // here is exactly the value the next ctrl-down seat reads back through
+        // nav_notional_col(), and the handover is idempotent under repeated
+        // ctrl cycles inside one capture — that is why no ratchet exists,
+        // rather than why one is tolerated.
+        set_strip_capture_notional_x(nav_stem_column_x());
+        clear_strip_capture_restore_x();
+        set_strip_capture_restore_kind(GuiCursorKind::Pan);
+    }
+    // THE POINTER'S X FREEZES FOR THE ZOOM PHASE AND RESUMES FOR THE PAN
+    // (architect 2026-08-14: the zoom locks the x position). Unconditional
+    // here — the platform's own capture guard answers a sub-threshold edge,
+    // and the crossing re-asserts what those edges could not reach. THE
+    // GESTURE'S ARITHMETIC IS UNTOUCHED EITHER WAY, and that separation is the
+    // whole reason a single bit can do this: both phases difference last_x off
+    // the UNFROZEN TRAVEL LEDGER, so the zoom keeps its unlimited lateral
+    // travel while the pointer's clamped NOTIONAL position simply stops
+    // advancing — the level spends those pixels and the position must not
+    // spend them again.
+    set_strip_capture_notional_x_frozen(sd.zooming);
+    // The stem's paint or erase: a mode switch is a discrete edge, so full
+    // waveform-area damage (the arm's own shape). This is what makes the stem
+    // vanish AT the ctrl-up rather than at the next motion.
+    viewport.invalidate_waveform_area();
+}
+
+// THE NAV DRAG'S ZOOM PHASE, one event (the live-ctrl model — contract at
+// ScrollDragState, app_state.h): dx zooms plain linear off the LIVE level
+// about the seated pivot, and dy is DISCARDED — the same axis the pan phase
+// reads, with the modifier deciding what horizontal travel MEANS rather than
 // which axis is live (architect 2026-08-14, THE ROTATION).
 // THE SIGN — RIGHT ZOOMS IN, LEFT ZOOMS OUT — is `zoom_level - dx/rate`, dx
 // being positive to the right and a SMALLER level being deeper in. Its
@@ -2471,19 +2575,22 @@ double GuiInputHandler::nav_stem_column_x() const {
 // AND THE POINTER'S OWN X IS FROZEN WITH IT, which is a SEPARATE STATEMENT
 // (architect 2026-08-14, from the rig: "I've been operating under the
 // assumption that the zoom control would lock the x position"). The rotation
-// makes it MORE necessary: the zoom SPENDS its lateral travel on the level,
+// makes it MORE necessary: this phase SPENDS its lateral travel on the level,
 // and the pointer's notional position must not spend the same pixels a second
 // time — nor could it, without capping a zoom at the window's width, since the
 // notional position clamps into the surface where the travel ledger does not.
-// The freeze is asserted once, at the threshold crossing (on_motion), and
-// lives in the platform, which owns the position; the ledger is untouched.
+// The freeze is asserted at the mode edges (sync_nav_drag_mode) and lives in
+// the platform, which owns the position; the ledger is untouched.
 // The viewport itself never moves here (a pure zoom pivots about the anchor's
 // column), so no wall clamp is needed on it — the resting viewport is already
 // chokepoint-legal, and apply_strip_drag_zoom re-clamps downstream. last_x
-// stays current here exactly as in the pan, both differencing the same
-// quantity from the crossing on.
+// stays current in this phase exactly as in the pan phase, which is the
+// ctrl-up switch's whole rebase: the first plain event after a switch
+// measures its dx from the pointer's own position, so nothing can jump — both
+// phases difference the SAME quantity, so the rebase holds on both sides of
+// the edge.
 // `y` IS UNREAD HERE, and deliberately: the rotation left this gesture no
-// vertical term at all (the pan has none either). The parameter stays
+// vertical term at all (the pan phase has none either). The parameter stays
 // because its callers hand the motion event's pair straight through.
 void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     (void)y;
@@ -2506,8 +2613,11 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     const double anchor_col = rebind_zoom_pivot_into_waveform(sd.anchor_sample);
 
     // Drive the capture's release-restore x to the stem, the strip drag's own
-    // rule, through the column's one owner (nav_stem_column_x, above), read
-    // after the rebind so the cursor lands on the stem as painted.
+    // rule; a later pan phase clears it back to the notional x at its switch —
+    // having first HANDED that switch this same column, through the one owner
+    // both sites read (nav_stem_column_x, above). Recomputing there rather
+    // than passing anchor_col along is what keeps the ctrl-up handover and this
+    // stamp from drifting apart.
     // THE +0.5 IS ADDED HERE AND NOT IN THE OWNER: the cursor is sent to the
     // CENTRE of the stem's pixel, which is a convention belonging to the
     // cursor and not to the column.
@@ -2519,12 +2629,11 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
 }
 
 // THE NAV DRAG'S LEVEL RULE — one owner, two readers: the pointer nav drag's
-// zoom (apply_nav_zoom_at) and the one-finger touch zoom
-// (apply_touch_nav_update's zoom-band arm — "port the fork, reuse the
-// applier, no second zoom rule", 2026-09-25; the band decides it since
-// 2026-09-29). dx zooms plain linear
+// zoom phase (apply_nav_zoom_at) and the one-finger touch zoom
+// (apply_touch_nav_update's ctrl arm, the S Pen's button, 2026-09-25: "port
+// the fork, reuse the applier, no second zoom rule"). dx zooms plain linear
 // off the LIVE level, RIGHT zooming in (`zoom_level - dx/rate` — the sign's
-// derivation from the pinch is at the zoom's contract), pre-clamped
+// derivation from the pinch is at the zoom phase's contract), pre-clamped
 // into the chokepoint's own [effective floor, effective ceiling] window exactly as
 // every apply_strip_drag_zoom caller pre-clamps. The divisor is the RESOLVED
 // rate — device px per level at the live gui_scale — and never the authored
@@ -2542,7 +2651,7 @@ double GuiInputHandler::nav_drag_zoom_level(double dx) const {
 }
 
 // THE ZOOM PIVOT'S COLUMN UNDER THE LIVE VIEWPORT, with the Ableton EDGE
-// TRICK — one owner, three readers: the nav drag's zoom, the pinch and
+// TRICK — one owner, three readers: the nav drag's zoom phase, the pinch and
 // the one-finger touch zoom (apply_touch_nav_update), each holding its own
 // SONG-FRAME pivot (ScrollDragState::anchor_sample, TouchNavZoomState). The
 // deleted strip drag's own step, minus its pan term: a zoom never moves the
@@ -2593,26 +2702,18 @@ double GuiInputHandler::rebind_zoom_pivot_into_waveform(
 
 // THE TOUCH NAVIGATION BODY — two-finger frames and the phone model's
 // single-finger frames land here alike; contract, the ONE FINGER PANS,
-// TWO FINGERS ZOOM ruling (and the one-finger zoom from the zoom band), delivery-shape
+// TWO FINGERS ZOOM ruling (and the one-finger zoom under ctrl), delivery-shape
 // justification and refusal rationale at the declaration (input_handler.h).
 // One delivered frame = at most one placement through the strip-drag family's
 // own application chokepoint.
 void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // THE FRAME'S MEANING, three and only three: TWO fingers are the PINCH;
-    // ONE finger whose stream came down in the waveform's ZOOM BAND is THE
-    // ONE-FINGER ZOOM (architect 2026-09-29, the quarter rule — the nav drag's
-    // own zoom-band arm, ScrollDragState, on the glass; the frame's band is
-    // ignored on two fingers); one finger from the pan band is the PAN. The
-    // fork keys on the band, never the tool: a finger and the pen are one
-    // road, and the band is the down's, held for the whole stream.
-    const bool one_finger_zoom = !f.two_finger && f.zoom_band;
-    // A PAN FRAME OR A PINCH FRAME DISSOLVES THE RETAINED ANCHOR (contract at
-    // AppState::retained_zoom_anchor): either is a gesture that did not
-    // become a zoom-band drag. Bookkeeping, like the seat's clear below, and
-    // for the same reason ABOVE the refusal: a refused frame still says what
-    // the gesture is. A one-finger zoom frame keeps it — it is what that
-    // frame's seat takes over below.
-    if (!one_finger_zoom) dissolve_retained_zoom_anchor(app, viewport);
+    // ONE finger under the ctrl bit is THE ONE-FINGER ZOOM (2026-09-25, the S
+    // Pen's side button — the nav drag's own live-ctrl fork, ScrollDragState,
+    // carried onto the glass; the frame's ctrl is ignored on two fingers); one
+    // finger without it is the PAN. The fork keys on the bit, never the tool:
+    // a fingertip simply has no ctrl to hold.
+    const bool one_finger_zoom = !f.two_finger && f.ctrl;
     // THE SEATED PIVOT IS CLEARED BY ANY FRAME WHOSE MEANING IS NOT THE
     // SEAT'S — a pan frame, or a zoom of the other kind (the seat records its
     // kind, TouchNavZoomState::one_finger) — and that clear LEADS THE BODY:
@@ -2626,22 +2727,34 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // survivor's pan would let a later upgrade zoom about a song frame the
     // fingers had long since left behind. Refusing to navigate is not refusing
     // to notice that the pinch ended.
-    // THE CLEAR OWES THE ERASE since the pinch became an anchor stem producer
-    // (2026-08-14) — and that is exactly why it is a body with an early return
-    // rather than an assignment here: this line can run on EVERY frame, while
-    // the stem must be rubbed out once, on the frame the seat actually dies
-    // (contract at clear_touch_zoom_seat).
+    // THE CLEAR OWES THE ERASE since the pinch became the anchor stem's third
+    // producer (2026-08-14) — and that is exactly why it is a body with an
+    // early return rather than an assignment here: this line runs on EVERY
+    // one-finger frame, while the stem must be rubbed out once, on the frame
+    // the seat actually dies (contract at clear_touch_zoom_seat).
     // AND THE DOWNGRADE REACHES THIS LINE BY CONSTRUCTION: the platform
     // delivers one single-finger frame at the two-to-one transition even when
     // both of its deltas are no-ops (the exemption at set_touch_nav_hooks'
     // update contract), so a survivor left standing still cannot keep the dead
     // pinch's pivot seated and its stem painted under one finger — which is
-    // what let a later upgrade zoom about the OLD song point. (A zoom-band
-    // stream's downgrade returns to the one-finger zoom, which re-seats at the
-    // survivor below.)
+    // what let a later upgrade zoom about the OLD song point.
+    // THE ONE-FINGER ZOOM REACHES THIS LINE AT BOTH CTRL EDGES BY
+    // CONSTRUCTION TOO: the platform delivers one exempt frame carrying the
+    // new bit at every ctrl edge under a live single-finger nav (the same
+    // exemption's second clause), so a ctrl-up clears the seat and erases the
+    // stem at the edge rather than at the next motion — the nav drag's own
+    // edge behaviour (sync_nav_drag_mode).
     if ((!f.two_finger && !one_finger_zoom) ||
         app.touch_nav_zoom.one_finger != one_finger_zoom)
         clear_touch_zoom_seat(app, viewport);
+    // A SEAT THE PEN'S LIFT RETAINED IS A LIVE GESTURE'S AGAIN from the first
+    // frame that survives the clear above — which, for the pen's next
+    // button-held landing, is its first one-finger zoom frame: the seat is of
+    // its own kind, so nothing clears and nothing re-seats below, and the
+    // zoom continues about the same song frame (contract at
+    // TouchNavZoomState, app_state.h). Whether it outlives THIS gesture is
+    // decided afresh at this gesture's end.
+    app.touch_nav_zoom.retained = false;
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
@@ -2688,10 +2801,10 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // discarded outright, which is what kills the accordion, and a
     // single-finger frame carries no distance to zoom by. The one-finger
     // side's 1.0 RESTATES the model rather than guarding — the platform
-    // already pins the ratio there, one finger having no finger gap. FROM THE
-    // ZOOM BAND THE ONE FINGER'S TRAVEL IS THE ZOOM'S instead of the pan's
+    // already pins the ratio there, one finger having no finger gap. UNDER
+    // CTRL THE ONE FINGER'S TRAVEL IS THE ZOOM'S instead of the pan's
     // (zoom_dx), the nav drag's own rotation: the same horizontal travel, the
-    // band deciding what it MEANS.
+    // modifier deciding what it MEANS.
     const double eff_dx    = (f.two_finger || one_finger_zoom) ? 0.0 : f.dx;
     const double eff_ratio = f.two_finger ? dist_ratio : 1.0;
     const double zoom_dx   = one_finger_zoom ? f.dx : 0.0;
@@ -2726,30 +2839,22 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // drifted to by then rather than at the point the fingers grabbed, and no
     // stem appeared until then either. Nothing about the seat's VALUE changed
     // here — only when it is taken.
-    // THE ONE-FINGER ZOOM SEATS ON THE SAME LINE, and in one of two ways.
-    // WITH A RETAINED ANCHOR STANDING (AppState::retained_zoom_anchor — a
-    // zoom-band drag lifted before this one, by the mouse or on the glass)
-    // IT TAKES THAT ANCHOR OVER: the same song frame, no re-seat, the stem
-    // unmoved (its column is the same frame's), and the edge rebind below
-    // applies as on any frame. Otherwise it seats at the finger's point when
-    // the zoom began: the PREVIOUS centroid column (x - dx) — on the stream's
-    // FIRST frame, which folds the whole travel since the down, the DOWN
-    // point, the mouse's own seat-at-the-press; on a zoom-band downgrade's
-    // transition frame (dx 0) the survivor itself.
+    // THE ONE-FINGER ZOOM SEATS ON THE SAME LINE, at the finger's point: the
+    // PREVIOUS centroid column (x - dx), which is the finger's position when
+    // the zoom began — on the ctrl edge's exempt frame (dx 0) the finger
+    // itself, the pointer drag's "the pivot seats where the cursor is at the
+    // ctrl-down"; on a single nav whose FIRST frame already carries the bit
+    // (the button held at the down, then the slop crossed) the DOWN point,
+    // the ctrl-armed press's own seat-at-the-press.
     if ((f.two_finger || one_finger_zoom) && !app.touch_nav_zoom.seated) {
         TouchNavZoomState& z = app.touch_nav_zoom;
-        if (one_finger_zoom && app.retained_zoom_anchor) {
-            z.anchor_sample = *app.retained_zoom_anchor;
-            app.retained_zoom_anchor.reset();
-        } else {
-            const double seat_col =
-                static_cast<double>(f.x) - (one_finger_zoom ? f.dx : 0.0);
-            z.anchor_sample = vp + seat_col * spp_old;
-        }
+        const double seat_col =
+            static_cast<double>(f.x) - (one_finger_zoom ? f.dx : 0.0);
+        z.anchor_sample = vp + seat_col * spp_old;
         z.seated        = true;
         z.one_finger    = one_finger_zoom;
-        // THE SEAT OWES ITS FIRST FRAME'S DAMAGE, which is the mouse zoom's
-        // own rule (its seat at the crossing, on_motion) reaching the glass —
+        // THE SEAT OWES ITS FIRST FRAME'S DAMAGE, which is the mouse arm's own
+        // rule (arm_nav_zoom_press) reaching the pinch —
         // the seat is the anchor stem's gate since 2026-08-14
         // (paint_strip_drag_anchor, paint_handler.cpp) and it is NOT free. A
         // seating frame is not even an APPLIED frame any more (it is exactly
@@ -2805,7 +2910,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         anchor_sample = vp + (static_cast<double>(f.x) - eff_dx) * spp_old;
         anchor_col    = static_cast<double>(f.x);
     } else {
-        // A ZOOM — TWO FINGERS, OR ONE FROM THE ZOOM BAND — PIVOTS ABOUT THE POINT ON
+        // A ZOOM — TWO FINGERS, OR ONE UNDER CTRL — PIVOTS ABOUT THE POINT ON
         // THE WAVEFORM THE GESTURE GRABBED, held for the phase's life: seated
         // above (on the phase's FIRST unrefused frame, whether or not that
         // frame applies anything), then re-derived as a COLUMN against the
@@ -2814,8 +2919,8 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // together still applies nothing — it only seats — while the one
         // finger's travel is the zoom itself (zoom_dx).
         TouchNavZoomState& z = app.touch_nav_zoom;
-        // THE EDGE TRICK, through its one owner (the nav drag's zoom reads the
-        // same body): a column pushed outside [0, W-1] pins at the
+        // THE EDGE TRICK, through its one owner (the nav drag's zoom phase
+        // reads the same body): a column pushed outside [0, W-1] pins at the
         // edge pixel and REBINDS the held frame to that pixel's content, which
         // is what keeps the zoom's focus on screen exactly as it does for the
         // mouse.
@@ -2832,8 +2937,8 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // callers).
     // THE ONE-FINGER ZOOM TAKES THE NAV DRAG'S OWN LEVEL RULE instead
     // (nav_drag_zoom_level — linear in travel at the gui_scale-resolved rate,
-    // RIGHT zooming in), so the glass's zoom-band drag and the mouse's are
-    // one rule, not two.
+    // RIGHT zooming in), so the pen's drag and the mouse's ctrl drag are one
+    // rule, not two.
     double new_level = 0.0;
     if (one_finger_zoom) {
         new_level = nav_drag_zoom_level(zoom_dx);
@@ -2870,23 +2975,12 @@ void clear_touch_zoom_seat(AppState& app, Viewport& viewport) {
     viewport.invalidate_waveform_area();
 }
 
-// THE RETAINED ZOOM ANCHOR'S DISSOLVE AND ITS ERASE (contract at the
-// declaration, input_handler.h; the record and the caller inventory at
-// AppState::retained_zoom_anchor): the early return makes the damage fire
-// once, and the damage is owed because a dissolve lands where nothing else
-// repaints the waveform.
-void dissolve_retained_zoom_anchor(AppState& app, Viewport& viewport) {
-    if (!app.retained_zoom_anchor) return;
-    app.retained_zoom_anchor.reset();
-    viewport.invalidate_waveform_area();
-}
-
-void GuiInputHandler::end_touch_nav(bool lifted) {
+void GuiInputHandler::end_touch_nav() {
     // Any end commits, and every applied frame already rebuilt synchronously;
     // the one deferred piece is the playback predictor (mid-gesture frames
     // skip the resync exactly as the strip drag's do) — the grab-pan release's
     // own tail.
-    // AND THE ZOOM'S SEATED PIVOT IS CLEARED HERE, the gesture's one GUI-side
+    // AND THE PINCH'S SEATED PIVOT IS CLEARED HERE, the gesture's one GUI-side
     // record since 2026-08-14 (TouchNavZoomState, app_state.h — the old "every
     // frame is applied whole and forgotten" is retired with it). Every end
     // reaches this one body — a finger lift, wl_touch.cancel and
@@ -2895,23 +2989,33 @@ void GuiInputHandler::end_touch_nav(bool lifted) {
     // clear_touch_zoom_seat because the clear owes the STEM'S ERASE: an end
     // rebuilds nothing of its own, so without the damage a hard end would
     // leave the pivot mark painted over a settled view.
-    // A ONE-FINGER ZOOM'S SEAT AT THE FINGER'S OWN LIFT IS HANDED ON FIRST
-    // (architect 2026-09-29, the quarter rule; contract at
-    // AppState::retained_zoom_anchor): it becomes the RETAINED ANCHOR, so the
-    // next drag that begins in the zoom band continues about the same frame,
-    // and the stem stays — the retained record paints the same column the
-    // seat did, so the handover owes no damage. A pinch's seat is never
-    // retained, and a HARD END (`lifted` false: a cancel, capability or focus
-    // loss) retains nothing, the platform having taken a contact the user
-    // never lifted.
+    // THE ONE END THAT KEEPS THE SEAT (architect 2026-09-27; contract at
+    // TouchNavZoomState, app_state.h): the pen lifting with its side button
+    // held leaves a ONE-FINGER seat standing, marked retained, so the next
+    // button-held landing zooms on about the same anchor — the laptop's Ctrl
+    // held while the mouse is lifted and set down. The pen facts are the
+    // platform's and it answers them here, true only inside the pen's own
+    // lift on the Android backend (GuiPlatform::pen_lift_keeps_zoom_anchor);
+    // the Wayland backend answers false, so the laptop clears at every end
+    // exactly as before. Nothing on screen changes at a retention, so it owes
+    // no damage; the stem the seat gates simply stays.
     TouchNavZoomState& z = app.touch_nav_zoom;
-    if (lifted && z.seated && z.one_finger) {
-        app.retained_zoom_anchor = z.anchor_sample;
-        z = TouchNavZoomState{};
-    } else {
+    if (z.seated && z.one_finger && gui.pen_lift_keeps_zoom_anchor())
+        z.retained = true;
+    else
         clear_touch_zoom_seat(app, viewport);
-    }
     if (playback.is_playing()) playback.resync_predictor();
+}
+
+void GuiInputHandler::release_pen_zoom_anchor() {
+    // A RETAINED SEAT ALONE: a seat a live gesture holds is that gesture's to
+    // clear (its own frames and its end), so a release reaching one — a pen
+    // report showing the button up mid-stroke, whose ctrl edge has already
+    // cleared it, or a finger landing on a live pen stroke, which the
+    // platform marks so that stroke's lift keeps nothing — changes nothing.
+    // The erase is clear_touch_zoom_seat's.
+    if (!app.touch_nav_zoom.retained) return;
+    clear_touch_zoom_seat(app, viewport);
 }
 
 // The pan-zone query's body (contract at the declaration): THE NAVIGATION
@@ -2997,16 +3101,6 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     return point_on_nav_surface(app, x, y);
 }
 
-// THE ZONE QUERY'S WHOLE ANSWER (contract at the declaration): the zone above,
-// then the BAND through the one owner the mouse's press reads too
-// (nav_point_in_zoom_band), so a finger and the mouse split the waveform at
-// the same rows. Surface geometry only, like the zone.
-GuiTouchNavZone GuiInputHandler::touch_nav_zone(int x, int y) const {
-    if (!touch_point_in_pan_zone(x, y)) return GuiTouchNavZone::Off;
-    return nav_point_in_zoom_band(app, y) ? GuiTouchNavZone::ZoomBand
-                                          : GuiTouchNavZone::PanBand;
-}
-
 // --- The touch region former (the hold on the pan zone) --------------------
 //
 // Pan-primary's touch half (architect 2026-08-12, the eighth glass ruling) —
@@ -3036,12 +3130,6 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // refused begin arms nothing — the update/end hooks then no-op on the
     // drag's own !active guard, so the refused stream is dead rather than a
     // fallback pointer drag (the pan gestures' model).
-    // A REGION HOLD DISSOLVES THE RETAINED ZOOM ANCHOR, ahead of every gate
-    // (architect 2026-09-29; contract at AppState::retained_zoom_anchor): the
-    // hold did not become a zoom-band drag, whether or not the former then
-    // begins — the pan and pinch frames' own bookkeeping-above-the-refusal
-    // rule.
-    dissolve_retained_zoom_anchor(app, viewport);
     if (app.prompt.active) return;
     // THE RENDER PLAYER'S, THE PICKER'S AND THE STATS PANEL'S VEILS
     // (2026-08-28; the panel joined 2026-09-03), restated here for the gesture
@@ -4845,29 +4933,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
 
-    // THE RETAINED ZOOM ANCHOR DISSOLVES AT EVERY PRESS THAT DOES NOT ARM A
-    // ZOOM-BAND PENDING (architect 2026-09-29, the quarter rule; contract and
-    // the whole inventory at AppState::retained_zoom_anchor). ONE EXIT GUARD
-    // rather than a clause per claim, so a press route added later cannot
-    // forget it: whatever this body does — a veil's swallow, a chrome arm, a
-    // flag click, a pan-band pending, a shift sweep, a modifier's no-op — the
-    // anchor goes unless THIS press armed the plain navigation pending in the
-    // zoom band, which keeps it until its own verdict (the crossing takes it
-    // over; a motionless release or an unmoved end dissolves it). A press
-    // that lands while a pending already stands (a second button) did not arm
-    // one, so it dissolves too.
-    struct DissolveUnlessZoomBandArmed {
-        GuiInputHandler& h;
-        const bool pending_before;
-        ~DissolveUnlessZoomBandArmed() {
-            const bool armed_zoom_band = !pending_before &&
-                                         h.app.scroll_drag.active &&
-                                         h.app.scroll_drag.zoom_band;
-            if (!armed_zoom_band)
-                dissolve_retained_zoom_anchor(h.app, h.viewport);
-        }
-    } const dissolve_guard{*this, app.scroll_drag.active};
-
     // THE NOTIFICATION CARDS, ABOVE EVERY GATE AND EVERY VEIL (architect
     // 2026-08-29): a press on a published card is consumed whole — arms
     // nothing, moves nothing, lands no playhead, opens no drag, reaches
@@ -5855,16 +5920,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
-        // marker claim below); on the TRIM BAR it is the BEGIN bound set (the
-        // claim after it). EVERYWHERE ELSE IT IS A STRICT NO-OP — THE
-        // NAVIGATION SURFACE INCLUDED since 2026-09-29 (architect): the
-        // waveform's ctrl press was THE ONE NAV DRAG'S CTRL ENTRY from
-        // 2026-08-14, opening the drag in its zoom phase, and it is REMOVED
-        // with the live-ctrl model — the zoom is the plain drag from the
-        // waveform's middle half now (the quarter rule at
-        // ScrollDragState), one sentence for the mouse, a finger and the pen.
-        // (The ctrl+waveform selection clear was retired 2026-07-23, and the
-        // playhead jump that briefly rode the ctrl press, 2026-08-05..06.)
+        // marker claim below). On the NAVIGATION SURFACE — the waveform, either
+        // half, and nothing else (the RULER and the MARKER lane's empty
+        // stretches were on it from 2026-08-12 and left it on both devices
+        // 2026-09-25, a ctrl press there arming nothing) — it is THE ONE NAV
+        // DRAG'S CTRL ENTRY since 2026-08-14
+        // (arm_nav_zoom_press; the live-ctrl model at ScrollDragState): the
+        // same drag the plain press arms, opened in the ZOOM phase with the
+        // pivot seated and the anchor stem painted at the press — ctrl is the
+        // desk's second finger, live mid-gesture in both directions, so this
+        // entry differs from the plain one only in its opening mode and in
+        // arming NO click act. The gesture is
+        // navigation-class: allowed in read-only, never touches the playhead or
+        // selection — and a MOTIONLESS ctrl press-release commits
+        // nothing at all (the ctrl+waveform selection clear is RETIRED,
+        // architect 2026-07-23: ctrl is purely the zoom modifier on the
+        // waveform; the 2026-08-05..06 playhead jump that briefly stood here was
+        // ROLLED BACK 2026-08-06 and only its anchor stem survives, so this
+        // press is once again the drag and nothing else).
+        // Ctrl-exact on any OTHER top-strip spot is a strict no-op except
+        // the trim bar's BEGIN bound set (the claim below).
         if (ctrl && !alt && !shift) {
             // Ctrl-exact on a top-strip MARKER is the individual membership
             // toggle (the former shift behavior) — this AMENDS the "Ctrl keeps
@@ -5953,14 +6028,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
             }
-            // EVERY OTHER CTRL-EXACT PRESS IS THE STRICT NO-OP — the
-            // WAVEFORM among them since 2026-09-29 (architect: the Ctrl+drag
-            // zoom is REMOVED, the zoom being the plain drag from the
-            // waveform's zoom band, ScrollDragState's quarter rule), the RULER
-            // and the MARKER lane's empty stretches since 2026-09-25 (the
-            // lanes left the navigation surface on both devices), the gap
-            // band, the inter-lane seams. An unbound modifier combination,
-            // silent: it arms nothing, moves nothing and stops no playback.
+            // The zoom surface IS the navigation surface, through its one
+            // geometry owner — the waveform, either half, and nothing else.
+            // Anywhere else — the RULER and the MARKER lane's empty stretches
+            // among them since 2026-09-25 (architect: the lanes left the
+            // navigation surface on both devices; a ctrl press there arms no
+            // drag, and a ctrl click there never had a click act, the ctrl
+            // entry arming none), the gap band, the inter-lane seams — the
+            // strict no-op below. (The `h` view's ctrl press falls through to
+            // this same claim; the click act is not armed on this entry, so
+            // the mode needs no arm of its own here.)
+            if (point_on_nav_surface(app, x, y))
+                arm_nav_zoom_press(x, y);
             return;
         }
 
@@ -6035,10 +6114,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // press is a PENDING CLICK (arm_nav_press): a motionless
         // release runs THE HALF'S OWN ACT as the DEFERRED CLICK ACT (upper =
         // the playhead placement, lower = the audition scrub), and crossing the
-        // 8px threshold is the GRAB-PAN from the top and bottom quarters and
-        // the DRAG ZOOM from the middle half (the quarter rule, architect
-        // 2026-09-29 — the band, like the half, stashed at the press). A SHIFT
-        // press there is
+        // 8px threshold is the GRAB-PAN in either half. A SHIFT press there is
         // the REGION FORMER, the one mouse region gesture (claimed just below,
         // ahead of the band walk), IN EITHER HALF TOO since the same ruling
         // ("shift plus drag to map out a region should also be allowed in the
@@ -6134,7 +6210,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // with placement_only (arm_placement_press) and does NOTHING ELSE;
             // a motionless release runs the deferred click act (deselect +
             // playhead to the column), and a drag that crosses the slop does
-            // nothing at all — no pan and no zoom, in any band of it.
+            // nothing at all — no pan, and no ctrl edge turns it into a zoom.
             // No double-click surface here: the span-framing double-click
             // lives on the TRIM lane, and the marker-create one on the MARKER
             // lane's empty stretches — the ruler seeds nothing.
@@ -6371,14 +6447,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // sweep draws it since the architect deleted its resting form — the
         // tablet's pen reaches the trim bar — so a press never meets it and
         // the claim went with it.)
-        // THE BAND IS STASHED BESIDE THE HALF (architect 2026-09-29, the
-        // quarter rule): the half picks the motionless release's act, the
-        // band picks what a crossing begins — the zoom from the middle half,
-        // the pan from the top and bottom quarters — and both are the press's
-        // own geometry, read once here.
         arm_nav_press(x, y, /*history=*/false, /*seed_empty_lane=*/false,
-                      /*scrub_release=*/waveform_lower_half(area, y),
-                      /*zoom_band=*/nav_point_in_zoom_band(app, y));
+                      /*scrub_release=*/waveform_lower_half(area, y));
     }
     // Wheel events no longer reach on_button_press; they arrive coalesced
     // per pointer frame through on_wheel -> handle_wheel.
@@ -6500,25 +6570,21 @@ void GuiInputHandler::commit_region_sweep() {
     if (wrote) commit_trim_mutation();
 }
 
-// ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click / grab-pan /
-// drag zoom (contract at ScrollDragState, app_state.h). The press records its
-// point and its surface facts and does NOTHING ELSE: no capture (that begins
-// at the threshold crossing, so a click never blinks the cursor), no playhead,
-// no deselect, no hide, NO SCRUB, no zoom stem — nothing pops at press. The
-// four surface facts are the press's, because only the press knows where it landed:
+// ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click / grab-pan
+// (contract at ScrollDragState, app_state.h). The press records its point and
+// its surface facts and does NOTHING ELSE: no capture (that begins at the
+// threshold crossing, so a click never blinks the cursor), no playhead, no
+// deselect, no hide, NO SCRUB — nothing pops at press. The three surface
+// facts are the press's, because only the press knows where it landed:
 // `history` marks the `h` view's arm (the deferred act is the mode's land);
 // `seed_empty_lane` marks the marker lane's empty stretch (the motionless
 // release seeds the marker-create double-click candidate beside its click
 // act); `scrub_release` marks the waveform's LOWER half (the motionless
-// release runs the audition scrub instead of the placement — 2026-08-13);
-// `zoom_band` marks the waveform's MIDDLE HALF (the crossing begins
-// the drag zoom instead of the pan — the quarter rule, 2026-09-29). The first
-// three are mutually exclusive by geometry (a lane is not the waveform, and
-// the `h` view has no scrub half); `zoom_band` is independent of the half —
-// the band splits the drag, the half the click.
+// release runs the audition scrub instead of the placement — 2026-08-13). The
+// three are mutually exclusive by geometry: a lane is not the waveform, and
+// the `h` view has no scrub half.
 void GuiInputHandler::arm_nav_press(int x, int y, bool history,
-                                    bool seed_empty_lane, bool scrub_release,
-                                    bool zoom_band) {
+                                    bool seed_empty_lane, bool scrub_release) {
     app.scroll_drag = ScrollDragState{};
     app.scroll_drag.active          = true;
     app.scroll_drag.press_x         = x;
@@ -6527,7 +6593,6 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
     app.scroll_drag.history         = history;
     app.scroll_drag.seed_empty_lane = seed_empty_lane;
     app.scroll_drag.scrub_release   = scrub_release;
-    app.scroll_drag.zoom_band       = zoom_band;
 }
 
 // ARM A PLACEMENT LANE'S PRESS (architect 2026-09-25: the ruler and the marker
@@ -6540,9 +6605,34 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
 // claim through one arm each).
 void GuiInputHandler::arm_placement_press(int x, int y, bool history,
                                           bool seed_empty_lane) {
-    arm_nav_press(x, y, history, seed_empty_lane, /*scrub_release=*/false,
-                  /*zoom_band=*/false);
+    arm_nav_press(x, y, history, seed_empty_lane, /*scrub_release=*/false);
     app.scroll_drag.placement_only = true;
+}
+
+// THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
+// contract at ScrollDragState, app_state.h): the ordinary nav press, opened
+// in the ZOOM phase. `ctrl_entry` is the press-time record — the deferred
+// click act is NOT armed, a ctrl click never having been the placement — and
+// the pivot seats at the press column, where the anchor stem paints FROM THE
+// PRESS (the stem-at-press ruling kept across the unification; the arm owes
+// that first frame's full waveform-area damage, the discrete shape). The
+// CAPTURE does not begin here: it begins at the 8px crossing whatever the
+// mode, so a ctrl click never blinks the cursor — superseding the retired
+// dedicated zoom drag's capture-at-press, the unification's own rule.
+void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
+    arm_nav_press(x, y, /*history=*/false, /*seed_empty_lane=*/false,
+                  /*scrub_release=*/false);
+    app.scroll_drag.ctrl_entry = true;
+    app.scroll_drag.zooming    = true;
+    // The seat is the SONG FRAME under the pointer's notional column — the
+    // same projection and the same conversion every later ctrl-down edge
+    // makes, so the press is not a second recipe. No capture is live at a
+    // press, so that position is the press point.
+    app.scroll_drag.anchor_sample =
+        static_cast<double>(app.viewport_start_sample) +
+        nav_notional_col() *
+            painter_samples_per_pixel(app, audio, waveform_area(app));
+    viewport.invalidate_waveform_area();
 }
 
 // THE DEFERRED CLICK ACT — what a motionless navigation-surface press does at
@@ -6935,32 +7025,41 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (app.scroll_drag.active) {
         // The navigation surface's press resolves at its release (the one nav
         // drag — contract at ScrollDragState, app_state.h). A MOVED drag ends
-        // as its BAND began it: the pan's end is one predictor re-anchor (the
-        // continuous pan deferred per-event resyncs); the zoom's end is the
-        // final apply (resync + the one synchronous rebuild inside
-        // apply_strip_drag_zoom's final path, plus the moved-drag
-        // double-click drop, since a zoom moves content between two clicks)
-        // and then THE RETAINED ANCHOR — the drag's pivot handed on, its stem
-        // left standing, so the next drag that begins in the zoom band
-        // continues about the same frame (the quarter rule, architect
-        // 2026-09-29; contract at AppState::retained_zoom_anchor). Either way
-        // the capture, begun at the crossing, ends here and the cursor
-        // reappears as the kind the crossing stamped — on the stem after a
-        // zoom, at the notional x after a pan. No click act on any moved end:
-        // the drag was navigation.
+        // in whichever PHASE it was in: the pan's end is one predictor
+        // re-anchor (the continuous pan deferred per-event resyncs), the zoom
+        // phase's end is the final apply (resync + the one synchronous
+        // rebuild inside apply_strip_drag_zoom's final path — which is also
+        // the stem's erase — plus the moved-drag double-click drop, since a
+        // zoom moves content between two clicks); either way the capture,
+        // begun at the crossing, ends here and the cursor reappears as the
+        // kind the LAST mode stamped — the stem column after a zoom-phase
+        // end, the notional x after a pan-phase one. No click act on any
+        // moved end: the drag was navigation.
+        // THE MODE IS NOT RE-ASKED HERE, and does not need to be: every ctrl
+        // edge — the motionless one included — has already run the switch
+        // through sync_nav_drag_mode, so the cached bit and the stamped
+        // restore both name the phase the gesture is really in. What is left
+        // is ONE DISPATCH BATCH wide (a ctrl edge and this release arriving
+        // with no loop tail between them) and falls in the accepted
+        // post-unlock stale-cursor class: the platform drops every cursor
+        // answer while it has no real pointer position, and the compositor's
+        // next absolute event resolves it.
         // A MOTIONLESS press is THE DEFERRED CLICK — run_nav_click_act at the
         // press column, running THE PRESSED HALF'S OWN ACT: the upper half's
         // placement (deselect / mode-land, playhead, reseek)
-        // or the lower half's audition SCRUB (2026-08-13), IN EITHER BAND,
+        // or the lower half's audition SCRUB (2026-08-13),
         // plus the EmptyLane double-click seed when the press was the marker
         // lane's empty stretch (release-side seeding, the TrimBar pattern: only
         // the release knows it stayed a click). No capture ever began, so
-        // nothing to end. A zoom-band press that stayed a click DISSOLVES a
-        // standing retained anchor here, at its lift — the press kept it only
-        // while it might yet have become the zoom (the pending's own verdict;
-        // every other press dissolved it at on_button_press).
+        // nothing to end. THE ACT IS PRESS-TIME: a ctrl-armed press
+        // (ctrl_entry) runs NO act — a ctrl click was never the placement —
+        // and owes only its press-painted stem's erase; a plain-armed press
+        // runs its act even with ctrl down at the release (press-time
+        // modifiers arm the act, live modifiers steer the gesture — the
+        // scoping statement at AppState::ChromePress::shift).
         const bool moved     = app.scroll_drag.moved;
         const bool zooming   = app.scroll_drag.zooming;
+        const bool ctrl_arm  = app.scroll_drag.ctrl_entry;
         const bool history   = app.scroll_drag.history;
         const bool seed_lane = app.scroll_drag.seed_empty_lane;
         const bool scrub     = app.scroll_drag.scrub_release;
@@ -6969,7 +7068,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         if (moved && zooming) {
             apply_nav_zoom_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
-            app.retained_zoom_anchor = app.scroll_drag.anchor_sample;
         }
         app.scroll_drag = ScrollDragState{};
         // A PLACEMENT LANE'S CROSSED PRESS (2026-09-25) began no capture and
@@ -6982,7 +7080,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             end_strip_pointer_capture();
             return;
         }
-        dissolve_retained_zoom_anchor(app, viewport);
+        // The motionless zoom-phase press painted a stem from the press (or
+        // from a sub-threshold ctrl edge) and owes its erase — full
+        // waveform-area damage, the discrete shape.
+        if (zooming) viewport.invalidate_waveform_area();
+        if (ctrl_arm) return;
         run_nav_click_act(press_x, history, scrub);
         if (seed_lane) {
             app.double_click = DoubleClickCandidate{
@@ -7150,19 +7252,16 @@ void GuiInputHandler::finalize_active_drags() {
     commit_region_sweep();
     if (app.scroll_drag.active) {
         // The one nav drag / pending click. A MOVED drag applied its motion
-        // continuously in either band, so ending is just ending: one
-        // predictor re-anchor, one synchronous rebuild when it was the zoom
-        // (there are no release coordinates here, so no final apply — the
-        // strip arm's own force-end shape), and the capture end (begun at the
-        // crossing). An UNMOVED press merely
+        // continuously in either phase, so ending is just ending: one
+        // predictor re-anchor, one synchronous rebuild when the zoom phase
+        // was live (there are no release coordinates here, so no final
+        // apply — the strip arm's own force-end shape), and the capture end
+        // (begun at the crossing). An UNMOVED press merely
         // DISARMS — a force-end is not a click, so the deferred click act does
         // NOT run, the same commit-vs-disarm asymmetry the two pendings below
         // hold (a pending has committed nothing, and there is nothing owed).
-        // A zoom's stem owes its erase, and A FORCE-END RETAINS NOTHING: it is
-        // not the hand's lift (a resize, a quit, a close), so the zoom's
-        // pivot is dropped rather than handed on, and a zoom-band pending's
-        // standing retained anchor dissolves with it (contract at
-        // AppState::retained_zoom_anchor).
+        // A zoom-phase stem — painted from a ctrl press or a ctrl edge —
+        // owes its erase on every one of these ends.
         // A placement lane's crossed press began nothing, so it is the
         // disarm alone (ScrollDragState::placement_only).
         const bool zooming = app.scroll_drag.zooming;
@@ -7173,7 +7272,6 @@ void GuiInputHandler::finalize_active_drags() {
         }
         app.scroll_drag = ScrollDragState{};
         if (zooming) viewport.invalidate_waveform_area();
-        dissolve_retained_zoom_anchor(app, viewport);
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
     // no release here (the button is still held), and a force-end is not a
@@ -8191,15 +8289,14 @@ void GuiInputHandler::finish_chrome_press_release(
         // WITH A CARRIED CTRL IT COMPOSES ONLY WHERE THE PAIR IS ADMITTED
         // (redesign_button_ctrl_shift_admits, architect 2026-09-26) — the band
         // gate's pair rule, which a carried shift meets at the press, asked
-        // here of the held shift. THE WALK IS WHERE IT BITES: a keyboard's Ctrl
-        // held through a long press on it carries ctrl, the hold adds shift,
-        // and the lift dispatches Ctrl+Shift+Tab, the paired march. On glass
-        // no press carries ctrl since the S Pen's side button stopped being
-        // the Ctrl bit (2026-09-29; it was the pen's road to the march from
-        // 2026-09-26), so there the same hold is Shift+Tab, the previous
-        // marker, and the tab row's long press is the march's glass road.
-        // (Up / Down admit both modifiers but not the pair, and they repeat,
-        // so the term below excludes them twice over.)
+        // here of the held shift. THE WALK IS WHERE IT BITES: the S Pen's
+        // side button held through a long press on it carries ctrl, the hold
+        // adds shift, and the lift dispatches Ctrl+Shift+Tab, the paired
+        // march — the pen's road to it, the tab row's long press being the
+        // fingertip's. Without the pen's button the same hold is Shift+Tab,
+        // the previous marker, as before. (Up / Down admit both modifiers but
+        // not the pair, and they repeat, so the term below excludes them
+        // twice over.)
         //
         // AND IT REACHES NO HOLD-REPEATING BUTTON EITHER: A HELD REPEAT
         // OUTRANKS THE LONG-PRESS SHIFT, the principle stated at
@@ -8578,11 +8675,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // tree that writes that bit true outside toggle_dropdown's open.
 // THE `h` HISTORY MODE's POINTER ALLOWLIST and its acts. True = the press is
 // CONSUMED here (refused outright, or handled as one of the mode's own acts);
-// false = the press is one the mode leaves to on_button_press untouched. SINCE
-// 2026-09-29 IT NEVER ANSWERS FALSE: its one pass-through was the ctrl press
-// on the navigation surface, the live router's Ctrl+drag zoom entry, removed
-// that day — the mode's zoom is the plain drag from the zoom band, armed here
-// like its pan. The bool stays the gate's shape.
+// false = the press is one of the navigation gestures the mode leaves alone, and
+// on_button_press proceeds with it untouched.
 //
 // THE VIEW MIRRORS THE LIVE VOCABULARY THROUGH ITS OWN GATES (re-derived
 // 2026-08-12 under the eighth glass ruling, pan-primary — the view admits
@@ -8591,9 +8685,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // 2026-08-05) and nothing else, and on it plain drag = the grab-pan,
 // motionless plain click = THE MODE'S LAND at the column (deferred to the
 // release like everywhere else), shift+drag = the view-local region former,
-// and the plain drag from the middle half = the drag zoom (the
-// quarter rule, 2026-09-29; ctrl+drag, the zoom until then, is a consumed
-// nothing). The RULER and the MARKER lane's empty
+// ctrl+drag = the strip-drag zoom. The RULER and the MARKER lane's empty
 // stretches are PLACEMENT SURFACES in here as outside (architect 2026-09-25,
 // the lanes leaving the navigation surface on both devices): a motionless
 // plain or shift click lands the playhead through the mode's land, and every
@@ -8606,30 +8698,29 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // that was already running. (The mode's deferred click act runs the shared
 // placement body, whose reseek arm is structurally dead in here.)
 //
-// WHAT PASSES THROUGH: NOTHING MODIFIED BUT THE CLAIMS BELOW. The CTRL-exact
-// press over the navigation surface passed through to the live router's zoom
-// entry until 2026-09-29, when the Ctrl+drag zoom was REMOVED (the zoom being
-// the plain drag from the waveform's zoom band in here as everywhere — the
-// quarter rule at ScrollDragState), so it is consumed here like every unbound
-// combination (a ctrl press on a diff FLAG is the mode's membership toggle,
-// claimed below; a ctrl press on the lanes' empty stretches is consumed since
-// 2026-09-25). Ctrl+Shift is NOT admitted anywhere on this gate's content
-// (the chrome's one pair admission, the walk button's, is claimed at the band
-// above this gate): over the waveform it is a no-op, and over the TRIM BAR it
-// sets the end bound, which is a write. ALT passes nowhere — its pointer
-// vocabulary is empty product-wide.
+// WHAT PASSES THROUGH, the whole list — the mode's navigation vocabulary, the
+// pointer half of what history_mode_key_blocked admits on the keyboard:
+//   * CTRL-exact over the navigation surface — the one nav drag's ZOOM entry
+//     (arm_nav_zoom_press; the dual-axis strip drag this bullet used to name
+//     died 2026-08-14 with the zoom's rotation onto the horizontal axis), on
+//     the waveform (a ctrl press on a diff FLAG is the mode's membership
+//     toggle, claimed below before this can fork; a ctrl press on the lanes'
+//     empty stretches is consumed since 2026-09-25). Ctrl+Shift is NOT admitted anywhere on
+//     this gate's content (the chrome's one pair admission, the walk
+//     button's, is claimed at the band above this gate): over
+//     the waveform it is already a no-op, and over the TRIM BAR it sets the
+//     end bound, which is a write. ALT passes nowhere — its pointer
+//     vocabulary is empty product-wide.
 //
 // THE ACTS, all pure navigation:
 //   * a PLAIN press on the NAVIGATION SURFACE arms the mode's own PENDING
-//     CLICK / GRAB-PAN / DRAG ZOOM (arm_nav_press with the history flag and
-//     the press's band): nothing at press; a motionless release runs THE
-//     MODE'S LAND — clear the mode focus + selection (the deselect's mode
-//     analog, through the one pair clearer), seat the playhead at the press
-//     column (run_nav_click_act's history arm — the live recipe through the
-//     shared placement body, whose reseek cannot fire in the silent view); a
-//     crossed drag is the captured pan from the top and bottom quarters or
-//     the drag zoom from the middle half (the quarter rule, 2026-09-29), which
-//     move no playhead and clear nothing. The ruler and the empty lane stretches
+//     CLICK / GRAB-PAN (arm_nav_press with the history flag): nothing at
+//     press; a motionless release runs THE MODE'S LAND — clear the mode focus
+//     + selection (the deselect's mode analog, through the one pair clearer),
+//     seat the playhead at the press column (run_nav_click_act's history arm — the
+//     live recipe through the shared placement body, whose reseek cannot fire
+//     in the silent view); a crossed drag is the captured pan, which moves no
+//     playhead and clears nothing. The ruler and the empty lane stretches
 //     take the same pending as PLACEMENT SURFACES (arm_placement_press,
 //     2026-09-25), so their motionless clicks land the playhead and a drag
 //     there does nothing.
@@ -8684,8 +8775,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // THE SYMMETRY RULING (architect 2026-08-06) is why the acts read as they do:
 // THE HISTORY VIEW AND THE REGULAR VIEWS ANSWER A WAVEFORM CLICK IDENTICALLY,
 // and the regular views' standing model is the model. THE WAVEFORM RESOLVES NO
-// FLAG AT ALL — a waveform modifier is GESTURE vocabulary (shift the former;
-// ctrl the zoom until 2026-09-29) while SELECTION is LANE vocabulary (the flag boxes' plain,
+// FLAG AT ALL — a waveform modifier is GESTURE vocabulary (ctrl the zoom,
+// shift the former) while SELECTION is LANE vocabulary (the flag boxes' plain,
 // shift and ctrl clicks), the stems pointer-inert in all contexts (the seventh
 // glass ruling).
 //
@@ -8753,12 +8844,14 @@ bool GuiInputHandler::handle_history_mode_press(
         }
     }
 
-    // CTRL-exact is CONSUMED everywhere on this gate's content (the flag
-    // toggle was claimed above): the trim bar's begin set is a write, the
-    // placement lanes arm no drag, and the waveform's ctrl zoom entry is
-    // REMOVED since 2026-09-29 (the mode's zoom is the plain drag from the
-    // zoom band, below).
-    if (ctrl && !shift && !alt) return true;
+    // CTRL-exact on the navigation surface leaves for the live router's ctrl
+    // claim — the one nav drag's ctrl entry (arm_nav_zoom_press), the mode's
+    // admitted zoom, on the gesture's full grown surface (the flag toggle was
+    // claimed above). The entry arms NO click act, so the mode needs no arm
+    // of its own; a mid-drag ctrl release pans, the pan being equally
+    // admitted (the wheel class). Everywhere else — the trim bar's begin set
+    // above all, and the placement lanes, which arm no drag — it is consumed.
+    if (ctrl && !shift && !alt) return !on_nav_surface;
     // SHIFT-exact on the navigation surface is the VIEW-LOCAL REGION FORMER
     // (the header's act list): the mode-focus clear where the live former
     // deselects, then the shared placement body and the arm.
@@ -8909,12 +9002,8 @@ bool GuiInputHandler::handle_history_mode_press(
         // all contexts): the press is the surface's own at EVERY column,
         // stems included. The diff flag's LANE BOX is its one pointer
         // surface, above.
-        // THE BAND, the live router's own read (the quarter rule): the middle
-        // half's crossing is the drag zoom, the top and bottom quarters' the
-        // pan — the mode's navigation vocabulary, both.
         arm_nav_press(x, y, /*history=*/true, /*seed_empty_lane=*/false,
-                      /*scrub_release=*/false,
-                      /*zoom_band=*/nav_point_in_zoom_band(app, y));
+                      /*scrub_release=*/false);
         return true;
     }
 
@@ -10121,7 +10210,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // THE ONE NAV DRAG: the pending click, and past the threshold the
-    // grab-pan — or, from the zoom band, the drag zoom (the quarter rule,
+    // grab-pan — or, while ctrl is held, the zoom (the live-ctrl model,
     // contract at ScrollDragState, app_state.h). The viewport snaps to whole
     // pixels in
     // clamp_viewport_start (reached through scroll_viewport), so a per-event pan
@@ -10130,11 +10219,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // per-event work is one full-width render — the cost zoom already paid per
     // pointer frame, and the reason a panning plate looks identical to a resting
     // one (architect 2026-07-26). A lost button: a MOVED drag ends like release
-    // (the zoom's final apply and its anchor's retention, or the pan's one
-    // predictor re-anchor, then the capture end); an UNMOVED press is NOT
+    // (the zoom phase's final apply, or the pan's one predictor re-anchor,
+    // then the capture end); an UNMOVED press is NOT
     // a clean click, so the deferred act does not run and no seed is left —
-    // the standing abnormal-end rule — and, not having become a zoom-band
-    // drag, it dissolves a standing retained anchor. The
+    // the standing abnormal-end rule. The
     // wheel keeps its quantized detent step; only the drag is continuous.
     if (app.scroll_drag.active) {
         ScrollDragState& sd = app.scroll_drag;
@@ -10143,20 +10231,28 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // pan), so its moved end is the disarm alone.
             const bool moved   = sd.moved && !sd.placement_only;
             const bool zooming = sd.zooming;
-            if (moved && zooming) {
+            if (moved && zooming)
                 apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/true);
-                app.retained_zoom_anchor = sd.anchor_sample;
-            }
             app.scroll_drag = ScrollDragState{};
+            // The stem's erase, when the zoom phase painted one — the moved
+            // final apply's rebuild covers it, so this is the unmoved
+            // ctrl-armed press's owed frame (the strip arm's own shape).
+            if (zooming && !moved) viewport.invalidate_waveform_area();
             if (moved) {
                 if (!zooming && playback.is_playing())
                     playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
-            } else {
-                dissolve_retained_zoom_anchor(app, viewport);
             }
             return;
         }
+        // THE LIVE MODE SYNC, ahead of the threshold gate so a pending press
+        // tracks ctrl too. THIS CALLER IS THE PER-DELIVERED-MOTION ONE: the
+        // settled-state tail already answers the motionless edge, but a
+        // dispatch batch can carry the modifiers event and then a motion with
+        // no loop tail between them, and the mode must be right BEFORE this
+        // event's delta is applied — the same two-caller shape, and the same
+        // argument, as the dropdown hover walk. Both reach the one body.
+        sync_nav_drag_mode(mods);
         // Sub-threshold: still the pending click. The press did nothing, so
         // nothing happens here either — the fork IS the threshold. last_x
         // stays at the press until the crossing, which therefore folds the
@@ -10174,36 +10270,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // release the press was not a click, and no capture, pan or zoom
             // follows — the held button stays this pending's until the release.
             if (sd.placement_only) return;
-            // THE BAND BECOMES THE GESTURE HERE (the quarter rule, architect
-            // 2026-09-29): a zoom-band press's crossing is THE DRAG ZOOM, its
-            // pivot SEATED ONCE, now — the RETAINED ANCHOR when one stands
-            // (taken over, the same frame, the stem unmoved), else the song
-            // frame under the PRESS column (the point the user aimed at;
-            // the apply's own conversion, so this seat and the first event
-            // cannot disagree) — and its stem appears now, not at the press,
-            // a zoom-band press being a possible click until this moment.
-            if (sd.zoom_band) {
-                sd.zooming = true;
-                if (app.retained_zoom_anchor) {
-                    sd.anchor_sample = *app.retained_zoom_anchor;
-                    app.retained_zoom_anchor.reset();
-                } else {
-                    const GuiRect wf_area = waveform_area(app);
-                    sd.anchor_sample =
-                        static_cast<double>(app.viewport_start_sample) +
-                        clamp_col_into_waveform(
-                            wf_area,
-                            static_cast<double>(sd.press_x - wf_area.x)) *
-                            painter_samples_per_pixel(app, audio, wf_area);
-                }
-                viewport.invalidate_waveform_area();
-            }
             // THE DRAG BEGINS AT THE CROSSING, and so does its CAPTURE — not
             // at the press, or every motionless click would blink the cursor
-            // away and back (the unification's own rule). The BAND is the
-            // gesture's cue, stamped for the capture's release restore (the
-            // contract at GuiPlatform::begin_pointer_capture) — it cannot
-            // change after this.
+            // away and back, the ctrl click included (the unification's own
+            // rule). The MODE AT THE CROSSING is the gesture's cue, stamped
+            // for the capture's release restore (the contract at
+            // GuiPlatform::begin_pointer_capture); a later mode switch
+            // re-stamps it through set_strip_capture_restore_kind above.
             begin_strip_pointer_capture(sd.zooming ? GuiCursorKind::Zoom
                                                    : GuiCursorKind::Pan);
             // AND THE CAPTURED POINTER IS TOLD ITS WRAP SPAN, immediately
@@ -10213,16 +10286,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // whatever the gesture or the mode (contract at
             // set_strip_capture_wrap_span, input_handler.h).
             tell_capture_wrap_span();
-            // AND THE BAND SETS THE LATERAL FREEZE, the one site: the capture
-            // opens unfrozen, and a zoom must not let the pointer's x advance
-            // on the travel the level spends (apply_nav_zoom_at).
+            // AND THE MODE AT THE CROSSING ALSO SETS THE LATERAL FREEZE. The
+            // capture opens unfrozen, and the ctrl edges a sub-threshold press
+            // took spoke to no capture at all (the setters are capture-
+            // guarded), so a ctrl-armed drag would otherwise reach its zoom
+            // phase with the pointer's x still advancing. This is the only
+            // other site: from here every switch rides sync_nav_drag_mode.
             set_strip_capture_notional_x_frozen(sd.zooming);
         }
         if (sd.placement_only) return;  // past the crossing: nothing, ever
         if (sd.zooming) {
-            // The ZOOM: dx off the live level about the seated pivot (right
-            // zooms in), dy discarded, and the pointer's own notional x held
-            // still by the freeze asserted above — the level spends the
+            // The ZOOM phase: dx off the live level about the seated pivot
+            // (right zooms in), dy discarded, and the pointer's own notional x
+            // held still by the freeze asserted above — the level spends the
             // lateral travel and the position must not spend it twice
             // (apply_nav_zoom_at; the two are different statements).
             apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/false);

@@ -3277,8 +3277,8 @@ void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason
 void GuiPlatform::set_keyboard_intent_cancel_hook(std::function<void()> cb) { input_.set_keyboard_intent_cancel_hook(std::move(cb)); }
 void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
-    std::function<void(bool lifted)> end,
-    std::function<GuiTouchNavZone(int x, int y)> pan_zone,
+    std::function<void()> end,
+    std::function<bool(int x, int y)> pan_zone,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
     std::function<void()> region_end,
@@ -3299,5 +3299,9 @@ void GuiPlatform::set_touch_nav_hooks(
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
 void GuiPlatform::set_capture_restore_x(double surface_x)   { input_.set_capture_restore_x(surface_x); }
+void GuiPlatform::clear_capture_restore_x()                 { input_.clear_capture_restore_x(); }
+void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) { input_.set_capture_restore_kind(kind); }
 void GuiPlatform::set_notional_x_frozen(bool frozen)        { input_.set_notional_x_frozen(frozen); }
+void GuiPlatform::set_notional_pointer_x(double surface_x)  { input_.set_notional_pointer_x(surface_x); }
 void GuiPlatform::set_capture_wrap_span(double lo, double hi) { input_.set_capture_wrap_span(lo, hi); }
+double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_x(); }

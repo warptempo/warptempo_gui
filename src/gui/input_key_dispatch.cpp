@@ -637,9 +637,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // left this delta and the IconAddToSelection button left iteration_lock_greys
 // with it. THE TWO LAMPS STAND TOGETHER, which is what the pointer road onto a
 // multi-marker selection under the lamp wants: several markers ctrl-clicked on
-// their flag boxes, and on glass this lamp is the ONE road to ctrl (the S
-// Pen's side button, the other from 2026-09-25, reaches nothing since
-// 2026-09-29, touch.md). Bare
+// their flag boxes, and on glass this lamp is the fingertip's road to ctrl,
+// the S Pen's side button the other (touch.md). Bare
 // `i`'s ON edge still PUTS ADD TO SELECTION OUT (architect 2026-09-12, its own
 // arm calling selection_consumed — raising the cells is an act that ends a
 // selecting pass), which is a use case ending rather than a refusal, so
@@ -1593,7 +1592,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // route below on_key's DRAG-MODAL GATE, so none of them can run with a gesture
 // live — the whole reason close_history_mode ends none. This one arrives on a
 // poll and bypasses that gate, and the view has gestures live in it (the
-// region drag and the one nav drag, its pan and its zoom alike): left held across the
+// region drag and the one nav drag, pan and ctrl-zoom phases alike): left held across the
 // reset, the next motion would grow a VIEW-LOCAL region in the EDITOR from an
 // anchor the view took, or pan on behalf of a view that is no longer up.
 // finalize_active_drags is the existing force-end — the same release bodies the
@@ -3310,7 +3309,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // it (membership re-derived 2026-08-12 under pan-primary): zoom, the paged
 // scroll, the plain-wheel stepped pan, the overview command,
 // the one nav drag on the mode's whole navigation surface (its pan and its
-// zoom-band zoom alike), and the mode's own cursor-moving acts
+// ctrl zoom phase alike), and the mode's own cursor-moving acts
 // — the diff-flag click, the deferred click act and the keyboard's Tab cycle,
 // Home/End and `c`, which `0` reaches too from full zoom out. Committing the
 // frozen text
@@ -8286,8 +8285,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (run_marker_click_act, input_pointer.cpp), a bound cell's plain press is
     // a plain press with both lamps lit, and the two stand together — which is
     // what a pointer road onto a multi-marker selection under the lamp needs,
-    // this lamp being glass's one road to ctrl (the S Pen's side button, the
-    // other until 2026-09-29, reaches nothing). Bare `i`'s ON edge still puts
+    // this lamp being glass's fingertip road to ctrl (the S Pen's side button
+    // is the other). Bare `i`'s ON edge still puts
     // THIS lamp out (architect 2026-09-12), a use case ending rather than a
     // refusal.
     // THE VALUE DRAG IS NO GATE EITHER: its posture (the view's since

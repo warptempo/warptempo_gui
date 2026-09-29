@@ -95,7 +95,6 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     // and the correctness / fresh-grip split are at clear_touch_zoom_seat's
     // declaration (input_handler.h).
     clear_touch_zoom_seat(app, viewport);
-    dissolve_retained_zoom_anchor(app, viewport);  // its twin, the same rule
     app.active_markers_view = target_mode;
 }
 
@@ -143,7 +142,6 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // grabbed — the FRESH-GRIP half of the rule, the held frame staying
     // arithmetically valid. Its next two-finger frame seats afresh.
     clear_touch_zoom_seat(app, viewport);
-    dissolve_retained_zoom_anchor(app, viewport);  // its twin, the same rule
     // A TAB SWITCH CLEARS THE SELECTION (the scope rule, architect 2026-07-29 —
     // a column or tab switch clears; only the `t` audio-view switch carries).
     // Nothing is stashed and nothing is restored: the tab's remembered spot is
