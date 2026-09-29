@@ -1935,9 +1935,11 @@ struct TrimBarPressSeed {
 // 2026-09-01), then the bottom row's FIFTEEN (re-counted 2026-09-23, when
 // the two hold-column nudges left its walk group) — the
 // transport three, the MARKER-VERB GROUP'S SEVEN (kMarkerVerbGroup,
-// paint_handler.cpp, owns that membership and its succession), the
-// MARKER-WALK GROUP'S ONE (2026-08-15; the walk alone since 2026-09-23) and
-// the four cardinal arrows. It exists ONCE, here, because
+// paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S ONE
+// (2026-08-15; the walk alone since 2026-09-23) and the four cardinal
+// arrows, in enum order; the row PAINTS the transport three last, at its
+// right end (architect 2026-09-29), the enum keeping them first because
+// nothing reads the bottom row's enum order. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -1967,7 +1969,8 @@ struct TrimBarPressSeed {
 // DROPDOWN, which no keyboard chord does, and all three are spelled at the menu
 // claim rather than in the chord table.
 //
-// The enum ORDER is painted order, and redesign_button_index depends on the
+// The enum ORDER is painted order but for the bottom row's transport three
+// (above), and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
 // main.cpp walks the range by index). The indices are DERIVED and never
 // serialized, so inserting a button mid-roster (as Settings was) or REORDERING
@@ -2519,13 +2522,13 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. FIFTEEN buttons in four groups, in painted order (the enum
-    // order is the painted order, and the row paints below the top rows, so the
-    // roster's tail is
-    // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
-    // THE ONE PLAY/STOP BUTTON = bare Space, skip-forward = bare End) with the
-    // CLOCK behind its separator, then — FLUSH AT THE RIGHT MARGIN, three
-    // groups divided by two more separators — THE MARKER-VERB GROUP'S SEVEN
+    // detection. FIFTEEN buttons in four groups, all FLUSH AT THE RIGHT
+    // MARGIN with the CLOCK alone at the row's left pad (architect
+    // 2026-09-29, the right-handed tablet's layout). The enum lists them from
+    // the TRANSPORT (skip-back = bare Home, THE ONE PLAY/STOP BUTTON = bare
+    // Space, skip-forward = bare End), which the row PAINTS LAST, at its
+    // right end behind the arrows; the other three groups paint in enum
+    // order, divided by separators — THE MARKER-VERB GROUP'S SEVEN
     // (the four single-marker verbs of 2026-08-18: drop = bare `s`, delete =
     // Delete, disable = Ctrl+D, inherit = Ctrl+N; then
     // THE EDIT FLAG BUTTON (2026-08-27, bare Enter —
@@ -2639,22 +2642,14 @@ enum class RedesignButton {
     // HOP on the phase-reset column — so the hop is glass-reachable by the
     // plain press and the held button walks hops.
     //
-    // THE TWO SKIPS ADMIT CTRL (architect 2026-09-26): a CTRL-CLICK on
+    // THE TWO SKIPS ADMIT SHIFT (architect 2026-09-29): a SHIFT-CLICK on
     // either runs the WHOLE-PIECE jump — frame 0 or the active domain's last
     // frame, whatever the trim window is — where the plain click lands on the
     // trim bounds. The button spells the KEYBOARD'S OWN MODIFIER: the act is
-    // Ctrl+Home / Ctrl+End, so a ctrl press here dispatches that chord
-    // exactly as a shift press elsewhere dispatches a shifted one, with
-    // nothing translated between the two axes (redesign_button_ctrl_admits,
-    // below, owns the membership). ON GLASS THE CTRL IS THE S PEN'S SIDE
-    // BUTTON held on the skip (touch.md), so the whole-piece jump is
-    // reachable on the tablet.
-    //
-    // THEY ADMIT NO SHIFT, which is what keeps the LONG PRESS off this act BY
-    // CONSTRUCTION rather than by an exclusion: the hold exists to give a
-    // keyboardless panel a held SHIFT, so it reaches a twin exactly where
-    // redesign_button_shift_admits does, and these two are not in it. A held
-    // skip gives the ordinary trim-bound jump exactly as a tap does.
+    // Shift+Home / Shift+End, so a shift press here dispatches that chord
+    // (redesign_button_shift_admits, below, owns the membership). ON GLASS
+    // THE LONG PRESS is the held shift, so a skip held past the hold beat is
+    // the whole-piece jump on the tablet. They admit no ctrl.
     //
     // THE PLAY BUTTON ADMITS SHIFT (architect 2026-08-26): its twin is
     // Shift+Space, THE A/B AUDITION, so a shift-click or a long press runs the
@@ -6527,9 +6522,8 @@ struct AppState {
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
     // centre in monospace; the row unification merged that row and the status
-    // line into the one bottom row a day later, and the architect moved the
-    // cell to the row's LEFT BLOCK, behind the transport's own separator, on
-    // 2026-08-18). It is a PAINTER STASH in the
+    // line into the one bottom row a day later; the cell sits at the lane's
+    // left pad since 2026-09-29). It is a PAINTER STASH in the
     // roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
     // a SHAPED specimen on the monospace face at the live size, which only the
@@ -6586,9 +6580,8 @@ struct AppState {
     // release's own rule): a button that admits a modifier must see the one
     // held when the user PRESSED, and a modifier tapped or dropped mid-hold
     // changes nothing. EACH ADMISSION IS THE ROSTER'S — the shift-admitting
-    // set, the ctrl-admitting one (redesign_button_ctrl_admits: the two
-    // SKIPS, whose ctrl-click is Ctrl+Home / Ctrl+End, the Up / Down step
-    // ladder's Ctrl rung and the WALK's Ctrl+Tab) and the pair's
+    // set, the ctrl-admitting one (redesign_button_ctrl_admits: the Up /
+    // Down step ladder's Ctrl rung and the WALK's Ctrl+Tab) and the pair's
     // (redesign_button_ctrl_shift_admits: the walk's Ctrl+Shift+Tab) — asked
     // at the press by the band claims' modifier gate and again at the lift's
     // chord build, so a carried bit, or the carried pair, can only ever reach
@@ -11749,8 +11742,8 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // has TWO ENTRANTS: the `h` HISTORY VIEW takes it for every jump (architect
 // 2026-08-05: the view reviews the WHOLE piece, so an End stopping at a trim
 // bound would hide the flags past it), and the `whole_piece` parameter asks
-// for it outright, which is what CTRL+HOME / CTRL+END pass (architect
-// 2026-09-26: the piece's ends whatever the trim window is). With a full
+// for it outright, which is what SHIFT+HOME / SHIFT+END pass (architect
+// 2026-09-29: the piece's ends whatever the trim window is). With a full
 // trim window the two arms coincide. THE RETURNED FRAME IS PRE-CLAMPED
 // through clamp_playhead_to_live_domain above: this function names a
 // LANDING, and a landing must be a frame the cursor can actually occupy. It
@@ -11860,9 +11853,9 @@ std::pair<long long, long long> compute_trim_samples(
 // follows the basis of what it repaints (playhead_pixel_x above states the same
 // rule for the waveform's two bases).
 //
-//   clock_invalidate_rect — the reserved CLOCK CELL in the lane's left
-//   block, and
-//   nothing else on the row: every route that moves the PLAYHEAD or the
+//   clock_invalidate_rect — the reserved CLOCK CELL at the lane's left
+//   pad, and nothing else on the row: every route that moves the PLAYHEAD or
+//   the
 //   SCANNER, which is the only thing the clock reads. Reached through
 //   Viewport::invalidate_clock_area, whose declaration carries the caller
 //   inventory (viewport.h).
@@ -13151,8 +13144,8 @@ inline bool history_pull_actionable(const AppState& a) {
 // whose Ctrl+S retries the push through the act's clean-but-owing arm, so
 // AHEAD ACTS WHATEVER THE HEAD DELTA SAYS (the session equals the unpushed
 // commit, and the push is still owed) ONCE THE DELTA IS MEASURED (architect
-// 2026-09-28, the Fable catch-up's run D finding D2): the act forks on the
-// delta — empty retries the push under the default title, non-empty asks the
+// 2026-09-28): the act forks on the delta — empty retries the push under
+// the default title, non-empty asks the
 // title — and the bit RESTS TRUE while unmeasured, which under Ahead would
 // select the untitled road for real edits, so the face greys and the key is
 // silent until the measurement lands, as under UP TO DATE. Every other status
@@ -13185,9 +13178,9 @@ inline bool history_checkpoint_actionable(const AppState& a) {
            !a.history_mode.head_delta_empty;
 }
 
-// WOULD CTRL+S ASK GITHUB AGAIN? (architect 2026-09-28, the Fable catch-up's
-// run D question Q1) — inside the `h` view, on a visit with a clone, with no
-// checkpoint publishing, while the GitHub status reads OFFLINE: the reading
+// WOULD CTRL+S ASK GITHUB AGAIN? (architect 2026-09-28) — inside the `h`
+// view, on a visit with a clone, with no checkpoint publishing, while the
+// GitHub status reads OFFLINE: the reading
 // may be minutes old (the hotspot coming up after the view opened), so Ctrl+S
 // and the Save button's lift DISPATCH THE CHECK (dispatch_github_check, its
 // one dispatcher) and nothing else — row 8 reads `checking...` and then the
@@ -15221,14 +15214,15 @@ inline bool redesign_button_enabled(const AppState& a,
         // transport session (the press stops it), a standing selection (the
         // act clears it; the mode's diff-flag focus inside the `h` view), or
         // a landing that differs from the resting cursor — and the face asks
-        // it of the BARE form AND the WHOLE-PIECE form (the ctrl-click,
-        // Ctrl+Home / Ctrl+End), greying only when both answer no (the twin
+        // it of the BARE form AND the WHOLE-PIECE form (the shift-click and
+        // the long press, Shift+Home / Shift+End), greying only when both
+        // answer no (the twin
         // rule at the head of this body). A Home / End press is not a pure
         // jump — either form also STOPS A LIVE AUDITION and CLEARS THE MARKER
         // SELECTION even when the jump moves nothing (run_playhead_end_jump
         // and the `h` arm, input_key_dispatch.cpp) — which is why those side
         // acts are terms of the owner: a greyed skip forgoes nothing, and a
-        // live whole-piece jump keeps the face lit with the ctrl-click
+        // live whole-piece jump keeps the face lit with the shift-click
         // reachable. The `h` view needs nothing hand-listed: the landing
         // owner's own mode arm makes both forms the piece's ends in there.
         // PLAY, in the case list below, takes its own arm beside them; all
@@ -15610,7 +15604,7 @@ inline bool redesign_button_enabled(const AppState& a,
                     iteration_sweep_actionable(a));
         // THE TWO SKIPS (2026-08-30; the reasoning is at their case in the
         // first switch): lit iff EITHER admitted form — the bare trim-bound
-        // jump or the ctrl whole-piece jump — would change anything, through
+        // jump or the shift whole-piece jump — would change anything, through
         // the acts' one actionability owner (whose terms are a live transport
         // session, the jump's own side acts and the landing compare).
         case RedesignButton::TransportSkipBack:
@@ -16175,6 +16169,11 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (Center admitted shift for the hours of 2026-09-23 that Shift+C armed the
 // chase posture; the posture, the chord and the admission were deleted that
 // evening when the follow lamp came back.)
+// (THE TWO SKIPS JOINED 2026-09-29 with Shift+Home / Shift+End, THE
+// WHOLE-PIECE JUMP (architect): the plain press lands on the trim bounds and
+// the shifted twin on the piece's own ends, the drop's rule once more. The
+// long press is the tablet's road. The TWIN RULE decides the face: the
+// button greys only where both forms would change nothing.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
@@ -16182,7 +16181,9 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TabB ||
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
+           b == RedesignButton::TransportSkipBack ||
            b == RedesignButton::TransportPlayStop ||
+           b == RedesignButton::TransportSkipForward ||
            b == RedesignButton::IconMarkerDrop ||
            b == RedesignButton::IconMarkerInherit ||
            b == RedesignButton::IconCopyValue ||
@@ -16193,12 +16194,9 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TransportDown;
 }
 
-// THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two SKIPS,
-// the two VERTICAL ARROWS and THE WALK. The SKIPS dispatch bare Home / End,
-// and the act their modified press owes is the WHOLE-PIECE jump, whose
-// keyboard spelling is CTRL+Home / CTRL+End (architect 2026-09-26): the jump
-// ignores the trim window, a different axis from anything shift means
-// elsewhere on the roster. The VERTICAL ARROWS' ctrl-click (R12, 2026-08-31)
+// THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two
+// VERTICAL ARROWS and THE WALK. The VERTICAL ARROWS' ctrl-click (R12,
+// 2026-08-31)
 // is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
 // shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
 // WALK'S ctrl-click (architect 2026-09-26) dispatches Ctrl+Tab, the one-shot
@@ -16217,16 +16215,13 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 //
 // ON GLASS THE CTRL IS THE S PEN'S SIDE BUTTON (touch.md): held on a chrome
 // button it carries the ctrl bit into the press like a held Ctrl key, so the
-// skips' whole-piece jump, the arrows' three-step and the walk's tab switch
-// are reachable on the tablet with the pen. The SHIFT LONG PRESS — glass's
-// held shift — COMPOSES WITH THAT CARRIED CTRL ONLY WHERE THE PAIR IS
-// ADMITTED: the pen's button held through a long press on the walk is its
-// ctrl-shift press, the march (the lift's hold-as-shift term,
-// finish_chrome_press_release). It reaches no other ctrl: the skips admit no
-// shift, so the hold stays off them BY CONSTRUCTION and a held skip gives the
-// ordinary trim-bound jump just as a tap does, and on the arrows a held
-// repeat outranks the long-press shift (ToolbarChord::repeats,
-// input_pointer.cpp).
+// arrows' three-step and the walk's tab switch are reachable on the tablet
+// with the pen. The SHIFT LONG PRESS — glass's held shift — COMPOSES WITH
+// THAT CARRIED CTRL ONLY WHERE THE PAIR IS ADMITTED: the pen's button held
+// through a long press on the walk is its ctrl-shift press, the march (the
+// lift's hold-as-shift term, finish_chrome_press_release). It reaches no
+// other ctrl: on the arrows a held repeat outranks the long-press shift
+// (ToolbarChord::repeats, input_pointer.cpp).
 //
 // TWO READERS, both in input_pointer.cpp: the band claims' MODIFIER GATE, which
 // admits a ctrl press only where this says so (and a ctrl+shift press only
@@ -16235,9 +16230,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // moves the carried bit into the dispatched chord (the hold-repeat's arm and
 // fire build the same chord).
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
-    return b == RedesignButton::TransportSkipBack ||
-           b == RedesignButton::TransportSkipForward ||
-           b == RedesignButton::TransportWalk ||
+    return b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
@@ -16290,13 +16283,13 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
     "neither Shift+Left / Shift+Right nor Ctrl+Left / Ctrl+Right binds "
     "anything — the step's camera is the hold posture's "
     "(chord_is_bound, gui_input.h)");
-static_assert(!redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
-                  !redesign_button_shift_admits(RedesignButton::TransportSkipForward) &&
-                  redesign_button_ctrl_admits(RedesignButton::TransportSkipBack) &&
-                  redesign_button_ctrl_admits(RedesignButton::TransportSkipForward),
-    "the two skips admit Ctrl (Ctrl+Home / Ctrl+End, the whole-piece jump) "
-    "and no Shift, so the long press stays off the act and a held skip is "
-    "the trim-bound jump (chord_is_bound, gui_input.h)");
+static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
+                  redesign_button_shift_admits(RedesignButton::TransportSkipForward) &&
+                  !redesign_button_ctrl_admits(RedesignButton::TransportSkipBack) &&
+                  !redesign_button_ctrl_admits(RedesignButton::TransportSkipForward),
+    "the two skips admit Shift (Shift+Home / Shift+End, the whole-piece "
+    "jump, so the long press reaches it on glass) and no Ctrl "
+    "(chord_is_bound, gui_input.h)");
 static_assert(redesign_button_shift_admits(RedesignButton::TransportWalk) &&
                   redesign_button_ctrl_admits(RedesignButton::TransportWalk) &&
                   redesign_button_ctrl_shift_admits(RedesignButton::TransportWalk),
@@ -16643,24 +16636,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Load in Place (')", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
-        // THE TWO SKIPS ADMIT CTRL (architect 2026-09-26) and carry the line
-        // that says so: a ctrl-click is the WHOLE-PIECE jump, Ctrl+Home /
-        // Ctrl+End. The names are the ratified sentence-case labels, the
+        // THE TWO SKIPS ADMIT SHIFT (architect 2026-09-29) and carry the line
+        // that says so: a shift-click or a long press is the WHOLE-PIECE
+        // jump, Shift+Home / Shift+End. The names are the ratified labels, the
         // accelerators the table's own convention (a NAMED key by Qt's own
         // name — "Home", "End", "Space", "Tab", "Del", "Return" — punctuation
         // by its cap, and a CHORD with its spelled-out modifiers). THE
         // MODIFIER LINE NAMES THE ACT AND THE MODIFIER AND NOT A KEY, this
-        // table's rule for second lines. THE CTRL LINE STAYS ON A GREYED
+        // table's rule for second lines. THE SHIFT LINE STAYS ON A GREYED
         // SKIP: under the twin rule the button greys only when the bare jump
         // AND the whole-piece jump would both change nothing, so the act this
-        // line names is dead on every dead face — a live ctrl twin keeps the
-        // button lit and the ctrl-click reachable instead — and the
+        // line names is dead on every dead face — a live shift twin keeps the
+        // button lit and the shift-click reachable instead — and the
         // tooltips-on-disabled ruling (a disabled icon still explains itself)
         // says the line stays. The stateful overload drops it where the two
         // forms land on one frame.
         case RedesignButton::TransportSkipBack:
             return {"Go to Start (Home)",
-                    "Press Ctrl to ignore the trim window."};
+                    "Press Shift to ignore the trim window."};
         // THE PLAY/STOP BUTTON'S TEXT IS STATEFUL and this row is its STOPPED
         // form — the stateful overload below returns "Stop (Space)" while an
         // audition runs, Render's own pattern (a constant row for the ordinary
@@ -16683,7 +16676,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Play (Space)", "Press Shift for the A/B audition."};
         case RedesignButton::TransportSkipForward:
             return {"Go to End (End)",
-                    "Press Ctrl to ignore the trim window."};
+                    "Press Shift to ignore the trim window."};
         // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
         // HELP's vocabulary. THREE OF THEM ADMIT SHIFT and carry the second
         // line that says so — the DROP since 2026-08-28, whose shifted chord
@@ -17172,15 +17165,15 @@ inline RedesignTooltipText redesign_button_tooltip(
             if (!center_command_lands_on_focus(a))
                 return {"Center on Playhead (C)", nullptr};
             break;
-        // THE TWO SKIPS: the CTRL LINE DROPS where the bare and the
+        // THE TWO SKIPS: the SHIFT LINE DROPS where the bare and the
         // whole-piece landings coincide, AND THE COMPARE IS THE LANDING
         // OWNER'S OWN (playhead_skip_landing_frame, viewport.cpp, asked in
         // both arms): a restated shape (a full trim window, or the `h` view
         // taking the whole-piece arm for every jump) would miss the case where
         // only the RELEVANT bound sits at its song wall — with trim [0, x]
-        // bare Home and Ctrl+Home both land on frame 0 — and those shapes fall
-        // out of the compare anyway, so "Press Ctrl to ignore the trim window"
-        // advertises the ctrl form exactly where it lands somewhere else. The
+        // bare Home and Shift+Home both land on frame 0 — and those shapes fall
+        // out of the compare anyway, so "Press Shift to ignore the trim window"
+        // advertises the shift form exactly where it lands somewhere else. The
         // first line never forks: standing already at the bound is a benign
         // one-dimensional refusal, silent on every surface (messaging.md),
         // and the name is the name of the press.
@@ -17441,7 +17434,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // on Render's iteration-mode precedent of 2026-08-02): where the admitted
 // twin is dead in the current state — the maximizer over a full window, the
 // crossing in the P column, the jump with no eligible focus or no source,
-// the audition's shift over a standing sequence, the skips' ctrl form where
+// the audition's shift over a standing sequence, the skips' shift form where
 // the two landings coincide, since 2026-09-02 (R-17e) UP / DOWN'S STEP
 // LADDER where every
 // rung refuses alike (the step's kind refusals), and THE WALK'S TWO ARROWS one step

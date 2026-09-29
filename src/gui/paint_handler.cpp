@@ -35,7 +35,7 @@
 // (architect 2026-08-11, HIS REVERSAL of his own 2026-08-01 absolute, "I wanted
 // to get rid of monospace altogether — the last row should be the same font as
 // the rest"): monospace is the CLOCK's — the unified bottom row's
-// centre cell (paint_bottom_row_buttons_and_clock, which owns the face, the
+// left cell (paint_bottom_row_buttons_and_clock, which owns the face, the
 // size and the cell) and, since 2026-08-28, the render player's modal clock,
 // which is that same cell said twice and takes its metrics from it — and,
 // SINCE 2026-09-03, THE AV SYNC STATS PANEL (architect, with the panel): a
@@ -3062,95 +3062,44 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// THE BOTTOM ROW'S BUTTON CLUSTER AND CLOCK — the transport half of THE
-// UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the transport row
-// landed 2026-08-11 as the touch arc's first surface, its own lane for one
-// day): permanent on every host — ordinary mouse-clickable buttons, no touch
-// mode, no flag, no detection. The transport THREE on the row's LEFT with the
-// CLOCK behind a separator, and — FLUSH AT THE RIGHT MARGIN, three groups
-// divided by two more separators — the four SINGLE-MARKER VERBS, the
-// MARKER-WALK GROUP and the four ARROWS (the 2026-08-12
-// relayout put the arrows there — "the nudge based icons in the bottom
-// right", architect-agreed — and his 2026-08-15 live look re-weighted the two
-// ends: "the more I think about it, the more awkward it feels to have all of
-// that right next to those three others", so the left cluster dropped to three
-// and the freed weight went right; the 2026-08-18 ROSTER RELAYOUT sent it more
-// still, moving the verbs down from the icon row and taking the four history
-// companions back up). That is the row's whole roster
-// since 2026-08-13, when the STATUS CHAIN — which right-aligned against the
-// arrows' left edge from the unification — moved into the TAB ROW (and was
-// deleted there on 2026-08-29 for the status bar, whose one day left this
-// row's roster untouched — and whose state text folded onto this row as the
-// clock's own neighbour that evening, one cell and no ladder):
+// THE BOTTOM ROW'S BUTTON CLUSTER AND CLOCK — THE UNIFIED BOTTOM ROW (rows 8
+// and 9 merged 2026-08-12): permanent on every host — ordinary
+// mouse-clickable buttons, no touch mode, no flag, no detection. LEFT TO
+// RIGHT (architect 2026-09-29, for the right-handed tablet: the most-used
+// buttons at the bottom right):
 //
-//   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
-//   Home), THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap
-//   on the live audition bit — Render-is-Cancel's own stateful-face shape, and
-//   the reason this row's paint goes through redesign_button_icon; it was TWO
-//   buttons over that one chord until 2026-08-15, most recently as a radio
-//   pair) and skip-forward (bare
-//   End). THE ROW'S OTHER BUTTONS GREY WHERE THEIR PRESS WOULD BE A NO-OP
-//   since 2026-08-30 (architect: "Any time a button would be a no-op, grey
-//   it") — the selection's state on the verbs, the arrows, the walk steps and
-//   Copy value — on top of what the `h` history view's derived partition greys
-//   and the marker verbs' own lock grey (below). From 2026-08-15 until then
-//   they were LIT UNCONDITIONALLY apart from those two, by RULING rather than
-//   an unfinished sweep (the architect reversing his own whole-row honesty
-//   ruling of that morning in three steps — the arrows, then the skips, then
-//   play and stop): "there's not a whole lot of value derived from the icon
-//   faces changing, and it is a little distracting. The whole premise of the
-//   GUI is that it expects strict user knowledge — the user is expected to
-//   know that with the playhead outside trim it's not going to play in target
-//   view." Every reasoning, per pair and per reversal, is at
-//   redesign_button_enabled;
-//   THE FIRST SEPARATOR, the ruled row-8 divider, and then THE CLOCK at the
-//   pen it leaves behind — the timestamp, which moved here off the
-//   status line in MONOSPACE (the architect's ruling, the face, the size
-//   and the no-wiggle cell are all at kClockShape below). It was CENTRED IN
-//   THE LANE from 2026-08-11 until 2026-08-18, when the architect anchored it
-//   to the left block ("move bottom row timestamp to left alignment, place a
-//   separator between transport buttons and timestamp") and then nudged it off
-//   that pen by the two authored offsets at kClockCellOffsetXPx;
-//   THE SINGLE-MARKER VERBS (2026-08-18), the right block's first four — drop
-//   (bare `s`), delete (Delete), disable (Ctrl+D), inherit (Ctrl+N), moved
-//   down from the icon row at the architect's word ("move
-//   drop/delete/disable/toggle inherit to bottom right row"). THEY AND THE
-//   EDIT FLAG BUTTON ARE THE
-//   ROW'S ONLY RESTING GREYS ON A LOCKED TAB: their two mode gates — the `h`
-//   view and a locked tab — are the BUTTONS' own and came down with them;
-//   ADD TO SELECTION (2026-08-18), closing the verb group
-//   at the architect's own placement — bare `k`, the STICKY CTRL, and the
-//   row's ONE LIT FACE: it wears the selected fill while the mode stands. Its
-//   gates are its own and are NOT the verbs': the `h` view greys it with them,
-//   the READ-ONLY LOCK does not, a selection being navigation;
-//   THE SECOND SEPARATOR, then
-//   THE MARKER-WALK GROUP (2026-08-15) — THE WALK ALONE since 2026-09-23
-//   (Tab, its shifted press Shift+Tab: previous and next marker merged into
-//   one on 2026-09-22; its camera the audio view's). The two HOLD-COLUMN
-//   nudges (Ctrl+Left, Ctrl+Right) stood beside it from 2026-09-22 until
-//   their deletion 2026-09-23, and walk both tabs (Ctrl+Shift+Tab) until
-//   2026-09-14, the tab row's shifted press now;
-//   THE THIRD SEPARATOR — the row paints three of the ruled row-8 dividers
-//   (1px, 32 tall, 5px each side) since 2026-08-18, where it painted one:
-//   adjacent groups at one anchor need a line where anchoring alone used to be
-//   the boundary, and the left block needs one where the clock used to float
-//   free of it;
-//   THE CARDINAL ARROWS, closing the right block (their unification-era seat
-//   beside the transport lasted one day), in the architect's own order
-//   left-to-right
-//   since 2026-08-14 — DOWN, UP, LEFT, RIGHT (bare Down/Up/Left/Right; it was
-//   vim's left-down-up-right before), a single line and not a d-pad, and THE
-//   ROW'S ONE HOLD GESTURE: held past the hold beat they repeat their own
-//   chords at the compositor's key-repeat rate, the roster's only buttons that
-//   do (architect 2026-08-16, the record at the arrows' chord-table rows,
-//   input_pointer.cpp). Nothing about the PAINT changes for it — the pressed
-//   interior is the ordinary arm's, and the hold has no cue of its own. THEY
-//   PAINT IN EVERY STATE since 2026-08-18: the four HISTORY COMPANIONS took
-//   these same slots while the `h` view stood from 2026-08-14 until then — a
-//   cluster SWAP, one four painted at the anchor and the other publishing zero
-//   rects — and the relayout sent the companions back to the icon row and
-//   deleted the swap whole. Nothing on this row is conditional on a mode any
-//   more, and no member of it publishes a zero rect except under a modal.
+//   THE CLOCK at the lane's left pad — the timestamp in MONOSPACE (the face,
+//   the size and the no-wiggle cell are at kClockShape below) — with THE
+//   STATE CELL behind it in the clock's own run (`00:00.100 | Updating...`),
+//   clipped one pad short of the right block;
+//
+//   and, FLUSH AT THE RIGHT MARGIN, four groups divided by three of the ruled
+//   row-8 separators:
+//   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
+//   disable (Ctrl+D), inherit (Ctrl+N), the EDIT FLAG button (bare Return),
+//   COPY RESOLVED VALUE (bare `j`) and ADD TO SELECTION (bare `k`, the sticky
+//   ctrl, the row's ONE LIT FACE while the mode stands). The four verbs and
+//   the Edit flag button are the row's resting greys on a locked tab; Copy
+//   value and Add to selection are not, both being navigation;
+//   THE MARKER WALK (kTransportWalkGroup) — Tab, its shifted press
+//   Shift+Tab;
+//   THE CARDINAL ARROWS (kTransportArrowGroup) — DOWN, UP, LEFT, RIGHT (bare
+//   Down/Up/Left/Right), a single line and not a d-pad, and THE ROW'S HOLD
+//   GESTURE: held past the hold beat they repeat their own chords at the
+//   compositor's key-repeat rate (the record at the arrows' chord-table rows,
+//   input_pointer.cpp). The pressed interior is the ordinary arm's, and the
+//   hold has no cue of its own;
+//   THE TRANSPORT (kTransportGroup), closing the row — skip-back (bare Home,
+//   Shift+Home the whole-piece jump), THE ONE PLAY/STOP BUTTON (bare Space,
+//   whose GLYPH and TOOLTIP swap on the live audition bit — the reason this
+//   row's paint goes through redesign_button_icon) and skip-forward (bare
+//   End, Shift+End). The last button's right edge is one lane pad in from the
+//   lane's right edge.
+//
+// EVERY BUTTON GREYS WHERE ITS PRESS WOULD BE A NO-OP (the truthful-buttons
+// ruling, redesign_button_enabled), the `h` view's derived partition on top.
+// Nothing on this row is conditional on a mode, and no member of it publishes
+// a zero rect except under a modal.
 //
 // (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
 // was DELETED at the architect's live pass — "looks like a missing button
@@ -3175,16 +3124,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // (bottom_row_content_h_px delegating to icon_row_content_h_px, render.h). One
 // source, so a retune of the icon row carries here by construction.
 //
-// THE ROW PAINTS THREE SEPARATORS since 2026-08-18, all on one spec. The
-// 2026-08-12 relayout moved the arrows FLUSH RIGHT, which
-// made anchoring the boundary between the row's two ends and left the ROW-8
-// SEPARATOR SPEC with no consumer; the architect's marker-walk group put a
-// second cluster at that right end on 2026-08-15 and cashed the spec in for
-// ONE line; and the ROSTER RELAYOUT added two more — a THIRD group in the
-// right block (the single-marker verbs, so two boundaries there instead of
-// one) and the LEFT block's own, between the transport and the clock ("place
-// a separator between transport buttons and timestamp"), the left cluster's
-// first line ever. The spec's own ruled numbers (architect 2026-08-11): SOURCE
+// THE ROW PAINTS THREE SEPARATORS, all on one spec, one at each boundary of
+// the right block's four groups (verbs | walk | arrows | transport); the gap
+// between the clock's run and the block needs none, anchoring being the
+// boundary there. The spec's own ruled numbers (architect 2026-08-11): SOURCE
 // tmp/screenshots/kdenlive/redesign/row_8_separator.png, 1x32 — a
 // single flat column sampling #4c4e51, which IS kRedesignTabLine (the same
 // grey the icon row's separators paint; recorded as the sampled value, per
@@ -3278,21 +3221,22 @@ constexpr double kTransportSepGapPx    = 5.0;
 constexpr double kTransportSepWidthPx  = 1.0;
 constexpr double kTransportSepHeightPx = 32.0;
 
-// The painter's half of the row's roster: four groups, painted left to right
-// (the transport at the left pad, then the right block's three).
+// The painter's half of the row's roster: four groups, all in the right
+// block and painted left to right in the order the body lays them (verbs,
+// walk, arrows, transport); each table is declared beside its reasons.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
 // key off the same ids.
 struct TransportRowDef {
     RedesignButton id;
     icons::Icon    icon;
 };
-// THE LEFT CLUSTER IS THREE since 2026-08-15 (architect, at his live look):
-// play and stop collapsed into ONE stateful button, so the table carries
+// THE TRANSPORT THREE, the right block's LAST GROUP since 2026-09-29
+// (architect: the most-used buttons at the bottom right for the right hand):
+// play and stop are ONE stateful button (2026-08-15), so the table carries
 // media-playback-START as that button's resting glyph and the resolver swaps
 // in media-playback-STOP while an audition runs (redesign_button_icon —
 // Save's and Render's own shape, and the reason this row's paint goes through
-// the resolver at all now). The freed weight went to the row's RIGHT, where
-// the marker-walk group landed in the same ruling.
+// the resolver).
 constexpr TransportRowDef kTransportGroup[] = {
     {RedesignButton::TransportSkipBack,    icons::Icon::MediaSkipBackward},
     {RedesignButton::TransportPlayStop,    icons::Icon::MediaPlaybackStart},
@@ -3360,7 +3304,7 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconCopyValue,        icons::Icon::EditCopy},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
 };
-// THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle
+// THE MARKER-WALK GROUP (architect 2026-08-15), the right block's second
 // group between the verbs and the arrows: THE WALK ALONE since 2026-09-23
 // (Tab, its shifted press Shift+Tab — Previous marker and Next marker merged
 // 2026-09-22, a shift-modified form riding the plain button; its camera the
@@ -3431,56 +3375,36 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // the CURRENT scaled font, the widest advance wins, and the cell is a specimen
 // built from THAT digit — "DD:DD.DDD", the MM:SS.mmm shape with its 7 digit
 // slots — shaped through the same one-run path the painted clock takes. The
-// cell then starts at the LEFT BLOCK'S separator pen plus the authored offset
-// below (architect 2026-08-18; it was CENTERED in the lane from 2026-08-11
-// until then) and the live text starts
-// at its LEFT pen too, so the reserved box does not move at all on a given
-// scale and the glyphs never walk inside it.
+// cell then starts at the lane's left pad (architect 2026-09-29) and the
+// live text starts at its LEFT pen too, so the reserved box does not move at
+// all on a given scale and the glyphs never walk inside it.
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
 // no wider.
 constexpr const char* kClockShape = "DD:DD.DDD";
 
-// THE CELL'S ONE AUTHORED OFFSET OFF THAT SEAT (architect 2026-08-18, his own
-// measured number from looking at the row): the cell sits FOUR PIXELS RIGHT of
-// the separator's pen. It is a MARGIN MIRROR — the row's last button keeps one
-// lane pad from the lane's RIGHT edge, and this gives the clock the same air
-// on its left, so the row's two text-free margins read alike. AUTHORED, NOT
-// DERIVED — sampled off the painted row exactly as this row's separator trio
-// is, so it is not folded into an expression over the pad. It rides gui_scale
-// like every other authored length here.
-//
-// (A VERTICAL OFFSET STOOD BESIDE IT from the same evening until 2026-09-09:
-// one pixel DOWN of the band's centred baseline, his own measure of where the
-// digits read centred in the lane. THE BASELINE SOLVER ANSWERS IT NOW — it
-// centres the face's CAP BAND rather than its ascent-minus-descent, which
-// seats the digits on his row at both scales, at the row-8 clock and at the
-// render player's alike, so the drop had nothing left to correct. The
-// derivation is at redesign_baseline.)
+// THE SEPARATOR → DIGITS OFFSET (architect 2026-08-18, his own measured number
+// from looking at the row, when the row-8 clock sat behind the transport's
+// separator): the digits' cell sits FOUR PIXELS past the separator's trailing
+// gap. It was a MARGIN MIRROR — the row's last button keeps one lane pad from
+// the lane's right edge, and this gave the digits about the same air on their
+// left past a divider. AUTHORED, NOT DERIVED — sampled off the painted row
+// exactly as the separator trio is. It rides gui_scale like every other
+// authored length here. The row-8 clock sits at the lane's bare left pad since
+// 2026-09-29 and reads no offset (the pad is the mirror there); this constant
+// survives as the second addend of the distance below, which the render
+// player's modal row spends around its scrub.
 constexpr double kClockCellOffsetXPx = 4.0;
 
-// THE SEPARATOR → TIMESTAMP DISTANCE, this row's own and the ONE OWNER of
-// that distance (architect 2026-08-29): the whole air between the divider's
-// line and the first digit, which this row spends in its two halves — the
-// separator's own trailing gap above, then the cell's authored margin mirror.
-// ONE SITE READS THE CONSTANT and one site spends the same air by its two
-// addends (retold 2026-09-02 — the count of two read the clock cell as a
-// reader of this name, which it is not):
-//   * the CLOCK CELL itself, above, which lays the separator's trailing gap
-//     and then the cell's own margin, i.e. these two addends in order;
-//   * the RENDER PLAYER'S MODAL ROW, the constant's one reader by name, which
-//     takes it whole for every gap around
-//     its play-scrub (left separator → scrub, scrub → clock, clock → right
-//     separator), the architect's ruling being that those gaps ARE this one:
-//     the modal row stands in row 8's lane and its clock is row 8's cell said
-//     twice, so it takes this distance rather than authoring a second spec for
-//     the same air in the same place.
-// (A THIRD READER stood from 2026-08-29 to 2026-08-31: the sans STATE CELL
-// right of the clock took this same distance as its DIGITS-TO-TEXT gap, so no
-// second number was authored for it. It went when the state text joined the
-// clock's own run behind a literal ` | ` — the separation is a character now,
-// not a measured gap.)
+// THE SEPARATOR → TIMESTAMP DISTANCE, the ONE OWNER of that distance
+// (architect 2026-08-29): the whole air between a divider's line and the first
+// digit — the separator's own trailing gap, then the offset above. ITS ONE
+// READER is the RENDER PLAYER'S MODAL ROW, which takes it whole for every gap
+// around its play-scrub (left separator → scrub, scrub → clock, clock → right
+// separator): the modal row stands in row 8's lane and its clock is row 8's
+// face, so it takes this distance rather than authoring a second spec for the
+// same air in the same place.
 constexpr double kTransportSepToClockPx =
     kTransportSepGapPx + kClockCellOffsetXPx;
 
@@ -3669,114 +3593,52 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         return pen + sep_w + sep_gap;
     };
 
-    // THE TRANSPORT AND THE CLOCK AT THE LEFT, THE RIGHT BLOCK FLUSH RIGHT
-    // (the 2026-08-12 relayout's rearrangement, architect-agreed: "the
-    // nudge based icons in the bottom right"; RE-WEIGHTED 2026-08-15 at his
-    // live look — "the more I think about it, the more awkward it feels to
-    // have all of that right next to those three others"; RE-WEIGHTED AGAIN
-    // 2026-08-18, the roster relayout sending the four single-marker verbs
-    // down here and taking the four history companions back up): the TRANSPORT
-    // THREE walk from the row's left pad, a SEPARATOR follows them and the
-    // CLOCK CELL starts at the pen it leaves — the architect's own ask, "move
-    // bottom row timestamp to left alignment, place a separator between
-    // transport buttons and timestamp". The RIGHT BLOCK anchors at the RIGHT
-    // margin as SEVEN + SEPARATOR + ONE + SEPARATOR + FOUR (the seven counted
-    // off kMarkerVerbGroup, the one off kTransportWalkGroup) — the MARKER
-    // VERBS with the
-    // EDIT FLAG button, COPY VALUE and ADD TO SELECTION behind them, the
-    // MARKER-WALK GROUP (the walk alone since 2026-09-23, when the two
-    // hold-column nudges left it), and the CARDINAL ARROWS (↓ ↑ ← →, the
-    // architect's order since 2026-08-14). The span between the cell and the
-    // right block is THE STATUS CELL since 2026-08-29 (the status bar's fold
-    // into this row) — the clock's neighbour, laid out with it below and
-    // clipped one lane pad short of the right block's own left edge. THE VERB
-    // GROUP IS SEVEN since 2026-09-19, the FLATTEN button having joined it
-    // that morning and left for the icon row's iteration group the same day
-    // (its count's succession is at kMarkerVerbGroup and in git history).
+    // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
+    // layout: the most-used buttons at the bottom right): the CLOCK at the
+    // lane's left pad with THE STATE CELL behind it, then THE RIGHT BLOCK,
+    // anchored at the right margin — the MARKER-VERB GROUP (its seven counted
+    // off kMarkerVerbGroup), a separator, the MARKER-WALK GROUP (the walk,
+    // kTransportWalkGroup), a separator, the four CARDINAL ARROWS (↓ ↑ ← →,
+    // kTransportArrowGroup), a separator and the TRANSPORT THREE
+    // (kTransportGroup), whose last button's right edge is one pad in from
+    // the lane's right edge. The whole block is measured first and laid left
+    // to right from there, so one expression owns the anchor and no group
+    // re-derives it. It has no mode term: every button on this row publishes
+    // a real rect on every frame, except under a modal, where the row yields
+    // whole (paint_bottom_strip).
     //
-    // THE TWO ENDS CANNOT CRAWL INTO EACH OTHER FROM THE CLOCK'S SIDE ANY MORE
-    // (2026-08-18). The cell was CENTRED IN THE LANE until then, so it TRAVELLED
-    // toward the right block as the window narrowed and the clearance had to be
-    // re-derived at every metrics change; anchored to the left block it is at a
-    // fixed pen on every window, and only the RIGHT block moves. At 100% the
-    // left block ends at the clock's pen — 8px pad + three 32px boxes + two 2px
-    // gaps = 108, then 5 + 1 + 5 = 119, and the cell's own authored 4px offset
-    // seats it at 123 — and the right block is 424 wide since 2026-09-23's
-    // deletion of the two hold-column nudges (236 verbs + 11 separator span +
-    // 32 walk + 11 + 134 arrows, each group n × 32 + (n − 1) × 2 and each
-    // separator span 5 + 1 + 5; the count's succession is in git history), so
-    // it starts at 208 on the 640px defensive floor, 592 on the retired rig's
-    // 1024 and 1488 at 1920. The 9-glyph cell measures 79.2px at 100% (it
-    // narrowed when the clock went to 11pt on 2026-08-14), which leaves the
-    // rig's own 1024 (the tablet's logical width too) some 390px of ground
-    // between the cell and the verbs — the room THE STATUS CELL now takes, clipped
-    // one pad short of the block. THE 640px DEFENSIVE FLOOR NO LONGER CROPS
-    // INTO THE CLOCK since that deletion — the block's origin lands some 6px
-    // right of the cell's ~202px right edge, the clip bound one pad short of
-    // it leaving the state cell no width there — and a crop at that floor
-    // would be ACCEPTED anyway under the crop-at-the-floor allowance recorded
-    // at kMinWindowWidthPx: 640 is a floor no real host of this product uses
-    // (the rig was 1024, the laptop 1920). EVERY BOX A
-    // GROUP GAINS OR LOSES MOVES THE BLOCK BY 34 (a 32px box and its 2px gap)
-    // — the block's ONE dimension that moves, which is why the numbers in this
-    // paragraph are re-derived at every such change rather than inherited
-    // (most recently 2026-09-23, the two hold-column nudges leaving the walk
-    // group, two boxes; the succession is
-    // in git history). The STATE CELL is 1278
-    // authored px wide at 100% on 1920 since 2026-09-23 (1920 − 8 − 424 =
-    // 1488, the clip bound at 1480, less the clock's ~202) and 382 logical px
-    // on the tablet's 2304 device px at 225% —
-    // 2304 / 2.25 = 1024 logical, the block's left edge at 1024 − 8 − 424 =
-    // 592, the clip bound one pad short at 584, less the clock's ~202 right
-    // edge — each measured from the clock's own right edge to the clip bound. THE
-    // ROW STILL CARRIES NO COLLISION RULE — none of the
-    // redesign does, row 1's floats included — and the crop-at-the-floor
-    // allowance recorded at kMinWindowWidthPx is what covers a scale driven
-    // toward the 350 ceiling (2026-08-29). The block is anchored one pad in
-    // from the right edge, so it reaches the
-    // clock's own ~202px right edge once the LOGICAL width (device width over
-    // the factor) falls below about 634 (202 + 424 + 8) — at 350% on a 2304px
-    // panel that is 658, some 24px clear of the cell; the
-    // tablet's own 225% leaves 1024 logical px and 382 of clear ground. Still no collision
-    // rule, for the reason above: the row crops at its floor. THE STATUS CELL
-    // TAKES THAT GROUND AND CANNOT PUSH ANYTHING: it CLIPS at the block's own
-    // left edge less one pad, so a long line is cut rather than colliding.
-    int x = lane.x + pad;
-    for (const TransportRowDef& def : kTransportGroup) {
-        paint_button(def, x);
-        x += btn + btn_gap;
-    }
-    const int clock_cell_x = paint_separator(x);
-
-    // THE RIGHT BLOCK, from its right-anchored origin: the VERB GROUP's seven
-    // boxes (the four single-marker verbs with the EDIT FLAG BUTTON since
-    // 2026-08-27, the COPY VALUE button
-    // since 2026-08-29 and ADD TO SELECTION since 2026-08-18 behind them),
-    // a separator, the WALK GROUP's one, a separator, and the four
-    // ARROWS whose LAST button's right edge is one pad in from the lane's
-    // right edge. The whole block is measured first and laid left to right
-    // from there, so one expression owns the anchor and no group re-derives it.
-    //
-    // IT HAS NO MODE TERM AT ALL since 2026-08-18. From 2026-08-14 the arrows'
-    // four slots were a SWAP — the history companions painted there while the
-    // `h` view stood, the unpainted four publishing zero rects — and the
-    // relayout took those companions back to the icon row, which leaves one
-    // cluster at that anchor in every state. So the shown/hidden selection,
-    // the zero-rect publishes and the swap's whole-window damage note are
-    // deleted rather than kept: every button on this row publishes a real rect
-    // on every frame now, except under a modal, where the row yields whole.
+    // THE NUMBERS, re-derived whenever a group gains or loses a box (each box
+    // moves the block by a 32px box and its 2px gap): each group is
+    // n × 32 + (n − 1) × 2 and each separator span 5 + 1 + 5, so the block is
+    // 236 verbs + 11 + 32 walk + 11 + 134 arrows + 11 + 100 transport = 535
+    // authored px. At 100% on the laptop's 1920 it starts at 1920 − 8 − 535 =
+    // 1377, the state cell's clip bound one pad short at 1369, and the clock
+    // cell (79.2px at 11pt) spans 8..~87, leaving the state cell ~1282px. On
+    // the tablet at 200% (2304 device px, 1152 logical) the block starts at
+    // logical 1152 − 8 − 535 = 609, the clip bound at 601 and the clock ends
+    // at ~87, leaving ~514 logical px. THE ROW CARRIES NO COLLISION RULE —
+    // none of the redesign does — and the crop-at-the-floor allowance recorded
+    // at kMinWindowWidthPx covers a narrow window or a scale driven toward the
+    // 350 ceiling: the block reaches the clock's right edge once the logical
+    // width falls below about 630 (87 + 535 + 8); the 640 floor keeps ~10px of
+    // it. THE STATE CELL CANNOT PUSH ANYTHING: it CLIPS at the block's left
+    // edge less one pad, so a long line is cut rather than colliding.
     int right_block_x = lane.x + lane.w - pad;
     {
-        // The group's count read off its own table, so a box joining or
+        // Each group's count read off its own table, so a box joining or
         // leaving moves this width with no second edit.
-        const int verbs_n  = static_cast<int>(std::size(kMarkerVerbGroup));
-        const int verbs_w  = verbs_n * btn + (verbs_n - 1) * btn_gap;
-        const int walk_n   = static_cast<int>(std::size(kTransportWalkGroup));
-        const int walk_w   = walk_n * btn + (walk_n - 1) * btn_gap;
-        const int arrows_w = 4 * btn + 3 * btn_gap;
+        const auto group_w = [&](int n) { return n * btn + (n - 1) * btn_gap; };
+        const int verbs_w  =
+            group_w(static_cast<int>(std::size(kMarkerVerbGroup)));
+        const int walk_w   =
+            group_w(static_cast<int>(std::size(kTransportWalkGroup)));
+        const int arrows_w =
+            group_w(static_cast<int>(std::size(kTransportArrowGroup)));
+        const int transport_w =
+            group_w(static_cast<int>(std::size(kTransportGroup)));
         const int sep_span = sep_gap + sep_w + sep_gap;
-        const int block_w  =
-            verbs_w + sep_span + walk_w + sep_span + arrows_w;
+        const int block_w  = verbs_w + sep_span + walk_w + sep_span +
+                             arrows_w + sep_span + transport_w;
         int ax = lane.x + lane.w - pad - block_w;
         // THE STATE CELL'S CLIP BOUND (below) is this block's own left edge,
         // published out of the scope so the cell cannot guess it.
@@ -3795,15 +3657,20 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             paint_button(def, ax);
             ax += btn + btn_gap;
         }
+        ax = paint_separator(ax);
+        for (const TransportRowDef& def : kTransportGroup) {
+            paint_button(def, ax);
+            ax += btn + btn_gap;
+        }
     }
 
     // THE CLOCK. Its own face on this context — the monospace face, selected
     // through the one face owner (gui_font.h) — contained by the save/restore
     // this body already opened; nothing else on the row draws text. ONE FACE,
     // THREE CELLS since 2026-09-03: this one, the RENDER PLAYER's
-    // `<position> / <length>` on the modal row — which takes this cell's size,
-    // metrics and authored offsets so the digits never walk between them
-    // (2026-08-28) — and the AV SYNC STATS PANEL's rows, which take the face
+    // `<position> / <length>` on the modal row — which takes this cell's size
+    // and metrics so the digits never walk between them (2026-08-28) — and
+    // the AV SYNC STATS PANEL's rows, which take the face
     // and the size and none of this cell's geometry, being a list rather than
     // a cell. NONE OF THE THREE EVER PAINTS IN THE SAME FRAME AS ANOTHER: the
     // player and the panel each own the row whole while they stand, and the
@@ -3818,15 +3685,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const TransportClockMetrics& clock_metrics =
             clock_cell_metrics(font, size_px);
         const double cell_w = clock_metrics.cell_w;
-        // THE CELL STARTS AT THE LEFT BLOCK'S SEPARATOR PEN (architect
-        // 2026-08-18, "move bottom row timestamp to left alignment"), PLUS THE
-        // AUTHORED MARGIN-MIRROR OFFSET (the same day, at his live look; the
-        // offset and its reason are at kClockCellOffsetXPx). The cell
-        // is still a reserved WIDTH — measured from the widest digit's
-        // specimen, so the glyphs never walk inside it — and only its ORIGIN
-        // moved: it was `lane.x + nearbyint((lane.w - cell_w) * 0.5)`, the lane
-        // midline, from 2026-08-11 until then.
-        const int cell_x = clock_cell_x + scaled_px(kClockCellOffsetXPx);
+        // THE CELL STARTS AT THE LANE'S LEFT PAD (architect 2026-09-29, the
+        // transport having moved to the row's right end). THE AIR IS A MARGIN
+        // MIRROR: the row's last button keeps one lane pad from the lane's
+        // right edge, and the clock keeps the same pad from its left, so the
+        // row's two ends read alike — the rule kClockCellOffsetXPx carried
+        // while the cell sat behind a separator, which at a bare margin is the
+        // pad itself and takes no offset. It is also where the modal row's
+        // prompt message starts. The cell is a reserved WIDTH — measured from
+        // the widest digit's specimen, so the glyphs never walk inside it.
+        const int cell_x = lane.x + pad;
         // THE BASELINE IS THE BAND'S SOLVED ONE AND NOTHING ELSE: the solver
         // centres the face's cap band, which is where the architect measured
         // these digits, so the vertical drop that used to ride here is gone.
@@ -3839,9 +3707,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // on each side: the reserved width is an ADVANCE sum and a glyph's ink
         // may sit a hair outside it, and the band is the row's content height,
         // which contains the baseline's ascent and descent by construction.
-        // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the horizontal
-        // offset above is in `cell_x` and so is in this box, which is what stops
-        // the moved cell leaving a trail. The vertical axis needs no term at
+        // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the origin
+        // above is `cell_x` and so is this box's, so the damage can never
+        // miss the painted digits. The vertical axis needs no term at
         // all: the box is the row's whole content band, which the baseline's
         // ink stays inside, and the band's bottom IS the window's, so widening
         // it downward would damage past the surface.
@@ -3879,21 +3747,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // at the clock's size, on the clock's baseline, from the clock's own
         // origin. There is no second cell and no second face here any more.
         //
-        // WHAT THIS SUPERSEDES (2026-08-29 to 2026-08-31): the state text was
-        // the clock's NEIGHBOUR, a sans run in the row's ordinary label ink,
-        // laid a second read of kTransportSepToClockPx off the clock — the
-        // layout `| sep | gap | 02:42.608 | gap | <state text> |` — with an
-        // ink-to-ink origin correction (the constant taken off the memoised
-        // specimen's ink RIGHT edge, plus the specimen's left bearing, less the
-        // sans run's own, so both gaps around the digits read alike) and its
-        // own centred baseline. THE SEPARATION IS NOW A CHARACTER, so all of
-        // that geometry retires: the second read of the constant, the ink pair's
-        // use at this site, the face switch and the sans baseline. The constant
-        // keeps its FIRST reader (this row's separator -> clock distance, above)
-        // and the render player's modal row's three; the memoised ink pair
-        // keeps the specimen it was measured from.
-        //
-        // THE CONTENT is unchanged and so is its precedence: the `h` walk line,
+        // THE CONTENT AND ITS PRECEDENCE: the `h` walk line,
         // else the render / batch / loading progress line. The two CAN COEXIST
         // and THE WALK LINE WINS — nothing STARTS a render inside the `h` view
         // (both render chords are off its allowlist), but a render or a target
@@ -6449,12 +6303,10 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: all FIFTEEN buttons — the transport three, the VERB
-// GROUP'S SEVEN,
-// the marker walk and the four arrows — plus the clock and the row's three separators stand
-// down, nothing negotiates
-// for space,
-// and paint_modal_dialog paints the modal into the lane they left.
+// YIELDS WHOLE: all FIFTEEN buttons — the VERB GROUP'S SEVEN, the marker
+// walk, the four arrows and the transport three — plus the clock and the
+// row's three separators stand down, nothing negotiates for space, and
+// paint_modal_dialog paints the modal into the lane they left.
 //
 // The two helpers below are that fork, shared by the row's painter (which
 // wants the boolean, just under here) and by paint_modal_dialog (which wants
@@ -6512,27 +6364,15 @@ static bool modal_owns_bottom_row(AppState& app) {
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
-    // into ONE lane — under the waveform then, on the WINDOW'S FOOT from the
-    // same day's relayout commit B, which also moved the arrows FLUSH RIGHT,
-    // apart from the one day a STATUS BAR stood under it, 2026-08-29):
-    // the transport three
-    // on the left at the icon row's boxes with the monospace clock behind their
-    // separator (left-aligned since 2026-08-18, lane-centred before), and —
-    // flush right since 2026-08-15 — the MARKER-VERB GROUP, the marker-walk
-    // two and the four cardinal arrows behind two more of the ruled
-    // separators (the three tables above own those memberships).
-    // THAT IS THE WHOLE ROSTER since
-    // 2026-08-13, when the architect moved the STATUS CHAIN — the critical
-    // chip and section C's precedence ladder — up into the TAB ROW (the chain
-    // was deleted there on 2026-08-29; its critical chip became the cards and
-    // its two surviving STATE strings came back to this row that evening, not
-    // as a ladder but as the ONE STATE CELL right of the clock, which is the
-    // buttons-and-clock body's tenant and not a roster member): this
-    // painter owns the lane's CHROME (ground + border-top) and nothing else;
-    // the buttons and the clock are
-    // paint_bottom_row_buttons_and_clock, called from here onto the grounded
-    // band (the cluster's tables and the clock's metrics live beside that
-    // body).
+    // into ONE lane on the WINDOW'S FOOT): the monospace clock and THE STATE
+    // CELL at the left pad, and — flush right — the MARKER-VERB GROUP, the
+    // marker walk, the four cardinal arrows and the transport three, divided
+    // by three of the ruled separators (architect 2026-09-29; the four tables
+    // above own those memberships). That is the whole roster. This painter
+    // owns the lane's CHROME (ground + border-top) and nothing else; the
+    // buttons and the clock are paint_bottom_row_buttons_and_clock, called
+    // from here onto the grounded band (the cluster's tables and the clock's
+    // metrics live beside that body).
     // THE ROW HAS A MODAL STATE since 2026-08-13, in which those tenants
     // stand down and the lane carries the prompt or the dialog
     // editor instead (the ruling and the fork are at modal_owns_bottom_row,
@@ -6625,14 +6465,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
                                 def.id,
                                 GuiRect{0, 0, 0, 0});
         }
-        // The RIGHT BLOCK's three groups stand down with them — the MARKER
-        // VERBS (2026-08-18), the MARKER-WALK GROUP (2026-08-15) and the four
-        // ARROWS. Each is a tenant of this lane like every other member, and
-        // the modal takes the lane whole. FOUR TABLES, NOT FIVE, since the
-        // relayout: the arrows' slots carried a second table until then (the
-        // history companions' cluster, which had to stand down too whichever
-        // of the two the mode would have painted), and those four are the icon
-        // row's again.
+        // The right block's other three groups stand down with the transport
+        // — the MARKER VERBS, the MARKER-WALK GROUP and the four ARROWS. Each
+        // is a tenant of this lane like every other member, and the modal
+        // takes the lane whole: four tables, every button on the row.
         for (const TransportRowDef& def : kMarkerVerbGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,
@@ -7463,12 +7299,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the same place.
         const int ggap     = scaled_px(kIconBtnGapPx);
         const int sep_gap  = scaled_px(kTransportSepGapPx);
-        // THE AIR AROUND THE SCRUB, all three of it, is ROW 8'S OWN SEPARATOR
-        // → TIMESTAMP DISTANCE (architect 2026-08-29; the owner and its
+        // THE AIR AROUND THE SCRUB, all three of it, is THE SEPARATOR →
+        // TIMESTAMP DISTANCE (architect 2026-08-29; the owner and its
         // derivation are at kTransportSepToClockPx): left separator → scrub,
         // scrub → clock, clock → right separator. One number, read three
-        // times, and it is the number the row under this modal already spends
-        // between its divider and its digits.
+        // times.
         const int sep_pad  = scaled_px(kTransportSepToClockPx);
         const int sep_w    = scaled_px(kTransportSepWidthPx, 1);
         const int sep_h    = scaled_px(kTransportSepHeightPx);
@@ -7487,9 +7322,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // being one of the fixed terms the scrub's own is what is left over.
         // ONE FACE, THREE CELLS since 2026-09-03 (this pair since 2026-08-28;
         // the AV sync stats panel is the third — the set's own record is at
-        // this file's bottom-row text block): the row-8 clock's face, size,
-        // cell metrics and authored offsets, so the digits never walk between
-        // the project's clock and the player's.
+        // this file's bottom-row text block): the row-8 clock's face, size
+        // and cell metrics, so the digits never walk between the project's
+        // clock and the player's.
         gui_select_font_face(cr, GuiFontFamily::Mono);
         const double csize = clock_font_size_px();
         cairo_set_font_size(cr, csize);
@@ -7506,7 +7341,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         plan[1].x = px; px += btn_h + ggap;      // Play / Pause
         plan[2].x = px; px += btn_h;             // End (skip forward)
         // The separator keeps the spec's own 5px on its BUTTON side; the
-        // scrub side takes the distance above, exactly as row 8's clock does.
+        // scrub side takes the distance above.
         const int sep1_x   = px + sep_gap;
         const int scrub_x0 = sep1_x + sep_w + sep_pad;
 

@@ -773,11 +773,9 @@ private:
     // cluster (bottom lane 0, the strip's ONE lane, ON THE WINDOW'S FOOT since
     // the relayout's commit B apart from the one day the STATUS BAR stood
     // under it, 2026-08-29:
-    // the transport three, the clock and the STATE CELL left, then the marker
-    // verbs, the
-    // marker walk and the arrow four flush
-    // right behind their separators, declared
-    // below).
+    // the clock and the STATE CELL left, then the marker verbs, the marker
+    // walk, the arrow four and the transport three flush right behind their
+    // separators, declared below).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
@@ -798,18 +796,13 @@ private:
     void paint_tab_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
-    // 2026-08-12; the arrows flush right since the same day's relayout): the
-    // transport three at the left pad, then the right margin's block — the
-    // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp)
-    // + separator + marker walk + separator + arrow four (2026-08-15 for the walk
-    // group, 2026-08-18 for the verbs) — at
-    // the icon row's boxes, the
-    // monospace clock at its own left-anchored pen behind the transport's
-    // separator (centred in the lane until 2026-08-18) and THE STATE CELL
-    // beside that clock (2026-08-29, the status bar's fold into this row: the
-    // `h` walk line or the render's progress line, at the clock's own
-    // separator-to-digits distance and clipped where the right block begins),
-    // painted onto the lane paint_bottom_strip has
+    // 2026-08-12; the layout architect 2026-09-29): the monospace clock at
+    // the lane's left pad with THE STATE CELL in its own run (the `h` walk
+    // line or the render's progress line, clipped where the right block
+    // begins), then the right margin's block — the MARKER-VERB GROUP (its
+    // membership is kMarkerVerbGroup's, in the .cpp) + separator + marker
+    // walk + separator + arrow four + separator + transport three — at the
+    // icon row's boxes, painted onto the lane paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row
     // painter separate only because the button cluster's tables and the

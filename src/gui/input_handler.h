@@ -1398,10 +1398,10 @@ struct GuiInputHandler {
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's fifteen — the transport three, then the right block's
-    // MARKER-VERB GROUP of seven (kMarkerVerbGroup, paint_handler.cpp, owns
-    // that membership), the walk group's one (the walk) and four cardinal
-    // arrows. EVERY ONE OF THEM
+    // row's fifteen — the right block's MARKER-VERB GROUP of seven
+    // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the walk
+    // group's one (the walk), four cardinal arrows and the transport three.
+    // EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
     // with the history companions on 2026-08-18 (definitions beside
@@ -2636,10 +2636,11 @@ private:
     // is at land_playhead_on_marker, input_pointer.cpp) and land through
     // Viewport::move_playhead_to, the movement owner. `forward` picks End over
     // Home; `whole_piece` asks the landing owner for the piece's own ends
-    // instead of the trim bounds, which is what the CTRL forms pass
+    // instead of the trim bounds, which is what the SHIFT forms pass
     // (playhead_skip_landing_frame, app_state.h, states the two arms). FOUR
-    // CALLERS: the bare Home and End arms and their two CTRL arms, which the
-    // bottom row's skip buttons dispatch on a plain and a ctrl press. The `h`
+    // CALLERS: the bare Home and End arms and their two SHIFT arms, which the
+    // bottom row's skip buttons dispatch on a plain press and on a shift press
+    // or long press. The `h`
     // history view's own pair is NOT one of them — it clears the MODE's
     // diff-flag focus where these clear the live selection, so it spells its
     // own body and shares only the landing owner, which its mode bit already

@@ -2018,34 +2018,35 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         warpops.toggle_disabled();
         return;
     }
-    // CTRL+HOME / CTRL+END: the WHOLE-PIECE jump (architect 2026-09-26).
+    // SHIFT+HOME / SHIFT+END: the WHOLE-PIECE jump (architect 2026-09-29).
     // Frame 0 and the ACTIVE DOMAIN's last frame, whatever the trim window
     // is, where the bare pair lands on the trim bounds — the way to reach
     // audio the window has cut off without opening the window first. Same
     // body, same unconditional acts (run_playhead_end_jump,
     // input_key_dispatch.cpp), through the movement owner as always. The two
-    // skip buttons dispatch it on a ctrl-click (redesign_button_ctrl_admits,
-    // app_state.h), which on the tablet is the S Pen's side button held on
-    // the skip (touch.md).
+    // skip buttons dispatch it on a shift-click and on the chrome long press,
+    // glass's held shift (redesign_button_shift_admits, app_state.h).
     //
-    // THEY DISPATCH HERE, WITH THE OTHER CTRL CHORDS, because the bare pair's
+    // THEY DISPATCH HERE, among the modified chords, because the bare pair's
     // arms live in a switch this function reaches only with no modifier held —
-    // a chord has no road into handle_plain_bare_keys by construction. Ctrl is
-    // the only modifier they take: Ctrl+Shift and Ctrl+Alt forms bind nothing
-    // and are consumed no-ops under strict modifier validation, as Shift+Home
-    // and Shift+End are.
+    // a chord has no road into handle_plain_bare_keys by construction. Shift
+    // is the only modifier they take: Ctrl, Ctrl+Shift and Alt forms bind
+    // nothing and are consumed no-ops under strict modifier validation.
     //
-    // A TEXT EDITOR NEVER REACHES THIS ARM: Ctrl+Home / Ctrl+End are the
-    // editors' own caret motion (text_editor::classify_key's MotionEditKey arm
-    // admits ctrl and shift on Home / End), and the editor blocks sit at the
-    // top of on_key, far above this dispatch — so an open editor consumes the
-    // chord before the jump can see it.
+    // A TEXT EDITOR NEVER REACHES THIS ARM: Home / End under any modifier are
+    // the editors' own caret motion and selection (text_editor::classify_key's
+    // MotionEditKey arm admits ctrl and shift on Home / End), and the editor
+    // blocks sit at the top of on_key, far above this dispatch — so an open
+    // editor consumes the chord before the jump can see it. The render player
+    // never reaches it either: its router owns the whole keyboard while it
+    // stands, and its own Shift+Home / Shift+End are the item folder's ends
+    // (route_render_player_key).
     //
     // The `h` history view claims them too, one arm above this whole dispatch:
     // in there a jump ALREADY means the piece's ends, so the chord means the
     // same thing in every state (history_mode_owns_key).
     if ((key == GuiKeys::Home || key == GuiKeys::End) &&
-        ctrl && !shift && !alt) {
+        shift && !ctrl && !alt) {
         run_playhead_end_jump(key == GuiKeys::End, /*whole_piece=*/true);
         return;
     }

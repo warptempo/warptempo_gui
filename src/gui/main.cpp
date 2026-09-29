@@ -181,19 +181,12 @@ namespace {
 // BOTTOM ROW,
 // bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
-// transport three at the left
-// pad and, flush right, the MARKER-VERB GROUP (kMarkerVerbGroup,
-// paint_handler.cpp, owns its membership and its succession), the
-// marker walk and the four
-// cardinal arrows, divided by
-// two of the ruled separators (the roster commit's
-// rearrangement, re-weighted 2026-08-15 and again at the 2026-08-18 relayout,
-// which deleted the mode SWAP that put the history companions in the arrows'
-// slots inside the `h` view). All at the icon row's boxes, the clock in
-// monospace beside the transport's own separator and THE STATE CELL beside
-// the clock (2026-08-29, the status bar's fold into this row) —
-// sitting ON THE WINDOW'S FOOT with the flexible gap 2
-// between it and the waveform. (The strip was one lane from row 7's collapse,
+// monospace clock and THE STATE CELL at the left pad and, flush right, the
+// MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp, owns its
+// membership), the marker walk, the four cardinal arrows and the transport
+// three, divided by three of the ruled separators (architect 2026-09-29),
+// all at the icon row's boxes — sitting ON THE WINDOW'S FOOT with the
+// flexible gap 2 between it and the waveform. (The strip was one lane from row 7's collapse,
 // 2026-08-01, two from row 8, 2026-08-11, one at the unification, one from
 // commit B, two for the STATUS BAR'S ONE DAY on 2026-08-29, and one since
 // that evening's fold.) It rides the
@@ -472,10 +465,10 @@ int top_lane_height(int lane) {
 }
 // The bottom strip's ONE lane, indexed from the WINDOW'S FOOT inward like
 // every lane table here — so lane 0 is THE UNIFIED BOTTOM ROW, resting on the
-// window's foot (2026-08-12, rows 8 and 9 merged: buttons left, clock at the
-// transport's separator; the succession is at that row's geometry block,
-// render.h). GAP 2 sits ABOVE it, in bottom_strip_h's total rather than in the
-// lane's inset, so lane 0 is flush with the window edge like the top strip's
+// window's foot (2026-08-12, rows 8 and 9 merged: the clock left, the
+// buttons flush right; the layout is paint_bottom_row_buttons_and_clock's).
+// GAP 2 sits ABOVE it, in bottom_strip_h's total rather than in the lane's
+// inset, so lane 0 is flush with the window edge like the top strip's
 // own lane 0. (THE STATUS BAR was bottom lane 0 for ONE DAY — 2026-08-29,
 // the messaging redesign's bar half — with this row one lane in above it; the
 // architect ruled the bar off that evening and its state text is this row's
@@ -824,18 +817,12 @@ GuiRect top_marker_row_area(const AppState& a) {
 // 2026-08-12, rows 8
 // and 9 merged; the succession is at the bottom row's geometry block,
 // render.h), with GAP 2's blank window ground between it
-// and the waveform: the transport three on the left at the icon
-// row's boxes with the monospace clock behind their separator (left-aligned
-// since 2026-08-18), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
-// (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the
-// marker walk and the four cardinal arrows, divided by two more of the
-// ruled separators, and THE STATE CELL right of the clock. (The arrows' four
-// slots were a mode SWAP with the history
-// companions from 2026-08-14 until the 2026-08-18 relayout took those four
-// back to the icon row.) (The status chain moved into the TAB ROW on
-// 2026-08-13 and was deleted whole on 2026-08-29 for the STATUS BAR, which
-// stood one lane below this row for that day and folded into it that evening
-// — the state text is this row's cell now and the resolved readout retired.)
+// and the waveform: the monospace clock at the left pad with THE STATE CELL
+// right of it, and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
+// (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
+// walk, the four cardinal arrows and the transport three, at the icon row's
+// boxes and divided by three of the ruled separators (architect
+// 2026-09-29).
 // THE DIRTY MARK
 // IS A TENANT HERE, AND IT IS THE ONLY ONE: the clock wears the `*` suffix
 // while app.dirty stands (paint_bottom_row_buttons_and_clock appends it; the
@@ -1275,19 +1262,15 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // Viewport::invalidate_modal_dialog_area's lane.)
 
 // THE CLOCK'S RECT — the unified bottom row's reserved cell as the
-// painter last drew it, in the row's LEFT BLOCK behind the transport's
-// separator since 2026-08-18 (AppState::clock_cell_rect, whose stash contract
-// is at the field). Narrow by construction: on_redraw clips to the damage
-// region, so paint_bottom_strip runs but its buttons and its three separators
-// fall outside the clip and cost nothing, which is what makes this affordable
-// at the pre-paint hook's per-frame cadence. THE MOVE MADE IT NO WIDER AND NO
-// NARROWER — the cell's width is the same shaped specimen and only its origin
-// changed — so nothing about this owner or its consumers moved with it. (The
-// row's STATUS CHAIN was the third such tenant until 2026-08-13, when it moved
-// into the TAB ROW; the chain is gone entirely since 2026-08-29 and what stands
-// beside the clock now is THE STATE CELL, whose own owner is
-// Viewport::invalidate_status_cell_area and whose rect is the lane WHOLE —
-// see the record just above.)
+// painter last drew it, at the lane's left pad (AppState::clock_cell_rect,
+// whose stash contract is at the field). Narrow by construction: on_redraw
+// clips to the damage region, so paint_bottom_strip runs but its buttons and
+// its three separators fall outside the clip and cost nothing, which is what
+// makes this affordable at the pre-paint hook's per-frame cadence. The cell's
+// width is the shaped specimen and only the painter knows its origin, so a
+// move of the cell moves nothing here. What stands beside the clock is THE
+// STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
+// whose rect is the lane WHOLE — see the record just above.
 //
 // THE DIRTY MARK PAINTS PAST THIS CELL AND THAT IS CORRECT (architect
 // 2026-09-09): row 8's `*` is appended to the timestamp inside the clock's
@@ -2589,9 +2572,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
             // second arm covers both of the row's surfaces, its fifteen
-            // roster buttons (the transport three, the right block's seven
-            // marker-verb-group members, the walk group's one and the four
-            // cardinal arrows — the four tables in paint_handler.cpp,
+            // roster buttons (the right block's seven marker-verb-group
+            // members, the walk group's one, the four cardinal arrows and the
+            // transport three — the four tables in paint_handler.cpp,
             // kMarkerVerbGroup and its neighbours, own those memberships)
             // and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the

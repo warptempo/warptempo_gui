@@ -2079,13 +2079,11 @@ int  waveform_max_h_px();
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
-// strip's ONLY lane since the relayout's commit B): the transport three on the left with the monospace
-// clock behind their separator (left-anchored since 2026-08-18, centred in the
-// lane before it), and the MARKER-VERB GROUP
-// + separator + marker walk + separator + four cardinal
-// arrows flush right (2026-08-15 for the walk group, 2026-08-18 for the
-// verbs; kMarkerVerbGroup in paint_handler.cpp owns that group's membership,
-// which has changed under this geometry several times and does not bear
+// strip's ONLY lane since the relayout's commit B): the monospace clock and
+// the state cell at the left pad, and the MARKER-VERB GROUP + separator +
+// marker walk + separator + four cardinal arrows + separator + transport
+// three flush right (architect 2026-09-29; kMarkerVerbGroup in
+// paint_handler.cpp owns that group's membership, which does not bear
 // restating here), all one line ON THE WINDOW'S FOOT — which it holds again
 // since
 // 2026-08-29's evening fold, a STATUS BAR having stood under it for that one

@@ -826,10 +826,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // and the camera is the hold posture's now (NudgeCamera above).
         case GuiKeys::Left: case GuiKeys::Right:
             return bare;
-        // The trim bounds bare, and the WHOLE-PIECE ends under ctrl
-        // (architect 2026-09-26: the S Pen's side button is glass's Ctrl, so
-        // the skip buttons' ctrl-click reaches Ctrl+Home / Ctrl+End there too).
-        case GuiKeys::Home: case GuiKeys::End: return bare || cl;
+        // The trim bounds bare, and the WHOLE-PIECE ends under shift
+        // (architect 2026-09-29: Shift+Home / Shift+End, which the skip
+        // buttons' shift-click and long press dispatch). Ctrl spells nothing.
+        case GuiKeys::Home: case GuiKeys::End: return bare || sh;
         // The viewport's stepped scroll.
         case GuiKeys::PageUp: case GuiKeys::PageDown: return bare;
 
@@ -871,15 +871,17 @@ static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
 static_assert(chord_is_bound(GuiKeys::Home, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::End, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Home,
-                                 GuiInputState{true, false, false}, false) &&
+                                 GuiInputState{false, true, false}, false) &&
                   chord_is_bound(GuiKeys::End,
-                                 GuiInputState{true, false, false}, false) &&
+                                 GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Home,
-                                  GuiInputState{false, true, false}, false) &&
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::End,
+                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::End,
                                   GuiInputState{true, true, false}, false),
-              "Home / End bind bare (the trim-bound jump) and under Ctrl (the "
-              "whole-piece jump); Shift and Ctrl+Shift forms bind nothing");
+              "Home / End bind bare (the trim-bound jump) and under Shift (the "
+              "whole-piece jump); Ctrl and Ctrl+Shift forms bind nothing");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}, false) &&
