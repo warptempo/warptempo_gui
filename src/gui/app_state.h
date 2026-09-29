@@ -1226,7 +1226,7 @@ struct TrimDragState {
 // deleted for good 2026-08-12 at the sixth glass ruling). The NAVIGATION
 // SURFACE's ctrl press survived longest: it became the ONE nav drag's LIVE
 // ZOOM MODIFIER on 2026-08-14 and was REMOVED 2026-09-29, when the zoom moved
-// onto the waveform's ZOOM BAND, its top and bottom quarters — ScrollDragState
+// onto the waveform's ZOOM BAND, its middle half — ScrollDragState
 // below. Viewport::apply_strip_drag_zoom, the chokepoint the family was named
 // for, is driven by that zoom-band drag and by the touch pinch.)
 
@@ -1270,9 +1270,10 @@ struct TrimDragState {
 //     under any live pointer gesture (this pending included) and under any
 //     touch contact, so no autopager can slide the song beneath a held
 //     column between the press and the release that converts it (main.cpp);
-//   * CROSSING the threshold from the PAN BAND — the waveform's middle half,
-//     the quarter rule below — is the GRAB-PAN, the alt+drag machinery whole
-//     (from the ZOOM BAND it is the drag zoom, below):
+//   * CROSSING the threshold from the PAN BAND — the waveform's top and
+//     bottom quarters, the quarter rule below — is the GRAB-PAN, the
+//     alt+drag machinery whole (from the ZOOM BAND it is the drag zoom,
+//     below):
 //     the pointer CAPTURE begins at the crossing (begin_strip_pointer_capture
 //     — cursor-hide + lock, unbounded virtual travel while the viewport
 //     clamps at the song walls; the cursor reappears at the pointer's
@@ -1286,10 +1287,11 @@ struct TrimDragState {
 //     compare, at AppState::camera_hold and AppState::follow_suspended). A PAN IS A PURE VIEWPORT MOVE: it moves
 //     NO playhead, hides NO overlay and clears NO selection, seeds nothing.
 // THE ZOOM IS THE WAVEFORM'S ZOOM BAND (architect 2026-09-29, THE QUARTER
-// RULE — on both devices, in both audio views and in the `h` view): the
-// waveform's painted height is split in QUARTERS by one owner
-// (nav_point_in_zoom_band, input_pointer.cpp) — the TOP and the BOTTOM quarter
-// are the ZOOM BAND, the middle half the PAN BAND. A plain drag that BEGINS in
+// RULE — on both devices, in both audio views and in the `h` view; inverted
+// 2026-09-29 at his first look): the waveform's painted height is split in
+// QUARTERS by one owner (nav_point_in_zoom_band, input_pointer.cpp) — the
+// MIDDLE HALF is the ZOOM BAND, the TOP and the BOTTOM quarter the PAN BAND.
+// A plain drag that BEGINS in
 // the zoom band is THE DRAG ZOOM; one that begins in the pan band is the
 // grab-pan above. THE BAND IS DECIDED AT THE PRESS AND HOLDS FOR THE WHOLE
 // GESTURE — `zoom_band` below, never re-read and never converted mid-drag. The

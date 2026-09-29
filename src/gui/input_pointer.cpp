@@ -959,8 +959,8 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
 // live views' being the same rect. The ruler and the marker lane's empty
 // stretches were its lane members from 2026-08-12 until 2026-09-25, when they
 // became placement surfaces (point_on_placement_lanes above). On it plain
-// drag = the grab-pan from the middle half and the drag zoom from the top and
-// bottom quarters (the quarter rule, nav_point_in_zoom_band below), motionless
+// drag = the grab-pan from the top and bottom quarters and the drag zoom from
+// the middle half (the quarter rule, nav_point_in_zoom_band below), motionless
 // click = the half's act, shift+drag = the sweep.
 //
 // The waveform BAND spans the FULL WINDOW WIDTH (top.w), not the effective
@@ -988,31 +988,34 @@ bool point_on_nav_surface(const AppState& app, int x, int y) {
 
 // THE WAVEFORM'S QUARTERS — THE ONE OWNER OF THE ZOOM BAND (architect
 // 2026-09-29, the quarter rule, on both devices, in both audio views and in
-// the `h` view): the waveform's PAINTED height (waveform_area, the rect the
-// plate is drawn in) splits in quarters, and the TOP and BOTTOM quarter are
-// the ZOOM BAND — a plain drag that begins there is the drag zoom — while the
-// middle half is the PAN BAND, whose drag is the grab-pan. Asked only of a
-// point the caller already knows is on the navigation surface (the x span and
-// the surface's own membership are point_on_nav_surface's), so it reads y
-// alone.
+// the `h` view; inverted 2026-09-29 at his first look): the waveform's
+// PAINTED height (waveform_area, the rect the plate is drawn in) splits in
+// quarters, and the MIDDLE HALF is the ZOOM BAND — a plain drag that begins
+// there is the drag zoom — while the TOP and BOTTOM quarter are the PAN BAND,
+// whose drag is the grab-pan. Asked only of a point the caller already knows
+// is on the navigation surface (the x span and the surface's own membership
+// are point_on_nav_surface's), so it reads y alone.
 // THE ARITHMETIC IS EXACT QUARTERS IN INTEGERS, with no division to round:
-// with r = y − area.y and h = area.h, a ROW is in the zoom band iff it lies
-// WHOLLY inside a quarter — 4·(r+1) <= h (the top quarter, [0, h/4)) or
-// 4·r >= 3·h (the bottom quarter, [3h/4, h)). So a row straddling a quarter
-// line falls to the PAN band on either side, and the two quarters are always
+// with r = y − area.y and h = area.h, a ROW is in the PAN band iff it lies
+// WHOLLY inside an outer quarter — 4·(r+1) <= h (the top quarter, [0, h/4))
+// or 4·r >= 3·h (the bottom quarter, [3h/4, h)) — and in the zoom band
+// otherwise, 4·(r+1) > h and 4·r < 3·h. So a row straddling a quarter line
+// falls to the ZOOM band on either side, and the two pan quarters are always
 // the same height, ⌊h/4⌋ rows each: at the laptop's 500 px rows 0..124 and
-// 375..499 zoom and 125..374 pan; at the tablet's 769, 192 rows each.
+// 375..499 pan and 125..374 zoom; at the tablet's 769, 192 rows each pan and
+// rows 192..576 zoom.
 // FOUR READERS, by grep 2026-09-29: the live press router's plain waveform
 // arm and the `h` view's (each stashing the answer on the pending as
 // ScrollDragState::zoom_band), the pointer cursor map (Zoom over the band, Pan
-// over the middle), and the touch zone query (touch_nav_zone, whose answer the
-// platform holds for the stream as GuiTouchNavFrame::zoom_band). The band is
-// decided at the DOWN on every road and never re-asked mid-gesture.
+// over the outer quarters), and the touch zone query (touch_nav_zone, whose
+// answer the platform holds for the stream as GuiTouchNavFrame::zoom_band).
+// The band is decided at the DOWN on every road and never re-asked
+// mid-gesture.
 bool nav_point_in_zoom_band(const AppState& app, int y) {
     const GuiRect area = waveform_area(app);
     const int64_t r = static_cast<int64_t>(y) - area.y;
     const int64_t h = area.h;
-    return 4 * (r + 1) <= h || 4 * r >= 3 * h;
+    return 4 * (r + 1) > h && 4 * r < 3 * h;
 }
 
 // Active-domain playhead frame at click column `col`: the single-rounding
@@ -2158,8 +2161,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // waveform — both halves, every view — and nothing else. The lower half
     // joined 2026-08-13 when the press-time scrub became the motionless
     // release's act, which left the halves differing in that act alone. It is
-    // the plain drag's surface, the PAN from its middle half and the ZOOM from
-    // its top and bottom quarters (the quarter rule, 2026-09-29), and the two
+    // the plain drag's surface, the PAN from its top and bottom quarters and
+    // the ZOOM from its middle half (the quarter rule, 2026-09-29), and the two
     // cues split it the same way. THE RULER AND THE MARKER LANE WEAR THE ARROW
     // (architect 2026-09-25, the lanes leaving the surface on both devices):
     // they are PLACEMENT SURFACES now, a motionless click their one act and
@@ -2211,9 +2214,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // PLAIN-EXACT from here.
     //
     // THE NAVIGATION SURFACE WEARS ITS DRAG'S CUE, BY BAND (architect
-    // 2026-09-29, the quarter rule): the ZOOM over the top and bottom quarters
-    // — the cue the Ctrl+drag zoom wore, promising the drag zoom a press there
-    // begins — and the PAN over the middle half, the grab-pan's own. The one
+    // 2026-09-29, the quarter rule): the ZOOM over the middle half — the cue
+    // the Ctrl+drag zoom wore, promising the drag zoom a press there begins —
+    // and the PAN over the top and bottom quarters, the grab-pan's own. The one
     // owner (nav_point_in_zoom_band) is the one the press stashes, so cue and
     // gesture agree by construction, and the laptop shows the bands. The
     // motionless click needs no cue, exactly as no click anywhere carries one,
@@ -5858,7 +5861,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // waveform's ctrl press was THE ONE NAV DRAG'S CTRL ENTRY from
         // 2026-08-14, opening the drag in its zoom phase, and it is REMOVED
         // with the live-ctrl model — the zoom is the plain drag from the
-        // waveform's top and bottom quarters now (the quarter rule at
+        // waveform's middle half now (the quarter rule at
         // ScrollDragState), one sentence for the mouse, a finger and the pen.
         // (The ctrl+waveform selection clear was retired 2026-07-23, and the
         // playhead jump that briefly rode the ctrl press, 2026-08-05..06.)
@@ -6032,8 +6035,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // press is a PENDING CLICK (arm_nav_press): a motionless
         // release runs THE HALF'S OWN ACT as the DEFERRED CLICK ACT (upper =
         // the playhead placement, lower = the audition scrub), and crossing the
-        // 8px threshold is the GRAB-PAN from the middle half and the DRAG ZOOM
-        // from the top and bottom quarters (the quarter rule, architect
+        // 8px threshold is the GRAB-PAN from the top and bottom quarters and
+        // the DRAG ZOOM from the middle half (the quarter rule, architect
         // 2026-09-29 — the band, like the half, stashed at the press). A SHIFT
         // press there is
         // the REGION FORMER, the one mouse region gesture (claimed just below,
@@ -6370,8 +6373,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the claim went with it.)
         // THE BAND IS STASHED BESIDE THE HALF (architect 2026-09-29, the
         // quarter rule): the half picks the motionless release's act, the
-        // band picks what a crossing begins — the zoom from the top and
-        // bottom quarters, the pan from the middle — and both are the press's
+        // band picks what a crossing begins — the zoom from the middle half,
+        // the pan from the top and bottom quarters — and both are the press's
         // own geometry, read once here.
         arm_nav_press(x, y, /*history=*/false, /*seed_empty_lane=*/false,
                       /*scrub_release=*/waveform_lower_half(area, y),
@@ -6508,7 +6511,7 @@ void GuiInputHandler::commit_region_sweep() {
 // release seeds the marker-create double-click candidate beside its click
 // act); `scrub_release` marks the waveform's LOWER half (the motionless
 // release runs the audition scrub instead of the placement — 2026-08-13);
-// `zoom_band` marks the waveform's top or bottom QUARTER (the crossing begins
+// `zoom_band` marks the waveform's MIDDLE HALF (the crossing begins
 // the drag zoom instead of the pan — the quarter rule, 2026-09-29). The first
 // three are mutually exclusive by geometry (a lane is not the waveform, and
 // the `h` view has no scrub half); `zoom_band` is independent of the half —
@@ -8588,7 +8591,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // 2026-08-05) and nothing else, and on it plain drag = the grab-pan,
 // motionless plain click = THE MODE'S LAND at the column (deferred to the
 // release like everywhere else), shift+drag = the view-local region former,
-// and the plain drag from the top and bottom quarters = the drag zoom (the
+// and the plain drag from the middle half = the drag zoom (the
 // quarter rule, 2026-09-29; ctrl+drag, the zoom until then, is a consumed
 // nothing). The RULER and the MARKER lane's empty
 // stretches are PLACEMENT SURFACES in here as outside (architect 2026-09-25,
@@ -8624,8 +8627,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     analog, through the one pair clearer), seat the playhead at the press
 //     column (run_nav_click_act's history arm — the live recipe through the
 //     shared placement body, whose reseek cannot fire in the silent view); a
-//     crossed drag is the captured pan from the middle half or the drag zoom
-//     from the top and bottom quarters (the quarter rule, 2026-09-29), which
+//     crossed drag is the captured pan from the top and bottom quarters or
+//     the drag zoom from the middle half (the quarter rule, 2026-09-29), which
 //     move no playhead and clear nothing. The ruler and the empty lane stretches
 //     take the same pending as PLACEMENT SURFACES (arm_placement_press,
 //     2026-09-25), so their motionless clicks land the playhead and a drag
@@ -8906,8 +8909,8 @@ bool GuiInputHandler::handle_history_mode_press(
         // all contexts): the press is the surface's own at EVERY column,
         // stems included. The diff flag's LANE BOX is its one pointer
         // surface, above.
-        // THE BAND, the live router's own read (the quarter rule): the top
-        // and bottom quarters' crossing is the drag zoom, the middle's the
+        // THE BAND, the live router's own read (the quarter rule): the middle
+        // half's crossing is the drag zoom, the top and bottom quarters' the
         // pan — the mode's navigation vocabulary, both.
         arm_nav_press(x, y, /*history=*/true, /*seed_empty_lane=*/false,
                       /*scrub_release=*/false,

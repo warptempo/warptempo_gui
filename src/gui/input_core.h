@@ -562,7 +562,7 @@ public:
     // one of the open editor's field (the editor_field query below): a
     // one-finger DRAG whose DOWN POINT lies on the zone is
     // SINGLE-FINGER NAVIGATION — the finger drags the pan, the phone model,
-    // or, from the waveform's ZOOM BAND (its top and bottom quarters,
+    // or, from the waveform's ZOOM BAND (its middle half,
     // architect 2026-09-29), the one-finger zoom — delivered through
     // the SAME update hook with the finger as the centroid and dist_ratio
     // pinned at 1.0 (one finger has no distance to pinch by), a HOLD

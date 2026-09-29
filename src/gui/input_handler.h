@@ -993,7 +993,7 @@ struct GuiInputHandler {
     //
     // ONE FINGER FROM THE ZOOM BAND ZOOMS (architect 2026-09-29, the quarter
     // rule — finger and pen alike): a single-finger frame whose stream came
-    // down in the waveform's top or bottom quarter (GuiTouchNavFrame::
+    // down in the waveform's middle half (GuiTouchNavFrame::
     // zoom_band, decided at the down and held for the stream) is THE NAV
     // DRAG'S OWN ZOOM-BAND DRAG ported, not a second rule: its travel runs the
     // drag's level rule (nav_drag_zoom_level) about a pivot SEATED at the down
@@ -1081,7 +1081,7 @@ struct GuiInputHandler {
     //
     // THE DESK AND THE GLASS SHARE ONE ONE-FINGER SENTENCE SINCE 2026-09-29
     // (the quarter rule, ScrollDragState, app_state.h): the drag PANS from the
-    // waveform's middle half and ZOOMS from its top and bottom quarters, the
+    // waveform's top and bottom quarters and ZOOMS from its middle half, the
     // band decided at the down — the mouse's Ctrl+drag zoom, which played the
     // second finger's part with a key from 2026-08-14, is removed.
     //
@@ -1188,10 +1188,11 @@ struct GuiInputHandler {
     bool touch_point_in_pan_zone(int x, int y) const;
     // THE ZONE QUERY'S WHOLE ANSWER (architect 2026-09-29, the quarter rule):
     // Off where touch_point_in_pan_zone says no, else the BAND the down point
-    // lies in — ZoomBand in the waveform's top or bottom quarter
+    // lies in — ZoomBand in the waveform's middle half
     // (nav_point_in_zoom_band, the one owner the mouse press reads too),
-    // PanBand in its middle half. The platform captures it once at the first
-    // finger's down and holds it for the stream (GuiTouchNavZone, gui_input.h).
+    // PanBand in its top or bottom quarter. The platform captures it once at
+    // the first finger's down and holds it for the stream (GuiTouchNavZone,
+    // gui_input.h).
     // Wired at main.cpp's set_touch_nav_hooks call.
     GuiTouchNavZone touch_nav_zone(int x, int y) const;
 
@@ -1965,7 +1966,7 @@ struct GuiInputHandler {
     // else. `scrub_release` is the waveform's LOWER half (2026-08-13): the
     // motionless release runs the audition scrub instead of the placement,
     // which is the halves' one remaining difference. `zoom_band` is the
-    // waveform's top or bottom QUARTER (architect 2026-09-29, the quarter
+    // waveform's MIDDLE HALF (architect 2026-09-29, the quarter
     // rule): the crossing is the zoom rather than the pan.
     void arm_nav_press(int x, int y, bool history, bool seed_empty_lane,
                        bool scrub_release, bool zoom_band);
@@ -3366,9 +3367,9 @@ private:
     // the marker lane left the surface on both devices — the NAVIGATION
     // SURFACE is the WHOLE waveform and nothing else, in every view, read from
     // its one geometry owner point_on_nav_surface):
-    // - Pan: the NAVIGATION SURFACE's middle half (the PAN BAND), plain — the
-    //   cue promises the drag, which is the grab-pan there; the motionless
-    //   click needs no cue, no click
+    // - Pan: the NAVIGATION SURFACE's top and bottom quarters (the PAN BAND),
+    //   plain — the cue promises the drag, which is the grab-pan there; the
+    //   motionless click needs no cue, no click
     //   anywhere carrying one, and BOTH halves' click acts (the placement and
     //   the scrub) are clicks. "The hand shows up in both the top and the
     //   bottom half" (architect 2026-08-13).
@@ -3376,8 +3377,8 @@ private:
     //   with it — "we need to just get rid of the crosshairs but retain the
     //   scrub action". The lower half's audition is still there; it is a click
     //   act now, and the drag the cue must promise is the pan.)
-    // - Zoom: the NAVIGATION SURFACE's top and bottom quarters (the ZOOM
-    //   BAND, nav_point_in_zoom_band), plain — since 2026-09-29 the drag
+    // - Zoom: the NAVIGATION SURFACE's middle half (the ZOOM BAND,
+    //   nav_point_in_zoom_band), plain — since 2026-09-29 the drag
     //   zoom a press there begins (the quarter rule, ScrollDragState), the cue
     //   the CTRL-exact surface wore from 2026-08-14 until the Ctrl+drag zoom's
     //   removal; ctrl over the surface is the Arrow now. The two cues split

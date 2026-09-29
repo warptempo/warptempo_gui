@@ -1279,8 +1279,8 @@ struct GuiTouchNavFrame {
     // zoom-only gesture and the one-finger one.
     bool   two_finger = false;
     // THE STREAM'S BAND (architect 2026-09-29, the quarter rule): true when
-    // the FIRST finger's down lay in the waveform's ZOOM BAND — its top or
-    // bottom quarter, the GUI's own answer to the zone query, captured once
+    // the FIRST finger's down lay in the waveform's ZOOM BAND — its middle
+    // half, the GUI's own answer to the zone query, captured once
     // at that down (GuiTouchNavZone). READ ON SINGLE-FINGER FRAMES ONLY:
     // while it stands the one-finger gesture is THE ZOOM ABOUT THE DOWN
     // POINT rather than the pan, the nav drag's own zoom-band arm
@@ -1298,10 +1298,10 @@ struct GuiTouchNavFrame {
 // owners, point_on_nav_surface and nav_point_in_zoom_band (input_pointer.cpp):
 //   * Off      — not on the navigation surface: no window opens, the down is
 //                the pointer on contact (outside an open editor's field).
-//   * PanBand  — the waveform's middle half: the window's slop crossing is
-//                the one-finger PAN.
-//   * ZoomBand — the waveform's top or bottom quarter: the crossing is the
-//                one-finger ZOOM (GuiTouchNavFrame::zoom_band).
+//   * PanBand  — the waveform's top or bottom quarter: the window's slop
+//                crossing is the one-finger PAN.
+//   * ZoomBand — the waveform's middle half: the crossing is the one-finger
+//                ZOOM (GuiTouchNavFrame::zoom_band).
 // Both bands are the ZONE alike — the region hold, the tap and the pinch are
 // the same on either — and differ only in what the one-finger drag means.
 enum class GuiTouchNavZone { Off, PanBand, ZoomBand };

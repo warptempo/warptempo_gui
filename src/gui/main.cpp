@@ -1612,8 +1612,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
     // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the
-    // one nav drag (the pan from the waveform's middle half, the zoom from its
-    // top and bottom quarters), for infinite pan/zoom travel.
+    // one nav drag (the pan from the waveform's top and bottom quarters, the
+    // zoom from its middle half), for infinite pan/zoom travel.
     // All the platform methods self-guard (begin no-ops when a capture is live
     // or the compositor lacks the managers; end is idempotent; the restore
     // riders no-op uncaptured), so the input layer
@@ -1642,8 +1642,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // never pan, the nav body discarding their centroid delta), and the
     // phone model's
     // single-finger frames born of a drag starting on the pan surface — the
-    // pan from the waveform's middle half, or the one-finger zoom from its top
-    // and bottom quarters (the quarter rule, 2026-09-29) — drive the input
+    // pan from the waveform's top and bottom quarters, or the one-finger zoom
+    // from its middle half (the quarter rule, 2026-09-29) — drive the input
     // handler's ONE
     // touch-nav body, which runs the
     // strip-drag family's own viewport chokepoint — the
