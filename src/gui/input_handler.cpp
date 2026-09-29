@@ -2851,10 +2851,10 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // user left it while the landing is on screen.
     // THE Land ARM IS THE LANDING OWNER'S WALK (Viewport::land_subject,
     // LandingKind::Walk, architect 2026-09-24) over the cursor just seated
-    // (lo == hi; playback is stopped above): at the working zoom or finer it
-    // centres the landing, on screen or not, arming the hold posture;
-    // coarser, an on-screen landing moves nothing and an off-screen one is
-    // paged in the edge margin from the left edge. A single marker always
+    // (lo == hi; playback is stopped above): at the working zoom, as painted,
+    // it centres the landing, on screen or not, arming the hold posture; at
+    // every other zoom, finer or coarser, an on-screen landing moves nothing
+    // and an off-screen one is paged in the edge margin from the left edge. A single marker always
     // fits, so the owner's cannot-fit verdict is dropped.
     //
     // WHO PASSES WHAT, re-grepped 2026-09-26: `c` (run_center_command) states

@@ -15,8 +15,9 @@ class GuiPlayback;
 // same discipline as MarkerLandingFrame (app_state.h), so a new caller cannot
 // compile without saying which answers it means:
 //   * `Walk` — the Tab walk in both audio views, live and `h`: centred at
-//     the working zoom or finer whether on screen or not; coarser, nothing
-//     on screen and paged in off screen (the paired march does not come
+//     the working zoom, as painted, whether on screen or not; at every other
+//     zoom, finer or coarser, nothing on screen and paged in off screen (the
+//     paired march does not come
 //     here: each of its steps centres through bare `c`'s own act, 2026-09-26);
 //   * `Restore` — the undo / redo restore: nothing wholly on screen, and an
 //     off-screen subject that fits centred at every zoom.
@@ -385,14 +386,15 @@ struct Viewport {
     // THE LANDING OWNER (architect 2026-09-24): the one camera that brings a
     // walked or restored subject — the active-domain range [lo, hi], lo == hi
     // for a single marker — on screen, READING THE ZOOM at the discrete act,
-    // its answers chosen by `kind`. WALK: at the working zoom or finer the
-    // subject is CENTRED, on screen or not; coarser, an on-screen subject
-    // moves nothing and an off-screen one is PAGED IN, lo landing the edge
-    // margin in from the LEFT edge. RESTORE: a subject WHOLLY ON SCREEN moves
+    // its answers chosen by `kind`. WALK: at the working zoom, as painted,
+    // the subject is CENTRED, on screen or not; at every other zoom, finer or
+    // coarser, an on-screen subject moves nothing and an off-screen one is
+    // PAGED IN, lo landing the edge margin in from the LEFT edge. RESTORE: a subject WHOLLY ON SCREEN moves
     // nothing at every zoom; an off-screen one that fits is CENTRED on its
     // midpoint at every zoom; a range that CANNOT FIT (wider than 1 − 2 × the
     // edge margin of the window) returns FALSE having written nothing. The
-    // WALK's centring ARMS THE HOLD POSTURE; a restore's centring never arms
+    // WALK's centring ARMS THE HOLD POSTURE, so the hold stands only at the
+    // working zoom (architect 2026-09-28); a restore's centring never arms
     // it (architect 2026-09-24), and a singleton restore reaches it only with
     // the hold dark (under it the restore holds the column instead,
     // 2026-09-25). The zoom is never written. Its readers, the one

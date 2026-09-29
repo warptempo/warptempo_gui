@@ -916,7 +916,11 @@ void Viewport::invalidate_all() {
 // the waveform a hop's width per step. NO VIEW TERM:
 // in target view on the warp column the marker nudge is refused upstream
 // (active_column_authoring_allowed) and never arrives, while the playhead step
-// holds there as anywhere. THE ZOOM IS NEVER CHANGED HERE.
+// holds there as anywhere. THE ZOOM IS NEVER CHANGED HERE, and every caller
+// reaches this body only under the hold, which stands only at the working
+// zoom (architect 2026-09-28, the rule at Viewport::land_subject), where q is
+// the whole-frame working column and the held offset is a whole number of
+// frames.
 void Viewport::hold_subject_column_after_nudge(int prior_column) {
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
@@ -1010,15 +1014,18 @@ void Viewport::follow_scroll_if_needed() {
 //
 // WALK — the Tab walk, always a single frame (the paired march's steps came
 // here until 2026-09-26, when each took bare `c`'s act instead):
-//   * AT THE WORKING ZOOM OR FINER, AS PAINTED (the painted step q is at
-//     most the working column, audio.working_column(); `c`'s level 2.0 paints
-//     q = column exactly, any coarser q is coarse) the subject is
-//     CENTRED, ON SCREEN OR NOT, the centring body's own placement: the walk
-//     always moves one way and every landing frames alike, so no half of the
-//     screen is skipped;
-//   * COARSER, an on-screen subject moves NOTHING and an off-screen one is
-//     PAGED IN, lo landing the edge margin in from the LEFT edge in both
-//     directions — follow's own placement (paged_in_viewport_start).
+//   * AT THE WORKING ZOOM, AS PAINTED (architect 2026-09-28: the painted
+//     step q EQUALS the working column, audio.working_column(); `c`'s level
+//     2.0 paints q = column exactly, and a rest a hair above it that rounds
+//     to the same sixteenth-frame grid point paints the same picture and
+//     walks like it) the subject is CENTRED, ON SCREEN OR NOT, the centring
+//     body's own placement: the walk always moves one way and every landing
+//     frames alike, so no half of the screen is skipped;
+//   * AT EVERY OTHER ZOOM, FINER OR COARSER, an on-screen subject moves
+//     NOTHING and an off-screen one is PAGED IN, lo landing the edge margin
+//     in from the LEFT edge in both directions — follow's own placement
+//     (paged_in_viewport_start). A finer zoom is reached only by accident;
+//     `c` is the repair (the working zoom, centred).
 // RESTORE — undo / redo, a singleton (lo == hi) or a group's [earliest,
 // latest]; a restore is a non-linear jump, and centring is the least
 // prejudicial way of framing one:
@@ -1041,7 +1048,11 @@ void Viewport::follow_scroll_if_needed() {
 // THE HOLD POSTURE (AppState::camera_hold) IS ARMED BY THE WALK'S CENTRING
 // ALONE (architect 2026-09-24), after the chokepoint — a walked marker centred
 // at the working zoom is expected to hold its column, and it arms even where a
-// wall keeps it off the centre. THE RESTORE NEVER ARMS (its singleton centring
+// wall keeps it off the centre. Since the walk centres only at the working
+// zoom and every other arm (bare `c`, the paired march, Ctrl+J) writes that
+// zoom, while every zoom write that moves the level changes the camera at the
+// chokepoint and puts the bit out, THE HOLD STANDS ONLY AT THE WORKING ZOOM
+// (architect 2026-09-28). THE RESTORE NEVER ARMS (its singleton centring
 // included) and never clears on its own: its centring of an off-screen
 // subject clears the bit at the chokepoint like any camera move, and its
 // no-move answer leaves it as it stands. (The singleton restore reaches this
@@ -1077,6 +1088,10 @@ void Viewport::follow_scroll_if_needed() {
 //   * AN UNDO / REDO CENTRING ARMING THE HOLD (f25778d1, one morning,
 //     2026-09-24): a lamp now shows the posture, so only the walk and `c`
 //     arm it.
+//   * THE WALK CENTRING AT A ZOOM FINER THAN THE WORKING ONE (2026-09-24 to
+//     2026-09-29): it centred, and armed the hold, at every finer zoom; it
+//     centres at the working zoom alone, so the hold stands only there
+//     (architect 2026-09-28).
 //
 // ITS READERS, re-grepped 2026-09-25:
 //   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
@@ -1111,13 +1126,16 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     // The working-zoom read, inline by ruling: the walk's one zoom term. AS
     // PAINTED, q against the working column, not the level against 2.0: a
     // rest just above level 2 (under a 1/32 frame over the column) paints
-    // the working picture exactly and walks like it.
-    const bool fine = q <= static_cast<double>(audio.working_column());
+    // the working picture exactly and walks like it. AN EXACT EQUALITY IS
+    // LEGITIMATE HERE: q is on the sixteenth-frame grid (n/16, exact in a
+    // double) and the column is whole frames, so the painted working picture
+    // compares equal and every other picture, finer or coarser, does not.
+    const bool at_working = q == static_cast<double>(audio.working_column());
     bool centre = false;
     switch (kind) {
         case LandingKind::Walk:
-            if (!fine && on_screen) return true;
-            centre = fine;
+            if (!at_working && on_screen) return true;
+            centre = at_working;
             break;
         case LandingKind::Restore:
             if (on_screen) return true;

@@ -1878,9 +1878,10 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // view should be", 2026-09-22): the mode's Tab arm states Land, the
     // landing owner's walk (Viewport::land_subject,
     // LandingKind::Walk, architect 2026-09-24) over the cursor just seated —
-    // at the working zoom or finer it centres the flag, on screen or not
-    // (arming the hold posture); coarser, an on-screen flag moves nothing and
-    // an off-screen one is paged in; the zoom is never written. A single
+    // at the working zoom, as painted, it centres the flag, on screen or not
+    // (arming the hold posture); at every other zoom, finer or coarser, an
+    // on-screen flag moves nothing and an off-screen one is paged in; the
+    // zoom is never written. A single
     // flag always fits, so the owner's cannot-fit verdict is dropped. The
     // Center arm is the march's step (2026-09-26), the live march's own
     // statement, and centres at the standing zoom, as the live jump's does;
@@ -9030,10 +9031,11 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
     // marker, moving the playhead to it through THE LANDING OWNER
     // (MarkerLandingFrame::Land — Viewport::land_subject's walk, architect
-    // 2026-09-24), in both audio views alike: at the working zoom or finer
-    // the landing is centred, on screen or not, arming the hold posture;
-    // coarser, an on-screen landing moves nothing and an off-screen one is
-    // paged in the edge margin from the left edge. The zoom is never written. Under a lit grid
+    // 2026-09-24), in both audio views alike: at the working zoom, as
+    // painted, the landing is centred, on screen or not, arming the hold
+    // posture; at every other zoom, finer or coarser, an on-screen landing
+    // moves nothing and an off-screen one is paged in the edge margin from
+    // the left edge. The zoom is never written. Under a lit grid
     // iterations the walk steps the cells (marker_walk_step's same-marker arm
     // writes no camera).
     //

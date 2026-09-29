@@ -2498,8 +2498,9 @@ private:
     // its own — follow never gated it. The three Tab arms pass
     // MarkerLandingFrame::Land, the landing owner's walk
     // (Viewport::land_subject, LandingKind::Walk): centred at the working
-    // zoom or finer, on screen or not; coarser, nothing on screen and paged
-    // in off screen; the zoom never written. The two steps of the
+    // zoom, as painted, on screen or not; at every other zoom, finer or
+    // coarser, nothing on screen and paged in off screen; the zoom never
+    // written. The two steps of the
     // Ctrl+Shift+Tab paired march pass MarkerLandingFrame::Center, `c`'s own
     // statement, each running bare `c`'s act behind it (2026-09-26: the
     // march writes the working zoom).

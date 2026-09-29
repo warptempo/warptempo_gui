@@ -2930,8 +2930,8 @@ enum class RedesignButton {
     // the twin rule leaves its face lit wherever the roster is
     // (redesign_button_enabled, the tabs' arm). Its bare landing's camera is
     // the landing owner's walk (Viewport::land_subject, LandingKind::Walk):
-    // centred at the working zoom or finer, on screen or not; coarser,
-    // nothing on screen and paged in off screen.
+    // centred at the working zoom, on screen or not; at every other zoom,
+    // finer or coarser, nothing on screen and paged in off screen.
     //
     // (THE LEAST-MOVEMENT WALK, a second button seated here on the Alt
     // forms of the walk, stood from 2026-09-22 until it was deleted
@@ -4876,10 +4876,16 @@ struct AppState {
     //     Ctrl+Shift+Tab (live and `h`; each of its two steps runs
     //     run_center_key_command, 2026-09-26), Ctrl+J (its closing
     //     `c`), and THE WALK'S CENTRING BY THE LANDING OWNER
-    //     (Viewport::land_subject's LandingKind::Walk at the working zoom or
-    //     finer, on screen or not: the Tab walk in both audio views). A centring
-    //     act that cannot centre (a wall) still arms: the bit means "hold the
-    //     column the subject is in", not "the subject is at the centre".
+    //     (Viewport::land_subject's LandingKind::Walk at the working zoom as
+    //     painted, on screen or not: the Tab walk in both audio views). A
+    //     centring act that cannot centre (a wall) still arms: the bit means
+    //     "hold the column the subject is in", not "the subject is at the
+    //     centre". EVERY ARM IS AT THE WORKING ZOOM (architect 2026-09-28):
+    //     `c`, the march and Ctrl+J write it, the walk centres only there, and
+    //     a zoom write that moves the level is a changed camera at the
+    //     chokepoint, which clears the bit — so THE HOLD STANDS ONLY AT THE
+    //     WORKING ZOOM (on a file too short for it, `c`'s clamped level, the
+    //     file's own ceiling).
     //     WHY SO FEW (architect 2026-09-24): an automatic arm on arrival at
     //     the centre would freeze the viewport under a run of nudges that
     //     happened to reach the middle; `c` then nudging means "I'm looking
@@ -12886,9 +12892,10 @@ inline int history_diff_cycle_target(const AppState& a, const GuiAudio& audio,
 //     own act behind it (2026-09-26);
 //   * `Land` hands the landing to THE LANDING OWNER'S WALK
 //     (Viewport::land_subject, LandingKind::Walk, architect 2026-09-24): at
-//     the working zoom or finer the landing is centred, on screen or not,
-//     arming the hold posture; coarser, an on-screen landing moves nothing
-//     and an off-screen one is paged in the edge margin from the left edge;
+//     the working zoom, as painted, the landing is centred, on screen or not,
+//     arming the hold posture; at every other zoom, finer or coarser, an
+//     on-screen landing moves nothing and an off-screen one is paged in the
+//     edge margin from the left edge;
 //     the zoom never written — THE TAB WALK'S IN BOTH AUDIO VIEWS, live and
 //     in the `h` view.
 // (`NoFrame`, which wrote no camera, went 2026-09-23 with the landing owner;
@@ -12928,8 +12935,8 @@ inline NudgeCamera nudge_camera(const AppState& a) {
 // LANDING MAY READ THE ZOOM AT A DISCRETE ACT (architect 2026-09-23): a zoom
 // read at a keystroke does not pop, and his hand expected the walk to answer
 // the level he works at, so the landing owner's walk (Viewport::land_subject,
-// LandingKind::Walk) centres at the working zoom or finer and pages an
-// off-screen landing in when coarser. The nudge
+// LandingKind::Walk) centres at the working zoom and pages an off-screen
+// landing in at every other zoom, finer or coarser. The nudge
 // reads no zoom (nudge_camera above). (The first zoom-derived walk, a
 // predicate and a frame chooser of 2026-09-13 to 2026-09-22, was deleted with
 // the placement-instrument principle; zoom-viewport-strip.md keeps its
