@@ -4404,10 +4404,11 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
 
     using Role = onscreen_keyboard::Role;
 
-    // THE THREE LAMP KEYS ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They
-    // still take the held index (so the finger sees the click face) with a
-    // keysym of 0, which is what the release reads as "this key owed no
-    // key-up".
+    // THE THREE PAGE / STATE CONTROLS — Shift, the symbol-mode key and the
+    // page key, the first two of which wear lamps (the page key's cap already
+    // says its page) — ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They still
+    // take the held index (so the finger sees the click face) with a keysym of
+    // 0, which is what the release reads as "this key owed no key-up".
     if (def.role == Role::Shift || def.role == Role::SymbolMode ||
         def.role == Role::SymbolPage) {
         app.onscreen_keyboard.pressed_key    = hit;
@@ -7554,23 +7555,24 @@ void GuiInputHandler::tick_hover_fades() {
     }
 
     // THE FLAG HOVER'S FADES (architect 2026-09-29; AppState::FlagHover): the
-    // same advance, keyed to the unit's own box in the promoted stash. A unit
-    // whose flag no longer publishes a rect (it left the screen, or an editor
-    // opened on it) is cut and erased — the lane's own rebuild repainted its
-    // pixels, and a payload's stem still standing (under the payload editor)
-    // is damaged so its tint goes too — and a unit settled dark is erased;
-    // each painted-level change damages that one box and, for a payload, its
+    // same advance, keyed to the unit's own box in the stash the next frame
+    // blits (flag_hover_stash). A unit whose flag no longer publishes a rect
+    // (it left the screen, an editor opened on it, or its marker is gone) is
+    // cut and erased — the lane's own rebuild repainted its pixels, and a
+    // payload's stem still standing (under the payload editor) is damaged so
+    // its tint goes too — and a unit settled dark is erased; each
+    // painted-level change damages that one box and, for a payload, its
     // stem's column (flag_hover_stem_rect), nothing wider.
     std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
     const auto damage_stem = [&](const AppState::FlagHoverFade& f) {
         GuiRect stem{0, 0, 0, 0};
-        if (f.cell == MarkerCell::Payload &&
-            flag_hover_stem_rect(app, f.marker_index, stem))
+        if (f.unit.cell == MarkerCell::Payload &&
+            flag_hover_stem_rect(app, f.unit.marker, stem))
             viewport.invalidate_rect(stem);
     };
     for (size_t i = 0; i < hf.size();) {
         GuiRect box{0, 0, 0, 0};
-        if (!flag_hover_unit_box(app, hf[i].marker_index, hf[i].cell, box)) {
+        if (!flag_hover_unit_box(app, hf[i].unit, box)) {
             if (hover_fade_steps(hf[i].fade) > 0) damage_stem(hf[i]);
             hf.erase(hf.begin() + static_cast<std::ptrdiff_t>(i));
             continue;
@@ -7592,29 +7594,6 @@ void GuiInputHandler::tick_hover_fades() {
 
 namespace {
 
-// THE LANE THE FLAG HOVER'S INDICES LIVE IN (AppState::FlagHover::lane_key):
-// the column, the `h` view's own walk position and the two stores' edit
-// generations — every input that can make one index name another box. It is a
-// strict subset of the flag cache's fingerprint, so a key change always comes
-// with that cache's rebuild and its whole-lane damage.
-uint64_t flag_hover_lane_key(const AppState& app) {
-    uint64_t h = 1469598103934665603ull;
-    const auto mix = [&h](uint64_t v) {
-        h ^= v + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
-    };
-    mix(static_cast<uint64_t>(static_cast<unsigned char>(
-        app.active_markers_view)));
-    mix(app.history_mode.active ? 1u : 0u);
-    mix(static_cast<uint64_t>(app.history_mode.generation));
-    mix(static_cast<uint64_t>(app.history_mode.index));
-    mix(static_cast<uint64_t>(app.history_mode.local_index));
-    mix(static_cast<uint64_t>(app.history_mode.source));
-    mix(static_cast<uint64_t>(app.history_compare()));
-    mix(static_cast<uint64_t>(app.warpmarkers.generation()));
-    mix(static_cast<uint64_t>(app.phaseresetmarkers.generation()));
-    return h;
-}
-
 // ONE UNIT'S HOVER EDGE: its fade slot (made on first use) takes the edge in
 // the SnapIn kind, the buttons' own (architect 2026-09-29, "like the icons"):
 // full the instant the hover begins, the 100 ms fade on the way out from
@@ -7623,19 +7602,18 @@ uint64_t flag_hover_lane_key(const AppState& app) {
 // PAINTED level moved at the edge — which a SnapIn edge does (the snap in,
 // and a short hover's tail starting below full), so the caller damages the
 // unit's box then; the tick's advances damage the rest.
-bool flag_hover_edge(AppState& app, int marker_index, MarkerCell cell,
+bool flag_hover_edge(AppState& app, const AppState::FlagHoverUnit& unit,
                      bool hovered, int64_t now) {
     std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
     AppState::FlagHoverFade* slot = nullptr;
     for (AppState::FlagHoverFade& f : hf)
-        if (f.marker_index == marker_index && f.cell == cell) { slot = &f; break; }
+        if (f.unit == unit) { slot = &f; break; }
     if (!slot) {
         if (!hovered) return false;   // nothing painted, nothing to fade out
         // The slot is born knowing its unit's selection bit, so the disarm's
         // watch (observe_flag_hover_selection) sees only later transitions.
         hf.push_back(AppState::FlagHoverFade{
-            marker_index, cell, HoverFade{},
-            flag_hover_unit_selected(app, marker_index, cell)});
+            unit, HoverFade{}, flag_hover_unit_selected(app, unit)});
         slot = &hf.back();
     }
     const int before = hover_fade_steps(slot->fade);
@@ -7648,12 +7626,13 @@ bool flag_hover_edge(AppState& app, int marker_index, MarkerCell cell,
 // for a PAYLOAD unit, its marker's stem column over the waveform (the stem
 // tint, paint_marker_stems) — each damaged through `damage`, nothing wider.
 template <typename Damage>
-void damage_flag_hover_unit(const AppState& app, int marker_index,
-                            MarkerCell cell, Damage&& damage) {
+void damage_flag_hover_unit(const AppState& app,
+                            const AppState::FlagHoverUnit& unit,
+                            Damage&& damage) {
     GuiRect r{0, 0, 0, 0};
-    if (flag_hover_unit_box(app, marker_index, cell, r)) damage(r);
-    if (cell == MarkerCell::Payload &&
-        flag_hover_stem_rect(app, marker_index, r))
+    if (flag_hover_unit_box(app, unit, r)) damage(r);
+    if (unit.cell == MarkerCell::Payload &&
+        flag_hover_stem_rect(app, unit.marker, r))
         damage(r);
 }
 
@@ -7661,21 +7640,18 @@ void damage_flag_hover_unit(const AppState& app, int marker_index,
 // each unit whose painted level moved at its edge has its own paint damaged
 // (`damage`, the caller's viewport) — its box, and a payload's stem column.
 template <typename Damage>
-void set_flag_hover_unit(AppState& app, int marker_index, MarkerCell cell,
+void set_flag_hover_unit(AppState& app, const AppState::FlagHoverUnit& unit,
                          Damage&& damage) {
     AppState::FlagHover& h = app.flag_hover;
-    if (marker_index == h.marker_index &&
-        (marker_index < 0 || cell == h.cell))
-        return;
+    if (unit == h.unit) return;
     const int64_t now = monotonic_ms();
-    const auto edge = [&](int idx, MarkerCell c, bool hovered) {
-        if (!flag_hover_edge(app, idx, c, hovered, now)) return;
-        damage_flag_hover_unit(app, idx, c, damage);
+    const auto edge = [&](const AppState::FlagHoverUnit& u, bool hovered) {
+        if (!flag_hover_edge(app, u, hovered, now)) return;
+        damage_flag_hover_unit(app, u, damage);
     };
-    if (h.marker_index >= 0) edge(h.marker_index, h.cell, false);
-    h.marker_index = marker_index;
-    h.cell         = cell;
-    if (marker_index >= 0) edge(marker_index, cell, true);
+    if (h.unit.named()) edge(h.unit, false);
+    h.unit = unit;
+    if (unit.named()) edge(unit, true);
 }
 
 // THE DESELECT UNDER THE POINTER (architect 2026-09-29; the rule and its state
@@ -7698,33 +7674,34 @@ void set_flag_hover_unit(AppState& app, int marker_index, MarkerCell cell,
 //     flashes the fill on its way. The wait ripens on the tick, which runs
 //     the writer.
 template <typename Damage>
-void observe_flag_hover_selection(AppState& app, int under, MarkerCell cell,
+void observe_flag_hover_selection(AppState& app,
+                                  const AppState::FlagHoverUnit& under,
                                   int mx, int my, Damage&& damage) {
     AppState::FlagHover& h = app.flag_hover;
     for (AppState::FlagHoverFade& f : h.fades) {
-        const bool sel =
-            flag_hover_unit_selected(app, f.marker_index, f.cell);
+        const bool sel = flag_hover_unit_selected(app, f.unit);
         if (f.selected && !sel) {
             const int before = hover_fade_steps(f.fade);
             hover_fade_cut(f.fade, /*hovered=*/false);
-            if (before > 0)
-                damage_flag_hover_unit(app, f.marker_index, f.cell, damage);
+            if (before > 0) damage_flag_hover_unit(app, f.unit, damage);
         }
         f.selected = sel;
     }
 
-    if (under != h.under_marker_index ||
-        (under >= 0 && cell != h.under_cell)) {
-        h.under_marker_index = under;
-        h.under_cell         = cell;
+    // THE UNIT UNDER THE POINTER IS COMPARED BY IDENTITY, so a store edit
+    // that moves its index while its flag stays under the pointer is no
+    // change here and the latch stands; one that takes the flag away leaves
+    // another unit, or none, under the pointer — a leave.
+    if (under != h.under) {
+        h.under = under;
         h.under_selected =
-            under >= 0 && flag_hover_unit_selected(app, under, cell);
+            under.named() && flag_hover_unit_selected(app, under);
         h.disarmed     = false;
         h.rearm_due_ms = 0;
         return;
     }
-    if (under < 0) return;
-    const bool sel = flag_hover_unit_selected(app, under, cell);
+    if (!under.named()) return;
+    const bool sel = flag_hover_unit_selected(app, under);
     if (h.under_selected && !sel) {
         h.disarmed     = true;
         h.anchor_x     = mx;
@@ -7750,19 +7727,23 @@ void observe_flag_hover_selection(AppState& app, int under, MarkerCell cell,
 // THE FLAG HOVER'S ONE WRITER (the contract is at the declaration).
 void GuiInputHandler::recompute_flag_hover() {
     AppState::FlagHover& h = app.flag_hover;
-    // THE LANE MOVED UNDER THE INDICES: every tail is cut — the lane's own
-    // rebuild repaints its pixels whole — and the hovered unit keeps its
-    // settled face, so a store edit under a resting pointer (a nudge of the
-    // selection beside it) does not blink the box; the walk below re-derives
-    // it from the stash like any motion would.
-    const uint64_t key = flag_hover_lane_key(app);
-    if (key != h.lane_key) {
-        h.lane_key = key;
-        std::erase_if(h.fades, [&](const AppState::FlagHoverFade& f) {
-            return f.marker_index != h.marker_index || f.cell != h.cell;
-        });
-        for (AppState::FlagHoverFade& f : h.fades)
-            hover_fade_cut(f.fade, /*hovered=*/true);
+    // THE STASH OF RECORD CHANGED LANES (another column, an `h` edge, walk
+    // step or reading — never a store edit, which the identities survive):
+    // every identity names a flag of the old lane, so the fades are cut whole
+    // and the unit, the latch and its tracking start afresh — a leave. No
+    // damage is owed: the rebuild that staged the new lane damaged the whole
+    // strip and waveform (a mode edge's drop repaints them too), and the walk
+    // below snaps the unit now under the pointer in at full, so the lane
+    // change blinks no box.
+    const uint64_t lane = flag_hover_stash_lane(app);
+    if (lane != h.lane_key) {
+        h.lane_key       = lane;
+        h.fades.clear();
+        h.unit           = AppState::FlagHoverUnit{};
+        h.under          = AppState::FlagHoverUnit{};
+        h.under_selected = false;
+        h.disarmed       = false;
+        h.rearm_due_ms   = 0;
     }
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
@@ -7782,25 +7763,26 @@ void GuiInputHandler::recompute_flag_hover() {
         folder_overlay_stands(app) ||
         app.dropdown.open() ||
         notification_card_at(app, mx, my) != 0;
-    MarkerCell cell = MarkerCell::Payload;
-    const int under = away ? -1 : flag_hover_unit_at(app, mx, my, cell);
-    observe_flag_hover_selection(app, under, cell, mx, my, damage);
+    const AppState::FlagHoverUnit under =
+        away ? AppState::FlagHoverUnit{} : flag_hover_unit_at(app, mx, my);
+    observe_flag_hover_selection(app, under, mx, my, damage);
     // NO HOVER PAINTED on that unit under a held primary button (a press, a
     // drag, every finger contact — no hover under touch: the pointer is not
     // resting, though it has not left) or while the unit is disarmed by a
     // deselect under the pointer.
     const bool refused = app.redesign_tooltip.button_held || h.disarmed;
-    set_flag_hover_unit(app, refused ? -1 : under, cell, damage);
+    set_flag_hover_unit(app, refused ? AppState::FlagHoverUnit{} : under,
+                        damage);
 }
 
 void GuiInputHandler::clear_flag_hover() {
     // The pointer has left: every unit re-arms, as a leave always does.
     AppState::FlagHover& h = app.flag_hover;
-    h.under_marker_index = -1;
-    h.under_selected     = false;
-    h.disarmed           = false;
-    h.rearm_due_ms       = 0;
-    set_flag_hover_unit(app, -1, MarkerCell::Payload,
+    h.under          = AppState::FlagHoverUnit{};
+    h.under_selected = false;
+    h.disarmed       = false;
+    h.rearm_due_ms   = 0;
+    set_flag_hover_unit(app, AppState::FlagHoverUnit{},
                         [this](const GuiRect& r) {
                             viewport.invalidate_rect(r);
                         });
@@ -10351,10 +10333,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // (notification_card_at) for the same reason.
     update_notification_hover(mouse_x, mouse_y);
     // THE FLAG HOVER (architect 2026-09-29), above every branch for the same
-    // reason: it is paint alone, derived from the promoted flag stash, the
-    // remembered position and the held button just written above, so every
-    // motion re-derives it — a held press or a drag clears it, a veil or an
-    // overlay refuses it — and the branches below need not know it exists.
+    // reason: it is paint alone, derived from the flag stash the next frame
+    // blits, the remembered position and the held button just written above,
+    // so every motion re-derives it — a held press or a drag clears it, a
+    // veil or an overlay refuses it — and the branches below need not know it
+    // exists.
     recompute_flag_hover();
     // (THE POINTER CURSOR IS NOT RESOLVED HERE, 2026-08-03. A push stood at this
     // spot — above every gesture branch, so that each early return below still

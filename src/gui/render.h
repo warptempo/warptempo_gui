@@ -6,6 +6,7 @@
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 
 #include <cairo/cairo.h>
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -2951,6 +2952,52 @@ inline int playhead_half_px() {
 // characters any more.)
 
 
+// THE MARKER A FLAG NAMES, ACROSS A STORE EDIT (architect 2026-09-29, the flag
+// hover's identity). There is no stable id in the stores, so the identity is
+// the one this product already follows a marker by across an edit — its
+// authored SOURCE frame — with its place in the run of rows sharing that
+// frame, COUNTED FROM THE RUN'S END: `ordinal` 0 is the run's last row. From
+// the end because insert_marker places a new row FIRST in its run
+// (lower_bound, marker_store.h), so a drop onto an occupied frame, and its
+// undo, leave every standing row's identity where it was. A Delete, a drop,
+// an undo or redo elsewhere in the store moves a marker's INDEX and leaves
+// this alone; what changes it is the marker's own frame moving, or the rows
+// AFTER it inside its own coincident run changing — read then as that marker
+// leaving, which is the hover's ordinary leave. The live columns count
+// in their store, the `h` view in its diff list (both sorted by frame at
+// rest). `ordinal` -1 names nothing.
+struct FlagMarkerId {
+    int64_t frame   = 0;
+    int     ordinal = -1;
+    bool named() const { return ordinal >= 0; }
+    bool operator==(const FlagMarkerId&) const = default;
+};
+
+// The identity of row `i` of a frame-sorted row vector (a marker store, the
+// diff list), and its inverse — the row an identity names, or -1.
+template <typename Rows>
+FlagMarkerId flag_marker_id_of(const Rows& rows, int i) {
+    if (i < 0 || static_cast<std::size_t>(i) >= rows.size()) return {};
+    const int64_t frame = rows[static_cast<std::size_t>(i)].time_frame;
+    int ordinal = 0;
+    for (std::size_t j = static_cast<std::size_t>(i) + 1;
+         j < rows.size() && rows[j].time_frame == frame; ++j)
+        ++ordinal;
+    return FlagMarkerId{frame, ordinal};
+}
+template <typename Rows>
+int flag_marker_index_of(const Rows& rows, FlagMarkerId id) {
+    if (!id.named()) return -1;
+    const auto run_end = std::upper_bound(
+        rows.begin(), rows.end(), id.frame,
+        [](int64_t f, const auto& row) { return f < row.time_frame; });
+    const std::ptrdiff_t i =
+        (run_end - rows.begin()) - 1 - static_cast<std::ptrdiff_t>(id.ordinal);
+    if (i < 0 || rows[static_cast<std::size_t>(i)].time_frame != id.frame)
+        return -1;
+    return static_cast<int>(i);
+}
+
 // Screen-coord rect of one rendered flag, keyed back to its marker index.
 // Emitted in the same order flags appear left-to-right. It is the WHOLE PAINTED
 // BOX — the 1px left border included, so its x sits one column left of the
@@ -2991,6 +3038,12 @@ inline int playhead_half_px() {
 // what makes a press on a riding cell resolve to the same marker and the same
 // MarkerCell a press on the resting one resolves to. A cold or absent run
 // reads marker_index -1 with a zero rect, which contains no point.
+//
+// `id` NAMES THE MARKER ACROSS A STORE EDIT (FlagMarkerId above), which the
+// index cannot: the two lane producers set it — the flag pass off the store,
+// the `h` view's pass off its diff list — and its one reader is the flag
+// hover (AppState::FlagHover). The editor's riding run names none; the hover
+// answers nothing on it.
 struct FlagHitRect {
     int    marker_index = -1;
     double x            = 0.0;
@@ -2999,6 +3052,7 @@ struct FlagHitRect {
     double h            = 0.0;
     double iter_lower_boundary_x = 0.0;
     double iter_upper_boundary_x = 0.0;
+    FlagMarkerId id{};
 };
 
 // THE FLAG HOVER (architect 2026-09-29) — PCManFM-Qt's hover shape, subtle: the
@@ -3031,19 +3085,24 @@ struct FlagHitRect {
 // its state are at AppState::FlagHover).
 //
 // IT IS PAINT, NEVER A CLAIM (strictly as painted): the hover is resolved from
-// the promoted flag stash (AppState::flag_hit_rects) and changes nothing a
-// press hits. THE OVERLAY IS A RE-RUN OF THE LANE PASS, clipped to the hovered
-// unit's box: GuiPaintHandler::paint_flag_hover (waveform_cache.cpp) paints the
-// same flags in the same store order over the cached surface's blit, so later
-// flags keep covering earlier ones exactly as the cache drew them, and the one
-// thing that differs inside the clip is the hovered unit's fill. The cached
-// surface itself never carries a hover, so a hover edge rebuilds nothing and
-// damages the unit's own box alone. `clip_lo_x` / `clip_hi_x` are the clip's
-// columns, which the pass's cull reads to shape only the flags that can reach
-// the box.
+// the flag stash the next painted frame blits (flag_hover_stash, app_state.h —
+// the staged one while a rebuild waits for its promote, else the promoted
+// one) and changes nothing a press hits. THE OVERLAY IS A RE-RUN OF THE LANE
+// PASS, clipped to the hovered unit's box: GuiPaintHandler::paint_flag_hover
+// (waveform_cache.cpp) paints the same flags in the same store order over the
+// cached surface's blit, so later flags keep covering earlier ones exactly as
+// the cache drew them, and the one thing that differs inside the clip is the
+// hovered unit's fill. The cached surface itself never carries a hover, so a
+// hover edge rebuilds nothing and damages the unit's own paint alone: its box
+// and, for a payload unit, its stem's column over the waveform
+// (flag_hover_stem_rect). `clip_lo_x` / `clip_hi_x` are the clip's columns,
+// which the pass's cull reads to shape only the flags that can reach the box.
 inline constexpr double kFlagHoverMix = 0.5;
 struct FlagHoverPaint {
-    int        marker_index = -1;   // store index; a diff-flag index in `h`
+    // The hovered marker's index in the lane the pass paints — the live store,
+    // or the diff list in `h` — resolved from the hover's identity at the
+    // paint (flag_hover_live_index, app_state.h).
+    int        marker_index = -1;
     MarkerCell cell         = MarkerCell::Payload;
     int        level        = 0;    // the painted HoverFade level
     int        clip_lo_x    = 0;

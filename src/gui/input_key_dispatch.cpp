@@ -1123,6 +1123,8 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.staged_flag_hit_rects.clear();
     app.staged_marker_stems.clear();
     app.flag_stash_staged = false;
+    app.flag_stash_lane        = 0;
+    app.staged_flag_stash_lane = 0;
     app.history_mode.flags.clear();
 }
 

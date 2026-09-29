@@ -1211,7 +1211,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // next frame's promote (GuiPaintHandler::on_redraw), the frame that blits
     // the surface just drawn. Unconditional like that blit — the contract, and
     // why it does not wait behind the displayed-basis freeze, is at
-    // AppState::flag_hit_rects.
+    // AppState::flag_hit_rects. The lane it was painted in rides with it, the
+    // flag hover's identities belonging to that lane (flag_lane_key).
+    app.staged_flag_stash_lane = flag_lane_key(app);
     app.flag_stash_staged = true;
 
     flag_cache.fp_vp_start                = vp_start;
@@ -1506,6 +1508,12 @@ void GuiPaintHandler::render_flag_lane(cairo_t* cr, const FlagHoverPaint* hover,
 // the blit exactly as the cache drew them, and only the hovered unit's fill
 // differs. The same readiness gates the cache's rebuild takes: no surface or
 // no displayed plate means no flags on screen to hover.
+// THE UNIT IS AN IDENTITY (AppState::FlagHover), resolved twice here, each in
+// its own index space: its BOX in the stash this frame blits, and the index
+// the re-run paints it at in the live lane — which a store edit may already
+// have moved ahead of the cache's rebuild, so the stash's index could name
+// another row there. A unit with no live row (its marker is gone, the rebuild
+// not yet run) paints no overlay: the blit alone shows it at rest.
 void GuiPaintHandler::paint_flag_hover(cairo_t* cr) {
     if (app.flag_hover.fades.empty()) return;
     if (!flag_cache.surface) return;
@@ -1515,10 +1523,12 @@ void GuiPaintHandler::paint_flag_hover(cairo_t* cr) {
         const int level = hover_fade_steps(f.fade);
         if (level <= 0) continue;
         GuiRect box{0, 0, 0, 0};
-        if (!flag_hover_unit_box(app, f.marker_index, f.cell, box)) continue;
+        if (!flag_hover_unit_box(app, f.unit, box)) continue;
+        const int live = flag_hover_live_index(app, f.unit.marker);
+        if (live < 0) continue;
         FlagHoverPaint hp;
-        hp.marker_index = f.marker_index;
-        hp.cell         = f.cell;
+        hp.marker_index = live;
+        hp.cell         = f.unit.cell;
         hp.level        = level;
         hp.clip_lo_x    = box.x;
         hp.clip_hi_x    = box.x + box.w;

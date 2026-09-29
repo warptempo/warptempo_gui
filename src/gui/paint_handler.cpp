@@ -5972,7 +5972,9 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // takes the flag's own blend of its rest and selected stems at that level.
     // A selected stem publishes the same colour twice, so the blend leaves it
     // standing; a disarmed unit's slot sits at level 0 and tints nothing. The
-    // lookup runs only while some unit paints a level.
+    // lookup runs only while some unit paints a level, and matches the stem by
+    // its marker's IDENTITY resolved in this stash (flag_hover_stem_level), so
+    // a store edit that moved the indices cannot tint another marker's stem.
     const bool hover_live = !app.flag_hover.fades.empty();
 
     cairo_save(cr);
@@ -5994,12 +5996,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             // paint_flag_hover's own two gates: a level, and a box the flag
             // pass published (none under the payload editor), so the stem
             // tints exactly when its flag does.
-            const int level = flag_hover_level(app, stem.marker_index,
-                                               MarkerCell::Payload);
-            GuiRect box{0, 0, 0, 0};
-            if (level > 0 &&
-                flag_hover_unit_box(app, stem.marker_index,
-                                    MarkerCell::Payload, box))
+            const int level = flag_hover_stem_level(app, stem.marker_index);
+            if (level > 0)
                 c = flag_hover_fill(stem.color, stem.selected_color, level);
         }
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
@@ -8709,6 +8707,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     if (app.flag_stash_staged) {
         std::swap(app.flag_hit_rects, app.staged_flag_hit_rects);
         std::swap(app.marker_stems, app.staged_marker_stems);
+        std::swap(app.flag_stash_lane, app.staged_flag_stash_lane);
         app.flag_stash_staged = false;
     }
 

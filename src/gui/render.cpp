@@ -2007,6 +2007,7 @@ void render_flag_boxes_impl(
                 // column and `run_end` is the edited box's own seam, as before.
                 FlagHitRect r;
                 r.marker_index = i;
+                r.id = flag_marker_id_of(markers, i);
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
                 r.w = static_cast<double>(run_end - (bx - border_w));
@@ -2508,6 +2509,7 @@ void render_history_diff_flags(
                 // one item however wide it is painted.
                 FlagHitRect r;
                 r.marker_index = i;
+                r.id = flag_marker_id_of(flags, i);
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
                 r.w = static_cast<double>(bw + 2 * border_w);

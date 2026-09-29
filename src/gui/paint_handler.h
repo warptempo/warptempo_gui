@@ -591,8 +591,11 @@ struct GuiPaintHandler {
     // render.h's FlagHoverPaint): for each unit of AppState::FlagHover whose
     // fade paints a level, the lane pass re-run over the flag cache's blit,
     // clipped to that unit's box in the promoted stash, the unit's fill at the
-    // half blend. Called by paint_flag_annotations right after the blit, so it
-    // lies under the open editor's box and every floating surface. Off the
+    // half blend — the unit's identity resolved to its box there and to its
+    // row in the live lane for the re-run (flag_hover_unit_box,
+    // flag_hover_live_index). Called by paint_flag_annotations right after
+    // the blit, so it lies under the open editor's box and every floating
+    // surface. Off the
     // damage it costs nothing (the outer clip), and with no hover it is one
     // emptiness test.
     void paint_flag_hover(cairo_t* cr);

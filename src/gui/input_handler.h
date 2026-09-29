@@ -1444,9 +1444,12 @@ struct GuiInputHandler {
     // called by every pointer motion (on_motion's head), every press
     // (on_button_press's head), the tick and the pre-paint hook ahead of
     // every frame (main.cpp): it resolves the unit under the remembered
-    // position from the PROMOTED flag stash — the topmost flag rect, the cell
-    // by its painted boundaries, nothing under the open editor's riding boxes
-    // — and answers NONE while the pointer is out of the window, the primary
+    // position from the flag stash the next frame blits (flag_hover_stash:
+    // the staged one while a rebuild waits for its promote, else the promoted
+    // one) — the topmost flag rect, named by its marker's identity
+    // (FlagMarkerId, so a store edit moving the indices is no change of unit),
+    // the cell by its painted boundaries, nothing under the open editor's
+    // riding boxes — and answers NONE while the pointer is out of the window, the primary
     // button is held (a press, a drag, any finger contact: no hover under
     // touch), the load is in flight, a prompt or a dialog editor veils the
     // window, the folder overlay stands, a dropdown is open or a notification

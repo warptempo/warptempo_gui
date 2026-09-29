@@ -5926,23 +5926,47 @@ struct AppState {
 
     // THE FLAG HOVER (architect 2026-09-29; the paint rule is at render.h's
     // FlagHoverPaint) — PAINT STATE ONLY, like the fades above: no press,
-    // cursor, tooltip or hit test reads it. `marker_index` / `cell` are the
-    // unit under the resting pointer, resolved from the PROMOTED flag stash
-    // (flag_hit_rects: the store index on the live columns, the diff-flag index
-    // in the `h` view; the cell by the painter's own boundaries, so under grid
-    // iterations the unit is the CELL) — -1 with none. Its one writer is
-    // GuiInputHandler::recompute_flag_hover (input_pointer.cpp), run by every
-    // pointer motion, every press, the tick and the pre-paint hook ahead of
-    // every frame; the pointer's leave and the held primary button (a press,
-    // a drag, a finger's contact) clear it. `fades` holds one
-    // HoverFade per unit still painting a level — the hovered one and any it
-    // left fading out (HoverFadeKind::SnapIn since 2026-09-29, the buttons'
-    // own: full at once, the 100 ms fade on the way out) — each erased once it settles
-    // dark, cut when its unit leaves the stash (the flag left the screen) and
-    // cut whole when `lane_key` moves (another column, the `h` edge, a store
-    // edit: the indices name other boxes then). The tick advances them beside
-    // the roster's and damages the unit's own paint alone — its box and, for
-    // a PAYLOAD unit, its marker's stem column over the waveform.
+    // cursor, tooltip or hit test reads it. `unit` is the unit under the
+    // resting pointer, resolved from the flag stash THE NEXT PAINTED FRAME
+    // BLITS (flag_hover_stash: the staged one while a rebuild waits for its
+    // promote, else the promoted one — so the hover is always read off the
+    // pixels it will be painted over), the cell by the painter's own
+    // boundaries, so under grid iterations the unit is the CELL; unnamed with
+    // none. Its one writer is GuiInputHandler::recompute_flag_hover
+    // (input_pointer.cpp), run by every pointer motion, every press, the tick
+    // and the pre-paint hook ahead of every frame; the pointer's leave and
+    // the held primary button (a press, a drag, a finger's contact) clear it.
+    // `fades` holds one HoverFade per unit still painting a level — the
+    // hovered one and any it left fading out (HoverFadeKind::SnapIn since
+    // 2026-09-29, the buttons' own: full at once, the 100 ms fade on the way
+    // out) — each erased once it settles dark or its unit leaves the stash
+    // (the flag left the screen, or its marker is gone). The tick advances
+    // them beside the roster's and damages the unit's own paint alone — its
+    // box and, for a PAYLOAD unit, its marker's stem column over the
+    // waveform.
+    //
+    // EVERY UNIT IS NAMED BY ITS MARKER'S IDENTITY, NEVER BY AN INDEX
+    // (FlagMarkerId, render.h — the source frame and the place in its
+    // coincident run, published on each stash rect by the pass that painted
+    // it). An index is the painting epoch's alone: a Delete, a drop, an undo
+    // or redo moves every index past the edit while the flags stand still, and
+    // the index spaces move at different moments — the live store and its
+    // selection at the edit, the stash at the rebuild's stage and the frame's
+    // promote. The identity survives every one of them, so a store edit never
+    // hands the hover, its fading tail or the disarm latch below to another
+    // flag, and each reader resolves it in its own index space at the moment
+    // it reads: the stash for the box, the stem and the unit under the
+    // pointer (flag_hover_stash_index), the live store — or the `h` view's
+    // diff list — for the overlay's re-run and the selection bit
+    // (flag_hover_live_index). A store edit that
+    // leaves the hovered flag under the pointer is therefore no edge at all;
+    // one that takes it away is the leave the writer's next resolution sees.
+    // `lane_key` is the LANE the identities belong to (flag_lane_key: the
+    // column, and in the `h` view its walk position and reading) as the stash
+    // of record carries it; when it moves, every identity names a flag of
+    // another lane, so the writer cuts the fades whole and the unit, the
+    // latch and its tracking start afresh — a leave — the stash's own rebuild
+    // having damaged the whole lane and every stem.
     //
     // THE HOVER TINTS THE PAYLOAD'S STEM (architect 2026-09-29): while a
     // marker's PAYLOAD unit paints a level, its stem on the waveform takes the
@@ -5975,24 +5999,31 @@ struct AppState {
     // read as a whole deselect — a unit landing at the half blend reads as a
     // half-deselected flag; the roster buttons need no such rule because
     // their lamp is a separate face from their hover outline. Becoming
-    // selected under the pointer is unaffected. `under_*` track the unit
+    // selected under the pointer is unaffected. `under` tracks the unit
     // under the resting pointer WHATEVER THE HELD BUTTON (a held press refuses
     // the paint, not the unit: a click's deselect happens under it), with
     // `under_selected` its painted-selected bit as last seen; each slot's
     // `selected` is the same bit for its own unit.
+    struct FlagHoverUnit {
+        FlagMarkerId marker{};
+        MarkerCell   cell = MarkerCell::Payload;
+        bool named() const { return marker.named(); }
+        // Two unnamed units are the same none whatever their cells.
+        bool operator==(const FlagHoverUnit& o) const {
+            if (!named() || !o.named()) return named() == o.named();
+            return marker == o.marker && cell == o.cell;
+        }
+    };
     struct FlagHoverFade {
-        int        marker_index = -1;
-        MarkerCell cell         = MarkerCell::Payload;
-        HoverFade  fade{};
-        bool       selected     = false;
+        FlagHoverUnit unit{};
+        HoverFade     fade{};
+        bool          selected = false;
     };
     struct FlagHover {
-        int                        marker_index = -1;
-        MarkerCell                 cell         = MarkerCell::Payload;
+        FlagHoverUnit              unit{};
         uint64_t                   lane_key     = 0;
         std::vector<FlagHoverFade> fades;
-        int                        under_marker_index = -1;
-        MarkerCell                 under_cell     = MarkerCell::Payload;
+        FlagHoverUnit              under{};
         bool                       under_selected = false;
         bool                       disarmed       = false;
         int                        anchor_x       = 0;
@@ -6039,8 +6070,10 @@ struct AppState {
     // rebuild's own damage is the full strip+waveform rect, so the promoting
     // frame repaints the whole lane and every stem. Every reader — the hit
     // walk (topmost_flag_rect, app_state.cpp), the stem painter and the
-    // playhead's stem suppression — reads THESE promoted copies; nothing
-    // reads the staged pair but the promote.
+    // playhead's stem suppression — reads THESE promoted copies. The staged
+    // pair has one reader besides the promote: the flag hover's writer and
+    // its tick (flag_hover_stash), which are paint state for the NEXT frame
+    // and so read the pair that frame will blit — and no press reads it.
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
@@ -6077,6 +6110,12 @@ struct AppState {
     std::vector<FlagHitRect> staged_flag_hit_rects;
     std::vector<MarkerStem>  staged_marker_stems;
     bool                     flag_stash_staged = false;
+    // THE LANE EACH HALF WAS PAINTED IN (flag_lane_key, stamped by the
+    // rebuild beside its stage and swapped with the pair; 0 once a mode edge
+    // drops the stash) — what the flag hover's identities belong to
+    // (AppState::FlagHover::lane_key).
+    uint64_t                 flag_stash_lane        = 0;
+    uint64_t                 staged_flag_stash_lane = 0;
 
     // THE TRIM BAR'S PAINTER STASH (architect 2026-09-24, strictly
     // as-painted) — the flag stash's doctrine carried to the lane under it.
@@ -6477,7 +6516,7 @@ struct AppState {
 
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
-    // The painted keyboard (onscreen_keyboard.h) stands while any of the six
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the five
     // editor kinds does, on a backend that asks for one, and it holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
     // arm and the PAGE (letters, symbols 1/2, symbols 2/2; plasma-keyboard's
@@ -18113,41 +18152,74 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
                               int mouse_x, int mouse_y);
 
-// THE FLAG HOVER'S TWO STASH READS (architect 2026-09-29; the paint rule is at
-// render.h's FlagHoverPaint). flag_hover_unit_at answers the unit a RESTING
-// pointer hovers — the topmost rect of the LANE PASS's own stash and its cell
-// by the painter's boundaries, the walk hit_test_flag takes — or -1: a point
-// on the open editor's riding boxes answers none (the editor paints those, and
-// no hover is drawn on them). flag_hover_unit_box answers the painted box of
-// one unit — the marker's stash rect cut at its published boundaries (the
-// payload box from the rect's left border to the lower seam, a cell from its
-// seam to the next, the upper to the rect's end) — or false when the marker
-// publishes no rect (off the screen, or under the payload editor). Paint
-// state only: the hover's writer, its tick and its painter read these, and no
-// press does.
-int flag_hover_unit_at(const AppState& app, int mouse_x, int mouse_y,
-                       MarkerCell& cell_out);
-bool flag_hover_unit_box(const AppState& app, int marker_index,
-                         MarkerCell cell, GuiRect& box_out);
-// THE HOVER'S THREE FURTHER READS (architect 2026-09-29, the same paint-only
-// family). flag_hover_unit_selected answers whether the unit paints in its
-// SELECTED pair — the flag pass's own bit re-spelled across its parameter
-// boundary from the state it is handed (phase_reset_overlay_band's precedent):
-// on the live columns a member of the selection whose bright cell is this one
-// — the focus's addressed cell, else the payload, falling back to the payload
-// where that bound cell is painted nowhere (marker_paints_iter_cells); in the
-// `h` view the diff flag's focus or membership. It is the bit the disarm
-// watches (AppState::FlagHover). flag_hover_level answers the painted hover
-// level of one unit, 0 with no slot. flag_hover_stem_rect answers the
-// waveform rect the marker's stem paints on (the stem stash's column, the
-// waveform_line_px() width clipped at the right edge, the waveform's height)
-// — false with no stem in the stash — which is what a PAYLOAD unit's level
-// change damages beside its box.
-bool flag_hover_unit_selected(const AppState& app, int marker_index,
-                              MarkerCell cell);
-int flag_hover_level(const AppState& app, int marker_index, MarkerCell cell);
-bool flag_hover_stem_rect(const AppState& app, int marker_index,
+// THE LANE A FLAG STASH IS PAINTED IN (architect 2026-09-29, the flag hover's
+// identity): the markers view, and in the `h` view the session, walk position
+// and reading its diff list is built from — every input under which one
+// FlagMarkerId names another flag. A store edit is deliberately NOT in it:
+// the identity survives the edit (FlagMarkerId, render.h). A strict subset of
+// the flag cache's fingerprint, so the lane cannot move without a rebuild,
+// which stamps it on the stash it stages (AppState::flag_stash_lane).
+uint64_t flag_lane_key(const AppState& app);
+
+// THE FLAG HOVER'S READS (architect 2026-09-29; the paint rule is at render.h's
+// FlagHoverPaint, the state at AppState::FlagHover). Paint state only: the
+// hover's writer, its tick and its painters read these, and no press does.
+//
+// THE STASH OF RECORD is the one the next painted frame blits:
+// flag_hover_stash / flag_hover_stems answer the STAGED pair while a rebuild
+// waits for its promote (flag_stash_staged), else the promoted pair, and
+// flag_hover_stash_lane its lane. A painter reads after the frame's promote,
+// where the two are one; the writer and the tick read ahead of it, where the
+// staged pair is what that frame will show — so the hover never names a unit
+// by the flags a frame is about to replace.
+//
+// flag_hover_unit_at answers the unit a RESTING pointer hovers — the topmost
+// rect of that stash and its cell by the painter's boundaries, the walk
+// hit_test_flag takes — or an unnamed unit: a point on the open editor's
+// riding boxes answers none (the editor paints those, and no hover is drawn
+// on them). flag_hover_stash_index answers the stash's own index for a
+// marker's identity, -1 when no rect names it; flag_hover_unit_box answers
+// the painted box of one unit — the marker's stash rect cut at its published
+// boundaries (the payload box from the rect's left border to the lower seam,
+// a cell from its seam to the next, the upper to the rect's end) — or false
+// when the marker publishes no rect (off the screen, under the payload
+// editor, or gone). flag_hover_stem_rect answers the waveform rect the
+// marker's stem paints on (the stem stash's column, the waveform_line_px()
+// width clipped at the right edge, the waveform's height) — false with no
+// stem — which is what a PAYLOAD unit's level change damages beside its box.
+// flag_hover_stem_level answers the hover level the stem the stash's index
+// `stash_index` names takes: its marker's PAYLOAD unit's painted level where
+// that unit has a box (paint_flag_hover's own two gates, so the stem tints
+// exactly when its flag does), 0 otherwise.
+//
+// flag_hover_live_index answers the identity's index in the LANE THE STATE
+// LIVES IN NOW — the active column's store, or the `h` view's diff list —
+// which is what the overlay's re-run paints and the selection names; -1 when
+// the identity names no row there, or when the live lane is no longer the one
+// the hover's identities belong to. flag_hover_unit_selected answers whether
+// the unit paints in its SELECTED pair — the flag pass's own bit re-spelled
+// across its parameter boundary from the state it is handed
+// (phase_reset_overlay_band's precedent): on the live columns a member of the
+// selection whose bright cell is this one — the focus's addressed cell, else
+// the payload, falling back to the payload where that bound cell is painted
+// nowhere (marker_paints_iter_cells); in the `h` view the diff flag's focus or
+// membership; false for a unit with no live row. It is the bit the disarm
+// watches (AppState::FlagHover).
+const std::vector<FlagHitRect>& flag_hover_stash(const AppState& app);
+const std::vector<MarkerStem>& flag_hover_stems(const AppState& app);
+uint64_t flag_hover_stash_lane(const AppState& app);
+AppState::FlagHoverUnit flag_hover_unit_at(const AppState& app, int mouse_x,
+                                           int mouse_y);
+int flag_hover_stash_index(const AppState& app, FlagMarkerId marker);
+bool flag_hover_unit_box(const AppState& app,
+                         const AppState::FlagHoverUnit& unit,
+                         GuiRect& box_out);
+bool flag_hover_stem_rect(const AppState& app, FlagMarkerId marker,
                           GuiRect& rect_out);
+int flag_hover_stem_level(const AppState& app, int stash_index);
+int flag_hover_live_index(const AppState& app, FlagMarkerId marker);
+bool flag_hover_unit_selected(const AppState& app,
+                              const AppState::FlagHoverUnit& unit);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box
