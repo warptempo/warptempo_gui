@@ -7646,7 +7646,10 @@ struct AppState {
         // after which it is static for the visit exactly as before. Still ONE
         // measurement site (GuiInputHandler::measure_history_head_delta), which
         // both the entry and the arrival hook call; `head_delta_measured` below
-        // is what makes it once.
+        // is what makes it once. The resting TRUE is conservative under UP TO
+        // DATE only: under AHEAD an empty delta selects the untitled push
+        // retry, so there the act and the face ask `head_delta_measured`
+        // itself (architect 2026-09-28; history_checkpoint_actionable).
         //
         // AND THE WINDOW HAS A SECOND EXIT since 2026-08-09: a run that reports
         // DONE having delivered NOTHING. The walk is then finished and empty —
@@ -7661,7 +7664,8 @@ struct AppState {
         // False until the walk has answered — either member 0 compared against
         // the frozen now side, or the run finishing with no member at all; the
         // one measurement site sets it and nothing clears it inside a visit (the
-        // whole-struct reset at both edges does).
+        // whole-struct reset at both edges does). Read beside the bit by the
+        // Ahead arms of the checkpoint act and of its face.
         bool head_delta_measured = false;
 
         // THE VIEW OWNS NO NAVIGATION STATE (architect 2026-08-18, "this
@@ -8159,12 +8163,14 @@ struct AppState {
     // against GitHub as of the last fetch. PER PROJECT, born Unchecked with
     // this AppState, written on the MAIN THREAD alone: Checking when a check
     // is dispatched (GuiInputHandler::dispatch_github_check — every project
-    // open and every `h` entry), the check's reading at its completion, the
-    // checkpoint act's own fetched reading at its completion, and UpToDate
-    // when a pull lands. READ BY row 8's `h` walk line (its `GitHub: <word>`
-    // segment), by the Save button's face in the view (its grey, and the Pull
-    // glyph while Behind — history_checkpoint_actionable,
-    // history_pull_actionable, redesign_button_glyph) and by Ctrl+S's act
+    // open, every `h` entry, and Ctrl+S in the view while Offline), the
+    // check's reading at its completion, the checkpoint act's own fetched
+    // reading at its completion, and UpToDate when a pull lands. READ BY
+    // row 8's `h` walk line (its `GitHub: <word>` segment), by the Save
+    // button's face in the view (its grey, and the Pull glyph while Behind —
+    // history_checkpoint_actionable, history_pull_actionable,
+    // history_github_recheck_actionable, redesign_button_glyph) and by
+    // Ctrl+S's act
     // there (open_history_commit_editor), which forks on it.
     GuiGitHubStatus github_status = GuiGitHubStatus::Unchecked;
 
@@ -13143,13 +13149,19 @@ inline bool history_pull_actionable(const AppState& a) {
 // STATUS THAT ADMITS A COMMIT: UP TO DATE with something to commit (the head
 // delta, measured once per visit), or AHEAD — a committed-but-unpushed branch,
 // whose Ctrl+S retries the push through the act's clean-but-owing arm, so
-// AHEAD BYPASSES THE HEAD DELTA (the session equals the unpushed commit, and
-// the push is still owed). Every other status greys the face — Checking,
-// Offline, Refused, Diverged and Unchecked, each carded by the key at the act
-// (open_history_commit_editor) — and Behind is the PULL's face instead
-// (history_pull_actionable above). So an offline device takes no checkpoint,
-// on the laptop too (architect 2026-09-27, symmetric): outside the view Ctrl+S
-// is the plain save always.
+// AHEAD ACTS WHATEVER THE HEAD DELTA SAYS (the session equals the unpushed
+// commit, and the push is still owed) ONCE THE DELTA IS MEASURED (architect
+// 2026-09-28, the Fable catch-up's run D finding D2): the act forks on the
+// delta — empty retries the push under the default title, non-empty asks the
+// title — and the bit RESTS TRUE while unmeasured, which under Ahead would
+// select the untitled road for real edits, so the face greys and the key is
+// silent until the measurement lands, as under UP TO DATE. Every other status
+// greys the face — Checking, Refused, Diverged and Unchecked, each carded by
+// the key at the act (open_history_commit_editor) — Behind is the PULL's face
+// instead (history_pull_actionable above) and Offline the CHECK's
+// (history_github_recheck_actionable below). So an offline device takes no
+// checkpoint, on the laptop too (architect 2026-09-27, symmetric): outside the
+// view Ctrl+S is the plain save always.
 //
 // IT EXISTS BECAUSE THE ALLOWLIST STOPPED CARRYING THOSE TERMS. Ctrl+S was
 // admitted into the `h` view's vocabulary only while its terms held from
@@ -13166,9 +13178,28 @@ inline bool history_checkpoint_actionable(const AppState& a) {
         a.history_checkpoint_in_flight) {
         return false;
     }
-    if (a.github_status == GuiGitHubStatus::Ahead) return true;
+    if (a.github_status == GuiGitHubStatus::Ahead) {
+        return a.history_mode.head_delta_measured;
+    }
     return a.github_status == GuiGitHubStatus::UpToDate &&
            !a.history_mode.head_delta_empty;
+}
+
+// WOULD CTRL+S ASK GITHUB AGAIN? (architect 2026-09-28, the Fable catch-up's
+// run D question Q1) — inside the `h` view, on a visit with a clone, with no
+// checkpoint publishing, while the GitHub status reads OFFLINE: the reading
+// may be minutes old (the hotspot coming up after the view opened), so Ctrl+S
+// and the Save button's lift DISPATCH THE CHECK (dispatch_github_check, its
+// one dispatcher) and nothing else — row 8 reads `checking...` and then the
+// answer, and the next press acts on it. The face is live on these terms (a
+// face that advertises an act dispatches it) and greys under Checking like
+// every other status in flight. Read by Save's face; the act answers the same
+// status at its own fork (open_history_commit_editor), below the no-clone and
+// in-flight refusals this restates.
+inline bool history_github_recheck_actionable(const AppState& a) {
+    return a.history_mode.active && history_remote_walk_available(a) &&
+           !a.history_checkpoint_in_flight &&
+           a.github_status == GuiGitHubStatus::Offline;
 }
 
 // THE WALK'S TWO WALLS, one predicate per direction (architect 2026-08-30):
@@ -15529,16 +15560,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // which has no delta to ask about.
         //
         // AND IN THE VIEW THE GITHUB STATUS IS A TERM (architect 2026-09-27):
-        // the face is live where the chord would commit, retry the push or
-        // PULL (history_checkpoint_actionable, history_pull_actionable), and
-        // grey on Checking, Offline, Refused, Diverged and Unchecked, whose
-        // cards are the key's.
+        // the face is live where the chord would commit, retry the push,
+        // PULL or — under Offline since 2026-09-28 — ASK GITHUB AGAIN
+        // (history_checkpoint_actionable, history_pull_actionable,
+        // history_github_recheck_actionable), and grey on Checking, Refused,
+        // Diverged and Unchecked, whose cards are the key's.
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
                    (!a.history_mode.active ||
                     history_checkpoint_actionable(a) ||
-                    history_pull_actionable(a));
+                    history_pull_actionable(a) ||
+                    history_github_recheck_actionable(a));
         // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-CURRENT-VIEW
         // LAMP (architect 2026-09-04; its question the view since 2026-09-22),
         // and it is the truthful-button rule's own shape: with the lamp lit

@@ -1320,7 +1320,8 @@ void GuiInputHandler::republish_history_lane_now() {
 //
 // EVERY ENTRY CHECKS GITHUB (architect 2026-09-27): a visit that bootstrapped
 // a clone dispatches the GitHub check (dispatch_github_check), so row 8's
-// `GitHub:` segment is at most one visit old.
+// `GitHub:` segment is at most one visit old — and under `offline` Ctrl+S in
+// the view asks again (open_history_commit_editor, architect 2026-09-28).
 void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
     // prefetch store now, and a store describing another source, another
@@ -1435,8 +1436,10 @@ void GuiInputHandler::open_history_mode_fresh() {
 //
 // WHAT THE STREAMING WALK ADDED is a window in which there is nothing to
 // measure: a visit may open before the prefetch has delivered member 0 at all.
-// The bit RESTS TRUE there — the conservative face, since the act is greyed and
-// the chord refused while the answer is unknown — and this runs again at every
+// The bit RESTS TRUE there — the conservative face under UP TO DATE, since the
+// act is greyed and the chord silent while the answer is unknown; under AHEAD
+// the act and the face ask head_delta_measured itself, TRUE selecting the
+// untitled push retry there — and this runs again at every
 // prefetch arrival while the view stands, taking the measurement the first time
 // member 0 exists. `head_delta_measured` is what makes that "the first time":
 // after it, this is a no-op whatever else arrives.
@@ -3092,9 +3095,10 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // session always carries both strings), which is why they are silent.
 //
 // AND THE GITHUB STATUS FORKS IT (architect 2026-09-27; the fork is in the
-// body): Checking, Offline, Refused, Unchecked and Diverged each card their
-// sentence; Behind is the PULL (run_history_pull_press); Ahead with nothing
-// new to commit skips the question and retries the push at once.
+// body): Checking, Refused, Unchecked and Diverged each card their sentence;
+// Offline ASKS GITHUB AGAIN (dispatch_github_check, architect 2026-09-28);
+// Behind is the PULL (run_history_pull_press); Ahead with a MEASURED empty
+// delta skips the question and retries the push at once.
 //
 // THE TWO SESSION REFUSALS ARE THIS ACT'S OWN SINCE 2026-09-01 (architect: a
 // gate's membership is the chord's alone, so a chord the mode owns says its
@@ -3144,18 +3148,26 @@ void GuiInputHandler::open_history_commit_editor() {
     }
     // THE GITHUB STATUS SELECTS WHAT THE CHORD IS (architect 2026-09-27;
     // GuiGitHubStatus, history_diff.h): UP TO DATE commits, AHEAD commits or
-    // retries the push, BEHIND pulls, and every other status refuses with its
-    // own card — the Save face greys on the same terms
-    // (history_checkpoint_actionable / history_pull_actionable, app_state.h),
-    // so the key says the reason and the grey is the button's message.
+    // retries the push, BEHIND pulls, OFFLINE asks GitHub again, and every
+    // other status refuses with its own card — the Save face is live and grey
+    // on the same terms (history_checkpoint_actionable /
+    // history_pull_actionable / history_github_recheck_actionable,
+    // app_state.h), so the key says the reason and the grey is the button's
+    // message.
     switch (app.github_status) {
     case GuiGitHubStatus::Checking:
         notifications.notify(AppState::NotificationClass::Normal,
                              "GitHub is still being checked");
         return;
     case GuiGitHubStatus::Offline:
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "GitHub cannot be reached");
+        // THE READING MAY BE STALE (architect 2026-09-28, the Fable
+        // catch-up's run D question Q1): a view opened while the link was
+        // still coming up would read offline for its whole life. So the
+        // press asks again through the check's one dispatcher and does
+        // nothing else: row 8 turns to `checking...` and then the answer,
+        // and the next press acts on it. No card — an offline answer is on
+        // row 8, which the screen already shows truthfully.
+        dispatch_github_check();
         return;
     case GuiGitHubStatus::Refused:
         notifications.notify(AppState::NotificationClass::Normal,
@@ -3170,11 +3182,16 @@ void GuiInputHandler::open_history_commit_editor() {
         return;
     case GuiGitHubStatus::Diverged:
         // FAST-FORWARD ONLY: no in-app resolution. The fix is named on stderr.
+        // The tablet is the only committer (architect 2026-09-28), so the
+        // laptop's clone holds nothing authored and its local commits are
+        // discarded, and a diverged tablet is re-placed after its sidecars
+        // are copied off.
         std::fprintf(stderr,
             "warptempo_gui: Save and Commit refused: this device and GitHub "
-            "have both moved; on the laptop run 'git pull --rebase' in the "
-            "projects clone, on the tablet carry its sidecars to the laptop, "
-            "commit them there and re-place the tablet's clone\n");
+            "have both moved; on the laptop discard its local commits with "
+            "'git reset --hard origin/main' in the projects clone (it holds "
+            "nothing authored), and on the tablet copy its sidecars off and "
+            "re-place its clone with 'wts setup'\n");
         notifications.notify(AppState::NotificationClass::Normal,
                              "This device and GitHub have both moved");
         return;
@@ -3189,14 +3206,20 @@ void GuiInputHandler::open_history_commit_editor() {
     if (dir.empty() || app.history_mode.session.sidecar_base_name().empty()) {
         return;
     }
-    // AHEAD BYPASSES THE HEAD DELTA (architect 2026-09-27, superseding the
-    // 2026-08-09 "no in-app retry"): the branch carries a commit GitHub has
-    // not — a push that failed — and the chord RETRIES THE PUSH. With nothing
-    // new to commit there is no title to ask for, so the act runs at once
-    // under the default title (which a clean act never reads) and its
-    // clean-but-owing arm pushes; with a delta, the editor asks as ever and
-    // the act commits and pushes both.
+    // AHEAD BYPASSES THE HEAD DELTA'S SILENCE (architect 2026-09-27,
+    // superseding the 2026-08-09 "no in-app retry"): the branch carries a
+    // commit GitHub has not — a push that failed — and the chord RETRIES THE
+    // PUSH. With nothing new to commit there is no title to ask for, so the
+    // act runs at once under the default title (which a clean act never
+    // reads) and its clean-but-owing arm pushes; with a delta, the editor
+    // asks as ever and the act commits and pushes both. ONLY ON A MEASURED
+    // DELTA (architect 2026-09-28, the Fable catch-up's run D finding D2):
+    // the bit rests TRUE until the walk answers, and reading that as "nothing
+    // new" would commit real edits under a title nobody was asked for, so an
+    // unmeasured delta falls to the silence below, as under UP TO DATE, and
+    // the face greys on the same term (history_checkpoint_actionable).
     if (app.github_status == GuiGitHubStatus::Ahead &&
+        app.history_mode.head_delta_measured &&
         app.history_mode.head_delta_empty) {
         run_history_commit(history_checkpoint_title(dir));
         return;

@@ -4422,8 +4422,10 @@ public:
     // producer-less 2026-08-29).
     void kick_history_prefetch();
     // THE GITHUB CHECK'S ONE DISPATCH (architect 2026-09-27): at every project
-    // open (main.cpp's load tail, beside the prefetch kick) and every `h`
-    // entry that bootstrapped a clone. The status reads Checking until the
+    // open (main.cpp's load tail, beside the prefetch kick), every `h` entry
+    // that bootstrapped a clone, and Ctrl+S in the view (the Save button's
+    // lift included) under Offline (open_history_commit_editor, architect
+    // 2026-09-28). The status reads Checking until the
     // worker answers (on_github_check_complete). A worker already busy
     // dispatches nothing: a check in flight answers soon, and a checkpoint's
     // completion writes its own reading.

@@ -1238,7 +1238,7 @@ enum class GuiHistoryCommitOutcome {
 // against GitHub, as of the last fetch. Row 8's `h` walk line says it as
 // `GitHub: <word>` (github_status_word), and it selects what Ctrl+S does in
 // the view: UpToDate commits, Ahead commits or retries the push, Behind
-// pulls, and the rest refuse with a card.
+// pulls, Offline asks GitHub again, and the rest refuse with a card.
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
 //               read that did not answer, a fetch that failed in the clone
@@ -1248,7 +1248,8 @@ enum class GuiHistoryCommitOutcome {
 //   Ahead     — this branch has commits GitHub has not (a push that failed).
 //   Behind    — GitHub has commits this branch has not; the pull's case.
 //   Diverged  — both have moved; fast-forward only, so no in-app answer.
-//   Offline   — the fetch could not reach GitHub.
+//   Offline   — the fetch could not reach GitHub; Ctrl+S in the view
+//               dispatches the check again.
 //   Refused   — GitHub declined this device, the guard refused the clone's
 //               remotes, or HEAD is not on main (another branch, or
 //               detached: main is the only branch, architect 2026-09-28).
@@ -1268,7 +1269,8 @@ enum class GuiGitHubStatus {
 const char* github_status_word(GuiGitHubStatus status);
 
 // THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
-// at every project open and every `h` entry: derive the clone from the source
+// at every project open, every `h` entry and Ctrl+S in the view under
+// Offline: derive the clone from the source
 // through the same three steps resolve_history_walk_header takes
 // (resolve_repo_root_for_source, open_clone_for and the projects-home guard
 // clone_is_projects_home), read the branch, FETCH

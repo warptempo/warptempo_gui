@@ -535,9 +535,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
                           : nullptr;
     if (!dir || !*dir) {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,
-                            "no externalDataPath: the whole sync convention "
-                            "lives there and nothing else puts a project on "
-                            "this device");
+                            "no externalDataPath: the projects folder is the "
+                            "projects/ of the tablet's clone there, placed "
+                            "by wts setup");
         abort();
     }
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
