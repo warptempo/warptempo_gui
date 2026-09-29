@@ -122,16 +122,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
     // (the same clear at its own entry).
     app.double_click = DoubleClickCandidate{};
-    // ANY KEY PRESS HIDES THE HOVER TOOLTIP, the keyboard half of the rule the
-    // pointer press and the wheel already carry: the hint says what the button
-    // under the pointer would do, and once the user has acted — by any means — it
-    // is stale advice left floating. It is what keeps a hint from standing over a
-    // MODAL the key just opened, advertising a chord that modal's gate now
-    // swallows, and it covers the reverse timing too by resetting the dwell, so a
-    // dwell still counting when `;` opened the settings editor never comes due.
-    // (The tooltip cannot come BACK under that modal: the dwell writer refuses to
-    // run one while a prompt or a keyboard-modal editor is up — the rule is at
-    // recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
+    // ANY KEY PRESS IS THE HOVER TOOLTIP'S HARD END, the keyboard half of the
+    // rule the pointer press and the wheel already carry: the hint says what
+    // the button under the pointer would do, and once the user has acted — by
+    // any means — it is stale advice left floating. (Qt hides it at a key on
+    // macOS alone and lets it age out on Linux; here it goes on both devices,
+    // architect 2026-09-29, because a key may raise a card or a modal under
+    // the box.) It is what keeps a hint from standing over a MODAL the key
+    // just opened, advertising a chord that modal's gate now swallows, and it
+    // covers the reverse timing too by stopping the wait, so a wait still
+    // counting when `;` opened the settings editor never comes due. (The
+    // tooltip cannot come BACK under that modal: the roster walk refuses to
+    // start a wait while a prompt or a keyboard-modal editor is up — the rule
+    // is at recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
     // site: THE DIALOG'S VEIL already owns it (recompute_redesign_button_hover,
     // input_pointer.cpp) — under a PROMPT or an EDITOR dialog alike every
     // roster face goes dark, one blanket answer since the modal-trap

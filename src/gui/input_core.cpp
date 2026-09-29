@@ -645,7 +645,7 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // WHAT MAKES THAT SAFE IS THE ORDERING, NOT UNREACHABILITY, and the
     // distinction matters for anyone editing below: THE HOOK RUNS IMMEDIATELY
     // AFTER THIS CALL, and it drops precisely what such a delivery can touch —
-    // the in-window bit, the hover faces, the tooltip dwell, the armed chrome
+    // the in-window bit, the hover faces, the tooltip's wait, the armed chrome
     // press and
     // the popup's pointer state — an invariant restore placed after the last
     // thing that can disturb the invariant. ANY future change that separates the

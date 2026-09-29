@@ -62,8 +62,8 @@
 // DEVICE — a mouse button on the laptop, a fingertip or the pen on the
 // tablet — so the two holds that read kHoldBeatMs (gui_input.h, where the
 // readers' inventory lives) read this key instead, both templates stamping
-// that constant's 575. The beats that are not holds — the hover tooltip's
-// dwell among them — stay on the constant.
+// that constant's 575. The beats that are not holds stay on the constant,
+// and the hover tooltip reads neither (its wait is Qt's, render.h).
 // THE WAVEFORM PICTURE'S KEYS came and went (architect): the leveler's
 // `waveform_gain_*` joined 2026-09-23 and the expander's `waveform_expander_*`
 // 2026-09-24 for a tuning phase, eleven at the end, and all eleven LEFT
@@ -273,8 +273,8 @@ inline constexpr bool is_max_waveform_height(int64_t v) {
 // holds read — the chrome shift long press and the touch region hold —
 // installed at gui_main's startup and at the commit
 // (GuiInputHandler::apply_hold_delay_ms); the readers' inventory, and why
-// the hover tooltip's dwell, the double-click window, the tap coalesce and
-// both repeat delays stay on kHoldBeatMs, are at that constant
+// the double-click window, the tap coalesce and both repeat delays stay on
+// kHoldBeatMs, are at that constant
 // (gui_input.h). 100 is the floor because
 // a hold shorter than an unhurried click's own press would turn clicks into
 // holds; 2000 the ceiling because a press held two seconds with nothing

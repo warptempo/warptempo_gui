@@ -3504,21 +3504,19 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         app.modal_dialog.scrub.w > 0 && app.modal_dialog.scrub.h > 0) {
         viewport.invalidate_rect(app.modal_dialog.scrub);
     }
-    // AND IT OWNS THIS SURFACE'S TOOLTIP DWELL (2026-08-13, when the modal
-    // buttons took hints instead of bracketed accelerators): the same helper
-    // and the same hold-beat tick the roster's walk uses, keyed on the Dialog half
-    // of the owner's index space. EVERY dialog button has a hint, so there is
-    // no membership term here — the hit alone decides, and the painter's stash
-    // carries the text.
-    // IT IS INDEPENDENT OF THE PRESS ARM ABOVE: the dwell answers where the
-    // pointer IS, so a held button keeps its hint running exactly as a hovered
-    // one does, and losing the arm by sliding off is the same motion that
-    // re-keys the dwell onto whatever is under the pointer now.
+    // AND IT OWNS THIS SURFACE'S TOOLTIP WAIT (2026-08-13, when the modal
+    // buttons took hints instead of bracketed accelerators): the same writer
+    // and the same tick the roster's walk uses, keyed on the Dialog half of
+    // the owner's index space. EVERY dialog button has a hint, so there is no
+    // membership term here — the hit alone decides, and the painter's stash
+    // carries the text. A held press starts no wait here either (the writer's
+    // held term — the press arm above is the same press), and the pointer
+    // sliding off the box's button starts the hide grace like any soft end.
     // THE OWNER IS STAMPED WITH THE STASH THE HIT WAS READ FROM (its owner
-    // tag and session), so the dwell belongs to this painted surface alone
+    // tag and session), so the wait belongs to this painted surface alone
     // and dies with it (the rule is at AppState::RedesignTooltip).
-    arm_tooltip_dwell({AppState::RedesignTooltip::Surface::Dialog, hit,
-                       app.modal_dialog.owner, app.modal_dialog.session});
+    note_tooltip_hover({AppState::RedesignTooltip::Surface::Dialog, hit,
+                        app.modal_dialog.owner, app.modal_dialog.session});
 }
 
 // THE HOVER'S LEAVE END — the pointer-leave / capability-loss hook (main.cpp),
@@ -4941,11 +4939,13 @@ void GuiInputHandler::clear_player_scrub_drag() {
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
-    // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
-    // say, and a hint left floating over the thing the user just clicked is
-    // noise. It also resets the dwell, so a fresh hover starts a fresh wait.
-    // Placed here rather than at the release because the hint's job ends the
-    // moment the user acts on it, not when they let go.
+    // ANY PRESS IS THE TOOLTIP'S HARD END, above every gate — it has said what
+    // it had to say, and a hint left floating over the thing the user just
+    // clicked is noise. Placed here rather than at the release because the
+    // hint's job ends the moment the user acts on it, not when they let go;
+    // and the held bit is recorded first, so NO WAIT STARTS UNDER THE HELD
+    // PRESS (Qt's model, architect 2026-09-29 — AppState::RedesignTooltip).
+    app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
     // ANY PRESS ENDS THE MENU ROW'S MODE, beside it and for a related reason: the
     // ruling ends the mode on every ordinary dismissal, and with no popup open a
@@ -6899,14 +6899,18 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 // nothing is dropped: the pointer is where the GUI thinks it is, the cursor was
 // never hidden, and the loop's next tail is the ordinary end-of-gesture
 // re-resolve that puts the true cue back.
-// `mods` IS UNNAMED HERE because nothing in this handler reads it any more: the
-// per-arm cursor refresh was its only reader (it wanted the modifier truth the
-// platform delivered WITH this release), and the owner that replaced those calls
-// is handed the live state by the platform. The parameter stays in the signature
-// — it is the platform's release callback shape — so an arm that ever needs the
-// modifiers just names it again.
+// `mods` HAS ONE READER, the tooltip's held bit at the top (the per-arm cursor
+// refresh that once read it wanted the modifier truth the platform delivered
+// WITH this release, and the owner that replaced those calls is handed the
+// live state by the platform).
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
-                                        int y, GuiInputState /*mods*/) {
+                                        int y, GuiInputState mods) {
+    // THE TOOLTIP'S HELD BIT, above every return: the platform's own answer
+    // with this release (the left's release reads up; another button's reads
+    // whatever the left still is), so a wait may start again — on the next
+    // motion past the slop, never on the release's resting pointer
+    // (AppState::RedesignTooltip).
+    app.redesign_tooltip.button_held = mods.primary_button_held;
     // THE ON-SCREEN KEYBOARD'S OWED KEY-UP, above every gate and above even the
     // dropdown's release — the press's mirror. It is guarded on the held key
     // index alone, which only that surface's own press ever sets, so it claims
@@ -7628,9 +7632,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // return so the walk still writes `hovered = false` on whatever it lit
     // before the card slid up.
     const bool under_card = notification_card_at(app, mx, my) != 0;
-    // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
-    // walk because the walk below is what stamps it (the only route that
-    // starts a roster dwell); the rule is stated at the stamp itself.
+    // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
+    // walk because the walk below is what finds the tooltip's button (the only
+    // route that starts a roster wait); the rule is stated at the walk's tail.
     const bool modal_owns_the_keyboard = tooltip_dwell_suppressed();
     // THE DIALOG'S VEIL (2026-08-12): under a PROMPT or an EDITOR dialog the
     // WHOLE roster is refused — nothing behind the modal is pressable, so
@@ -7762,94 +7766,100 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // silent while the `h` view repurposed them as its walk selector; the
     // selector left the row on 2026-08-18 and they carry their ordinary hint in
     // every state again.)
-    // The walk above covers the whole roster either way: a newly hovered
-    // one stamps the clock, and moving between two of them hides and re-stamps,
-    // so a fresh dwell begins on each arrival. The run
-    // loop's tick compares the stamp against tooltip_delay_ms() and flips
-    // `visible` — no timer is created and nothing here decides visibility.
+    // The walk above covers the whole roster either way, and it hands the
+    // button it found (or none) to the wait's one writer, note_tooltip_hover,
+    // which decides by the slop, the held button and the box's own owner; the
+    // tooltip's clock (tick_tooltip) decides visibility. Nothing here does.
     //
-    // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT, and this refusal
+    // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT, and this refusal
     // is what makes "a tooltip never floats over a modal" hold rather than merely
     // start out true. The HOVER PILL deliberately stays live under those surfaces
     // (the standing ruling: button hover is a pointer fact, and a lit pill
     // advertising a swallowed press is an accepted cost) — and both of the
-    // branches that keep it live call this function, so without this line every
-    // motion under a prompt or an editor would stamp a fresh dwell and the tick
-    // would raise a FLOATING hint over the modal one dwell later. A hint is not a
+    // branches that keep it live call this function, so without this line a
+    // motion under a prompt or an editor would start a wait and the tick
+    // would raise a FLOATING hint over the modal. A hint is not a
     // face: it is a second surface, it hangs past the strip, and the chord it
     // names is exactly what the modal gate is swallowing. Forcing "no owner" here
-    // rather than gating the tick keeps the stamp and the hide in one place — the
-    // resolution below then also hides whatever roster hint was already up, so
-    // the modal's OPEN edge needs nothing beyond its own hide (on_key's, for
-    // the case where no motion and no tick follow).
+    // rather than gating the tick keeps the wait's writer in one place; the
+    // modal's OPEN edge is a hard end of its own (on_key's or the press's, or
+    // the compositor close's), which takes any standing box down at once.
     // THE DROPDOWN NEEDS NO TERM OF ITS OWN: redesign_button_hover_zone refuses
     // the whole roster while a popup is up, so the walk finds no owner by itself
     // — the two floating surfaces cannot coexist by construction.
     //
-    // A STANDING DIALOG'S DWELL IS THE DIALOG'S (2026-08-13, when the modal's
+    // A STANDING DIALOG'S WAIT IS THE DIALOG'S (2026-08-13, when the modal's
     // buttons took tooltips): this walk answers for the ROSTER's index space
-    // only, IN EVERY STATE, so with no roster button to stamp it hides a
-    // standing ROSTER owner, hides a DIALOG owner whose surface is gone, and
-    // leaves a DIALOG owner whose surface stands and still wears the stash
-    // that armed it — the modal's own walk
-    // (update_modal_dialog_hover) owns that surface's dwell, arming it and
-    // hiding it when the pointer leaves every dialog button. The roster hide
-    // is a backstop for a dwell caught by a dialog's open rather than the
-    // mechanism (the open edge is a key press or a pointer press, and both
-    // hide already). A DIALOG SURFACE IS LIVE exactly where on_motion runs
-    // that walk, re-derived by grep 2026-09-25: the prompt and the editor
-    // dialogs (the veil's two terms) and the folder overlay's three owners
-    // (the player, the picker, the stats panel — folder_overlay_stands). The
-    // liveness test reads the LIVE surfaces, never the painted stash, so the
-    // frame a dialog closes on is the frame this walk takes its dwell back,
-    // whatever road closed it — the two that carry no input event of their
-    // own to hide with (a modal button dispatched by a KEY RELEASE after the
-    // pointer re-armed the dwell mid-hold, and the history prefetch's failure
-    // cancelling the load-in-place prompt from a worker) included.
+    // only, IN EVERY STATE, so with no roster button under the pointer it
+    // hands "none" to the writer (a soft end for a standing ROSTER box),
+    // HARD-ENDS a DIALOG owner — the wait's or the standing box's — whose
+    // surface is gone or replaced, and leaves a DIALOG wait whose surface
+    // stands and still wears the stash that armed it: the modal's own walk
+    // (update_modal_dialog_hover) owns that surface's wait. A DIALOG SURFACE
+    // IS LIVE exactly where on_motion runs that walk, re-derived by grep
+    // 2026-09-25: the prompt and the editor dialogs (the veil's two terms)
+    // and the folder overlay's three owners (the player, the picker, the
+    // stats panel — folder_overlay_stands). The liveness test reads the LIVE
+    // surfaces, never the painted stash, so the frame a dialog closes on is
+    // the frame this walk takes its hint down, whatever road closed it — the
+    // two that carry no input event of their own (a modal button dispatched
+    // by a KEY RELEASE, and the history prefetch's failure cancelling the
+    // load-in-place prompt from a worker) included. A closed or replaced
+    // surface is not a graze, so it is a hard end, not the grace.
     // AND THE OWNER MUST STILL NAME THE STASH THAT ARMED IT: a Dialog owner
     // whose stamp (AppState::RedesignTooltip) differs from the live stash's
-    // owner and session is hidden too. Liveness alone cannot see a surface
+    // owner and session is dead too. Liveness alone cannot see a surface
     // REPLACED under the pointer, and exactly one such road exists: the
     // load-in-place prompt standing over the render player, closed by a key
-    // release after the pointer re-armed the dwell on one of its buttons —
-    // the player stays live, so without the stamp the dwell would ripen into
-    // the PLAYER's button at the same index, a hint beside a pointer not on
-    // it. The picker cannot host a prompt (open_project_commit runs
-    // close_picker before request_close, and request_close takes the player,
-    // the picker and the stats panel down before it asks anything) and the
-    // stats panel raises none of its own (Ctrl+Q's fall-through and
-    // File → Quit reach that same request_close). THE STASH LAGS THE CLOSE BY
-    // ONE PAINT: the frame that repaints the player's row republishes the
-    // stash, paint_shift_tooltip refuses the mismatch on that same frame, and
-    // this walk's hide lands on the tick after it — ahead of the dwell's
-    // tooltip_delay_ms(), so no hint of the wrong surface is ever painted.
+    // release while the pointer rested on one of its buttons — the player
+    // stays live, so without the stamp the wait would ripen into the
+    // PLAYER's button at the same index, a hint beside a pointer not on it.
+    // The picker cannot host a prompt (open_project_commit runs close_picker
+    // before request_close, and request_close takes the player, the picker
+    // and the stats panel down before it asks anything) and the stats panel
+    // raises none of its own (Ctrl+Q's fall-through and File → Quit reach
+    // that same request_close). THE STASH LAGS THE CLOSE BY ONE PAINT: the
+    // frame that repaints the player's row republishes the stash,
+    // paint_shift_tooltip refuses the mismatch on that same frame, and this
+    // walk's hide lands on the tick after it, so no hint of the wrong surface
+    // is ever painted.
     // Under the veil `hovered_tip` is -1 by construction (the veil and the
-    // no-dwell rule above), so the veil needs no branch of its own: it was
-    // this same rule written twice until 2026-09-25. Under the FOLDER
-    // OVERLAY, whose three owners are not veil terms, `hovered_tip` is -1
-    // through the no-dwell rule alone, and the "surface stands" arm is what
+    // no-wait rule above), so the veil needs no branch of its own. Under the
+    // FOLDER OVERLAY, whose three owners are not veil terms, `hovered_tip` is
+    // -1 through the no-wait rule alone, and the "surface stands" arm is what
     // keeps the player's, the picker's and the stats panel's button hints
-    // alive — the tail used to arm "no owner" there, which hid the dialog's
-    // dwell on the motion that armed it and on every tick. The default
-    // Owner{} is {Roster, -1}, so hiding it is the helper's existing no-op.
+    // alive: handing "none" to the writer there would stop the dialog's wait
+    // on every tick.
     if (hovered_tip < 0) {
-        const AppState::RedesignTooltip::Owner& o = app.redesign_tooltip.owner;
+        AppState::RedesignTooltip& t = app.redesign_tooltip;
         const bool dialog_surface_live =
             modal_veil || folder_overlay_stands(app);
-        const bool stash_is_owners =
-            o.dialog_owner == app.modal_dialog.owner &&
-            o.dialog_session == app.modal_dialog.session;
-        if (o.surface == AppState::RedesignTooltip::Surface::Roster ||
-            !dialog_surface_live || !stash_is_owners) {
+        const auto dialog_owner_dead =
+            [&](const AppState::RedesignTooltip::Owner& o) {
+                return o.surface == AppState::RedesignTooltip::Surface::Dialog &&
+                       o.index >= 0 &&
+                       (!dialog_surface_live ||
+                        o.dialog_owner != app.modal_dialog.owner ||
+                        o.dialog_session != app.modal_dialog.session);
+            };
+        if (dialog_owner_dead(t.hovered) ||
+            (t.visible && dialog_owner_dead(t.owner))) {
+            t.hovered = AppState::RedesignTooltip::Owner{};
             hide_shift_tooltip();
+            return;
         }
+        if (t.hovered.surface == AppState::RedesignTooltip::Surface::Dialog &&
+            t.hovered.index >= 0)
+            return;
+        note_tooltip_hover(AppState::RedesignTooltip::Owner{});
         return;
     }
-    // Keying on the id is what makes a direct Render->Paste motion wait the
-    // full delay again instead of inheriting the dwell that was already
-    // running; the rule itself is at arm_tooltip_dwell.
-    arm_tooltip_dwell({AppState::RedesignTooltip::Surface::Roster,
-                       hovered_tip});
+    // Keying on the id is what makes a direct Render->Paste motion a new
+    // arrival with its own wait (20 ms while awake, the full wake-up asleep)
+    // rather than a continuation of the last one; the rule is at
+    // note_tooltip_hover.
+    note_tooltip_hover({AppState::RedesignTooltip::Surface::Roster,
+                        hovered_tip});
 }
 
 // THE OPEN DROPDOWN'S OWN HOVER AND ITS ARMED ITEM, the pointer's only hover
@@ -8318,9 +8328,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect 2026-09-29): the hand
         // learns the device's hold delay, and nothing on screen marks the
         // instant this term starts answering true. The hover tooltip is not
-        // its cue — it keeps its own fixed dwell (tooltip_delay_ms, render.h)
-        // and no press stamps it — so a hint that rises under a resting press
-        // is the resting pointer's and says nothing about this term.
+        // its cue: no tooltip rises under a held press at all (Qt's model,
+        // AppState::RedesignTooltip), the press being one of its hard ends.
         //
         // THE TWO SKIPS ARE WHERE IT REACHES THE WHOLE-PIECE JUMP (architect
         // 2026-09-29): they admit shift for Shift+Home / Shift+End, so a skip
@@ -9395,17 +9404,17 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
             GuiRect{0, menu_lane.y + menu_lane.h, app.width,
                     dropdown_h_px(menu)});
     }
-    // THE TOOLTIP GOES DOWN ON THE OPEN EDGE — the two floating surfaces cannot
+    // THE TOOLTIP GOES DOWN ON THE OPEN EDGE, A HARD END (Qt's model: a menu
+    // opening hides the tip at once) — the two floating surfaces cannot
     // coexist (paint_handler.h states the pair), and this is the one line that
     // makes that structural rather than a reachability argument about which
     // routes reach an open. It is NOT the roster clear's doing:
     // clear_redesign_button_hover writes the faces' `hovered` bits and nothing
-    // else, the tooltip's dwell and visibility living in their own state
-    // (AppState::redesign_tooltip) with hide_shift_tooltip as their one hide
-    // owner. The hover recompute would reach the same answer on the NEXT motion
-    // (no roster button hovers under a popup, so the dwell walk finds no owner
-    // and hides), but "next motion" is not a property — an open reached with the
-    // pointer standing still has no next motion.
+    // else, the tooltip's wait and box living in their own state
+    // (AppState::redesign_tooltip). The hover recompute alone would find no
+    // owner under the popup and only start the hide grace, and on the NEXT
+    // motion at that — "next motion" is not a property, an open reached with
+    // the pointer standing still has none.
     hide_shift_tooltip();
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup, and
     // redesign_button_hover_zone refuses the WHOLE roster while a dropdown is
@@ -9416,9 +9425,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // would otherwise stay lit under a surface that has taken the pointer from
     // it. THE TOOLTIP STAYS DOWN for as long as the popup is up on the same
     // predicate's OTHER half: redesign_button_hover_zone (the term hoverability
-    // and the dwell still share — the enabled term is the one they parted on)
-    // refuses every button while a menu is open, so the dwell writer
-    // (recompute_redesign_button_hover) can never stamp a new one.
+    // and the hint still share — the enabled term is the one they parted on)
+    // refuses every button while a menu is open, so the roster walk
+    // (recompute_redesign_button_hover) can never start a wait.
     //
     // ROW 1 IS CLEARED HERE TOO AND STAYS CLEAR while the menu is up; it
     // re-resolves at the next motion or the next tick (main.cpp runs the same
@@ -9596,51 +9605,183 @@ void GuiInputHandler::clear_dropdown_pointer_state() {
     viewport.invalidate_rect(app.dropdown.rect);
 }
 
-// THE HOVER TOOLTIP'S HIDE. Its callers, re-derived by grep: the hover
-// recompute (the hover ended, or moved to another tooltip-bearing button), ANY
-// pointer press and ANY key press (the hint's job ends the moment the user
-// acts), any wheel, the dropdown's OPEN edge (the two floating surfaces never
-// coexist), and TWO main.cpp hooks — the pointer-leave / capability-loss edge
-// and the compositor close, the one modal opener that arrives with no key press
-// to carry the key-press hide's own rule.
-// THAT LAST ONE IS WHY THE RECOMPUTE IS NOT ENOUGH BY ITSELF. It damages the
-// strip AND the box's last painted rect, and the box hangs BELOW the strip — so
-// an edge that clears the hover bits without hiding here leaves the paint with
-// no owner to draw, which publishes a zero rect and returns, and the overhang
-// below the strip then has nothing left to erase it. clear_redesign_button_hover
-// has exactly TWO callers, re-derived by grep, and both are covered: the
-// dropdown's open edge hides two lines above its clear, and the leave hook now
-// hides beside its own.
-// Showing is the tick's job (the dwell); this is only the hide, plus the stamp
-// reset that makes the next hover start its dwell from zero. It is
-// surface-agnostic: the owner clears to "none" whichever surface it named, and
-// the painted rect it damages is wherever that hint was drawn.
-void GuiInputHandler::hide_shift_tooltip() {
-    app.redesign_tooltip.hover_ms = 0;
-    app.redesign_tooltip.owner    = AppState::RedesignTooltip::Owner{};
-    if (!app.redesign_tooltip.visible) return;
-    const GuiRect painted = app.redesign_tooltip.rect;
-    app.redesign_tooltip.visible = false;
+// THE HOVER TOOLTIP'S BOX GOES DOWN — the one hide body, shared by the hard end
+// and by the two timed hides (the grace and the expiry, tick_tooltip). It
+// damages the strip AND the box's last painted rect, and that is why every
+// edge that takes a hint away must come through here rather than leave it to
+// a hover walk: the box hangs OUTSIDE its strip (below the top strip, above
+// the bottom row), so a repaint that found no box to draw would publish a
+// zero rect and return, and the overhang would have nothing left to erase it.
+// Surface-agnostic: the painted rect is wherever that hint was drawn.
+static void take_tooltip_box_down(AppState& app, Viewport& viewport) {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    t.grace_due_ms  = 0;
+    t.expire_due_ms = 0;
+    if (!t.visible) return;
+    const GuiRect painted = t.rect;
+    t.visible = false;
     viewport.invalidate_top_strip();
     viewport.invalidate_rect(painted);
 }
 
-// THE DWELL'S ONE ARMING ROUTE, shared by both hover walks (the roster's and
-// the modal dialog's) so "a fresh dwell on each arrival" is one rule rather
-// than two copies: a change of owner — ACROSS surfaces as well as within one,
-// the owner being compared whole — hides whatever was up and starts the new
-// button's wait from zero, an unchanged owner keeps the wait running, and no
-// owner hides. The tick then decides visibility by comparing two numbers.
-void GuiInputHandler::arm_tooltip_dwell(
-        AppState::RedesignTooltip::Owner o) {
-    if (o.index < 0) {
+// THE HARD END (the model and the callers' inventory are at
+// AppState::RedesignTooltip and the declaration): the box down at once, the
+// wait stopped and the product asleep. `hovered`, the anchor and the seen
+// position STAND — the pointer has not moved, so the button under it is still
+// the one it rests on, and a resting pointer re-arms nothing until a motion
+// carries it past the slop (Qt re-arms on a no-button motion alone).
+void GuiInputHandler::hide_shift_tooltip() {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    t.wake_due_ms    = 0;
+    t.awake_until_ms = 0;
+    take_tooltip_box_down(app, viewport);
+}
+
+// THE POINTER LEAVING (the declaration carries the contract). The wait's
+// button goes and the seen position is forgotten, so the re-entry's first
+// walk is a motion onto whatever it lands on; a hard leave then hides as
+// every hard end does, and the pen's plane exit starts the hide grace instead
+// — the box keeps its owner and stays painted (paint_shift_tooltip reads
+// neither the hover faces nor the in-window bit), a return to the same button
+// within the grace cancels it, and the grace running out takes the box down
+// through the tick with the awake window left running (Qt's Leave).
+void GuiInputHandler::end_tooltip_hover(bool soft) {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    t.hovered     = AppState::RedesignTooltip::Owner{};
+    t.wake_due_ms = 0;
+    t.seen_x      = AppState::kTooltipUnseen;
+    t.seen_y      = AppState::kTooltipUnseen;
+    if (!soft) {
         hide_shift_tooltip();
         return;
     }
-    if (app.redesign_tooltip.owner == o) return;
-    hide_shift_tooltip();
-    app.redesign_tooltip.owner    = o;
-    app.redesign_tooltip.hover_ms = monotonic_ms();
+    if (t.visible && t.grace_due_ms == 0)
+        t.grace_due_ms = monotonic_ms() + kTooltipHideGraceMs;
+}
+
+// THE WAIT'S ONE WRITER, shared by both hover walks (the roster's and the
+// modal dialog's) so the model is one rule rather than two copies; the model
+// is stated at AppState::RedesignTooltip. In order:
+//   * THE BOX'S GRACE: while a box stands, the pointer on its own button
+//     cancels a running grace and the pointer anywhere else starts one if
+//     none runs (Qt's hideTip, never restarted);
+//   * NO BUTTON: the wait stops (Qt's Leave stops the wake-up);
+//   * A HELD PRESS: the button and the anchor follow the pointer and no wait
+//     runs, so the release's resting pointer arms nothing;
+//   * A NEW BUTTON: re-anchored where the pointer is, and the wait starts if
+//     this walk saw a motion — the owner is compared whole, across surfaces
+//     as well as within one;
+//   * THE SAME BUTTON: the wait restarts only when the pointer has moved past
+//     the hover slop from the anchor on either axis, re-anchoring there
+//     (AOSP View's updateAnchorPos: within the slop is stillness).
+// The wait's length is chosen as it starts: 20 ms while awake, 700 asleep.
+void GuiInputHandler::note_tooltip_hover(AppState::RedesignTooltip::Owner o) {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    const int64_t now = monotonic_ms();
+    const int x = app.last_mouse_x;
+    const int y = app.last_mouse_y;
+    const bool moved = x != t.seen_x || y != t.seen_y;
+    t.seen_x = x;
+    t.seen_y = y;
+    if (t.visible) {
+        if (o.index >= 0 && o == t.owner)
+            t.grace_due_ms = 0;
+        else if (t.grace_due_ms == 0)
+            t.grace_due_ms = now + kTooltipHideGraceMs;
+    }
+    if (o.index < 0) {
+        t.hovered     = AppState::RedesignTooltip::Owner{};
+        t.wake_due_ms = 0;
+        return;
+    }
+    const auto start_wait = [&] {
+        t.anchor_x    = x;
+        t.anchor_y    = y;
+        t.wake_due_ms = now + (now < t.awake_until_ms ? kTooltipAwakeWakeUpMs
+                                                      : kTooltipWakeUpMs);
+    };
+    if (t.button_held) {
+        t.hovered     = o;
+        t.anchor_x    = x;
+        t.anchor_y    = y;
+        t.wake_due_ms = 0;
+        return;
+    }
+    if (!(o == t.hovered)) {
+        t.hovered = o;
+        if (moved) {
+            start_wait();
+        } else {
+            t.anchor_x    = x;
+            t.anchor_y    = y;
+            t.wake_due_ms = 0;
+        }
+        return;
+    }
+    const int slop = tooltip_hover_slop_px();
+    if (std::abs(x - t.anchor_x) > slop || std::abs(y - t.anchor_y) > slop)
+        start_wait();
+}
+
+// THE TOOLTIP'S CLOCK (the declaration carries the contract; the model is at
+// AppState::RedesignTooltip). Three deadlines on a tick that already runs, in
+// the order they can interact: the wait's ripening first, because a
+// neighbour's hint taking the box over cancels the grace that would otherwise
+// take it down on the same tick; then the grace and the expiry, both soft
+// hides that leave the awake window running.
+//
+// THE SHOW EDGE cannot know the box's own rect yet (the paint that publishes
+// it is the frame this schedules), so it damages the owner's strip plus the
+// full-width band the box can hang into — at most tooltip_damage_h_px() tall.
+// The band's SIDE follows the owner: a top-row tooltip hangs BELOW the top
+// strip, a BOTTOM-ROW one hangs ABOVE its lane, the painter's own flip — and
+// that second arm covers both of the row's surfaces, its roster buttons (the
+// four tables in paint_handler.cpp, kMarkerVerbGroup and its neighbours, own
+// those memberships) and the MODAL's own buttons, which paint in the same
+// lane. A TAKE-OVER in place damages the old box's published rect too: the
+// new words may measure smaller, and the neighbour may hang on the other side.
+// A RE-SHOW of the same hint paints nothing new and damages nothing.
+void GuiInputHandler::tick_tooltip() {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    const int64_t now = monotonic_ms();
+    if (t.wake_due_ms != 0 && now >= t.wake_due_ms) {
+        t.wake_due_ms = 0;
+        const AppState::RedesignTooltip::Owner o = t.hovered;
+        if (o.index >= 0) {
+            const bool same = t.visible && t.owner == o;
+            if (!same) {
+                if (t.visible) {
+                    viewport.invalidate_top_strip();
+                    viewport.invalidate_rect(t.rect);
+                }
+                t.owner   = o;
+                t.visible = true;
+                const bool on_bottom_row =
+                    o.surface == AppState::RedesignTooltip::Surface::Dialog ||
+                    redesign_button_in_transport_row(
+                        static_cast<RedesignButton>(o.index));
+                if (on_bottom_row) {
+                    const GuiRect tr = bottom_row_area(app);
+                    viewport.invalidate_rect(tr);
+                    viewport.invalidate_rect(GuiRect{
+                        0, tr.y - tooltip_damage_h_px(), app.width,
+                        tooltip_damage_h_px()});
+                } else {
+                    viewport.invalidate_top_strip();
+                    const GuiRect ts = top_strip_area(app);
+                    viewport.invalidate_rect(GuiRect{
+                        0, ts.y + ts.h, app.width, tooltip_damage_h_px()});
+                }
+            }
+            t.grace_due_ms   = 0;
+            t.expire_due_ms  = now + kTooltipExpireMs;
+            t.awake_until_ms = now + kTooltipFallAsleepMs;
+        }
+    }
+    if (t.grace_due_ms != 0 && now >= t.grace_due_ms)
+        take_tooltip_box_down(app, viewport);
+    if (t.visible && t.expire_due_ms != 0 && now >= t.expire_due_ms)
+        take_tooltip_box_down(app, viewport);
 }
 
 // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's one
@@ -9887,6 +10028,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // these commit NOTHING — the two families share this one edge and nothing
     // else, which is the distinction whose absence was the round-19 miss.
     if (!mods.primary_button_held) clear_release_time_press_arms();
+    // THE TOOLTIP'S HELD BIT, at the same placement for the same reason (every
+    // branch below returns, and the walks read it): the platform's button
+    // state with this motion, so a button lost without a release (the touch
+    // layer's abnormal end) cannot leave the wait refused
+    // (AppState::RedesignTooltip).
+    app.redesign_tooltip.button_held = mods.primary_button_held;
     // THE MENU ROW'S MODE ENDS WHEN THE POINTER LEAVES ROW 1, and that half is
     // resolved HERE, above every branch, because it is the only placement that
     // sees every motion: the modal branches and every live gesture return before

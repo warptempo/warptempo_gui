@@ -1553,8 +1553,10 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 input_.touch_capability_lost();
                 // AND A HOVERING PEN LEAVES WITH IT: no HOVER_EXIT is owed to
                 // a window that lost focus, so the pointer's leave (the
-                // tooltip hide, the hover faces) is delivered here, and the
-                // pen's Ctrl bit drops.
+                // tooltip's wait, the hover faces — the activation hook above
+                // has already taken a standing tooltip box down, focus loss
+                // being its hard end) is delivered here, and the pen's Ctrl
+                // bit drops.
                 end_pen_hover();
                 set_pen_ctrl(false);
                 // AND THE PEN'S RETAINED ZOOM ANCHOR DIES WITH IT (release
@@ -1837,8 +1839,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // 2026-09-27: every pen hover effect acts only within the plane,
             // pen_report_in_plane): it takes the EXIT's arm whole — a
             // standing hover ENDS through the core's leave (the roster's
-            // outline, the menu row's fill and mode, and the tooltip and its
-            // dwell all go, the leave hook's own list, main.cpp; the reason
+            // outline, the menu row's fill and mode and the tooltip's wait all
+            // go, and a standing tooltip box takes its hide grace rather than
+            // blinking — the leave hook's own list, main.cpp; the reason
             // is PenHoverEnd, end_pen_hover) and the Ctrl bit drops — and no
             // enter or motion is delivered. Back within the plane (at or
             // under the ENTER threshold, the latch's rule) the first report

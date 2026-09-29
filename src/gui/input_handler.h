@@ -1566,39 +1566,54 @@ struct GuiInputHandler {
     // through row 1's band (a capability loss disarms whatever the position).
     void clear_dropdown_pointer_state();
 
-    // THE HOVER TOOLTIP's hide — the hint's job ends the moment the user acts,
-    // by whatever means, the two floating surfaces never coexist, and a pointer
-    // that has left cannot be hovering anything. Its callers, re-derived by
-    // grep: the hover recompute (hover ended), every pointer press, every KEY
-    // press, every wheel, the dropdown's open edge, and two main.cpp hooks —
-    // the pointer-leave / capability-loss edge, which needs it because the hover
-    // clear beside it damages the STRIP only while this box hangs below it (the
-    // full argument is at the definition), and the compositor close, which is
-    // the key-press hide's own no-hint-over-a-modal rule at the one modal opener
-    // no key press reaches. Showing is NOT here: the run loop's
-    // tick owns the dwell, comparing AppState::redesign_tooltip.hover_ms against
-    // the delay. Damages the strip and the box's last painted rect.
-    // NO ROSTER DWELL RUNS UNDER A MODAL SURFACE: the roster's one stamper,
-    // recompute_redesign_button_hover, refuses one while a prompt, a
-    // keyboard-modal editor or one of the three list owners is up, through
-    // tooltip_dwell_suppressed (the rule is stated at the walk's stamp), so a
-    // roster tooltip cannot come back under one,
-    // which the per-tick recompute and the hover that stays live under modals
-    // would otherwise let it do. THE MODAL'S OWN BUTTONS DO carry hints since
-    // 2026-08-13 — a different surface in the same one dwell state, armed by
-    // that dialog's hover walk.
+    // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
+    // hides the box at once, stops the wait and puts the product to sleep,
+    // leaving the button under the pointer and the slop's anchor where they
+    // are, so a resting pointer re-arms nothing. Its callers, re-derived by
+    // grep: every pointer press, every KEY press, every wheel, the dropdown's
+    // open edge, the roster walk's tail for a dialog owner whose surface
+    // closed or was replaced, end_tooltip_hover's hard arm, and two main.cpp
+    // hooks — the compositor close, the key-press hide's own
+    // no-hint-over-a-modal rule at the one modal opener no key press reaches,
+    // and the activation edge. Damages the strip and the box's last painted
+    // rect (the box hangs outside the strip; the argument is at the
+    // definition).
+    // NO ROSTER WAIT RUNS UNDER A MODAL SURFACE: the roster's walk refuses one
+    // while a prompt, a keyboard-modal editor or one of the three list owners
+    // is up, through tooltip_dwell_suppressed (the rule is stated at the
+    // walk's tail), so a roster tooltip cannot come back under one. THE
+    // MODAL'S OWN BUTTONS DO carry hints since 2026-08-13 — a different
+    // surface in the same one state, armed by that dialog's hover walk.
     void hide_shift_tooltip();
 
-    // THE DWELL'S ONE ARMING ROUTE, for both hover walks (the roster's and the
-    // modal dialog's). Hides and re-stamps on any change of owner, keeps a
-    // running dwell when the owner is unchanged, and hides when there is none.
-    // The owner's two-surface encoding is at AppState::RedesignTooltip.
-    void arm_tooltip_dwell(AppState::RedesignTooltip::Owner o);
+    // THE POINTER LEAVING — the pointer-leave hook's one call (main.cpp), for
+    // every reason: the pointer is on no button, so the wait stops and the
+    // next arrival is a motion. `soft` is the pen leaving the plane
+    // (PenHoverEnd), which starts the hide grace so a pen hovering at the
+    // plane's edge does not blink the hint; the ordinary leave and capability
+    // loss are hard.
+    void end_tooltip_hover(bool soft);
+
+    // THE WAIT'S ONE WRITER, for both hover walks (the roster's and the modal
+    // dialog's), handed the tooltip-bearing button under the pointer (index
+    // < 0: none) and reading the pointer at app.last_mouse_x/y: it starts,
+    // restarts or stops the wait by the slop and the held button, and starts
+    // or cancels the hide grace as the pointer leaves or regains the box's
+    // own button. The owner's two-surface encoding and the model are at
+    // AppState::RedesignTooltip.
+    void note_tooltip_hover(AppState::RedesignTooltip::Owner o);
+
+    // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the wait's
+    // ripening shows (or re-shows, or takes a standing box over in place),
+    // the hide grace and the expiry hide. Each edge damages once — a show the
+    // owner's strip and the band the box can hang into, a hide the box's
+    // published rect.
+    void tick_tooltip();
 
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's
     // ONE expression, asked by the roster's hover walk
     // (recompute_redesign_button_hover), the only route that starts a roster
-    // dwell. The full rationale is at the walk's stamp; the predicate names
+    // wait. The full rationale is at the walk's tail; the predicate names
     // the rule's membership in one place.
     bool tooltip_dwell_suppressed() const;
 

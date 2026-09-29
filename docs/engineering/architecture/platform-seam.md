@@ -498,7 +498,7 @@ drag coordinates floor instead of truncating.
   four-tier review's R-18(a). THE DELAY STAYS `kHoldBeatMs`, DECOUPLED FROM
   THE DEVICE'S `hold_delay_ms` (architect 2026-09-29): that key tunes the
   holds — the chrome shift long press and the touch region hold (the
-  tooltip's dwell stays on the fixed beat too) — and a repeat delay measures the cadence of a stream of repeats,
+  tooltip reads neither; its wait is Qt's, render.h) — and a repeat delay measures the cadence of a stream of repeats,
   not a hand resting until a hold means something, so retuning the hold delay
   on the tablet leaves its key repeat (and the held buttons' first fire) at
   575. Hardware keyboards are out of scope; the owned
@@ -523,7 +523,7 @@ drag coordinates floor instead of truncating.
   `pointer_enter` / `pointer_motion` / `pointer_leave` with a `pointer_frame`
   each (`pen_hovering_` the one owner; hovers are dropped while any touch
   contact is down and ANY first down, pen or finger, ends a standing hover, so
-  the doors never overlap), which is what runs the hover walk and the tooltip dwell under a
+  the doors never overlap), which is what runs the hover walk and the tooltip's wait under a
   hovering pen. SINCE 2026-09-27 BOTH PEN RULES READ ONE PLANE
   (raw `AXIS_DISTANCE` counts, through the one predicate
   `pen_report_in_plane`, which owns the plane's latch and is asked once per
@@ -535,7 +535,8 @@ drag coordinates floor instead of truncating.
   same day's tuning phase, whose device keys and startup push are struck;
   the latch's transitions are touch.md's pen section): a hover
   or hovering button edge above it ends the hover (`pointer_leave` with
-  `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face) and drops the
+  `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face and gives a
+  standing tooltip box its hide grace, the leave's one soft end) and drops the
   Ctrl bit, and only an in-plane report is sampled. And two seam members
   carry THE PEN'S RETAINED ZOOM ANCHOR to the GUI's seat
   (`TouchNavZoomState`): the query `pen_lift_keeps_zoom_anchor`, which

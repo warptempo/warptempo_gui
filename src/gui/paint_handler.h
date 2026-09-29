@@ -820,14 +820,14 @@ private:
     // dropdown's open path hides the tooltip outright (a press opens a menu, and
     // so does an armed row-1 hover), and while the popup stands NO roster button
     // answers the pointer at all (redesign_button_hover_zone — the term the hint
-    // and the hover face still share), so nothing can stamp a fresh dwell
+    // and the hover face still share), so nothing can start a tooltip wait
     // under it. Both PUBLISH the rect
     // they painted (AppState::redesign_tooltip.rect,
     // AppState::dropdown.rect + item_rects) — the dropdown's for its hit
     // tests, the tooltip's only so the hide edge can damage it — and both write
     // a zero rect when not shown, which is the correct empty answer.
     // THE TOOLTIP SERVES TWO SURFACES since 2026-08-13 — the roster and the
-    // MODAL DIALOG's buttons, one dwell state whose owner names which (the
+    // MODAL DIALOG's buttons, one tooltip state whose owner names which (the
     // encoding is at AppState::RedesignTooltip) — which is why it paints
     // AFTER paint_modal_dialog rather than beside the dropdown: it reads the
     // stash that call publishes, and a hint over the modal is the one floating

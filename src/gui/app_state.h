@@ -3917,10 +3917,9 @@ inline int double_click_slack_px() {
 // (is_hold_delay_ms, device_config.h) keeps both ends of that sentence.
 //
 // THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect 2026-09-29): nothing on
-// screen marks the moment it is crossed. The hover tooltip keeps its own
-// fixed dwell (tooltip_delay_ms, render.h) and does not read the hold delay,
-// so a hint that happens to rise under a resting press says nothing about
-// this term; the ruling's home is the read site.
+// screen marks the moment it is crossed. The hover tooltip reads neither this
+// value nor the beat, and no tooltip rises under a held press at all (Qt's
+// model, AppState::RedesignTooltip); the ruling's home is the read site.
 //
 // A NAMED READER OF THE ONE INSTALLED VALUE, not a constant (2026-09-29): the
 // two read sites say which hold they measure while the value itself has one
@@ -6771,10 +6770,9 @@ struct AppState {
     // shift term the carried bit feeds — so a physical Shift+click and a long
     // press are two routes to one dispatch rather than two dispatches. The
     // elapsed span is measured at the RELEASE, so nothing polls and nothing
-    // ticks FOR THE HOLD, AND THE FEEDBACK IS THE TOOLTIP THE PRESS ALREADY
-    // RAISES (architect 2026-09-11, superseding the 2026-08-13 "no feedback"
-    // ruling): the dwell reads the same beat, so the hint comes up as the mark
-    // is crossed, on glass as on the mouse.
+    // ticks FOR THE HOLD, and nothing on screen marks the crossing: a held
+    // press raises no tooltip (Qt's model, architect 2026-09-29 — the rule is
+    // at AppState::RedesignTooltip).
     // The rule is stated at the read site (finish_chrome_press_release).
     //
     // `inside` is THE FEINT'S BIT, the modal arm's `press_inside` on the
@@ -6884,52 +6882,91 @@ struct AppState {
     };
     ChromePress chrome_press;
 
-    // THE HOVER TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
-    // CLOCK_MONOTONIC stamp of the moment a tooltip-bearing button became
-    // hovered (0 = none is), written by the hover recompute; `visible` is what
-    // the painter draws, flipped by the run loop's existing tick when the delay
-    // comes due. No timer, no callback, no per-frame damage: the tick already
-    // runs, it compares two numbers, and it damages ONCE on each edge.
-    // `rect` is the painter's published tooltip box, needed only for damage
-    // (nothing hit-tests a tooltip).
-    // `owner` is the BUTTON the dwell belongs to. It is what makes "a fresh
-    // dwell on each arrival" TRUE rather than merely intended: a single motion
-    // can leave one tooltip-bearing button and enter the other in the same
-    // recompute, and without the id the stamp would survive that change — the
-    // second button would inherit however much of the first's dwell had
-    // already elapsed, showing instantly if the first tooltip was already up.
+    // THE HOVER TOOLTIP — THE WHOLE OF ITS STATE, AND THE MODEL'S ONE STATEMENT.
+    // THE MODEL IS QT'S QToolTip (architect 2026-09-29), kdenlive's toolbar's
+    // own; the numbers are at render.h's tooltip block, hard-coded:
+    //   * THE WAIT (Qt's wake-up) counts from STILLNESS WITH HYSTERESIS: it is
+    //     anchored where the pointer stood and restarts only when a motion
+    //     carries it MORE than the hover slop from that anchor on either axis
+    //     (re-anchoring there) or onto another tooltip-bearing button, so a
+    //     hovering pen's jitter cannot starve it. It runs kTooltipWakeUpMs
+    //     (700), or kTooltipAwakeWakeUpMs (20) while the product is AWAKE —
+    //     the delay chosen when the wait starts, as Qt's is. A change of owner
+    //     with no motion (a relayout, a key making a tab hoverable, a surface
+    //     closing under a resting pointer) re-anchors and starts nothing: Qt
+    //     wakes on motion alone.
+    //   * THE SHOW: the wait ripening shows its button's hint — reusing a
+    //     standing box IN PLACE when one is up (the neighbour's hint takes the
+    //     box over with no hide frame, Qt's reuseTip), or re-showing the same
+    //     hint unchanged — and every show or re-show opens the AWAKE WINDOW
+    //     (kTooltipFallAsleepMs, 2000) and restarts the box's EXPIRY
+    //     (kTooltipExpireMs, 10 s).
+    //   * A SOFT END keeps the box up for the HIDE GRACE (kTooltipHideGraceMs,
+    //     300), started once: the pointer leaving the box's button (into a gap
+    //     or onto a neighbour) and the pen leaving the plane (PenHoverEnd).
+    //     The pointer coming back to the box's own button cancels the grace; a
+    //     neighbour's ripened wait takes the box over; otherwise the grace runs
+    //     out and the box goes down while the awake window runs on.
+    //   * A HARD END hides at once and puts the product to sleep: any pointer
+    //     press, any key press, any wheel, a menu opening (the dropdown's open
+    //     edge), a modal opening with no key or press to carry it (the
+    //     compositor close), the pointer leaving the window (the ordinary
+    //     leave and capability loss), the window's activation flipping either
+    //     way (focus loss or gain, Qt's WindowDeactivate / WindowActivate),
+    //     and a dialog owner whose surface closed or was replaced. The pointer still
+    //     resting on the button re-arms nothing: only a motion past the slop
+    //     does.
+    //   * NO TOOLTIP UNDER A HELD PRESS, on both devices: while the logical
+    //     primary button is held (the physical left, bare `e`'s synthesized
+    //     hold, a finger or the pen in contact) no wait starts, the anchor
+    //     following the pointer, so a finger never raises a hint and a hint
+    //     comes back after a release only on a motion past the slop. The
+    //     other two buttons bind nothing in this product and are not terms.
+    // No timer object and no callback: GuiInputHandler::tick_tooltip reads the
+    // three deadlines on the run loop's existing tick and damages once per edge;
+    // note_tooltip_hover is the one writer of the wait.
     //
-    // IT NAMES ONE OF TWO SURFACES since 2026-08-13, when the modal's buttons
-    // took tooltips too (architect, retiring the bracketed accelerators: "we
-    // just do a tooltip just like the regular icon tooltips"). THE ENCODING,
-    // stated once here and nowhere restated: `surface` says WHICH index space
-    // `index` lives in — Roster indexes the redesign roster
-    // (redesign_buttons / RedesignButton), Dialog indexes
+    // THE BOX: `owner` is the button whose hint is painted, `visible` is what
+    // the painter draws, `rect` the painter's published box (damage only —
+    // nothing hit-tests a tooltip), `grace_due_ms` the hide grace's deadline
+    // and `expire_due_ms` the expiry's (0 = not running).
+    // THE WAIT: `hovered` is the tooltip-bearing button under the pointer
+    // (Qt's toolTipWidget; no owner off every such button), `anchor_x/y` the
+    // slop's centre, `seen_x/y` the position the last walk read (the motion
+    // test; kTooltipUnseen after a leave, so a re-entry is a motion), and
+    // `wake_due_ms` the wait's deadline (0 = no wait runs).
+    // `awake_until_ms` is the awake window's end (0 = asleep), and
+    // `button_held` the logical primary button's state as the last pointer
+    // event delivered it.
+    //
+    // AN OWNER NAMES ONE OF TWO SURFACES since 2026-08-13, when the modal's
+    // buttons took tooltips too (architect, retiring the bracketed
+    // accelerators: "we just do a tooltip just like the regular icon
+    // tooltips"). THE ENCODING, stated once here and nowhere restated:
+    // `surface` says WHICH index space `index` lives in — Roster indexes the
+    // redesign roster (redesign_buttons / RedesignButton), Dialog indexes
     // AppState::modal_dialog.buttons — and `index` < 0 means NO OWNER in
-    // either. The pair is compared whole (the defaulted ==), which is what
-    // keeps "a fresh dwell on each arrival" true ACROSS the two surfaces as
-    // well as within one: index 0 of the roster and index 0 of a dialog are
-    // different buttons and compare unequal. It is deliberately ONE field
-    // rather than two parallel tooltip states — there is at most one dwell in
-    // the product, one painter for it and one dwell clock, and a second state
-    // would have to be kept mutually exclusive with the first by hand.
+    // either. The pair is compared whole (the defaulted ==), so index 0 of the
+    // roster and index 0 of a dialog are different buttons and a slide between
+    // them is an arrival. It is deliberately ONE state rather than two
+    // parallel tooltip states — there is at most one box in the product, one
+    // painter for it and one clock.
     //
-    // WHO WRITES IT: the two hover walks, each for its own surface and each
-    // through the one arming helper (GuiInputHandler::arm_tooltip_dwell) —
-    // recompute_redesign_button_hover for the roster, update_modal_dialog_hover
-    // for a standing dialog — plus hide_shift_tooltip, which clears it. No
-    // other route stamps a dwell: the tooltip is the resting pointer's alone,
-    // and a press only hides it.
+    // WHO WRITES THE WAIT: the two hover walks, each for its own surface and
+    // each through note_tooltip_hover — recompute_redesign_button_hover for the
+    // roster, update_modal_dialog_hover for a standing dialog. No other route
+    // starts a wait: the tooltip is the resting pointer's alone.
     //
     // A DIALOG OWNER CARRIES THE STASH THAT ARMED IT: `dialog_owner` and
     // `dialog_session` are the modal stash's owner tag and session
     // (ModalDialogGeometry) at arm time, stamped by update_modal_dialog_hover;
     // a Roster owner carries None / 0. A Dialog index names a button of ONE
     // painted surface, so the pair is what lets the roster walk's tail and
-    // paint_shift_tooltip refuse a dwell whose surface has been replaced by
+    // paint_shift_tooltip refuse an owner whose surface has been replaced by
     // another under the same pointer (a prompt closing back onto the render
     // player's row). The defaulted == compares them too, so a stash change
-    // under a standing index is a new arrival with a fresh dwell.
+    // under a standing index is a new arrival.
+    static constexpr int kTooltipUnseen = std::numeric_limits<int>::min();
     struct RedesignTooltip {
         enum class Surface { Roster, Dialog };
         struct Owner {
@@ -6939,10 +6976,22 @@ struct AppState {
             uint64_t         dialog_session = 0;
             bool operator==(const Owner&) const = default;
         };
-        int64_t hover_ms = 0;
+        // The box.
         Owner   owner{};
-        bool    visible  = false;
+        bool    visible        = false;
         GuiRect rect{0, 0, 0, 0};
+        int64_t grace_due_ms   = 0;
+        int64_t expire_due_ms  = 0;
+        // The wait.
+        Owner   hovered{};
+        int     anchor_x       = 0;
+        int     anchor_y       = 0;
+        int     seen_x         = kTooltipUnseen;
+        int     seen_y         = kTooltipUnseen;
+        int64_t wake_due_ms    = 0;
+        // The awake window and the held button.
+        int64_t awake_until_ms = 0;
+        bool    button_held    = false;
     };
     RedesignTooltip redesign_tooltip;
 
@@ -11686,7 +11735,8 @@ void remap_marker_indices_after_reorder(AppState& app,
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this
 // platform). The ONE shared wall-clock reader for the application layer's
 // millisecond time bases — the press-driven double-click detection (strip-row /
-// marker, input_pointer.cpp), the tooltip's hover dwell (main.cpp) and the A/B
+// marker, input_pointer.cpp), the tooltip's clock (tick_tooltip,
+// input_pointer.cpp) and the A/B
 // audition's rests (GuiAbAudition::fire_if_due) — the same CLOCK_MONOTONIC the
 // platform's own deadlines (key repeat, the touch window's region-hold beat —
 // the pan zone's window, the one touch window with a deadline since

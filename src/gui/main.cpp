@@ -1871,8 +1871,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // KEYBOARD opener implements it at the top of on_key; this compositor
         // close is THE ONE modal opener that arrives asynchronously — it carries
         // no key and no pointer event to hide with — so the rule needs its call
-        // here or the hint stands over the prompt until the tick's dwell refusal
-        // catches it a frame later. (The checkpoint worker's failure report was a
+        // here (a HARD end) or the hint stands over the prompt until the walk's
+        // no-wait refusal lets its hide grace run out. (The checkpoint worker's failure report was a
         // second such opener from 2026-08-07 until 2026-08-09, when it became the
         // bottom row's paint-only critical slot and stopped raising anything;
         // it is a critical notification card since 2026-08-29, which raises no
@@ -2076,17 +2076,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // 2026-09-27: every pen hover effect acts only within the GUI's plane): a
     // pen rising off row 1 steps onto no titlebar, so the row's fill and its
     // mode leave with the pen like every other face.
-    // THE TOOLTIP GOES DOWN ON THIS EDGE TOO, and it must go down HERE rather
-    // than be left to the tick's hover recompute: the hint hangs BELOW the top
-    // strip, and hide_shift_tooltip is the only route that damages the box's own
-    // published rect as well as the strip. The hover clear below queues STRIP
-    // damage alone, so a repaint running between this event and the next tick
-    // would find no hovered owner, publish a zero rect and return — leaving the
-    // part of the box below the strip in the buffer with no rect left to erase
-    // it with. Hiding in the same event that takes the pointer away makes the
-    // erase and the unhover one edge — and the tick is not a fallback for it in
-    // any case: that recompute refuses outright while the pointer is outside, so
-    // this is the only hide the edge gets.
+    // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
+    // must end HERE rather than be left to the tick's hover recompute, which
+    // refuses outright while the pointer is outside. THE REASON FORKS IT (Qt's
+    // model, architect 2026-09-29): the ORDINARY leave and capability loss are
+    // HARD ends — the box goes down in this same event, through the one hide
+    // that damages the box's own published rect as well as the strip (the
+    // hover clear below queues strip damage alone, and the box hangs outside
+    // the strip) — while the pen leaving the plane (PenHoverEnd) is SOFT: the
+    // box keeps its owner and stays painted for the hide grace, so a pen
+    // hovering at the plane's edge, or lost by the platform inside it, does not
+    // blink the hint; coming back onto the same button within the grace keeps
+    // it, and the grace running out takes it down through the tooltip's clock
+    // with the same damage.
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
         // Read the band BEFORE the in-window flag goes false: the answer is about
         // the remembered position, which this hook does not touch, but the two
@@ -2098,7 +2100,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             app.dropdown.menu_row_armed &&
             point_in_menu_row_band(app, app.last_mouse_x, app.last_mouse_y);
         app.pointer_in_window = false;
-        input_handler.hide_shift_tooltip();
+        input_handler.end_tooltip_hover(
+            reason == GuiPointerLeaveReason::PenHoverEnd);
         if (!through_menu_row) {
             input_handler.clear_redesign_button_hover();
             input_handler.disarm_menu_row();
@@ -2181,7 +2184,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // nothing. The GEOMETRY takes the same shape one hook further down, where
     // redeliver_geometry() re-fires on_resize for a size that did not change.
     app.window_activated = gui.window_activated();
+    // THE TOOLTIP'S HARD END rides this edge too, either way (Qt's model,
+    // architect 2026-09-29: QTipLabel hides at once on WindowActivate and
+    // WindowDeactivate, and QApplication puts the wake-up to sleep on
+    // ActivationChange): focus leaving or arriving is the user acting
+    // elsewhere, not a pointer grazing a gap. hide_shift_tooltip carries its
+    // own damage.
     gui.set_activation_changed_hook([&] {
+        input_handler.hide_shift_tooltip();
         app.window_activated = gui.window_activated();
         viewport.invalidate_top_strip();
         if (app.modal_dialog.valid) viewport.invalidate_modal_dialog_area();
@@ -2554,52 +2564,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
-        // THE HOVER TOOLTIP'S DUE-CHECK — the whole timer, and it is two number
-        // comparisons on a tick that already runs. The hover recompute stamped
-        // hover_ms when a tooltip-bearing button was entered (and zeroed it on
-        // every exit / press / wheel through hide_shift_tooltip), so all that is
-        // left is: is a dwell running, has it come due, and is the tooltip not
-        // already up. One invalidate on the show edge; the HIDE edge is owned by
-        // the input side, which knows the box's painted rect. No timer object,
-        // no callback, no per-frame damage.
-        if (!app.redesign_tooltip.visible && app.redesign_tooltip.hover_ms != 0 &&
-            monotonic_ms() - app.redesign_tooltip.hover_ms >= tooltip_delay_ms()) {
-            app.redesign_tooltip.visible = true;
-            // The show edge cannot know the box's own rect yet (the paint that
-            // publishes it is the frame this schedules), so it damages the
-            // owner's strip plus the full-width band the box can hang into —
-            // at most tooltip_damage_h_px() tall. The band's SIDE follows the
-            // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
-            // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its eighteen
-            // roster buttons (the right block's seven marker-verb-group
-            // members, the walk group's four, the four cardinal arrows and the
-            // transport three — the four tables in paint_handler.cpp,
-            // kMarkerVerbGroup and its neighbours, own those memberships)
-            // and the MODAL's own buttons
-            // (2026-08-13), which paint in the same lane. The HIDE edge has the
-            // published rect and damages exactly that.
-            const AppState::RedesignTooltip::Owner tip_owner =
-                app.redesign_tooltip.owner;
-            const bool tip_on_bottom_row =
-                tip_owner.index >= 0 &&
-                (tip_owner.surface ==
-                     AppState::RedesignTooltip::Surface::Dialog ||
-                 redesign_button_in_transport_row(
-                     static_cast<RedesignButton>(tip_owner.index)));
-            if (tip_on_bottom_row) {
-                const GuiRect tr = bottom_row_area(app);
-                viewport.invalidate_rect(tr);
-                viewport.invalidate_rect(GuiRect{
-                    0, tr.y - tooltip_damage_h_px(), app.width,
-                    tooltip_damage_h_px()});
-            } else {
-                invalidate_top_strip();
-                const GuiRect ts = top_strip_area(app);
-                viewport.invalidate_rect(
-                    GuiRect{0, ts.y + ts.h, app.width, tooltip_damage_h_px()});
-            }
-        }
+        // THE HOVER TOOLTIP'S CLOCK — the whole timer, three deadline compares
+        // on a tick that already runs (Qt's model, architect 2026-09-29: the
+        // wait's ripening, the hide grace and the expiry; the awake window is
+        // read where a wait starts). No timer object, no callback, no
+        // per-frame damage: each edge damages once, inside the owner
+        // (GuiInputHandler::tick_tooltip, whose body carries the damage rule).
+        input_handler.tick_tooltip();
 
         {
             // The bottom row's damage fork, here too (2026-08-11, with the

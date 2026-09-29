@@ -109,18 +109,13 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // installed value and of the core's member, so a device that never edits the
 // key holds exactly as the product always did.
 //
-// THE CADENCES AND THE HOVER DWELL STAY ON THIS CONSTANT, DECOUPLED FROM THE
-// KEY (architect 2026-09-29): a cadence measures the gap between presses or
-// the pace of a stream of repeats, the dwell how long a pointer rests before
-// a hint, and none is a hand resting on a thing until it crosses into a held
-// meaning, which is what the key tunes. FIVE READERS:
-//   * THE HOVER TOOLTIP'S DWELL (tooltip_delay_ms, render.h) — how long a
-//     pointer must REST on a button before its hint appears. It is its own
-//     wait and announces no hold: a hint riding a hold delay tuned short for
-//     the hand pops in and out under every touch and blinks at the pen
-//     plane's edge, so the shift long press has no visual cue and the dwell
-//     keeps the fixed beat whatever the device's holds are. (It carried its
-//     own 700 until 2026-09-11.)
+// THE CADENCES STAY ON THIS CONSTANT, DECOUPLED FROM THE KEY (architect
+// 2026-09-29): a cadence measures the gap between presses or the pace of a
+// stream of repeats, and none is a hand resting on a thing until it crosses
+// into a held meaning, which is what the key tunes. (THE HOVER TOOLTIP reads
+// neither this beat nor the key: its wait is Qt's own 700 ms wake-up,
+// kTooltipWakeUpMs in render.h, with the rest of Qt's QToolTip model beside
+// it — architect 2026-09-29.) FOUR READERS:
 //   * THE DOUBLE-CLICK WINDOW (kDoubleClickMs, app_state.h), since
 //     2026-08-27 — the interval a deliberate SECOND TAP has to arrive inside;
 //   * THE UNDO TAP-COALESCE WINDOW (kTapCoalesceMs, undo.h), since
@@ -138,9 +133,9 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 //     place the paragraph below does not reach, because that platform
 //     advertises no delay to ask for; the ruling is at that site).
 // So at the default a keyboard hold, a chrome shift hold, a touch region
-// hold, a held button's first repeat, a double tap, a re-tapped nudge and a
-// hover dwell all land on the same beat; a retuned hold delay moves the two
-// holds together and leaves the four cadences and the dwell where they are.
+// hold, a held button's first repeat, a double tap and a re-tapped nudge all
+// land on the same beat; a retuned hold delay moves the two holds together
+// and leaves the four cadences where they are.
 //
 // 575 ms BY CONVENTION WITH THE COMPOSITOR'S KEY-REPEAT DELAY, matched
 // DELIBERATELY and not by coincidence: it is the architect's own labwc

@@ -2,7 +2,7 @@
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
-#include "gui_input.h"        // kHoldBeatMs: the tooltip's dwell, the hold delay's construction state
+#include "gui_input.h"        // kHoldBeatMs: the hold delay's construction state
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 
 #include <cairo/cairo.h>
@@ -2615,37 +2615,83 @@ inline int playhead_head_half_px(int device_row, double s) {
 // (app_state.h), and the touch region hold sits in the input core below this
 // header and takes the value PUSHED DOWN
 // (GuiPlatform::set_touch_region_hold_ms, at the same two points). The hover
-// tooltip's dwell is NOT a hold and does not read it (tooltip_delay_ms below).
+// tooltip's wait is NOT a hold and does not read it (kTooltipWakeUpMs below).
 // The readers' whole inventory, and the beats that stay on kHoldBeatMs, are
 // at that constant (gui_input.h).
 void set_hold_delay_ms(int ms);
 int  hold_delay_ms();
 
-// THE HOVER TOOLTIP'S two SHARED numbers — a DAMAGE BOUND on its box height and
-// its dwell. They live out here, rather than with the rest of the tooltip's
-// anatomy in paint_handler.cpp, because the RUN LOOP reads both: the tick
-// compares the dwell to decide when to show, and damages a band below the top
-// strip to cover whatever the box overhangs.
+// THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, the
+// five durations of its life and the slop of its wait. They live out here,
+// rather than with the rest of the tooltip's anatomy in paint_handler.cpp,
+// because both the RUN LOOP and the input side read them: the timer owner
+// (GuiInputHandler::tick_tooltip) runs on the tick and damages a band beside
+// the owner's strip to cover whatever the box overhangs, and the one wait
+// writer (note_tooltip_hover) reads the slop and the two wake-up delays.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from the FACE'S OWN EXTENTS at both type sizes (one line, or 12pt over 10pt),
 // so the box follows the font instead of a literal that could drift from it;
 // the run loop only needs to know it can never exceed this. 60 clears the
 // two-line form (51 at 100%) with room for a font whose metrics run larger.
-//
-// THE DWELL IS ITS OWN FIXED NUMBER, kHoldBeatMs — 575 ms — and NOT the
-// device's hold delay (architect 2026-09-29). The tooltip is a hint for a
-// resting pointer and nothing else: it announces no hold. The chrome shift
-// long press is timed by `hold_delay_ms` alone (chrome_shift_hold_ms,
-// app_state.h) and has no visual announcement, so a tablet that tunes its
-// holds short does not also get a hint that pops in and out under every
-// passing touch or pen hover. The two mechanisms share neither a number nor
-// a clock: a hover dwell and a press hold neither reset, suppress nor feed
-// the other.
 inline constexpr int     kTooltipDamageHeightPx = 60;
-inline constexpr int64_t tooltip_delay_ms() { return kHoldBeatMs; }
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
+}
+
+// THE TIMING IS QT'S QToolTip MODEL (architect 2026-09-29), the one kdenlive's
+// toolbar runs on this laptop — Breeze 6.7.5, KStyle and qt6ct override none
+// of it — taken at Qt 6.11.2's own numbers. The model is stated once, at
+// AppState::RedesignTooltip; these are its constants, hard-coded, no keys.
+// Durations ride no scale.
+//
+// THE WAKE-UP: 700 ms of REST on a tooltip-bearing button before its hint
+// shows — SH_ToolTip_WakeUpDelay (qcommonstyle.cpp), restarted by every
+// motion past the slop below. Its own number: no hold and no beat reads it,
+// and it reads neither (the chrome shift long press is timed by
+// `hold_delay_ms` alone and has no visual announcement).
+inline constexpr int64_t kTooltipWakeUpMs = 700;
+// THE AWAKE WAKE-UP: 20 ms instead, while the product is awake (below) —
+// QApplication::notify's `toolTipFallAsleep.isActive() ? 20 : wakeDelay`
+// (qapplication.cpp) — which is what makes a neighbouring button's hint
+// follow at once and take the standing box over in place.
+inline constexpr int64_t kTooltipAwakeWakeUpMs = 20;
+// THE AWAKE WINDOW: 2000 ms from every show — SH_ToolTip_FallAsleepDelay
+// (qcommonstyle.cpp), restarted by each show or re-show
+// (QApplication::event's ToolTip arm). Rest on one hint longer and the
+// product falls asleep: the next button waits the full wake-up again.
+inline constexpr int64_t kTooltipFallAsleepMs = 2000;
+// THE HIDE GRACE: a SOFT end leaves the box up this long — QTipLabel::hideTip
+// (qtooltip.cpp), started once and never restarted by a second soft end —
+// and the pointer coming back to the box's own button, or a neighbour's hint
+// taking the box over, cancels it (QTipLabel::restartExpireTimer's
+// hideTimer.stop()).
+inline constexpr int64_t kTooltipHideGraceMs = 300;
+// THE EXPIRY: a box standing this long after its last show or re-show goes
+// down — QTipLabel::restartExpireTimer's 10 s (qtooltip.cpp). Qt adds 40 ms
+// per character past 100; the one hint that long (the walk's two lines, 108
+// characters) would stand 0.32 s longer there, and that term is not carried.
+inline constexpr int64_t kTooltipExpireMs = 10000;
+
+// THE HOVER SLOP (architect 2026-09-29: the wait counts from STILLNESS WITH
+// HYSTERESIS): the wait re-anchors, restarting, only when the pointer moves
+// MORE than this from where it was anchored on EITHER axis, so a hovering
+// pen's jitter cannot starve it. Qt has no such tolerance — QApplication
+// restarts the wake-up on every motion and its Android plugin forwards the
+// pen's hover as plain moves — so the number is ANDROID'S OWN for the same
+// job: AOSP View's hover tooltip ignores a HOVER_MOVE within
+// ViewConfiguration.getScaledHoverSlop() of its anchor on both axes
+// (View.TooltipInfo.updateAnchorPos, "filters out the jitter which is
+// typical for such input sources as stylus"), and that slop is
+// `config_viewConfigurationHoverSlop` = 4dp (core/res/values/config.xml),
+// half the platform's 8dp touch slop. It is taken as 4 AUTHORED px through
+// scaled_px, the authored px being to gui_scale what the dp is to density:
+// exactly 4dp on the tablet at its 200 % under the 320 density it runs at,
+// and half the drag gate (kDragMovedThresholdPx 8, app_state.h) as Android's
+// is half its touch slop. Floor 1, so a small scale never zeroes it.
+inline constexpr int kTooltipHoverSlopPx = 4;
+inline int tooltip_hover_slop_px() {
+    return scaled_px(kTooltipHoverSlopPx, 1);
 }
 
 // THE HOVER FADE — BREEZE'S HOVER ANIMATION, PORTED (architect 2026-09-27:

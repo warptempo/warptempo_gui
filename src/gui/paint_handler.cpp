@@ -1292,8 +1292,9 @@ constexpr double kTooltipShiftFontSizePt = 10.0;
 constexpr double kTooltipPadYPx          = 6.0;   // top AND bottom, equal
 constexpr double kTooltipLineGapPx       = 4.0;   // between the two bands
 constexpr double kTooltipPadXPx      = 5.0;
-// (The damage BOUND on the height and the hover dwell live in render.h — the
-// run loop reads both, for the due-check and for the band under the strip.)
+// (The damage BOUND on the height and the timing constants live in render.h —
+// the tooltip's clock reads them, for the deadlines and for the band beside
+// the strip.)
 
 // THE TOOLTIP'S TEXT lives with the roster, not here
 // (redesign_button_tooltip, app_state.h, owns both the membership and the text;
@@ -3907,22 +3908,23 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
-    // THE HOVER TOOLTIP, on whichever button the dwell belongs to — at most
-    // one, because at most one button is under the pointer. The tick owns
-    // WHEN it appears (the dwell); this owns only what it looks like, and
-    // publishes the rect it painted so the hide edge can damage it.
+    // THE HOVER TOOLTIP, on the box's own button — at most one box. The
+    // tooltip's clock (tick_tooltip) owns WHEN it shows and goes; this owns
+    // only what it looks like, and publishes the rect it painted so the hide
+    // edge can damage it.
     app.redesign_tooltip.rect = GuiRect{0, 0, 0, 0};
     if (!app.redesign_tooltip.visible) return;
 
-    // THE DWELL'S OWN OWNER IS THE SUBJECT, read rather than re-derived: the
-    // input side decided which button the hint belongs to when it stamped the
-    // clock (the two hover walks, one per surface), and `visible` is only ever
-    // set for a stamp, so an owner is always standing here. Re-walking for a
-    // hovered button would be a SECOND membership rule to keep in step with
-    // that one — and since 2026-08-07 it could not be the same rule anyway: A
-    // DISABLED BUTTON SHOWS ITS HINT (the architect's kdenlive-parity ruling)
-    // while it never sets the hover FACE, so `hovered` no longer names the
-    // tooltip's subject.
+    // THE BOX'S OWN OWNER IS THE SUBJECT, read rather than re-derived: the
+    // clock set it from the wait that ripened (the two hover walks writing
+    // that wait, one per surface), and `visible` is only ever set with an
+    // owner, so one is always standing here — through the hide grace too,
+    // when the pointer is already elsewhere or out of the plane. Re-walking
+    // for a hovered button would be a SECOND membership rule to keep in step
+    // with that one — and since 2026-08-07 it could not be the same rule
+    // anyway: A DISABLED BUTTON SHOWS ITS HINT (the architect's
+    // kdenlive-parity ruling) while it never sets the hover FACE, so the face's
+    // `hovered` does not name the tooltip's subject.
     const AppState::RedesignTooltip::Owner owner = app.redesign_tooltip.owner;
     if (owner.index < 0) return;
 
@@ -3942,7 +3944,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
             owner.index >= static_cast<int>(dlg.buttons.size())) {
             return;
         }
-        // ONLY THE STASH THAT ARMED THE DWELL: an owner stamped by another
+        // ONLY THE STASH THAT ARMED THE WAIT: an owner stamped by another
         // surface (the load-in-place prompt, closed back onto the render
         // player's row under the pointer) would read a different button at the
         // same index. This frame's stash is already published above, so the
@@ -3982,12 +3984,12 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         const RedesignTooltipText text = redesign_button_tooltip(
             app, audio, audio.total_frames(), id);
         // A HINT WITH NO LINE 1 IS NO HINT. Nothing can take a hint away under
-        // a standing dwell any more — tooltip MEMBERSHIP is the menu row and
+        // a standing box any more — tooltip MEMBERSHIP is the menu row and
         // nothing else, in every state (the rule is at redesign_button_tooltip,
-        // app_state.h), and the dwell writer only ever stamps a button whose
+        // app_state.h), and the wait's writer only ever takes a button whose
         // line 1 is non-null. So this reads as the table's total answer rather
         // than as a state guard, and it keeps the painter honest against the
-        // stamp without knowing which arms are null.
+        // owner without knowing which arms are null.
         if (text.line1 == nullptr) return;
         line1      = text.line1;
         line2      = text.line2;
@@ -6594,13 +6596,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
-// end to end — the same hold-beat dwell, the same box, the same painter, the same
+// end to end — the same Qt timing, the same box, the same painter, the same
 // AppState::redesign_tooltip state, whose owner names either surface now. The
 // TEXT is composed per button from the word it wears plus the key it
 // dispatches (modal_dialog_button_hint, app_state.h) and published in the
-// stash beside the rect; the DWELL is stamped by this surface's own hover walk
-// (update_modal_dialog_hover), which is independent of the press arm, so
-// holding a button neither starts nor stops a hint.
+// stash beside the rect; the WAIT is written by this surface's own hover walk
+// (update_modal_dialog_hover), and as everywhere no wait starts under a held
+// press (the model is at AppState::RedesignTooltip).
 //
 // THE BUTTONS ARE THE ARCHITECT'S EXPLICIT MIX: the deleted toolbar row's box
 // (row 2's 32px height and its own label pads, the icon slot dropped — these
