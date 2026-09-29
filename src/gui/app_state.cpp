@@ -323,6 +323,48 @@ bool flag_hover_unit_box(const AppState& app, int marker_index,
     return false;
 }
 
+bool flag_hover_unit_selected(const AppState& app, int marker_index,
+                              MarkerCell cell) {
+    if (marker_index < 0) return false;
+    if (app.history_mode.active)
+        return marker_index == app.history_mode.focus ||
+               app.history_mode.selection.count(marker_index) > 0;
+    if (app.selected_markers.count(marker_index) == 0) return false;
+    MarkerCell bright = marker_index == app.last_selected_marker
+                            ? app.addressed_cell
+                            : MarkerCell::Payload;
+    if (bright != MarkerCell::Payload &&
+        !marker_paints_iter_cells(app, app.active_markers_view, marker_index))
+        bright = MarkerCell::Payload;
+    return cell == bright;
+}
+
+int flag_hover_level(const AppState& app, int marker_index, MarkerCell cell) {
+    for (const AppState::FlagHoverFade& f : app.flag_hover.fades)
+        if (f.marker_index == marker_index && f.cell == cell)
+            return hover_fade_steps(f.fade);
+    return 0;
+}
+
+bool flag_hover_stem_rect(const AppState& app, int marker_index,
+                          GuiRect& rect_out) {
+    if (marker_index < 0) return false;
+    for (const MarkerStem& stem : app.marker_stems) {
+        if (stem.marker_index != marker_index) continue;
+        // paint_marker_stems' own column and fill_waveform_line's own gate and
+        // right-edge clip, on the area that painter is handed.
+        const GuiRect area = waveform_area(app);
+        const int col = static_cast<int>(
+            std::nearbyint(stem.x - static_cast<double>(area.x)));
+        if (col < 0 || col >= area.w || area.h <= 0) return false;
+        const int t = waveform_line_px();
+        const int w = col + t < area.w ? t : area.w - col;
+        rect_out = GuiRect{area.x + col, area.y, w, area.h};
+        return true;
+    }
+    return false;
+}
+
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
     (void)audio;

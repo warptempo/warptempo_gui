@@ -2030,9 +2030,12 @@ void render_flag_boxes_impl(
                 // THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN — bx, the
                 // marker's own frame column, unchanged by the border standing
                 // to its left (the architect's explicit clause, spelled at
-                // marker_flag_border_px).
-                out_stems->push_back(
-                    MarkerStem{i, static_cast<double>(bx), face.stem});
+                // marker_flag_border_px). Its selected colour is the ladder's
+                // own stem for the selected payload, the hover tint's far end.
+                out_stems->push_back(MarkerStem{
+                    i, static_cast<double>(bx), face.stem,
+                    resolve_flag_face(dis, red, /*selected=*/true,
+                                      column_face).stem});
             }
         });
 
@@ -2559,7 +2562,9 @@ void render_history_diff_flags(
                                        ? (focused ? kHistoryRemovedFillSel
                                                   : kHistoryRemovedFill)
                                        : (focused ? kHistoryAddedFillSel
-                                                  : kHistoryAddedFill)});
+                                                  : kHistoryAddedFill),
+                                   f.removed ? kHistoryRemovedFillSel
+                                             : kHistoryAddedFillSel});
                 }
             }
         });

@@ -2653,7 +2653,10 @@ inline int tooltip_damage_h_px() {
 // shows — SH_ToolTip_WakeUpDelay (qcommonstyle.cpp), restarted by every
 // motion past the slop below. Its own number: no hold and no beat reads it,
 // and it reads neither (the chrome shift long press is timed by
-// `hold_delay_ms` alone and has no visual announcement).
+// `hold_delay_ms` alone and has no visual announcement). ITS SECOND READER
+// (architect 2026-09-29, his pick of the same 700 ms): the flag hover's
+// re-arm after a deselect under the pointer waits this long from stillness
+// past the slop, the tooltip's own shape (AppState::FlagHover).
 inline constexpr int64_t kTooltipWakeUpMs = 700;
 // THE AWAKE WAKE-UP: 20 ms instead, while the product is awake (below) —
 // QApplication::notify's `toolTipFallAsleep.isActive() ? 20 : wakeDelay`
@@ -2693,6 +2696,13 @@ inline constexpr int64_t kTooltipExpireMs = 10000;
 // exactly 4dp on the tablet at its 200 % under the 320 density it runs at,
 // and half the drag gate (kDragMovedThresholdPx 8, app_state.h) as Android's
 // is half its touch slop. Floor 1, so a small scale never zeroes it.
+// TWO READERS, one test (either axis, strictly more than the slop): the
+// tooltip's wait (note_tooltip_hover) and, since 2026-09-29, the flag hover's
+// re-arm after a deselect under the pointer (AppState::FlagHover — the
+// architect's "the same half-threshold movement the icons require"), both
+// asking whether a resting pointer has really moved, and both re-anchoring
+// and restarting the same wake-up (kTooltipWakeUpMs) when it has. The name
+// stays the tooltip's, where the number was ruled.
 inline constexpr int kTooltipHoverSlopPx = 4;
 inline int tooltip_hover_slop_px() {
     return scaled_px(kTooltipHoverSlopPx, 1);
@@ -2999,12 +3009,26 @@ struct FlagHitRect {
 // rest and bright fills, the disabled blend of either; the `h` view's added and
 // removed pairs, damped the same way) — so a hovered box reads halfway to
 // selected. A unit already painted in its selected pair shows no hover change.
-// The edge, the border, the label, the stem and the lead-in ring never move.
+// The edge, the border, the label and the lead-in ring never move; the
+// payload's stem takes the blend (below).
 // THE BLEND RIDES THE BUTTONS' HoverFade (kHoverFadeMs / kHoverFadeSteps,
 // above) IN THE BUTTONS' OWN KIND, SnapIn (architect 2026-09-29, "like the
 // icons"): full the instant the hover begins, the 100 ms fade on the way out,
 // so the painted fill is hover_fade_color over the half blend at the unit's
 // painted level.
+// THE PAYLOAD'S STEM TAKES IT TOO (architect 2026-09-29): while a marker's
+// PAYLOAD unit paints a level, its stem on the waveform is flag_hover_fill of
+// its rest stem and its selected stem at that level (paint_marker_stems, off
+// MarkerStem's two colours; the stem wears the fill, so the one blend serves
+// both). A hovered bound cell tints no stem, and the phase-reset lead-in ring
+// takes nothing (it paints only on the selected focus, which shows no hover).
+// A DESELECT UNDER THE POINTER PAINTS AT REST (architect 2026-09-29): a unit
+// that loses its selection while hovered, or while its tail fades, drops to
+// level 0 at once — box and stem — and shows no fill until the pointer leaves
+// it, or moves past the hover slop and then rests for the tooltip's own
+// wake-up (kTooltipWakeUpMs, 700 ms; architect 2026-09-29), so a
+// deselect reads whole rather than as a half-deselected flag (the rule and
+// its state are at AppState::FlagHover).
 //
 // IT IS PAINT, NEVER A CLAIM (strictly as painted): the hover is resolved from
 // the promoted flag stash (AppState::flag_hit_rects) and changes nothing a
@@ -3025,8 +3049,9 @@ struct FlagHoverPaint {
     int        clip_lo_x    = 0;
     int        clip_hi_x    = 0;
 };
-// The hovered fill: the half blend toward the selected fill, faded in by the
-// unit's painted level through the buttons' one fade blend.
+// The hovered colour: the half blend toward the selected colour, faded in by
+// the unit's painted level through the buttons' one fade blend — a flag
+// unit's fill, and its payload's stem (the stem wearing the fill).
 inline GuiColor flag_hover_fill(GuiColor rest, GuiColor selected, int level) {
     return hover_fade_color(mix_color(selected, rest, kFlagHoverMix), rest,
                             level);
@@ -3780,10 +3805,14 @@ struct FlagLaneRects {
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved face — its class, brightened
-// when its flag box is (architect 2026-09-23); the consumer applies
-// exactly one override over it, the open flag editor's invalid-commit red flash
-// (a transient the painter has no business baking into a cache — the contract is
-// at GuiPaintHandler::paint_marker_stems).
+// when its flag box is (architect 2026-09-23) — and `selected_color` the stem
+// the same marker would paint with its flag box selected (equal to `color`
+// when it is). The consumer applies two transients over them, neither of which
+// the painter has any business baking into a cache: the open flag editor's
+// invalid-commit red flash, which wins, and THE FLAG HOVER'S STEM TINT
+// (architect 2026-09-29, FlagHoverPaint above), flag_hover_fill of the two
+// at the payload unit's painted hover level — the contract is at
+// GuiPaintHandler::paint_marker_stems.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3795,11 +3824,13 @@ struct FlagLaneRects {
 // ALSO the pointer's stem hit source for 2026-08-01..12, when the stem was a
 // second click surface of its marker; that surface is deleted — stems are
 // pointer-inert, the seventh glass ruling — so the stash is paint-only again
-// and `marker_index` serves the painter's identity bookkeeping alone.)
+// and `marker_index` serves the painters' identity bookkeeping alone: the
+// flash's and the hover tint's lookups, and the hover's stem damage.)
 struct MarkerStem {
     int      marker_index;
     double   x;
     GuiColor color;
+    GuiColor selected_color;
 };
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an

@@ -1441,20 +1441,25 @@ struct GuiInputHandler {
 
     // THE FLAG HOVER (architect 2026-09-29; the state is AppState::FlagHover,
     // the paint rule render.h's FlagHoverPaint). recompute_ is its ONE writer,
-    // called by every pointer motion (on_motion's head) and by the tick
-    // (main.cpp): it resolves the unit under the remembered position from the
-    // PROMOTED flag stash — the topmost flag rect, the cell by its painted
-    // boundaries, nothing under the open editor's riding boxes — and answers
-    // NONE while the pointer is out of the window, the primary button is held
-    // (a press, a drag, any finger contact: no hover under touch), the load
-    // is in flight, a prompt or a dialog editor veils the window, the folder
-    // overlay stands, a dropdown is open or a notification card is under the
-    // pointer. A change of unit fades the old one out and snaps the new one
-    // in (HoverFadeKind::SnapIn, the buttons' own, architect 2026-09-29) and
-    // damages the two units' own boxes alone —
-    // never the waveform. clear_ is the pointer-leave hook's (main.cpp): the
-    // hovered unit fades out, every reason alike. Paint state only: no input
-    // road reads either.
+    // called by every pointer motion (on_motion's head), every press
+    // (on_button_press's head), the tick and the pre-paint hook ahead of
+    // every frame (main.cpp): it resolves the unit under the remembered
+    // position from the PROMOTED flag stash — the topmost flag rect, the cell
+    // by its painted boundaries, nothing under the open editor's riding boxes
+    // — and answers NONE while the pointer is out of the window, the primary
+    // button is held (a press, a drag, any finger contact: no hover under
+    // touch), the load is in flight, a prompt or a dialog editor veils the
+    // window, the folder overlay stands, a dropdown is open or a notification
+    // card is under the pointer. FIRST it watches the selection: a unit that
+    // lost it is cut to rest and, under the pointer, DISARMED until the
+    // pointer leaves it or rests past the slop for the tooltip's wake-up
+    // (architect 2026-09-29, AppState::FlagHover). A change of unit fades the
+    // old one out and snaps the new one in (HoverFadeKind::SnapIn, the
+    // buttons' own, architect 2026-09-29) and damages the two units' own
+    // paint alone — the box and, for a payload, its stem's column (the stem
+    // tint). clear_ is the pointer-leave hook's (main.cpp): the hovered unit
+    // fades out and the disarm lifts, every reason alike. Paint state only:
+    // no input road reads either.
     void recompute_flag_hover();
     void clear_flag_hover();
 
@@ -4138,8 +4143,8 @@ private:
     // half of the pair (the order and what each step is for are at the body).
     // Both are
     // read-only-legal, both live in S and T, both refused in the `h` view at
-    // its allowlist; the icon row's Copy Resolved Value button is `j` at its
-    // lift and the bottom row's Jump to Defining Marker is Ctrl+J at its
+    // its allowlist; the icon row's Copy Resolved Value button is Ctrl+C at
+    // its lift and the bottom row's Jump to Defining Marker is Ctrl+J at its
     // (2026-09-29; the jump rode Copy Value's shift press, as Shift+J, until
     // then). Definitions and the whole
     // reasoning are in input_key_dispatch.cpp.

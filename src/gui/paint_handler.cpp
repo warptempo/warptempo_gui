@@ -5967,6 +5967,14 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             ? ed.target
             : -1;
 
+    // THE FLAG HOVER'S STEM TINT (architect 2026-09-29; the rule at render.h's
+    // FlagHoverPaint): a stem whose marker's PAYLOAD unit paints a hover level
+    // takes the flag's own blend of its rest and selected stems at that level.
+    // A selected stem publishes the same colour twice, so the blend leaves it
+    // standing; a disarmed unit's slot sits at level 0 and tints nothing. The
+    // lookup runs only while some unit paints a level.
+    const bool hover_live = !app.flag_hover.fades.empty();
+
     cairo_save(cr);
     const double y0 = static_cast<double>(area.y);
     const double y1 = static_cast<double>(area.y + area.h);
@@ -5979,8 +5987,21 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
         // waveform_line_px() width at the right edge.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
-                                                            : stem.color;
+        GuiColor c = stem.color;
+        if (stem.marker_index == flash_idx) {
+            c = kMarkerStemRed;
+        } else if (hover_live) {
+            // paint_flag_hover's own two gates: a level, and a box the flag
+            // pass published (none under the payload editor), so the stem
+            // tints exactly when its flag does.
+            const int level = flag_hover_level(app, stem.marker_index,
+                                               MarkerCell::Payload);
+            GuiRect box{0, 0, 0, 0};
+            if (level > 0 &&
+                flag_hover_unit_box(app, stem.marker_index,
+                                    MarkerCell::Payload, box))
+                c = flag_hover_fill(stem.color, stem.selected_color, level);
+        }
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
         fill_waveform_line(cr, area.x, area.w, col, y0, y1);
     }

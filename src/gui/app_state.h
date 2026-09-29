@@ -5932,25 +5932,72 @@ struct AppState {
     // in the `h` view; the cell by the painter's own boundaries, so under grid
     // iterations the unit is the CELL) — -1 with none. Its one writer is
     // GuiInputHandler::recompute_flag_hover (input_pointer.cpp), run by every
-    // pointer motion and by the tick; the pointer's leave and the held primary
-    // button (a press, a drag, a finger's contact) clear it. `fades` holds one
+    // pointer motion, every press, the tick and the pre-paint hook ahead of
+    // every frame; the pointer's leave and the held primary button (a press,
+    // a drag, a finger's contact) clear it. `fades` holds one
     // HoverFade per unit still painting a level — the hovered one and any it
     // left fading out (HoverFadeKind::SnapIn since 2026-09-29, the buttons'
     // own: full at once, the 100 ms fade on the way out) — each erased once it settles
     // dark, cut when its unit leaves the stash (the flag left the screen) and
     // cut whole when `lane_key` moves (another column, the `h` edge, a store
     // edit: the indices name other boxes then). The tick advances them beside
-    // the roster's and damages the unit's own box alone.
+    // the roster's and damages the unit's own paint alone — its box and, for
+    // a PAYLOAD unit, its marker's stem column over the waveform.
+    //
+    // THE HOVER TINTS THE PAYLOAD'S STEM (architect 2026-09-29): while a
+    // marker's PAYLOAD unit paints a level, its stem on the waveform takes the
+    // same half blend toward the stem it would paint selected, at the same
+    // level (paint_marker_stems, reading `fades`); a hovered bound cell tints
+    // no stem, selecting one changing no stem either. The phase-reset lead-in
+    // ring is not tinted: it paints only on the selected focus, which shows
+    // no hover.
+    //
+    // A DESELECT UNDER THE POINTER DISARMS THE HOVER (architect 2026-09-29):
+    // a unit that goes from painted-selected to not (flag_hover_unit_selected,
+    // the painter's own bit) BY ANY ROAD — a ctrl or sticky-`k` click, the
+    // Tab walk, undo/redo, the auto-select moving off it, the addressed cell
+    // moving, the `h` view's focus and `v`; a shift range or a plain click
+    // collapsing a group deselects only units the pointer is not on, whose
+    // tails the same cut covers — paints AT REST at once: every slot whose unit lost its
+    // selection is cut to level 0 (no fade-out tail of the half blend), and
+    // while the pointer stays on it the unit shows no fill. It RE-ARMS when
+    // the pointer leaves the unit (to another unit or none; the next entry
+    // snaps in as ever), or AFTER A WAIT FROM STILLNESS, the tooltip's own
+    // shape: a motion MORE than the hover slop (tooltip_hover_slop_px, the
+    // tooltip's test, on either axis) from `anchor_x` / `anchor_y` — where
+    // the pointer rested at the disarm — re-anchors there and starts the wait
+    // (`rearm_due_ms`, the tooltip's own wake-up kTooltipWakeUpMs on, 700 ms,
+    // the architect's pick), every further such motion
+    // restarting it, and the unit re-arms when the wait ripens (the tick runs
+    // the writer). Crossing the slop alone re-arms nothing, so a pointer
+    // leaving the flag after a deselect does not flash the fill on its way
+    // out. A deselect must
+    // read as a whole deselect — a unit landing at the half blend reads as a
+    // half-deselected flag; the roster buttons need no such rule because
+    // their lamp is a separate face from their hover outline. Becoming
+    // selected under the pointer is unaffected. `under_*` track the unit
+    // under the resting pointer WHATEVER THE HELD BUTTON (a held press refuses
+    // the paint, not the unit: a click's deselect happens under it), with
+    // `under_selected` its painted-selected bit as last seen; each slot's
+    // `selected` is the same bit for its own unit.
     struct FlagHoverFade {
         int        marker_index = -1;
         MarkerCell cell         = MarkerCell::Payload;
         HoverFade  fade{};
+        bool       selected     = false;
     };
     struct FlagHover {
         int                        marker_index = -1;
         MarkerCell                 cell         = MarkerCell::Payload;
         uint64_t                   lane_key     = 0;
         std::vector<FlagHoverFade> fades;
+        int                        under_marker_index = -1;
+        MarkerCell                 under_cell     = MarkerCell::Payload;
+        bool                       under_selected = false;
+        bool                       disarmed       = false;
+        int                        anchor_x       = 0;
+        int                        anchor_y       = 0;
+        int64_t                    rearm_due_ms   = 0;
     };
     FlagHover flag_hover;
 
@@ -18076,6 +18123,25 @@ int flag_hover_unit_at(const AppState& app, int mouse_x, int mouse_y,
                        MarkerCell& cell_out);
 bool flag_hover_unit_box(const AppState& app, int marker_index,
                          MarkerCell cell, GuiRect& box_out);
+// THE HOVER'S THREE FURTHER READS (architect 2026-09-29, the same paint-only
+// family). flag_hover_unit_selected answers whether the unit paints in its
+// SELECTED pair — the flag pass's own bit re-spelled across its parameter
+// boundary from the state it is handed (phase_reset_overlay_band's precedent):
+// on the live columns a member of the selection whose bright cell is this one
+// — the focus's addressed cell, else the payload, falling back to the payload
+// where that bound cell is painted nowhere (marker_paints_iter_cells); in the
+// `h` view the diff flag's focus or membership. It is the bit the disarm
+// watches (AppState::FlagHover). flag_hover_level answers the painted hover
+// level of one unit, 0 with no slot. flag_hover_stem_rect answers the
+// waveform rect the marker's stem paints on (the stem stash's column, the
+// waveform_line_px() width clipped at the right edge, the waveform's height)
+// — false with no stem in the stash — which is what a PAYLOAD unit's level
+// change damages beside its box.
+bool flag_hover_unit_selected(const AppState& app, int marker_index,
+                              MarkerCell cell);
+int flag_hover_level(const AppState& app, int marker_index, MarkerCell cell);
+bool flag_hover_stem_rect(const AppState& app, int marker_index,
+                          GuiRect& rect_out);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box

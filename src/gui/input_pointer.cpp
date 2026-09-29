@@ -4946,7 +4946,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     hide_shift_tooltip();
     // ANY PRESS ENDS THE FLAG HOVER (architect 2026-09-29) off that same held
     // bit: the hovered box fades out on its tail, the press acting on the
-    // stash exactly as it always did — the hover is paint, never a claim.
+    // stash exactly as it always did — the hover is paint, never a claim. A
+    // press that DESELECTS the box under it does so below this call; the
+    // writer's next run, the pre-paint hook's at the latest, cuts that tail
+    // to rest and disarms the unit before any frame paints it
+    // (AppState::FlagHover).
     recompute_flag_hover();
     // ANY PRESS ENDS THE MENU ROW'S MODE, beside it and for a related reason: the
     // ruling ends the mode on every ordinary dismissal, and with no popup open a
@@ -7546,16 +7550,28 @@ void GuiInputHandler::tick_hover_fades() {
     // same advance, keyed to the unit's own box in the promoted stash. A unit
     // whose flag no longer publishes a rect (it left the screen, or an editor
     // opened on it) is cut and erased — the lane's own rebuild repainted its
-    // pixels — and a unit settled dark is erased; each painted-level change
-    // damages that one box and nothing wider.
+    // pixels, and a payload's stem still standing (under the payload editor)
+    // is damaged so its tint goes too — and a unit settled dark is erased;
+    // each painted-level change damages that one box and, for a payload, its
+    // stem's column (flag_hover_stem_rect), nothing wider.
     std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
+    const auto damage_stem = [&](const AppState::FlagHoverFade& f) {
+        GuiRect stem{0, 0, 0, 0};
+        if (f.cell == MarkerCell::Payload &&
+            flag_hover_stem_rect(app, f.marker_index, stem))
+            viewport.invalidate_rect(stem);
+    };
     for (size_t i = 0; i < hf.size();) {
         GuiRect box{0, 0, 0, 0};
         if (!flag_hover_unit_box(app, hf[i].marker_index, hf[i].cell, box)) {
+            if (hover_fade_steps(hf[i].fade) > 0) damage_stem(hf[i]);
             hf.erase(hf.begin() + static_cast<std::ptrdiff_t>(i));
             continue;
         }
-        if (hover_fade_advance(hf[i].fade, now)) viewport.invalidate_rect(box);
+        if (hover_fade_advance(hf[i].fade, now)) {
+            viewport.invalidate_rect(box);
+            damage_stem(hf[i]);
+        }
         if (!hf[i].fade.running && !hf[i].fade.rising) {
             hf.erase(hf.begin() + static_cast<std::ptrdiff_t>(i));
             continue;
@@ -7608,7 +7624,11 @@ bool flag_hover_edge(AppState& app, int marker_index, MarkerCell cell,
         if (f.marker_index == marker_index && f.cell == cell) { slot = &f; break; }
     if (!slot) {
         if (!hovered) return false;   // nothing painted, nothing to fade out
-        hf.push_back(AppState::FlagHoverFade{marker_index, cell, HoverFade{}});
+        // The slot is born knowing its unit's selection bit, so the disarm's
+        // watch (observe_flag_hover_selection) sees only later transitions.
+        hf.push_back(AppState::FlagHoverFade{
+            marker_index, cell, HoverFade{},
+            flag_hover_unit_selected(app, marker_index, cell)});
         slot = &hf.back();
     }
     const int before = hover_fade_steps(slot->fade);
@@ -7617,9 +7637,22 @@ bool flag_hover_edge(AppState& app, int marker_index, MarkerCell cell,
     return hover_fade_steps(slot->fade) != before;
 }
 
+// WHAT ONE UNIT'S PAINTED LEVEL COVERS: its box in the promoted stash and,
+// for a PAYLOAD unit, its marker's stem column over the waveform (the stem
+// tint, paint_marker_stems) — each damaged through `damage`, nothing wider.
+template <typename Damage>
+void damage_flag_hover_unit(const AppState& app, int marker_index,
+                            MarkerCell cell, Damage&& damage) {
+    GuiRect r{0, 0, 0, 0};
+    if (flag_hover_unit_box(app, marker_index, cell, r)) damage(r);
+    if (cell == MarkerCell::Payload &&
+        flag_hover_stem_rect(app, marker_index, r))
+        damage(r);
+}
+
 // THE HOVERED UNIT MOVES: the old one fades out, the new one snaps in, and
-// each unit whose painted level moved at its edge has its own box damaged
-// (`damage`, the caller's viewport) — never the waveform.
+// each unit whose painted level moved at its edge has its own paint damaged
+// (`damage`, the caller's viewport) — its box, and a payload's stem column.
 template <typename Damage>
 void set_flag_hover_unit(AppState& app, int marker_index, MarkerCell cell,
                          Damage&& damage) {
@@ -7630,13 +7663,79 @@ void set_flag_hover_unit(AppState& app, int marker_index, MarkerCell cell,
     const int64_t now = monotonic_ms();
     const auto edge = [&](int idx, MarkerCell c, bool hovered) {
         if (!flag_hover_edge(app, idx, c, hovered, now)) return;
-        GuiRect box{0, 0, 0, 0};
-        if (flag_hover_unit_box(app, idx, c, box)) damage(box);
+        damage_flag_hover_unit(app, idx, c, damage);
     };
     if (h.marker_index >= 0) edge(h.marker_index, h.cell, false);
     h.marker_index = marker_index;
     h.cell         = cell;
     if (marker_index >= 0) edge(marker_index, cell, true);
+}
+
+// THE DESELECT UNDER THE POINTER (architect 2026-09-29; the rule and its state
+// are at AppState::FlagHover). Two halves, both before the hovered unit is
+// re-derived:
+//   * EVERY SLOT whose unit went from painted-selected to not since the
+//     writer last looked is CUT TO REST — level 0, no fade-out tail — with its
+//     paint damaged, so no frame shows the half blend on a unit that has just
+//     been deselected, whether it was hovered or only fading out.
+//   * THE UNIT UNDER THE POINTER, tracked whatever the held button (a click's
+//     deselect happens under its own press), LATCHES `disarmed` at that same
+//     transition, anchored where the pointer rests. The latch clears when the
+//     unit under the pointer changes (to another unit or none) — the next
+//     entry is an ordinary hover — or when the pointer, having moved MORE
+//     than the hover slop from the anchor on either axis (the tooltip's own
+//     test, tooltip_hover_slop_px), then rests within the slop of where it
+//     re-anchored for the tooltip's own wake-up, kTooltipWakeUpMs (the
+//     architect's pick, 2026-09-29): crossing the slop only starts that
+//     wait, so a pointer passing out of the flag after a deselect never
+//     flashes the fill on its way. The wait ripens on the tick, which runs
+//     the writer.
+template <typename Damage>
+void observe_flag_hover_selection(AppState& app, int under, MarkerCell cell,
+                                  int mx, int my, Damage&& damage) {
+    AppState::FlagHover& h = app.flag_hover;
+    for (AppState::FlagHoverFade& f : h.fades) {
+        const bool sel =
+            flag_hover_unit_selected(app, f.marker_index, f.cell);
+        if (f.selected && !sel) {
+            const int before = hover_fade_steps(f.fade);
+            hover_fade_cut(f.fade, /*hovered=*/false);
+            if (before > 0)
+                damage_flag_hover_unit(app, f.marker_index, f.cell, damage);
+        }
+        f.selected = sel;
+    }
+
+    if (under != h.under_marker_index ||
+        (under >= 0 && cell != h.under_cell)) {
+        h.under_marker_index = under;
+        h.under_cell         = cell;
+        h.under_selected =
+            under >= 0 && flag_hover_unit_selected(app, under, cell);
+        h.disarmed     = false;
+        h.rearm_due_ms = 0;
+        return;
+    }
+    if (under < 0) return;
+    const bool sel = flag_hover_unit_selected(app, under, cell);
+    if (h.under_selected && !sel) {
+        h.disarmed     = true;
+        h.anchor_x     = mx;
+        h.anchor_y     = my;
+        h.rearm_due_ms = 0;
+    }
+    h.under_selected = sel;
+    if (!h.disarmed) return;
+    const int slop = tooltip_hover_slop_px();
+    const int64_t now = monotonic_ms();
+    if (std::abs(mx - h.anchor_x) > slop || std::abs(my - h.anchor_y) > slop) {
+        h.anchor_x     = mx;
+        h.anchor_y     = my;
+        h.rearm_due_ms = now + kTooltipWakeUpMs;
+    } else if (h.rearm_due_ms != 0 && now >= h.rearm_due_ms) {
+        h.disarmed     = false;
+        h.rearm_due_ms = 0;
+    }
 }
 
 } // namespace
@@ -7660,30 +7759,43 @@ void GuiInputHandler::recompute_flag_hover() {
     }
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
-    // NO HOVER where nothing is pressable or the pointer is not resting: out
-    // of the window (the pen above its plane leaves it), under a held primary
-    // button (a press, a drag, every finger contact — no hover under touch),
-    // with no piece to show, under a prompt's or a dialog editor's veil, under
-    // the folder overlay's band, beside an open dropdown (it owns the
-    // pointer) or under a notification card (opaque to the pointer).
-    const bool refused =
-        !app.pointer_in_window || app.redesign_tooltip.button_held ||
+    const auto damage = [this](const GuiRect& r) {
+        viewport.invalidate_rect(r);
+    };
+    // NO UNIT UNDER THE POINTER where nothing is pressable: out of the window
+    // (the pen above its plane leaves it), with no piece to show, under a
+    // prompt's or a dialog editor's veil, under the folder overlay's band,
+    // beside an open dropdown (it owns the pointer) or under a notification
+    // card (opaque to the pointer). Each of these is the pointer LEAVING the
+    // unit, for the disarm's latch as for the paint.
+    const bool away =
+        !app.pointer_in_window ||
         app.loading || audio.total_frames() <= 0 ||
         app.prompt.active || modal_dialog_editor_active() ||
         folder_overlay_stands(app) ||
         app.dropdown.open() ||
         notification_card_at(app, mx, my) != 0;
     MarkerCell cell = MarkerCell::Payload;
-    const int idx = refused ? -1 : flag_hover_unit_at(app, mx, my, cell);
-    set_flag_hover_unit(app, idx, cell, [this](const GuiRect& box) {
-        viewport.invalidate_rect(box);
-    });
+    const int under = away ? -1 : flag_hover_unit_at(app, mx, my, cell);
+    observe_flag_hover_selection(app, under, cell, mx, my, damage);
+    // NO HOVER PAINTED on that unit under a held primary button (a press, a
+    // drag, every finger contact — no hover under touch: the pointer is not
+    // resting, though it has not left) or while the unit is disarmed by a
+    // deselect under the pointer.
+    const bool refused = app.redesign_tooltip.button_held || h.disarmed;
+    set_flag_hover_unit(app, refused ? -1 : under, cell, damage);
 }
 
 void GuiInputHandler::clear_flag_hover() {
+    // The pointer has left: every unit re-arms, as a leave always does.
+    AppState::FlagHover& h = app.flag_hover;
+    h.under_marker_index = -1;
+    h.under_selected     = false;
+    h.disarmed           = false;
+    h.rearm_due_ms       = 0;
     set_flag_hover_unit(app, -1, MarkerCell::Payload,
-                        [this](const GuiRect& box) {
-                            viewport.invalidate_rect(box);
+                        [this](const GuiRect& r) {
+                            viewport.invalidate_rect(r);
                         });
 }
 

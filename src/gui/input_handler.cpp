@@ -2889,8 +2889,8 @@ void GuiInputHandler::run_center_command() {
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
     // frame (the rule and the ordering it owes the audition's sequence are at
-    // ab_audition.h), and, since 2026-08-29, SHIFT+`j`'s jump to the value's
-    // source (jump_to_value_source, input_key_dispatch.cpp), WHICH CALLS THIS
+    // ab_audition.h), and, since 2026-08-29, the jump to the value's source
+    // (CTRL+J, jump_to_value_source, input_key_dispatch.cpp), WHICH CALLS THIS
     // TWICE — it is still ONE caller: once on the
     // CURRENT tab before it leaves (the audition's own shape, so the origin
     // tab is framed on the reference it was read from) and once as its last

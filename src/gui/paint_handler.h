@@ -923,12 +923,19 @@ private:
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
-    // ONE PAINT-TIME COLOUR OVERRIDE, and one only (2026-08-01): the open flag
-    // editor's invalid-commit RED FLASH reaches its marker's stem, so a flashing
-    // flag and its stem agree. It is applied here rather than published into the
-    // stash because that is how the flash face itself works — an override over
-    // the resolved class, per frame, out of any cache (the definition carries
-    // the reasoning and the damage story).
+    // TWO PAINT-TIME COLOUR TRANSIENTS, the flash winning. The open flag
+    // editor's invalid-commit RED FLASH (2026-08-01) reaches its marker's stem,
+    // so a flashing flag and its stem agree. THE FLAG HOVER'S STEM TINT
+    // (architect 2026-09-29): while the marker's PAYLOAD unit paints a hover
+    // level (AppState::FlagHover's fades), its stem takes flag_hover_fill of
+    // its two published colours at that level — halfway toward its selected
+    // stem, fading with the flag, nothing on a selected stem, nothing for a
+    // hovered bound cell. Both are applied here rather than published into
+    // the stash because that is how the flash face and the hover overlay
+    // themselves work — overrides over the resolved class, per frame, out of
+    // any cache (the definition carries the reasoning and the damage story;
+    // the hover's damage is its writer's and its tick's, the stem's own
+    // column).
     //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag

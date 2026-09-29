@@ -2861,8 +2861,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE FLAG HOVER'S TICK RE-DERIVATION (architect 2026-09-29): the
         // flag stash moves under a resting pointer (a pan, a zoom, a store
         // edit, the promote after a rebuild), so the hovered unit is re-read
-        // here from the same inputs a motion reads. Ungated: a gesture holds
-        // the primary button, which the recompute already answers with none.
+        // here from the same inputs a motion reads — and a unit disarmed by a
+        // deselect under the pointer re-arms here when its stillness wait
+        // ripens (AppState::FlagHover). Ungated: a gesture holds the primary
+        // button, which the recompute already answers with none.
         input_handler.recompute_flag_hover();
 
         // THE HOVER FADES' CLOCK (architect 2026-09-27, Breeze's hover
@@ -3229,6 +3231,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // not change, and it sits ABOVE the playback guards below because it
         // has nothing to do with playback.
         onscreen_keyboard::reconcile_session(app, gui, viewport);
+
+        // THE FLAG HOVER'S WRITER RUNS AHEAD OF EVERY FRAME TOO (architect
+        // 2026-09-29), for the same reason: a selection can drop under a
+        // resting pointer from a press, a key or an undo, and the backend's
+        // paint can follow with no tick between, so without this the first
+        // frame of a deselect could paint the unit's hover — the half blend,
+        // or its fading tail — before the writer had seen the deselect and
+        // disarmed it (AppState::FlagHover). Transition-gated, its damage is
+        // the hover's own units, which this hook may still add; above the
+        // guards below, which answer playback alone, the writer refusing a
+        // load or an empty piece itself.
+        input_handler.recompute_flag_hover();
 
         if (app.loading || audio.total_frames() <= 0) return;
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the
