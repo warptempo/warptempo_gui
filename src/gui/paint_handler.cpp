@@ -3130,10 +3130,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   input_pointer.cpp). The pressed interior is the ordinary arm's, and the
 //   hold has no cue of its own;
 //   THE TRANSPORT (kTransportGroup), closing the row — skip-back (bare Home,
-//   Shift+Home the whole-piece jump), THE ONE PLAY/STOP BUTTON (bare Space,
+//   Ctrl+Home the whole-piece jump), THE ONE PLAY/STOP BUTTON (bare Space,
 //   whose GLYPH and TOOLTIP swap on the live audition bit — the reason this
 //   row's paint goes through redesign_button_icon) and skip-forward (bare
-//   End, Shift+End). The last button's right edge is one lane pad in from the
+//   End, Ctrl+End). The last button's right edge is one lane pad in from the
 //   lane's right edge.
 //
 // EVERY BUTTON GREYS WHERE ITS PRESS WOULD BE A NO-OP (the truthful-buttons
@@ -3919,7 +3919,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // THE HOVER TOOLTIP, on the box's own button — at most one box. The
     // tooltip's clock (tick_tooltip) owns WHEN it shows and goes; this owns
     // only what it looks like, and publishes the rect it painted so the hide
-    // edge can damage it.
+    // edge can damage it — AS PAINTED (the rule is at AppState::
+    // RedesignTooltip): the previous rect is held until the new box is known.
+    const GuiRect prev_rect = app.redesign_tooltip.rect;
     app.redesign_tooltip.rect = GuiRect{0, 0, 0, 0};
     if (!app.redesign_tooltip.visible) return;
 
@@ -4078,10 +4080,25 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (x < 0) x = 0;
     if (y + h > app.height) y = app.height - h;
     if (y < 0) y = 0;
-    app.redesign_tooltip.rect = GuiRect{x, y, w, h};
+    const GuiRect box{x, y, w, h};
+    // PUBLISHED AS PAINTED: a clip that covers the box draws it whole, so the
+    // rect and the words are exactly this frame's; a clip that does not (the
+    // player's clock and scrub cells at scanner cadence, which recompose a
+    // modal button's words on the stash above without reaching the box)
+    // leaves the old box's pixels where they stood, so the rect grows to the
+    // union of the two and the words stay the last ones really drawn —
+    // main.cpp's comparator sees that drift and damages the box whole.
+    if (clip_covers_drawable(cr, app, box)) {
+        app.redesign_tooltip.rect          = box;
+        app.redesign_tooltip.painted_line1 = line1;
+        app.redesign_tooltip.painted_line2 = line2 != nullptr ? line2 : "";
+    } else {
+        app.redesign_tooltip.rect =
+            (prev_rect.w > 0 && prev_rect.h > 0) ? union_rect(prev_rect, box)
+                                                 : box;
+    }
 
-    paint_popup_chrome(cr, app.redesign_tooltip.rect, kRedesignRowGround,
-                       kRedesignLine);
+    paint_popup_chrome(cr, box, kRedesignRowGround, kRedesignLine);
 
     // THE PAINT PHASE. Each line RE-SETS its own size first, so the context
     // carries the very font that shaped the run it is about to emit — the

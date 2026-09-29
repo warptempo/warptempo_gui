@@ -590,10 +590,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
     // throughout, repeat_eligible included — the arm SHARES that predicate
     // rather than mirroring it.
-    // THE TWO SKIPS ADMIT SHIFT (architect 2026-09-29): a SHIFT-CLICK or
-    // the LONG PRESS — glass's held shift — dispatches Shift+Home /
-    // Shift+End, the WHOLE-PIECE jump, through redesign_button_shift_admits
-    // (app_state.h). They admit no ctrl. The rows below carry the PLAIN
+    // THE TWO SKIPS ADMIT CTRL (architect 2026-09-26): a CTRL-CLICK
+    // dispatches Ctrl+Home / Ctrl+End, the WHOLE-PIECE jump, through
+    // redesign_button_ctrl_admits (app_state.h) — on glass the S Pen's side
+    // button held on the skip. They admit no shift, which is what keeps the
+    // LONG PRESS — glass's held shift — off the act by construction, so a held
+    // skip is the trim-bound jump a tap is. The rows below carry the PLAIN
     // chord, as every row does; the admission and its modifier are the
     // roster's, never a column here.
     {RedesignButton::TransportSkipBack,
@@ -872,7 +874,8 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // can spell (conventions.md).
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
-// Up / Down step ladder's Ctrl rung, the WALK's Ctrl+Tab, PREVIOUS
+// two SKIPS, whose ctrl-click is Ctrl+Home / Ctrl+End, the Up / Down step
+// ladder's Ctrl rung, the WALK's Ctrl+Tab, PREVIOUS
 // MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29), CENTER's
 // Ctrl+C and RESTRICT UNDO's Ctrl+Z (2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
@@ -8476,10 +8479,13 @@ void GuiInputHandler::finish_chrome_press_release(
         // its cue: no tooltip rises under a held press at all (Qt's model,
         // AppState::RedesignTooltip), the press being one of its hard ends.
         //
-        // THE TWO SKIPS ARE WHERE IT REACHES THE WHOLE-PIECE JUMP (architect
-        // 2026-09-29): they admit shift for Shift+Home / Shift+End, so a skip
-        // held past the hold delay lifts into the piece's own ends — the tablet's
-        // road to the act, the skips repeating nothing.
+        // AND IT REACHES NO CTRL-ADMITTING BUTTON THAT ADMITS NO SHIFT, by
+        // construction rather than by an exclusion: the two SKIPS admit CTRL
+        // for the whole-piece jump and admit no shift at all, so this term's
+        // own predicate answers false for them and a held skip gives the
+        // trim-bound jump exactly as a tap does. Their ctrl road on glass is
+        // the S Pen's side button held on the skip, a real ctrl bit carried
+        // by the press like a held Ctrl key, never this hold.
         //
         // WITH A CARRIED CTRL IT COMPOSES ONLY WHERE THE PAIR IS ADMITTED
         // (redesign_button_shift_admits_with, which asks

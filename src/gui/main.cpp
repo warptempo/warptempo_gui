@@ -2725,10 +2725,45 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                  app.modal_dialog.buttons) {
                 if (b.enabled != render_player_button_enabled(
                                      app, playback, b.player_act)) {
-                    viewport.invalidate_rect(bottom_row_area(app));
+                    // Through the row's damage owner, so a standing hint over
+                    // the row is repainted from the same composition
+                    // (viewport.h's rule at invalidate_modal_dialog_area).
+                    viewport.invalidate_modal_dialog_area();
                     break;
                 }
             }
+        }
+
+        // A STANDING DIALOG HINT IS A FACE TOO (2026-09-29; the
+        // roster's Render / Save glyph rule above, one surface over): a modal
+        // button's words are recomposed onto the stash by every paint of the
+        // row (paint_modal_dialog), and some of those paints reach the row
+        // alone — the player's clock and scrub cells at scanner cadence carry
+        // Home's previous-track window across its edge ("Previous File" to
+        // "Go to Start", and the shift line with it) with no row damage at
+        // all. The box's words are published AS PAINTED (AppState::
+        // RedesignTooltip), so a stash that has moved past them is a box
+        // standing stale, and the row's damage owner repaints the row, the
+        // old box and the band the new one hangs into. Only while the owner
+        // is the stash that armed it (the owner tag and session the painter
+        // stamped), since a replaced surface takes the box down on its own.
+        if (app.redesign_tooltip.visible && app.modal_dialog.valid &&
+            app.redesign_tooltip.owner.surface ==
+                AppState::RedesignTooltip::Surface::Dialog &&
+            app.redesign_tooltip.owner.dialog_owner == app.modal_dialog.owner &&
+            app.redesign_tooltip.owner.dialog_session ==
+                app.modal_dialog.session &&
+            app.redesign_tooltip.owner.index >= 0 &&
+            app.redesign_tooltip.owner.index <
+                static_cast<int>(app.modal_dialog.buttons.size())) {
+            const AppState::ModalDialogButton& b =
+                app.modal_dialog.buttons[static_cast<size_t>(
+                    app.redesign_tooltip.owner.index)];
+            // (A button with no words paints no box, so it owes nothing.)
+            if (!b.tooltip.empty() &&
+                (b.tooltip != app.redesign_tooltip.painted_line1 ||
+                 b.tooltip2 != app.redesign_tooltip.painted_line2))
+                viewport.invalidate_modal_dialog_area();
         }
 
         // THE HOLD LAMP ON THE PLAYHEAD HEAD (architect 2026-09-24), the

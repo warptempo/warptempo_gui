@@ -2014,19 +2014,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         warpops.toggle_disabled();
         return;
     }
-    // SHIFT+HOME / SHIFT+END: the WHOLE-PIECE jump (architect 2026-09-29).
+    // CTRL+HOME / CTRL+END: the WHOLE-PIECE jump (architect 2026-09-26).
     // Frame 0 and the ACTIVE DOMAIN's last frame, whatever the trim window
     // is, where the bare pair lands on the trim bounds — the way to reach
     // audio the window has cut off without opening the window first. Same
     // body, same unconditional acts (run_playhead_end_jump,
     // input_key_dispatch.cpp), through the movement owner as always. The two
-    // skip buttons dispatch it on a shift-click and on the chrome long press,
-    // glass's held shift (redesign_button_shift_admits, app_state.h).
+    // skip buttons dispatch it on a ctrl-click (redesign_button_ctrl_admits,
+    // app_state.h), which on the tablet is the S Pen's side button held on
+    // the skip (touch.md).
     //
-    // THEY DISPATCH HERE, among the modified chords, because the bare pair's
+    // THEY DISPATCH HERE, WITH THE OTHER CTRL CHORDS, because the bare pair's
     // arms live in a switch this function reaches only with no modifier held —
-    // a chord has no road into handle_plain_bare_keys by construction. Shift
-    // is the only modifier they take: Ctrl, Ctrl+Shift and Alt forms bind
+    // a chord has no road into handle_plain_bare_keys by construction. Ctrl is
+    // the only modifier they take: Shift, Ctrl+Shift and Alt forms bind
     // nothing and are consumed no-ops under strict modifier validation.
     //
     // A TEXT EDITOR NEVER REACHES THIS ARM: Home / End under any modifier are
@@ -2042,7 +2043,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // in there a jump ALREADY means the piece's ends, so the chord means the
     // same thing in every state (history_mode_owns_key).
     if ((key == GuiKeys::Home || key == GuiKeys::End) &&
-        shift && !ctrl && !alt) {
+        ctrl && !shift && !alt) {
         run_playhead_end_jump(key == GuiKeys::End, /*whole_piece=*/true);
         return;
     }

@@ -2665,11 +2665,10 @@ private:
     // is at land_playhead_on_marker, input_pointer.cpp) and land through
     // Viewport::move_playhead_to, the movement owner. `forward` picks End over
     // Home; `whole_piece` asks the landing owner for the piece's own ends
-    // instead of the trim bounds, which is what the SHIFT forms pass
+    // instead of the trim bounds, which is what the CTRL forms pass
     // (playhead_skip_landing_frame, app_state.h, states the two arms). FOUR
-    // CALLERS: the bare Home and End arms and their two SHIFT arms, which the
-    // bottom row's skip buttons dispatch on a plain press and on a shift press
-    // or long press. The `h`
+    // CALLERS: the bare Home and End arms and their two CTRL arms, which the
+    // bottom row's skip buttons dispatch on a plain and a ctrl press. The `h`
     // history view's own pair is NOT one of them — it clears the MODE's
     // diff-flag focus where these clear the live selection, so it spells its
     // own body and shares only the landing owner, which its mode bit already

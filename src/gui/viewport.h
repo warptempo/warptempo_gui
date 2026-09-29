@@ -502,6 +502,9 @@ struct Viewport {
     //     WINDOW-ACTIVATION hook, gated on the player standing (main.cpp),
     //     the scrub's played part being the third surface that reads
     //     AppState::window_activated.
+    //   * THE PER-TICK COMPARATORS (main.cpp): the player row's enabled-face
+    //     drift, and a standing dialog hint whose words the row's paint has
+    //     recomposed past the ones the box last drew (2026-09-29, below).
     //
     // The PROMPTS are deliberately absent: every raise and every answer
     // damages the whole window (prompt.cpp), which is what a surface with no
@@ -509,6 +512,21 @@ struct Viewport {
     // rather than the modal's stashed box, so a CLOSER that runs between
     // paints still erases what the last frame drew and the row's own tenants
     // come back with it.
+    //
+    // A STANDING DIALOG TOOLTIP RIDES THIS DAMAGE (2026-09-29):
+    // a modal button's hint is composed by the row's own paint
+    // (paint_modal_dialog publishes it on the stash) and its box hangs ABOVE
+    // the lane, outside this rect — so a row repaint alone would recompose
+    // the words (the Play/Pause face's "Pause" becoming "Play" at a folder's
+    // end, "Resume" at a pause) and leave the old box's pixels standing.
+    // While a tooltip stands on a Dialog owner this owner also damages the
+    // box's published rect (erasing the old words, which may measure wider)
+    // and the band the recomputed box can hang into — the show edge's own
+    // band (tick_tooltip) — so the frame that repaints the row repaints the
+    // hint from the same composition. Every caller above inherits it, the
+    // player's three included; the per-tick comparator in main.cpp calls here
+    // for the hint changes no row damage carries (the previous-track window's
+    // edge under a playing item, which only the clock's cell damages).
     void invalidate_modal_dialog_area();
     // The unified bottom row's CLOCK CELL, and the authoritative inventory of
     // who wants it

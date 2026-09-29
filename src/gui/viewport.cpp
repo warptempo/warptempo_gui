@@ -77,11 +77,10 @@ int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 // WHERE A Home / End JUMP WOULD LAND THE CURSOR — the contract, the two arms and
 // the clamp's purpose are all at the declaration (app_state.h). THREE READERS:
 // the shared jump body run_playhead_end_jump (input_key_dispatch.cpp) plus the
-// history view's own pair, so the live Home / End, their shift forms and the
+// history view's own pair, so the live Home / End, their ctrl forms and the
 // mode's absolute jumps spell one bound once instead of once per route (the
-// bottom row's two SKIP buttons dispatch Home / End, and Shift+Home /
-// Shift+End on a shift press or a long press, like any other chrome button
-// and reach it that way); and
+// bottom row's two SKIP buttons dispatch Home / End, and Ctrl+Home / Ctrl+End
+// on a ctrl press, like any other chrome button and reach it that way); and
 // playhead_end_jump_actionable just below, the jump acts' "would this form
 // change anything" owner, through which the SKIPS' FACE and the acts' own
 // no-op refusals read this landing (the skips' case in
@@ -92,7 +91,7 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
         // THE WHOLE-PIECE ARM, ONE ARM WITH TWO ENTRANTS. The `h` history view
         // takes it for every jump (architect 2026-08-05: the view reviews the
         // WHOLE piece, so an End stopping at a trim bound would hide the flags
-        // past it), and the SHIFT forms take it anywhere (architect 2026-09-29:
+        // past it), and the CTRL forms take it anywhere (architect 2026-09-26:
         // frame 0 and the last frame whatever the trim window is). The ends
         // are the ACTIVE DOMAIN's own: live_total_frames is what the
         // displayed timeline runs to in either audio view. With a full trim
@@ -161,6 +160,16 @@ void Viewport::invalidate_status_cell_area() {
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
+    // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
+    // published rect and the full-width band above the lane, the show edge's
+    // own pair, so the rect (above) and these two cover the recomposed box.
+    const AppState::RedesignTooltip& tip = app.redesign_tooltip;
+    if (tip.visible &&
+        tip.owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
+        invalidate_rect(tip.rect);
+        const int band_h = tooltip_damage_h_px();
+        invalidate_rect(GuiRect{0, t.y - band_h, app.width, band_h});
+    }
 }
 
 // THE NOTIFICATION STACK'S DAMAGE — its bound whole; the callers and the
