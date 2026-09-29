@@ -6276,7 +6276,9 @@ struct AppState {
     // pointer-derived face state in the roster's own model (the hover walk
     // writes it, the painter reads it, a change damages the box). Cleared by
     // paint_modal_dialog's no-dialog arm alongside the stash, so a fresh
-    // dialog cannot inherit the previous one's lit face.
+    // dialog cannot inherit the previous one's lit face, and on the
+    // pointer-leave hook by clear_modal_dialog_hover, which ends it through
+    // the walk's own fade edge.
     int modal_dialog_hovered = -1;
 
     // THE POINTER IS OVER THE EDITOR FIELD — the same pointer fact as the
@@ -6288,14 +6290,17 @@ struct AppState {
     // bool rather than a second index because there is exactly one field.
     // Resolved against modal_dialog.field, which a prompt publishes zero, so
     // this is false under a prompt by construction; reset with the three face
-    // indices in paint_modal_dialog's no-dialog and owner-change arms.
+    // indices in paint_modal_dialog's no-dialog and owner-change arms, and
+    // cleared with the index above on the pointer-leave hook.
     bool modal_dialog_field_hovered = false;
 
     // THE MODAL ROW'S HOVER FADES (architect 2026-09-27, render.h's
     // HoverFade): one per dialog button, indexed like modal_dialog_hovered,
     // SnapIn — Breeze's QPushButton — and the field's, Reversing — Breeze's
     // line-edit frame, which fades both ways. Written on the hover walk's
-    // edges (update_modal_dialog_hover) and KEYED TO THE PAINTED SURFACE'S
+    // edges (stamp_modal_dialog_hover_fades, called by
+    // update_modal_dialog_hover and by the pointer-leave hook's
+    // clear_modal_dialog_hover) and KEYED TO THE PAINTED SURFACE'S
     // SESSION (`modal_dialog_fades_session`), so a fade outlives neither its
     // dialog nor a change of dialog: reset_modal_dialog_face_state drops them
     // with the face indices, and the tick drops a set whose session is no

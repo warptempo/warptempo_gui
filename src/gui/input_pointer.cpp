@@ -3328,7 +3328,8 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 
 // THE MODAL ROW'S HOVER FADE EDGES (architect 2026-09-27, the Breeze port at
 // render.h's HoverFade), called by the walk below on a change and before it
-// writes the new answer: the button the pointer left starts its SnapIn tail
+// writes the new answer, and by the leave hook's clear_modal_dialog_hover
+// with no button and no field: the button the pointer left starts its SnapIn tail
 // (QPushButton), the one it reached snaps full, and the field fades either
 // way (Reversing — Breeze's line-edit frame animates hover in and out). The
 // slots are keyed to the PAINTED surface's session — the stash the hit was
@@ -3467,14 +3468,36 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
                        app.modal_dialog.owner, app.modal_dialog.session});
 }
 
+// THE HOVER'S LEAVE END — the pointer-leave / capability-loss hook (main.cpp),
+// beside the roster's clear_redesign_button_hover, the folder overlay's and
+// the notification cards' (architect 2026-09-28): a pointer that has left is
+// on no button and no field, and a leave delivers no motion for the walk above
+// to answer, so without this the lit outline would stand until the next motion
+// landed somewhere. It covers every leave reason the hook is handed — the mouse
+// leaving the window, the pen leaving the plane (PenHoverEnd keeps no face),
+// a finger's lift with no mouse resting in the window, capability loss. It is
+// a hover end like any other and goes through the walk's own edge
+// (stamp_modal_dialog_hover_fades), so the button left takes its SnapIn tail
+// and the field its Reversing one, with the walk's own damage of the stashed
+// box. The focus face is untouched: focus is hard and is not a pointer fact.
+// Transition-gated.
+void GuiInputHandler::clear_modal_dialog_hover() {
+    if (app.modal_dialog_hovered < 0 && !app.modal_dialog_field_hovered)
+        return;
+    stamp_modal_dialog_hover_fades(-1, false);
+    app.modal_dialog_hovered       = -1;
+    app.modal_dialog_field_hovered = false;
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
+}
+
 // THE ARM'S HARD END — the pointer-leave / capability-loss hook (main.cpp),
 // beside the roster's own clear_redesign_button_press and for its reason: a
 // pointer that has left the window is on no button, and an act that has not
 // happened yet must not be left waiting for a release that may never come.
-// It deliberately does NOT clear the hovered index: a stale lit face is the
-// standing accepted cost there (the next delivered motion re-runs the walk),
-// while a stale ARM is a pending act. Transition-gated, damaging the stashed
-// box when it fires.
+// The hovered index is its sibling's (clear_modal_dialog_hover, on the same
+// hook): the hover is a face and ends with its tail, the arm a pending act.
+// Transition-gated, damaging the stashed box when it fires.
 void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
     app.modal_dialog_pressed      = -1;

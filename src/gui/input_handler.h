@@ -1713,6 +1713,11 @@ struct GuiInputHandler {
     // are private, beside the modal's other pointer readers; the contract is at
     // the definition and the full edge list at AppState::modal_dialog_pressed.
     void clear_modal_dialog_press();
+    // THE MODAL ROW'S HOVER FACES (the dialog buttons' and the field's),
+    // dropped on that same edge (architect 2026-09-28) through the hover
+    // walk's own fade edge, so each takes its Breeze tail; the contract is at
+    // the definition.
+    void clear_modal_dialog_hover();
     // THE RENDER PLAYER'S TWO ARMS' HARD ENDS (2026-08-28): the folder
     // overlay's row press and the play-scrub's marker drag, dropped
     // uncommitted on the pointer-leave edge (main.cpp's hook), the

@@ -1972,7 +1972,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Pointer-leave / capability-loss drop. THIS BODY IS THE AUTHORITATIVE
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
     // modal dialog's armed button, the popup's two
-    // item faces plus its press claim, and the PAIR that a leave through row 1
+    // item faces plus its press claim, the render player's row press and
+    // scrub drag, the hover faces of the folder overlay's band, the
+    // notification cards and the modal row (its buttons and its field), the
+    // scrub handle's damage, and the PAIR that a leave through row 1
     // skips, the roster hover clear and the menu-row disarm (which is itself
     // gated a second time, on no menu being open). The platform-side sites name
     // their OWN concern and point
@@ -2020,8 +2023,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // for as long as it stays outside. THE MARKER
     // HOVER USED TO RIDE THIS EDGE TOO and no longer exists (row 5) — the
     // redesigned rows' button hover is the only ROSTER hover left (an open
-    // dropdown's item hover is the other pointer-position-dependent surface
-    // this edge drops, below), and it is separate state with its own clear.
+    // dropdown's item hover, the folder overlay's band, the notification
+    // cards and the modal row are the other pointer-position-dependent
+    // surfaces this edge drops, below), and it is separate state with its own
+    // clear.
     // THE ARMED CHROME PRESS joins it, and since the act moved to the release
     // (2026-08-13) this is sharper than a face: the arm is a pending ACT, and
     // this is the BUTTON-LOST edge — the hold stops being the pointer's to
@@ -2146,6 +2151,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // a pointer that has left rests on no card, so every paused card's
         // clock is re-armed here and the X's face goes dark.
         input_handler.clear_notification_hover();
+        // AND THE MODAL ROW'S HOVER FACES (architect 2026-09-28), the dialog
+        // buttons' outline and the field's border, the same hover half: a
+        // pointer that has left is on no button and no field, so each ends
+        // through the walk's own fade edge and takes its tail. Every reason
+        // clears it, the pen's PenHoverEnd included; the focus face stays.
+        input_handler.clear_modal_dialog_hover();
         input_handler.clear_player_scrub_drag();
         // AND THE SCRUB HANDLE'S HOVERED OUTLINE, the same hover half of the
         // question one surface over: the handle's accent is re-answered at
