@@ -3024,7 +3024,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // documented at kWaveformRegionCanvas. paint_region_ink applies it to every
 // opaque plate pixel inside the region, each from its OWN colour, whatever
 // ink the palette holds — no ink is keyed and no lifted constant is pinned,
-// the inks being tunable (architect 2026-09-25); at full alpha the
+// so a change to any ink's constexpr carries its lift with it; at full alpha the
 // premultiplied word is the colour itself, so lifting the bytes lifts the
 // colour.
 inline constexpr uint32_t region_lift(uint32_t word) {
@@ -3068,9 +3068,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 //
 // THE >=1px NEVER-FADE FLOOR SURVIVES, re-expressed: it came from each segment
 // depositing a full unit at its endpoint tips, and it now comes from integer
-// geometry — floor(top) == floor(bot) for any sub-pixel interval, so the
-// inclusive fill always writes at least one row. Flat or silent material draws
-// a hairline; nothing can fade out or vanish.
+// geometry — floor(top) == floor(bot) for any sub-pixel interval, and both row
+// indices are clamped into the lane, so the inclusive fill always writes at
+// least one row, a bar clamped whole to either lane edge included. Flat or
+// silent material draws a hairline; nothing can fade out or vanish.
 //
 // PAN INVARIANCE IS STRENGTHENED, NOT WEAKENED, BY THE HALOS' REMOVAL. They
 // existed because a column's ink came from the segments on BOTH its sides, so an
@@ -3135,8 +3136,11 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // multiplier over the working columns the column spans
 // (waveform_expander_multiplier_over) — ON BOTH BARS, so the gap between
 // them is g / (c x 1/2), a pure function of L, and the inner never stands
-// out of the outer. Each bar's tips are CLAMPED to [-1, 1] before
-// they become rows, and each keeps the >=1px floor. The writer
+// out of the outer IN HEIGHT ABOUT THE CENTRE ROW (in pixels a column wholly
+// on one side of zero is the exception: THE ALIGNMENT, below). Each bar's
+// tips are CLAMPED to [-1, 1] before they become rows, and each keeps the
+// >=1px floor at both lane edges (a bar clamped whole to an edge is that
+// edge's row). The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
 // reading is the source's bar, the same ink as the levelled bar behind it and
 // set off from it by its darker contour alone (one pixel at 100 %, the line
@@ -3162,21 +3166,19 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // stroke, no coverage, no blend.
 // THE EDGES: a neighbour column beyond the plate's left or right edge counts
 // as INSIDE (the waveform continues off screen, so no vertical line is drawn
-// at the area's sides); a row beyond the channel's lane counts as inside
-// where the bar was CLIPPED there — a tip that reached the sample domain's
-// edge (|v| >= 1 after its scale) — because the shape continues past the
-// lane rather than ending, and as OUTSIDE where the tip merely floors into
-// the lane's edge row short of full scale, the shape genuinely ending there.
-// So a clipped bar carries no line along the lane's edge, and the two
-// channels' clipped bars still meet flush at the split row. Each channel's
-// lane is its own shape; the
-// other channel's pixels are never a neighbour. A bar up to 2t px tall comes
-// out all border; the >=1px floor stands. THE ALGORITHM is per column, from
-// the row extents of the 2t + 1 columns around it alone, no 2D scan: a bar's
-// interior is its rows [r0 + t, r1 - t] (r0 / r1 themselves where that end
-// is clipped), intersected with the [r0, r1] of every in-plate column within
-// t on each side; its border is the bar's rows above and below that interior
-// (the whole bar when it is empty).
+// at the area's sides); a row beyond the bar's own ends is OUTSIDE, so both
+// ends of every inner bar carry the line. No inner bar is ever clipped at
+// the lane's edge — its tips are at most half scale (raw at most 1, the
+// compressor's scale and the expander's multiplier at most 1, the foreground
+// gain one half; kForegroundGain's static_assert, waveform_gain.cpp) — so
+// every end is a true end of the shape. Each channel's lane is its own shape;
+// the other channel's pixels are never a neighbour. A bar up to 2t px tall
+// comes out all border; the >=1px floor stands. THE ALGORITHM is per column,
+// from the row extents of the 2t + 1 columns around it alone, no 2D scan: a
+// bar's interior is its rows [r0 + t, r1 - t], intersected with the
+// [r0, r1] of every in-plate column within t on each side; its border is the
+// bar's rows above and below that interior (the whole bar when the interior
+// is empty).
 // The outline recolours pixels of the bar's own shape and adds none, each
 // written once with the fill's word or the outline's. paint_region_ink lifts
 // outline pixels as it lifts every opaque plate pixel, from the pixel's own

@@ -1083,10 +1083,10 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // exact-grid marker commits and pixel anchoring simultaneously valid at
     // maximum scroll.
     //
-    // The ONE right-wall owner. It was hoisted for the deleted strip drag's
-    // per-event pan clamp, which had to derive the same wall the resting clamp
-    // rests at; that caller left with the gesture (2026-08-15) and
-    // clamp_viewport_start below is the one reader again. Degenerate branches: visible >= total
+    // The ONE right-wall owner, with TWO readers: clamp_viewport_start below,
+    // which rests every viewport at or left of it, and
+    // source_frame_off_right_edge, which asks where a frame paints at it.
+    // Degenerate branches: visible >= total
     // (the whole song fits) → 0; q <= 0 (non-numeric zoom) → max(0, max_start).
     const int64_t visible = samples_visible(a, audio);
     const int64_t total   = live_total_frames(a, audio);

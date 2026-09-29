@@ -412,6 +412,24 @@ inline int displayed_column_at(double displayed, double vp_start, double spp) {
     return static_cast<int>(std::nearbyint((displayed - vp_start) / spp));
 }
 
+// IS A DISPLAYED FRAME ON SCREEN, AS PAINTED — THE CAMERAS' ONE VISIBILITY
+// TEST (architect 2026-09-28, strictly as painted): true iff the frame's
+// painted column, displayed_column_at's one rounding, lies in the waveform's
+// columns [0, w). The painters place a frame by that rounding, so a frame in
+// the view's last half-column rounds to grid point w and paints no stem and
+// no playhead line, while one in the half-column left of the start paints at
+// column 0; a sample-span test ([vp_start, vp_start + w·q)) called the first
+// on screen and the second off. PURE ARITHMETIC, the basis the caller's: the
+// three cameras that ask it — Viewport::reseat_playhead_to's keep-visible
+// edge-align, follow_scroll_if_needed and land_subject — pass the live
+// viewport and the live grid step q (painter_samples_per_pixel), the grid
+// their own writes land on. `spp` > 0 and `w` > 0 are the caller's.
+inline bool displayed_frame_on_screen(double displayed, double vp_start,
+                                      double spp, int w) {
+    const int col = displayed_column_at(displayed, vp_start, spp);
+    return col >= 0 && col < w;
+}
+
 // THE ANCHOR STEM'S PAINTED COLUMN — displayed_column_at clamped into the
 // waveform's [0, w-1], the column render_strip_anchor_stem draws. Its one
 // reader is the stem painter (paint_strip_drag_anchor, on the PLATE basis).

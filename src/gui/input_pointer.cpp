@@ -2458,9 +2458,8 @@ void GuiInputHandler::tell_capture_wrap_span() const {
 // hit and restore geometry ride the live one.
 // The column->x math is render_strip_anchor_stem's own origin term
 // (area.x + col), clamped in the waveform's bounds through the one clamp body
-// above; that painter adds its own +0.5 to centre a 1px cairo stroke in the
-// pixel, which is the same convention split stated once more at a third
-// consumer.
+// above; that painter fills the line's pixels [col, col + t) through
+// fill_waveform_line (render.h), its left edge on the column.
 double GuiInputHandler::nav_stem_column_x() const {
     const GuiRect wf_area = waveform_area(app);
     const double  spp     = painter_samples_per_pixel(app, audio, wf_area);
@@ -7463,11 +7462,10 @@ void GuiInputHandler::tick_hover_fades() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-three — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-one — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18, the FLATTEN button in
-// the iteration group since 2026-09-19, the WAVEFORM MAGNIFICATION lamp in the
-// zoom group since 2026-09-22 and the ZOOM IN / ZOOM OUT pair back at its head
-// the same day — and the bottom row's
+// the iteration group since 2026-09-19 and the WAVEFORM MAGNIFICATION lamp in
+// the zoom group since 2026-09-22 — and the bottom row's
 // seventeen: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member

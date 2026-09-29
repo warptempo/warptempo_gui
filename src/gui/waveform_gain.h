@@ -203,7 +203,9 @@
 //   PAINTER'S INNER BAR is raw x c x 1/2 x the expander's multiplier, the
 //   one clamp, the >=1px floor; with the expander on BOTH bars the gap
 //   between them is g / (c x 1/2), a pure function of L, and since
-//   c x 1/2 <= 1/2 < 1 <= g the inner can no longer exceed the outer. The
+//   c x 1/2 <= 1/2 < 1 <= g the inner can no longer exceed the outer in
+//   height about the centre row (a column wholly on one side of zero has its
+//   outer pushed outward past the inner — render_waveform's declaration). The
 //   reading is the source's bar over a levelled bar behind it, the core's
 //   relative thickness the loudness.
 //

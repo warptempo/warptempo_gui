@@ -131,21 +131,13 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
             s.view_playhead_frame = tph;
 
             // Derive the viewport so the translated playhead keeps its
-            // pre-flip screen column: ph_px is the playhead's column in the
-            // source domain; the target-domain viewport start places the
-            // translated playhead at that same column, at the unchanged zoom.
-            const double cur_spp = samples_per_pixel_at(
-                app.zoom_level, audio.working_column());
-            const double ph_px = (cur_spp > 0.0)
-                ? (static_cast<double>(app.playhead_cursor_sample -
-                                       app.viewport_start_sample) / cur_spp)
-                : 0.0;
-            const double new_spp = samples_per_pixel_at(
-                app.zoom_level, audio.working_column());
-            const double new_vp_d =
-                static_cast<double>(tph) - ph_px * new_spp;
+            // pre-flip screen column at the unchanged zoom: the zoom being
+            // one level in both domains, the column's offset in frames is the
+            // same on both sides, so the target-domain start is the
+            // translated playhead less the playhead's offset from the source
+            // viewport.
             s.view_viewport_start_frame =
-                static_cast<int64_t>(std::nearbyint(new_vp_d));
+                tph - (app.playhead_cursor_sample - app.viewport_start_sample);
         } else {
             s.view_viewport_start_frame = app.viewport_start_sample;
             s.view_playhead_frame       = app.playhead_cursor_sample;

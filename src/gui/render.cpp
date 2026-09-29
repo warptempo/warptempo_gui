@@ -392,28 +392,22 @@ void render_waveform(cairo_surface_t* dest,
     // THE BAR'S ROWS. The column's tips — its maximum -> top tip, its minimum
     // -> bottom tip, in float rows, never snapped — are clamped to this
     // channel's rows BEFORE any row index is derived, so a clipped interval
-    // cannot address outside the band; then both ends are floored and the bar
-    // is the rows r0 .. r1 inclusive. r0 == r1 for any sub-pixel interval,
-    // which is the >=1px floor stated at the top of this function, and it
-    // holds for both bars. (r0 > r1 — an EMPTY bar — only where both tips sit
-    // at or past the lane's bottom edge, a tip of -1 flooring to the row past
-    // the lane; it writes nothing.) The regime split (thin vs tall) went with
-    // the tip segments: there is one rendering for every column now, however
-    // small its interval. One owner for both bars and both lamps, so the
-    // outer and the inner cannot disagree about the geometry.
-    //
-    // THE OPEN ENDS are the inner outline's (the rule is at this function's
-    // declaration): an end whose tip reached the sample domain's edge — the
-    // magnified_tip clamp, |v| >= 1 — was CLIPPED at the lane's edge row, the
-    // shape continuing past the lane, so the row beyond the lane is not
-    // outside it there. A tip at full scale lands on exactly that edge row
-    // (yt == y_lo, yb == y_hi flooring to y_hi - 1 by the clamp), so an open
-    // end always sits on the lane's edge.
+    // cannot address outside the band; then both ends are floored and both
+    // row indices are clamped into the band's rows [y_lo, y_hi - 1], and the
+    // bar is the rows r0 .. r1 inclusive. r0 == r1 for any sub-pixel
+    // interval, which is the >=1px floor stated at the top of this function,
+    // and it holds for both bars AT BOTH LANE EDGES: a bar clamped whole to
+    // the top edge is the lane's top row, and one clamped whole to the bottom
+    // edge (both tips at -1, flooring to the row past the lane) is the lane's
+    // bottom row. The bar is never empty: the column's minimum is at most its
+    // maximum and a tip's scale is positive, so yt <= yb, and the clamps keep
+    // r0 <= r1. The regime split (thin vs tall) went with the tip segments:
+    // there is one rendering for every column now, however small its
+    // interval. One owner for both bars and both lamps, so the outer and the
+    // inner cannot disagree about the geometry.
     struct BarRows {
-        int  r0;
-        int  r1;
-        bool open_top;
-        bool open_bot;
+        int r0;
+        int r1;
     };
     const auto bar_rows = [&](double tip_min, double tip_max) {
         double yt = y_center - tip_max * half_h;
@@ -427,8 +421,9 @@ void render_waveform(cairo_surface_t* dest,
         int r0 = static_cast<int>(std::floor(yt));
         int r1 = static_cast<int>(std::floor(yb));
         if (r0 < y_lo)     r0 = y_lo;
+        if (r0 > y_hi - 1) r0 = y_hi - 1;
         if (r1 > y_hi - 1) r1 = y_hi - 1;
-        return BarRows{r0, r1, tip_max >= 1.0, tip_min <= -1.0};
+        return BarRows{r0, r1};
     };
 
     // THE DARK BAR AND THE LIT OUTER: its rows filled with one word, no
@@ -443,23 +438,23 @@ void render_waveform(cairo_surface_t* dest,
     // adds none). THE CONTOUR FROM THE 2t + 1 COLUMNS' EXTENTS, t =
     // outline_px (the line width, render.h's waveform_line_px, snapshotted on
     // the job), no 2D scan: a row of this bar is INTERIOR iff every row within
-    // t above and below it is in this bar (rows [r0 + t, r1 - t], and r0 / r1
-    // themselves at an open end) and it lies inside every column within t on
-    // each side (inside that column's [r0, r1]; a column beyond the plate's
-    // side edge counts as inside) — an erosion at distance t, the
-    // four-neighbour test at t = 1. That interior is one interval [lo, hi]
-    // because each bar is one; the rows of the bar above and below it are the
-    // border, the whole bar when it is empty. An empty neighbour (r0 > r1)
-    // empties it, so its side is all border, as it should be.
+    // t above and below it is in this bar (rows [r0 + t, r1 - t]) and it lies
+    // inside every column within t on each side (inside that column's
+    // [r0, r1]; a column beyond the plate's side edge counts as inside) — an
+    // erosion at distance t, the four-neighbour test at t = 1. That interior
+    // is one interval [lo, hi] because each bar is one; the rows of the bar
+    // above and below it are the border, the whole bar when the interior is
+    // empty. No inner tip reaches full scale (kForegroundGain's
+    // static_assert, waveform_gain.cpp), so no inner bar is clipped and each
+    // of its ends is a true end of the shape, taking the border.
     assert(!gain_or_null || outline_px >= 1);
     const int t = outline_px;
     const auto outline_bar = [&](int i, const std::vector<BarRows>& rows) {
         const int x = area.x + i;
         if (x < col_lo || x >= col_hi) return;
         const BarRows& b = rows[static_cast<size_t>(i)];
-        if (b.r0 > b.r1) return;
-        int lo = b.open_top ? b.r0 : b.r0 + t;
-        int hi = b.open_bot ? b.r1 : b.r1 - t;
+        int lo = b.r0 + t;
+        int hi = b.r1 - t;
         for (int d = 1; d <= t; ++d) {
             if (i - d >= 0) {
                 const BarRows& n = rows[static_cast<size_t>(i - d)];

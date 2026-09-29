@@ -228,10 +228,54 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     reseat_playhead_to(new_sample);
 }
 
+namespace {
+// THE KEEP-VISIBLE EDGE-ALIGN'S PLACEMENT, AS PAINTED: the viewport grid start
+// nearest the current one at which `subject` paints in the edge column on the
+// side it left by — past the right edge the smallest grid start that paints
+// it at or left of column w − 1, past the left edge the largest that paints it
+// at or right of column 0: the least page that shows it. Asked of the grid
+// itself (viewport_grid_point, displayed_column_at) rather than written as a
+// sample offset for the chokepoint to snap, because that snap's half-column
+// rounding could rest the subject back on grid point w (or −1), a page that
+// shows nothing. The walk starts one grid step beyond the answer and moves the
+// column by one per step (give or take the grid's sub-frame rounding), so it
+// takes at most three steps. Unclamped: clamp_viewport_start owns the song's
+// two ends, and at the right wall the wall wins — a frame in the song's last
+// half-column paints at grid point w at every viewport there (the off-edge
+// rule, source_frame_off_right_edge), so the edge-align settles on the wall.
+int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
+                                    bool past_right) {
+    const double  s = static_cast<double>(subject);
+    const int64_t k_subject = static_cast<int64_t>(std::nearbyint(s / q));
+    const auto column_at = [&](int64_t k) {
+        return displayed_column_at(
+            s, static_cast<double>(viewport_grid_point(k, q)), q);
+    };
+    int64_t k = 0;
+    if (past_right) {
+        k = k_subject - w - 1;
+        while (column_at(k) >= w) ++k;
+    } else {
+        k = k_subject + 2;
+        while (column_at(k) < 0) --k;
+    }
+    return viewport_grid_point(k, q);
+}
+}  // namespace
+
 // reseat_playhead_to: update playhead, keep viewport so playhead stays
 // visible. Invalidate only what changed. Clamps to the full audio
 // range; trim is purely cosmetic so the playhead is free to sit
 // outside the trim window.
+//
+// VISIBLE IS AS PAINTED (architect 2026-09-28): the keep-visible edge-align
+// asks displayed_frame_on_screen (warp_frame_map_view.h) of the new cursor on
+// the live viewport and grid, so a cursor landing in the view's last
+// half-column — inside the sample span, but painted at grid point w with no
+// stem — pages, and one in the half-column left of the start, painted at
+// column 0, does not. Off screen, the viewport takes
+// edge_aligned_viewport_start above: the cursor in the last column past the
+// right edge, in column 0 past the left.
 //
 // THE WRITE ALONE, WITH NO AUDITION END IN IT, and the callers who want it
 // that way are the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP
@@ -278,23 +322,18 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
     new_sample = clamp_playhead_to_live_domain(new_sample, app, audio);
 
     const int64_t old_vp = app.viewport_start_sample;
-    const int64_t visible = samples_visible(app, audio);
+    const GuiRect area = waveform_area(app);
+    const double  q = painter_samples_per_pixel(app, audio, area);
 
     app.playhead_cursor_sample = new_sample;
 
-    const int64_t vp_end = app.viewport_start_sample + visible;
-    bool viewport_changed = false;
-
-    if (new_sample < app.viewport_start_sample) {
-        app.viewport_start_sample = new_sample;
-        viewport_changed = true;
-    } else if (new_sample >= vp_end) {
-        const double q = painter_samples_per_pixel(app, audio,
-                                                   waveform_area(app));
-        const int64_t one_px = static_cast<int64_t>(std::nearbyint(q));
-        app.viewport_start_sample =
-            new_sample - (visible - std::max<int64_t>(one_px, 1));
-        viewport_changed = true;
+    if (q > 0.0 &&
+        !displayed_frame_on_screen(static_cast<double>(new_sample),
+                                   static_cast<double>(old_vp), q, area.w)) {
+        // Off screen and at or right of the start is past the right edge
+        // (a frame in the half-column left of the start paints at column 0).
+        app.viewport_start_sample = edge_aligned_viewport_start(
+            new_sample, q, area.w, new_sample >= old_vp);
     }
     // THE KEEP-VISIBLE EDGE-ALIGN SUSPENDS NO FOLLOW (architect 2026-09-23):
     // a camera move onto the playhead is a move onto follow's own subject,
@@ -304,7 +343,10 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
     const bool suspended_before = app.follow_suspended;
     clamp_viewport_start(app, audio);
     app.follow_suspended = suspended_before;
-    if (app.viewport_start_sample != old_vp) viewport_changed = true;
+    // The changed path is the settled camera's: at the right wall an
+    // edge-align the wall refuses leaves the start where it stood and pays no
+    // render.
+    const bool viewport_changed = app.viewport_start_sample != old_vp;
 
     if (viewport_changed) {
         // One-shot discrete viewport shift (Home / End, navigate-to-marker, or
@@ -890,7 +932,13 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
 // (kViewportEdgeMarginFraction, app_state.h — 5 % since 2026-09-22, the
 // architect finding the old 10 % lead "starts way too late"; the class's
 // inventory is at that declaration), leaving the rest of the window ahead.
-// Only the first move beyond vp_end triggers a scroll. Called at launch too
+// OFF SCREEN IS AS PAINTED (architect 2026-09-28, displayed_frame_on_screen,
+// warp_frame_map_view.h): the page fires once the scanner's painted column
+// leaves [0, w), so the half-column before the right edge, where its column
+// would round to grid point w and paint no line, already pages. AT THE RIGHT
+// WALL the page settles: in the song's last half-column the scanner paints at
+// w at every viewport the clamp allows, the page's write clamps back onto the
+// wall, the start compares unchanged and nothing repaints. Called at launch too
 // (right after the one launch body's seed — launch_playback_window — sets the
 // scanner to the launch position), so the same landing rule places an
 // offscreen launch position the same margin in from the left edge.
@@ -910,11 +958,15 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;
+    const GuiRect area = waveform_area(app);
+    const double  q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0) return;
     const int64_t target = app.playhead_scanner_active
         ? app.playhead_scanner_sample
         : app.playhead_cursor_sample;
-    const int64_t vp_end = app.viewport_start_sample + visible;
-    if (target < app.viewport_start_sample || target >= vp_end) {
+    if (!displayed_frame_on_screen(
+            static_cast<double>(target),
+            static_cast<double>(app.viewport_start_sample), q, area.w)) {
         const int64_t old_vp = app.viewport_start_sample;
         app.viewport_start_sample = paged_in_viewport_start(target, visible);
         const bool suspended_before = app.follow_suspended;
@@ -960,8 +1012,9 @@ void Viewport::follow_scroll_if_needed() {
 // RESTORE — undo / redo, a singleton (lo == hi) or a group's [earliest,
 // latest]; a restore is a non-linear jump, and centring is the least
 // prejudicial way of framing one:
-//   * WHOLLY ON SCREEN (lo ≥ start and hi < start + visible, in painted
-//     samples): NOTHING MOVES, at every zoom;
+//   * WHOLLY ON SCREEN (lo and hi each painted in the columns [0, w) of
+//     the live viewport, displayed_frame_on_screen — the walk's on-screen
+//     test is the same one): NOTHING MOVES, at every zoom;
 //   * CANNOT FIT: the range is wider than 1 − 2 × the edge margin of the
 //     PAINTED window at the live zoom (samples_visible, W·q on the
 //     sixteenth-frame grid — the span the centring below places the subject
@@ -996,7 +1049,10 @@ void Viewport::follow_scroll_if_needed() {
 // no-move answer leaves the posture as it stands. Degenerate geometry (no
 // strip width, no sample rate, nothing visible) writes nothing and answers true. clamp_viewport_start
 // owns the song's two ends and the grid; the changed path takes the discrete
-// move's tail.
+// move's tail. AT THE RIGHT WALL a subject in the song's last half-column
+// paints at grid point w at every viewport the clamp allows, so it never
+// counts as on screen there; its landing clamps onto the wall, and once the
+// camera rests there the start compares unchanged and nothing repaints.
 //
 // RULED OUT, never to be re-proposed (architect 2026-09-24):
 //   * LEAST MOVEMENT as a camera (2026-09-22 to 2026-09-24): it "sounds good
@@ -1035,15 +1091,18 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     const int     sr = audio.sample_rate();
     const int64_t visible = samples_visible(app, audio);
     if (W <= 0 || sr <= 0 || visible <= 0) return true;
-    const int64_t vp_end = app.viewport_start_sample + visible;
-    const bool on_screen = lo >= app.viewport_start_sample && hi < vp_end;
+    const double q = painter_samples_per_pixel(app, audio, waveform_area(app));
+    if (q <= 0.0) return true;
+    // On screen AS PAINTED, both ends (displayed_frame_on_screen).
+    const double vp = static_cast<double>(app.viewport_start_sample);
+    const bool on_screen =
+        displayed_frame_on_screen(static_cast<double>(lo), vp, q, W) &&
+        displayed_frame_on_screen(static_cast<double>(hi), vp, q, W);
     // The working-zoom read, inline by ruling: the walk's one zoom term. AS
     // PAINTED, q against the working column, not the level against 2.0: a
     // rest just above level 2 (under a 1/32 frame over the column) paints
     // the working picture exactly and walks like it.
-    const bool fine =
-        painter_samples_per_pixel(app, audio, waveform_area(app)) <=
-        static_cast<double>(audio.working_column());
+    const bool fine = q <= static_cast<double>(audio.working_column());
     bool centre = false;
     switch (kind) {
         case LandingKind::Walk:

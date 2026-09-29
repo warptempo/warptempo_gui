@@ -342,8 +342,11 @@ drag coordinates floor instead of truncating.
   (the waveform cap, the retired `kWaveformMaxHeightPx`'s value),
   `kDefaultProjectsRepo` and a
   blank `last_project`. (Keys the template no longer
-  stamps: `sync_path`, struck with Synchronize 2026-09-27 — settings.md; the lit plate's ink keys `fg_color` / `bg_color`, 2026-09-26 for
-  their tuning phase, struck at its close — settings.md; the S Pen's plane
+  stamps: `sync_path`, struck with Synchronize 2026-09-27 — settings.md; the lit plate's picture keys — `fg_color` / `bg_color` 2026-09-26,
+  then `fg_color` / `fg_border_color` / `bg_color` / `bg_border_color` and `waveform_widening`
+  2026-09-27, and `waveform_compressor_threshold_db` / `waveform_compressor_ratio` (2026-09-25, and again
+  2026-09-27 with `waveform_foreground_gain_db`) — each stamped for its tuning phase and
+  struck at its close — settings.md; the S Pen's plane
   keys, the single `pen_plane_distance` and then the pair `pen_plane_enter` /
   `pen_plane_exit`, 2026-09-27 for theirs, struck at its close the same day
   — settings.md; and `audio_player`, which stood here until
@@ -538,7 +541,7 @@ drag coordinates floor instead of truncating.
 
 The glass has no hardware keys, so the product paints its own (2026-08-27): a
 four-row Maliit-shaped surface standing while ANY OF THE TEXT EDITORS
-(`text_editor::Kind` is the authoritative list — seven today) stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
+(`text_editor::Kind` is the authoritative list — five today) stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
 directly above the bottom row over the waveform area's lower part, whose every
 key press goes through `synthesize_key` into the ORDINARY key path — so the
 editors' grammars, their refusals, the undo coalescing and the core's repeat

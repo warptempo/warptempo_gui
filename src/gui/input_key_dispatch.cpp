@@ -2470,26 +2470,21 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // own navigation press rather than a scrub, and the one entry owner stops a session that was already running
 // (open_history_mode_fresh), since a view that consumes Space could not otherwise
 // stop one.
-//   - = / - (bare)          → zoom in / out (restored 2026-09-22)
 //   - 0 (bare)              → the overview toggle (2026-09-23): full zoom
 //                             out stamping the live tab's view, then the
 //                             restore of that zoom, playhead and viewport —
 //                             the mode owns no navigation state, so the stamp
 //                             is the live tab's, and a restore that moves the
 //                             playhead clears the mode's focus as Home / End
-//                             do. At a ceiling nothing stamped it is THE
-//                             MODE'S OWN `c` (run_center_command forks on the
-//                             mode bit), stop and land included, admitted on
-//                             exactly the reason `c` itself is claimed one
-//                             line above the gate.
+//                             do. At a ceiling nothing stamped it is a silent
+//                             no-op, as in the live view.
 //   - PageUp/PageDown       → the paged viewport scroll
-//     (bare)                  — the three above are NAVIGATION, which is the
+//     (bare)                  — the two above are NAVIGATION, which is the
 //                             mode's whole vocabulary: the delta is laid out on
 //                             the viewport, so panning and zooming it is reading
-//                             it. Two of them are PURE viewport moves; `0`'s
-//                             restore (or its `c`) lands the playhead, which
-//                             the mode's diff-flag click and Tab cycle
-//                             already do.
+//                             it. PageUp/PageDown are PURE viewport moves; `0`'s
+//                             restore lands the playhead, which the mode's
+//                             diff-flag click and Tab cycle already do.
 //   - t / p / 1 / 2 / 3     → THE VIEW SWITCHES (architect 2026-08-04, from his
 //     (bare)                  first real session with the mode). THE DELTA IS
 //                             VIEW-INDEPENDENT AND THE PAINTED SUBSET IS NOT,

@@ -132,9 +132,9 @@ inline constexpr KeyDef kLetterRow2[] = {
 // as far as 16 slots allow, keeping the product's grammar characters
 // (digits, `+ - * : @ [ ] = _ /` and `?` for `url=` values; `.`, `,` and
 // Space on the shared bottom row) and filling from Plasma's page 2 order
-// (`$ = [ ]`). `#` and `|` are not typed anywhere (the flag editor composes
-// both from the marker, flag_editor.cpp) and `;` is in no grammar, so
-// neither is on the page.
+// (`$ = [ ]`). `#` and `|` are never typed (the flag editor composes both
+// from the marker, flag_editor.cpp) and `;` is in no grammar, so none of the
+// three is on the page.
 //
 // ROW 2'S LEADING SLOT IS TAB (architect 2026-08-27, with the project model):
 // the letter layer's Shift position, and the one key the letter layer has no
@@ -253,11 +253,11 @@ inline char shifted_char(char base, bool shift_armed) {
 
 // THE KEYSYM OF A CHARACTER KEY. GuiKey is the universal keysym numbering, in
 // which every printable ASCII character IS its own code point — `a` is 0x61,
-// `#` is 0x23, space is 0x20 — and GuiKey is ASCII CASE-FOLDED besides (the
+// `$` is 0x24, space is 0x20 — and GuiKey is ASCII CASE-FOLDED besides (the
 // backend's contract, at GuiInputCore::key_event), so the LOWERCASE base is the
 // keysym for a letter in both cases. That identity is why the punctuation this
 // keyboard types needs no named constants in GuiKeys: a name earns its place by
-// being BOUND somewhere, and nothing in the dispatch binds `#`, `|` or `_` —
+// being BOUND somewhere, and nothing in the dispatch binds `$`, `(` or `_` —
 // they exist only as characters an editor inserts.
 inline constexpr GuiKey keysym_of(char base) {
     return static_cast<GuiKey>(static_cast<unsigned char>(base));

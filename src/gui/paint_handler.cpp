@@ -1016,9 +1016,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // region button itself — bare `[`, wearing tool-rect-selection — was
     // deleted on 2026-09-22 (the tablet's pen reaches the trim bar, so the
     // overlay stands only while a sweep draws it), one box and one 2px gap
-    // off the walk, no separator moving; ZOOM IN leads the group since Zoom
-    // In and Zoom Out came back in front of Full zoom out that evening. What
-    // the group collects is the VIEWPORT CLASS — the four zoom commands, the
+    // off the walk, no separator moving; FULL ZOOM OUT leads the group. What
+    // the group collects is the VIEWPORT CLASS — the two zoom commands, the
     // magnification lamp, FOLLOW and RESTRICT UNDO — all in one
     // separator-led run. THIS TABLE IS THE
     // ROW'S PAINTED ORDER — the walk
@@ -6375,8 +6374,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // The three-way chain that used to live here is gone with the SPAN FORM: the
     // region is no longer a playhead at all (it IS THE TRIM — a ground recolor
     // DERIVED from the trim window every frame, written by the shift waveform
-    // sweep, previewed by the lower half's scrub click act, shown and hidden by
-    // bare `[`), so it hides
+    // sweep, previewed by the lower half's scrub click act, standing only
+    // while a sweep draws it), so it hides
     // nothing and suppresses nothing, and the split half-triangle renderer is
     // deleted outright. The non-empty-selection suppression is
     // gone too: a cursor resting ON the focused marker is simply hidden behind
