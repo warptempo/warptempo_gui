@@ -4952,16 +4952,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // PRESS (Qt's model, architect 2026-09-29 — AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
-    // ANY PRESS ENDS THE FLAG HOVER (architect 2026-09-29) off that same held
-    // bit: the hovered box fades out on its tail, the press acting on the
-    // stash exactly as it always did — the hover is paint, never a claim —
-    // and A PRIMARY PRESS PUTS THE PRESS FACE on the unit it lands on (the
-    // promoted stash's, the flags this press hits), with no fade, for as long
-    // as the button stays down (AppState::FlagHover's `pressed`). Paint only:
-    // what the press does below is decided exactly as it always was.
-    recompute_flag_hover();
-    if (button == GuiMouseButton::Left && mods.primary_button_held)
-        press_flag_unit(x, y);
     // ANY PRESS ENDS THE MENU ROW'S MODE, beside it and for a related reason: the
     // ruling ends the mode on every ordinary dismissal, and with no popup open a
     // press is the only pointer act there is — the press on the anchor, the press
@@ -6926,15 +6916,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // motion past the slop, never on the release's resting pointer
     // (AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
-    // THE LIFT ENDS THE FLAG'S PRESS FACE (architect 2026-09-29), above every
-    // gate for the tooltip bit's reason: the unit returns to whatever the
-    // hover writer next resolves — its hover at the selection bit it has now,
-    // with the pointer still on it, or rest when the pointer is gone (a
-    // finger's lift brings its leave). The writer is not run here: the hover
-    // is re-derived by the next motion, tick or pre-paint, after this lift's
-    // own act and a finger's leave, so a finger's lift never snaps a hover in
-    // for its leave to fade out.
-    if (!mods.primary_button_held) end_flag_press();
     // THE ON-SCREEN KEYBOARD'S OWED KEY-UP, above every gate and above even the
     // dropdown's release — the press's mirror. It is guarded on the held key
     // index alone, which only that surface's own press ever sets, so it claims
@@ -7565,207 +7546,7 @@ void GuiInputHandler::tick_hover_fades() {
         ++i;
     }
 
-    // THE FLAG HOVER'S FADES (architect 2026-09-29; AppState::FlagHover): the
-    // same advance, keyed to the unit's own box in the stash the next frame
-    // blits (flag_hover_stash). A unit whose flag no longer publishes a rect
-    // (it left the screen, an editor opened on it, or its marker is gone) is
-    // cut and erased — the lane's own rebuild repainted its pixels, and a
-    // payload's stem still standing (under the payload editor) is damaged so
-    // its tint goes too — and a unit settled dark is erased; each
-    // painted-level change damages that one box and, for a payload, its
-    // stem's column (flag_hover_stem_rect), nothing wider.
-    std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
-    const auto damage_stem = [&](const AppState::FlagHoverFade& f) {
-        GuiRect stem{0, 0, 0, 0};
-        if (f.unit.cell == MarkerCell::Payload &&
-            flag_hover_stem_rect(app, f.unit.marker, stem))
-            viewport.invalidate_rect(stem);
-    };
-    for (size_t i = 0; i < hf.size();) {
-        GuiRect box{0, 0, 0, 0};
-        if (!flag_hover_unit_box(app, hf[i].unit, box)) {
-            if (hover_fade_steps(hf[i].fade) > 0) damage_stem(hf[i]);
-            hf.erase(hf.begin() + static_cast<std::ptrdiff_t>(i));
-            continue;
-        }
-        if (hover_fade_advance(hf[i].fade, now)) {
-            viewport.invalidate_rect(box);
-            damage_stem(hf[i]);
-        }
-        if (!hf[i].fade.running && !hf[i].fade.rising) {
-            hf.erase(hf.begin() + static_cast<std::ptrdiff_t>(i));
-            continue;
-        }
-        running = running || hf[i].fade.running;
-        ++i;
-    }
-
     app.hover_fades_running = running;
-}
-
-namespace {
-
-// ONE UNIT'S HOVER EDGE: its fade slot (made on first use) takes the edge in
-// the SnapIn kind, the buttons' own (architect 2026-09-29, "like the icons"):
-// full the instant the hover begins, the 100 ms fade on the way out from
-// where the hidden animation stood, a return mid-fade full again at once. It
-// raises the tick's bit when an animation now runs, and returns whether the
-// PAINTED level moved at the edge — which a SnapIn edge does (the snap in,
-// and a short hover's tail starting below full), so the caller damages the
-// unit's box then; the tick's advances damage the rest.
-bool flag_hover_edge(AppState& app, const AppState::FlagHoverUnit& unit,
-                     bool hovered, int64_t now) {
-    std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
-    AppState::FlagHoverFade* slot = nullptr;
-    for (AppState::FlagHoverFade& f : hf)
-        if (f.unit == unit) { slot = &f; break; }
-    if (!slot) {
-        if (!hovered) return false;   // nothing painted, nothing to fade out
-        hf.push_back(AppState::FlagHoverFade{unit, HoverFade{}});
-        slot = &hf.back();
-    }
-    const int before = hover_fade_steps(slot->fade);
-    if (hover_fade_edge(slot->fade, HoverFadeKind::SnapIn, hovered, now))
-        app.hover_fades_running = true;
-    return hover_fade_steps(slot->fade) != before;
-}
-
-// WHAT ONE UNIT'S HOVER OR PRESS FACE COVERS: its box in the stash of record
-// (flag_hover_stash) and, for a PAYLOAD unit, its marker's stem column over
-// the waveform (the stem tint, paint_marker_stems) — each damaged through
-// `damage`, nothing wider.
-template <typename Damage>
-void damage_flag_hover_unit(const AppState& app,
-                            const AppState::FlagHoverUnit& unit,
-                            Damage&& damage) {
-    GuiRect r{0, 0, 0, 0};
-    if (flag_hover_unit_box(app, unit, r)) damage(r);
-    if (unit.cell == MarkerCell::Payload &&
-        flag_hover_stem_rect(app, unit.marker, r))
-        damage(r);
-}
-
-// THE HOVERED UNIT MOVES: the old one fades out, the new one snaps in, and
-// each unit whose painted level moved at its edge has its own paint damaged
-// (`damage`, the caller's viewport) — its box, and a payload's stem column.
-template <typename Damage>
-void set_flag_hover_unit(AppState& app, const AppState::FlagHoverUnit& unit,
-                         Damage&& damage) {
-    AppState::FlagHover& h = app.flag_hover;
-    if (unit == h.unit) return;
-    const int64_t now = monotonic_ms();
-    const auto edge = [&](const AppState::FlagHoverUnit& u, bool hovered) {
-        if (!flag_hover_edge(app, u, hovered, now)) return;
-        damage_flag_hover_unit(app, u, damage);
-    };
-    if (h.unit.named()) edge(h.unit, false);
-    h.unit = unit;
-    if (unit.named()) edge(unit, true);
-}
-
-// THE PRESSED UNIT MOVES (AppState::FlagHover's `pressed`): the old one's
-// press face and the new one's are edges with no fade, so each unit's own
-// paint — its box and a payload's stem column — is damaged through `damage`.
-template <typename Damage>
-void set_flag_press_unit(AppState& app, const AppState::FlagHoverUnit& unit,
-                         Damage&& damage) {
-    AppState::FlagHover& h = app.flag_hover;
-    if (unit == h.pressed) return;
-    if (h.pressed.named()) damage_flag_hover_unit(app, h.pressed, damage);
-    h.pressed = unit;
-    if (unit.named()) damage_flag_hover_unit(app, unit, damage);
-}
-
-} // namespace
-
-// NO UNIT IS PRESSABLE OR HOVERABLE at (x, y) where nothing is pressable: with
-// no piece to show, under a prompt's or a dialog editor's veil, under the
-// folder overlay's band, beside an open dropdown (it owns the pointer) or
-// under a notification card (opaque to the pointer). The pointer's own
-// absence is the writer's term, not this one.
-bool GuiInputHandler::flag_units_unreachable_at(int x, int y) const {
-    return app.loading || audio.total_frames() <= 0 ||
-           app.prompt.active || modal_dialog_editor_active() ||
-           folder_overlay_stands(app) ||
-           app.dropdown.open() ||
-           notification_card_at(app, x, y) != 0;
-}
-
-// THE FLAG HOVER'S ONE WRITER (the contract is at the declaration).
-void GuiInputHandler::recompute_flag_hover() {
-    AppState::FlagHover& h = app.flag_hover;
-    const auto damage = [this](const GuiRect& r) {
-        viewport.invalidate_rect(r);
-    };
-    // THE STASH OF RECORD CHANGED LANES (another column, an `h` edge, walk
-    // step or reading — never a store edit, which the identities survive):
-    // every identity names a flag of the old lane, so the fades are cut whole
-    // and the unit and the press start afresh — a leave. No damage is owed:
-    // the rebuild that staged the new lane damaged the whole strip and
-    // waveform (a mode edge's drop repaints them too), and the walk below
-    // snaps the unit now under the pointer in at full, so the lane change
-    // blinks no box.
-    const uint64_t lane = flag_hover_stash_lane(app);
-    if (lane != h.lane_key) {
-        h.lane_key = lane;
-        h.fades.clear();
-        h.unit     = AppState::FlagHoverUnit{};
-        h.pressed  = AppState::FlagHoverUnit{};
-    }
-    // THE PRESS ENDS WITH THE BUTTON: the lift ends it at the release's head
-    // (end_flag_press), and any later report of the button up — a button lost
-    // without a release — ends it here.
-    if (!app.redesign_tooltip.button_held)
-        set_flag_press_unit(app, AppState::FlagHoverUnit{}, damage);
-    const int mx = app.last_mouse_x;
-    const int my = app.last_mouse_y;
-    // NO UNIT UNDER THE POINTER out of the window (the pen above its plane
-    // leaves it) or where nothing is pressable (flag_units_unreachable_at).
-    // Each of these is the pointer LEAVING the unit for the paint.
-    const bool away =
-        !app.pointer_in_window || flag_units_unreachable_at(mx, my);
-    // NO HOVER PAINTED under a held primary button (a press, a drag, every
-    // finger contact — no hover under touch: the pointer is not resting,
-    // though it has not left); the unit the press went down on wears the
-    // press face instead.
-    const bool refused = away || app.redesign_tooltip.button_held;
-    set_flag_hover_unit(app,
-                        refused ? AppState::FlagHoverUnit{}
-                                : flag_hover_unit_at(app, mx, my),
-                        damage);
-}
-
-void GuiInputHandler::clear_flag_hover() {
-    // The pointer has left: the hovered unit fades out on its own tail, and a
-    // press face still standing ends with it.
-    const auto damage = [this](const GuiRect& r) {
-        viewport.invalidate_rect(r);
-    };
-    set_flag_press_unit(app, AppState::FlagHoverUnit{}, damage);
-    set_flag_hover_unit(app, AppState::FlagHoverUnit{}, damage);
-}
-
-void GuiInputHandler::press_flag_unit(int x, int y) {
-    // THE PRESS FACE GOES ON THE UNIT THE PRESS HITS (AppState::FlagHover's
-    // `pressed`): the promoted stash's unit under the press, where the hover's
-    // gates admit one and that stash is the lane the hover's identities
-    // belong to — the writer has just stamped `lane_key` off the stash of
-    // record, so a lane change waiting for its blit presses nothing.
-    const AppState::FlagHoverUnit unit =
-        flag_units_unreachable_at(x, y) ||
-                app.flag_stash_lane != app.flag_hover.lane_key
-            ? AppState::FlagHoverUnit{}
-            : flag_press_unit_at(app, x, y);
-    set_flag_press_unit(app, unit, [this](const GuiRect& r) {
-        viewport.invalidate_rect(r);
-    });
-}
-
-void GuiInputHandler::end_flag_press() {
-    set_flag_press_unit(app, AppState::FlagHoverUnit{},
-                        [this](const GuiRect& r) {
-                            viewport.invalidate_rect(r);
-                        });
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
@@ -10312,13 +10093,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // claim and the touch pan zone ask the same one owner
     // (notification_card_at) for the same reason.
     update_notification_hover(mouse_x, mouse_y);
-    // THE FLAG HOVER (architect 2026-09-29), above every branch for the same
-    // reason: it is paint alone, derived from the flag stash the next frame
-    // blits, the remembered position and the held button just written above,
-    // so every motion re-derives it — a held press or a drag clears it (the
-    // pressed unit wearing its press face instead), a veil or an overlay
-    // refuses it — and the branches below need not know it exists.
-    recompute_flag_hover();
     // (THE POINTER CURSOR IS NOT RESOLVED HERE, 2026-08-03. A push stood at this
     // spot — above every gesture branch, so that each early return below still
     // left the right cue up — and it went with the other twenty-two: the cursor

@@ -1447,22 +1447,6 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
     return f;
 }
 
-// THE PRESS FACE of one unit (FlagHoverPaint, render.h): every ink of its
-// face at kFlagPressMix along the line from its REST face to its SELECTED
-// face — the ladder's two answers for the unit's own class, `rest` and
-// `selected` — one derivation per ink (flag_press_color), so an ink that
-// selection does not move (the border, a live label) stays where it is.
-FlagFace flag_press_face(const FlagFace& rest, const FlagFace& selected) {
-    FlagFace f;
-    f.fill     = flag_press_color(rest.fill,   selected.fill);
-    f.edge     = flag_press_color(rest.edge,   selected.edge);
-    f.border   = flag_press_color(rest.border, selected.border);
-    f.label    = flag_press_color(rest.label,  selected.label);
-    f.stem     = flag_press_color(rest.stem,   selected.stem);
-    f.has_stem = rest.has_stem;
-    return f;
-}
-
 } // namespace
 
 // The phase-reset lead-in ring's colour (declaration in render.h): the ladder
@@ -1594,13 +1578,7 @@ void render_flag_boxes_impl(
     // resting flag-box face below AND THE TWO BOUND CELLS (architect
     // 2026-09-21: the cells wear their own column's hue — purple on W, blue
     // on P).
-    FlagColumnFace column_face,
-    // THE FLAG HOVER'S OVERLAY RE-RUN (FlagHoverPaint, render.h), or null for
-    // the cached pass. Non-null, the caller has clipped to the hovered or
-    // pressed unit's box and publishes nothing; this pass culls to that clip
-    // and paints the hovered unit's fill halfway to its selected fill, or the
-    // pressed unit's whole face at its press face.
-    const FlagHoverPaint* hover) {
+    FlagColumnFace column_face) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1643,15 +1621,6 @@ void render_flag_boxes_impl(
                                // is at the bound.
                                marker_flag_max_width_px(iteration_on),
         [&](int i, double left_x) {
-            // THE HOVER RE-RUN'S CULL, ahead of any shaping: only a flag whose
-            // widest possible run (its left border, the width bound, its
-            // closing column) reaches the clipped box can put a pixel there,
-            // so the rest are skipped unshaped.
-            if (hover &&
-                (left_x - border_w >= hover->clip_hi_x ||
-                 left_x + marker_flag_max_width_px(iteration_on) +
-                         2.0 * border_w <= hover->clip_lo_x))
-                return;
             // THE LABEL LAMBDA COMPOSES THE PAINTED FORM ITSELF — each
             // column's own, and the cut (where there is one) is inside it.
             const std::string text = label_of(i);
@@ -1772,36 +1741,9 @@ void render_flag_boxes_impl(
             const auto cell_selected = [&](MarkerCell c) {
                 return sel && c == bright;
             };
-            // THE HOVERED UNIT (FlagHoverPaint): this marker's box `c` under
-            // the pointer, not already painted in its selected pair, and
-            // faded in at all. Its face takes the half blend on the fill alone
-            // — `dis` the face's own disabled bit, so a disabled or follower
-            // cell blends its damped pair — and nothing else of the face moves.
-            // THE PRESSED UNIT takes its press face whole instead, selected or
-            // not, off the same two ends of the same class's line.
-            const auto hover_face = [&](FlagFace f, MarkerCell c,
-                                        bool face_dis) {
-                if (!hover || hover->marker_index != i || hover->cell != c)
-                    return f;
-                if (hover->pressed)
-                    return flag_press_face(
-                        resolve_flag_face(face_dis, red, /*selected=*/false,
-                                          column_face),
-                        resolve_flag_face(face_dis, red, /*selected=*/true,
-                                          column_face));
-                if (hover->level <= 0 || cell_selected(c))
-                    return f;
-                f.fill = flag_hover_fill(
-                    f.fill,
-                    resolve_flag_face(face_dis, red, /*selected=*/true,
-                                      column_face).fill,
-                    hover->level);
-                return f;
-            };
-            const FlagFace face = hover_face(
+            const FlagFace face =
                 resolve_flag_face(dis, red, cell_selected(MarkerCell::Payload),
-                                  column_face),
-                MarkerCell::Payload, dis);
+                                  column_face);
 
             // THE EDITED MARKER'S BOX IS NOT PAINTED HERE — the open editor
             // owns every pixel of it (render_flag_editor_box, which paints the
@@ -1933,11 +1875,9 @@ void render_flag_boxes_impl(
                         // OR cannot double-damp; the FLAG BOX above is
                         // untouched and keeps its live class, the grey being
                         // about the cells alone.
-                        hover_face(
-                            resolve_flag_face(dis || cells.follower, red,
-                                              cell_selected(which),
-                                              column_face),
-                            which, dis || cells.follower),
+                        resolve_flag_face(dis || cells.follower, red,
+                                          cell_selected(which),
+                                          column_face),
                         closes);
                 };
                 // The lower cell never closes a run this pass paints: with no
@@ -2033,7 +1973,6 @@ void render_flag_boxes_impl(
                 // column and `run_end` is the edited box's own seam, as before.
                 FlagHitRect r;
                 r.marker_index = i;
-                r.id = flag_marker_id_of(markers, i);
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
                 r.w = static_cast<double>(run_end - (bx - border_w));
@@ -2057,19 +1996,9 @@ void render_flag_boxes_impl(
                 // THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN — bx, the
                 // marker's own frame column, unchanged by the border standing
                 // to its left (the architect's explicit clause, spelled at
-                // marker_flag_border_px). Its selected colour is the ladder's
-                // own stem for the selected payload, the hover tint's far end,
-                // and its pressed colour the press face's stem off the
-                // ladder's rest and selected stems.
-                const GuiColor rest_stem =
-                    resolve_flag_face(dis, red, /*selected=*/false,
-                                      column_face).stem;
-                const GuiColor sel_stem =
-                    resolve_flag_face(dis, red, /*selected=*/true,
-                                      column_face).stem;
-                out_stems->push_back(MarkerStem{
-                    i, static_cast<double>(bx), face.stem, sel_stem,
-                    flag_press_color(rest_stem, sel_stem)});
+                // marker_flag_border_px).
+                out_stems->push_back(
+                    MarkerStem{i, static_cast<double>(bx), face.stem});
             }
         });
 
@@ -2121,8 +2050,7 @@ void render_flags(cairo_t* cr,
                   std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
                   const DragOverlay* drag_overlay,
-                  SuppressedBox suppressed,
-                  const FlagHoverPaint* hover) {
+                  SuppressedBox suppressed) {
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample, sample_rate,
@@ -2140,7 +2068,7 @@ void render_flags(cairo_t* cr,
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
         suppressed, iteration_on,
         focus_marker, focus_cell,
-        FlagColumnFace::Warp, hover);
+        FlagColumnFace::Warp);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -2160,8 +2088,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             std::vector<MarkerStem>* out_stems,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
                             const DragOverlay* drag_overlay,
-                            SuppressedBox suppressed,
-                            const FlagHoverPaint* hover) {
+                            SuppressedBox suppressed) {
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, phase_resets,
         viewport_start_sample, viewport_end_sample, sample_rate,
@@ -2194,7 +2121,7 @@ void render_phase_reset_flags(cairo_t* cr,
         suppressed.cell == MarkerCell::Payload ? SuppressedBox{} : suppressed,
         iteration_on,
         focus_marker, focus_cell,
-        FlagColumnFace::PhaseReset, hover);
+        FlagColumnFace::PhaseReset);
 }
 
 void render_history_diff_flags(
@@ -2209,8 +2136,7 @@ void render_history_diff_flags(
         const std::set<int>& selected,
         std::vector<FlagHitRect>* out_hit_rects,
         std::vector<MarkerStem>* out_stems,
-        const std::vector<WarpFrameMapSegment>* warp_frame_map,
-        const FlagHoverPaint* hover) {
+        const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     // The same clear-first contract the two marker painters carry: this pass is
     // the SOLE producer of both stashes while the history mode stands, so a
     // frame that paints nothing must leave nothing claimable behind.
@@ -2278,12 +2204,6 @@ void render_history_diff_flags(
         /*drag_overlay=*/nullptr,
         cull_width_px,
         [&](int i, double left_x) {
-            // THE HOVER RE-RUN'S CULL (the live lane's, over this lane's own
-            // width bound): a flag that cannot reach the clipped box is
-            // skipped unshaped.
-            if (hover && (left_x - border_w >= hover->clip_hi_x ||
-                          left_x + cull_width_px <= hover->clip_lo_x))
-                return;
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
             // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
             // either lights the flag, and BOTH HALVES of a changed pair take
@@ -2376,13 +2296,16 @@ void render_history_diff_flags(
             // inside each half's own box — so no pair-wide fallback is needed and
             // a toggle's dimmed half carries a dimmed label beside a
             // full-strength one.
-            const auto label_on = [](GuiColor fill, bool d) {
-                return d ? mix_color(kMarkerFlagLabel, fill,
-                                     kMarkerDisabledLabelMix)
-                         : kMarkerFlagLabel;
-            };
-            GuiColor removed_label = label_on(removed_fill, removed_disabled);
-            GuiColor added_label   = label_on(added_fill, added_disabled);
+            const GuiColor removed_label =
+                removed_disabled
+                    ? mix_color(kMarkerFlagLabel, removed_fill,
+                                kMarkerDisabledLabelMix)
+                    : kMarkerFlagLabel;
+            const GuiColor added_label =
+                added_disabled
+                    ? mix_color(kMarkerFlagLabel, added_fill,
+                                kMarkerDisabledLabelMix)
+                    : kMarkerFlagLabel;
 
             // THE TWO BORDER COLUMNS DIM BY WHAT EACH BELONGS TO. The box's own
             // left border stands OUTSIDE the leftmost half's fill and is that
@@ -2413,50 +2336,6 @@ void render_history_diff_flags(
             // PAINTED HALF's face element, so it dims with that half — the
             // added one on a pair or an added-only flag, the removed one on a
             // removed-only flag — the mirror of box_border's pick.
-            // THE FLAG HOVER (FlagHoverPaint, render.h): a diff flag is one
-            // item, so a hovered unfocused one blends BOTH halves' fills
-            // halfway to their own selected fills — each damped by its own
-            // side's disabled bit exactly as the rest fill above was — and
-            // nothing else of the face moves. The labels above were resolved
-            // off the rest fills and stay as they are.
-            // A PRESSED diff flag, focused or not, takes each half's press
-            // face instead: its fill, edge and label at kFlagPressMix along
-            // the half's own rest → selected line, each end damped by its own
-            // side's disabled bit (the borders, which the focus never moves,
-            // stay).
-            const auto damp = [](GuiColor c, bool d) {
-                return d ? mix_color(c, kRedesignContentGround,
-                                     kMarkerDisabledMix)
-                         : c;
-            };
-            if (hover && hover->marker_index == i && hover->pressed) {
-                const GuiColor rf  = damp(kHistoryRemovedFill, removed_disabled);
-                const GuiColor rfs =
-                    damp(kHistoryRemovedFillSel, removed_disabled);
-                const GuiColor af  = damp(kHistoryAddedFill, added_disabled);
-                const GuiColor afs = damp(kHistoryAddedFillSel, added_disabled);
-                removed_fill = flag_press_color(rf, rfs);
-                removed_edge = flag_press_color(
-                    damp(kHistoryRemovedEdge, removed_disabled),
-                    damp(kHistoryRemovedEdgeSel, removed_disabled));
-                removed_label =
-                    flag_press_color(label_on(rf, removed_disabled),
-                                     label_on(rfs, removed_disabled));
-                added_fill = flag_press_color(af, afs);
-                added_edge = flag_press_color(
-                    damp(kHistoryAddedEdge, added_disabled),
-                    damp(kHistoryAddedEdgeSel, added_disabled));
-                added_label = flag_press_color(label_on(af, added_disabled),
-                                               label_on(afs, added_disabled));
-            } else if (hover && hover->marker_index == i && !focused &&
-                       hover->level > 0) {
-                removed_fill = flag_hover_fill(
-                    removed_fill, damp(kHistoryRemovedFillSel, removed_disabled),
-                    hover->level);
-                added_fill = flag_hover_fill(
-                    added_fill, damp(kHistoryAddedFillSel, added_disabled),
-                    hover->level);
-            }
             const bool right_half_disabled =
                 (w_added > 0) ? added_disabled : removed_disabled;
             const GuiColor close_border =
@@ -2563,7 +2442,6 @@ void render_history_diff_flags(
                 // one item however wide it is painted.
                 FlagHitRect r;
                 r.marker_index = i;
-                r.id = flag_marker_id_of(flags, i);
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
                 r.w = static_cast<double>(bw + 2 * border_w);
@@ -2612,15 +2490,13 @@ void render_history_diff_flags(
                     !pair && (w_removed > 0 ? removed_disabled
                                             : added_disabled);
                 if (!single_disabled) {
-                    const GuiColor rest_stem =
-                        f.removed ? kHistoryRemovedFill : kHistoryAddedFill;
-                    const GuiColor sel_stem =
-                        f.removed ? kHistoryRemovedFillSel
-                                  : kHistoryAddedFillSel;
                     out_stems->push_back(
                         MarkerStem{i, static_cast<double>(bx),
-                                   focused ? sel_stem : rest_stem, sel_stem,
-                                   flag_press_color(rest_stem, sel_stem)});
+                                   f.removed
+                                       ? (focused ? kHistoryRemovedFillSel
+                                                  : kHistoryRemovedFill)
+                                       : (focused ? kHistoryAddedFillSel
+                                                  : kHistoryAddedFill)});
                 }
             }
         });

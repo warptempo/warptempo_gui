@@ -1439,41 +1439,6 @@ struct GuiInputHandler {
     void stamp_redesign_button_hover_fade(RedesignButton id, int64_t now);
     void tick_hover_fades();
 
-    // THE FLAG HOVER (architect 2026-09-29; the state is AppState::FlagHover,
-    // the paint rule render.h's FlagHoverPaint). recompute_ is its ONE writer,
-    // called by every pointer motion (on_motion's head), every press
-    // (on_button_press's head), the tick and the pre-paint hook ahead of
-    // every frame (main.cpp): it resolves the unit under the remembered
-    // position from the flag stash the next frame blits (flag_hover_stash:
-    // the staged one while a rebuild waits for its promote, else the promoted
-    // one) — the topmost flag rect, named by its marker's identity
-    // (FlagMarkerId, so a store edit moving the indices is no change of unit),
-    // the cell by its painted boundaries, nothing under the open editor's
-    // riding boxes — and answers NONE while the pointer is out of the window, the primary
-    // button is held (a press, a drag, any finger contact: no hover under
-    // touch), the load is in flight, a prompt or a dialog editor veils the
-    // window, the folder overlay stands, a dropdown is open or a notification
-    // card is under the pointer (every term but the window and the button is
-    // flag_units_unreachable_at's, which also answers an empty piece). A
-    // change of unit fades the old one out and snaps the new one in
-    // (HoverFadeKind::SnapIn, the buttons' own, architect 2026-09-29) and
-    // damages the two units' own paint alone — the box and, for a payload,
-    // its stem's column (the stem tint). It also ends the PRESS FACE on any
-    // report of the primary button up, and resets both on a lane change.
-    // clear_ is the pointer-leave hook's (main.cpp): the hovered unit fades
-    // out and a standing press face ends, every reason alike.
-    // THE PRESS FACE (architect 2026-09-29, AppState::FlagHover's `pressed`):
-    // press_ is on_button_press's, right after the writer at its head, for a
-    // primary press — it names the unit under the press in the promoted
-    // stash, the flags the press hits — and end_ is on_button_release's head
-    // (the lift, above every gate). Paint state only: no input road reads any
-    // of them.
-    void recompute_flag_hover();
-    void clear_flag_hover();
-    void press_flag_unit(int x, int y);
-    void end_flag_press();
-    bool flag_units_unreachable_at(int x, int y) const;
-
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
     // action of EVERY non-chord button — the three of kDropdownMenus, File,

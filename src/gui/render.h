@@ -6,7 +6,6 @@
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 
 #include <cairo/cairo.h>
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -80,25 +79,6 @@ inline constexpr GuiColor mix_color(GuiColor own, GuiColor toward,
         toward.r + (own.r - toward.r) * t,
         toward.g + (own.g - toward.g) * t,
         toward.b + (own.b - toward.b) * t,
-    };
-}
-
-// THE EXTRAPOLATING TWIN of the mix above: the same line, toward + (own -
-// toward) × keep_own, with keep_own UNCLAMPED, so a factor past 1 carries
-// `own` beyond itself, away from `toward`. What it clamps is each CHANNEL, to
-// cairo's [0, 1] (the [0, 255] of the 8-bit pixel), so no factor can leave the
-// domain. Its one reader is the flag's press face (kFlagPressMix, below): a
-// point on a flag's own rest → selected line past the selected end.
-inline constexpr GuiColor extend_color(GuiColor own, GuiColor toward,
-                                       double keep_own) {
-    const auto channel = [keep_own](double o, double t) {
-        const double v = t + (o - t) * keep_own;
-        return v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
-    };
-    return GuiColor{
-        channel(own.r, toward.r),
-        channel(own.g, toward.g),
-        channel(own.b, toward.b),
     };
 }
 
@@ -2712,8 +2692,7 @@ inline constexpr int64_t kTooltipExpireMs = 10000;
 // scaled_px, the authored px being to gui_scale what the dp is to density:
 // exactly 4dp on the tablet at its 200 % under the 320 density it runs at,
 // and half the drag gate (kDragMovedThresholdPx 8, app_state.h) as Android's
-// is half its touch slop. Floor 1, so a small scale never zeroes it. Its one
-// reader is the tooltip's wait (note_tooltip_hover).
+// is half its touch slop. Floor 1, so a small scale never zeroes it.
 inline constexpr int kTooltipHoverSlopPx = 4;
 inline int tooltip_hover_slop_px() {
     return scaled_px(kTooltipHoverSlopPx, 1);
@@ -2962,52 +2941,6 @@ inline int playhead_half_px() {
 // characters any more.)
 
 
-// THE MARKER A FLAG NAMES, ACROSS A STORE EDIT (architect 2026-09-29, the flag
-// hover's identity). There is no stable id in the stores, so the identity is
-// the one this product already follows a marker by across an edit — its
-// authored SOURCE frame — with its place in the run of rows sharing that
-// frame, COUNTED FROM THE RUN'S END: `ordinal` 0 is the run's last row. From
-// the end because insert_marker places a new row FIRST in its run
-// (lower_bound, marker_store.h), so a drop onto an occupied frame, and its
-// undo, leave every standing row's identity where it was. A Delete, a drop,
-// an undo or redo elsewhere in the store moves a marker's INDEX and leaves
-// this alone; what changes it is the marker's own frame moving, or the rows
-// AFTER it inside its own coincident run changing — read then as that marker
-// leaving, which is the hover's ordinary leave. The live columns count
-// in their store, the `h` view in its diff list (both sorted by frame at
-// rest). `ordinal` -1 names nothing.
-struct FlagMarkerId {
-    int64_t frame   = 0;
-    int     ordinal = -1;
-    bool named() const { return ordinal >= 0; }
-    bool operator==(const FlagMarkerId&) const = default;
-};
-
-// The identity of row `i` of a frame-sorted row vector (a marker store, the
-// diff list), and its inverse — the row an identity names, or -1.
-template <typename Rows>
-FlagMarkerId flag_marker_id_of(const Rows& rows, int i) {
-    if (i < 0 || static_cast<std::size_t>(i) >= rows.size()) return {};
-    const int64_t frame = rows[static_cast<std::size_t>(i)].time_frame;
-    int ordinal = 0;
-    for (std::size_t j = static_cast<std::size_t>(i) + 1;
-         j < rows.size() && rows[j].time_frame == frame; ++j)
-        ++ordinal;
-    return FlagMarkerId{frame, ordinal};
-}
-template <typename Rows>
-int flag_marker_index_of(const Rows& rows, FlagMarkerId id) {
-    if (!id.named()) return -1;
-    const auto run_end = std::upper_bound(
-        rows.begin(), rows.end(), id.frame,
-        [](int64_t f, const auto& row) { return f < row.time_frame; });
-    const std::ptrdiff_t i =
-        (run_end - rows.begin()) - 1 - static_cast<std::ptrdiff_t>(id.ordinal);
-    if (i < 0 || rows[static_cast<std::size_t>(i)].time_frame != id.frame)
-        return -1;
-    return static_cast<int>(i);
-}
-
 // Screen-coord rect of one rendered flag, keyed back to its marker index.
 // Emitted in the same order flags appear left-to-right. It is the WHOLE PAINTED
 // BOX — the 1px left border included, so its x sits one column left of the
@@ -3048,12 +2981,6 @@ int flag_marker_index_of(const Rows& rows, FlagMarkerId id) {
 // what makes a press on a riding cell resolve to the same marker and the same
 // MarkerCell a press on the resting one resolves to. A cold or absent run
 // reads marker_index -1 with a zero rect, which contains no point.
-//
-// `id` NAMES THE MARKER ACROSS A STORE EDIT (FlagMarkerId above), which the
-// index cannot: the two lane producers set it — the flag pass off the store,
-// the `h` view's pass off its diff list — and its one reader is the flag
-// hover (AppState::FlagHover). The editor's riding run names none; the hover
-// answers nothing on it.
 struct FlagHitRect {
     int    marker_index = -1;
     double x            = 0.0;
@@ -3062,100 +2989,7 @@ struct FlagHitRect {
     double h            = 0.0;
     double iter_lower_boundary_x = 0.0;
     double iter_upper_boundary_x = 0.0;
-    FlagMarkerId id{};
 };
-
-// THE FLAG HOVER (architect 2026-09-29) — PCManFM-Qt's hover shape, subtle: the
-// flag box (or, under grid iterations, the CELL) under a resting pointer paints
-// its FILL as a linear blend, kFlagHoverMix = 50 %, between the fill it paints
-// at rest and the one it would paint selected — each class through its own
-// pair off the one ladder (resolve_flag_face: the default and red classes'
-// rest and bright fills, the disabled blend of either; the `h` view's added and
-// removed pairs, damped the same way) — so a hovered box reads halfway to
-// selected. A unit already painted in its selected pair shows no hover change.
-// The edge, the border, the label and the lead-in ring never move; the
-// payload's stem takes the blend (below).
-// THE BLEND RIDES THE BUTTONS' HoverFade (kHoverFadeMs / kHoverFadeSteps,
-// above) IN THE BUTTONS' OWN KIND, SnapIn (architect 2026-09-29, "like the
-// icons"): full the instant the hover begins, the 100 ms fade on the way out,
-// so the painted fill is hover_fade_color over the half blend at the unit's
-// painted level.
-// THE PAYLOAD'S STEM TAKES IT TOO (architect 2026-09-29): while a marker's
-// PAYLOAD unit paints a level, its stem on the waveform is flag_hover_fill of
-// its rest stem and its selected stem at that level (paint_marker_stems, off
-// MarkerStem's two colours; the stem wears the fill, so the one blend serves
-// both). A hovered bound cell tints no stem, and the phase-reset lead-in ring
-// takes nothing (it paints only on the selected focus, which shows no hover).
-// The hover is a pure function of where the pointer rests and the unit's
-// CURRENT selection bit: a unit deselected under the pointer shows the half
-// blend at once and keeps it, one selected under it shows its selected pair.
-//
-// THE PRESS FACE (architect 2026-09-29): while the primary button — the
-// mouse's, the pen's contact, a finger's — is DOWN on a unit, from the press
-// through any drag it starts (the horizontal marker drag and the value drag
-// alike: the drag moves the flag and has no look of its own) until the lift,
-// that unit paints its PRESS FACE, whatever its selection: every ink the face
-// paints — fill, edge, border, label, and a payload's stem — at kFlagPressMix
-// = 150 % ALONG ITS OWN REST → SELECTED LINE, selected + ½ (selected − rest)
-// per channel, clamped (extend_color, above), each class through its own pair
-// as the hover's blend is (the disabled blend of either, a tie follower's
-// damped cells, the `h` view's two halves). The border and the live label
-// sit at one colour at both ends, so they stay; the lead-in ring takes
-// nothing. It shows at the press with no fade, as the buttons' pressed
-// interior does, and the lift hands the unit back to the hover (the pointer
-// still on it) or to rest (a finger's lift, the pointer gone). The roster
-// buttons carry a pressed state distinct from their hover, and the flag
-// carries the same three faces now: REST → HOVER → PRESS → HOVER. It
-// REPLACES the deselect disarm of the same day (a deselected unit painted at
-// rest until the pointer left it, or crossed the tooltip's slop and rested
-// its 700 ms wake-up), whose timing read oddly on glass; after a
-// deselect-click the unit lands on its hover and stays there.
-//
-// IT IS PAINT, NEVER A CLAIM (strictly as painted): the hover is resolved from
-// the flag stash the next painted frame blits (flag_hover_stash, app_state.h —
-// the staged one while a rebuild waits for its promote, else the promoted
-// one) and changes nothing a press hits. THE OVERLAY IS A RE-RUN OF THE LANE
-// PASS, clipped to the hovered unit's box: GuiPaintHandler::paint_flag_hover
-// (waveform_cache.cpp) paints the same flags in the same store order over the
-// cached surface's blit, so later flags keep covering earlier ones exactly as
-// the cache drew them, and the one thing that differs inside the clip is the
-// hovered unit's fill. The cached surface itself never carries a hover, so a
-// hover edge rebuilds nothing and damages the unit's own paint alone: its box
-// and, for a payload unit, its stem's column over the waveform
-// (flag_hover_stem_rect). `clip_lo_x` / `clip_hi_x` are the clip's columns,
-// which the pass's cull reads to shape only the flags that can reach the box.
-// THE PRESS FACE IS THE SAME OVERLAY, one more re-run clipped to the pressed
-// unit's box with `pressed` set, painted after the fades (a pressed unit's own
-// fading tail is not drawn under it); its edges damage the same box and stem.
-//
-// THE TWO FACES ARE TWO POINTS ON ONE LINE, the unit's rest colour (0) to its
-// selected colour (1): the hover at kFlagHoverMix, the press at kFlagPressMix.
-inline constexpr double kFlagHoverMix = 0.5;
-inline constexpr double kFlagPressMix = 1.5;
-struct FlagHoverPaint {
-    // The hovered marker's index in the lane the pass paints — the live store,
-    // or the diff list in `h` — resolved from the hover's identity at the
-    // paint (flag_hover_live_index, app_state.h).
-    int        marker_index = -1;
-    MarkerCell cell         = MarkerCell::Payload;
-    int        level        = 0;    // the painted HoverFade level
-    // The unit paints its press face instead (the level is not read).
-    bool       pressed      = false;
-    int        clip_lo_x    = 0;
-    int        clip_hi_x    = 0;
-};
-// The hovered colour: the half blend toward the selected colour, faded in by
-// the unit's painted level through the buttons' one fade blend — a flag
-// unit's fill, and its payload's stem (the stem wearing the fill).
-inline GuiColor flag_hover_fill(GuiColor rest, GuiColor selected, int level) {
-    return hover_fade_color(mix_color(selected, rest, kFlagHoverMix), rest,
-                            level);
-}
-// The pressed colour of one ink: kFlagPressMix along its rest → selected
-// line, no fade — every ink of a pressed unit's face, and its payload's stem.
-inline GuiColor flag_press_color(GuiColor rest, GuiColor selected) {
-    return extend_color(selected, rest, kFlagPressMix);
-}
 
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
 // have no X11 or event-loop dependencies.
@@ -3905,17 +3739,10 @@ struct FlagLaneRects {
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved face — its class, brightened
-// when its flag box is (architect 2026-09-23) — and `selected_color` the stem
-// the same marker would paint with its flag box selected (equal to `color`
-// when it is). The consumer applies two transients over them, neither of which
-// the painter has any business baking into a cache: the open flag editor's
-// invalid-commit red flash, which wins, and THE FLAG HOVER'S STEM TINT
-// (architect 2026-09-29, FlagHoverPaint above), flag_hover_fill of the two
-// at the payload unit's painted hover level, and while that unit is PRESSED
-// `pressed_color` — flag_press_color of its rest stem and its selected stem,
-// published because a selected marker's `color` is its selected stem and no
-// longer names the rest end of the line — the contract is at
-// GuiPaintHandler::paint_marker_stems.
+// when its flag box is (architect 2026-09-23); the consumer applies
+// exactly one override over it, the open flag editor's invalid-commit red flash
+// (a transient the painter has no business baking into a cache — the contract is
+// at GuiPaintHandler::paint_marker_stems).
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3927,14 +3754,11 @@ struct FlagLaneRects {
 // ALSO the pointer's stem hit source for 2026-08-01..12, when the stem was a
 // second click surface of its marker; that surface is deleted — stems are
 // pointer-inert, the seventh glass ruling — so the stash is paint-only again
-// and `marker_index` serves the painters' identity bookkeeping alone: the
-// flash's and the hover tint's lookups, and the hover's stem damage.)
+// and `marker_index` serves the painter's identity bookkeeping alone.)
 struct MarkerStem {
     int      marker_index;
     double   x;
     GuiColor color;
-    GuiColor selected_color;
-    GuiColor pressed_color;
 };
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an
@@ -4147,10 +3971,7 @@ void render_flags(cairo_t* cr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
-                  SuppressedBox suppressed = SuppressedBox{},
-                  // THE FLAG HOVER'S OVERLAY RE-RUN (FlagHoverPaint above):
-                  // null for the cached pass, which never paints a hover.
-                  const FlagHoverPaint* hover = nullptr);
+                  SuppressedBox suppressed = SuppressedBox{});
 
 // THE OPEN MARKER-LANE EDITOR'S RESOLVED GEOMETRY, published by
 // render_flag_editor_box and consumed by the pointer path. Every field is
@@ -4370,9 +4191,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             // suppression naming the payload box, that editor
                             // being a warp-column surface by its own open
                             // gates, while the bound editor is both columns'.
-                            SuppressedBox suppressed = SuppressedBox{},
-                            // The flag hover's overlay re-run, render_flags'.
-                            const FlagHoverPaint* hover = nullptr);
+                            SuppressedBox suppressed = SuppressedBox{});
 
 // THE COLOUR A LIVE PHASE RESET'S STEM WEARS, for a surface that must wear it
 // too — the lead-in ring (paint_phase_reset_overlay_ring, paint_handler.cpp,
@@ -4549,10 +4368,7 @@ void render_history_diff_flags(cairo_t* cr,
                                const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,
                                std::vector<MarkerStem>* out_stems,
-                               const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                               // The flag hover's overlay re-run (a diff flag
-                               // hovers whole — no cells on this lane).
-                               const FlagHoverPaint* hover = nullptr);
+                               const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical
 // line's payload WHOLE — the tempo's derived base and its every deviation

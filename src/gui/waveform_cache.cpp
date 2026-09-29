@@ -1198,12 +1198,158 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     cairo_paint(ccr);
     cairo_restore(ccr);
 
-    // THE HISTORY MODE'S LIST IS REBUILT WITH THE SURFACE THAT SHOWS IT
-    // (rebuild_history_diff_flags' contract): here, ahead of the lane pass,
-    // and never by the hover overlay, which paints the list as it stands.
-    if (history_active) rebuild_history_diff_flags();
-    render_flag_lane(ccr, /*hover=*/nullptr, &app.staged_flag_hit_rects,
-                     &app.staged_marker_stems);
+    // top_strip_area is anchored at (0, 0), so the local rect equals the
+    // surface rect. The blit at on_redraw time positions the surface back
+    // at screen (0, 0).
+    const GuiRect local_top_strip{0, 0, surface_w, surface_h};
+    // The flag/triangle LANE rects the shapes occupy, straight from the lane
+    // accessors — the same bands the empty-lane press gate and the hit rects
+    // read. The top strip is anchored at screen y=0 and this surface mirrors it
+    // 1:1, so the screen-coordinate lane rects are already surface-local.
+    const FlagLaneRects flag_lanes{top_marker_row_area(app)};
+    // The width the flag column mapping divides the displayed span by — the same
+    // denominator the live trim pass and the hit tests use (this pass stages it
+    // for them at the tail), so flags stay column-aligned with the trim/stem
+    // verticals below them. The surface stays full-strip width; a
+    // non-multiple-of-16 window leaves the gutter columns unpainted.
+    //
+    // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
+    // resize-window basis split). The numerator here is the DISPLAYED span
+    // (fp_vp_end - fp_vp_start); dividing it by the LIVE effective width mixed
+    // two epochs, so during an async plate publish after a resize the flags,
+    // their stems, their hit rects and the trim geometry were mapped at a
+    // samples-per-pixel the blitted ink did not have — while the playhead, the
+    // region columns and the ruler, which all read plate_viewport_basis
+    // ((fp_vp_end - fp_vp_start)/fp_area_w), had it right. The plate is blitted
+    // 1:1 at its own scale, never stretched, so an overlay that wants to sit on
+    // its ink must use the width that ink was rendered at. Both bases are now
+    // the one expression, and the fingerprint still catches every width change
+    // transitively: fp_vp_end = vp_start + w·q (viewport_end_sample) and the
+    // effective width moves in steps of 16 at q >= working column / 2 frames/px
+    // (23 or more on every deployed device), so no width change can leave the
+    // displayed span untouched.
+    //
+    // The live-width fallback mirrors plate_viewport_basis's own cold arm: the
+    // fp_rendered gate above makes it unreachable in practice (a plate that has
+    // published rendered at a positive width), and it costs one compare.
+    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
+                                              : waveform_area(app).w;
+    const int sr = audio.sample_rate();
+
+    const std::vector<WarpFrameMapSegment>* tmap_arg =
+        (is_target && !wf_cache.fp_warp_frame_map.empty())
+            ? &wf_cache.fp_warp_frame_map : nullptr;
+
+    DragOverlay drag_overlay_storage;
+    const DragOverlay* drag_overlay = nullptr;
+    if (app.drag.active) {
+        drag_overlay_storage.indices = &app.drag.dragging_markers;
+        drag_overlay_storage.times   = &app.drag.moveable_times;
+        drag_overlay = &drag_overlay_storage;
+    }
+
+    // (No trim pass here: trim is painted LIVE, every pixel of it, inside its
+    // own lane (GuiPaintHandler::paint_trim over top_trim_row_area), and this
+    // cache holds the marker and phase-reset FLAG shapes. Two owners over two
+    // disjoint bands — nothing to arbitrate between them.)
+
+    // Red-flag sets: the marker indices whose render normalizes to the 1.00
+    // fallback OR that share their frame with another row of their own store,
+    // disabled or not (the caches' contract, warp_frame_map_view.h), painted
+    // the hard-coded red class: kMarkerFlagFillRed/kMarkerFlagEdgeRed at rest
+    // and their Sel pair on a selected marker's addressed cell (architect
+    // 2026-09-16 — red takes the selection swap like every other class, the
+    // cue being the hue), with the kMarkerStemRed stem at rest and the bright
+    // fill selected, following the flag like every other stem (architect
+    // 2026-09-23; resolve_flag_face — a
+    // disabled red marker blends whichever of the two pairs it would have worn
+    // toward the lane ground and stays recognisably red).
+    // Read from the memoized caches (keyed on the respective store
+    // generation), so the silent classification runs only on a marker change,
+    // not on this per-tick rebuild; the committed store means a red flag
+    // freezes through a marker drag and re-evaluates at commit. The active
+    // view supplies only its own column's set.
+    //
+    // THIS IS THE SOLE PRODUCER of the marker painter's stash (app.flag_hit_rects
+    // / app.marker_stems, contract at their declaration): the boxes' widths are
+    // derived from shaped labels, so the pass that draws them is the only one
+    // that can report them. It writes the STAGED pair, because what it draws
+    // is an offscreen surface; on_redraw promotes the pair at the frame that
+    // blits that surface (the stage bit is raised at the tail below). The
+    // active view supplies its own column's stash and the other column's is
+    // not retained — hit tests and the stem pass are both active-column-only.
+    if (history_active) {
+        // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
+        // marker paints. (The lane is not the whole of that suppression — the
+        // phase-reset lead-in RING is a live-marker surface in the WAVEFORM, and
+        // it is gated at its own visibility owner, phase_reset_overlay_band in
+        // paint_handler.cpp, since 2026-08-05.) This arm becomes the producer of the same two
+        // stashes the two marker arms below produce — with `marker_index`
+        // carrying an index into app.history_mode.flags rather than into a
+        // store, which is what lets hit_test_flag serve the mode's focus click
+        // unchanged.
+        rebuild_history_diff_flags();
+        render_history_diff_flags(
+            ccr, local_top_strip, flag_lanes, wave_w,
+            app.history_mode.flags,
+            vp_start, vp_end,
+            history_focus,
+            app.history_mode.selection,
+            &app.staged_flag_hit_rects,
+            &app.staged_marker_stems,
+            // THE SAME MAP ARGUMENT the live columns take — a diff flag's frame
+            // is an authored SOURCE frame exactly as a marker's is, in both
+            // stores, so target view translates it through the same segments and
+            // a removed marker lands on the column a live one at that frame
+            // would.
+            tmap_arg);
+    } else if (mv == 'P') {
+        const std::set<int>& pr_red =
+            phase_reset_red_flag_set_cached(app).red;
+        render_phase_reset_flags(
+            ccr, local_top_strip, flag_lanes, wave_w,
+            app.phaseresetmarkers.markers(),
+            vp_start, vp_end, sr,
+            app.selected_markers,
+            pr_red,
+            // The mode's verdict FOR THIS COLUMN, which paints its two BOUND
+            // CELLS (its hop bracket) exactly as the warp column's are painted
+            // when the lamp was lit there instead.
+            iter_on,
+            // The focus and its addressed cell — the bright cell, which on
+            // this column can be the payload or a bound cell
+            // (render_flags' declaration).
+            app.last_selected_marker,
+            app.addressed_cell,
+            &app.staged_flag_hit_rects,
+            &app.staged_marker_stems,
+            tmap_arg,
+            drag_overlay,
+            suppressed);
+    } else {
+        // The WARP column — mv == 'W', the one letter left after the two arms
+        // above.
+        const std::set<int>& warp_red = warp_red_flag_set_cached(
+            app, sr, static_cast<long>(audio.total_frames())).red;
+        // (The suppression reaches this call as its last argument: whichever
+        // box the standing editor is opened on — and every box to the RIGHT of
+        // it — is that editor's to paint, not this pass's.)
+        render_flags(ccr, local_top_strip, flag_lanes, wave_w,
+                     app.warpmarkers.markers(),
+                     vp_start, vp_end, sr,
+                     app.selected_markers,
+                     warp_red,
+                     iter_on,
+                     // The focus and its addressed cell — the bright cell
+                     // (render_flags' declaration).
+                     app.last_selected_marker,
+                     app.addressed_cell,
+                     &app.staged_flag_hit_rects,
+                     &app.staged_marker_stems,
+                     tmap_arg,
+                     drag_overlay,
+                     suppressed);
+    }
 
     cairo_destroy(ccr);
 
@@ -1211,9 +1357,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // next frame's promote (GuiPaintHandler::on_redraw), the frame that blits
     // the surface just drawn. Unconditional like that blit — the contract, and
     // why it does not wait behind the displayed-basis freeze, is at
-    // AppState::flag_hit_rects. The lane it was painted in rides with it, the
-    // flag hover's identities belonging to that lane (flag_lane_key).
-    app.staged_flag_stash_lane = flag_lane_key(app);
+    // AppState::flag_hit_rects.
     app.flag_stash_staged = true;
 
     flag_cache.fp_vp_start                = vp_start;
@@ -1273,11 +1417,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // flags' own geometry.
     app.staged_displayed_vp_start = wf_cache.fp_vp_start;
     app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
-    // (The plate's width, the lane pass's own column-mapping denominator —
-    // the derivation is at wave_w in render_flag_lane.)
-    app.staged_displayed_area_w   = wf_cache.fp_area_w > 0
-                                        ? wf_cache.fp_area_w
-                                        : waveform_area(app).w;
+    app.staged_displayed_area_w   = wave_w;
     app.staged_displayed_valid = true;
 
     // THE REBUILD'S OWN DAMAGE REACHES THE WAVEFORM (architect 2026-08-01,
@@ -1325,228 +1465,4 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // mutation, every pan/zoom, every drag motion event — so those pay nothing.
     const GuiRect wave = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, wave.y + wave.h);
-}
-
-// THE LANE PASS (the contract is at the declaration, paint_handler.h): every
-// argument the three lane painters take, derived ONCE here from the live state
-// and the displayed plate's fingerprint, for the cache's rebuild and the
-// hover overlay alike.
-void GuiPaintHandler::render_flag_lane(cairo_t* cr, const FlagHoverPaint* hover,
-                                       std::vector<FlagHitRect>* out_hit_rects,
-                                       std::vector<MarkerStem>* out_stems) {
-    const GuiRect top_strip = top_strip_area(app);
-    const int surface_w = top_strip.w;
-    const int surface_h = top_strip.h;
-    const int64_t  vp_start  = wf_cache.fp_vp_start;
-    const int64_t  vp_end    = wf_cache.fp_vp_end;
-    const bool     is_target = wf_cache.fp_target;
-    const char     mv        = app.active_markers_view;
-    const bool     iter_on   = iteration_column_lit(app, mv);
-    const SuppressedBox suppressed = suppressed_flag_box(app);
-    const bool     history_active = app.history_mode.active;
-    const int      history_focus  = app.history_mode.focus;
-
-    // top_strip_area is anchored at (0, 0), so the local rect equals the
-    // surface rect. The blit at on_redraw time positions the surface back
-    // at screen (0, 0).
-    const GuiRect local_top_strip{0, 0, surface_w, surface_h};
-    // The flag/triangle LANE rects the shapes occupy, straight from the lane
-    // accessors — the same bands the empty-lane press gate and the hit rects
-    // read. The top strip is anchored at screen y=0 and this surface mirrors it
-    // 1:1, so the screen-coordinate lane rects are already surface-local.
-    const FlagLaneRects flag_lanes{top_marker_row_area(app)};
-    // The width the flag column mapping divides the displayed span by — the same
-    // denominator the live trim pass and the hit tests use (this pass stages it
-    // for them at the tail), so flags stay column-aligned with the trim/stem
-    // verticals below them. The surface stays full-strip width; a
-    // non-multiple-of-16 window leaves the gutter columns unpainted.
-    //
-    // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
-    // resize-window basis split). The numerator here is the DISPLAYED span
-    // (fp_vp_end - fp_vp_start); dividing it by the LIVE effective width mixed
-    // two epochs, so during an async plate publish after a resize the flags,
-    // their stems, their hit rects and the trim geometry were mapped at a
-    // samples-per-pixel the blitted ink did not have — while the playhead, the
-    // region columns and the ruler, which all read plate_viewport_basis
-    // ((fp_vp_end - fp_vp_start)/fp_area_w), had it right. The plate is blitted
-    // 1:1 at its own scale, never stretched, so an overlay that wants to sit on
-    // its ink must use the width that ink was rendered at. Both bases are now
-    // the one expression, and the fingerprint still catches every width change
-    // transitively: fp_vp_end = vp_start + w·q (viewport_end_sample) and the
-    // effective width moves in steps of 16 at q >= working column / 2 frames/px
-    // (23 or more on every deployed device), so no width change can leave the
-    // displayed span untouched.
-    //
-    // The live-width fallback mirrors plate_viewport_basis's own cold arm: both
-    // callers' fp_rendered gate makes it unreachable in practice (a plate that
-    // has published rendered at a positive width), and it costs one compare.
-    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
-                                              : waveform_area(app).w;
-    const int sr = audio.sample_rate();
-
-    const std::vector<WarpFrameMapSegment>* tmap_arg =
-        (is_target && !wf_cache.fp_warp_frame_map.empty())
-            ? &wf_cache.fp_warp_frame_map : nullptr;
-
-    DragOverlay drag_overlay_storage;
-    const DragOverlay* drag_overlay = nullptr;
-    if (app.drag.active) {
-        drag_overlay_storage.indices = &app.drag.dragging_markers;
-        drag_overlay_storage.times   = &app.drag.moveable_times;
-        drag_overlay = &drag_overlay_storage;
-    }
-
-    // (No trim pass here: trim is painted LIVE, every pixel of it, inside its
-    // own lane (GuiPaintHandler::paint_trim over top_trim_row_area), and this
-    // cache holds the marker and phase-reset FLAG shapes. Two owners over two
-    // disjoint bands — nothing to arbitrate between them.)
-
-    // Red-flag sets: the marker indices whose render normalizes to the 1.00
-    // fallback OR that share their frame with another row of their own store,
-    // disabled or not (the caches' contract, warp_frame_map_view.h), painted
-    // the hard-coded red class: kMarkerFlagFillRed/kMarkerFlagEdgeRed at rest
-    // and their Sel pair on a selected marker's addressed cell (architect
-    // 2026-09-16 — red takes the selection swap like every other class, the
-    // cue being the hue), with the kMarkerStemRed stem at rest and the bright
-    // fill selected, following the flag like every other stem (architect
-    // 2026-09-23; resolve_flag_face — a
-    // disabled red marker blends whichever of the two pairs it would have worn
-    // toward the lane ground and stays recognisably red).
-    // Read from the memoized caches (keyed on the respective store
-    // generation), so the silent classification runs only on a marker change,
-    // not on this per-tick rebuild; the committed store means a red flag
-    // freezes through a marker drag and re-evaluates at commit. The active
-    // view supplies only its own column's set.
-    //
-    // THIS IS THE SOLE PRODUCER of the marker painter's stash (app.flag_hit_rects
-    // / app.marker_stems, contract at their declaration): the boxes' widths are
-    // derived from shaped labels, so the pass that draws them is the only one
-    // that can report them. It writes the STAGED pair, because what it draws
-    // is an offscreen surface; on_redraw promotes the pair at the frame that
-    // blits that surface (the stage bit is raised at the tail below). The
-    // active view supplies its own column's stash and the other column's is
-    // not retained — hit tests and the stem pass are both active-column-only.
-    if (history_active) {
-        // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
-        // marker paints. (The lane is not the whole of that suppression — the
-        // phase-reset lead-in RING is a live-marker surface in the WAVEFORM, and
-        // it is gated at its own visibility owner, phase_reset_overlay_band in
-        // paint_handler.cpp, since 2026-08-05.) This arm becomes the producer of the same two
-        // stashes the two marker arms below produce — with `marker_index`
-        // carrying an index into app.history_mode.flags rather than into a
-        // store, which is what lets hit_test_flag serve the mode's focus click
-        // unchanged.
-        render_history_diff_flags(
-            cr, local_top_strip, flag_lanes, wave_w,
-            app.history_mode.flags,
-            vp_start, vp_end,
-            history_focus,
-            app.history_mode.selection,
-            out_hit_rects,
-            out_stems,
-            // THE SAME MAP ARGUMENT the live columns take — a diff flag's frame
-            // is an authored SOURCE frame exactly as a marker's is, in both
-            // stores, so target view translates it through the same segments and
-            // a removed marker lands on the column a live one at that frame
-            // would.
-            tmap_arg,
-            hover);
-    } else if (mv == 'P') {
-        const std::set<int>& pr_red =
-            phase_reset_red_flag_set_cached(app).red;
-        render_phase_reset_flags(
-            cr, local_top_strip, flag_lanes, wave_w,
-            app.phaseresetmarkers.markers(),
-            vp_start, vp_end, sr,
-            app.selected_markers,
-            pr_red,
-            // The mode's verdict FOR THIS COLUMN, which paints its two BOUND
-            // CELLS (its hop bracket) exactly as the warp column's are painted
-            // when the lamp was lit there instead.
-            iter_on,
-            // The focus and its addressed cell — the bright cell, which on
-            // this column can be the payload or a bound cell
-            // (render_flags' declaration).
-            app.last_selected_marker,
-            app.addressed_cell,
-            out_hit_rects,
-            out_stems,
-            tmap_arg,
-            drag_overlay,
-            suppressed,
-            hover);
-    } else {
-        // The WARP column — mv == 'W', the one letter left after the two arms
-        // above.
-        const std::set<int>& warp_red = warp_red_flag_set_cached(
-            app, sr, static_cast<long>(audio.total_frames())).red;
-        // (The suppression reaches this call as its last argument: whichever
-        // box the standing editor is opened on — and every box to the RIGHT of
-        // it — is that editor's to paint, not this pass's.)
-        render_flags(cr, local_top_strip, flag_lanes, wave_w,
-                     app.warpmarkers.markers(),
-                     vp_start, vp_end, sr,
-                     app.selected_markers,
-                     warp_red,
-                     iter_on,
-                     // The focus and its addressed cell — the bright cell
-                     // (render_flags' declaration).
-                     app.last_selected_marker,
-                     app.addressed_cell,
-                     out_hit_rects,
-                     out_stems,
-                     tmap_arg,
-                     drag_overlay,
-                     suppressed,
-                     hover);
-    }
-}
-
-// THE FLAG HOVER'S OVERLAY (the contract is at the declaration; the rule at
-// render.h's FlagHoverPaint). Each painting unit re-runs the lane pass inside
-// its own box, so the flags that overlap that box repaint in store order over
-// the blit exactly as the cache drew them, and only the hovered unit's fill —
-// or the pressed unit's face — differs. The same readiness gates the cache's
-// rebuild takes: no surface or no displayed plate means no flags on screen to
-// hover or press.
-// THE UNIT IS AN IDENTITY (AppState::FlagHover), resolved twice here, each in
-// its own index space: its BOX in the stash this frame blits, and the index
-// the re-run paints it at in the live lane — which a store edit may already
-// have moved ahead of the cache's rebuild, so the stash's index could name
-// another row there. A unit with no live row (its marker is gone, the rebuild
-// not yet run) paints no overlay: the blit alone shows it at rest.
-// THE PRESSED UNIT PAINTS LAST, and its own fading tail not at all: the press
-// face is the whole of that unit's look while the button is down.
-void GuiPaintHandler::paint_flag_hover(cairo_t* cr) {
-    const AppState::FlagHover& h = app.flag_hover;
-    if (h.fades.empty() && !h.pressed.named()) return;
-    if (!flag_cache.surface) return;
-    if (app.loading || audio.total_frames() <= 0) return;
-    if (!wf_cache.fp_rendered) return;
-    const auto overlay = [&](const AppState::FlagHoverUnit& unit, int level,
-                             bool pressed) {
-        GuiRect box{0, 0, 0, 0};
-        if (!flag_hover_unit_box(app, unit, box)) return;
-        const int live = flag_hover_live_index(app, unit.marker);
-        if (live < 0) return;
-        FlagHoverPaint hp;
-        hp.marker_index = live;
-        hp.cell         = unit.cell;
-        hp.level        = level;
-        hp.pressed      = pressed;
-        hp.clip_lo_x    = box.x;
-        hp.clip_hi_x    = box.x + box.w;
-        cairo_save(cr);
-        cairo_rectangle(cr, box.x, box.y, box.w, box.h);
-        cairo_clip(cr);
-        render_flag_lane(cr, &hp, nullptr, nullptr);
-        cairo_restore(cr);
-    };
-    for (const AppState::FlagHoverFade& f : h.fades) {
-        if (h.pressed.named() && f.unit == h.pressed) continue;
-        const int level = hover_fade_steps(f.fade);
-        if (level <= 0) continue;
-        overlay(f.unit, level, /*pressed=*/false);
-    }
-    if (h.pressed.named()) overlay(h.pressed, 0, /*pressed=*/true);
 }

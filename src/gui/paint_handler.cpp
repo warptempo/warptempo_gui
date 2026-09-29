@@ -173,10 +173,9 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                              const GuiRect& top_strip) {
     // Flag annotations in the top strip. The marker/phase-reset flag BOXES live
     // on flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
-    // this pass is a blit plus the flag HOVER's clipped re-run over it (since
-    // 2026-09-29, below). (Trim's bar and endcaps left this cache for the
+    // this pass is a pure blit. (Trim's bar and endcaps left this cache for the
     // live paint_trim pass.) The boxes CARRY THEIR TEXT since row 5 — the marker-text lane
-    // that used to show it beneath them is gone — so the only other thing painted
+    // that used to show it beneath them is gone — so the only thing painted
     // after this blit in that band is the open editor's overlay
     // (render_flag_editor_box) — which is why the EDITED BOX, and every box of
     // that marker standing to its right, are NOT in this surface at all: they
@@ -197,11 +196,6 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
         cairo_paint(cr);
         cairo_restore(cr);
     }
-    // THE FLAG HOVER AND THE PRESS FACE (architect 2026-09-29) paint straight
-    // over the blit, inside each hovered or pressed unit's own box — the
-    // surface never carries either, so an edge rebuilds nothing
-    // (paint_flag_hover, waveform_cache.cpp).
-    paint_flag_hover(cr);
 }
 
 // -- The redesigned rows: paint_menu_row / paint_tab_row / paint_icon_row
@@ -5968,19 +5962,6 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             ? ed.target
             : -1;
 
-    // THE FLAG HOVER'S STEM TINT (architect 2026-09-29; the rule at render.h's
-    // FlagHoverPaint): a stem whose marker's PAYLOAD unit paints a hover level
-    // takes the flag's own blend of its rest and selected stems at that level.
-    // A selected stem publishes the same colour twice, so the blend leaves it
-    // standing. A stem whose marker's PAYLOAD unit is PRESSED wears the press
-    // face's stem instead (`pressed_color`, selected or not; flag_press_stem),
-    // which wins over any level. The lookup runs only while some unit paints a
-    // level or is pressed, and matches the stem by its marker's IDENTITY
-    // resolved in this stash (flag_press_stem, flag_hover_stem_level), so a
-    // store edit that moved the indices cannot tint another marker's stem.
-    const bool hover_live = !app.flag_hover.fades.empty() ||
-                            app.flag_hover.pressed.named();
-
     cairo_save(cr);
     const double y0 = static_cast<double>(area.y);
     const double y1 = static_cast<double>(area.y + area.h);
@@ -5993,23 +5974,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
         // waveform_line_px() width at the right edge.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        GuiColor c = stem.color;
-        if (stem.marker_index == flash_idx) {
-            c = kMarkerStemRed;
-        } else if (hover_live) {
-            // paint_flag_hover's own gates: the press, else a level, and a
-            // box the flag pass published (none under the payload editor), so
-            // the stem tints exactly when its flag does.
-            if (flag_press_stem(app, stem.marker_index)) {
-                c = stem.pressed_color;
-            } else {
-                const int level =
-                    flag_hover_stem_level(app, stem.marker_index);
-                if (level > 0)
-                    c = flag_hover_fill(stem.color, stem.selected_color,
-                                        level);
-            }
-        }
+        const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
+                                                            : stem.color;
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
         fill_waveform_line(cr, area.x, area.w, col, y0, y1);
     }
@@ -8717,7 +8683,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     if (app.flag_stash_staged) {
         std::swap(app.flag_hit_rects, app.staged_flag_hit_rects);
         std::swap(app.marker_stems, app.staged_marker_stems);
-        std::swap(app.flag_stash_lane, app.staged_flag_stash_lane);
         app.flag_stash_staged = false;
     }
 

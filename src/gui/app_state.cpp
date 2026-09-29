@@ -223,11 +223,8 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
 // riding box must resolve to the marker and the cell a resting one resolves
 // to, and the only way to be sure of that is to answer both out of the same
 // walk with the same boundary idiom.
-// `rects` is the lane pass's stash the walk reads: the promoted one for every
-// press and cursor, the stash of record for the flag hover (flag_hover_stash).
-static const FlagHitRect* topmost_flag_rect_in(
-        const AppState& app, const std::vector<FlagHitRect>& rects,
-        int mouse_x, int mouse_y) {
+static const FlagHitRect* topmost_flag_rect(const AppState& app,
+                                            int mouse_x, int mouse_y) {
     // THE OPEN EDITOR'S RIDING BOXES ARE ASKED FIRST — whichever of the
     // marker's boxes stand to the RIGHT of the field, re-painted at its right
     // edge by the editor's painter and published there as a flag rect of their
@@ -257,7 +254,8 @@ static const FlagHitRect* topmost_flag_rect_in(
         mouse_y >= rc.y && mouse_y < rc.y + rc.h) {
         return &rc;
     }
-    for (auto it = rects.rbegin(); it != rects.rend(); ++it) {
+    for (auto it = app.flag_hit_rects.rbegin();
+         it != app.flag_hit_rects.rend(); ++it) {
         const FlagHitRect& r = *it;
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h) {
@@ -265,10 +263,6 @@ static const FlagHitRect* topmost_flag_rect_in(
         }
     }
     return nullptr;
-}
-static const FlagHitRect* topmost_flag_rect(const AppState& app,
-                                            int mouse_x, int mouse_y) {
-    return topmost_flag_rect_in(app, app.flag_hit_rects, mouse_x, mouse_y);
 }
 
 MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
@@ -285,161 +279,6 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     if (x >= r->iter_upper_boundary_x) return MarkerCell::Upper;
     if (x >= r->iter_lower_boundary_x) return MarkerCell::Lower;
     return MarkerCell::Payload;
-}
-
-uint64_t flag_lane_key(const AppState& app) {
-    uint64_t h = 1469598103934665603ull;
-    const auto mix = [&h](uint64_t v) {
-        h ^= v + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
-    };
-    mix(static_cast<uint64_t>(static_cast<unsigned char>(
-        app.active_markers_view)));
-    mix(app.history_mode.active ? 1u : 0u);
-    if (app.history_mode.active) {
-        mix(static_cast<uint64_t>(app.history_mode.generation));
-        mix(static_cast<uint64_t>(app.history_mode.index));
-        mix(static_cast<uint64_t>(app.history_mode.local_index));
-        mix(static_cast<uint64_t>(app.history_mode.source));
-        mix(static_cast<uint64_t>(app.history_compare()));
-    }
-    return h;
-}
-
-const std::vector<FlagHitRect>& flag_hover_stash(const AppState& app) {
-    return app.flag_stash_staged ? app.staged_flag_hit_rects
-                                 : app.flag_hit_rects;
-}
-
-const std::vector<MarkerStem>& flag_hover_stems(const AppState& app) {
-    return app.flag_stash_staged ? app.staged_marker_stems : app.marker_stems;
-}
-
-uint64_t flag_hover_stash_lane(const AppState& app) {
-    return app.flag_stash_staged ? app.staged_flag_stash_lane
-                                 : app.flag_stash_lane;
-}
-
-// The unit at a point of `rects` — the hover's and the press's one walk.
-static AppState::FlagHoverUnit flag_unit_in(
-        const AppState& app, const std::vector<FlagHitRect>& rects,
-        int mouse_x, int mouse_y) {
-    const FlagHitRect* r = topmost_flag_rect_in(app, rects, mouse_x, mouse_y);
-    // The riding boxes are the editor's paint and carry no hover or press
-    // face; the walk answering one of them means the point is on them, so
-    // no unit is there.
-    if (!r || r == &app.flag_editor_box.riding_cells) return {};
-    AppState::FlagHoverUnit unit;
-    unit.marker = r->id;
-    const double x = static_cast<double>(mouse_x);
-    if (x >= r->iter_upper_boundary_x)      unit.cell = MarkerCell::Upper;
-    else if (x >= r->iter_lower_boundary_x) unit.cell = MarkerCell::Lower;
-    return unit;
-}
-
-AppState::FlagHoverUnit flag_hover_unit_at(const AppState& app, int mouse_x,
-                                           int mouse_y) {
-    return flag_unit_in(app, flag_hover_stash(app), mouse_x, mouse_y);
-}
-
-AppState::FlagHoverUnit flag_press_unit_at(const AppState& app, int mouse_x,
-                                           int mouse_y) {
-    return flag_unit_in(app, app.flag_hit_rects, mouse_x, mouse_y);
-}
-
-// The stash of record's rect naming `marker`, or nullptr.
-static const FlagHitRect* flag_hover_rect_of(const AppState& app,
-                                             FlagMarkerId marker) {
-    if (!marker.named()) return nullptr;
-    for (const FlagHitRect& r : flag_hover_stash(app))
-        if (r.id == marker) return &r;
-    return nullptr;
-}
-
-int flag_hover_stash_index(const AppState& app, FlagMarkerId marker) {
-    const FlagHitRect* r = flag_hover_rect_of(app, marker);
-    return r ? r->marker_index : -1;
-}
-
-bool flag_hover_unit_box(const AppState& app,
-                         const AppState::FlagHoverUnit& unit,
-                         GuiRect& box_out) {
-    const FlagHitRect* rp = flag_hover_rect_of(app, unit.marker);
-    if (!rp) return false;
-    const FlagHitRect& r = *rp;
-    double lo = r.x;
-    double hi = r.x + r.w;
-    switch (unit.cell) {
-        case MarkerCell::Payload:
-            hi = std::min(hi, r.iter_lower_boundary_x);
-            break;
-        case MarkerCell::Lower:
-            lo = std::max(lo, r.iter_lower_boundary_x);
-            hi = std::min(hi, r.iter_upper_boundary_x);
-            break;
-        case MarkerCell::Upper:
-            lo = std::max(lo, r.iter_upper_boundary_x);
-            break;
-    }
-    const int x0 = static_cast<int>(std::floor(lo));
-    const int x1 = static_cast<int>(std::ceil(hi));
-    if (x1 <= x0 || r.h <= 0.0) return false;
-    box_out = GuiRect{x0, static_cast<int>(r.y), x1 - x0,
-                      static_cast<int>(r.h)};
-    return true;
-}
-
-bool flag_hover_stem_rect(const AppState& app, FlagMarkerId marker,
-                          GuiRect& rect_out) {
-    const int stash_index = flag_hover_stash_index(app, marker);
-    if (stash_index < 0) return false;
-    for (const MarkerStem& stem : flag_hover_stems(app)) {
-        if (stem.marker_index != stash_index) continue;
-        // paint_marker_stems' own column and fill_waveform_line's own gate and
-        // right-edge clip, on the area that painter is handed.
-        const GuiRect area = waveform_area(app);
-        const int col = static_cast<int>(
-            std::nearbyint(stem.x - static_cast<double>(area.x)));
-        if (col < 0 || col >= area.w || area.h <= 0) return false;
-        const int t = waveform_line_px();
-        const int w = col + t < area.w ? t : area.w - col;
-        rect_out = GuiRect{area.x + col, area.y, w, area.h};
-        return true;
-    }
-    return false;
-}
-
-int flag_hover_stem_level(const AppState& app, int stash_index) {
-    if (stash_index < 0) return 0;
-    for (const AppState::FlagHoverFade& f : app.flag_hover.fades) {
-        if (f.unit.cell != MarkerCell::Payload) continue;
-        const int level = hover_fade_steps(f.fade);
-        if (level <= 0) continue;
-        if (flag_hover_stash_index(app, f.unit.marker) != stash_index) continue;
-        GuiRect box{0, 0, 0, 0};
-        return flag_hover_unit_box(app, f.unit, box) ? level : 0;
-    }
-    return 0;
-}
-
-bool flag_press_stem(const AppState& app, int stash_index) {
-    const AppState::FlagHoverUnit& p = app.flag_hover.pressed;
-    if (stash_index < 0 || !p.named() || p.cell != MarkerCell::Payload)
-        return false;
-    if (flag_hover_stash_index(app, p.marker) != stash_index) return false;
-    GuiRect box{0, 0, 0, 0};
-    return flag_hover_unit_box(app, p, box);
-}
-
-int flag_hover_live_index(const AppState& app, FlagMarkerId marker) {
-    if (!marker.named()) return -1;
-    // The identities are the hover's lane's; a live lane that has moved on
-    // ahead of the stash's rebuild holds none of them.
-    if (flag_lane_key(app) != app.flag_hover.lane_key) return -1;
-    if (app.history_mode.active)
-        return flag_marker_index_of(app.history_mode.flags, marker);
-    if (app.active_markers_view == 'P')
-        return flag_marker_index_of(app.phaseresetmarkers.markers(), marker);
-    return flag_marker_index_of(app.warpmarkers.markers(), marker);
 }
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,

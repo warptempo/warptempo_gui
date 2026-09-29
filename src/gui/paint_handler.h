@@ -575,34 +575,6 @@ struct GuiPaintHandler {
     // empty list, which paints an empty lane rather than a stale one.
     void rebuild_history_diff_flags();
 
-    // THE LANE PASS ITSELF — the one body that turns the live state and the
-    // displayed plate's fingerprint (wf_cache.fp_*) into the three painters'
-    // arguments and runs the pass for the standing lane (the `h` view's diff
-    // flags, the phase-reset column, or the warp column), onto `cr` in the
-    // top strip's own coordinates. TWO CALLERS, and one body is what keeps
-    // them drawing the same flags: maybe_rebuild_flag_cache (onto the cached
-    // surface, publishing the staged stash; `hover` null) and paint_flag_hover
-    // (onto the frame, clipped to one hovered or pressed unit, publishing
-    // nothing).
-    void render_flag_lane(cairo_t* cr, const FlagHoverPaint* hover,
-                          std::vector<FlagHitRect>* out_hit_rects,
-                          std::vector<MarkerStem>* out_stems);
-
-    // THE FLAG HOVER'S OVERLAY (architect 2026-09-29; the rule is at
-    // render.h's FlagHoverPaint): for each unit of AppState::FlagHover whose
-    // fade paints a level, the lane pass re-run over the flag cache's blit,
-    // clipped to that unit's box in the promoted stash, the unit's fill at the
-    // half blend — and, last, the same re-run for the PRESSED unit at its
-    // press face, whose own fading tail is skipped — the unit's identity
-    // resolved to its box there and to its row in the live lane for the
-    // re-run (flag_hover_unit_box, flag_hover_live_index). Called by
-    // paint_flag_annotations right after
-    // the blit, so it lies under the open editor's box and every floating
-    // surface. Off the
-    // damage it costs nothing (the outer clip), and with no hover it is one
-    // emptiness test.
-    void paint_flag_hover(cairo_t* cr);
-
     // Force a synchronous waveform rebuild + fp_vp_* update for a user-driven
     // viewport jump. Renders into the live surface on the calling (main)
     // thread and publishes the displayed fingerprint immediately, so a
@@ -929,21 +901,12 @@ private:
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
-    // TWO PAINT-TIME COLOUR TRANSIENTS, the flash winning. The open flag
-    // editor's invalid-commit RED FLASH (2026-08-01) reaches its marker's stem,
-    // so a flashing flag and its stem agree. THE FLAG HOVER'S STEM TINT
-    // (architect 2026-09-29): while the marker's PAYLOAD unit paints a hover
-    // level (AppState::FlagHover's fades), its stem takes flag_hover_fill of
-    // its two published colours at that level — halfway toward its selected
-    // stem, fading with the flag, nothing on a selected stem, nothing for a
-    // hovered bound cell — and while that unit is PRESSED its published
-    // `pressed_color`, the press face's stem, over any level. Both are
-    // applied here rather than published into
-    // the stash because that is how the flash face and the hover overlay
-    // themselves work — overrides over the resolved class, per frame, out of
-    // any cache (the definition carries the reasoning and the damage story;
-    // the hover's damage is its writer's and its tick's, the stem's own
-    // column).
+    // ONE PAINT-TIME COLOUR OVERRIDE, and one only (2026-08-01): the open flag
+    // editor's invalid-commit RED FLASH reaches its marker's stem, so a flashing
+    // flag and its stem agree. It is applied here rather than published into the
+    // stash because that is how the flash face itself works — an override over
+    // the resolved class, per frame, out of any cache (the definition carries
+    // the reasoning and the damage story).
     //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag
