@@ -242,9 +242,9 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
               : !iter_popup_eligible_marker(mv, idx)) return;
     // A TIE FOLLOWER HAS NO FIELD (architect 2026-09-19): its cells show the
     // LEADER's numbers and its own pair is unread, so a field here would edit
-    // one bracket while displaying another. The Edit Flag button greys on
-    // this same predicate (flag_editor_open_actionable) and bare Return cards
-    // kBoundCellTiedCard at its own arm; the DOUBLE-CLICK road is silent, a
+    // one bracket while displaying another. Bare Return refuses on this same
+    // predicate (flag_editor_open_actionable) and cards kBoundCellTiedCard at
+    // its own arm; the DOUBLE-CLICK road is silent, a
     // pointer gesture's non-event being its own answer, so this arm is the
     // refusal for that road and the belt for the other.
     if (bound_cell_is_tie_follower(app, column, idx)) return;

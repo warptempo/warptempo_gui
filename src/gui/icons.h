@@ -372,28 +372,12 @@ enum class Icon {
     // committed assets are DELETED — the last two 2026-09-23 with the two
     // buttons, the architect having made the held column a posture of the
     // bare arrows. The rotation's record is at icons.cpp's IconTransform.)
-    // THE EDIT FLAG BUTTON'S GLYPH (2026-08-27), the bottom row's verb group
-    // after Toggle inherit until 2026-09-29, the icon row's Render group after
-    // Render since: text-field, Breeze's own
-    // TEXT CURSOR — a serif I-beam standing on a field's underline rule.
-    //
-    // WHY THIS ONE OF THE FAMILY'S FOUR. The architect asked for "an
-    // I-beam-ish button", and Breeze offers four near neighbours: `insert-text`
-    // is the same I-beam with a PLUS, which reads as ADD and would have
-    // collided with the drop verb's list-add two boxes to its left;
-    // `edit-select-text` is an `A` inside brackets, which names SELECTING text
-    // rather than opening an editor over it; `edittext` is a pencil, a verb
-    // this roster spells nowhere else. text-field says the one thing the act
-    // is: put a caret in a field and type. Its silhouette is shared with
-    // nothing on the row — the media triangles, the +/− pair, the crossed eye,
-    // the chain, the staff, the marquee arrow, the tab arrows and the four
-    // chevrons are all closed or diagonal shapes, and this is the row's only
-    // upright bar.
-    //
-    // THE ENUMERATOR KEEPS THE BREEZE FILE NAME while the product act it faces
-    // is EDIT FLAG: icon ids name their PROVENANCE, not the product verb (the
-    // theme-provenance rule), so this is TextField and not IconEditFlag.
-    TextField,           // Edit flag (Return)
+    // (TEXT-FIELD, Breeze's own text cursor — a serif I-beam on a field's
+    // underline rule — was the EDIT FLAG button's glyph from 2026-08-27 until
+    // the architect deleted the button 2026-09-29; the enumerator, its def and
+    // its asset left with it. Its three rejected neighbours stay recorded for
+    // any future editor-opening button: insert-text reads as ADD,
+    // edit-select-text names SELECTING text, edittext is a pencil.)
 
     // THE FOLDER OVERLAY'S TWO ROW GLYPHS (2026-08-28, the render player):
     // places/22/folder, the Breeze dark folder every file picker on the
@@ -453,14 +437,15 @@ enum class Icon {
     WindowClose,         // the X: a card's dismiss, and the player's Close
 
     // THE COPY VALUE BUTTON'S GLYPH (2026-08-29; the bottom row's verb group
-    // until 2026-09-29, the icon row's Render group since):
+    // until 2026-09-29, the icon row's Undo group since, between Redo and
+    // Render):
     // Breeze's actions/22/edit-copy, the two stacked sheets — the same file
     // this roster carried for the ICONCOPY button from 2026-08-12 until the
     // 2026-08-20 propagate relocation deleted that button, transcribed FRESH
     // here rather than recovered (the def and the asset had gone with the
-    // consumer). It says "take this value with you", which is what bare `j`
+    // consumer). It says "take this value with you", which is what Ctrl+C
     // does with the focused marker's resolved tempo.
-    EditCopy,            // Copy resolved value (the icon row, after Edit Flag)
+    EditCopy,            // Copy resolved value (the icon row, after Redo)
 
     // THE ENABLE TOOLTIPS LAMP'S GLYPH (architect 2026-09-29), the icon
     // row's render-entry group between the padlock and Settings: Breeze
@@ -482,7 +467,9 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 55 SINCE THE ROSTER MOVES OF 2026-09-29'S EVENING (architect):
+// 54 SINCE THE EDIT FLAG BUTTON'S DELETION (architect 2026-09-29, late
+// evening): text-field left with the button that wore it. It was 55 from THE
+// ROSTER MOVES OF 2026-09-29'S EVENING (architect):
 // help-whatsthis joined with the Enable Tooltips lamp, go-jump-declaration
 // with Jump to Defining Marker and edit-delete with the render player's
 // Delete. It was 52 from THE WALK GROUP'S GROWTH earlier that day: bboxprev
@@ -527,7 +514,7 @@ enum class Icon {
 // leaving restates this number. It held at 50 through 2026-09-24's swap,
 // when zoom-in-y replaced zoom-out-y on the Waveform Magnification lamp at
 // its reversal, one glyph out and one in.
-inline constexpr int kIconCount = 55;
+inline constexpr int kIconCount = 54;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

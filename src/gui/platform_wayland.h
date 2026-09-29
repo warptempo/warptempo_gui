@@ -892,7 +892,7 @@ private:
     // the seat's recent serials and silently refuses when stale or zero.
     // Cached from EVERY accepted input event that can trigger a copy, before
     // the event reaches the core: a keyboard key (Ctrl+C / Ctrl+X in an
-    // editor, bare `j`, the stats panel's Ctrl+C), a pointer button (a modal
+    // editor, the main window's Ctrl+C, the stats panel's Ctrl+C), a pointer button (a modal
     // or roster button's lift, the Copy to Clipboard button since
     // 2026-09-03 — a pointer-only session had no serial at all until then,
     // and a stale key serial otherwise) and a touch down / up (the Wayland

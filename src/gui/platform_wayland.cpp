@@ -2488,7 +2488,8 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
                                   uint32_t keycode, uint32_t state) {
     // Cache the serial for wl_data_device.set_selection (the field's comment
     // is the inventory of the events that cache): a key-triggered copy —
-    // Ctrl+C / Ctrl+X in an editor, bare `j`, the stats panel's Ctrl+C —
+    // Ctrl+C / Ctrl+X in an editor, the main window's Ctrl+C, the stats
+    // panel's Ctrl+C —
     // runs synchronously under this event, so the serial stored here IS the
     // triggering event's own by the time clipboard_set_text runs. Cached
     // BEFORE the xkb and release gates below so a release, a key with no

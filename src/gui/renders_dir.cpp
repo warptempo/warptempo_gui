@@ -41,7 +41,8 @@ RendersBatchScan max_renders_batch_index(
     std::error_code ec;
     if (!std::filesystem::is_directory(renders_dir, ec)) return scan;
     // NON-THROWING (directory_walk.h): a batch root edited under the dispatch —
-    // the trash road, an external sync, a folder unmounted — answers what it
+    // the load in place's wipe, the player's Delete, an external sync, a
+    // folder unmounted — answers what it
     // saw, which is the same "highest index seen" this scan is, rather than
     // terminating the process out of a range-for's increment.
     for_each_directory_entry(renders_dir, ec, [&scan](
@@ -62,6 +63,47 @@ RendersBatchScan max_renders_batch_index(
         }
     });
     return scan;
+}
+
+// THE ONE DELETION OF A BATCH FOLDER (the contract, its verdicts and its two
+// callers are at the declaration, renders_dir.h).
+BatchFolderRemoval remove_batch_folder(const std::filesystem::path& batch_root,
+                                       const std::filesystem::path& folder,
+                                       std::error_code& ec) {
+    ec.clear();
+    std::error_code status_ec;
+    if (folder.parent_path() != batch_root || folder.filename().empty() ||
+        !std::filesystem::is_directory(folder, status_ec) || status_ec)
+        return BatchFolderRemoval::OutOfBounds;
+    std::filesystem::remove_all(folder, ec);
+    return ec ? BatchFolderRemoval::Failed : BatchFolderRemoval::Removed;
+}
+
+// EVERY DIRECTORY DIRECTLY UNDER THE BATCH ROOT (the contract is at the
+// declaration).
+std::vector<std::filesystem::path> list_batch_folders(
+        const std::filesystem::path& batch_root, std::error_code& ec) {
+    std::vector<std::filesystem::path> out;
+    ec.clear();
+    // THE STATUS, NOT is_directory: libstdc++ sets the error_code on a plain
+    // ENOENT too, so an absent root would read as a failed query. Absence is
+    // the ordinary empty answer; any other fault is the caller's to say.
+    std::error_code root_ec;
+    const std::filesystem::file_status st =
+        std::filesystem::status(batch_root, root_ec);
+    if (st.type() == std::filesystem::file_type::not_found) return out;
+    if (root_ec) {
+        ec = root_ec;
+        return out;
+    }
+    if (st.type() != std::filesystem::file_type::directory) return out;
+    for_each_directory_entry(batch_root, ec, [&out](
+            const std::filesystem::directory_entry& de) {
+        std::error_code entry_ec;
+        if (!de.is_directory(entry_ec) || entry_ec) return;
+        out.push_back(de.path());
+    });
+    return out;
 }
 
 // Enumerate the flat render-entry list under <source parent>/tmp/.
@@ -88,7 +130,8 @@ GuiRendersDir::enumerate_render_entries() {
     };
 
     // BOTH WALKS ARE NON-THROWING (directory_walk.h). A batch folder removed
-    // by the trash road, or the whole batch root swept away, while the player
+    // by the wipe or the player's Delete, or the whole batch root swept
+    // away, while the player
     // is listing or a dispatch is numbering answers WHAT IT SAW — a partial or
     // empty entry list, which every caller already treats as "no cells" —
     // instead of terminating the process out of a range-for's increment.

@@ -18,7 +18,7 @@
 // unmounted or made unreadable WHILE a listing is being built still throws out
 // of the loop, and the GUI has no handler anywhere above it, so the process
 // dies. The events are ordinary here, not adversarial: `l` prunes and lists
-// `render/` and `tmp/` on a project the sync script or the trash road is
+// `render/` and `tmp/` on a project the sync script or the wipe is
 // editing under it, a render dispatch scans the batch root.
 //
 // THE CONTRACT. Construct with `ec`; walk to the end; increment with `ec` and

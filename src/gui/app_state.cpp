@@ -521,7 +521,7 @@ PayloadEligibility payload_eligibility(const AppState& app,
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return E::NoResolvedValue;
     const auto& m = mv[idx];
-    // This gates the VALUE PAIR — bare `j`, which copies the focused marker's
+    // This gates the VALUE PAIR — Ctrl+C, which copies the focused marker's
     // resolved value, and Ctrl+J, which jumps to the marker that value
     // came from — a marker's OWN value being written on its flag regardless
     // of eligibility. NEITHER ACT MAY REPORT A TEMPO THE RENDER NEVER

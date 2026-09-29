@@ -74,11 +74,11 @@
 // THE ONE EXCEPTION IS THE CLIPBOARD WRITE (architect 2026-08-30, the
 // invariant that an accepted press shows something): NOTHING PAINTS A
 // CLIPBOARD, and since the resolved readout retired no standing surface
-// paints a resolved value either, so the THREE COPIES — bare `j`'s resolved
+// paints a resolved value either, so the THREE COPIES — Ctrl+C's resolved
 // value, Ctrl+P's phase resets and
 // the AV Sync Stats panel's own copy, each with its button or menu row
 // inheriting the chord — say so on a normal card, which is the whole
-// of what those presses show (bare `j`'s card naming the copied value in
+// of what those presses show (Ctrl+C's card naming the copied value in
 // single quotes, architect 2026-09-13). THE EDITORS' OWN Ctrl+C IS NOT ONE OF THEM: an
 // editor is its own world with that world's conventions, and its copy stays
 // silent (its Ctrl+V over an empty clipboard with it).

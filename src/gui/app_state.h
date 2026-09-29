@@ -1941,13 +1941,14 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's THREE, row 3's two
-// TABS, row 4's TWENTY-FOUR
+// TABS, row 4's TWENTY-THREE
 // view / mode / action buttons (the deleted toolbar row's four lead them since
-// the 2026-08-12 relayout, EDIT FLAG and COPY VALUE behind Render since
+// the 2026-08-12 relayout, COPY VALUE between Redo and Render since
 // 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
 // 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-29 evening,
-// when Edit Flag and Copy Value went up and Jump to Defining Marker joined) —
+// when Edit Flag and Copy Value went up and Jump to Defining Marker joined;
+// Edit Flag was deleted later that evening) —
 // the transport three, the MARKER-VERB GROUP'S SIX (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
 // (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
@@ -2117,7 +2118,8 @@ enum class RedesignButton {
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
     // machinery, the FACE now a glyph in the 32px box and the old labels
-    // living on as the tooltips), THE VIEWPORT-CLASS GROUP — the Show trim
+    // living on as the tooltips; COPY VALUE between Redo and Render since
+    // 2026-09-29), THE VIEWPORT-CLASS GROUP — the Show trim
     // region button leading the zoom buttons (2026-08-12, the architect's live
     // placement "after the trim"; the Show trim region button gone 2026-09-22
     // and the stepped zoom pair 2026-09-25, so Full zoom out leads; CENTER
@@ -2169,99 +2171,56 @@ enum class RedesignButton {
     //
     // SAVE STANDS ALONE BEHIND A SEPARATOR (architect 2026-09-29, after his
     // accidental Save presses at the tablet's 200 %): UNDO opens a group of
-    // its own with Redo and Render behind it, so the toolbar four are two
-    // groups and the row's first separator stands between Save and Undo
+    // its own with Redo, Copy Value and Render behind it, so the row's first
+    // separator stands between Save and Undo
     // (redesign_button_opens_icon_group).
-    Save, Undo, Redo, Render,
-    // EDIT FLAG AND COPY VALUE MOVED UP FROM THE BOTTOM ROW'S VERB GROUP
-    // (architect 2026-09-29), in this order directly after Render and inside
-    // Render's group (ahead of the separator Full zoom out opens): the same
-    // ids, chords, glyphs, acts and faces — only the lane changed, a roster id
-    // naming the button and not the lane it sits in. Their home strip is the
-    // TOP strip now (redesign_button_in_transport_row no longer names them).
+    Save, Undo, Redo,
+    // THE COPY VALUE BUTTON (architect 2026-08-29) — BETWEEN REDO AND RENDER
+    // since 2026-09-29 (architect: kdenlive's own order, Save | Undo, Redo,
+    // Copy, …), inside Undo's group; it stood at the bottom row's verb group's
+    // tail beside Add to Selection until that day, and after Render for its
+    // first evening in this row.
     //
-    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the bottom row's
-    // verb group's fifth member, after Toggle inherit, until 2026-09-29,
-    // DELIBERATELY FAR FROM DELETE there ("away from the delete button"): its
-    // act is an editor open and its neighbour's was a destruction, and the
-    // move to the icon row keeps it a whole row away from Delete.
+    // ITS CHORD IS CTRL+C and its act is that key's exactly — copy the
+    // FOCUSED marker's resolved value to the system clipboard (bare `j` until
+    // 2026-09-29, which binds nothing now). IT ADMITS NO MODIFIER: its row
+    // carries the ctrl, so a further modified press is refused at the band
+    // gate and the long press reaches nothing. The CENTER button's ctrl press
+    // is the chord's second pointer road (a modified press spells its button's
+    // own key; Center's is `c`).
     //
-    // ITS CHORD IS BARE Enter and its act is that key's exactly — open the
-    // FLAG EDITOR on the focused marker (the arm is in on_key,
-    // input_handler.cpp; the button dispatches the chord at the LIFT through
-    // kToolbarChords like every other chrome button, while the KEY acts at the
-    // press like every other hotkey). ONE ROAD, no second body: every refusal
-    // the key has is the button's by construction.
+    // WHY IT EXISTS: it is what the RESOLVED READOUT became (architect
+    // 2026-08-29). The readout was the status bar's right cell for one day
+    // and the bottom strip's before that; the bar folded into row 8 and the
+    // readout retired with it, so the value is now something you TAKE rather
+    // than something you read, and the marker it came from is somewhere you
+    // GO (Jump to Defining Marker, Ctrl+J).
     //
-    // WHY IT EXISTS. The flag editor had TWO doors, the double-click and the
-    // Enter key, and on glass the first is unreliable — the architect drove a
-    // taller flag hit rect for one evening trying to rescue the double tap and
-    // retired it the same night: "get rid of double tapping as the ONLY way to
-    // enter the editor". A keyboardless panel now has a door that cannot miss.
-    // (Both older roads are untouched; this is a THIRD, not a replacement.)
-    //
-    // ITS ENABLED ARM READS THE ACT'S OWN REFUSAL SINCE 2026-08-30
-    // (flag_editor_open_actionable — nothing focused, or the P view, which
-    // has no per-flag editor): the button greys exactly where bare Return is
-    // a consumed no-op, the architect's truthful-buttons ruling ("Any time a
-    // button would be a no-op, grey it"). From its 2026-08-27 landing until
-    // then it had NO focus term and no view term,
-    // under the 2026-08-15 no-blink ruling — a face tracking the selection
-    // would blink at interaction cadence — which he withdrew for himself: he
-    // is deliberate with his presses, and greying is a face the row already
-    // wears in the `h` view. What greyed it before still does: the READ-ONLY
-    // LOCK (bare Return is on no read_only_key_blocked allowlist entry — the
-    // editor writes serialized content) and the `h` VIEW through the DERIVED
-    // partition (Return is neither history_mode_owns_key's vocabulary nor on
-    // history_mode_key_blocked's allowlist). A standing MODAL needs no arm at
-    // all: the veil consumes the press, the roster's own rule.
-    //
-    // IT IS NOT HOME-VIEW GATED, and that is the flag editor's own ruling
-    // rather than this button's: the payload editor is the FIFTH ruled
-    // exception to the home-view binding (the inventory is at
-    // active_column_authoring_allowed), so it opens in W+target as well as
-    // W+source. NO LAMP: an act, not a mode. IT ADMITS NEITHER SHIFT NOR CTRL,
-    // so a modified press is refused at the band gate and the long press —
-    // glass's held shift — reaches nothing.
-    IconMarkerEditFlag,
-    // THE COPY VALUE BUTTON (architect 2026-08-29) — Edit Flag's neighbour in
-    // the icon row since 2026-09-29, the Render group's last; it stood at the
-    // bottom row's verb group's tail beside Add to Selection until then.
-    //
-    // ITS CHORD IS BARE `j` and its act is that key's exactly — copy the
-    // FOCUSED marker's resolved value to the system clipboard. IT ADMITS NO
-    // MODIFIER SINCE 2026-09-29 (architect): the jump to the marker that value
-    // came from was its shifted twin (Shift+`j`, the shift-click and the long
-    // press) from 2026-08-29, and it is CTRL+J on a dedicated button of its
-    // own now (IconJumpToDefiningMarker, the bottom row's verb group), so a
-    // modified press here is refused at the band gate and the long press
-    // reaches nothing.
-    //
-    // WHY IT EXISTS: it is what the RESOLVED READOUT and its Ctrl+C became
-    // (architect 2026-08-29). The readout was the status bar's right cell for
-    // one day and the bottom strip's before that; the bar folded into row 8
-    // and the readout retired with it, so the value is now something you TAKE
-    // rather than something you read, and the marker it came from is somewhere
-    // you GO.
-    //
-    // ITS ENABLED ARM READS payload_eligible_marker ON THE FOCUS SINCE
-    // 2026-08-30 — the ONE gate bare `j` and Ctrl+J both run — so it greys on an
-    // ineligible focus (an owner, a phase reset, a disabled marker, a member
-    // of a coincident-collapsed stack, the P column, nothing focused; the
-    // gate's terms are at its declaration), the architect's truthful-buttons ruling ("Any time a
-    // button would be a no-op, grey it"). For its first day it had NO selection
-    // term, the group's rule then, under the 2026-08-15 no-blink ruling (a
-    // face tracking the focus would blink at every selection), which he
-    // withdrew for himself. The one refusal past the gate — an EMPTY PAYLOAD,
-    // a ref whose definition is missing — stays a consumed no-op behind a lit
-    // face: it needs the composer run, which a per-tick face has no business
-    // doing. AND IT IS NOT IN THE
-    // READ-ONLY ARM: bare `j` is on read_only_key_blocked's allowlist (a
+    // ITS ENABLED ARM READS payload_eligible_marker ON THE FOCUS — the ONE
+    // gate Ctrl+C and Ctrl+J both run — so it greys on an ineligible focus (an
+    // owner, a phase reset, a disabled marker, a member of a
+    // coincident-collapsed stack, the P column, nothing focused; the gate's
+    // terms are at its declaration), the truthful-buttons ruling. The one
+    // refusal past the gate — an EMPTY PAYLOAD, a ref whose definition is
+    // missing — stays a card behind a lit face: it needs the composer run,
+    // which a per-tick face has no business doing. AND IT IS NOT IN THE
+    // READ-ONLY ARM: Ctrl+C is on read_only_key_blocked's allowlist (a
     // clipboard write authors nothing), so a locked tab leaves the button lit
-    // exactly as it leaves the key live. What greys it is the `h` VIEW through the DERIVED partition
-    // (bare `j` is neither the mode's vocabulary nor on its allowlist) and the
-    // folder overlay's own arm — nothing else. NO LAMP: an act, not a mode.
+    // exactly as it leaves the key live. What greys it is the `h` VIEW
+    // through the DERIVED partition (Ctrl+C is neither the mode's vocabulary
+    // nor on its allowlist) and the folder overlay's own arm — nothing else.
+    // NO LAMP: an act, not a mode.
     IconCopyValue,
+    Render,
+    // (THE EDIT FLAG BUTTON — IconMarkerEditFlag, bare Return on a button,
+    // wearing text-field — stood in the bottom row's verb group from
+    // 2026-08-27 and after Render in this row for the evening of 2026-09-29,
+    // when the architect DELETED it: tapping a flag and then moving the pen to
+    // a button is counterintuitive when a double tap on the flag does it, and
+    // the double-click is safe since the first click arms and waits and the
+    // grab gate doubled. The flag editor's roads are the Return key and the
+    // double-click on the flag, both unchanged; its glyph left icons::Icon
+    // with it.)
     // (THE SHOW TRIM REGION BUTTON led the zoom group here from 2026-08-16
     // until the architect deleted it whole on 2026-09-22 with its bare `[`
     // chord: the tablet's pen reaches the trim bar, so the waveform overlay
@@ -2439,8 +2398,8 @@ enum class RedesignButton {
     // and I'm comfortable with it" — the provenance he gave is that old
     // script). EVERY BOTTOM-ROW VERB IS POINTED AT
     // SOMETHING FIRST: Delete and Toggle disabled walk a selection, Ctrl+N
-    // collapses to the focus, Edit flag and Copy resolved value read the focus
-    // alone, Add to selection is the posture that builds one, and even the
+    // collapses to the focus, Copy resolved value read the focus alone (it
+    // left the row 2026-09-29), Add to selection is the posture that builds one, and even the
     // drop — the group's one member with no existing subject — acts at the
     // playhead you put there. With nothing pointed at, that whole row acts on
     // nothing. FLATTEN TAKES NO SELECTION AT ALL AND ACTS ON THE WHOLE PIECE
@@ -3025,17 +2984,17 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-29
-// evening, when Edit Flag and Copy Value went up to row 4, Enable Tooltips
-// joined row 4 and Jump to Defining Marker the bottom row): SIX in row 1 (the
-// three menu anchors and the view bar's three), two in row 3, TWENTY-FOUR in
-// row 4 and SEVENTEEN in the bottom row — 49. Of
-// those, FORTY-SIX carry a chord in kToolbarChords
+// late evening, when the Edit Flag button was deleted and Copy Value moved
+// between Redo and Render): SIX in row 1 (the
+// three menu anchors and the view bar's three), two in row 3, TWENTY-THREE in
+// row 4 and SEVENTEEN in the bottom row — 48. Of
+// those, FORTY-FIVE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 49;
+inline constexpr int kRedesignButtonCount = 48;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3102,6 +3061,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
+        case RedesignButton::IconCopyValue:
         case RedesignButton::IconRestrictUndo:
         case RedesignButton::Render:
         case RedesignButton::IconZoomFitBest:
@@ -3111,8 +3071,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconIter:
         case RedesignButton::IconFlatten:
         case RedesignButton::IconListen:
-        case RedesignButton::IconMarkerEditFlag:
-        case RedesignButton::IconCopyValue:
         case RedesignButton::IconReadOnly:
         case RedesignButton::IconTooltips:
         case RedesignButton::IconSettings:
@@ -3149,8 +3107,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), ADD TO SELECTION
 // (the EDIT FLAG BUTTON, 2026-08-27, and the COPY VALUE button, 2026-08-29,
-// were members until 2026-09-29, when both went up to the icon row after
-// Render; the MARKER MEASURE stood among them from 2026-08-19 until the
+// were members until 2026-09-29, when both went up to the icon row — Edit
+// Flag to be deleted the same evening; the MARKER MEASURE stood among them from 2026-08-19 until the
 // measures feature was deleted 2026-09-16, the VALUE DRAG LAMP last in that
 // group from 2026-09-10 to its deletion 2026-09-13, the MARKER
 // MAGNIFICATION from 2026-09-14 to 2026-09-15, and the FLATTEN BUTTON for the
@@ -3254,9 +3212,9 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // fact about the roster's order and this is where the order is stated. ONE
 // reader now — paint_icon_row's layout walk.
 //
-// THE SIX GROUPS, in painted order: SAVE ALONE, then UNDO, REDO, RENDER,
-// EDIT FLAG and COPY VALUE (the last two up from the bottom row since
-// 2026-09-29 evening, members joining and no boundary moving), THE
+// THE SIX GROUPS, in painted order: SAVE ALONE, then UNDO, REDO, COPY VALUE
+// and RENDER (Copy Value up from the bottom row since 2026-09-29, members
+// joining and leaving and no boundary moving), THE
 // VIEWPORT-CLASS GROUP (Full zoom out leading, the
 // magnification lamp, FOLLOW and the restrict-undo lamp), THE ITERATION
 // GROUP (the BPM opener, the grid-iterations lamp and, since 2026-09-19,
@@ -4097,7 +4055,7 @@ inline int grab_moved_threshold_px() {
 // without it — the lane and its resolver are gone (a marker's value is written
 // on its flag), the readout took the SELECTION translation and then RETIRED
 // WHOLE on 2026-08-29 with the one-day status bar that carried it, and the
-// copy is bare `j` now (with Ctrl+J, the jump to the marker the value came
+// copy is Ctrl+C now (with Ctrl+J, the jump to the marker the value came
 // from; input_key_dispatch.cpp). The staleness machinery went with it: the three
 // generations, the convergence loop, the on_tick repair and the pointer-leave
 // clear all existed to keep a CACHE honest, and there is no cache left.
@@ -5962,9 +5920,9 @@ struct AppState {
     // GuiInputHandler::recompute_flag_hover (input_pointer.cpp), run by every
     // pointer motion and by the tick; the pointer's leave and the held primary
     // button (a press, a drag, a finger's contact) clear it. `fades` holds one
-    // HoverFade per unit still painting a level — the hovered one rising and
-    // any it left fading out (HoverFadeKind::Reversing: in and out, a return
-    // mid-fade reversing from where it stood) — each erased once it settles
+    // HoverFade per unit still painting a level — the hovered one and any it
+    // left fading out (HoverFadeKind::SnapIn since 2026-09-29, the buttons'
+    // own: full at once, the 100 ms fade on the way out) — each erased once it settles
     // dark, cut when its unit leaves the stash (the flag left the screen) and
     // cut whole when `lane_key` moves (another column, the `h` edge, a store
     // edit: the indices name other boxes then). The tick advances them beside
@@ -6830,9 +6788,9 @@ struct AppState {
     // release's own rule): a button that admits a modifier must see the one
     // held when the user PRESSED, and a modifier tapped or dropped mid-hold
     // changes nothing. EACH ADMISSION IS THE ROSTER'S — the shift-admitting
-    // set, the ctrl-admitting one (redesign_button_ctrl_admits: the Up /
-    // Down step ladder's Ctrl rung and the WALK's Ctrl+Tab) and the pair's
-    // (redesign_button_ctrl_shift_admits: the walk's Ctrl+Shift+Tab) — asked
+    // set, the ctrl-admitting one (redesign_button_ctrl_admits, which names
+    // its members) and the pair's (redesign_button_ctrl_shift_admits: the
+    // walk's Ctrl+Shift+Tab and Restrict Undo's Ctrl+Shift+Z) — asked
     // at the press by the band claims' modifier gate and again at the lift's
     // chord build, so a carried bit, or the carried pair, can only ever reach
     // a button that spells something with it.
@@ -8810,7 +8768,7 @@ struct AppState {
     // editor fork, the flag painter's bright cell (render_flags through the
     // flag cache's fp_addressed_cell), THE TAB WALK'S OWN STEP
     // (marker_walk_step, which reads the axis as the box it is standing in),
-    // the Up/Down and Edit Flag buttons'
+    // the Up/Down buttons'
     // face and tooltip (redesign_button_enabled / redesign_button_tooltip)
     // and THE ITERATION LOCK'S KEYBOARD GATE, which admits Up/Down and Return
     // on a bound axis and drops them on any other
@@ -11773,8 +11731,9 @@ inline MarkerCell iter_bound_editor_side(const text_editor::State& ed) {
 // columns' since 2026-09-09: a bound cell is addressed on either column's
 // eligible flags, so that arm asks no column. A bound cell's kind refusal
 // (an owner disabled after its cell was addressed) stays the act's own
-// card behind a live face, as the Up/Down pair's is. READERS: the Return arm
-// (input_handler.cpp) and the Edit flag button's disabled face.
+// card behind a live face, as the Up/Down pair's is. ONE READER since the
+// Edit Flag button's deletion (2026-09-29): the Return arm
+// (input_handler.cpp), whose refusal cards.
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
@@ -11784,10 +11743,10 @@ inline bool flag_editor_open_actionable(const AppState& app) {
     case MarkerCell::Payload: return app.active_markers_view == 'W';
     // A TIE FOLLOWER'S CELL HAS NO EDITOR (architect 2026-09-19): its pair is
     // unread and the numbers it shows are the leader's, so a field opening
-    // there would edit one bracket while displaying another. The button greys
-    // on the tie's ONE predicate and bare Return cards its one sentence
-    // (kBoundCellTiedCard), ranked ahead of this gate at its own arm so the
-    // key says why rather than this predicate's shared "wants a marker".
+    // there would edit one bracket while displaying another. Bare Return
+    // cards the tie's one sentence (kBoundCellTiedCard), ranked ahead of this
+    // gate at its own arm so the key says why rather than this predicate's
+    // shared "wants a marker".
     case MarkerCell::Lower:
     case MarkerCell::Upper:
         return !addressed_bound_cell_is_tie_follower(app);
@@ -12378,14 +12337,14 @@ inline bool any_tab_read_only(const AppState& a) {
 //
 // THE MEMBERS FALL IN THREE GROUPS, as the keyboard gate's own admissions do:
 // the marker verbs, History, the padlock, BPM iterations and the view bar's
-// three GREY OUTRIGHT under a lit lamp; Edit flag and Up/Down grey UNLESS A
+// three GREY OUTRIGHT under a lit lamp; Up/Down grey UNLESS A
 // BOUND CELL (Lower or Upper) IS ADDRESSED, the gate's bound-axis admission;
 // Left/Right follow the lane (horizontal_arrow_step_lock_admits).
 //
 // IT IS THE ITERATION HALF ALONE, deliberately, and every reader composes its
 // own read-only half:
 //   * most of the members' read-only half is the tab's bare bit (the marker
-//     verbs, Edit flag, Up/Down);
+//     verbs, Up/Down);
 //   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the
 //     Toggle History View button (a locked tab reads history exactly as a
 //     writable one does), the view bar's three (bare 1/2/3 are on
@@ -12547,15 +12506,15 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // under a lit lamp and the lamp cannot be lit while any tab is locked
         // — so they are back in the never-grey group at their enabled arm and
         // this membership has no per-tab member at all.)
-        // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
-        // as the keyboard gate's own bound-axis test does: with Lower or Upper
+        // THE VERTICAL PAIR FORKS ON THE ADDRESSED AXIS, exactly as the
+        // keyboard gate's own bound-axis test does: with Lower or Upper
         // addressed the press reaches the bound cells — the mode's one
-        // authoring surface — and on the PAYLOAD axis it would
-        // open an editor over serialized content or run a value step that
-        // pushes (the tempo). The gate
-        // admits the two bound cells and nothing else, so the lock is the
-        // refusal that stands on every other axis under a lit lamp.
-        case RedesignButton::IconMarkerEditFlag:
+        // authoring surface — and on the PAYLOAD axis it would run a value
+        // step that pushes (the tempo). The gate admits the two bound cells
+        // and nothing else, so the lock is the refusal that stands on every
+        // other axis under a lit lamp. (The Edit Flag button forked here too,
+        // Return opening the addressed cell's editor, until its deletion
+        // 2026-09-29.)
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown:
             return a.addressed_cell != MarkerCell::Lower &&
@@ -13358,6 +13317,21 @@ inline bool undo_step_permitted_by_current_view_lamp(
     if (!a.restrict_undo_to_current_view) return true;
     if (stack.empty()) return true;
     return undo_restore_stays_in_current_view(a, stack.back());
+}
+
+// THE UNDO / REDO BUTTONS' FACE, one step's whole question: the active tab
+// writable (the read-only lock drops Ctrl+Z on it), the step actionable
+// (history_step_actionable: the stack, the target tab's lock, grid
+// iterations) and permitted by the Restrict Undo lamp. TWO READERS
+// (2026-09-29): the Undo and Redo arms of redesign_button_enabled, and the
+// Restrict Undo lamp's modifier line (redesign_button_tooltip's stateful
+// overload), which names Ctrl+Z and Ctrl+Shift+Z and drops where neither
+// would act.
+inline bool history_step_button_actionable(
+        const AppState& a, const std::vector<UndoEntry>& stack) {
+    return !active_view_state(a).read_only &&
+           history_step_actionable(a, stack) &&
+           undo_step_permitted_by_current_view_lamp(a, stack);
 }
 
 // DROP THE HISTORY VIEW'S OWN FOCUS AND SELECTION — the ONE clearer for the
@@ -14391,9 +14365,9 @@ inline bool playback_launch_playable(const AppState& a,
 //     one owner, iteration_lock_greys (above), which the arms alone read since
 //     2026-09-12 (the HINTS were its second reader until the refusal-reason
 //     tooltip class was deleted). RE-DERIVED FROM THE ARMS 2026-09-19, the
-//     three shapes are these. SIX ARMS BELOW COMPOSE BOTH HALVES, EIGHT
-//     BUTTONS: Drop marker; Delete and Disable, sharing one arm; Edit flag;
-//     BPM Iterations; the LEFT / RIGHT pair, which composes them around one
+//     three shapes are these. FIVE ARMS BELOW COMPOSE BOTH HALVES, SEVEN
+//     BUTTONS (the Edit flag arm left 2026-09-29 with its button): Drop
+//     marker; Delete and Disable, sharing one arm; BPM Iterations; the LEFT / RIGHT pair, which composes them around one
 //     lane term; and the UP / DOWN pair, whose iteration half is admitted on a
 //     BOUND AXIS, where the cells are the mode's own authoring surface.
 //     TWO ARMS ASK THE ITERATION HALF ALONE, SIX BUTTONS, having no read-only
@@ -14937,7 +14911,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // CENTER MIRRORS NOTHING (2026-08-12): `c` always frames on a loaded
         // file. It stood in the icon row's zoom group beside Full zoom out
         // until 2026-09-29 and is the bottom row's walk group's since; its
-        // face did not move with it. FULL ZOOM OUT MIRRORS ITS FORK UNDER THE
+        // face did not move with it. Its ctrl twin (Ctrl+C, the copy, since
+        // 2026-09-29) changes nothing under the twin rule: the plain press
+        // always acts, so the face never greys, and a ctrl press over an
+        // ineligible focus reaches the copy's own card. FULL ZOOM OUT MIRRORS ITS FORK UNDER THE
         // TWIN RULE (architect 2026-09-23 — "zero should just lose its
         // meaning" when there is nothing to return to): bare `0` is a silent
         // no-op on overview_command_target's NoOp arm (a ceiling the key did
@@ -14987,7 +14964,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // never the switch. It GREYS IN THE `h` VIEW, through the
         // derived partition and with nothing hand-listed — bare
         // `z` is off the mode's allowlist, both undo stacks being frozen while
-        // the view stands.
+        // the view stands. ITS CTRL AND CTRL+SHIFT TWINS (Ctrl+Z / Ctrl+Shift+Z,
+        // architect 2026-09-29) change nothing under the twin rule: the plain
+        // toggle always acts, so the lamp never greys for them, and a
+        // modified press whose step would refuse reaches the key's own card.
         case RedesignButton::IconRestrictUndo:
         // PLAY RENDERS MIRRORS NOTHING (2026-08-28, when bare `l` became the
         // RENDER PLAYER's opener): the player plays a rendered wav and authors
@@ -15200,31 +15180,10 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    (a.iteration_mode_enabled ? iter_tie_toggle_actionable(a)
                                              : inherit_toggle_actionable(a));
-        // THE EDIT FLAG BUTTON JOINED THIS ARM AT ITS LANDING (2026-08-27) and
-        // it is the verbs' class exactly: bare Return opens an editor over
-        // SERIALIZED CONTENT — the marker's canonical line — and sits on no
-        // read_only_key_blocked allowlist entry, so the lock eats the chord and
-        // the face says so. ITS OTHER REFUSALS (nothing focused, the P view)
-        // GREY IT TOO SINCE 2026-08-30, through the Return arm's own predicate
-        // flag_editor_open_actionable; they were consumed no-ops behind a live
-        // face until then.
-        //
-        // THE ITERATION LOCK ADMITS IT ON A BOUND AXIS (architect 2026-09-10):
-        // with Lower or Upper addressed, Return opens THAT CELL'S editor, and
-        // the bound cells are the mode's own authoring surface — the one thing
-        // the lock leaves open. On the payload axis the same
-        // press would open an editor over serialized content, which the lock
-        // refuses like every other authoring verb, so the face greys exactly
-        // where the keyboard gate drops the chord (the two deltas are stated
-        // once at iteration_lock_key_blocked, input_key_dispatch.cpp). THE
-        // AXIS FORK IS THE MEMBERSHIP PREDICATE'S (iteration_lock_greys,
-        // above) alone now: the refusal-reason tooltip it once fed died with
-        // the whole class 2026-09-12 ("disabled IS the message"), so this
-        // face is its only reader here.
-        case RedesignButton::IconMarkerEditFlag:
-            return !active_view_state(a).read_only &&
-                   !iteration_lock_greys(a, b) &&
-                   flag_editor_open_actionable(a);
+        // (THE EDIT FLAG BUTTON stood on this arm from its landing 2026-08-27
+        // to its deletion 2026-09-29: bare Return opens an editor over
+        // serialized content, so the lock greyed it, and its other refusals
+        // read flag_editor_open_actionable, the Return arm's own predicate.)
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
@@ -15722,7 +15681,7 @@ inline bool redesign_button_enabled(const AppState& a,
             break;
         }
         // COPY VALUE (2026-08-29; the icon row's since 2026-09-29) STANDS
-        // OUTSIDE THE READ-ONLY ARM: bare `j`, the clipboard write, is on
+        // OUTSIDE THE READ-ONLY ARM: Ctrl+C, the clipboard write, is on
         // read_only_key_blocked's allowlist, authoring nothing the lock
         // protects, so it must NOT join that arm above — greying a face whose
         // key still works is the face promising less than the key delivers.
@@ -15732,8 +15691,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // coincident-collapsed stack, the P column or nothing focused greys it
         // exactly where the press would card (the boolean wrapper folds both
         // refusals into one grey, the KEY forking the sentence). The `h` VIEW
-        // greys it through the derived partition at the top of this body (bare
-        // `j` is neither the mode's vocabulary nor on its allowlist), and the
+        // greys it through the derived partition at the top of this body
+        // (Ctrl+C is neither the mode's vocabulary nor on its allowlist), and the
         // folder overlay's first arm. (THE TIE ROAD HELD THIS FACE LIT under
         // the twin rule from 2026-09-19 until 2026-09-29, while the jump was
         // this button's shifted press; the jump is its own button now, below,
@@ -15930,7 +15889,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // TRANSPORT THREE HAVE THEIR ARMS HERE, below the guard, because their
         // predicates ask about a loaded piece — playhead_skip_landing_frame
         // and playback_launch_playable have nothing to say about a blank one.
-        // (The four MARKER VERBS and the EDIT FLAG BUTTON are not
+        // (The four MARKER VERBS are not
         // among the members here: their read-only term and their selection
         // terms are in the arm above, carried down from the icon row with
         // the buttons on 2026-08-18.)
@@ -15987,15 +15946,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // simpler answer. A held button's burst rests on this grey as it rests
         // on the empty stack's (tick_chrome_press_repeat).
         case RedesignButton::Undo:
-            return !active_view_state(a).read_only &&
-                   history_step_actionable(a, a.history.undo_stack) &&
-                   undo_step_permitted_by_current_view_lamp(
-                       a, a.history.undo_stack);
+            return history_step_button_actionable(a, a.history.undo_stack);
         case RedesignButton::Redo:
-            return !active_view_state(a).read_only &&
-                   history_step_actionable(a, a.history.redo_stack) &&
-                   undo_step_permitted_by_current_view_lamp(
-                       a, a.history.redo_stack);
+            return history_step_button_actionable(a, a.history.redo_stack);
         // RENDER'S ITERATION TERM (2026-09-02, the four-tier review's R-10):
         // with grid iterations on, this button's chord IS the sweep, so the
         // face reads the sweep's own pre-dispatch verdict
@@ -16062,8 +16015,8 @@ inline bool redesign_button_enabled(const AppState& a,
             // guard above it); the ruling, the 2026-08-15 reversal it
             // supersedes and the
             // per-pair successions are at that block. The row's remaining
-            // members are the four SINGLE-MARKER VERBS and the EDIT FLAG
-            // BUTTON, which return from the read-only arm
+            // members are the four SINGLE-MARKER VERBS, which return from the
+            // read-only arm
             // above — that arm's own case list is the one authoritative
             // statement of who takes the lock's grey, so no count of it is
             // restated here. Every other id returned above, from one switch
@@ -16244,10 +16197,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        // THE EDIT FLAG BUTTON IS MOMENTARY TOO (2026-08-27): it opens an
-        // editor and the editor's own session is the state; there is no bit
-        // for a lamp.
-        case RedesignButton::IconMarkerEditFlag:
         // COPY VALUE AND JUMP TO DEFINING MARKER ARE MOMENTARY (2026-08-29 and
         // 2026-09-29): a copy completes, and so does the jump. Nothing stays
         // true afterwards for a lamp to report.
@@ -16255,7 +16204,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconJumpToDefiningMarker:
         // THE BPM OPENER IS MOMENTARY (2026-08-01, back with its button
         // 2026-09-04): it opens an editor and the editor's own session is the
-        // state, exactly as the edit-flag button answers. FLATTEN IS MOMENTARY
+        // state. FLATTEN IS MOMENTARY
         // TOO (2026-09-19, arriving in the same group): the terms go or they
         // collapse, and the marker's own flag is where the result shows.
         // TWO OF THE GROUP'S THREE ARE ACTS AND THE MIDDLE ONE IS A LAMP —
@@ -16266,7 +16215,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         // THE SETTINGS BUTTON IS MOMENTARY (2026-09-29): it opens the prompt,
-        // whose own session is the state, the edit-flag button's answer.
+        // whose own session is the state, the BPM opener's answer.
         case RedesignButton::IconSettings:
         // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
         // it is an ACT, not a mode — it runs once and closes the view — so
@@ -16627,7 +16576,9 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // VERTICAL ARROWS, THE WALK and, since 2026-09-29, PREVIOUS MARKER, whose
 // ctrl press is its own Shift+Tab under ctrl, Ctrl+Shift+Tab, the paired
 // march (the lift ORs the carried ctrl into the row's own shift; on glass the
-// S Pen's side button). The VERTICAL ARROWS' ctrl-click (R12,
+// S Pen's side button), CENTER, whose ctrl press is CTRL+C, Copy Resolved
+// Value, and RESTRICT UNDO, whose ctrl press is CTRL+Z, Undo (architect
+// 2026-09-29, both). The VERTICAL ARROWS' ctrl-click (R12,
 // 2026-08-31)
 // is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
 // shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
@@ -16662,41 +16613,59 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // moves the carried bit into the dispatched chord (the hold-repeat's arm and
 // fire build the same chord).
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
-    return b == RedesignButton::TransportWalkPrevious ||
+    return b == RedesignButton::IconRestrictUndo ||
+           b == RedesignButton::TransportWalkPrevious ||
            b == RedesignButton::TransportWalk ||
+           b == RedesignButton::IconZoomOriginal ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
-// THE CTRL+SHIFT-ADMITTING BUTTONS — THE WALK ALONE (architect 2026-09-26):
-// its ctrl-shift press is its own key under both modifiers, Ctrl+Shift+Tab,
-// the paired march. Everywhere else ctrl+shift together spell no roster chord
-// (strict modifier validation; Ctrl+Shift+Up, Ctrl+Shift+Home and the rest
-// are unbound on the keyboard too), so the band claims' modifier gate refuses
-// the pair on every other button and the lift's chord build never sees it
-// there. A button in this set admits each modifier alone as well (the assert
-// below): the pair is the conjunction of two admissions, never a third act
-// standing apart from them.
+// THE CTRL+SHIFT-ADMITTING BUTTONS — THE WALK (architect 2026-09-26), whose
+// ctrl-shift press is its own key under both modifiers, Ctrl+Shift+Tab, the
+// paired march, and RESTRICT UNDO (architect 2026-09-29), whose ctrl-shift
+// press is Ctrl+Shift+Z, Redo. Everywhere else ctrl+shift together spell no
+// roster chord (strict modifier validation; Ctrl+Shift+Up, Ctrl+Shift+Home
+// and the rest are unbound on the keyboard too), so the band claims' modifier
+// gate refuses the pair on every other button and the lift's chord build
+// never sees it there. A button in this set admits CTRL alone as well (the
+// assert below) — the pair is the ctrl admission with a shift beside it —
+// but NOT NECESSARILY SHIFT ALONE: the walk does (Shift+Tab), Restrict Undo
+// does not (Shift+Z binds nothing), so a shift press on the lamp is the
+// consumed nothing any non-admitting button's is.
 inline constexpr bool redesign_button_ctrl_shift_admits(RedesignButton b) {
-    return b == RedesignButton::TransportWalk;
+    return b == RedesignButton::IconRestrictUndo ||
+           b == RedesignButton::TransportWalk;
+}
+// THE SHIFT A PRESS CARRIES, ASKED IN ONE PLACE: alone it is the shift
+// admission, and beside a carried ctrl it is the PAIR's — so Restrict Undo's
+// Ctrl+Shift+Z is admitted while its Shift+Z is not. THREE READERS, all in
+// input_pointer.cpp: the arm's shift refusal (arm_redesign_press), the lift's
+// re-ask and its long-press term (finish_chrome_press_release).
+inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,
+                                                        bool ctrl) {
+    return ctrl ? redesign_button_ctrl_shift_admits(b)
+                : redesign_button_shift_admits(b);
 }
 // THE TWO-MODIFIER RULE, WALKED RATHER THAN LISTED (2026-08-31; restated
-// 2026-09-26): a hand list of names would stay true of every name listed and
-// go false of the roster the day a button joined both sets. A button carries
-// ONE second tooltip line, and a button that admits BOTH modifiers is one of
-// two shapes whose single line can name all its forms honestly: THE STEP
-// LADDER (the vertical arrows, whose two admissions are two RUNGS OF ONE
-// LADDER, the pair refused — Ctrl+Shift+Up binds nothing), or A BUTTON THAT
-// ADMITS THE PAIR (the walk, whose line names its key's three modified forms,
-// each spelled on the key). Left / Right admit neither since 2026-09-21, the
-// horizontal ladder retired. The walk states the pair's implication too: a
-// pair admission without both single admissions fails here.
+// 2026-09-26 and 2026-09-29): a hand list of names would stay true of every
+// name listed and go false of the roster the day a button joined both sets. A
+// button carries ONE second tooltip line, and a button that admits BOTH
+// single modifiers is one of two shapes whose single line can name all its
+// forms honestly: THE STEP LADDER (the vertical arrows, whose two admissions
+// are two RUNGS OF ONE LADDER, the pair refused — Ctrl+Shift+Up binds
+// nothing), or A BUTTON THAT ADMITS THE PAIR (the walk, whose line names its
+// key's three modified forms, each spelled on the key). Left / Right admit
+// neither since 2026-09-21, the horizontal ladder retired. The walk states the
+// pair's implication too: a pair admission without the ctrl admission fails
+// here (Restrict Undo admits ctrl and the pair, its line naming both forms,
+// and no shift alone).
 constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
         const bool both = redesign_button_ctrl_admits(b) &&
                           redesign_button_shift_admits(b);
         const bool pair = redesign_button_ctrl_shift_admits(b);
-        if (pair && !both) return false;
+        if (pair && !redesign_button_ctrl_admits(b)) return false;
         if (!both) continue;
         const bool ladder = b == RedesignButton::TransportUp ||
                             b == RedesignButton::TransportDown;
@@ -16705,9 +16674,9 @@ constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
     return true;
 }
 static_assert(redesign_button_dual_modifier_is_ladder_or_pair(),
-    "a button admitting both modifiers is the step ladder (Up / Down, the "
-    "pair refused) or admits the pair (the walk), and a pair admission "
-    "implies both single ones");
+    "a button admitting both single modifiers is the step ladder (Up / Down, "
+    "the pair refused) or admits the pair (the walk), and a pair admission "
+    "implies the ctrl one");
 static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
                   !redesign_button_shift_admits(RedesignButton::TransportRight) &&
                   !redesign_button_ctrl_admits(RedesignButton::TransportLeft) &&
@@ -16738,6 +16707,22 @@ static_assert(redesign_button_ctrl_admits(RedesignButton::TransportWalkPrevious)
     "Previous Marker (Shift+Tab) admits Ctrl alone, reaching Ctrl+Shift+Tab; "
     "Switch Tab (Ctrl+Tab) admits Shift alone, reaching the same march: each "
     "button's own chord plus the one missing modifier, nothing else");
+static_assert(redesign_button_ctrl_admits(RedesignButton::IconZoomOriginal) &&
+                  !redesign_button_shift_admits(RedesignButton::IconZoomOriginal) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::IconZoomOriginal),
+    "Center (bare `c`) admits Ctrl alone, Ctrl+C being Copy Resolved Value; "
+    "Shift+C and Ctrl+Shift+C bind nothing (chord_is_bound, gui_input.h)");
+static_assert(redesign_button_ctrl_admits(RedesignButton::IconRestrictUndo) &&
+                  redesign_button_ctrl_shift_admits(RedesignButton::IconRestrictUndo) &&
+                  !redesign_button_shift_admits(RedesignButton::IconRestrictUndo),
+    "Restrict Undo (bare `z`) admits Ctrl (Ctrl+Z, undo) and the pair "
+    "(Ctrl+Shift+Z, redo) and no Shift alone, Shift+Z binding nothing "
+    "(chord_is_bound, gui_input.h)");
+static_assert(!redesign_button_shift_admits(RedesignButton::IconCopyValue) &&
+                  !redesign_button_ctrl_admits(RedesignButton::IconCopyValue) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::IconCopyValue),
+    "Copy Resolved Value (Ctrl+C) admits no modifier: its row carries the ctrl, "
+    "and Ctrl+Shift+C binds nothing");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button that has one. It sits with the roster (rather than with the chord
@@ -16796,7 +16781,7 @@ static_assert(redesign_button_ctrl_admits(RedesignButton::TransportWalkPrevious)
 // WHAT SURVIVES IN THE OVERLOAD IS TWO THINGS AND NO THIRD: (1) a fork that
 // NAMES WHAT THE PRESS DOES NOW — Save's "Save and Commit", Render's "Cancel"
 // and "Render Grid Iterations", Play's "Stop", the two zoom buttons' and
-// Center's landing names, the bound-step names and Edit Flag's addressed cell
+// Center's landing names and the bound-step names
 // — and (2) the DROPPING of a modifier line where the modified press does
 // nothing different in this state, which the static_assert below still binds
 // to the admissions. Nothing there may state a reason or report a state.
@@ -16909,16 +16894,20 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (2026-09-01, the
         // overload): Full zoom out at the ceiling is the recall, and Center
         // with nothing focused centers on the playhead — each press does
-        // something, and the overload names which. ONE CARRIES A SECOND LINE,
-        // FULL ZOOM OUT (2026-09-22): its shifted twin is
+        // something, and the overload names which. BOTH CARRY A SECOND LINE.
+        // FULL ZOOM OUT'S (2026-09-22): its shifted twin is
         // Shift+0, RESET TRIM, the words the Show trim region button's line
         // carried for the same act until that button's deletion the same day;
         // the overload drops it over a full trim window, where the maximizer's
-        // own guard refuses.
+        // own guard refuses. CENTER'S (architect 2026-09-29): its ctrl press
+        // is Ctrl+C, the copy of the focused marker's resolved value, in the
+        // Copy Resolved Value button's own words; the overload drops it where
+        // the copy would refuse.
         case RedesignButton::IconZoomFitBest:
             return {"Full Zoom Out (0)", "Press Shift to reset the trim."};
         case RedesignButton::IconZoomOriginal:
-            return {"Center on Focus (C)", nullptr};
+            return {"Center on Focus (C)",
+                    "Press Ctrl to copy the resolved value."};
         // THE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22, renamed
         // 2026-09-24), one line: the bare backtick toggles (since 2026-09-23)
         // and has no shifted twin; the name is the toggle's.
@@ -16928,14 +16917,18 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // and has no shifted twin; the name is the toggle's.
         case RedesignButton::IconFollow:
             return {"Toggle Follow (F)", nullptr};
-        // THE UNDO POSTURE'S LAMP (2026-09-04), one line: bare `z` toggles and
-        // has no shifted twin. It NAMES THE TOGGLE like every lamp — the
-        // state is the lamp's to tell — and it names the SWITCH, never what
-        // the switch makes conditional. Where the lamp refuses a step, the
-        // Undo or Redo button simply greys and Ctrl+Z cards the reason; no
-        // tooltip anywhere says it (the rule at this table's head).
+        // THE UNDO POSTURE'S LAMP (2026-09-04): bare `z` toggles and has no
+        // shifted twin. It NAMES THE TOGGLE like every lamp — the state is the
+        // lamp's to tell — and it names the SWITCH, never what the switch
+        // makes conditional. Where the lamp refuses a step, the Undo or Redo
+        // button simply greys and Ctrl+Z cards the reason; no tooltip anywhere
+        // says it (the rule at this table's head). ITS SECOND LINE (architect
+        // 2026-09-29) names its two modified presses in one sentence, the
+        // walk's shape: ctrl is Ctrl+Z, undo, and ctrl+shift Ctrl+Shift+Z,
+        // redo. The overload drops it where neither step would act.
         case RedesignButton::IconRestrictUndo:
-            return {"Toggle Restrict Undo to Current View (Z)", nullptr};
+            return {"Toggle Restrict Undo to Current View (Z)",
+                    "Press Ctrl to undo, Ctrl+Shift to redo."};
         // THE ITERATION PAIR (2026-09-04, back from the deleted Iterations
         // menu), one line each: neither chord has a shifted twin, so neither
         // carries a second line. THESE TWO STRINGS ARE THE VOCABULARY'S OWNER
@@ -17199,33 +17192,19 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
             return {"Toggle Inherit (Ctrl+N)",
                     "Press Shift to tie the markers into one sweep axis."};
-        // THE EDIT FLAG BUTTON (2026-08-27; the icon row's, after Render, since
-        // 2026-09-29), ONE LINE: the act named, no shift line, the button
-        // admitting neither shift nor ctrl. THE ACCELERATOR IS "Return" since
-        // 2026-09-01, because that is Qt's — and so kdenlive's — name for the
-        // key, the product's one spelling convention (spell_chord's head,
-        // gui_input.h); the keypad's own Enter opens the editor through the
-        // same arm and is not named separately (one act, two keysyms). It read
-        // "Enter" from 2026-08-27, the word stamped on the plastic and on the
-        // painted keyboard, before the convention reached this table. It greys in the `h` view and on a locked
-        // tab — the verbs' own two resting greys — and still explains itself in
-        // both, the tooltips-on-disabled ruling above.
-        case RedesignButton::IconMarkerEditFlag:
-            return {"Edit Flag (Return)", nullptr};
-        // COPY RESOLVED VALUE (2026-08-29; the icon row's, after Edit Flag,
-        // since 2026-09-29), ONE LINE SINCE 2026-09-29: bare `j` copies the
-        // focused marker's resolved value, and the jump that was its shifted
-        // twin (with the second line "Press Shift to jump to defining/previous
-        // marker.") is Jump to Defining Marker's own chord, Ctrl+J, on its own
-        // button — so the button admits no modifier and names one act. The
-        // first line is the architect's own words (2026-08-29): RESOLVED
+        // COPY RESOLVED VALUE (2026-08-29; the icon row's, between Redo and
+        // Render, since 2026-09-29), ONE LINE: CTRL+C copies the focused
+        // marker's resolved value (bare `j` until 2026-09-29), and the jump
+        // that was its shifted twin is Jump to Defining Marker's own Ctrl+J on
+        // its own button — so the button admits no modifier and names one act.
+        // The first line is the architect's own words (2026-08-29): RESOLVED
         // because that is what the value is and the flag shows the unresolved
-        // one. The accelerator is a bare letter and so a capital. The READ-ONLY
-        // LOCK leaves it lit (bare `j` authors nothing), and it still explains
-        // itself in the `h` view, where the derived partition greys it — the
-        // tooltips-on-disabled ruling above.
+        // one. The accelerator is a chord, spelled with its modifier. The
+        // READ-ONLY LOCK leaves it lit (Ctrl+C authors nothing), and it still
+        // explains itself in the `h` view, where the derived partition greys
+        // it — the tooltips-on-disabled ruling above.
         case RedesignButton::IconCopyValue:
-            return {"Copy Resolved Value (J)", nullptr};
+            return {"Copy Resolved Value (Ctrl+C)", nullptr};
         // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's
         // fifth, ONE LINE: the act's name in the architect's words and its
         // own chord, Ctrl+J, spelled with its modifier as a chord is. It
@@ -17409,8 +17388,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   Play reads "Stop (Space)" while the transport is live, Full zoom out reads "Back to
 //   Previous View (0)" while its whole-song state stands and "Back to Working
 //   Zoom (0)" at a ceiling nothing stamped, Center
-//   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair and
-//   Edit flag read the ADDRESSED CELL's own name. Each of those names what a
+//   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair
+//   reads the ADDRESSED CELL's own name. Each of those names what a
 //   press would do in that state — which is what a name is for.
 //
 //   (2) DROP A MODIFIER LINE the constant table carries, where the modified
@@ -17628,9 +17607,34 @@ inline RedesignTooltipText redesign_button_tooltip(
         // run_center_command's own fork (center_command_lands_on_focus, the
         // live focus atom outside the `h` view and the mode's own range
         // inside it).
-        case RedesignButton::IconZoomOriginal:
+        //
+        // ITS CTRL LINE (Ctrl+C, the copy, architect 2026-09-29) DROPS WHERE
+        // THE COPY WOULD REFUSE: the `h` view, whose allowlist does not name
+        // the chord, and an ineligible focus — payload_eligible_marker, the
+        // copy's one gate and the Copy Resolved Value button's face. (The
+        // empty-payload refusal past the gate stays behind the line, as it
+        // stays behind that button's lit face.)
+        case RedesignButton::IconZoomOriginal: {
+            const char* line2 =
+                !a.history_mode.active &&
+                        payload_eligible_marker(a, audio, a.last_selected_marker)
+                    ? redesign_button_tooltip(b).line2
+                    : nullptr;
             if (!center_command_lands_on_focus(a))
-                return {"Center on Playhead (C)", nullptr};
+                return {"Center on Playhead (C)", line2};
+            return {redesign_button_tooltip(b).line1, line2};
+        }
+        // RESTRICT UNDO'S MODIFIER LINE (architect 2026-09-29) DROPS WHERE
+        // NEITHER STEP WOULD ACT — the Undo and Redo buttons' own faces, read
+        // through their one owner (history_step_button_actionable): an empty
+        // stack, a locked tab or target tab, grid iterations, or the lamp's
+        // own verdict. The `h` view refuses both chords at its allowlist, both
+        // stacks being frozen there.
+        case RedesignButton::IconRestrictUndo:
+            if (a.history_mode.active ||
+                (!history_step_button_actionable(a, a.history.undo_stack) &&
+                 !history_step_button_actionable(a, a.history.redo_stack)))
+                return {redesign_button_tooltip(b).line1, nullptr};
             break;
         // THE TWO SKIPS: the SHIFT LINE DROPS where the bare and the
         // whole-piece landings coincide, AND THE COMPARE IS THE LANDING
@@ -17769,23 +17773,6 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
         }
-        // EDIT FLAG OPENS THE ADDRESSED CELL'S EDITOR (architect 2026-09-05):
-        // the button is bare Return, and Return opens whichever cell of the
-        // focus is addressed, so the name follows the axis — the table's
-        // "Edit Flag" on the payload, the cell's own name otherwise. One
-        // line, the button admitting no modifier.
-        case RedesignButton::IconMarkerEditFlag:
-            switch (a.addressed_cell) {
-            // The table's "Edit Flag" stands on the payload: the warp column's
-            // payload IS the flag's line.
-            case MarkerCell::Payload:
-                break;
-            case MarkerCell::Lower:
-                return {"Edit Lower Bound (Return)", nullptr};
-            case MarkerCell::Upper:
-                return {"Edit Upper Bound (Return)", nullptr};
-            }
-            break;
         // LEFT / RIGHT NAME THE HOP ON THE PHASE-RESET COLUMN (architect
         // 2026-09-21): THE P COLUMN'S ARROW UNIT IS A HOP, for the focused
         // reset and the playhead alike (horizontal_arrow_step, gui_input.h —
@@ -17869,7 +17856,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // the walk at redesign_button_ctrl_shift_admits is what holds the buttons
 // admitting both to the two shapes whose one line names every form (Up and
 // Down's names both rungs of the step ladder, the walk's its key's three
-// modified forms).
+// modified forms; Restrict Undo's names its ctrl and its ctrl+shift form).
 //
 // IT HOLDS ON THE CONSTANT TABLE, the state-free truth. THE STATEFUL OVERLOAD
 // MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
@@ -17883,7 +17870,9 @@ inline RedesignTooltipText redesign_button_tooltip(
 // rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
 // from a wall, where the jump names the member the step already reaches, and
 // since 2026-09-29 the MARCH LINE of PREVIOUS MARKER, SWITCH TAB and the two
-// TABS under a lit grid iterations, where the lock refuses the march —
+// TABS under a lit grid iterations, where the lock refuses the march,
+// CENTER's copy line where the copy would refuse, and RESTRICT UNDO's line
+// where neither step would act —
 // the overload returns the one-line
 // form, and it can return a
 // second line only on a button this walk has already bound to an admission,
@@ -18371,7 +18360,7 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // missing entirely stays Eligible — resolved_marker_payload already yields an
 // empty string for that case and both acts refuse an empty payload, so it
 // never surfaces a stale tempo. ITS FOUR CALLERS, re-greped 2026-09-29: the
-// VALUE PAIR (2026-08-29) — bare `j`, which copies the focused marker's
+// VALUE PAIR (2026-08-29) — Ctrl+C, which copies the focused marker's
 // resolved value to the system clipboard, and Ctrl+J, which jumps to the
 // marker that value came from (both read the verdict and fork their card on
 // it) — the COPY VALUE BUTTON'S disabled face since 2026-08-30

@@ -527,7 +527,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 // MISCELLANEOUS CELL — this dispatcher's other subject —
                 // removes nothing: its output lands in `tmp/`, which is
                 // transient by ruling and taken wholesale at the next
-                // load-in-place's trash, and no mirror ships a cell as a
+                // load-in-place's wipe, and no mirror ships a cell as a
                 // deliverable. (A sweep's cells are the one `tmp/` case that
                 // IS removed, at on_batch_entry_complete, because a sweep
                 // leaves a folder of them to walk.)

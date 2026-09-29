@@ -752,9 +752,10 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // left float's three menu buttons and the right float's view bar, its
 // content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-four view/mode/action buttons since 2026-09-29's
-// evening — Edit Flag and Copy Value up from the bottom row, Enable Tooltips
-// new — twenty-one from the stepped zoom
+// ICON row (the twenty-three view/mode/action buttons since 2026-09-29's
+// late evening — Copy Value up from the bottom row between Redo and Render,
+// Enable Tooltips new, Edit Flag up and deleted the same evening —
+// twenty-one from the stepped zoom
 // buttons' removal 2026-09-25, twenty-three from Follow's return
 // on the evening of 2026-09-23, twenty-two for the hours of that day it was
 // deleted, twenty-three from Zoom In and Zoom
@@ -866,7 +867,7 @@ GuiRect bottom_row_content_area(const AppState& a) {
 // `kStatusBarContentPx`, the three height accessors, `paint_status_bar` and
 // the window-foot seam `kRedesignBottomLine` all went with it; the STATE TEXT
 // is row 8's own cell, right of the clock, and the RESOLVED READOUT retired
-// whole — bare `j` copies the value and Ctrl+J goes to its source.)
+// whole — Ctrl+C copies the value and Ctrl+J goes to its source.)
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
 // pair. (`Viewport::trim_range` is not "the target-view half" of a pair with
@@ -1775,7 +1776,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // payload_eligibility is a free function in app_state.{h,cpp} (its
     // boolean face payload_eligible_marker beside it). The two acts reach it
-    // directly with the (app, audio, idx) signature — bare `j`, which copies
+    // directly with the (app, audio, idx) signature — Ctrl+C, which copies
     // the focused marker's resolved value, and Ctrl+J, which jumps to the
     // marker that value came from (both in input_key_dispatch.cpp); the Copy
     // Value button's face and Jump to Defining Marker's
@@ -2860,7 +2861,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // cache had stamped — the backstop for a store mutation or a silent map
         // promotion under a stationary cursor. There is no hover cache to keep
         // honest any more: a marker's value is painted on its own flag, and
-        // bare `j`'s copy and Ctrl+J's jump both read the live store through
+        // Ctrl+C's copy and Ctrl+J's jump both read the live store through
         // the selection.
 
         // Blink the editor cursor independently of playback. Compare the
@@ -3394,12 +3395,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 int gui_main(const char* argument) {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
-    // (NO SIGCHLD DISPOSITION HERE. SIG_IGN stood at this point until
-    // 2026-09-06 to auto-reap fire-and-forget children; the last such child —
-    // the external audio player `l` used to spawn — left the roster 2026-08-28,
-    // and the one spawner that remains (`gio trash` in input_key_dispatch.cpp)
-    // waits on its own child. The DEFAULT disposition is what makes that
-    // child's exit status readable.)
+    // (NO SIGCHLD DISPOSITION HERE, AND NO CHILD: the GUI spawns nothing
+    // since 2026-09-29, when the load in place's `gio trash` gave way to a
+    // permanent delete (architect). SIG_IGN stood at this point until
+    // 2026-09-06 to auto-reap fire-and-forget children, the last of which —
+    // the external audio player `l` used to spawn — left 2026-08-28.)
 
     // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
     // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is the
@@ -3411,11 +3411,8 @@ int gui_main(const char* argument) {
     // (abandon the transfer, close the fd, no state to unwind). libjack's
     // server socket is the same shape and inherits the same protection — it has
     // no SIGPIPE-dependent behaviour of its own, and neither has libgit2's SSH
-    // transport, whose socket to the remote a checkpoint push writes. THE
-    // CHILD INHERITS IT: an ignored disposition survives exec and posix_spawn
-    // resets nothing of its own here (no POSIX_SPAWN_SETSIGDEF in the one
-    // spawner's attributes, trash_directory's `gio trash`), and that child's
-    // output goes to /dev/null, so it never meets a closed pipe.
+    // transport, whose socket to the remote a checkpoint push writes. The
+    // process spawns no child, so nothing inherits the disposition.
     std::signal(SIGPIPE, SIG_IGN);
 
     // THE ONE GIT ROAD, initialized once for the whole process (git_repo.h):

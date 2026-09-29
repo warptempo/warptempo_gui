@@ -1129,8 +1129,11 @@ Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
 wide, and the icon row fits WHOLE up to gui_scale 322 from the TWO VIEW LAMPS'
 WHOLE ICON-ROW CATEGORY'S DELETION on 2026-09-15 — two boxes, a group slot and
-a separator — until 2026-09-19. THE WALK IS 857 AUTHORED PX AND THE CEILING 270 since
-2026-09-29's evening, when Edit Flag and Copy Value came up from the bottom row and
+a separator — until 2026-09-19. THE WALK IS 823 AUTHORED PX AND THE CEILING 279 since
+2026-09-29's late evening, when the Edit Flag button was deleted and Copy Value
+moved between Redo and Render (23 members in 6 groups; the PAINTED walk ends at
+2296 of 2304 at 279 and at 2319 at 280; at the tablet's 200 % it paints 1646).
+It was 857 and 270 for that evening's hour, when Edit Flag and Copy Value came up from the bottom row and
 Enable Tooltips joined the icon row (24 members in 6 groups; the PAINTED walk ends
 at 2301 of 2304 at 270 and at 2325 at 271; at the tablet's 200 % it paints 1714).
 It was 755 and 304 from that morning, when a separator went in between Save and Undo, Center left for the

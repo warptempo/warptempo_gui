@@ -308,32 +308,37 @@ void GuiRenderPlayer::delete_batch_folders(
             }
         }
     }
-    // THE BOUNDS: only a directory directly under this project's own `tmp/`,
-    // named by the listing it came from. The batch root is re-derived here
-    // from the source, the same owner the listing's enumeration and every
-    // dispatcher name their folders by, so a parked path that is anything
-    // else — `tmp/` itself, a path outside it, a file — is refused whole.
+    // THE BOUNDS AND THE REMOVE are the one batch-folder deletion's
+    // (remove_batch_folder, renders_dir.h, shared with the load in place's
+    // tail): only a directory directly under this project's own `tmp/`,
+    // named by the listing it came from, goes, and it goes for good. The
+    // batch root is re-derived here from the source, the same owner the
+    // listing's enumeration and every dispatcher name their folders by, so a
+    // parked path that is anything else — `tmp/` itself, a path outside it, a
+    // file — is refused whole.
     const std::filesystem::path batch_root =
         project_batch_root(app.source_audio_path);
     for (const std::filesystem::path& f : folders) {
         std::error_code ec;
-        if (f.parent_path() != batch_root || f.filename().empty() ||
-            !std::filesystem::is_directory(f, ec)) {
-            std::fprintf(stderr,
-                         "warptempo_gui: delete refused: '%s' is not a batch "
-                         "folder under '%s'\n",
-                         f.string().c_str(), batch_root.string().c_str());
-            continue;
-        }
-        std::filesystem::remove_all(f, ec);
-        if (ec) {
-            const GuiFailure fail = path_failure(
-                "Could not delete ", f, f.filename().string(),
-                ": " + ec.message());
-            std::fprintf(stderr, "warptempo_gui: %s\n",
-                         fail.diagnostic.c_str());
-            notifications.notify(AppState::NotificationClass::Critical,
-                                 fail.display);
+        switch (remove_batch_folder(batch_root, f, ec)) {
+            case BatchFolderRemoval::Removed:
+                break;
+            case BatchFolderRemoval::OutOfBounds:
+                std::fprintf(stderr,
+                             "warptempo_gui: delete refused: '%s' is not a "
+                             "batch folder under '%s'\n",
+                             f.string().c_str(), batch_root.string().c_str());
+                break;
+            case BatchFolderRemoval::Failed: {
+                const GuiFailure fail = path_failure(
+                    "Could not delete ", f, f.filename().string(),
+                    ": " + ec.message());
+                std::fprintf(stderr, "warptempo_gui: %s\n",
+                             fail.diagnostic.c_str());
+                notifications.notify(AppState::NotificationClass::Critical,
+                                     fail.display);
+                break;
+            }
         }
     }
     // THE LISTING FROM DISK AGAIN, whatever failed: a partial removal shows

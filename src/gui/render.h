@@ -1778,8 +1778,10 @@ inline int tab_spill_px() {
 // 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
-// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-FOUR
-// view/mode/action buttons since 2026-09-29's evening, Edit Flag and Copy Value
+// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-THREE
+// view/mode/action buttons since 2026-09-29's late evening, when the Edit Flag
+// button was deleted and Copy Value sat between Redo and Render; TWENTY-FOUR
+// for that evening's hour, Edit Flag and Copy Value
 // coming up behind Render and Enable Tooltips joining behind the padlock;
 // TWENTY-ONE from 2026-09-25, when the stepped zoom buttons Zoom In and Zoom
 // Out were removed — still twenty-one across 2026-09-29's morning, Center
@@ -2999,8 +3001,10 @@ struct FlagHitRect {
 // selected. A unit already painted in its selected pair shows no hover change.
 // The edge, the border, the label, the stem and the lead-in ring never move.
 // THE BLEND RIDES THE BUTTONS' HoverFade (kHoverFadeMs / kHoverFadeSteps,
-// above), in and out, so the painted fill is hover_fade_color over the half
-// blend at the unit's painted level.
+// above) IN THE BUTTONS' OWN KIND, SnapIn (architect 2026-09-29, "like the
+// icons"): full the instant the hover begins, the 100 ms fade on the way out,
+// so the painted fill is hover_fade_color over the half blend at the unit's
+// painted level.
 //
 // IT IS PAINT, NEVER A CLAIM (strictly as painted): the hover is resolved from
 // the promoted flag stash (AppState::flag_hit_rects) and changes nothing a

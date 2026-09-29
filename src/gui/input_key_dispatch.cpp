@@ -32,13 +32,7 @@
                                    // bpm_sweep_plan on 2026-09-04; the slice
                                    // has other callers here)
 
-#include <fcntl.h>
-#include <spawn.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
 #include <algorithm>
-#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -48,10 +42,6 @@
 #include <system_error>
 #include <utility>
 #include <vector>
-
-// The trashed deletion's child inherits our environment whole (gio needs the
-// session bus address to reach gvfs), and posix_spawnp takes it by name.
-extern "C" char** environ;
 
 namespace {
 
@@ -63,112 +53,6 @@ namespace {
 // (THE CHECKPOINT-PUBLISHING SENTENCE moved to notifications.h on 2026-09-24,
 // when the save owner began raising it from save_ops.cpp: the account of its
 // readers is there.)
-
-// Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
-// spec's ordinary command-line front end. True iff the folder is gone from
-// disk afterwards.
-//
-// THIS IS THE PRODUCT'S ONLY TRASHED DELETION (architect 2026-08-07), and the
-// scope line is deliberate: the one caller is the `'` load-in-place's tmp/
-// wipe far below, which takes every archival render in the folder with it —
-// user-visible artifacts a sweep may have spent an evening producing, so a
-// wiped batch stays restorable. EVERY OTHER deletion in the product stays a
-// native remove: the atomic-write temporaries, the history mode's RAII scratch
-// dir, the process-private render cache and a cancelled render's own partial
-// artifacts are all ephemera the user never sees, and trashing them would
-// pollute his trash instead of protecting anything. THE RENDER PLAYER'S DELETE
-// (architect 2026-09-29) IS NATIVE TOO, for the opposite reason: it is the
-// user's own deliberate act on the batch folders, asked behind a question
-// whose Enter answers Cancel, and its glyph is KDE's permanent Delete
-// (edit-delete) rather than Move to Trash — the wipe here is a side effect of
-// another act, which is what the trash protects against
-// (GuiRenderPlayer::delete_batch_folders, render_player.cpp).
-//
-// argv exec, NEVER a shell (the project's standing rule): a project folder's
-// name carries spaces and reaches gio as one argv element with no quoting rules
-// in between. `--` guards a hypothetical dash-leading path. The folder goes
-// WHOLE, so a restore brings back one entry rather than a scatter of files.
-//
-// THE VERDICT IS AN OBSERVATION OF THE FILESYSTEM rather than the child's exit
-// status, and that is a choice rather than a limitation: the act's question is
-// whether the folder is GONE, which is not the question gio's exit code answers
-// The wait still runs — it is what orders the
-// observation after the child, and it is also what keeps the child from sitting
-// as a zombie, SIGCHLD carrying its default disposition — and the status IS
-// honoured as a fast negative; what decides the ordinary case is that the
-// directory is no longer there. That one witness covers every shape the
-// caller's fallback exists for: gio absent (posix_spawnp refuses outright on
-// glibc; on bionic the child exits 127), gio refusing (an unsupported
-// filesystem, no gvfs available), a spawn that never happened at all.
-//
-// THE WITNESS ANSWERS ONLY A CONFIRMED ABSENCE, which is why the error_code is
-// read rather than discarded: std::filesystem::exists returns false both when
-// the status says not_found and when the status query itself FAILED (a
-// permission or I/O error), and those two are opposite verdicts. A false with
-// `ec` set is INDETERMINATE — the folder may well still be there — so it is not
-// absence and this helper returns false for it, routing the caller onto the
-// native fallback, whose own failure is loud. Reporting a successful trash on
-// an unreadable status would suppress that fallback and let the caller announce
-// a wipe that never happened.
-//
-// The child's stdout and stderr go to /dev/null: the caller's single fallback
-// line is the whole diagnostic this act prints, and gio's own words would only
-// double it.
-bool trash_directory(const std::filesystem::path& dir) {
-    const std::string path = dir.string();
-
-    char* argv[] = {const_cast<char*>("gio"), const_cast<char*>("trash"),
-                    const_cast<char*>("--"),  const_cast<char*>(path.c_str()),
-                    nullptr};
-
-    // posix_spawnp, never fork() (2026-09-06): the GUI carries several hundred
-    // megabytes of virtual address space, and fork() copies its page tables and
-    // marks every page copy-on-write, so the GUI thread then faults on its own
-    // writes — a stutter measured across the git subprocesses the history view
-    // spawned per commit until libgit2 replaced them. posix_spawnp runs the
-    // child under vfork semantics (no page-table copy, no COW) and the parent
-    // resumes once the child has exec'd or failed; this is the product's one
-    // spawn now. The child runs no code of ours — the two /dev/null redirections are a
-    // file-actions object the spawn applies — so nothing here has to be
-    // async-signal-safe. POSIX_SPAWN_USEVFORK is bionic's switch; glibc has used
-    // CLONE_VFORK unconditionally since 2.24 and ignores the flag.
-    posix_spawn_file_actions_t actions;
-    if (posix_spawn_file_actions_init(&actions) != 0) return false;
-    posix_spawnattr_t attr;
-    if (posix_spawnattr_init(&attr) != 0) {
-        posix_spawn_file_actions_destroy(&actions);
-        return false;
-    }
-    int rc = posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO,
-                                              "/dev/null", O_WRONLY, 0);
-    if (rc == 0) {
-        rc = posix_spawn_file_actions_addopen(&actions, STDERR_FILENO,
-                                              "/dev/null", O_WRONLY, 0);
-    }
-    if (rc == 0) {
-        rc = posix_spawnattr_setflags(
-            &attr, static_cast<short>(POSIX_SPAWN_USEVFORK));
-    }
-
-    pid_t pid = -1;
-    if (rc == 0) rc = posix_spawnp(&pid, "gio", &actions, &attr, argv, environ);
-    posix_spawnattr_destroy(&attr);
-    posix_spawn_file_actions_destroy(&actions);
-    if (rc != 0) return false;
-
-    int   status = 0;
-    pid_t w      = 0;
-    do {
-        w = waitpid(pid, &status, 0);
-    } while (w < 0 && errno == EINTR);
-    if (w == pid && (!WIFEXITED(status) || WEXITSTATUS(status) != 0)) {
-        return false;
-    }
-
-    std::error_code ec;
-    const bool absent = !std::filesystem::exists(dir, ec);
-    return absent && !ec;
-}
 
 }  // namespace
 
@@ -240,8 +124,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // ENUMERATED ONCE, at redesign_button_enabled's read-only mode statement
 // (app_state.h); THE CHORDS, re-derived against the return below 2026-09-19,
 // are the FOUR marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N), FLATTEN in the
-// icon row's iteration group (Ctrl+F), the Edit flag opener on the bottom row
-// (bare Return), THE ITERATION PAIR that came back to that same group 2026-09-04
+// icon row's iteration group (Ctrl+F), THE ITERATION PAIR that came back to that same group 2026-09-04
 // (Ctrl+B and bare `i`), UNDO and REDO (Ctrl+Z, Ctrl+Shift+Z), the LOAD IN PLACE
 // (bare `'`, dropped in the `h` view alone — the state-dependent entry above),
 // and THE FOUR CARDINAL ARROWS (Up/Down dropped outright; Left/Right dropped
@@ -526,9 +409,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_load_in_place_player =
         (!ctrl && !shift && !alt && key == GuiKeys::Apostrophe &&
          !app.history_mode.active);
-    // THE VALUE PAIR — bare `j` and Ctrl+J (2026-08-29; the jump was
-    // Shift+`j` until 2026-09-29) — is admitted on the header's own standard:
-    // neither authors anything. `j` composes the focused marker's resolved
+    // THE VALUE PAIR — Ctrl+C and Ctrl+J (2026-08-29; both chords since
+    // 2026-09-29) — is admitted on the header's own standard:
+    // neither authors anything. Ctrl+C composes the focused marker's resolved
     // value and hands it to the compositor's clipboard; Ctrl+J switches the A/B
     // tab, selects the marker that value came from, lands the playhead on it
     // and centres it — a tab switch, a selection, a playhead and a camera,
@@ -760,7 +643,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // group, was never one either — its face reads
 // tempo_flatten_actionable, which composes authoring_locked itself, so the
 // grey falls out of the act's own predicate with no membership here), the
-// Toggle History View button, Edit flag and the
+// Toggle History View button, the
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
 // 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
@@ -6069,70 +5952,45 @@ bool GuiInputHandler::load_render_entry_in_place(
     const std::filesystem::path batch_root =
         project_batch_root(app.source_audio_path);
 
-    // Wipe tmp/ AFTER the successful load-in-place. The loaded render survives
-    // through the render cache, not as a folder artifact.
+    // WIPE tmp/ AFTER THE SUCCESSFUL LOAD IN PLACE: every batch folder under
+    // it is DELETED PERMANENTLY (architect 2026-09-29), through the one
+    // batch-folder deletion the render player's Delete also runs
+    // (remove_batch_folder, renders_dir.h) — so the same bounds hold: only a
+    // directory standing directly under the project's `tmp/` goes, `tmp/`
+    // itself stays, and nothing else in it is touched. The loaded render
+    // survives through the render cache, not as a folder artifact. (The wipe
+    // went to the desktop trash first from 2026-08-07 until this ruling: the
+    // tablet's trash cannot be recovered, and by the time a cell is loaded in
+    // place its keeper has been chosen.)
     //
-    // TO THE DESKTOP TRASH FIRST (architect 2026-08-07): this is the product's one
-    // deletion of user-visible artifacts, so a wiped batch stays restorable. THE
-    // FALLBACK IS THE DETECTION — no upfront probe, no setting, no capability
-    // cache: trash_directory answers by observation, and its false lands on the
-    // native remove_all below with ONE line saying the trash was unavailable. A
-    // successful trash prints no diagnostic of its own; that silence is this
-    // wipe's ordinary ending and always was, and the act's own tail line below is
-    // what names where the batch went. The is_directory guard and the
-    // ec-reported failure line are the fallback path's own, unchanged.
-    //
-    // THE GUARD READS ITS error_code for the same reason the trash witness does:
-    // is_directory returns false both when the status says "not there" and when
-    // the status QUERY ITSELF FAILED (a permission or I/O error), and those are
-    // opposite verdicts. An absence is the ordinary silent ending — nothing to
-    // dispose of — while a failed query is INDETERMINATE: the folder may well
-    // still be there, nothing was trashed or deleted, and it gets its own line.
-    //
-    // THE TAIL LINE THEN NAMES THE DISPOSAL THAT ACTUALLY HAPPENED (architect
-    // 2026-08-08), three wordings off one verdict: TRASHED says "moved tmp/
-    // to the trash", because that batch is RESTORABLE and "wiped" would overstate
-    // it — the whole point of the trash-first rule; WIPED says "wiped tmp/"
-    // for the native fallback's own delete, which is not restorable; and NONE
-    // drops the clause entirely on the two failing shapes (the failed query and
-    // the fallback delete's error), since the load succeeded either way but the
-    // disposal did not happen and each shape has already printed its own line.
-    // THE ABSENT DIRECTORY KEEPS THE "WIPED" WORDING, unchanged from before the
-    // split: the clause is a claim about the END STATE the act guarantees — there
-    // is no tmp/ on disk and nothing of it left to restore — which is exactly
-    // true with nothing there, and the split is about restorability, the one axis
-    // an absence has no side of.
-    enum class WipeVerdict { Trashed, Wiped, None };
-    WipeVerdict verdict = WipeVerdict::Wiped;  // The absent case; see above.
-    if (std::filesystem::is_directory(batch_root, ec)) {
-        if (trash_directory(batch_root)) {
-            verdict = WipeVerdict::Trashed;
-        } else {
-            std::fprintf(stderr,
-                "warptempo_gui: load-in-place: Trash unavailable for '%s'; "
-                "deleting it instead\n",
-                batch_root.string().c_str());
-            std::filesystem::remove_all(batch_root, ec);
-            if (ec) {
-                std::fprintf(stderr,
-                    "warptempo_gui: load-in-place: Wipe failed for '%s': %s\n",
-                    batch_root.string().c_str(), ec.message().c_str());
-                verdict = WipeVerdict::None;
-            }
-        }
-    } else if (ec) {
+    // The folders are listed WHOLE before the first remove (list_batch_folders),
+    // so no iterator is live while the folder changes. A failed listing and a
+    // failed remove each print their own stderr line and drop the tail's
+    // clause; the load succeeded either way. An absent `tmp/` is the ordinary
+    // empty listing.
+    bool wiped = true;
+    const std::vector<std::filesystem::path> batch_folders =
+        list_batch_folders(batch_root, ec);
+    if (ec) {
         std::fprintf(stderr,
-            "warptempo_gui: load-in-place: Could not check '%s': %s\n",
+            "warptempo_gui: load-in-place: Could not list '%s': %s\n",
             batch_root.string().c_str(), ec.message().c_str());
-        verdict = WipeVerdict::None;
+        wiped = false;
+    }
+    for (const std::filesystem::path& f : batch_folders) {
+        if (remove_batch_folder(batch_root, f, ec) ==
+            BatchFolderRemoval::Removed)
+            continue;
+        std::fprintf(stderr,
+            "warptempo_gui: load-in-place: Could not delete '%s'%s%s\n",
+            f.string().c_str(), ec ? ": " : "",
+            ec ? ec.message().c_str() : "");
+        wiped = false;
     }
 
-    const char* disposal =
-        (verdict == WipeVerdict::Trashed) ? " and moved tmp/ to the trash"
-      : (verdict == WipeVerdict::Wiped)   ? " and wiped tmp/"
-                                          : "";
     std::fprintf(stderr,
-        "warptempo_gui: load-in-place: Loaded render in place%s\n", disposal);
+        "warptempo_gui: load-in-place: Loaded render in place%s\n",
+        wiped ? " and wiped tmp/" : "");
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
@@ -7586,15 +7444,16 @@ void GuiInputHandler::copy_stats_panel_report() {
     }
     // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes the
     // string and hands it straight over, holding no copy of its own
-    // (conventions.md's clipboard ruling, and bare `j`'s own road).
+    // (conventions.md's clipboard ruling, and Ctrl+C's own road in the main
+    // window).
     if (!gui.clipboard_set_text(report)) {
         card_clipboard_refusal(notifications, "copy");
         return;
     }
     // AND THE SUCCESS SAYS SO: a clipboard write is the one success class in
     // the product that paints nothing, so the card is the whole of what the
-    // act shows (messaging.md; the sentence takes bare `j`'s shape, "Copied
-    // the resolved value", one surface over).
+    // act shows (messaging.md; the sentence takes the value copy's shape,
+    // "Copied the resolved value", one surface over).
     notifications.notify(AppState::NotificationClass::Normal,
                          "Copied the AV sync stats");
 }
@@ -7620,9 +7479,10 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     }
     // CTRL+C COPIES THE WHOLE REPORT — the Copy to Clipboard button's key twin
     // (architect 2026-09-03). A TEXT SURFACE OWNING Ctrl+C IS THE EDITORS'
-    // EXISTING PATTERN rather than an exception to the global unbinding
-    // (conventions.md's clipboard ruling): the chord is unbound in ordinary
-    // dispatch and belongs to whatever surface holds text, and this panel is
+    // EXISTING PATTERN (conventions.md's clipboard ruling): while the panel
+    // stands its router is the whole vocabulary, so the chord is the report's
+    // here and never reaches the main window's own Ctrl+C (the focused
+    // marker's resolved value, since 2026-09-29), and this panel is
     // the one report in the product whose whole purpose is to be read and
     // quoted. There is nothing to select and nothing to select FROM — the act
     // is the report WHOLE, which is what the architect asked for ("all I
@@ -7873,7 +7733,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         selection_consumed(app);
         phase_reset_propagate.copy_from_selection();
         // THE COPY SAYS SO: a clipboard write paints nothing (the reasoning
-        // is at bare `j`'s own card, copy_focused_marker_value). The card is
+        // is at Ctrl+C's own card, copy_focused_marker_value). The card is
         // the ARM'S: the propagate's COPY body carries no sentence of its own
         // (unlike the pastes beside it). THE MENU ROW INHERITS IT: Edit ->
         // Copy Phase Resets dispatches this chord.
@@ -8608,11 +8468,11 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     }
 }
 
-// -- THE VALUE PAIR: bare `j` copies, Ctrl+J jumps -----------------------
+// -- THE VALUE PAIR: Ctrl+C copies, Ctrl+J jumps -------------------------
 //
-// (architect 2026-08-29, replacing the resolved readout and its Ctrl+C, which
-// retired with the status bar the same day.) BOTH ACT ON THE SELECTION'S
-// FOCUS, the subject Ctrl+C had, and both compose through the ONE parser
+// (architect 2026-08-29, replacing the resolved readout, which retired with
+// the status bar the same day; the copy is on Ctrl+C again since 2026-09-29.)
+// BOTH ACT ON THE SELECTION'S FOCUS, and both compose through the ONE parser
 // composer resolved_marker_payload (warp_frame_map_build.h), which returns the
 // pasteable value and — through its out-parameter — the marker that value came
 // FROM: a pass's immediate prior owner, a ref's definition. One resolve, two
@@ -8634,7 +8494,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
 // (kValueInCollapsedStack, app_state.h — one sentence for both chords, the
 // jump refusing on the same ground: the marker a render-inert value "came
 // from" is nowhere to stand). Iteration mode stopped being a term the same
-// day — the line was the retired readout's, and under it `j` carded "no
+// day — the line was the retired readout's, and under it the copy carded "no
 // resolved value" on a marker that had one. THE COPY VALUE BUTTON GREYS ON
 // THE GATE'S ANSWER since 2026-08-30 (redesign_button_enabled, the
 // truthful-buttons ruling — for its first day it never greyed on the
@@ -8691,10 +8551,10 @@ void GuiInputHandler::copy_focused_marker_value() {
     // value is the very `payload` handed to the clipboard, single-quoted as
     // every named thing on a card is. The save and a render stay silent by
     // ruling: each has its own visible answer (row 8's clock
-    // suffix — the `*` a save clears — and the file on disk). THE BUTTON
-    // INHERITS IT: the bottom row's Copy resolved value dispatches this same
-    // bare `j` through on_key at its lift, so the sentence lives once and both
-    // roads say it.
+    // suffix — the `*` a save clears — and the file on disk). THE BUTTONS
+    // INHERIT IT: the icon row's Copy Resolved Value and the Center button's
+    // ctrl press dispatch this same Ctrl+C through on_key at their lift, so
+    // the sentence lives once and every road says it.
     notifications.notify(AppState::NotificationClass::Normal,
                          "Copied the resolved value '" + payload + "'");
 }

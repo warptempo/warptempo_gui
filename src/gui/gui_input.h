@@ -696,18 +696,23 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
     switch (key) {
-        // -- letters, bare only, bound in EVERY state: the centring `c` and
-        // the mode toggles (`i` iteration, `k` add to selection; `f` left this
+        // -- letters, bare only, bound in EVERY state: the mode toggles (`i`
+        // iteration, `k` add to selection; `c` left this group 2026-09-29 for
+        // Ctrl+C, below, its bare centring unchanged; `f` left this
         // group 2026-09-19 for the two FLATTEN chords below, its bare form —
         // the follow lamp — unchanged; `x` the value drag's lamp stood here 2026-09-10 to
         // 2026-09-13, `y` the keep-centered lamp 2026-08-31 to 2026-09-14,
         // `m` the bpm opener and `t` the S/T flip both 2026-08-01 (`m`)/
         // earlier to 2026-09-15, when the architect moved the opener to
         // Ctrl+B, below, and deleted `t` whole with its view lamp).
-        case GuiKeys::C:
         case GuiKeys::I:
         case GuiKeys::K:
             return bare;
+        // THE LETTER CARRIES TWO ACTS: bare `c` centres (every state), and
+        // CTRL+C copies the focused marker's resolved value (architect
+        // 2026-09-29, Copy Resolved Value's chord — and the Center button's
+        // ctrl press). Shift+C binds nothing.
+        case GuiKeys::C: return bare || cl;
         // THE LETTER CARRIES THREE ACTS: bare `f` is the FOLLOW LAMP (the
         // group above's own kind; architect 2026-09-23, back after the hours
         // it was unbound that day), Ctrl+F flattens every warp marker's tempo
@@ -732,10 +737,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // input_handler.cpp carries the same mode test.
         case GuiKeys::G: case GuiKeys::U: case GuiKeys::V:
             return bare && history_view;
-        // The value pair: bare `j` copies, and CTRL+J jumps to where the
-        // value came from (architect 2026-09-29, Jump to Defining Marker's own
-        // chord; it was Shift+J from 2026-08-29, which binds nothing now).
-        case GuiKeys::J: return bare || cl;
+        // The value pair's jump: CTRL+J goes to where the focused value came
+        // from (architect 2026-09-29, Jump to Defining Marker's own chord).
+        // Bare `j` and Shift+J bind nothing; the copy is Ctrl+C.
+        case GuiKeys::J: return cl;
         // Drop on the live column / drop a phase reset from any view / save.
         // Ctrl+Shift+S is unbound (it dropped a magnification level marker
         // from 2026-09-15 until that column's deletion 2026-09-23).
@@ -884,11 +889,15 @@ static_assert(!chord_is_bound(GuiKeys::Escape,
               "Esc is bare-exact: no modified Escape binds anywhere, Ctrl+Esc "
               "included since it retired on 2026-09-01");
 static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::C,
+                                 GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::C,
                                   GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::C,
+                                  GuiInputState{true, true, false}, false) &&
                   chord_is_bound(GuiKeys::F, GuiInputState{}, false),
-              "bare `c` centres and Shift+C binds nothing (the chase posture "
-              "it armed was deleted 2026-09-23); bare `f` is the follow lamp");
+              "bare `c` centres and Ctrl+C copies the resolved value; Shift+C "
+              "and Ctrl+Shift+C bind nothing; bare `f` is the follow lamp");
 static_assert(chord_is_bound(GuiKeys::Home, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::End, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Home,
@@ -929,15 +938,15 @@ static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                                   GuiInputState{true, false, false}, false),
               "the bare backslash is the tooltip lamp in both modes, and no "
               "decoration of it binds");
-static_assert(chord_is_bound(GuiKeys::J, GuiInputState{}, false) &&
+static_assert(!chord_is_bound(GuiKeys::J, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::J,
                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::J,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::J,
                                   GuiInputState{true, true, false}, false),
-              "bare `j` copies the resolved value and Ctrl+J jumps to its "
-              "defining marker; Shift+J and Ctrl+Shift+J bind nothing");
+              "Ctrl+J jumps to the focused value's defining marker; bare `j`, "
+              "Shift+J and Ctrl+Shift+J bind nothing");
 static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit0,
                                  GuiInputState{false, true, false}, false) &&
@@ -1242,17 +1251,18 @@ inline bool is_av_sync_stats_key(GuiKey key, GuiInputState mods) {
 }
 
 // THE VALUE PAIR (architect 2026-08-29), the two acts that replaced the
-// retired resolved readout and its Ctrl+C: bare `j` COPIES the focused
-// marker's resolved value to the system clipboard, and CTRL+J JUMPS to the
-// marker that value came from — the pass's owner or the ref's definition — on
-// the OTHER A/B tab, so the two tabs stand on the reference and its
-// definition at once. `j` was unbound (verified by grep at the landing). THE
-// JUMP WAS SHIFT+J from 2026-08-29 until 2026-09-29, the roster's shift-twin
-// shape on the Copy Value button; the architect gave it CTRL+J and a button of
-// its own that day (Jump to Defining Marker, the bottom row's verb group), and
-// Shift+J binds nothing since.
+// retired resolved readout: CTRL+C COPIES the focused marker's resolved value
+// to the system clipboard (architect 2026-09-29, Copy Resolved Value's chord
+// beside Redo, kdenlive's order; it was bare `j` until then, which binds
+// nothing now), and CTRL+J JUMPS to the marker that value came from — the
+// pass's owner or the ref's definition — on the OTHER A/B tab, so the two tabs
+// stand on the reference and its definition at once (Jump to Defining Marker,
+// the bottom row's verb group). Ctrl+C is free in the main window: bare `c`
+// is the centre key, and the text editors' and the AV sync stats panel's own
+// Ctrl+C are their routers', which run ahead of this dispatch while they
+// stand.
 //
-// BOTH ARE EXACT — bare, and ctrl alone — so shift and alt decorations stay
+// BOTH ARE CTRL-EXACT, so shift and alt decorations stay
 // the strict rule's consumed no-ops, and both are ONE-SHOT
 // (repeat-ineligible: a copy repeats onto itself and a jump has one
 // destination). Their subject is the SELECTION'S FOCUS, and an ineligible
@@ -1268,7 +1278,7 @@ inline bool is_av_sync_stats_key(GuiKey key, GuiInputState mods) {
 // (input_handler.cpp) and the read-only allowlist — and the same one-owner
 // reason.
 inline bool is_copy_value_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::J && !mods.ctrl && !mods.shift && !mods.alt;
+    return key == GuiKeys::C && mods.ctrl && !mods.shift && !mods.alt;
 }
 inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::J && mods.ctrl && !mods.shift && !mods.alt;

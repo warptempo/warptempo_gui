@@ -16,7 +16,7 @@
 // THE DISPOSABLE BATCH CELLS — the iteration and BPM sweeps and the
 // miscellaneous cell, `<N>_<tag>/<basename>.wav` with their per-cell sidecar
 // sets. Lowercase and named for what they are: scratch, which the `'` load in
-// place trashes wholesale. The batch cells are the GUI's alone, which is why
+// place deletes wholesale (every batch folder, permanently). The batch cells are the GUI's alone, which is why
 // their folder is named here; THE DELIVERABLE'S FOLDER IS THE PARSER'S, both
 // products writing it — kDeliverableFolderName / render_output_directory,
 // render_output_naming.h. What that folder has here is the PRUNE below, which
@@ -39,7 +39,7 @@ inline constexpr const char* kBatchFolderName = "tmp";
 
 // `<source parent>/tmp` — the batch root every batch dispatcher creates into,
 // the RENDER PLAYER lists (its `tmp/` folders) and the load in place's tail
-// trashes.
+// empties.
 std::filesystem::path project_batch_root(const std::string& source_audio_path);
 
 // THE BATCH ROOT'S NUMBERING (moved here 2026-09-15, from a private static of
@@ -158,6 +158,39 @@ inline GuiFailure render_folder_creation_failure(
 // `.peaks`, a staging `.tmp` and the architect's own material in there survive.
 void prune_render_folder(const std::string& source_audio_path,
                          const EngineSettings& es);
+
+// THE ONE DELETION OF A BATCH FOLDER (architect 2026-09-29): PERMANENT — a
+// native remove_all, never the desktop trash — and BOUNDED: `folder` goes
+// only if it is a directory standing DIRECTLY under `batch_root` (the
+// project's `tmp/`, project_batch_root), so nothing outside `tmp/` and never
+// `tmp/` itself can go. The verdict says which way it went, and the callers
+// report it on their own surfaces (the answers differ by act):
+//   Removed     — the folder is gone;
+//   OutOfBounds — not a directory directly under `batch_root` (a stray path,
+//                 `tmp/` itself, a file, or a status query that failed —
+//                 indeterminate is not a directory), left alone;
+//   Failed      — the remove itself failed, `ec` holding the system's words
+//                 (a partial removal leaves what it could not take).
+// TWO CALLERS: the render player's Delete (GuiRenderPlayer::
+// delete_batch_folders, the folders the root listing parked) and the load in
+// place's tail (load_render_entry_in_place, every folder under `tmp/` through
+// list_batch_folders below). The load's tail went to the desktop trash from
+// 2026-08-07 until this ruling: the tablet's trash cannot be recovered, and
+// by the time he loads a cell in place he has chosen his keeper.
+enum class BatchFolderRemoval { Removed, OutOfBounds, Failed };
+BatchFolderRemoval remove_batch_folder(const std::filesystem::path& batch_root,
+                                       const std::filesystem::path& folder,
+                                       std::error_code& ec);
+
+// EVERY DIRECTORY DIRECTLY UNDER `batch_root`, classified WHOLE before the
+// caller removes anything, so no iterator is live while the folder changes
+// (the prune's own shape). Non-throwing (directory_walk.h): `ec` holds the
+// fault a failed status query or walk met, and the list is what the walk saw.
+// An absent root, or a root that is not a directory, is an empty list with
+// `ec` clear. Entries that are not directories — no product writes a file
+// there — are left out and left alone.
+std::vector<std::filesystem::path> list_batch_folders(
+    const std::filesystem::path& batch_root, std::error_code& ec);
 
 // Batch-folder enumeration. The directory scan of
 // `<source parent>/tmp/<batch>/<basename>.wav` and the per-entry .settings

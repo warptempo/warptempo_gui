@@ -213,87 +213,35 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, true},   // Ctrl+S
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, true,  true},   // Ctrl+Shift+Z
-    {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false, true},   // Ctrl+Alt+R (+Shift)
-    // EDIT FLAG AND COPY VALUE (architect 2026-09-29: up from the bottom
-    // row's verb group, after Render inside its group; the rows are unchanged
-    // but for Copy Value's lost shift admission, the table being read by id).
-    //
-    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the flag editor's
-    // THIRD ROAD: BARE Enter, which the keyboard
-    // has opened the editor with all along. It exists because the other two
-    // roads are a double-click and a key, and glass has neither reliably — the
-    // architect drove a taller flag hit rect for one evening chasing the missed
-    // double tap and retired it the same night for this button: "get rid of
-    // double tapping as the ONLY way to enter the editor... its tooltip hotkey
-    // says Enter, because that is what triggers the editor".
-    //
-    // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches bare Return
-    // through on_key at the LIFT like every other chrome button, while the KEY
-    // acts at the press like every other hotkey. The ACT is on_key's own Return
-    // arm (input_handler.cpp) and there is no second body — so the editor's
-    // gates, the P-view refusal, the nothing-focused no-op, the read-only drop
-    // and the modal consume are all inherited whole. THE KEYPAD'S Enter is the
-    // same arm's second keysym and is NOT a second row here: a row spells the
-    // chord the dispatch synthesizes, and Return is the spelling every reader
-    // accepts (the marker walk's IsoLeftTab precedent).
-    //
-    // IT IS NOT A RADIO AND CARRIES NO LAMP (an act, not a mode), it does NOT
-    // repeat (an editor opener, and openers never repeat), and it admits
-    // NEITHER shift NOR ctrl, so a modified press is
-    // refused at the band gate and the long press reaches nothing.
-    //
-    // THE BUTTON IS ENTER IN EVERY STATE, A STANDING EDITOR INCLUDED
-    // (architect 2026-08-27, naming the button by its hotkey: "just say Enter,
-    // because that's what triggers the editor"). A button that IS a key does
-    // what the key does, so a press while a marker-lane editor stands
-    // COMMITS that editor on valid text and RED-FLASHES it on invalid — exactly
-    // what the keyboard's Enter does there, and what the on-screen keyboard's
-    // own Enter key does. No second road and no special case: the icon row's
-    // band claim (the bottom row's until 2026-09-29, and it too) sits ABOVE
-    // the outside-press closer in on_button_press, so the
-    // editor is never torn down under this press, and the lift's dispatched
-    // Return arrives at the editor's own key route like any other Return.
-    // THE FLAG DOUBLE-CLICK DIFFERS, AND THE DIFFERENCE IS THE POINT: it stays
-    // close-then-reopen, because a double-click on a flag names a MARKER — the
-    // outside-press closer runs on its first press and the second press opens
-    // the editor on the marker under the finger — while this button names the
-    // KEY, which has no marker under it at all.
-    //
-    // IT OPENS THE ADDRESSED CELL'S EDITOR (architect 2026-09-05), because
-    // Return does: the payload editor by default, a bound cell's editor
-    // where a press or an editor open addressed that cell,
-    // and its tooltip names whichever (redesign_button_tooltip's stateful
-    // arm). ITS GATES: the `h`
-    // view consumes bare Return and greys it with the verbs, and so does the
-    // READ-ONLY lock (the canonical line is serialized content); in the P
-    // VIEW it is live with a BOUND cell addressed — the bound editor is both
-    // columns', while the payload editor refuses there — and the P view's
-    // refusal GREYS the button since 2026-08-30
-    // (flag_editor_open_actionable, the Return arm's own predicate, under
-    // the truthful-buttons ruling; it was a consumed no-op with a live face
-    // under the 2026-08-15 no-blink ruling until then).
-    {RedesignButton::IconMarkerEditFlag,
-     GuiKeys::Return, false, false, false, false, true},                            // bare Enter
-    // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), Edit Flag's
-    // neighbour, the value pair's pointer home for the copy: BARE `j`, which
-    // was free (greped at the landing). Its lift copies the focused marker's
-    // resolved value to the system clipboard, exactly as the key does —
-    // button-is-its-chord literally, the press dispatching bare `j` through
-    // on_key at the LIFT while the KEY acts at the press.
-    //
-    // IT ADMITS NO MODIFIER SINCE 2026-09-29: its shifted twin was the JUMP
-    // (Shift+`j`) from 2026-08-29, and the jump is Jump to Defining Marker's
-    // own Ctrl+J on the bottom row now, so a modified press here is refused at
-    // the band gate and the long press reaches nothing.
+    // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the value pair's
+    // pointer home for the copy, BETWEEN REDO AND RENDER since 2026-09-29
+    // (kdenlive's own order — Save | Undo, Redo, Copy, …): CTRL+C, which the
+    // main window binds to nothing else (bare `c` is the centre key; the text
+    // editors' and the AV sync stats panel's own Ctrl+C are their routers').
+    // Its lift copies the focused marker's resolved value to the system
+    // clipboard, exactly as the key does — button-is-its-chord literally, the
+    // press dispatching Ctrl+C through on_key at the LIFT while the KEY acts at
+    // the press. The row carries the ctrl, Undo's shape, so a ctrl-click is the
+    // consumed nothing the band's modifier gate makes it on any button that
+    // does not admit ctrl, and the long press reaches nothing.
     //
     // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
     // copy repeats onto itself, so the key is one-shot at repeat_eligible and
     // the button carries no `repeats`. ITS GATES ARE NOT THE VERBS': the
-    // READ-ONLY lock ADMITS bare `j` (a clipboard write authors nothing), so
-    // the button stays lit on a locked tab, while the `h` view consumes bare
-    // `j` and greys it through the derived partition.
+    // READ-ONLY lock ADMITS Ctrl+C (a clipboard write authors nothing), so
+    // the button stays lit on a locked tab, while the `h` view consumes the
+    // chord and greys it through the derived partition. (Bare `j` was its chord
+    // until 2026-09-29 and binds nothing now.)
     {RedesignButton::IconCopyValue,
-     GuiKeys::J,      false, false, false, false, true},                             // bare j
+     GuiKeys::C,      true,  false, false, false, true},                             // Ctrl+C
+    {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false, true},   // Ctrl+Alt+R (+Shift)
+    // (THE EDIT FLAG BUTTON — bare Return on a button, the flag editor's third
+    // road — stood in the bottom row's verb group from 2026-08-27 and in the
+    // icon row for the evening of 2026-09-29, when the architect DELETED it:
+    // tapping a flag and then moving the pen to a button is counterintuitive
+    // when a double tap on the flag does it, and the double-click is safe since
+    // the first click arms and waits and the grab gate doubled. The editor's two
+    // roads, the Return key and the double-click on the flag, are unchanged.)
     // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
     // toggle IS the direct select, and the radio flag is what makes a press on
     // the already-selected half a consumed nothing rather than a switch away.
@@ -401,6 +349,16 @@ constexpr ToolbarChord kToolbarChords[] = {
     // Ctrl+Z is not) and DEAD in the `h` view, where both undo stacks are
     // frozen and the mode's allowlist drops the chord, so the derived partition
     // greys this face in there.
+    //
+    // IT ADMITS CTRL AND THE PAIR (architect 2026-09-29): a modified press
+    // spells the button's own key under those modifiers, so its ctrl-click is
+    // CTRL+Z, UNDO, and its ctrl-shift press CTRL+SHIFT+Z, REDO — the keys'
+    // own acts with every refusal they carry (the lock, the lamp's own
+    // verdict, an empty stack), each carding where the key cards. It admits no
+    // shift alone, Shift+Z binding nothing (redesign_button_ctrl_admits /
+    // redesign_button_ctrl_shift_admits). On glass the ctrl is the S Pen's
+    // side button, and the side button held through a long press is the redo.
+    // The row does not repeat, so a held modified press acts once at the lift.
     {RedesignButton::IconRestrictUndo,
      GuiKeys::Z, false, false, false, false, true},                                // bare z
     // THE ITERATION GROUP (architect 2026-09-04) — two rows back from the menu
@@ -575,8 +533,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ADD TO SELECTION landed behind them later that day).
     // SEVENTEEN
     // rows (re-counted 2026-09-29 evening: the walk group grown to four that
-    // morning, then Edit Flag and Copy Value up to the icon row and Jump to
-    // Defining Marker in),
+    // morning, then Edit Flag and Copy Value up to the icon row — Edit Flag
+    // deleted there the same evening — and Jump to Defining Marker in),
     // every chord already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -755,9 +713,14 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
     // CENTER (bare `c`), moved here from the icon row's zoom group on
     // 2026-09-29 (architect) with its row unchanged: a momentary navigation
-    // chord, no radio, no modifier (a modified click is refused at the band
-    // gate), no repeat. LIVE in the `h` view, `c` being that mode's own
-    // vocabulary.
+    // chord, no radio, no repeat. LIVE in the `h` view, `c` being that mode's
+    // own vocabulary. IT ADMITS CTRL (architect 2026-09-29,
+    // redesign_button_ctrl_admits): a modified press spells the button's own
+    // key under that modifier, so its ctrl-click dispatches CTRL+C, COPY
+    // RESOLVED VALUE — the copy's own refusals and card, the icon row's Copy
+    // Value button's act exactly (on glass the S Pen's side button with a
+    // tap). A shift press, and the long press, reach nothing: Shift+C binds
+    // nothing.
     {RedesignButton::IconZoomOriginal,
      GuiKeys::C,      false, false, false, false, true},                             // bare c
     // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the one-shot other-tab
@@ -909,8 +872,9 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // can spell (conventions.md).
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
-// Up / Down step ladder's Ctrl rung, the WALK's Ctrl+Tab and PREVIOUS
-// MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29) — which is why
+// Up / Down step ladder's Ctrl rung, the WALK's Ctrl+Tab, PREVIOUS
+// MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29), CENTER's
+// Ctrl+C and RESTRICT UNDO's Ctrl+Z (2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
 // of any row, or on one of the four dropdown anchors (which carry no chord row
@@ -920,15 +884,19 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 //
 // CTRL+SHIFT TOGETHER BIND ONLY WHERE redesign_button_ctrl_shift_admits SAYS
 // SO (app_state.h) — THE WALK, whose ctrl-shift press is its own key under
-// both modifiers, Ctrl+Shift+Tab, the paired march (architect 2026-09-26).
-// On every other button the pair spells no roster chord — strict modifier
+// both modifiers, Ctrl+Shift+Tab, the paired march (architect 2026-09-26),
+// and RESTRICT UNDO, whose ctrl-shift press is Ctrl+Shift+Z, redo (architect
+// 2026-09-29). On every other button the pair spells no roster chord — strict modifier
 // validation, and Ctrl+Shift+Up is unbound on the keyboard too — so it dies
 // here and the lift's chord build never sees it there. The gate asks the
 // roster, never a named button.
 //
 // A SHIFT press is deliberately NOT judged here: its admission is a press-time
 // refusal of the arm body's (arm_redesign_press), where a non-admitting button
-// consumes the press rather than letting the band answer for it.
+// consumes the press rather than letting the band answer for it. A CTRL+SHIFT
+// press that passes here is the pair's admission and asks no shift-alone one:
+// Restrict Undo admits the pair while Shift+Z binds nothing
+// (redesign_button_shift_admits_with, app_state.h).
 bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
                                    GuiInputState mods) {
     if (mods.alt) return true;
@@ -7622,37 +7590,50 @@ uint64_t flag_hover_lane_key(const AppState& app) {
 }
 
 // ONE UNIT'S HOVER EDGE: its fade slot (made on first use) takes the edge in
-// the Reversing kind — in and out, a return mid-fade reversing from where it
-// stood — and raises the tick's bit when an animation now runs. No damage:
-// an edge moves no painted level, the tick's advances do.
-void flag_hover_edge(AppState& app, int marker_index, MarkerCell cell,
+// the SnapIn kind, the buttons' own (architect 2026-09-29, "like the icons"):
+// full the instant the hover begins, the 100 ms fade on the way out from
+// where the hidden animation stood, a return mid-fade full again at once. It
+// raises the tick's bit when an animation now runs, and returns whether the
+// PAINTED level moved at the edge — which a SnapIn edge does (the snap in,
+// and a short hover's tail starting below full), so the caller damages the
+// unit's box then; the tick's advances damage the rest.
+bool flag_hover_edge(AppState& app, int marker_index, MarkerCell cell,
                      bool hovered, int64_t now) {
     std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
     AppState::FlagHoverFade* slot = nullptr;
     for (AppState::FlagHoverFade& f : hf)
         if (f.marker_index == marker_index && f.cell == cell) { slot = &f; break; }
     if (!slot) {
-        if (!hovered) return;   // nothing painted, nothing to fade out
+        if (!hovered) return false;   // nothing painted, nothing to fade out
         hf.push_back(AppState::FlagHoverFade{marker_index, cell, HoverFade{}});
         slot = &hf.back();
     }
-    if (hover_fade_edge(slot->fade, HoverFadeKind::Reversing, hovered, now))
+    const int before = hover_fade_steps(slot->fade);
+    if (hover_fade_edge(slot->fade, HoverFadeKind::SnapIn, hovered, now))
         app.hover_fades_running = true;
+    return hover_fade_steps(slot->fade) != before;
 }
 
-// THE HOVERED UNIT MOVES: the old one fades out, the new one in.
-void set_flag_hover_unit(AppState& app, int marker_index, MarkerCell cell) {
+// THE HOVERED UNIT MOVES: the old one fades out, the new one snaps in, and
+// each unit whose painted level moved at its edge has its own box damaged
+// (`damage`, the caller's viewport) — never the waveform.
+template <typename Damage>
+void set_flag_hover_unit(AppState& app, int marker_index, MarkerCell cell,
+                         Damage&& damage) {
     AppState::FlagHover& h = app.flag_hover;
     if (marker_index == h.marker_index &&
         (marker_index < 0 || cell == h.cell))
         return;
     const int64_t now = monotonic_ms();
-    if (h.marker_index >= 0)
-        flag_hover_edge(app, h.marker_index, h.cell, false, now);
+    const auto edge = [&](int idx, MarkerCell c, bool hovered) {
+        if (!flag_hover_edge(app, idx, c, hovered, now)) return;
+        GuiRect box{0, 0, 0, 0};
+        if (flag_hover_unit_box(app, idx, c, box)) damage(box);
+    };
+    if (h.marker_index >= 0) edge(h.marker_index, h.cell, false);
     h.marker_index = marker_index;
     h.cell         = cell;
-    if (marker_index >= 0)
-        flag_hover_edge(app, marker_index, cell, true, now);
+    if (marker_index >= 0) edge(marker_index, cell, true);
 }
 
 } // namespace
@@ -7691,17 +7672,22 @@ void GuiInputHandler::recompute_flag_hover() {
         notification_card_at(app, mx, my) != 0;
     MarkerCell cell = MarkerCell::Payload;
     const int idx = refused ? -1 : flag_hover_unit_at(app, mx, my, cell);
-    set_flag_hover_unit(app, idx, cell);
+    set_flag_hover_unit(app, idx, cell, [this](const GuiRect& box) {
+        viewport.invalidate_rect(box);
+    });
 }
 
 void GuiInputHandler::clear_flag_hover() {
-    set_flag_hover_unit(app, -1, MarkerCell::Payload);
+    set_flag_hover_unit(app, -1, MarkerCell::Payload,
+                        [this](const GuiRect& box) {
+                            viewport.invalidate_rect(box);
+                        });
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-four — the toolbar four included since the 2026-08-12
-// relayout, EDIT FLAG, COPY VALUE and ENABLE TOOLTIPS since 2026-09-29, the
+// tabs, row 4's twenty-three — the toolbar four included since the 2026-08-12
+// relayout, COPY VALUE and ENABLE TOOLTIPS since 2026-09-29, the
 // history group's seven since 2026-08-18, the FLATTEN button in
 // the iteration group since 2026-09-19 and the WAVEFORM MAGNIFICATION lamp in
 // the zoom group since 2026-09-22 — and the bottom row's
@@ -8148,8 +8134,12 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // A SHIFT PRESS ON A BUTTON WITH NO SHIFTED CHORD is a consumed nothing
         // — never the unshifted action, which would be a silent lie about what
         // the modifier did (the flag's rationale is at its declaration). No
-        // arm, no face: the release could only refuse it again.
-        if (mods.shift && !redesign_button_shift_admits(tc.id)) return true;
+        // arm, no face: the release could only refuse it again. A shift
+        // carried WITH a ctrl asks the pair's admission instead of the
+        // shift-alone one (redesign_button_shift_admits_with): Restrict Undo
+        // admits Ctrl+Shift+Z while Shift+Z binds nothing.
+        if (mods.shift &&
+            !redesign_button_shift_admits_with(tc.id, mods.ctrl)) return true;
         // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: nothing arms, so
         // nothing can dispatch at the lift, and a SHIFT press is swallowed
         // exactly like the plain one (one bit, both routes — a greyed
@@ -8388,8 +8378,9 @@ void GuiInputHandler::finish_chrome_press_release(
         // body — the roster's own copy lived here until the walk tab was found
         // to be missing it.)
         // The press-time refusals the lift re-asks — the shift admission
-        // under the CARRIED shift and the pair admission under the carried
-        // pair (constant tables), then the enabled bit and
+        // under the CARRIED shift, the pair's under the carried pair (one
+        // constant question, redesign_button_shift_admits_with), then the
+        // enabled bit and
         // the radio rule ON THE PAINTED FACE, never the live predicates
         // (architect 2026-09-24, strictly as-painted: the lift asks what the
         // screen shows). The press arms and damages the strip, so by the lift
@@ -8402,9 +8393,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // the screen advertised.
         const AppState::RedesignButtonFace& face =
             app.redesign_buttons[static_cast<size_t>(arm.index)];
-        if (arm.shift && !redesign_button_shift_admits(tc.id)) return;
-        if (arm.shift && arm.ctrl &&
-            !redesign_button_ctrl_shift_admits(tc.id)) return;
+        if (arm.shift &&
+            !redesign_button_shift_admits_with(tc.id, arm.ctrl)) return;
         if (!face.enabled) return;
         if (tc.radio && face.selected) return;
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect
@@ -8492,16 +8482,20 @@ void GuiInputHandler::finish_chrome_press_release(
         // road to the act, the skips repeating nothing.
         //
         // WITH A CARRIED CTRL IT COMPOSES ONLY WHERE THE PAIR IS ADMITTED
-        // (redesign_button_ctrl_shift_admits, architect 2026-09-26) — the band
-        // gate's pair rule, which a carried shift meets at the press, asked
-        // here of the held shift. THE WALK IS WHERE IT BITES: the S Pen's
-        // side button held through a long press on it carries ctrl, the hold
-        // adds shift, and the lift dispatches Ctrl+Shift+Tab, the paired
-        // march — the pen's road to it, the tab row's long press being the
-        // fingertip's. Without the pen's button the same hold is Shift+Tab,
-        // the previous marker, as before. (Up / Down admit both modifiers but
-        // not the pair, and they repeat, so the term below excludes them
-        // twice over.)
+        // (redesign_button_shift_admits_with, which asks
+        // redesign_button_ctrl_shift_admits under a carried ctrl; architect
+        // 2026-09-26) — the band gate's pair rule, which a carried shift meets
+        // at the press, asked here of the held shift. THE WALK IS WHERE IT
+        // BITES: the S Pen's side button held through a long press on it
+        // carries ctrl, the hold adds shift, and the lift dispatches
+        // Ctrl+Shift+Tab, the paired march — the pen's road to it, the tab
+        // row's long press being the fingertip's. Without the pen's button the
+        // same hold is Shift+Tab, the previous marker, as before. RESTRICT
+        // UNDO IS THE OTHER (architect 2026-09-29): the side button held
+        // through a long press is Ctrl+Shift+Z, redo, while the bare hold
+        // reaches nothing, the lamp admitting no shift alone. (Up / Down admit
+        // both modifiers but not the pair, and they repeat, so the term below
+        // excludes them twice over.)
         //
         // AND IT REACHES NO HOLD-REPEATING BUTTON EITHER: A HELD REPEAT
         // OUTRANKS THE LONG-PRESS SHIFT, the principle stated at
@@ -8526,8 +8520,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // shift-admitting button is untouched: the hold is still its road to
         // its twin, on glass and on the desk.
         const bool held_to_shift =
-            !tc.repeats && redesign_button_shift_admits(tc.id) &&
-            (!arm.ctrl || redesign_button_ctrl_shift_admits(tc.id)) &&
+            !tc.repeats && redesign_button_shift_admits_with(tc.id, arm.ctrl) &&
             monotonic_ms() - arm.press_ms >= chrome_shift_hold_ms();
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
         // CARRIED press-time bit and the hold — well-defined because no row
@@ -8541,7 +8534,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // reaches this build only on a button that admits the pair (the gate,
         // the re-ask above and the hold's own term), so the chord it spells
         // is that button's key under both modifiers — the walk's
-        // Ctrl+Shift+Tab.
+        // Ctrl+Shift+Tab, Restrict Undo's Ctrl+Shift+Z.
         GuiInputState chord{};
         chord.ctrl  = tc.ctrl ||
                       (arm.ctrl && redesign_button_ctrl_admits(tc.id));

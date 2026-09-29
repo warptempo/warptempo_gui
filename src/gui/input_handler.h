@@ -1389,9 +1389,9 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-four (the
-    // toolbar four included since the 2026-08-12 relayout, EDIT FLAG and COPY
-    // VALUE behind Render since 2026-09-29, Full zoom out
+    // the view bar's three, row 3's two tabs, row 4's twenty-three (the
+    // toolbar four included since the 2026-08-12 relayout, COPY VALUE
+    // between Redo and Render since 2026-09-29, Full zoom out
     // leading the zoom group (Center left it for the bottom row 2026-09-29),
     // ENABLE TOOLTIPS and SETTINGS behind the padlock since 2026-09-29, the
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
@@ -1449,8 +1449,9 @@ struct GuiInputHandler {
     // (a press, a drag, any finger contact: no hover under touch), the load
     // is in flight, a prompt or a dialog editor veils the window, the folder
     // overlay stands, a dropdown is open or a notification card is under the
-    // pointer. A change of unit fades the old one out and the new one in
-    // (HoverFadeKind::Reversing) and damages the two units' own boxes alone —
+    // pointer. A change of unit fades the old one out and snaps the new one
+    // in (HoverFadeKind::SnapIn, the buttons' own, architect 2026-09-29) and
+    // damages the two units' own boxes alone —
     // never the waveform. clear_ is the pointer-leave hook's (main.cpp): the
     // hovered unit fades out, every reason alike. Paint state only: no input
     // road reads either.
@@ -2466,10 +2467,9 @@ private:
     // when there is nothing to paste. Returns false for any other action so the
     // caller can fall through to its remaining branches.
     //
-    // This and bare `j`'s value copy (copy_focused_marker_value,
+    // This and Ctrl+C's value copy (copy_focused_marker_value,
     // input_key_dispatch.cpp) are the whole of the GUI's clipboard reach; no
-    // other site copies or pastes. (`j` took that reach from the retired
-    // readout's global Ctrl+C on 2026-08-29.)
+    // other site copies or pastes.
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
@@ -3063,7 +3063,7 @@ private:
     // assign the engine block, take the store-change basis reset, clamp
     // the live playhead and viewport into the possibly-changed domain, and run
     // the coincidence auto-select and the sync/invalidate/trigger tail. Each
-    // caller keeps its own tail after it (the tmp/ trash-then-wipe, the
+    // caller keeps its own tail after it (the tmp/ wipe, the
     // stderr line, the full-window invalidate).
     void apply_recipe_in_place(
         std::vector<GuiWarpMarker> warp,
@@ -4121,7 +4121,7 @@ private:
     // for the same hook and the same finalizer.)
 
     // THE VALUE PAIR (architect 2026-08-29), the two acts that took the
-    // retired resolved readout's place: bare `j` COPIES the focused marker's
+    // retired resolved readout's place: Ctrl+C COPIES the focused marker's
     // resolved value to the system clipboard, Ctrl+J JUMPS to the marker
     // that value came from — the pass's owner or the ref's definition — ON THE
     // OTHER A/B TAB, so a reference and its definition stand one Ctrl+Tab

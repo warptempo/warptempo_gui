@@ -612,17 +612,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_commit_title_editor_key(key, mods)) return;
     }
 
-    // (CTRL+C IS UNBOUND GLOBALLY AGAIN — architect 2026-08-29. It copied the
-    // FOCUSED marker's resolved value here from row 5 (2026-08-01) until the
-    // messaging redesign folded the status bar into row 8 and retired the
-    // resolved readout with it: the copy was the readout's own companion —
-    // "what you see is what you copy" — and with nothing displayed it needed
-    // a name of its own. BARE `j` IS THAT NAME (is_copy_value_key, gui_input.h;
-    // the arm is in the ordinary dispatch below with the rest of the bare
-    // letters), and SHIFT+`j` is its twin, the jump to the marker the value
-    // came from. The editors' own ctrl-exact Ctrl+C / Ctrl+X / Ctrl+V are
-    // untouched — they are handled in the editor blocks above and were never
-    // this arm.)
+    // (CTRL+C COPIES THE FOCUSED MARKER'S RESOLVED VALUE — architect
+    // 2026-09-29, Copy Resolved Value's chord (is_copy_value_key, gui_input.h;
+    // the arm is in the ordinary dispatch below, beside Ctrl+J's jump). The
+    // editors' own ctrl-exact Ctrl+C / Ctrl+X / Ctrl+V are handled in the
+    // editor blocks above and never reach it, and the AV sync stats panel's
+    // Ctrl+C is its router's, which runs ahead of this body while it stands.)
 
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
@@ -1462,19 +1457,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE VALUE PAIR (architect 2026-08-29) — bare `j` copies the FOCUSED
-    // marker's resolved value to the system clipboard, CTRL+J (Shift+`j` until
-    // 2026-09-29) jumps to the marker that value came from on the OTHER A/B
-    // tab. They took the place of the retired resolved readout and its Ctrl+C,
+    // THE VALUE PAIR (architect 2026-08-29) — CTRL+C copies the FOCUSED
+    // marker's resolved value to the system clipboard, CTRL+J jumps to the
+    // marker that value came from on the OTHER A/B tab (both chords since
+    // 2026-09-29). They took the place of the retired resolved readout,
     // and they sit here, in the ordinary dispatch below the read-only gate and
     // below the mode's own claim, because both are read-only-LEGAL (the
     // allowlist admits them, so the gate above passes them through) and both
     // are refused in the `h` view by that view's allowlist, which never names
-    // them. Bare- and ctrl-exact through the shared predicates (gui_input.h),
-    // so these arms and the allowlist cannot drift; every refusal is the act's
-    // own card. The icon row's Copy Resolved Value button dispatches bare `j`
-    // through here at its lift, and the bottom row's Jump to Defining Marker
-    // dispatches Ctrl+J.
+    // them. Ctrl-exact through the shared predicates (gui_input.h), so these
+    // arms and the allowlist cannot drift; every refusal is the act's own
+    // card. The icon row's Copy Resolved Value button and the Center button's
+    // ctrl press dispatch Ctrl+C through here at their lift, and the bottom
+    // row's Jump to Defining Marker dispatches Ctrl+J.
     if (is_copy_value_key(key, mods)) {
         copy_focused_marker_value();
         return;
@@ -1609,8 +1604,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // canonical-line editor, a bound cell its bound editor, each with its
     // seeded content fully selected
     // (open-selected, like every open route — the first keystroke replaces
-    // it). The Edit Flag button is this chord and inherits the fork.
-    // Read-only already dropped Return at the allowlist gate above (every
+    // it). Read-only already dropped Return at the allowlist gate above (every
     // one of these is an authoring surface — the old click-to-edit refused
     // read-only too). Modifier-strict: only the plain, unmodified press binds.
     if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
@@ -1627,18 +1621,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // editor — while the BOUND editor is both columns' since 2026-09-09: a bound
         // cell is addressed on either column's eligible flags now. THE REFUSALS ARE ONE
         // PREDICATE since 2026-08-30 (flag_editor_open_actionable,
-        // app_state.h, forking on the axis since 2026-09-05), which the Edit
-        // flag button's face reads too — the truthful-buttons ruling. AND
+        // app_state.h, forking on the axis since 2026-09-05). AND
         // THEY SHARE ONE SENTENCE (architect 2026-08-30): the P column and
         // an unfocused selection are the same answer from the user's side —
         // the editor wants a warp marker and does not have one — so the
         // card names the subject it needs rather than forking on which half
-        // of the predicate said no. The greyed button never reaches it.
+        // of the predicate said no.
         //
         // THE TIE'S OWN SENTENCE, RANKED AHEAD OF THE SHARED ONE (architect
-        // 2026-09-19): a bound cell addressed on a TIE FOLLOWER greys this
-        // button through the predicate below, and the reason a grey does not
-        // carry is the key's to card — but the predicate's sentence names the
+        // 2026-09-19): a bound cell addressed on a TIE FOLLOWER refuses
+        // through the predicate below — but the predicate's sentence names the
         // subject the editor WANTS, which here it already has. So the tie
         // answers first, in its own words, and the shared sentence keeps
         // meaning what it always meant.
@@ -3573,8 +3565,8 @@ bool GuiInputHandler::apply_editor_clipboard(
         // editor is its own world (messaging.md), the text it did not take is
         // still sitting there selected, and the paste that follows shows the
         // truth the moment it is asked for. The two CARDED copies are the ones
-        // whose result nothing paints at all (bare `j`, the stats panel's
-        // report).
+        // whose result nothing paints at all (the main window's Ctrl+C, the
+        // stats panel's report).
         //
         // A FAILED CUT IS DIFFERENT IN KIND, because a cut is a copy AND a
         // deletion: erasing on a refused claim would destroy the bytes with
