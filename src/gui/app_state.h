@@ -2510,8 +2510,8 @@ enum class RedesignButton {
     // setter (architect 2026-09-29), so the player row's hints can be lit and
     // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
-    // SETTINGS (architect 2026-09-29), right after the padlock, closing the
-    // render-entry group: bare `;`, the bare settings prompt, wearing Breeze's
+    // SETTINGS (architect 2026-09-29), right after the tooltip lamp, closing
+    // the render-entry group: bare `;`, the bare settings prompt, wearing Breeze's
     // settings-configure. The button IS the key, so it greys exactly where
     // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
     // allowlist), grid iterations (the iteration lock's gate inherits that
@@ -4763,9 +4763,12 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         lands during a play, which the reseek arm never could (it fires on
 //         `was_playing`).
 //         THE ACT'S OWN `c` PASSES THROUGH THIS OWNER whenever a marker is
-//         focused (run_center_command lands on it), which is why all three of
-//         its calls are placed in windows where the sequence is already Idle —
-//         before the first launch, and after a switch but ahead of the arm.
+//         focused (run_center_command lands on it), and through owner (1),
+//         the stop body, at every call (the command stops playback before it
+//         centres, on both its arms), which is why all three of its calls are
+//         placed in windows where the sequence is already Idle and none of
+//         the act's plays sounds — before the first launch, and after a
+//         switch but ahead of the arm.
 //         The ordering is stated at GuiAbAudition::apply_working_zoom.
 //     The source file loads once, at startup, so a file load finds this Idle by
 //     construction and needs no site.
@@ -4857,7 +4860,7 @@ struct AppState {
     // the WALK's centring, inside Viewport::land_subject);
     // the nudge keeps HOLD
     // across its whole act; the undo / redo singleton restore under the hold
-    // re-arms HOLD after its held column; follow's own page-in, bare `c` and the reseat's
+    // re-arms HOLD after its held column; follow's own page-in and the reseat's
     // keep-visible edge-align keep FOLLOW_SUSPENDED as it stood; and the A/B
     // AUDITION keeps HOLD across its own camera writes (its `c`s and tab
     // switches, GuiAbAudition::start and advance_after_natural_end), the act
@@ -4994,10 +4997,12 @@ struct AppState {
     //     moves the camera. A PLACEMENT CLICK DURING A PLAY DOES NOT SET IT:
     //     the click moves the playhead, not the camera, and the play pages on
     //     from where it was placed.
-    //   * KEPT AS IT STOOD by follow's own page-in (follow_scroll_if_needed),
-    //     by bare `c` (a centring on the scanner, follow's own subject) and by
-    //     the movement owners' keep-visible edge-align (reseat_playhead_to),
-    //     each restoring it behind its clamp.
+    //   * KEPT AS IT STOOD by follow's own page-in (follow_scroll_if_needed)
+    //     and by the movement owners' keep-visible edge-align
+    //     (reseat_playhead_to), each restoring it behind its clamp. Bare `c`
+    //     keeps nothing: it stops the play before it centres, so its camera
+    //     write suspends a play that is no longer running, a value never read
+    //     before the next launch clears it.
     //   * CLEARED by every launch (the one launch body's success tail,
     //     GuiPlaybackLifecycle::launch_playback_window, ahead of its page-in),
     //     so each play starts following while the lamp is lit, and by the lamp's
@@ -7212,10 +7217,11 @@ struct AppState {
     // that commit had and the session dropped, and ONE DOUBLE-WIDTH flag per
     // same-frame pair (red half then, green half now). The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
-    // marker stands exactly where it stood. The bottom row's right-aligned
-    // status corner (section C) carries the member's position and its
-    // `scale=` value (the short SHA left that line 2026-09-28;
-    // history_walk_line, paint_handler.cpp, owns its shape).
+    // marker stands exactly where it stood. Row 8's state cell, beside the
+    // clock, carries the walk line: the member's position, then the
+    // `GitHub: <word>` segment, then the `Scale:` segment when the `scale=`
+    // value changed, separated by ` | ` (history_walk_line,
+    // paint_handler.cpp, owns its shape).
     //
     // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
     // load-in-place gate itself — each candidate commit's three sidecars must

@@ -66,15 +66,21 @@ struct GuiInputHandler;
 // last one deciding the plate that frame. Each half is therefore read at the
 // working zoom, centered, whatever level the tab was left at.
 //
-// ITS ORDERING IS LOAD-BEARING: `c` can reach land_playhead_on_marker, which
-// CLEARS THE SEQUENCE unconditionally (a land is a movement, the inventory at
-// GuiAuditionSequence). So every one of the three calls sits in a window where
-// the sequence is already Idle — the press-time pair before the first launch
-// (the refusal guard has returned by then, and launch_phase's own phase write
-// comes after both), and the switch-back call after the switch and BEFORE
+// ITS ORDERING IS LOAD-BEARING: `c` STOPS PLAYBACK BEFORE IT CENTRES, on both
+// its arms (architect 2026-09-29), through the one stop body, which CLEARS THE
+// SEQUENCE ahead of its own guard and would silence a play of the act's own;
+// and with a focus it reaches land_playhead_on_marker, which clears the
+// sequence too (a land is a movement, the inventory at GuiAuditionSequence).
+// So every one of the three calls sits in a window where the sequence is
+// already Idle and none of the act's plays sounds — the press-time pair
+// before the first launch (the refusal guard has returned by then, and
+// launch_phase's own phase write comes after both; the first call's stop ends
+// a play the press found, which the switch behind it would end anyway), and
+// the switch-back call after the tick's stop and the switch and BEFORE
 // arm_rest, which is the same reason the switch itself must precede the arm.
 // A call placed after an arm — or after launch_phase's write — would wipe the
-// phase just written and silently end the act.
+// phase just written, or stop the play just launched, and silently end the
+// act.
 //
 // SEQUENCING IS PACED AND TAKES NO TIMER OF ITS OWN: the audio thread ends a
 // play, the tick observes it (the same natural-end branch every audition ends

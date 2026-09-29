@@ -95,9 +95,15 @@ struct GuiPlaybackLifecycle {
     //     both position nudges (the collapse to point form IS the reason they
     //     stop; both pay it once, in the shared prologue past its refusal
     //     verdict — the singleton's wall included — and ahead of the first
-    //     write)
-    //     and `c`. The S/T switch `t` stops on its own standing ruling, the audio
+    //     write). The S/T switch `t` stops on its own standing ruling, the audio
     //     domain flipping under the running session.
+    //   * THE CENTRE COMMAND STOPS, ALWAYS (architect 2026-09-29): `c` and every
+    //     road that runs its body (the Center button, the paired march's steps,
+    //     Ctrl+J, the A/B audition's opening of each half) stop before they
+    //     centre, a focus standing or not, at the command's one owner
+    //     (run_center_command), so the centring is on the resting playhead and
+    //     the hold the key arms stands on it. Follow, not `c`, keeps the
+    //     scanner in view.
     //   * VALUE STEPS DO NOT STOP: the Up/Down value step on the addressed
     //     cell edits a value. Its tempo arm is GROUP-PRESERVING, leaving the
     //     selection and its span exactly as they stood, so the audition plays
@@ -109,9 +115,8 @@ struct GuiPlaybackLifecycle {
     //     PageUp/PageDown, the zoom gestures — they move the window onto the audio,
     //     not the audio. `0`'s RESTORE (architect 2026-09-23) puts the stamped
     //     playhead back and so stops as Home / End do, only when that playhead
-    //     differs from the resting one; at a ceiling nothing stamped `0` IS the
-    //     `c` command (run_center_command) and stops exactly where `c` does —
-    //     inside the land onto the focused stop, so only when one stands.
+    //     differs from the resting one; at a ceiling nothing stamped `0` is a
+    //     silent no-op and stops nothing.
     //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: the sweep and Shift+0, matching every
     //     POINTER trim route (the endcap/bridge drags and the bound-set clicks each
     //     stop at their own commit point). BOTH views, and the rule is unchanged

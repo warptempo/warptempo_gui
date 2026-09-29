@@ -162,8 +162,9 @@ void GuiAbAudition::start() {
     // leaving tab's slot, so the level set here is the level this tab is
     // restored at when the act switches back (and re-run there, the ruling
     // asking for it on every arrival). It runs AFTER the two gates above, so a
-    // refused act moves no camera, and BEFORE the sequence exists, so its land
-    // clears nothing that stands (the header's ordering rule). The gates above
+    // refused act moves no camera, and BEFORE the sequence exists, so its stop
+    // and its land clear nothing that stands (the header's ordering rule); the
+    // stop ends a play the press found, as the switch below would. The gates above
     // therefore judged the cursor as it RESTED: `c` can only move it onto this
     // tab's own focus, which the cursor already sits on after every route that
     // sets one, and a play that refused after such a move would simply end the
@@ -262,10 +263,11 @@ void GuiAbAudition::apply_working_zoom() {
     // centering and the focused re-land all decided there, so this cluster
     // holds no zoom knowledge of its own and a retune of `c` reaches the
     // audition for free. THE CAMERA IS NEVER A MOVEMENT: `c` with nothing
-    // focused writes no playhead, so it hides no trim overlay and clears
-    // nothing; with a focus it lands, and that land is the one write this
-    // whole act can make to a resting cursor (the header's two paragraphs
-    // carry the case and the ordering the three call sites obey).
+    // focused writes no playhead; with a focus it lands, and that land is the
+    // one write this whole act can make to a resting cursor. EITHER WAY IT
+    // TAKES THE ONE STOP BODY FIRST, which clears the sequence (the header's
+    // two paragraphs carry the case and the ordering the three call sites
+    // obey).
     if (input != nullptr) input->run_center_command();
 }
 

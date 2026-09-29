@@ -272,9 +272,9 @@ drag coordinates floor instead of truncating.
   sat anywhere inside the period before that fill. THE CYCLE STAMP IS AN
   ACCURACY DEVICE, NOT A COMPENSATION — it is about the same raw line, and
   what it buys is that a resync's step is the accumulated DRIFT alone instead
-  of re-rolling a whole pickup period into the line at every pan end, page
-  turn or `c` (playback.h's resync paragraph owns the reasoning and the call
-  sites).
+  of re-rolling a whole pickup period into the line at every pan end or page
+  turn (playback.h's resync paragraph owns the reasoning and the call
+  sites; `c` stops the play before it centres, so it resyncs nothing).
 
   THE WAYLAND SINGLE-COMMIT ORDERING STAYS TOO, by his ruling of 2026-09-03
   although the presentation feedback it was landed for is gone: frame

@@ -554,8 +554,8 @@ struct Viewport {
     //     kept as truth-over-churn. All three move the VIEWPORT AND ZOOM
     //     ONLY — none contains a playhead write or a playhead clamp (the
     //     earlier "through their playhead clamp" description here was
-    //     false), and keyboard zoom's centering ON the scanner READS the
-    //     value without moving it — so the clock's value cannot change under
+    //     false), and the `c` command's centring READS the resting cursor
+    //     without moving it — so the clock's value cannot change under
     //     them. The calls are 66d2ec58's rename-in-place of the
     //     whole-status-lane damage these sites carried while the timestamp
     //     lived on that lane; one small always-clean rect per discrete zoom

@@ -793,12 +793,12 @@ int64_t paged_in_viewport_start(int64_t target, int64_t visible) {
 
 void Viewport::center_viewport_on_playhead() {
     if (audio.total_frames() <= 0) return;
-    // Split-playhead: during playback center on the scanner (audio
-    // under review); otherwise center on the cursor. The scanner is
-    // meaningful only while active, so the ternary takes the cursor at rest.
-    const int64_t target = app.playhead_scanner_active
-        ? app.playhead_scanner_sample
-        : app.playhead_cursor_sample;
+    // THE RESTING PLAYHEAD, ALWAYS: every caller centres with playback
+    // stopped — the `c` command's live recipe stops on both its arms and the
+    // marker jump's Center arm stops ahead of its land, while the `h` view
+    // (the command's mode arm and the diff-flag step's Center arm) has no
+    // playback at all — so no scanner is live to centre on.
+    const int64_t target = app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample = centred_viewport_start(target, visible);

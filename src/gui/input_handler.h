@@ -2206,9 +2206,9 @@ struct GuiInputHandler {
     // one empty-string test per tick when nothing is parked.
     void tick_promote_render_status();
 
-    // THE BARE `c` COMMAND, and the ONE owner of both its recipes: the working
-    // zoom centered on the playhead, with a focused stop re-landed under it
-    // first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
+    // THE BARE `c` COMMAND, and the ONE owner of both its recipes: playback
+    // stopped, then the working zoom centered on the playhead, with a focused
+    // stop re-landed under it first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
     // (repair_last_selected + jump_playhead_to_focused_marker), the history
     // mode's re-expression walks its own diff-flag list and its own focus — so
     // the call sites (re-greped 2026-09-23: run_center_key_command — the
@@ -2227,10 +2227,11 @@ struct GuiInputHandler {
     // restores the stamped view itself).
     void run_center_command();
     // THE CENTRE KEY'S ACT (architect 2026-09-23): bare `c` (the live arm and
-    // the `h` view's claim) — run_center_command, then the HOLD posture armed
-    // whether or not the centring could move the camera
-    // (AppState::camera_hold), and follow's suspension kept as it stood, the
-    // centring being on follow's own subject (AppState::follow_suspended). The
+    // the `h` view's claim), the Center button's synthesized chord and both
+    // steps of the paired march — run_center_command, which stops any play
+    // first (architect 2026-09-29), then the HOLD posture armed whether or
+    // not the centring could move the camera (AppState::camera_hold), so the
+    // hold always stands on the resting playhead the command centred. The
     // other callers of run_center_command — the A/B audition, and Ctrl+J,
     // which arms the hold at its own tail — do not come through here.
     void run_center_key_command();

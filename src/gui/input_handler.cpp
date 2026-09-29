@@ -2877,8 +2877,9 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 }
 
 void GuiInputHandler::run_center_command() {
-    // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
-    // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
+    // THE BARE `c` COMMAND, WHOLE — playback stopped, then the working zoom
+    // centered on the playhead, with a focused stop re-landed under it first —
+    // and THE ONE PLACE THE MODE
     // FORK LIVES. THREE CALLERS, re-grepped 2026-09-26: the centre keys' act
     // run_center_key_command (since 2026-09-23 the one road of the live `c`
     // key arm in handle_plain_bare_keys, the history mode's own `c` arm in
@@ -2927,13 +2928,14 @@ void GuiInputHandler::run_center_command() {
         // hint reads it too, "Center on focus" / "Center on playhead").
         if (center_command_lands_on_focus(app)) {
             const int focus = app.history_mode.focus;
-            // The live arm's stop lives inside its jump, so it stops only when
-            // something is focused; this keeps that shape. NO REACHABLE
-            // PRODUCER (recorded 2026-08-06): the entry owner stops any session
-            // running before `h` and nothing in the view can start one, so this
+            // The stop stands on the focused arm alone here, while the live
+            // recipe stops on both of its arms. NO REACHABLE PRODUCER
+            // (recorded 2026-08-06): the entry owner stops any session running
+            // before `h` and nothing in the view can start one, so this call
             // is a formality kept for the regime's shape — the same note the
             // mode's Tab cycle, its Home/End and the revert act carry at their
-            // own stops (input_key_dispatch.cpp).
+            // own stops (input_key_dispatch.cpp) — and the no-focus arm, which
+            // spells none, centres the resting playhead all the same.
             playback_lifecycle.stop_playback_if_playing();
             land_playhead_on_source_frame(
                 app, audio, viewport,
@@ -2954,6 +2956,22 @@ void GuiInputHandler::run_center_command() {
     // behavior.
     // The focused arm's jump lands the playhead through the land owner, a
     // movement; the NO-FOCUS arm only zooms and recenters, a camera move.
+    // THE COMMAND ALWAYS STOPS PLAYBACK BEFORE IT CENTRES (architect
+    // 2026-09-29), on both arms, so the centring is always on the resting
+    // playhead and the hold the centre key arms behind it
+    // (run_center_key_command) stands on the playhead it centred — never on
+    // a moving scanner that leaves a resting cursor uncentred, perhaps off
+    // screen. Follow is the road that keeps the scanner in view. ONE STOP PER
+    // ROAD: the focused arm's stop is the jump's own (the Tab walk's, which
+    // it shares), and the jump returns false exactly when it touched nothing,
+    // stop included, so the no-focus arm spells its stop on that return,
+    // ahead of the zoom and the centre. Every caller inherits it here — bare
+    // `c`, the Center button, both steps of the paired march, Ctrl+J's two
+    // calls and the A/B audition's three, each of which runs with the act's
+    // sequence Idle and none of the act's plays sounding — the first ahead of
+    // the switch that would stop a play the press found anyway, the other two
+    // behind a switch — so the stop ends no play of the act's own
+    // (ab_audition.h).
     // A GROUP CARRIES (architect 2026-07-30, with the SPAN FORM retired): the
     // collapse-to-focus that stood here is deleted — it existed only to keep a
     // group from resting SPANLESS, a state that no longer exists now the region
@@ -2966,24 +2984,23 @@ void GuiInputHandler::run_center_command() {
     // THE CAMERA IS STATED, NOT INHERITED (architect 2026-09-04): `c` frames,
     // always and by its own name, so it hands the jump
     // MarkerLandingFrame::Center rather than taking a default. Its own
-    // center_viewport_on_playhead two lines down is the post-zoom re-centre and
-    // is a separate act from this one.
+    // center_viewport_on_playhead below the zoom is the post-zoom re-centre
+    // and is a separate act from this one.
     selection.repair_last_selected();
-    jump_playhead_to_focused_marker(MarkerLandingFrame::Center);
+    if (!jump_playhead_to_focused_marker(MarkerLandingFrame::Center))
+        playback_lifecycle.stop_playback_if_playing();
     viewport.apply_zoom_change(kWorkingZoomLevel);
     viewport.center_viewport_on_playhead();
 }
 
-// THE CENTRE KEY'S ACT (contract at the declaration). Follow's suspension is
-// read before the centring because the centring's camera write suspends it
-// at the chokepoint (clamp_viewport_start): a centring on the scanner is a
-// move onto follow's own subject, so the suspension stands after `c` exactly
-// as it stood before (AppState::follow_suspended).
+// THE CENTRE KEY'S ACT (contract at the declaration). FOLLOW'S SUSPENSION IS
+// LEFT TO THE CHOKEPOINT: the command stops any play before it centres, so
+// the centring's camera write suspends nothing that is read — the suspension
+// means something only while a project play runs, and the next launch clears
+// it (AppState::follow_suspended).
 void GuiInputHandler::run_center_key_command() {
-    const bool suspended_before = app.follow_suspended;
     run_center_command();
-    app.camera_hold      = true;
-    app.follow_suspended = suspended_before;
+    app.camera_hold = true;
 }
 
 // IS THERE A VIEW FOR BARE `0` TO RETURN TO — the contract is at the

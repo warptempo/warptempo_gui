@@ -58,8 +58,10 @@
 // apply_zoom_change helper, the resize zoom-out reclamp,
 // follow's page-in (follow_scroll_if_needed) and the follow toggle's lit edge,
 // horizontal pan via scroll_viewport
-// (the plain-wheel stepped pan and PageUp/PageDown), viewport recenter via
-// center_viewport_on_playhead (C key) — AND, SINCE 2026-09-17, THE LOOP WRAP.
+// (the plain-wheel stepped pan and PageUp/PageDown) — AND, SINCE 2026-09-17,
+// THE LOOP WRAP. (The C key's recenter, center_viewport_on_playhead, shares
+// the discrete move's resync but meets no live session: `c` stops playback
+// before it centres.)
 // Every GUI launch still runs [start, end) once and stops at the natural end
 // (architect 2026-07-30, all audition looping removed), so on those sessions
 // the read position only ever advances and the predictor has no backward
@@ -110,8 +112,8 @@
 // EVERY RESYNC ANCHORS ON THE AUDIO THREAD'S CYCLE STAMP — (the read cursor,
 // the instant that cursor's frame enters the output port) — and not on the
 // main thread's `now`, which sat anywhere inside the period before that fill
-// and re-rolled that whole phase into the line at every pan end, page turn or
-// `c`. So a resync's step is the accumulated DRIFT alone.
+// and re-rolled that whole phase into the line at every pan end or page
+// turn. So a resync's step is the accumulated DRIFT alone.
 // A session that is launched and left alone — the architect's own `c`,
 // Space, no pan — runs the
 // whole play on steady_clock against the DAC's crystal with no re-anchor at
