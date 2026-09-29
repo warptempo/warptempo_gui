@@ -167,8 +167,9 @@ void prune_render_folder(const std::string& source_audio_path,
 // report it on their own surfaces (the answers differ by act):
 //   Removed     — the folder is gone;
 //   OutOfBounds — not a directory directly under `batch_root` (a stray path,
-//                 `tmp/` itself, a file, or a status query that failed —
-//                 indeterminate is not a directory), left alone;
+//                 `tmp/` itself, a last component of `.` or `..`, a file,
+//                 or a status query that failed — indeterminate is not a
+//                 directory), left alone;
 //   Failed      — the remove itself failed, `ec` holding the system's words
 //                 (a partial removal leaves what it could not take).
 // TWO CALLERS: the render player's Delete (GuiRenderPlayer::

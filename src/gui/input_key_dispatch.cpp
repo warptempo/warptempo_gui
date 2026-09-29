@@ -8827,19 +8827,23 @@ void GuiInputHandler::render_player_delete(bool all) {
         render_player.toggle_pause();
     app.render_player.pending_delete = folders;
     // THE QUESTION (a prompt is a question, messaging.md): the one folder is
-    // the highlighted row on screen, so "this" names it; the count is the
-    // rows the press parked. Delete / Cancel, Cancel the Escape sentinel LAST
-    // and FOCUSED (PromptInitialFocus::LastButton): nothing takes a deletion
+    // NAMED — its own name, the path's last component, SINGLE-QUOTED and
+    // spelled raw like the load question's entry id — because the deletion is
+    // permanent, the question is its only safeguard, and the band returns to
+    // the top row after a delete, so "this" would read the same over any
+    // row; the count is the rows the press parked. Delete / Cancel, Cancel
+    // the Escape sentinel LAST and FOCUSED (PromptInitialFocus::LastButton):
+    // nothing takes a deletion
     // back, so a bare Enter answers Cancel, and `d` is Delete's letter — the
     // Delete key is no answer here, so the press that raised the question
     // cannot also answer it. Through PromptState::present, the one raise
     // route, so the painted gate holds. A shifted press over a one-folder
-    // root parks that one folder — the highlighted one — and asks the plain
+    // root parks that one folder — the highlighted one — and asks the named
     // question, the shift line being absent there for the same reason.
     const std::string question =
         folders.size() > 1
             ? "Delete all " + std::to_string(folders.size()) + " folders?"
-            : std::string("Delete this folder?");
+            : "Delete '" + folders.front().filename().string() + "'?";
     app.prompt.present(question,
                        {'d', '\x1b'},
                        {"Delete", "Cancel"},

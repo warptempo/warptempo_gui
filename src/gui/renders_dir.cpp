@@ -71,8 +71,13 @@ BatchFolderRemoval remove_batch_folder(const std::filesystem::path& batch_root,
                                        const std::filesystem::path& folder,
                                        std::error_code& ec) {
     ec.clear();
+    // The parent test is lexical, so a last component of `.` or `..` would
+    // pass it while naming `tmp/` itself or the project folder: both are
+    // refused beside the empty name, and the bound holds of this body alone.
+    const std::filesystem::path name = folder.filename();
     std::error_code status_ec;
-    if (folder.parent_path() != batch_root || folder.filename().empty() ||
+    if (folder.parent_path() != batch_root || name.empty() || name == "." ||
+        name == ".." ||
         !std::filesystem::is_directory(folder, status_ec) || status_ec)
         return BatchFolderRemoval::OutOfBounds;
     std::filesystem::remove_all(folder, ec);

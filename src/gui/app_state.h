@@ -4116,8 +4116,8 @@ enum class DialogTrigger {
     // button focused, the load confirmation's default, so a bare Enter
     // answers OK (PromptInitialFocus owns the choice and its reason).
     REVERT_CONFIRM,
-    // THE RENDER PLAYER'S DELETE (architect 2026-09-29): "Delete this
-    // folder?" or "Delete all N folders?", Delete / Cancel, raised by the
+    // THE RENDER PLAYER'S DELETE (architect 2026-09-29): "Delete '<folder
+    // name>'?" or "Delete all N folders?", Delete / Cancel, raised by the
     // root listing's Delete button or the Delete key (the shift press and
     // Shift+Delete for all), the folders parked at
     // AppState::RenderPlayer::pending_delete. RAISED WITH CANCEL FOCUSED

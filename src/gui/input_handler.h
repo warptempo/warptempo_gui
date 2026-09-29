@@ -4169,8 +4169,8 @@ private:
     // parks the highlighted batch folder (`all` false) or every batch folder
     // the root listing shows (`all` true) at
     // AppState::RenderPlayer::pending_delete and raises the
-    // DELETE_FOLDER_CONFIRM prompt — "Delete this folder?" / "Delete all N
-    // folders?", Delete / Cancel, Cancel focused — pausing a live transport
+    // DELETE_FOLDER_CONFIRM prompt — "Delete '<folder name>'?" / "Delete all
+    // N folders?", Delete / Cancel, Cancel focused — pausing a live transport
     // first, the load's own opening step. Inside a batch folder it does
     // nothing (the key's arm is the root's alone and the slot is Load in
     // Place there); at the root with nothing to delete it cards "There is no
