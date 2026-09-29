@@ -104,12 +104,11 @@ inline constexpr int kGuiCursorKindCount = 8;
 // sites do not share, handed to the consumer because it changes what the drop
 // may leave standing (2026-08-08).
 //   * OrdinaryLeave is pointer_leave (wl_pointer.leave on Wayland) — and,
-//     since touch phase 1 (2026-08-11), a touch POINTER TRANSLATION ending
-//     WITH NO PHYSICAL
-//     POINTER FOCUSED: the finger left the glass and no mouse rests in the
-//     window, so the pointer is gone (delivered after the release; the fires
-//     are the touch up, touch_cancel (wl_touch.cancel on Wayland) and
-//     touch-capability loss — the edge
+//     since touch phase 1 (2026-08-11), a touch POINTER TRANSLATION's
+//     ABNORMAL end WITH NO PHYSICAL POINTER FOCUSED: the window system took
+//     the contact and no mouse rests in the window, so the pointer is gone
+//     (delivered after the lost-button motion; the fires are touch_cancel
+//     (wl_touch.cancel on Wayland) and touch-capability loss — the edge
 //     inventory at the touch state block). A translation ending with the
 //     physical pointer FOCUSED fires this hook NOT AT ALL — it delivers a
 //     restore MOTION at the mouse's own position instead (the codex round-3
@@ -131,23 +130,38 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     `pointer_in_window` back and leave a hover face stale, which is a recorded
 //     ACCEPTED GLITCH (architect 2026-08-09; the record is at the fire site) and
 //     self-heals on the pointer's next entry.
+//   * TouchLift is the same translation's CLEAN end, the contact's own lift
+//     (touch_up), with no physical pointer focused — delivered after the
+//     release, the fork being the same one. An ordinary leave in every
+//     respect but one: THE CONTACT LIFTING IS NOT THE POINTER GOING AWAY for
+//     the hover tooltip (architect 2026-09-29), which keeps its button, its
+//     slop anchor and its seen position across it exactly as it keeps them
+//     across a mouse's release, so the S Pen's hover coming back within the
+//     slop of the lift point is stillness and starts no wait (the rule is at
+//     AppState::RedesignTooltip). Every other consumer reads it as it reads
+//     OrdinaryLeave, the menu row's keep below included.
 //   * PenHoverEnd is the Android backend's S Pen HOVER ENDING
 //     (GuiPlatform::end_pen_hover: a HOVER_EXIT, a report above the GUI's
 //     plane, any first down, focus loss — architect 2026-09-27, every pen
 //     hover effect acts only within the plane). An ordinary leave in every
-//     respect but the one this enum exists for: the pen has NO TITLEBAR, so
-//     the menu row's keep below — a step one pixel up off row 1 being a step
-//     onto the titlebar rather than out of the visit — does not apply to it.
-//     A pen rising off row 1 has left the visit, and the row's fill and mode
-//     go with every other face. The Wayland backend never passes it.
-// The distinction exists for exactly one consumer today (main.cpp's hook body,
-// where the menu row's armed mode and its hovered button survive an ordinary
-// leave through row 1 and never survive the hard one or the pen's); every
-// other clear the hook performs is unconditional and reads this not at all.
+//     respect but two: the pen has NO TITLEBAR, so the menu row's keep below
+//     — a step one pixel up off row 1 being a step onto the titlebar rather
+//     than out of the visit — does not apply to it (a pen rising off row 1
+//     has left the visit, and the row's fill and mode go with every other
+//     face); and a standing tooltip takes its hide grace rather than going
+//     down at once. The Wayland backend never passes it.
+// The distinction is read in one place, main.cpp's hook body, by exactly two
+// consumers: the menu row's armed mode and its hovered button, which survive
+// an ordinary leave (or a contact's lift) through row 1 and never survive the
+// hard one or the pen's; and the tooltip's leave (end_tooltip_hover), which the
+// pen's hover ending makes soft and the contact's lift makes no leave at all.
+// Every other clear the hook performs is unconditional and reads this not at
+// all.
 enum class GuiPointerLeaveReason {
     OrdinaryLeave,
     CapabilityLoss,
     PenHoverEnd,
+    TouchLift,
 };
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
@@ -310,7 +324,8 @@ public:
     void pointer_enter(double x, double y);
     // `reason` is OrdinaryLeave (every Wayland call, the default) or
     // PenHoverEnd (the Android pen's hover ending, its one other caller);
-    // never CapabilityLoss, which is pointer_capability_lost's alone
+    // never CapabilityLoss, which is pointer_capability_lost's alone, nor
+    // TouchLift, which is deliver_touch_translation_end's alone
     // (GuiPointerLeaveReason, above the class).
     void pointer_leave(
         GuiPointerLeaveReason reason = GuiPointerLeaveReason::OrdinaryLeave);
@@ -496,8 +511,9 @@ public:
 
     // Fired when the pointer LEAVES the surface (pointer_leave), at
     // pointer-capability loss, and — since touch phase 1 — at a touch pointer
-    // translation's end on its NO-FOCUS arm only (as OrdinaryLeave, after the
-    // release: the finger left the glass and no mouse rests in the window; a
+    // translation's end on its NO-FOCUS arm only (as TouchLift after the
+    // lift's release, as OrdinaryLeave after an abnormal end's lost-button
+    // motion: the contact is gone and no mouse rests in the window; a
     // FOCUSED physical pointer gets a restore motion instead and this hook
     // stays silent — the round-3 fork, stated at
     // deliver_touch_translation_end). The edges drop pointer focus
@@ -510,7 +526,7 @@ public:
     // a consumer may keep pointer-derived state across the ordinary leave, where
     // a return motion will re-derive it, and may keep NOTHING across the hard
     // one, where no such event exists. Each fire site passes its own reason and
-    // neither infers it. The one consumer that reads it is named at the enum.
+    // neither infers it. The two consumers that read it are named at the enum.
     // The one owner of the drop-what-the-pointer-was-naming behavior. What
     // main.cpp wires it to is enumerated THERE, at the hook body, which is the
     // authoritative list — this contract deliberately does not keep a second
@@ -1512,7 +1528,7 @@ private:
     //     logical left 1->0 edge at the last position, THE TRANSLATION END ON
     //     THAT SAME EDGE (codex round 2; one owner,
     //     deliver_touch_translation_end), which FORKS ON PHYSICAL POINTER
-    //     FOCUS (codex round 3): the ordinary leave when no mouse rests in
+    //     FOCUS (codex round 3): the leave (TouchLift) when no mouse rests in
     //     the window, an ordinary restore MOTION at pointer_x_/pointer_y_
     //     when one does — the finger lifted, so the unified pointer is where
     //     the mouse is, and the motion re-derives hover and the settled
@@ -1963,10 +1979,11 @@ private:
     // platform-tracked position instead of the leave (the finger is no longer
     // the pointer, so the unified pointer is where the mouse is; the
     // cursor-residue fix), no
-    // mouse focus gets the ordinary leave as before. clean_release is passed
-    // through to end_touch_left_hold and chooses nothing else: the finger's
-    // OWN LIFT passes true, and the ends where no finger left — the HARD
-    // ENDS (2026-08-29) — pass false. Rationale, edges and
+    // mouse focus gets the leave as before. clean_release is passed
+    // through to end_touch_left_hold and chooses one thing more, the leave's
+    // reason (TouchLift for a lift, OrdinaryLeave for a hard end): the
+    // finger's OWN LIFT passes true, and the ends where no finger left — the
+    // HARD ENDS (2026-08-29) — pass false. Rationale, edges and
     // the armed-anchor judgment at the definition.
     void deliver_touch_translation_end(bool clean_release);
     // Compute + deliver the Nav frame's centroid/distance update through the

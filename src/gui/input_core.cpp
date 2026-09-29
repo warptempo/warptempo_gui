@@ -1370,9 +1370,16 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     surprises to suppress — suppression would need a "restore" mark on
     //     the motion, a device branch in spirit (judgment recorded here and
     //     in touch.md).
-    //   * physical pointer NOT focused — the ordinary leave, as before: no
-    //     mouse rests in the window, so the finger's lift IS the pointer
-    //     leaving.
+    //   * physical pointer NOT focused — the leave: no mouse rests in the
+    //     window, so the contact ending IS the pointer leaving. Its REASON
+    //     is the one term clean_release still decides here: the lift passes
+    //     TouchLift, the hard end OrdinaryLeave. The hover tooltip is the
+    //     consumer that tells them apart — a lift is a release under a
+    //     pointer that has not moved, so the wait's button and anchor stand
+    //     across it and the S Pen hovering back at the lift point starts no
+    //     wait (the rule is at AppState::RedesignTooltip) — while a contact
+    //     the window system took ends the tooltip's hover as a mouse leaving
+    //     the window does (GuiPointerLeaveReason carries both).
     // The mods are current_mods() at delivery: the touch bit is already down
     // and the delivering edge means neither sibling holds, so the motion
     // honestly reads unheld — an ordinary resting motion.
@@ -1386,7 +1393,8 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
         return;
     }
     if (pointer_left_hook_)
-        pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
+        pointer_left_hook_(clean_release ? GuiPointerLeaveReason::TouchLift
+                                         : GuiPointerLeaveReason::OrdinaryLeave);
 }
 
 void GuiInputCore::touch_down(int32_t id, double x, double y,
@@ -2074,8 +2082,9 @@ void GuiInputCore::hard_end_touch_stream() {
             // pointer-capability-loss precedent: a vanished hold would latch
             // the drag-modal gate with no event left to lift it) — then the
             // translation end ON THAT DELIVERY'S OWN EDGE, exactly as the
-            // finger's own lift delivers it: the ordinary leave, or the
-            // focus-forked restore motion when a mouse rests in the window
+            // finger's own lift delivers it: the leave (OrdinaryLeave here,
+            // where the lift's is TouchLift), or the focus-forked restore
+            // motion when a mouse rests in the window
             // (the round-3 fork), through the one owner. A sibling-held
             // logical left suppresses the delivery here too, and the end with
             // it — whatever happened to the glass, the mouse is still there,

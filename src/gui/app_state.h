@@ -4856,7 +4856,8 @@ struct AppState {
     //
     // THE EXEMPT WRITERS KEEP OR RE-ARM THEIR BIT AFTER THE CHOKEPOINT, each
     // at its own site: the centring acts re-arm HOLD after their centring
-    // (bare `c` and Ctrl+J at run_center_key_command; the landing owner on
+    // (bare `c` at run_center_key_command, Ctrl+J at the tail of its own
+    // jump_to_value_source after its closing `c`; the landing owner on
     // the WALK's centring, inside Viewport::land_subject);
     // the nudge keeps HOLD
     // across its whole act; the undo / redo singleton restore under the hold
@@ -6973,6 +6974,15 @@ struct AppState {
     //     following the pointer, so a finger never raises a hint and a hint
     //     comes back after a release only on a motion past the slop. The
     //     other two buttons bind nothing in this product and are not terms.
+    //   * A TRANSLATED CONTACT'S LIFT IS NOT THE POINTER GOING AWAY (architect
+    //     2026-09-29): the touch translation ends a finger's or the S Pen's
+    //     contact with a release and then a leave (TouchLift), and that leave
+    //     keeps the wait's button, its anchor and the seen position at the
+    //     lift point (GuiInputHandler::end_tooltip_hover), so the pen's hover
+    //     coming back within the slop of that point is stillness after a
+    //     release and starts no wait, exactly as a still mouse after a click;
+    //     a re-entry farther than the slop, or onto another button, is a
+    //     motion. Every other leave forgets them.
     // No timer object and no callback: GuiInputHandler::tick_tooltip reads the
     // three deadlines on the run loop's existing tick and damages once per edge;
     // note_tooltip_hover is the one writer of the wait.
@@ -6995,7 +7005,8 @@ struct AppState {
     // THE WAIT: `hovered` is the tooltip-bearing button under the pointer
     // (Qt's toolTipWidget; no owner off every such button), `anchor_x/y` the
     // slop's centre, `seen_x/y` the position the last walk read (the motion
-    // test; kTooltipUnseen after a leave, so a re-entry is a motion), and
+    // test; kTooltipUnseen after a leave, so a re-entry is a motion — the
+    // contact's lift excepted, which keeps it), and
     // `wake_due_ms` the wait's deadline (0 = no wait runs).
     // `awake_until_ms` is the awake window's end (0 = asleep), and
     // `button_held` the logical primary button's state as the last pointer

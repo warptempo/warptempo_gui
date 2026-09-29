@@ -1588,12 +1588,20 @@ struct GuiInputHandler {
     void hide_shift_tooltip();
 
     // THE POINTER LEAVING — the pointer-leave hook's one call (main.cpp), for
-    // every reason: the pointer is on no button, so the wait stops and the
-    // next arrival is a motion. `soft` is the pen leaving the plane
-    // (PenHoverEnd), which starts the hide grace so a pen hovering at the
-    // plane's edge does not blink the hint; the ordinary leave and capability
-    // loss are hard.
-    void end_tooltip_hover(bool soft);
+    // every reason, and the tooltip lamp's dark edge (set_show_tooltips).
+    // HARD (the ordinary leave, capability loss, the lamp going dark) and
+    // SOFT (the pen leaving the plane, PenHoverEnd, which starts the hide
+    // grace so a pen hovering at the plane's edge does not blink the hint)
+    // both mean the pointer is on no button: the wait stops, its button and
+    // the seen position are forgotten, and the next arrival is a motion.
+    // CONTACT LIFT (TouchLift, a translated contact's own lift) is NOT the
+    // pointer going away (architect 2026-09-29): it ends nothing, so the
+    // button, the anchor and the seen position stand at the lift point as a
+    // mouse's release leaves them, and the S Pen's hover coming back within
+    // the slop of that point is stillness. The rule is at
+    // AppState::RedesignTooltip.
+    enum class TooltipHoverEnd { Hard, Soft, ContactLift };
+    void end_tooltip_hover(TooltipHoverEnd end);
 
     // THE WAIT'S ONE WRITER, for both hover walks (the roster's and the modal
     // dialog's), handed the tooltip-bearing button under the pointer (index

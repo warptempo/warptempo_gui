@@ -4308,10 +4308,11 @@ void GuiInputHandler::set_show_waveform_magnification(bool desired) {
 
 void GuiInputHandler::set_show_tooltips(bool desired) {
     // The contract — sole writer, per-project, history-less, the dark edge
-    // ending the model whole — is at the declaration (input_handler.h). The
-    // ONE caller is the bare-backslash arm, which the icon row's button
-    // reaches by synthesizing that press.
+    // ending the model whole — is at the declaration (input_handler.h), and
+    // so are its callers: the main window's bare-backslash arm (which the
+    // icon row's button reaches by synthesizing that press) and the folder
+    // overlay's three routers' own backslash arms.
     app.show_tooltips = desired;
     if (desired) return;
-    end_tooltip_hover(/*soft=*/false);
+    end_tooltip_hover(TooltipHoverEnd::Hard);
 }

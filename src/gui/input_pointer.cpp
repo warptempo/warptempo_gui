@@ -7214,11 +7214,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (app.pending_marker_press.active) {
-        // THE FLAG'S MOTIONLESS LIFT OWES ONLY THE SEED — the click itself
+        // THE FLAG'S UNCROSSED LIFT OWES ONLY THE SEED — the click itself
         // acted at the press (2026-08-17; the contract is at
         // PendingMarkerPress, app_state.h), and only the release can tell a
         // click from a drag, so the next Marker double-click candidate is
-        // written here and nowhere else.
+        // written here and nowhere else. A lift that never crossed the grab
+        // gate is a click however far short of it the press travelled
+        // (grab_moved_threshold_px, app_state.h); the second press pairs with
+        // this seed only within the drag gate's slack of it.
         // THE POSITION IS THE PRESS'S, not this release's: it keeps the
         // SPATIAL pairing press-to-press, and it is the honest one for the
         // touch layer, whose synthesized release carries the finger's LAST
@@ -9684,13 +9687,26 @@ void GuiInputHandler::hide_shift_tooltip() {
 // neither the hover faces nor the in-window bit), a return to the same button
 // within the grace cancels it, and the grace running out takes the box down
 // through the tick with the awake window left running (Qt's Leave).
-void GuiInputHandler::end_tooltip_hover(bool soft) {
+// A TRANSLATED CONTACT'S LIFT IS NO LEAVE FOR THE TOOLTIP (architect
+// 2026-09-29) and returns before touching anything: the lift is the release
+// of a press that was already the hard end (the box down, the product
+// asleep), and under that held press the button and the anchor followed the
+// contact (note_tooltip_hover's held arm), so both stand at the lift point
+// with the seen position beside them — the state a mouse's release leaves.
+// The S Pen hovering back into the plane then arrives as an enter whose walk
+// is the model's own motion test: within the slop of the lift point on the
+// same button it is stillness and starts no wait; past the slop, or onto
+// another button, it is a motion. A finger has no hover after its lift, and
+// its next contact's entry motion already reads held, so nothing changes for
+// it.
+void GuiInputHandler::end_tooltip_hover(TooltipHoverEnd end) {
+    if (end == TooltipHoverEnd::ContactLift) return;
     AppState::RedesignTooltip& t = app.redesign_tooltip;
     t.hovered     = AppState::RedesignTooltip::Owner{};
     t.wake_due_ms = 0;
     t.seen_x      = AppState::kTooltipUnseen;
     t.seen_y      = AppState::kTooltipUnseen;
-    if (!soft) {
+    if (end == TooltipHoverEnd::Hard) {
         hide_shift_tooltip();
         return;
     }

@@ -1973,7 +1973,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
     // GuiPointerLeaveReason, because one effect below now differs between them.
     // (SINCE TOUCH PHASE 1, 2026-08-11, a touch pointer translation's end
-    // fires this hook too — as OrdinaryLeave, and ONLY on its no-focus arm
+    // fires this hook too — as TouchLift for the contact's own lift and as
+    // OrdinaryLeave for the hard end, and ONLY on its no-focus arm
     // since codex round 3: with the physical pointer focused, the platform
     // delivers a restore MOTION at the mouse's own position instead and this
     // body never runs — the ordinary motion path re-derives hover and the
@@ -2064,7 +2065,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // its own early return, and a relayout is a real dismissal. Any OTHER leave —
     // below the row, or with the mode not armed — behaves exactly as it always
     // did.
-    // THE EXCEPTION IS SCOPED TO THE ORDINARY LEAVE, and that is a correctness
+    // THE EXCEPTION IS SCOPED TO THE ORDINARY LEAVE (a contact's lift,
+    // TouchLift, reading as one here), and that is a correctness
     // term rather than tidiness (codex 2026-08-08): this body is shared with
     // POINTER-CAPABILITY LOSS, the hard end of the stream, where no leave, no
     // motion and no release will ever arrive again. Keeping anything there would
@@ -2092,7 +2094,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // hovering at the plane's edge, or lost by the platform inside it, does not
     // blink the hint; coming back onto the same button within the grace keeps
     // it, and the grace running out takes it down through the tooltip's clock
-    // with the same damage.
+    // with the same damage. A TRANSLATED CONTACT'S LIFT (TouchLift) is NO
+    // LEAVE FOR THE TOOLTIP at all (architect 2026-09-29): it is the release
+    // of a press that already hard-ended the hint, so the wait's button, its
+    // anchor and the seen position stand at the lift point as a mouse's
+    // release leaves them, and the S Pen hovering back within the slop of
+    // that point starts no wait (end_tooltip_hover). Every other effect here
+    // reads the lift exactly as the ordinary leave, the row-1 keep included.
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
         // Read the band BEFORE the in-window flag goes false: the answer is about
         // the remembered position, which this hook does not touch, but the two
@@ -2100,12 +2108,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // REASON is the first term: only the ordinary leave has the return motion
         // the exception is built on.
         const bool through_menu_row =
-            reason == GuiPointerLeaveReason::OrdinaryLeave &&
+            (reason == GuiPointerLeaveReason::OrdinaryLeave ||
+             reason == GuiPointerLeaveReason::TouchLift) &&
             app.dropdown.menu_row_armed &&
             point_in_menu_row_band(app, app.last_mouse_x, app.last_mouse_y);
         app.pointer_in_window = false;
+        using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
         input_handler.end_tooltip_hover(
-            reason == GuiPointerLeaveReason::PenHoverEnd);
+            reason == GuiPointerLeaveReason::TouchLift
+                ? TooltipHoverEnd::ContactLift
+            : reason == GuiPointerLeaveReason::PenHoverEnd
+                ? TooltipHoverEnd::Soft
+                : TooltipHoverEnd::Hard);
         if (!through_menu_row) {
             input_handler.clear_redesign_button_hover();
             input_handler.disarm_menu_row();
@@ -2548,8 +2562,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // against the ones the painter last painted
         // (RedesignButtonFace::enabled and ::selected) and any drift pays a
         // single invalidate_top_strip. The repaint rewrites the whole stash, so
-        // this settles in one pass — including the cold case, where the roster's
-        // bits start at their defaults and the first compare corrects them.
+        // the faces settle in one pass — including the cold case, where the
+        // roster's bits start at their defaults and the first compare corrects
+        // them. (A standing BOTTOM-ROW hint's words, compared below, settle in
+        // two frames; the reason is at that compare.)
         // IT IS ALSO WHAT MAKES THE PAINTED CLAIM TRUTHFUL (architect
         // 2026-09-24, strictly as-painted): every chrome claim — the roster's
         // press, lift, hold-repeat and menu-row slide, the dropdown's rows, the
@@ -2650,9 +2666,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // paint_shift_tooltip), so live words that have moved past the
             // painted pair are a box standing stale: this damages the old
             // box's published rect, the owner's strip and the band the new one
-            // hangs into — the show edge's own set (tick_tooltip), which covers
-            // the new box whole whatever it measures (viewport.h's
-            // floating-surface damage rule). Asked outside the walk, which
+            // hangs into — the show edge's own set (tick_tooltip), whose rects
+            // together cover every pixel of the new box whatever it measures
+            // (viewport.h's floating-surface damage rule). A TOP-ROW box lies
+            // inside the strip, so one rect covers it and its words publish in
+            // that frame. A BOTTOM-ROW box straddles the band and the lane,
+            // and the painter publishes words only under a clip that covers
+            // the box whole (paint_shift_tooltip), so that frame paints the
+            // box and publishes the union of the old and new rects with the
+            // old words; the next tick's compare damages that published rect,
+            // a rect of its own covering the box, and the second frame
+            // publishes the words. Two frames at most, once per words change,
+            // never a standing per-tick damage. Asked outside the walk, which
             // stops once both strips have drifted.
             //
             // THE OWNER'S GLYPH DRIFT IS THE SAME TEST ONE TICK EARLIER: two
