@@ -497,7 +497,12 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
 
     // Ctrl+C / Ctrl+X / Ctrl+V: clipboard. These sit in the editor's owned
     // keymap (returning a handled action), so they never fall through to the
-    // global dispatch; Ctrl+C/X/V are unbound globally, so no conflict. Copy
+    // global dispatch. Ctrl+X and Ctrl+V are unbound globally; Ctrl+C is the
+    // main window's Copy Resolved Value since 2026-09-29, and while an editor
+    // stands the TYPED chord is this field's copy and never the resolved
+    // value (a roster lift spelling Ctrl+C under the flag editor is refused
+    // on the editor's swallow card before it reaches here,
+    // finish_chrome_press_release). Copy
     // and cut are a no-op (plain Consumed) without a selection; paste always
     // requests — the input handler applies the action against the SYSTEM
     // clipboard, and answers a request with nothing on it by doing nothing.

@@ -2815,7 +2815,9 @@ private:
     //       button (press-at-press, commit-at-release, the modal's own) or,
     //       with none focused, OPENS the highlight; Space presses a focused
     //       button only; Up / Down walk the highlight (repeat-eligible,
-    //       scrolling to keep it visible); Esc closes; Ctrl+S saves with the
+    //       scrolling to keep it visible); bare `\` toggles the tooltip lamp
+    //       (set_show_tooltips, the player's arm); Esc closes; Ctrl+S saves
+    //       with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
     //       contract); Ctrl+Q falls through to the close
     //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
@@ -2932,7 +2934,8 @@ private:
     //     route_picker_key and needed a modal owner of its own, the record
     //     being at AppState::ModalDialogOwner); Shift+L closes, the opener's
     //     own chord answering in here as bare `l` answers inside the player;
-    //     every other bare key and every other modified chord is consumed,
+    //     bare `\` toggles the tooltip lamp (set_show_tooltips, the player's
+    //     arm); every other bare key and every other modified chord is consumed,
     //     silently.
     //
     // No undo, nothing authored, LEGAL ON A READ-ONLY TAB — it reads hardware
@@ -3817,10 +3820,12 @@ private:
     // comparator. History-less; display-only; silent.
     void set_show_waveform_magnification(bool desired);
 
-    // THE TOOLTIP LAMP'S ONE SETTER (architect 2026-09-29) — one road: bare
+    // THE TOOLTIP LAMP'S ONE SETTER (architect 2026-09-29) — one key: bare
     // backslash, which the icon row's Enable Tooltips button reaches by
     // synthesizing that press, in every state the roster is live (both locks
-    // and the `h` view admit it). The bit (AppState::show_tooltips) is a
+    // and the `h` view admit it), and which the folder overlay's three
+    // routers (the render player's, the picker's, the stats panel's) answer
+    // through this setter too while the button is greyed there. The bit (AppState::show_tooltips) is a
     // per-project session posture, dark at every project open, never
     // serialized and never in the undo domain. THE DARK EDGE ENDS THE MODEL
     // WHOLE: a standing box goes down (the hard end's own body), the wait
@@ -4025,15 +4030,20 @@ private:
     // Left / Right seek ∓5 s; bare Home the item's own start, or THE PREVIOUS
     // ENTRY when the press lands inside the item's first three seconds
     // (kPlayerPreviousThresholdMs, the previous-track window, 2026-08-31);
-    // bare End the item's own END (2026-08-30, the scrub's own right edge —
-    // not a walk, the natural end being what advances); Backspace up one
+    // bare End THE NEXT WAV of the item's folder in every transport state
+    // (2026-09-04; the item's own end 2026-08-30..09-04), a silent wall at
+    // the folder's last; Backspace up one
     // folder (a consumed no-op at the root); SHIFT+Home / Shift+End the
     // folder's FIRST / LAST wav (R37, re-keyed off Page Up / Page Down
     // 2026-08-30 and off comma/period 2026-08-31 — bare `,` / `.` are unbound
     // here and fall to the silent catch-all below, and bare `v` joined them
     // 2026-09-01 when the player's Stop retired with its
     // button); `r` the Repeat one lamp; `'` the Load in
-    // place button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
+    // place button's chord; bare Delete / Shift+Delete the Delete button's
+    // two acts, at the root listing alone; bare `\` the tooltip lamp
+    // (set_show_tooltips, architect 2026-09-29 — the picker and the stats
+    // panel answer it too); `l` and Esc close; Ctrl+S falls through to the
+    // save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
     // neither gesture restates the step). EVERY OTHER

@@ -755,8 +755,10 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-four
-    // view/mode/action buttons since 2026-09-29's evening, twenty-one from
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-three
+    // view/mode/action buttons since 2026-09-29's late evening, when the
+    // Edit Flag button was deleted — twenty-four earlier that evening,
+    // twenty-one from
     // the stepped zoom buttons' removal
     // 2026-09-25, twenty-three from Follow's return on the evening of
     // 2026-09-23, twenty-two for the hours of that day it was deleted,

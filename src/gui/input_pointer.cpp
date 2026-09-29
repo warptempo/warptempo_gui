@@ -690,8 +690,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // whose row carried Shift+Tab as its own base chord, Redo's shape — and
     // Next marker): the row is bare Tab and SHIFT IS AN ADMISSION
     // (redesign_button_shift_admits), so the shift-click and the long press
-    // dispatch Shift+Tab, the reverse walk. A shift-modified form never has
-    // its own button. CTRL AND THE PAIR ARE ADMISSIONS TOO (architect
+    // dispatch Shift+Tab, the reverse walk — beside Previous Marker's own
+    // row above, the same chord's dedicated button since 2026-09-29, when
+    // the rule that a modified form never has its own button was dissolved.
+    // CTRL AND THE PAIR ARE ADMISSIONS TOO (architect
     // 2026-09-26, redesign_button_ctrl_admits /
     // redesign_button_ctrl_shift_admits): a modified press spells the
     // button's own key, so the ctrl-click dispatches Ctrl+Tab, the tab
@@ -880,7 +882,7 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // Ctrl+C and RESTRICT UNDO's Ctrl+Z (2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
-// of any row, or on one of the four dropdown anchors (which carry no chord row
+// of any row, or on one of the three dropdown anchors (which carry no chord row
 // at all) is refused exactly as it always was. The walk is kToolbarChords in the
 // arm's own order, so the button this answers about is the button that would
 // arm.
@@ -914,7 +916,7 @@ bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
 
 // Does the roster button at this index paint a pressed interior? The chord
 // table's click_face column by roster index — the damage gate for the arm's
-// writers (a face that is never painted owes no erase). False for the two
+// writers (a face that is never painted owes no erase). False for the three
 // anchors, which carry no table row.
 bool roster_index_click_face(int index) {
     for (const ToolbarChord& tc : kToolbarChords) {
@@ -8408,6 +8410,27 @@ void GuiInputHandler::finish_chrome_press_release(
                       (arm.ctrl && redesign_button_ctrl_admits(tc.id));
         chord.shift = tc.shift || arm.shift || held_to_shift;
         chord.alt   = tc.alt;
+        // A LIFT THAT SPELLS CTRL+C UNDER A STANDING MARKER-LANE EDITOR IS
+        // REFUSED ON THE EDITOR'S OWN SWALLOW CARD (architect 2026-09-29): the
+        // flag editor, in every kind, raises no veil, so the roster stays
+        // pressable under it, and the chord would reach on_key as the
+        // editor's own copy (text_editor's ctrl-exact Ctrl+C) — the field's
+        // selection copied, or nothing, silently, behind a face named Copy
+        // Resolved Value or Center. A face named for the resolved value never
+        // copies something else, so its lift says what the same button said
+        // while its chord was one the editor does not own. Both roads meet
+        // here: Copy Resolved Value's plain lift and Center's ctrl press.
+        // THE KEYBOARD IS UNTOUCHED: Ctrl+C typed in the field copies the
+        // field's selection, the editor's key classifier being the keyboard's
+        // owner, not this. The faces do not grey for it. The dialog editors
+        // need no term: the veil at this body's head already refused the lift,
+        // so a keyboard-modal editor standing here is the marker lane's.
+        if (tc.key == GuiKeys::C && chord.ctrl && !chord.shift &&
+            !chord.alt && keyboard_modal_editor_active()) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 modal_editor_swallow_card(tc.key, chord));
+            return;
+        }
         on_key(tc.key, chord);
         return;
     }

@@ -1295,7 +1295,9 @@ inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
 // view's allowlist (history_mode_key_blocked, which admits it — the lamp is
 // chrome, not that view's business) and the dispatch arm (Backslash's case in
 // handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
-// reaches).
+// reaches). The folder overlay's three routers answer the same bare key in
+// their own bare switches (a Backslash case under each router's bare-only
+// catch-all), outside the main dispatch this predicate serves.
 inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }

@@ -2604,16 +2604,16 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 // clock's neighbour since 2026-08-29's fold, the one-day status bar's LEFT
 // cell before that. While the mode stands this line is what that cell is for.
 //
-// THE SHAPE (architect 2026-09-28): SEGMENTS SEPARATED BY ` | `, every one
-// alike — the POSITION `x/y`, then the SCALE segment
-// `Scale: [-]<then token> [+]<now token>` when the scale changed, then the
-// GITHUB segment `GitHub: <word>` when there is one (below) — so an absent
-// segment leaves no separator behind it and nothing leads or trails:
-// `12/14 | Scale: [-]1.0 [+]1.1 | GitHub: up to date`, `03/14 | GitHub:
-// behind`, `007/114`. The same shape on BOTH walks. The scale segment speaks
-// the lane's own sign vocabulary through the lane's own spelling owner
-// (history_diff_label), so this line and the flags cannot come to bracket
-// differently. (The "bottom-left corner" of the mode's record read
+// THE SHAPE (architect 2026-09-28; the GitHub segment ahead of the scale
+// since 2026-09-29): SEGMENTS SEPARATED BY ` | `, every one alike — the
+// POSITION `x/y`, then the GITHUB segment `GitHub: <word>` when there is one,
+// then the SCALE segment `Scale: [-]<then token> [+]<now token>` when the
+// scale changed (both below) — so an absent segment leaves no separator
+// behind it and nothing leads or trails: `03/14 | GitHub: up to date |
+// Scale: [-]1.0 [+]1.1`, `03/14 | GitHub: behind`, `007/114`. The same shape
+// on BOTH walks. The scale segment speaks the lane's own sign vocabulary
+// through the lane's own spelling owner (history_diff_label), so this line
+// and the flags cannot come to bracket differently. (The "bottom-left corner" of the mode's record read
 // bottom-RIGHT from the 2026-08-12 unification, TOP-RIGHT while the status
 // chain sat in the tab row, bottom-LEFT on the one-day status bar, and reads
 // BOTTOM-CENTRE now, beside the clock — the same line, four surfaces.)
@@ -2666,6 +2666,28 @@ static std::string history_walk_line(AppState& app) {
         line.insert(0, total.size() - line.size(), '0');
     line += '/';
     line += total;
+    // THE GITHUB SEGMENT, SECOND, AHEAD OF THE SCALE (architect 2026-09-27;
+    // moved ahead of the scale 2026-09-29): how this device stands against
+    // GitHub as of the last check — `GitHub: checking...` / `up to date` /
+    // `ahead` / `behind` / `diverged` / `offline` / `refused`
+    // (github_status_word) — in the line's own `Label: value` shape, on BOTH
+    // walks, because what Ctrl+S does in the view depends on it whichever walk
+    // is showing. It stands ahead of the scale because the state cell clips
+    // at the verbs (paint_bottom_row_buttons_and_clock): where the line is
+    // wider than the cell — the tablet's, with the scale segment showing —
+    // the cut falls on the scale, which the diff lane also shows, and never
+    // on the word Ctrl+S forks on. A visit with no clone (the local fallback)
+    // has no segment, and neither has an Unchecked status. The position
+    // always precedes it (`0/0` at worst), so the separator is unconditional.
+    if (history_remote_walk_available(app)) {
+        if (const char* word = github_status_word(app.github_status)) {
+            line += kSegmentSeparator;
+            line += "GitHub: ";
+            line += word;
+        }
+    }
+    // THE SCALE SEGMENT, LAST: something always precedes it (the position,
+    // `0/0` at worst), so the separator is unconditional.
     const GuiHistoryCommitDelta* d =
         app.history_mode.displayed_delta(app.history_compare());
     // No unavailable-delta arm: walk membership is the strict whole-set load
@@ -2673,8 +2695,6 @@ static std::string history_walk_line(AppState& app) {
     // has a real delta — the old `Ambiguous` token died with the display
     // machinery it named.
     if (d && d->scale_changed) {
-        // The position always precedes it (`0/0` at worst), so the separator
-        // is unconditional.
         line += kSegmentSeparator;
         line += "Scale: ";
         line += history_diff_label("[-]", /*disabled=*/false,
@@ -2682,20 +2702,6 @@ static std::string history_walk_line(AppState& app) {
         line += ' ';
         line += history_diff_label("[+]", /*disabled=*/false,
                                    d->now_scale_token);
-    }
-    // THE GITHUB SEGMENT, LAST (architect 2026-09-27): how this device stands
-    // against GitHub as of the last check — `GitHub: checking...` / `up to
-    // date` / `ahead` / `behind` / `diverged` / `offline` / `refused`
-    // (github_status_word) — in the line's own `Label: value` shape, on BOTH
-    // walks, because what Ctrl+S does in the view depends on it whichever walk
-    // is showing. A visit with no clone (the local fallback) has no segment,
-    // and neither has an Unchecked status.
-    if (history_remote_walk_available(app)) {
-        if (const char* word = github_status_word(app.github_status)) {
-            line += kSegmentSeparator;
-            line += "GitHub: ";
-            line += word;
-        }
     }
     return line;
 }
@@ -3795,7 +3801,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // IT IS CLIPPED, NEVER ELLIPSISED — a cairo rectangle clip, the folder
         // overlay rows' precedent — at the right block's own left edge less
         // one lane pad, so a long line is cut rather than colliding with the
-        // marker verbs.
+        // marker verbs. The tablet's cell (~446 logical px at 200 %, the
+        // numbers above) is narrower than the longest walk line, so the
+        // composer puts the segment that must survive the cut ahead of the
+        // one that may lose it — the GitHub word before the scale
+        // (history_walk_line, architect 2026-09-29).
         //
         // THE CLIP IS THE STATE'S OWN RUN, AND THAT IS WHY THERE ARE TWO RUNS
         // (2026-08-31, the round-B conversion). One face, one size, one

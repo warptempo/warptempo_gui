@@ -216,8 +216,8 @@ struct GuiRendersDir {
 // .wav`, always folder-qualified. One path per file, so the id is unique by
 // filesystem construction, and the folder-qualified spelling is the entry's
 // real on-disk path under tmp/. ONE READER, re-greped: the RENDER PLAYER's
-// load confirmation, which spells the entry it asks about with it ("Load
-// `3_bpm/02.wav` in place?", render_player_load_in_place in
+// load confirmation, which spells the entry it asks about with it, single-
+// quoted ("Load '3_bpm/02.wav' in place?", render_player_load_in_place in
 // input_key_dispatch.cpp). It lives here rather than at that one site because
 // the id is a property of the entry, which this header owns. (The typed load
 // editor resolved a user's typed identifier against these strings, and its

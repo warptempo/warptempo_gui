@@ -385,7 +385,9 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // nearbyint((displayed - vp_start) / spp), rounded once to the integer column.
 // One owner for the one rounding — the trim-bound column, the region span, the
 // phase-reset overlay's left edge, the strip-drag anchor stem, the undo
-// restore's visibility test, the flag iterator (iterate_visible_flags_impl,
+// restore's held column (the singleton under the hold, undo.cpp; the
+// restore's visibility test is displayed_frame_on_screen, inside
+// land_subject), the flag iterator (iterate_visible_flags_impl,
 // render.cpp, whose right cull is this column minus the flag's left border
 // >= w) and
 // painted_column_of_source_frame_on_basis's tail

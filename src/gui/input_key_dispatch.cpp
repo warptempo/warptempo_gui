@@ -1854,10 +1854,11 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 // need the stack's duplicate-text rule to answer once.)
 void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
                                                     MarkerLandingFrame frame) {
-    // THE STOP IS ONE OWNER'S (history_diff_cycle_target, app_state.h), read
-    // by the Walk button's face in the view too, so the greyed face and the
-    // dead key agree (architect 2026-09-24). The seed, the walls and the
-    // empty arm are stated there; each is a silent consumed no-op here.
+    // THE STOP IS ONE OWNER'S (history_diff_cycle_target, app_state.h), and
+    // this body is its one reader: the Walk button's face does not ask it,
+    // its ctrl form (the tab switch) keeping it lit wherever the roster is.
+    // The seed, the walls and the empty arm are stated there; each is a
+    // silent consumed no-op here.
     const int there = history_diff_cycle_target(app, audio, forward);
     if (there < 0) return;
     playback_lifecycle.stop_playback_if_playing();
@@ -7224,6 +7225,11 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::Down:
             picker_move_highlight(+1);
             return true;
+        case GuiKeys::Backslash:
+            // The tooltip lamp, the render player's arm verbatim (the rule is
+            // stated there).
+            set_show_tooltips(!app.show_tooltips);
+            return true;
         default:
             // Space with no button focused, Left / Right, and every other
             // bare key: consumed, and silent with the modified arm above. The
@@ -7540,6 +7546,11 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
                     app, key == GuiKeys::Down ? +1 : -1)) {
                 viewport.invalidate_rect(folder_overlay::surface_rect(app));
             }
+            return true;
+        case GuiKeys::Backslash:
+            // The tooltip lamp, the render player's arm verbatim (the rule is
+            // stated there).
+            set_show_tooltips(!app.show_tooltips);
             return true;
         default:
             // Enter and Space with no button focused, Left / Right, and every
@@ -8374,6 +8385,18 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // exact like all of them — every modified spelling of `r` is
             // consumed above by the router's `if (!bare) return true`.
             render_player.toggle_repeat_one();
+            return true;
+        case GuiKeys::Backslash:
+            // THE TOOLTIP LAMP (architect 2026-09-29), the main window's bare
+            // `\` answering in here through the lamp's one body
+            // (set_show_tooltips), so the player row's hints can be lit and
+            // put out where they stand. The lamp is chrome and governs this
+            // row's hints too; its roster button stays greyed under the
+            // overlay with the rest of the roster, the key being the road in
+            // here. Put out while a hint shows, the hint ends (the setter's
+            // dark edge, the hard end). The picker's and the stats panel's
+            // routers carry the same arm.
+            set_show_tooltips(!app.show_tooltips);
             return true;
         case GuiKeys::Return:
         case GuiKeys::KpEnter:
@@ -9329,7 +9352,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // The one bare form reaches here (is_tooltip_lamp_key, the caller
         // having gated on no modifiers). Silent: the lamp's face shows the new
         // state. The setter is GuiInputHandler::set_show_tooltips, shared with
-        // the icon-row button's synthesized chord and with nothing else.
+        // the icon-row button's synthesized chord and with the folder
+        // overlay's three routers, which answer the same key in their own
+        // arms while their contents stand.
         // History-less, one-shot, legal on a locked tab, under the
         // grid-iterations lock and in the `h` view (all three allowlists
         // admit it — the `h` view's claim above this dispatch does not own

@@ -780,7 +780,8 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
 //     answer (land_subject);
 //   * paged_in_viewport_start — `target` the edge margin in from the LEFT
 //     edge: follow's page-in (follow_scroll_if_needed) and the landing
-//     owner's coarse walk page-in (land_subject).
+//     owner's walk page-in at every zoom but the working one, finer or
+//     coarser (land_subject).
 namespace {
 int64_t centred_viewport_start(int64_t target, int64_t visible) {
     return target - visible / 2;
@@ -1016,9 +1017,9 @@ void Viewport::follow_scroll_if_needed() {
 // here until 2026-09-26, when each took bare `c`'s act instead):
 //   * AT THE WORKING ZOOM, AS PAINTED (architect 2026-09-28: the painted
 //     step q EQUALS the working column, audio.working_column(); `c`'s level
-//     2.0 paints q = column exactly, and a rest a hair above it that rounds
-//     to the same sixteenth-frame grid point paints the same picture and
-//     walks like it) the subject is CENTRED, ON SCREEN OR NOT, the centring
+//     2.0 paints q = column exactly, and a rest a hair either side of it
+//     that rounds to the same sixteenth-frame grid point paints the same
+//     picture and walks like it) the subject is CENTRED, ON SCREEN OR NOT, the centring
 //     body's own placement: the walk always moves one way and every landing
 //     frames alike, so no half of the screen is skipped;
 //   * AT EVERY OTHER ZOOM, FINER OR COARSER, an on-screen subject moves
@@ -1125,8 +1126,9 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
         displayed_frame_on_screen(static_cast<double>(hi), vp, q, W);
     // The working-zoom read, inline by ruling: the walk's one zoom term. AS
     // PAINTED, q against the working column, not the level against 2.0: a
-    // rest just above level 2 (under a 1/32 frame over the column) paints
-    // the working picture exactly and walks like it. AN EXACT EQUALITY IS
+    // rest a hair either side of level 2 (spp under a 1/32 frame from the
+    // column, over or under) paints the working picture exactly and walks
+    // like it. AN EXACT EQUALITY IS
     // LEGITIMATE HERE: q is on the sixteenth-frame grid (n/16, exact in a
     // double) and the column is whole frames, so the painted working picture
     // compares equal and every other picture, finer or coarser, does not.

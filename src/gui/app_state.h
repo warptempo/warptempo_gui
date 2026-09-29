@@ -152,8 +152,8 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 //     asks whether the range is at most 1 − 2 × margin of the window at the
 //     live zoom (else its one caller that can meet the verdict, the group
 //     restore, zooms out through the framer's margin arm below), and the
-//     walk's page-in, an off-screen landing coarser than the working zoom,
-//     lands the subject the margin in from the LEFT edge exactly as follow's
+//     walk's page-in, an off-screen landing at any zoom but the working one,
+//     finer or coarser, lands the subject the margin in from the LEFT edge exactly as follow's
 //     does (the restore never pages in);
 //   * frame_span_into_view's `margin` arm (input_handler.cpp) — the span
 //     framer pads each side by this fraction OF THE WINDOW, so the framed
@@ -1972,9 +1972,9 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-25 against kDropdownMenus and the chord table (41 chord
-// rows + 3 anchors = 44 = kRedesignButtonCount, re-counted 2026-09-25 when
-// the stepped zoom buttons' rows left);
+// re-greped against kDropdownMenus and the chord table (45 chord rows + 3
+// anchors = 48 = kRedesignButtonCount, re-counted 2026-09-29; the count's
+// own statement is at kRedesignButtonCount below);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -2502,8 +2502,13 @@ enum class RedesignButton {
     // (GuiInputHandler::set_show_tooltips puts a standing box down at the dark
     // edge). Lit, the model is Qt's QToolTip exactly as before. It is chrome,
     // not authoring: LIVE on a locked tab, under the grid-iterations lock and
-    // in the `h` view (bare backslash is on all three allowlists), so it
-    // NEVER GREYS; it admits no modifier and does not repeat.
+    // in the `h` view (bare backslash is on all three allowlists), so it greys
+    // only with the WHOLE ROSTER at redesign_button_enabled's head gates — no
+    // audio to dispatch on, and the folder overlay standing. Under the
+    // overlay the KEY stays live: the render player's, the picker's and the
+    // stats panel's routers each answer bare backslash through the same
+    // setter (architect 2026-09-29), so the player row's hints can be lit and
+    // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
     // SETTINGS (architect 2026-09-29), right after the padlock, closing the
     // render-entry group: bare `;`, the bare settings prompt, wearing Breeze's
@@ -6977,9 +6982,10 @@ struct AppState {
     // leaves the old pixels standing — it publishes the UNION of the old
     // rect and the new one (a later hide then erases both) and keeps the
     // words it last really drew; a covering frame publishes the box and its
-    // words exactly. The words are what main.cpp's comparator holds against
-    // a modal button's recomposed hint (a player button's words move with
-    // its state).
+    // words exactly. The words are what main.cpp's two comparators hold
+    // against the live ones — a roster button's stateful overload
+    // (redesign_button_tooltip) and a modal button's recomposed hint — since
+    // either can move with state under a still pointer.
     //
     // THE WAIT: `hovered` is the tooltip-bearing button under the pointer
     // (Qt's toolTipWidget; no owner off every such button), `anchor_x/y` the
@@ -9427,8 +9433,10 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         case AppState::PlayerButtonAct::Up:          return "Up a Folder (Backspace)";
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in Place (')";
         // DELETE (architect 2026-09-29), Load in Place's slot at the root: the
-        // act named over the key the router binds to it, Qt's own "Delete".
-        case AppState::PlayerButtonAct::Delete:      return "Delete Folder (Delete)";
+        // act named over the key the router binds to it, spelled "Del" as
+        // the product spells that key everywhere (spell_key_name, gui_input.h;
+        // Delete Markers' own "(Del)").
+        case AppState::PlayerButtonAct::Delete:      return "Delete Folder (Del)";
         case AppState::PlayerButtonAct::Close:       return "Close (Esc)";
         case AppState::PlayerButtonAct::None:        break;
     }
@@ -12338,8 +12346,8 @@ inline bool any_tab_read_only(const AppState& a) {
 // of the same buttons.
 //
 // THE MEMBERS FALL IN THREE GROUPS, as the keyboard gate's own admissions do:
-// the marker verbs, History, the padlock, BPM iterations and the view bar's
-// three GREY OUTRIGHT under a lit lamp; Up/Down grey UNLESS A
+// the marker verbs, History, the padlock, BPM iterations, Settings and the
+// view bar's three GREY OUTRIGHT under a lit lamp; Up/Down grey UNLESS A
 // BOUND CELL (Lower or Upper) IS ADDRESSED, the gate's bound-axis admission;
 // Left/Right follow the lane (horizontal_arrow_step_lock_admits).
 //
@@ -14367,18 +14375,20 @@ inline bool playback_launch_playable(const AppState& a,
 //     bound cells and the marker lane's absence — and its whole membership has
 //     one owner, iteration_lock_greys (above), which the arms alone read since
 //     2026-09-12 (the HINTS were its second reader until the refusal-reason
-//     tooltip class was deleted). RE-DERIVED FROM THE ARMS 2026-09-19, the
-//     three shapes are these. FIVE ARMS BELOW COMPOSE BOTH HALVES, SEVEN
-//     BUTTONS (the Edit flag arm left 2026-09-29 with its button): Drop
-//     marker; Delete and Disable, sharing one arm; BPM Iterations; the LEFT / RIGHT pair, which composes them around one
-//     lane term; and the UP / DOWN pair, whose iteration half is admitted on a
-//     BOUND AXIS, where the cells are the mode's own authoring surface.
-//     TWO ARMS ASK THE ITERATION HALF ALONE, SIX BUTTONS, having no read-only
-//     term to compose: TOGGLE READ-ONLY and TOGGLE HISTORY VIEW, which share
-//     one arm (the padlock because under a lit lamp no tab is locked at all;
-//     the history view because its mode is claimed above the gate and a locked
-//     tab reads history as a writable one does), and THE VIEW BAR'S THREE
-//     SELECTORS on one arm of their own. TWO ARMS ASK A READ-ONLY BIT WITH NO
+//     tooltip class was deleted). RE-DERIVED FROM THE ARMS 2026-09-29, the
+//     three shapes are these. SIX ARMS BELOW COMPOSE BOTH HALVES, NINE
+//     BUTTONS (the Edit flag arm left 2026-09-29 with its button, and the
+//     Settings arm joined the same day): Drop marker; Delete and Disable,
+//     sharing one arm; BPM Iterations; Settings; the LEFT / RIGHT pair, which
+//     composes them around one lane term; and the UP / DOWN pair, whose
+//     iteration half is admitted on a BOUND AXIS, where the cells are the
+//     mode's own authoring surface.
+//     THREE ARMS ASK THE ITERATION HALF ALONE, FIVE BUTTONS, having no
+//     read-only term to compose: TOGGLE READ-ONLY (under a lit lamp no tab is
+//     locked at all), TOGGLE HISTORY VIEW, whose arm adds the publishing
+//     refusal (its mode is claimed above the gate and a locked tab reads
+//     history as a writable one does), and THE VIEW BAR'S THREE SELECTORS on
+//     one arm of their own. TWO ARMS ASK A READ-ONLY BIT WITH NO
 //     ITERATION TERM, AND THEY ASK TWO DIFFERENT BITS: TOGGLE INHERIT reads
 //     the ACTIVE TAB's, then FORKS on the lamp rather than greying on it —
 //     under a lit lamp its plain chord is dead and its shift twin, the tie, is
@@ -14389,8 +14399,12 @@ inline bool playback_launch_playable(const AppState& a,
 //     predicate the keys' own refusal reads. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops.
-//     RE-DERIVED FROM THE ARMS 2026-09-19, it is SEVEN — bare `s`, Delete,
-//     Ctrl+D, Ctrl+N, bare Return, Ctrl+B and bare `i` — BARE `/` having gone
+//     THIS COUNTS THE BUTTONS WHOSE ARM READS THE BIT AS ITS FIRST TERM, not
+//     the lock's whole button set (that one is FIFTEEN and is enumerated at
+//     the read-only arm itself, below). RE-DERIVED FROM THE ARMS 2026-09-29,
+//     it is SEVEN — bare `s`, Delete, Ctrl+D, Ctrl+N, Ctrl+B, bare `;` and
+//     bare `i` — bare Return having left with the Edit Flag button and bare
+//     `;` joined with the Settings button that day, and BARE `/` having gone
 //     with the measures feature whole on 2026-09-16, which took the measure
 //     editor, its button and its chord together. (CTRL+F IS NOT AN EIGHTH
 //     although this gate drops it too: the Flatten button's face does not read
@@ -15093,13 +15107,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // on purpose, invisible chrome state otherwise, changing only when `o`
         // is pressed.
         //
-        // THE READ-ONLY LOCK'S BUTTON SET IS SIXTEEN, AND THIS IS THE ONE
-        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-29, when
-        // the icon row's SETTINGS button joined; every
+        // THE READ-ONLY LOCK'S BUTTON SET IS FIFTEEN, AND THIS IS THE ONE
+        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-29 late
+        // evening: SIXTEEN when the icon row's SETTINGS button joined that
+        // day, fifteen when the Edit Flag button left; every
         // other site states its own class and points here). In five groups,
         // by HOW each asks:
-        //   * THESE EIGHT, whose arms are below — the bit their first term.
-        //     Seven read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
+        //   * THESE SEVEN, whose arms are below — the bit their first term.
+        //     Six read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
         //     (any_tab_read_only, its own arm's reason).
         //   * THE FOUR HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
         //     block below: Up/Down outright, and Left/Right only while a
@@ -16788,10 +16803,10 @@ static_assert(!redesign_button_shift_admits(RedesignButton::IconCopyValue) &&
 // collapsed-stack sentence and the two skips' "At the trim start/end".
 //
 // WHAT SURVIVES IN THE OVERLOAD IS TWO THINGS AND NO THIRD: (1) a fork that
-// NAMES WHAT THE PRESS DOES NOW — Save's "Save and Commit", Render's "Cancel"
-// and "Render Grid Iterations", Play's "Stop", the two zoom buttons' and
-// Center's landing names and the bound-step names
-// — and (2) the DROPPING of a modifier line where the modified press does
+// NAMES WHAT THE PRESS DOES NOW — Save's "Save and Commit" and "Pull",
+// Render's "Cancel" and "Render Grid Iterations", Play's "Stop", Full Zoom
+// Out's and Center's landing names, the bound-step and hop names and Toggle
+// Inherit's tie names — and (2) the DROPPING of a modifier line where the modified press does
 // nothing different in this state, which the static_assert below still binds
 // to the admissions. Nothing there may state a reason or report a state.
 //
@@ -17140,15 +17155,17 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Go to End (End)",
                     "Press Ctrl to ignore the trim window."};
         // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
-        // HELP's vocabulary. THREE OF THEM ADMIT SHIFT and carry the second
+        // HELP's vocabulary. TWO OF THEM ADMIT SHIFT and carry the second
         // line that says so — the DROP since 2026-08-28, whose shifted chord
         // crosses from the warp column and drops a
         // phase reset (refusing as already crossed in the P column since
-        // 2026-08-30), and TOGGLE INHERIT and FLATTEN since 2026-09-19 — while
-        // DELETE and TOGGLE DISABLED take one line
-        // each. (COPY RESOLVED VALUE, seated among them since 2026-08-29,
-        // carries a two-line form of its own; its own row below says
-        // why.) The admissions are redesign_button_shift_admits',
+        // 2026-08-30), and TOGGLE INHERIT since 2026-09-19 (FLATTEN, whose
+        // shifted press is the collapse, is the icon row's iteration group's
+        // since the same day) — while DELETE, TOGGLE DISABLED and JUMP TO
+        // DEFINING MARKER take one line each. (COPY RESOLVED VALUE sat among
+        // them from 2026-08-29 until 2026-09-29, when it moved to the icon
+        // row with one line; its own row below says why.) The admissions are
+        // redesign_button_shift_admits',
         // never a count restated here. They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
         // this table is keyed by id and carries no row of its own; it is kept
@@ -17221,8 +17238,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // admits no modifier, so there is no second line to bind.
         case RedesignButton::IconJumpToDefiningMarker:
             return {"Jump to Defining Marker (Ctrl+J)", nullptr};
-        // ADD TO SELECTION (2026-08-18), the verb group's EIGHTH since
-        // 2026-09-19 and a MODE rather than an act — the hint NAMES THE
+        // ADD TO SELECTION (2026-08-18), the verb group's SIXTH and last
+        // since 2026-09-29 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
         // it read "Add to Selection" from 2026-08-18 and "Add to selection"
         // for the hours of that day's sentence-case pass, a verb phrase that
@@ -17232,9 +17249,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // product's standing rule about UI text. THE `h` VIEW WAS ITS ONE
         // GREYED HOME UNTIL 2026-09-17, when the architect admitted the chord
         // in there (the lamp is a producer of that view's own multi-selection
-        // now), so the button is live in every state the roster paints it in
-        // and only grid iterations greys it — the words are unchanged either
-        // way, a tooltip naming the act and never a state.
+        // now), and grid iterations stopped greying it on 2026-09-19
+        // (iteration_lock_greys records why), so nothing greys it but the
+        // whole roster's head gates — the words are unchanged either way, a
+        // tooltip naming the act and never a state.
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection (K)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Next marker" / "previous
@@ -17405,6 +17423,20 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   (2) DROP A MODIFIER LINE the constant table carries, where the modified
 //   press does nothing different in this state. It may drop a line; it may
 //   never add a sentence.
+//
+// A MULTI-FORM LINE STANDS WHOLE WHILE ANY ONE OF ITS FORMS IS LIVE
+// (architect 2026-09-29). Two second lines name more than one modified form —
+// Next Marker's three (Shift, Ctrl, Ctrl+Shift) and Restrict Undo's two (Ctrl,
+// Ctrl+Shift) — and since this overload may drop a line but never rewrite
+// one, a line naming several forms cannot be shortened to its live ones: it
+// stands whole while any of its forms would act, and drops only where none
+// would. So Next Marker's stands under a lit grid iterations, where its
+// Ctrl+Shift form is the refused march (its Ctrl form switches the tab in
+// every state, so it never drops), and Restrict Undo's stands with an empty
+// redo stack, dropping only where neither step would act (its arm below). A
+// greyed-out half of a sentence has no face to carry it. The single-form
+// march lines (Previous Marker's, Switch Tab's, the tabs') are rule (2)'s
+// plain case and drop under that lamp.
 //
 // THE REASON-AND-STATE FORKS ARE DELETED WHOLE (the same ruling): the lock's
 // and the lamps' "Turn off … first" lines went on 2026-09-12 with the class's

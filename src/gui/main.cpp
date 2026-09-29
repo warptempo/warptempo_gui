@@ -2641,43 +2641,63 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             if (drift_transport)
                 viewport.invalidate_rect(bottom_row_area(app));
             // A STANDING HINT IS A FACE TOO (architect 2026-09-24, strictly
-            // as-painted): Render's tooltip reads the painted glyph
-            // (redesign_button_tooltip's stateful overload), and it hangs
-            // OUTSIDE the strip the walk above damages, so a glyph drift
-            // under a standing Render hint also damages the hint's published
-            // rect — erasing the old box — and the band the new one can hang
-            // into (the show edge's own band, above), since the new words may
-            // measure larger. The frame that repaints the button as its new
-            // glyph republishes the bit before the tooltip paints and so
-            // repaints the hint from it (viewport.h's floating-surface damage
-            // rule). Asked outside the walk, which stops once both strips
-            // have drifted. SAVE'S HINT FOLLOWS ITS PAINTED GLYPH THE SAME WAY
-            // since 2026-09-27 ("Pull" over the pull glyph), so the one test
-            // serves both owners.
+            // as-painted; general since 2026-09-29): a roster hint's words are
+            // the stateful overload's (redesign_button_tooltip), which fork on
+            // live state — Play / Stop on the transport, Center on the focus,
+            // a second line dropping where its modified press would not act —
+            // and the box hangs OUTSIDE the strip the walk above damages. The
+            // box's words are published AS PAINTED (AppState::RedesignTooltip,
+            // paint_shift_tooltip), so live words that have moved past the
+            // painted pair are a box standing stale: this damages the old
+            // box's published rect, the owner's strip and the band the new one
+            // hangs into — the show edge's own set (tick_tooltip), which covers
+            // the new box whole whatever it measures (viewport.h's
+            // floating-surface damage rule). Asked outside the walk, which
+            // stops once both strips have drifted.
+            //
+            // THE OWNER'S GLYPH DRIFT IS THE SAME TEST ONE TICK EARLIER: two
+            // hints read the button's PAINTED glyph rather than live state —
+            // Render's Cancel and Save's Pull — so their live words move only
+            // once the frame that repaints the button republishes the glyph,
+            // and that frame paints the box under the strip's clip, which does
+            // not cover it. Damaging the box on the owner's glyph drift puts
+            // the button and its hint in one frame. (This general test replaced
+            // a Render / Save list on 2026-09-29, which repaired those two and
+            // left every other stateful hint, Play / Stop's among them,
+            // standing stale under a still pointer.)
             const int tip_i = app.redesign_tooltip.owner.index;
-            const bool tip_reads_glyph =
-                tip_i == static_cast<int>(RedesignButton::Render) ||
-                tip_i == static_cast<int>(RedesignButton::Save);
             if (app.redesign_tooltip.visible &&
                 app.redesign_tooltip.owner.surface ==
                     AppState::RedesignTooltip::Surface::Roster &&
-                tip_reads_glyph &&
-                app.redesign_buttons[static_cast<size_t>(tip_i)].glyph !=
-                    redesign_button_glyph(app,
-                                          static_cast<RedesignButton>(tip_i))) {
-                viewport.invalidate_rect(app.redesign_tooltip.rect);
-                const GuiRect band =
-                    redesign_button_in_transport_row(
-                        static_cast<RedesignButton>(tip_i))
-                        ? GuiRect{0,
-                                  bottom_row_area(app).y -
-                                      tooltip_damage_h_px(),
-                                  app.width, tooltip_damage_h_px()}
-                        : GuiRect{0,
-                                  top_strip_area(app).y +
-                                      top_strip_area(app).h,
-                                  app.width, tooltip_damage_h_px()};
-                viewport.invalidate_rect(band);
+                tip_i >= 0 && tip_i < kRedesignButtonCount) {
+                const RedesignButton tip_id =
+                    static_cast<RedesignButton>(tip_i);
+                const RedesignTooltipText live = redesign_button_tooltip(
+                    app, audio, audio.total_frames(), tip_id);
+                const bool glyph_drift =
+                    app.redesign_buttons[static_cast<size_t>(tip_i)].glyph !=
+                    redesign_button_glyph(app, tip_id);
+                // (A button with no words paints no box, so it owes nothing.)
+                const bool words_drift =
+                    live.line1 != nullptr &&
+                    (app.redesign_tooltip.painted_line1 != live.line1 ||
+                     app.redesign_tooltip.painted_line2 !=
+                         (live.line2 != nullptr ? live.line2 : ""));
+                if (glyph_drift || words_drift) {
+                    viewport.invalidate_rect(app.redesign_tooltip.rect);
+                    if (redesign_button_in_transport_row(tip_id)) {
+                        const GuiRect tr = bottom_row_area(app);
+                        viewport.invalidate_rect(tr);
+                        viewport.invalidate_rect(GuiRect{
+                            0, tr.y - tooltip_damage_h_px(), app.width,
+                            tooltip_damage_h_px()});
+                    } else {
+                        invalidate_top_strip();
+                        const GuiRect ts = top_strip_area(app);
+                        viewport.invalidate_rect(GuiRect{
+                            0, ts.y + ts.h, app.width, tooltip_damage_h_px()});
+                    }
+                }
             }
         }
 
@@ -2730,7 +2750,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
 
         // A STANDING DIALOG HINT IS A FACE TOO (2026-09-29; the
-        // roster's Render / Save glyph rule above, one surface over): a modal
+        // roster's words test above, one surface over): a modal
         // button's words are recomposed onto the stash by every paint of the
         // row (paint_modal_dialog), and some of those paints reach the row
         // alone — the player's clock and scrub cells at scanner cadence carry
