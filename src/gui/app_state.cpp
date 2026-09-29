@@ -281,6 +281,48 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     return MarkerCell::Payload;
 }
 
+int flag_hover_unit_at(const AppState& app, int mouse_x, int mouse_y,
+                       MarkerCell& cell_out) {
+    cell_out = MarkerCell::Payload;
+    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
+    // The riding boxes are the editor's paint and carry no hover; the walk
+    // answering one of them means the point is on them, so nothing hovers.
+    if (!r || r == &app.flag_editor_box.riding_cells) return -1;
+    const double x = static_cast<double>(mouse_x);
+    if (x >= r->iter_upper_boundary_x)      cell_out = MarkerCell::Upper;
+    else if (x >= r->iter_lower_boundary_x) cell_out = MarkerCell::Lower;
+    return r->marker_index;
+}
+
+bool flag_hover_unit_box(const AppState& app, int marker_index,
+                         MarkerCell cell, GuiRect& box_out) {
+    if (marker_index < 0) return false;
+    for (const FlagHitRect& r : app.flag_hit_rects) {
+        if (r.marker_index != marker_index) continue;
+        double lo = r.x;
+        double hi = r.x + r.w;
+        switch (cell) {
+            case MarkerCell::Payload:
+                hi = std::min(hi, r.iter_lower_boundary_x);
+                break;
+            case MarkerCell::Lower:
+                lo = std::max(lo, r.iter_lower_boundary_x);
+                hi = std::min(hi, r.iter_upper_boundary_x);
+                break;
+            case MarkerCell::Upper:
+                lo = std::max(lo, r.iter_upper_boundary_x);
+                break;
+        }
+        const int x0 = static_cast<int>(std::floor(lo));
+        const int x1 = static_cast<int>(std::ceil(hi));
+        if (x1 <= x0 || r.h <= 0.0) return false;
+        box_out = GuiRect{x0, static_cast<int>(r.y), x1 - x0,
+                          static_cast<int>(r.h)};
+        return true;
+    }
+    return false;
+}
+
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
     (void)audio;
@@ -480,7 +522,7 @@ PayloadEligibility payload_eligibility(const AppState& app,
     if (idx >= static_cast<int>(mv.size())) return E::NoResolvedValue;
     const auto& m = mv[idx];
     // This gates the VALUE PAIR — bare `j`, which copies the focused marker's
-    // resolved value, and Shift+`j`, which jumps to the marker that value
+    // resolved value, and Ctrl+J, which jumps to the marker that value
     // came from — a marker's OWN value being written on its flag regardless
     // of eligibility. NEITHER ACT MAY REPORT A TEMPO THE RENDER NEVER
     // APPLIES, and the render's three ways of not applying one are the

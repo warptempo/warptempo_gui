@@ -264,6 +264,84 @@ void GuiRenderPlayer::up() {
     enter(Folder::Root, {}, came_from);
 }
 
+// THE ROOT'S BATCH-FOLDER COUNT (the contract is at the declaration,
+// app_state.h): the listing's own Folder rows while it stands at the root.
+int render_player_root_folder_count(const AppState& a) {
+    if (a.render_player.folder != AppState::RenderPlayer::Folder::Root) return 0;
+    int n = 0;
+    for (const Row& r : a.folder_overlay.rows)
+        if (r.kind == Row::Kind::Folder) ++n;
+    return n;
+}
+
+// WOULD DELETE ACT (the contract at the declaration): at the root, the band on
+// a batch folder — which, the band standing on a row whenever the listing has
+// one, is also exactly when the shifted press has any folder to take.
+bool render_player_delete_actionable(const AppState& a) {
+    if (a.render_player.folder != AppState::RenderPlayer::Folder::Root)
+        return false;
+    const AppState::FolderOverlay& ov = a.folder_overlay;
+    if (ov.highlight_row < 0 ||
+        ov.highlight_row >= static_cast<int>(ov.rows.size()))
+        return false;
+    return ov.rows[static_cast<size_t>(ov.highlight_row)].kind ==
+           Row::Kind::Folder;
+}
+
+// THE ROOT'S DELETE, ANSWERED (the contract is at the declaration).
+void GuiRenderPlayer::delete_batch_folders(
+        const std::vector<std::filesystem::path>& folders) {
+    AppState::RenderPlayer& rp = app.render_player;
+    if (!rp.active || folders.empty()) return;
+    // THE ITEM FIRST: a transport bound to a wav inside a folder about to go
+    // is stopped and unloaded before any file is touched, the Up act's own
+    // unload (the player keeps standing). At the root this never runs today —
+    // the item's folder is the band's by construction and up() unloaded it on
+    // the way here — and it is kept so the rule holds on any road that ever
+    // reaches this body with an item bound.
+    if (!rp.item.empty()) {
+        const std::filesystem::path item_folder = rp.item.parent_path();
+        for (const std::filesystem::path& f : folders) {
+            if (item_folder == f) {
+                unload_item(UnloadTail::Up);
+                break;
+            }
+        }
+    }
+    // THE BOUNDS: only a directory directly under this project's own `tmp/`,
+    // named by the listing it came from. The batch root is re-derived here
+    // from the source, the same owner the listing's enumeration and every
+    // dispatcher name their folders by, so a parked path that is anything
+    // else — `tmp/` itself, a path outside it, a file — is refused whole.
+    const std::filesystem::path batch_root =
+        project_batch_root(app.source_audio_path);
+    for (const std::filesystem::path& f : folders) {
+        std::error_code ec;
+        if (f.parent_path() != batch_root || f.filename().empty() ||
+            !std::filesystem::is_directory(f, ec)) {
+            std::fprintf(stderr,
+                         "warptempo_gui: delete refused: '%s' is not a batch "
+                         "folder under '%s'\n",
+                         f.string().c_str(), batch_root.string().c_str());
+            continue;
+        }
+        std::filesystem::remove_all(f, ec);
+        if (ec) {
+            const GuiFailure fail = path_failure(
+                "Could not delete ", f, f.filename().string(),
+                ": " + ec.message());
+            std::fprintf(stderr, "warptempo_gui: %s\n",
+                         fail.diagnostic.c_str());
+            notifications.notify(AppState::NotificationClass::Critical,
+                                 fail.display);
+        }
+    }
+    // THE LISTING FROM DISK AGAIN, whatever failed: a partial removal shows
+    // what is left, and the band takes the listing's top (the seat rule's
+    // memory-less arm — the folder it stood on is gone).
+    enter(Folder::Root, {}, {});
+}
+
 void GuiRenderPlayer::open_row(int index) {
     const AppState::FolderOverlay& ov = app.folder_overlay;
     if (index < 0 || index >= static_cast<int>(ov.rows.size())) return;
@@ -533,6 +611,14 @@ bool render_player_button_enabled(const AppState& a,
             return !authoring_locked(a) &&
                    !load_in_place_render_blocked(a) &&
                    render_player_highlighted_entry(a) != nullptr;
+        // DELETE (architect 2026-09-29), the root's slot: the act's own
+        // question under the twin rule (render_player_delete_actionable — the
+        // band on a batch folder, which at the root is also every case the
+        // shifted press has a folder to take). A RUNNING RENDER IS NO TERM:
+        // no run can stand while the player does (open() refuses over one,
+        // and nothing under the player starts one).
+        case AppState::PlayerButtonAct::Delete:
+            return render_player_delete_actionable(a);
         case AppState::PlayerButtonAct::RepeatOne:
         case AppState::PlayerButtonAct::Close:
             return true;
@@ -1357,6 +1443,7 @@ bool GuiRenderPlayer::open() {
     rp.painted_cursor = -1;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
+    rp.pending_delete.clear();
     // THE BAND OPENS WITH THE PLAYER AS ITS OWNER — the tag is the panel's
     // standing predicate (folder_overlay_stands), so it is what raises the
     // overlay, and every other field of the panel is reset with it.
@@ -1403,6 +1490,10 @@ void GuiRenderPlayer::unload_item(UnloadTail tail) {
     rp.transport      = Transport::Idle;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
+    // (The parked delete is NOT dropped here: the Up tail runs inside the
+    // delete's own answer, after the prompt has consumed it. The close drops
+    // it with the rest of the mode, below.)
+    if (tail == UnloadTail::Close) rp.pending_delete.clear();
     // The mode bit goes where the tail puts it (the two roads' reasons are at
     // UnloadTail, render_player.h): the fence above was taken with the player
     // active on both roads, and the close's re-express below must run with the

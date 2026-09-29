@@ -425,7 +425,7 @@ struct Viewport {
     // piece of state (the inventory below). (The bar was the window's last lane
     // for one day and carried a THIRD string, the resolved readout, in a right
     // cell; that readout RETIRED WHOLE with the bar — bare `j` copies the
-    // value and Shift+`j` goes to the marker it came from — and every caller
+    // value and Ctrl+J goes to the marker it came from — and every caller
     // that served it alone went with it. The chain that ranked all three lived
     // on the tab row from 2026-08-13 and was deleted at the bar's landing; its
     // transient tier and its critical chip left for the notification cards the

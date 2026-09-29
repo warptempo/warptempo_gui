@@ -132,7 +132,7 @@ static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // RESOLVED READOUT — the third state string, and the bar's right cell for its
 // one day — RETIRED WHOLE with the bar: no state surface displays a resolved
 // value any more, bare `j` copies it (its card, an event, naming the copied
-// value — architect 2026-09-13) and Shift+`j` goes to the marker it came from.
+// value — architect 2026-09-13) and Ctrl+J goes to the marker it came from.
 //
 // THE STRINGS' EARLIER HOMES, as history: they were the bottom-LEFT
 // lead-in until the 2026-08-12 unification, the bottom row's right end after
@@ -173,9 +173,10 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                              const GuiRect& top_strip) {
     // Flag annotations in the top strip. The marker/phase-reset flag BOXES live
     // on flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
-    // this pass is a pure blit. (Trim's bar and endcaps left this cache for the
+    // this pass is a blit plus the flag HOVER's clipped re-run over it (since
+    // 2026-09-29, below). (Trim's bar and endcaps left this cache for the
     // live paint_trim pass.) The boxes CARRY THEIR TEXT since row 5 — the marker-text lane
-    // that used to show it beneath them is gone — so the only thing painted
+    // that used to show it beneath them is gone — so the only other thing painted
     // after this blit in that band is the open editor's overlay
     // (render_flag_editor_box) — which is why the EDITED BOX, and every box of
     // that marker standing to its right, are NOT in this surface at all: they
@@ -196,6 +197,10 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
         cairo_paint(cr);
         cairo_restore(cr);
     }
+    // THE FLAG HOVER (architect 2026-09-29) paints straight over the blit,
+    // inside each hovered unit's own box — the surface never carries a hover,
+    // so a hover edge rebuilds nothing (paint_flag_hover, waveform_cache.cpp).
+    paint_flag_hover(cr);
 }
 
 // -- The redesigned rows: paint_menu_row / paint_tab_row / paint_icon_row
@@ -973,6 +978,16 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
     {RedesignButton::Render,     icons::Icon::MediaRecord},
+    // EDIT FLAG AND COPY RESOLVED VALUE (architect 2026-09-29, evening), up
+    // from the bottom row's verb group and seated after Render INSIDE Render's
+    // group, ahead of the separator Full zoom out opens: bare Return
+    // (text-field, the flag editor's third road) and bare `j` (edit-copy, the
+    // focused marker's resolved value to the clipboard) — same ids, glyphs,
+    // acts and faces; Copy Value admits no modifier since the jump left it for
+    // its own button (Ctrl+J, the bottom row's Jump to Defining Marker). Two
+    // boxes and two 2px gaps onto the walk, no separator moving.
+    {RedesignButton::IconMarkerEditFlag, icons::Icon::TextField},
+    {RedesignButton::IconCopyValue,      icons::Icon::EditCopy},
     // (THE TWO VIEW LAMPS SHARED ONE GROUP here from 2026-09-04 to 2026-09-15
     // — IconAudioView wearing document-import lit in Target, IconMarkerColumn
     // chronometer-start lit in Phase Reset, one button per axis where four
@@ -1140,6 +1155,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // on a writable tab — every button goes through that resolver, so this
     // constant is the fallback rather than the painted truth.
     {RedesignButton::IconReadOnly,       icons::Icon::Lock},
+    // ENABLE TOOLTIPS (architect 2026-09-29, evening), between the padlock and
+    // Settings: the bare backslash's LAMP, wearing Breeze's help-whatsthis.
+    // Dark at every open, and while dark no tooltip shows anywhere; lit, the
+    // Qt model as ruled. One box and one 2px gap onto the walk, no separator
+    // moving.
+    {RedesignButton::IconTooltips,       icons::Icon::HelpWhatsthis},
     // SETTINGS CLOSES THE RENDER-ENTRY GROUP (architect 2026-09-29): bare
     // `;`, the settings prompt, wearing Breeze's settings-configure — the
     // typed road's pointer spelling beside the padlock, one box and one 2px
@@ -2695,7 +2716,7 @@ static std::string history_walk_line(AppState& app) {
 // LANE, its two rect accessors, its three height accessors and the window-foot
 // seam went with the painter; THE STATE TEXT is row 8's own cell, painted by
 // paint_bottom_row_buttons_and_clock right of the clock, and THE RESOLVED
-// READOUT retired whole — bare `j` copies the value and Shift+`j` goes to the
+// READOUT retired whole — bare `j` copies the value and Ctrl+J goes to the
 // marker it came from. `history_walk_line` above is untouched: the composer
 // still stands beside its one caller, which is now that cell.)
 
@@ -2705,12 +2726,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-ONE members
+    // separator-divided groups of 32x32 buttons — TWENTY-FOUR members
     // in SIX groups (the width math below is the count's
     // one statement), RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row — SAVE ALONE and
-    // then the other three behind a separator since 2026-09-29), THE ZOOM
+    // then the other three behind a separator since 2026-09-29) with EDIT
+    // FLAG and COPY VALUE behind Render in its group (up from the bottom row,
+    // 2026-09-29 evening), THE ZOOM
     // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: FULL ZOOM OUT (2026-08-12; the stepped
     // zoom buttons in front of it removed 2026-09-25, and CENTER behind it
@@ -2726,14 +2749,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // RENDER-ENTRY group
     // (listen and the READ-ONLY toggle, the architect's own order on
     // 2026-08-14 less the load-in-place, which left for the history group on
-    // 2026-09-01, and SETTINGS at its tail since 2026-09-29) and THE HISTORY
+    // 2026-09-01, and ENABLE TOOLTIPS and SETTINGS at its tail since
+    // 2026-09-29) and THE HISTORY
     // GROUP, the opener leading THE WALK LAMP,
     // its four companions (2026-08-18, the companions back from the bottom
     // row and the walk surface down from row 3 later that day) and THE LOAD
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-one paint on every
+    // hiding/showing icons in top icon row"): all twenty-four paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2748,34 +2772,34 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups): TWENTY-ONE MEMBERS IN SIX GROUPS since 2026-09-29, when
-    // Center left for the bottom row, Settings joined the render-entry group
-    // and Undo opened a group of its own (one separator slot where a 2px gap
-    // stood):
-    //   8 + 21·32 + (21−6)·2 + (6−1)·9 = 8 + 672 + 30 + 45 = 755px,
+    // minus groups): TWENTY-FOUR MEMBERS IN SIX GROUPS since 2026-09-29
+    // evening, when Edit Flag and Copy Value came up behind Render and Enable
+    // Tooltips joined the render-entry group (three boxes and three 2px gaps,
+    // no separator moving):
+    //   8 + 24·32 + (24−6)·2 + (6−1)·9 = 8 + 768 + 36 + 45 = 857px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 763.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 865.
     //
-    // THE TABLET FIT CEILING IS 304 (re-derived 2026-09-29; 307 before the
-    // separator after Save), and it is taken off THE PAINTED WALK, not off
-    // 755·factor: every element above is its own scaled_px, rounded on its
-    // own, so the walk's device width is 8s + 21·[32s] + 15·[2s] +
-    // 5·(2·[4s] + [1s]) with each bracket a banker's rounding. At 304 that is
-    // 24 + 21·97 + 15·6 + 5·(24 + 3) = 2286 of 2304, and at 305 it is 2307
-    // (the box rounds up to 98). (Counting the trailing pad the ceiling is 301 — 2289 at
-    // 301, the pad being ground, not ink, so the icons themselves are the
-    // thing measured.) The tablet's 200 % paints the walk 1510 device px wide,
-    // clearing the panel by 794; its first-run 225 paints it 1690, clearing
-    // it by 614. The laptop clears it outright at 763 of 1920. The row's
-    // width succession is in git history; a roster move restates these
-    // numbers.
+    // THE TABLET FIT CEILING IS 270 (re-derived 2026-09-29 evening; 304 that
+    // morning, before the three boxes), and it is taken off THE PAINTED WALK,
+    // not off 857·factor: every element above is its own scaled_px, rounded on
+    // its own, so the walk's device width is 8s + 24·[32s] + 18·[2s] +
+    // 5·(2·[4s] + [1s]) with each bracket a banker's rounding. At 270 that is
+    // 22 + 24·86 + 18·5 + 5·(22 + 3) = 2301 of 2304, and at 271 it is 2325
+    // (the box rounds up to 87). (Counting the trailing pad the ceiling is
+    // 267 — 2297 at 267, the pad being ground, not ink, so the icons
+    // themselves are the thing measured.) The tablet's 200 % paints the walk
+    // 1714 device px wide, clearing the panel by 590; a 225 would paint it
+    // 1918, clearing it by 386. The laptop clears it outright at 865 of 1920.
+    // The row's width succession is in git history; a roster move restates
+    // these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
-    // 34px and a NEW GROUP costs 41, which at the tablet's 225% paint as 76
-    // and 92 device px (the box's 72 and the gap's 4.5 rounding to 4; the
-    // separator's 9 + 2 + 9 ahead of the leader's box) — room for EIGHT more
-    // members at 225% (1690 + 8·76 = 2298 of 2304), a ninth cropping
-    // (2374).
+    // 34px and a NEW GROUP costs 41, which at the tablet's 200% paint as 68
+    // and 82 device px — room for EIGHT more members at 200% (1714 + 8·68 =
+    // 2258 of 2304), a ninth cropping (2326); at 225% (76 and 92: the box's 72
+    // and the gap's 4.5 rounding to 4) room for FIVE (1918 + 5·76 = 2298), a
+    // sixth cropping (2374).
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -3089,11 +3113,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   and, FLUSH AT THE RIGHT MARGIN, four groups divided by three of the ruled
 //   row-8 separators:
 //   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
-//   disable (Ctrl+D), inherit (Ctrl+N), the EDIT FLAG button (bare Return),
-//   COPY RESOLVED VALUE (bare `j`) and ADD TO SELECTION (bare `k`, the sticky
-//   ctrl, the row's ONE LIT FACE while the mode stands). The four verbs and
-//   the Edit flag button are the row's resting greys on a locked tab; Copy
-//   value and Add to selection are not, both being navigation;
+//   disable (Ctrl+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
+//   since 2026-09-29) and ADD TO SELECTION (bare `k`, the sticky ctrl, the
+//   row's ONE LIT FACE while the mode stands). The four verbs are the row's
+//   resting greys on a locked tab; the jump and Add to selection are not,
+//   both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood between
+//   Toggle inherit and Add to selection until 2026-09-29 and are the icon
+//   row's since);
 //   THE MARKER WALK (kTransportWalkGroup) — PREVIOUS MARKER (Shift+Tab, its
 //   ctrl press the paired march), NEXT MARKER (Tab, its shifted press
 //   Shift+Tab), CENTER (bare `c`, down from the icon row) and SWITCH TAB
@@ -3156,15 +3182,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
-// blend. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-29 — NINE of the
-// eighteen in the `h` view, where it used to be one: there
+// blend. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-29 evening — EIGHT
+// of the seventeen in the `h` view, where it used to be one: there
 // the derived partition greys the PLAY/STOP button (Space is consumed there),
 // UP and DOWN (bare
 // Up/Down are neither the mode's
 // vocabulary nor on its allowlist; LEFT / RIGHT are the mode's own playhead
-// step since 2026-09-26 and grey on their own arm), the FOUR MARKER VERBS, COPY
-// VALUE and THE EDIT
-// FLAG BUTTON (bare `j` and bare Return, consumed in there like
+// step since 2026-09-26 and grey on their own arm), the FOUR MARKER VERBS and
+// JUMP TO DEFINING MARKER (Ctrl+J, consumed in there like
 // the verbs' chords); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
 // being on that mode's allowlist now and the lamp producing the view's own
 // multi-selection; the two
@@ -3172,9 +3197,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // own absolute jumps, Tab/Shift+Tab its diff-flag cycle, `c` its centring and
 // Ctrl+Tab on its allowlist (architect-confirmed for the skips). PREVIOUS
 // MARKER greys only under a lit grid iterations with no reverse step left
-// (its twin, the march, refusing there too). Outside the view the four VERBS and the EDIT FLAG BUTTON
+// (its twin, the march, refusing there too). Outside the view the four VERBS
 // grey on a locked tab, their own
-// gate — COPY VALUE, seated among them, does NOT, both its chords being
+// gate — JUMP TO DEFINING MARKER, seated among them, does NOT, its chord being
 // navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT THE
 // TRANSPORT THREE AND ADD TO SELECTION greys on the
 // selection's state where its press would be a consumed no-op (the
@@ -3275,51 +3300,32 @@ constexpr TransportRowDef kTransportGroup[] = {
 // member of this table that ever wears the lit fill; the four verbs above are
 // acts that complete.
 //
-// THE GROUP IS EIGHT since 2026-09-19, when the FLATTEN BUTTON landed
-// between Toggle inherit and Edit flag: the four verbs, then FLATTEN, then
-// the EDIT FLAG BUTTON, then COPY RESOLVED VALUE and ADD TO SELECTION at the
-// tail. It was SEVEN from 2026-09-16, when the MARKER MEASURE (bare `/`,
-// minuet-scales, seated after the Edit flag button) left with the measures
-// feature. The rest of the succession — the Measure's 2026-08-19 arrival, the
-// Edit flag button's on 2026-08-27, Copy value's on 2026-08-29, the value
-// drag lamp of 2026-09-10..13 and the marker magnification of 2026-09-14..15
-// — is in git history.
+// It was SEVEN from 2026-09-19 until 2026-09-29 — the four verbs, the EDIT
+// FLAG BUTTON (2026-08-27), COPY RESOLVED VALUE (2026-08-29) and ADD TO
+// SELECTION; the rest of the succession (the Marker Measure, the value drag
+// lamp, the marker magnification, the Flatten button's hours) is in git
+// history.
 //
-// THE EDIT FLAG BUTTON (2026-08-27) — bare Enter, text-field (Breeze's own text
-// cursor: a serif I-beam on a field's underline rule). THE SEAT IS THE
-// ARCHITECT'S: "away from the delete button", an editor open
-// kept two boxes clear of a destruction. It is an act rather
-// than a mode, wears no lamp, and greys under the READ-ONLY lock and in the
-// `h` view. It is the flag editor's THIRD ROAD, added when the architect
-// retired the one-evening touch halo that had tried to rescue the double tap
-// instead.
-//
-// THE COPY RESOLVED VALUE button (2026-08-29; bare `j`, edit-copy's two
-// stacked sheets) sits at the group's tail with Add to selection — THE
-// ARCHITECT'S OWN SEAT, taken on his live pass that evening (it landed
-// that afternoon in the slot after Toggle inherit, on a coder's reading of his
-// first ask "beside Toggle inherit", and he moved it the same day): the four
-// verbs and the editor opener keep their run, and this
-// button joins Add to selection at the end, the two members that reach a
-// marker without authoring it. It is the one ACT in the group the READ-ONLY
-// LOCK does not grey (its two chords author nothing; Add to selection is left
-// lit too, a selection being navigation) and one of the buttons that
-// admit SHIFT (redesign_button_shift_admits owns that membership), its twin
-// being the jump to the marker the value came from.
+// THE GROUP IS SIX SINCE 2026-09-29 EVENING (architect): EDIT FLAG and COPY
+// RESOLVED VALUE went up to the icon row, after Render inside its group (their
+// records are at kIconRowButtons), and JUMP TO DEFINING MARKER — Ctrl+J,
+// Breeze's go-jump-declaration, a flag with a return arrow — took the seat
+// after Toggle Inherit, Add to Selection closing the group behind it. The jump
+// was Copy Value's shifted twin until that day; it is a dedicated button now
+// under the dissolved shift-twin rule (conventions.md). It is an act, wears no
+// lamp, and greys where Ctrl+J would refuse (jump_to_value_source_actionable)
+// and in the `h` view; neither lock greys it, the jump authoring nothing.
 //
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
-// (architect), taking Breeze's merge with it — its only consumer. The group is
-// SEVEN again and Edit flag is back one box nearer Delete; the seat's reasoning
-// is at the roster entry, app_state.h.)
+// (architect), taking Breeze's merge with it — its only consumer.)
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
-    {RedesignButton::IconMarkerInherit,    icons::Icon::InsertLink},
-    {RedesignButton::IconMarkerEditFlag,   icons::Icon::TextField},
-    {RedesignButton::IconCopyValue,        icons::Icon::EditCopy},
-    {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
+    {RedesignButton::IconMarkerInherit,        icons::Icon::InsertLink},
+    {RedesignButton::IconJumpToDefiningMarker, icons::Icon::GoJumpDeclaration},
+    {RedesignButton::IconAddToSelection,       icons::Icon::EditSelect},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's second
 // group between the verbs and the arrows — FOUR SINCE 2026-09-29 (architect),
@@ -3626,7 +3632,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
     // layout: the most-used buttons at the bottom right): the CLOCK at the
     // lane's left pad with THE STATE CELL behind it, then THE RIGHT BLOCK,
-    // anchored at the right margin — the MARKER-VERB GROUP (its seven counted
+    // anchored at the right margin — the MARKER-VERB GROUP (its six counted
     // off kMarkerVerbGroup), a separator, the MARKER-WALK GROUP (Previous
     // Marker, Next Marker, Center and Switch Tab, kTransportWalkGroup), a
     // separator, the four CARDINAL ARROWS (↓ ↑ ← →,
@@ -3641,22 +3647,24 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE NUMBERS, re-derived whenever a group gains or loses a box (each box
     // moves the block by a 32px box and its 2px gap): each group is
     // n × 32 + (n − 1) × 2 and each separator span 5 + 1 + 5, so the block is
-    // 236 verbs + 11 + 134 walk + 11 + 134 arrows + 11 + 100 transport = 637
-    // authored px (2026-09-29, the walk group grown from one box to four).
-    // At 100% on the laptop's 1920 it starts at 1920 − 8 − 637 =
-    // 1275, the state cell's clip bound one pad short at 1267, and the clock
-    // cell (79.2px at 11pt) spans 8..~87, leaving the state cell ~1180px. On
+    // 202 verbs + 11 + 134 walk + 11 + 134 arrows + 11 + 100 transport = 603
+    // authored px (2026-09-29 evening, the verb group seven → six: Edit Flag
+    // and Copy Value up to the icon row, Jump to Defining Marker in).
+    // At 100% on the laptop's 1920 it starts at 1920 − 8 − 603 =
+    // 1309, the state cell's clip bound one pad short at 1301, and the clock
+    // cell (79.2px at 11pt) spans 8..~87, leaving the state cell ~1214px. On
     // the tablet at 200% (2304 device px, 1152 logical) the block starts at
-    // logical 1152 − 8 − 637 = 507, the clip bound at 499 and the clock ends
-    // at ~87, leaving ~412 logical px. THE ROW CARRIES NO COLLISION RULE —
+    // logical 1152 − 8 − 603 = 541, the clip bound at 533 and the clock ends
+    // at ~87, leaving ~446 logical px. THE ROW CARRIES NO COLLISION RULE —
     // none of the redesign does — and the crop-at-the-floor allowance recorded
     // at kMinWindowWidthPx covers a narrow window or a scale driven toward the
     // 350 ceiling: the block reaches the clock's right edge once the logical
-    // width falls below about 732 (87 + 637 + 8), which is above the 640
+    // width falls below about 698 (87 + 603 + 8), which is above the 640
     // floor — a window narrowed toward that floor paints the block over the
-    // clock's cell (the tablet's 200 % leaves 1152, its 304 % fit ceiling
-    // 757). THE STATE CELL CANNOT PUSH ANYTHING: it CLIPS at the block's left
-    // edge less one pad, so a long line is cut rather than colliding.
+    // clock's cell (the tablet's 200 % leaves 1152, its 270 % icon-row fit
+    // ceiling 853). THE STATE CELL CANNOT PUSH ANYTHING: it CLIPS at the
+    // block's left edge less one pad, so a long line is cut rather than
+    // colliding.
     int right_block_x = lane.x + lane.w - pad;
     {
         // Each group's count read off its own table, so a box joining or
@@ -4057,7 +4065,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // below them at all, so a hint dropped there would fall off the window and
     // it hangs upward instead, the
     // same box flipped about the button. That covers BOTH bottom-row surfaces —
-    // the row's eighteen roster buttons and, since 2026-08-13, the modal's own,
+    // the row's seventeen roster buttons and, since 2026-08-13, the modal's own,
     // which paint in the same lane (the fork was resolved with the owner,
     // above). Then CLAMPED
     // FULLY ON-WINDOW so a
@@ -6338,7 +6346,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: all EIGHTEEN buttons — the VERB GROUP'S SEVEN, the marker
+// YIELDS WHOLE: all SEVENTEEN buttons — the VERB GROUP'S SIX, the marker
 // walk group's four, the four arrows and the transport three — plus the clock and the
 // row's three separators stand down, nothing negotiates for space, and
 // paint_modal_dialog paints the modal into the lane they left.
@@ -7079,8 +7087,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // BUTTONS and no word button, so its faces take the glyph fork whole.
         // Close stays LAST, the escape sentinel by construction, and both keep
         // their acts, their keys and their hints unchanged.
-        glyph_button(AppState::PlayerButtonAct::LoadInPlace,
-                     icons::Icon::DialogOkApply);
+        // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
+        // listing is batch folders, where a load has nothing to name, so the
+        // sixth button deletes — Breeze's edit-delete, the red bin — the
+        // highlighted folder, and its shift press every folder listed; its
+        // shift line stands only where "all" is more than the highlighted one.
+        // Inside a batch folder the slot is Load in Place, unchanged.
+        hint.delete_all_differs = render_player_root_folder_count(app) > 1;
+        if (app.render_player.folder == AppState::RenderPlayer::Folder::Root)
+            glyph_button(AppState::PlayerButtonAct::Delete,
+                         icons::Icon::EditDelete);
+        else
+            glyph_button(AppState::PlayerButtonAct::LoadInPlace,
+                         icons::Icon::DialogOkApply);
         glyph_button(AppState::PlayerButtonAct::Close,
                      icons::Icon::WindowClose);
     } else {

@@ -228,17 +228,18 @@ inline constexpr const char* kDefaultProjectsRepo =
 // where the EIGHT-LANE stack still fits a 1080-tall window — the top strip's
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
-// tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
-// ceiling (304 since 2026-09-29 — the walk's own paragraph below) are
-// untouched by the move.
+// tallest scale the vocabulary admits. The tablet's scale and its icon-row
+// fit ceiling (270 since 2026-09-29's evening — the walk's own paragraph
+// below) are untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 755 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-one-button, six-group left-to-right walk runs past the window's right
-// edge — the tablet's own 225 clears it by 269 (2304/2.25 = 1024 logical px)
-// and 304 is the fit ceiling on that panel (307 from the stepped zoom
-// buttons' removal 2026-09-25 until the separator after Save, 2026-09-29),
-// inside the [50, 350] vocabulary, so a
+// 857 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-four-button, six-group left-to-right walk runs past the window's right
+// edge — the tablet's 200 clears it by 295 (2304/2 = 1152 logical px), a 225
+// by 167 (1024 logical px), and 270 is the fit ceiling on that panel since
+// 2026-09-29's evening (304 that morning, 307 from the stepped zoom buttons'
+// removal 2026-09-25 until the separator after Save), inside the [50, 350]
+// vocabulary, so a
 // scale above it crops (the
 // arithmetic is at paint_icon_row, paint_handler.cpp; the ceiling's succession
 // is in git history; 250 was tried as the TEMPLATE for an afternoon on

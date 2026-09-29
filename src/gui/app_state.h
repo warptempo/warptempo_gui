@@ -1941,13 +1941,14 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's THREE, row 3's two
-// TABS, row 4's TWENTY-ONE
+// TABS, row 4's TWENTY-FOUR
 // view / mode / action buttons (the deleted toolbar row's four lead them since
-// the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
+// the 2026-08-12 relayout, EDIT FLAG and COPY VALUE behind Render since
+// 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's EIGHTEEN (re-counted 2026-09-29, when
-// its walk group grew to four) — the
-// transport three, the MARKER-VERB GROUP'S SEVEN (kMarkerVerbGroup,
+// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-29 evening,
+// when Edit Flag and Copy Value went up and Jump to Defining Marker joined) —
+// the transport three, the MARKER-VERB GROUP'S SIX (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
 // (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
 // 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS the transport three last, at its
@@ -2126,7 +2127,7 @@ enum class RedesignButton {
     // from the toolbar group later on 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
-    // 2026-09-29, SETTINGS — and THE ROW'S LAST GROUP —
+    // 2026-09-29, ENABLE TOOLTIPS and SETTINGS — and THE ROW'S LAST GROUP —
     // the HISTORY OPENER leading its WALK LAMP, its four companions and
     // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
     // for it.
@@ -2172,6 +2173,95 @@ enum class RedesignButton {
     // groups and the row's first separator stands between Save and Undo
     // (redesign_button_opens_icon_group).
     Save, Undo, Redo, Render,
+    // EDIT FLAG AND COPY VALUE MOVED UP FROM THE BOTTOM ROW'S VERB GROUP
+    // (architect 2026-09-29), in this order directly after Render and inside
+    // Render's group (ahead of the separator Full zoom out opens): the same
+    // ids, chords, glyphs, acts and faces — only the lane changed, a roster id
+    // naming the button and not the lane it sits in. Their home strip is the
+    // TOP strip now (redesign_button_in_transport_row no longer names them).
+    //
+    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the bottom row's
+    // verb group's fifth member, after Toggle inherit, until 2026-09-29,
+    // DELIBERATELY FAR FROM DELETE there ("away from the delete button"): its
+    // act is an editor open and its neighbour's was a destruction, and the
+    // move to the icon row keeps it a whole row away from Delete.
+    //
+    // ITS CHORD IS BARE Enter and its act is that key's exactly — open the
+    // FLAG EDITOR on the focused marker (the arm is in on_key,
+    // input_handler.cpp; the button dispatches the chord at the LIFT through
+    // kToolbarChords like every other chrome button, while the KEY acts at the
+    // press like every other hotkey). ONE ROAD, no second body: every refusal
+    // the key has is the button's by construction.
+    //
+    // WHY IT EXISTS. The flag editor had TWO doors, the double-click and the
+    // Enter key, and on glass the first is unreliable — the architect drove a
+    // taller flag hit rect for one evening trying to rescue the double tap and
+    // retired it the same night: "get rid of double tapping as the ONLY way to
+    // enter the editor". A keyboardless panel now has a door that cannot miss.
+    // (Both older roads are untouched; this is a THIRD, not a replacement.)
+    //
+    // ITS ENABLED ARM READS THE ACT'S OWN REFUSAL SINCE 2026-08-30
+    // (flag_editor_open_actionable — nothing focused, or the P view, which
+    // has no per-flag editor): the button greys exactly where bare Return is
+    // a consumed no-op, the architect's truthful-buttons ruling ("Any time a
+    // button would be a no-op, grey it"). From its 2026-08-27 landing until
+    // then it had NO focus term and no view term,
+    // under the 2026-08-15 no-blink ruling — a face tracking the selection
+    // would blink at interaction cadence — which he withdrew for himself: he
+    // is deliberate with his presses, and greying is a face the row already
+    // wears in the `h` view. What greyed it before still does: the READ-ONLY
+    // LOCK (bare Return is on no read_only_key_blocked allowlist entry — the
+    // editor writes serialized content) and the `h` VIEW through the DERIVED
+    // partition (Return is neither history_mode_owns_key's vocabulary nor on
+    // history_mode_key_blocked's allowlist). A standing MODAL needs no arm at
+    // all: the veil consumes the press, the roster's own rule.
+    //
+    // IT IS NOT HOME-VIEW GATED, and that is the flag editor's own ruling
+    // rather than this button's: the payload editor is the FIFTH ruled
+    // exception to the home-view binding (the inventory is at
+    // active_column_authoring_allowed), so it opens in W+target as well as
+    // W+source. NO LAMP: an act, not a mode. IT ADMITS NEITHER SHIFT NOR CTRL,
+    // so a modified press is refused at the band gate and the long press —
+    // glass's held shift — reaches nothing.
+    IconMarkerEditFlag,
+    // THE COPY VALUE BUTTON (architect 2026-08-29) — Edit Flag's neighbour in
+    // the icon row since 2026-09-29, the Render group's last; it stood at the
+    // bottom row's verb group's tail beside Add to Selection until then.
+    //
+    // ITS CHORD IS BARE `j` and its act is that key's exactly — copy the
+    // FOCUSED marker's resolved value to the system clipboard. IT ADMITS NO
+    // MODIFIER SINCE 2026-09-29 (architect): the jump to the marker that value
+    // came from was its shifted twin (Shift+`j`, the shift-click and the long
+    // press) from 2026-08-29, and it is CTRL+J on a dedicated button of its
+    // own now (IconJumpToDefiningMarker, the bottom row's verb group), so a
+    // modified press here is refused at the band gate and the long press
+    // reaches nothing.
+    //
+    // WHY IT EXISTS: it is what the RESOLVED READOUT and its Ctrl+C became
+    // (architect 2026-08-29). The readout was the status bar's right cell for
+    // one day and the bottom strip's before that; the bar folded into row 8
+    // and the readout retired with it, so the value is now something you TAKE
+    // rather than something you read, and the marker it came from is somewhere
+    // you GO.
+    //
+    // ITS ENABLED ARM READS payload_eligible_marker ON THE FOCUS SINCE
+    // 2026-08-30 — the ONE gate bare `j` and Ctrl+J both run — so it greys on an
+    // ineligible focus (an owner, a phase reset, a disabled marker, a member
+    // of a coincident-collapsed stack, the P column, nothing focused; the
+    // gate's terms are at its declaration), the architect's truthful-buttons ruling ("Any time a
+    // button would be a no-op, grey it"). For its first day it had NO selection
+    // term, the group's rule then, under the 2026-08-15 no-blink ruling (a
+    // face tracking the focus would blink at every selection), which he
+    // withdrew for himself. The one refusal past the gate — an EMPTY PAYLOAD,
+    // a ref whose definition is missing — stays a consumed no-op behind a lit
+    // face: it needs the composer run, which a per-tick face has no business
+    // doing. AND IT IS NOT IN THE
+    // READ-ONLY ARM: bare `j` is on read_only_key_blocked's allowlist (a
+    // clipboard write authors nothing), so a locked tab leaves the button lit
+    // exactly as it leaves the key live. What greys it is the `h` VIEW through the DERIVED partition
+    // (bare `j` is neither the mode's vocabulary nor on its allowlist) and the
+    // folder overlay's own arm — nothing else. NO LAMP: an act, not a mode.
+    IconCopyValue,
     // (THE SHOW TRIM REGION BUTTON led the zoom group here from 2026-08-16
     // until the architect deleted it whole on 2026-09-22 with its bare `[`
     // chord: the tablet's pen reaches the trim bar, so the waveform overlay
@@ -2442,6 +2532,20 @@ enum class RedesignButton {
     // of read_only beside the key. Recorded so the harder variant is not
     // revived.
     IconReadOnly,
+    // ENABLE TOOLTIPS (architect 2026-09-29), between the padlock and
+    // Settings: THE TOOLTIP LAMP on bare backslash, wearing Breeze's
+    // help-whatsthis. A per-project session lamp in the magnification lamp's
+    // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
+    // settings vocabulary and not carried by `'` — and while it is DARK NO
+    // TOOLTIP SHOWS ANYWHERE: the tooltip model's one wait writer
+    // (note_tooltip_hover) keeps its state clear and starts no wait, so the
+    // roster, the modal row and the render player's row never raise a hint
+    // (GuiInputHandler::set_show_tooltips puts a standing box down at the dark
+    // edge). Lit, the model is Qt's QToolTip exactly as before. It is chrome,
+    // not authoring: LIVE on a locked tab, under the grid-iterations lock and
+    // in the `h` view (bare backslash is on all three allowlists), so it
+    // NEVER GREYS; it admits no modifier and does not repeat.
+    IconTooltips,
     // SETTINGS (architect 2026-09-29), right after the padlock, closing the
     // render-entry group: bare `;`, the bare settings prompt, wearing Breeze's
     // settings-configure. The button IS the key, so it greys exactly where
@@ -2555,18 +2659,16 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. EIGHTEEN buttons in four groups, all FLUSH AT THE RIGHT
+    // detection. SEVENTEEN buttons in four groups, all FLUSH AT THE RIGHT
     // MARGIN with the CLOCK alone at the row's left pad (architect
     // 2026-09-29, the right-handed tablet's layout). The enum lists them from
     // the TRANSPORT (skip-back = bare Home, THE ONE PLAY/STOP BUTTON = bare
     // Space, skip-forward = bare End), which the row PAINTS LAST, at its
     // right end behind the arrows; the other three groups paint in enum
-    // order, divided by separators — THE MARKER-VERB GROUP'S SEVEN
+    // order, divided by separators — THE MARKER-VERB GROUP'S SIX
     // (the four single-marker verbs of 2026-08-18: drop = bare `s`, delete =
-    // Delete, disable = Ctrl+D, inherit = Ctrl+N; then
-    // THE EDIT FLAG BUTTON (2026-08-27, bare Enter —
-    // the flag editor's third road), COPY RESOLVED VALUE (2026-08-29, bare
-    // `j`) AND ADD
+    // Delete, disable = Ctrl+D, inherit = Ctrl+N; then JUMP TO DEFINING MARKER
+    // (2026-09-29, Ctrl+J) AND ADD
     // TO SELECTION CLOSING THEM (bare `k`, the sticky ctrl
     // — 2026-08-18, later the same day as the verbs; the VALUE DRAG LAMP on
     // bare `x` stood behind it from 2026-09-10 to 2026-09-13, and the FLATTEN
@@ -2703,9 +2805,10 @@ enum class RedesignButton {
     // came across whole.
     //
     // THE DROP ADMITS SHIFT (architect 2026-08-28), the first of the verb
-    // group's members to — Copy value's Shift+`j` landed 2026-08-29 and
-    // Toggle inherit's Ctrl+Shift+N (THE TIE) 2026-09-19, which makes three
-    // of the group's members. The membership is
+    // group's members to — Toggle inherit's Ctrl+Shift+N (THE TIE) landed
+    // 2026-09-19, and Copy value's Shift+`j` stood between them from
+    // 2026-08-29 until the jump became Ctrl+J on its own button and Copy
+    // Value went up to the icon row (2026-09-29). The membership is
     // redesign_button_shift_admits' alone, never a count restated here. Its
     // own twin is SHIFT+S, THE PHASE-RESET DROP FROM ANY
     // VIEW, so a shift-click or a LONG PRESS lands the session in T+P and
@@ -2738,107 +2841,28 @@ enum class RedesignButton {
     // (a frame fact the lane shows). They keep their Icon* names: a roster id
     // names the button, not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
-    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the verb group's
-    // FIFTH member, seated directly after Toggle inherit (it was the SIXTH for
-    // the afternoon of 2026-08-29, when the Copy value button landed in that
-    // slot and left it again the same evening, and again from the Flatten
-    // button's 2026-09-19 landing until that button left this row for the icon
-    // row's iteration group later the same day),
-    // DELIBERATELY FAR FROM DELETE ("away from the delete button"): its act is
-    // an editor open and its neighbour's is a destruction, and a fingertip
-    // reaching for one must not be one box from the other.
-    //
-    // ITS CHORD IS BARE Enter and its act is that key's exactly — open the
-    // FLAG EDITOR on the focused marker (the arm is in on_key,
-    // input_handler.cpp; the button dispatches the chord at the LIFT through
-    // kToolbarChords like every other chrome button, while the KEY acts at the
-    // press like every other hotkey). ONE ROAD, no second body: every refusal
-    // the key has is the button's by construction.
-    //
-    // WHY IT EXISTS. The flag editor had TWO doors, the double-click and the
-    // Enter key, and on glass the first is unreliable — the architect drove a
-    // taller flag hit rect for one evening trying to rescue the double tap and
-    // retired it the same night: "get rid of double tapping as the ONLY way to
-    // enter the editor". A keyboardless panel now has a door that cannot miss.
-    // (Both older roads are untouched; this is a THIRD, not a replacement.)
-    //
-    // ITS ENABLED ARM READS THE ACT'S OWN REFUSAL SINCE 2026-08-30
-    // (flag_editor_open_actionable — nothing focused, or the P view, which
-    // has no per-flag editor): the button greys exactly where bare Return is
-    // a consumed no-op, the architect's truthful-buttons ruling ("Any time a
-    // button would be a no-op, grey it"). From its 2026-08-27 landing until
-    // then it had NO focus term and no view term,
-    // under the 2026-08-15 no-blink ruling — a face tracking the selection
-    // would blink at interaction cadence — which he withdrew for himself: he
-    // is deliberate with his presses, and greying is a face the row already
-    // wears in the `h` view. What greyed it before still does: the READ-ONLY
-    // LOCK (bare Return is on no read_only_key_blocked allowlist entry — the
-    // editor writes serialized content) and the `h` VIEW through the DERIVED
-    // partition (Return is neither history_mode_owns_key's vocabulary nor on
-    // history_mode_key_blocked's allowlist). A standing MODAL needs no arm at
-    // all: the veil consumes the press, the roster's own rule.
-    //
-    // IT IS NOT HOME-VIEW GATED, and that is the flag editor's own ruling
-    // rather than this button's: the payload editor is the FIFTH ruled
-    // exception to the home-view binding (the inventory is at
-    // active_column_authoring_allowed), so it opens in W+target as well as
-    // W+source. NO LAMP: an act, not a mode. IT ADMITS NEITHER SHIFT NOR CTRL,
-    // so a modified press is refused at the band gate and the long press —
-    // glass's held shift — reaches nothing.
-    IconMarkerEditFlag,
-    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SEVENTH
-    // member since the Flatten button joined the group 2026-09-19 (its sixth
-    // from the Marker Measure's deletion with the measures feature on
-    // 2026-09-16, its seventh before that),
-    // seated at the group's tail with Add to Selection, the two acts that
-    // reach a marker without authoring it — the architect's own seat, taken
-    // on his live pass the evening it landed.
-    //
-    // ITS CHORD IS BARE `j` and its act is that key's exactly — copy the
-    // FOCUSED marker's resolved value to the system clipboard — while its
-    // SHIFTED twin, Shift+`j`, JUMPS to the marker that value came from on the
-    // other A/B tab, so the reference and its definition stand one Ctrl+Tab
-    // apart, each tab framed on its own half by the jump's two `c` calls. IT
-    // IS ONE OF THE ROSTER'S SHIFT-ADMITTING BUTTONS, the second of them to
-    // land in this group, after the Drop's on 2026-08-28
-    // (redesign_button_shift_admits owns the membership, never a count, and the
-    // static_assert binds the tooltip's second line to it), which is what
-    // gives a keyboardless panel the jump through a LONG PRESS.
-    //
-    // WHY IT EXISTS: it is what the RESOLVED READOUT and its Ctrl+C became
-    // (architect 2026-08-29). The readout was the status bar's right cell for
-    // one day and the bottom strip's before that; the bar folded into row 8
-    // and the readout retired with it, so the value is now something you TAKE
-    // rather than something you read, and the marker it came from is somewhere
-    // you GO.
-    //
-    // ITS ENABLED ARM READS payload_eligible_marker ON THE FOCUS SINCE
-    // 2026-08-30 — the ONE gate both of its chords run — so it greys on an
-    // ineligible focus (an owner, a phase reset, a disabled marker, a member
-    // of a coincident-collapsed stack, the P column, nothing focused; the
-    // gate's terms are at its declaration), the architect's truthful-buttons ruling ("Any time a
-    // button would be a no-op, grey it"). For its first day it had NO selection
-    // term, the group's rule then, under the 2026-08-15 no-blink ruling (a
-    // face tracking the focus would blink at every selection), which he
-    // withdrew for himself. The one refusal past the gate — an EMPTY PAYLOAD,
-    // a ref whose definition is missing — stays a consumed no-op behind a lit
-    // face: it needs the composer run, which a per-tick face has no business
-    // doing. AND IT IS NOT IN THE
-    // READ-ONLY ARM either, which is where it parts from its four neighbours:
-    // both chords are on read_only_key_blocked's allowlist (they author
-    // nothing — a clipboard write, a tab switch, a playhead move and a
-    // camera), so a locked tab leaves the button lit exactly as it leaves the
-    // keys live. What greys it is the `h` VIEW through the DERIVED partition
-    // (bare `j` is neither the mode's vocabulary nor on its allowlist) and the
-    // folder overlay's own arm — nothing else. NO LAMP: an act, not a mode.
-    IconCopyValue,
-    // ADD TO SELECTION — the verb group's EIGHTH member since 2026-09-19,
-    // when the Flatten button landed ahead of it (its seventh from the Marker
-    // Measure's deletion with the measures feature on 2026-09-16, its eighth
-    // from 2026-08-29, its seventh from 2026-08-27 and its sixth from
-    // 2026-08-18; every one of those arrivals landed AHEAD of it, and the
-    // Copy value button has stood immediately ahead of it since that
-    // evening's reseat),
+    // JUMP TO DEFINING MARKER (architect 2026-09-29) — the verb group's FIFTH
+    // member, after Toggle Inherit and ahead of Add to Selection, wearing
+    // Breeze's go-jump-declaration. ITS CHORD IS CTRL+J (Shift+J until that
+    // day, when it rode Copy Value's shift-click and long press; Shift+J binds
+    // nothing now), and its act is that key's exactly — the existing jump
+    // body (jump_to_value_source): a `c` on the tab it leaves, the switch to
+    // the other A/B tab, the single-select of the marker the focused value
+    // came from, the playhead land and a second `c`, which arms the hold.
+    // ITS FACE GREYS WHERE THAT ACT REFUSES: payload_eligible_marker on the
+    // focus (the act's one gate, Copy Value's too — nothing focused, an owner,
+    // a phase reset, a disabled marker, a coincident-collapsed member, the P
+    // column); the empty-payload refusal past the gate stays a card behind a
+    // lit face, as Copy Value's does. Read-only-legal and admitted under the
+    // grid-iterations lock (both allowlists name the chord — it authors
+    // nothing), so neither lock greys it; the `h` view refuses the key at its
+    // allowlist, so the derived partition greys the button there. It admits
+    // no modifier and does not repeat (a jump has one destination).
+    IconJumpToDefiningMarker,
+    // ADD TO SELECTION — the verb group's SIXTH and last member since
+    // 2026-09-29, Jump to Defining Marker standing immediately ahead of it
+    // (every arrival in the group's history landed ahead of it; the count's
+    // succession is in git history),
     // seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
     // Selection') after toggle inherit, before the separator"). Bare `k`, the
@@ -3000,17 +3024,18 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-09-29, when
-// the walk group grew to four, Center moved down to it and Settings joined
-// row 4): SIX in row 1 (the three menu anchors and the view bar's three), two
-// in row 3, TWENTY-ONE in row 4 and EIGHTEEN in the bottom row — 47. Of
-// those, FORTY-FOUR carry a chord in kToolbarChords
+// THE ROSTER, re-derived by counting the enumerators above (2026-09-29
+// evening, when Edit Flag and Copy Value went up to row 4, Enable Tooltips
+// joined row 4 and Jump to Defining Marker the bottom row): SIX in row 1 (the
+// three menu anchors and the view bar's three), two in row 3, TWENTY-FOUR in
+// row 4 and SEVENTEEN in the bottom row — 49. Of
+// those, FORTY-SIX carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 49;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3086,7 +3111,10 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconIter:
         case RedesignButton::IconFlatten:
         case RedesignButton::IconListen:
+        case RedesignButton::IconMarkerEditFlag:
+        case RedesignButton::IconCopyValue:
         case RedesignButton::IconReadOnly:
+        case RedesignButton::IconTooltips:
         case RedesignButton::IconSettings:
         case RedesignButton::IconHistory:
         case RedesignButton::HistoryWalk:
@@ -3102,8 +3130,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconMarkerEditFlag:
-        case RedesignButton::IconCopyValue:
+        case RedesignButton::IconJumpToDefiningMarker:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
@@ -3118,11 +3145,12 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-09-29: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-29 evening: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
-// row on 2026-08-18, ADD TO SELECTION, (2026-08-27)
-// the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button
-// (the MARKER MEASURE stood among them from 2026-08-19 until the
+// row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), ADD TO SELECTION
+// (the EDIT FLAG BUTTON, 2026-08-27, and the COPY VALUE button, 2026-08-29,
+// were members until 2026-09-29, when both went up to the icon row after
+// Render; the MARKER MEASURE stood among them from 2026-08-19 until the
 // measures feature was deleted 2026-09-16, the VALUE DRAG LAMP last in that
 // group from 2026-09-10 to its deletion 2026-09-13, the MARKER
 // MAGNIFICATION from 2026-09-14 to 2026-09-15, and the FLATTEN BUTTON for the
@@ -3140,7 +3168,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -3164,8 +3192,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconMarkerEditFlag:
-        case RedesignButton::IconCopyValue:
+        case RedesignButton::IconJumpToDefiningMarker:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
@@ -3227,12 +3254,15 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // fact about the roster's order and this is where the order is stated. ONE
 // reader now — paint_icon_row's layout walk.
 //
-// THE SIX GROUPS, in painted order: SAVE ALONE, then UNDO, REDO and
-// RENDER, THE VIEWPORT-CLASS GROUP (Full zoom out leading, the
+// THE SIX GROUPS, in painted order: SAVE ALONE, then UNDO, REDO, RENDER,
+// EDIT FLAG and COPY VALUE (the last two up from the bottom row since
+// 2026-09-29 evening, members joining and no boundary moving), THE
+// VIEWPORT-CLASS GROUP (Full zoom out leading, the
 // magnification lamp, FOLLOW and the restrict-undo lamp), THE ITERATION
 // GROUP (the BPM opener, the grid-iterations lamp and, since 2026-09-19,
 // FLATTEN), the render-entry group (listen, the read-only toggle and, since
-// 2026-09-29, SETTINGS — the load-in-place left it on 2026-09-01) and THE
+// 2026-09-29, ENABLE TOOLTIPS and SETTINGS — the load-in-place left it on
+// 2026-09-01) and THE
 // HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
 // load-in-place at the tail.
 //
@@ -4067,7 +4097,7 @@ inline int grab_moved_threshold_px() {
 // without it — the lane and its resolver are gone (a marker's value is written
 // on its flag), the readout took the SELECTION translation and then RETIRED
 // WHOLE on 2026-08-29 with the one-day status bar that carried it, and the
-// copy is bare `j` now (with Shift+`j`, the jump to the marker the value came
+// copy is bare `j` now (with Ctrl+J, the jump to the marker the value came
 // from; input_key_dispatch.cpp). The staleness machinery went with it: the three
 // generations, the convergence loop, the on_tick repair and the pointer-leave
 // clear all existed to keep a CACHE honest, and there is no cache left.
@@ -4120,6 +4150,16 @@ enum class DialogTrigger {
     // button focused, the load confirmation's default, so a bare Enter
     // answers OK (PromptInitialFocus owns the choice and its reason).
     REVERT_CONFIRM,
+    // THE RENDER PLAYER'S DELETE (architect 2026-09-29): "Delete this
+    // folder?" or "Delete all N folders?", Delete / Cancel, raised by the
+    // root listing's Delete button or the Delete key (the shift press and
+    // Shift+Delete for all), the folders parked at
+    // AppState::RenderPlayer::pending_delete. RAISED WITH CANCEL FOCUSED
+    // (PromptInitialFocus::LastButton): the act destroys files and nothing
+    // takes it back, so a bare Enter answers Cancel — the one-key answer is
+    // `d`, Delete's letter, never the Delete key itself, so a second press of
+    // the key that raised the question cannot answer it.
+    DELETE_FOLDER_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
@@ -4842,7 +4882,7 @@ struct AppState {
     //
     // THE EXEMPT WRITERS KEEP OR RE-ARM THEIR BIT AFTER THE CHOKEPOINT, each
     // at its own site: the centring acts re-arm HOLD after their centring
-    // (bare `c` and Shift+J at run_center_key_command; the landing owner on
+    // (bare `c` and Ctrl+J at run_center_key_command; the landing owner on
     // the WALK's centring, inside Viewport::land_subject);
     // the nudge keeps HOLD
     // across its whole act; the undo / redo singleton restore under the hold
@@ -4868,7 +4908,7 @@ struct AppState {
     //   * SET by the EXPLICIT CENTRING ACTS and nothing else: bare `c` (live
     //     and in the `h` view; run_center_key_command), the paired march
     //     Ctrl+Shift+Tab (live and `h`; each of its two steps runs
-    //     run_center_key_command, 2026-09-26), Shift+J (its closing
+    //     run_center_key_command, 2026-09-26), Ctrl+J (its closing
     //     `c`), and THE WALK'S CENTRING BY THE LANDING OWNER
     //     (Viewport::land_subject's LandingKind::Walk at the working zoom or
     //     finer, on screen or not: the Tab walk in both audio views). A centring
@@ -5049,6 +5089,20 @@ struct AppState {
     // it reaches no authoring, no red cue, no render and no sidecar. Its one
     // writer is GuiInputHandler::set_show_waveform_magnification.
     bool    show_waveform_magnification = false;
+
+    // THE TOOLTIP LAMP — Enable Tooltips on bare backslash (architect
+    // 2026-09-29), the icon row's IconTooltips. A session posture in the
+    // magnification lamp's family: per-project, DARK AT EVERY PROJECT OPEN
+    // (the fresh AppState is the reset), in no settings vocabulary, never
+    // serialized, never in the undo domain, not carried by `'`, and touched by
+    // no restore, view switch or lock. DARK, NO TOOLTIP SHOWS ANYWHERE — the
+    // roster, the modal row, the render player's row: the wait's one writer
+    // (GuiInputHandler::note_tooltip_hover) reads this bit first and keeps the
+    // model's state clear, so no wait starts and the clock (tick_tooltip) has
+    // nothing to ripen. LIT, the model at redesign_tooltip below runs as
+    // ruled. Its one writer is GuiInputHandler::set_show_tooltips, which puts a
+    // standing box down at the dark edge.
+    bool    show_tooltips = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame. The scanner is the
@@ -5898,6 +5952,36 @@ struct AppState {
     // none is left running. While it is false the tick does nothing more.
     bool hover_fades_running = false;
 
+    // THE FLAG HOVER (architect 2026-09-29; the paint rule is at render.h's
+    // FlagHoverPaint) — PAINT STATE ONLY, like the fades above: no press,
+    // cursor, tooltip or hit test reads it. `marker_index` / `cell` are the
+    // unit under the resting pointer, resolved from the PROMOTED flag stash
+    // (flag_hit_rects: the store index on the live columns, the diff-flag index
+    // in the `h` view; the cell by the painter's own boundaries, so under grid
+    // iterations the unit is the CELL) — -1 with none. Its one writer is
+    // GuiInputHandler::recompute_flag_hover (input_pointer.cpp), run by every
+    // pointer motion and by the tick; the pointer's leave and the held primary
+    // button (a press, a drag, a finger's contact) clear it. `fades` holds one
+    // HoverFade per unit still painting a level — the hovered one rising and
+    // any it left fading out (HoverFadeKind::Reversing: in and out, a return
+    // mid-fade reversing from where it stood) — each erased once it settles
+    // dark, cut when its unit leaves the stash (the flag left the screen) and
+    // cut whole when `lane_key` moves (another column, the `h` edge, a store
+    // edit: the indices name other boxes then). The tick advances them beside
+    // the roster's and damages the unit's own box alone.
+    struct FlagHoverFade {
+        int        marker_index = -1;
+        MarkerCell cell         = MarkerCell::Payload;
+        HoverFade  fade{};
+    };
+    struct FlagHover {
+        int                        marker_index = -1;
+        MarkerCell                 cell         = MarkerCell::Payload;
+        uint64_t                   lane_key     = 0;
+        std::vector<FlagHoverFade> fades;
+    };
+    FlagHover flag_hover;
+
     // (THE ACTIVE TAB'S LOCK RECT IS DELETED — architect 2026-08-14, "we
     // should move the icon out of the tab and into the icon row, then show the
     // current tab's readonly value". The tabs carried a permanent close-icon
@@ -6218,8 +6302,17 @@ struct AppState {
     // Backspace, unchanged. It greys at the root, which is `tmp/` itself
     // (render_player_up_actionable, the wall's one owner, read by the act and
     // by the face alike).
+    //
+    // DELETE TAKES LOAD IN PLACE'S SLOT AT THE ROOT (architect 2026-09-29):
+    // at `tmp/`'s own listing — batch folders, where a load has nothing to
+    // name — the row's sixth button is Delete (edit-delete, the key Delete),
+    // which deletes the highlighted batch folder behind a question, and its
+    // shift press every batch folder the listing shows; inside a batch folder
+    // the slot is Load in Place, unchanged. The acts are
+    // GuiInputHandler::render_player_delete and its confirmation.
     enum class PlayerButtonAct {
-        None, Home, PlayPause, NextTrack, RepeatOne, Up, LoadInPlace, Close
+        None, Home, PlayPause, NextTrack, RepeatOne, Up, LoadInPlace, Delete,
+        Close
     };
     // THE AV SYNC STATS PANEL'S TWO BUTTONS (architect 2026-09-03), the FOURTH
     // dispatch vocabulary on this row: what a panel button DOES at its lift
@@ -8694,7 +8787,7 @@ struct AppState {
     // RESET TO PAYLOAD BY EVERY OTHER ROUTE THAT CHANGES THE FOCUS, at ONE
     // chokepoint: every Selection mutator writes the focus through
     // Selection::seat_focus (selection.cpp), which resets the axis — the Tab
-    // walk, the paired march (whose two marker steps go through it), Shift+J's
+    // walk, the paired march (whose two marker steps go through it), Ctrl+J's
     // jump, the load's and the undo/redo
     // restores' auto-select and sanitize, `p` / Ctrl+Tab's clear, the
     // coincidence auto-select at the four entry chokepoints and the flag
@@ -9087,6 +9180,13 @@ struct AppState {
         };
         ScrubDrag                  scrub;
         std::optional<RenderEntry> pending_load;
+        // THE FOLDERS THE STANDING DELETE_FOLDER_CONFIRM PROMPT ASKS ABOUT
+        // (architect 2026-09-29): the highlighted batch folder, or every batch
+        // folder the root listing showed at the press — parked by the raise
+        // (render_player_delete), consumed by its Delete, dropped by its
+        // Cancel and reset at every open and close. Paths taken from the
+        // listing's own rows, never typed.
+        std::vector<std::filesystem::path> pending_delete;
     };
     RenderPlayer render_player;
 };
@@ -9275,11 +9375,18 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 // it named the plain End's dead arm under a face its shifted twin lit; a
 // folder walk has no idle refusal, and the wall it does have greys the button
 // rather than renaming it, the roster's own shape.)
+//   delete_all_differs
+//                   DOES DELETE'S SHIFTED PRESS REACH MORE THAN ITS PLAIN ONE
+//                   (architect 2026-09-29): true while the root listing shows
+//                   more than one batch folder — with one, "all" is the
+//                   highlighted folder and the line would name the same act
+//                   (render_player_root_folder_count, the act's own count).
 struct RenderPlayerHintState {
     PlayerPlayFace play_face          = PlayerPlayFace::Play;
     bool           home_previous      = false;
     bool           home_shift_differs = false;
     bool           end_shift_differs  = false;
+    bool           delete_all_differs = false;
 };
 
 // THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
@@ -9359,6 +9466,9 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // every other row of this table does.
         case AppState::PlayerButtonAct::Up:          return "Up a Folder (Backspace)";
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in Place (')";
+        // DELETE (architect 2026-09-29), Load in Place's slot at the root: the
+        // act named over the key the router binds to it, Qt's own "Delete".
+        case AppState::PlayerButtonAct::Delete:      return "Delete Folder (Delete)";
         case AppState::PlayerButtonAct::Close:       return "Close (Esc)";
         case AppState::PlayerButtonAct::None:        break;
     }
@@ -9370,11 +9480,13 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 // button that admits a modified press gets its SHIFT-CLICK on plastic and,
 // through the hold delay (chrome_shift_hold_ms), its LONG PRESS on glass, so
 // the shifted half of
-// the pair is reachable with no keyboard. THE TWO SKIPS ARE THE WHOLE SET —
-// their twins are Shift+Home / Shift+End (2026-08-31, the keys following the
-// plain acts off `,` / `.`), the item folder's FIRST
-// and LAST wav — and every other button on the row keeps its plain act however
-// long it is held, exactly as a roster button with no twin does.
+// the pair is reachable with no keyboard. THE TWO SKIPS AND DELETE ARE THE
+// WHOLE SET — the skips' twins are Shift+Home / Shift+End (2026-08-31, the
+// keys following the plain acts off `,` / `.`), the item folder's FIRST
+// and LAST wav, and Delete's (architect 2026-09-29) is Shift+Delete, EVERY
+// batch folder at the root — and every other button on the row keeps its
+// plain act however long it is held, exactly as a roster button with no twin
+// does.
 //
 // THREE READERS, and they are three because they must not drift: the press
 // claim (a shift press on a non-admitting button is a consumed nothing, never
@@ -9383,7 +9495,8 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 // advertise it" being one fact.
 inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) {
     return act == AppState::PlayerButtonAct::Home ||
-           act == AppState::PlayerButtonAct::NextTrack;
+           act == AppState::PlayerButtonAct::NextTrack ||
+           act == AppState::PlayerButtonAct::Delete;
 }
 
 // THE MODIFIER LINE, in the roster's own form ("Press Shift for ...", which
@@ -9421,6 +9534,12 @@ inline std::string render_player_button_shift_hint(
             return s.end_shift_differs
                        ? "Press Shift for the last file of the playing folder."
                        : std::string();
+        // DELETE'S LINE (architect 2026-09-29) stands only where the shifted
+        // press reaches more than the plain one — a root listing of two or
+        // more batch folders.
+        case AppState::PlayerButtonAct::Delete:
+            return s.delete_all_differs ? "Press Shift to delete all folders."
+                                        : std::string();
         case AppState::PlayerButtonAct::PlayPause:
         case AppState::PlayerButtonAct::RepeatOne:
         case AppState::PlayerButtonAct::Up:
@@ -9445,10 +9564,11 @@ static_assert(
     !player_button_shift_admits(AppState::PlayerButtonAct::RepeatOne) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Up) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
+    player_button_shift_admits(AppState::PlayerButtonAct::Delete) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Close),
-    "the player's shift-admitting set is the two skips, and the hint's second "
-    "line exists on exactly them (dropping only where the shifted press would "
-    "reach what the plain one reaches)");
+    "the player's shift-admitting set is the two skips and Delete, and the "
+    "hint's second line exists on exactly them (dropping only where the "
+    "shifted press would reach what the plain one reaches)");
 
 // THE HIGHLIGHTED ROW'S LOAD-CAPABLE ENTRY, or null — non-null exactly when
 // the highlight is a tmp/ batch cell carrying a recipe. THE ONE KIND LEFT TO
@@ -9599,6 +9719,23 @@ bool render_player_button_enabled(const AppState& a,
 // render_player.cpp beside the act. Backspace is the button's key twin and
 // takes the same wall through the same act.
 bool render_player_up_actionable(const AppState& a);
+
+// THE ROOT'S BATCH FOLDERS (architect 2026-09-29, the player's Delete): how
+// many Folder rows the listing shows while it stands at the root — `tmp/`'s
+// own batch folders, the enumeration's — and 0 inside a batch folder, where
+// Delete is not the slot's act. THE ACT'S OWN COUNT, READ BY THREE: the
+// Shift+Delete raise (render_player_delete, which parks exactly these rows'
+// paths), Delete's face below, and the shift line's destination compare
+// (RenderPlayerHintState::delete_all_differs: more than one). Defined in
+// render_player.cpp beside the listing it counts.
+int render_player_root_folder_count(const AppState& a);
+// WOULD DELETE ACT — its face's one arm under the TWIN RULE (the plain press
+// needs the highlighted row to be a batch folder, the shifted press any batch
+// folder at all; at the root the band stands on a row whenever the listing has
+// one, so the two collapse into this). False inside a batch folder. The act
+// asks the same two questions at its head and cards where the face would
+// grey (render_player_delete, input_key_dispatch.cpp).
+bool render_player_delete_actionable(const AppState& a);
 
 // THE TWO SHIFTED TWINS' OWN WALLS (architect 2026-09-01, the truthful-
 // tooltips ruling — extracted so the act, the face and the hint read one
@@ -10698,7 +10835,7 @@ inline bool marker_paints_iter_cells(const AppState& app, char column,
 // A FOLLOWER'S TWO CELLS ARE ADDRESSABLE AND INERT. They paint greyed and
 // show the LEADER's numbers (iter_bracket_governor, warpmarkers.h), a plain
 // press addresses one and the Tab walk stops on it — which is what makes
-// Shift+`j` reachable from the keys — but nothing AUTHORS there: the bound
+// Ctrl+J reachable from the keys — but nothing AUTHORS there: the bound
 // step, the bound editor's open and the value drag all refuse, because a
 // follower carries the bracket by proxy and its own pair is unread. Only the
 // leader's cells step, edit and drag, and a leader's step never touches the
@@ -10720,7 +10857,7 @@ inline bool bound_cell_is_tie_follower(const AppState& app, char column,
 }
 
 // THE FOCUS-SHAPED FACE of the question above — is the cell the arrows, bare
-// Return and Shift+`j` are ADDRESSING a tie follower's? It is one derivation
+// Return and Ctrl+J are ADDRESSING a tie follower's? It is one derivation
 // and not a second reading: it asks the addressed axis, then hands the focus
 // and the live column to the one owner. The two shapes both exist because the
 // acts fork on the ADDRESSED cell while the pointer's two readers
@@ -10743,7 +10880,7 @@ inline bool addressed_bound_cell_is_tie_follower(const AppState& a) {
 // standing rule, so value_drag_target simply arms nothing there.
 constexpr const char* kBoundCellTiedCard = "Tied to an earlier marker";
 
-// WHERE Shift+`j` JUMPS ON THE TIE ROAD — the LEADER's index when a bound
+// WHERE Ctrl+J JUMPS ON THE TIE ROAD — the LEADER's index when a bound
 // cell is addressed on a tie FOLLOWER, and −1 when this road does not apply
 // (architect 2026-09-19: "he looks at the leader on the other tab without
 // losing his place among the followers on this one").
@@ -10757,11 +10894,11 @@ constexpr const char* kBoundCellTiedCard = "Tied to an earlier marker";
 // jump's tail resolving its index against the ACTIVE column's store as the
 // bound editor's open does.
 //
-// THREE READERS: the act's head fork (GuiInputHandler::jump_to_value_source),
-// the Copy Resolved Value button's ENABLED arm — the twin rule, the face
-// staying lit where the shifted press would act although the plain one cards
-// — and its tooltip's second line, which must stand exactly where the shifted
-// press jumps.
+// TWO READERS: the act's head fork (GuiInputHandler::jump_to_value_source)
+// and Jump to Defining Marker's face (jump_to_value_source_actionable, its
+// first question), so a lit face and this act name one destination. (Until
+// 2026-09-29 the jump was Copy Resolved Value's shifted press, and that
+// button's enabled arm and its tooltip's second line were the readers.)
 inline int jump_tie_leader_destination(const AppState& a) {
     if (!addressed_bound_cell_is_tie_follower(a)) return -1;
     const int f = a.last_selected_marker;
@@ -12221,7 +12358,7 @@ inline bool authoring_locked(const AppState& a) {
 //
 // SO THE COMPOSED STATE IS UNREACHABLE FROM EITHER SIDE, and every arm built
 // to answer a SWITCH INTO a locked tab went with it the day it landed
-// (2026-09-10): Ctrl+Tab, the settings editor's `active_tab_view=`, Shift+`j`
+// (2026-09-10): Ctrl+Tab, the settings editor's `active_tab_view=`, Ctrl+J
 // and the A/B audition all switch tabs under a lit lamp exactly as they
 // always did, there being no locked tab left to switch into. The two tab
 // buttons are back in the never-grey group with them.
@@ -12793,7 +12930,7 @@ enum class MarkerLandingFrame { Center, Land };
 
 // THE NUDGE'S CAMERA, ONE OWNER (architect 2026-09-23): the hold posture
 // read — HoldColumn while AppState::camera_hold stands (an explicit centring
-// armed it: bare `c`, Shift+J or the walk's centring; the playhead head's
+// armed it: bare `c`, Ctrl+J or the walk's centring; the playhead head's
 // white is its lamp), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
 // marker lane's arm, input_handler.cpp, and the waveform lane's step,
 // run_waveform_lane_playhead_step) and by the undo / redo singleton restore
@@ -12892,7 +13029,7 @@ inline NudgeCamera nudge_camera(const AppState& a) {
 //   * THE LEFT / RIGHT POSITION NUDGE — a group press REFUSES WHOLE
 //     (position_nudge.h), so the nudge never acts on a selection at all; what
 //     it acts on is a singleton, which is not a selection that was built;
-//   * BARE `j` and Shift+`j` — they read the FOCUS and write no store;
+//   * BARE `j` and Ctrl+J — they read the FOCUS and write no store;
 //   * THE MARKER DROP, the FOUR marker-lane EDITORS and the TAB WALK — none
 //     of them consumes a selection: the drop makes one, the editors edit one
 //     marker and the walk is how a selection is navigated.
@@ -14473,26 +14610,41 @@ inline constexpr const char* kValueInCollapsedStack =
     "The focused marker shares its frame with another, so its value is not "
     "what the render applies";
 // THE MARKER THE FOCUSED VALUE CAME FROM, or −1 — the jump's own question
-// (Shift+`j`, GuiInputHandler::jump_to_value_source), named 2026-09-01 so the
-// Copy value button's shift line can drop where there is nothing to jump to
-// (architect, the truthful-tooltips ruling). It wraps the one parser composer
-// resolved_marker_payload (warp_frame_map_build.h — called, never touched)
-// exactly as the jump calls it, and answers −1 on every case the jump's own
-// three-way test refuses: an empty payload, a value naming no source (a
-// first-marker pass, a walk that ended on a ref, a synthetic prior, a
-// normalized ref) and the out-of-store belt. It asks NOTHING of eligibility
-// — that is payload_eligible_marker's, the gate both chords run first — so
-// the jump keeps its two cards in the act's own order and this answers the
-// second, and the HINT asks the same two owners in that same order (the
-// tooltip's Copy value arm, which read this one alone until codex round B on
-// 2026-09-01 and so advertised the jump under a greyed face). TWO READERS:
-// the jump and the hint. MEMOIZED SINCE codex round A
-// (2026-09-01) on the store generation, the focus and the frame count — the
-// hint's reader is the tooltip painter, which the Wayland backend runs once
-// per damage rectangle; the cache, its key and the reasoning are at
-// AppState::ValueSourceMarkerCache. Defined in app_state.cpp beside the
-// eligibility gate.
+// (Ctrl+J since 2026-09-29, Shift+`j` before; GuiInputHandler::
+// jump_to_value_source), named 2026-09-01 so a face could drop where there is
+// nothing to jump to (architect, the truthful-tooltips ruling). It wraps the
+// one parser composer resolved_marker_payload (warp_frame_map_build.h —
+// called, never touched) exactly as the jump calls it, and answers −1 on
+// every case the jump's own three-way test refuses: an empty payload, a value
+// naming no source (a first-marker pass, a walk that ended on a ref, a
+// synthetic prior, a normalized ref) and the out-of-store belt. It asks
+// NOTHING of eligibility — that is payload_eligible_marker's, the gate the
+// jump runs first — so the jump keeps its two cards in the act's own order
+// and this answers the second. TWO READERS: the jump and Jump to Defining
+// Marker's face (jump_to_value_source_actionable, below), which asks the same
+// owners in the same order (Copy Value's shift line was the face's reader
+// from 2026-09-01 until the jump left that button, 2026-09-29). MEMOIZED
+// SINCE codex round A (2026-09-01) on the store generation, the focus and the
+// frame count — the face is asked on every tick and every paint; the cache,
+// its key and the reasoning are at AppState::ValueSourceMarkerCache. Defined
+// in app_state.cpp beside the eligibility gate.
 int value_source_marker(const AppState& app, int64_t total_frames);
+// WOULD THE JUMP LAND? — Jump to Defining Marker's face (architect
+// 2026-09-29: the button greys where Ctrl+J refuses). The act's own three
+// questions in the act's own order (GuiInputHandler::jump_to_value_source,
+// input_key_dispatch.cpp): the TIE ROAD first (a bound cell addressed on a tie
+// follower lands on the leader and short-circuits the rest), then the
+// eligibility gate on the focus, then value_source_marker (memoized, so the
+// per-tick face costs a compare). Each is read from its owner and restated
+// nowhere; `total_frames` is the source's, the jump's own argument.
+inline bool jump_to_value_source_actionable(const AppState& a,
+                                            const GuiAudio& audio,
+                                            int64_t total_frames) {
+    if (jump_tie_leader_destination(a) >= 0) return true;
+    if (!payload_eligible_marker(a, audio, a.last_selected_marker))
+        return false;
+    return value_source_marker(a, total_frames) >= 0;
+}
 // THE TARGET PREVIEW'S READINESS, forwarded (target_render.cpp): exactly
 // GuiTargetRender::preview_ready, reachable from this inline body although
 // the class is only forward-declared here. The contract is at the member.
@@ -14886,6 +15038,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // that greys History is no refusal of this key (architect 2026-09-24).
         case RedesignButton::IconReadOnly:
             return !iteration_lock_greys(a, b);
+        // ENABLE TOOLTIPS MIRRORS NOTHING AND NEVER GREYS (architect
+        // 2026-09-29): bare backslash flips a chrome posture on any loaded
+        // piece, authors nothing, and is admitted by the read-only lock, the
+        // grid-iterations lock (its gate falls through to that list) and the
+        // `h` view's allowlist alike — so no arm and no partition greys it.
+        case RedesignButton::IconTooltips:
+            return true;
         // THE HISTORY BUTTON MIRRORS TWO REFUSALS, BOTH OF THE ENTRY: the
         // iteration lock and the publishing flight. The view's own acts push
         // history — the revert, the two loads, the checkpoint's save — and two
@@ -15268,19 +15427,20 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // THE STRUCTURAL RULE EVERY NEW ARM KEEPS: a face never restates an
         // act's condition. Each reads a predicate the act's own refusal reads
-        // — the two cardinal pairs, the walk pair and Copy value below name
-        // theirs — so the face and the chord are one decision with nothing to
+        // — the two cardinal pairs, the walk pair, Copy value and Jump to
+        // Defining Marker name theirs — so the face and the chord are one decision with nothing to
         // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
-        // WHAT THE ROW GREYS, re-derived 2026-09-29 with the walk group's
-        // growth. IN THE `h` VIEW, all
+        // WHAT THE ROW GREYS, re-derived 2026-09-29 evening with the verb
+        // group's change (Edit Flag and Copy Value up to the icon row, where
+        // the same partition greys them; Jump to Defining Marker in). IN THE
+        // `h` VIEW, all
         // through the DERIVED partition at the top of this body: the
         // PLAY/STOP button (Space is consumed there), UP / DOWN
         // (bare Up/Down are neither the mode's vocabulary nor on its
-        // allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
-        // FLAG BUTTON (bare `j` and
-        // bare Return are consumed in there like the
-        // verbs' own chords) — NINE of the eighteen. ADD TO SELECTION
+        // allowlist), THE FOUR MARKER VERBS and JUMP TO DEFINING MARKER
+        // (Ctrl+J is consumed in there like the
+        // verbs' own chords) — EIGHT of the seventeen. ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
         // now. LEFT / RIGHT are the mode's own playhead step since 2026-09-26
         // and grey on their own arm below (a diff flag focused, or a wall).
@@ -15293,11 +15453,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // tabs being never-grey); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
-        // THE VIEW: the four VERBS and THE EDIT FLAG BUTTON
+        // THE VIEW: the four VERBS
         // on a locked tab, their own gate, stated at their arm above — and,
-        // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
-        // inherit and Edit flag (that same arm), on UP / DOWN,
-        // LEFT / RIGHT, THE WALK and COPY VALUE
+        // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable and
+        // Toggle inherit (that same arm), on UP / DOWN,
+        // LEFT / RIGHT, THE WALK and JUMP TO DEFINING MARKER
         // (this block), and
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
         // tempo bracket's two ends and the group step's whole refusal under
@@ -15561,43 +15721,37 @@ inline bool redesign_button_enabled(const AppState& a,
                 return false;
             break;
         }
-        // COPY VALUE (2026-08-29) is the VERB GROUP'S ONE MEMBER OUTSIDE THE
-        // READ-ONLY ARM: both of its chords — bare `j`, the clipboard write,
-        // and Shift+`j`, the two `c` frames around a tab switch, a select and
-        // a land — are on read_only_key_blocked's allowlist, authoring nothing
-        // the lock protects, so it must NOT join that arm above. Greying a
-        // face whose key still works is the face promising less than the key
-        // delivers, which the read-only-legal set's own rule refuses (Play
-        // renders left that arm on exactly this ground the day before). ITS
-        // SELECTION TERM IS payload_eligible_marker ON THE FOCUS since
-        // 2026-08-30 — the ONE gate both chords run (input_key_dispatch.cpp),
-        // so an owner, a phase reset, a disabled marker, a member of a
-        // coincident-collapsed stack, the P column or nothing focused greys
-        // it exactly where the press would be a consumed no-op (the terms are
-        // the gate's, at its declaration; the boolean wrapper folds both of
-        // its refusals into one grey, the KEY forking the sentence); for its
-        // first day it carried none, under the group's then-standing
-        // no-blink rule. The `h` VIEW greys it through the derived partition
-        // at the top of this body (bare `j` is neither the mode's vocabulary
-        // nor on its allowlist), and the folder overlay's first arm — nothing
-        // hand-listed either way.
-        // A BACKEND TERM STOOD HERE for one day (2026-09-03): where the
-        // clipboard reached no other program the plain press carded and the
-        // TWIN RULE held the face lit off the jump. It is gone with the
-        // capability it read — the tablet's ClipboardManager road landed the
-        // same evening, so both backends publish and the term had no
-        // producer left. What can still refuse is the per-press write, and
-        // that CARDS (card_clipboard_refusal, input_key_dispatch.cpp).
-        // AND THE TIE ROAD HOLDS THE FACE LIT UNDER THE TWIN RULE
-        // (2026-09-19), which is the shape the backend term had the day it
-        // stood: with a bound cell addressed on a TIE FOLLOWER the shifted
-        // press jumps to the LEADER on the other tab — a fact about the tie
-        // and not about a resolved value — while the plain press still cards
-        // the copy's own refusal. The tooltip's second line reads the same
-        // owner, so a lit face and a standing line name one act.
+        // COPY VALUE (2026-08-29; the icon row's since 2026-09-29) STANDS
+        // OUTSIDE THE READ-ONLY ARM: bare `j`, the clipboard write, is on
+        // read_only_key_blocked's allowlist, authoring nothing the lock
+        // protects, so it must NOT join that arm above — greying a face whose
+        // key still works is the face promising less than the key delivers.
+        // ITS SELECTION TERM IS payload_eligible_marker ON THE FOCUS since
+        // 2026-08-30 — the copy's one gate (input_key_dispatch.cpp), so an
+        // owner, a phase reset, a disabled marker, a member of a
+        // coincident-collapsed stack, the P column or nothing focused greys it
+        // exactly where the press would card (the boolean wrapper folds both
+        // refusals into one grey, the KEY forking the sentence). The `h` VIEW
+        // greys it through the derived partition at the top of this body (bare
+        // `j` is neither the mode's vocabulary nor on its allowlist), and the
+        // folder overlay's first arm. (THE TIE ROAD HELD THIS FACE LIT under
+        // the twin rule from 2026-09-19 until 2026-09-29, while the jump was
+        // this button's shifted press; the jump is its own button now, below,
+        // and carries that term.)
         case RedesignButton::IconCopyValue:
-            if (!payload_eligible_marker(a, audio, a.last_selected_marker) &&
-                jump_tie_leader_destination(a) < 0)
+            if (!payload_eligible_marker(a, audio, a.last_selected_marker))
+                return false;
+            break;
+        // JUMP TO DEFINING MARKER (architect 2026-09-29) GREYS WHERE CTRL+J
+        // REFUSES: the act's own three questions in its own order, read from
+        // one owner (jump_to_value_source_actionable — the tie road, the
+        // eligibility gate, the source lookup). Like Copy Value it stands
+        // outside the read-only arm and iteration_lock_greys (both allowlists
+        // name the chord — a tab switch, a select, a land and two `c`s author
+        // nothing), and the `h` view greys it through the derived partition,
+        // whose allowlist does not name Ctrl+J.
+        case RedesignButton::IconJumpToDefiningMarker:
+            if (!jump_to_value_source_actionable(a, audio, total_frames))
                 return false;
             break;
         // ADD TO SELECTION MIRRORS NOTHING AND NEVER GREYS (architect
@@ -16036,6 +16190,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // iteration already reports a mode that is ON.
         case RedesignButton::IconReadOnly:
             return active_view_state(a).read_only;
+        // THE TOOLTIP LAMP (architect 2026-09-29): the same toggle pattern,
+        // reading the live bit bare backslash flips, so the lit face and the
+        // tooltips' presence cannot drift.
+        case RedesignButton::IconTooltips:
+            return a.show_tooltips;
         // THE CUMULATIVE READING'S LAMP (2026-08-08), the same pattern over a
         // bit that is NOT the mode's: history_cumulative is a program-session
         // preference, so this reads true wherever the session left it.
@@ -16089,10 +16248,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // editor and the editor's own session is the state; there is no bit
         // for a lamp.
         case RedesignButton::IconMarkerEditFlag:
-        // COPY VALUE IS MOMENTARY (2026-08-29): a copy completes, and so does
-        // the jump its shifted twin runs. Nothing stays true afterwards for a
-        // lamp to report.
+        // COPY VALUE AND JUMP TO DEFINING MARKER ARE MOMENTARY (2026-08-29 and
+        // 2026-09-29): a copy completes, and so does the jump. Nothing stays
+        // true afterwards for a lamp to report.
         case RedesignButton::IconCopyValue:
+        case RedesignButton::IconJumpToDefiningMarker:
         // THE BPM OPENER IS MOMENTARY (2026-08-01, back with its button
         // 2026-09-04): it opens an editor and the editor's own session is the
         // state, exactly as the edit-flag button answers. FLATTEN IS MOMENTARY
@@ -16339,14 +16499,12 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // this is the membership it is about. The drop's shifted twin drops a phase
 // reset from any view, so the button reaches both columns' drops the way the
 // letter does.)
-// (COPY RESOLVED VALUE JOINED 2026-08-29, with Shift+`j`: its plain act
-// copies the focused marker's resolved value and its shifted twin JUMPS to
-// the marker
-// that value came from, on the other A/B tab — the same rule as the drop's
-// above, a shift-enabled gesture whose bare form has a button. The long press
-// is WANTED on glass here for the play button's reason: standing the two tabs
-// on a reference and its definition is a reading gesture as much as a desk
-// one, and the panel has no shift key.)
+// (COPY RESOLVED VALUE WAS A MEMBER FROM 2026-08-29 TO 2026-09-29, with
+// Shift+`j`: its plain act copies the focused marker's resolved value and its
+// shifted twin JUMPED to the marker that value came from. The architect moved
+// the jump to CTRL+J on a dedicated button, Jump to Defining Marker, on
+// 2026-09-29; Shift+J binds nothing since, so the copy admits no modifier and
+// left this set.)
 // (THE TWO VERTICAL ARROWS JOINED 2026-08-31 with the STEP LADDER — R12,
 // Shift+Up / Shift+Down = a TEN-unit step on the addressed cell since
 // 2026-09-21, a three until the architect made shift the long stride — and
@@ -16457,7 +16615,6 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TransportSkipForward ||
            b == RedesignButton::IconMarkerDrop ||
            b == RedesignButton::IconMarkerInherit ||
-           b == RedesignButton::IconCopyValue ||
            b == RedesignButton::IconFlatten ||
            b == RedesignButton::IconListen ||
            b == RedesignButton::TransportWalk ||
@@ -16833,6 +16990,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // lamps followed — until 2026-09-01.
         case RedesignButton::IconReadOnly:
             return {"Toggle Read-Only (O)", nullptr};
+        // ENABLE TOOLTIPS (architect 2026-09-29), one line: a lamp, so the
+        // text names the TOGGLE (the lamp rule at this table's head), its
+        // accelerator the bare backslash's own cap. It shows only while the
+        // lamp it names is lit — a dark lamp raises no tooltip anywhere, its
+        // own included.
+        case RedesignButton::IconTooltips:
+            return {"Toggle Tooltips (\\)", nullptr};
         // SETTINGS (architect 2026-09-29), one line: bare `;` opens the
         // settings prompt and admits no modifier. The accelerator names the
         // cap, the table's punctuation rule. The name is the menu anchor's
@@ -17035,8 +17199,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
             return {"Toggle Inherit (Ctrl+N)",
                     "Press Shift to tie the markers into one sweep axis."};
-        // THE EDIT FLAG BUTTON (2026-08-27), the verb group's fifth, ONE LINE
-        // like its neighbours: the act named, no shift line, the button
+        // THE EDIT FLAG BUTTON (2026-08-27; the icon row's, after Render, since
+        // 2026-09-29), ONE LINE: the act named, no shift line, the button
         // admitting neither shift nor ctrl. THE ACCELERATOR IS "Return" since
         // 2026-09-01, because that is Qt's — and so kdenlive's — name for the
         // key, the product's one spelling convention (spell_chord's head,
@@ -17048,33 +17212,26 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerEditFlag:
             return {"Edit Flag (Return)", nullptr};
-        // COPY RESOLVED VALUE (2026-08-29), the verb group's sixth since the
-        // Marker Measure's deletion on 2026-09-16 (seventh before it, and
-        // seventh again for the hours of 2026-09-19 while the Flatten button
-        // stood ahead of it) and the LAST
-        // of the group's two-line forms by seat: bare `j` copies
-        // the focused marker's resolved value, and the shifted twin JUMPS to
-        // the marker that value came from — so the second line names the act
-        // and the modifier and not a key, this table's rule for second lines,
-        // and the static_assert below keeps the line and the admission one
-        // fact. BOTH LINES ARE THE ARCHITECT'S OWN WORDS (2026-08-29): the
-        // first says RESOLVED because that is what the value is and the flag
-        // shows the unresolved one, and the second names the two things a
-        // source can be — the DEFINITION a `label_ref` points at, the
-        // PREVIOUS marker a pass inherits from. The
-        // accelerator is a bare letter and so a capital. It is the one ACT in
-        // the group the READ-ONLY LOCK leaves lit, both its chords being
-        // navigation (Add to selection, a mode, is left lit for the same
-        // reason), and it still explains itself in the `h` view, where the
-        // derived partition greys it — the tooltips-on-disabled ruling above.
-        // THE OVERLOAD DROPS THE SECOND LINE wherever the shifted press would
-        // not jump — the jump's own two questions, payload_eligible_marker and
-        // value_source_marker, asked in the act's order (2026-09-01; the
-        // eligibility term joined the source lookup at codex round B the same
-        // day).
+        // COPY RESOLVED VALUE (2026-08-29; the icon row's, after Edit Flag,
+        // since 2026-09-29), ONE LINE SINCE 2026-09-29: bare `j` copies the
+        // focused marker's resolved value, and the jump that was its shifted
+        // twin (with the second line "Press Shift to jump to defining/previous
+        // marker.") is Jump to Defining Marker's own chord, Ctrl+J, on its own
+        // button — so the button admits no modifier and names one act. The
+        // first line is the architect's own words (2026-08-29): RESOLVED
+        // because that is what the value is and the flag shows the unresolved
+        // one. The accelerator is a bare letter and so a capital. The READ-ONLY
+        // LOCK leaves it lit (bare `j` authors nothing), and it still explains
+        // itself in the `h` view, where the derived partition greys it — the
+        // tooltips-on-disabled ruling above.
         case RedesignButton::IconCopyValue:
-            return {"Copy Resolved Value (J)",
-                    "Press Shift to jump to defining/previous marker."};
+            return {"Copy Resolved Value (J)", nullptr};
+        // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's
+        // fifth, ONE LINE: the act's name in the architect's words and its
+        // own chord, Ctrl+J, spelled with its modifier as a chord is. It
+        // admits no modifier, so there is no second line to bind.
+        case RedesignButton::IconJumpToDefiningMarker:
+            return {"Jump to Defining Marker (Ctrl+J)", nullptr};
         // ADD TO SELECTION (2026-08-18), the verb group's EIGHTH since
         // 2026-09-19 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
@@ -17554,51 +17711,11 @@ inline RedesignTooltipText redesign_button_tooltip(
             // different from the plain one and the table's line always goes —
             // which is why this arm needs no verdict of its own to drop it.
             return {redesign_button_tooltip(b).line1, nullptr};
-        // COPY RESOLVED VALUE: the shift line exists iff the shifted press
-        // would jump, which is ALL of the jump's own questions asked in the
-        // jump's own order — the TIE ROAD first since 2026-09-19
-        // (jump_tie_leader_destination, which answers for a bound cell on a
-        // follower and short-circuits the rest, exactly as the act's head
-        // fork does), then the eligibility verdict on the focus (the ONE gate
-        // both chords run first, and the face's own enabled term above) and
-        // then value_source_marker, which names the marker to land on or
-        // −1. No condition is restated here; each is read from its owner.
-        // (THE STACK REFUSAL FORKED THE FIRST LINE from 2026-09-02 to
-        // 2026-09-12, answering kValueInCollapsedStack plus the accelerator
-        // where a pass or a ref inside a coincident-collapsed group greys the
-        // face on a verdict the flag does not explain. It was a REASON on a
-        // tooltip and went with the class; bare `j` and Shift+`j` both card
-        // that very sentence, which is where it belongs.) The composer runs
-        // ONCE PER ANSWER since codex round A (2026-09-01), the owner
-        // memoizing on the store generation, the focus and the frame count;
-        // it ran at each paint of the hint until then, which the paint path's
-        // per-damage-rectangle redraw made a real cost during playback.
-        case RedesignButton::IconCopyValue: {
-            // THE TIE ROAD IS ASKED FIRST because it is the act's own first
-            // fork (2026-09-19): with a bound cell addressed on a follower the
-            // shifted press jumps to the leader and none of the payload
-            // questions below applies, so the line stands there whatever they
-            // would have answered.
-            if (jump_tie_leader_destination(a) >= 0) break;
-            const PayloadEligibility verdict =
-                payload_eligibility(a, audio, a.last_selected_marker);
-            // (AN ITERATION-LOCK TERM STOOD HERE for one afternoon on
-            // 2026-09-10, dropping the line while the jump's target tab was
-            // locked under a lit lamp. The piece-wide exclusion ruled that
-            // evening deleted that state — the lamp cannot be lit while any
-            // tab is locked — so the jump switches tabs under the lamp
-            // exactly as it always did and the line is owed in every state
-            // the two conditions below admit.)
-            if (verdict != PayloadEligibility::Eligible ||
-                value_source_marker(a, total_frames) < 0)
-                return {"Copy Resolved Value (J)", nullptr};
-            // (A BACKEND FORK stood in both arms above for one day,
-            // 2026-09-03, spelling "Copy is not available on this backend"
-            // where the clipboard reached no other program. Both backends
-            // publish since the tablet's ClipboardManager road landed, so it
-            // has no producer and the table's own line stands.)
-            break;
-        }
+        // (COPY RESOLVED VALUE'S SHIFT LINE stood here from 2026-09-01 to
+        // 2026-09-29, dropping wherever the shifted press would not jump. The
+        // jump left the button for Jump to Defining Marker's own Ctrl+J that
+        // day, so Copy Value is one line in every state and the jump's
+        // questions are that button's FACE now (jump_to_value_source_actionable).)
         // THE VERTICAL ARROWS' STEP-LADDER LINE drops where EVERY RUNG of the
         // ladder refuses alike (architect 2026-09-02, the four-tier review's
         // R-17e): "Press Shift for a 10-step, Ctrl for 3." exists to say that
@@ -17758,8 +17875,9 @@ inline RedesignTooltipText redesign_button_tooltip(
 // MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
 // on Render's iteration-mode precedent of 2026-08-02): where the admitted
 // twin is dead in the current state — the maximizer over a full window, the
-// crossing in the P column, the jump with no eligible focus or no source,
-// the audition's shift over a standing sequence, the skips' shift form where
+// crossing in the P column, the audition's shift over a standing sequence
+// (the jump with no eligible focus or no source was a member while it was
+// Copy Value's twin, until 2026-09-29), the skips' shift form where
 // the two landings coincide, since 2026-09-02 (R-17e) UP / DOWN'S STEP
 // LADDER where every
 // rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
@@ -17918,6 +18036,23 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // about which box was hit.
 MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
                               int mouse_x, int mouse_y);
+
+// THE FLAG HOVER'S TWO STASH READS (architect 2026-09-29; the paint rule is at
+// render.h's FlagHoverPaint). flag_hover_unit_at answers the unit a RESTING
+// pointer hovers — the topmost rect of the LANE PASS's own stash and its cell
+// by the painter's boundaries, the walk hit_test_flag takes — or -1: a point
+// on the open editor's riding boxes answers none (the editor paints those, and
+// no hover is drawn on them). flag_hover_unit_box answers the painted box of
+// one unit — the marker's stash rect cut at its published boundaries (the
+// payload box from the rect's left border to the lower seam, a cell from its
+// seam to the next, the upper to the rect's end) — or false when the marker
+// publishes no rect (off the screen, or under the payload editor). Paint
+// state only: the hover's writer, its tick and its painter read these, and no
+// press does.
+int flag_hover_unit_at(const AppState& app, int mouse_x, int mouse_y,
+                       MarkerCell& cell_out);
+bool flag_hover_unit_box(const AppState& app, int marker_index,
+                         MarkerCell cell, GuiRect& box_out);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box
@@ -18235,18 +18370,19 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // had one (architect, the four-tier review's R-16). A ref whose definition is
 // missing entirely stays Eligible — resolved_marker_payload already yields an
 // empty string for that case and both acts refuse an empty payload, so it
-// never surfaces a stale tempo. ITS FOUR CALLERS, re-greped 2026-09-12: the
+// never surfaces a stale tempo. ITS FOUR CALLERS, re-greped 2026-09-29: the
 // VALUE PAIR (2026-08-29) — bare `j`, which copies the focused marker's
-// resolved value to the system clipboard, and Shift+`j`, which jumps to the
+// resolved value to the system clipboard, and Ctrl+J, which jumps to the
 // marker that value came from (both read the verdict and fork their card on
 // it) — the COPY VALUE BUTTON'S disabled face since 2026-08-30
-// (redesign_button_enabled, the truthful-buttons ruling; the boolean wrapper,
-// so the button greys exactly where both chords refuse), and the tooltip
-// overload's Copy value arm, which reads the VERDICT and decides ONE thing
-// with it — whether the SHIFT line exists, the jump's first question asked in
-// the jump's own order. (That arm forked the FIRST line on the stack's own
-// sentence from 2026-09-02 to 2026-09-12; it was a reason on a tooltip and
-// went with the class, the two chords carding it as they always did.) The
+// (redesign_button_enabled, the truthful-buttons ruling; the boolean
+// wrapper), and JUMP TO DEFINING MARKER'S face since 2026-09-29, through
+// jump_to_value_source_actionable (the wrapper again, the jump's second
+// question after its tie road). (The tooltip overload's Copy value arm read
+// the VERDICT for its shift line from 2026-09-01 until the jump left that
+// button on 2026-09-29; it forked the FIRST line on the stack's own
+// sentence from 2026-09-02 to 2026-09-12, a reason on a tooltip that went
+// with the class, the two chords carding it as they always did.) The
 // audio identity is what the red-flag
 // cache keys on (sample rate and frame count), which is why the gate takes
 // it. It was `popup_eligible_marker` — the hover popup's name, kept

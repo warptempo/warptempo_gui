@@ -1078,7 +1078,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     nothing at the landing owner, so the chokepoint alone would not put
     //     it out. Its camera is the landing owner's Restore and the framer.
     // THE RESTORE NEVER ARMS THE POSTURE FROM DARK (architect 2026-09-24):
-    // only the walk's centring, bare `c` and Shift+J do; the singleton's
+    // only the walk's centring, bare `c` and Ctrl+J do; the singleton's
     // re-arm keeps a bit that already stood. The playhead head's lamp shows
     // which posture stands. (From 2026-09-23 to 2026-09-25 the restore kept
     // the bit across its land and let the landing owner decide, so an

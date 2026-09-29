@@ -712,7 +712,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // group above's own kind; architect 2026-09-23, back after the hours
         // it was unbound that day), Ctrl+F flattens every warp marker's tempo
         // deviations and Ctrl+Shift+F collapses them into one (2026-09-19) —
-        // the shifted form being the plain act's twin, `s`'s and `j`'s shape
+        // the shifted form being the plain act's twin, `s`'s shape
         // on a ctrl chord rather than a bare one. The ctrl spelling is what
         // guards an authoring verb against a stray bare press, exactly as
         // Ctrl+D and Ctrl+N do.
@@ -732,8 +732,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // input_handler.cpp carries the same mode test.
         case GuiKeys::G: case GuiKeys::U: case GuiKeys::V:
             return bare && history_view;
-        // The value pair: copy, and the jump to where the value came from.
-        case GuiKeys::J: return bare || sh;
+        // The value pair: bare `j` copies, and CTRL+J jumps to where the
+        // value came from (architect 2026-09-29, Jump to Defining Marker's own
+        // chord; it was Shift+J from 2026-08-29, which binds nothing now).
+        case GuiKeys::J: return bare || cl;
         // Drop on the live column / drop a phase reset from any view / save.
         // Ctrl+Shift+S is unbound (it dropped a magnification level marker
         // from 2026-09-15 until that column's deletion 2026-09-23).
@@ -797,6 +799,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // until the magnification level markers column's deletion 2026-09-23;
         // the lamp was on bare `]` for its first hours, then on bare `[`.)
         case GuiKeys::Grave: return bare;
+        // Toggle Tooltips (architect 2026-09-29), the bare BACKSLASH, bound in
+        // both modes: the lamp is chrome and the `h` view's allowlist admits
+        // it. Every modified backslash is unbound. (The key was Synchronize to
+        // External Storage from 2026-08-31 until that act was struck
+        // 2026-09-27, and unbound between.)
+        case GuiKeys::Backslash: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it
@@ -913,6 +921,23 @@ static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
                                   false),
               "the backtick is the magnification lamp, bare in both modes and "
               "no decoration of it; `[` and `]` are unbound");
+static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Backslash, GuiInputState{}, true) &&
+                  !chord_is_bound(GuiKeys::Backslash,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Backslash,
+                                  GuiInputState{true, false, false}, false),
+              "the bare backslash is the tooltip lamp in both modes, and no "
+              "decoration of it binds");
+static_assert(chord_is_bound(GuiKeys::J, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::J,
+                                 GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::J,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::J,
+                                  GuiInputState{true, true, false}, false),
+              "bare `j` copies the resolved value and Ctrl+J jumps to its "
+              "defining marker; Shift+J and Ctrl+Shift+J bind nothing");
 static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit0,
                                  GuiInputState{false, true, false}, false) &&
@@ -1197,8 +1222,8 @@ inline bool is_trim_maximize_key(GuiKey key, GuiInputState mods) {
 // True for the chord that opens and closes the AV sync stats panel (architect
 // 2026-09-03): Shift+L exactly, no ctrl and no alt. Bare `l` is the render
 // player's opener and this is its shifted twin, so the folder overlay's two
-// list-and-panel contents sit on one letter in the shape `s` / Shift+S and
-// `j` / Shift+J already carry. The shifted `l` was the strict rule's consumed
+// list-and-panel contents sit on one letter in the shape `s` / Shift+S already
+// carries (and `j` / Shift+J carried until 2026-09-29). The shifted `l` was the strict rule's consumed
 // no-op until this date, so the binding costs no other chord anything. The act
 // is GuiInputHandler::toggle_av_sync_stats, whose open half carries every gate
 // in its own body — the modal refusals, the `h` view, the loading state — which
@@ -1218,32 +1243,50 @@ inline bool is_av_sync_stats_key(GuiKey key, GuiInputState mods) {
 
 // THE VALUE PAIR (architect 2026-08-29), the two acts that replaced the
 // retired resolved readout and its Ctrl+C: bare `j` COPIES the focused
-// marker's resolved value to the system clipboard, and SHIFT+`j` JUMPS to the
+// marker's resolved value to the system clipboard, and CTRL+J JUMPS to the
 // marker that value came from — the pass's owner or the ref's definition — on
 // the OTHER A/B tab, so the two tabs stand on the reference and its
-// definition at once. `j` was unbound (verified by grep at the landing), and
-// the two spellings are the roster's own shift-twin shape: one button, its
-// plain lift the copy and its shift-click or long press the jump.
+// definition at once. `j` was unbound (verified by grep at the landing). THE
+// JUMP WAS SHIFT+J from 2026-08-29 until 2026-09-29, the roster's shift-twin
+// shape on the Copy Value button; the architect gave it CTRL+J and a button of
+// its own that day (Jump to Defining Marker, the bottom row's verb group), and
+// Shift+J binds nothing since.
 //
-// BOTH ARE BARE-/SHIFT-EXACT, so ctrl and alt decorations stay the strict
-// rule's consumed no-ops, and both are ONE-SHOT (repeat-ineligible: a copy
-// repeats onto itself and a jump has one destination). Their subject is the
-// SELECTION'S FOCUS, and an ineligible focus — an owner, a phase reset, a
-// disabled marker, the `P` column, nothing focused, or a member of a
-// coincident-collapsed stack — is a consumed no-op at the act that says so
-// on a card since 2026-08-30, each chord in its own words and the stack in
-// its own sentence (payload_eligibility, app_state.h). Both are
-// READ-ONLY-LEGAL (they author nothing: read_only_key_blocked admits them)
-// and legal in both audio views, being navigation rather than positional
-// authoring; the `h` view refuses them at its own allowlist like every chord
-// it does not name. The same two readers as the pairs above — on_key's
-// dispatch arms (input_handler.cpp) and the read-only allowlist — and the
-// same one-owner reason.
+// BOTH ARE EXACT — bare, and ctrl alone — so shift and alt decorations stay
+// the strict rule's consumed no-ops, and both are ONE-SHOT
+// (repeat-ineligible: a copy repeats onto itself and a jump has one
+// destination). Their subject is the SELECTION'S FOCUS, and an ineligible
+// focus — an owner, a phase reset, a disabled marker, the `P` column, nothing
+// focused, or a member of a coincident-collapsed stack — is a consumed no-op
+// at the act that says so on a card since 2026-08-30, each chord in its own
+// words and the stack in its own sentence (payload_eligibility, app_state.h).
+// Both are READ-ONLY-LEGAL (they author nothing: read_only_key_blocked admits
+// them, and the grid-iterations lock inherits the admission) and legal in both
+// audio views, being navigation rather than positional authoring; the `h`
+// view refuses them at its own allowlist like every chord it does not name.
+// The same two readers as the pairs above — on_key's dispatch arms
+// (input_handler.cpp) and the read-only allowlist — and the same one-owner
+// reason.
 inline bool is_copy_value_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::J && !mods.ctrl && !mods.shift && !mods.alt;
 }
 inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::J && !mods.ctrl && mods.shift && !mods.alt;
+    return key == GuiKeys::J && mods.ctrl && !mods.shift && !mods.alt;
+}
+
+// True for the chord that toggles THE TOOLTIP LAMP (architect 2026-09-29,
+// Enable Tooltips): the BARE BACKSLASH exactly — no ctrl, no shift, no alt.
+// It arrives as its level-0 keysym (GuiKeys::Backslash), so a shifted press is
+// the backslash plus the shift bit and this predicate refuses it. A chrome
+// posture that authors nothing. One-shot (a held toggle would flicker). THREE
+// READERS: the read-only allowlist (read_only_key_blocked, which ADMITS it,
+// and the grid-iterations lock's gate falls through to that list), the `h`
+// view's allowlist (history_mode_key_blocked, which admits it — the lamp is
+// chrome, not that view's business) and the dispatch arm (Backslash's case in
+// handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
+// reaches).
+inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
 enum class GuiMouseButton {

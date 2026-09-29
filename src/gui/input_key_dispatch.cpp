@@ -76,7 +76,13 @@ namespace {
 // native remove: the atomic-write temporaries, the history mode's RAII scratch
 // dir, the process-private render cache and a cancelled render's own partial
 // artifacts are all ephemera the user never sees, and trashing them would
-// pollute his trash instead of protecting anything.
+// pollute his trash instead of protecting anything. THE RENDER PLAYER'S DELETE
+// (architect 2026-09-29) IS NATIVE TOO, for the opposite reason: it is the
+// user's own deliberate act on the batch folders, asked behind a question
+// whose Enter answers Cancel, and its glyph is KDE's permanent Delete
+// (edit-delete) rather than Move to Trash — the wipe here is a side effect of
+// another act, which is what the trash protects against
+// (GuiRenderPlayer::delete_batch_folders, render_player.cpp).
 //
 // argv exec, NEVER a shell (the project's standing rule): a project folder's
 // name carries spaces and reaches gio as one argv element with no quoting rules
@@ -520,20 +526,25 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_load_in_place_player =
         (!ctrl && !shift && !alt && key == GuiKeys::Apostrophe &&
          !app.history_mode.active);
-    // THE VALUE PAIR — bare `j` and Shift+`j` (2026-08-29) — is admitted on
-    // the header's own standard: neither authors anything. `j` composes the
-    // focused marker's resolved value and hands it to the compositor's
-    // clipboard; Shift+`j` switches the A/B tab, selects the marker that value
-    // came from, lands the playhead on it and centres it — a tab switch, a
-    // selection, a playhead and a camera, every one of them navigation this
-    // gate has never blocked.
-    // Shift-exact through the shared predicates, so these two entries and the
-    // dispatch arms cannot drift. THE FACE FOLLOWS THE KEYS: the Copy resolved
-    // value button is NOT in redesign_button_enabled's read-only arm, so a
-    // locked
-    // tab leaves it lit exactly as it leaves both chords live.
+    // THE VALUE PAIR — bare `j` and Ctrl+J (2026-08-29; the jump was
+    // Shift+`j` until 2026-09-29) — is admitted on the header's own standard:
+    // neither authors anything. `j` composes the focused marker's resolved
+    // value and hands it to the compositor's clipboard; Ctrl+J switches the A/B
+    // tab, selects the marker that value came from, lands the playhead on it
+    // and centres it — a tab switch, a selection, a playhead and a camera,
+    // every one of them navigation this gate has never blocked.
+    // Exact through the shared predicates, so these two entries and the
+    // dispatch arms cannot drift. THE FACES FOLLOW THE KEYS: neither Copy
+    // Resolved Value nor Jump to Defining Marker is in redesign_button_enabled's
+    // read-only arm, so a locked tab leaves both lit exactly as it leaves both
+    // chords live.
     const bool is_copy_value          = is_copy_value_key(key, mods);
     const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
+    // THE TOOLTIP LAMP, bare backslash (architect 2026-09-29): a chrome
+    // posture — whether the resting pointer raises hints — authoring nothing
+    // the lock protects, so it is admitted on a locked tab and under the
+    // grid-iterations lock, whose gate falls through to this list.
+    const bool is_tooltip_lamp = is_tooltip_lamp_key(key, mods);
     // SHIFT+S IS BLOCKED, and it needs no term of its own to be: it drops a
     // phase reset from any view (2026-08-28) — authored content, exactly what
     // bare `s` drops and exactly what this gate refuses — and the is_save
@@ -574,7 +585,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_add_to_selection ||
              is_play_renders || is_av_sync_stats ||
              is_load_in_place_player ||
-             is_copy_value || is_jump_to_value_source);
+             is_copy_value || is_jump_to_value_source ||
+             is_tooltip_lamp);
 }
 
 // -- THE ITERATION LOCK'S ALLOWLIST ------------------------------------------
@@ -2588,6 +2600,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             of this list and the derived partition greyed
 //                             the button, and what made that honest then was
 //                             that the lamp produced nothing in here.
+//   - \ (bare)              → THE TOOLTIP LAMP, Enable Tooltips (architect
+//                             2026-09-29): chrome, not authoring — it decides
+//                             whether a resting pointer raises hints and
+//                             touches nothing the view froze. Admitted like
+//                             `k`, falling through to on_key's ordinary body
+//                             (handle_plain_bare_keys), and the button lights
+//                             from this line through the derived partition.
 //   - ' (bare)              → THE LOAD CONFIRMATION on the VIEWED walk member,
 //                             and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
@@ -3056,10 +3075,16 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
+    // THE TOOLTIP LAMP (architect 2026-09-29), bare backslash through the
+    // shared predicate: it is chrome — whether a resting pointer raises hints
+    // — and touches nothing the view froze, so the view admits it and the
+    // Enable Tooltips button stays lit in here by the derived partition.
+    const bool is_tooltip_lamp = is_tooltip_lamp_key(key, mods);
     return !(is_zero || is_page_updown ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
-             is_save || is_ctrl_q || is_open_project || is_revert_project);
+             is_save || is_ctrl_q || is_open_project || is_revert_project ||
+             is_tooltip_lamp);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
@@ -8444,6 +8469,18 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         }
     }
 
+    // THE ROOT'S DELETE (architect 2026-09-29): bare Delete asks to delete the
+    // highlighted batch folder and Shift+Delete every batch folder the root
+    // listing shows — the Delete button's plain and shifted presses. AT THE
+    // ROOT ALONE: inside a batch folder both fall to the catch-alls below,
+    // silent, the slot there being Load in Place. One-shot (repeat_eligible's
+    // player arm names neither).
+    if (key == GuiKeys::Delete && !ctrl && !alt &&
+        app.render_player.folder == AppState::RenderPlayer::Folder::Root) {
+        render_player_delete(/*all=*/shift);
+        return true;
+    }
+
     // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
     // 2026-08-30, the unbound-keys ruling) — the mode's router IS the whole
     // vocabulary while it stands, so a chord that means something outside it
@@ -8571,7 +8608,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     }
 }
 
-// -- THE VALUE PAIR: bare `j` copies, Shift+`j` jumps -----------------------
+// -- THE VALUE PAIR: bare `j` copies, Ctrl+J jumps -----------------------
 //
 // (architect 2026-08-29, replacing the resolved readout and its Ctrl+C, which
 // retired with the status bar the same day.) BOTH ACT ON THE SELECTION'S
@@ -8662,7 +8699,7 @@ void GuiInputHandler::copy_focused_marker_value() {
                          "Copied the resolved value '" + payload + "'");
 }
 
-// THE JUMP — Shift+`j`: stand the OTHER A/B tab on the marker this one's
+// THE JUMP — Ctrl+J: stand the OTHER A/B tab on the marker this one's
 // focused value came from, so a reference and its definition can be read side
 // by side one Ctrl+Tab apart. FIVE ACTS IN THIS ORDER, each through its own
 // chokepoint and none of them spelled twice — and the ORDER is the whole of
@@ -8719,14 +8756,13 @@ void GuiInputHandler::jump_to_value_source() {
     // lock refused a switch INTO a locked one. The piece-wide exclusion ruled
     // that evening deleted the state it answered — the lamp cannot be lit
     // while any tab is locked — so the jump switches tabs under a lit lamp
-    // exactly as it always did, and the button's shift line came back with
-    // it.)
+    // exactly as it always did.)
     //
     // THE TIE ROAD, asked first and answering with the destination itself
-    // (jump_tie_leader_destination, app_state.h — the one owner the button's
-    // enabled arm and its tooltip's second line read too, so a lit face, a
-    // standing line and this act name one destination). A −1 is "not this
-    // road" and the payload gates below take the press.
+    // (jump_tie_leader_destination, app_state.h — the one owner Jump to
+    // Defining Marker's face reads too, so a lit face and this act name one
+    // destination). A −1 is "not this road" and the payload gates below take
+    // the press.
     int destination = jump_tie_leader_destination(app);
     if (destination < 0) {
         // THE PAYLOAD ROAD, unchanged: its gates answer only where the tie
@@ -8765,8 +8801,9 @@ void GuiInputHandler::jump_to_value_source() {
         // the user.)
         // THE THREE ARE ONE OWNER since 2026-09-01 — value_source_marker
         // (app_state.cpp), which wraps the composer call this body made
-        // inline and which the Copy value button's shift line reads too, so
-        // the line drops exactly where this cards.
+        // inline and which Jump to Defining Marker's face reads too
+        // (jump_to_value_source_actionable), so the button greys exactly
+        // where this cards.
         destination = value_source_marker(app, audio.total_frames());
         if (destination < 0) {
             notifications.notify(AppState::NotificationClass::Normal,
@@ -8890,6 +8927,76 @@ void GuiInputHandler::render_player_load_in_place() {
                        DialogTrigger::LOAD_IN_PLACE_CONFIRM,
                        PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
+}
+
+// THE RENDER PLAYER'S DELETE (architect 2026-09-29; the contract is at the
+// declaration). The raise: park the folders, ask the question.
+void GuiInputHandler::render_player_delete(bool all) {
+    if (!app.render_player.active) return;
+    if (app.prompt.active) return;
+    // THE ROOT'S ACT ALONE: inside a batch folder the slot is Load in Place
+    // and the key's arm is not reached (route_render_player_key), so this
+    // line only answers a road that cannot come — silent.
+    if (app.render_player.folder != AppState::RenderPlayer::Folder::Root)
+        return;
+    // NOTHING TO DELETE CARDS (the face greys on the same question,
+    // render_player_delete_actionable): an empty `tmp/` — the band on no row —
+    // is the one state that reaches here, the Delete key being live at the
+    // root whatever the listing holds.
+    if (!render_player_delete_actionable(app)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "There is no folder to delete");
+        return;
+    }
+    std::vector<std::filesystem::path> folders;
+    const AppState::FolderOverlay& ov = app.folder_overlay;
+    if (all) {
+        for (const AppState::FolderOverlayRow& r : ov.rows)
+            if (r.kind == AppState::FolderOverlayRow::Kind::Folder)
+                folders.push_back(r.path);
+    } else {
+        folders.push_back(
+            ov.rows[static_cast<size_t>(ov.highlight_row)].path);
+    }
+    // A modal surface is opening over a possibly live transport: PAUSE it
+    // through the player's own pause, the load confirmation's opening step.
+    if (app.render_player.transport == AppState::RenderPlayer::Transport::Live)
+        render_player.toggle_pause();
+    app.render_player.pending_delete = folders;
+    // THE QUESTION (a prompt is a question, messaging.md): the one folder is
+    // the highlighted row on screen, so "this" names it; the count is the
+    // rows the press parked. Delete / Cancel, Cancel the Escape sentinel LAST
+    // and FOCUSED (PromptInitialFocus::LastButton): nothing takes a deletion
+    // back, so a bare Enter answers Cancel, and `d` is Delete's letter — the
+    // Delete key is no answer here, so the press that raised the question
+    // cannot also answer it. Through PromptState::present, the one raise
+    // route, so the painted gate holds. A shifted press over a one-folder
+    // root parks that one folder — the highlighted one — and asks the plain
+    // question, the shift line being absent there for the same reason.
+    const std::string question =
+        folders.size() > 1
+            ? "Delete all " + std::to_string(folders.size()) + " folders?"
+            : std::string("Delete this folder?");
+    app.prompt.present(question,
+                       {'d', '\x1b'},
+                       {"Delete", "Cancel"},
+                       DialogTrigger::DELETE_FOLDER_CONFIRM,
+                       PromptInitialFocus::LastButton);
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::confirm_render_player_delete() {
+    // Moved out before the act: the act's own listing rebuild and any close
+    // must find the slot empty.
+    const std::vector<std::filesystem::path> folders =
+        std::move(app.render_player.pending_delete);
+    app.render_player.pending_delete.clear();
+    if (!app.render_player.active) return;
+    render_player.delete_batch_folders(folders);
+}
+
+void GuiInputHandler::cancel_render_player_delete() {
+    app.render_player.pending_delete.clear();
 }
 
 // THE LOAD CONFIRMATION'S OK — ONE PROMPT BODY, TWO SUBJECTS (architect
@@ -9348,6 +9455,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             break;
         }
         set_show_waveform_magnification(!app.show_waveform_magnification);
+        break;
+    case GuiKeys::Backslash:
+        // Toggle the tooltip lamp (architect 2026-09-29, Enable Tooltips).
+        // The one bare form reaches here (is_tooltip_lamp_key, the caller
+        // having gated on no modifiers). Silent: the lamp's face shows the new
+        // state. The setter is GuiInputHandler::set_show_tooltips, shared with
+        // the icon-row button's synthesized chord and with nothing else.
+        // History-less, one-shot, legal on a locked tab, under the
+        // grid-iterations lock and in the `h` view (all three allowlists
+        // admit it — the `h` view's claim above this dispatch does not own
+        // the key, so its press falls through to here).
+        set_show_tooltips(!app.show_tooltips);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

@@ -379,6 +379,23 @@ struct GuiRenderPlayer {
     // nothing bound, nothing sounding, the band on row 0. The reasoning is at
     // the body and nowhere else.
     void up();
+    // THE ROOT'S DELETE, ANSWERED (architect 2026-09-29) — the one body the
+    // DELETE_FOLDER_CONFIRM prompt's Delete runs, through
+    // GuiInputHandler::confirm_render_player_delete. `folders` are the paths
+    // the raise parked off the root listing's own Folder rows. In order: a
+    // transport item living inside one of them is stopped and unloaded first
+    // (unload_item's Up tail — the player keeps standing; at the root no item
+    // is bound by construction, up() having unloaded it, so this is the rule
+    // stated rather than a step that runs today); then each folder is removed
+    // whole, BUT ONLY A DIRECTORY STANDING DIRECTLY UNDER THIS PROJECT'S
+    // `tmp/` (project_batch_root) — anything else is refused on stderr and
+    // left alone, so nothing outside `tmp/` and never `tmp/` itself can go;
+    // a filesystem failure cards CRITICAL naming the folder by its name, with
+    // the full path and the system's words on stderr (failure.h's two
+    // clauses), and the walk goes on to the next folder. The root listing is
+    // rebuilt from disk after, whatever failed. A success is silent: the rows
+    // leaving the listing are its answer.
+    void delete_batch_folders(const std::vector<std::filesystem::path>& folders);
     // The widget's three mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
     // overlay's other two contents drive the same mechanics through their own

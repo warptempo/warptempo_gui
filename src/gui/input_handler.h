@@ -1389,17 +1389,18 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-one (the
-    // toolbar four included since the 2026-08-12 relayout, Full zoom out
+    // the view bar's three, row 3's two tabs, row 4's twenty-four (the
+    // toolbar four included since the 2026-08-12 relayout, EDIT FLAG and COPY
+    // VALUE behind Render since 2026-09-29, Full zoom out
     // leading the zoom group (Center left it for the bottom row 2026-09-29),
-    // SETTINGS behind the padlock since 2026-09-29, the
+    // ENABLE TOOLTIPS and SETTINGS behind the padlock since 2026-09-29, the
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
     // 2026-09-19, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's eighteen — the right block's MARKER-VERB GROUP of seven
+    // row's seventeen — the right block's MARKER-VERB GROUP of six
     // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the walk
     // group's four (Previous Marker, Next Marker, Center, Switch Tab), four
     // cardinal arrows and the transport three.
@@ -1437,6 +1438,24 @@ struct GuiInputHandler {
     // are paint state only — no input road reads a fade.
     void stamp_redesign_button_hover_fade(RedesignButton id, int64_t now);
     void tick_hover_fades();
+
+    // THE FLAG HOVER (architect 2026-09-29; the state is AppState::FlagHover,
+    // the paint rule render.h's FlagHoverPaint). recompute_ is its ONE writer,
+    // called by every pointer motion (on_motion's head) and by the tick
+    // (main.cpp): it resolves the unit under the remembered position from the
+    // PROMOTED flag stash — the topmost flag rect, the cell by its painted
+    // boundaries, nothing under the open editor's riding boxes — and answers
+    // NONE while the pointer is out of the window, the primary button is held
+    // (a press, a drag, any finger contact: no hover under touch), the load
+    // is in flight, a prompt or a dialog editor veils the window, the folder
+    // overlay stands, a dropdown is open or a notification card is under the
+    // pointer. A change of unit fades the old one out and the new one in
+    // (HoverFadeKind::Reversing) and damages the two units' own boxes alone —
+    // never the waveform. clear_ is the pointer-leave hook's (main.cpp): the
+    // hovered unit fades out, every reason alike. Paint state only: no input
+    // road reads either.
+    void recompute_flag_hover();
+    void clear_flag_hover();
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
@@ -1764,6 +1783,14 @@ struct GuiInputHandler {
     // and history_load_in_place.
     void confirm_load_in_place();
     void cancel_load_in_place();
+    // THE RENDER PLAYER DELETE'S TWO ANSWERS (architect 2026-09-29), called by
+    // GuiPrompt when DELETE_FOLDER_CONFIRM answers. Delete hands the parked
+    // folders to GuiRenderPlayer::delete_batch_folders (which stops and
+    // unloads a transport item living inside one, removes each folder whole
+    // and rebuilds the root listing); Cancel drops them. The raise is
+    // render_player_delete.
+    void confirm_render_player_delete();
+    void cancel_render_player_delete();
     // THE PULL QUESTION'S THREE ANSWERS (architect 2026-09-27), called by
     // GuiPrompt through its back-pointer when PULL_CONFIRM answers: Reload
     // (`reload` true) and Keep run the parked plan
@@ -2205,7 +2232,7 @@ struct GuiInputHandler {
     // the call sites (re-greped 2026-09-23: run_center_key_command — the
     // centre key's act, which the live `c` arm and the mode's `c` claim
     // reach — the A/B
-    // audition's GuiAbAudition::apply_working_zoom, Shift+`j`'s jump, which
+    // audition's GuiAbAudition::apply_working_zoom, Ctrl+J's jump, which
     // calls it TWICE — once on the tab it leaves and once on the tab it
     // lands) share one decision instead of
     // spelling it each. Rationale at the definition.
@@ -2222,7 +2249,7 @@ struct GuiInputHandler {
     // whether or not the centring could move the camera
     // (AppState::camera_hold), and follow's suspension kept as it stood, the
     // centring being on follow's own subject (AppState::follow_suspended). The
-    // other callers of run_center_command — the A/B audition, and Shift+J,
+    // other callers of run_center_command — the A/B audition, and Ctrl+J,
     // which arms the hold at its own tail — do not come through here.
     void run_center_key_command();
 
@@ -2525,7 +2552,7 @@ private:
     // that lands a focus states its own camera. `c` states Center; the walk
     // states what ITS caller handed it.
     // Its land is the movement owner; its
-    // callers are `c` (and, through `c`, Shift+`j` and the A/B audition) and
+    // callers are `c` (and, through `c`, Ctrl+J and the A/B audition) and
     // cycle_marker_focus, which the three Tab arms and the march's two walk
     // steps reach.
     bool jump_playhead_to_focused_marker(MarkerLandingFrame frame);
@@ -3809,6 +3836,20 @@ private:
     // comparator. History-less; display-only; silent.
     void set_show_waveform_magnification(bool desired);
 
+    // THE TOOLTIP LAMP'S ONE SETTER (architect 2026-09-29) — one road: bare
+    // backslash, which the icon row's Enable Tooltips button reaches by
+    // synthesizing that press, in every state the roster is live (both locks
+    // and the `h` view admit it). The bit (AppState::show_tooltips) is a
+    // per-project session posture, dark at every project open, never
+    // serialized and never in the undo domain. THE DARK EDGE ENDS THE MODEL
+    // WHOLE: a standing box goes down (the hard end's own body), the wait
+    // stops and the hovered owner is forgotten, so nothing is left to ripen;
+    // from then on note_tooltip_hover keeps that state clear. THE LIT EDGE
+    // STARTS NOTHING: the pointer resting on the button re-arms only on a
+    // motion past the slop, the model's own rule. The lamp's face rides the
+    // per-tick comparator. History-less; silent.
+    void set_show_tooltips(bool desired);
+
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare
     // horizontal arrows step one painted column per press; the lane decides WHAT
@@ -4081,7 +4122,7 @@ private:
 
     // THE VALUE PAIR (architect 2026-08-29), the two acts that took the
     // retired resolved readout's place: bare `j` COPIES the focused marker's
-    // resolved value to the system clipboard, Shift+`j` JUMPS to the marker
+    // resolved value to the system clipboard, Ctrl+J JUMPS to the marker
     // that value came from — the pass's owner or the ref's definition — ON THE
     // OTHER A/B TAB, so a reference and its definition stand one Ctrl+Tab
     // apart. One composer answers both (resolved_marker_payload, the value and
@@ -4097,8 +4138,10 @@ private:
     // half of the pair (the order and what each step is for are at the body).
     // Both are
     // read-only-legal, both live in S and T, both refused in the `h` view at
-    // its allowlist; the bottom row's Copy resolved value button is `j` at its
-    // lift and Shift+`j` at its shift-click or long press. Definitions and the whole
+    // its allowlist; the icon row's Copy Resolved Value button is `j` at its
+    // lift and the bottom row's Jump to Defining Marker is Ctrl+J at its
+    // (2026-09-29; the jump rode Copy Value's shift press, as Shift+J, until
+    // then). Definitions and the whole
     // reasoning are in input_key_dispatch.cpp.
     void copy_focused_marker_value();
     void jump_to_value_source();
@@ -4139,6 +4182,22 @@ private:
     // (confirm_load_in_place / cancel_load_in_place — the prompt's
     // two answers — are public, beside the hard-end clearers above: GuiPrompt
     // reaches them through its back-pointer.)
+    // THE RENDER PLAYER'S DELETE (architect 2026-09-29) — the root listing's
+    // Delete button (its plain lift, its shift-click and long press) and the
+    // Delete / Shift+Delete keys at the root (route_render_player_key). It
+    // parks the highlighted batch folder (`all` false) or every batch folder
+    // the root listing shows (`all` true) at
+    // AppState::RenderPlayer::pending_delete and raises the
+    // DELETE_FOLDER_CONFIRM prompt — "Delete this folder?" / "Delete all N
+    // folders?", Delete / Cancel, Cancel focused — pausing a live transport
+    // first, the load's own opening step. Inside a batch folder it does
+    // nothing (the key's arm is the root's alone and the slot is Load in
+    // Place there); at the root with nothing to delete it cards "There is no
+    // folder to delete" (the face greys on the same question,
+    // render_player_delete_actionable). The prompt's two answers are
+    // confirm_render_player_delete / cancel_render_player_delete (public,
+    // beside the load's).
+    void render_player_delete(bool all);
 
     // THE MODAL DIALOG'S POINTER HALF (2026-08-12; bodies in
     // input_pointer.cpp — the painter's stash is AppState::modal_dialog and

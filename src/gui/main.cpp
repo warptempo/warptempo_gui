@@ -752,7 +752,9 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // left float's three menu buttons and the right float's view bar, its
 // content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-one view/mode/action buttons since the stepped zoom
+// ICON row (the twenty-four view/mode/action buttons since 2026-09-29's
+// evening — Edit Flag and Copy Value up from the bottom row, Enable Tooltips
+// new — twenty-one from the stepped zoom
 // buttons' removal 2026-09-25, twenty-three from Follow's return
 // on the evening of 2026-09-23, twenty-two for the hours of that day it was
 // deleted, twenty-three from Zoom In and Zoom
@@ -864,7 +866,7 @@ GuiRect bottom_row_content_area(const AppState& a) {
 // `kStatusBarContentPx`, the three height accessors, `paint_status_bar` and
 // the window-foot seam `kRedesignBottomLine` all went with it; the STATE TEXT
 // is row 8's own cell, right of the clock, and the RESOLVED READOUT retired
-// whole — bare `j` copies the value and Shift+`j` goes to its source.)
+// whole — bare `j` copies the value and Ctrl+J goes to its source.)
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
 // pair. (`Viewport::trim_range` is not "the target-view half" of a pair with
@@ -1774,9 +1776,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // payload_eligibility is a free function in app_state.{h,cpp} (its
     // boolean face payload_eligible_marker beside it). The two acts reach it
     // directly with the (app, audio, idx) signature — bare `j`, which copies
-    // the focused marker's resolved value, and Shift+`j`, which jumps to the
+    // the focused marker's resolved value, and Ctrl+J, which jumps to the
     // marker that value came from (both in input_key_dispatch.cpp); the Copy
-    // value button's face and its hint are the other two readers. They are
+    // Value button's face and Jump to Defining Marker's
+    // (jump_to_value_source_actionable) are the other two readers. They are
     // what the RESOLVED READOUT and its Ctrl+C became on 2026-08-29: no
     // surface DISPLAYS a resolved value any more, which is why the gate lost
     // the "popup" half of its old name. Its terms are documented above its
@@ -2143,6 +2146,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // through the walk's own fade edge and takes its tail. Every reason
         // clears it, the pen's PenHoverEnd included; the focus face stays.
         input_handler.clear_modal_dialog_hover();
+        // AND THE FLAG HOVER (architect 2026-09-29), the same hover half: a
+        // pointer that has left rests on no flag, and the hovered box fades
+        // out on its own tail. Every reason clears it, the pen's PenHoverEnd
+        // included — no hover survives above the pen's plane.
+        input_handler.clear_flag_hover();
         input_handler.clear_player_scrub_drag();
         // AND THE SCRUB HANDLE'S HOVERED OUTLINE, the same hover half of the
         // question one surface over: the handle's accent is re-answered at
@@ -2814,6 +2822,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // deliberately keeps when the pointer left through the menu row.
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
+        // THE FLAG HOVER'S TICK RE-DERIVATION (architect 2026-09-29): the
+        // flag stash moves under a resting pointer (a pan, a zoom, a store
+        // edit, the promote after a rebuild), so the hovered unit is re-read
+        // here from the same inputs a motion reads. Ungated: a gesture holds
+        // the primary button, which the recompute already answers with none.
+        input_handler.recompute_flag_hover();
 
         // THE HOVER FADES' CLOCK (architect 2026-09-27, Breeze's hover
         // animation — render.h's HoverFade): after the recompute, so an edge
@@ -2846,7 +2860,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // cache had stamped — the backstop for a store mutation or a silent map
         // promotion under a stationary cursor. There is no hover cache to keep
         // honest any more: a marker's value is painted on its own flag, and
-        // bare `j`'s copy and Shift+`j`'s jump both read the live store through
+        // bare `j`'s copy and Ctrl+J's jump both read the live store through
         // the selection.
 
         // Blink the editor cursor independently of playback. Compare the

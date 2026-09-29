@@ -214,6 +214,86 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, true,  true},   // Ctrl+Shift+Z
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false, true},   // Ctrl+Alt+R (+Shift)
+    // EDIT FLAG AND COPY VALUE (architect 2026-09-29: up from the bottom
+    // row's verb group, after Render inside its group; the rows are unchanged
+    // but for Copy Value's lost shift admission, the table being read by id).
+    //
+    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the flag editor's
+    // THIRD ROAD: BARE Enter, which the keyboard
+    // has opened the editor with all along. It exists because the other two
+    // roads are a double-click and a key, and glass has neither reliably — the
+    // architect drove a taller flag hit rect for one evening chasing the missed
+    // double tap and retired it the same night for this button: "get rid of
+    // double tapping as the ONLY way to enter the editor... its tooltip hotkey
+    // says Enter, because that is what triggers the editor".
+    //
+    // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches bare Return
+    // through on_key at the LIFT like every other chrome button, while the KEY
+    // acts at the press like every other hotkey. The ACT is on_key's own Return
+    // arm (input_handler.cpp) and there is no second body — so the editor's
+    // gates, the P-view refusal, the nothing-focused no-op, the read-only drop
+    // and the modal consume are all inherited whole. THE KEYPAD'S Enter is the
+    // same arm's second keysym and is NOT a second row here: a row spells the
+    // chord the dispatch synthesizes, and Return is the spelling every reader
+    // accepts (the marker walk's IsoLeftTab precedent).
+    //
+    // IT IS NOT A RADIO AND CARRIES NO LAMP (an act, not a mode), it does NOT
+    // repeat (an editor opener, and openers never repeat), and it admits
+    // NEITHER shift NOR ctrl, so a modified press is
+    // refused at the band gate and the long press reaches nothing.
+    //
+    // THE BUTTON IS ENTER IN EVERY STATE, A STANDING EDITOR INCLUDED
+    // (architect 2026-08-27, naming the button by its hotkey: "just say Enter,
+    // because that's what triggers the editor"). A button that IS a key does
+    // what the key does, so a press while a marker-lane editor stands
+    // COMMITS that editor on valid text and RED-FLASHES it on invalid — exactly
+    // what the keyboard's Enter does there, and what the on-screen keyboard's
+    // own Enter key does. No second road and no special case: the icon row's
+    // band claim (the bottom row's until 2026-09-29, and it too) sits ABOVE
+    // the outside-press closer in on_button_press, so the
+    // editor is never torn down under this press, and the lift's dispatched
+    // Return arrives at the editor's own key route like any other Return.
+    // THE FLAG DOUBLE-CLICK DIFFERS, AND THE DIFFERENCE IS THE POINT: it stays
+    // close-then-reopen, because a double-click on a flag names a MARKER — the
+    // outside-press closer runs on its first press and the second press opens
+    // the editor on the marker under the finger — while this button names the
+    // KEY, which has no marker under it at all.
+    //
+    // IT OPENS THE ADDRESSED CELL'S EDITOR (architect 2026-09-05), because
+    // Return does: the payload editor by default, a bound cell's editor
+    // where a press or an editor open addressed that cell,
+    // and its tooltip names whichever (redesign_button_tooltip's stateful
+    // arm). ITS GATES: the `h`
+    // view consumes bare Return and greys it with the verbs, and so does the
+    // READ-ONLY lock (the canonical line is serialized content); in the P
+    // VIEW it is live with a BOUND cell addressed — the bound editor is both
+    // columns', while the payload editor refuses there — and the P view's
+    // refusal GREYS the button since 2026-08-30
+    // (flag_editor_open_actionable, the Return arm's own predicate, under
+    // the truthful-buttons ruling; it was a consumed no-op with a live face
+    // under the 2026-08-15 no-blink ruling until then).
+    {RedesignButton::IconMarkerEditFlag,
+     GuiKeys::Return, false, false, false, false, true},                            // bare Enter
+    // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), Edit Flag's
+    // neighbour, the value pair's pointer home for the copy: BARE `j`, which
+    // was free (greped at the landing). Its lift copies the focused marker's
+    // resolved value to the system clipboard, exactly as the key does —
+    // button-is-its-chord literally, the press dispatching bare `j` through
+    // on_key at the LIFT while the KEY acts at the press.
+    //
+    // IT ADMITS NO MODIFIER SINCE 2026-09-29: its shifted twin was the JUMP
+    // (Shift+`j`) from 2026-08-29, and the jump is Jump to Defining Marker's
+    // own Ctrl+J on the bottom row now, so a modified press here is refused at
+    // the band gate and the long press reaches nothing.
+    //
+    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
+    // copy repeats onto itself, so the key is one-shot at repeat_eligible and
+    // the button carries no `repeats`. ITS GATES ARE NOT THE VERBS': the
+    // READ-ONLY lock ADMITS bare `j` (a clipboard write authors nothing), so
+    // the button stays lit on a locked tab, while the `h` view consumes bare
+    // `j` and greys it through the derived partition.
+    {RedesignButton::IconCopyValue,
+     GuiKeys::J,      false, false, false, false, true},                             // bare j
     // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
     // toggle IS the direct select, and the radio flag is what makes a press on
     // the already-selected half a consumed nothing rather than a switch away.
@@ -387,6 +467,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // its chord with no exception now, which is exactly why the padlock moved
     // here (the roster record is at RedesignButton::IconReadOnly).
     {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false, false, true},   // bare o
+    // ENABLE TOOLTIPS (architect 2026-09-29), between the padlock and
+    // Settings: the bare BACKSLASH, a TOGGLE with a lamp (AppState::
+    // show_tooltips) and NOT a radio — it presses through both ways. Live on a
+    // locked tab, under the grid-iterations lock and in the `h` view (all
+    // three allowlists admit it, so the derived partition leaves it lit).
+    // No modifier, no repeat.
+    {RedesignButton::IconTooltips, GuiKeys::Backslash, false, false, false, false, true}, // bare backslash
     // SETTINGS (architect 2026-09-29), the render-entry group's last: bare
     // `;`, the settings prompt, through on_key like every row, so the
     // read-only gate, the iteration gate and the `h` view refuse the lift
@@ -486,8 +573,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // EIGHTEEN
-    // rows (re-counted 2026-09-29, the walk group grown to four),
+    // SEVENTEEN
+    // rows (re-counted 2026-09-29 evening: the walk group grown to four that
+    // morning, then Edit Flag and Copy Value up to the icon row and Jump to
+    // Defining Marker in),
     // every chord already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -574,96 +663,25 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
-    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the verb group's
-    // FIFTH (its sixth for the hours of 2026-09-19 while the Flatten button
-    // stood ahead of it, before that button took the icon row's iteration
-    // group) and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
-    // has opened the editor with all along. It exists because the other two
-    // roads are a double-click and a key, and glass has neither reliably — the
-    // architect drove a taller flag hit rect for one evening chasing the missed
-    // double tap and retired it the same night for this button: "get rid of
-    // double tapping as the ONLY way to enter the editor... its tooltip hotkey
-    // says Enter, because that is what triggers the editor".
-    //
-    // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches bare Return
-    // through on_key at the LIFT like every other chrome button, while the KEY
-    // acts at the press like every other hotkey. The ACT is on_key's own Return
-    // arm (input_handler.cpp) and there is no second body — so the editor's
-    // gates, the P-view refusal, the nothing-focused no-op, the read-only drop
-    // and the modal consume are all inherited whole. THE KEYPAD'S Enter is the
-    // same arm's second keysym and is NOT a second row here: a row spells the
-    // chord the dispatch synthesizes, and Return is the spelling every reader
-    // accepts (the marker walk's IsoLeftTab precedent).
-    //
-    // IT IS NOT A RADIO AND CARRIES NO LAMP (an act, not a mode), it does NOT
-    // repeat (an editor opener, and openers never repeat), and it admits
-    // NEITHER shift NOR ctrl, so a modified press is
-    // refused at the band gate and the long press reaches nothing.
-    //
-    // THE BUTTON IS ENTER IN EVERY STATE, A STANDING EDITOR INCLUDED
-    // (architect 2026-08-27, naming the button by its hotkey: "just say Enter,
-    // because that's what triggers the editor"). A button that IS a key does
-    // what the key does, so a press while a marker-lane editor stands
-    // COMMITS that editor on valid text and RED-FLASHES it on invalid — exactly
-    // what the keyboard's Enter does there, and what the on-screen keyboard's
-    // own Enter key does. No second road and no special case: the bottom row's
-    // band claim sits ABOVE the outside-press closer in on_button_press, so the
-    // editor is never torn down under this press, and the lift's dispatched
-    // Return arrives at the editor's own key route like any other Return.
-    // THE FLAG DOUBLE-CLICK DIFFERS, AND THE DIFFERENCE IS THE POINT: it stays
-    // close-then-reopen, because a double-click on a flag names a MARKER — the
-    // outside-press closer runs on its first press and the second press opens
-    // the editor on the marker under the finger — while this button names the
-    // KEY, which has no marker under it at all.
-    //
-    // IT OPENS THE ADDRESSED CELL'S EDITOR (architect 2026-09-05), because
-    // Return does: the payload editor by default, a bound cell's editor
-    // where a press or an editor open addressed that cell,
-    // and its tooltip names whichever (redesign_button_tooltip's stateful
-    // arm). ITS GATES: the `h`
-    // view consumes bare Return and greys it with the verbs, and so does the
-    // READ-ONLY lock (the canonical line is serialized content); in the P
-    // VIEW it is live with a BOUND cell addressed — the bound editor is both
-    // columns', while the payload editor refuses there — and the P view's
-    // refusal GREYS the button since 2026-08-30
-    // (flag_editor_open_actionable, the Return arm's own predicate, under
-    // the truthful-buttons ruling; it was a consumed no-op with a live face
-    // under the 2026-08-15 no-blink ruling until then).
-    {RedesignButton::IconMarkerEditFlag,
-     GuiKeys::Return, false, false, false, false, true},                            // bare Enter
-    // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
-    // SIXTH since the Marker Measure's deletion on 2026-09-16 (seventh before
-    // that, and seventh again for the hours of 2026-09-19 while the Flatten
-    // button stood ahead of it)
-    // and the value pair's pointer home: BARE `j`, which was free
-    // (greped at the landing). Its plain lift copies the focused marker's
-    // resolved value to the system clipboard, exactly as the key does —
-    // button-is-its-chord literally, the press dispatching bare `j` through
-    // on_key at the LIFT while the KEY acts at the press.
-    //
-    // AND IT ADMITS SHIFT: its twin is SHIFT+`j`, THE JUMP to the marker that
-    // value came from, on the other A/B tab — so a shift-click or a LONG PRESS
-    // at chrome_shift_hold_ms() puts a reference and its definition one Ctrl+Tab
-    // apart with no keyboard, which is the whole reason the admission exists
-    // on glass. The row's own `shift` bit stays FALSE, the admission and the
-    // table bit being mutually exclusive by the shift term's construction
-    // (finish_chrome_press_release); the membership is
-    // redesign_button_shift_admits (app_state.h) and the tooltip's second line
-    // is bound to it by that predicate's static_assert.
-    //
-    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
-    // copy repeats onto itself and a jump has one destination, so the key is
-    // one-shot at repeat_eligible and the button carries no `repeats`. ITS
-    // GATES ARE NOT THE VERBS': the READ-ONLY lock ADMITS both chords (a
-    // clipboard write, a tab switch, a playhead move and two camera frames
-    // author nothing), so the button stays lit on a locked tab, while the `h`
-    // view consumes bare `j` and greys it with the group through the derived
-    // partition.
-    {RedesignButton::IconCopyValue,
-     GuiKeys::J,      false, false, false, false, true},                             // bare j
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's EIGHTH since
-    // 2026-09-19 (seventh from 2026-09-16, eighth from 2026-08-29, seventh
-    // from 2026-08-27 and sixth before that):
+    // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's FIFTH
+    // since Edit Flag and Copy Value went up to the icon row that day: CTRL+J,
+    // the jump to the marker the focused value came from on the other A/B tab
+    // (jump_to_value_source) — Copy Value's shifted twin, Shift+`j`, until that
+    // day, a dedicated button now under the dissolved shift-twin rule. Its row
+    // carries the ctrl as Ctrl+D's and Ctrl+N's do; it ADMITS NO MODIFIER, so a
+    // modified press is refused at the band gate and the long press reaches
+    // nothing. NOT A RADIO AND NO LAMP (an act), and it does NOT repeat (a jump
+    // has one destination). ITS GATES ARE NOT THE VERBS': both locks admit the
+    // chord (a tab switch, a select, a land and two `c`s author nothing), so it
+    // is lit on a locked tab and under grid iterations wherever the jump would
+    // land (jump_to_value_source_actionable), while the `h` view consumes Ctrl+J
+    // and greys it through the derived partition.
+    {RedesignButton::IconJumpToDefiningMarker,
+     GuiKeys::J,      true,  false, false, false, true},                             // Ctrl+J
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's SIXTH and last
+    // since 2026-09-29, behind Jump to Defining Marker (the group's count has
+    // moved around it with every arrival and departure; the succession is in
+    // git history):
     // BARE `k`, which was free — he picked it over `n`
     // (already reading as INHERIT) and over `a` (too easy to hit by accident).
     // It is a MODE toggle, so the button's lamp reads the same bit the key
@@ -3807,6 +3825,14 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::PlayerButtonAct::LoadInPlace:
                 render_player_load_in_place();
                 return true;
+            // DELETE (architect 2026-09-29), the root's slot and the row's
+            // third shift-admitting button: the plain press asks for the
+            // highlighted batch folder, the shifted one (a Shift+click, a
+            // long press on glass) for every batch folder at the root — the
+            // Delete key's two spellings.
+            case AppState::PlayerButtonAct::Delete:
+                render_player_delete(/*all=*/shifted);
+                return true;
             case AppState::PlayerButtonAct::Close:
                 render_player.close();
                 return true;
@@ -4947,6 +4973,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // PRESS (Qt's model, architect 2026-09-29 — AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
+    // ANY PRESS ENDS THE FLAG HOVER (architect 2026-09-29) off that same held
+    // bit: the hovered box fades out on its tail, the press acting on the
+    // stash exactly as it always did — the hover is paint, never a claim.
+    recompute_flag_hover();
     // ANY PRESS ENDS THE MENU ROW'S MODE, beside it and for a related reason: the
     // ruling ends the mode on every ordinary dismissal, and with no popup open a
     // press is the only pointer act there is — the press on the anchor, the press
@@ -7541,13 +7571,138 @@ void GuiInputHandler::tick_hover_fades() {
         ++i;
     }
 
+    // THE FLAG HOVER'S FADES (architect 2026-09-29; AppState::FlagHover): the
+    // same advance, keyed to the unit's own box in the promoted stash. A unit
+    // whose flag no longer publishes a rect (it left the screen, or an editor
+    // opened on it) is cut and erased — the lane's own rebuild repainted its
+    // pixels — and a unit settled dark is erased; each painted-level change
+    // damages that one box and nothing wider.
+    std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
+    for (size_t i = 0; i < hf.size();) {
+        GuiRect box{0, 0, 0, 0};
+        if (!flag_hover_unit_box(app, hf[i].marker_index, hf[i].cell, box)) {
+            hf.erase(hf.begin() + static_cast<std::ptrdiff_t>(i));
+            continue;
+        }
+        if (hover_fade_advance(hf[i].fade, now)) viewport.invalidate_rect(box);
+        if (!hf[i].fade.running && !hf[i].fade.rising) {
+            hf.erase(hf.begin() + static_cast<std::ptrdiff_t>(i));
+            continue;
+        }
+        running = running || hf[i].fade.running;
+        ++i;
+    }
+
     app.hover_fades_running = running;
+}
+
+namespace {
+
+// THE LANE THE FLAG HOVER'S INDICES LIVE IN (AppState::FlagHover::lane_key):
+// the column, the `h` view's own walk position and the two stores' edit
+// generations — every input that can make one index name another box. It is a
+// strict subset of the flag cache's fingerprint, so a key change always comes
+// with that cache's rebuild and its whole-lane damage.
+uint64_t flag_hover_lane_key(const AppState& app) {
+    uint64_t h = 1469598103934665603ull;
+    const auto mix = [&h](uint64_t v) {
+        h ^= v + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
+    };
+    mix(static_cast<uint64_t>(static_cast<unsigned char>(
+        app.active_markers_view)));
+    mix(app.history_mode.active ? 1u : 0u);
+    mix(static_cast<uint64_t>(app.history_mode.generation));
+    mix(static_cast<uint64_t>(app.history_mode.index));
+    mix(static_cast<uint64_t>(app.history_mode.local_index));
+    mix(static_cast<uint64_t>(app.history_mode.source));
+    mix(static_cast<uint64_t>(app.history_compare()));
+    mix(static_cast<uint64_t>(app.warpmarkers.generation()));
+    mix(static_cast<uint64_t>(app.phaseresetmarkers.generation()));
+    return h;
+}
+
+// ONE UNIT'S HOVER EDGE: its fade slot (made on first use) takes the edge in
+// the Reversing kind — in and out, a return mid-fade reversing from where it
+// stood — and raises the tick's bit when an animation now runs. No damage:
+// an edge moves no painted level, the tick's advances do.
+void flag_hover_edge(AppState& app, int marker_index, MarkerCell cell,
+                     bool hovered, int64_t now) {
+    std::vector<AppState::FlagHoverFade>& hf = app.flag_hover.fades;
+    AppState::FlagHoverFade* slot = nullptr;
+    for (AppState::FlagHoverFade& f : hf)
+        if (f.marker_index == marker_index && f.cell == cell) { slot = &f; break; }
+    if (!slot) {
+        if (!hovered) return;   // nothing painted, nothing to fade out
+        hf.push_back(AppState::FlagHoverFade{marker_index, cell, HoverFade{}});
+        slot = &hf.back();
+    }
+    if (hover_fade_edge(slot->fade, HoverFadeKind::Reversing, hovered, now))
+        app.hover_fades_running = true;
+}
+
+// THE HOVERED UNIT MOVES: the old one fades out, the new one in.
+void set_flag_hover_unit(AppState& app, int marker_index, MarkerCell cell) {
+    AppState::FlagHover& h = app.flag_hover;
+    if (marker_index == h.marker_index &&
+        (marker_index < 0 || cell == h.cell))
+        return;
+    const int64_t now = monotonic_ms();
+    if (h.marker_index >= 0)
+        flag_hover_edge(app, h.marker_index, h.cell, false, now);
+    h.marker_index = marker_index;
+    h.cell         = cell;
+    if (marker_index >= 0)
+        flag_hover_edge(app, marker_index, cell, true, now);
+}
+
+} // namespace
+
+// THE FLAG HOVER'S ONE WRITER (the contract is at the declaration).
+void GuiInputHandler::recompute_flag_hover() {
+    AppState::FlagHover& h = app.flag_hover;
+    // THE LANE MOVED UNDER THE INDICES: every tail is cut — the lane's own
+    // rebuild repaints its pixels whole — and the hovered unit keeps its
+    // settled face, so a store edit under a resting pointer (a nudge of the
+    // selection beside it) does not blink the box; the walk below re-derives
+    // it from the stash like any motion would.
+    const uint64_t key = flag_hover_lane_key(app);
+    if (key != h.lane_key) {
+        h.lane_key = key;
+        std::erase_if(h.fades, [&](const AppState::FlagHoverFade& f) {
+            return f.marker_index != h.marker_index || f.cell != h.cell;
+        });
+        for (AppState::FlagHoverFade& f : h.fades)
+            hover_fade_cut(f.fade, /*hovered=*/true);
+    }
+    const int mx = app.last_mouse_x;
+    const int my = app.last_mouse_y;
+    // NO HOVER where nothing is pressable or the pointer is not resting: out
+    // of the window (the pen above its plane leaves it), under a held primary
+    // button (a press, a drag, every finger contact — no hover under touch),
+    // with no piece to show, under a prompt's or a dialog editor's veil, under
+    // the folder overlay's band, beside an open dropdown (it owns the
+    // pointer) or under a notification card (opaque to the pointer).
+    const bool refused =
+        !app.pointer_in_window || app.redesign_tooltip.button_held ||
+        app.loading || audio.total_frames() <= 0 ||
+        app.prompt.active || modal_dialog_editor_active() ||
+        folder_overlay_stands(app) ||
+        app.dropdown.open() ||
+        notification_card_at(app, mx, my) != 0;
+    MarkerCell cell = MarkerCell::Payload;
+    const int idx = refused ? -1 : flag_hover_unit_at(app, mx, my, cell);
+    set_flag_hover_unit(app, idx, cell);
+}
+
+void GuiInputHandler::clear_flag_hover() {
+    set_flag_hover_unit(app, -1, MarkerCell::Payload);
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-one — the toolbar four included since the 2026-08-12
-// relayout, the history group's seven since 2026-08-18, the FLATTEN button in
+// tabs, row 4's twenty-four — the toolbar four included since the 2026-08-12
+// relayout, EDIT FLAG, COPY VALUE and ENABLE TOOLTIPS since 2026-09-29, the
+// history group's seven since 2026-08-18, the FLATTEN button in
 // the iteration group since 2026-09-19 and the WAVEFORM MAGNIFICATION lamp in
 // the zoom group since 2026-09-22 — and the bottom row's
 // seventeen: the enum's
@@ -9675,8 +9830,25 @@ void GuiInputHandler::end_tooltip_hover(bool soft) {
 //     the hover slop from the anchor on either axis, re-anchoring there
 //     (AOSP View's updateAnchorPos: within the slop is stillness).
 // The wait's length is chosen as it starts: 20 ms while awake, 700 asleep.
+//
+// THE TOOLTIP LAMP IS ASKED FIRST (architect 2026-09-29, Enable Tooltips on
+// bare backslash): while AppState::show_tooltips is dark this writer holds the
+// wait's state clear — no hovered owner, no deadline — and returns, so no
+// wait ever starts and tick_tooltip has nothing to ripen on either surface.
+// It keeps only the SEEN position current, so the first walk after the lamp
+// lights tells a motion from a resting pointer exactly as the lit model does
+// (a lamp lit under a still pointer starts no wait until the pointer moves).
+// The box itself went down at the dark edge (set_show_tooltips), so nothing
+// here needs to hide one.
 void GuiInputHandler::note_tooltip_hover(AppState::RedesignTooltip::Owner o) {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
+    if (!app.show_tooltips) {
+        t.hovered     = AppState::RedesignTooltip::Owner{};
+        t.wake_due_ms = 0;
+        t.seen_x      = app.last_mouse_x;
+        t.seen_y      = app.last_mouse_y;
+        return;
+    }
     const int64_t now = monotonic_ms();
     const int x = app.last_mouse_x;
     const int y = app.last_mouse_y;
@@ -10060,6 +10232,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // claim and the touch pan zone ask the same one owner
     // (notification_card_at) for the same reason.
     update_notification_hover(mouse_x, mouse_y);
+    // THE FLAG HOVER (architect 2026-09-29), above every branch for the same
+    // reason: it is paint alone, derived from the promoted flag stash, the
+    // remembered position and the held button just written above, so every
+    // motion re-derives it — a held press or a drag clears it, a veil or an
+    // overlay refuses it — and the branches below need not know it exists.
+    recompute_flag_hover();
     // (THE POINTER CURSOR IS NOT RESOLVED HERE, 2026-08-03. A push stood at this
     // spot — above every gesture branch, so that each early return below still
     // left the right cue up — and it went with the other twenty-two: the cursor

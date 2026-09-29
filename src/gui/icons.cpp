@@ -1051,6 +1051,52 @@ constexpr IconPath kEditCopyPaths[] = {
      "M 8 7 L 12 7 L 12 11 L 16 11 L 16 18 L 8 18 L 8 7 Z"},
 };
 
+// -- THE ROSTER MOVES' THREE (architect 2026-09-29, evening) -----------------
+//
+// Three fresh verbatim transcriptions from /usr/share/icons/breeze-dark/
+// actions/22/, committed under assets/icons/breeze/ unmodified, every `d`
+// copied as it stands.
+//
+// HELP-WHATSTHIS (the Enable Tooltips lamp): one `.ColorScheme-Text` path of
+// absolute M / L / C / z — the ring, the `i` in two bars and the pointer
+// arrow at the lower right.
+//
+// GO-JUMP-DECLARATION (Jump to Defining Marker): one `.ColorScheme-Text`
+// path of absolute M / L / C / z — the flag on its staff and the return
+// arrow's arc.
+//
+// EDIT-DELETE (the render player's Delete): one path in
+// `.ColorScheme-NegativeText`, so its fill is kIconNegativeText — the value
+// list-remove's cross resolves to — and its `d` is the compact spelling:
+// absolute M with `v` / `h` / `H` / `V` runs and implicit repetition, the
+// interpreter's oldest arms (tab-detach's precedent), no `z` (the fill closes
+// each subpath implicitly).
+constexpr IconPath kHelpWhatsthisPaths[] = {
+    {kIconText,
+     "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 11.339463 19 "
+     "11.67189 18.972289 12 18.931641 L 12 17.921875 C 11.672498 17.968487 "
+     "11.340784 18 11 18 C 7.122 18 4 14.878 4 11 C 4 7.122 7.122 4 11 4 C "
+     "14.878 4 18 7.122 18 11 C 18 11.696167 17.894565 12.366247 17.707031 13 "
+     "L 18.740234 13 C 18.903948 12.360349 19 11.692084 19 11 C 19 6.568 "
+     "15.432 3 11 3 z M 10 6 L 10 8 L 12 8 L 12 6 L 10 6 z M 10 9 L 10 16 L "
+     "12 16 L 12 9 L 10 9 z M 13 11 L 13.003906 20.099609 L 15.730469 "
+     "16.810547 L 20 16.599609 L 13 11 z "},
+};
+
+constexpr IconPath kGoJumpDeclarationPaths[] = {
+    {kIconText,
+     "M 3 3 L 3 19 L 4 19 L 4 11 L 9 11 L 9 12 L 14 12 L 14 5 L 9 5 L 9 4 L 4 "
+     "4 L 4 3 L 3 3 z M 17 6 L 16 7 L 15 8 L 17 10 L 17 8.7148438 C 17.624415 "
+     "9.6579187 18 10.778652 18 12 C 18 15.324 15.324 18 12 18 L 12 19 C "
+     "15.878 19 19 15.878 19 12 C 19 10.090887 18.232299 8.3761254 17 "
+     "7.1171875 L 17 6 z "},
+};
+
+constexpr IconPath kEditDeletePaths[] = {
+    {kIconNegativeText,
+     "M8 3v2h1V4h4v1h1V3H8M4 6v1h14V6H4m2 2v11h10V8h-1v10H7V8H6"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -1103,6 +1149,9 @@ constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
 constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
 constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
 constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
+constexpr IconDef kHelpWhatsthis      {22.0, kHelpWhatsthisPaths,       1};
+constexpr IconDef kGoJumpDeclaration  {22.0, kGoJumpDeclarationPaths,   1};
+constexpr IconDef kEditDelete         {22.0, kEditDeletePaths,          1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -1158,6 +1207,9 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DialogError:         return kDialogError;
         case Icon::WindowClose:         return kWindowClose;
         case Icon::EditCopy:            return kEditCopy;
+        case Icon::HelpWhatsthis:       return kHelpWhatsthis;
+        case Icon::GoJumpDeclaration:   return kGoJumpDeclaration;
+        case Icon::EditDelete:          return kEditDelete;
     }
     return kDialogOkApply;
 }

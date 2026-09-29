@@ -575,6 +575,28 @@ struct GuiPaintHandler {
     // empty list, which paints an empty lane rather than a stale one.
     void rebuild_history_diff_flags();
 
+    // THE LANE PASS ITSELF — the one body that turns the live state and the
+    // displayed plate's fingerprint (wf_cache.fp_*) into the three painters'
+    // arguments and runs the pass for the standing lane (the `h` view's diff
+    // flags, the phase-reset column, or the warp column), onto `cr` in the
+    // top strip's own coordinates. TWO CALLERS, and one body is what keeps
+    // them drawing the same flags: maybe_rebuild_flag_cache (onto the cached
+    // surface, publishing the staged stash; `hover` null) and paint_flag_hover
+    // (onto the frame, clipped to one hovered unit, publishing nothing).
+    void render_flag_lane(cairo_t* cr, const FlagHoverPaint* hover,
+                          std::vector<FlagHitRect>* out_hit_rects,
+                          std::vector<MarkerStem>* out_stems);
+
+    // THE FLAG HOVER'S OVERLAY (architect 2026-09-29; the rule is at
+    // render.h's FlagHoverPaint): for each unit of AppState::FlagHover whose
+    // fade paints a level, the lane pass re-run over the flag cache's blit,
+    // clipped to that unit's box in the promoted stash, the unit's fill at the
+    // half blend. Called by paint_flag_annotations right after the blit, so it
+    // lies under the open editor's box and every floating surface. Off the
+    // damage it costs nothing (the outer clip), and with no hover it is one
+    // emptiness test.
+    void paint_flag_hover(cairo_t* cr);
+
     // Force a synchronous waveform rebuild + fp_vp_* update for a user-driven
     // viewport jump. Renders into the live surface on the calling (main)
     // thread and publishes the displayed fingerprint immediately, so a
@@ -755,8 +777,9 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-one
-    // view/mode/action buttons since the stepped zoom buttons' removal
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-four
+    // view/mode/action buttons since 2026-09-29's evening, twenty-one from
+    // the stepped zoom buttons' removal
     // 2026-09-25, twenty-three from Follow's return on the evening of
     // 2026-09-23, twenty-two for the hours of that day it was deleted,
     // twenty-three from Zoom In and Zoom Out's restoration

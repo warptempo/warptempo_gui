@@ -202,7 +202,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 
 // `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver the VALUE
-// PAIR also reads — bare `j`'s clipboard copy and Shift+`j`'s jump to the
+// PAIR also reads — bare `j`'s clipboard copy and Ctrl+J's jump to the
 // marker the value came from (resolved_marker_payload; the readout that used
 // to display it retired 2026-08-29).
 // A LABEL REF IS SKIPPED TO THE MARKER BEHIND IT (architect 2026-09-13, the

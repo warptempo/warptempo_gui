@@ -1081,7 +1081,7 @@ void Viewport::follow_scroll_if_needed() {
 //     markers' [earliest, latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
 //     runs the span framer's margin arm on it.
 // NOT READERS, by ruling: bare `c`, the paired march (live and `h`, each step
-// running `c`'s act, 2026-09-26), Shift+J and the A/B audition, which
+// running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition, which
 // centre unconditionally (center_viewport_on_playhead after the working
 // zoom); follow's page-in during playback (follow_scroll_if_needed, which
 // reads the scanner and keeps follow's suspension its own); the nudge's

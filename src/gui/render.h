@@ -1778,10 +1778,12 @@ inline int tab_spill_px() {
 // 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
-// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-ONE view/mode/action buttons since
-// 2026-09-25, when the stepped zoom buttons Zoom In and Zoom Out were removed
-// — still twenty-one across 2026-09-29, Center leaving for the bottom row and
-// Settings arriving behind the padlock,
+// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-FOUR
+// view/mode/action buttons since 2026-09-29's evening, Edit Flag and Copy Value
+// coming up behind Render and Enable Tooltips joining behind the padlock;
+// TWENTY-ONE from 2026-09-25, when the stepped zoom buttons Zoom In and Zoom
+// Out were removed — still twenty-one across 2026-09-29's morning, Center
+// leaving for the bottom row and Settings arriving behind the padlock,
 // twenty-three from the evening of 2026-09-23, when Follow came back after its
 // hours' deletion that day, twenty-three from 2026-09-22, when Zoom
 // In and Zoom Out came back to the zoom group's head hours after the Show trim
@@ -2987,6 +2989,45 @@ struct FlagHitRect {
     double iter_upper_boundary_x = 0.0;
 };
 
+// THE FLAG HOVER (architect 2026-09-29) — PCManFM-Qt's hover shape, subtle: the
+// flag box (or, under grid iterations, the CELL) under a resting pointer paints
+// its FILL as a linear blend, kFlagHoverMix = 50 %, between the fill it paints
+// at rest and the one it would paint selected — each class through its own
+// pair off the one ladder (resolve_flag_face: the default and red classes'
+// rest and bright fills, the disabled blend of either; the `h` view's added and
+// removed pairs, damped the same way) — so a hovered box reads halfway to
+// selected. A unit already painted in its selected pair shows no hover change.
+// The edge, the border, the label, the stem and the lead-in ring never move.
+// THE BLEND RIDES THE BUTTONS' HoverFade (kHoverFadeMs / kHoverFadeSteps,
+// above), in and out, so the painted fill is hover_fade_color over the half
+// blend at the unit's painted level.
+//
+// IT IS PAINT, NEVER A CLAIM (strictly as painted): the hover is resolved from
+// the promoted flag stash (AppState::flag_hit_rects) and changes nothing a
+// press hits. THE OVERLAY IS A RE-RUN OF THE LANE PASS, clipped to the hovered
+// unit's box: GuiPaintHandler::paint_flag_hover (waveform_cache.cpp) paints the
+// same flags in the same store order over the cached surface's blit, so later
+// flags keep covering earlier ones exactly as the cache drew them, and the one
+// thing that differs inside the clip is the hovered unit's fill. The cached
+// surface itself never carries a hover, so a hover edge rebuilds nothing and
+// damages the unit's own box alone. `clip_lo_x` / `clip_hi_x` are the clip's
+// columns, which the pass's cull reads to shape only the flags that can reach
+// the box.
+inline constexpr double kFlagHoverMix = 0.5;
+struct FlagHoverPaint {
+    int        marker_index = -1;   // store index; a diff-flag index in `h`
+    MarkerCell cell         = MarkerCell::Payload;
+    int        level        = 0;    // the painted HoverFade level
+    int        clip_lo_x    = 0;
+    int        clip_hi_x    = 0;
+};
+// The hovered fill: the half blend toward the selected fill, faded in by the
+// unit's painted level through the buttons' one fade blend.
+inline GuiColor flag_hover_fill(GuiColor rest, GuiColor selected, int level) {
+    return hover_fade_color(mix_color(selected, rest, kFlagHoverMix), rest,
+                            level);
+}
+
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
 // have no X11 or event-loop dependencies.
 
@@ -3967,7 +4008,10 @@ void render_flags(cairo_t* cr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
-                  SuppressedBox suppressed = SuppressedBox{});
+                  SuppressedBox suppressed = SuppressedBox{},
+                  // THE FLAG HOVER'S OVERLAY RE-RUN (FlagHoverPaint above):
+                  // null for the cached pass, which never paints a hover.
+                  const FlagHoverPaint* hover = nullptr);
 
 // THE OPEN MARKER-LANE EDITOR'S RESOLVED GEOMETRY, published by
 // render_flag_editor_box and consumed by the pointer path. Every field is
@@ -4187,7 +4231,9 @@ void render_phase_reset_flags(cairo_t* cr,
                             // suppression naming the payload box, that editor
                             // being a warp-column surface by its own open
                             // gates, while the bound editor is both columns'.
-                            SuppressedBox suppressed = SuppressedBox{});
+                            SuppressedBox suppressed = SuppressedBox{},
+                            // The flag hover's overlay re-run, render_flags'.
+                            const FlagHoverPaint* hover = nullptr);
 
 // THE COLOUR A LIVE PHASE RESET'S STEM WEARS, for a surface that must wear it
 // too — the lead-in ring (paint_phase_reset_overlay_ring, paint_handler.cpp,
@@ -4364,7 +4410,10 @@ void render_history_diff_flags(cairo_t* cr,
                                const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,
                                std::vector<MarkerStem>* out_stems,
-                               const std::vector<WarpFrameMapSegment>* warp_frame_map);
+                               const std::vector<WarpFrameMapSegment>* warp_frame_map,
+                               // The flag hover's overlay re-run (a diff flag
+                               // hovers whole — no cells on this lane).
+                               const FlagHoverPaint* hover = nullptr);
 
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical
 // line's payload WHOLE — the tempo's derived base and its every deviation

@@ -22,7 +22,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
     case DialogTrigger::PULL_CONFIRM:
-        // All three are dispatched directly by activate_response, outside
+    case DialogTrigger::DELETE_FOLDER_CONFIRM:
+        // All four are dispatched directly by activate_response, outside
         // proceed.
         break;
     }
@@ -166,6 +167,26 @@ void GuiPrompt::activate_response(char k) {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) input->cancel_history_pull();
+            return;
+        }
+        return;
+    }
+
+    if (trigger == DialogTrigger::DELETE_FOLDER_CONFIRM) {
+        // THE RENDER PLAYER'S DELETE (architect 2026-09-29): `d` Delete runs
+        // the parked folders' removal through the input handler, Escape drops
+        // them. The prompt closes first either way, so the act runs with the
+        // player standing on the ordinary modal state.
+        if (k == 'd') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->confirm_render_player_delete();
+            return;
+        }
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->cancel_render_player_delete();
             return;
         }
         return;

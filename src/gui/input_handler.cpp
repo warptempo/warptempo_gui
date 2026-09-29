@@ -1463,17 +1463,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // THE VALUE PAIR (architect 2026-08-29) — bare `j` copies the FOCUSED
-    // marker's resolved value to the system clipboard, Shift+`j` jumps to the
-    // marker that value came from on the OTHER A/B tab. They took the place of
-    // the retired resolved readout and its Ctrl+C, and they sit here, in the
-    // ordinary dispatch below the read-only gate and below the mode's own
-    // claim, because both are read-only-LEGAL (the allowlist admits them, so
-    // the gate above passes them through) and both are refused in the `h`
-    // view by that view's allowlist, which never names them. Bare- and
-    // shift-exact through the shared predicates (gui_input.h), so these arms
-    // and the allowlist cannot drift; every refusal is the act's own consumed
-    // no-op. The bottom row's Copy resolved value button dispatches both
-    // spellings through here, its plain lift and its shift-click / long press.
+    // marker's resolved value to the system clipboard, CTRL+J (Shift+`j` until
+    // 2026-09-29) jumps to the marker that value came from on the OTHER A/B
+    // tab. They took the place of the retired resolved readout and its Ctrl+C,
+    // and they sit here, in the ordinary dispatch below the read-only gate and
+    // below the mode's own claim, because both are read-only-LEGAL (the
+    // allowlist admits them, so the gate above passes them through) and both
+    // are refused in the `h` view by that view's allowlist, which never names
+    // them. Bare- and ctrl-exact through the shared predicates (gui_input.h),
+    // so these arms and the allowlist cannot drift; every refusal is the act's
+    // own card. The icon row's Copy Resolved Value button dispatches bare `j`
+    // through here at its lift, and the bottom row's Jump to Defining Marker
+    // dispatches Ctrl+J.
     if (is_copy_value_key(key, mods)) {
         copy_focused_marker_value();
         return;
@@ -2866,7 +2867,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // WHO PASSES WHAT, re-grepped 2026-09-26: `c` (run_center_command) states
     // Center; cycle_marker_focus forwards Land from the three live Tab arms
     // and Center from the two steps of the Ctrl+Shift+Tab paired march, each
-    // followed by `c`'s own act. Shift+`j` and the A/B audition reach the
+    // followed by `c`'s own act. Ctrl+J and the A/B audition reach the
     // camera through run_center_command by name and so take its Center with
     // it.
     switch (frame) {
@@ -2917,7 +2918,7 @@ void GuiInputHandler::run_center_command() {
     // run_overview_command), so no caller substitutes and the parameter went.
     //
     // THE FORK IS HERE RATHER THAN AT THE CALLERS because that makes it ONE
-    // decision for all of them: the audition and Shift+`j` are refused inside
+    // decision for all of them: the audition and Ctrl+J are refused inside
     // the mode, while the centre keys' act is reached from both, the live `c`
     // arm and the mode's own `c` claim. One owner, one answer.
     if (app.history_mode.active) {
@@ -4293,4 +4294,14 @@ void GuiInputHandler::set_show_waveform_magnification(bool desired) {
     const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     app.show_waveform_magnification = desired;
     viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
+}
+
+void GuiInputHandler::set_show_tooltips(bool desired) {
+    // The contract — sole writer, per-project, history-less, the dark edge
+    // ending the model whole — is at the declaration (input_handler.h). The
+    // ONE caller is the bare-backslash arm, which the icon row's button
+    // reaches by synthesizing that press.
+    app.show_tooltips = desired;
+    if (desired) return;
+    end_tooltip_hover(/*soft=*/false);
 }
