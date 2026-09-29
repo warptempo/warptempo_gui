@@ -46,19 +46,24 @@
 // generation — so the superseded run's remaining members, and its DONE, can
 // arrive whenever they like and change nothing.
 //
-// CONCURRENCY WITH THE CHECKPOINT WORKER IS ACCEPTED, deliberately and with no
-// mechanism: every call this class makes is a git READ (GuiGitRepo's reads,
-// git_repo.h) and the checkpoint act's stage/commit/push may be running beside
-// it, each thread on its own libgit2 handle. A read that races a mutation sees
-// the repository partway through — an older HEAD, a commit not yet walked — and
-// the answer to that is
-// the RE-WARM rather than a lock: the act's completion kicks a fresh run for
-// every outcome that MAY have committed — two of the five, Committed and
-// CommittedNotPushed — so whatever raced is rebuilt from the
-// settled repository a moment later. That kick SUPERSEDES this run rather than
-// queueing behind it (the generation bump above is the whole mechanism), which
-// is what keeps a scan begun against the pre-commit tip from outliving it. (The `h` entry is refused outright while a
-// checkpoint publishes, so no VIEW can be reading a half-mutated walk either.)
+// CONCURRENCY WITH THE REPOSITORY'S MUTATORS IS ACCEPTED, deliberately and with
+// no mechanism: every call this class makes is a git READ (GuiGitRepo's reads,
+// git_repo.h), and beside it, each on its own libgit2 handle, may run the
+// checkpoint act's fetch / stage / commit / push and the GitHub check's fetch
+// (both on the checkpoint worker), or the pull's checkout, index write and
+// branch move (on the GUI thread). A read that races a mutation sees the
+// repository partway through — an older HEAD, a commit not yet walked — and
+// the answer to that is the RE-WARM rather than a lock: the act's completion
+// kicks a fresh run for every outcome that MAY have committed — two of the
+// eight, Committed and CommittedNotPushed — and the pull kicks one after every
+// ending that wrote the working tree, so whatever raced is rebuilt from the
+// settled repository a moment later. A fetch alone moves no HEAD, so a scan it
+// overlaps reads the history it would have read, and nothing re-warms after
+// the check. That kick SUPERSEDES this run rather than queueing behind it (the
+// generation bump above is the whole mechanism), which is what keeps a scan
+// begun against the old tip from outliving it. (The `h` entry is refused
+// outright while a checkpoint publishes, and the pull closes the view before
+// it kicks, so no VIEW can be reading a half-mutated walk either.)
 class GuiHistoryPrefetch {
 public:
     GuiHistoryPrefetch();
@@ -86,15 +91,16 @@ public:
     // START A FRESH RUN against this source and this projects_repo, superseding
     // whatever is running. Clears the store, bumps the generation.
     //
-    // THREE KICKERS, and the inventory is here because there is nowhere better
-    // (membership re-derived 2026-08-09): the startup load's tail (main.cpp,
-    // once the source has settled), the checkpoint act's completion for every
-    // outcome that MAY have committed (two of the five —
-    // GuiInputHandler::on_history_checkpoint_complete owns that derivation), and
-    // the `h` entry when the store is STALE. All three reach this through
+    // FOUR KICKERS: the startup load's tail (main.cpp, once the source has
+    // settled), the checkpoint act's completion for every outcome that MAY
+    // have committed (two of the eight —
+    // GuiInputHandler::on_history_checkpoint_complete owns that derivation),
+    // the `h` entry when the store is STALE, and the pull after every ending
+    // that wrote the working tree. All four reach this through
     // GuiInputHandler::kick_history_prefetch, whose definition carries the
-    // proof that NONE of the three can fire with an `h` visit standing — the
-    // property a visit needs, its indices naming this store's deque.
+    // inventory, re-derived by grep, and the proof that NONE of them can fire
+    // with an `h` visit standing — the property a visit needs, its indices
+    // naming this store's deque.
     void kick(std::string source_audio_path, std::string projects_repo);
 
     // What a drain did. `members_appended` is how many walk members arrived (0

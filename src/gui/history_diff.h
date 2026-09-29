@@ -1190,8 +1190,9 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // act). No hook runs, so none can refuse or hang one.
 //
 // NothingToCommit — THE CLEAN, IN-SYNC ENDING: the bytes just written are what
-// the branch already carries AND the pre-flight's `##` header reported nothing
-// ahead of the remote. Committed and published already, nothing to do. It is the
+// the branch already carries AND the pre-flight found the branch owing its
+// remote nothing (status_of's `publication_owed`, compare_with_origin's
+// reading). Committed and published already, nothing to do. It is the
 // one clean ending beside Committed and the caller treats the two alike.
 //
 // CommittedNotPushed — THE BYTES ARE IN THE LOCAL BRANCH AND THE PUSH DID NOT
@@ -1268,7 +1269,9 @@ const char* github_status_word(GuiGitHubStatus status);
 
 // THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
 // at every project open and every `h` entry: derive the clone from the source
-// (resolve_history_walk_header, the guard included), read the branch, FETCH
+// through the same three steps resolve_history_walk_header takes
+// (resolve_repo_root_for_source, open_clone_for and the projects-home guard
+// clone_is_projects_home), read the branch, FETCH
 // the branch's one ref from the guard's validated fetch url
 // (GuiGitRepo::fetch_origin — `refs/heads/<branch>` into
 // `refs/remotes/origin/<branch>`), and compare the branch with that ref

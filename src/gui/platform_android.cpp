@@ -510,17 +510,19 @@ GuiPlatform::~GuiPlatform() {
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
 // with no permission granted and the app reads and writes without
-// MANAGE_EXTERNAL_STORAGE, which is exactly what the sync convention mirrors
-// the laptop's `projects/<name>/` into. It is stamped as a LITERAL absolute
+// MANAGE_EXTERNAL_STORAGE — the `projects/` of the tablet's clone of the
+// projects repository, whose root is the external files dir itself (`wts
+// setup` places the clone; the pull and `wts tt`'s audio fill it). It is
+// stamped as a LITERAL absolute
 // path: the config is a file the user may read and edit, and a file that names
 // where the projects are is worth more than one that says "ask the activity".
 // A STATIC THAT READS THE BACKEND'S GLOBAL: this accessor is asked before any
 // GuiPlatform exists (gui_main resolves the config ahead of init()), and the
 // glue's android_app* reaches it only through g_android_app, parked by
 // android_main before gui_main runs — the same road init() takes to adopt the
-// window. No externalDataPath is FATAL rather than a fallback: the whole sync
-// convention lives there and nothing else puts a project on this device, so a
-// template pointing anywhere else could never be right.
+// window. No externalDataPath is FATAL rather than a fallback: the tablet's
+// projects clone and its audio live there and nothing else puts a project on
+// this device, so a template pointing anywhere else could never be right.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale     = 225;

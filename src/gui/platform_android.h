@@ -108,9 +108,10 @@ public:
     // the tablet being spawnable; the key retired whole with the in-app
     // render player, which plays a render through the product's own engine
     // on both devices.) The projects path is the
-    // activity's own absolute path stamped literally — exactly the folder the
-    // sync convention pushes into — and it is read off the backend's one
-    // file-scope pointer (g_android_app), which android_main parks before
+    // activity's own absolute path stamped literally — the `projects/` of the
+    // tablet's projects clone, whose root is the external files dir — and it
+    // is read off the backend's one file-scope pointer (g_android_app), which
+    // android_main parks before
     // gui_main asks; the choice is stated at the definition. The
     // XDG_CONFIG_HOME the config resolves under is pointed at the app's
     // private internal directory by android_main before gui_main runs, beside

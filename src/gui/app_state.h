@@ -8146,7 +8146,8 @@ struct AppState {
     // SAVE, globally, at the one save owner (GuiSaveOps::save). That third one
     // is the bit's only VISIBLE face: the act closes the view and `h` will not
     // reopen one, so the first refusal's grey is structural, while the save
-    // lockout shows as the Save button's "Committing..." wherever the user is.
+    // lockout shows on the Save button wherever the user is: greyed, wearing
+    // the commit glyph (redesign_button_enabled, redesign_button_glyph).
     // Its reason is a real race rather than a policy — the worker writes the
     // three sidecars into projects/<id>/ off the main thread, and in the
     // coincident workflow a concurrent Ctrl+S writes those same paths through
@@ -15507,9 +15508,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // projects/<id>/, every save is refused at the one save owner
         // (GuiSaveOps::save, which states why), so this arm is that refusal's
         // mirror exactly as the read-only terms below mirror the key gate. The
-        // face it produces is the "Committing..." label's own state, and the
-        // per-tick drift comparator (main.cpp) is what repaints the row on both
-        // edges of the bit with no damage call at either.
+        // face it produces is the grey (the commit glyph beside it,
+        // redesign_button_glyph), and the per-tick drift comparator (main.cpp)
+        // is what repaints the row on both edges of the bit with no damage
+        // call at either.
         //
         // AND SAVE'S THIRD TERM IS THE HEAD DELTA, MODE-SCOPED (2026-09-01):
         // inside the `h` view this button IS the Save-and-Commit act, and with

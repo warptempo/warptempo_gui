@@ -11,9 +11,11 @@
 // UNDER THE PROJECTS PATH, one level deep, and the folder's NAME is the
 // project's name ("550 - 1"). `projects_path` is a DEVICE CONFIG key
 // (device_config.h) — the laptop's is the projects clone's `projects/`, the
-// tablet's the app's external files dir's `projects/`, exactly the folder the
-// sync convention pushes into — and this file owns the three questions the
-// model asks of a filesystem and nothing else: what a folder's SOURCE is, which
+// tablet's the app's external files dir's `projects/`, which is its own
+// clone's `projects/`, the clone's root being that dir (placed by `wts
+// setup`, filled by the pull and by `wts tt`'s audio) — and this file owns
+// the three questions the model asks of a filesystem and nothing else: what
+// a folder's SOURCE is, which
 // folders there are, and which one the program opens at startup. It creates
 // nothing and reads no sidecar's CONTENT; the strict readers are the loaders'
 // (file_loader.{h,cpp} and the frozen parser behind it).
@@ -65,8 +67,8 @@
 // already refused a name that fails the grammar.
 //
 // EXTENSIONS COMPARE EXACTLY, lowercase `.wav` and the three sidecar spellings
-// as written: the product's own writers and the sync convention name every
-// file this way, so a `.WAV` is simply not a source, and no case folding or
+// as written: the product's own writers and the projects repository's
+// committed pieces name every file this way, so a `.WAV` is simply not a source, and no case folding or
 // other leniency is offered — strict knowledge required, no fallbacks.
 //
 // WHAT THIS DISSOLVES, recorded because each was an open question once: which

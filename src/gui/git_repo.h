@@ -120,9 +120,13 @@ enum class GuiGitFetch {
 // `Conflict` wrote nothing; the three failures after them stopped with the
 // branch where it was, each at its own step, and the caller's stderr names
 // the recovery for each (run_history_pull): `FilesFailed` — the working tree
-// partly written (step 1 or 2), an unknown subset, the index untouched, so
-// the recovery takes the files back to the index (the checkout is not a
-// cross-file transaction and is not made one, architect 2026-09-28);
+// partly written (step 1 or 2), an unknown subset; a failed step 1 leaves
+// the index untouched, while a step 2 that fails after step 1 succeeded
+// finds the index already carrying step 1's paths (libgit2's checkout writes
+// the index when it succeeds), whose files agree with it; either way the
+// recovery takes the files back to the index and pulls again (the checkout
+// is not a cross-file transaction and is not made one, architect
+// 2026-09-28);
 // `IndexFailed` — the working tree written, the index NOT (step 3: libgit2
 // writes the index through a lock file, so a failed write leaves the old one
 // whole); `BranchFailed` — the working tree and the index written, the branch

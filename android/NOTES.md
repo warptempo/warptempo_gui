@@ -571,8 +571,8 @@ it rather than refused at the tap. Either way a filesystem
 refusal — including the mode-770 one below — carries the system's own words.
 
 The producer is `~/.pc/bash/wts` (personal tooling, outside the repo, the
-architect's to run; its recipe is `~/.pc/distro/tablet/tablet_setup.txt`), three
-verbs since arc 5 (2026-09-27): `wts setup` places the tablet's CLONE of
+architect's to run; its recipe is `~/.pc/distro/tablet/tablet_setup.txt`), four
+verbs: `wts setup` places the tablet's CLONE of
 github.com/warptempo/warptempo_projects — a fresh clone made on the laptop, its
 `.git` and tracked tree pushed so that `<externalDataPath>` is the clone's root
 and `projects/` its pieces — with the clone config the tablet's storage needs
@@ -588,7 +588,9 @@ source `.wav` (audio only); `wts ft` brings the `render/` deliverables home
 (renders only), each wav WITH ITS FINGERPRINT as one pair — both fetched and
 checked before either is published, the laptop's old fingerprint removed
 first, and a tablet wav with no fingerprint deleting the laptop's, which would
-otherwise describe another render. The sidecars
+otherwise describe another render; `wts ot` opens an interactive shell on
+the tablet as the app, in its projects folder or a named piece's, the app
+stopped while the shell stands and started again on exit. The sidecars
 never travel by wts: the app commits, pushes and pulls them (github-recheck.md).
 The `current` file an older wts wrote is read by nothing; `wts setup` deletes
 it with the exported `history/` folders and any `.magnificationlevelmarkers`. Placing a

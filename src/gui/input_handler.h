@@ -764,8 +764,8 @@ struct GuiInputHandler {
     GuiHistoryCommitWorker&  history_commit_worker;
     // THE HISTORY WALK'S PREFETCH STORE (2026-08-07). The `h` visit BINDS to
     // it (GuiHistoryDiff::init) instead of running git itself, and this handler
-    // owns the three kick sites' one funnel — kick_history_prefetch, whose
-    // definition carries the proof that none of the three can fire with a
+    // owns the kickers' one funnel — kick_history_prefetch, whose definition
+    // carries their inventory and the proof that none of them can fire with a
     // visit standing.
     GuiHistoryPrefetch&      history_prefetch;
     GuiPlaybackLifecycle&    playback_lifecycle;
@@ -4414,11 +4414,12 @@ public:
     // -- THE HISTORY PREFETCH'S THREE PUBLIC EDGES (2026-08-07) -------------
     //
     // START A FRESH SCAN of the loaded source's committed history — the ONE
-    // funnel for all three kickers (main.cpp's startup load tail, the
-    // checkpoint completion's re-warm, and the `h` entry's staleness kick),
-    // none of which can fire with a visit standing (the definition carries the
-    // proof, and the deferral bit that stood for the case none of them
-    // produces was deleted producer-less 2026-08-29).
+    // funnel for all four kickers (main.cpp's startup load tail, the
+    // checkpoint completion's re-warm, the `h` entry's staleness kick, and the
+    // pull's re-warm after it wrote the working tree), none of which can fire
+    // with a visit standing (the definition carries the proof, and the
+    // deferral bit that stood for the case none of them produces was deleted
+    // producer-less 2026-08-29).
     void kick_history_prefetch();
     // THE GITHUB CHECK'S ONE DISPATCH (architect 2026-09-27): at every project
     // open (main.cpp's load tail, beside the prefetch kick) and every `h`

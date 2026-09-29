@@ -3016,8 +3016,11 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
     // EACH LATE FAILURE NAMES ITS RECOVERY ON STDERR, none run in-app (a step
     // that just failed on this clone is not retried behind the user's back).
     // FILES FAILED (step 1 or 2) left an unknown subset of the working tree
-    // the upstream's over an untouched index and branch, so the recovery
-    // takes the files BACK to the index: on the laptop `git restore projects`
+    // the upstream's with the branch unmoved — over an untouched index when
+    // step 1 failed, over an index already carrying step 1's paths (libgit2's
+    // checkout writes the index when it succeeds, and those files agree with
+    // it) when step 2 failed after it — so the recovery takes the files BACK
+    // to the index: on the laptop `git restore projects`
     // in the clone and the pull again; on the tablet, which has no terminal,
     // `wts setup` from the laptop re-places the clone. The pull is not made
     // crash-transactional (architect 2026-09-28; github-recheck.md, THE

@@ -1119,7 +1119,7 @@ void GuiInputHandler::close_history_mode() {
 
     // (THE DEFERRED PREFETCH KICK'S FLUSH stood here from 2026-08-07 and is
     // DELETED 2026-08-29 with the bit it read: no route can park one — the
-    // funnel's own comment carries the three kickers' proof — so this was a
+    // funnel's own comment carries the kickers' proof — so this was a
     // flush of a bit nothing could ever set.)
 }
 
@@ -1480,11 +1480,13 @@ void GuiInputHandler::measure_history_head_delta() {
 
 // -- THE PREFETCH'S THREE EDGES (architect 2026-08-07) ----------------------
 
-// START A FRESH SCAN — the ONE funnel, and the one place the deferral lives.
-// Its three kickers, re-derived by grep on this name: main.cpp's startup load
-// tail (once the source has settled), on_history_checkpoint_complete for every
-// outcome that MAY have committed (two of the five — that site owns the
-// derivation), and kick_history_prefetch_if_stale below.
+// START A FRESH SCAN — the ONE funnel. Its five call sites over four
+// kickers, re-derived by grep on this name: main.cpp's startup load tail
+// (once the source has settled), on_history_checkpoint_complete for every
+// outcome that MAY have committed (two of the eight — that site owns the
+// derivation), kick_history_prefetch_if_stale below, and
+// execute_history_pull's two — the Pulled ending and the three late failures
+// that wrote the working tree (FilesFailed / IndexFailed / BranchFailed).
 //
 // IT SUPERSEDES WHATEVER IS RUNNING, and no caller has to ask: the store's kick
 // bumps the generation, clears the queue and replaces the pending run, so a scan
@@ -1492,21 +1494,22 @@ void GuiInputHandler::measure_history_head_delta() {
 // members are dropped by tag. The freshness short-circuit that can DECLINE to
 // kick lives one function down, and only the `h` entry goes through it.
 //
-// NO KICK CAN ARRIVE WHILE THE VIEW STANDS, and the three kickers are the whole
-// proof (re-derived by grep 2026-08-29): the startup load tail runs once with
-// the view down and no way to have opened it; the `h` ENTRY's own
-// kick_history_prefetch_if_stale runs BEFORE `active` goes up, deliberately, so
-// init binds to the fresh generation; and the checkpoint completion's re-warm
-// runs after run_history_commit has already closed the view, which bare `h`
-// then refuses to reopen while the bit stands. (A DEFERRAL BIT stood here from
-// 2026-08-07 to 2026-08-29 for the case none of those three can produce — a
-// kick parked rather than run because a visit is BOUND to the store's
+// NO KICK CAN ARRIVE WHILE THE VIEW STANDS, and the four kickers are the whole
+// proof: the startup load tail runs once with the view down and no way to have
+// opened it; the `h` ENTRY's own kick_history_prefetch_if_stale runs BEFORE
+// `active` goes up, deliberately, so init binds to the fresh generation; the
+// checkpoint completion's re-warm runs after run_history_commit has already
+// closed the view, which bare `h` then refuses to reopen while the bit
+// stands; and both of the pull's kicks run straight after it closes any
+// standing view, on the GUI thread, in the same call. (A DEFERRAL BIT stood
+// here from 2026-08-07 to 2026-08-29 for the case none of the kickers can
+// produce — a kick parked rather than run because a visit is BOUND to the store's
 // generation and a restart would clear the deque its indices name — and it was
 // deleted with its flush at close_history_mode as producer-less, the project's
 // rule for machinery no route reaches. The ARGUMENT it encoded still holds and
 // is why the entry kicker's placement above `active` is load-bearing rather
-// than incidental: a future fourth kicker that could fire under a standing
-// visit has to answer this question again.)
+// than incidental: a future kicker that could fire under a standing visit has
+// to answer this question again.)
 void GuiInputHandler::kick_history_prefetch() {
     history_prefetch.kick(app.source_audio_path, app.projects_repo);
 }
@@ -1522,10 +1525,10 @@ void GuiInputHandler::kick_history_prefetch() {
 // kicked for THIS subject and started against a tip nobody has read yet, so
 // re-kicking it would only restart the scan the entry is about to stream from.
 // THE RUNNING SCAN IS ALWAYS THE NEWEST KICK'S, which is what keeps that
-// shortcut honest across a checkpoint: the completion re-warms through the
-// FUNNEL, which supersedes rather than asking this question, and a kick that
-// arrived while a view stood is flushed at the exit before any later entry can
-// reach this line.
+// shortcut honest across a checkpoint or a pull: the checkpoint's completion
+// and the pull re-warm through the FUNNEL, which supersedes rather than asking
+// this question, and no kick is ever parked for later — none can arrive while
+// a view stands (the funnel's own proof above).
 //
 // THE TIP READ IS A DISCOVERY AND A HEAD READ on this thread, in process — one
 // deriving the clone from the loaded source (2026-08-11: there is no compiled-in
@@ -2679,7 +2682,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             the sentence three other sites already say rather
 //                             than one of its own, while the GLOBAL save lockout
 //                             that DOES show is GuiSaveOps::save's own term,
-//                             mirrored by the "Committing..." face.
+//                             mirrored by the Save button's grey.
 //   - Bare `v`              → THE REVERT ACT, the mode's THIRD admitted mutator
 //                             (architect 2026-08-05, on Ctrl+H until
 //                             2026-09-01) and admitted on the same
@@ -3337,7 +3340,8 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // unlucky: the worker writes the three sidecars into projects/<id>/ off the main
 // thread, and under the project-folder law a concurrent Ctrl+S would write the
 // very same paths through the same fixed temp name. The refusal lives at the one save
-// owner (GuiSaveOps::save) and its face is the Save button's "Committing...".
+// owner (GuiSaveOps::save) and its face is the Save button's grey, the
+// commit glyph on it.
 // THE PRELUDE SAVE BELOW IS EXEMPT BY ORDERING ALONE — it runs before the bit
 // goes up, three statements down — so the act's own save needs no flag and no
 // second entry point.
@@ -3481,24 +3485,28 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // chip was a SLOT that held the repository's last answer; a card is an
 // EVENT, and the user closes it once he has read it, whatever the next act
 // answered (the architect: persistent, the X alone). GuiNotifications owns
-// the card; this is the critical class's one producer.
+// the card; this and the pull's late failure (execute_history_pull) are the
+// critical class's two producers.
 //
-// THE PARTITION, over the act's FIVE verdicts (GuiHistoryCommitOutcome,
+// THE PARTITION, over the act's EIGHT verdicts (GuiHistoryCommitOutcome,
 // history_diff.h, whose contract comment owns what each one means):
 //   THE TWO ENDINGS, AND THEY RAISE NOTHING — Committed (the branch carries
-//   these bytes and the push exited zero) and NothingToCommit (the newest
+//   these bytes and the push succeeded) and NothingToCommit (the newest
 //   checkpoint already carried them and the branch was not ahead of its remote).
 //   Neither is a failure; each says what it has to say on stderr.
-//   THE THREE FAILURES — WriteFailed (nothing reached the repository at all),
-//   CommitFailed (a step refused before anything was published) and
-//   CommittedNotPushed (the bytes are in the local branch and the push did not
-//   land). WHAT EACH ONE MEANS IS THE ENUM CONTRACT'S TO SAY, and it says it
-//   once (GuiHistoryCommitOutcome, history_diff.h) — this end of the wire needs
+//   THE THREE FAILURES — WriteFailed (nothing was committed), CommitFailed (a
+//   step refused before anything was published) and CommittedNotPushed (the
+//   bytes are in the local branch and the push did not land).
+//   THE THREE PRE-COMMIT REFUSALS — RemoteMoved, RemoteUnreachable and
+//   RemoteRefused (the act's fetch-first step, or the guard and HEAD tests
+//   before it, ended the act with the save landed and nothing committed).
+//   WHAT EACH ONE MEANS IS THE ENUM CONTRACT'S TO SAY, and it says it once
+//   (GuiHistoryCommitOutcome, history_diff.h) — this end of the wire needs
 //   only which class each falls in, so the arms are not re-enumerated here.
-//   The texts differ exactly where the
-//   user's next move does, which is why the act distinguishes them at all. They
-//   are SHORT because a card is one line and the detail is already on stderr,
-//   verbatim and unchanged by this arc.
+//   The six non-endings each raise a critical card, and their texts differ
+//   exactly where the user's next move does, which is why the act
+//   distinguishes them at all. They are SHORT because a card is one line and
+//   the detail is already on stderr, verbatim.
 //
 // THERE WERE FOUR FAILURES UNTIL 2026-09-06: `Unconfirmed` said the act could
 // establish neither the content nor the publication, and it existed because the
@@ -3569,8 +3577,9 @@ void GuiInputHandler::on_history_checkpoint_complete(
     // being answered by the very scan it is meant to replace.) The scan's git
     // READS may also have raced this act's mutations — the accepted overlap
     // recorded at GuiHistoryPrefetch — and this kick is what rebuilds whatever
-    // did. The view is normally already closed by now, but the funnel defers
-    // rather than assumes.
+    // did. The view is already closed by now: run_history_commit closed it,
+    // and bare `h` refuses to reopen it while the act is in flight (the
+    // funnel's own proof).
     if (outcome == GuiHistoryCommitOutcome::Committed ||
         outcome == GuiHistoryCommitOutcome::CommittedNotPushed) {
         kick_history_prefetch();
@@ -3580,7 +3589,7 @@ void GuiInputHandler::on_history_checkpoint_complete(
     case GuiHistoryCommitOutcome::Committed:
     case GuiHistoryCommitOutcome::NothingToCommit:
         // THE TWO ENDINGS raise nothing: the checkpoint is committed and the
-        // push exited zero, or there was nothing to do, and a clean ending is
+        // push succeeded, or there was nothing to do, and a clean ending is
         // not an event the user needs a card for (a render's completion is
         // ruled the same way). A failure card standing from an earlier act
         // stands on — it is the user's to close.
