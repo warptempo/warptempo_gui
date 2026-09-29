@@ -189,10 +189,14 @@ void render_waveform(cairo_surface_t* dest,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
                      int outline_px,
+                     int plate_px,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
     if (basis.full_width <= 0) return;
+    if (col0 < 0) return;
+    assert(plate_px >= 1);
+    if (plate_px < 1) return;
     // The lattice step must be numeric and positive; a degenerate zoom refuses
     // here exactly as the old empty-viewport check did.
     if (!(basis.spp > 0.0)) return;
@@ -255,9 +259,16 @@ void render_waveform(cairo_surface_t* dest,
     // adjacent target-view columns may read different levels, a per-column
     // statistics discontinuity — now confined to the one column that reads it,
     // since no segment carries anything into a neighbour. Aesthetic only.
+    //
+    // THE PLATE COLUMN IS A GROUP OF plate_px DEVICE COLUMNS (the rule is at
+    // this function's declaration), and its read is ONE read over the group's
+    // span, so the uniform source-view width is the group's, p x spp — exactly
+    // spp at p = 1, the multiply by 1.0 being exact.
+    const double group_spp =
+        samples_per_pixel * static_cast<double>(plate_px);
     const auto level_for_column = [&](double src_width) {
         return audio.level_for_span(warp_frame_map ? src_width
-                                                   : samples_per_pixel);
+                                                   : group_spp);
     };
 
     const double y_center = area.y + area.h * 0.5;
@@ -279,8 +290,9 @@ void render_waveform(cairo_surface_t* dest,
         return v;
     };
 
-    // Each column is written straight into the plate's pixel words, and a
-    // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
+    // Each plate column (a group of plate_px device columns) is written
+    // straight into the plate's pixel words, and a plate column is ONE HARD
+    // BAR, plate_px wide: its own raw min/max interval, floored to rows and
     // filled inclusively with the opaque ink word (with the lamp lit, the
     // outer bar goes down first and the inner over it, both in the ink word,
     // the inner's outline (outline_px thick) in the outline word — the rule is at this
@@ -350,7 +362,9 @@ void render_waveform(cairo_surface_t* dest,
         px[x] = word;
     };
 
-    // Global column c's display-domain edge, AS THE LATTICE POINT ITSELF:
+    // ABSOLUTE lattice index a's display-domain edge, AS THE LATTICE POINT
+    // ITSELF (a = k0+c for global column c; the loop below asks it at group
+    // ends, a = G*p):
     // g(k0+c) = nearbyint((k0+c)*spp), bit-for-bit the integer
     // clamp_viewport_start's grid() lambda produces. THE QUANTIZE LIVES HERE,
     // once, so every consumer — the loop and the carried-endpoint chain —
@@ -363,8 +377,8 @@ void render_waveform(cairo_surface_t* dest,
     // banker's rounding. The pan invariant held either way (floor of a lattice
     // point is still a pure function of the global index), but the geometry sat
     // off the lattice this contract declares.
-    const auto edge_at = [&](long long c) {
-        return std::nearbyint(static_cast<double>(k0 + c) * samples_per_pixel);
+    const auto edge_at = [&](long long a) {
+        return std::nearbyint(static_cast<double>(a) * samples_per_pixel);
     };
     // Display-domain lattice point -> source frame. `f` arrives INTEGRAL from
     // edge_at, so the size_t cast below is exact, not a second quantization.
@@ -381,13 +395,25 @@ void render_waveform(cairo_surface_t* dest,
                    : f;
     };
 
+    // THE GROUPS THIS CALL DRAWS, anchored to the song (the rule is at this
+    // function's declaration): area column i is absolute lattice index
+    // a_first + i, and group G holds the absolute indices [G*p, G*p + p). The
+    // first and last groups may be cut by the area's sides; each is still read
+    // over its whole span and paints only its columns inside the area. Every
+    // index is non-negative (k0 >= 0, col0 >= 0), so the divisions floor.
+    const long long p       = static_cast<long long>(plate_px);
+    const long long a_first = k0 + static_cast<long long>(col0);
+    const long long g_first = a_first / p;
+    const long long g_last  = (a_first + static_cast<long long>(area.w) - 1) / p;
+
     // THE RUNNING LEFT EDGE in SOURCE frames, and the carried-endpoint chain it
-    // serves: column i's left edge IS column i-1's right edge, so each edge is
+    // serves: group G's left edge IS group G-1's right edge, so each edge is
     // translated through the map once rather than twice. It seeds at the FIRST
-    // DRAWN column's own left edge — the halo column that used to seed it one
-    // step earlier is gone with the segments (the deletion note is at the top of
-    // this function).
-    double g_prev = to_source(edge_at(static_cast<long long>(col0)));
+    // DRAWN group's own left edge (the lattice point of its first absolute
+    // index, which a cut first group puts left of the area) — the halo column
+    // that used to seed it one step earlier is gone with the segments (the
+    // deletion note is at the top of this function).
+    double g_prev = to_source(edge_at(g_first * p));
 
     // THE BAR'S ROWS. The column's tips — its maximum -> top tip, its minimum
     // -> bottom tip, in float rows, never snapped — are clamped to this
@@ -435,7 +461,7 @@ void render_waveform(cairo_surface_t* dest,
 
     // THE LIT INNER BAR: its rows, each written ONCE with the ink word or the
     // outline word (the outline recolours pixels of the bar's own shape and
-    // adds none). THE CONTOUR FROM THE 2t + 1 COLUMNS' EXTENTS, t =
+    // adds none). THE CONTOUR FROM THE 2t + 1 DEVICE COLUMNS' EXTENTS, t =
     // outline_px (the line width, render.h's waveform_line_px, snapshotted on
     // the job), no 2D scan: a row of this bar is INTERIOR iff every row within
     // t above and below it is in this bar (rows [r0 + t, r1 - t]) and it lies
@@ -477,17 +503,21 @@ void render_waveform(cairo_surface_t* dest,
         for (int y = hi + 1; y <= b.r1;  ++y) put(x, y, outline_word);
     };
 
-    // THE LIT INNER BARS' ROWS, one per column of this call, held so the
-    // write pass can read the neighbours within t of every column. Both
-    // callers are full-plate renders, so this call's columns ARE the plate and
-    // its first and last columns' missing neighbours are the plate's side
-    // edges.
+    // THE LIT INNER BARS' ROWS, one per DEVICE column of this call (every
+    // device column of a group holding its group's rows), held so the write
+    // pass can read the neighbours within t of every column. Both callers are
+    // full-plate renders, so this call's columns ARE the plate and its first
+    // and last columns' missing neighbours are the plate's side edges.
     std::vector<BarRows> inner_rows;
     if (gain_or_null) inner_rows.resize(static_cast<size_t>(area.w));
 
-    for (int i = 0; i < area.w; i++) {
-        const long long c  = static_cast<long long>(col0) + i;
-        const double    f1 = edge_at(c + 1);
+    for (long long G = g_first; G <= g_last; ++G) {
+        // The group's device columns inside this call, [i_lo, i_hi): the
+        // whole group but where the area's side cuts it.
+        const int i_lo = static_cast<int>(std::max<long long>(0, G * p - a_first));
+        const int i_hi = static_cast<int>(std::min<long long>(
+            static_cast<long long>(area.w), G * p + p - a_first));
+        const double    f1 = edge_at((G + 1) * p);
         const double    g0 = g_prev;
         const double    g1 = to_source(f1);
 
@@ -498,8 +528,8 @@ void render_waveform(cairo_surface_t* dest,
         const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
 
-        // LIT: THE OUTER, the column's raw extremes times the curve's gain at
-        // the column's centre source frame and the expander's largest
+        // LIT: THE OUTER, the group's raw extremes times the curve's gain at
+        // the group's centre source frame and the expander's largest
         // multiplier over the working columns [s0, s1) spans; THE INNER, the
         // same extremes times the inner scale (the compressor's times the
         // foreground gain's half) at the same frame and the same multiplier. Each is clamped to the sample domain [-1, 1]
@@ -513,30 +543,32 @@ void render_waveform(cairo_surface_t* dest,
         // DARK: the raw bar at scale 1.0, where the clamp is a no-op (raw
         // peaks already rest in range), written here in the plate's ink, so
         // the dark plate is the plate this writer always drew.
+        // THE GROUP'S BAR goes to each of its device columns in the area.
         if (gain_or_null) {
             const int64_t centre = (s0 + s1) / 2;
             const double e = static_cast<double>(
                 waveform_expander_multiplier_over(*gain_or_null, s0, s1));
             const double outer = waveform_gain_at(*gain_or_null, centre) * e;
             const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
-            fill_bar(area.x + i,
-                     bar_rows(magnified_tip(mm.first, outer),
-                              magnified_tip(mm.second, outer)),
-                     ink_word);
-            inner_rows[static_cast<size_t>(i)] =
-                bar_rows(magnified_tip(mm.first, inner),
-                         magnified_tip(mm.second, inner));
+            const BarRows outer_rows = bar_rows(magnified_tip(mm.first, outer),
+                                                magnified_tip(mm.second, outer));
+            const BarRows inner_bar  = bar_rows(magnified_tip(mm.first, inner),
+                                                magnified_tip(mm.second, inner));
+            for (int i = i_lo; i < i_hi; ++i) {
+                fill_bar(area.x + i, outer_rows, ink_word);
+                inner_rows[static_cast<size_t>(i)] = inner_bar;
+            }
         } else {
-            fill_bar(area.x + i,
-                     bar_rows(magnified_tip(mm.first, 1.0),
-                              magnified_tip(mm.second, 1.0)),
-                     ink_word);
+            const BarRows raw_rows = bar_rows(magnified_tip(mm.first, 1.0),
+                                              magnified_tip(mm.second, 1.0));
+            for (int i = i_lo; i < i_hi; ++i)
+                fill_bar(area.x + i, raw_rows, ink_word);
         }
 
         g_prev = g1;
     }
 
-    // THE LIT WRITE PASS, per column: the inner's fill and outline over the
+    // THE LIT WRITE PASS, per device column: the inner's fill and outline over the
     // outer the loop above wrote — replace-writes, so where the two overlap
     // the inner wins, as it always has.
     if (gain_or_null) {
@@ -582,7 +614,12 @@ void render_playhead(cairo_t* cr,
     // tablet (q = 23), and under half a pixel at every waveform width, the
     // deepest-zoom floor holding q >= 20 (0.475 px; kDeepestZoomMinFramesPerPx,
     // app_state.h). Reading the bar as [g(c) − spp/2, g(c) + spp/2) is the
-    // alternative that was declined.
+    // alternative that was declined. The plate column p device columns wide
+    // (waveform_plate_column_px, 2026-09-29) widens the bar, not the point:
+    // the bar under the line is its song-anchored group's, [g(Gp), g(Gp + p)),
+    // which holds the point anywhere from its first grid step to its last, and
+    // a line not aligned to the groups straddles two bars; every landing still
+    // rides the point.
     const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
     cairo_save(cr);
