@@ -2,7 +2,7 @@
 
 #include "active_views.h"
 #include "app_state.h"
-#include "gui_input.h"          // kHoldBeatMs, the product's one beat — the
+#include "gui_input.h"          // kHoldBeatMs, the product's fixed beat — the
                                 // tap-coalesce window below IS it
 #include "playback_lifecycle.h"
 #include "selection.h"
@@ -131,7 +131,7 @@ enum class GestureKind {
 // neither is what the value is: nothing here reads a compositor setting, and
 // the held-key arm still consults no clock.
 //
-// IT IS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE BEAT — 575 ms, the
+// IT IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 575 ms, the
 // architect's own labwc <repeatDelay> matched by convention (architect
 // 2026-08-28: "increase the coalesce wait to 575 ms, the global wait time for
 // long press, key repeat, etc."). It was its own 500 from 2026-08-01 until
@@ -141,7 +141,10 @@ enum class GestureKind {
 // to arrive inside — so the product asks the hand for ONE cadence rather than
 // for a number per surface. The beat's own declaration carries the readers'
 // one inventory and lists this window apart from the holds, as it lists the
-// double-click window: this is not a hold.
+// double-click window: this is not a hold, and so it STAYS ON THE CONSTANT
+// when the device's `hold_delay_ms` retunes the holds (architect
+// 2026-09-29: a window measures the gap between two presses, not a hand
+// resting on a thing until it changes meaning).
 inline constexpr long long kTapCoalesceMs = kHoldBeatMs;
 
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.

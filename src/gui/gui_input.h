@@ -78,73 +78,94 @@ namespace GuiKeys {
 // exactly as it would for a physical BTN_LEFT device.
 constexpr GuiKey kLeftClickKey = GuiKeys::E;
 
-// THE PRODUCT'S ONE HOLD-BEAT DURATION — how long any deliberate hold must
-// rest before it crosses into its held meaning, and THE ONE CADENCE THE HAND
-// IS ASKED FOR ANYWHERE. This is the readers' one inventory, re-derived from
-// the tree rather than inherited:
-//   * the chrome roster's shift long press (kChromeShiftHoldMs, app_state.h),
-//     which the RENDER PLAYER'S MODAL ROW joined 2026-08-28 (R37) — its two
-//     skips admit a modified press, so their long press reaches the same twin
-//     a shift-click does, one constant and one term;
-//   * the touch pan zone's region hold (kTouchRegionHoldMs, input_core.cpp);
-//   * the hold-repeating buttons' FIRST fire (input_pointer.cpp's arm, where
-//     every LATER fire is the compositor's advertised repeat interval);
-//   * the Android backend's key-repeat DELAY (platform_android.cpp — the one
+// THE PRODUCT'S FIXED BEAT, AND THE HOLD DELAY'S DEFAULT (architect
+// 2026-09-29) — 575 ms. Until that day this was THE ONE HOLD BEAT every
+// cadence in the product read; the day split its readers by WHAT THEY
+// MEASURE, and this is their one inventory, re-derived from the tree rather
+// than inherited.
+//
+// THE HOLDS READ THE DEVICE'S HOLD DELAY, NOT THIS CONSTANT. A hold is the
+// hand resting on a thing until the rest crosses into a held meaning, and how
+// long that takes is a fact about the hand on the device, so it is the device
+// config's `hold_delay_ms` (an integer in [100, 2000], the range's owner
+// is_hold_delay_ms, device_config.h). Its one installed value is
+// set_hold_delay_ms / hold_delay_ms (render.h), installed at gui_main's
+// startup beside set_gui_scale_percent and at the settings editor's
+// `hold_delay_ms=` commit (GuiInputHandler::apply_hold_delay_ms), and it has
+// THREE READERS:
+//   * THE HOVER TOOLTIP'S DWELL (tooltip_delay_ms, render.h) — how long a
+//     pointer must REST before the hint appears. It is the long press's
+//     clock too, one value for both: a HELD button is a resting pointer — on
+//     glass a long press is a held finger and the dwell elapses under it — so
+//     the tooltip's appearance is the moment the hold has been long enough
+//     for the shift-modified act, and the cue to release is the hint itself,
+//     which is why THE HOLD'S OWN STAMP FEEDS THE DWELL on the one surface
+//     where both run at once: an admitted roster press seeds the dwell from
+//     the press's clock (GuiInputHandler::seed_roster_tooltip_dwell), so the
+//     hint is raised as the hold is crossed rather than a loop interval
+//     later. Nothing else couples them — neither resets or suppresses the
+//     other, and the dwell is still the pointer's own on every surface with
+//     no press on it. (It carried its own 700 until 2026-09-11.)
+//   * THE CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at
+//     both of its read sites — the roster lift and the RENDER PLAYER'S MODAL
+//     ROW, which joined 2026-08-28 (R37): its two skips admit a modified
+//     press, so their long press reaches the same twin a shift-click does,
+//     one value and one term;
+//   * THE TOUCH PAN ZONE'S REGION HOLD (GuiInputCore's touch_region_hold_ms_,
+//     input_core.cpp), which sits below the GUI model and takes the value
+//     PUSHED DOWN at the same two points (set_touch_region_hold_ms, whose
+//     declaration carries the push inventory).
+// This constant is that key's DEFAULT (kHoldDelayMsDefault, device_config.h,
+// both backends' templates stamping it) and the construction state of the
+// installed value and of the core's member, so a device that never edits the
+// key holds exactly as the product always did.
+//
+// THE CADENCES STAY ON THIS CONSTANT, DECOUPLED FROM THE KEY (architect
+// 2026-09-29): each measures the gap between presses or the pace of a stream
+// of repeats, and none is a hand resting on a thing until it changes meaning,
+// which is what the key tunes. FOUR READERS:
+//   * THE DOUBLE-CLICK WINDOW (kDoubleClickMs, app_state.h), since
+//     2026-08-27 — the interval a deliberate SECOND TAP has to arrive inside;
+//   * THE UNDO TAP-COALESCE WINDOW (kTapCoalesceMs, undo.h), since
+//     2026-08-28 — the interval a deliberate SECOND PRESS of the same
+//     authoring key has to arrive inside to land in the burst's existing undo
+//     entry instead of opening its own. It carried its own 500 from
+//     2026-08-01 until the architect tied it to the beat ("the global wait
+//     time for long press, key repeat, etc."), and the properties that made
+//     it its own number are untouched by the move: it gates the TAP arm
+//     alone, and the held-key arm beside it consults no clock at all;
+//   * THE HOLD-REPEATING BUTTONS' FIRST FIRE (input_pointer.cpp's arm, on
+//     both devices, where every LATER fire is the compositor's advertised
+//     repeat interval) — a repeat delay, the first beat of a stream;
+//   * THE ANDROID BACKEND'S KEY-REPEAT DELAY (platform_android.cpp — the one
 //     place the paragraph below does not reach, because that platform
-//     advertises no delay to ask for; the ruling is at that site);
-//   * and, since 2026-08-27, the DOUBLE-CLICK WINDOW (kDoubleClickMs,
-//     app_state.h), which is NOT a hold and is listed apart for that reason:
-//     it is the interval a deliberate SECOND TAP has to arrive inside, tied to
-//     this beat so the product asks the hand for one cadence and not two;
-//   * and, since 2026-08-28, THE UNDO TAP-COALESCE WINDOW (kTapCoalesceMs,
-//     undo.h), which is not a hold either and joins the double-click apart
-//     from the holds for the same reason: it is the interval a deliberate
-//     SECOND PRESS of the same authoring key has to arrive inside to land in
-//     the burst's existing undo entry instead of opening its own. It carried
-//     its own 500 from 2026-08-01 until the architect tied it to the beat
-//     ("the global wait time for long press, key repeat, etc."), and the
-//     properties that made it its own number are untouched by the move: it
-//     gates the TAP arm alone, and the held-key arm beside it consults no
-//     clock at all.
-//   * and, since 2026-09-11, THE HOVER TOOLTIP'S DWELL (kTooltipDelayMs,
-//     render.h), which is not a hold of the hand's at all and is listed with
-//     the two windows above for that reason: it is how long a pointer must
-//     REST before the hint appears. It joins the beat because a HELD button
-//     is a resting pointer — on glass a long press is a held finger and the
-//     dwell elapses under it — so the tooltip's appearance is the moment the
-//     hold has been long enough for the shift-modified act, and the cue to
-//     release is the hint itself — which is why THE HOLD'S OWN STAMP FEEDS THE
-//     DWELL on the one surface where both run at once: an admitted roster
-//     press seeds the dwell from the press's clock
-//     (GuiInputHandler::seed_roster_tooltip_dwell), so the hint is raised as
-//     this beat is crossed rather than a loop interval later. Nothing else
-//     couples them — neither resets or suppresses the other, and the dwell is
-//     still the pointer's own on every surface with no press on it. It
-//     carried its own 700 until then.
-// So a keyboard hold, a chrome shift hold, a touch region hold, a held
-// button's first repeat, a double tap, a re-tapped nudge and a hover dwell all
-// land on the same beat rather than on numbers that happen to be near each
-// other.
+//     advertises no delay to ask for; the ruling is at that site).
+// So at the default a keyboard hold, a chrome shift hold, a touch region
+// hold, a held button's first repeat, a double tap, a re-tapped nudge and a
+// hover dwell all land on the same beat; a retuned hold delay moves the three
+// holds together and leaves the four cadences where they are.
 //
 // 575 ms BY CONVENTION WITH THE COMPOSITOR'S KEY-REPEAT DELAY, matched
 // DELIBERATELY and not by coincidence: it is the architect's own labwc
 // <repeatDelay>, so the beat the hand already knows from every held key on
-// the desktop is the beat this program's own holds use.
+// the desktop is the beat this program's own cadences use, and the holds'
+// default.
 //
 // THE KEYBOARD'S OWN DELAY IS NOT THIS CONSTANT AND NEVER SHOULD BE WHERE THE
 // PLATFORM ADVERTISES ONE. Key repeat arrives from the compositor through
 // wl_keyboard.repeat_info and reaches the input core through set_repeat_info,
 // so it tracks the user's desktop setting and moves with every other
 // application if that setting is ever edited. This constant is the number OUR
-// gesture holds use to agree with it — hard-coding the key delay to match
+// cadences use to agree with it — hard-coding the key delay to match
 // would be the one place the product fights the desktop, and it would buy
 // nothing, because the two numbers already agree. (Android advertises no delay
 // at all to a native activity, which is why the inventory above lists it as a
 // reader there: a fallback where there is nothing to track, not a second
-// opinion about a setting that exists.)
+// opinion about a setting that exists.) The laptop's key repeat stays the
+// compositor's whatever the hold delay is.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale
-// has nothing to say about it.
+// has nothing to say about it — nor about the hold delay.
 constexpr int kHoldBeatMs = 575;
 
 // THE NOTIFICATION CARD'S LIFE (architect design 2026-08-29): a NORMAL card

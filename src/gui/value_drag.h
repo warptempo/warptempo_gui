@@ -96,10 +96,12 @@ struct ValueDragOps {
           undo(undo_),
           target_render(target_render_) {}
 
-    // Begin the drag on `marker`'s `cell` at the press's window y. False when
-    // the target rule refuses (or the index has gone stale), and nothing is
-    // written on that path — the caller drops the gesture.
-    bool begin(int marker, MarkerCell cell, int press_y);
+    // Begin the drag on `marker`'s `cell`, its travel counted from `origin_y`
+    // — the window y of the motion that crossed the grab gate, never the
+    // press's (ValueDragState::origin_y). False when the target rule refuses
+    // (or the index has gone stale), and nothing is written on that path —
+    // the caller drops the gesture.
+    bool begin(int marker, MarkerCell cell, int origin_y);
     // One motion event's whole effect. Cheap and idempotent inside a step.
     void apply_motion(int mouse_y);
     // End the gesture, pushing the tempo arm's one undo entry iff the

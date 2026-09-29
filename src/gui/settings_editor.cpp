@@ -144,11 +144,12 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // the surface could not see is that the same editor authors the per-device
 // keys, which belong to no piece (device_config.h: no undo, no dirty, no
 // Ctrl+S), so a locked tab killed the one road to `projects_path`,
-// `projects_repo` and the scale (and now the waveform cap) — and on the tablet the menu
+// `projects_repo` and the scale (and now the waveform cap and the hold
+// delay) — and on the tablet the menu
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the red flash every other refusal there wears, while commit_device_setting's
-// three keys and the `gui_scale` arm commit regardless. So every Settings
+// four keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
 //
@@ -283,10 +284,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other three editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, and since 2026-09-13
-    // max_waveform_height — take their one direct-set body in commit(),
-    // commit_device_setting, ahead of this router.)
+    // move. (The other four editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-09-13 max_waveform_height and
+    // since 2026-09-29 hold_delay_ms — take their one direct-set body in
+    // commit(), commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -673,9 +674,10 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The three device keys other than the scale — one body, ahead of the
+    // 2. The four device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
-    //    rest, max_waveform_height's live relayout included).
+    //    rest, max_waveform_height's live relayout and hold_delay_ms's live
+    //    apply included).
     if (commit_device_setting(key, value)) return;
 
     // 3a. GUI-kind keys. Every key that can appear in a `.settings` file is
@@ -896,7 +898,7 @@ void GuiSettingsEditor::commit() {
     target_render.trigger();
 }
 
-// THE THREE DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
+// THE FOUR DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
 // a direct-set arm here since it was a `.settings` key — free text, no undo
 // history, no dirty tracking, the settings editor its sole authoring surface
 // — and since 2026-08-27 it is a DEVICE preference: ONE user has ONE
@@ -927,7 +929,16 @@ void GuiSettingsEditor::commit() {
 // GuiInputHandler::apply_max_waveform_height, the live relayout (install,
 // whole-window damage, the resize path). Not a path key, so no Tab completion.
 //
-// WHEN EACH IS IN FORCE. `max_waveform_height`: at once, by that relayout. `projects_repo`: at once — every reader reads
+// hold_delay_ms JOINED 2026-09-29 (architect) as the body's second INTEGER
+// key, the cap's arm over its own grammar (parse_authored_frame, then
+// is_hold_delay_ms), past the write handing the value to
+// GuiInputHandler::apply_hold_delay_ms — the renderer's install and the
+// input core's region-hold push. It changes nothing on screen at the commit;
+// the next hold is the first to read it.
+//
+// WHEN EACH IS IN FORCE. `max_waveform_height`: at once, by that relayout.
+// `hold_delay_ms`: at once, from the next tooltip dwell, shift long press or
+// region hold on. `projects_repo`: at once — every reader reads
 // `app.projects_repo`, the live field, whose source moved 2026-08-27 and whose
 // readers did not (an empty value simply never matches any remote, which
 // disables the GitHub recheck). `projects_path`: FOR THE NEXT OPEN PROJECT AND THE
@@ -1003,6 +1014,27 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         (void)persist();
         applied();
         input->apply_max_waveform_height(v);
+        return true;
+    }
+    if (key == "hold_delay_ms") {
+        // The cap's arm exactly, over the hold delay's own grammar
+        // (is_hold_delay_ms), its live apply the installer and the core push
+        // (apply_hold_delay_ms) in place of a relayout.
+        int64_t v64 = 0;
+        if (!parse_authored_frame(value, v64) || !is_hold_delay_ms(v64)) {
+            reject(kHoldDelayMsGrammarReason);
+            return true;
+        }
+        // Range-checked above, so the narrowing to int is exact.
+        const int v = static_cast<int>(v64);
+        if (v == app.device_config->hold_delay_ms) {
+            unchanged();
+            return true;
+        }
+        app.device_config->hold_delay_ms = v;
+        (void)persist();
+        applied();
+        input->apply_hold_delay_ms(v);
         return true;
     }
 

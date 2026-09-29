@@ -28,18 +28,23 @@ namespace {
 // told one finger from two there — 60 ms, the eighth ruling's "as before" —
 // has no producer and is gone with its window.
 //
-// kTouchRegionHoldMs is the PAN ZONE's own stretched window — the
+// touch_region_hold_ms_ is the PAN ZONE's own stretched window — the
 // REGION-HOLD BEAT (the eighth glass ruling, 2026-08-12: pan is the common
 // act and takes the primary drag, so the region is the deliberate act —
 // "region select to be hold and then drag because the pan is way more
 // common"). A down on the navigation surface runs its window to this
 // deadline, and the EXPIRY there is the REGION HOLD: the region former armed
 // through the region hooks, so hold-then-drag sweeps a region on glass. The
-// duration is kHoldBeatMs (gui_input.h), the product's ONE hold beat, matched
-// by convention with the compositor's key-repeat delay, so it is a beat the
-// hand already knows from every held key on the desktop (that declaration
-// carries the readers' inventory) — and it is long past any
-// aimed drag's natural dwell, the lesson
+// duration is NO LONGER A CONSTANT HERE either (2026-09-29): it is the
+// device's HOLD DELAY (the device config's `hold_delay_ms`), which this layer
+// cannot read, so it is a settable member pushed down like the slop
+// (set_touch_region_hold_ms, input_core.h, where the contract and the two
+// push sites are) and born at kDefaultTouchRegionHoldMs, kHoldBeatMs
+// (gui_input.h), the key's default — matched by convention with the
+// compositor's key-repeat delay, so at the default it is a beat the hand
+// already knows from every held key on the desktop (that declaration carries
+// the readers' inventory) — and at any value the key admits it is long past
+// any aimed drag's natural dwell, the lesson
 // of the dead kTouchTrimHoldMs (the trim band's hold-a-beat deadline of
 // 2026-08-11, whose first cut rode the 60 ms window and turned every
 // deliberate band drag into the trim move; that GESTURE stayed dead — this
@@ -63,7 +68,7 @@ namespace {
 // caret drag. That is what keeps a resting finger out of the desk's
 // selection sweep — the field's contact can no longer expire onto the
 // pointer road at all — while a slow tap still opens a double tap.
-constexpr int    kTouchRegionHoldMs   = kHoldBeatMs;
+//
 // The deadline a window that must never expire carries: no monotonic reading
 // can reach it, so maybe_resolve_touch_window's one time compare is the whole
 // mechanism and no second predicate exists to drift from it.
@@ -1175,7 +1180,7 @@ void GuiInputCore::resolve_touch_window_to_single_nav() {
 void GuiInputCore::resolve_touch_window_to_region() {
     // Pending -> Region (the eighth glass ruling's on-zone expiry; contract
     // at the declaration): the hold resolved on the pan zone at the
-    // kTouchRegionHoldMs beat, so the finger now DRIVES THE REGION FORMER
+    // touch_region_hold_ms_ beat, so the finger now DRIVES THE REGION FORMER
     // through the region hooks and NOTHING pointer-shaped starts — no entry
     // motion, no press, the touch hold never raised (the single-nav model,
     // not the Pointer one). The begin fires at the DOWN point — the former's
@@ -1426,7 +1431,8 @@ void GuiInputCore::touch_down(int32_t id, double x, double y,
                                                containing_pixel(y))
                     : GuiTouchEditorField::Outside;
             // THE DEADLINE: ON the zone the window runs to the REGION-HOLD
-            // beat (kTouchRegionHoldMs, the product's one hold beat); IN AN
+            // beat (touch_region_hold_ms_, the device's hold delay pushed
+            // down); IN AN
             // OPEN EDITOR'S FIELD it runs to NOTHING (kTouchWindowNoExpiry —
             // the field has no hold meaning, so a motionless finger stays
             // Pending and its lift is the tap that seeds the double tap; the
@@ -1442,7 +1448,7 @@ void GuiInputCore::touch_down(int32_t id, double x, double y,
                 touch_down_in_editor_field_ == GuiTouchEditorField::Field
                     ? kTouchWindowNoExpiry
                     : gui_monotonic_us() +
-                          static_cast<uint64_t>(kTouchRegionHoldMs) * 1000ull;
+                          static_cast<uint64_t>(touch_region_hold_ms_) * 1000ull;
             // THE ON-CONTACT RESOLUTIONS — the third clause (content acts the
             // moment its identity is certain), twice:
             //   * THE DOUBLE PRESS (2026-09-05). A down inside the editor's

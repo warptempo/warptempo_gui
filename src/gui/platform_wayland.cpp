@@ -699,6 +699,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // carried until the key replaced it (is_max_waveform_height,
     // device_config.h); the same on both templates, gui_scale doing the rest.
     cfg.max_waveform_height = 500;
+    // The hold delay's default, the product's fixed beat (kHoldDelayMsDefault,
+    // device_config.h) — the same on both templates.
+    cfg.hold_delay_ms = kHoldDelayMsDefault;
     if (const char* home = std::getenv("HOME"); home && home[0]) {
         cfg.projects_path =
             std::string(home) + "/.warptempo/warptempo_projects/projects";
@@ -3298,6 +3301,7 @@ void GuiPlatform::set_touch_nav_hooks(
 }
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
+void GuiPlatform::set_touch_region_hold_ms(int ms)          { input_.set_touch_region_hold_ms(ms); }
 void GuiPlatform::set_capture_restore_x(double surface_x)   { input_.set_capture_restore_x(surface_x); }
 void GuiPlatform::clear_capture_restore_x()                 { input_.clear_capture_restore_x(); }
 void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) { input_.set_capture_restore_kind(kind); }

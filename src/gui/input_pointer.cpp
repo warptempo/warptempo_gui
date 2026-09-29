@@ -127,8 +127,10 @@ struct ToolbarChord {
     // explicit what was already true: glass reaches no rung of a repeating
     // button's modifier ladder). A `repeats` row's long press IS ITS REPEAT,
     // never its shift: the hold that would read as Shift on a non-repeating
-    // shift-admitting button (kChromeShiftHoldMs) is the burst's first fire
-    // here, measured on the same beat, so the lift's hold-as-shift term reads
+    // shift-admitting button (chrome_shift_hold_ms(), the hold delay) is the
+    // burst's first fire here (at kHoldBeatMs, the fixed beat — the two
+    // numbers coincide at the key's default and need not), so the lift's
+    // hold-as-shift term reads
     // `!tc.repeats` off this column (finish_chrome_press_release) and the
     // burst's chord never carries a held shift (arm_redesign_press). A
     // repeating button's shifted act is therefore plastic-only — a real
@@ -359,7 +361,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // AND IT ADMITS SHIFT, alone in this group: its twin is CTRL+SHIFT+F,
     // which COLLAPSES those
     // terms into their one sum instead of removing them — so a shift-click or
-    // a LONG PRESS at kChromeShiftHoldMs reaches the second act with no
+    // a LONG PRESS at chrome_shift_hold_ms() reaches the second act with no
     // keyboard. The row's own `shift` bit stays FALSE, the admission and the
     // table bit being mutually exclusive by the shift term's construction
     // (finish_chrome_press_release); the membership is
@@ -530,8 +532,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the marker, typing the tempo in the editor — do not cover it.
     //
     // THE CADENCE IS THE KEYBOARD'S, not a constant of this table's: the first
-    // fire one kHoldBeatMs after the press (the product's ONE hold beat, so the
-    // button hold and the key hold cross their threshold on the same beat) and
+    // fire one kHoldBeatMs after the press (the product's FIXED beat — never
+    // the device's hold delay, a repeat delay being a cadence and not a hold —
+    // so the button hold and the key hold cross their threshold on the same
+    // beat) and
     // every later fire at THE COMPOSITOR'S OWN advertised key-repeat interval,
     // read per fire — a desktop with key repeat switched off gets no button
     // repeat either. The burst rides the armed ChromePress and its whole edge
@@ -639,7 +643,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // AND IT ADMITS SHIFT: its twin is SHIFT+`j`, THE JUMP to the marker that
     // value came from, on the other A/B tab — so a shift-click or a LONG PRESS
-    // at kChromeShiftHoldMs puts a reference and its definition one Ctrl+Tab
+    // at chrome_shift_hold_ms() puts a reference and its definition one Ctrl+Tab
     // apart with no keyboard, which is the whole reason the admission exists
     // on glass. The row's own `shift` bit stays FALSE, the admission and the
     // table bit being mutually exclusive by the shift term's construction
@@ -3623,7 +3627,7 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
 
 // THE SHIFTED-TWIN VERDICT for the arm as it stands (R37) — the roster lift's
 // own term over this surface: the CARRIED press-time shift ORed with a press
-// HELD past kChromeShiftHoldMs, so a physical Shift+click and a long press
+// HELD past chrome_shift_hold_ms(), so a physical Shift+click and a long press
 // reach the same dispatch and holding a shift-clicked button changes nothing.
 // It is measured at the LIFT against the arm's own stamp — no timer, no tick —
 // and it asks nothing about WHICH button: the dispatch reads it only where
@@ -3634,7 +3638,7 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
 bool GuiInputHandler::modal_dialog_press_shifted() const {
     if (app.modal_dialog_pressed < 0) return false;
     return app.modal_dialog_press_shift ||
-           monotonic_ms() - app.modal_dialog_press_ms >= kChromeShiftHoldMs;
+           monotonic_ms() - app.modal_dialog_press_ms >= chrome_shift_hold_ms();
 }
 
 // A dialog button's RELEASE: the act runs iff the lift lands on the SAME
@@ -4673,8 +4677,9 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     if (!press.armed) return;
     if (!press.scrolling) {
-        // THE DRAG GATE, the product's one crossing threshold, spelled here
-        // exactly as at every other pending press: CHEBYSHEV from the press
+        // THE DRAG GATE, the sweeps' and pans' crossing threshold (a flag and
+        // the trim bar, the grab surfaces, read twice it), spelled here as at
+        // every other pending press: CHEBYSHEV from the press
         // (max(|dx|,|dy|)) against drag_moved_threshold_px() — 8 authored px
         // through scaled_px, the touch slop's own number — and the crossing is
         // `>=`, not `>`, because the core resolves a touch into a drag at `>=`
@@ -7054,11 +7059,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // THE TRIM-BAR FRAMING DOUBLE-CLICK'S SEED, resolved for every left release
     // because only the release can tell a click from a drag. The press recorded
     // the trim-bar point (TrimBarPressSeed); this seeds the candidate when the
-    // pointer never left the slack AND no trim drag went live — the two spellings
-    // of "it stayed a click", equal by construction AT EVERY gui_scale
-    // (double_click_slack_px() == drag_moved_threshold_px(): equal authored
-    // constants through the one scaled_px conversion — the contracts are at the
-    // two accessors, app_state.h). A moved endcap/bridge drag therefore seeds nothing
+    // pointer never left the slack AND no trim drag went live. THE SLACK IS
+    // THE STRICTER CLAUSE since 2026-09-29: it is the drag gate's length
+    // (double_click_slack_px() == drag_moved_threshold_px()) while the trim
+    // bar crosses into its drag at grab_moved_threshold_px(), twice it, so a
+    // release inside the slack never follows a crossing, and a click that
+    // rolled between the two is still a click (its act ran or will run as
+    // one) that simply seeds no framing double-click — the contracts are at
+    // the accessors, app_state.h. A moved endcap/bridge drag therefore seeds nothing
     // and, its own press having cleared any candidate at the top-of-frame, leaves
     // none behind. The record is consumed either way.
     {
@@ -7759,7 +7767,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // The walk above covers the whole roster either way: a newly hovered
     // one stamps the clock, and moving between two of them hides and re-stamps,
     // so a fresh dwell begins on each arrival. The run
-    // loop's tick compares the stamp against kTooltipDelayMs and flips
+    // loop's tick compares the stamp against tooltip_delay_ms() and flips
     // `visible` — no timer is created and nothing here decides visibility.
     //
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT, and this refusal
@@ -7816,7 +7824,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // ONE PAINT: the frame that repaints the player's row republishes the
     // stash, paint_shift_tooltip refuses the mismatch on that same frame, and
     // this walk's hide lands on the tick after it — ahead of the dwell's
-    // kTooltipDelayMs, so no hint of the wrong surface is ever painted.
+    // tooltip_delay_ms(), so no hint of the wrong surface is ever painted.
     // Under the veil `hovered_tip` is -1 by construction (the veil and the
     // no-dwell rule above), so the veil needs no branch of its own: it was
     // this same rule written twice until 2026-09-25. Under the FOLDER
@@ -8060,7 +8068,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // admission is asked here — an unadmitted ctrl press never reaches this
         // body. THE
         // PRESS'S CLOCK IS STAMPED HERE, unconditionally: the lift measures the
-        // hold against kChromeShiftHoldMs to decide the SHIFT LONG PRESS, and
+        // hold against chrome_shift_hold_ms() to decide the SHIFT LONG PRESS, and
         // the stamp is taken for every button rather than for the
         // shift-admitting ones alone (redesign_button_shift_admits owns that
         // membership), a press having a time whatever it landed on.
@@ -8114,6 +8122,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
                            redesign_button_ctrl_admits(tc.id));
             chord.shift = tc.shift || mods.shift;
             chord.alt   = tc.alt;
+            // The fixed beat, never the hold delay: the schedule's rule at
+            // the tick's repeat body below.
             if (repeat_eligible(tc.key, chord))
                 app.chrome_press.repeat_due_ms = now + kHoldBeatMs;
         }
@@ -8293,11 +8303,11 @@ void GuiInputHandler::finish_chrome_press_release(
             return;
         }
         // THE SHIFT LONG PRESS (architect 2026-08-13): a press HELD past
-        // kChromeShiftHoldMs on a shift-admitting button reaches that button's
+        // chrome_shift_hold_ms() on a shift-admitting button reaches that button's
         // shifted twin, the waveform region hold's shape on the roster's
         // surface. It exists for GLASS — the road rig has no keyboard, so
         // without it a finger could reach only the plain half of each shifted
-        // pair — and it costs the desk nothing, the hold beat being well past
+        // pair — and it costs the desk nothing, the hold delay being well past
         // any ordinary click.
         //
         // THE MEMBERSHIP IS redesign_button_shift_admits AND NOT A LIST: the
@@ -8323,8 +8333,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // never fires from a MOVING finger, but a finger RESTING on a button
         // is a resting held pointer and the dwell elapses under it exactly as
         // it does under a held mouse button — so the hint the press's own
-        // dwell already raises IS the cue, and kTooltipDelayMs
-        // reads kHoldBeatMs (render.h) so it arrives at the instant this term
+        // dwell already raises IS the cue, and tooltip_delay_ms() reads
+        // the same hold delay (render.h) so it arrives at the instant this term
         // starts answering true. See it, let go, get the shifted twin. Still
         // nothing is polled or ticked FOR THE HOLD: the span is measured at
         // the lift, and the dwell is the tooltip's own machinery — coupled to
@@ -8335,7 +8345,7 @@ void GuiInputHandler::finish_chrome_press_release(
         //
         // THE TWO SKIPS ARE WHERE IT REACHES THE WHOLE-PIECE JUMP (architect
         // 2026-09-29): they admit shift for Shift+Home / Shift+End, so a skip
-        // held past the beat lifts into the piece's own ends — the tablet's
+        // held past the hold delay lifts into the piece's own ends — the tablet's
         // road to the act, the skips repeating nothing.
         //
         // WITH A CARRIED CTRL IT COMPOSES ONLY WHERE THE PAIR IS ADMITTED
@@ -8354,13 +8364,17 @@ void GuiInputHandler::finish_chrome_press_release(
         // OUTRANKS THE LONG-PRESS SHIFT, the principle stated at
         // ToolbarChord::repeats, and this term is where it is read
         // (2026-08-31, the round-B conversion). A repeating row's burst and
-        // this hold are measured at THE SAME INSTANT — the arm schedules its
-        // first fire at press + kHoldBeatMs and kChromeShiftHoldMs is that
-        // same beat — and a fired burst consumes its own lift above.
+        // this hold are measured AGAINST TWO NUMBERS THAT MAY DIFFER — the
+        // arm schedules its first fire at press + kHoldBeatMs, the fixed
+        // beat, while chrome_shift_hold_ms() reads the device's hold delay
+        // (2026-09-29), the two coinciding only at the key's default — and a
+        // fired burst consumes its own lift above. EVEN AT ONE INSTANT,
         // SHARING A TIMESTAMP IS NOT AN ORDERING: a lift delivered just past
         // the beat but before the next tick finds repeat_fired still false,
-        // and without this term the release would dispatch a SHIFT
-        // ten-step where the user was owed a plain one. So the exclusion is
+        // and a hold delay shorter than the beat would reach the shift term
+        // with no fire at all, so without this term the release would
+        // dispatch a SHIFT ten-step where the user was owed a plain one. So
+        // the exclusion is
         // read off kToolbarChords' own `repeats` column — the arm's
         // membership, never a second list — which makes it guaranteed instead
         // of timing-dependent, for every `repeats` row alike (Undo / Redo and
@@ -8371,7 +8385,7 @@ void GuiInputHandler::finish_chrome_press_release(
         const bool held_to_shift =
             !tc.repeats && redesign_button_shift_admits(tc.id) &&
             (!arm.ctrl || redesign_button_ctrl_shift_admits(tc.id)) &&
-            monotonic_ms() - arm.press_ms >= kChromeShiftHoldMs;
+            monotonic_ms() - arm.press_ms >= chrome_shift_hold_ms();
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
         // CARRIED press-time bit and the hold — well-defined because no row
         // sets both the table bit and the admission (see shift_admits), so this
@@ -8407,9 +8421,13 @@ void GuiInputHandler::finish_chrome_press_release(
 // body re-hits honest.
 //
 // THE SCHEDULE'S TWO NUMBERS COME FROM DIFFERENT OWNERS ON PURPOSE. The FIRST
-// fire is one kHoldBeatMs after the press — the product's own hold beat,
-// matched to the architect's compositor delay so every deliberate hold in the
-// product coincides (the readers' inventory is at that declaration). Every
+// fire is one kHoldBeatMs after the press — the product's FIXED beat, matched
+// to the architect's compositor delay, and DECOUPLED FROM THE DEVICE'S HOLD
+// DELAY on both devices (architect 2026-09-29): a repeat delay measures the
+// cadence of a stream of repeats, as the double-click window and the tap
+// coalesce measure the gap between two presses, and none of them is a hand
+// resting on a thing until it changes meaning, which is what
+// `hold_delay_ms` tunes (the readers' inventory is at kHoldBeatMs). Every
 // LATER fire is THE COMPOSITOR'S ADVERTISED KEY-REPEAT INTERVAL
 // (GuiPlatform::key_repeat_period_ms), read PER FIRE because repeat_info may be
 // re-sent at any time, and a compositor advertising rate 0 has key repeat
@@ -9660,7 +9678,7 @@ bool GuiInputHandler::tooltip_dwell_suppressed() const {
 
 // THE LONG PRESS'S CUE STARTS AT THE PRESS (the contract is at the
 // declaration): the dwell is stamped from the press's own clock rather than
-// from the settled walk's, so the hint arrives as kChromeShiftHoldMs is
+// from the settled walk's, so the hint arrives as chrome_shift_hold_ms() is
 // crossed instead of one loop interval after it. The press's hide has already
 // run above this call, so the box is down and the owner is clear; this writes
 // the new owner and the press's stamp, and the next walk finds that owner
@@ -9668,7 +9686,7 @@ bool GuiInputHandler::tooltip_dwell_suppressed() const {
 //
 // THE RESIDUE IS THE TICK'S OWN PERIOD and nothing else: the due check is two
 // comparisons on the run loop's tick (main.cpp), so the cue is raised on the
-// first tick at or after press_ms + kTooltipDelayMs. That is the same grain
+// first tick at or after press_ms + tooltip_delay_ms(). That is the same grain
 // the SHIFT LONG PRESS itself is measured on at the lift, so the hint and the
 // act it announces cannot disagree by more than one frame.
 void GuiInputHandler::seed_roster_tooltip_dwell(RedesignButton b,
@@ -10409,9 +10427,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.pending_click = PendingClickAct{};
             return;
         }
+        // THE GRAB GATE (grab_moved_threshold_px, app_state.h, 2026-09-29):
+        // the trim bar is one surface with one gate, so this crossing and the
+        // pending trim drag's below read the same distance and the set and
+        // the drag it hands to resolve on one event.
         if (std::max(std::abs(mouse_x - app.pending_click.press_x),
                      std::abs(mouse_y - app.pending_click.press_y)) <
-                drag_moved_threshold_px()) {
+                grab_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // THE CROSSING SPENDS THE ARM. Read, disarm, then
@@ -10437,7 +10459,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // Pending trim drag (armed by a plain trim-bar press, or by the crossing of
     // a ctrl / ctrl+shift bound set just above): the trim reposition
-    // begins only once the pointer travels past the shared Chebyshev threshold.
+    // begins only once the pointer travels past the GRAB GATE
+    // (grab_moved_threshold_px, twice the sweeps' and pans' drag gate — an
+    // endcap or the bridge is a thing the press grabs; 2026-09-29).
     // A lost button before the crossing ends it as a motionless click (nothing
     // committed). Placed after the trim_drag branch above: on the crossing this
     // begins the drag AND applies its first update inline, so it does not fall
@@ -10459,7 +10483,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),
                      std::abs(mouse_y - app.pending_trim_drag.press_y)) <
-                drag_moved_threshold_px()) {
+                grab_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // Threshold crossed: begin the trim drag anchored at the PRESS column so
@@ -10542,9 +10566,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.pending_marker_press = PendingMarkerPress{};
             return;
         }
+        // THE GRAB GATE (grab_moved_threshold_px, app_state.h, 2026-09-29):
+        // a flag is a thing the press grabs, so it rests at twice the drag
+        // gate before it moves — and this one crossing is where BOTH of its
+        // drags fork, the value drag and the horizontal reposition below.
         if (std::max(std::abs(mouse_x - app.pending_marker_press.press_x),
                      std::abs(mouse_y - app.pending_marker_press.press_y)) <
-                drag_moved_threshold_px()) {
+                grab_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // THE CROSSING SPENDS THE ARM into the drag. Read, disarm, then act —
@@ -10585,14 +10613,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // home-view gate has nothing to say here, this gesture moving no
         // marker at all. Silent either way, as this whole surface is.
         if (value_drag_posture(app)) {
-            // The begin is followed by THIS EVENT'S OWN MOTION, which is the
-            // marker drag's fall-through said as a call: the crossing is
-            // already 8 px from the press, so the first apply folds the whole
-            // press->crossing travel and the value lands where the hand
-            // already is instead of waiting for the next event. A crossing
-            // that travelled sideways alone folds nothing — the step count is
-            // still zero, and the motion arm returns on its own guard.
-            if (value_drag.begin(press.marker, press.cell, press.press_y))
+            // THE TRAVEL COUNTS FROM THE CROSSING, NOT THE PRESS (architect
+            // 2026-09-29): the origin handed to begin is THIS EVENT'S y, so
+            // the grab gate's own travel is not spent on steps and the first
+            // step lands one full kValueDragPxPerStep (scaled) past the
+            // crossing — where a press-measured origin, the gate being twice
+            // a step, would have landed two steps at once. The begin is still
+            // followed by this event's own apply, the marker drag's
+            // fall-through said as a call, and that apply now lands on step
+            // zero and writes nothing: it is kept so the one motion body owns
+            // every event from the crossing on.
+            if (value_drag.begin(press.marker, press.cell, mouse_y))
                 value_drag.apply_motion(mouse_y);
             return;
         }

@@ -248,8 +248,9 @@ constexpr double kNavZoomPxPerLevel = 200.0;
 // own 225 % a level costs 450 device px — ~46 mm on that panel, back on the
 // rig's ~43 mm order of hand travel instead of half it. Durations never scale;
 // lengths do — the same split the
-// press road's three pixel thresholds take (drag_moved_threshold_px,
-// double_click_slack_px, GuiInputCore::set_touch_slop_px).
+// press road's four pixel thresholds take (drag_moved_threshold_px,
+// grab_moved_threshold_px, double_click_slack_px,
+// GuiInputCore::set_touch_slop_px).
 //
 // THE PINCH NEEDS NO SUCH TERM AND MUST NOT GET ONE: its level is log2 of the
 // FINGER-GAP RATIO (input_pointer.cpp's touch nav frame), and a ratio of two
@@ -584,7 +585,8 @@ struct DragState {
 // view on the warp column, and the phase column's cells under grid iterations)
 // a plain flag press-and-drag steps a value VERTICALLY — one step per
 // kValueDragPxPerStep authored pixels of travel, UP = INCREASE, measured from
-// the press's own y — and THE HORIZONTAL MARKER DRAG IS OFF ON EVERY FLAG (the
+// the y where the grab gate was crossed (2026-09-29; the press's own y until
+// then) — and THE HORIZONTAL MARKER DRAG IS OFF ON EVERY FLAG (the
 // architect: "we never allow multi-axis dragging; flags move up and down or
 // not at all"). What it steps is the cell the press landed on, through the
 // arrows' own landing owners: the BASE TEMPO on a warp flag's payload and a
@@ -614,8 +616,8 @@ struct DragState {
 // NOTHING HERE IS A CANCEL ORIGIN, the standing rule: pointer gestures have no
 // cancel, so Esc mid-drag changes nothing and any end commits. `start_value`
 // is the value the press found — the anchor the per-motion target is derived
-// from, so the walk is absolute against the press rather than an accumulation
-// of deltas that could round differently in each direction — and
+// from, so the walk is absolute against its origin rather than an
+// accumulation of deltas that could round differently in each direction — and
 // `pre_drag_snapshot` is the TEMPO arm's undo payload, captured at the begin
 // and empty on a bound drag, which pushes nothing at all (a bracket is outside
 // the undo domain, the iteration lock's own rule).
@@ -631,7 +633,11 @@ struct ValueDragState {
     // Which cell the press landed on — Payload (the base tempo) or Lower /
     // Upper (a bound) — value_drag_target decides which it may be.
     MarkerCell cell    = MarkerCell::Payload;
-    int        press_y = 0;    // window px: the travel is measured from here
+    // Window px: THE TRAVEL IS MEASURED FROM HERE, and here is the y of the
+    // motion event that crossed the grab gate, not the press's (architect
+    // 2026-09-29) — the gate's own travel buys no step, so the first step
+    // lands one full kValueDragPxPerStep past the crossing.
+    int        origin_y = 0;
     // The value the press found, in the cell's own domain: authored CENTS on
     // the payload and on a warp bound, HOPS on a phase-reset bound. ON A PASS
     // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
@@ -671,10 +677,12 @@ struct ValueDragState {
 //
 // EIGHT AND NOT FOUR since the afternoon of the day it landed (architect
 // 2026-09-10, on his own first drag: four was "a little fast"). It is the drag
-// GATE's own length now, which is a coincidence worth knowing rather than a
-// derivation: the crossing arrives already one whole step from the press, so
-// the first applied motion always carries a step and the hand never has to
-// travel twice to see the value move.
+// gate's own length and half the flag's grab gate (grab_moved_threshold_px),
+// a coincidence worth knowing rather than a derivation — and it no longer
+// shapes the first step: the travel is counted from the CROSSING (2026-09-29,
+// ValueDragState::origin_y), so the gate's own travel buys nothing and the
+// first step always lands one full step past it, where a press-measured
+// count would have landed the grab gate's two steps at once.
 inline constexpr double kValueDragPxPerStep = 8.0;
 
 // Drag-time position overlay. Paint sites consult this when a marker
@@ -1000,9 +1008,10 @@ struct EditorTextDragState {
 // at DoubleClickSurface). A MOTIONLESS RELEASE
 // seeds the next Marker double-click candidate and nothing else (the seed is a
 // release act by family rule — only the release knows the press stayed still).
-// A CROSSING of drag_moved_threshold_px() (Chebyshev from the press; the one
-// generic 8px gate shared by every press-becomes-drag surface) begins the
-// reposition drag — the click's acts already stand from the press, so the
+// A CROSSING of grab_moved_threshold_px() (Chebyshev from the press; THE GRAB
+// GATE, twice the generic drag gate, 2026-09-29 — the flag being a thing the
+// press grabs) begins the reposition drag, or the value drag where
+// value_drag_posture holds — the click's acts already stand from the press, so the
 // crossing runs no act. A lost button, the force-end finalizer and the touch
 // layer's ABNORMAL end (a touch hard end) disarm and seed nothing —
 // none of them is a clean click sequence, and the click itself is not theirs
@@ -1084,7 +1093,7 @@ struct PendingMarkerPress {
 // bridge press and the ctrl deferred-set pending died with the arc's revert.)
 // The trim sibling of PendingMarkerPress: the press CLAIMS the cap/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
-// machinery takes over) only once the pointer crosses drag_moved_threshold_px()
+// machinery takes over) only once the pointer crosses grab_moved_threshold_px()
 // (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS A CONSUMED
 // NOTHING again (architect 2026-07-30): the lane-click model gave it one act —
 // publishing the trim window as a region highlight — and that publish is retired
@@ -1143,7 +1152,8 @@ enum class PendingClickKind {
 // THE SHAPE IS THE PRODUCT'S: the press ARMS a record carrying what the act
 // will need (its press POINT and which bound the click writes); a MOTIONLESS
 // release runs the set, RE-ASKING every live gate (they all live inside
-// set_trim_bound_at_click); a CROSSING of drag_moved_threshold_px() runs the set
+// set_trim_bound_at_click); a CROSSING of grab_moved_threshold_px() (the trim
+// bar's one gate, 2026-09-29) runs the set
 // and hands over to the endcap drag; and a lost button, the force-end
 // finalizer and the touch layer's ABNORMAL end all commit nothing. Read
 // PendingMarkerPress above for the neighbouring press-time model.
@@ -1900,11 +1910,14 @@ struct DoubleClickCandidate {
 // the `h` history view too, the framing
 // being pure navigation in both) records this; the left release seeds the TrimBar
 // candidate when the pointer is still within double_click_slack_px() of the
-// recorded point and no trim drag went live. That slack IS the motionless test:
-// it equals drag_moved_threshold_px() at every gui_scale (both accessors resolve
-// their equal authored constants through the one scaled_px conversion), so
-// "never became a drag" and "never left the slack" are
-// the same condition by construction — STILL TRUE with the framing consume back
+// recorded point and no trim drag went live. That slack IS the motionless test,
+// and the STRICTER of the two clauses since 2026-09-29: it equals
+// drag_moved_threshold_px() while the trim bar becomes a drag only at
+// grab_moved_threshold_px(), twice it, so a release inside the slack never
+// follows a crossing and a trim-bar click that rolled between the two seeds
+// nothing (a click still, never a drag — the note at double_click_slack_px).
+// The "no trim drag went live" clause is kept as the statement of what the
+// slack stands for, and it held for the framing consume back
 // at the press (2026-08-17; it spent one day at the lift, 2026-08-15..17): the
 // press that CONSUMES records no seed at all (a consumed press never seeds, the
 // double-click family rule — it frames and returns, arming nothing), so this
@@ -2081,7 +2094,7 @@ enum class RedesignButton {
     // tabs.
     //
     // THE OTHER TAB CARRIES THE PAIRED MARCH (architect 2026-09-14): its
-    // shift-click and its kChromeShiftHoldMs long press dispatch Ctrl+Shift+Tab
+    // shift-click and its chrome_shift_hold_ms() long press dispatch Ctrl+Shift+Tab
     // through on_key, the shifted form of the tabs' own Ctrl+Tab, so the
     // shift-admission rule places the march here (redesign_button_shift_admits).
     // The bottom row's Walk Both Tabs button was deleted the same day for
@@ -2670,7 +2683,7 @@ enum class RedesignButton {
     // trim bounds. The button spells the KEYBOARD'S OWN MODIFIER: the act is
     // Shift+Home / Shift+End, so a shift press here dispatches that chord
     // (redesign_button_shift_admits, below, owns the membership). ON GLASS
-    // THE LONG PRESS is the held shift, so a skip held past the hold beat is
+    // THE LONG PRESS is the held shift, so a skip held past the hold delay is
     // the whole-piece jump on the tablet. They admit no ctrl.
     //
     // THE PLAY BUTTON ADMITS SHIFT (architect 2026-08-26): its twin is
@@ -3406,7 +3419,7 @@ redesign_button_hover_fade_kind(RedesignButton b) {
 // paint_handler.cpp; "GUI Scale" and "URL" keep their acronym caps under it)
 // with the SETTINGS KEY the click prefills into the editor, and
 // `separator_before` marks the one place the two categories part: the four
-// SIDECAR keys a hand edits (the metadata), then the four editable DEVICE CONFIG keys
+// SIDECAR keys a hand edits (the metadata), then the five editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
 // `last_project` is the program's own and has no row).
 //
@@ -3443,9 +3456,11 @@ struct SettingsPopupItem {
 // 2026-09-14), the picture's gain varying over source time since (the
 // continuous curve derived from the source since 2026-09-23).
 //
-// THE DEVICE HALF IS FOUR: `GUI Scale`, then `Max Waveform Height` right
+// THE DEVICE HALF IS FIVE: `GUI Scale`, then `Max Waveform Height` right
 // after it in kDeviceConfigKeys' order (architect 2026-09-13; it commits
-// through commit_device_setting and relays out live), then the two
+// through commit_device_setting and relays out live), then `Hold Delay`
+// right after that (architect 2026-09-29; it commits through the same body
+// and applies live through apply_hold_delay_ms), then the two
 // gesture-less device keys `Projects Repository` and `Projects Path`
 // (architect 2026-09-02, R-22), each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
@@ -3463,6 +3478,7 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Cover",               "cover",         false},
     {"GUI Scale",           "gui_scale",     true},
     {"Max Waveform Height", "max_waveform_height", false},
+    {"Hold Delay",          "hold_delay_ms", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
 };
@@ -3814,24 +3830,29 @@ inline int dropdown_h_px(DropdownMenu m) {
 // compare site reads that accessor and never the constant. The window, like
 // every other duration in the product, is untouched by the scale.
 //
-// THE WINDOW IS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE BEAT — 575 ms,
+// THE WINDOW IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 575 ms,
 // the architect's own labwc <repeatDelay> matched by convention (architect
-// 2026-08-27, on the glass: "I'm definitely sure about the interval"). It was
+// 2026-08-27, on the glass: "I'm definitely sure about the interval") — and
+// it STAYS ON THE CONSTANT while the holds read the device's `hold_delay_ms`
+// (architect 2026-09-29): a window measures the gap between two presses, a
+// cadence, not a hand resting on a thing until it changes meaning, which is
+// what that key tunes. It was
 // its own 500 until that evening. A RELAXED DOUBLE TAP IS SLOWER THAN A
 // MOUSE'S DOUBLE CLICK: the finger leaves the panel between the two taps and
 // has to come back, and 500 was cutting the second one off — the same gesture
 // the scaled slack fixed on the distance axis the same day, missing on the
 // time axis instead. Tying it to the beat rather than picking a second number
-// keeps the product on ONE cadence: the interval a deliberate hold has to
-// cross is the interval a deliberate second tap has to arrive inside. It is
-// NOT a hold, which is why the beat's own declaration lists it apart.
+// keeps the product on ONE cadence: at the default hold delay the interval a
+// deliberate hold has to cross is the interval a deliberate second tap has to
+// arrive inside. It is NOT a hold, which is why the beat's own declaration
+// lists it apart and why a retuned hold delay leaves it where it is.
 //
 // kTapCoalesceMs (the undo-coalescing window, undo.h) measures a DIFFERENT
 // thing — how long a standing undo subject keeps accepting rapid taps of the
 // same authoring key — and it READS THE SAME BEAT since 2026-08-28, on the
 // same argument this window took a day earlier: one cadence for the hand,
 // not a number per surface. The beat's declaration lists the two of them
-// apart from the holds, neither being one.
+// apart from the holds, neither being one, and both stay on the constant.
 constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
 constexpr int     kDoubleClickSlackPx = 8;
 
@@ -3842,9 +3863,20 @@ constexpr int     kDoubleClickSlackPx = 8;
 // IT EQUALS drag_moved_threshold_px() AT EVERY SCALE because the two authored
 // constants are equal and both resolve through the one scaled_px conversion —
 // the same strength the pre-scale pair had, and what makes "never became a
-// drag" and "never left the slack" one answer (the note at the seed test,
-// input_pointer.cpp). Floor 1: a zero slack would demand a pixel-exact second
-// press and starve double-click detection outright.
+// drag" and "never left the slack" one answer on the SWEEP AND PAN surfaces.
+// ON THE TWO GRAB SURFACES THEY ARE TWO ANSWERS since 2026-09-29: a flag and
+// the trim bar become drags at grab_moved_threshold_px(), twice this, so a
+// press there can leave the slack at 8 authored px and still be a click at
+// its release. That is fine because the seed is the motionless release's
+// alone and a release between the two distances IS a click, not a drag: the
+// flag's seed is written by any release whose pending never crossed (at the
+// PRESS position, the second press measured against the slack from it), and
+// the trim bar's seed test reads this slack from its release, so a trim-bar
+// click that rolled past 8 simply seeds no framing double-click — its act
+// (the deferred bound set, or nothing on a cap) is still the click's (the
+// note at the seed test, input_pointer.cpp). Floor 1: a zero slack would
+// demand a pixel-exact second press and starve double-click detection
+// outright.
 inline int double_click_slack_px() {
     return scaled_px(kDoubleClickSlackPx, 1);
 }
@@ -3860,67 +3892,69 @@ inline int double_click_slack_px() {
 // AppState::ChromePress::press_ms) and the RENDER PLAYER'S MODAL ROW
 // (modal_dialog_press_shifted, the same file, against
 // AppState::modal_dialog_press_ms) — the player's two skips being the first
-// modal buttons to admit a modified press. Same beat, same term, same reason:
+// modal buttons to admit a modified press. Same hold, same term, same reason:
 // glass has no shift key.
 //
-// IT READS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE HOLD BEAT, matched by
-// convention with the compositor's key-repeat delay, so every deliberate hold
-// in the product crosses its threshold on one beat. The constant's own
-// declaration carries that ruling and the readers' one inventory, including
-// why the keyboard's delay stays the compositor's where a compositor offers
-// one.
+// IT READS THE HOLD DELAY (hold_delay_ms, render.h — the device config's
+// `hold_delay_ms`, architect 2026-09-29), the value every deliberate hold in
+// the product crosses its threshold on; its default is kHoldBeatMs, matched by
+// convention with the compositor's key-repeat delay. The constant's own
+// declaration (gui_input.h) carries the readers' one inventory, including why
+// the keyboard's delay and the held buttons' first repeat stay on the fixed
+// beat rather than on this key.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
 // nothing to say about it (the same rule the drag-slop and region-hold
-// constants carry for their own reason — they model the hand, not the pixels).
+// values carry for their own reason — they model the hand, not the pixels).
 //
-// The beat is DELIBERATELY LONG relative to a click. A shifted act is the rarer
+// The hold is DELIBERATELY LONG relative to a click. A shifted act is the rarer
 // one on every button that admits shift (the membership is
 // redesign_button_shift_admits, never a count restated here), so the cost of an
 // accidental hold must land on the
-// rare act rather than on the common one; the beat is well past any ordinary
+// rare act rather than on the common one; the hold is well past any ordinary
 // click-and-lift and just short of the point where a user would assume the
-// press was lost.
+// press was lost — the default does, and the key's range
+// (is_hold_delay_ms, device_config.h) keeps both ends of that sentence.
 //
 // THE TOOLTIP IS THE BEAT'S CUE AND NOTHING IS BUILT FOR IT (architect
 // 2026-09-11, superseding the 2026-08-13 ruling that the beat passes silently
 // because tooltips do not show on glass — a RESTING finger is a resting held
 // pointer, and the dwell elapses under a long press there as it does under a
-// held mouse button). kTooltipDelayMs reads kHoldBeatMs too (render.h), so the
-// hint appears exactly as this constant is crossed; the ruling's home is the
-// read site.
-constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
+// held mouse button). tooltip_delay_ms() reads the same hold delay
+// (render.h), so the hint appears exactly as this hold is crossed; the
+// ruling's home is the read site.
+//
+// A NAMED READER OF THE ONE INSTALLED VALUE, not a constant (2026-09-29): the
+// two read sites say which hold they measure while the value itself has one
+// owner (set_hold_delay_ms / hold_delay_ms, render.h).
+inline int64_t chrome_shift_hold_ms() { return hold_delay_ms(); }
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
-// DRAG (architect-tunable), shared by EVERY press-becomes-drag surface. THE
-// LIST IS RE-DERIVED FROM THE GATES THEMSELVES (codex round 19 — it named
-// "strip, region, trim, and the marker flag" long after the strip drag's
-// deletion and the two 2026-08-15 additions; re-derived again 2026-08-18, when
-// the region's editor was deleted into the trim drags it had been borrowing;
-// re-greped 2026-09-16),
-// and it is FIVE states — four that latch their own `moved` in on_motion, plus
-// one that resolves at the crossing without latching anything (the editor
-// field's text drag was a sixth for the one day of 2026-09-05 and is not:
-// the desk's sweep moves on every motion with no gate, and the glass's caret
-// drag is the touch translation's own stream, gated by the slop alone):
+// DRAG (architect-tunable), shared by every press whose drag is a SWEEP or a
+// PAN — the press beginning a gesture over a surface rather than grabbing a
+// thing on it. THE GRAB SURFACES — a flag and the trim bar — read TWICE this
+// since 2026-09-29 (kGrabMovedThresholdPx below, where their membership and
+// its reason live). THE LIST IS RE-DERIVED FROM THE GATES THEMSELVES (codex
+// round 19 — it named "strip, region, trim, and the marker flag" long after
+// the strip drag's deletion and the two 2026-08-15 additions; re-derived
+// again 2026-08-18, when the region's editor was deleted into the trim drags
+// it had been borrowing; re-greped 2026-09-29, when the grab gate split off
+// and the folder overlay's band scroll, a reader since 2026-08-28, joined the
+// list it had been missing from), and it is THREE states, each latching its
+// own crossing in on_motion (the editor field's text drag was one more for
+// the one day of 2026-09-05 and is not: the desk's sweep moves on every
+// motion with no gate, and the glass's caret drag is the touch translation's
+// own stream, gated by the slop alone):
 //   * ScrollDragState — THE ONE NAV DRAG, the pending click whose crossing
 //     becomes the grab-pan or, with ctrl, the zoom (the capture begins at that
 //     crossing);
 //   * RegionDragState — THE SWEEP, the shift drag and the touch region hold,
 //     through apply_region_drag_motion's own gate (a direct trim write since
-//     2026-08-18; the overlay's move and bound drags are the TRIM pending
-//     below, that gesture having become the trim's own drags on a second
-//     surface rather than an editor of its own);
-//   * PendingTrimDrag — the trim bar's endcap / bridge drag;
-//   * PendingMarkerPress — the marker flag's PLAIN press, its click already
-//     acted at the press (2026-08-17), whose crossing becomes the reposition
-//     drag (the tempo flag was one more until the tempo drag's deletion,
-//     2026-07-29);
-//   * PendingClickAct — the trim bar's deferred bound-set click (the one
-//     surviving lift act, 2026-08-17), which is the one member that latches NO
-//     `moved` of its own: its crossing RESOLVES the arm outright, running the
-//     set and handing over to the endcap drag above, so there is no moved
-//     phase for it to be in.
+//     2026-08-18; the overlay's move and bound drags became the trim bar's
+//     own drags, which read the grab gate);
+//   * AppState::FolderOverlayPress — the folder overlay's band press, whose
+//     crossing (`>=`, update_folder_overlay_press_motion, for the twin-gate
+//     reason stated there) becomes the band's scroll drag.
 // (A derived reader sat outside that list until 2026-08-18: the region
 // former's SLIVER FLOOR, end_region_drag_min_size_check, measured a rested span
 // against this same constant so that "never became a drag" and "never left the
@@ -3953,8 +3987,9 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 //  - MARKER GRAB SLOP (the marker flag): a flag must be easy to click
 //    (select, or double-click to edit) without nudging it, and pixel-exact
 //    fine-tuning lives on the bare Left/Right nudge rather than the drag — the
-//    Ableton convention. 8px gives that slop; the other five surfaces inherit
-//    it.
+//    Ableton convention. 8px gave that slop until 2026-09-29, when the flag
+//    and the trim bar took the doubled grab gate below and this number kept
+//    the sweeps and the pans.
 // One latch shape everywhere — a motion event below the threshold is ignored
 // outright (moved stays false, no apply, the drag stays armed); once a drag,
 // always a drag, so dragging back near the press has no dead zone. The NAV
@@ -3962,9 +3997,11 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 // event folds the whole accumulated delta and no travel is lost (the
 // absolute-placement region edit folds it by
 // construction, placing per event rather than accumulating).
-// RECORDED FALLBACK: if the strip/trim feel degrades at 8, re-split into a
-// per-surface pair (the pre-2026-07-24 form: strip/region/trim at 3, markers
-// at 8).
+// THE RECORDED FALLBACK (a per-surface re-split, the pre-2026-07-24 form of
+// strip/region/trim at 3 and markers at 8) WAS TAKEN THE OTHER WAY
+// (architect 2026-09-29): the split is by what the press does, not by
+// surface — the GRAB surfaces went UP to twice this, the sweeps and pans kept
+// it — and it is still one authored number, the grab gate deriving from it.
 // THE 8 IS AN AUTHORED 100 % LENGTH, NOT A DEVICE COUNT (architect
 // 2026-08-27). The grab slop above is a PHYSICAL distance — the millimetres a
 // fingertip or a hand rolls before it means to drag — so it rides gui_scale
@@ -3977,11 +4014,51 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 constexpr int     kDragMovedThresholdPx = 8;
 
 // The gate in DEVICE pixels at the live gui_scale — THE ONE READER FOR EVERY
-// SURFACE in the list above (six `<` compares in input_pointer.cpp) and the
-// value pushed into the input core's touch slop at both gui_scale application
-// points. Floor 1: a zero gate would make every click a drag.
+// SURFACE in the list above (three compares in input_pointer.cpp: the nav
+// drag's and the sweep's `<`, the band scroll's `>=`) and the value pushed
+// into the input core's touch slop at both gui_scale application points.
+// Floor 1: a zero gate would make every click a drag.
 inline int drag_moved_threshold_px() {
     return scaled_px(kDragMovedThresholdPx, 1);
+}
+
+// THE GRAB GATE (architect 2026-09-29): the Chebyshev distance a press that
+// GRABS A THING must travel before it becomes that thing's drag — TWICE the
+// drag gate above, derived from it so the two stay one authored number (16
+// authored px; 32 device px at 200 %). A grab is a press on an object whose
+// drag MOVES it — a click that rolls a few pixels on a flag or a trim endcap
+// must stay the click it meant to be, because the drag it would otherwise
+// become rewrites authored content or the trim, where a sweep or a pan that
+// begins early costs nothing. THE MEMBERSHIP, re-greped 2026-09-29 — three
+// states, every compare a `<` in on_motion (input_pointer.cpp), and nothing
+// else reads it:
+//   * PendingMarkerPress — the flag's plain press, its click already acted at
+//     the press (2026-08-17); its crossing is the ONE fork for both of the
+//     flag's drags, the horizontal reposition drag and the value drag
+//     (value_drag_posture), so both begin at this distance;
+//   * PendingTrimDrag — the trim bar's endcap / bridge drag;
+//   * PendingClickAct — the trim bar's deferred ctrl / ctrl+shift bound-set
+//     click, the one member that latches NO `moved` of its own: its crossing
+//     RESOLVES the arm outright, running the set and handing over to the
+//     endcap drag above on the same event. THE TRIM BAR IS ONE SURFACE WITH
+//     ONE GATE, so the set and the drag it hands to cross at the same
+//     distance, as they always have.
+// THE TOUCH CORE NEEDS NO SECOND SLOP: the core's pan zone is the waveform
+// alone (touch_point_in_pan_zone asks point_on_nav_surface), so a finger on
+// a flag or the trim bar is the pointer on contact (2026-09-25, touch.md) and
+// its travel reaches this gate raw — the core's slop crossing never delivers
+// a grab press, and the twin-gate invariant (input_core.h's
+// set_touch_slop_px) binds the slop to the DRAG gate alone.
+// THE DOUBLE-CLICK SLACK STAYS THE DRAG GATE'S (the note at
+// double_click_slack_px above), so on a grab surface a press can leave the
+// slack before it becomes a drag; that is harmless because a seed is the
+// motionless release's alone — a release between the two distances is a
+// click, never a drag, whichever the seed then does with it.
+// Floor 1 through scaled_px, as the drag gate's.
+constexpr int     kGrabMovedThresholdPx = 2 * kDragMovedThresholdPx;
+
+inline int grab_moved_threshold_px() {
+    return scaled_px(kGrabMovedThresholdPx, 1);
 }
 
 // THE HOVER POPUP STATE IS DELETED (row 5, 2026-08-01). HoverPopupState cached
@@ -6454,7 +6531,7 @@ struct AppState {
     // arm's two fields over this surface, and they arrive together because the
     // two roads to a shifted act are one term: a SHIFT HELD AT THE PRESS
     // (modifiers are read at the press, never re-read at the lift) and a press
-    // HELD past kChromeShiftHoldMs, ORed at the lift. The stamp is taken for
+    // HELD past chrome_shift_hold_ms(), ORed at the lift. The stamp is taken for
     // every armed button, a press having a time whatever it landed on; the
     // shift bit can only stand where the press claim admitted it, which is the
     // player's row and player_button_shift_admits' two buttons. Meaningless
@@ -6687,7 +6764,7 @@ struct AppState {
     // press-time modifiers, so it no longer carries any.)
     //
     // `press_ms` is THE PRESS'S OWN monotonic_ms() STAMP, and the whole of the
-    // SHIFT LONG PRESS (architect 2026-08-13): held past kChromeShiftHoldMs on
+    // SHIFT LONG PRESS (architect 2026-08-13): held past chrome_shift_hold_ms() on
     // a shift-admitting button, the lift dispatches the SHIFTED twin — the
     // waveform's region hold on the roster's surface, and the route by which
     // glass, having no keyboard, reaches the other half of each shifted pair.
@@ -6738,8 +6815,11 @@ struct AppState {
     //   * `repeat_due_ms` is the CLOCK_MONOTONIC stamp of the next fire, and 0
     //     means THIS ARM CARRIES NO BURST (an unarmed button or an ineligible
     //     context). The first fire is one kHoldBeatMs
-    //     after the press — the product's ONE hold beat, so the button hold and
-    //     the key hold cross their threshold together — and every later fire is
+    //     after the press — the product's FIXED beat, the key-repeat delay's
+    //     own convention, so the button hold and the key hold cross their
+    //     threshold together, and deliberately NOT the device's hold delay (a
+    //     repeat delay is a cadence, not a hold; the ruling is at
+    //     kHoldBeatMs, gui_input.h) — and every later fire is
     //     THE COMPOSITOR'S OWN advertised key-repeat interval
     //     (GuiPlatform::key_repeat_period_ms, read per fire, 0 = the desktop
     //     has key repeat off and neither the keys nor these buttons repeat).
@@ -9243,7 +9323,8 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 // THE PLAYER ROW'S SHIFT-ADMITTING BUTTONS (2026-08-28, architect R37) —
 // redesign_button_shift_admits one surface over, and for the same reason: a
 // button that admits a modified press gets its SHIFT-CLICK on plastic and,
-// through the one hold beat, its LONG PRESS on glass, so the shifted half of
+// through the hold delay (chrome_shift_hold_ms), its LONG PRESS on glass, so
+// the shifted half of
 // the pair is reachable with no keyboard. THE TWO SKIPS ARE THE WHOLE SET —
 // their twins are Shift+Home / Shift+End (2026-08-31, the keys following the
 // plain acts off `,` / `.`), the item folder's FIRST
@@ -16197,10 +16278,10 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // one" are one fact by construction rather than two lists to keep in step
 // (the ctrl set below shares that line and that assert) — and,
 // since 2026-08-13, THE SHIFT LONG PRESS, whose membership is this same
-// predicate rather than a fourth list: a press held past kChromeShiftHoldMs
+// predicate rather than a fourth list: a press held past chrome_shift_hold_ms()
 // reaches the twin exactly where a shift press does, which is what gives a
-// keyboardless glass rig the shifted half of each pair (the beat's contract is
-// at that constant, the arm's stamp at AppState::ChromePress::press_ms).
+// keyboardless glass rig the shifted half of each pair (the hold's contract is
+// at that reader, the arm's stamp at AppState::ChromePress::press_ms).
 // (ICONPASTE LEFT THIS SET ON 2026-08-20 WITH ITS BUTTON. It admitted shift
 // for Ctrl+Alt+Shift+P, the paste-state chord, which the EDIT MENU now carries
 // as a row of its own — a menu item names its command outright, so the shifted
@@ -16603,7 +16684,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // tabs admit shift since the bottom row's Walk Both Tabs button was
         // deleted, a shift-click or long press dispatching Ctrl+Shift+Tab —
         // the march in the standing mode, the diff-flag march in the `h` view,
-        // the iteration lock's card under a lit lamp. Only the OTHER tab ever
+        // the iteration lock's card under a lit lamp — where the stateful
+        // overload drops this line (2026-09-29), the march roads' one rule.
+        // Only the OTHER tab ever
         // shows this, the selected tab having no hover zone (redesign_button_-
         // hover_zone); the march is a round trip since 2026-09-26 and ends on
         // the selected tab, which "both tabs" says without naming a tab.
@@ -17558,15 +17641,18 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {left ? "Hop Left (Left)" : "Hop Right (Right)", nullptr};
             break;
         }
-        // THE TWO DEDICATED MARCH ROADS (architect 2026-09-29): Previous
-        // Marker's ctrl press and Switch Tab's shifted press are both the
-        // paired march, which the grid-iterations lock refuses on its card
-        // (iteration_lock_key_blocked's delta (a), asked on the lamp exactly
-        // as authoring_lock_drops_chord asks it), so under a lit lamp the
-        // modified press does nothing the plain one does and the line drops.
-        // The first line never forks.
+        // THE MARCH ROADS (architect 2026-09-29): Previous Marker's ctrl
+        // press, Switch Tab's shifted press and the two TABS' shifted press
+        // are all the paired march, which the grid-iterations lock refuses on
+        // its card (iteration_lock_key_blocked's delta (a), asked on the lamp
+        // exactly as authoring_lock_drops_chord asks it), so under a lit lamp
+        // the modified press does nothing the plain one does and the line
+        // drops — on the tabs since the same day's evening, matching the two
+        // dedicated roads. The first line never forks.
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportSwitchTab:
+        case RedesignButton::TabA:
+        case RedesignButton::TabB:
             if (a.iteration_mode_enabled)
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
@@ -17632,8 +17718,8 @@ inline RedesignTooltipText redesign_button_tooltip(
 // LADDER where every
 // rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
 // from a wall, where the jump names the member the step already reaches, and
-// since 2026-09-29 PREVIOUS MARKER'S AND SWITCH TAB'S march line under a lit
-// grid iterations, where the lock refuses the march —
+// since 2026-09-29 the MARCH LINE of PREVIOUS MARKER, SWITCH TAB and the two
+// TABS under a lit grid iterations, where the lock refuses the march —
 // the overload returns the one-line
 // form, and it can return a
 // second line only on a button this walk has already bound to an admission,
@@ -17925,7 +18011,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // — the value drag, argued in full at the bottom of this block — a drag that
 // writes the LIVE STORE per motion event, where the freeze runs the other way
 // and protects the screen from the store. THE FREEZE STARTS AT THE AIMED
-// PRESS, not at the 8px crossing: the crossing CONVERTS the press's STORED
+// PRESS, not at the grab-gate crossing: the crossing CONVERTS the press's STORED
 // press_x through the then-current displayed basis (the marker path's
 // begin_drag, the trim path's begin_trim_drag conversion), so the epoch the
 // press was aimed in must survive until the crossing — a worker job already

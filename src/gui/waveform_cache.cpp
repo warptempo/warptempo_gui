@@ -203,7 +203,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // DERIVES it and is not restated here: in short, an absolute drag on a
     // painted subject, every pending press that aims one (the freeze
     // contract's "the one job in flight at the grab" means the AIMED PRESS,
-    // not the 8px crossing), and the value drag, whose own motion would
+    // not the grab-gate crossing), and the value drag, whose own motion would
     // otherwise DRIVE the publication (it writes the live store per motion,
     // so in target view the desired fingerprint's map hash changes every few
     // pixels and this gate is what keeps a full render off the worker until

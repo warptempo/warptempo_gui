@@ -17,12 +17,13 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (FIVE keys; the count's
+// set the shared scanner enforces after the loop (SIX keys; the count's
 // succession, up to seventeen with the tuning phases of 2026-09-23..27, is
 // the header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
 // with the fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
 // last_project — max_waveform_height placed right after gui_scale (architect
-// 2026-09-13). The scanner takes it as a
+// 2026-09-13), and hold_delay_ms right after max_waveform_height (architect
+// 2026-09-29), the keys the panel's rows edit first. The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -32,6 +33,7 @@ namespace {
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "max_waveform_height",
+    "hold_delay_ms",
     "projects_repo",
     "projects_path",
     "last_project",
@@ -48,6 +50,12 @@ std::string format_gui_scale_percent(int percent) {
 std::string format_max_waveform_height(int authored_px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", authored_px);
+    return std::string(buf);
+}
+
+std::string format_hold_delay_ms(int ms) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", ms);
     return std::string(buf);
 }
 
@@ -80,6 +88,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_gui_scale_percent(cfg.gui_scale);
         } else if (k == "max_waveform_height") {
             s += format_max_waveform_height(cfg.max_waveform_height);
+        } else if (k == "hold_delay_ms") {
+            s += format_hold_delay_ms(cfg.hold_delay_ms);
         } else if (k == "projects_repo") {
             // Free text, verbatim; blank is legal and never matches a remote.
             s += cfg.projects_repo;
@@ -137,6 +147,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                                  kMaxWaveformHeightGrammarReason);
             }
             out.max_waveform_height = static_cast<int>(v);
+            return {};
+        }
+        if (key == "hold_delay_ms") {
+            // The cap's road exactly: plain digits through
+            // parse_authored_frame, then the RANGE through the one owner in
+            // the header (is_hold_delay_ms).
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) || !is_hold_delay_ms(v)) {
+                return bad_value(ln, key, value, kHoldDelayMsGrammarReason);
+            }
+            out.hold_delay_ms = static_cast<int>(v);
             return {};
         }
         if (key == "projects_repo") {

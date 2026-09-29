@@ -23,17 +23,18 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FOUR editable ones the per-device config carries — gui_scale and
+// FIVE editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect, the four-tier review's R-22) projects_path,
-// which had been hand-edited only, and since 2026-09-13
-// max_waveform_height (the config's fifth key, last_project, is the
-// program's own and has no editor; `audio_player`, once
+// which had been hand-edited only, since 2026-09-13
+// max_waveform_height, and since 2026-09-29 hold_delay_ms (the config's
+// sixth key, last_project, is the program's own and has no editor;
+// `audio_player`, once
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
-// 1. The three device keys other than the scale — max_waveform_height,
-//    projects_repo, projects_path — in ONE body,
+// 1. The four device keys other than the scale — max_waveform_height,
+//    hold_delay_ms, projects_repo, projects_path — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (red flash and card on refusal), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
@@ -42,7 +43,9 @@ struct GuiInputHandler;
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; max_waveform_height is in force at once, the body handing it to
-//    apply_max_waveform_height for the live relayout. gui_scale, the fourth
+//    apply_max_waveform_height for the live relayout; hold_delay_ms is in
+//    force at once, the body handing it to apply_hold_delay_ms, which
+//    installs it for the three holds. gui_scale, the fifth
 //    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
 //    is to reach one.
@@ -154,9 +157,10 @@ struct GuiSettingsEditor {
     bool autocomplete_value();
 
 private:
-    // THE THREE DEVICE KEYS' COMMIT — `max_waveform_height=`,
-    // `projects_repo=`, `projects_path=` — in one body (the head's item 1).
-    // Returns true when `key` is one of the three, the commit then fully
+    // THE FOUR DEVICE KEYS' COMMIT — `max_waveform_height=`,
+    // `hold_delay_ms=`, `projects_repo=`, `projects_path=` — in one body (the
+    // head's item 1). Returns true when `key` is one of the four, the commit
+    // then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // red-flashed); false otherwise, so commit() goes on to the routers.
     bool commit_device_setting(const std::string& key,

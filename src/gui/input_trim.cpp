@@ -1238,7 +1238,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // region/playhead. Arms a PendingTrimDrag rather than beginning the drag
 // outright — the pending+threshold pattern the marker flag uses: the press
 // CLAIMS the endcap/bridge geometry, a motionless press-release commits nothing,
-// and only once the pointer crosses drag_moved_threshold_px() does begin_trim_drag
+// and only once the pointer crosses grab_moved_threshold_px() does begin_trim_drag
 // run and the existing single/pair drag machinery take over unchanged. A full
 // ordered pair ALWAYS rests (the unset state died 2026-07-30), so the old
 // pair-required gate is gone and the press is claimed purely on GEOMETRY.
@@ -1317,7 +1317,7 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
 
 // Arm the pending trim endcap/bridge drag from a plain TRIM-BAR press. Mirrors
 // PendingMarkerPress: nothing mutates the trim store yet — begin_trim_drag runs
-// only when on_motion sees the pointer cross drag_moved_threshold_px() from the
+// only when on_motion sees the pointer cross grab_moved_threshold_px() from the
 // press. is_begin names the single bound (Begin for a bridge/pair drag); both
 // distinguishes the single vs the pair.
 void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,

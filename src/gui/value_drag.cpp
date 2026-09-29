@@ -30,7 +30,7 @@ int64_t phase_bound_now(const GuiPhaseResetMarker& m, MarkerCell cell) {
 
 }  // namespace
 
-bool ValueDragOps::begin(int marker, MarkerCell cell, int press_y) {
+bool ValueDragOps::begin(int marker, MarkerCell cell, int origin_y) {
     // THE TARGET RULE, asked of its one owner and asked HERE rather than at the
     // caller, so the crossing and the cursor map cannot answer it differently
     // (value_drag_target, app_state.h). A refusal is SILENT and writes nothing:
@@ -47,7 +47,7 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int press_y) {
     st.marker  = marker;
     st.column  = column;
     st.cell    = cell;
-    st.press_y = press_y;
+    st.origin_y = origin_y;
 
     if (cell == MarkerCell::Payload) {
         // THE TEMPO ARM, SEEDED BY THE STEP'S OWN BODY (warp_tempo_step_start,
@@ -64,7 +64,7 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int press_y) {
         // THE SLICE IS THIS GESTURE'S ONE RESOLVE, taken at the begin and
         // never per motion: the walk answers the value the press found, and
         // that anchor is fixed for the drag's life by the same rule that makes
-        // the target absolute against the press.
+        // the target absolute against the origin.
         const WarpTempoStart start = warp_tempo_step_start(
             mv[static_cast<size_t>(marker)], slice_to_warp_markers(mv), marker,
             audio.total_frames());
@@ -105,21 +105,23 @@ void ValueDragOps::apply_motion(int mouse_y) {
     // the hand for the same travel at 100% and at 225%. Floored at 1: a
     // degenerate factor must never make the step zero pixels wide.
     const int per_step = scaled_px(kValueDragPxPerStep, 1);
-    // TRAVEL IS MEASURED FROM THE PRESS AND UP IS POSITIVE: window y grows
-    // downward, so `press_y - mouse_y` is "how far the hand has risen", and
-    // the sign of the step count is the sign of the value change.
+    // TRAVEL IS MEASURED FROM THE ORIGIN AND UP IS POSITIVE: the origin is
+    // the y where the grab gate was crossed (ValueDragState::origin_y, never
+    // the press), window y grows downward, so `origin_y - mouse_y` is "how
+    // far the hand has risen since the drag began", and the sign of the step
+    // count is the sign of the value change.
     const int64_t travel =
-        static_cast<int64_t>(app.value_drag.press_y) - mouse_y;
+        static_cast<int64_t>(app.value_drag.origin_y) - mouse_y;
     // C++ integer division TRUNCATES TOWARD ZERO, which is what this gesture
-    // wants: the count is SYMMETRIC about the press — the first step up and
+    // wants: the count is SYMMETRIC about the origin — the first step up and
     // the first step down are both a full per_step away — so a hand wobbling
-    // inside the dead band around its own press writes nothing in either
+    // inside the dead band around the crossing writes nothing in either
     // direction. Flooring instead would make the downward half fire a step
-    // one pixel below the press.
+    // one pixel below the origin.
     const int64_t steps = travel / per_step;
     if (steps == app.value_drag.last_steps) return;
     app.value_drag.last_steps = steps;
-    // THE TARGET IS ABSOLUTE AGAINST THE PRESS, never an accumulation of
+    // THE TARGET IS ABSOLUTE AGAINST THE ORIGIN, never an accumulation of
     // per-event deltas: the hand's position decides the value, so a drag that
     // walks out to a wall and comes back lands exactly where it started rather
     // than somewhere the clamps ate.

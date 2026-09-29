@@ -8686,7 +8686,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // callback a pointer press arrives and arms pending_marker_press /
     // pending_trim_drag; the frame callback then runs this block and would
     // promote the new pair UNDER THE AIM — the press decided its subject and
-    // stored its press_x against the OLD promoted basis, and the 8px crossing
+    // stored its press_x against the OLD promoted basis, and the grab-gate
+    // crossing (grab_moved_threshold_px)
     // would convert that stored column through the NEW one, which is exactly
     // the press-to-crossing epoch split the worker's dispatch freeze and
     // completion drop exist to prevent (they cover a job dispatched or

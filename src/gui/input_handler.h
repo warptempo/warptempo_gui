@@ -1604,9 +1604,10 @@ struct GuiInputHandler {
     // need the same answer and an inline copy would be an inventory to keep.
     bool tooltip_dwell_suppressed() const;
 
-    // THE LONG PRESS'S CUE STARTS AT THE PRESS. kTooltipDelayMs IS
-    // kChromeShiftHoldMs (render.h), so the hint is the long press's own cue
-    // and must arrive as the beat is crossed — but every press hides the
+    // THE LONG PRESS'S CUE STARTS AT THE PRESS. tooltip_delay_ms() (render.h)
+    // and chrome_shift_hold_ms() (app_state.h) read the one hold delay, so the
+    // hint is the long press's own cue
+    // and must arrive as the hold is crossed — but every press hides the
     // tooltip and zeroes its dwell, and only the next settled hover walk would
     // re-stamp it, with a clock started one loop interval late. So the
     // admitted roster arm seeds the owner and the dwell from the press's own
@@ -1648,7 +1649,7 @@ struct GuiInputHandler {
     // gate that no longer holds, dispatches nothing. It also owns THE SHIFT LONG PRESS: the hold
     // measured against the arm's press stamp and ORed into the one shift term
     // the chord is built from, on the shift-admitting buttons alone
-    // (kChromeShiftHoldMs, app_state.h, carries the ruling).
+    // (chrome_shift_hold_ms(), app_state.h, carries the ruling).
     bool arm_redesign_press(int x, int y, GuiInputState mods);
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,
@@ -3267,7 +3268,7 @@ private:
     // inter-cap bridge only). Arms a PendingTrimDrag (the pending+threshold
     // pattern): the
     // press CLAIMS the cap/bridge geometry, but the trim-drag machinery begins
-    // only once the pointer crosses drag_moved_threshold_px(). A full ordered pair
+    // only once the pointer crosses grab_moved_threshold_px(). A full ordered pair
     // always rests (the unset state died 2026-07-30), so the claim is purely
     // GEOMETRIC. Returns true iff the press landed on trim
     // geometry (an endcap-rect single hit, or the trim bar lane's inter-cap
@@ -3290,7 +3291,7 @@ private:
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
-    // only once on_motion crosses drag_moved_threshold_px() from the press.
+    // only once on_motion crosses grab_moved_threshold_px() from the press.
     // ONE SURFACE ARMS IT, the 10 px bar's endcaps and bridge (the waveform
     // overlay armed it too from 2026-08-18 until its resting form was deleted
     // on 2026-09-22).
@@ -3674,6 +3675,18 @@ private:
     // already written the live struct and the file and gated the no-op case.
     void apply_max_waveform_height(int authored_px);
 
+    // THE HOLD DELAY'S LIVE APPLY (the device config's `hold_delay_ms`,
+    // architect 2026-09-29): install the value into the renderer's one owner
+    // (set_hold_delay_ms, render.h — read by tooltip_delay_ms and
+    // chrome_shift_hold_ms) and push it down into the input core's region
+    // hold (GuiPlatform::set_touch_region_hold_ms), so the three holds read
+    // the new value from the next hold on, with no restart. Nothing is
+    // painted from it, so nothing is damaged. It ASSIGNS AND PERSISTS
+    // NOTHING: its sole caller, the settings editor's device-key body
+    // (commit_device_setting), has already written the live struct and the
+    // file and gated the no-op case.
+    void apply_hold_delay_ms(int ms);
+
     // The read-only bit's one setter (2026-09-04, converting a codex finding
     // that the two roads had drifted apart on damage). Two roads write the
     // bit: bare `o` on the active tab, which the icon row's Lock button
@@ -4021,8 +4034,8 @@ private:
     // since R37 being the row's, never a row of the list's), the release (A
     // MOTIONLESS LIFT HIGHLIGHTS THE ROW AND OPENS IT — a click activates,
     // architect 2026-08-29; a scroll drag ends), the motion
-    // (past the drag gate — the product's one Chebyshev crossing, on EITHER
-    // axis — the arm is the band's scroll drag; inside
+    // (past the drag gate — the sweeps' and pans' Chebyshev crossing, on
+    // EITHER axis — the arm is the band's scroll drag; inside
     // it the feint's inside bit), the hover walk, and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // the arm dropped, nothing committed). The claim is RANKED under the
@@ -4190,7 +4203,7 @@ private:
     //   modal_dialog_press_shifted — the SHIFTED-TWIN verdict for the arm that
     //                               is still standing (R37): the press-time
     //                               shift ORed with a hold past
-    //                               kChromeShiftHoldMs, the roster lift's own
+    //                               chrome_shift_hold_ms(), the roster lift's own
     //                               term. Read BEFORE the take, which clears
     //                               the arm.
     //   clear_modal_dialog_press  — the pointer-leave / capability-loss edge

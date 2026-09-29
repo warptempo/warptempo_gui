@@ -2512,6 +2512,16 @@ namespace {
     int    g_gui_scale_percent = 100;
 } // namespace
 
+namespace {
+    // THE HOLD DELAY in milliseconds (the device config's `hold_delay_ms`;
+    // contract at set_hold_delay_ms, render.h). Installed at the scale's two
+    // application points; born at kHoldBeatMs, the key's default.
+    int    g_hold_delay_ms = kHoldBeatMs;
+} // namespace
+
+void set_hold_delay_ms(int ms) { g_hold_delay_ms = ms; }
+int  hold_delay_ms()           { return g_hold_delay_ms; }
+
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
