@@ -296,8 +296,8 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 // at a held zoom. The LEVEL→spp map is device-relative since 2026-09-27
 // (spp = working column × 2^(level − 2), samples_per_pixel_at), and the
 // working column is fixed per process from the held width, so within a
-// device every level, whole or fractional (every rest a Ctrl-drag, pinch or
-// pen zoom leaves), has one grid; across devices the same level is the same
+// device every level, whole or fractional (every rest a zoom-band drag or a
+// pinch leaves), has one grid; across devices the same level is the same
 // RELATIVE zoom and a different grid, the cross-device promise withdrawn.
 //
 // WHY 16 — the waveform width rule's own reason (waveform_area, main.cpp):

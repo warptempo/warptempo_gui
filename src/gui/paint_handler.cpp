@@ -1032,9 +1032,10 @@ constexpr IconRowDef kIconRowButtons[] = {
     // that duplicated them was deleted 2026-08-15; the record is at
     // kFilePopupItems, app_state.h). The stepped zoom buttons in front of
     // them and their keys `=` / `-` were removed 2026-09-25 (architect: zoom
-    // is on every surface — the Ctrl+drag, the pinch, the S Pen's
-    // button-held drag), two boxes and two 2px gaps off the walk and no
-    // separator moving.
+    // is on every surface — then the Ctrl+drag, the pinch and the S Pen's
+    // button-held drag; the drag from the waveform's zoom band on every
+    // surface since 2026-09-29, beside the pinch), two boxes and two 2px gaps
+    // off the walk and no separator moving.
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
     // WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
@@ -5930,38 +5931,36 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
 
 // Paints the anchor stem (the Ableton pivot affordance) at the zoom anchor's
-// current column, full waveform height — a live zoom gesture's, or the S
-// Pen's retained one between strokes. TWO PRODUCERS, ONE STEM:
-//   * THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while `zooming` — from a
-//     ctrl-armed press, or from a ctrl-down edge mid-drag, and gone again at
-//     the ctrl-up edge; the mode's contract is at ScrollDragState);
+// current column, full waveform height — a live zoom gesture's, or the
+// RETAINED ANCHOR between zoom-band drags. THREE PRODUCERS, ONE STEM:
+//   * THE ONE NAV DRAG'S ZOOM (scroll_drag while `zooming` — a drag that
+//     began in the waveform's ZOOM BAND, from its threshold crossing to its
+//     end; the quarter rule's contract is at ScrollDragState);
 //   * THE TOUCH ZOOM (touch_nav_zoom.seated — the contract is at
 //     TouchNavZoomState, app_state.h), added so THE TWO SURFACES SHOW THE SAME
 //     AFFORDANCE (architect 2026-08-14, from the rig, asking to SEE the glass
 //     gesture: "add a zoom stem to the zoom on the touchpad just so I can see
 //     exactly what's going on, because at the edges there are some
 //     strangeness, it seems like") — the record it reads is one seat shared
-//     by the TWO-FINGER PINCH and, since 2026-09-25, the ONE-FINGER CTRL ZOOM
-//     (`TouchNavZoomState::one_finger`), so the stem has a third producer
-//     riding the second's record; AND THE SEAT'S THIRD POSTURE, THE PEN'S
-//     RETAINED ANCHOR (`TouchNavZoomState::retained`, architect 2026-09-27):
-//     a one-finger seat the pen lifted from with its side button held
-//     outlives the gesture, so the stem stays painted between strokes, at
-//     the anchor's live column, until the platform's release hook or a
-//     view-state clear takes the seat.
+//     by the TWO-FINGER PINCH and the ONE-FINGER ZOOM from the zoom band
+//     (`TouchNavZoomState::one_finger`);
+//   * THE RETAINED ANCHOR (AppState::retained_zoom_anchor, architect
+//     2026-09-29): a zoom-band drag's pivot, mouse or glass, kept past its
+//     lift, so the stem stays painted between drags, at the anchor's live
+//     column, until the next zoom-band drag takes it over or anything else
+//     dissolves it (the inventory is at the record).
 // The gate is the gesture record and nothing else since 2026-08-05
-// (architect), so THE PRESS ITSELF SHOWS THE PIVOT — the headless zoom stem —
-// rather than the stem appearing only once the drag crosses the slack. The
-// mouse arm and the mode-switch edges owe the frame's damage
-// (arm_nav_zoom_press / the mode sync in on_motion); it
-// vanishes the moment its gate drops (release / button loss / the force-end
-// finalizer / the ctrl-up switch, each spelling its own damage; Esc no longer
-// ends a gesture at all) — on the glass, at the seat's clear, which a
-// retained pen anchor defers past the pen's lift. The stem is the ZOOM PIVOT and nothing more — the
-// playhead jump that briefly rode the strip drag was rolled back 2026-08-06
-// and the stem is what survives it.
-// THE PINCH OWES ITS DAMAGE AT BOTH ENDS, exactly as the other producer
-// does, and NEITHER END IS FREE — a seating frame is not an applied frame at all
+// (architect). The mouse's zoom stem appears at the drag's CROSSING (a
+// zoom-band press may yet be a click, so it paints nothing), which owes that
+// frame's damage; it vanishes the moment its gate drops (release / button
+// loss / the force-end finalizer, each spelling its own damage; Esc no longer
+// ends a gesture at all) — unless a clean lift hands it to the retained
+// record, which paints the same column; on the glass, at the seat's clear or
+// its handover at the finger's lift. The stem is the ZOOM PIVOT and nothing
+// more — the playhead jump that briefly rode the strip drag was rolled back
+// 2026-08-06 and the stem is what survives it.
+// THE PINCH OWES ITS DAMAGE AT BOTH ENDS, exactly as the other producers do,
+// and NEITHER END IS FREE — a seating frame is not an applied frame at all
 // in the general case (the seat is taken above the gesture's exact-no-op
 // return, so two fingers landing and sliding together seat and apply nothing;
 // the ordering rule is at apply_touch_nav_update's seat), and even a seating
@@ -5971,9 +5970,10 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // saturated is exactly that frame). So the SEAT damages at its own
 // site, the mouse arms' rule, and the CLEAR damages through
 // clear_touch_zoom_seat, because a clear can land on a frame that applies
-// nothing at all (a survivor's pan refused off the wheel's surfaces).
-// BOTH PRODUCERS ANCHOR THE SAME WAY AND ALWAYS DID (all three did, while
-// there were three), which is why there
+// nothing at all (a survivor's pan refused off the wheel's surfaces); the
+// retained record's dissolve damages through its own body for the same
+// reason (dissolve_retained_zoom_anchor).
+// ALL THREE ANCHOR THE SAME WAY, which is why there
 // is ONE expression (the nav drag's pivot went back to a SONG position
 // 2026-08-14 — the clamped-zoom reversibility ruling, contract at
 // ScrollDragState — and the pinch seats a song frame for the same reason): the
@@ -5983,30 +5983,32 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // blitted plate while the worker rebuilds, and the anchor lives in the active
 // display domain (viewport_start + col*spp) so no warp map is walked.
 // Re-projecting is what makes the stem SLIDE WITH ITS CONTENT when a clamped
-// zoom keeps moving the song under it — which is now visible ON GLASS exactly
+// zoom keeps moving the song under it — which is visible ON GLASS exactly
 // as it is under the mouse, the ruling made watchable and the reason the
-// architect asked for the stem there.
+// architect asked for the stem there — and what lets a retained stem ride a
+// wheel pan with the song it names.
 // strip_anchor_stem_column clamps the column to the visible edges (and
 // render_strip_anchor_stem's own clamp agrees) — an edge-pinned anchor draws
 // the clamp itself.
 // PRECEDENCE IS DECLARED RATHER THAN LEFT TO THE EXPRESSION'S SHAPE: a held
 // mouse capture and a glass contact are not structurally impossible together,
-// so the CAPTURING gesture goes first — the nav drag's zoom phase, then the
-// pinch — a capture owning the pointer for its whole life and being the more
-// committed act. (With two producers the selection is a ternary again; it was
-// an if/else chain while there were three, and the rule it expresses is the
-// same either way.) One stem is painted either way.
+// so the CAPTURING gesture goes first — the nav drag's zoom, then the touch
+// seat, then the retained record (which a live zoom-band drag of either road
+// has taken over by construction, so it stands only between drags). One stem
+// is painted either way.
 void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) {
     const bool nav_zoom    = app.scroll_drag.active && app.scroll_drag.zooming;
-    const bool touch_pinch = app.touch_nav_zoom.seated;
-    if (!nav_zoom && !touch_pinch) return;
+    const bool touch_zoom  = app.touch_nav_zoom.seated;
+    const bool retained    = app.retained_zoom_anchor.has_value();
+    if (!nav_zoom && !touch_zoom && !retained) return;
     if (area.w <= 0 || area.h <= 0) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
     if (basis.spp <= 0.0) return;
 
-    const double anchor_sample = nav_zoom ? app.scroll_drag.anchor_sample
-                                          : app.touch_nav_zoom.anchor_sample;
+    const double anchor_sample = nav_zoom   ? app.scroll_drag.anchor_sample
+                               : touch_zoom ? app.touch_nav_zoom.anchor_sample
+                                            : *app.retained_zoom_anchor;
 
     // The stem's one column derivation (strip_anchor_stem_column over
     // displayed_column_at, warp_frame_map_view.h), on the PLATE basis.

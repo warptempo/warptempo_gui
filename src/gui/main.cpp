@@ -1612,34 +1612,26 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
     // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the
-    // one nav drag (pan by default, zoom while ctrl is held), for infinite
-    // pan/zoom travel.
+    // one nav drag (the pan from the waveform's middle half, the zoom from its
+    // top and bottom quarters), for infinite pan/zoom travel.
     // All the platform methods self-guard (begin no-ops when a capture is live
     // or the compositor lacks the managers; end is idempotent; the restore
     // riders no-op uncaptured), so the input layer
     // stays agnostic to whether capture is available. The begin hook forwards the
     // gesture's own cursor kind, which is what the release restores (contract at
-    // GuiPlatform::begin_pointer_capture); the nav drag's mid-gesture mode
-    // switches ride the restore-x clear, the restore-kind re-stamp, the
-    // lateral freeze that stops the zoom phase's discarded sideways travel
-    // moving the pointer's notional position, and the ctrl-up handover that
-    // gives that position the stem's own column before the override is
-    // dropped (2026-08-14, the live-ctrl model). The WRAP SPAN rides the
-    // capture's begin instead of a mode switch — it belongs to the captured
-    // pointer rather than to a phase.
+    // GuiPlatform::begin_pointer_capture); the zoom rides the per-event
+    // restore-x stamp (the stem) and the lateral freeze that stops the zoom's
+    // sideways travel moving the pointer's notional position, both set at the
+    // crossing and never switched (the band is decided at the press). The
+    // WRAP SPAN rides the capture's begin too — it belongs to the captured
+    // pointer rather than to a gesture.
     input_handler.begin_strip_pointer_capture = [&](GuiCursorKind restore_kind) {
         gui.begin_pointer_capture(restore_kind);
     };
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
-    input_handler.clear_strip_capture_restore_x =
-        [&]() { gui.clear_capture_restore_x(); };
-    input_handler.set_strip_capture_restore_kind =
-        [&](GuiCursorKind kind) { gui.set_capture_restore_kind(kind); };
     input_handler.set_strip_capture_notional_x_frozen =
         [&](bool frozen) { gui.set_notional_x_frozen(frozen); };
-    input_handler.set_strip_capture_notional_x =
-        [&](double sx) { gui.set_notional_pointer_x(sx); };
     input_handler.set_strip_capture_wrap_span =
         [&](double lo, double hi) { gui.set_capture_wrap_span(lo, hi); };
 
@@ -1650,15 +1642,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // never pan, the nav body discarding their centroid delta), and the
     // phone model's
     // single-finger frames born of a drag starting on the pan surface — the
-    // pan, or under the ctrl bit (the S Pen's button on the tablet,
-    // 2026-09-25) the one-finger zoom — drive the input handler's ONE
+    // pan from the waveform's middle half, or the one-finger zoom from its top
+    // and bottom quarters (the quarter rule, 2026-09-29) — drive the input
+    // handler's ONE
     // touch-nav body, which runs the
     // strip-drag family's own viewport chokepoint — the
     // set_keyboard_intent_cancel_hook wiring precedent, one narrow
     // platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook: the
     // platform asks it once at each first finger's down, and the GUI answers
     // the NAVIGATION SURFACE — the whole waveform and nothing else (the ruler
-    // and the marker lane left it on both devices 2026-09-25) — surface geometry only
+    // and the marker lane left it on both devices 2026-09-25) — and its BAND
+    // (touch_nav_zone), which the platform holds for the stream — surface geometry only
     // (refusals stay per-frame in the update body and in the region begin);
     // off it the platform opens no window at all, the down being the pointer
     // on contact, so no nav gesture can begin anywhere else (2026-09-25).
@@ -1685,9 +1679,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&](const GuiTouchNavFrame& frame) {
             input_handler.apply_touch_nav_update(frame);
         },
-        [&]() { input_handler.end_touch_nav(); },
+        [&](bool lifted) { input_handler.end_touch_nav(lifted); },
         [&](int x, int y) {
-            return input_handler.touch_point_in_pan_zone(x, y);
+            return input_handler.touch_nav_zone(x, y);
         },
         [&](int x, int y) { input_handler.begin_touch_region(x, y); },
         [&](int x, int y) { input_handler.update_touch_region(x, y); },
@@ -1698,14 +1692,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&](int x, int y) { input_handler.begin_touch_caret_drag(x, y); },
         [&](int x, int y) { input_handler.update_touch_caret_drag(x, y); },
         [&]() { input_handler.end_touch_caret_drag(); });
-    // THE PEN'S RETAINED ZOOM ANCHOR'S RELEASE (architect 2026-09-27): the
-    // platform fires it where a retained anchor dies — its inventory is at
-    // GuiPlatform::set_pen_zoom_anchor_release_hook (platform_android.h); the
-    // Wayland backend accepts it and never fires it. Its partner, the
-    // retention itself, is a query end_touch_nav asks
-    // (GuiPlatform::pen_lift_keeps_zoom_anchor), not a hook.
-    gui.set_pen_zoom_anchor_release_hook(
-        [&]() { input_handler.release_pen_zoom_anchor(); });
 
     auto invalidate_modal_dialog_area = [&]() { viewport.invalidate_modal_dialog_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
@@ -1814,6 +1800,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // any pointer-button press — so no repeat-bit test is needed. The
         // burst's full edge inventory is at AppState::ChromePress.
         app.chrome_press.repeat_due_ms = 0;
+        // ANY KEY PRESS DISSOLVES THE RETAINED ZOOM ANCHOR (architect
+        // 2026-09-29, the quarter rule; the inventory at
+        // AppState::retained_zoom_anchor) — at THIS hook for the same reason
+        // as the line above: it sees exactly the platform's key deliveries,
+        // none of the synthetic on_key entries (a chrome lift's own press
+        // already dissolved it at on_button_press).
+        dissolve_retained_zoom_anchor(app, viewport);
         input_handler.on_key(key, mods);
     });
 
@@ -2181,8 +2174,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // nothing. The GEOMETRY takes the same shape one hook further down, where
     // redeliver_geometry() re-fires on_resize for a size that did not change.
     app.window_activated = gui.window_activated();
+    // FOCUS LOSS DISSOLVES THE RETAINED ZOOM ANCHOR (architect 2026-09-29,
+    // the quarter rule; the inventory at AppState::retained_zoom_anchor): the
+    // deactivating edge on both backends — a task switch or a shade pull on
+    // the glass, a click into another window on the desk — ends the visit the
+    // anchor belonged to.
     gui.set_activation_changed_hook([&] {
         app.window_activated = gui.window_activated();
+        if (!app.window_activated) dissolve_retained_zoom_anchor(app, viewport);
         viewport.invalidate_top_strip();
         if (app.modal_dialog.valid) viewport.invalidate_modal_dialog_area();
         if (folder_overlay::stands(app))
@@ -2208,13 +2207,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // PRESS, pointer intent, and no edge of this hook ends a finger's hold on a
     // button (the reasoning is at the setter's contract, the burst's whole edge
     // inventory at AppState::ChromePress).
+    // AND THE RETAINED ZOOM ANCHOR (architect 2026-09-29, the quarter rule):
+    // ANY KEY PRESS dissolves it, and these edges are key presses the on_key
+    // hook below never sees (a Super-swallowed press) or the keyboard going
+    // away (its focus leaving) — the anchor's whole inventory is at
+    // AppState::retained_zoom_anchor. Not a key intent, but the same edge
+    // answers it, so it rides here rather than growing a second hook.
     gui.set_keyboard_intent_cancel_hook([&] {
         input_handler.clear_modal_dialog_key_press();
+        dissolve_retained_zoom_anchor(app, viewport);
     });
 
-    // THE SETTLED BOUNDARY AND ITS THREE CONSUMERS (architect 2026-08-03,
-    // replacing the per-site model; the third joined 2026-08-14 with the nav
-    // drag's live ctrl). The run loop fires this at the TAIL of every
+    // THE SETTLED BOUNDARY AND ITS TWO CONSUMERS (architect 2026-08-03,
+    // replacing the per-site model; a third rode it 2026-08-14..2026-09-29 for
+    // the nav drag's live ctrl). The run loop fires this at the TAIL of every
     // iteration it is not leaving, so whatever is derived here is derived once per
     // poll wakeup from a state that has fully settled — after the display's
     // events, the tick and both worker completions.
@@ -2281,22 +2287,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // per-iteration call cannot resurrect a face from coordinates the pointer
     // has left behind.
     //
-    // THE NAV DRAG'S ZOOM/PAN MODE IS THE THIRD CONSUMER (2026-08-14), and it
-    // is the same disease once more: ctrl SELECTS what a live navigation drag
-    // means, so releasing it under a MOTIONLESS pointer must drop the zoom stem
-    // and re-stamp the capture's restore there and then — the old model synced
-    // in on_motion alone, so the stem stood until the mouse moved again
-    // (architect, from the rig). It refuses immediately with no nav drag
-    // standing, and unlike the two above it is deliberately NOT gated on the
-    // pointer being in the window: a captured drag's pointer is virtual and
-    // may be anywhere, and the gesture is what owns the answer. It is
-    // independent of both — the map refuses every cue while a gesture is live,
-    // and the hover walk reads nothing it writes — so the order here stays
-    // free.
+    // (THE NAV DRAG'S ZOOM/PAN MODE WAS A THIRD CONSUMER from 2026-08-14 until
+    // 2026-09-29: ctrl selected what a live navigation drag meant, so a ctrl
+    // release under a motionless pointer had to drop the stem here. The
+    // quarter rule decides the drag's meaning at the press, so nothing about
+    // it can move under a resting pointer and the consumer is gone.)
     gui.set_loop_settled_hook([&](GuiInputState mods) {
         input_handler.refresh_pointer_cursor(mods);
         input_handler.recompute_dropdown_hover(mods);
-        input_handler.sync_nav_drag_mode(mods);
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {

@@ -1547,21 +1547,16 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 input_.touch_capability_lost();
                 // AND A HOVERING PEN LEAVES WITH IT: no HOVER_EXIT is owed to
                 // a window that lost focus, so the pointer's leave (the
-                // tooltip hide, the hover faces) is delivered here, and the
-                // pen's Ctrl bit drops.
+                // tooltip hide, the hover faces) is delivered here.
                 end_pen_hover();
-                set_pen_ctrl(false);
-                // AND THE PEN'S RETAINED ZOOM ANCHOR DIES WITH IT (release
-                // inventory (d), set_pen_zoom_anchor_release_hook): the
-                // contacts are gone and the button is unobserved until the
-                // pen reports again, so no anchor is carried across the
-                // window's absence. The pen's contact record goes with the
-                // contacts, and the plane's latch goes OUT (the pen left the
-                // window; pen_report_in_plane's transitions): the pen's next
-                // report here must enter the plane afresh.
+                // The pen's contact record goes with the contacts, and the
+                // plane's latch goes OUT (the pen left the window;
+                // pen_report_in_plane's transitions): the pen's next report
+                // here must enter the plane afresh. (The retained zoom
+                // anchor dies at this edge too, GUI-side: the activation
+                // hook, main.cpp.)
                 pen_on_glass_ = false;
                 pen_in_plane_ = false;
-                release_pen_zoom_anchor();
             }
             break;
         }
@@ -1643,18 +1638,18 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     // than returning it is deliberate: a mouse click that fell through to the
     // system would act on whatever is behind the activity.
     //
-    // THE S PEN IS NOT IN THAT CLASS: IT IS A FINGER WITH THREE AMENDMENTS
-    // (architect 2026-09-25, touch.md's pen section). The architect uses the
-    // Tab S10 FE's pen daily, and Samsung reports it as a touchscreen source
-    // with the stylus bits beside (TOUCHSCREEN|STYLUS), so its contacts ride
-    // the finger road — the phone-model pan, the region hold, the caret drag,
-    // the tap-at-lift and every fingertip-tuned number, which he ruled it
-    // keeps. What this backend adds for it is read per event in
-    // on_motion_event: the TOOL TYPE (STYLUS or ERASER is the pen, handed to
-    // the core's touch_down), the SIDE BUTTON (the Ctrl bit, through the
-    // modifier door), the mid-stroke BUTTON_PRESS / BUTTON_RELEASE edges and
-    // the HOVER actions (the pointer's enter / motion / leave, so the roster's
-    // hover walk and the tooltip dwell run under a hovering pen). A source
+    // THE S PEN IS NOT IN THAT CLASS: IT IS A FINGER WITH TWO AMENDMENTS
+    // (architect 2026-09-25, touch.md's pen section; its side button's Ctrl
+    // bit, the third, is struck 2026-09-29 — the button reaches nothing). The
+    // architect uses the Tab S10 FE's pen daily, and Samsung reports it as a
+    // touchscreen source with the stylus bits beside (TOUCHSCREEN|STYLUS), so
+    // its contacts ride the finger road — the phone-model pan, the waveform's
+    // zoom band, the region hold, the caret drag, the tap-at-lift and every
+    // fingertip-tuned number, which he ruled it keeps. What this backend adds
+    // for it is read per event in on_motion_event: the TOOL TYPE (STYLUS or
+    // ERASER is the pen, handed to the core's touch_down) and the HOVER
+    // actions (the pointer's enter / motion / leave, so the roster's hover
+    // walk and the tooltip dwell run under a hovering pen). A source
     // carrying the STYLUS bits WITHOUT the touchscreen's is admitted too, so
     // a pen reported that way is not silently eaten; a mouse or touchpad is
     // neither and stays consumed above.
@@ -1712,8 +1707,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                static_cast<double>(origin_y_);
     };
 
-    // THE PEN, read per event (the three amendments' platform half; the
-    // ruling is at the source gate above). A pointer whose tool type is
+    // THE PEN, read per event (the amendments' platform half; the ruling is
+    // at the source gate above). A pointer whose tool type is
     // STYLUS or ERASER is the pen — the eraser end is the same instrument
     // turned over, so it is the pen too — and anything else is a finger.
     auto is_pen = [&](size_t i) {
@@ -1732,75 +1727,20 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             pen_index   = i;
         }
     }
-    // WHETHER THIS PEN REPORT IS WITHIN THE GUI'S PLANE — the one answer both
-    // pen rules read (pen_report_in_plane): the hover doors below and the
-    // retained anchor's release (c). False when the event carries no pen.
-    // ASKED HERE ONCE PER EVENT AND NOWHERE ELSE: the predicate owns the
-    // plane's latch and updates it as it answers, so a second asking would
-    // be a second transition; everything below reads this const.
+    // WHETHER THIS PEN REPORT IS WITHIN THE GUI'S PLANE — the one answer the
+    // pen's hover rule reads (pen_report_in_plane): the hover doors below.
+    // False when the event carries no pen. ASKED HERE ONCE PER EVENT AND
+    // NOWHERE ELSE: the predicate owns the plane's latch and updates it as it
+    // answers, so a second asking would be a second transition; everything
+    // below reads this const.
+    //
+    // THE PEN'S SIDE BUTTON IS NOT READ (architect 2026-09-29): it was the
+    // Ctrl bit from 2026-09-25, steering the one-finger zoom and the chrome's
+    // ctrl admissions, and it reaches nothing now — the one-finger zoom is
+    // the waveform's quarter rule on every tool, decided GUI-side at the
+    // down, and the chrome's ctrl admissions are the keyboard's alone.
     const bool pen_in_plane =
         pen_present && pen_report_in_plane(event, masked, pen_index);
-
-    // THE SIDE BUTTON IS THE CTRL BIT, set BEFORE this event's delivery so
-    // the press, the motions and the settled hook's sync_nav_drag_mode all
-    // read the state this event reported (the door's contract,
-    // GuiInputCore::set_modifiers). STYLUS_PRIMARY is the platform's name for
-    // the barrel button since API 23; SECONDARY is accepted beside it because
-    // pens of the S Pen's lineage reported the barrel button that way before
-    // STYLUS_PRIMARY existed. Both bits are accepted, verified working on
-    // this tablet 2026-09-25. Read only on events that carry the pen, so a
-    // finger's event never speaks for it.
-    //
-    // THE BUTTON STEERS ONLY WHAT THE PEN OWNS: the pen's hover (nothing on
-    // the glass) or a gesture whose owning contact is the pen
-    // (GuiInputCore::touch_owner_tool, asked before this event's delivery).
-    // While a FINGER owns the gesture — or the owner has lifted and only
-    // ignored contacts drain — the pen is an ignored contact and its button
-    // reaches the door as released, so it never converts the finger's pan
-    // to a zoom nor makes the finger's pending window cross as one. Nothing
-    // pen-set can be standing to drop there: a finger becomes the owner only
-    // at a first down, and that down drops the hover's Ctrl before its own
-    // delivery (the DOWN arm below); every later pen event under that finger
-    // passes "released". Two actions are NOT sampled: the pen's OWN lift,
-    // whose final leg runs under the Ctrl bit the stroke last had and whose
-    // clear follows the lift (so a firmware reporting buttons=0 on the up
-    // cannot flip the last leg from zoom to pan), and a cancel, which clears
-    // unconditionally. The bit is otherwise dropped at a hover exit and focus
-    // loss.
-    //
-    // ONLY A REPORT WITHIN THE GUI'S PLANE IS SAMPLED (architect 2026-09-27,
-    // pen_report_in_plane): a hover above it is the pen out of the GUI's
-    // reach, exactly as a HOVER_EXIT is — its arm ends the hover and drops
-    // the bit, and a button edge reported above the plane drops it in its own
-    // arm — so re-entering the plane samples the button afresh. (A cancel
-    // and a HOVER_EXIT are never in the plane, which is what keeps them
-    // unsampled here. The plane has hysteresis, so "within" is the latch's
-    // answer: a pen that entered stays sampled up to the exit threshold.)
-    //
-    // AND AN IN-PLANE REPORT SHOWING THE BUTTON UP RELEASES THE PEN'S
-    // RETAINED ZOOM ANCHOR (release inventory (b) and (c),
-    // set_pen_zoom_anchor_release_hook): the pen's DOWN sampled released, a
-    // hover within the plane, a hovering button edge there, a
-    // mid-stroke report. Only while the pen steers: an ignored pen's button
-    // reads released by rule, not by the hand, and the finger that owns the
-    // gesture already released any anchor at its own first down. A release
-    // meeting a live stroke's seat is inert (the GUI clears a RETAINED seat
-    // alone); that stroke's own ctrl edge is what clears it there.
-    const bool pen_own_lift =
-        (masked == AMOTION_EVENT_ACTION_UP ||
-         masked == AMOTION_EVENT_ACTION_POINTER_UP) &&
-        index < count && is_pen(index);
-    if (pen_in_plane && !pen_own_lift) {
-        const int32_t buttons = AMotionEvent_getButtonState(event);
-        const bool held = (buttons & (AMOTION_EVENT_BUTTON_STYLUS_PRIMARY |
-                                      AMOTION_EVENT_BUTTON_SECONDARY)) != 0;
-        const std::optional<GuiTouchTool> owner = input_.touch_owner_tool();
-        const bool pen_steers =
-            !input_.touch_contact_active() ||
-            (owner && *owner == GuiTouchTool::Pen);
-        set_pen_ctrl(held && pen_steers);
-        if (pen_steers && !held) release_pen_zoom_anchor();
-    }
 
     switch (masked) {
         case AMOTION_EVENT_ACTION_HOVER_ENTER:
@@ -1824,8 +1764,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // translation's synthesized
             // entry motion never meets a pointer already in and its lift's
             // translation end takes the leave arm (no mouse is resting); the
-            // pen's lift back into hover is a fresh HOVER_ENTER. The EXIT
-            // drops the Ctrl bit — the pen has left the glass's reach.
+            // pen's lift back into hover is a fresh HOVER_ENTER.
             //
             // A HOVER ABOVE THE GUI'S PLANE IS NOT A POINTER (architect
             // 2026-09-27: every pen hover effect acts only within the plane,
@@ -1833,15 +1772,12 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // standing hover ENDS through the core's leave (the roster's
             // outline, the menu row's fill and mode, and the tooltip and its
             // dwell all go, the leave hook's own list, main.cpp; the reason
-            // is PenHoverEnd, end_pen_hover) and the Ctrl bit drops — and no
-            // enter or motion is delivered. Back within the plane (at or
-            // under the ENTER threshold, the latch's rule) the first report
-            // is a fresh enter. Neither the exit nor a report
-            // above the plane touches the retained zoom anchor.
+            // is PenHoverEnd, end_pen_hover) — and no enter or motion is
+            // delivered. Back within the plane (at or under the ENTER
+            // threshold, the latch's rule) the first report is a fresh enter.
             if (!pen_present) return;
             if (!pen_in_plane) {   // a HOVER_EXIT, or a hover above the plane
                 end_pen_hover();
-                set_pen_ctrl(false);
                 return;
             }
             if (input_.touch_contact_active()) return;
@@ -1856,22 +1792,15 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
 
         case AMOTION_EVENT_ACTION_BUTTON_PRESS:
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
-            // A MID-STROKE BUTTON EDGE. The bit itself was set above (as
-            // released when the pen owns nothing it could steer); that
-            // is the whole of it — the door delivers the staged motion under
-            // the old bit and announces the edge to a live single-finger nav
-            // itself, so there is no position to hand over and no frame owed.
-            // AN EDGE ABOVE THE GUI'S PLANE was not sampled (the pen is out
-            // of reach there) and is no pointer, so it takes the hover arm's
-            // own above-plane answer whole: a standing hover ENDS
-            // (end_pen_hover — the outline, the menu row's fill and mode and
-            // the tooltip all go) and the bit drops. It leaves the retained
-            // anchor alone: released high up and pressed again before
-            // re-entering the plane, the anchor stands.
-            if (pen_present && !pen_in_plane) {
-                end_pen_hover();
-                set_pen_ctrl(false);
-            }
+            // A SIDE-BUTTON EDGE carries nothing to the GUI (the button
+            // reaches nothing since 2026-09-29) and is consumed. What it
+            // still is, is a PEN REPORT, and the plane reads it like any
+            // other (pen_report_in_plane's transitions): AN EDGE ABOVE THE
+            // GUI'S PLANE is no pointer, so it takes the hover arm's own
+            // above-plane answer whole — a standing hover ENDS (end_pen_hover
+            // — the outline, the menu row's fill and mode and the tooltip all
+            // go). Within the plane it changes nothing.
+            if (pen_present && !pen_in_plane) end_pen_hover();
             return;
 
         case AMOTION_EVENT_ACTION_DOWN:
@@ -1884,40 +1813,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // leave arm rather than restoring the stale hover point. A hover
             // stands only while nothing is on the glass (hover motion is
             // dropped under a contact), so ending it here unconditionally is
-            // ending it at the first down. WHEN THE FIRST DOWN IS A FINGER,
-            // the hover's Ctrl goes with it before the finger's delivery: the
-            // finger owns this gesture and the pen's button steers only what
-            // the pen owns (the sampling above). A pen's first down keeps the
-            // bit its own DOWN just reported.
-            //
-            // THE RETAINED ZOOM ANCHOR (release inventory (a),
-            // set_pen_zoom_anchor_release_hook): EVERY FINGER DOWN RELEASES
-            // IT — any finger contact ends the pen's lifted zoom, at the
-            // contact itself, whatever the glass already holds. A finger
-            // landing while THE PEN OWNS a live stroke is an ignored contact:
-            // the release still fires (a seat retained by an earlier stroke
-            // that this one has not yet reached with a nav frame dies here,
-            // and the stem with it), and it is inert on the stroke's own live
-            // seat (the GUI clears a RETAINED seat alone), which the stroke
-            // keeps; the stroke is marked (pen_stroke_shared_), so its lift
-            // keeps nothing. The pen's own first down opens a fresh stroke,
-            // unmarked; whether it releases the anchor was the sampling's
-            // answer above (b).
-            {
-                const bool finger_down = index < count && !is_pen(index);
-                if (!input_.touch_contact_active()) {
-                    end_pen_hover();
-                    if (finger_down) set_pen_ctrl(false);
-                    else pen_stroke_shared_ = false;
-                } else if (finger_down) {
-                    const std::optional<GuiTouchTool> owner =
-                        input_.touch_owner_tool();
-                    if (owner && *owner == GuiTouchTool::Pen)
-                        pen_stroke_shared_ = true;
-                }
-                if (finger_down) release_pen_zoom_anchor();
-                if (index < count && is_pen(index)) pen_on_glass_ = true;
-            }
+            // ending it at the first down.
+            if (!input_.touch_contact_active()) end_pen_hover();
+            if (index < count && is_pen(index)) pen_on_glass_ = true;
             if (index < count) {
                 // EVERY AMotionEvent CARRIES EVERY LIVE POINTER'S CURRENT
                 // POSITION, not only the one its action names, and the fingers
@@ -1976,60 +1874,23 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                     input_.touch_motion(AMotionEvent_getPointerId(event, i),
                                         px(i), py(i));
                 }
-                // THE PEN LIFTING WITH ITS BUTTON HELD KEEPS ITS ZOOM ANCHOR
-                // (architect 2026-09-27; the GUI half at TouchNavZoomState,
-                // app_state.h): the stroke's last sampled Ctrl bit (pen_ctrl_
-                // — this lift is unsampled, so it is the bit the stroke's
-                // final leg runs under) held, and no finger joined the
-                // stroke. The answer is true exactly while the lift's own
-                // delivery runs, which is where the gesture's end asks it
-                // (pen_lift_keeps_zoom_anchor); an ignored pen's bit is
-                // released, so its lift keeps nothing.
-                const bool pen_lift  = is_pen(index);
-                const bool keep_seat =
-                    pen_lift && pen_ctrl_ && !pen_stroke_shared_;
-                pen_lift_keeps_anchor_ = keep_seat;
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
-                pen_lift_keeps_anchor_ = false;
-                // THE PEN'S LIFT DROPS THE CTRL BIT, after the lift's own
-                // delivery: this event was not sampled (the sampling above),
-                // so the final leg and the release ran under the bit the
-                // stroke last had, whatever buttons the up reports. A hover
-                // that follows reports the button afresh. A LIFT THAT KEEPS
-                // NOTHING FIRES NO RELEASE: every road to it already released
-                // at its own edge — a button up sampled in the plane (b, c) or
-                // a finger's down (a), the one reason a pen that held its
-                // button keeps nothing — and the lift's own nav end cleared
-                // any live seat.
-                if (pen_lift) {
-                    pen_on_glass_ = false;
-                    input_.touch_frame();
-                    set_pen_ctrl(false);
-                    return;
-                }
+                if (is_pen(index)) pen_on_glass_ = false;
             }
             break;
 
         case AMOTION_EVENT_ACTION_CANCEL:
             // The window system claims the touches. One contract with
-            // capability loss, and the core owns it whole; a pen-set Ctrl
-            // bit goes with them UNCONDITIONALLY — the clear reads the
-            // backend's own record (pen_ctrl_), not whether this cancel
-            // still enumerates a stylus, and the event was not sampled.
-            // THE PEN'S RETAINED ZOOM ANCHOR GOES TOO (release inventory
-            // (d), set_pen_zoom_anchor_release_hook): a live stroke's seat
-            // was cleared by the cancel's own nav end (the lift query
-            // answers false outside a lift), and this release takes one a
-            // tap had left standing. The pen's contact record goes with the
-            // contacts, and the plane's latch goes OUT, UNCONDITIONALLY like
-            // the Ctrl clear (pen_report_in_plane's transitions: the
+            // capability loss, and the core owns it whole (a live one-finger
+            // zoom's pivot is dropped there, not retained — the core tells the
+            // GUI's nav end this was no lift). The pen's contact record goes
+            // with the contacts, and the plane's latch goes OUT,
+            // UNCONDITIONALLY (pen_report_in_plane's transitions: the
             // predicate sets it out only on a cancel that still carries the
             // pen, and this one may not).
             input_.touch_cancel();
-            set_pen_ctrl(false);
             pen_on_glass_ = false;
             pen_in_plane_ = false;
-            release_pen_zoom_anchor();
             return;   // a cancel closes its own batch; no frame is owed
 
         default:
@@ -2042,17 +1903,6 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // off it. It follows every translated action, not just MOVE: a down and an
     // up each close their own batch too.
     input_.touch_frame();
-}
-
-void GuiPlatform::set_pen_ctrl(bool held) {
-    // A release clears only a Ctrl the pen set (pen_ctrl_); a press always
-    // brings the modeled bit to held.
-    const bool was_pen_set = pen_ctrl_;
-    pen_ctrl_ = held;
-    if (!held && !was_pen_set) return;
-    const GuiInputState mods = input_.current_mods();
-    if (mods.ctrl == held) return;
-    input_.set_modifiers(held, mods.shift, mods.alt, /*super=*/false);
 }
 
 void GuiPlatform::end_pen_hover() {
@@ -2089,9 +1939,10 @@ constexpr float kPenPlaneEnter = 85.0f;
 constexpr float kPenPlaneExit  = 100.0f;
 
 // THE ONE PREDICATE — "is this pen report within the GUI's plane" — read by
-// both pen rules and nothing else: the hover doors (on_motion_event's hover
-// arm: above the plane the pen is not a pointer) and the retained zoom
-// anchor's release (c) (an in-plane report showing the button up). IT OWNS
+// the pen's hover rule and nothing else: the hover doors (on_motion_event's
+// hover and button-edge arms: above the plane the pen is not a pointer). The
+// retained zoom anchor's release (c) was its second reader until the side
+// button stopped being the Ctrl bit, 2026-09-29. IT OWNS
 // THE PLANE'S LATCH (pen_in_plane_) and answers with the latch's new state,
 // so its one caller asks it exactly once per pen-carrying event. THE
 // TRANSITIONS:
@@ -2148,14 +1999,6 @@ bool GuiPlatform::pen_report_in_plane(const AInputEvent* event, int32_t masked,
         default:   // every other action
             return false;
     }
-}
-
-void GuiPlatform::set_pen_zoom_anchor_release_hook(std::function<void()> cb) {
-    pen_zoom_anchor_release_hook_ = std::move(cb);
-}
-
-void GuiPlatform::release_pen_zoom_anchor() {
-    if (pen_zoom_anchor_release_hook_) pen_zoom_anchor_release_hook_();
 }
 
 // THE ON-SCREEN KEYBOARD'S OTHER SEAM MEMBER (contract at the declarations;
@@ -2387,7 +2230,7 @@ void GuiPlatform::end_pointer_capture() {}
 // Wayland twin swaps a themed wl_surface under the pointer; a touch panel has
 // no pointer image at all. The POLICY still runs — the drop of a kind named
 // for a position the pointer does not occupy, and the remember-only-on-change
-// — because it is the core's and because notional_pointer_x() is live on this
+// — because it is the core's and because the notional position is live on this
 // platform too; only the protocol request at the end is missing.
 void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
     if (input_.pointer_position_unknown()) return;
@@ -2452,8 +2295,8 @@ void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason
 void GuiPlatform::set_keyboard_intent_cancel_hook(std::function<void()> cb) { input_.set_keyboard_intent_cancel_hook(std::move(cb)); }
 void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
-    std::function<void()> end,
-    std::function<bool(int x, int y)> pan_zone,
+    std::function<void(bool lifted)> end,
+    std::function<GuiTouchNavZone(int x, int y)> pan_zone,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
     std::function<void()> region_end,
@@ -2471,12 +2314,8 @@ void GuiPlatform::set_touch_nav_hooks(
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
 void GuiPlatform::set_capture_restore_x(double surface_x)   { input_.set_capture_restore_x(surface_x); }
-void GuiPlatform::clear_capture_restore_x()                 { input_.clear_capture_restore_x(); }
-void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) { input_.set_capture_restore_kind(kind); }
 void GuiPlatform::set_notional_x_frozen(bool frozen)        { input_.set_notional_x_frozen(frozen); }
-void GuiPlatform::set_notional_pointer_x(double surface_x)  { input_.set_notional_pointer_x(surface_x); }
 void GuiPlatform::set_capture_wrap_span(double lo, double hi) { input_.set_capture_wrap_span(lo, hi); }
-double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_x(); }
 
 // ---------------------------------------------------------------------------
 // android_main — this platform's entry point

@@ -57,6 +57,7 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // load_file's own two direct writes to these fields (the pre-parse 'W' reset
     // and the forced 'S' of a failed target-view restore).
     clear_touch_zoom_seat(app, viewport);
+    dissolve_retained_zoom_anchor(app, viewport);  // its twin, the same rule
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;

@@ -665,8 +665,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // which writes the live store per motion and so must swallow every chord
     // exactly as its horizontal sibling does) /
     // trim / region drags, the one nav drag and its pending
-    // click (scroll_drag — one state for the pending, the pan and the ctrl
-    // zoom phase since 2026-08-14; the dual-axis STRIP drag was a member here
+    // click (scroll_drag — one state for the pending, the pan and the drag
+    // zoom, by band since 2026-09-29; the dual-axis STRIP drag was a member here
     // until its deletion, 2026-08-15),
     // (THE STANDING REGION'S OWN EDITOR was an entry of its own from
     // 2026-08-15 until 2026-08-18: `region_edit_drag`, the move and the two
@@ -3307,7 +3307,8 @@ void GuiInputHandler::run_span_framing_command() {
 // varies over source time now — with the ALT
 // FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
 // SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
-// caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,
+// caller): the zoom gestures are the zoom-band DRAG (the Ctrl+drag until
+// 2026-09-29) and the pinch,
 // its keys `0` and `c` (the stepped zoom on bare `=` / `-` was removed
 // 2026-09-25: zoom is on every surface).
 //
@@ -3919,6 +3920,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // STATELESS pinch could not have this defect — it kept nothing between
     // frames — which is why the seat is what brought it.
     clear_touch_zoom_seat(app, viewport);
+    dissolve_retained_zoom_anchor(app, viewport);  // its twin, the same rule
 
     // THE GROUP CARRIES ACROSS THE FLIP (architect 2026-07-30, resolving the
     // deferral this block used to record): `t` translates the same markers into
