@@ -1453,18 +1453,26 @@ struct GuiInputHandler {
     // button is held (a press, a drag, any finger contact: no hover under
     // touch), the load is in flight, a prompt or a dialog editor veils the
     // window, the folder overlay stands, a dropdown is open or a notification
-    // card is under the pointer. FIRST it watches the selection: a unit that
-    // lost it is cut to rest and, under the pointer, DISARMED until the
-    // pointer leaves it or rests past the slop for the tooltip's wake-up
-    // (architect 2026-09-29, AppState::FlagHover). A change of unit fades the
-    // old one out and snaps the new one in (HoverFadeKind::SnapIn, the
-    // buttons' own, architect 2026-09-29) and damages the two units' own
-    // paint alone — the box and, for a payload, its stem's column (the stem
-    // tint). clear_ is the pointer-leave hook's (main.cpp): the hovered unit
-    // fades out and the disarm lifts, every reason alike. Paint state only:
-    // no input road reads either.
+    // card is under the pointer (every term but the window and the button is
+    // flag_units_unreachable_at's, which also answers an empty piece). A
+    // change of unit fades the old one out and snaps the new one in
+    // (HoverFadeKind::SnapIn, the buttons' own, architect 2026-09-29) and
+    // damages the two units' own paint alone — the box and, for a payload,
+    // its stem's column (the stem tint). It also ends the PRESS FACE on any
+    // report of the primary button up, and resets both on a lane change.
+    // clear_ is the pointer-leave hook's (main.cpp): the hovered unit fades
+    // out and a standing press face ends, every reason alike.
+    // THE PRESS FACE (architect 2026-09-29, AppState::FlagHover's `pressed`):
+    // press_ is on_button_press's, right after the writer at its head, for a
+    // primary press — it names the unit under the press in the promoted
+    // stash, the flags the press hits — and end_ is on_button_release's head
+    // (the lift, above every gate). Paint state only: no input road reads any
+    // of them.
     void recompute_flag_hover();
     void clear_flag_hover();
+    void press_flag_unit(int x, int y);
+    void end_flag_press();
+    bool flag_units_unreachable_at(int x, int y) const;
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole

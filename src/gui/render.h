@@ -83,6 +83,25 @@ inline constexpr GuiColor mix_color(GuiColor own, GuiColor toward,
     };
 }
 
+// THE EXTRAPOLATING TWIN of the mix above: the same line, toward + (own -
+// toward) × keep_own, with keep_own UNCLAMPED, so a factor past 1 carries
+// `own` beyond itself, away from `toward`. What it clamps is each CHANNEL, to
+// cairo's [0, 1] (the [0, 255] of the 8-bit pixel), so no factor can leave the
+// domain. Its one reader is the flag's press face (kFlagPressMix, below): a
+// point on a flag's own rest → selected line past the selected end.
+inline constexpr GuiColor extend_color(GuiColor own, GuiColor toward,
+                                       double keep_own) {
+    const auto channel = [keep_own](double o, double t) {
+        const double v = t + (o - t) * keep_own;
+        return v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
+    };
+    return GuiColor{
+        channel(own.r, toward.r),
+        channel(own.g, toward.g),
+        channel(own.b, toward.b),
+    };
+}
+
 // Trim boundaries in domain-frame samples (source-frame in source view,
 // target-frame in target view). Trim no longer dims any renderer — it is
 // consumed by render_trim_flags to place the bar and its endcaps. Values
@@ -2654,10 +2673,7 @@ inline int tooltip_damage_h_px() {
 // shows — SH_ToolTip_WakeUpDelay (qcommonstyle.cpp), restarted by every
 // motion past the slop below. Its own number: no hold and no beat reads it,
 // and it reads neither (the chrome shift long press is timed by
-// `hold_delay_ms` alone and has no visual announcement). ITS SECOND READER
-// (architect 2026-09-29, his pick of the same 700 ms): the flag hover's
-// re-arm after a deselect under the pointer waits this long from stillness
-// past the slop, the tooltip's own shape (AppState::FlagHover).
+// `hold_delay_ms` alone and has no visual announcement).
 inline constexpr int64_t kTooltipWakeUpMs = 700;
 // THE AWAKE WAKE-UP: 20 ms instead, while the product is awake (below) —
 // QApplication::notify's `toolTipFallAsleep.isActive() ? 20 : wakeDelay`
@@ -2696,14 +2712,8 @@ inline constexpr int64_t kTooltipExpireMs = 10000;
 // scaled_px, the authored px being to gui_scale what the dp is to density:
 // exactly 4dp on the tablet at its 200 % under the 320 density it runs at,
 // and half the drag gate (kDragMovedThresholdPx 8, app_state.h) as Android's
-// is half its touch slop. Floor 1, so a small scale never zeroes it.
-// TWO READERS, one test (either axis, strictly more than the slop): the
-// tooltip's wait (note_tooltip_hover) and, since 2026-09-29, the flag hover's
-// re-arm after a deselect under the pointer (AppState::FlagHover — the
-// architect's "the same half-threshold movement the icons require"), both
-// asking whether a resting pointer has really moved, and both re-anchoring
-// and restarting the same wake-up (kTooltipWakeUpMs) when it has. The name
-// stays the tooltip's, where the number was ruled.
+// is half its touch slop. Floor 1, so a small scale never zeroes it. Its one
+// reader is the tooltip's wait (note_tooltip_hover).
 inline constexpr int kTooltipHoverSlopPx = 4;
 inline int tooltip_hover_slop_px() {
     return scaled_px(kTooltipHoverSlopPx, 1);
@@ -3076,13 +3086,30 @@ struct FlagHitRect {
 // MarkerStem's two colours; the stem wears the fill, so the one blend serves
 // both). A hovered bound cell tints no stem, and the phase-reset lead-in ring
 // takes nothing (it paints only on the selected focus, which shows no hover).
-// A DESELECT UNDER THE POINTER PAINTS AT REST (architect 2026-09-29): a unit
-// that loses its selection while hovered, or while its tail fades, drops to
-// level 0 at once — box and stem — and shows no fill until the pointer leaves
-// it, or moves past the hover slop and then rests for the tooltip's own
-// wake-up (kTooltipWakeUpMs, 700 ms; architect 2026-09-29), so a
-// deselect reads whole rather than as a half-deselected flag (the rule and
-// its state are at AppState::FlagHover).
+// The hover is a pure function of where the pointer rests and the unit's
+// CURRENT selection bit: a unit deselected under the pointer shows the half
+// blend at once and keeps it, one selected under it shows its selected pair.
+//
+// THE PRESS FACE (architect 2026-09-29): while the primary button — the
+// mouse's, the pen's contact, a finger's — is DOWN on a unit, from the press
+// through any drag it starts (the horizontal marker drag and the value drag
+// alike: the drag moves the flag and has no look of its own) until the lift,
+// that unit paints its PRESS FACE, whatever its selection: every ink the face
+// paints — fill, edge, border, label, and a payload's stem — at kFlagPressMix
+// = 150 % ALONG ITS OWN REST → SELECTED LINE, selected + ½ (selected − rest)
+// per channel, clamped (extend_color, above), each class through its own pair
+// as the hover's blend is (the disabled blend of either, a tie follower's
+// damped cells, the `h` view's two halves). The border and the live label
+// sit at one colour at both ends, so they stay; the lead-in ring takes
+// nothing. It shows at the press with no fade, as the buttons' pressed
+// interior does, and the lift hands the unit back to the hover (the pointer
+// still on it) or to rest (a finger's lift, the pointer gone). The roster
+// buttons carry a pressed state distinct from their hover, and the flag
+// carries the same three faces now: REST → HOVER → PRESS → HOVER. It
+// REPLACES the deselect disarm of the same day (a deselected unit painted at
+// rest until the pointer left it, or crossed the tooltip's slop and rested
+// its 700 ms wake-up), whose timing read oddly on glass; after a
+// deselect-click the unit lands on its hover and stays there.
 //
 // IT IS PAINT, NEVER A CLAIM (strictly as painted): the hover is resolved from
 // the flag stash the next painted frame blits (flag_hover_stash, app_state.h —
@@ -3097,7 +3124,14 @@ struct FlagHitRect {
 // and, for a payload unit, its stem's column over the waveform
 // (flag_hover_stem_rect). `clip_lo_x` / `clip_hi_x` are the clip's columns,
 // which the pass's cull reads to shape only the flags that can reach the box.
+// THE PRESS FACE IS THE SAME OVERLAY, one more re-run clipped to the pressed
+// unit's box with `pressed` set, painted after the fades (a pressed unit's own
+// fading tail is not drawn under it); its edges damage the same box and stem.
+//
+// THE TWO FACES ARE TWO POINTS ON ONE LINE, the unit's rest colour (0) to its
+// selected colour (1): the hover at kFlagHoverMix, the press at kFlagPressMix.
 inline constexpr double kFlagHoverMix = 0.5;
+inline constexpr double kFlagPressMix = 1.5;
 struct FlagHoverPaint {
     // The hovered marker's index in the lane the pass paints — the live store,
     // or the diff list in `h` — resolved from the hover's identity at the
@@ -3105,6 +3139,8 @@ struct FlagHoverPaint {
     int        marker_index = -1;
     MarkerCell cell         = MarkerCell::Payload;
     int        level        = 0;    // the painted HoverFade level
+    // The unit paints its press face instead (the level is not read).
+    bool       pressed      = false;
     int        clip_lo_x    = 0;
     int        clip_hi_x    = 0;
 };
@@ -3114,6 +3150,11 @@ struct FlagHoverPaint {
 inline GuiColor flag_hover_fill(GuiColor rest, GuiColor selected, int level) {
     return hover_fade_color(mix_color(selected, rest, kFlagHoverMix), rest,
                             level);
+}
+// The pressed colour of one ink: kFlagPressMix along its rest → selected
+// line, no fade — every ink of a pressed unit's face, and its payload's stem.
+inline GuiColor flag_press_color(GuiColor rest, GuiColor selected) {
+    return extend_color(selected, rest, kFlagPressMix);
 }
 
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
@@ -3870,7 +3911,10 @@ struct FlagLaneRects {
 // the painter has any business baking into a cache: the open flag editor's
 // invalid-commit red flash, which wins, and THE FLAG HOVER'S STEM TINT
 // (architect 2026-09-29, FlagHoverPaint above), flag_hover_fill of the two
-// at the payload unit's painted hover level — the contract is at
+// at the payload unit's painted hover level, and while that unit is PRESSED
+// `pressed_color` — flag_press_color of its rest stem and its selected stem,
+// published because a selected marker's `color` is its selected stem and no
+// longer names the rest end of the line — the contract is at
 // GuiPaintHandler::paint_marker_stems.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
@@ -3890,6 +3934,7 @@ struct MarkerStem {
     double   x;
     GuiColor color;
     GuiColor selected_color;
+    GuiColor pressed_color;
 };
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an

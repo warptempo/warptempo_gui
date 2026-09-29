@@ -5924,15 +5924,15 @@ struct AppState {
     // none is left running. While it is false the tick does nothing more.
     bool hover_fades_running = false;
 
-    // THE FLAG HOVER (architect 2026-09-29; the paint rule is at render.h's
-    // FlagHoverPaint) — PAINT STATE ONLY, like the fades above: no press,
-    // cursor, tooltip or hit test reads it. `unit` is the unit under the
-    // resting pointer, resolved from the flag stash THE NEXT PAINTED FRAME
-    // BLITS (flag_hover_stash: the staged one while a rebuild waits for its
-    // promote, else the promoted one — so the hover is always read off the
-    // pixels it will be painted over), the cell by the painter's own
-    // boundaries, so under grid iterations the unit is the CELL; unnamed with
-    // none. Its one writer is GuiInputHandler::recompute_flag_hover
+    // THE FLAG HOVER AND THE FLAG PRESS (architect 2026-09-29; the paint rule
+    // is at render.h's FlagHoverPaint) — PAINT STATE ONLY, like the fades
+    // above: no press, cursor, tooltip or hit test reads it. `unit` is the
+    // unit under the resting pointer, resolved from the flag stash THE NEXT
+    // PAINTED FRAME BLITS (flag_hover_stash: the staged one while a rebuild
+    // waits for its promote, else the promoted one — so the hover is always
+    // read off the pixels it will be painted over), the cell by the painter's
+    // own boundaries, so under grid iterations the unit is the CELL; unnamed
+    // with none. Its one writer is GuiInputHandler::recompute_flag_hover
     // (input_pointer.cpp), run by every pointer motion, every press, the tick
     // and the pre-paint hook ahead of every frame; the pointer's leave and
     // the held primary button (a press, a drag, a finger's contact) clear it.
@@ -5945,6 +5945,38 @@ struct AppState {
     // box and, for a PAYLOAD unit, its marker's stem column over the
     // waveform.
     //
+    // THE HOVER IS A PURE FUNCTION OF THE POINTER AND THE SELECTION: the
+    // painter reads the unit's CURRENT selection bit at every paint (a unit
+    // painted in its selected pair shows no hover change), so a unit
+    // deselected under the pointer by any road — a ctrl or sticky-`k` click,
+    // the walk, undo/redo — shows the half blend at once and keeps it for as
+    // long as the pointer rests there, and one selected under it shows its
+    // selected pair; no transition is watched and nothing is timed. A fading
+    // tail is the leave's own and paints whatever the bit it meets.
+    //
+    // `pressed` IS THE UNIT THE PRIMARY BUTTON IS DOWN ON (architect
+    // 2026-09-29): the mouse's button, the pen's contact, a finger's contact.
+    // It is written at the press (GuiInputHandler::press_flag_unit, from
+    // on_button_press's head) with the unit under the press in the PROMOTED
+    // stash — the flags the press itself hits — under the hover's own gates
+    // (no veil, overlay, open dropdown or card over the point, a piece
+    // loaded), and only while that stash is the lane `lane_key` names (a press
+    // between a lane change's rebuild and its blit presses flags the next
+    // frame replaces). It stands through any drag the press starts, WHATEVER
+    // THE POINTER'S POSITION: the horizontal marker drag and the value drag
+    // write the store at their commit, never the marker's frame mid-drag, so
+    // the identity names the dragged flag the whole way and its box in the
+    // stash follows the flag. It ends at the lift (on_button_release's head,
+    // and the writer's own backstop on any report of the button up — the
+    // touch layer's lost-button end), at the pointer's leave, and when the
+    // lane moves. While it stands the unit paints its PRESS FACE, whatever
+    // its selection, with no fade in or out, and its own fading tail is not
+    // drawn under it; at the lift the unit falls to whatever the writer
+    // next resolves — its hover (the pointer still on it: the mouse, the pen
+    // lifting back into hover) at the selection bit it now has, or rest (a
+    // finger's lift, whose leave comes with it). A press elsewhere presses no
+    // flag and, holding the button, lights no hover either.
+    //
     // EVERY UNIT IS NAMED BY ITS MARKER'S IDENTITY, NEVER BY AN INDEX
     // (FlagMarkerId, render.h — the source frame and the place in its
     // coincident run, published on each stash rect by the pass that painted
@@ -5953,68 +5985,35 @@ struct AppState {
     // the index spaces move at different moments — the live store and its
     // selection at the edit, the stash at the rebuild's stage and the frame's
     // promote. The identity survives every one of them, so a store edit never
-    // hands the hover, its fading tail or the disarm latch below to another
-    // flag, and each reader resolves it in its own index space at the moment
-    // it reads: the stash for the box, the stem and the unit under the
-    // pointer (flag_hover_stash_index), the live store — or the `h` view's
-    // diff list — for the overlay's re-run and the selection bit
-    // (flag_hover_live_index). A store edit that
-    // leaves the hovered flag under the pointer is therefore no edge at all;
-    // one that takes it away is the leave the writer's next resolution sees.
-    // `lane_key` is the LANE the identities belong to (flag_lane_key: the
-    // column, and in the `h` view its walk position and reading) as the stash
-    // of record carries it; when it moves, every identity names a flag of
-    // another lane, so the writer cuts the fades whole and the unit, the
-    // latch and its tracking start afresh — a leave — the stash's own rebuild
-    // having damaged the whole lane and every stem.
+    // hands the hover, its fading tail or the press to another flag, and each
+    // reader resolves it in its own index space at the moment it reads: the
+    // stash for the box, the stem and the unit under the pointer
+    // (flag_hover_stash_index), the live store — or the `h` view's diff list —
+    // for the overlay's re-run and the selection bit (flag_hover_live_index).
+    // A store edit that leaves the hovered flag under the pointer is
+    // therefore no edge at all; one that takes it away is the leave the
+    // writer's next resolution sees. `lane_key` is the LANE the identities
+    // belong to (flag_lane_key: the column, and in the `h` view its walk
+    // position and reading) as the stash of record carries it; when it moves,
+    // every identity names a flag of another lane, so the writer cuts the
+    // fades whole and the unit and the press start afresh — a leave — the
+    // stash's own rebuild having damaged the whole lane and every stem.
     //
-    // THE HOVER TINTS THE PAYLOAD'S STEM (architect 2026-09-29): while a
-    // marker's PAYLOAD unit paints a level, its stem on the waveform takes the
-    // same half blend toward the stem it would paint selected, at the same
-    // level (paint_marker_stems, reading `fades`); a hovered bound cell tints
-    // no stem, selecting one changing no stem either. The phase-reset lead-in
-    // ring is not tinted: it paints only on the selected focus, which shows
-    // no hover.
+    // THE HOVER AND THE PRESS TINT THE PAYLOAD'S STEM (architect 2026-09-29):
+    // while a marker's PAYLOAD unit paints a level, its stem on the waveform
+    // takes the same half blend toward the stem it would paint selected, at
+    // the same level, and while it is pressed the press face's stem
+    // (paint_marker_stems, reading `fades` and `pressed`); a hovered or
+    // pressed bound cell tints no stem, selecting one changing no stem
+    // either. The phase-reset lead-in ring is not tinted.
     //
-    // A DESELECT UNDER THE POINTER DISARMS THE HOVER (architect 2026-09-29):
-    // a unit that goes from painted-selected to not (flag_hover_unit_selected,
-    // the painter's own bit) BY ANY ROAD — a ctrl or sticky-`k` click, the
-    // Tab walk, undo/redo, the auto-select moving off it, the addressed cell
-    // moving, the `h` view's focus and `v`; a shift range or a plain click
-    // collapsing a group deselects only units the pointer is not on, whose
-    // tails the same cut covers — paints AT REST at once: every slot whose unit lost its
-    // selection is cut to level 0 (no fade-out tail of the half blend), and
-    // while the pointer stays on it the unit shows no fill. It RE-ARMS when
-    // the pointer is next reported IN THE WINDOW over another unit or none
-    // (the next entry snaps in as ever), or AFTER A WAIT FROM STILLNESS, the
-    // tooltip's own
-    // shape: a motion MORE than the hover slop (tooltip_hover_slop_px, the
-    // tooltip's test, on either axis) from `anchor_x` / `anchor_y` — where
-    // the pointer rested at the disarm — re-anchors there and starts the wait
-    // (`rearm_due_ms`, the tooltip's own wake-up kTooltipWakeUpMs on, 700 ms,
-    // the architect's pick), every further such motion
-    // restarting it, and the unit re-arms when the wait ripens (the tick runs
-    // the writer). Crossing the slop alone re-arms nothing, so a pointer
-    // leaving the flag after a deselect does not flash the fill on its way
-    // out. A LEAVE AND RE-ENTRY OVER THE SAME UNIT IS NOT A MOVE OFF IT
-    // (architect 2026-09-29, found on glass): the pointer's leave — the pen's
-    // hover ending as its tip lands, its tap's lift (the touch translation's
-    // end), the pen leaving its plane, the window leave — keeps the latch, `under`, its bit and the
-    // anchor, cancelling only a running wait (the pointer did not rest while
-    // away), and while the pointer is out of the window the writer reads no
-    // unit change, measures no slop and ripens no wait, watching the tracked
-    // unit's selection alone. So the pen lifting straight up off a flag it
-    // has just deselected re-enters over it still at rest, until it crosses
-    // the slop and rests the wait, or hovers off it. A deselect must
-    // read as a whole deselect — a unit landing at the half blend reads as a
-    // half-deselected flag; the roster buttons need no such rule because
-    // their lamp is a separate face from their hover outline. Becoming
-    // selected under the pointer is unaffected. `under` tracks the unit
-    // under the resting pointer as the window last reported it, WHATEVER THE
-    // HELD BUTTON (a held press refuses
-    // the paint, not the unit: a click's deselect happens under it), with
-    // `under_selected` its painted-selected bit as last seen; each slot's
-    // `selected` is the same bit for its own unit.
+    // (THE DESELECT DISARM IS STRUCK, architect 2026-09-29, the same day it
+    // shipped: a unit deselected under the pointer painted at rest until the
+    // pointer left it, or crossed the tooltip's hover slop and rested the
+    // tooltip's 700 ms wake-up, a pen's leave and re-entry over it not
+    // counting as leaving. Its timing read oddly on glass; the roster buttons
+    // need no such rule because they carry a PRESSED face distinct from their
+    // hover, and the press face above gives the flag the same one.)
     struct FlagHoverUnit {
         FlagMarkerId marker{};
         MarkerCell   cell = MarkerCell::Payload;
@@ -6028,18 +6027,12 @@ struct AppState {
     struct FlagHoverFade {
         FlagHoverUnit unit{};
         HoverFade     fade{};
-        bool          selected = false;
     };
     struct FlagHover {
         FlagHoverUnit              unit{};
-        uint64_t                   lane_key     = 0;
+        uint64_t                   lane_key = 0;
         std::vector<FlagHoverFade> fades;
-        FlagHoverUnit              under{};
-        bool                       under_selected = false;
-        bool                       disarmed       = false;
-        int                        anchor_x       = 0;
-        int                        anchor_y       = 0;
-        int64_t                    rearm_due_ms   = 0;
+        FlagHoverUnit              pressed{};
     };
     FlagHover flag_hover;
 
@@ -18207,15 +18200,14 @@ uint64_t flag_lane_key(const AppState& app);
 // LIVES IN NOW — the active column's store, or the `h` view's diff list —
 // which is what the overlay's re-run paints and the selection names; -1 when
 // the identity names no row there, or when the live lane is no longer the one
-// the hover's identities belong to. flag_hover_unit_selected answers whether
-// the unit paints in its SELECTED pair — the flag pass's own bit re-spelled
-// across its parameter boundary from the state it is handed
-// (phase_reset_overlay_band's precedent): on the live columns a member of the
-// selection whose bright cell is this one — the focus's addressed cell, else
-// the payload, falling back to the payload where that bound cell is painted
-// nowhere (marker_paints_iter_cells); in the `h` view the diff flag's focus or
-// membership; false for a unit with no live row. It is the bit the disarm
-// watches (AppState::FlagHover).
+// the hover's identities belong to.
+//
+// THE PRESS'S TWO READS (AppState::FlagHover's `pressed`): flag_press_unit_at
+// answers the unit under a PRESS — flag_hover_unit_at's walk over the
+// PROMOTED stash (AppState::flag_hit_rects), the flags the press itself hits,
+// never the staged ones — and flag_press_stem whether the stem the stash's
+// index `stash_index` names wears the press face: its marker's PAYLOAD unit is
+// the pressed one and has a box (the overlay's own gate), false otherwise.
 const std::vector<FlagHitRect>& flag_hover_stash(const AppState& app);
 const std::vector<MarkerStem>& flag_hover_stems(const AppState& app);
 uint64_t flag_hover_stash_lane(const AppState& app);
@@ -18229,8 +18221,9 @@ bool flag_hover_stem_rect(const AppState& app, FlagMarkerId marker,
                           GuiRect& rect_out);
 int flag_hover_stem_level(const AppState& app, int stash_index);
 int flag_hover_live_index(const AppState& app, FlagMarkerId marker);
-bool flag_hover_unit_selected(const AppState& app,
-                              const AppState::FlagHoverUnit& unit);
+AppState::FlagHoverUnit flag_press_unit_at(const AppState& app, int mouse_x,
+                                           int mouse_y);
+bool flag_press_stem(const AppState& app, int stash_index);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box

@@ -2150,9 +2150,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // AND THE FLAG HOVER (architect 2026-09-29), the same hover half: a
         // pointer that has left rests on no flag, and the hovered box fades
         // out on its own tail. Every reason clears it, the pen's PenHoverEnd
-        // included — no hover survives above the pen's plane. A deselect's
-        // disarm latch is NOT cleared here: a leave and re-entry over the
-        // same flag is not a move off it (AppState::FlagHover).
+        // included — no hover survives above the pen's plane — and a press
+        // face still standing ends with it (AppState::FlagHover).
         input_handler.clear_flag_hover();
         input_handler.clear_player_scrub_drag();
         // AND THE SCRUB HANDLE'S HOVERED OUTLINE, the same hover half of the
@@ -2864,11 +2863,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // flag stash moves under a resting pointer (a pan, a zoom, a store
         // edit — each restaged by the rebuild above, whose staged stash this
         // reads ahead of the frame that promotes it: flag_hover_stash), so the
-        // hovered unit is re-read here from the same inputs a motion reads —
-        // and a unit disarmed by a
-        // deselect under the pointer re-arms here when its stillness wait
-        // ripens (AppState::FlagHover). Ungated: a gesture holds the primary
-        // button, which the recompute already answers with none.
+        // hovered unit is re-read here from the same inputs a motion reads
+        // (AppState::FlagHover). Ungated: a gesture holds the primary button,
+        // which the recompute already answers with no hover.
         input_handler.recompute_flag_hover();
 
         // THE HOVER FADES' CLOCK (architect 2026-09-27, Breeze's hover
@@ -3237,20 +3234,25 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         onscreen_keyboard::reconcile_session(app, gui, viewport);
 
         // THE FLAG HOVER'S WRITER RUNS AHEAD OF EVERY FRAME TOO (architect
-        // 2026-09-29), for the same reason: a selection can drop under a
-        // resting pointer from a press, a key or an undo, and the backend's
-        // paint can follow with no tick between, so without this the first
-        // frame of a deselect could paint the unit's hover — the half blend,
-        // or its fading tail — before the writer had seen the deselect and
-        // disarmed it (AppState::FlagHover). IT READS THE STASH THIS FRAME
-        // WILL BLIT — a stash staged since the last frame is promoted at
-        // on_redraw's top, after this hook, and the writer reads that staged
-        // one (flag_hover_stash) — so the unit it names, and every box its
-        // damage covers, are the frame's own; and it names units by their
-        // markers' identities, so the promote's new indices change nothing.
-        // Transition-gated, its damage is the hover's own units, which this
-        // hook may still add; above the guards below, which answer playback
-        // alone, the writer refusing a load or an empty piece itself.
+        // 2026-09-29), for the same reason: the flag stash is restaged
+        // OUTSIDE the tick — a key's or a wheel's pan or zoom and every
+        // kick_waveform_sync tail, a worker's plate publish, a drag's refresh
+        // all rebuild the flag cache inline — and the backend's paint can
+        // follow with no tick between, so without this the first frame after
+        // such a rebuild could paint the hover on a flag that has just moved
+        // out from under a resting pointer, miss the one that moved under
+        // it, or keep a lane's fades across a lane change; and a lift's
+        // release, which ends the press face without re-deriving the hover
+        // (on_button_release), is followed by the frame that snaps the hover
+        // back in. IT READS THE STASH THIS FRAME WILL BLIT — a stash staged
+        // since the last frame is promoted at on_redraw's top, after this
+        // hook, and the writer reads that staged one (flag_hover_stash) — so
+        // the unit it names, and every box its damage covers, are the
+        // frame's own; and it names units by their markers' identities, so
+        // the promote's new indices change nothing. Transition-gated, its
+        // damage is the hover's own units, which this hook may still add;
+        // above the guards below, which answer playback alone, the writer
+        // refusing a load or an empty piece itself.
         input_handler.recompute_flag_hover();
 
         if (app.loading || audio.total_frames() <= 0) return;

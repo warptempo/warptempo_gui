@@ -1505,31 +1505,35 @@ void GuiPaintHandler::render_flag_lane(cairo_t* cr, const FlagHoverPaint* hover,
 // THE FLAG HOVER'S OVERLAY (the contract is at the declaration; the rule at
 // render.h's FlagHoverPaint). Each painting unit re-runs the lane pass inside
 // its own box, so the flags that overlap that box repaint in store order over
-// the blit exactly as the cache drew them, and only the hovered unit's fill
-// differs. The same readiness gates the cache's rebuild takes: no surface or
-// no displayed plate means no flags on screen to hover.
+// the blit exactly as the cache drew them, and only the hovered unit's fill —
+// or the pressed unit's face — differs. The same readiness gates the cache's
+// rebuild takes: no surface or no displayed plate means no flags on screen to
+// hover or press.
 // THE UNIT IS AN IDENTITY (AppState::FlagHover), resolved twice here, each in
 // its own index space: its BOX in the stash this frame blits, and the index
 // the re-run paints it at in the live lane — which a store edit may already
 // have moved ahead of the cache's rebuild, so the stash's index could name
 // another row there. A unit with no live row (its marker is gone, the rebuild
 // not yet run) paints no overlay: the blit alone shows it at rest.
+// THE PRESSED UNIT PAINTS LAST, and its own fading tail not at all: the press
+// face is the whole of that unit's look while the button is down.
 void GuiPaintHandler::paint_flag_hover(cairo_t* cr) {
-    if (app.flag_hover.fades.empty()) return;
+    const AppState::FlagHover& h = app.flag_hover;
+    if (h.fades.empty() && !h.pressed.named()) return;
     if (!flag_cache.surface) return;
     if (app.loading || audio.total_frames() <= 0) return;
     if (!wf_cache.fp_rendered) return;
-    for (const AppState::FlagHoverFade& f : app.flag_hover.fades) {
-        const int level = hover_fade_steps(f.fade);
-        if (level <= 0) continue;
+    const auto overlay = [&](const AppState::FlagHoverUnit& unit, int level,
+                             bool pressed) {
         GuiRect box{0, 0, 0, 0};
-        if (!flag_hover_unit_box(app, f.unit, box)) continue;
-        const int live = flag_hover_live_index(app, f.unit.marker);
-        if (live < 0) continue;
+        if (!flag_hover_unit_box(app, unit, box)) return;
+        const int live = flag_hover_live_index(app, unit.marker);
+        if (live < 0) return;
         FlagHoverPaint hp;
         hp.marker_index = live;
-        hp.cell         = f.unit.cell;
+        hp.cell         = unit.cell;
         hp.level        = level;
+        hp.pressed      = pressed;
         hp.clip_lo_x    = box.x;
         hp.clip_hi_x    = box.x + box.w;
         cairo_save(cr);
@@ -1537,5 +1541,12 @@ void GuiPaintHandler::paint_flag_hover(cairo_t* cr) {
         cairo_clip(cr);
         render_flag_lane(cr, &hp, nullptr, nullptr);
         cairo_restore(cr);
+    };
+    for (const AppState::FlagHoverFade& f : h.fades) {
+        if (h.pressed.named() && f.unit == h.pressed) continue;
+        const int level = hover_fade_steps(f.fade);
+        if (level <= 0) continue;
+        overlay(f.unit, level, /*pressed=*/false);
     }
+    if (h.pressed.named()) overlay(h.pressed, 0, /*pressed=*/true);
 }
