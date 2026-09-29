@@ -4229,8 +4229,8 @@ private:
     // types into the very editor raising the veil.
     //
     // THE PRESS CLAIMS THE WHOLE RECT and answers true for every press inside
-    // it, key or not: the gaps between keys, the outer margin and a blank slot
-    // all CONSUME: a finger that misses a key must not fall through to the
+    // it, key or not: the gaps between keys, the outer margin and the letters'
+    // half-key inset all CONSUME: a finger that misses a key must not fall through to the
     // waveform's pan underneath. A key's
     // act runs AT THE PRESS through GuiPlatform::synthesize_key, so the whole
     // ordinary key path — the keyboard-modal gate, route_modal_editor_key, the

@@ -550,7 +550,7 @@ drag coordinates floor instead of truncating.
 ## The on-screen keyboard
 
 The glass has no hardware keys, so the product paints its own (2026-08-27): a
-four-row Maliit-shaped surface standing while ANY OF THE TEXT EDITORS
+four-row surface wearing plasma-keyboard's three pages (below), standing while ANY OF THE TEXT EDITORS
 (`text_editor::Kind` is the authoritative list — five today) stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
 directly above the bottom row over the waveform area's lower part, whose every
 key press goes through `synthesize_key` into the ORDINARY key path — so the
@@ -558,8 +558,8 @@ editors' grammars, their refusals, the undo coalescing and the core's repeat
 synthesis are inherited whole rather than mirrored, and a new editor gets a
 working keyboard by existing. `src/gui/onscreen_keyboard.h` IS AUTHORITATIVE
 for all of it — the layout table and the two derivations off it, the geometry
-walk the painter and the press router share, the one-shot shift and the symbol
-layer, the session-change owner that clears them ahead of the next press, and
+walk the painter and the press router share, the one-shot shift and the page,
+the session-change owner that clears them ahead of the next press, and
 the rule that the waveform is not painted under the opaque band — with the
 painter in `paint_handler.cpp` and the press router in `input_pointer.cpp`
 beside every other painter and router. The standing predicate is false forever
@@ -590,28 +590,58 @@ paints and this surface neither owns nor touches. `kBorderPx` / `border_px()`
 are gone with the seam, so the band's published height, its paint and its hit
 rect are one number by construction.
 
+THE THREE PAGES ARE PLASMA-KEYBOARD'S, KEY FOR KEY AND WIDTH FOR WIDTH
+(architect 2026-09-28, built 2026-09-29): `src/layouts/fallback/main.qml` and
+`symbols.qml`, its widths read off the QML's weights (a default key shares its
+row, `normalKeyWidth` is one standard key, `functionKeyWidth` one and a half)
+and stated exactly in the table's forty quarter-units (the mapping is at
+`kUnitsPerRow`). LETTERS: `q`…`p`; `a`…`l` inset half a key at each end
+(Plasma's FillerKeys); Shift, `z`…`m`, Backspace. SYMBOLS 1/2: `1`…`0`;
+`@ # % & * _ - + ( )`; `1/2`, `" < > ' : / ! ?`, Backspace. SYMBOLS 2/2:
+`` ~ ` | · √ ÷ × ½ { } ``; `$ € £ ¢ ¥ ^ = § [ ]`; `2/2`, `™ ® « » ; “ ” \`,
+Backspace. THE BOTTOM ROW on all three is Plasma's with TWO DEPARTURES:
+`&123`/`ABC`, **Tab** in the globe's slot, `,`, **Space**, `.` (`…` on 2/2, as
+Plasma's), **Esc** in the hide key's slot, **Return** — the symbol-mode key and
+Return at one and a half keys, Space at three, the rest at one. `&123` goes to
+symbols 1/2 and `ABC` back to the letters; `1/2` / `2/2` flips the two symbol
+pages, and the symbols always open on 1/2, as Plasma's do. The page is a
+three-valued state (`AppState::OnscreenKeyboard::Page`), and the stable key code
+is the key's place — page, row, column (`key_index`, inverted by
+`page_of_key_index`). NOT BUILT, the product being feature-complete: Plasma's
+long-press alternates (the letters' small digits, `.`'s `!.?`), any language
+switching, any hide act. (2026-09-28 the symbol layer had followed Plasma's
+page-1 order within sixteen slots, Tab leading its row 2; the three pages were
+ruled the same day.)
+
+SYMBOLS 2/2 TYPES PAST ASCII (`· √ ÷ × ½ € £ ¢ ¥ § ™ ® « » “ ” …`): the table
+carries a codepoint (`KeyDef::ch`, a `char32_t`), the keysym is its X11 one
+(Latin-1 its own code point, the rest `0x01000000` + the code point,
+`keysym_of`), and the character rides the key event's codepoint into the
+editor's printable branch and `text_editor::replace_selection` — the road a
+laptop keyboard's composed character takes — so free text takes it as UTF-8
+and a grammar field's commit refuses it as that field refuses any stray
+character. The cap is the same codepoint encoded by the editors' one encoder
+(`text_editor::encode_utf8`); every glyph is in the one sans face (Liberation
+Sans on both devices).
+
 EVERY CAP IS TEXT, on the one sans face at the product's one text size through
-the one shaping chokepoint — the letter caps, the layer toggle's `ABC` / `&123`
-and the FUNCTION KEYS' WORDS alike: **Shift**, **Backspace**, **Space**,
-**Esc**, **Return**, **Tab** (the words are `cap_word`'s, retold here after the
-2026-09-01 capitalization sweep renamed the act-named pair — the paragraph
-below owns the ruling). **Backspace** is on both layers (each layer's own row 2
-ends with one), and **Space**, **Esc** and **Return** are on both by
-construction — row 3 is one array shared by the two. **Shift** is the LETTER
-layer's alone: the symbol layer's row 2 opens with **Tab** in its place
-(2026-08-27, with File → Open Project — the one key the letter layer has no
-room for, and what the product's prompts COMPLETE on; a bare `GuiKeys::Tab`
-through the same `synthesize_key` road; the blank role is deleted with its last
-slot). IT IS NO LONGER THE OPEN PROMPT'S GLASS ROAD: that prompt's PICKER
-landed 2026-08-28 and takes this keyboard's own band, so the glass gesture is
-File → Open Project, tap the row — the tap's lift both highlights and opens
-it, the row's Cancel button its only other reach — and THE FIELD-LESS LIST IS
-THE ONLY ROAD ON BOTH BACKENDS: the typed prompt was deleted rather than left
-as the laptop's second road, so no name is typed anywhere for this act.
-The key stays for every OTHER prompt's completion and ring walk.
-The symbol layer duplicates nothing of the shared bottom row and follows
-plasma-keyboard's page-1 order (architect 2026-09-28): row 1 is `@ $ * _ - + ( ) =`,
-row 2 is Tab, `[ ] ' : / ! ?`, Backspace.
+the one shaping chokepoint — the character caps, the page keys' `&123` / `ABC`
+and `1/2` / `2/2` (Plasma's own caps) and the FUNCTION KEYS' WORDS alike:
+**Shift**, **Backspace**, **Space**, **Esc**, **Return**, **Tab** (the words
+are `cap_word`'s, retold here after the 2026-09-01 capitalization sweep renamed
+the act-named pair — the paragraph below owns the ruling). **Backspace** is on
+every page (row 2's last key), **Shift** is the letters' alone, and **Tab**,
+**Space**, **Esc** and **Return** are on every page's bottom row. **Tab** is a
+bare `GuiKeys::Tab` through the same `synthesize_key` road (2026-08-27, with
+File → Open Project), what the product's prompts COMPLETE on and what walks a
+dialog's focus ring. IT IS NOT THE OPEN PROMPT'S GLASS ROAD: that prompt's
+PICKER landed 2026-08-28 and takes this keyboard's own band, so the glass
+gesture is File → Open Project, tap the row — the tap's lift both highlights
+and opens it, the row's Cancel button its only other reach — and THE
+FIELD-LESS LIST IS THE ONLY ROAD ON BOTH BACKENDS: the typed prompt was
+deleted rather than left as the laptop's second road, so no name is typed
+anywhere for this act. The key stays for every OTHER prompt's completion and
+ring walk.
 The function keys wore unmodified Breeze glyphs for their first day
 and read OVERSIZED beside the letter caps — a 22-unit icon scaled to the key's
 own height beside a 12pt letter — and a full-width row has room for words, so
@@ -622,8 +652,8 @@ keyboard-spacebar / edit-clear-locationbar-rtl) went with it — enumerators,
 defs and committed assets, taking the roster from 51 to 46 AT THAT MOMENT (it stands well above that today — `kIconCount` in icons.h is the one authority, the transport, player, card and value-copy glyphs having been added since). SHIFT'S ONE-SHOT ARM IS THE
 FACE: the cap says "Shift" armed or resting, and what says the arm is the key's
 ARMED FACE — `kRedesignSelectedFill` under a `kRedesignLine` frame, the icon
-row's own lit-toggle face, which this key and the layer toggle already wore off
-their lamp bits — together with the letter caps, every one of which turns
+row's own lit-toggle face, which this key and the symbol-mode key (while a
+symbol page stands) wear off their lamps — together with the letter caps, every one of which turns
 capital while the arm stands. No new colour; the caps pair's stateful glyph is
 what the face replaced.
 

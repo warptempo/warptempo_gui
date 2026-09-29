@@ -8219,7 +8219,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //               where a toolbar icon is not).
 //   ARMED     — kRedesignSelectedFill under a 1px kRedesignLine frame, the
 //               roster's SELECTED face verbatim. Worn by SHIFT while it is
-//               armed and by the LAYER TOGGLE while the symbol layer stands:
+//               armed and by the SYMBOL-MODE key while a symbol page stands:
 //               the two lamps, one face, the icon row's own lamp. IT IS ALL
 //               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
 //               word "Shift" in both states — that, and the letter caps, every
@@ -8237,12 +8237,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //
 // EVERY CAP IS TEXT (architect 2026-08-27, on glass — the Breeze glyphs the
 // function keys wore for a day read oversized beside the letter caps): the
-// function keys, Space and the layer toggle say their words, the letter keys
-// their characters, all on the one sans face through the one shaping
-// chokepoint. This surface draws no icon.
+// function keys, Space and the two page keys say their words, the character
+// keys their characters (symbols 2/2's past ASCII too, UTF-8 encoded through
+// text_editor::encode_utf8, the editors' own encoder), all on the one sans
+// face through the one shaping chokepoint. This surface draws no icon.
 //
 // STATE-AXIS: every one of the three faces is decided ONCE per key, from the
-// two lamp bits and the one held index this body reads at its head, and the cap
+// two lamps and the one held index this body reads at its head, and the cap
 // comes from the layout table's own derivations (cap_word, shifted_char). There
 // is no second list of what a key looks like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
@@ -8266,9 +8267,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // gates above would decide when a painter noticed the change, and a painter
     // may declare no damage.
     const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
-    const bool  symbol_layer = kb.symbol_layer;
-    const bool  shift_armed  = kb.shift_armed;
-    const int   held         = kb.pressed_key;
+    const onscreen_keyboard::Page page        = kb.page;
+    const bool                    shift_armed = kb.shift_armed;
+    const int                     held        = kb.pressed_key;
 
     cairo_save(cr);
 
@@ -8286,7 +8287,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // THE ONE SANS FACE at the product's ONE text size, selected through the
     // one face owner and shaped through the one chokepoint (text_shape.h) like
     // every other label in the product. EVERY key on this surface takes it —
-    // the letter caps, the layer toggle's word and the function keys' words
+    // the character caps, the page keys' words and the function keys' words
     // alike — so there is no second way a cap can be drawn. A cap is one to
     // nine glyphs, which are the cheapest runs there are.
     gui_select_font_face(cr, GuiFontFamily::Sans);
@@ -8298,7 +8299,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                                          gui_scale_factor());
 
     onscreen_keyboard::for_each_key(
-        app, symbol_layer,
+        app, page,
         [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
             const GuiRect& r) {
             using Role = onscreen_keyboard::Role;
@@ -8308,13 +8309,15 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // crossing this band pays for the keys it actually crosses and for
             // no other. That matters at the panel's tick rate:
             // the scanner's own damage is a column a few pixels wide, and
-            // without this test every one of them walked forty-odd keys.
+            // without this test every one of them painted every key on the
+            // page (thirty-five to thirty-seven).
             if (!rects_intersect(exposed, r)) return;
 
             const bool pressed = (static_cast<int>(index) == held);
             const bool armed   =
-                (k.role == Role::Shift       && shift_armed) ||
-                (k.role == Role::LayerToggle && symbol_layer);
+                (k.role == Role::Shift      && shift_armed) ||
+                (k.role == Role::SymbolMode &&
+                 page != onscreen_keyboard::Page::Letters);
 
             // The three faces (the block above): the fill is always painted,
             // the frame only where a face has one — a resting key has none,
@@ -8328,14 +8331,17 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                               (pressed || armed) ? &line : nullptr);
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
-            // the function keys, Space and the layer toggle), or, where it
-            // answers none, the character key's own letter through the ONE case
-            // derivation (shifted_char) — never a second uppercase table.
-            char one[2] = {'\0', '\0'};
-            const char* cap = onscreen_keyboard::cap_word(k, symbol_layer);
+            // the function keys, Space and the page keys), or, where it
+            // answers none, the character key's own character through the ONE
+            // case derivation (shifted_char) — never a second uppercase table
+            // — UTF-8 encoded by the editors' one encoder, so a cap is spelled
+            // exactly as the key's press inserts it.
+            std::string one;
+            const char* cap = onscreen_keyboard::cap_word(k, page);
             if (cap == nullptr) {
-                one[0] = onscreen_keyboard::shifted_char(k.ch, shift_armed);
-                cap    = one;
+                one = text_editor::encode_utf8(
+                    onscreen_keyboard::shifted_char(k.ch, shift_armed));
+                cap = one.c_str();
             }
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, cap);

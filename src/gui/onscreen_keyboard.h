@@ -10,8 +10,9 @@
 // other press router; both walk this file's table through the one walker below,
 // so paint and hit cannot describe different keys.
 //
-// WHAT IT IS. A four-row Maliit-shaped keyboard (the reference is Plasma
-// Mobile's, Breeze Dark), full window width, sitting DIRECTLY ABOVE THE BOTTOM
+// WHAT IT IS. A four-row keyboard wearing plasma-keyboard's three pages key
+// for key and width for width (the layout table below), full window width,
+// sitting DIRECTLY ABOVE THE BOTTOM
 // ROW and painting over the waveform area's lower part — which the waveform's
 // own passes then do not paint at all (waveform_paint_area, below). It stands while ANY OF
 // THE TEXT EDITORS stands, on a backend that asks for one, and it
@@ -38,12 +39,13 @@
 // A key held down repeats through the core exactly as a held physical key
 // does, on the platform's advertised cadence.
 //
-// WHAT IT DELIBERATELY HAS NOT GOT: no globe and no language label (one
-// layout), no hide-keyboard key (it leaves with the editor that raised it), no
-// caps lock (shift is one-shot), no long-press alternates and no chords — an
-// act at the press precludes the first, and a second finger is the navigation
-// gesture and never reaches a key. No Left/Right keys either: backspace and
-// retyping cover a one-line field.
+// WHAT IT DELIBERATELY HAS NOT GOT: no language switching (one layout; Tab
+// wears the globe's slot), no hide act (it leaves with the editor that raised
+// it; Esc wears the hide key's slot), no caps lock (shift is one-shot), no
+// long-press alternates (Plasma's small digits on the letters and `.`'s `!.?`;
+// an act at the press precludes them) and no chords — a second finger is the
+// navigation gesture and never reaches a key. No Left/Right keys either:
+// backspace and retyping cover a one-line field.
 
 #include "app_state.h"
 // THE SLOT'S OTHER TENANT (2026-08-28): this header reads the folder
@@ -69,6 +71,22 @@ namespace onscreen_keyboard {
 // how wide it is. The painter reads the cap a key wears from here through the
 // derivations below, and the press router reads its keysym and codepoint from
 // the SAME `ch`, so a key cannot type one thing and say another.
+//
+// THE THREE PAGES ARE PLASMA-KEYBOARD'S, VERBATIM (architect 2026-09-28,
+// built 2026-09-29): plasma/plasma-keyboard, src/layouts/fallback/main.qml
+// (the letters) and symbols.qml (its two symbol pages, 1/2 and 2/2), key for
+// key and width for width, with TWO DEPARTURES, both in the bottom row: TAB
+// TAKES THE GLOBE'S SLOT (the language key; one layout here) and ESC TAKES THE
+// HIDE KEY'S (between `.` and Return) — each at Plasma's own width for that
+// slot, on all three pages. The function keys wear WORDS, not Plasma's glyphs
+// (cap_word, below). (History: 2026-09-28 the symbol page followed Plasma's
+// page-1 order within sixteen slots, Tab leading its row 2; the three pages
+// were ruled the same day and built the next.)
+
+// THE PAGE, the keyboard's one layout state beside the shift arm. Declared on
+// AppState (this header includes app_state.h) and aliased here.
+using Page = AppState::OnscreenKeyboard::Page;
+inline constexpr int kPageCount = 3;
 
 enum class Role : uint8_t {
     Character,     // types `ch` — every letter, digit and symbol, space included
@@ -77,27 +95,52 @@ enum class Role : uint8_t {
     Enter,         // GuiKeys::Return
     Escape,        // GuiKeys::Escape
     Tab,           // GuiKeys::Tab, bare — the prompts' completion key
-    LayerToggle,   // the `&123` / `ABC` key: flips the symbol layer
+    SymbolMode,    // Plasma's SymbolModeKey, `&123` / `ABC`: letters <-> symbols
+    SymbolPage,    // Plasma's page key, `1/2` / `2/2`: flips the symbol pages
 };
 
 // THE ROW IS FORTY QUARTER-UNITS WIDE. Every key's width is authored in
-// QUARTERS OF A STANDARD KEY, so a row's spans sum to 40 when it fills the
-// width and to less when it is inset (row 2's nine letters, the reference's own
-// half-key indent). The unit itself is DERIVED from the window — the surface is
-// full width by ruling, so ten keys across a 2304 px panel are 230 px each —
-// which is why this is the one dimension in the product that is not authored at
-// 100% and scaled: gui_scale moves the ROW HEIGHTS and the gaps below, and the
-// window decides the pitch.
+// QUARTERS OF A STANDARD KEY, and every one of Plasma's widths is a whole
+// number of them, so the table states Plasma's proportions EXACTLY.
+// plasma-keyboard (Qt Virtual Keyboard's layout model) sizes keys by WEIGHT:
+// every key defaults to the layout's one keyWeight and shares its row's
+// width in proportion, while a key marked `Layout.fillWidth: false` takes a
+// fixed width — `normalKeyWidth`, one standard key (a tenth of the row, row 0
+// being ten default keys), or `functionKeyWidth`, the x of that standard
+// key's centre, which is the SECOND key of row 0, so one and a half standard
+// keys. Read off the QML, rows counted from 0 at the top as the arrays below
+// are, the mapping is:
+//   * default key in a ten-key row (row 0 on every page, row 1 on the symbol
+//     pages, and the symbol pages' row 2, whose page key, eight characters
+//     and Backspace are all default keys): 4;
+//   * the letters' row 1: a function-width group of a half-key FillerKey and
+//     `a`, seven default keys, and `l` with its filler in another — nine
+//     standard keys (36) inset by half a key (2) at each end, which the
+//     centring rule of for_each_key states, so a filler is ground, not a key;
+//   * the letters' row 2: Shift and Backspace at function width (6) around
+//     seven default keys (4);
+//   * row 3, the bottom row: the symbol-mode key and Return at function width
+//     (6), the globe (Tab here), `,`, `.` and the hide key (Esc here) at
+//     normal width (4), and Space, the one default key, filling the rest (12).
+//
+// The unit itself is DERIVED from the window — the surface is full width by
+// ruling, so ten keys across a 2304 px panel are 230 px each — which is why
+// this is the one dimension in the product that is not authored at 100% and
+// scaled: gui_scale moves the ROW HEIGHTS and the gaps below, and the window
+// decides the pitch.
 inline constexpr int kUnitsPerRow = 40;
 inline constexpr int kRowCount    = 4;
-// The widest row in either layer; the index arithmetic below reserves this many
+// The widest row on any page; the index arithmetic below reserves this many
 // slots per row so a key's index is a pure function of where it sits.
-inline constexpr int kMaxRowKeys  = 12;
+inline constexpr int kMaxRowKeys  = 10;
 
 struct KeyDef {
-    Role    role   = Role::Character;
-    char    ch     = '\0';   // Character keys only; the LOWERCASE / base form
-    uint8_t span_q = 4;      // width in quarter-units
+    Role     role   = Role::Character;
+    // Character keys only: the codepoint it types, the LOWERCASE / base form
+    // for a letter. A char32_t because symbols 2/2 types past ASCII
+    // (· √ ÷ × ½ € £ ¢ ¥ § ™ ® « » “ ” …).
+    char32_t ch     = 0;
+    uint8_t  span_q = 4;      // width in quarter-units
 };
 
 struct Row {
@@ -107,96 +150,142 @@ struct Row {
 
 namespace detail {
 
-// THE LETTER LAYER — the reference's own four rows.
+// THE LETTERS — main.qml's four rows (row 1's inset is Plasma's two
+// FillerKeys, the mapping above).
 inline constexpr KeyDef kLetterRow0[] = {
-    {Role::Character, 'q'}, {Role::Character, 'w'}, {Role::Character, 'e'},
-    {Role::Character, 'r'}, {Role::Character, 't'}, {Role::Character, 'y'},
-    {Role::Character, 'u'}, {Role::Character, 'i'}, {Role::Character, 'o'},
-    {Role::Character, 'p'},
+    {Role::Character, U'q'}, {Role::Character, U'w'}, {Role::Character, U'e'},
+    {Role::Character, U'r'}, {Role::Character, U't'}, {Role::Character, U'y'},
+    {Role::Character, U'u'}, {Role::Character, U'i'}, {Role::Character, U'o'},
+    {Role::Character, U'p'},
 };
 inline constexpr KeyDef kLetterRow1[] = {
-    {Role::Character, 'a'}, {Role::Character, 's'}, {Role::Character, 'd'},
-    {Role::Character, 'f'}, {Role::Character, 'g'}, {Role::Character, 'h'},
-    {Role::Character, 'j'}, {Role::Character, 'k'}, {Role::Character, 'l'},
+    {Role::Character, U'a'}, {Role::Character, U's'}, {Role::Character, U'd'},
+    {Role::Character, U'f'}, {Role::Character, U'g'}, {Role::Character, U'h'},
+    {Role::Character, U'j'}, {Role::Character, U'k'}, {Role::Character, U'l'},
 };
 inline constexpr KeyDef kLetterRow2[] = {
-    {Role::Shift, '\0', 6},
-    {Role::Character, 'z'}, {Role::Character, 'x'}, {Role::Character, 'c'},
-    {Role::Character, 'v'}, {Role::Character, 'b'}, {Role::Character, 'n'},
-    {Role::Character, 'm'},
-    {Role::Backspace, '\0', 6},
+    {Role::Shift, 0, 6},
+    {Role::Character, U'z'}, {Role::Character, U'x'}, {Role::Character, U'c'},
+    {Role::Character, U'v'}, {Role::Character, U'b'}, {Role::Character, U'n'},
+    {Role::Character, U'm'},
+    {Role::Backspace, 0, 6},
 };
 
-// THE SYMBOL LAYER'S THREE. Digits on row 0 in order; the page follows
-// plasma-keyboard / Qt Virtual Keyboard's page 1 order (the `&123` lineage)
-// as far as 16 slots allow, keeping the product's grammar characters
-// (digits, `+ - * : @ [ ] = _ /` and `?` for `url=` values; `.`, `,` and
-// Space on the shared bottom row) and filling from Plasma's page 2 order
-// (`$ = [ ]`). `#` and `|` are never typed (the flag editor composes both
-// from the marker, flag_editor.cpp) and `;` is in no grammar, so none of the
-// three is on the page.
-//
-// ROW 2'S LEADING SLOT IS TAB (architect 2026-08-27, with the project model):
-// the letter layer's Shift position, and the one key the letter layer has no
-// room for. Shift does nothing on a symbol page, so the slot stood BLANK until
-// a Tab became worth reaching on glass — Tab is what the product's prompts
-// COMPLETE on (the one autocomplete model, route_modal_editor_key) and what
-// walks a dialog's focus ring. It is a BARE Tab, no modifier, on the same
-// synthesize_key road as every other key here. IT IS NOT THE OPEN PROJECT
-// PICKER'S GLASS ROAD (2026-08-28): that picker is field-less and stands in
-// this band, so the keyboard does not paint there at all and the gesture is
-// File → Open project, tap the project's row — the tap's lift both highlights
-// and opens it, the row's Cancel button its only other reach. What the key
-// serves is every prompt a finger can raise — the settings editor's value
-// recall and the ring walk on the dialogs that publish buttons.
-//
-// THE SYMBOL PAGE CARRIES NO DUPLICATE OF THE SHARED BOTTOM ROW (architect
-// 2026-09-28): row 3 is layer-blind, so `.`, `,` and Space are always one row
-// down and never repeated here.
-inline constexpr KeyDef kSymbolRow0[] = {
-    {Role::Character, '1'}, {Role::Character, '2'}, {Role::Character, '3'},
-    {Role::Character, '4'}, {Role::Character, '5'}, {Role::Character, '6'},
-    {Role::Character, '7'}, {Role::Character, '8'}, {Role::Character, '9'},
-    {Role::Character, '0'},
+// SYMBOLS 1/2 — symbols.qml's first page. Row 1 is ten keys, not inset.
+inline constexpr KeyDef kSymbols1Row0[] = {
+    {Role::Character, U'1'}, {Role::Character, U'2'}, {Role::Character, U'3'},
+    {Role::Character, U'4'}, {Role::Character, U'5'}, {Role::Character, U'6'},
+    {Role::Character, U'7'}, {Role::Character, U'8'}, {Role::Character, U'9'},
+    {Role::Character, U'0'},
 };
-inline constexpr KeyDef kSymbolRow1[] = {
-    {Role::Character, '@'}, {Role::Character, '$'}, {Role::Character, '*'},
-    {Role::Character, '_'}, {Role::Character, '-'}, {Role::Character, '+'},
-    {Role::Character, '('}, {Role::Character, ')'}, {Role::Character, '='},
+inline constexpr KeyDef kSymbols1Row1[] = {
+    {Role::Character, U'@'}, {Role::Character, U'#'}, {Role::Character, U'%'},
+    {Role::Character, U'&'}, {Role::Character, U'*'}, {Role::Character, U'_'},
+    {Role::Character, U'-'}, {Role::Character, U'+'}, {Role::Character, U'('},
+    {Role::Character, U')'},
 };
-inline constexpr KeyDef kSymbolRow2[] = {
-    {Role::Tab, '\0', 6},
-    {Role::Character, '['}, {Role::Character, ']'}, {Role::Character, '\''},
-    {Role::Character, ':'}, {Role::Character, '/'}, {Role::Character, '!'},
-    {Role::Character, '?'},
-    {Role::Backspace, '\0', 6},
+inline constexpr KeyDef kSymbols1Row2[] = {
+    {Role::SymbolPage},
+    {Role::Character, U'"'}, {Role::Character, U'<'}, {Role::Character, U'>'},
+    {Role::Character, U'\''}, {Role::Character, U':'}, {Role::Character, U'/'},
+    {Role::Character, U'!'}, {Role::Character, U'?'},
+    {Role::Backspace},
 };
 
-// ROW 3 IS ONE ARRAY SHARED BY BOTH LAYERS — the bottom row does not change
-// under the toggle, so it is not written twice. 6 + 4 + 14 + 4 + 6 + 6 = 40.
+// SYMBOLS 2/2 — symbols.qml's second page.
+inline constexpr KeyDef kSymbols2Row0[] = {
+    {Role::Character, U'~'}, {Role::Character, U'`'}, {Role::Character, U'|'},
+    {Role::Character, U'·'}, {Role::Character, U'√'}, {Role::Character, U'÷'},
+    {Role::Character, U'×'}, {Role::Character, U'½'}, {Role::Character, U'{'},
+    {Role::Character, U'}'},
+};
+inline constexpr KeyDef kSymbols2Row1[] = {
+    {Role::Character, U'$'}, {Role::Character, U'€'}, {Role::Character, U'£'},
+    {Role::Character, U'¢'}, {Role::Character, U'¥'}, {Role::Character, U'^'},
+    {Role::Character, U'='}, {Role::Character, U'§'}, {Role::Character, U'['},
+    {Role::Character, U']'},
+};
+inline constexpr KeyDef kSymbols2Row2[] = {
+    {Role::SymbolPage},
+    {Role::Character, U'™'}, {Role::Character, U'®'}, {Role::Character, U'«'},
+    {Role::Character, U'»'}, {Role::Character, U';'}, {Role::Character, U'“'},
+    {Role::Character, U'”'}, {Role::Character, U'\\'},
+    {Role::Backspace},
+};
+
+// THE BOTTOM ROW, Plasma's `[&123/ABC] [globe] , [Space] . [hide] [Enter]`
+// with Tab in the globe's slot and Esc in the hide key's. The letters and
+// symbols 1/2 share one array; symbols 2/2 differs in the `.` slot alone,
+// which wears and types `…` there as Plasma's does.
+// 6 + 4 + 4 + 12 + 4 + 4 + 6 = 40.
+//
+// TAB (architect 2026-08-27, with the project model; in the globe's slot on
+// every page since 2026-09-29) is what the product's prompts COMPLETE on (the
+// one autocomplete model, route_modal_editor_key) and what walks a dialog's
+// focus ring: a BARE Tab, no modifier, on the same synthesize_key road as
+// every other key here. IT IS NOT THE OPEN PROJECT PICKER'S GLASS ROAD
+// (2026-08-28): that picker is field-less and stands in this band, so the
+// keyboard does not paint there at all and the gesture is File → Open
+// project, tap the project's row. What the key serves is every prompt a
+// finger can raise — the settings editor's value recall and the ring walk on
+// the dialogs that publish buttons.
 inline constexpr KeyDef kBottomRow[] = {
-    {Role::LayerToggle, '\0', 6},
-    {Role::Character,   ',',  4},
-    {Role::Character,   ' ', 14},
-    {Role::Character,   '.',  4},
-    {Role::Escape,      '\0', 6},
-    {Role::Enter,       '\0', 6},
+    {Role::SymbolMode, 0,     6},
+    {Role::Tab,        0,     4},
+    {Role::Character,  U',',  4},
+    {Role::Character,  U' ', 12},
+    {Role::Character,  U'.',  4},
+    {Role::Escape,     0,     4},
+    {Role::Enter,      0,     6},
+};
+inline constexpr KeyDef kSymbols2BottomRow[] = {
+    {Role::SymbolMode, 0,     6},
+    {Role::Tab,        0,     4},
+    {Role::Character,  U',',  4},
+    {Role::Character,  U' ', 12},
+    {Role::Character,  U'…',  4},
+    {Role::Escape,     0,     4},
+    {Role::Enter,      0,     6},
 };
 
 template <int N>
 constexpr Row make_row(const KeyDef (&a)[N]) { return Row{a, N}; }
 
-inline constexpr Row kLayers[2][kRowCount] = {
+inline constexpr Row kPages[kPageCount][kRowCount] = {
     {make_row(kLetterRow0), make_row(kLetterRow1),
      make_row(kLetterRow2), make_row(kBottomRow)},
-    {make_row(kSymbolRow0), make_row(kSymbolRow1),
-     make_row(kSymbolRow2), make_row(kBottomRow)},
+    {make_row(kSymbols1Row0), make_row(kSymbols1Row1),
+     make_row(kSymbols1Row2), make_row(kBottomRow)},
+    {make_row(kSymbols2Row0), make_row(kSymbols2Row1),
+     make_row(kSymbols2Row2), make_row(kSymbols2BottomRow)},
 };
+
+// THE TABLE'S TWO SHAPE FACTS, checked at compile time: every row fits the
+// index arithmetic's slot reservation, and every row but the letters' inset
+// row 1 fills the width exactly (that one is nine standard keys, centred).
+constexpr bool pages_are_well_formed() {
+    for (int p = 0; p < kPageCount; ++p) {
+        for (int r = 0; r < kRowCount; ++r) {
+            const Row& row = kPages[p][r];
+            if (row.count > kMaxRowKeys) return false;
+            int span = 0;
+            for (int i = 0; i < row.count; ++i) span += row.keys[i].span_q;
+            const int want = (p == 0 && r == 1) ? kUnitsPerRow - 4
+                                                : kUnitsPerRow;
+            if (span != want) return false;
+        }
+    }
+    return true;
+}
+static_assert(pages_are_well_formed(),
+              "a keyboard row overflows its slots or misses Plasma's width");
+
+constexpr int page_number(Page page) { return static_cast<int>(page); }
 
 } // namespace detail
 
-inline const Row& row_of(bool symbol_layer, int row) {
-    return detail::kLayers[symbol_layer ? 1 : 0][row];
+inline const Row& row_of(Page page, int row) {
+    return detail::kPages[detail::page_number(page)][row];
 }
 
 // ZERO IS THE CORE'S "NO STABLE CODE" SENTINEL and this table may not produce
@@ -208,30 +297,32 @@ inline const Row& row_of(bool symbol_layer, int row) {
 // this table's codes are its own small integers, so the base is stated here
 // rather than left to luck. THIS IS THE PRODUCT'S ONLY SYNTHESIZER since
 // 2026-09-12: the render player's car buttons took a base of their own
-// (kCarStableCodeBase = 1000, above this table's ceiling of 97) while each of
-// them pressed one of the player's keys, and that road went whole when the car
+// (kCarStableCodeBase = 1000, above this table's ceiling) while each of them
+// pressed one of the player's keys, and that road went whole when the car
 // became an interface of its own and every command a direct act.
 inline constexpr uint32_t kStableCodeBase = 1;
 
 // A KEY'S STABLE PER-KEY IDENTITY, which is what the core's repeat cancel and
 // the synthesized-hold end compare against (contract at GuiInputCore::
-// key_event). It is the key's PLACE in this table — layer, row, column, off the
-// base above — and deliberately not the keysym: two layers put different
-// characters on one slot, so only the place is unique per key. Bounded by
-// kStableCodeBase + 2*kRowCount*kMaxRowKeys = 97.
-inline constexpr uint32_t key_index(bool symbol_layer, int row, int col) {
+// key_event). It is the key's PLACE in this table — page, row, column, off the
+// base above — and deliberately not the keysym: the pages put different
+// characters on one slot, so only the place is unique per key. Codes run from
+// kStableCodeBase to kStableCodeBase + kPageCount*kRowCount*kMaxRowKeys - 1,
+// which is 1..120.
+inline constexpr uint32_t key_index(Page page, int row, int col) {
     return kStableCodeBase + static_cast<uint32_t>(
-        (((symbol_layer ? 1 : 0) * kRowCount) + row) * kMaxRowKeys + col);
+        ((detail::page_number(page) * kRowCount) + row) * kMaxRowKeys + col);
 }
 
-// THE LAYER A KEY INDEX BELONGS TO — the inverse of the layer term above, and
+// THE PAGE A KEY INDEX BELONGS TO — the inverse of the page term above, and
 // the one place that reads it back. Its consumer is the RELEASE, which must
-// damage the key the finger pressed even when that key's own act (the layer
-// toggle) has moved the live layer out from under it; asking the live layer
+// damage the key the finger pressed even when that key's own act (the two
+// page keys) has moved the live page out from under it; asking the live page
 // there would look the key up on a page it is not on and damage nothing.
-inline constexpr bool layer_of_key_index(int index) {
-    return (static_cast<uint32_t>(index) - kStableCodeBase) >=
-           static_cast<uint32_t>(kRowCount * kMaxRowKeys);
+inline constexpr Page page_of_key_index(int index) {
+    return static_cast<Page>(
+        (static_cast<uint32_t>(index) - kStableCodeBase) /
+        static_cast<uint32_t>(kRowCount * kMaxRowKeys));
 }
 
 // -- The derivations off the table ------------------------------------------
@@ -241,13 +332,14 @@ inline constexpr bool layer_of_key_index(int index) {
 // lamp turns it into the cap the key WEARS and the codepoint it TYPES through
 // this one function, so the two can never disagree about what a shifted key is.
 // Non-letters are unmoved — this keyboard has no shifted punctuation, the
-// symbol layer being where the rest of ASCII lives. THAT PROPERTY IS ALSO THE
+// symbol pages being where the rest lives, and every letter is on the letter
+// page, so the arm acts there alone. THAT PROPERTY IS ALSO THE
 // ONE-SHOT ARM'S TEST: the press router spends the arm exactly where this
 // function moved the character, so "the arm is spent by the next LETTER" needs
 // no second list of which keys have a capital form.
-inline char shifted_char(char base, bool shift_armed) {
+inline constexpr char32_t shifted_char(char32_t base, bool shift_armed) {
     if (!shift_armed) return base;
-    if (base >= 'a' && base <= 'z') return static_cast<char>(base - 'a' + 'A');
+    if (base >= U'a' && base <= U'z') return base - U'a' + U'A';
     return base;
 }
 
@@ -255,12 +347,19 @@ inline char shifted_char(char base, bool shift_armed) {
 // which every printable ASCII character IS its own code point — `a` is 0x61,
 // `$` is 0x24, space is 0x20 — and GuiKey is ASCII CASE-FOLDED besides (the
 // backend's contract, at GuiInputCore::key_event), so the LOWERCASE base is the
-// keysym for a letter in both cases. That identity is why the punctuation this
+// keysym for a letter in both cases. The same numbering gives Latin-1 its own
+// code points as keysyms (`£` is 0xa3, `×` is 0xd7) and every other character
+// the Unicode keysym 0x01000000 + its code point (`€` is 0x010020ac), which is
+// how symbols 2/2's keys get theirs. That identity is why the punctuation this
 // keyboard types needs no named constants in GuiKeys: a name earns its place by
-// being BOUND somewhere, and nothing in the dispatch binds `$`, `(` or `_` —
-// they exist only as characters an editor inserts.
-inline constexpr GuiKey keysym_of(char base) {
-    return static_cast<GuiKey>(static_cast<unsigned char>(base));
+// being BOUND somewhere, and nothing in the dispatch binds `$`, `(`, `_` or
+// `€` — they exist only as characters an editor inserts, and what the editor
+// inserts is the CODEPOINT the press carries beside the keysym (the printable
+// branch of text_editor::handle_key, into replace_selection — the road a
+// hardware keyboard's composed character takes on the laptop).
+inline constexpr GuiKey keysym_of(char32_t base) {
+    return base < 0x100 ? static_cast<GuiKey>(base)
+                        : static_cast<GuiKey>(0x01000000u | base);
 }
 
 // WHAT A KEY WEARS, AND IT IS TEXT AND NOTHING ELSE (architect 2026-08-27, on
@@ -283,12 +382,12 @@ inline constexpr GuiKey keysym_of(char base) {
 // This function is the ONE OWNER of the words. It answers the cap for every key
 // that has one that is not simply its own character: the five function keys
 // (Tab among them since 2026-08-27, a word exactly as Shift, Backspace and
-// Return are), SPACE (which has no glyph of its own to wear), and the LAYER
-// TOGGLE, whose cap names the layer it goes TO — the reference's own
-// convention and the only one that reads right on a key you press to leave
-// where you are. A Character key other than space answers nullptr and the
-// painter spells it out of the table's own `ch` through the one case
-// derivation above.
+// Return are), SPACE (which has no glyph of its own to wear), and the two PAGE
+// KEYS, each in Plasma's own caps: the SYMBOL-MODE key names the page it goes
+// TO (`&123` on the letters, `ABC` on either symbol page), and the PAGE KEY
+// names the symbol page it stands ON (`1/2`, `2/2`). A Character key other
+// than space answers nullptr and the painter spells it out of the table's own
+// `ch` through the one case derivation above.
 //
 // THE CAPS ARE SPELLED THE PRODUCT'S ONE WAY (architect 2026-09-01), which is
 // Qt's and so kdenlive's: "Return" — not "Enter", the word stamped on the
@@ -301,21 +400,34 @@ inline constexpr GuiKey keysym_of(char base) {
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — kRedesignSelectedFill under a
 // kRedesignLine frame, the icon row's own lit-toggle face, which this key and
-// the layer toggle already wear off their lamp bits — and the letter caps
-// themselves, every one of which turns capital while the arm stands. The
-// layer toggle's own caps are Plasma's / Qt Virtual Keyboard's own spelling,
-// `&123` and `ABC` (architect 2026-09-28).
-inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
+// the symbol-mode key (while a symbol page stands) wear off their lamps — and
+// the letter caps themselves, every one of which turns capital while the arm
+// stands. The page key wears no lamp: its cap already says the page.
+inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {
         case Role::Shift:       return "Shift";
         case Role::Backspace:   return "Backspace";
         case Role::Enter:       return "Return";
         case Role::Escape:      return "Esc";
         case Role::Tab:         return "Tab";
-        case Role::LayerToggle: return symbol_layer ? "ABC" : "&123";
-        case Role::Character:   return k.ch == ' ' ? "Space" : nullptr;
+        case Role::SymbolMode:  return page == Page::Letters ? "&123" : "ABC";
+        case Role::SymbolPage:  return page == Page::Symbols2 ? "2/2" : "1/2";
+        case Role::Character:   return k.ch == U' ' ? "Space" : nullptr;
     }
     return nullptr;
+}
+
+// THE TWO PAGE KEYS' ACTS, one owner for where each goes. The symbol-mode key
+// goes letters -> symbols 1/2 and either symbol page -> letters; the page key
+// flips 1/2 <-> 2/2. Returning to the symbols always lands on 1/2, as
+// Plasma's does (its symbols loader resets `secondPage` whenever it is
+// hidden).
+inline constexpr Page page_after(Role role, Page page) {
+    if (role == Role::SymbolMode)
+        return page == Page::Letters ? Page::Symbols1 : Page::Letters;
+    if (role == Role::SymbolPage)
+        return page == Page::Symbols1 ? Page::Symbols2 : Page::Symbols1;
+    return page;
 }
 
 // -- The authored geometry --------------------------------------------------
@@ -431,7 +543,7 @@ inline GuiRect slot_damage_rect(const AppState& a) {
 // THE TWO LAMPS BELONG TO THE EDIT THEY WERE SET IN, so a close, a reopen or a
 // RETARGET of the live flag editor must clear them — and the PIXELS MUST SAY SO
 // BEFORE THE NEXT PRESS IS ROUTED, because the lamps decide both which key is
-// under the finger (the layer) and what that key types (the arm): a surface
+// under the finger (the page) and what that key types (the arm): a surface
 // left describing one key while the press dispatches another is the defect this
 // owner exists to make impossible.
 //
@@ -455,8 +567,7 @@ inline GuiRect slot_damage_rect(const AppState& a) {
 // a tick that is followed by one is already covered by the pre-paint call.
 //
 // IT DAMAGES THE WHOLE BAND because both lamps are whole-surface facts: the
-// arm moves every letter cap's case and the layer moves every key on three
-// rows.
+// arm moves every letter cap's case and the page moves every key.
 //
 // `pressed_key` IS DELIBERATELY NOT CLEARED HERE. It is a fact about the
 // FINGER, not about the edit, and THE KEY-UP IT OWES THE CORE IS OWED EXACTLY
@@ -475,7 +586,7 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
     if (a.onscreen_keyboard.lamp_session == live) return;
     a.onscreen_keyboard.lamp_session = live;
     a.onscreen_keyboard.shift_armed  = false;
-    a.onscreen_keyboard.symbol_layer = false;
+    a.onscreen_keyboard.page         = Page::Letters;
     viewport.invalidate_rect(surface_rect(a));
 }
 
@@ -541,16 +652,16 @@ inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
 // -- The ONE walk over the keys ----------------------------------------------
 
 // THE ONE WALK OVER THE KEYS, and the reason paint and hit cannot drift: both
-// go through it. `fn(index, def, rect)` is called for every key of `layer` in
+// go through it. `fn(index, def, rect)` is called for every key of `page` in
 // painted order, with `rect` the key's PAINTED box — the slot inset by half a
 // gap on each side, so the gaps between keys are uniform and the row's ends sit
 // on the margin exactly.
 //
 // A row whose spans sum to less than kUnitsPerRow is CENTERED in the surface
-// (the reference's own half-key indent on the nine-letter row); a row that
-// fills it starts at the margin. One rule, both cases.
+// (Plasma's half-key FillerKeys on the nine-letter row); a row that fills it
+// starts at the margin. One rule, both cases.
 template <class Fn>
-inline void for_each_key(const AppState& a, bool symbol_layer, Fn&& fn) {
+inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
     const GuiRect surf = surface_rect(a);
     if (surf.w <= 0 || surf.h <= 0) return;
 
@@ -564,7 +675,7 @@ inline void for_each_key(const AppState& a, bool symbol_layer, Fn&& fn) {
 
     int y = surf.y + pad;
     for (int r = 0; r < kRowCount; ++r) {
-        const Row& row = row_of(symbol_layer, r);
+        const Row& row = row_of(page, r);
         int span_total = 0;
         for (int i = 0; i < row.count; ++i) span_total += row.keys[i].span_q;
         const double row_x0 =
@@ -579,7 +690,7 @@ inline void for_each_key(const AppState& a, bool symbol_layer, Fn&& fn) {
             const int kw =
                 static_cast<int>(std::nearbyint(slot_x1 - gap * 0.5)) - kx;
             if (kw > 0) {
-                fn(key_index(symbol_layer, r, i), k, GuiRect{kx, y, kw, key_h});
+                fn(key_index(page, r, i), k, GuiRect{kx, y, kw, key_h});
             }
             q += k.span_q;
         }
@@ -594,11 +705,11 @@ inline void for_each_key(const AppState& a, bool symbol_layer, Fn&& fn) {
 //
 // It writes the found key's def through `out_def` so the caller needs no second
 // lookup, and it walks the same for_each_key the painter does.
-inline int key_at(const AppState& a, bool symbol_layer, int x, int y,
+inline int key_at(const AppState& a, Page page, int x, int y,
                   KeyDef& out_def) {
     int found = -1;
     KeyDef found_def{};
-    for_each_key(a, symbol_layer,
+    for_each_key(a, page,
                  [&](uint32_t index, const KeyDef& k, const GuiRect& r) {
                      if (found < 0 && rect_contains(r, x, y)) {
                          found     = static_cast<int>(index);
@@ -610,10 +721,10 @@ inline int key_at(const AppState& a, bool symbol_layer, int x, int y,
 }
 
 // The painted rect of one key index, for the per-key press/lift damage. A zero
-// rect when the index is not on the given layer.
-inline GuiRect key_rect(const AppState& a, bool symbol_layer, int index) {
+// rect when the index is not on the given page.
+inline GuiRect key_rect(const AppState& a, Page page, int index) {
     GuiRect found{0, 0, 0, 0};
-    for_each_key(a, symbol_layer,
+    for_each_key(a, page,
                  [&](uint32_t i, const KeyDef&, const GuiRect& r) {
                      if (static_cast<int>(i) == index) found = r;
                  });

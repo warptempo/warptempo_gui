@@ -545,6 +545,15 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 std::string selected_text(const State& s);
 bool        replace_selection(State& s, const std::string& raw);
 
+// THE PRODUCT'S ONE UTF-8 ENCODER: one codepoint to its shortest-form bytes.
+// Precondition: an insertable codepoint (U+0020 and up, not DEL, not a
+// surrogate, not past U+10FFFF), which both callers meet — handle_key's
+// printable branch, gated on the same predicate its classifier admits by,
+// and the on-screen keyboard's cap painter (paint_handler.cpp), whose layout
+// table holds printable codepoints only, so a cap is spelled with exactly the
+// bytes its key's press inserts.
+std::string encode_utf8(uint32_t cp);
+
 // Render-side helper: returns true if the cursor should be drawn this
 // frame. Period is 1000ms (~500ms on, ~500ms off) and resets at every
 // `pending` mutation so the cursor stays visible immediately after a

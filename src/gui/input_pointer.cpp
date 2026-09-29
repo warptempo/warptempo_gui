@@ -4391,23 +4391,25 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     // change and does nothing at all otherwise.
     onscreen_keyboard::reconcile_session(app, gui, viewport);
 
-    // The lamps, read ONCE: the layer decides which key is under the finger and
+    // The lamps, read ONCE: the page decides which key is under the finger and
     // the shift arm decides what that key types, so both must be the same
     // answer the last paint used.
     const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
-    const bool symbol_layer = kb.symbol_layer;
-    const bool shift_armed  = kb.shift_armed;
+    const onscreen_keyboard::Page page        = kb.page;
+    const bool                    shift_armed = kb.shift_armed;
 
     onscreen_keyboard::KeyDef def{};
-    const int hit = onscreen_keyboard::key_at(app, symbol_layer, x, y, def);
+    const int hit = onscreen_keyboard::key_at(app, page, x, y, def);
     if (hit < 0) return true;   // a gap, the margin: consumed, no key
 
     using Role = onscreen_keyboard::Role;
 
-    // THE TWO LAMP KEYS ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They still
-    // take the held index (so the finger sees the click face) with a keysym of
-    // 0, which is what the release reads as "this key owed no key-up".
-    if (def.role == Role::Shift || def.role == Role::LayerToggle) {
+    // THE THREE LAMP KEYS ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They
+    // still take the held index (so the finger sees the click face) with a
+    // keysym of 0, which is what the release reads as "this key owed no
+    // key-up".
+    if (def.role == Role::Shift || def.role == Role::SymbolMode ||
+        def.role == Role::SymbolPage) {
         app.onscreen_keyboard.pressed_key    = hit;
         app.onscreen_keyboard.pressed_keysym = 0;
         if (def.role == Role::Shift) {
@@ -4418,17 +4420,19 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
             // session-change owner (onscreen_keyboard.h).
             app.onscreen_keyboard.shift_armed = !shift_armed;
         } else {
-            // THE LAYER TOGGLE LEAVES A PENDING CAPITAL STANDING, like every
-            // other key that types no letter (the rule is stated whole at the
+            // THE PAGE KEYS LEAVE A PENDING CAPITAL STANDING, like every other
+            // key that types no letter (the rule is stated whole at the
             // ordinary key's spend, below). It costs nothing to keep: the only
             // thing an arm can ever change is a LETTER, and every letter is on
-            // the page this key came from, so a round trip to the symbols and
-            // back finds the arm exactly where it was left — with the lamp lit
-            // again the moment the shift key is painted again.
-            app.onscreen_keyboard.symbol_layer = !symbol_layer;
+            // the letter page, so a round trip through the symbols and back
+            // finds the arm exactly where it was left — with the lamp lit
+            // again the moment the shift key is painted again. Where each key
+            // goes is the layout's own answer (page_after).
+            app.onscreen_keyboard.page =
+                onscreen_keyboard::page_after(def.role, page);
         }
-        // BOTH KEYS REPAINT THE WHOLE SURFACE: shift moves every letter cap's
-        // case and the layer moves every key on three rows.
+        // ALL THREE REPAINT THE WHOLE SURFACE: shift moves every letter cap's
+        // case and a page change moves every key.
         viewport.invalidate_rect(surf);
         return true;
     }
@@ -4442,15 +4446,16 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     bool     capitalized = false;
     switch (def.role) {
         case Role::Character: {
-            const char typed = onscreen_keyboard::shifted_char(def.ch,
-                                                               shift_armed);
+            const char32_t typed = onscreen_keyboard::shifted_char(def.ch,
+                                                                   shift_armed);
             capitalized = (typed != def.ch);
             // The keysym is the LOWERCASE base (GuiKey is ASCII case-folded);
             // the CASE travels in the codepoint, which is what the editors'
-            // printable classification reads. The reasoning is at keysym_of.
+            // printable classification reads — and what they insert, through
+            // the one incoming filter, for ASCII and past it alike. The
+            // reasoning is at keysym_of.
             keysym    = onscreen_keyboard::keysym_of(def.ch);
-            codepoint = static_cast<uint32_t>(
-                static_cast<unsigned char>(typed));
+            codepoint = static_cast<uint32_t>(typed);
             break;
         }
         case Role::Backspace: keysym = GuiKeys::BackSpace; break;
@@ -4461,7 +4466,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
         // on it where there is nothing to complete.
         case Role::Tab:       keysym = GuiKeys::Tab;       break;
         case Role::Shift:
-        case Role::LayerToggle: return true;   // handled above; unreachable
+        case Role::SymbolMode:
+        case Role::SymbolPage: return true;   // handled above; unreachable
     }
 
     app.onscreen_keyboard.pressed_key    = hit;
@@ -4472,13 +4478,14 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     // and HIDE of the whole surface (the tick comparator's, main.cpp), not to a
     // key changing face.
     viewport.invalidate_rect(
-        onscreen_keyboard::key_rect(app, symbol_layer, hit));
+        onscreen_keyboard::key_rect(app, page, hit));
 
     // A SHIFT ARM IS SPENT BY THE LETTER IT CAPITALIZED AND BY NOTHING ELSE.
     // ONE-SHOT SHIFT MEANS THE NEXT LETTER (planner ruling 2026-08-27), so a
     // key that types no capital leaves the arm standing: the comma and the
-    // period, the space bar, backspace, Enter, Esc, the layer toggle and every
-    // digit and symbol on the other page. Shift, comma, `q` types `,Q`. The
+    // period, the space bar, backspace, Enter, Esc, Tab, the page keys and
+    // every digit and symbol on the symbol pages. Shift, comma, `q` types
+    // `,Q`. The
     // test is the layout table's own case derivation moving this key's
     // character (`capitalized`, set at the Character arm above) rather than a
     // list of exempt roles — a list would be a second statement of which keys
@@ -4514,15 +4521,15 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     app.onscreen_keyboard.pressed_key    = -1;
     app.onscreen_keyboard.pressed_keysym = 0;
 
-    // Un-press the face, on the layer the INDEX names rather than the live one:
-    // the layer toggle's own press moved the live layer, and its key would be
-    // looked up on a page it is not on (the reason is at layer_of_key_index).
+    // Un-press the face, on the page the INDEX names rather than the live one:
+    // a page key's own press moved the live page, and its key would be looked
+    // up on a page it is not on (the reason is at page_of_key_index).
     // The surface may be GONE altogether (the press's own Enter or Esc closed
     // the editor), in which case the rect is empty and this is a no-op — the
     // show/hide damage is the tick comparator's, not this path's.
     if (onscreen_keyboard::stands(app, gui)) {
         viewport.invalidate_rect(onscreen_keyboard::key_rect(
-            app, onscreen_keyboard::layer_of_key_index(held), held));
+            app, onscreen_keyboard::page_of_key_index(held), held));
     }
 
     // The owed key-up. A lamp key synthesized nothing and owes nothing; every

@@ -991,8 +991,8 @@ private:
     // platform term is false there.
     //
     // AND THEN ON ITS OWN EXPOSURE, exactly as the four redesigned rows are and
-    // for their reason: this pass shapes up to nine cap runs and draws up to
-    // nine icons per row, which the outer Cairo clip would NOT elide, and a
+    // for their reason: this pass shapes up to ten cap runs per row, which
+    // the outer Cairo clip would NOT elide, and a
     // narrow per-frame damage must not pay for them — the caret blink damages
     // the editor's box every half second, and the flag editor is the one
     // keyboard-modal surface that does not stop playback, so the scanner's own

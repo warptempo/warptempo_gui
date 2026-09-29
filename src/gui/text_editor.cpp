@@ -63,29 +63,6 @@ bool is_insertable_codepoint(uint32_t cp) {
            !(cp >= 0xd800 && cp <= 0xdfff);
 }
 
-// Encode ONE insertable codepoint as UTF-8. Precondition:
-// is_insertable_codepoint(cp) — the two callers gate on it (handle_key's
-// printable branch, which classify_key admitted on the same predicate).
-std::string encode_utf8(uint32_t cp) {
-    std::string out;
-    if (cp < 0x80) {
-        out.push_back(static_cast<char>(cp));
-    } else if (cp < 0x800) {
-        out.push_back(static_cast<char>(0xc0 | (cp >> 6)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
-    } else if (cp < 0x10000) {
-        out.push_back(static_cast<char>(0xe0 | (cp >> 12)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
-    } else {
-        out.push_back(static_cast<char>(0xf0 | (cp >> 18)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3f)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
-    }
-    return out;
-}
-
 // Remove the selected range from `pending`, place the cursor at the
 // selection start, and clear the anchor. No-op if no selection.
 void erase_selection(State& s) {
@@ -159,6 +136,27 @@ CharClass classify(char c) {
 }
 
 } // namespace
+
+// The contract (and its two callers) is at the declaration.
+std::string encode_utf8(uint32_t cp) {
+    std::string out;
+    if (cp < 0x80) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp < 0x800) {
+        out.push_back(static_cast<char>(0xc0 | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+    } else if (cp < 0x10000) {
+        out.push_back(static_cast<char>(0xe0 | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+    } else {
+        out.push_back(static_cast<char>(0xf0 | (cp >> 18)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3f)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+    }
+    return out;
+}
 
 // Nearest boundary, ties to the lower index — the contract is at the
 // declaration. Linear over at most the field's byte cap + 1 entries, run

@@ -6480,7 +6480,8 @@ struct AppState {
     // The painted keyboard (onscreen_keyboard.h) stands while any of the six
     // editor kinds does, on a backend that asks for one, and it holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
-    // arm and the symbol layer — and both are SESSION-SCOPED: `lamp_session`
+    // arm and the PAGE (letters, symbols 1/2, symbols 2/2; plasma-keyboard's
+    // three, onscreen_keyboard.h) — and both are SESSION-SCOPED: `lamp_session`
     // is the text_editor_session() they were set in, and the ONE OWNER
     // onscreen_keyboard::reconcile_session clears the pair the moment the live
     // session has moved — at its own call sites, which its declaration names,
@@ -6502,15 +6503,20 @@ struct AppState {
     // is shared with the folder overlay since the render player, and one bit
     // describes the SLOT rather than either tenant.)
     // `pressed_keysym` is the key-up the held key OWES, or 0 for a held key
-    // that synthesizes nothing (the layer toggle, the shift arm, a blank
-    // slot). It is stored rather than re-derived from `pressed_key` because
-    // the press's own act may have moved the layer under the index — the layer
-    // toggle is exactly that key — and a release must never resolve through a
-    // table that has changed since the finger landed.
+    // that synthesizes nothing (the two page keys, the shift arm). It is
+    // stored rather than re-derived from `pressed_key` because the press's own
+    // act may have moved the page under the index — the page keys are exactly
+    // that — and a release must never resolve through a table that has
+    // changed since the finger landed.
+    //
+    // THE PAGE IS DECLARED HERE rather than in onscreen_keyboard.h because
+    // that header includes this one; it aliases the enum as
+    // onscreen_keyboard::Page and owns everything the pages mean.
     struct OnscreenKeyboard {
+        enum class Page : uint8_t { Letters, Symbols1, Symbols2 };
         uint64_t lamp_session     = 0;
         bool     shift_armed      = false;
-        bool     symbol_layer     = false;
+        Page     page             = Page::Letters;
         int      pressed_key      = -1;
         GuiKey   pressed_keysym   = 0;
     };
