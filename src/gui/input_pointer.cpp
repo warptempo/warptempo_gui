@@ -66,10 +66,11 @@ namespace {
 // table, which is what makes "the table's length plus those three IS the
 // roster" a build-time fact rather than a remembered list of names.
 //
-// The `shift` column is each button's OWN chord — ONE row sets it since
-// 2026-09-22: Redo's Ctrl+Shift+Z. The marker walk's Shift+Tab (previous
-// marker) was a second from 2026-08-15 until the walk pair merged into one
-// button, whose shift is an ADMISSION now; Ctrl+Shift+Tab (walk both tabs)
+// The `shift` column is each button's OWN chord — TWO rows set it: Redo's
+// Ctrl+Shift+Z and, since 2026-09-29, PREVIOUS MARKER's Shift+Tab, which set
+// it from 2026-08-15 until the walk pair merged into one button on
+// 2026-09-22 and set it again when the dedicated button came back (the walk's
+// own shift stays an ADMISSION beside it); Ctrl+Shift+Tab (walk both tabs)
 // was a third until its button was deleted on 2026-09-14, the chord being the
 // TABS' admitted shift now. It is not
 // the whole shift story: the SHIFT-ADMITTING buttons OR a shift-exact press
@@ -260,24 +261,24 @@ constexpr ToolbarChord kToolbarChords[] = {
     // reads a mismatch here as the layout's truth; that truth is the
     // painter's kIconRowButtons, with each group's leader at
     // redesign_button_opens_icon_group (app_state.h).
-    // THE ZOOM PAIR (2026-08-12, the grand relayout): two momentary
-    // navigation chords, the commands' pointer home, no radio, click face like
-    // the rest of the row. Both stay LIVE in the `h` view — `0` is on the
-    // mode's allowlist and `c` is its own vocabulary — which the derived
-    // partition answers with nothing hand-listed. THE STEPPED ZOOM BUTTONS
+    // FULL ZOOM OUT (2026-08-12, the grand relayout): a momentary
+    // navigation chord, the command's pointer home, no radio, click face like
+    // the rest of the row. It stays LIVE in the `h` view — `0` is on the
+    // mode's allowlist — which the derived partition answers with nothing
+    // hand-listed. (CENTER, bare `c`, stood beside it as the zoom pair until
+    // 2026-09-29, when its row moved to the bottom row's walk group below.)
+    // THE STEPPED ZOOM BUTTONS
     // (bare `=` / `-`) WERE REMOVED 2026-09-25 (architect): zoom is on every
     // surface — the Ctrl+drag on the waveform, the two-finger pinch, the S
-    // Pen's button-held drag. ONE ADMITS A MODIFIER, SHIFT
-    // (redesign_button_shift_admits): Full zoom out since 2026-09-22, its
-    // shift-click or long press dispatching Shift+0, RESET TRIM; Center is
-    // refused a modified click at the band gate. NEITHER REPEATS: the
-    // `repeats` column is unset on both rows.
+    // Pen's button-held drag. IT ADMITS A MODIFIER, SHIFT
+    // (redesign_button_shift_admits), since 2026-09-22, its
+    // shift-click or long press dispatching Shift+0, RESET TRIM. It does not
+    // repeat: the `repeats` column is unset.
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
-    {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
     // WAVEFORM MAGNIFICATION (architect 2026-09-22) — the bare
     // backtick since 2026-09-23 (bare `]` for its first hours, then bare
     // `[`), a TOGGLE with
-    // a lamp, right after `c`. Live in both audio views, on a locked tab and
+    // a lamp, right after Full zoom out. Live in both audio views, on a locked tab and
     // under the read-only lock (a display posture on that allowlist), and
     // DEAD in the `h` view, whose allowlist does not name it.
     {RedesignButton::IconWaveformMagnification,
@@ -384,6 +385,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // its chord with no exception now, which is exactly why the padlock moved
     // here (the roster record is at RedesignButton::IconReadOnly).
     {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false, false, true},   // bare o
+    // SETTINGS (architect 2026-09-29), the render-entry group's last: bare
+    // `;`, the settings prompt, through on_key like every row, so the
+    // read-only gate, the iteration gate and the `h` view refuse the lift
+    // exactly as they refuse the key — and the face greys on all three first
+    // (redesign_button_enabled). Momentary, no radio, no modifier, no repeat.
+    {RedesignButton::IconSettings, GuiKeys::Semicolon, false, false, false, false, true}, // bare ;
     // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like
     // iteration — its chord opens the mode and closes it, and the button
     // dispatches on both edges because the icon row's band claim sits ABOVE the
@@ -477,9 +484,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // SEVENTEEN
-    // chords (re-counted 2026-09-23, the least-movement walk deleted),
-    // every one already bound elsewhere: the row adds no semantics
+    // EIGHTEEN
+    // rows (re-counted 2026-09-29, the walk group grown to four),
+    // every chord already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
     // allowlists, the read-only gate and every refusal apply by construction, a
@@ -672,9 +679,25 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false, true},                             // bare k
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
-    // behind a separator and ahead of the arrows — THE WALK ALONE since
-    // 2026-09-23 (the two HOLD-COLUMN nudges stood beside it from 2026-09-22
-    // and were deleted with their chords). The declined double-click
+    // behind a separator and ahead of the arrows — FOUR ROWS since 2026-09-29
+    // (architect): PREVIOUS MARKER, NEXT MARKER (the walk), CENTER and SWITCH
+    // TAB. It was the walk alone from 2026-09-23 (the two HOLD-COLUMN nudges
+    // stood beside it from 2026-09-22 and were deleted with their chords).
+    //
+    // PREVIOUS MARKER'S ROW CARRIES SHIFT+TAB AS ITS OWN BASE CHORD, Redo's
+    // shape: a Shift- or Ctrl-modified chord may have its own dedicated
+    // button since 2026-09-29 (architect, "an artificial constraint; the
+    // tablet is the only real development surface now" — this button is
+    // Next Marker's Shift form, Switch Tab below its Ctrl form), the walk's
+    // shift admission standing beside it. It ADMITS CTRL (redesign_button_ctrl_admits), which the lift ORs
+    // into the row's own shift: its ctrl press dispatches Ctrl+Shift+Tab, the
+    // paired march — the S Pen's side button with a tap on glass. A shift
+    // press on it is the consumed nothing a shift on Redo is, and its long
+    // press stays Shift+Tab (it admits no shift for the hold to reach). It
+    // does not repeat, as the walk does not.
+    {RedesignButton::TransportWalkPrevious,
+     GuiKeys::Tab,    false, true,  false, false, true},                             // Shift+Tab
+    // The declined double-click
     // rule's mechanical reason is recorded at the roster entry (every
     // double-click surface in this product acts on its FIRST click too).
     // WALK BOTH TABS was a member on Ctrl+Shift+Tab until the architect
@@ -708,6 +731,24 @@ constexpr ToolbarChord kToolbarChords[] = {
     // deleted 2026-09-23.)
     {RedesignButton::TransportWalk,
      GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
+    // CENTER (bare `c`), moved here from the icon row's zoom group on
+    // 2026-09-29 (architect) with its row unchanged: a momentary navigation
+    // chord, no radio, no modifier (a modified click is refused at the band
+    // gate), no repeat. LIVE in the `h` view, `c` being that mode's own
+    // vocabulary.
+    {RedesignButton::IconZoomOriginal,
+     GuiKeys::C,      false, false, false, false, true},                             // bare c
+    // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the one-shot other-tab
+    // act, its row carrying the ctrl as the tabs' rows do — but NOT A RADIO:
+    // the chord toggles, so every press switches. It ADMITS SHIFT
+    // (redesign_button_shift_admits) and nothing else: the shift-click and
+    // the long press OR the shift into the row's ctrl and dispatch
+    // Ctrl+Shift+Tab, the paired march, the other tab's shifted press
+    // exactly. A ctrl press on it is refused at the band gate (strict
+    // modifier validation — the button's chord already carries its ctrl). It
+    // does not repeat: its long press is its shift.
+    {RedesignButton::TransportSwitchTab,
+     GuiKeys::Tab,    true,  false, false, false, true},                             // Ctrl+Tab
     // (THE HOLD-COLUMN NUDGES' ROWS — Ctrl+Left and Ctrl+Right, 2026-09-22 —
     // ARE DELETED with their buttons and their chords, architect 2026-09-23:
     // the held column is a posture an explicit centring arms, read by the
@@ -846,7 +887,8 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // can spell (conventions.md).
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
-// Up / Down step ladder's Ctrl rung and the WALK's Ctrl+Tab — which is why
+// Up / Down step ladder's Ctrl rung, the WALK's Ctrl+Tab and PREVIOUS
+// MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
 // of any row, or on one of the four dropdown anchors (which carry no chord row
@@ -1202,8 +1244,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // toggle; 2026-08-08 — bare `u`, the reading's own toggle), and it did not have
 // to move when the ROSTER later grew buttons for those same shapes either:
 // bare Home / End became the bottom row's SKIPS (2026-08-11), bare `c` the icon
-// row's zoom-original (2026-08-12), and bare Tab / Shift+Tab / Ctrl+Shift+Tab
-// the bottom row's MARKER-WALK GROUP (2026-08-15). Every one of them is a chord
+// row's zoom-original (2026-08-12; the bottom row's walk group's since
+// 2026-09-29), and bare Tab / Shift+Tab / Ctrl+Shift+Tab
+// the bottom row's MARKER-WALK GROUP (2026-08-15; Shift+Tab a dedicated
+// Previous Marker again since 2026-09-29). Every one of them is a chord
 // the MODE OWNS, which is exactly what makes this walk answer LIVE for its
 // button with nothing hand-listed — the same free derivation the walk's two
 // arrows, the Cumulative toggle and Revert already ride. (The membership is
@@ -1260,9 +1304,12 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   to, and greyed rather than relabelled in either case; it was RENDER's chord
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
-//   THE ZOOM PAIR since the 2026-08-12 relayout (bare `0` is the
+//   FULL ZOOM OUT AND CENTER since the 2026-08-12 relayout (bare `0` is the
 //   allowlist's own zoom admission and bare `c` is the mode's vocabulary —
-//   pure navigation, live with nothing hand-listed),
+//   pure navigation, live with nothing hand-listed; Center on the bottom
+//   row's walk group since 2026-09-29, beside Previous Marker and Switch Tab,
+//   whose Shift+Tab and Ctrl+Shift+Tab are the mode's own and whose Ctrl+Tab
+//   is on its allowlist),
 //   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
 //   the timeline state on the Local one since 2026-08-08, and live on both:
@@ -1288,8 +1335,12 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   read against the lane in here, a round trip through the other tab since
 //   2026-09-26; it ran the reverse WALK-SOURCE cycle from
 //   2026-08-07 until the walk moved to the icon row's own radio pair, and was
-//   blocked for the hours between),
-//   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button on the same terms
+//   blocked for the hours between) — AND SINCE 2026-09-29 THE GROUP'S
+//   DEDICATED ROADS: PREVIOUS MARKER (Shift+Tab, the mode's own, its ctrl
+//   press the mode's march) and SWITCH TAB (Ctrl+Tab, on the allowlist, its
+//   shifted press the mode's march), both LIVE for free,
+//   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button (Center, the
+//   walk group's third since 2026-09-29) on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE BOTTOM ROW'S LEFT / RIGHT since 2026-09-26 (bare Left / Right, the
 //   mode's own playhead step; their own arm greys them over a focused diff
@@ -1345,7 +1396,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
 //   this walk asks about a chord, never about a lane); ADD TO SELECTION (bare
-//   `k`, since 2026-08-18); and the
+//   `k`, since 2026-08-18); the icon row's SETTINGS BUTTON (bare `;`, since
+//   2026-09-29 — off the mode's allowlist, as the typed road always was); and the
 //   SETTINGS anchor
 //   — the only anchor here
 //   since 2026-08-08, when NAVIGATION moved to the LIVE column above with its

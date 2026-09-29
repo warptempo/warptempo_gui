@@ -1119,7 +1119,11 @@ Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
 wide, and the icon row fits WHOLE up to gui_scale 322 from the TWO VIEW LAMPS'
 WHOLE ICON-ROW CATEGORY'S DELETION on 2026-09-15 — two boxes, a group slot and
-a separator — until 2026-09-19. THE WALK IS 748 AUTHORED PX AND THE CEILING 307 since
+a separator — until 2026-09-19. THE WALK IS 755 AUTHORED PX AND THE CEILING 304 since
+2026-09-29, when a separator went in between Save and Undo, Center left for the
+bottom row and Settings joined behind the padlock (21 members in 6 groups; the
+PAINTED walk ends at 2286 of 2304 at 304 and at 2307 at 305 — paint_icon_row
+carries the arithmetic; at the tablet's 200 % it paints 1510). It was 748 and 307 from
 2026-09-25, when ZOOM IN AND ZOOM OUT were removed with `=` / `-` (21 members in
 5 groups; the PAINTED walk, every element its own scaled_px, ends at 2287 of
 2304 at 307 and at 2308 at 308 — paint_icon_row carries the arithmetic; the
@@ -1158,8 +1162,8 @@ lamp's 959 from 2026-08-31; 249 at the 2026-08-27
 Series relocation's 925, the same walk and the same ceiling reached from the
 other direction; 228 at the 1007-px row before that, and 221 for the one
 day the row was 1041). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
-the whole icon row lands (the 748-px walk paints 1674 of the panel's 2304, 630 px of slack
-where the 816-px row of 2026-09-22..25 had 478, the 748-px row of that afternoon 630, the 782-px row 554, the 748-px row of 2026-09-19 621, the 789-px row 529, the 891-px row 299, the 959-px row 146 and the 993-px row 70) and the layout is the one the redesign was drawn
+the whole icon row lands (the 755-px walk of 2026-09-29 paints 1690 of the panel's 2304, 614 px of slack, where the 748-px walk of 2026-09-25 had 630 and
+the 816-px row of 2026-09-22..25 had 478, the 748-px row of that afternoon 630, the 782-px row 554, the 748-px row of 2026-09-19 621, the 789-px row 529, the 891-px row 299, the 959-px row 146 and the 993-px row 70) and the layout is the one the redesign was drawn
 against. 250 held the template for one
 afternoon that day — the architect's question was whether a marker flag is
 TAPPABLE, whether the second tap of a double-tap lands on the flag rather than

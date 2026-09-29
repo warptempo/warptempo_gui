@@ -125,17 +125,17 @@ enum class Icon {
     // 2026-09-22 — enumerator, def and asset together, and the interpreter's
     // stroked arm with it, the file having been that arm's last producer.)
     // THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's
-    // roster commit — the icon row's viewport-class group, which Full zoom
-    // out leads). Breeze's own magnifier family: the fit frame (full zoom out
-    // — bare `0`'s whole-song arm) and the 1:1 original (working-zoom center,
-    // bare `c`). The plus and minus magnifiers left with the Zoom In / Zoom
+    // roster commit). Breeze's own magnifier family: the fit frame (full zoom
+    // out — bare `0`'s whole-song arm, leading the icon row's viewport-class
+    // group) and the 1:1 original (working-zoom center, bare `c`, on the
+    // bottom row's walk group since 2026-09-29). The plus and minus magnifiers left with the Zoom In / Zoom
     // Out buttons on 2026-09-25 (architect: zoom is on every surface) —
     // enumerators, defs and assets together.
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
     // ZOOM-IN-Y, the vertical magnifier (the ruler on its dial beside a
-    // plus): worn by the Waveform Magnification lamp between Center and
-    // Follow since the lamp's reversal (architect 2026-09-24), in place of
+    // plus): worn by the Waveform Magnification lamp between Full zoom out
+    // and Follow since the lamp's reversal (architect 2026-09-24), in place of
     // its twin zoom-out-y.
     ZoomInY,             // Toggle Waveform Magnification (bare `)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
@@ -324,8 +324,9 @@ enum class Icon {
     Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
     // THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15 from a
     // rendered candidate sheet, the row's right cluster ahead of the four
-    // arrows): the walk (Tab, and Shift+Tab on its shifted press; its
-    // landing's camera the audio view's since 2026-09-23). HIS OWN REASONS,
+    // arrows): Previous Marker (Shift+Tab) and Next Marker — the walk — (Tab,
+    // and Shift+Tab on its shifted press; its landing's camera the audio
+    // view's since 2026-09-23). HIS OWN REASONS,
     // kept because they are about this row's crowding rather than about the
     // glyphs in isolation:
     //   bbox-prev / bbox-next are AN ARROW MEETING A BAR, which is the Tab
@@ -339,16 +340,31 @@ enum class Icon {
     // the tab row's shifted press now. It was the file that brought the
     // interpreter's stroked arm back and the one producer of the per-path line
     // cap, which went with it.)
-    // (BBOXPREV, the Previous marker button's glyph, is DELETED with that
-    // button on 2026-09-22, when the walk pair merged into one button wearing
-    // bboxnext — its enumerator, its def and its committed asset.)
+    // BBOXPREV IS BACK (architect 2026-09-29) with the Previous Marker
+    // button: it left on 2026-09-22 when the walk pair merged into one button
+    // wearing bboxnext, and returned byte-verbatim (its committed asset
+    // restored from git history) when the walk group grew a dedicated
+    // Previous Marker again.
     // (SNAP-ORTHOGONAL and SNAP-NODE, Breeze's node-on-a-dotted-cross and
     // node-at-the-end-of-a-dotted-run, stood here from 2026-09-22 as the
     // centring walk's and the least-movement walk's glyphs, bboxnext deleted
     // for that day; both were DELETED 2026-09-23 with the least-movement walk
     // button — enumerators, defs and committed assets — and bboxnext came
     // back byte-verbatim as the one walk's glyph.)
-    BboxNext,            // The walk (Tab; Shift+Tab on the shifted press)
+    BboxPrev,            // Previous Marker (Shift+Tab; Ctrl for the march)
+    BboxNext,            // Next Marker (Tab; Shift+Tab on the shifted press)
+    // THE SWITCH TAB BUTTON'S GLYPH (architect 2026-09-29), the walk group's
+    // last: Breeze Dark's actions/22/tab-detach — a tabbed folder whose tab
+    // stands apart from the body, the other tab being the act. One fresh
+    // verbatim transcription.
+    TabDetach,           // Switch Tab (Ctrl+Tab; Shift for the march)
+    // THE SETTINGS BUTTON'S GLYPH (architect 2026-09-29), the icon row's
+    // render-entry group, after the padlock: Breeze Dark's
+    // actions/22/settings-configure — a symlink in the theme onto
+    // configure.svg, copied resolved (the dialog glyphs' precedent), two
+    // sliders with their knobs. The enumerator keeps the name the architect
+    // picked it by (the theme-provenance rule).
+    SettingsConfigure,   // Settings (bare `;`)
     // (THE HOLD-COLUMN NUDGES' GLYPHS stood here: Breeze's go-previous-context
     // / go-next-context from 2026-09-22, then for the hours of 2026-09-23
     // snap-nodes-midpoint TURNED A QUARTER left and right, the product's
@@ -449,7 +465,10 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 49 SINCE THE PULL (architect 2026-09-27): vcs-pull joined as Save's third
+// 52 SINCE THE WALK GROUP GREW (architect 2026-09-29): bboxprev came back
+// with the Previous Marker button, tab-detach joined with Switch Tab and
+// settings-configure with the icon row's Settings button. It was 49 from
+// THE PULL (architect 2026-09-27): vcs-pull joined as Save's third
 // face. It was 48 from THE STEPPED ZOOM BUTTONS' REMOVAL (architect
 // 2026-09-25), re-counted off the enumerators above: zoom-in and zoom-out
 // left with the Zoom In / Zoom Out buttons that wore them. It was 50 from the follow lamp's
@@ -488,7 +507,7 @@ enum class Icon {
 // leaving restates this number. It held at 50 through 2026-09-24's swap,
 // when zoom-in-y replaced zoom-out-y on the Waveform Magnification lamp at
 // its reversal, one glyph out and one in.
-inline constexpr int kIconCount = 49;
+inline constexpr int kIconCount = 52;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

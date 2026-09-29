@@ -2571,9 +2571,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its fifteen
+            // second arm covers both of the row's surfaces, its eighteen
             // roster buttons (the right block's seven marker-verb-group
-            // members, the walk group's one, the four cardinal arrows and the
+            // members, the walk group's four, the four cardinal arrows and the
             // transport three — the four tables in paint_handler.cpp,
             // kMarkerVerbGroup and its neighbours, own those memberships)
             // and the MODAL's own buttons

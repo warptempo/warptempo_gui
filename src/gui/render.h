@@ -1779,7 +1779,9 @@ inline int tab_spill_px() {
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
 // kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-ONE view/mode/action buttons since
-// 2026-09-25, when the stepped zoom buttons Zoom In and Zoom Out were removed,
+// 2026-09-25, when the stepped zoom buttons Zoom In and Zoom Out were removed
+// — still twenty-one across 2026-09-29, Center leaving for the bottom row and
+// Settings arriving behind the padlock,
 // twenty-three from the evening of 2026-09-23, when Follow came back after its
 // hours' deletion that day, twenty-three from 2026-09-22, when Zoom
 // In and Zoom Out came back to the zoom group's head hours after the Show trim

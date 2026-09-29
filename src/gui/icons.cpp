@@ -904,30 +904,72 @@ constexpr IconPath kMergePaths[] = {
 
 // -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15) --------
 //
-// bboxnext (the walk: Tab, and Shift+Tab on its shifted press; its landing's
-// camera is the audio view's since 2026-09-23, which the glyph does not
-// depict — an arrow meeting a bar is the Tab key's own shape). The
-// architect's reasons for the pick are at the enum entry in icons.h — they
-// are about this row's crowding, which is a roster fact rather than a
-// transcription one.
+// bboxprev (Previous Marker: Shift+Tab, its ctrl press the paired march) and
+// bboxnext (Next Marker: Tab, and Shift+Tab on its shifted press), then
+// tab-detach (Switch Tab: Ctrl+Tab, its shifted press the march) — the
+// group's four since 2026-09-29, Center wearing zoom-original among them.
+// The architect's reasons for the bbox picks are at the enum entry in
+// icons.h — they are about this row's crowding, which is a roster fact
+// rather than a transcription one.
 //
-// THE BBOX FILE IS AN ORDINARY FILLED PATH, one `.ColorScheme-Text`, its `d`
-// verbatim. Command coverage: relative `m` with implicit relative-lineto
-// repetition (comma-separated pairs — "0,1 -2,0 0,14" is three linetos), one
-// relative `m`, one absolute `L`, and NO `z` at all — the fill closes each
-// subpath implicitly, six committed files' precedent.
+// THE TWO BBOX FILES ARE ORDINARY FILLED PATHS, one `.ColorScheme-Text`
+// each, their `d` verbatim. Command coverage: relative `m` with implicit
+// relative-lineto repetition (comma-separated pairs — "0,1 -2,0 0,14" is
+// three linetos), one absolute `M` and one relative `l` in bboxprev, one
+// relative `m` and one absolute `L` in bboxnext, and NO `z` at all — the
+// fill closes each subpath implicitly, six committed files' precedent.
+// bboxprev spells its x-coordinates as 7.9999995 and 9.9999995 and they are
+// copied AS THEY STAND: a hand-rounded 8 and 10 would read better and would
+// break the property that a diff against the committed file is a
+// transcription bug and nothing else. BBOXPREV CAME BACK BYTE-VERBATIM
+// (2026-09-29), its row and its asset restored from git history, having left
+// with the first Previous marker button on 2026-09-22.
 //
-// (BBOXPREV, the Previous marker button's glyph, is DELETED with that button
-// on 2026-09-22, when the walk pair merged into one; so is BOOST, the group's
-// third file for Walk Both Tabs — the set's first STROKED one, whose two
-// arrowhead paths were the only producers of a per-path LINE CAP — deleted
-// with its button 2026-09-14. SNAP-ORTHOGONAL and SNAP-NODE, the two walks'
-// glyphs from 2026-09-22, were deleted 2026-09-23 with the least-movement
-// walk, the walk wearing bboxnext again.)
+// TAB-DETACH is one compact `.ColorScheme-Text` path: absolute and relative
+// moves, `h` / `v` runs with implicit repetition ("v1 14 1" is three
+// verticals), two `z` closes and an outer outline left to the fill's implicit
+// close — the interpreter's oldest arms.
+//
+// (BOOST, the group's third file for Walk Both Tabs — the set's first
+// STROKED one, whose two arrowhead paths were the only producers of a
+// per-path LINE CAP — was deleted with its button 2026-09-14. SNAP-ORTHOGONAL
+// and SNAP-NODE, the two walks' glyphs from 2026-09-22, were deleted
+// 2026-09-23 with the least-movement walk, the walk wearing bboxnext again.)
+constexpr IconPath kBboxPrevPaths[] = {
+    {kIconText,
+     "m 7.9999995,3 0,1 -2,0 0,14 2,0 0,1 -5,0 0,-1 2,0 0,-14 -2,0 0,-1 5,0 "
+     "M 19,7 l 0,3 0,2 0,3 -1,0 0,-3 -4,0 0,2 L 9.9999995,11 14,8 l 0,2 4,0 "
+     "0,-3 1,0"},
+};
+
 constexpr IconPath kBboxNextPaths[] = {
     {kIconText,
      "m 14,3 0,1 2,0 0,14 -2,0 0,1 5,0 0,-1 -2,0 0,-14 2,0 0,-1 -5,0 m -11,4 "
      "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
+};
+
+constexpr IconPath kTabDetachPaths[] = {
+    {kIconText,
+     "m3 3v1 14 1h16v-1-12h-1-2-7v-1-2h-1-4m6 0v2h8v-2zm-6 1h4v3h8 2v11h-14z"},
+};
+
+// -- THE ICON ROW'S SETTINGS BUTTON (architect 2026-09-29) --------------------
+//
+// settings-configure, Breeze Dark's actions/22 name for configure.svg (a
+// symlink in the theme, the asset committed resolved under the name it was
+// picked by): two sliders, one `.ColorScheme-Text` path of absolute M / L /
+// C / z, its `d` verbatim.
+constexpr IconPath kSettingsConfigurePaths[] = {
+    {kIconText,
+     "M 11.5 3 C 10.286139 3 9.2809778 3.8559279 9.0507812 5 L 3 5 L 3 6 L "
+     "9.0507812 6 C 9.2809778 7.1440721 10.286139 8 11.5 8 C 12.713861 8 "
+     "13.719022 7.1440721 13.949219 6 L 19 6 L 19 5 L 13.949219 5 C 13.719022 "
+     "3.8559279 12.713861 3 11.5 3 z M 5.5 14 C 4.1149999 14 3 15.115 3 16.5 "
+     "C 3 17.885 4.1149999 19 5.5 19 C 6.7138604 19 7.7190223 18.144072 "
+     "7.9492188 17 L 19 17 L 19 16 L 7.9492188 16 C 7.7190223 14.855928 "
+     "6.7138604 14 5.5 14 z M 5.5 15 C 6.3310001 15 7 15.669 7 16.5 C 7 "
+     "17.331 6.3310001 18 5.5 18 C 4.6689999 18 4 17.331 4 16.5 C 4 15.669 "
+     "4.6689999 15 5.5 15 z "},
 };
 
 // (THE HOLD-COLUMN NUDGES' snap-nodes-midpoint, turned a quarter left and
@@ -1053,7 +1095,10 @@ constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kMerge              {22.0, kMergePaths,               1};
+constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
+constexpr IconDef kTabDetach          {22.0, kTabDetachPaths,           1};
+constexpr IconDef kSettingsConfigure  {22.0, kSettingsConfigurePaths,   1};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
 constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
 constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
@@ -1104,7 +1149,10 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ViewHidden:          return kViewHidden;
         case Icon::InsertLink:          return kInsertLink;
         case Icon::Merge:               return kMerge;
+        case Icon::BboxPrev:            return kBboxPrev;
         case Icon::BboxNext:            return kBboxNext;
+        case Icon::TabDetach:           return kTabDetach;
+        case Icon::SettingsConfigure:   return kSettingsConfigure;
         case Icon::DialogOkApply:       break;
         case Icon::DialogInformation:   return kDialogInformation;
         case Icon::DialogError:         return kDialogError;

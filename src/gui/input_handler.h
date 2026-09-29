@@ -1390,17 +1390,19 @@ struct GuiInputHandler {
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
     // the view bar's three, row 3's two tabs, row 4's twenty-one (the
-    // toolbar four included since the 2026-08-12 relayout, the zoom pair
-    // since the stepped zoom buttons' removal 2026-09-25, the
+    // toolbar four included since the 2026-08-12 relayout, Full zoom out
+    // leading the zoom group (Center left it for the bottom row 2026-09-29),
+    // SETTINGS behind the padlock since 2026-09-29, the
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
     // 2026-09-19, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's fifteen — the right block's MARKER-VERB GROUP of seven
+    // row's eighteen — the right block's MARKER-VERB GROUP of seven
     // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the walk
-    // group's one (the walk), four cardinal arrows and the transport three.
+    // group's four (Previous Marker, Next Marker, Center, Switch Tab), four
+    // cardinal arrows and the transport three.
     // EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went

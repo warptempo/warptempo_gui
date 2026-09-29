@@ -1928,16 +1928,16 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's THREE, row 3's two
-// TABS, row 4's TWENTY-THREE
+// TABS, row 4's TWENTY-ONE
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's FIFTEEN (re-counted 2026-09-23, when
-// the two hold-column nudges left its walk group) — the
+// 2026-09-01), then the bottom row's EIGHTEEN (re-counted 2026-09-29, when
+// its walk group grew to four) — the
 // transport three, the MARKER-VERB GROUP'S SEVEN (kMarkerVerbGroup,
-// paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S ONE
-// (2026-08-15; the walk alone since 2026-09-23) and the four cardinal
-// arrows, in enum order; the row PAINTS the transport three last, at its
+// paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
+// (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
+// 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS the transport three last, at its
 // right end (architect 2026-09-29), the enum keeping them first because
 // nothing reads the bottom row's enum order. It exists ONCE, here, because
 // it indexes
@@ -2106,12 +2106,14 @@ enum class RedesignButton {
     // living on as the tooltips), THE VIEWPORT-CLASS GROUP — the Show trim
     // region button leading the zoom buttons (2026-08-12, the architect's live
     // placement "after the trim"; the Show trim region button gone 2026-09-22
-    // and the stepped zoom pair 2026-09-25, so Full zoom out leads), the three
+    // and the stepped zoom pair 2026-09-25, so Full zoom out leads; CENTER
+    // left for the bottom row's walk group 2026-09-29), the three
     // lamps behind them (Follow, the middle one, was out
     // for the hours of 2026-09-23), the last of which arrived
     // from the toolbar group later on 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
-    // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
+    // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
+    // 2026-09-29, SETTINGS — and THE ROW'S LAST GROUP —
     // the HISTORY OPENER leading its WALK LAMP, its four companions and
     // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
     // for it.
@@ -2150,6 +2152,12 @@ enum class RedesignButton {
     // is DELETED WHOLE with that ruling, and the argument the 2026-08-13
     // group order was built on — keeping the history opener's x fixed across
     // the toggle — is answered by construction now rather than by placement.
+    //
+    // SAVE STANDS ALONE BEHIND A SEPARATOR (architect 2026-09-29, after his
+    // accidental Save presses at the tablet's 200 %): UNDO opens a group of
+    // its own with Redo and Render behind it, so the toolbar four are two
+    // groups and the row's first separator stands between Save and Undo
+    // (redesign_button_opens_icon_group).
     Save, Undo, Redo, Render,
     // (THE SHOW TRIM REGION BUTTON led the zoom group here from 2026-08-16
     // until the architect deleted it whole on 2026-09-22 with its bare `[`
@@ -2159,24 +2167,24 @@ enum class RedesignButton {
     // admission was Reset Trim's pointer road, which is Full zoom out's
     // shift press now. FULL ZOOM OUT led the zoom group from then until ZOOM IN came back in
     // front of it the same evening.)
-    // THE ZOOM PAIR (2026-08-12, the grand relayout's roster commit): full
-    // zoom out (bare `0`, whose second press restores the view the first
-    // left, and whose SHIFT-CLICK and long press are Shift+0 RESET TRIM since
-    // 2026-09-22 — `0` is the whole song for the camera and, shifted, for the
-    // trim) and working-zoom center (bare `c`). THE STEPPED ZOOM BUTTONS AND
+    // FULL ZOOM OUT (2026-08-12, the grand relayout's roster commit; bare
+    // `0`, whose second press restores the view the first left, and whose
+    // SHIFT-CLICK and long press are Shift+0 RESET TRIM since 2026-09-22 —
+    // `0` is the whole song for the camera and, shifted, for the trim). It
+    // stood beside WORKING-ZOOM CENTER (bare `c`) as the zoom pair until
+    // 2026-09-29, when Center moved to the bottom row's walk group (its roster
+    // entry is there now). THE STEPPED ZOOM BUTTONS AND
     // `=` / `-` WERE REMOVED 2026-09-25 (architect): zoom is on every surface
     // — the Ctrl+drag on the waveform, the two-finger pinch and the S Pen's
-    // button-held drag. Neither button hold-repeats. Both are momentary
-    // navigation acts and LIVE in the `h` view (`0` is on the mode's
-    // allowlist and `c` its own vocabulary, so the derived partition answers
-    // live with nothing hand-listed). CENTER NEVER GREYS because `c` always
-    // frames; FULL ZOOM OUT GREYS where bare `0` has nothing to return to AND
+    // button-held drag. It does not hold-repeat. It is a momentary
+    // navigation act and LIVE in the `h` view (`0` is on the mode's
+    // allowlist, so the derived partition answers live with nothing
+    // hand-listed). It GREYS where bare `0` has nothing to return to AND
     // Reset Trim, its shifted twin, would not act (the twin rule, at
-    // redesign_button_enabled's arm). They are the zoom commands' pointer
-    // home.
-    IconZoomFitBest, IconZoomOriginal,
+    // redesign_button_enabled's arm).
+    IconZoomFitBest,
     // WAVEFORM MAGNIFICATION (architect 2026-09-22, reversed and made
-    // universal 2026-09-24) — the backtick's lamp, after Center, THE ONLY
+    // universal 2026-09-24) — the backtick's lamp, after Full Zoom Out, THE ONLY
     // EXCEPTIONS ROAD (architect 2026-09-23). A DISPLAY POSTURE and nothing
     // else: lit, the waveform picture carries the continuous gain derived
     // from the source (GuiAudio::gain_curve, gated by waveform_magnified) in
@@ -2421,6 +2429,18 @@ enum class RedesignButton {
     // of read_only beside the key. Recorded so the harder variant is not
     // revived.
     IconReadOnly,
+    // SETTINGS (architect 2026-09-29), right after the padlock, closing the
+    // render-entry group: bare `;`, the bare settings prompt, wearing Breeze's
+    // settings-configure. The button IS the key, so it greys exactly where
+    // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
+    // allowlist), grid iterations (the iteration lock's gate inherits that
+    // refusal; iteration_lock_greys names it) and the `h` view (off that
+    // mode's allowlist, through the derived partition) — and a dialog editor
+    // already standing is the veil's, the press never reaching it. It is not
+    // the menu row's Settings ANCHOR (RedesignButton::Settings), whose rows
+    // each prefill one key and open on a locked tab; this is the typed road's
+    // pointer spelling. An act, not a mode: no lamp.
+    IconSettings,
     // THE HISTORY GROUP — the row's LAST, and its own again since 2026-08-18
     // (architect: "place a separator before the history button, and place
     // cumulative/etc after the history button"). The OPENER leads it: bare
@@ -2522,7 +2542,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. FIFTEEN buttons in four groups, all FLUSH AT THE RIGHT
+    // detection. EIGHTEEN buttons in four groups, all FLUSH AT THE RIGHT
     // MARGIN with the CLOCK alone at the row's left pad (architect
     // 2026-09-29, the right-handed tablet's layout). The enum lists them from
     // the TRANSPORT (skip-back = bare Home, THE ONE PLAY/STOP BUTTON = bare
@@ -2539,9 +2559,11 @@ enum class RedesignButton {
     // bare `x` stood behind it from 2026-09-10 to 2026-09-13, and the FLATTEN
     // button between Toggle inherit and Edit flag for the hours of 2026-09-19
     // before it took the icon row's iteration group)),
-    // THE MARKER-WALK GROUP (2026-08-15; since 2026-09-22 the walk = Tab,
-    // its shifted press Shift+Tab — alone since 2026-09-23, the hold-column
-    // nudges on Ctrl+Left / Ctrl+Right deleted that day), and the
+    // THE MARKER-WALK GROUP (2026-08-15; since 2026-09-29 FOUR — Previous
+    // Marker = Shift+Tab, Next Marker = Tab (its shifted press Shift+Tab),
+    // Center = bare `c` down from the icon row, and Switch Tab = Ctrl+Tab;
+    // the walk alone from 2026-09-23, the hold-column nudges on Ctrl+Left /
+    // Ctrl+Right deleted that day), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
     // the row's first day) — which inherit the bare arrows' whole
@@ -2863,15 +2885,37 @@ enum class RedesignButton {
     // id names the button, not the lane it sits in.
     IconAddToSelection,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's right cluster,
-    // behind a separator and ahead of the four arrows) — THE WALK ALONE SINCE
-    // 2026-09-23, the two HOLD-COLUMN nudges beside it since 2026-09-22 having
-    // been deleted that day.
+    // behind a separator and ahead of the four arrows) — FOUR SINCE 2026-09-29
+    // (architect), in painted order: PREVIOUS MARKER, NEXT MARKER, CENTER and
+    // SWITCH TAB. It was the walk alone from 2026-09-23, the two HOLD-COLUMN
+    // nudges beside it since 2026-09-22 having been deleted that day.
     //
-    // THE WALK IS ONE BUTTON (architect 2026-09-22, merging Previous marker and
-    // Next marker, two buttons over two chords since 2026-08-15): its plain
+    // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON
+    // (architect 2026-09-29, dissolving the rule that it never does: "an
+    // artificial constraint; the tablet is the only real development surface
+    // now") — Previous Marker is Next Marker's Shift form and Switch Tab its
+    // Ctrl form. The modified-press
+    // roads on the existing buttons all stay, so Shift+Tab, Ctrl+Tab and
+    // Ctrl+Shift+Tab each have more than one pointer road — a consequence,
+    // never a second listing.
+    //
+    // PREVIOUS MARKER (2026-09-29, back after the 2026-09-22 merge): its
+    // own base chord is SHIFT+TAB, Redo's shape — the table row carries the
+    // shift, so a shift press on it is the consumed nothing a shift on Redo
+    // is — and it ADMITS CTRL, which it ORs into its own shift: the ctrl
+    // press is CTRL+SHIFT+TAB, the paired march (a modified press spells the
+    // button's own key under those modifiers; on glass the S Pen's side
+    // button). It admits nothing else. THE TWIN RULE DECIDES ITS FACE: the
+    // march acts in every state but under a lit grid iterations (the lock
+    // refuses it on its card), so the face greys only where that lock stands
+    // AND the reverse step (marker_walk_step) would land nothing.
+    TransportWalkPrevious,
+    // NEXT MARKER — THE WALK — IS UNCHANGED (architect 2026-09-22, merging
+    // Previous marker and Next marker, two buttons over two chords since
+    // 2026-08-15; the dedicated Previous Marker beside it again since
+    // 2026-09-29 took nothing from it): its plain
     // press is bare Tab, the next marker, and its shift-click and long press
-    // are Shift+Tab, the previous one — A SHIFT-MODIFIED FORM NEVER HAS ITS
-    // OWN BUTTON, IT RIDES THE PLAIN ONE (redesign_button_shift_admits, whose
+    // are Shift+Tab, the previous one (redesign_button_shift_admits, whose
     // static_assert binds the tooltip's second line to the admission). IT
     // ADMITS CTRL AND THE PAIR (architect 2026-09-26): a modified press
     // spells the button's own key under those modifiers, so its ctrl-click is
@@ -2911,6 +2955,30 @@ enum class RedesignButton {
     // ctrl form switches the tab and its ctrl-shift form is the diff-flag
     // march.
     TransportWalk,
+    // CENTER (bare `c`, working-zoom center, wearing zoom-original) — in the
+    // walk group since 2026-09-29 (architect), MOVED from the icon row's
+    // viewport-class group where it stood beside Full zoom out from the
+    // 2026-08-12 grand relayout. The id keeps its Icon* name, a roster id
+    // naming the button and not the lane. Nothing but the seat moved: same
+    // chord, glyph, act, tooltip ("Center on Focus (C)", "Center on Playhead
+    // (C)" with nothing focused) and face. It NEVER GREYS because `c` always
+    // frames; it admits no modifier and does not repeat; it is LIVE in the
+    // `h` view, `c` being that mode's own vocabulary. Its act arms the hold
+    // posture (AppState::camera_hold).
+    IconZoomOriginal,
+    // SWITCH TAB (architect 2026-09-29), the group's last: CTRL+TAB, the
+    // one-shot other-tab act, its table row carrying the ctrl as the tabs'
+    // rows do, wearing Breeze's tab-detach. It ADMITS SHIFT and nothing else:
+    // the shift-click and the long press OR the shift into the row's ctrl and
+    // dispatch CTRL+SHIFT+TAB, the paired march — the tabs' own shape, which
+    // it shares with the other tab's press (so the tab switch has three
+    // pointer roads: the other tab, the walk's ctrl-click and this button).
+    // Not a radio: the chord toggles the tab, so there is no lit half. It
+    // NEVER GREYS: Ctrl+Tab acts in every state the roster is live in (the
+    // tabs' and the walk's arm in redesign_button_enabled). In the `h` view
+    // Ctrl+Tab is on the mode's allowlist and the march is its own
+    // vocabulary, so the derived partition answers live.
+    TransportSwitchTab,
     // (THE HOLD-COLUMN NUDGES — Ctrl+Left and Ctrl+Right, the Left / Right
     // step with the held-column camera, wearing Breeze's snap-nodes-midpoint
     // turned a quarter left and right — stood here from 2026-09-22 until the
@@ -2919,17 +2987,17 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-09-25, when
-// the stepped zoom buttons left row 4): SIX in row 1 (the three menu anchors
-// and the view bar's three), two in row 3, TWENTY-ONE in row 4 and FIFTEEN in
-// the bottom row — 44. Of those, FORTY-ONE carry a chord in
-// kToolbarChords
+// THE ROSTER, re-derived by counting the enumerators above (2026-09-29, when
+// the walk group grew to four, Center moved down to it and Settings joined
+// row 4): SIX in row 1 (the three menu anchors and the view bar's three), two
+// in row 3, TWENTY-ONE in row 4 and EIGHTEEN in the bottom row — 47. Of
+// those, FORTY-FOUR carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 44;
+inline constexpr int kRedesignButtonCount = 47;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2999,7 +3067,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconRestrictUndo:
         case RedesignButton::Render:
         case RedesignButton::IconZoomFitBest:
-        case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconWaveformMagnification:
         case RedesignButton::IconFollow:
         case RedesignButton::IconBpm:
@@ -3007,6 +3074,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconFlatten:
         case RedesignButton::IconListen:
         case RedesignButton::IconReadOnly:
+        case RedesignButton::IconSettings:
         case RedesignButton::IconHistory:
         case RedesignButton::HistoryWalk:
         case RedesignButton::HistoryCumulative:
@@ -3024,7 +3092,10 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
+        case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
+        case RedesignButton::IconZoomOriginal:
+        case RedesignButton::TransportSwitchTab:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
         case RedesignButton::TransportLeft:
@@ -3034,7 +3105,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — FIFTEEN since 2026-09-23: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-09-29: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, ADD TO SELECTION, (2026-08-27)
 // the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button
@@ -3043,19 +3114,20 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // group from 2026-09-10 to its deletion 2026-09-13, the MARKER
 // MAGNIFICATION from 2026-09-14 to 2026-09-15, and the FLATTEN BUTTON for the
 // hours of 2026-09-19 before it went up to the icon row's iteration group),
-// the MARKER-WALK GROUP's one (2026-08-15; three
+// the MARKER-WALK GROUP's four (2026-08-15; three
 // until Walk Both Tabs left on 2026-09-14, two until 2026-09-22, when the
 // walk pair merged into one button and the two hold-column nudges joined
 // it, four when the least-movement walk joined later that day, three again
-// when it left on 2026-09-23, and ONE later that day, when the two nudges
-// were deleted) and the four
+// when it left on 2026-09-23, ONE later that day, when the two nudges
+// were deleted, and FOUR since 2026-09-29 — Previous Marker, Next Marker,
+// Center down from the icon row, and Switch Tab) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
 // until the same relayout took them back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these fifteen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -3082,7 +3154,10 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
+        case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
+        case RedesignButton::IconZoomOriginal:
+        case RedesignButton::TransportSwitchTab:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
         case RedesignButton::TransportLeft:
@@ -3139,19 +3214,23 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // fact about the roster's order and this is where the order is stated. ONE
 // reader now — paint_icon_row's layout walk.
 //
-// THE FIVE GROUPS, in painted order: the toolbar four,
-// THE VIEWPORT-CLASS GROUP (the zoom pair leading since the Show trim region
-// button's deletion on 2026-09-22, Full zoom out at their head since the
-// stepped zoom pair's removal 2026-09-25, the magnification
-// lamp and the restrict-undo lamp — FOLLOW between them until its deletion
-// on 2026-09-23, which moved no divider), THE ITERATION GROUP (the BPM opener,
-// the grid-iterations lamp and, since 2026-09-19, FLATTEN), the
-// render-entry group (listen and
-// the read-only toggle — the load-in-place left it on 2026-09-01) and THE
+// THE SIX GROUPS, in painted order: SAVE ALONE, then UNDO, REDO and
+// RENDER, THE VIEWPORT-CLASS GROUP (Full zoom out leading, the
+// magnification lamp, FOLLOW and the restrict-undo lamp), THE ITERATION
+// GROUP (the BPM opener, the grid-iterations lamp and, since 2026-09-19,
+// FLATTEN), the render-entry group (listen, the read-only toggle and, since
+// 2026-09-29, SETTINGS — the load-in-place left it on 2026-09-01) and THE
 // HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
 // load-in-place at the tail.
 //
-// FIVE SINCE 2026-09-15, DOWN FROM SIX, when the architect deleted THE TWO
+// SIX SINCE 2026-09-29, UP FROM FIVE (architect, after his accidental Save
+// presses at the tablet's 200 %): UNDO OPENS A GROUP, so a separator stands
+// between Save and Undo and the toolbar four are two groups. The same day
+// CENTER left the viewport-class group for the bottom row's walk group (a
+// member leaving, no boundary moving) and SETTINGS joined the render-entry
+// group's tail (a member joining, no boundary moving).
+//
+// FIVE FROM 2026-09-15, DOWN FROM SIX, when the architect deleted THE TWO
 // VIEW LAMPS' whole category (buttons, group slot, separator) rather than
 // leaving a hollowed group behind: IconAudioView stopped opening a group and
 // nothing takes its place, so the leader count fell by one and no other
@@ -3225,6 +3304,10 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
+        // UNDO LEADS REDO AND RENDER (architect 2026-09-29): the separator
+        // in front of it keeps a finger aimed at Undo off Save, the row's
+        // first button, at the tablet's 200 %.
+        case RedesignButton::Undo:
         // THE ZOOM GROUP'S LEADER: Full zoom out, since the stepped zoom
         // buttons in front of it were removed 2026-09-25 (the lead moved onto
         // it and no separator). Follow, the mass-marker group's lone
@@ -12151,6 +12234,12 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // is not this predicate's: bare `i` refuses while BPM iterations
         // stands, at that button's own arm.)
         case RedesignButton::IconBpm:
+        // THE SETTINGS BUTTON (architect 2026-09-29): bare `;` is off the
+        // read-only allowlist, and the iteration gate refuses everything that
+        // list refuses, so the key cards the lock's sentence under a lit lamp
+        // and the face greys — its read-only half is the tab's bare bit, at
+        // its enabled arm.
+        case RedesignButton::IconSettings:
         // THE VIEW BAR'S THREE (architect 2026-09-10): bare 1/2/3 run the
         // audio-view and column switches, so the delta blocks all three
         // unconditionally
@@ -12176,7 +12265,11 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // and the walk's plain and shifted presses step the cells, the mode's
         // own surface, while its ctrl form is that same Ctrl+Tab — so under
         // the twin rule both stay lit and the march's lift reaches the key's
-        // own refusal and its card.)
+        // own refusal and its card. THE TWO MARCH ROADS OF 2026-09-29 ARE NO
+        // MEMBERS EITHER: Switch Tab's plain press is that live Ctrl+Tab, and
+        // Previous Marker's plain Shift+Tab steps the cells — its arm in
+        // redesign_button_enabled greys it only where that reverse step lands
+        // nothing too, a fork a membership answer cannot spell.)
         // EVERY MEMBER ABOVE GREYS OUTRIGHT, whatever cell is addressed: the
         // gate refuses their chords ahead of its bound-axis admission
         // (iteration_lock_key_blocked), so a Lower or Upper cell buys them
@@ -14088,7 +14181,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the VIEW BAR'S THREE
-//     (bare 1/2/3), the zoom pair, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
+//     (bare 1/2/3), Full zoom out and Center, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
 //     not: the lamp is a posture switch that authors nothing, so its own chord
@@ -14537,15 +14630,35 @@ inline bool redesign_button_enabled(const AppState& a,
         // own arms when pressed, a plain lift at the cycle's end being the
         // key's silent refusal (cycle_marker_focus, and the `h` view's
         // cycle_history_diff_flag_focus).
+        //
+        // SWITCH TAB JOINS THEM (architect 2026-09-29): its plain press IS
+        // Ctrl+Tab, so it never greys, its shifted press (the march) under a
+        // lit grid iterations reaching the key's own card.
         case RedesignButton::TabA:
         case RedesignButton::TabB:
         case RedesignButton::TransportWalk:
+        case RedesignButton::TransportSwitchTab:
             // Their own return: falling into the zoom group's first arm handed
             // them Full Zoom Out's fork, and row 3 paints no disabled face, so
             // a live-looking tab dropped its click (architect 2026-09-24).
             return true;
-        // THE ZOOM GROUP. CENTER MIRRORS NOTHING (2026-08-12): `c` always
-        // frames on a loaded file. FULL ZOOM OUT MIRRORS ITS FORK UNDER THE
+        // PREVIOUS MARKER (architect 2026-09-29) UNDER THE TWIN RULE: its
+        // plain press is Shift+Tab and its ctrl press Ctrl+Shift+Tab, the
+        // paired march, which acts in every state but one — under a lit grid
+        // iterations the lock refuses it on its card (iteration_lock_key_-
+        // blocked's delta (a)). So the face greys only where that lamp stands
+        // AND the reverse step would land nothing: marker_walk_step, the
+        // act's own gate (cycle_marker_focus), asked backwards — under the
+        // lamp it walks the bound cells too. Outside the lamp the march always
+        // acts (its two `c`s centre whatever the steps find), live and in the
+        // `h` view alike, so the face is lit wherever the roster is.
+        case RedesignButton::TransportWalkPrevious:
+            return !a.iteration_mode_enabled ||
+                   marker_walk_step(a, audio, /*forward=*/false).marker >= 0;
+        // CENTER MIRRORS NOTHING (2026-08-12): `c` always frames on a loaded
+        // file. It stood in the icon row's zoom group beside Full zoom out
+        // until 2026-09-29 and is the bottom row's walk group's since; its
+        // face did not move with it. FULL ZOOM OUT MIRRORS ITS FORK UNDER THE
         // TWIN RULE (architect 2026-09-23 — "zero should just lose its
         // meaning" when there is nothing to return to): bare `0` is a silent
         // no-op on overview_command_target's NoOp arm (a ceiling the key did
@@ -14711,13 +14824,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // on purpose, invisible chrome state otherwise, changing only when `o`
         // is pressed.
         //
-        // THE READ-ONLY LOCK'S BUTTON SET IS FIFTEEN, AND THIS IS THE ONE
-        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-23, when
-        // the two hold-column nudges left the transport block; every
+        // THE READ-ONLY LOCK'S BUTTON SET IS SIXTEEN, AND THIS IS THE ONE
+        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-29, when
+        // the icon row's SETTINGS button joined; every
         // other site states its own class and points here). In five groups,
         // by HOW each asks:
-        //   * THESE SEVEN, whose arms are below — the bit their first term.
-        //     Six read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
+        //   * THESE EIGHT, whose arms are below — the bit their first term.
+        //     Seven read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
         //     (any_tab_read_only, its own arm's reason).
         //   * THE FOUR HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
         //     block below: Up/Down outright, and Left/Right only while a
@@ -14858,6 +14971,19 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    bpm_sweep_open_actionable(a, audio);
+        // THE SETTINGS BUTTON (architect 2026-09-29) IS BARE `;` AND GREYS
+        // EXACTLY WHERE THE KEY REFUSES: `;` is off read_only_key_blocked's
+        // allowlist (a locked tab cards "; is not available on a read-only
+        // tab"), the iteration gate inherits that refusal (the membership
+        // predicate names it), and the `h` view consumes it through the
+        // derived partition at the head of this body. The opener itself
+        // (GuiSettingsEditor::open) refuses nothing past those gates — an
+        // editor already standing is the veil's, whose press never reaches
+        // this button. It is NOT the menu row's Settings anchor, whose rows
+        // open on a locked tab; that anchor answers at the head of this body.
+        case RedesignButton::IconSettings:
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b);
         // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
         // tempo_flatten_actionable composes BOTH LOCKS itself, so this arm
         // asks neither separately — the rule against a face restating an
@@ -15019,21 +15145,22 @@ inline bool redesign_button_enabled(const AppState& a,
         // theirs — so the face and the chord are one decision with nothing to
         // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
-        // WHAT THE ROW GREYS, re-derived 2026-09-23 with the walk group's
-        // change. IN THE `h` VIEW, all
+        // WHAT THE ROW GREYS, re-derived 2026-09-29 with the walk group's
+        // growth. IN THE `h` VIEW, all
         // through the DERIVED partition at the top of this body: the
         // PLAY/STOP button (Space is consumed there), UP / DOWN
         // (bare Up/Down are neither the mode's vocabulary nor on its
         // allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
         // FLAG BUTTON (bare `j` and
         // bare Return are consumed in there like the
-        // verbs' own chords) — NINE of the fifteen. ADD TO SELECTION
+        // verbs' own chords) — NINE of the eighteen. ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
         // now. LEFT / RIGHT are the mode's own playhead step since 2026-09-26
         // and grey on their own arm below (a diff flag focused, or a wall).
         // The two SKIPS and
-        // THE WALK stay lit, being the mode's own
-        // absolute jumps and its diff-flag cycle (the tab row's shifted press
+        // THE WALK GROUP'S FOUR stay lit, being the mode's own
+        // absolute jumps, its diff-flag cycle both ways, its `c` and the
+        // allowlisted Ctrl+Tab (the tab row's shifted press
         // carries the march that composes that cycle with a round trip
         // through the other tab, the
         // tabs being never-grey); the architect
@@ -15851,6 +15978,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconFlatten:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
+        // THE SETTINGS BUTTON IS MOMENTARY (2026-09-29): it opens the prompt,
+        // whose own session is the state, the edit-flag button's answer.
+        case RedesignButton::IconSettings:
         // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
         // it is an ACT, not a mode — it runs once and closes the view — so
         // there is no bit for a lamp to read. Its ENABLED face greys with no
@@ -15873,7 +16003,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // between the Cumulative toggle going back up to the icon row and ADD
         // TO SELECTION arriving, which is the row's lamp now — its arm is
         // above with the other toggles, where a mode's lamp belongs): the
-        // two skips, the walk, the four arrows
+        // two skips, the walk group's four (Center among them since
+        // 2026-09-29), the four arrows
         // and the marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
         // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
@@ -15887,7 +16018,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
+        case RedesignButton::TransportSwitchTab:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -16174,6 +16307,17 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // the shifted twin on the piece's own ends, the drop's rule once more. The
 // long press is the tablet's road. The TWIN RULE decides the face: the
 // button greys only where both forms would change nothing.)
+// (SWITCH TAB JOINED 2026-09-29 with Ctrl+Shift+Tab, THE PAIRED MARCH
+// (architect): the tabs' own shape on a bottom-row button whose table row is
+// Ctrl+Tab, the lift ORing the admitted shift into the row's ctrl. The long
+// press is the fingertip's road to the march from the walk group. A SHIFT-
+// OR CTRL-MODIFIED CHORD MAY ALSO HAVE ITS OWN DEDICATED BUTTON since that
+// day (architect: "an artificial constraint; the tablet is the only real
+// development surface now") — Previous Marker carries Shift+Tab and Switch
+// Tab Ctrl+Tab as their own base chords beside the walk's admissions — and
+// neither road replaces the other: this predicate is
+// about the modified press on a button, and says nothing about which chords
+// may also own a button.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
@@ -16190,12 +16334,16 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconFlatten ||
            b == RedesignButton::IconListen ||
            b == RedesignButton::TransportWalk ||
+           b == RedesignButton::TransportSwitchTab ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
 
 // THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two
-// VERTICAL ARROWS and THE WALK. The VERTICAL ARROWS' ctrl-click (R12,
+// VERTICAL ARROWS, THE WALK and, since 2026-09-29, PREVIOUS MARKER, whose
+// ctrl press is its own Shift+Tab under ctrl, Ctrl+Shift+Tab, the paired
+// march (the lift ORs the carried ctrl into the row's own shift; on glass the
+// S Pen's side button). The VERTICAL ARROWS' ctrl-click (R12,
 // 2026-08-31)
 // is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
 // shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
@@ -16230,7 +16378,8 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // moves the carried bit into the dispatched chord (the hold-repeat's arm and
 // fire build the same chord).
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
-    return b == RedesignButton::TransportWalk ||
+    return b == RedesignButton::TransportWalkPrevious ||
+           b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
@@ -16296,6 +16445,15 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportWalk) &&
     "the walk admits Shift (Shift+Tab, the previous marker), Ctrl (Ctrl+Tab, "
     "the other tab) and the pair (Ctrl+Shift+Tab, the paired march): its "
     "key's three modified forms");
+static_assert(redesign_button_ctrl_admits(RedesignButton::TransportWalkPrevious) &&
+                  !redesign_button_shift_admits(RedesignButton::TransportWalkPrevious) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::TransportWalkPrevious) &&
+                  redesign_button_shift_admits(RedesignButton::TransportSwitchTab) &&
+                  !redesign_button_ctrl_admits(RedesignButton::TransportSwitchTab) &&
+                  !redesign_button_ctrl_shift_admits(RedesignButton::TransportSwitchTab),
+    "Previous Marker (Shift+Tab) admits Ctrl alone, reaching Ctrl+Shift+Tab; "
+    "Switch Tab (Ctrl+Tab) admits Shift alone, reaching the same march: each "
+    "button's own chord plus the one missing modifier, nothing else");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button that has one. It sits with the roster (rather than with the chord
@@ -16458,7 +16616,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
         // category: their axes are the three view selectors' and the view bar's
         // alone now.)
-        // THE ZOOM GROUP (2026-08-12); the accelerators are the table's own
+        // FULL ZOOM OUT AND CENTER (2026-08-12, the icon row's zoom pair until
+        // Center moved to the bottom row's walk group on 2026-09-29 with its
+        // words unchanged); the accelerators are the table's own
         // convention — a key names its own cap. BOTH ARE STATE-FREE HERE ONLY
         // (2026-09-01, the
         // overload): Full zoom out at the ceiling is the recall, and Center
@@ -16544,6 +16704,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // lamps followed — until 2026-09-01.
         case RedesignButton::IconReadOnly:
             return {"Toggle Read-Only (O)", nullptr};
+        // SETTINGS (architect 2026-09-29), one line: bare `;` opens the
+        // settings prompt and admits no modifier. The accelerator names the
+        // cap, the table's punctuation rule. The name is the menu anchor's
+        // own word, the act being that menu's bare prompt.
+        case RedesignButton::IconSettings:
+            return {"Settings (;)", nullptr};
         // THE HISTORY VIEW'S TOGGLE, one line: the key toggles and there is
         // no shifted twin. The text names the toggle (the lamp rule at this
         // table's head); it read "History (H)", HELP's own word for the
@@ -16819,6 +16985,21 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Next Marker (Tab)",
                     "Press Shift for the previous marker, Ctrl for the other "
                     "tab, Ctrl+Shift to walk both tabs."};
+        // PREVIOUS MARKER (architect 2026-09-29): its own chord is Shift+Tab,
+        // spelled with its modifier as a chord is ("Redo (Ctrl+Shift+Z)"'s
+        // shape), and its one admission is ctrl, the paired march — "walk
+        // both tabs" being the tabs' own words for it. The stateful overload
+        // drops the line under a lit grid iterations, where the march refuses.
+        case RedesignButton::TransportWalkPrevious:
+            return {"Previous Marker (Shift+Tab)",
+                    "Press Ctrl to walk both tabs."};
+        // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the act's name — the
+        // tabs name their own letters, so no existing string named the act —
+        // and its one admission, shift, the paired march in the tabs' own
+        // words. The overload drops the line under a lit grid iterations.
+        case RedesignButton::TransportSwitchTab:
+            return {"Switch Tab (Ctrl+Tab)",
+                    "Press Shift to walk both tabs."};
         // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
         // the key IS the direction, so "Left (Left)" would name the same word
         // twice — the hint keeps the direction alone (one word, which the
@@ -17377,6 +17558,18 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {left ? "Hop Left (Left)" : "Hop Right (Right)", nullptr};
             break;
         }
+        // THE TWO DEDICATED MARCH ROADS (architect 2026-09-29): Previous
+        // Marker's ctrl press and Switch Tab's shifted press are both the
+        // paired march, which the grid-iterations lock refuses on its card
+        // (iteration_lock_key_blocked's delta (a), asked on the lamp exactly
+        // as authoring_lock_drops_chord asks it), so under a lit lamp the
+        // modified press does nothing the plain one does and the line drops.
+        // The first line never forks.
+        case RedesignButton::TransportWalkPrevious:
+        case RedesignButton::TransportSwitchTab:
+            if (a.iteration_mode_enabled)
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         // THE WALK'S TWO ARROWS: the shift line drops where the twin lands on
         // the member the bare press ALREADY reaches — one step from a wall,
         // where `,` and Shift+`,` both choose count − 1 and `.` and Shift+`.`
@@ -17437,8 +17630,10 @@ inline RedesignTooltipText redesign_button_tooltip(
 // the audition's shift over a standing sequence, the skips' shift form where
 // the two landings coincide, since 2026-09-02 (R-17e) UP / DOWN'S STEP
 // LADDER where every
-// rung refuses alike (the step's kind refusals), and THE WALK'S TWO ARROWS one step
-// from a wall, where the jump names the member the step already reaches —
+// rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
+// from a wall, where the jump names the member the step already reaches, and
+// since 2026-09-29 PREVIOUS MARKER'S AND SWITCH TAB'S march line under a lit
+// grid iterations, where the lock refuses the march —
 // the overload returns the one-line
 // form, and it can return a
 // second line only on a button this walk has already bound to an admission,
