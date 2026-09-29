@@ -816,7 +816,7 @@ public:
     // on the pan zone before its window expires into the region former (the
     // eighth glass ruling; the constants block in input_core.cpp carries it).
     // IT IS THE DEVICE'S HOLD DELAY (the device config's `hold_delay_ms`,
-    // architect 2026-09-29), one of the three holds that read that key
+    // architect 2026-09-29), one of the two holds that read that key
     // (the inventory is at kHoldBeatMs, gui_input.h), and it is PUSHED DOWN
     // for the slop's reason: this layer sits below the GUI model and never
     // reads the config. The default is kDefaultTouchRegionHoldMs. A push

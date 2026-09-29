@@ -3916,13 +3916,11 @@ inline int double_click_slack_px() {
 // press was lost — the default does, and the key's range
 // (is_hold_delay_ms, device_config.h) keeps both ends of that sentence.
 //
-// THE TOOLTIP IS THE BEAT'S CUE AND NOTHING IS BUILT FOR IT (architect
-// 2026-09-11, superseding the 2026-08-13 ruling that the beat passes silently
-// because tooltips do not show on glass — a RESTING finger is a resting held
-// pointer, and the dwell elapses under a long press there as it does under a
-// held mouse button). tooltip_delay_ms() reads the same hold delay
-// (render.h), so the hint appears exactly as this hold is crossed; the
-// ruling's home is the read site.
+// THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect 2026-09-29): nothing on
+// screen marks the moment it is crossed. The hover tooltip keeps its own
+// fixed dwell (tooltip_delay_ms, render.h) and does not read the hold delay,
+// so a hint that happens to rise under a resting press says nothing about
+// this term; the ruling's home is the read site.
 //
 // A NAMED READER OF THE ONE INSTALLED VALUE, not a constant (2026-09-29): the
 // two read sites say which hold they measure while the value itself has one
@@ -6919,11 +6917,9 @@ struct AppState {
     // WHO WRITES IT: the two hover walks, each for its own surface and each
     // through the one arming helper (GuiInputHandler::arm_tooltip_dwell) —
     // recompute_redesign_button_hover for the roster, update_modal_dialog_hover
-    // for a standing dialog — plus hide_shift_tooltip, which clears it, and
-    // the ROSTER PRESS SEED (seed_roster_tooltip_dwell), the one writer that
-    // is not a hover walk: it stamps the dwell from the press's own clock so
-    // the hint arrives as the shift hold's beat is crossed, and it asks the
-    // roster walk's own refusals before it does.
+    // for a standing dialog — plus hide_shift_tooltip, which clears it. No
+    // other route stamps a dwell: the tooltip is the resting pointer's alone,
+    // and a press only hides it.
     //
     // A DIALOG OWNER CARRIES THE STASH THAT ARMED IT: `dialog_owner` and
     // `dialog_session` are the modal stash's owner tag and session

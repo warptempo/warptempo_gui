@@ -937,8 +937,8 @@ void GuiSettingsEditor::commit() {
 // the next hold is the first to read it.
 //
 // WHEN EACH IS IN FORCE. `max_waveform_height`: at once, by that relayout.
-// `hold_delay_ms`: at once, from the next tooltip dwell, shift long press or
-// region hold on. `projects_repo`: at once — every reader reads
+// `hold_delay_ms`: at once, from the next shift long press or region hold
+// on. `projects_repo`: at once — every reader reads
 // `app.projects_repo`, the live field, whose source moved 2026-08-27 and whose
 // readers did not (an empty value simply never matches any remote, which
 // disables the GitHub recheck). `projects_path`: FOR THE NEXT OPEN PROJECT AND THE

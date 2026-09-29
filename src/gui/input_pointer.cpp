@@ -7629,10 +7629,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // before the card slid up.
     const bool under_card = notification_card_at(app, mx, my) != 0;
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
-    // walk because the walk below is what stamps it; the rule is stated at the
-    // stamp itself, and the predicate is shared with the PRESS SEED
-    // (seed_roster_tooltip_dwell), the only other route that starts a roster
-    // dwell.
+    // walk because the walk below is what stamps it (the only route that
+    // starts a roster dwell); the rule is stated at the stamp itself.
     const bool modal_owns_the_keyboard = tooltip_dwell_suppressed();
     // THE DIALOG'S VEIL (2026-08-12): under a PROMPT or an EDITOR dialog the
     // WHOLE roster is refused — nothing behind the modal is pressable, so
@@ -8076,15 +8074,6 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         app.chrome_press = AppState::ChromePress{
             AppState::ChromePress::Kind::Roster,
             redesign_button_index(tc.id), mods.shift, mods.ctrl, true, now};
-        // THE TOOLTIP IS THE LONG PRESS'S CUE, so its dwell starts on THIS
-        // clock. The press's hide (on_button_press's first act) cleared the
-        // owner and zeroed the stamp; without this seed only the next settled
-        // hover walk would re-stamp, from a later monotonic_ms(), and the cue
-        // would come up a loop interval after the beat the LIFT measures
-        // against. Seeded from `now` — the very stamp the lift reads — the two
-        // agree. The walk's own terms are re-asked inside the seed, and the
-        // walk that follows keeps this stamp because the owner is unchanged.
-        seed_roster_tooltip_dwell(tc.id, now);
         // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
@@ -8326,22 +8315,12 @@ void GuiInputHandler::finish_chrome_press_release(
         // tick, nothing polled, and no state beyond the int64 the arm already
         // carries.
         //
-        // NOTHING IS BUILT FOR THE FEEDBACK, AND THE TOOLTIP IS IT —
-        // architect-RULED 2026-09-11, superseding the 2026-08-13 answer that
-        // no feedback was needed (which reasoned that the gesture exists for
-        // the TOUCH PANEL and tooltips do not show there). A hover surface
-        // never fires from a MOVING finger, but a finger RESTING on a button
-        // is a resting held pointer and the dwell elapses under it exactly as
-        // it does under a held mouse button — so the hint the press's own
-        // dwell already raises IS the cue, and tooltip_delay_ms() reads
-        // the same hold delay (render.h) so it arrives at the instant this term
-        // starts answering true. See it, let go, get the shifted twin. Still
-        // nothing is polled or ticked FOR THE HOLD: the span is measured at
-        // the lift, and the dwell is the tooltip's own machinery — coupled to
-        // this arm in exactly one place, the press seed
-        // (seed_roster_tooltip_dwell) that starts the dwell on the ARM'S OWN
-        // stamp, so the two read the same clock and the hint cannot lag the
-        // beat by more than the tick the due check runs on.
+        // THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect 2026-09-29): the hand
+        // learns the device's hold delay, and nothing on screen marks the
+        // instant this term starts answering true. The hover tooltip is not
+        // its cue — it keeps its own fixed dwell (tooltip_delay_ms, render.h)
+        // and no press stamps it — so a hint that rises under a resting press
+        // is the resting pointer's and says nothing about this term.
         //
         // THE TWO SKIPS ARE WHERE IT REACHES THE WHOLE-PIECE JUMP (architect
         // 2026-09-29): they admit shift for Shift+Home / Shift+End, so a skip
@@ -9665,47 +9644,15 @@ void GuiInputHandler::arm_tooltip_dwell(
 }
 
 // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's one
-// expression, read by the roster's hover walk and by the press seed below.
-// The three list owners are terms because each takes the keyboard whole; the
-// pointer-transparent FLAG editor is a term through keyboard_modal_editor_active
-// for the same reason, and it is exactly the case a press seed could otherwise
-// miss: a roster press IS reachable under one (that editor raises no veil).
+// expression, read by the roster's hover walk. The three list owners are terms
+// because each takes the keyboard whole; the pointer-transparent FLAG editor is
+// a term through keyboard_modal_editor_active for the same reason, and it is
+// the case the walk's veil cannot see: the roster stays hoverable under one
+// (that editor raises no veil).
 bool GuiInputHandler::tooltip_dwell_suppressed() const {
     return app.prompt.active || keyboard_modal_editor_active() ||
            app.render_player.active || app.picker.active ||
            app.stats_panel.active;
-}
-
-// THE LONG PRESS'S CUE STARTS AT THE PRESS (the contract is at the
-// declaration): the dwell is stamped from the press's own clock rather than
-// from the settled walk's, so the hint arrives as chrome_shift_hold_ms() is
-// crossed instead of one loop interval after it. The press's hide has already
-// run above this call, so the box is down and the owner is clear; this writes
-// the new owner and the press's stamp, and the next walk finds that owner
-// unchanged and leaves the running dwell alone.
-//
-// THE RESIDUE IS THE TICK'S OWN PERIOD and nothing else: the due check is two
-// comparisons on the run loop's tick (main.cpp), so the cue is raised on the
-// first tick at or after press_ms + tooltip_delay_ms(). That is the same grain
-// the SHIFT LONG PRESS itself is measured on at the lift, so the hint and the
-// act it announces cannot disagree by more than one frame.
-void GuiInputHandler::seed_roster_tooltip_dwell(RedesignButton b,
-                                                int64_t press_ms) {
-    // The walk's own two terms before it stamps, asked in its order: no dwell
-    // under a modal surface, and the CONSTANT table's membership (the menu-row
-    // anchors and the view bar's three carry no hint in any state — the
-    // stateful overload is the painter's and is not asked here).
-    if (tooltip_dwell_suppressed()) return;
-    if (redesign_button_tooltip(b).line1 == nullptr) return;
-    // AND THE HOVER ZONE, the walk's other refusal: an open dropdown and the
-    // SELECTED tab answer nothing to the pointer, so neither may start a
-    // dwell. The walk's remaining terms cannot differ here — the pointer is on
-    // this button by construction (the press hit its published rect) and a
-    // notification card's claim is consumed far above this arm.
-    if (!redesign_button_hover_zone(app, b)) return;
-    app.redesign_tooltip.owner = {AppState::RedesignTooltip::Surface::Roster,
-                                  redesign_button_index(b)};
-    app.redesign_tooltip.hover_ms = press_ms;
 }
 
 // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss hook's

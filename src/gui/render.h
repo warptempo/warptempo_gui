@@ -2,7 +2,7 @@
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
-#include "gui_input.h"        // kHoldBeatMs, the hold delay's construction state
+#include "gui_input.h"        // kHoldBeatMs: the tooltip's dwell, the hold delay's construction state
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 
 #include <cairo/cairo.h>
@@ -2610,13 +2610,13 @@ inline int playhead_head_half_px(int device_row, double s) {
 // set_gui_scale_percent and before the window exists, and the settings
 // editor's `hold_delay_ms=` commit (commit_device_setting, whose live apply
 // is GuiInputHandler::apply_hold_delay_ms). Its construction state is
-// kHoldBeatMs, the key's default. hold_delay_ms() is the ONE reader, and it
-// is read through two NAMED readers so each site still says which hold it
-// is — tooltip_delay_ms() below and chrome_shift_hold_ms() (app_state.h) —
-// while the third hold, the touch region hold, sits in the input core below
-// this header and takes the value PUSHED DOWN
-// (GuiPlatform::set_touch_region_hold_ms, at the same two points). The
-// readers' whole inventory, and the four beats that stay on kHoldBeatMs, are
+// kHoldBeatMs, the key's default. It governs TWO holds: the chrome shift long
+// press reads it through its named reader, chrome_shift_hold_ms()
+// (app_state.h), and the touch region hold sits in the input core below this
+// header and takes the value PUSHED DOWN
+// (GuiPlatform::set_touch_region_hold_ms, at the same two points). The hover
+// tooltip's dwell is NOT a hold and does not read it (tooltip_delay_ms below).
+// The readers' whole inventory, and the beats that stay on kHoldBeatMs, are
 // at that constant (gui_input.h).
 void set_hold_delay_ms(int ms);
 int  hold_delay_ms();
@@ -2633,18 +2633,17 @@ int  hold_delay_ms();
 // the run loop only needs to know it can never exceed this. 60 clears the
 // two-line form (51 at 100%) with room for a font whose metrics run larger.
 //
-// THE DWELL IS THE HOLD DELAY, not a number of its own. A tooltip under a
-// HELD button is a resting pointer's dwell either way — which is exactly what
-// a finger's long press is on glass — so tying the dwell to the value the
-// shift long press reads (chrome_shift_hold_ms, app_state.h) makes the
-// tooltip's APPEARANCE the cue that the hold has crossed into its shifted
-// meaning: see the hint, release for the modified act. ONE VALUE, BOTH: the
-// dwell and the long press read the device's `hold_delay_ms` through the one
-// installed value, so a retune moves the cue with the act it announces. The
-// two mechanisms stay independent (a hover dwell and a press hold neither
-// reset, suppress nor feed the other); it is the NUMBER that is one.
+// THE DWELL IS ITS OWN FIXED NUMBER, kHoldBeatMs — 575 ms — and NOT the
+// device's hold delay (architect 2026-09-29). The tooltip is a hint for a
+// resting pointer and nothing else: it announces no hold. The chrome shift
+// long press is timed by `hold_delay_ms` alone (chrome_shift_hold_ms,
+// app_state.h) and has no visual announcement, so a tablet that tunes its
+// holds short does not also get a hint that pops in and out under every
+// passing touch or pen hover. The two mechanisms share neither a number nor
+// a clock: a hover dwell and a press hold neither reset, suppress nor feed
+// the other.
 inline constexpr int     kTooltipDamageHeightPx = 60;
-inline int64_t tooltip_delay_ms() { return hold_delay_ms(); }
+inline constexpr int64_t tooltip_delay_ms() { return kHoldBeatMs; }
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }

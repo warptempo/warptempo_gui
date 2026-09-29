@@ -45,7 +45,7 @@ struct GuiInputHandler;
 //    card; max_waveform_height is in force at once, the body handing it to
 //    apply_max_waveform_height for the live relayout; hold_delay_ms is in
 //    force at once, the body handing it to apply_hold_delay_ms, which
-//    installs it for the three holds. gui_scale, the fifth
+//    installs it for the two holds. gui_scale, the fifth
 //    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
 //    is to reach one.

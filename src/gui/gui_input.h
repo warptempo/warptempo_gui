@@ -92,25 +92,14 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // set_hold_delay_ms / hold_delay_ms (render.h), installed at gui_main's
 // startup beside set_gui_scale_percent and at the settings editor's
 // `hold_delay_ms=` commit (GuiInputHandler::apply_hold_delay_ms), and it has
-// THREE READERS:
-//   * THE HOVER TOOLTIP'S DWELL (tooltip_delay_ms, render.h) — how long a
-//     pointer must REST before the hint appears. It is the long press's
-//     clock too, one value for both: a HELD button is a resting pointer — on
-//     glass a long press is a held finger and the dwell elapses under it — so
-//     the tooltip's appearance is the moment the hold has been long enough
-//     for the shift-modified act, and the cue to release is the hint itself,
-//     which is why THE HOLD'S OWN STAMP FEEDS THE DWELL on the one surface
-//     where both run at once: an admitted roster press seeds the dwell from
-//     the press's clock (GuiInputHandler::seed_roster_tooltip_dwell), so the
-//     hint is raised as the hold is crossed rather than a loop interval
-//     later. Nothing else couples them — neither resets or suppresses the
-//     other, and the dwell is still the pointer's own on every surface with
-//     no press on it. (It carried its own 700 until 2026-09-11.)
+// TWO READERS:
 //   * THE CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at
 //     both of its read sites — the roster lift and the RENDER PLAYER'S MODAL
 //     ROW, which joined 2026-08-28 (R37): its two skips admit a modified
 //     press, so their long press reaches the same twin a shift-click does,
-//     one value and one term;
+//     one value and one term. It has NO VISUAL ANNOUNCEMENT: the span is
+//     measured at the lift and nothing on screen marks the moment it is
+//     crossed;
 //   * THE TOUCH PAN ZONE'S REGION HOLD (GuiInputCore's touch_region_hold_ms_,
 //     input_core.cpp), which sits below the GUI model and takes the value
 //     PUSHED DOWN at the same two points (set_touch_region_hold_ms, whose
@@ -120,10 +109,18 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // installed value and of the core's member, so a device that never edits the
 // key holds exactly as the product always did.
 //
-// THE CADENCES STAY ON THIS CONSTANT, DECOUPLED FROM THE KEY (architect
-// 2026-09-29): each measures the gap between presses or the pace of a stream
-// of repeats, and none is a hand resting on a thing until it changes meaning,
-// which is what the key tunes. FOUR READERS:
+// THE CADENCES AND THE HOVER DWELL STAY ON THIS CONSTANT, DECOUPLED FROM THE
+// KEY (architect 2026-09-29): a cadence measures the gap between presses or
+// the pace of a stream of repeats, the dwell how long a pointer rests before
+// a hint, and none is a hand resting on a thing until it crosses into a held
+// meaning, which is what the key tunes. FIVE READERS:
+//   * THE HOVER TOOLTIP'S DWELL (tooltip_delay_ms, render.h) — how long a
+//     pointer must REST on a button before its hint appears. It is its own
+//     wait and announces no hold: a hint riding a hold delay tuned short for
+//     the hand pops in and out under every touch and blinks at the pen
+//     plane's edge, so the shift long press has no visual cue and the dwell
+//     keeps the fixed beat whatever the device's holds are. (It carried its
+//     own 700 until 2026-09-11.)
 //   * THE DOUBLE-CLICK WINDOW (kDoubleClickMs, app_state.h), since
 //     2026-08-27 — the interval a deliberate SECOND TAP has to arrive inside;
 //   * THE UNDO TAP-COALESCE WINDOW (kTapCoalesceMs, undo.h), since
@@ -142,8 +139,8 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 //     advertises no delay to ask for; the ruling is at that site).
 // So at the default a keyboard hold, a chrome shift hold, a touch region
 // hold, a held button's first repeat, a double tap, a re-tapped nudge and a
-// hover dwell all land on the same beat; a retuned hold delay moves the three
-// holds together and leaves the four cadences where they are.
+// hover dwell all land on the same beat; a retuned hold delay moves the two
+// holds together and leaves the four cadences and the dwell where they are.
 //
 // 575 ms BY CONVENTION WITH THE COMPOSITOR'S KEY-REPEAT DELAY, matched
 // DELIBERATELY and not by coincidence: it is the architect's own labwc

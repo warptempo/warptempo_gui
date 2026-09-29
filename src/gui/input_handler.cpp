@@ -4254,8 +4254,8 @@ void GuiInputHandler::apply_max_waveform_height(int authored_px) {
 void GuiInputHandler::apply_hold_delay_ms(int ms) {
     // The contract is at the declaration (input_handler.h). The two installs
     // are the startup's two (gui_main, main.cpp) in the same order; a hold
-    // already running when this lands (a tooltip dwell, a press) is measured
-    // at its own due check or lift against the value standing then.
+    // already running when this lands (a press, a region hold) is measured
+    // at its own lift or window against the value standing then.
     set_hold_delay_ms(ms);
     gui.set_touch_region_hold_ms(hold_delay_ms());
 }

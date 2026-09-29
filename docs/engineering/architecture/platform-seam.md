@@ -497,8 +497,8 @@ drag coordinates floor instead of truncating.
   a number the convention sentence did not support, corrected under the
   four-tier review's R-18(a). THE DELAY STAYS `kHoldBeatMs`, DECOUPLED FROM
   THE DEVICE'S `hold_delay_ms` (architect 2026-09-29): that key tunes the
-  holds — the tooltip's dwell, the chrome shift long press, the touch region
-  hold — and a repeat delay measures the cadence of a stream of repeats,
+  holds — the chrome shift long press and the touch region hold (the
+  tooltip's dwell stays on the fixed beat too) — and a repeat delay measures the cadence of a stream of repeats,
   not a hand resting until a hold means something, so retuning the hold delay
   on the tablet leaves its key repeat (and the held buttons' first fire) at
   575. Hardware keyboards are out of scope; the owned

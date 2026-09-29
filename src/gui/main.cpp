@@ -3495,9 +3495,9 @@ int gui_main(const char* argument) {
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
     // THE HOLD DELAY RIDES IT TOO (the device config's `hold_delay_ms`,
-    // 2026-09-29): installed before the first frame, so the first tooltip
-    // dwell and the first shift long press already hold for the device's
-    // value; live at the settings editor's commit (commit_device_setting then
+    // 2026-09-29): installed before the first frame, so the first shift long
+    // press already holds for the device's value; live at the settings
+    // editor's commit (commit_device_setting then
     // GuiInputHandler::apply_hold_delay_ms). The one reader is hold_delay_ms
     // (render.h); the input core's region hold takes it pushed down below.
     set_hold_delay_ms(device_config.hold_delay_ms);
