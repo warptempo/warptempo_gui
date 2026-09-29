@@ -5985,8 +5985,9 @@ struct AppState {
     // tails the same cut covers — paints AT REST at once: every slot whose unit lost its
     // selection is cut to level 0 (no fade-out tail of the half blend), and
     // while the pointer stays on it the unit shows no fill. It RE-ARMS when
-    // the pointer leaves the unit (to another unit or none; the next entry
-    // snaps in as ever), or AFTER A WAIT FROM STILLNESS, the tooltip's own
+    // the pointer is next reported IN THE WINDOW over another unit or none
+    // (the next entry snaps in as ever), or AFTER A WAIT FROM STILLNESS, the
+    // tooltip's own
     // shape: a motion MORE than the hover slop (tooltip_hover_slop_px, the
     // tooltip's test, on either axis) from `anchor_x` / `anchor_y` — where
     // the pointer rested at the disarm — re-anchors there and starts the wait
@@ -5995,12 +5996,22 @@ struct AppState {
     // restarting it, and the unit re-arms when the wait ripens (the tick runs
     // the writer). Crossing the slop alone re-arms nothing, so a pointer
     // leaving the flag after a deselect does not flash the fill on its way
-    // out. A deselect must
+    // out. A LEAVE AND RE-ENTRY OVER THE SAME UNIT IS NOT A MOVE OFF IT
+    // (architect 2026-09-29, found on glass): the pointer's leave — the pen's
+    // hover ending as its tip lands, its tap's lift (the touch translation's
+    // end), the pen leaving its plane, the window leave — keeps the latch, `under`, its bit and the
+    // anchor, cancelling only a running wait (the pointer did not rest while
+    // away), and while the pointer is out of the window the writer reads no
+    // unit change, measures no slop and ripens no wait, watching the tracked
+    // unit's selection alone. So the pen lifting straight up off a flag it
+    // has just deselected re-enters over it still at rest, until it crosses
+    // the slop and rests the wait, or hovers off it. A deselect must
     // read as a whole deselect — a unit landing at the half blend reads as a
     // half-deselected flag; the roster buttons need no such rule because
     // their lamp is a separate face from their hover outline. Becoming
     // selected under the pointer is unaffected. `under` tracks the unit
-    // under the resting pointer WHATEVER THE HELD BUTTON (a held press refuses
+    // under the resting pointer as the window last reported it, WHATEVER THE
+    // HELD BUTTON (a held press refuses
     // the paint, not the unit: a click's deselect happens under it), with
     // `under_selected` its painted-selected bit as last seen; each slot's
     // `selected` is the same bit for its own unit.

@@ -7664,8 +7664,8 @@ void set_flag_hover_unit(AppState& app, const AppState::FlagHoverUnit& unit,
 //   * THE UNIT UNDER THE POINTER, tracked whatever the held button (a click's
 //     deselect happens under its own press), LATCHES `disarmed` at that same
 //     transition, anchored where the pointer rests. The latch clears when the
-//     unit under the pointer changes (to another unit or none) — the next
-//     entry is an ordinary hover — or when the pointer, having moved MORE
+//     pointer is next REPORTED IN THE WINDOW over another unit or none — the
+//     next entry is an ordinary hover — or when the pointer, having moved MORE
 //     than the hover slop from the anchor on either axis (the tooltip's own
 //     test, tooltip_hover_slop_px), then rests within the slop of where it
 //     re-anchored for the tooltip's own wake-up, kTooltipWakeUpMs (the
@@ -7673,10 +7673,22 @@ void set_flag_hover_unit(AppState& app, const AppState::FlagHoverUnit& unit,
 //     wait, so a pointer passing out of the flag after a deselect never
 //     flashes the fill on its way. The wait ripens on the tick, which runs
 //     the writer.
+//   * A LEAVE AND RE-ENTRY OVER THE SAME UNIT IS NOT A MOVE OFF IT (architect
+//     2026-09-29, found on glass: the pen's tap is HOVER_EXIT, contact, lift
+//     — the touch translation's end, the pointer's leave — then a fresh
+//     HOVER_ENTER over the flag it just deselected). While the pointer is out
+//     of the window (`present` false) the tracked unit stands as the pointer
+//     last reported it: no unit change is read, no slop is measured and no
+//     wait ripens, and only the selection transition is watched, so a
+//     deselect the writer first sees after the leave still latches. The leave
+//     itself cancels a running wait (clear_flag_hover), so the pointer coming
+//     back over the same unit stays at rest until it crosses the slop and
+//     rests afresh, or is reported over another unit or none.
 template <typename Damage>
 void observe_flag_hover_selection(AppState& app,
-                                  const AppState::FlagHoverUnit& under,
-                                  int mx, int my, Damage&& damage) {
+                                  const AppState::FlagHoverUnit& reported,
+                                  bool present, int mx, int my,
+                                  Damage&& damage) {
     AppState::FlagHover& h = app.flag_hover;
     for (AppState::FlagHoverFade& f : h.fades) {
         const bool sel = flag_hover_unit_selected(app, f.unit);
@@ -7692,14 +7704,15 @@ void observe_flag_hover_selection(AppState& app,
     // that moves its index while its flag stays under the pointer is no
     // change here and the latch stands; one that takes the flag away leaves
     // another unit, or none, under the pointer — a leave.
-    if (under != h.under) {
-        h.under = under;
+    if (present && reported != h.under) {
+        h.under = reported;
         h.under_selected =
-            under.named() && flag_hover_unit_selected(app, under);
+            reported.named() && flag_hover_unit_selected(app, reported);
         h.disarmed     = false;
         h.rearm_due_ms = 0;
         return;
     }
+    const AppState::FlagHoverUnit under = h.under;
     if (!under.named()) return;
     const bool sel = flag_hover_unit_selected(app, under);
     if (h.under_selected && !sel) {
@@ -7709,7 +7722,7 @@ void observe_flag_hover_selection(AppState& app,
         h.rearm_due_ms = 0;
     }
     h.under_selected = sel;
-    if (!h.disarmed) return;
+    if (!h.disarmed || !present) return;
     const int slop = tooltip_hover_slop_px();
     const int64_t now = monotonic_ms();
     if (std::abs(mx - h.anchor_x) > slop || std::abs(my - h.anchor_y) > slop) {
@@ -7755,9 +7768,14 @@ void GuiInputHandler::recompute_flag_hover() {
     // prompt's or a dialog editor's veil, under the folder overlay's band,
     // beside an open dropdown (it owns the pointer) or under a notification
     // card (opaque to the pointer). Each of these is the pointer LEAVING the
-    // unit, for the disarm's latch as for the paint.
+    // unit for the paint; for the disarm's latch every one but the first is
+    // the pointer, in the window, over none. OUT OF THE WINDOW the pointer
+    // reports nothing and the latch's tracking stands as it last reported —
+    // a leave and re-entry over the same unit is not a move off it
+    // (observe_flag_hover_selection).
+    const bool present = app.pointer_in_window;
     const bool away =
-        !app.pointer_in_window ||
+        !present ||
         app.loading || audio.total_frames() <= 0 ||
         app.prompt.active || modal_dialog_editor_active() ||
         folder_overlay_stands(app) ||
@@ -7765,7 +7783,7 @@ void GuiInputHandler::recompute_flag_hover() {
         notification_card_at(app, mx, my) != 0;
     const AppState::FlagHoverUnit under =
         away ? AppState::FlagHoverUnit{} : flag_hover_unit_at(app, mx, my);
-    observe_flag_hover_selection(app, under, mx, my, damage);
+    observe_flag_hover_selection(app, under, present, mx, my, damage);
     // NO HOVER PAINTED on that unit under a held primary button (a press, a
     // drag, every finger contact — no hover under touch: the pointer is not
     // resting, though it has not left) or while the unit is disarmed by a
@@ -7776,12 +7794,17 @@ void GuiInputHandler::recompute_flag_hover() {
 }
 
 void GuiInputHandler::clear_flag_hover() {
-    // The pointer has left: every unit re-arms, as a leave always does.
+    // The pointer has left: the hovered unit fades out on its own tail. THE
+    // DISARM LATCH STANDS, with its unit and its anchor (a leave and re-entry
+    // over the same unit is not a move off it — the pen's tap leaves at the
+    // contact and again at the lift, then re-enters over the flag it just
+    // deselected; observe_flag_hover_selection): the latch clears only when
+    // the pointer is next reported in the window over another unit or none.
+    // A RUNNING WAIT FROM STILLNESS IS CANCELLED — the pointer did not rest
+    // while it was away — so a return within the slop of the anchor stays at
+    // rest until it crosses the slop and rests afresh.
     AppState::FlagHover& h = app.flag_hover;
-    h.under          = AppState::FlagHoverUnit{};
-    h.under_selected = false;
-    h.disarmed       = false;
-    h.rearm_due_ms   = 0;
+    h.rearm_due_ms = 0;
     set_flag_hover_unit(app, AppState::FlagHoverUnit{},
                         [this](const GuiRect& r) {
                             viewport.invalidate_rect(r);

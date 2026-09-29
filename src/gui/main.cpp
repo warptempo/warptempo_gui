@@ -2150,7 +2150,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // AND THE FLAG HOVER (architect 2026-09-29), the same hover half: a
         // pointer that has left rests on no flag, and the hovered box fades
         // out on its own tail. Every reason clears it, the pen's PenHoverEnd
-        // included — no hover survives above the pen's plane.
+        // included — no hover survives above the pen's plane. A deselect's
+        // disarm latch is NOT cleared here: a leave and re-entry over the
+        // same flag is not a move off it (AppState::FlagHover).
         input_handler.clear_flag_hover();
         input_handler.clear_player_scrub_drag();
         // AND THE SCRUB HANDLE'S HOVERED OUTLINE, the same hover half of the
