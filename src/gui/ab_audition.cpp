@@ -1,6 +1,6 @@
 #include "ab_audition.h"
 
-#include "input_handler.h"   // run_center_command, the `c` command's one owner
+#include "input_handler.h"   // run_center_key_command, the `c` key's act
 
 #include <cmath>
 #include <cstdint>
@@ -170,17 +170,20 @@ void GuiAbAudition::start() {
     // sets one, and a play that refused after such a move would simply end the
     // act — the interrupt rule's own answer.
     //
-    // THE ACT IGNORES THE HOLD POSTURE (architect 2026-09-23;
-    // AppState::camera_hold): its camera writes — the two `c`s and the tab
-    // switch here, the switch back and its `c` at the second pair — leave
-    // the bit as the act found it, so what stood before the act stands after
-    // it. The switches now derive the bit on arrival (hold_derived_on_arrival,
-    // architect 2026-09-29) and the `c`s arm it; the bit is read here and the
-    // write-back behind the writes restores what stood. The follow lamp
-    // needs no such care: nothing here writes it, and the suspension its
-    // camera writes leave behind is cleared by the next launch
+    // THE ACT'S CENTRINGS ARM THE HOLD POSTURE LIKE `c` (architect
+    // 2026-09-29, superseding 2026-09-23's "the act ignores the hold
+    // posture"; AppState::camera_hold): each of its three `c`s is the centre
+    // key's act (apply_working_zoom), so the bit stands behind every one of
+    // them, and nothing is saved or written back. The switch between the two
+    // `c`s here puts the bit out and derives it on arrival
+    // (hold_derived_on_arrival), and the `c` behind it arms it over whatever
+    // that answered; the plays and the stops between them move no camera and
+    // keep it. So the act ends armed on the home tab it centred last, and an
+    // act a key ends on the other tab leaves it armed there, on the centring
+    // the act made, unless that key moved the playhead or the camera. The
+    // follow lamp needs no care: nothing here writes it, and the suspension
+    // its camera writes leave behind is cleared by the next launch
     // (AppState::follow_suspended).
-    const bool hold_before  = app.camera_hold;
     apply_working_zoom();
     // Step 1: the ordinary tab switch (the stop of any live audition, the
     // selection clear, the band swap, the coincidence auto-select and the
@@ -192,7 +195,6 @@ void GuiAbAudition::start() {
     // together. Still ahead of the launch, so the play below starts from the
     // cursor `c` left (a no-op land after a switch — the header says why).
     apply_working_zoom();
-    app.camera_hold  = hold_before;
     // Step 2's first play, launched STRAIGHT AWAY — no rest precedes it. The
     // architect's rest is between SOUNDS and nothing sounded before this one
     // (the constants' own note, app_state.h). A refusal here is unreachable in
@@ -222,20 +224,15 @@ void GuiAbAudition::advance_after_natural_end(
             // first for a second reason: switch_active_tab_view_to takes the
             // one stop body, which clears the sequence, so a rest armed ahead
             // of it would be wiped.
-            // The hold posture is written back across both writes (the
-            // switch's derivation and the `c`'s arm), the act's rule at
-            // start().
-            {
-                const bool hold_before  = app.camera_hold;
-                active_views.switch_active_tab_view_to(ended.home_tab);
-                // `c` on the tab just re-entered, in that same switch's frame
-                // — and BEFORE the arm below, which is the second half of
-                // this arm's ordering rule: the command can clear the
-                // sequence, so it must not run after a rest has been written
-                // (the header).
-                apply_working_zoom();
-                app.camera_hold  = hold_before;
-            }
+            // The `c` behind the switch arms the hold posture on the home tab
+            // over the switch's own derivation, the act's rule at start().
+            active_views.switch_active_tab_view_to(ended.home_tab);
+            // `c` on the tab just re-entered, in that same switch's frame
+            // — and BEFORE the arm below, which is the second half of
+            // this arm's ordering rule: the command can clear the
+            // sequence, so it must not run after a rest has been written
+            // (the header).
+            apply_working_zoom();
             arm_rest(Phase::HomeFirst, ended.home_tab, kAuditionSwitchGapMs);
             return;
         case Phase::HomeFirst:
@@ -270,8 +267,11 @@ void GuiAbAudition::apply_working_zoom() {
     // one write this whole act can make to a resting cursor. EITHER WAY IT
     // TAKES THE ONE STOP BODY FIRST, which clears the sequence (the header's
     // two paragraphs carry the case and the ordering the three call sites
-    // obey).
-    if (input != nullptr) input->run_center_command();
+    // obey). AND IT ARMS THE HOLD POSTURE AS THE KEY DOES (architect
+    // 2026-09-29): the call is the centre key's act, run_center_key_command
+    // — run_center_command, then AppState::camera_hold armed — so the act's
+    // centrings are `c`'s in the posture they leave too.
+    if (input != nullptr) input->run_center_key_command();
 }
 
 void GuiAbAudition::fire_if_due() {

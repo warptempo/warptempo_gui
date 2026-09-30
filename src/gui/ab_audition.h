@@ -54,8 +54,9 @@ struct GuiInputHandler;
 // lands it — so in practice both pairs still start where the user left them.
 //
 // THE WORKING ZOOM OPENS EACH HALF (architect 2026-08-28, from his plastic
-// pass): apply_working_zoom runs the `c` command — the whole command through
-// its one owner, GuiInputHandler::run_center_command, never a second zoom
+// pass): apply_working_zoom runs the `c` key's act — the whole command through
+// its one owner, GuiInputHandler::run_center_command, reached through the
+// key's own GuiInputHandler::run_center_key_command, never a second zoom
 // recipe — at the press on the tab the press found, on the other tab the
 // moment the act switches to it, and on the starting tab the moment it
 // switches back. IT RUNS IN THE SWITCH'S OWN FRAME, immediately after the
@@ -65,6 +66,18 @@ struct GuiInputHandler;
 // writes takes its own synchronous rebuild through kick_waveform_sync, the
 // last one deciding the plate that frame. Each half is therefore read at the
 // working zoom, centered, whatever level the tab was left at.
+//
+// AND EACH CENTRING ARMS THE HOLD POSTURE AS `c` DOES (architect 2026-09-29,
+// superseding 2026-09-23's "the act ignores the hold posture";
+// AppState::camera_hold): the key's act arms the bit behind its centring, and
+// nothing in the act saves or writes it back. The plays and the stops between
+// the centrings move no camera and keep it; each switch puts it out and
+// derives it on arrival (hold_derived_on_arrival), and the `c` behind the
+// switch arms it over that answer. So the act ends with the hold standing on
+// the home tab, centred on its playhead at the working zoom, whether or not
+// it stood at the press; an act a key ends on the other tab leaves it armed
+// there, on the centring the act made, unless the key itself moved the
+// playhead or the camera.
 //
 // ITS ORDERING IS LOAD-BEARING: `c` STOPS PLAYBACK BEFORE IT CENTRES, on both
 // its arms (architect 2026-09-29), through the one stop body, which CLEARS THE
@@ -286,8 +299,9 @@ private:
     void arm_rest(GuiAuditionSequence::Phase phase, char home_tab, int gap_ms);
     // THE `c` COMMAND ON THE ACTIVE TAB (architect 2026-08-28; the rule, the
     // same-frame claim and the ordering it owes the sequence are at the head
-    // comment). It routes through the command's one owner and adds nothing of
-    // its own — no zoom arithmetic, no camera write — so the three call sites
-    // land exactly what the key lands. Silent if the back-pointer is unwired.
+    // comment). It routes through the key's own act and adds nothing of its
+    // own — no zoom arithmetic, no camera write, no hold write — so the three
+    // call sites land exactly what the key lands, the hold posture armed
+    // included (2026-09-29). Silent if the back-pointer is unwired.
     void apply_working_zoom();
 };

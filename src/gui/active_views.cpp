@@ -151,7 +151,8 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // its VALUE-shaped band alone (viewport / zoom / playhead / trim /
     // read_only), and the entry re-acquires a selection by coincidence at the
     // tail — and the hold posture likewise, derived from the entering band at
-    // the tail (hold_derived_on_arrival, architect 2026-09-29). Placed HERE, before the band flips, so clear_selection's
+    // the tail (hold_derived_on_arrival, architect 2026-09-29). Placed HERE,
+    // before the band flips, so clear_selection's
     // stem/overlay/playhead-column damage resolves against the LEAVING tab's
     // basis — the basis of the pixels it erases. It also subsumes the
     // shift-range anchor clear this site used to spell out by hand (every
@@ -198,8 +199,10 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // the auto-select above: clamp_viewport_start has just put the bit out
     // (a tab switch is always a changed camera), and the entering tab arrives
     // with the hold its picture says — armed iff it rests at the working zoom
-    // within one column of a centring of its playhead (the rule at
-    // hold_derived_on_arrival, app_state.h). Read here, after the auto-select,
+    // EXACTLY on the grid point `c` would centre its playhead at, that
+    // centring clear of both walls (the rule at hold_derived_on_arrival,
+    // app_state.h; the one arrival that derives it — the S/T flip derives
+    // nothing). Read here, after the auto-select,
     // whose reseat writes the cursor it already holds, so the derivation
     // reads the settled camera and playhead. An assignment, not an arm: the
     // bit is the derivation. Every road through this switch inherits it; the

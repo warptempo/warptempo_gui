@@ -1078,12 +1078,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     view the restore left, so the arm reads the tab and the audio view
     //     captured at this body's head beside the painted pair and, when
     //     either changed, takes the landing owner's Restore WHATEVER THE BIT.
-    //     The switch it ran derived the bit on arrival
-    //     (hold_derived_on_arrival: armed iff the entered view rests at the
-    //     working zoom within a column of its playhead's centring), and it
-    //     then stands or falls as that answer and the land leave it — the
-    //     land puts it out if it moves the cursor, an off-screen centring at
-    //     the chokepoint, and an on-screen no-move keeps it, the arrival's own
+    //     A tab switch it ran derived the bit on arrival
+    //     (hold_derived_on_arrival: armed iff the entered tab rests at the
+    //     working zoom exactly on its playhead's unclamped centring), an S/T
+    //     switch it ran put the bit out and derived nothing, and the bit then
+    //     stands or falls as that answer and the land leave it — the land
+    //     puts it out if it moves the cursor, an off-screen centring at the
+    //     chokepoint, and an on-screen no-move keeps it, the arrival's own
     //     answer.
     //   * A SINGLETON RESTORE WITH THE HOLD DARK takes the landing owner's
     //     Restore (above), whose off-screen centring cannot arm it.
@@ -1092,12 +1093,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     nothing at the landing owner, so the chokepoint alone would not put
     //     it out. Its camera is the landing owner's Restore and the framer.
     // THE RESTORE NEVER ARMS THE POSTURE FROM DARK (architect 2026-09-24):
-    // only the walk's centring, bare `c`, the paired march and Ctrl+J arm it
-    // as acts, and the singleton's re-arm keeps a bit that already stood. THE
-    // SWITCH A RESTORE RUNS MAY (architect 2026-09-29): a restore that crosses
-    // the tab or the audio view arrives with the hold that view's picture
-    // says (hold_derived_on_arrival), the switch's answer and not the
-    // restore's. The playhead head's lamp shows which posture stands. (From 2026-09-23 to 2026-09-25 the restore kept
+    // only the walk's centring, bare `c`, the paired march, the A/B
+    // audition's centrings and Ctrl+J arm it as acts, and the singleton's
+    // re-arm keeps a bit that already stood. THE TAB SWITCH A RESTORE RUNS MAY
+    // (architect 2026-09-29): a restore that crosses the tab arrives with the
+    // hold that tab's picture says (hold_derived_on_arrival), the switch's
+    // answer and not the restore's; one that crosses the audio view arrives
+    // dark, the S/T switch deriving nothing. The playhead head's lamp shows
+    // which posture stands. (From 2026-09-23 to 2026-09-25 the restore kept
     // the bit across its land and let the landing owner decide, so an
     // on-screen singleton left the cursor off the held column with the lamp
     // still white.)
@@ -1159,8 +1162,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 } else {
                     // THE HOLD IS DARK, OR THE RESTORE CROSSED A VIEW: the
                     // landing owner's Restore at the current zoom, the bit
-                    // standing or falling as the arrival's derivation and the
-                    // land left it. A single marker always fits, so the
+                    // standing or falling as the switches and the land left
+                    // it. A single marker always fits, so the
                     // verdict is dropped.
                     (void)viewport.land_subject(app.playhead_cursor_sample,
                                                 app.playhead_cursor_sample,

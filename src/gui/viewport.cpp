@@ -791,32 +791,36 @@ int64_t paged_in_viewport_start(int64_t target, int64_t visible) {
 }
 }  // namespace
 
-// THE HOLD DERIVED ON ARRIVAL (architect 2026-09-29; the contract and its two
-// callers at the declaration, app_state.h). A switch keeps the hold if nothing
-// else that would put it out is done, and each tab keeps its own; the shape is
-// DERIVED, never stored: on arrival in a tab or an audio view the bit is armed
-// iff the view rests where `c` would have left it — the working zoom as
-// painted, and the viewport within one column of the playhead's centring.
+// THE HOLD DERIVED ON ARRIVAL (architect 2026-09-29; the contract and its one
+// caller at the declaration, app_state.h). A tab switch keeps the hold if
+// nothing else that would put it out is done, and each tab keeps its own; the
+// shape is DERIVED, never stored: on arrival in a tab the bit is armed iff the
+// tab rests EXACTLY where `c` would have left it — the working zoom as
+// painted, and the viewport ON the grid point C of the playhead's centring,
+// so the playhead paints in precisely the column `c` would put it in (*"the
+// hold holds only if it is precisely the same column as the centre"*). A
+// grab-pan that rests even one column off C arrives dark.
 //
-// WHY ONE COLUMN AND NOT EXACT: the S/T flip anchors the playhead's pre-flip
-// pixel column (switch_active_audio_view_to, input_handler.cpp) and the
-// chokepoint re-snaps the translated start to the grid, and the parked tab's
-// band is shifted by its playhead's delta at every flip and re-snapped when it
-// goes live; each re-snap can move a centred rest by ONE grid step (the
-// leaving rest's snap error, under half a column, pushed across a rounding
-// boundary — at q = 55 roughly a quarter of positions). So a view that WAS
-// centred by `c` reads as centred through every flip and switch only with a
-// one-column tolerance, while a rest two or more columns off centre (any pan
-// of a column or more) reads as not centred. Both starts are grid points, so
-// ≤ q is at most one column apart. ACCEPTED COST: a view the user rested
-// within a column of centre by hand (a grab-pan) arrives armed too.
+// NEVER AT A WALL (architect 2026-09-29, the same night): C is the centring's
+// grid snap WITHOUT the wall clamp (nearest_viewport_grid_point, the snap half
+// of the chokepoint's resting_viewport_start), and it must lie within
+// [0, max_viewport_start_grid] as well as equal the live start. A centring
+// whose snap falls outside the walls — the playhead within half a window of
+// either end — is a CLAMPED one, and answers false whatever the viewport: at a
+// wall the clamp makes every rest with the playhead inside that half-window
+// look like a centring, so a view parked near either end by any road would
+// spuriously earn the hold. A centring that lands EXACTLY on a wall's grid
+// point is unclamped and counts. So `c` armed at a wall stands while the view
+// stays, but a switch away and back arrives dark there; `c` is the repair.
 //
-// KNOWN LIMIT: a hold armed at a WALL (the playhead within half a window of
-// either end, where the clamp keeps it off centre) survives a flip only while
-// the entering domain's clamp also rests the translated view within a column
-// of its own clamped centring; a stretch that pulls the playhead's column
-// clear of the wall drops it — rare at the working zoom's 2.4 s window, and
-// `c` is the repair.
+// THE ONE-COLUMN TOLERANCE WAS STRUCK THE SAME NIGHT: it had been tried so a
+// centred rest would survive the S/T flip, whose anchored start the chokepoint
+// re-snaps (a centred rest can move one grid step); the S/T switch's
+// derivation was removed instead (*"then just remove that"*), the flip putting
+// the bit out at the chokepoint as it always had. A tab parked centred while
+// the other tab flips has its band shifted by its playhead's delta and
+// re-snapped when it goes live, which can leave it one column off C: it
+// arrives dark, the correct answer for a band that is no longer centred.
 bool hold_derived_on_arrival(const AppState& app, const GuiAudio& audio) {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0 || audio.sample_rate() <= 0) return false;
@@ -827,11 +831,13 @@ bool hold_derived_on_arrival(const AppState& app, const GuiAudio& audio) {
     // The working zoom AS PAINTED, the landing owner's exact equality
     // (land_subject carries why an exact compare is legitimate).
     if (q != static_cast<double>(audio.working_column())) return false;
-    const int64_t centred = resting_viewport_start(
-        app, audio,
-        centred_viewport_start(app.playhead_cursor_sample, visible));
-    return std::fabs(static_cast<double>(app.viewport_start_sample - centred))
-           <= q;
+    // The centring's grid point, snapped and NOT clamped: outside the walls
+    // it is a clamped centring and never arms.
+    const int64_t centred = nearest_viewport_grid_point(
+        centred_viewport_start(app.playhead_cursor_sample, visible), q);
+    if (centred < 0 || centred > max_viewport_start_grid(app, audio))
+        return false;
+    return app.viewport_start_sample == centred;
 }
 
 void Viewport::center_viewport_on_playhead() {
@@ -1094,18 +1100,19 @@ void Viewport::follow_scroll_if_needed() {
 // walked marker centred at the working zoom is expected to hold its column,
 // and it arms even where a wall keeps it off the centre. Since the walk
 // centres only at the working zoom, every other act that arms (bare `c`, the
-// paired march, Ctrl+J) writes that zoom, and the tab and audio-view
-// switches' arrival derivation (hold_derived_on_arrival above, architect
-// 2026-09-29) arms only at the working zoom as painted, while every zoom
+// paired march, the A/B audition's centrings, Ctrl+J) writes that zoom, and
+// the tab switch's arrival derivation (hold_derived_on_arrival above,
+// architect 2026-09-29) arms only at the working zoom as painted, while every zoom
 // write that moves the level changes the camera at the chokepoint and puts
 // the bit out, THE HOLD STANDS ONLY AT THE WORKING ZOOM (architect
 // 2026-09-28). THE RESTORE NEVER ARMS (its singleton centring
 // included) and never clears on its own: its centring of an off-screen
 // subject clears the bit at the chokepoint like any camera move, and its
 // no-move answer leaves it as it stands. (The singleton restore reaches this
-// owner with the hold dark, or having crossed the tab or the audio view, whose
-// switch derived the bit on arrival (architect 2026-09-29); under a hold in
-// the view it started in it takes the nudge's
+// owner with the hold dark, or having crossed the tab or the audio view —
+// the tab switch having derived the bit on arrival, the S/T switch having put
+// it out (architect 2026-09-29); under a hold in the view it started in it
+// takes the nudge's
 // hold_subject_column_after_nudge instead and re-arms the bit itself after
 // that body, as the nudge's dispatch keeps it — the restore's own act, not
 // this owner's. The group restore puts the bit out at its own arm before it
@@ -1114,10 +1121,11 @@ void Viewport::follow_scroll_if_needed() {
 // reach the middle; `c` then nudging means "I'm looking for a place to drop a
 // marker" and wants the hold, `c` then panning means "I want the working zoom
 // but my own viewport" and the pan clears it — and the playhead head's lamp
-// (kPlayheadHeadHeld, render.h) now shows which posture stands. (A tab or
-// audio-view switch is the one arrival that derives it, being a discrete
-// arrival at a view the user last left, not a run of nudges; architect
-// 2026-09-29, hold_derived_on_arrival.) A walk's page-in passes the chokepoint, which puts the hold out as at any page; a
+// (kPlayheadHeadHeld, render.h) now shows which posture stands. (A tab
+// switch is the one arrival that derives it, being a discrete arrival at a
+// tab the user last left, not a run of nudges; architect 2026-09-29,
+// hold_derived_on_arrival.) A walk's page-in passes the chokepoint, which
+// puts the hold out as at any page; a
 // no-move answer leaves the posture as it stands. Degenerate geometry (no
 // strip width, no sample rate, nothing visible) writes nothing and answers true. clamp_viewport_start
 // owns the song's two ends and the grid; the changed path takes the discrete
@@ -1157,7 +1165,8 @@ void Viewport::follow_scroll_if_needed() {
 //     markers' [earliest, latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
 //     runs the span framer's margin arm on it.
 // NOT READERS, by ruling: bare `c`, the paired march (live and `h`, each step
-// running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition, which
+// running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition (its three
+// centrings `c`'s act too, 2026-09-29), which
 // centre unconditionally (center_viewport_on_playhead after the working
 // zoom); follow's page-in during playback (follow_scroll_if_needed, which
 // reads the scanner and keeps follow's suspension its own); the nudge's

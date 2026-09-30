@@ -323,6 +323,17 @@ inline int64_t viewport_grid_point(int64_t k, double q) {
     return static_cast<int64_t>(std::nearbyint(static_cast<double>(k) * q));
 }
 
+// THE GRID SNAP ALONE: the viewport grid point nearest `start` at painter
+// step q (q > 0), with no wall — the snap half of the chokepoint's rest
+// (resting_viewport_start, main.cpp, which clamps its answer into the two
+// walls). Its other reader is hold_derived_on_arrival (viewport.cpp), which
+// needs the snap and the walls as separate facts: a centring whose snapped
+// start falls outside the walls is a clamped one.
+inline int64_t nearest_viewport_grid_point(int64_t start, double q) {
+    return viewport_grid_point(static_cast<int64_t>(
+        std::nearbyint(static_cast<double>(start) / q)), q);
+}
+
 // Viewport-END sample for a strip `w` px wide at samples-per-pixel `spp`:
 // vp_start + w·q, q the painter quantization of `spp` (painter_quantized_spp,
 // so a caller may pass the logical spp or q itself), the painter-quantized

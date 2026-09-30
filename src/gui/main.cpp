@@ -1073,9 +1073,11 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // exact-grid marker commits and pixel anchoring simultaneously valid at
     // maximum scroll.
     //
-    // The ONE right-wall owner, with TWO readers: clamp_viewport_start below,
-    // which rests every viewport at or left of it, and
-    // source_frame_off_right_edge, which asks where a frame paints at it.
+    // The ONE right-wall owner, with THREE readers: clamp_viewport_start below
+    // (through resting_viewport_start), which rests every viewport at or left
+    // of it, source_frame_off_right_edge, which asks where a frame paints at
+    // it, and hold_derived_on_arrival (viewport.cpp), which refuses the hold
+    // to a centring whose snapped start lies past it.
     // Degenerate branches: visible >= total
     // (the whole song fits) → 0; q <= 0 (non-numeric zoom) → max(0, max_start).
     const int64_t visible = samples_visible(a, audio);
@@ -1093,11 +1095,13 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
 // THE RESTING START — the grid snap and the wall clamp the chokepoint below
 // applies to a requested start, as a PURE question at the live zoom, the
 // arithmetic's one copy (the chokepoint's body calls it after its level
-// clamp). Its second reader is hold_derived_on_arrival (viewport.cpp), which
-// asks where a centring of the playhead WOULD rest — the wall winning there as
-// at every centring — without writing the camera. It reads the live zoom as it
-// stands: a caller that has just written the level passes the chokepoint's
-// level clamp first, which the chokepoint does.
+// clamp, and is its one caller). The snap half is nearest_viewport_grid_point
+// (warp_frame_map_view.h), which hold_derived_on_arrival (viewport.cpp) reads
+// on its own beside max_viewport_start_grid: the arrival derivation asks
+// whether a centring is CLAMPED, so it needs the snap and the walls apart
+// (architect 2026-09-29). It reads the live zoom as it stands: a caller that
+// has just written the level passes the chokepoint's level clamp first,
+// which the chokepoint does.
 int64_t resting_viewport_start(const AppState& a, const GuiAudio& audio,
                                int64_t start) {
     const int64_t visible = samples_visible(a, audio);
@@ -1124,9 +1128,9 @@ int64_t resting_viewport_start(const AppState& a, const GuiAudio& audio,
     // Snap the viewport to its nearest grid point, then clamp into
     // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid
     // max_start first — that would pull a valid flush-right grid rest back
-    // off-grid.)
-    int64_t snapped = viewport_grid_point(static_cast<int64_t>(
-        std::nearbyint(static_cast<double>(start) / q)), q);
+    // off-grid.) The snap is nearest_viewport_grid_point's
+    // (warp_frame_map_view.h), the one spelling the arrival derivation shares.
+    int64_t snapped = nearest_viewport_grid_point(start, q);
     if (snapped < 0)               snapped = 0;
     if (snapped > max_start_grid)  snapped = max_start_grid;
     return snapped;
@@ -1187,11 +1191,12 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // CAMERA IS FOUR FIELDS (AppState::camera_posture_identity): the tab and
     // the audio view ride beside the start and the zoom, so a switch that
     // lands the same two numbers still registers as the change it is. THE
-    // TWO SWITCHES THEN DERIVE THE HOLD AFRESH behind this clear (architect
-    // 2026-09-29): the tab switch and the S/T switch each assign
-    // hold_derived_on_arrival (viewport.cpp) once their camera and cursor
-    // have settled, so the bit put out here stands again on arrival in a view
-    // that rests centred on its playhead at the working zoom.
+    // TAB SWITCH THEN DERIVES THE HOLD AFRESH behind this clear (architect
+    // 2026-09-29): it assigns hold_derived_on_arrival (viewport.cpp) once its
+    // camera and cursor have settled, so the bit put out here stands again on
+    // arrival in a tab that rests exactly where `c` would centre its playhead
+    // at the working zoom, clear of both walls. The S/T switch derives
+    // nothing: the bit put out here at a flip stays out.
     const AppState::CameraPostureIdentity settled{
         a.viewport_start_sample, a.zoom_level,
         a.active_tab_view, a.active_audio_view};

@@ -102,7 +102,7 @@ struct GuiPlaybackLifecycle {
     //     Ctrl+J, the A/B audition's opening of each half) stop before they
     //     centre, a focus standing or not, at the command's one owner
     //     (run_center_command), so the centring is on the resting playhead and
-    //     the hold the key arms stands on it. Follow, not `c`, keeps the
+    //     the hold the key and the audition arm stands on it. Follow, not `c`, keeps the
     //     scanner in view.
     //   * VALUE STEPS DO NOT STOP: the Up/Down value step on the addressed
     //     cell edits a value. Its tempo arm is GROUP-PRESERVING, leaving the

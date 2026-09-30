@@ -2860,9 +2860,10 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // WHO PASSES WHAT, re-grepped 2026-09-26: `c` (run_center_command) states
     // Center; cycle_marker_focus forwards Land from the three live Tab arms
     // and Center from the two steps of the Ctrl+Shift+Tab paired march, each
-    // followed by `c`'s own act. Ctrl+J and the A/B audition reach the
-    // camera through run_center_command by name and so take its Center with
-    // it.
+    // followed by `c`'s own act. Ctrl+J reaches the camera through
+    // run_center_command by name and the A/B audition through the centre
+    // key's act (run_center_key_command, 2026-09-29), and so both take its
+    // Center with it.
     switch (frame) {
         case MarkerLandingFrame::Center:
             viewport.center_viewport_on_playhead();
@@ -2880,17 +2881,19 @@ void GuiInputHandler::run_center_command() {
     // THE BARE `c` COMMAND, WHOLE — playback stopped, then the working zoom
     // centered on the playhead, with a focused stop re-landed under it first —
     // and THE ONE PLACE THE MODE
-    // FORK LIVES. THREE CALLERS, re-grepped 2026-09-26: the centre keys' act
+    // FORK LIVES. TWO CALLERS, re-grepped 2026-09-29: the centre keys' act
     // run_center_key_command (since 2026-09-23 the one road of the live `c`
     // key arm in handle_plain_bare_keys, the history mode's own `c` arm in
     // handle_history_mode_key — which must claim the key to keep it off the
     // mode's allowlist — and the writer of the hold posture a centring key
     // arms; since 2026-09-26 also run by both steps of the Ctrl+Shift+Tab
-    // paired march, live and `h`), since 2026-08-28 the A/B audition's
+    // paired march, live and `h`; and since 2026-09-29 by the A/B audition's
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
-    // frame (the rule and the ordering it owes the audition's sequence are at
-    // ab_audition.h), and, since 2026-08-29, the jump to the value's source
+    // frame, and arms the hold as the key does — the rule and the ordering it
+    // owes the audition's sequence are at ab_audition.h; it called this
+    // command directly from 2026-08-28), and, since 2026-08-29, the jump to
+    // the value's source
     // (CTRL+J, jump_to_value_source, input_key_dispatch.cpp), WHICH CALLS THIS
     // TWICE — it is still ONE caller: once on the
     // CURRENT tab before it leaves (the audition's own shape, so the origin
@@ -4053,6 +4056,13 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // surface, and the playhead column all repaint in one frame. (The S/T
     // indicator was the bottom strip's until the row-7 collapse deleted the
     // letters — row 4's buttons carry that state now.)
+    // THE FLIP PUTS THE HOLD OUT HERE AND DERIVES NOTHING (architect
+    // 2026-09-29): an S/T flip is always a changed camera at the chokepoint,
+    // and unlike the tab switch it does not re-derive the bit on arrival —
+    // the anchored start's re-snap can move a centred rest by one column, so
+    // the flip cannot meet the exact test (hold_derived_on_arrival,
+    // viewport.cpp). Bare 1/2/3 across S and T therefore drop the hold; the
+    // W/P column switch moves no camera and keeps it.
     clamp_viewport_start(app, audio);
     // A SURVIVING SELECTION RE-EXPRESSES THROUGH ITS FOCUS, NOT THROUGH THE
     // CURSOR. The generic translation above is a double round trip — the cursor
@@ -4093,20 +4103,6 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // viewport.cpp).
     if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
         reseat_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
-    // THE HOLD DERIVED ON ARRIVAL (architect 2026-09-29), the second arrival
-    // chokepoint beside the tab switch's: clamp_viewport_start above has put
-    // the bit out (an S/T flip is always a changed camera), and the entering
-    // domain arrives with the hold its picture says — armed iff it rests at
-    // the working zoom within one column of a centring of the playhead (the
-    // rule, and why one column absorbs this flip's re-snap of the anchored
-    // start, at hold_derived_on_arrival, app_state.h / viewport.cpp). Read
-    // after the focus re-express above, a cursor write that moves no
-    // viewport, so the derivation reads the settled playhead. An assignment,
-    // not an arm. Every caller of this chokepoint inherits it — bare 1/2/3
-    // and the view bar, the typed `active_audio_view=`, Shift+S's and bare
-    // `i`'s crossings, the phase-reset paste's landing tail and the undo /
-    // redo restore's audio-view tag.
-    app.camera_hold = hold_derived_on_arrival(app, audio);
     // One-shot discrete jump with a domain change: is_target, the viewport, and
     // the warp_frame_map hash all flip, so the displayed plate must change. Render it
     // synchronously and publish the displayed fingerprint now, so the
