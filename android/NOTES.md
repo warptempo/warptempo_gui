@@ -570,9 +570,9 @@ exactly the folders that WILL open, so an invalid folder is simply absent from
 it rather than refused at the tap. Either way a filesystem
 refusal — including the mode-770 one below — carries the system's own words.
 
-The producer is `~/.pc/bash/wts` (personal tooling, outside the repo, the
-architect's to run; its recipe is `~/.pc/distro/tablet/tablet_setup.txt`), four
-verbs: `wts setup` places the tablet's CLONE of
+The producer is the sync script (`scripts/warptempo_sync` since 2026-09-30,
+the architect's alone to run; its recipe is `docs/INSTALL.md`), four
+verbs: `warptempo_sync setup` places the tablet's CLONE of
 github.com/warptempo/warptempo_projects — a fresh clone made on the laptop, its
 `.git` and tracked tree pushed so that `<externalDataPath>` is the clone's root
 and `projects/` its pieces — with the clone config the tablet's storage needs
@@ -583,16 +583,16 @@ line, and the audio — having first printed its whole plan (every file it
 deletes or copies over, the settings file, the audio) read-only and asked
 `Proceed? [y/N]`, the app not even stopped before a `y`; nothing is backed up
 (architect 2026-09-28: the confirmation is the insurance), so the tablet's old
-`.git` goes whole with any commit GitHub lacks; `wts tt` pushes each piece's
-source `.wav` (audio only); `wts ft` brings the `render/` deliverables home
+`.git` goes whole with any commit GitHub lacks; `warptempo_sync tt` pushes each piece's
+source `.wav` (audio only); `warptempo_sync ft` brings the `render/` deliverables home
 (renders only), each wav WITH ITS FINGERPRINT as one pair — both fetched and
 checked before either is published, the laptop's old fingerprint removed
 first, and a tablet wav with no fingerprint deleting the laptop's, which would
-otherwise describe another render; `wts ot` opens an interactive shell on
+otherwise describe another render; `warptempo_sync ot` opens an interactive shell on
 the tablet as the app, in its projects folder or a named piece's, the app
 stopped while the shell stands and started again on exit. The sidecars
-never travel by wts: the app commits, pushes and pulls them (github-recheck.md).
-The `current` file an older wts wrote is read by nothing; `wts setup` deletes
+never travel by the sync script: the app commits, pushes and pulls them (github-recheck.md).
+The `current` file an older sync script wrote is read by nothing; `warptempo_sync setup` deletes
 it with the exported `history/` folders and any `.magnificationlevelmarkers`. Placing a
 source by hand is one push plus the chmod below:
 
@@ -612,7 +612,7 @@ device 2026-08-27); since the project model landed the same permission failure
 surfaces as `resolve_project`'s own "Permission denied" on whichever folder
 it hit. `chmod` does take on this device's external storage, so one pass over
 the shell-owned directories (`.git`'s included) is the whole fix; the files
-under them are already world-readable. Every wts verb that pushes runs it.
+under them are already world-readable. Every sync verb that pushes runs it.
 
 **THE SIDECAR TRAVELS VERBATIM since 2026-08-27.** `gui_scale` left the
 `.settings` for the per-device config that day (`$XDG_CONFIG_HOME/warptempo_gui/
