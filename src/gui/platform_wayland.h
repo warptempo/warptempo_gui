@@ -127,8 +127,8 @@ public:
     //
     // clipboard_set_text claims the selection with `text` as the payload,
     // offered as text/plain;charset=utf-8 and text/plain. ITS VERDICT IS
-    // WHETHER THE CLAIM WAS ISSUED (2026-09-03, codex on the AV Sync Stats
-    // panel's copy button): TRUE only when a data device exists, the data
+    // WHETHER THE CLAIM WAS ISSUED (2026-09-03, first at the AV Sync
+    // Stats panel's copy button): TRUE only when a data device exists, the data
     // source was created and set_selection was sent with a NON-ZERO
     // input-event serial; FALSE otherwise, with the compositor holding no
     // claim to honour. THE PAYLOAD IS STILL STORED on the refused road, but
@@ -279,8 +279,8 @@ public:
     // enumerated. THE POINTER CURSOR WAS THE FIRST CONSUMER and is that cue's ONE
     // owner: the kind is derived from roughly ten independent facts (the pointer's
     // position, the modifiers, every gesture's state, the trim window, the layout,
-    // read-only, the modal surfaces), and two review rounds each found a class the
-    // previous per-site derivation had missed. THE OPEN DROPDOWN'S ITEM FACES ARE
+    // read-only, the modal surfaces), and the previous per-site derivation
+    // twice missed a class. THE OPEN DROPDOWN'S ITEM FACES ARE
     // THE SECOND (2026-08-03): their hit test reads PAINTER-PUBLISHED rects, which
     // are zero until the popup's first paint, so a pointer that stops moving
     // before that paint would otherwise have nothing lit and nothing armed with no

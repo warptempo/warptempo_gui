@@ -20,8 +20,7 @@
 // THE SHAPE KEEPS THE ONE-COMPOSER GUARANTEE: both clauses are built at the
 // site that has the path and the error, from that structured data, and NEVER
 // by parsing the composed English of one clause into the other — a path with
-// a quote or a colon in it would defeat any such reduction, and the codex
-// review named exactly that. Where a failure crosses a thread (the render
+// a quote or a colon in it would defeat any such reduction. Where a failure crosses a thread (the render
 // worker's completion, the history scan's result) this STRUCT rides the completion, so the GUI thread chooses which
 // clause it raises and the worker prints the other.
 //

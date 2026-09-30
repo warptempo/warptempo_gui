@@ -386,7 +386,7 @@ std::string remote_failure(const RemoteState& state, const char* fallback) {
 }
 
 // A FETCH THAT FAILED IN THIS CLONE, NOT ON THE WIRE (GuiGitFetch::LocalFailed;
-// codex round 6 over the git arc, 2026-09-28): ONCE GITHUB'S HOST KEY HAS BEEN
+// 2026-09-28): ONCE GITHUB'S HOST KEY HAS BEEN
 // ACCEPTED, a failure libgit2 files under a local class — the filesystem, a
 // ref, the object database, the repository or its configuration. A ref's
 // lock standing is GIT_ERROR_OS (probed 2026-09-28), and so is a full disk

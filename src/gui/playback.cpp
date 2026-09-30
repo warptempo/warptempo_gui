@@ -306,7 +306,7 @@ void GuiPlayback::stop() {
     // backstop — we cannot fix what we do not know about). The alternative,
     // an IN-FLIGHT FENCE (wait only for a callback already in flight, which
     // carries the same buffer-safety proof and returns at once with nothing
-    // in flight), was proposed by codex that night and REJECTED: its only
+    // in flight), was proposed that night and REJECTED: its only
     // visible effect is in exactly this adversarial case, it cannot be
     // tested here, and it would trade a hang the user notices for silence he
     // must diagnose. THE DIAGNOSIS ROAD: `aplay -l` shows no card for the

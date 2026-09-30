@@ -278,7 +278,7 @@ struct Viewport {
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
-    // THE MARKER DRAG RELEASE'S SEAM (Sol round 11 of 2026-09-14; the rule
+    // THE MARKER DRAG RELEASE'S SEAM (2026-09-14; the rule
     // is at MarkerDragOps::commit_drag's tail).
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the

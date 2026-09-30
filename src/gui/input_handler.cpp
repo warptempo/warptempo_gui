@@ -3580,7 +3580,7 @@ bool GuiInputHandler::apply_editor_clipboard(
         text_editor::KeyAction action, text_editor::State& s) {
     switch (action) {
         // THE COPY IGNORES THE VERDICT AND THE CUT OBEYS IT, and the two
-        // are one rule rather than an inconsistency (2026-09-03, codex).
+        // are one rule rather than an inconsistency (2026-09-03).
         //
         // A FAILED COPY CHANGES NOTHING ON SCREEN, so it says nothing: the
         // editor is its own world (messaging.md), the text it did not take is
@@ -3922,14 +3922,14 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // columns in the new domain. So a domain flip has nothing to put away.)
     // THE SEATED PINCH'S ANCHOR IS CLEARED HERE, and it survived the overlay
     // hide's deletion above because it answers a different question — a stale
-    // song frame, not a view preference (codex round 20): TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
+    // song frame, not a view preference: TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
     // song frame, and nothing about two fingers resting on the glass stops a
     // keyboard `t` or a mouse click on the audio-view lamp from reaching here — so a
     // pinch held across this flip would go on zooming about a SOURCE frame read
     // as a TARGET one, seating the view on an unrelated song point. THIS IS THE
     // CORRECTNESS member of the rule: it is the one view write that changes what
     // the stored number MEANS. It sits here, beside the two assignments above,
-    // because since codex round 21 the clear rides the WRITES of the active view
+    // because the clear rides the WRITES of the active view
     // state rather than the commands that reach them — the derivation, the whole
     // membership and the do-not-add-touch-to-any_pointer_gesture_active note are
     // at the free function's declaration (input_handler.h). The pre-arc

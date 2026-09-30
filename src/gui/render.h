@@ -2518,8 +2518,8 @@ inline int trim_endcap_w_px() {
 // demands on each side of the whole tile. All the widths ride gui_scale
 // alone, like every interior length in this lane.
 //
-// THE INNER SQUARE HAS NO LENGTH OF ITS OWN ANY MORE (codex round 3,
-// 2026-08-10). It WAS a third constant, kTrimMiddleInnerPx = 5, read through a
+// THE INNER SQUARE HAS NO LENGTH OF ITS OWN ANY MORE (2026-08-10).
+// It WAS a third constant, kTrimMiddleInnerPx = 5, read through a
 // trim_middle_inner_px() accessor and rounded independently of the tile and the
 // inset — and three independent nearbyints do not partition a symmetric ring:
 // the left rim was `inset` while the right was the leftover tile - inset -
@@ -2550,7 +2550,7 @@ inline int trim_middle_clear_px() {
 // Painting it as integer rectangles keeps it hard-edged at every scale, which a
 // path fill would not.
 //
-// THE 19 IS PROVENANCE, NOT A CONSTANT (codex round 4, 2026-08-10). It WAS
+// THE 19 IS PROVENANCE, NOT A CONSTANT (2026-08-10). It WAS
 // kPlayheadHeadWidthPx, reader-less and independently authored beside the table
 // that already implies it (2 * kPlayheadHeadHalf[0] + 1). Scaled on its own it
 // would have disagreed with the width the painter actually lays down — 28
@@ -3289,7 +3289,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // zoom (1920 columns, ~0.30 s per column) a column at 122.3 s paints 0.53 by
 // the centre rule against 0.87 gained-before-reduction, and at 640 columns
 // (~0.90 s per column) one paints 0.97 against 0.34 (normalized peak
-// estimates on the peak measure, Astra review 2026-09-23,
+// estimates on the peak measure, measured 2026-09-23,
 // tmp/gain_check/review_coarse.py). The
 // exact alternative is a second pyramid reduced over the gained samples —
 // immutable with the source like the curve, so the lamp would select between
@@ -4208,7 +4208,7 @@ GuiColor phase_reset_stem_color(bool red, bool selected);
 // line is frame plus the disable bit — so `then_token` stays empty on that
 // column.
 //
-// EACH HALF NAMES ITS OWN ROW (2026-09-16, Sol round 16's P1): `then_ordinal`
+// EACH HALF NAMES ITS OWN ROW (2026-09-16): `then_ordinal`
 // is the removed line's row within its frame's run on the then side,
 // `now_ordinal` the added line's on the now side — each meaningful exactly
 // when its half's bool is set, both copied off the delta entry the label is

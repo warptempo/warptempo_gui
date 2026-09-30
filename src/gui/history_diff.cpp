@@ -157,8 +157,8 @@ std::string trim_trailing_ws(std::string s) {
     return s;
 }
 
-// THE DIFF REPORTS LINE POSITIONS, NOT LINE TEXT (2026-09-16, Sol round 16's
-// P1): each side stays split, and `added` / `removed` are indices into
+// THE DIFF REPORTS LINE POSITIONS, NOT LINE TEXT (2026-09-16):
+// each side stays split, and `added` / `removed` are indices into
 // `now_lines` / `then_lines`, in file order. The text is one subscript away;
 // the POSITION is what a line's ordinal within its frame's run is derived
 // from (run_ordinals below), which is the identity a diff flag carries into
@@ -1002,7 +1002,7 @@ struct ScratchDirGuard {
     }
 };
 
-// THE ONE SCRATCH ROOT OWNER (codex round 3 over the git arc, 2026-09-28):
+// THE ONE SCRATCH ROOT OWNER (2026-09-28):
 // a directory under the system temp dir, CREATED EXCLUSIVELY by this call and
 // so NEWLY MADE AND EMPTY — `mkdtemp`, which picks a random suffix for
 // `<stem>-XXXXXX` and creates it with mkdir, retrying on a name that exists,
@@ -2254,8 +2254,8 @@ bool head_on_main(const GuiGitRepo& repo, std::string& why) {
     return false;
 }
 
-// THE COLD-START LOCK RECOVERY'S ONE ASKER (codex round 6 over the git arc,
-// 2026-09-28; GuiGitRepo::clear_stale_locks owns what is removed and why a
+// THE COLD-START LOCK RECOVERY'S ONE ASKER (2026-09-28;
+// GuiGitRepo::clear_stale_locks owns what is removed and why a
 // death mid-write leaves it). ONCE PER CLONE PER PROCESS, at the start of the
 // first job that opens it — the check and the checkpoint act each ask this
 // right after opening their handle, before anything is fetched or written —

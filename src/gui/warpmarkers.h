@@ -437,7 +437,7 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // this predicate a statement about the SWEEP's own input rather than about the
 // bracket's writers, which is why it stays. (A 2026-09-09 reading claimed a
 // cascade-disabled marker was the reachable case the term existed for; that
-// was impossible even then, a ref being no carrier — codex round 5's P3.)
+// was impossible even then, a ref being no carrier.)
 // SEVEN READERS since 2026-09-19 (the tie's verdict owner joined them —
 // iter_tie_toggle_verdict, app_state.h, which refuses a member the sweep does
 // not read, so a tie can never hold a marker whose cells do not paint),

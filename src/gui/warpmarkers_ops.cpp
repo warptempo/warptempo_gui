@@ -837,8 +837,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // sentence. Before any mutation — no freeze, no undo, no dirty.
     if (const char* refusal = tempo_cent_step_kind_refusal(app, audio))
         return refusal;
-    // THE BRACKET WALL IS ASKED AHEAD OF THE COALESCE STAMP (2026-08-31,
-    // converting codex round A's MED finding), through the DIRECTIONAL half of
+    // THE BRACKET WALL IS ASKED AHEAD OF THE COALESCE STAMP (2026-08-31),
+    // through the DIRECTIONAL half of
     // this arm's own face (tempo_cent_step_direction_actionable, defined below
     // — here it is a singleton by the fork just above, so it is the singleton
     // arm that answers: the focused OWNER's clamped landing compared against
@@ -1079,8 +1079,8 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
         // producer, the pass-2 fallback, reddens only refs, walled above
         // whatever their disabled bit, so nothing else of `red`
         // was ever a wall here.
-        // THE TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13, Sol
-        // round 5's P1). The parser's collapse set
+        // THE TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13).
+        // The parser's collapse set
         // (warp_coincident_collapse_members) marks the WHOLE raw run, disabled
         // rows included, once two or more effectively enabled rows share the
         // frame; a disabled row in that run is no stack member for the render
@@ -1137,7 +1137,7 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 //
 // NOR IS A DISABLED MARKER (architect 2026-09-13, "disabled should be
 // steppable"): the singleton steps the one marker asked for. THE COLLAPSE ARM
-// IS ASKED OF AN ENABLED ROW ALONE (Sol round 5's P1, the same day): the
+// IS ASKED OF AN ENABLED ROW ALONE (the same day): the
 // parser's collapse set (warp_coincident_collapse_members, frozen, copied into
 // the red cache's `collapsed`) INCLUDES the disabled rows of a collapsed run —
 // it marks the whole raw run once two or more effectively enabled rows share
@@ -1163,8 +1163,8 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // passes before it asks. The cache is memoized on the store's generation,
 // which is what lets the per-tick Up / Down face read it.
 //
-// THE BODY IS INDEX-SHAPED AND THE FOCUS FORM WRAPS IT (2026-09-10, codex's
-// finding): the verdict is a fact about ONE marker, so the subject is a
+// THE BODY IS INDEX-SHAPED AND THE FOCUS FORM WRAPS IT (2026-09-10):
+// the verdict is a fact about ONE marker, so the subject is a
 // parameter. The focus form below is the group short-circuit plus this one
 // asked of `last_selected_marker` — the keyboard's own subject — while the
 // value drag asks it of the marker UNDER THE POINTER, which is not the focus
@@ -1305,8 +1305,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // read and the direction's bracket edge, all of it): ANY walled member
     // refuses the whole press, and the Up / Down buttons now grey on that same
     // answer.
-    // AND IT RUNS AHEAD OF THE COALESCE VERDICT (2026-08-31, converting codex
-    // round A's MED finding; it sat behind it from 2026-07-29): A WALL NO-OP
+    // AND IT RUNS AHEAD OF THE COALESCE VERDICT (2026-08-31; it sat
+    // behind it from 2026-07-29): A WALL NO-OP
     // TOUCHES NOTHING. The verdict's call invalidates the coalescing stamp on a
     // physical press, so with the scan behind it a refused KEY press split the
     // previous undo run while the same press on the GREYED button never

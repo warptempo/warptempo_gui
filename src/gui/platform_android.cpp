@@ -2334,7 +2334,7 @@ bool GuiPlatform::clipboard_set_text(const std::string& text) {
 // straight back out of it, where the Wayland twin would have to read its own
 // pipe and deadlock.
 //
-// AND THE PAYLOAD IS BOUNDED HERE AS IT IS ON WAYLAND (2026-09-03, codex):
+// AND THE PAYLOAD IS BOUNDED HERE AS IT IS ON WAYLAND (2026-09-03):
 // kClipboardMaxBytes (gui_input.h) is the seam's one number and this is its
 // second reader. THE ARRAY'S LENGTH IS ASKED BEFORE THE STRING IS RESIZED, so
 // an external clip of any size costs one jsize and not two allocations of it

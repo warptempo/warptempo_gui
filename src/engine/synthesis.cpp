@@ -518,7 +518,7 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             // SCHEDULE'S ROUNDING, so the grain's lateness does not reach it;
             // neither a nearest-centre placement nor a stretched seed is
             // opened. THE RESIDUE IN THAT "TO THE ROUNDING" (recorded
-            // 2026-09-02, restated the same day after codex round 2;
+            // 2026-09-02, restated the same day;
             // architect approval 2026-09-02, comment-only): pass 1's placement
             // compare is on the schedule's ROUNDED window start against the
             // integer query, so a seed centre up to half a source frame past

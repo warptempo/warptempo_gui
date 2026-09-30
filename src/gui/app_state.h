@@ -355,7 +355,7 @@ struct UndoEntry {
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     // THE W/P COLUMN THE ACT LANDED IN — the entry's column VIEW TAG, kept
-    // apart from `op_mode` (Sol review 2026-09-23), which names the STORE the
+    // apart from `op_mode` (2026-09-23), which names the STORE the
     // entry changed and so its KIND: the dirty walk (recompute_dirty) and the
     // post-restore rules' store selection read op_mode, and every question of
     // "which column does this entry land in" reads THIS. The two agree on
@@ -1512,7 +1512,7 @@ struct ScrollDragState {
     // input_pointer.cpp) and never accumulated here: the position is owned
     // where the raw events are, because a second clamped accumulation
     // advanced on the DELIVERY cadence cannot agree with it at a wall
-    // (GuiInputCore::notional_pointer_x_ carries that record, codex round 17).
+    // (GuiInputCore::notional_pointer_x_ carries that record).
     //
     // WHAT THE PHASE HOLDS IS THE FRAME, AND THAT IS THE PART THAT CHANGED
     // (architect 2026-08-14, from the rig, reversing the pivot half of the
@@ -1674,8 +1674,8 @@ struct ScrollDragState {
 //     STATIONARY survivor produces no frame of its own and would otherwise
 //     leave this seat alive and its stem painted under a single finger, ready
 //     for the next pair to pinch about a song point the fingers had left.
-//   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE since codex round 20, ON THE
-//     WRITERS THEMSELVES since round 21 — the S/T, W/P and A/B assignment sites,
+//   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE, ON THE WRITERS
+//     THEMSELVES — the S/T, W/P and A/B assignment sites,
 //     with every command that reaches one (the three view selectors, Ctrl+Tab,
 //     the view bar, the settings keys, the
 //     propagate pastes and undo/redo) inheriting it by
@@ -3927,8 +3927,8 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // PAN — the press beginning a gesture over a surface rather than grabbing a
 // thing on it. THE GRAB SURFACES — a flag and the trim bar — read TWICE this
 // since 2026-09-29 (kGrabMovedThresholdPx below, where their membership and
-// its reason live). THE LIST IS RE-DERIVED FROM THE GATES THEMSELVES (codex
-// round 19 — it named "strip, region, trim, and the marker flag" long after
+// its reason live). THE LIST IS RE-DERIVED FROM THE GATES THEMSELVES (it
+// once named "strip, region, trim, and the marker flag" long after
 // the strip drag's deletion and the two 2026-08-15 additions; re-derived
 // again 2026-08-18, when the region's editor was deleted into the trim drags
 // it had been borrowing; re-greped 2026-09-29, when the grab gate split off
@@ -4195,7 +4195,7 @@ enum class DialogTrigger {
 // AppState::modal_dialog_focus_active, which owns the model; the face ladder
 // is paint_modal_dialog's.
 //
-// A PROMPT ANSWERS ONLY AFTER IT HAS PAINTED (2026-08-13, codex round 13 —
+// A PROMPT ANSWERS ONLY AFTER IT HAS PAINTED (2026-08-13 —
 // the one lag span the in-window modal still had; unchanged in substance by
 // the move onto the bottom row later that day, which moved the modal's
 // rectangle and nothing about this gate). One dispatch batch is
@@ -5045,7 +5045,7 @@ struct AppState {
     // settles differs from it, which is also the moment it clears the hold
     // and suspends follow above. THE IDENTITY IS FOUR FIELDS, NOT TWO: the viewport start
     // and the zoom, AND the active tab letter and the active audio view
-    // (Sol review 2026-09-23). A tab switch or an S/T flip is a camera change
+    // (2026-09-23). A tab switch or an S/T flip is a camera change
     // by rule even when its destination happens to settle the same two
     // numbers — both tabs at their default start and zoom, an identity map —
     // so without the two letters such a switch would leave the hold standing
@@ -5574,7 +5574,7 @@ struct AppState {
     mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
-    // the three inputs it read to give it (codex round A, 2026-09-01: the Copy
+    // the three inputs it read to give it (2026-09-01: the Copy
     // resolved value tooltip asks that question inside the redraw callback,
     // which Wayland runs once per pending damage rectangle, so during playback
     // the scanner's damage re-ran an O(markers) copy plus the parser composer
@@ -5596,7 +5596,7 @@ struct AppState {
     mutable ValueSourceMarkerCache value_source_marker_cache;
 
     // MEMOIZED COPY CAPTURE — the answer phase_reset_copy_captures last gave
-    // (architect 2026-09-24, Sol's round over the truthful menus): the Edit
+    // (architect 2026-09-24): the Edit
     // anchor's verdict (menu_anchor_live) asks every Edit row on every tick,
     // menu open or not, and the Copy row's last rung walks the selection
     // through warp_marker_propagates, whose effective_disabled scans the
@@ -6171,7 +6171,7 @@ struct AppState {
     // gate is for the claims that ACT.
     //
     // THE TAG IS THE CLASS AND THE SESSION IS THE IDENTITY (the session joined
-    // 2026-08-14, closing the round-15 finding that the tag alone cannot tell
+    // 2026-08-14, closing the gap that the tag alone cannot tell
     // one EDITOR session from the next). What is and is not reachable, stated
     // exactly: TWO DIALOG EDITORS ARE NEVER LIVE TOGETHER — every opener
     // refuses while another editor owns the keyboard — but a CLOSE AND AN OPEN
@@ -6727,8 +6727,8 @@ struct AppState {
     // carrying GuiInputState::synthesized_repeat outright — so even a repeat
     // armed before the focus moved cannot re-press or re-fire.
     //
-    // MOVING THE FOCUS CANCELS THE ARM (2026-08-14, closing the round-15
-    // finding that a Tab mid-hold left the arm on the button the user had
+    // MOVING THE FOCUS CANCELS THE ARM (2026-08-14, closing the
+    // defect that a Tab mid-hold left the arm on the button the user had
     // visibly left: focus OK, hold Space, Tab onto Cancel, release — and OK
     // committed). SO WHILE THIS IS >= 0 IT EQUALS modal_dialog_focus, an
     // invariant every reader may lean on: the pressed face and the focus ring
@@ -7171,7 +7171,7 @@ struct AppState {
     // from the row, the row answers the pointer alone — entering ANY anchor's
     // rect opens that anchor's menu with no click (on_motion's no-gesture tail,
     // open_menu_row_anchor_on_hover; a RESTING pointer only — a held primary
-    // button refuses the open at the call site, codex round 2), which is what
+    // button refuses the open at the call site), which is what
     // every desktop's menu bar
     // does; the "pointer left the row" half is a separate entry with the
     // opposite guard list (update_menu_row_exit, at the top of on_motion). COLD,
@@ -9367,7 +9367,7 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 //                   them for the clock);
 //   home_shift_differs / end_shift_differs
 //                   DOES THE SHIFTED TWIN REACH A DIFFERENT FILE THAN THE
-//                   PLAIN PRESS (codex round A, 2026-09-01; the two bits held
+//                   PLAIN PRESS (2026-09-01; the two bits held
 //                   the twins' own walls alone — first_twin_live /
 //                   last_twin_live — for one day). Each is composed by the
 //                   plan builder from the twin's wall
@@ -9524,7 +9524,7 @@ inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) 
 // act is a tooltip doing its job, not a gesture hint. THE LINE GOES
 // EMPTY WHERE THE SHIFTED PRESS WOULD LAND WHERE THE PLAIN ONE DOES
 // (architect 2026-09-01, the truthful-tooltips ruling; the DESTINATION
-// compare since codex round A, where the twins' walls alone stood for one
+// compare since 2026-09-01, where the twins' walls alone stood for one
 // day): the twins walk the TRANSPORT ITEM'S folder (first_in_item_folder /
 // last_in_item_folder — not the listed folder the band stands in, which is
 // why the words say "the playing folder"), so on the folder's first item
@@ -9768,7 +9768,7 @@ bool render_player_delete_actionable(const AppState& a);
 // bound-item terms — the hint's shift line, where each is
 // ONE TERM of that line's own question — the plan builder ANDs each with its
 // plain act's own destination compare (RenderPlayerHintState's
-// home_shift_differs / end_shift_differs; codex round A, 2026-09-01, where
+// home_shift_differs / end_shift_differs; 2026-09-01, where
 // the wall alone stood for one day, and the right skip's compare from
 // 2026-09-04, where its plain act became a track change) — and, for the last
 // wav's wall, the next track's own predicate — and, for the FIRST wav's,
@@ -11079,8 +11079,8 @@ inline int64_t iter_bound_step_landing(const std::vector<GuiWarpMarker>& mv,
 // author it).
 //
 // A pair of two zeroes clears instead of resting, because [0, 0] is the blank
-// bracket on every authoring road (planner-ruled 2026-09-04, converting a
-// codex finding, when the flag editor's bracket grammar read two typed
+// bracket on every authoring road (planner-ruled 2026-09-04,
+// when the flag editor's bracket grammar read two typed
 // zeroes as blank and the step had to agree with it). Both roads that
 // remain — the arrows' step and the bound cell's own editor
 // (GuiFlagEditor::commit_iter_bound_edit) — write through this one site, so
@@ -13503,7 +13503,7 @@ inline bool history_mode_revert_subject_standing(
 // The lock's term lives here rather than only at on_key's read-only gate
 // because the act's face is DERIVED from the `h` allowlist's admission, and
 // an admission that ignored the lock lit a button whose chord the gate below
-// it then dropped (codex, round B). TWO READERS: history_mode_key_blocked's
+// it then dropped. TWO READERS: history_mode_key_blocked's
 // bare-`v` term (the key — so on a locked tab the key is refused at the
 // view's gate, ahead of the read-only gate it used to fall through to) and,
 // through that same walk, the Revert button's face. No enum arm spells the
@@ -13923,7 +13923,7 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         const int64_t start = *m.iter_start_cents;
         const int64_t end   = *m.iter_end_cents;
         // A SWEEP MAY ONLY AUTHOR CELLS THE PRODUCT CAN LOAD, AND THE JUDGE IS
-        // THE LOADER ITSELF (2026-09-19, converting a Sol finding). A cell
+        // THE LOADER ITSELF (2026-09-19). A cell
         // moves the marker's RESOLVED TOTAL and APPENDS its delta to the
         // deviation chain, so the SPELLED BASE cannot move under a sweep and
         // the live cause of an unloadable cell is THE TERM COUNT: a marker
@@ -14703,7 +14703,7 @@ inline constexpr const char* kValueInCollapsedStack =
 // Marker's face (jump_to_value_source_actionable, below), which asks the same
 // owners in the same order (Copy Value's shift line was the face's reader
 // from 2026-09-01 until the jump left that button, 2026-09-29). MEMOIZED
-// SINCE codex round A (2026-09-01) on the store generation, the focus and the
+// SINCE 2026-09-01 on the store generation, the focus and the
 // frame count — the face is asked on every tick and every paint; the cache,
 // its key and the reasoning are at AppState::ValueSourceMarkerCache. Defined
 // in app_state.cpp beside the eligibility gate.
@@ -14749,7 +14749,7 @@ bool target_preview_ready(const GuiTargetRender& target_render);
 // second such term and the painted band's rounding half an output sample more
 // — a few samples at ordinary tempos, up to ~8 + ~8 + ½ at the numeric slope
 // ceiling of 16, unbounded only across a label-reference segment, and NOT a
-// universal "sample or two" (codex round 2 corrected that reading). The
+// universal "sample or two". The
 // residue's three terms, its worked case and its acceptance are at the drop's
 // comment, the derivation's one prose home. It reaches no audio and moves no
 // authored frame.
@@ -14829,8 +14829,8 @@ inline bool history_view_open_refused_by_publishing(const AppState& a) {
 }
 
 // (transport_session_live — the one owner of "a transport session is live" —
-// sits above with the arrow-step predicates since round B of the strictness
-// arc, where the horizontal arrows' waveform-lane wall term needed it too.)
+// sits above with the arrow-step predicates since the strictness arc,
+// where the horizontal arrows' waveform-lane wall term needed it too.)
 
 inline bool redesign_button_enabled(const AppState& a,
                                     const GuiAudio& audio,
@@ -16858,7 +16858,8 @@ static_assert(!redesign_button_shift_admits(RedesignButton::IconCopyValue) &&
 // has one; its icon or
 // single letter is not self-describing.
 //
-// The names follow HELP's vocabulary so the hint and the manual agree.
+// THE TOOLTIPS OWN THE VOCABULARY: the names here are the product's names for
+// its acts, and no manual restates them.
 //
 // `line2` is THE MODIFIER LINE and is non-null on exactly the buttons that
 // admit a modified press — the shift-admitting set, and since 2026-08-24 the
@@ -17110,8 +17111,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Settings (;)", nullptr};
         // THE HISTORY VIEW'S TOGGLE, one line: the key toggles and there is
         // no shifted twin. The text names the toggle (the lamp rule at this
-        // table's head); it read "History (H)", HELP's own word for the
-        // mode, until 2026-09-01.
+        // table's head); it read "History (H)", the word the manual then
+        // used for the mode, until 2026-09-01.
         case RedesignButton::IconHistory:
             return {"Toggle History View (H)", nullptr};
         // THE WALK LAMP, one line: bare `g` toggles the axis and has no shifted
@@ -17243,7 +17244,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Go to End (End)",
                     "Press Ctrl to ignore the trim window."};
         // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
-        // HELP's vocabulary. TWO OF THEM ADMIT SHIFT and carry the second
+        // the tooltips' own vocabulary. TWO OF THEM ADMIT SHIFT and carry the second
         // line that says so — the DROP since 2026-08-28, whose shifted chord
         // crosses from the warp column and drops a
         // phase reset (refusing as already crossed in the P column since
@@ -17344,7 +17345,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection (K)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Next marker" / "previous
-        // marker" are HELP's own words for the bare Tab cycle, and the group's
+        // marker" are the tooltips' own words for the bare Tab cycle (the
+        // manual's too, while there was one), and the group's
         // buttons are what made the Navigation dropdown a duplicate path and
         // got it deleted hours later — so the names outlived the surface they
         // were matched to, and are kept because they are the act's words.

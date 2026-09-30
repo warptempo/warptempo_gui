@@ -3755,7 +3755,7 @@ void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
 
 namespace {
 
-// THE REVERT'S ONE APPLY BODY (2026-09-16, Sol round 16's P1), generic over
+// THE REVERT'S ONE APPLY BODY (2026-09-16), generic over
 // the two marker stores — they are one template, GuiMarkerStore — so the
 // column arms in run_history_revert differ only in how a then line becomes a
 // marker, which `restore` answers: the marker, or nothing after its own
@@ -3898,7 +3898,7 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 // once, at the check itself below.
 //
 // THE PER-CLASS INVERSE, read off the flag's own two bits, EACH HALF NAMING
-// ITS OWN ROW (2026-09-16, Sol round 16's P1 — the identity is (frame,
+// ITS OWN ROW (2026-09-16 — the identity is (frame,
 // ordinal within the frame's run), HistoryDiffFlag::then_ordinal /
 // now_ordinal, render.h; the contract at GuiHistoryWarpEntry::ordinal,
 // history_diff.h):
@@ -4119,7 +4119,7 @@ void GuiInputHandler::run_history_revert() {
                     format_warpmarkers_text(warp_pre);
 
     // THE GRAMMAR'S OWN UNIQUENESS RULE, ASKED ONCE ON THE PROPOSED STORE AND
-    // REFUSING THE WHOLE ACT (architect 2026-09-06, on Astra's P1). A label
+    // REFUSING THE WHOLE ACT (architect 2026-09-06). A label
     // definition may stand at exactly ONE row of the warp column, and a
     // `.warpmarkers` file that defines one twice is LOAD-FATAL in both binaries
     // (parse_warpmarkers_file's seen_def set). A REMOVED flag's inverse
@@ -5029,8 +5029,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // twice and closed with an instruction ("more than N cells (cap N).
         // Narrow the marker brackets and retry."), which was the retired
         // dismiss-only
-        // modal's shape rather than a card's: the fix is implied by the reason
-        // and HELP already tells the user to narrow the brackets.
+        // modal's shape rather than a card's: the fix is implied by the reason,
+        // the card naming the brackets as what makes too many cells.
         notifications.notify(AppState::NotificationClass::Normal,
                              kIterSweepOverCapCard);
         return;
@@ -7398,7 +7398,7 @@ void GuiInputHandler::refresh_stats_panel_rows() {
 }
 
 // THE CLIPBOARD REFUSAL'S ONE SENTENCE, for the three carded clipboard writes
-// (2026-09-03, codex on the panel's copy button; the editor's CUT joined the
+// (2026-09-03, first at the panel's copy button; the editor's CUT joined the
 // two copies later the same day): clipboard_set_text answers a VERDICT —
 // whether a claim another program can read went out (the contract at the
 // seam, platform_wayland.h / platform_android.h) — and a success card on a
@@ -7441,7 +7441,7 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb) {
 // a title, the three group headings and, for every unmeasured reading, the
 // sentence saying so — and the panel cannot stand without them, the opener
 // building the first listing before it returns. WHAT CAN REFUSE IS THE
-// CLIPBOARD (2026-09-03, codex): the write's verdict, read below, cards here.
+// CLIPBOARD (2026-09-03): the write's verdict, read below, cards here.
 // Nothing greys the button ahead of it — the backend capability that did, for
 // one day, is gone with the tablet's own clipboard road, and every remaining
 // half of the verdict is unknowable until the press.
@@ -8074,7 +8074,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                     AppState::NotificationClass::Normal,
                     "The first selected marker must own its tempo and be enabled");
                 return true;
-            // A COINCIDENT OWNER CANNOT TAKE A TEMPO EITHER (codex 2026-08-26,
+            // A COINCIDENT OWNER CANNOT TAKE A TEMPO EITHER (2026-08-26,
             // the ref refusal's own class): the resolver's stage 2 collapses
             // an exact-frame run with two or more effectively-enabled members
             // to ONE synthetic 1.00 owner, so a span owned from inside such a

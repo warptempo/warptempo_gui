@@ -259,8 +259,8 @@ enum class GuiHistoryWalkSource {
 // line whole (warpmarkers_parse.h).
 struct GuiHistoryWarpEntry {
     int64_t     frame    = 0;
-    // THE LINE'S ORDINAL WITHIN ITS FRAME'S RUN, ON ITS OWN SIDE (2026-09-16,
-    // Sol round 16's P1): the count of lines at this same frame directly above
+    // THE LINE'S ORDINAL WITHIN ITS FRAME'S RUN, ON ITS OWN SIDE (2026-09-16):
+    // the count of lines at this same frame directly above
     // it in the side's file — 0 for the first line at a frame, so 0 for every
     // line whose frame is its own. Coincident markers are legal on every
     // column (the ruling at insert_marker, marker_store.h) and a loader-clean
@@ -1381,8 +1381,8 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 // otherwise (Keep) the three keep their working-tree bytes and every other
 // changed path is pulled. It re-reads the branch and the upstream first, so a
 // terminal commit or pull since the press refuses as Moved with nothing
-// written — AND HANDS BACK WHAT THE REFS NOW SHOW in `reading` (codex round 2
-// over the git arc, 2026-09-28), which the caller stores as the GitHub status
+// written — AND HANDS BACK WHAT THE REFS NOW SHOW in `reading` (2026-09-28),
+// which the caller stores as the GitHub status
 // exactly as the press stores an immediate refusal's: the question may have
 // stood for minutes, and a face still saying Behind would spell an act the
 // refs no longer describe. `reading` is Unchecked on every other outcome.
@@ -1417,7 +1417,7 @@ enum class GuiHistoryPullOutcome {
     WouldNotLoad,
 };
 //
-// THE RELOAD'S REOPEN GATE (codex round 1 over the git arc, 2026-09-28): a
+// THE RELOAD'S REOPEN GATE (2026-09-28): a
 // Reload promises to reopen the pulled checkpoint, and the reopen is the
 // Revert road, whose strict dry run can refuse — so the pull asks that dry run
 // FIRST, before it writes a file, the index or the ref. After the refs are

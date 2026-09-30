@@ -394,8 +394,8 @@ private:
     // Space's arm, Shift+Space's arm and the waveform scrub's one act, never
     // the bottom-row Home/End skips (the owner and its writer inventory are
     // at the field, app_state.h ~4743). A GUI TRANSPORT ACT SUPERSEDES THE CAR'S
-    // DEFERRED PLAY, WHETHER IT PLAYED OR WAS REFUSED (architect 2026-09-21,
-    // on Sol's finding): a scrub or a Space refused at the preview's own
+    // DEFERRED PLAY, WHETHER IT PLAYED OR WAS REFUSED (architect 2026-09-21):
+    // a scrub or a Space refused at the preview's own
     // readiness gate sounds nothing, so the "something is already sounding"
     // clear below never saw it, and the wait fired the car's loop from the
     // trim when the preview settled — over a press that had asked for

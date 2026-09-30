@@ -699,8 +699,8 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // maybe_dispatch_pending at the tail of this callback, so an
         // ensure_ready that honoured that pending_ instead of redispatching
         // still gets its render. Every state the guard can meet, with
-        // in_flight_ just fallen here or standing elsewhere. Five columns
-        // (codex round C added the last): D = is_dirty_, F = in_flight_,
+        // in_flight_ just fallen here or standing elsewhere. Five columns:
+        // D = is_dirty_, F = in_flight_,
         // P = pending_, G = dispatched_generation_ == dirty_generation_ (the
         // PROMISE the guard reads), I = in_flight_generation_ ==
         // dirty_generation_ (the RECEIPT the completion is judged by; it has a
@@ -796,7 +796,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
 
 void GuiTargetRender::complete_successful_buffer(
     uint64_t completed_generation) {
-    // THE SUPERSESSION GATE (codex round C, 2026-09-02), at the OWNER of
+    // THE SUPERSESSION GATE (2026-09-02), at the OWNER of
     // "bless this buffer as current" rather than at any one of its three
     // callers, so every road is judged by one test. A Success whose generation
     // the store has already left behind is DISCARDED — the buffer emptied,
@@ -868,8 +868,8 @@ void GuiTargetRender::complete_successful_buffer(
         // player's close re-expresses the view through ensure_ready, whose
         // clean path rebinds exactly this finished buffer. The dirty bit
         // still clears below: the buffer IS current, only the bind waits.
-        // The close itself is not "under the player" (2026-09-04, codex round
-        // 3): its unload lowers the mode bit behind the stop fence and ahead
+        // The close itself is not "under the player" (2026-09-04):
+        // its unload lowers the mode bit behind the stop fence and ahead
         // of that re-express, precisely so a completion arriving inside the
         // close — the synchronous one a cache or artifact rung resolves inside
         // ensure_ready's own call — takes this bind rather than deferring to a
@@ -1085,8 +1085,8 @@ void GuiTargetRender::ensure_ready() {
     // guard can meet is at on_render_done's Cancelled branch, the road that
     // re-pumps pending_.
     //
-    // AND THE CLEAN PATH ABOVE CANNOT BE REACHED BY AN OBSOLETE RENDER (codex
-    // round C, 2026-09-02). The guard honours a dispatch by its PROMISE
+    // AND THE CLEAN PATH ABOVE CANNOT BE REACHED BY AN OBSOLETE RENDER
+    // (2026-09-02). The guard honours a dispatch by its PROMISE
     // (dispatched_generation_), which a later trigger() overwrites; what
     // clears is_dirty_ is a completion judged by its RECEIPT
     // (in_flight_generation_, or a reuse rung's same-instant read), so a
@@ -1129,7 +1129,7 @@ void GuiTargetRender::cancel_in_flight_update() {
     // next line, and with pending_ down and in_flight_ either down or naming a
     // render whose own completion now discards, the next target-view entry
     // finds dispatch_stands_for_current_generation() false and falls through to
-    // trigger(). That is the whole of the road codex round C found open: it was
+    // trigger(). That is the whole of the road that once stood open: it was
     // the discard's absence, not this drop, that used to hand the next entry a
     // clean-looking stale buffer.
     pending_ = false;

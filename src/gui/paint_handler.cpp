@@ -698,8 +698,8 @@ constexpr double kTabBorderPx        = 1.0;   // side borders / the base line
 // which is what makes it its chord literally. A TAB IS ITS LABEL FIELD AGAIN:
 // no slot, no added width, no rect. The crop provenance and the two numbers
 // stay in kdenlive-redesign.md's row-3 record, and the slot's own
-// partition bug — a third rounded constant that did not partition, codex round
-// 2, 2026-08-10 — is history there too.)
+// partition bug — a third rounded constant that did not partition,
+// 2026-08-10 — is history there too.)
 
 // THE PAINTER'S HALF OF THE TAB ROSTER: each tab's roster id, its A/B letter
 // and its label. The press claim (input_pointer.cpp) reads the same ids out of
@@ -2897,7 +2897,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // at gui_scale 50 takes the five groups' dividers with it).
     const int sep_w    = scaled_px(kIconSepWidthPx, 1);
     // AUTHORED, NOT DERIVED — deliberately unlike row 2's separator, and
-    // measured before deciding (codex round 3, 2026-08-10). Row 2 places its
+    // measured before deciding (2026-08-10). Row 2 places its
     // line from a rounded TOP MARGIN, so a third rounding put the whole error
     // under the line and it sat off-centre; this row places EVERYTHING by the
     // centering rule below, which splits the remainder itself. The residual is
@@ -5479,9 +5479,9 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
 // 1/(tempo · marker_scale · settings_scale) — a fraction of a sample at unity
 // tempo, up to ~8 at the numeric slope ceiling of 16, unbounded across a
 // label-reference segment, and NOT the "sample or two" this comment claimed
-// for one day (codex round 2). THIS SITE ADDS THE THIRD TERM: the nearbyint(T)
+// for one day. THIS SITE ADDS THE THIRD TERM: the nearbyint(T)
 // below is up to another half OUTPUT sample of painted width. So the band can
-// come out that much wider than N/2 (codex round 1's case — tempo 0.30, reset
+// come out that much wider than N/2 (the worked case — tempo 0.30, reset
 // at source 307 — paints 2049 where N/2 is 2048). NOT CLAMPED to N/2: the
 // clamp would hide the engine's geometry rather than fix it, and this band
 // exists to depict that geometry. It reaches no audio and it is SUB-PIXEL at
@@ -6848,7 +6848,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // every such edge because one raise takes one id: prompt over editor,
     // editor after prompt, a prompt REPLACING a prompt at the save-failed rung
     // (which no owner test can see), and EDITOR AFTER EDITOR — a close and an
-    // open inside one dispatch batch, the round-15 finding, which is why this
+    // open inside one dispatch batch, which is why this
     // reads the session rather than the owner as it did until 2026-08-14.
     // Read before the branches below write anything.
     // THE RESET IS ALSO THE PROMPT'S FOCUS ASSIGNMENT (2026-08-13): a prompt is
@@ -7005,7 +7005,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // and an up-a-folder bit — while the skips walked the band; the walk
         // is the car's own act again and the car has no tooltip.)
         // THE SHIFT LINES COMPARE DESTINATIONS, not the twins' walls alone
-        // (codex round A, 2026-09-01): the line names the FILE the shifted
+        // (2026-09-01): the line names the FILE the shifted
         // press plays, so it must drop wherever the plain press already
         // plays that file. Home's two destinations are home()'s own — the
         // PREVIOUS entry inside the previous-track window
@@ -7164,7 +7164,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the product's own modifier spelling directly. One line — the button
         // admits no modified press, so there is no second line to add.
         // ITS FACE NEVER GREYS. It read a backend capability for one day
-        // (2026-09-03, codex) — whether the clipboard reached another program
+        // (2026-09-03) — whether the clipboard reached another program
         // at all — and both backends answer yes since the tablet's
         // ClipboardManager road landed that evening, so the condition had no
         // producer left and went with the capability. Every other half of the

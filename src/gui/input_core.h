@@ -111,7 +111,7 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     (wl_touch.cancel on Wayland) and touch-capability loss — the edge
 //     inventory at the touch state block). A translation ending with the
 //     physical pointer FOCUSED fires this hook NOT AT ALL — it delivers a
-//     restore MOTION at the mouse's own position instead (the codex round-3
+//     restore MOTION at the mouse's own position instead (the focus
 //     fork; the one statement is at deliver_touch_translation_end's
 //     definition). Either way the stream is NOT over.
 //     No position event arrives WHILE the pointer stays outside, but a
@@ -458,7 +458,7 @@ public:
     // correct BY CONSTRUCTION; gating them would instead strand exactly the
     // arm whose press got through before Super went down, which is the one
     // case that could go wrong. THE CORNER LIVES HERE AND IS RULED KEPT
-    // (architect 2026-08-16, codex round 26's M1: "super is the desktop's; the
+    // (architect 2026-08-16: "super is the desktop's; the
     // GUI basically ignores it — Super usage inside the GUI is outside the
     // GUI's providence"): Super pressed mid-hold does not block the one armed
     // act at its release — the modal dialog's Enter/Space arm, the product's
@@ -509,7 +509,7 @@ public:
     // lift's release, as OrdinaryLeave after an abnormal end's lost-button
     // motion: the contact is gone and no mouse rests in the window; a
     // FOCUSED physical pointer gets a restore motion instead and this hook
-    // stays silent — the round-3 fork, stated at
+    // stays silent — the focus fork, stated at
     // deliver_touch_translation_end). The edges drop pointer focus
     // and no position event will follow (outright, for capability loss; for the
     // ordinary leaves, for as long as the pointer stays outside — it may
@@ -534,7 +534,7 @@ public:
     // drops any more; full story at clear_dropdown_pointer_state. Null-safe.
     void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
 
-    // THE KEYBOARD-INTENT CANCELLATION HOOK (codex round 4, 2026-08-11): fired
+    // THE KEYBOARD-INTENT CANCELLATION HOOK (2026-08-11): fired
     // wherever the platform ENDS OR CONSUMES the keyboard stream WITHOUT a
     // delivery, so application-side key intent — the modal dialog's keyboard
     // press arm, whose own disarms can only see events that reach the
@@ -902,7 +902,7 @@ public:
     // be made to agree with this one at a wall). Suppression therefore has to
     // happen at the accumulation: a GUI-side correction would have to subtract
     // the discarded travel on the DELIVERY cadence, which is precisely the
-    // second-position shape codex round 17 deleted. But the platform applies NO
+    // deleted second-position shape. But the platform applies NO
     // GESTURE POLICY — it never works out that a zoom phase is running. It is
     // TOLD, exactly as it is told the restore x and the restore kind, by the
     // gesture that is the only thing that knows: this is the fourth member of
@@ -1118,8 +1118,8 @@ private:
     //     frozen phase withheld (notional_x_frozen_ below). Its consumers are
     //     the release restore below and, through notional_pointer_x(), the
     //     GUI's zoom pivot seat.
-    //     THERE IS EXACTLY ONE OF THESE, AND THAT IS THE POINT (codex round
-    //     17): the GUI briefly kept a second clamped position of its own,
+    //     THERE IS EXACTLY ONE OF THESE, AND THAT IS THE POINT: the
+    //     GUI briefly kept a second clamped position of its own,
     //     advanced once per DELIVERED (coalesced) motion by the net travel
     //     delta of the whole pointer frame while this one advanced per RAW
     //     event, and CLAMP-PER-STEP AND CLAMP-ONCE-ON-THE-NET-DELTA ARE NOT
@@ -1499,9 +1499,9 @@ private:
     //     field.
     //   * touch UP, owner, Pointer  — staged motion flushed, release on the
     //     logical left 1->0 edge at the last position, THE TRANSLATION END ON
-    //     THAT SAME EDGE (codex round 2; one owner,
+    //     THAT SAME EDGE (one owner,
     //     deliver_touch_translation_end), which FORKS ON PHYSICAL POINTER
-    //     FOCUS (codex round 3): the leave (TouchLift) when no mouse rests in
+    //     FOCUS: the leave (TouchLift) when no mouse rests in
     //     the window, an ordinary restore MOTION at pointer_x_/pointer_y_
     //     when one does — the finger lifted, so the unified pointer is where
     //     the mouse is, and the motion re-derives hover and the settled
@@ -1608,8 +1608,8 @@ private:
     // state stays self-consistent. For the same reason touch does not clear
     // pointer_position_unknown_ (a touch says nothing about where the mouse
     // cursor is) and gates NO DELIVERY on pointer_focused_ (touch delivers
-    // only to the touched surface). The split has ONE deliberate reader since
-    // codex round 3: deliver_touch_translation_end reads pointer_focused_ —
+    // only to the touched surface). The split has ONE deliberate reader:
+    // deliver_touch_translation_end reads pointer_focused_ —
     // and pointer_x_/pointer_y_ on the focused arm — because the translation's
     // END is a MOUSE question ("is the mouse resting in the window, and
     // where"), not a touch delivery to gate.
@@ -1781,7 +1781,7 @@ private:
     RepeatEligibleProbe  repeat_eligible_probe_;
     // The one owner of the pointer-leave drop: fired at pointer_leave, at
     // pointer-capability loss, and at a touch translation end's NO-FOCUS arm
-    // (the round-3 fork at deliver_touch_translation_end — a focused mouse
+    // (the focus fork at deliver_touch_translation_end — a focused mouse
     // gets a restore motion, not this hook): the focus-dropping edges with no
     // motion to
     // re-resolve — permanently on capability loss, and for the duration of the
@@ -1926,7 +1926,7 @@ private:
     // flush the deferred POINTER motion on the delivering edge, clear the
     // bit, then deliver at the owner's last position only on the logical
     // 1->0 edge (the end_left_hold_source ordering, third source).
-    // clean_release picks WHAT that edge delivers (codex round 19): true =
+    // clean_release picks WHAT that edge delivers: true =
     // the left RELEASE, the press ending as the click it was; false = THE
     // ABNORMAL END, a lost-button MOTION instead (the hold bit still drops,
     // so nothing sticks) — the product's own button-lost spelling, under
@@ -1943,7 +1943,7 @@ private:
     // The one owner of the translation's END, called by the touch-up site
     // and the hard-end contract: end the touch
     // hold, and on the delivering
-    // edge FORK ON PHYSICAL POINTER FOCUS (codex round 3) — a mouse resting
+    // edge FORK ON PHYSICAL POINTER FOCUS — a mouse resting
     // in the window gets an ordinary restore MOTION at its last
     // platform-tracked position instead of the leave (the finger is no longer
     // the pointer, so the unified pointer is where the mouse is; the

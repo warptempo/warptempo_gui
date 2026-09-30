@@ -422,8 +422,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     //
     // A WALL NO-OP TOUCHES NOTHING, AND THAT SUPERSEDES THE "EVERY REFUSED
     // PRESS SPLITS THE RUN" CLAUSE FOR THE WALL CLASS (planner-ruled
-    // 2026-08-31 on the refinement arc's own logic, converting codex round A's
-    // MED finding; it was "at its ENTRY, before its own refusals run" from
+    // 2026-08-31 on the refinement arc's own logic; it was "at its ENTRY, before its own refusals run" from
     // 2026-07-29). THE PROBLEM WAS TWO SURFACES, ONE WALL: the truthful-buttons
     // ruling greys a button wherever its press would change nothing, and a
     // greyed press never dispatches — so with the wall test BEHIND this call

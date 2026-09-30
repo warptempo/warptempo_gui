@@ -48,7 +48,7 @@ PositionNudgePrologue position_nudge_prologue(
     // the song's last columns — and is no state the user can see.
     //
     // THE WHOLE REFUSAL SET IS ONE PREDICATE, AND IT IS THE FACE'S OWN
-    // (2026-08-31, converting codex round A's MED finding): the seven guards
+    // (2026-08-31): the seven guards
     // this prologue used to spell — loading, empty audio, empty selection, no
     // focus, a dead sample rate, a degenerate samples-per-pixel, a stale
     // focused index — plus each twin's WALL are exactly the terms of

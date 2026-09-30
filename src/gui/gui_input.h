@@ -326,7 +326,7 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
 // to 2026-09-23; Ctrl+Left / Ctrl+Right bind nothing now.
 enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
 
-// -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03, codex) -------------
+// -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03) --------------------
 //
 // WHAT A PASTE WILL ACCEPT FROM OUTSIDE THIS PROGRAM, IN BYTES, ON EVERY
 // BACKEND. The clipboard is the one door another application writes through,
@@ -429,7 +429,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // THE SPELLING: modifiers first in the fixed order Ctrl, Alt, Shift, joined by
 // '+', then the key — a printable ASCII key by its own character upper-cased
 // ("F", "1", "/"), a named key by its name. THE ORDER IS THE PRODUCT'S OWN, the
-// one every chord in HELP and in the docs is written in (Ctrl+Alt+Shift+R), so
+// one every chord in the README and the docs is written in (Ctrl+Alt+Shift+R), so
 // the card and the documentation spell one chord one way.
 //
 // EVERY CHORD THIS SPELLER IS ASKED FOR HAS A NAME, BY CONSTRUCTION, and there
@@ -517,18 +517,16 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // deliberately — Return / KpEnter are one "Return" to the hand, since both
 // keysyms open the flag editor and Qt's separate "Enter" for the keypad would
 // name a second key the product does not distinguish — and IsoLeftTab IS the
-// shifted Tab keysym. HELP KEEPS THE SPLIT IN ONE SENTENCE (planner
-// 2026-09-01): the flag editor's paragraph says "`Return` or keypad `Enter`",
-// which is Qt-correct and the one place the distinction tells the reader
-// something; nothing this speller composes ever says "Enter".
+// shifted Tab keysym. NO USER TEXT KEEPS THE SPLIT: the distinction lives
+// in no user-facing sentence now (the interface's own words are its
+// tooltips), and nothing this speller composes ever says "Enter".
 //
 // TWO NAMES THIS TABLE DOES NOT HOLD, and cannot: the SUPER MODIFIER is
 // dropped at the platform boundary and no chord names it, so its Qt spelling —
-// `Meta`, kdenlive's own — lives in HELP alone, introduced there once as
-// "`Meta` (the Super or Logo key)" for the reader whose keycap says Super
-// (planner 2026-09-01). The PAINTED KEYBOARD'S CAPS are the other: they name
-// the same keys the same way but are their own table (onscreen_keyboard.h's
-// cap_word, which points here for the convention).
+// `Meta`, kdenlive's own — is spelled nowhere in user text, no chord and no
+// tooltip having a Super to name. The PAINTED KEYBOARD'S CAPS are the
+// other: they name the same keys the same way but are their own table
+// (onscreen_keyboard.h's cap_word, which points here for the convention).
 //
 // BACKSPACE LEFT WITH THE THREE NAME-ONLY BLOCKS on 2026-08-31: it is one of
 // the keys chord_is_bound lists as deliberately absent — the editors consume

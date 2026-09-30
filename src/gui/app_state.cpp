@@ -537,7 +537,7 @@ bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
 // payload and the out-of-store belt are the jump's own three-way test,
 // answered as one "no source" here.
 //
-// MEMOIZED AT THE OWNER (codex round A, 2026-09-01): one of the two readers is
+// MEMOIZED AT THE OWNER (2026-09-01): one of the two readers is
 // the Copy resolved value button's hint, which the tooltip painter asks inside
 // the redraw callback — and the Wayland backend runs that callback once per
 // pending damage rectangle, so with the hint up during playback the scanner's

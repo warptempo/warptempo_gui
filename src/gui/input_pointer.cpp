@@ -2421,7 +2421,7 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // relative stream accumulated and clamped per event), so this only changes
 // space — window x to waveform column — and re-clamps in the bounds THIS layer
 // owns, the platform knowing nothing about the waveform.
-// THAT THERE IS ONLY ONE POSITION IS THE POINT (codex round 17): a clamped
+// THAT THERE IS ONLY ONE POSITION IS THE POINT: a clamped
 // column accumulated HERE advanced once per DELIVERED motion, on the net
 // travel of a whole coalesced pointer frame, while the platform's advanced per
 // RAW event — and the two answers differ at a wall (raw +20 then -8 at the
@@ -2743,7 +2743,7 @@ double GuiInputHandler::rebind_zoom_pivot_into_waveform(
 // FROM 2026-08-15 TO 2026-08-18 and are DELETED WHOLE, not moved: the overlay's
 // move and bound drags became the TRIM BRIDGE and ENDCAP drags armed from the
 // waveform, and those arms were deleted with the resting overlay on
-// 2026-09-22. The codex-round-20 displayed-basis rule they carried lives on in
+// 2026-09-22. The displayed-basis rule they carried lives on in
 // the trim drag's own dispatch freeze, which names trim_drag: no waveform job
 // may publish a new basis while a trim drag is held.)
 
@@ -5364,8 +5364,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // 2026-08-14): in the one batch between an editor's OPEN and its first
     // paint the stash still belongs to whatever stood before it — a PROMPT,
     // which publishes editor_ok FALSE on every button and so used to CANCEL an
-    // editor that had just opened, or ANOTHER EDITOR, whose OK the round-15
-    // finding showed could commit at an unseen dialog. Refusing a stash that
+    // editor that had just opened, or ANOTHER EDITOR, whose OK could
+    // commit at an unseen dialog. Refusing a stash that
     // does not name the live session closes both (the doctrine and the two
     // identity fields are at ModalDialogGeometry, app_state.h).
     // (The claim needs no modal_dialog_editor_active term of its own and lost
@@ -8607,7 +8607,7 @@ int GuiInputHandler::dropdown_item_at(int x, int y) const {
 // stands here now is the opposite act on the same coordinates — a DERIVE, which
 // ACTS on the freshest truth where the compare refused on disagreement.
 //
-// WHY THE DERIVE (2026-08-03, from codex): that premise has exactly ONE
+// WHY THE DERIVE (2026-08-03): that premise has exactly ONE
 // exception, and it is not about motion at all. The item rects are
 // PAINTER-PUBLISHED and are zero from the open until paint_dropdown publishes
 // them, so they can move — from nothing to real — at a PAINT with no pointer
@@ -9417,9 +9417,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
     // published until paint_dropdown runs, and a redraw is CLIPPED to the
     // damage it was handed — so strip damage alone would clip away whatever the
-    // popup hangs past the strip. At 100% the settings menu happens to fit
-    // (175px of popup inside a 217px strip); at 200% it overhangs by ~40px and
-    // the bottom band would never paint.
+    // popup hangs past the strip. The settings menu (eight rows and a
+    // separator) is taller than the five lanes below the menu lane at every
+    // scale, so without the band its overhang would never paint.
     //
     // The HEIGHT is derivable without painting (dropdown_h_px — item count
     // times item height, plus the separator blocks and the borders), so the
@@ -9528,7 +9528,7 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 // the branches that already return above it — an open dropdown (which owns the
 // motion outright), the prompt, the editor text drag, the dialog
 // modal editors, and every live gesture and pending — PLUS THE ONE
-// condition the call site restates (codex round 2): a HELD PRIMARY BUTTON,
+// condition the call site restates: a HELD PRIMARY BUTTON,
 // which does not return above (a held motion that armed no gesture reaches the
 // tail — the touch resolution burst's pre-press entry motion, and a mouse
 // press-hold sliding along the armed row; the producers are recorded at the
@@ -9597,7 +9597,7 @@ void GuiInputHandler::disarm_menu_row() {
 }
 
 // THE POPUP'S POINTER-DERIVED STATE, DROPPED AT THE ONE HOOK FIRED ON BOTH
-// the pointer-leave AND capability-loss edges (codex 2026-08-03: the two are
+// the pointer-leave AND capability-loss edges (2026-08-03: the two are
 // not the same). Capability loss ends that pointer stream outright — no
 // motion or release for it will ever arrive again. An ordinary leave has no
 // event only WHILE the pointer stays outside; it may re-enter (a synthesized
@@ -9890,8 +9890,8 @@ void GuiInputHandler::clear_redesign_button_press() {
     (void)take_chrome_press();
 }
 
-// THE RELEASE-TIME ARMS' BUTTON-LOST END — the family's one owner (codex round
-// 20; the contract, and why the family needed one, are at the declaration).
+// THE RELEASE-TIME ARMS' BUTTON-LOST END — the family's one owner (the
+// contract, and why the family needed one, are at the declaration).
 // It calls the three arms' OWN clears rather than touching their fields, so
 // each keeps its damage, its transition gate and its own reasoning; what this
 // body adds is the QUESTION — is any of them standing — because two of those
@@ -10087,7 +10087,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     app.pointer_in_window = true;
-    // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE (codex round 20),
+    // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE,
     // and it sits at the very TOP because every branch below returns: an open
     // dropdown takes the motion whole, a modal branch returns, each live gesture
     // returns. The arms this drops belong to none of those branches — they are
@@ -10098,7 +10098,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // motion-driven gestures keep their OWN per-branch button-lost arms below,
     // where each ends the way its release would (a moved drag finalizes), while
     // these commit NOTHING — the two families share this one edge and nothing
-    // else, which is the distinction whose absence was the round-19 miss.
+    // else, which is the distinction whose absence was the defect.
     if (!mods.primary_button_held) clear_release_time_press_arms();
     // THE TOOLTIP'S HELD BIT, at the same placement for the same reason (every
     // branch below returns, and the walks read it): the platform's button
@@ -10207,8 +10207,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the button under the pointer resolves to hovered in the very same
         // call.
         //
-        // THE FAMILY RULE, stated here at its first member in this branch (codex
-        // rounds 2-3 built it one member at a time): NO ROW-1 HOVER ACT FIRES
+        // THE FAMILY RULE, stated here at its first member in this branch (it
+        // was built one member at a time): NO ROW-1 HOVER ACT FIRES
         // WHILE THE PRIMARY BUTTON IS HELD — the armed hover-OPEN (on_motion's
         // no-gesture tail), the open-menu anchor-SWITCH (the walk below), and
         // this hover CLOSE, its last unguarded member. A held button is not a
@@ -10272,7 +10272,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // dropdown never reaches here at all: the close rule above consumed it
         // and the menu is already down.
         //
-        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON (codex round 3) — the
+        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON — the
         // family rule's second member (the three-member statement is at the
         // close walk above; the armed hover-open is the first) — a held
         // button is not a resting hover here either, on the same two producers:
@@ -10855,12 +10855,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // clears them, and the recompute then re-derives the whole roster false
         // under the new popup, which is the correct answer for a pointer the
         // popup has taken.
-        // ONE CONDITION IS RESTATED FOR THE OPEN (codex round 2): a HELD PRIMARY
+        // ONE CONDITION IS RESTATED FOR THE OPEN: a HELD PRIMARY
         // BUTTON refuses the hover-open. This is the FIRST MEMBER of the row-1
         // hover-act family rule — no row-1 hover act fires while the primary
         // button is held; the three-member statement lives at the open-dropdown
         // branch's close walk, beside its siblings (the anchor-switch and the
-        // hover close, codex round 3). A held button is not a resting hover,
+        // hover close). A held button is not a resting hover,
         // and it does NOT return above — a held motion with no armed gesture
         // reaches this tail, on two producers: the TOUCH resolution burst's
         // pre-press entry motion (the platform raises the touch hold before

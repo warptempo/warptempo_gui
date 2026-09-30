@@ -301,7 +301,7 @@ private:
     // only consumes lookup/artifact results and binds the completed buffer.
     //
     // THE SUCCESS IS JUDGED BY THE GENERATION IT RENDERED (architect
-    // 2026-09-02, codex round C), which the caller passes: the dispatch's own
+    // 2026-09-02), which the caller passes: the dispatch's own
     // generation for the two synchronous reuse rungs (read at the top of
     // dispatch_render_now, the same instant the fingerprint and the trim
     // verdict are taken, so it always equals dirty_generation_ here) and
@@ -390,8 +390,8 @@ private:
     // samples never embodied.
     int64_t dispatched_buffer_start_frame_ = 0;
 
-    // THE PREVIEW CARD'S EDGE (architect 2026-09-02, deep dive item L; SCOPED
-    // TO ITS SUBJECT after codex round 2): the trim_fell_back verdict of the
+    // THE PREVIEW CARD'S EDGE (architect 2026-09-02; since
+    // SCOPED TO ITS SUBJECT): the trim_fell_back verdict of the
     // PREVIOUS dispatch TOGETHER WITH THE SUBJECT THAT PRODUCED IT, so
     // dispatch_render_now cards kTrimFallbackCard when the whole record changes
     // into a fallback — it fell back now, and the last dispatch was not this
@@ -410,8 +410,8 @@ private:
     // already been told: that the window he has just made is one the render
     // cannot honor.
     //
-    // WHY A SUBJECT AND NOT A BARE BIT (the defect codex round 2 found in the
-    // inventory above): "each one re-dispatches under a trim window that has
+    // WHY A SUBJECT AND NOT A BARE BIT (the defect in the inventory
+    // above): "each one re-dispatches under a trim window that has
     // not changed" is true of every producer in that list EXCEPT the tab
     // switch, and undo/redo can land on a different pair too. THE A/B TABS
     // RESTORE INDEPENDENT TRIM PAIRS (restore_active_view_state,
@@ -490,8 +490,8 @@ private:
     // first ensure_ready() must dispatch.
     bool is_dirty_  = true;
 
-    // THE THREE GENERATIONS (architect 2026-09-02, the four-tier review's R-8
-    // for the first two, codex round C for the third). is_dirty_ alone cannot
+    // THE THREE GENERATIONS (architect 2026-09-02).
+    // is_dirty_ alone cannot
     // tell "stale, and nothing is doing anything about it" from "stale, and
     // the render that will make it current is already on its way", so
     // ensure_ready used to call trigger() in both cases — and on every
@@ -521,8 +521,8 @@ private:
     // the guard from seeing that navigated-away-from render as standing.
     //
     // in_flight_generation_ IS THE GENERATION THE WORKER IS ACTUALLY RENDERING
-    // (codex round C, 2026-09-02) — a DIFFERENT question from
-    // dispatched_generation_, which the R-8 shape above conflated. That stamp
+    // (2026-09-02) — a DIFFERENT question from
+    // dispatched_generation_, which the two-generation shape conflated. That stamp
     // is a PROMISE ("a dispatch stands for this generation") and every later
     // trigger() overwrites it, including one that arrives while the worker is
     // still completing an older preview; this one is a RECEIPT, written once

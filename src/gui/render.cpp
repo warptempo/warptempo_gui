@@ -887,7 +887,7 @@ void render_trim_flags(cairo_t* cr,
         const int inset = trim_middle_inset_px();
         const int clear = trim_middle_clear_px();
         // THE INNER SQUARE'S WIDTH IS THE PARTITION'S REMAINDER, never its own
-        // rounding (codex round 3, 2026-08-10 — the tab lock slot's fix applied
+        // rounding (2026-08-10 — the tab lock slot's fix applied
         // to the crop's other composite). The crop's ring is symmetric,
         // inset + inner + inset == tile, and it USED to be three independent
         // nearbyints: the left rim was `inset` and the right rim was whatever
@@ -933,8 +933,8 @@ void render_trim_flags(cairo_t* cr,
             // relationship that scales with the lane, and it insets from the
             // tile's left by the crop's 2px.
             //
-            // THE BOTTOM RIM IS CLAMPED INTO EXISTENCE (codex round 1,
-            // 2026-08-10, with the gui_scale floor 100->50; the rim this
+            // THE BOTTOM RIM IS CLAMPED INTO EXISTENCE (2026-08-10,
+            // with the gui_scale floor 100->50; the rim this
             // clamp protects moved from the top to the bottom with the
             // 2026-09-16 flip — the reasoning and the arithmetic are
             // untouched, only which edge of the face the square hangs from).
@@ -1895,7 +1895,7 @@ void render_flag_boxes_impl(
                                MarkerCell::Upper, pass_closes);
             }
 
-            // THE SUPPRESSED BOX PUBLISHES NO HIT RECT EITHER (codex 2026-08-02,
+            // THE SUPPRESSED BOX PUBLISHES NO HIT RECT EITHER (2026-08-02,
             // correcting this pass's first suppression): the rect must match the
             // pixels, which is this stash's whole doctrine, and a box that is not
             // painted has no extent to claim. The earlier reasoning — that the

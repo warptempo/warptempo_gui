@@ -599,7 +599,7 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // see clear_dropdown_pointer_state.)
     // THE STAGED RELATIVE MOTION IS DELIVERED FIRST, and this edge owes that for
     // the same reason the capability branch's hold ends do: WHAT IS STILL OWED
-    // GOES BEFORE THE INVARIANT RESTORE (codex 2026-08-08). A captured drag's
+    // GOES BEFORE THE INVARIANT RESTORE (2026-08-08). A captured drag's
     // relative motion is staged, not delivered — it is coalesced to the
     // pointer_frame boundary (relative_motion) — and the frame that
     // TERMINATES this leave runs pointer_frame's pending block AFTER the hook
@@ -626,7 +626,7 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // the relative-pointer object the motion was staged on is being destroyed.
     //
     // WHAT "STAGED" ACTUALLY IMPLIES IS ONLY THAT A CAPTURE EXISTED WHEN IT WAS
-    // STAGED — not that one still stands (codex 2026-08-08, correcting the
+    // STAGED — not that one still stands (2026-08-08, correcting the
     // stronger claim this comment used to make). THE FORCE-FINALIZE ROUTES ARE
     // THE COUNTEREXAMPLE: Ctrl+Q, the WM close and a resize each end the live
     // gesture through finalize_active_drags, and ending it releases the capture
@@ -1100,7 +1100,7 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // tap's caller delivers the release and the focus-forked translation end
     // itself (deliver_touch_translation_end), immediately after.
     touch_phase_ = TouchPhase::Pointer;
-    // THE HOLD BIT GOES UP BEFORE THE ENTRY MOTION (codex round 2): the finger
+    // THE HOLD BIT GOES UP BEFORE THE ENTRY MOTION: the finger
     // has factually been down since the window opened, so EVERY delivery in
     // this burst — the entry motion included — reads primary_button_held
     // through current_mods(). That is the state the GUI's armed hover-open
@@ -1259,7 +1259,7 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     // the logical 1->0 edge (neither sibling source held); the deferred
     // POINTER motion flushes ahead of the delivery it exists for; then clear;
     // then deliver at the owner's last position.
-    // WHAT is delivered on that edge FORKS ON clean_release (codex round 19),
+    // WHAT is delivered on that edge FORKS ON clean_release,
     // and the fork is one line at the bottom of this body:
     //   * CLEAN (the finger's own lift, and nothing else since 2026-08-29) —
     //     the left RELEASE: the press was a click, and every act-at-lift
@@ -1286,8 +1286,8 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     ones whose act was never owed until the lift, the nav surface's
     //     deferred click among them. touch.md's hard-end bullet is the ruling.
     //     AND THE ARMS THE CHROME / MODAL / MENU SURFACES HOLD ARE
-    //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below
-    //     (codex round 20): the GUI ends its release-time claims — the chrome
+    //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below:
+    //     the GUI ends its release-time claims — the chrome
     //     press, the modal's armed button, the popup's item claim — at exactly
     //     this edge, an unheld motion while one stands
     //     (clear_release_time_press_arms, at on_motion's top). That is a
@@ -1316,7 +1316,7 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
         else
             deliver_motion(x, y);   // the button-lost edge (the fork above)
     }
-    // The return is the END'S OWN EDGE (codex round 2): every caller ends the
+    // The return is the END'S OWN EDGE: every caller ends the
     // translation through deliver_touch_translation_end, which acts iff the
     // end was delivered — a sibling-suppressed end means the unified
     // pointer has NOT left (the mouse is still there, mid-press), and the
@@ -1327,7 +1327,7 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
 }
 
 void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
-    // The end's own edge first (codex round 2): a sibling-held logical
+    // The end's own edge first: a sibling-held logical
     // left suppressed the release, and then NOTHING below fires either — the
     // mouse is mid-press, and neither a leave nor a restore motion is this
     // stream's to deliver. A suppressed end can strand a hover face where the
@@ -1339,8 +1339,8 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // below is shared verbatim: whichever end it was, the finger is no longer
     // the pointer, and the fork below answers where the pointer now IS.
     if (!end_touch_left_hold(clean_release)) return;
-    // THE END FORKS ON PHYSICAL POINTER FOCUS (codex round 3, the
-    // cursor-residue fix): a resolved touch drives the GUI's remembered
+    // THE END FORKS ON PHYSICAL POINTER FOCUS (the cursor-residue
+    // fix): a resolved touch drives the GUI's remembered
     // position to the finger, and the loop-settled cursor owner applies the
     // finger zone's kind to the REAL pointer — so before this fork a mouse
     // resting in the window kept the finger's cue (Arrow/resize over a
@@ -1621,8 +1621,8 @@ void GuiInputCore::touch_up(int32_t id) {
             // (the invariant at flush_touch_frame_motion), so there is
             // nothing to clear here — a bare clear at this site would be the
             // swallow the flush owner forbids.
-            // THE TRANSLATION END RIDES THE RELEASE'S OWN EDGE (codex round
-            // 2), and since round 3 it FORKS on physical pointer focus — the
+            // THE TRANSLATION END RIDES THE RELEASE'S OWN EDGE, and
+            // it FORKS on physical pointer focus — the
             // ordinary leave when no mouse rests in the window, a restore
             // MOTION at the mouse's own position when one does (the finger
             // lifted, so the unified pointer is where the mouse is). The
@@ -2079,7 +2079,7 @@ void GuiInputCore::hard_end_touch_stream() {
             // finger's own lift delivers it: the leave (OrdinaryLeave here,
             // where the lift's is TouchLift), or the focus-forked restore
             // motion when a mouse rests in the window
-            // (the round-3 fork), through the one owner. A sibling-held
+            // (the focus fork), through the one owner. A sibling-held
             // logical left suppresses the delivery here too, and the end with
             // it — whatever happened to the glass, the mouse is still there,
             // mid-press, and its live press claim is not this stream's to

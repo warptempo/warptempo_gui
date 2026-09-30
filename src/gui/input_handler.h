@@ -193,7 +193,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // that reach the render can refuse a cell.
 //
 // THE RESOLVER'S OWN 1.00s STAND OUTSIDE THE RESCALE (recorded asymmetry,
-// codex 2026-08-26): the rewrite moves AUTHORED values, and what the render
+// 2026-08-26): the rewrite moves AUTHORED values, and what the render
 // resolver normalizes it normalizes afterwards — the frame-0 seed ahead of the
 // first marker, a leading pass's fallback, and a ref whose implied tempo
 // leaves the resolver's envelope
@@ -364,8 +364,8 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // above the refusal). Full waveform-area damage, the discrete shape the mouse's
 // own mode edges spell.
 //
-// FREE, AND BESIDE show_trim_region_overlay, SINCE codex round 20 — AND ON THE
-// VIEW-STATE WRITERS RATHER THAN THE COMMANDS SINCE ROUND 21: the seat is an
+// FREE, AND BESIDE show_trim_region_overlay — AND ON THE VIEW-STATE WRITERS
+// RATHER THAN THE COMMANDS: the seat is an
 // ACTIVE-DOMAIN song frame taken against a particular view, so A WRITE OF THE
 // ACTIVE VIEW STATE KILLS IT. The one body cannot be a member of GuiActiveViews
 // or GuiInputHandler because writers live in both, and in Undo and the file
@@ -1174,7 +1174,7 @@ struct GuiInputHandler {
     // clear_touch_zoom_seat, and a seat a live gesture holds is left to that
     // gesture. Contract at TouchNavZoomState, app_state.h.
     void release_pen_zoom_anchor();
-    // (THE SEATED PINCH'S CLEAR is a FREE function since codex round 20 — the
+    // (THE SEATED PINCH'S CLEAR is a FREE function — the
     // view switches clear the seat too and they are not this class's:
     // clear_touch_zoom_seat(app, viewport), declared beside
     // show_trim_region_overlay near the top of this header.)
@@ -1349,8 +1349,8 @@ struct GuiInputHandler {
     // WHY THAT IS THE SHAPE (architect 2026-08-03, replacing a per-site model
     // with twenty-three push sites): the map reads about ten independent fact
     // families, so a push was owed by EVERY writer of any of them — a set that
-    // could not be enumerated and kept enumerated. Two review rounds each found
-    // a class the previous derivation had missed, and whole classes had no event
+    // could not be enumerated and kept enumerated. The previous derivation
+    // twice missed a class, and whole classes had no event
     // to hang a call on at all (a keyboard zoom moving the trim endcaps under a
     // resting pointer, the zoom and navigation keys, the trim keys, an undo
     // restoring trim, `o`, a gui_scale relayout, every keyboard editor open and
@@ -1494,8 +1494,8 @@ struct GuiInputHandler {
     //     so do the prompt, the dialog editors, the folder overlay's three
     //     contents and every live gesture —
     //     plus ONE condition the call site restates because nothing above
-    //     returns on it: a HELD PRIMARY BUTTON refuses the open (codex round 2;
-    //     the two held-motion producers are recorded at the call). The four
+    //     returns on it: a HELD PRIMARY BUTTON refuses the open (the
+    //     two held-motion producers are recorded at the call). The four
     //     anchors the `h` view and the folder overlay kill are refused inside
     //     toggle_dropdown (the anchor's painted face, stamped from
     //     menu_anchor_live), not here. SO THE ARMED
@@ -1819,10 +1819,10 @@ struct GuiInputHandler {
     void refresh_stats_panel_rows();
 
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
-    // (codex round 20). THE FINDING IS WHY THIS EXISTS, and it is worth stating
-    // before the mechanism: the touch layer's ABNORMAL END (round 19; its
-    // producers are the touch hard ends — a cancel, a capability loss) ends
-    // every MOTION-DRIVEN gesture correctly, because those have a button-lost
+    // — THE DEFECT IS WHY THIS EXISTS, and it is worth stating before the
+    // mechanism: the touch layer's ABNORMAL END (its producers are the touch
+    // hard ends — a cancel, a capability loss) ends every MOTION-DRIVEN
+    // gesture correctly, because those have a button-lost
     // end — on_motion's `!primary_button_held` arms, one per drag state. THESE
     // THREE HAVE NONE. The armed chrome press, the modal dialog's armed button
     // and the dropdown's item claim are not button-lost consumers at all: they
@@ -3695,8 +3695,8 @@ private:
     // already written the live struct and the file and gated the no-op case.
     void apply_max_waveform_height(int authored_px);
 
-    // The read-only bit's one setter (2026-09-04, converting a codex finding
-    // that the two roads had drifted apart on damage). Two roads write the
+    // The read-only bit's one setter (2026-09-04, after the two roads
+    // had drifted apart on damage). Two roads write the
     // bit: bare `o` on the active tab, which the icon row's Lock button
     // reaches by synthesizing that press, and the settings editor's
     // `tab_a_read_only=` / `tab_b_read_only=` commit, which may name either
@@ -3913,7 +3913,7 @@ private:
     // predicate, picker_active, and NOT in this answer, exactly as the render
     // player is not.) NINE CALLING
     // FUNCTIONS, RE-DERIVED BY GREP 2026-08-29 (the count was eight from
-    // 2026-08-14, when two left with the round-15 session fix — the dialog
+    // 2026-08-14, when two left with the session fix — the dialog
     // BUTTON claim in on_button_press and dispatch_modal_dialog_button, both
     // of which ask modal_dialog_stash_current instead, a strictly narrower
     // question that implies this one; the ninth arrived 2026-08-29, and it is

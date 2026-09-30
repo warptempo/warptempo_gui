@@ -1988,13 +1988,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h, and the capability-loss fire
     // site in input_core.cpp).
-    // THE TWO EDGES ARE NOT THE SAME EDGE (codex 2026-08-03) — and SINCE
+    // THE TWO EDGES ARE NOT THE SAME EDGE (2026-08-03) — and SINCE
     // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
     // GuiPointerLeaveReason, because one effect below now differs between them.
     // (SINCE TOUCH PHASE 1, 2026-08-11, a touch pointer translation's end
     // fires this hook too — as TouchLift for the contact's own lift and as
-    // OrdinaryLeave for the hard end, and ONLY on its no-focus arm
-    // since codex round 3: with the physical pointer focused, the platform
+    // OrdinaryLeave for the hard end, and ONLY on its no-focus arm:
+    // with the physical pointer focused, the platform
     // delivers a restore MOTION at the mouse's own position instead and this
     // body never runs — the ordinary motion path re-derives hover and the
     // settled cursor from truth (the fork's one statement is at
@@ -2006,7 +2006,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // sites are the touch edge inventory's, input_core.h.
     // ONE OF THOSE FIRINGS IS THE TOUCH HARD END (a cancel, capability or
     // focus loss on a live pointer translation, hard_end_touch_stream), whose
-    // end is the ABNORMAL one (codex round 19, when the second-finger upgrade
+    // end is the ABNORMAL one (when the second-finger upgrade
     // was its other producer — deleted 2026-09-25, a second contact on a live
     // translation being ignored now) — no release is delivered, so the three
     // press ARMS this body drops are what stops a system-taken touch
@@ -2086,7 +2086,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // did.
     // THE EXCEPTION IS SCOPED TO THE ORDINARY LEAVE (a contact's lift,
     // TouchLift, reading as one here), and that is a correctness
-    // term rather than tidiness (codex 2026-08-08): this body is shared with
+    // term rather than tidiness (2026-08-08): this body is shared with
     // POINTER-CAPABILITY LOSS, the hard end of the stream, where no leave, no
     // motion and no release will ever arrive again. Keeping anything there would
     // strand it — a lit row-1 button with no event left to unlight it (the
@@ -2143,8 +2143,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             input_handler.clear_redesign_button_hover();
             input_handler.disarm_menu_row();
         }
-        // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end
-        // (codex round 20): they also die at the BUTTON-LOST edge, an unheld
+        // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end:
+        // they also die at the BUTTON-LOST edge, an unheld
         // motion while one of them stands — which is what the touch layer's
         // abnormal end delivers, and what a lost physical button delivers too
         // (clear_release_time_press_arms). The calls stay spelled out here
@@ -2236,7 +2236,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
     });
 
-    // THE PLATFORM'S CONSUMED KEYBOARD EDGES (codex round 4, 2026-08-11):
+    // THE PLATFORM'S CONSUMED KEYBOARD EDGES (2026-08-11):
     // keyboard leave / keyboard-capability loss and every Super-swallowed
     // press are key events the GUI's own chokepoints can never see — the
     // platform consumes them without calling on_key — so the platform reports
@@ -2283,8 +2283,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // state you read has settled". The zone map reads about ten independent fact
     // families, so a refresh was owed by
     // every writer of any of them: a set nobody could enumerate and keep
-    // enumerated, and two review rounds each found a class the previous
-    // derivation had missed while whole classes (a keyboard zoom moving the trim
+    // enumerated, and the previous derivation twice missed a class
+    // while whole classes (a keyboard zoom moving the trim
     // endcaps under a resting pointer, the zoom and navigation keys, the trim
     // keys, an
     // undo restoring trim, `o`, a gui_scale relayout, every keyboard editor open
@@ -2299,8 +2299,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // damage, no gesture logic. `mods` is the platform's live modifier truth,
     // handed over rather than fetched.
     //
-    // THE OPEN DROPDOWN'S ITEM FACES ARE THE SECOND CONSUMER (2026-08-03, from
-    // codex), and they are the same disease at a different surface: the popup's
+    // THE OPEN DROPDOWN'S ITEM FACES ARE THE SECOND CONSUMER (2026-08-03),
+    // and they are the same disease at a different surface: the popup's
     // item rects are PAINTER-PUBLISHED, zero from the open until paint_dropdown
     // publishes them, so a motion delivered before that paint resolves NO item —
     // and if the pointer then RESTS, no further motion exists to correct it.

@@ -249,7 +249,7 @@ struct Undo {
     // or pushes nothing. op_mode is NOT restamped: it names the store the
     // entry changed, which recompute_dirty's per-column walk and the
     // post-restore rules read; the column the restore returns to is the
-    // landing column, which is (Sol review 2026-09-23 — before it, a paste
+    // landing column (2026-09-23 — before it, a paste
     // whose target entry refused kept op_mode 'P' as its column, and the
     // Restrict Undo to Current View lamp refused its undo from the S+W the
     // restore would never have left). Nothing between the push and

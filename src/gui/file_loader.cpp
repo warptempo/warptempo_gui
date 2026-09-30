@@ -45,7 +45,7 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // stopped writing anything a source load writes beyond the engine block.
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
-    // same line of argument the region reset above makes (codex round 21): the
+    // same line of argument the region reset above makes: the
     // three assignments below REPLACE the active view state wholesale, and this
     // routine is where that write lives — so the clear lives here rather than at
     // the caller. THE VALUES-ONLY CONTRACT STILL HOLDS otherwise: this is a

@@ -105,8 +105,8 @@ struct GuiGitUpstream {
 
 // HOW A FETCH ENDED. `Refused` is GitHub declining this device — no deploy
 // key, the key refused, a host key off the pin, a non-SSH URL — which no
-// retry fixes; `LocalFailed` is THIS CLONE failing the fetch (codex round 6
-// over the git arc, 2026-09-28): a write, a lock or a full disk once GitHub's
+// retry fixes; `LocalFailed` is THIS CLONE failing the fetch (2026-09-28):
+// a write, a lock or a full disk once GitHub's
 // host key has been accepted, or a local step before or after the session —
 // the network was never the cause, so no retry of it helps (git_repo.cpp's
 // local_fetch_failure owns the classification); `Unreachable` is every other
@@ -299,8 +299,7 @@ public:
                                    std::string&                    conflict_path,
                                    std::string&                    diag);
 
-    // ---- THE COLD-START LOCK RECOVERY (codex round 6 over the git arc,
-    // 2026-09-28). Normal use includes the app being killed (Android kills a
+    // ---- THE COLD-START LOCK RECOVERY (2026-09-28). Normal use includes the app being killed (Android kills a
     // backgrounded app) or the device losing power in the middle of one of
     // the five mutators above, and libgit2 removes its lock files only on an
     // ordinary return, so a death mid-write leaves one standing and every

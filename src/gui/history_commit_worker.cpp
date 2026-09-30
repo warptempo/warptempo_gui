@@ -10,8 +10,8 @@
 
 namespace {
 
-// THE REPOSITORY LANE — PROCESS-OWNED, OUTLIVING EVERY WORKER (codex round 1
-// over the git arc, 2026-09-28). Every job holds it for its WHOLE run, from
+// THE REPOSITORY LANE — PROCESS-OWNED, OUTLIVING EVERY WORKER (2026-09-28).
+// Every job holds it for its WHOLE run, from
 // before the clone opens until its handle closes: the check (a fetch) and the
 // checkpoint (a fetch, the commit, the push). One worker's one slot
 // serializes a session's own jobs; the lane serializes them ACROSS SESSIONS.

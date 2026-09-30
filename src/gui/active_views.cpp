@@ -83,8 +83,8 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == 'P' && app.active_audio_view != 'T') return;
     selection.clear_selection();
     // THE SEATED PINCH'S ANCHOR DIES ON THE W/P WRITE, and it is written HERE —
-    // at the writer — rather than in the `p` toggle below, which is where codex
-    // round 20 put it and where round 21 found the hole: the toggle is not this
+    // at the writer — rather than in the `p` toggle below, which is where it first sat
+    // and where it left a hole: the toggle is not this
     // helper's only caller, and the others reach it DIRECT and inherit nothing
     // it spells (the undo restore's column tag, the phase-reset paste's
     // landing tail and the Shift+S crossing's drop from any view all call this,
@@ -137,8 +137,8 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // The SEATED PINCH's anchor IS cleared here, this function being the A/B
     // WRITER and so a member of that rule in its own right — and it outlived
     // the deleted overlay hide because it answers a different question, a stale
-    // song frame rather than a view preference (codex round 20, moved
-    // onto the writers at round 21; the argument, the whole membership and the
+    // song frame rather than a view preference (moved onto the
+    // writers; the argument, the whole membership and the
     // do-not-do-this note are at clear_touch_zoom_seat's declaration,
     // input_handler.h): the entering tab restores another band entirely, so a
     // pinch held across the switch would resume about a point the fingers never
@@ -262,7 +262,7 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // writes its own selection one line later, and an auto-select there would
     // be overwritten for nothing.
     // (NO clear_touch_zoom_seat call here: it moved down onto the W/P WRITER,
-    // switch_active_markers_view_to above, at codex round 21 — this toggle's own
+    // switch_active_markers_view_to above — this toggle's own
     // call was one of the three command-wrapper spellings that let the propagate
     // paste reach a column switch with a seated pinch intact. The flip this
     // function performs still clears the seat; it inherits it from the helper,

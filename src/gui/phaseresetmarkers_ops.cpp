@@ -147,7 +147,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // THE ROUNDING RESIDUE, ACCEPTED AND RECORDED (architect 2026-09-02, "no
 // effect on audio output; accept and record"). THIS IS ITS ONE PROSE HOME;
 // every other site states its own share and points here. IT HAS THREE TERMS
-// (codex round 2, 2026-09-02, correcting the first telling — which named one
+// (2026-09-02, correcting the first telling — which named one
 // term, put it on the wrong slope, and gave it a universal two-sample
 // ceiling):
 //
@@ -186,7 +186,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // above are true TO THE SCHEDULE'S ROUNDING: the grain can end that far past
 // T + N/2 and leave P inside its last samples — at the grain's own
 // ZERO-WEIGHT EDGE, where the Hann² window has tapered to nothing. The worked
-// case (codex round 1, 2026-09-02): tempo 0.30 with a target playhead
+// case (2026-09-02): tempo 0.30 with a target playhead
 // P = 3071 drops at S = 307, and m = 1 qualifies —
 // llrint(0.30·1024 − 2048) = −1741 = S − 2048 — while T = 1023.33…, so the
 // seed grain ends at 3072, ONE SAMPLE PAST P, and the painted band is 2049

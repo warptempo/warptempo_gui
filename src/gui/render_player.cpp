@@ -1081,7 +1081,7 @@ bool render_player_inside_previous_window(const AppState& a,
 // HOME'S FORK — the contract is at the declaration: a previous entry to play
 // AND the window above. THE FORK IS ONE OWNER since 2026-09-01, which the Home
 // button's hint reads too, so "Previous File" and "Go to Start" are said
-// exactly where each is what the press does — and, since codex round A the
+// exactly where each is what the press does — and, since the
 // same day, so does the hint's SHIFT line, which compares this arm's
 // destination with the shifted twin's and drops where the folder's second item
 // makes them one file.
