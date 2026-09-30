@@ -18,7 +18,6 @@ tmp/
 
 # docs
 docs/references/*.pdf
-docs/welcome_back_template.md
 
 # tools
 tools/build/
