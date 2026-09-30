@@ -153,15 +153,15 @@
 // file is always the last committed state and a save carries none of them.
 // The chokepoints are the callers inventory at write_device_config below.
 //
-// EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect, the
-// four-tier review's R-22): the Settings dropdown carries `GUI Scale`,
+// EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
+// Settings dropdown carries `GUI Scale`,
 // `Max Waveform Height` (since 2026-09-13), `Projects Repository` and
 // `Projects Path` as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
 // writer under the key's own grammar below. Until that day the path keys
 // were hand-edited only, and HELP told the user to edit one without
 // telling him to quit first — which mattered, because A HAND EDIT UNDER A
-// RUNNING APP IS CLOBBERED BY THE NEXT IN-APP COMMIT (R-6): the live struct is
+// RUNNING APP IS CLOBBERED BY THE NEXT IN-APP COMMIT: the live struct is
 // the truth and every commit rewrites the whole file from it. That stays so,
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
@@ -441,12 +441,12 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // whatever the file last held.
 //
 // The card stands, and it is a ruling rather than a leftover (architect
-// 2026-09-04, blessing what landed 2026-09-02 under R-11's shape): the
-// four-tier review had classed a failed persist as adversarial reach and asked
-// for no message at all, but each of these writes is a deliberate press whose
-// result nothing paints, and the deliberate-press rule (R-7's shape,
-// messaging.md) is what decides such a case — so the failure says its
-// sentence, on a NORMAL card, where the caller has a card surface.
+// 2026-09-04, blessing what landed 2026-09-02 in the two-clause shape): a
+// 2026-09-02 review had classed a failed persist as adversarial reach and
+// asked for no message at all, but each of these writes is a deliberate press
+// whose result nothing paints, and the deliberate-press rule (messaging.md)
+// is what decides such a case — so the failure says its sentence, on a
+// NORMAL card, where the caller has a card surface.
 //
 // THE LIVE CONFIG HAS ONE OWNER, gui_main's loop (main.cpp): the ONE
 // DeviceConfig it reads at startup outlives every project the process opens,
@@ -463,7 +463,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // the settings editor's ONE device-key body, which serves three keys —
 // `max_waveform_height=`, `projects_repo=` and `projects_path=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the cap's
-// arm joined 2026-09-13, the path arm 2026-09-02 under R-22); and gui_main's
+// arm joined 2026-09-13, the path arm 2026-09-02); and gui_main's
 // `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value

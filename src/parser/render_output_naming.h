@@ -76,8 +76,8 @@ std::string render_staging_path(const std::string& final_path);
 // to the source. That is a real way to lose the source, so the predicate and
 // its three boundary refusals stay.
 //
-// WHAT THE REFUSAL DOES NOT COVER, RECORDED (architect 2026-09-02, the
-// four-tier review's R-1; architect approval 2026-09-02, comment-only): the
+// WHAT THE REFUSAL DOES NOT COVER, RECORDED (architect 2026-09-02;
+// architect approval 2026-09-02, comment-only): the
 // dispatcher deletes the deliverable pair on a FAILED archival render, and
 // this refusal is one of the six producers that fail BEFORE the up-to-date
 // rung — so under the inode arm's first shape (`render/` a symlink to the

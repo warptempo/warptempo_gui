@@ -78,7 +78,7 @@ struct GuiFileLoader {
 // session's load can then fail only on a CHANGE ON DISK between this check and
 // that load, which is the adversarial class and takes load_file's own fatal
 // exit — WITH ONE STANDING GAP the dry-run cannot see (recorded 2026-09-02,
-// the four-tier review's R-15, ADVERSARIAL by his rubric and left as it is):
+// ADVERSARIAL by his rubric and left as it is):
 // a NEW project whose folder is not writable passes here — nothing is
 // created at this stage, and the load's own template creation is advisory —
 // and then dies at load_file's strict read of the sidecar that was never

@@ -151,7 +151,7 @@ std::optional<GuiFailure> source_load_dry_run(
     // wearing a sidecar's name having counted as PRESENT, so it is parsed and
     // refused here exactly as the load would refuse it.
     //
-    // EACH REFUSAL NAMES THE FILE ONCE (the four-tier review's R-11 rule,
+    // EACH REFUSAL NAMES THE FILE ONCE (the two-clause rule of 2026-09-02,
     // failure.h: the diagnostic carries the full path, the card the project's
     // folder-and-file form, and neither is parsed out of the other). The
     // strict loaders' own open and read refusals name the path the composer

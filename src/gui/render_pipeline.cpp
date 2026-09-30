@@ -81,7 +81,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // THE ONE FAILURE COMPOSER (architect 2026-09-02, the failed render's
     // card). Every Failed return in this function goes through here: the
     // failure is built once, AS TWO CLAUSES (GuiFailure, failure.h — the
-    // universal shape since the four-tier review's R-11), its diagnostic
+    // universal shape since 2026-09-02), its diagnostic
     // printed on this pipeline's one `Render error:` line and the whole
     // struct handed back through the out-parameter for the GUI's card, so the
     // terminal and the card carry two spellings of ONE composition and

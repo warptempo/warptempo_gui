@@ -184,7 +184,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         return;
     }
     // THE DEVICE IS REOPENED HERE, AHEAD OF THE POSITION (asked 2026-08-30;
-    // a REOPEN since 2026-09-02, architect — the four-tier review's R-3: the
+    // a REOPEN since 2026-09-02, architect: the
     // AAudio backend reopened a dead stream inside play(), and a read ahead of
     // play() carded forever after a route drop, so the press now reopens
     // through GuiPlayback::ensure_device_available_for_play and cards only
@@ -555,7 +555,7 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // launch-inert by this gate (its render still works: the trimmer's
     // one-frame-fady-trim latitude is a RENDER latitude, not an audition one).
     // A DEAD OR ABSENT DEVICE IS REOPENED FIRST, AND A FAILED REOPEN SAYS SO
-    // (asked 2026-08-30; a REOPEN since 2026-09-02, architect — R-3): the
+    // (asked 2026-08-30; a REOPEN since 2026-09-02, architect): the
     // launch below would "succeed" — the scanner would seed, the page-in would
     // scroll and play() would return — with nothing coming out of the
     // machine, which is the one refusal the user cannot see for himself. The

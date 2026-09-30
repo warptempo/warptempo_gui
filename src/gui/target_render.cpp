@@ -445,7 +445,7 @@ void GuiTargetRender::dispatch_render_now() {
     // only in what it depends on, which is nothing.)
     const uint64_t generation = dirty_generation_;
 
-    // THE FALLBACK'S CARD (architect 2026-09-02, deep dive item L), at the ONE
+    // THE FALLBACK'S CARD (architect 2026-09-02), at the ONE
     // OUTERMOST SITE EVERY TARGET-VIEW DISPATCH PASSES THROUGH. It has to be
     // here rather than at any rung: a cache hit, an archival artifact hit and a
     // fresh render all serve the FULL, untrimmed buffer under the fallback, so
@@ -694,7 +694,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
         // THE RE-PUMP BELOW IS WHAT MAKES ensure_ready'S GENERATION GUARD SAFE
-        // (architect 2026-09-02, R-8): a cancelled render whose successor is
+        // (architect 2026-09-02): a cancelled render whose successor is
         // parked in pending_ for the current generation dispatches from
         // maybe_dispatch_pending at the tail of this callback, so an
         // ensure_ready that honoured that pending_ instead of redispatching
@@ -1048,8 +1048,8 @@ void GuiTargetRender::ensure_ready() {
         return;
     }
 
-    // A DISPATCH ALREADY STANDS FOR THIS GENERATION (architect 2026-09-02,
-    // R-8): the render that will make the buffer current is in flight or
+    // A DISPATCH ALREADY STANDS FOR THIS GENERATION (architect 2026-09-02):
+    // the render that will make the buffer current is in flight or
     // parked in pending_, stamped with the very generation the last mutation
     // made, so this entry has nothing to add. Its completion lands the buffer
     // and rebinds through complete_successful_buffer — which binds whenever

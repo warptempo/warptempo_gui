@@ -53,7 +53,7 @@
 //      THE DELETE'S FORM IS THE WHOLE-MAP REWRITE'S, and it is not this
 //      cluster's alone: the SETTINGS ENGINE COMMIT (settings_editor.cpp) and
 //      the `h` view's WARP REVERT (input_key_dispatch.cpp) took the same two
-//      lines on 2026-09-02 (the four-tier review's R-17d) — capture the
+//      lines on 2026-09-02 — capture the
 //      instant before the rewrite, re-land after it — each site arguing its
 //      own subject. The reseat's caller inventory is one owner,
 //      Viewport::reseat_playhead_to's definition (viewport.cpp).
@@ -1025,7 +1025,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // disabled member (effective_disabled, warpmarkers.h) counts, walls on the
 // same terms as any other member and steps with the rest, so the singleton
 // key, its button, the value drag and the group step treat a disabled marker
-// alike. From 2026-09-02 (the four-tier review's R-12, the `m` BPM sweep's
+// alike. From 2026-09-02 (the `m` BPM sweep's
 // "a disabled marker is invisible to the act" asked of this step) until that
 // ruling a disabled member was SKIPPED by both loops, and a selection made
 // only of disabled members was an EMPTY verdict carding the empty-selection
@@ -1056,8 +1056,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // which is what made the extraction necessary at all: the act's scan used to
 // sit inside a body that had already asked the coalesce verdict (a call with a
 // side effect on the undo stamp), so there was no callable form. It answers a
-// plain boolean again since 2026-09-13 (the three-way verdict of R-12 lost its
-// Empty arm with the disabled skip). Declared in app_state.h beside the face
+// plain boolean again since 2026-09-13 (the three-way
+// TempoCentStepGroupVerdict of 2026-09-02 lost its Empty arm with the
+// disabled skip). Declared in app_state.h beside the face
 // that reads it; the wall set and its GROUP RIGIDITY justification are here,
 // at the act.
 bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
@@ -1326,7 +1327,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // the press needs to know is that the GROUP could not move as a group, not
     // which member walled — naming the member would be a second act's worth
     // of detail for a press that changed nothing. (An EMPTY STEP carded the
-    // singleton's empty-selection sentence from 2026-09-02, R-12, for a
+    // singleton's empty-selection sentence from 2026-09-02, for a
     // selection whose every member was effectively disabled and so skipped;
     // since 2026-09-13 a disabled member steps like any other, so nothing
     // produces that refusal and its arm is deleted.)

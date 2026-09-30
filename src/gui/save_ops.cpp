@@ -12,19 +12,18 @@
 namespace {
 
 // THE SAVE'S OWN FAILURE, one composer for the three write arms (architect
-// 2026-09-02; the two-clause shape the same day, the four-tier review's
-// R-11): a deliberate Ctrl+S that could not write is answered with words
-// rather than with a dirty dot that simply stays lit, which is what the
-// strictness ruling asks of every refusal that has a reason (messaging.md).
-// BOTH CLAUSES ARE COMPOSED HERE (GuiFailure, failure.h): the DIAGNOSTIC is
-// the arm's own stderr line, the tag it always printed and the FULL path
-// after it, and the DISPLAY is ONE CLAUSE naming the file THE BASENAME
-// RULE'S WAY — the bare filename, not the folder-and-file form the loaders'
-// composer produces (shown_project_path, device_config.h), because these
-// three paths are the OPEN project's own sidecars: the folder is the one the
-// window title already names, so the file alone identifies which of the
-// three writes fell over. `report` below is the one place either clause
-// reaches its surface.
+// 2026-09-02; the two-clause shape the same day): a deliberate Ctrl+S that
+// could not write is answered with words rather than with a dirty dot that
+// simply stays lit, which is what the strictness ruling asks of every refusal
+// that has a reason (messaging.md). BOTH CLAUSES ARE COMPOSED HERE
+// (GuiFailure, failure.h): the DIAGNOSTIC is the arm's own stderr line, the
+// tag it always printed and the FULL path after it, and the DISPLAY is ONE
+// CLAUSE naming the file THE BASENAME RULE'S WAY — the bare filename, not the
+// folder-and-file form the loaders' composer produces (shown_project_path,
+// device_config.h), because these three paths are the OPEN project's own
+// sidecars: the folder is the one the window title already names, so the file
+// alone identifies which of the three writes fell over. `report` below is the
+// one place either clause reaches its surface.
 GuiFailure save_write_failure(const char* stderr_tag, const std::string& path) {
     GuiFailure f;
     f.diagnostic = std::string(stderr_tag) + ": " + path;

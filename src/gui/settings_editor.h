@@ -25,7 +25,7 @@ struct GuiInputHandler;
 // user edits in-app: every key that can appear in a `.settings` file, plus the
 // FOUR editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
-// since 2026-09-02 (architect, the four-tier review's R-22) projects_path,
+// since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-09-13
 // max_waveform_height (the config's fifth key, last_project, is the
 // program's own and has no editor; the hold delay's key, editable for its

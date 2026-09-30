@@ -563,10 +563,10 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
 }
 
 void Undo::note_saved() {
-    // THE SAVE ENDS THE TAP WINDOW (architect 2026-09-02, the four-tier
-    // review's R-2). The tap arm's merge test reads the clock and the subject
-    // terms, and a Ctrl+S changes none of them and no stack top — so
-    // before this a save inside a burst left the stamp standing, and the next
+    // THE SAVE ENDS THE TAP WINDOW (architect 2026-09-02). The tap arm's
+    // merge test reads the clock and the subject terms, and a Ctrl+S changes
+    // none of them and no stack top — so before this a save inside a burst
+    // left the stamp standing, and the next
     // press inside kTapCoalesceMs MERGED: the store mutated with no push, the
     // reference (just rebound to 0, the burst's live state) stayed at 0, and
     // recompute_dirty read CLEAN over a store that no longer matched the file.

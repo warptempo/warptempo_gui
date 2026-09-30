@@ -306,7 +306,7 @@ struct AudioSTFT {
         // entirely zero; a valid frame reads min(N, src_frames - ta) samples
         // and zero-pads the tail.
         // THE HEAD IS NOT PADDED THE WAY THE TAIL IS, AND THAT IS KEPT ON
-        // PURPOSE (architect 2026-09-02, record-only, the deep dive's item D;
+        // PURPOSE (architect 2026-09-02, record-only;
         // architect approval 2026-09-02, comment-only). The two frames whose
         // read starts before sample 0 are left WHOLE-ZERO, which is what makes
         // the head fade 3*R_s long and seeds the head's synthesis phase from

@@ -359,7 +359,7 @@ std::expected<TrimPlan, std::string> plan_trim(
     // under the clamp it is the full map's own EOF target, at or beyond
     // T_e; llrint is monotone.
     // THE CROP IS END-EXCLUSIVE ON AN INCLUSIVE AUTHORED DOMAIN, ACCEPTED AND
-    // RECORDED (architect 2026-09-02, the truthfulness deep dive's item K;
+    // RECORDED (architect 2026-09-02;
     // architect approval 2026-09-02, comment-only). The kept output is
     // [llrint(tgt(b)), llrint(tgt(e))), so the authored end frame e — the last
     // frame INSIDE the window by data-model.md's inclusive [0, total-1]

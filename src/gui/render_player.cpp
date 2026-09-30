@@ -31,8 +31,8 @@ void GuiRenderPlayer::status(const std::string& line) {
     notifications.notify(AppState::NotificationClass::Normal, line);
 }
 
-// THE DECODE'S REFUSAL, TWO CLAUSES (GuiFailure, failure.h — 2026-09-02, the
-// four-tier review's R-11): the card keeps saying the wav reader's own words
+// THE DECODE'S REFUSAL, TWO CLAUSES (GuiFailure, failure.h — 2026-09-02):
+// the card keeps saying the wav reader's own words
 // alone, as it always did — the subject is the highlighted row on screen, so
 // the sentence needs no name (the basename rule's own reasoning,
 // messaging.md) — and the stderr line, new with the shape, names the FULL

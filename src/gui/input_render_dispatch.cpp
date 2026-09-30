@@ -501,17 +501,16 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             //             failure that never looked at it. That is accepted —
             //             one rule, one clue, and a re-render restores it.
             //             THE COLLISION SHAPE IS THE ACCEPTED ADVERSARIAL EDGE
-            //             (architect 2026-09-02, the four-tier review's R-1;
-            //             his rubric: adversarial use hardfails and we move
-            //             on): with `render/` made a symlink back to the
-            //             project folder OUT OF APP and the title equal to the
-            //             source's own stem, the collision refusal fires and
-            //             this removal then resolves through that directory
-            //             symlink and unlinks the SOURCE. It reaches no
-            //             in-app road — the loader and the settings editor
-            //             both refuse a colliding title while both paths
-            //             exist — so no `equivalent` guard and no rung bit
-            //             were taken for it.
+            //             (architect 2026-09-02; his rubric: adversarial
+            //             use hardfails and we move on): with `render/` made a
+            //             symlink back to the project folder OUT OF APP and
+            //             the title equal to the source's own stem, the
+            //             collision refusal fires and this removal then
+            //             resolves through that directory symlink and unlinks
+            //             the SOURCE. It reaches no in-app road — the loader
+            //             and the settings editor both refuse a colliding
+            //             title while both paths exist — so no `equivalent`
+            //             guard and no rung bit were taken for it.
             //   CANCELLED leaves it alone — a cancel is the user's own
             //             deliberate act, he knows the deliverable is the old
             //             one, and taking his audio away for a keypress he

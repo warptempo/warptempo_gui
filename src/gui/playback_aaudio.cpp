@@ -133,7 +133,7 @@ struct GuiPlayback::Impl {
     // ahead by L_audio and the pixel arrives L_display late, so the error at
     // light is L_audio − L_display — 10–25 ms against SurfaceFlinger's
     // 22–33 ms, roughly −23…+3 ms net. And IN THE CAR IT COSTS NOTHING AT ALL
-    // (recorded 2026-09-02 from the truthfulness deep dive's item I): there
+    // (recorded 2026-09-02): there
     // the render player stands, and under it the waveform scanner is not
     // sampled or painted (main.cpp's pre-paint hook returns above it) — the
     // only moving picture is the modal row's play-scrub and its clock, neither
@@ -527,8 +527,8 @@ bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
     return true;
 }
 
-// THE UNDERRUN COUNT, SAID ONCE PER SESSION THAT HAD ONE (the four-tier
-// review's R-18(d), architect 2026-09-02). AAudio's own counter is the only
+// THE UNDERRUN COUNT, SAID ONCE PER SESSION THAT HAD ONE (architect
+// 2026-09-02). AAudio's own counter is the only
 // evidence this backend has that its buffer — burst × 2, one burst of slack —
 // lost a callback to a scheduling hiccup, and until now nothing read it: an
 // underrun on this platform was simply an audible tick nobody could account

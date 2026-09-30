@@ -1743,8 +1743,8 @@ static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // the callers are ENTRIES — the A/B tab switch, the `p` column swap, the
 // loads — and an entry is a restore or a switch, neither of which moves the
 // playhead in the music. So this route reseats rather than lands.
-// THE SCAN IS SELECT-FIRST, AND IT STAYS THAT WAY (architect 2026-09-02, the
-// four-tier review's R-12): it walks the store in ORDER and takes the first
+// THE SCAN IS SELECT-FIRST, AND IT STAYS THAT WAY (architect 2026-09-02): it
+// walks the store in ORDER and takes the first
 // marker on the frame, with no disabled term — so where a stack shares one
 // frame it can land the focus on a member the marker WALK would skip (that
 // walk skips disabled) and on the BOTTOM of a stack whose top a click would

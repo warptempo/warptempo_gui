@@ -1393,21 +1393,21 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // own note is at kSettingsPopupItems, app_state.h — the box "simply grows",
 // and this is what it grew into): its content asked 288 at 100%, past the
 // 242, so that popup DERIVED at every scale — 296px wide with its chrome —
-// and the +42 did not land on it. THAT ROW LEFT 2026-09-02 (R-23) and three
-// device-key rows joined (R-22), the widest label now "Projects Repository"
-// (tied since 2026-09-13 by "Max Waveform Height", the same 19 characters)
+// and the +42 did not land on it. THAT ROW LEFT 2026-09-02 and three
+// device-key rows joined, the widest label now "Projects Repository" (tied
+// since 2026-09-13 by "Max Waveform Height", the same 19 characters)
 // — some 19 characters against the 28 that asked 209, so by the same
 // advance-width method the content sits under the 242 and the FLOOR is the
 // width again; unmeasured, and it does not have to be: the painter takes the
 // larger of the two terms at every paint, so which wins is never in doubt,
 // only which term it is.
 //
-// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENUS: SETTINGS and HELP, whose
-// widest labels are short enough that the content ask stays under the 242 —
-// which is what gives a short menu a box that reads as a menu at all, and is
+// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENUS, FILE and SETTINGS, whose
+// content asks stay under the 242 by the advance-width estimate (the table
+// above; EDIT's content wins, and HELP was a third short menu 2026-09-03..09)
+// — which is what gives a short menu a box that reads as a menu at all, and is
 // the whole of what this constant is for. Neither figure is stated: the
-// painter takes the LARGER of floor and content at every paint, so which term
-// wins is the only thing this table has to say.
+// painter takes the LARGER at every paint, so which term wins is all it says.
 //
 // THE ITERATIONS MENU HELD THE FLOOR UP FROM 2026-08-27 UNTIL ITS DELETION ON
 // 2026-09-04 and is worth one line as the measurement that showed the floor

@@ -96,8 +96,8 @@
 // accuracy about the same raw line, not compensation.
 //
 // THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
-// (architect 2026-09-02, the truthfulness deep dive's item C; the periodic
-// cadence proposed there does NOT land). Every resync is an EVENT — FOURTEEN
+// (architect 2026-09-02; a periodic cadence was proposed that day and does
+// NOT land). Every resync is an EVENT — FOURTEEN
 // call sites at this writing (re-counted 2026-09-17), in classes: the zooms
 // (apply_zoom_change, apply_strip_drag_zoom's final frame,
 // apply_zoom_to_start), the DISCRETE pan (scroll_viewport with
@@ -324,8 +324,8 @@ public:
     // AAudio: `!impl_ || !impl_->device_ready` — the `stream_dead` latch and
     // the null stream are NOT terms, being exactly what the press reopens.
     // THREE READERS, re-grepped 2026-09-02: the two PLAY-face predicates
-    // space_launch_would_play and ab_audition_preflight_ok, and — since the
-    // four-tier review's R-17a landed that day — the render player's modal
+    // space_launch_would_play and ab_audition_preflight_ok, and — since that
+    // day — the render player's modal
     // Play/Pause face, whose arm in render_player_button_enabled takes this
     // as its LEADING term (the player's own road reaches play(), which
     // reopens, so the latch is exactly what a press repairs there too).
@@ -351,30 +351,29 @@ public:
     // is at that backend's Impl. Main thread only; a pure read.
     GuiAudioStats audio_stats() const;
 
-    // THE REOPEN AT THE PRESS (architect 2026-09-02, the four-tier review's
-    // R-3). Asked at a LAUNCH press by the three launch gates —
-    // toggle_playback's target pre-sum gate, GuiAbAudition::start's preflight
-    // and the launch body's belt (playback_lifecycle.cpp, ab_audition.cpp) —
-    // which card kPlaybackDeviceUnavailableCard only when this answers FALSE.
-    // JACK answers `!device_unavailable()` and touches nothing (this backend
-    // has no latch to clear — the mid-play loss is not recorded, the reason
-    // at device_unavailable's definition). AAudio closes a dead stream and
+    // THE REOPEN AT THE PRESS (architect 2026-09-02). Asked at a LAUNCH press
+    // by the three launch gates — toggle_playback's target pre-sum gate,
+    // GuiAbAudition::start's preflight and the launch body's belt
+    // (playback_lifecycle.cpp, ab_audition.cpp) — which card
+    // kPlaybackDeviceUnavailableCard only when this answers FALSE. JACK
+    // answers `!device_unavailable()` and touches nothing (this backend has no
+    // latch to clear — the mid-play loss is not recorded, the reason at
+    // device_unavailable's definition). AAudio closes a dead stream and
     // reopens a dead or null one at the head — play()'s own first two lines,
     // hoisted here so a route that dropped on the tablet (a headphone pulled,
     // a Bluetooth route gone) comes back at the NEXT PRESS instead of leaving
     // every main-window launch road carding forever behind a read that never
     // reopened — AND THEN STARTS IT, because the question a launch gate asks
-    // is whether this device will SOUND, not whether a stream object stands:
-    // a reopened stream is stopped, and an init whose start was refused
-    // leaves a non-null stopped one, neither of which device_unavailable can
-    // see. Left to play()'s own start — which runs AFTER the publish — a
-    // refused start lowers the playing bit and closes the stream while the
-    // launch body has already seeded the scanner and returned true, so the
-    // next tick reads that bit as a natural end: a silent false launch with
-    // no card. The start is idempotent, so an ordinary play makes no device
-    // call here; a refused one closes the stream and answers false, which is
-    // the card. It does not replace play()'s own reopen and start or its
-    // post-publish race check:
+    // is whether this device will SOUND, not whether a stream object stands: a
+    // reopened stream is stopped, and an init whose start was refused leaves a
+    // non-null stopped one, neither of which device_unavailable can see. Left
+    // to play()'s own start — which runs AFTER the publish — a refused start
+    // lowers the playing bit and closes the stream while the launch body has
+    // already seeded the scanner and returned true, so the next tick reads
+    // that bit as a natural end: a silent false launch with no card. The start
+    // is idempotent, so an ordinary play makes no device call here; a refused
+    // one closes the stream and answers false, which is the card. It does not
+    // replace play()'s own reopen and start or its post-publish race check:
     // the player's road reaches play() with no gate ahead of it, and the
     // ordering argument at play()'s second latch read rests on the head
     // check standing there. Main thread only; non-const because it may open

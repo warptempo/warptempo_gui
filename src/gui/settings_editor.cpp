@@ -866,8 +866,8 @@ void GuiSettingsEditor::commit() {
     // view so displayed == live at this command boundary. A non-scale engine key (provenance) leaves the plate
     // unchanged, so the sync is a redundant bounded rebuild there — acceptable,
     // matching the unconditional trigger beside it.
-    // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT (architect 2026-09-02, the
-    // four-tier review's R-17d, superseding the "NO RE-LAND, and none is
+    // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT (architect 2026-09-02,
+    // superseding the "NO RE-LAND, and none is
     // possible" this site carried from 2026-07-29). That reading was the
     // pre-2026-08-24 FOCUS argument: with the selection cleared above there is
     // no focus whose image could be the subject, so the site concluded there
@@ -903,7 +903,7 @@ void GuiSettingsEditor::commit() {
 // — and since 2026-08-27 it is a DEVICE preference: ONE user has ONE
 // repository, so the projects home is the device config's (device_config.h)
 // and Ctrl+S does not carry it. projects_path JOINED IT 2026-09-02
-// (architect, the four-tier review's R-22 — the Settings dropdown carries
+// (architect — the Settings dropdown carries
 // both as rows), which is what made the arm a body: ONE SHAPE FOR THE TWO.
 // The key's own grammar owner in device_config.h decides —
 // is_projects_repo, is_projects_path, never a second spelling

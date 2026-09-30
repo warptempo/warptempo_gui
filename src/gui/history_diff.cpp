@@ -1144,8 +1144,8 @@ bool load_commit_sidecars_strict_in(const GuiGitRepo&     repo,
     // the SHA. First error only, by construction: every arm returns.
     //
     // THE NAME IN THESE SENTENCES IS THE COMMITTED SIDECAR, NEVER THE SCRATCH
-    // FILE (the staging rationale above, and the four-tier review's R-11 rule
-    // in failure.h). A loader's open or read refusal names the path it was
+    // FILE (the staging rationale above, and the two-clause rule in
+    // failure.h). A loader's open or read refusal names the path it was
     // handed — here the per-call scratch copy, an implementation detail of
     // this call that exists for microseconds and that the user cannot act on
     // — so appending its composed sentence put that temp filename on the card.

@@ -564,7 +564,7 @@ void render_playhead(cairo_t* cr,
 
     // THE COLUMN IS THE NEAREST LATTICE POINT WHILE THE PLATE'S BAR IN IT IS A
     // CELL, AND THE HALF-COLUMN BIAS THAT LEAVES IS ACCEPTED (architect
-    // 2026-09-02, the truthfulness deep dive's item N, a coarse-zoom cost).
+    // 2026-09-02, a coarse-zoom cost).
     // The playhead — and the marker stems, endcaps and flags, which all reach
     // their column through the same nearbyint rule (frame_to_paint_sample at
     // the head of this file) — paints AT a lattice point, while the bar drawn

@@ -344,7 +344,7 @@ private:
     // alongside trim_fell_back, and stays null when the render is trimmed or
     // full.
     //
-    // trim_fell_back HAS THREE READERS (2026-09-02, deep dive item L): the two
+    // trim_fell_back HAS THREE READERS (2026-09-02): the two
     // reuse rungs' stderr lines, the PREVIEW'S CARD at the top of
     // dispatch_render_now (kTrimFallbackCard when this flag and the subject it
     // was computed from change into a fallback — last_dispatch_trim_fallback_

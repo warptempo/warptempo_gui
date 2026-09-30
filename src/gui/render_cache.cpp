@@ -324,7 +324,7 @@ std::vector<uint8_t> render_fingerprint(
     // gains a field (the canonical-key addition recipe touches both), so a new
     // field's encoding and order must be chosen at this switch.
     // THE PROVENANCE FIELDS ARE KEY MEMBERS, AND THAT COST IS ACCEPTED
-    // (recorded 2026-09-02, the truthfulness deep dive's item Q). Of the six,
+    // (recorded 2026-09-02). Of the six,
     // only `scale` reaches the engine; title, bpm, notes, url and cover are
     // informational (engine_settings.h says so at each field), so editing one
     // of them invalidates every cached artifact and the next render spends the

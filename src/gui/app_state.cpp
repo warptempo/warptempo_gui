@@ -343,7 +343,7 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
 // reference is now an explicit argument.
 // THE MARKER WALK'S LANDING — contract at the declaration (app_state.h). This
 // body is Selection::cycle_selection's own scan, hoisted whole on 2026-08-30
-// (planner decision 59) so the act and the walk button's face
+// so the act and the walk button's face
 // read one landing; the act calls it and selects what it returns.
 int marker_walk_landing(const AppState& a, const GuiAudio& audio,
                         bool forward) {
@@ -509,7 +509,7 @@ PayloadEligibility payload_eligibility(const AppState& app,
     //     the acts refuse — refusing them here as a stack would name the
     //     wrong reason. This refusal carries its own sentence
     //     (kValueInCollapsedStack); the two above share the acts' own.
-    // Iteration mode is not a term (2026-09-02, R-16): the readout-era line
+    // Iteration mode is not a term (2026-09-02): the readout-era line
     // that refused under it survived the readout and made `j` card "no
     // resolved value" on a marker that had one. A ref whose definition is
     // missing entirely stays Eligible — resolved_marker_payload already
@@ -537,13 +537,16 @@ bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
 // payload and the out-of-store belt are the jump's own three-way test,
 // answered as one "no source" here.
 //
-// MEMOIZED AT THE OWNER (2026-09-01): one of the two readers is
-// the Copy resolved value button's hint, which the tooltip painter asks inside
-// the redraw callback — and the Wayland backend runs that callback once per
-// pending damage rectangle, so with the hint up during playback the scanner's
-// damage re-ran the marker copy and the parser composer several times a frame
-// on an answer that had not changed. The key is exactly what this body reads
-// (the fields are at AppState::ValueSourceMarkerCache): the focused index, the
+// MEMOIZED AT THE OWNER (2026-09-01): one of the two readers is Jump to
+// Defining Marker's FACE (jump_to_value_source_actionable), which the tick
+// comparator asks every tick and the roster painter asks at every paint of
+// its row — and the Wayland backend runs the redraw callback once per pending
+// damage rectangle, so during playback the scanner's damage would re-run the
+// marker copy and the parser composer at paint cadence on an answer that had
+// not changed. (From 2026-09-01 until 2026-09-29 that seat was the Copy
+// resolved value button's tooltip, whose shift line named the jump.) The key
+// is exactly what this body reads (the fields are at
+// AppState::ValueSourceMarkerCache): the focused index, the
 // warp store's generation — the store's own change token, which the red-flag
 // memos and the flag-cache fingerprint key on already, and which the A/B tabs
 // cannot dodge because they share this one store — and the frame count. No

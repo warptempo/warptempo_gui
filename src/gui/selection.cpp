@@ -381,7 +381,7 @@ void Selection::sanitize_selection_after_restore(int n) {
 
 void Selection::cycle_selection(bool forward) {
     // THE LANDING IS THE ONE OWNER'S (marker_walk_landing, app_state.cpp —
-    // planner decision 59, 2026-08-30): this body's own scan, hoisted whole so
+    // 2026-08-30): this body's own scan, hoisted whole so
     // the walk button's face reads the same landing —
     // the seat at the playhead, the in-group step, the nearest enabled marker
     // in the walk direction, an empty or all-disabled store yielding none.

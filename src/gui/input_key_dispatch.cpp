@@ -207,7 +207,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // entry), a different act on a different surface, untouched here
     // and the sole owner of the "scrub" name.
     // THE LANE TERM READS ITS ONE OWNER (horizontal_arrow_step_lock_admits,
-    // app_state.h — planner decision 52, 2026-08-30): the Left / Right
+    // app_state.h — 2026-08-30): the Left / Right
     // buttons' disabled face reads the same owner, so the lock's refusal and
     // the grey are one decision. (It read playhead_in_marker_lane() until
     // then, the lane predicate whose body that owner now is.)
@@ -2604,7 +2604,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             focused there is nothing to revert, so the chord
 //                             drops here as a consumed no-op
 //                             (history_revert_actionable, app_state.h — the
-//                             subject AND the lock since planner decision 58,
+//                             subject AND the lock since 2026-08-30,
 //                             whose one code reader is this line). THE FACE
 //                             MIRRORS IT AGAIN SINCE
 //                             2026-08-30: the Revert button greys from this
@@ -3870,8 +3870,8 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 // only while the mode stands, only past the read-only gate, and only with the
 // allowlist having admitted the chord — which it does only while a subject
 // stands on a WRITABLE tab (history_revert_actionable, app_state.h, whose
-// ONE code reader is that key gate; the lock joined the subject there under
-// planner decision 58). The Revert BUTTON'S grey reads the same decision
+// ONE code reader is that key gate; the lock joined the subject there on
+// 2026-08-30). The Revert BUTTON'S grey reads the same decision
 // through the derived `h` partition — again since 2026-08-30: the architect
 // reversed the face half alone on 2026-08-15, the grey having tracked the
 // diff-flag selection and blinked at interaction cadence (the argument that
@@ -4031,7 +4031,7 @@ void GuiInputHandler::run_history_revert() {
 
     // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
     // OLD map still stands — the subject of the target-view re-land at the
-    // tail (architect 2026-09-02, the four-tier review's R-17d), the delete's
+    // tail (architect 2026-09-02), the delete's
     // own two lines in the warp family's shape (the contract at the head of
     // warpmarkers_ops.cpp). A WARP revert removes and re-inserts warp
     // markers wholesale, which re-warps the target domain under a resting
@@ -4862,7 +4862,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
     for (int i = 0; i < warp_axis_n; ++i) {
         const GuiWarpMarker& m = base_warp_markers[i];
         // A DISABLED OWNER IS INVISIBLE TO THE SWEEP (architect 2026-09-02,
-        // R-12, the `m` sweep's rule): the eligibility carries the effective
+        // the `m` sweep's rule): the eligibility carries the effective
         // disabled verdict, so a disabled owner neither multiplies the product
         // nor names a cell, and it
         // keeps its authored tempo in every cell (render-filtered
@@ -4975,17 +4975,16 @@ void GuiInputHandler::run_iteration_sweep_render() {
         per_phase_cell_frames.push_back(std::move(member_frames));
     }
 
-    // THE VERDICT IS THE FACE'S OWN (architect 2026-09-02, the four-tier
-    // review's R-10). All three refusals below are decided by
-    // iteration_sweep_plan (app_state.h), which has TWO readers — its own
-    // boolean face iteration_sweep_actionable, which the Render button's
-    // enabled arm asks, and this dispatch — so the button greys exactly where
-    // this body would refuse, the grey being the roster's whole message and
-    // the card below the key's. Nothing is counted twice: the owner walks the
-    // same store through the same eligibility predicate this body does, and no
-    // hand-rolled product survives here — the LIT COLUMN'S store in both
-    // cases, the owner and this body forking on the one stamp. THE BREACH
-    // ABOVE IS NOT ITS
+    // THE VERDICT IS THE FACE'S OWN (architect 2026-09-02). All three refusals
+    // below are decided by iteration_sweep_plan (app_state.h), which has TWO
+    // readers — its own boolean face iteration_sweep_actionable, which the
+    // Render button's enabled arm asks, and this dispatch — so the button
+    // greys exactly where this body would refuse, the grey being the roster's
+    // whole message and the card below the key's. Nothing is counted twice:
+    // the owner walks the same store through the same eligibility predicate
+    // this body does, and no hand-rolled product survives here — the LIT
+    // COLUMN'S store in both cases, the owner and this body forking on the one
+    // stamp. THE BREACH ABOVE IS NOT ITS
     // BUSINESS — the owner counts an inverted bracket as one swept cell so the
     // face stays lit for it, and the loud refusal is the dispatch's alone.
     const IterationSweepPlan plan = iteration_sweep_plan(app);
@@ -5854,8 +5853,8 @@ bool GuiInputHandler::load_render_entry_in_place(
         }
     }
 
-    // THE STRICT LOADERS' REFUSALS NAME THE CELL'S FILE ONCE (the four-tier
-    // review's R-11 rule, failure.h): each arm below already names the file
+    // THE STRICT LOADERS' REFUSALS NAME THE CELL'S FILE ONCE (the two-clause
+    // rule of 2026-09-02, failure.h): each arm below already names the file
     // the project's folder-and-file way in its own clause, and `refuse` puts
     // the FULL path on the stderr line, so an open or read refusal — which
     // names the very path this road handed the loader — contributes its WORDS
@@ -8508,22 +8507,22 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
 // THE ELIGIBILITY IS THE ONE GATE, payload_eligibility (app_state.h): warp
 // view, an effectively enabled pass or ref (the cascade through
 // effective_disabled), and not a member of a coincident-collapsed stack — a
-// THREE-WAY VERDICT since 2026-09-02 (architect, the four-tier review's
-// R-16), because its two refusals card in different words. An ineligible
+// THREE-WAY VERDICT, PayloadEligibility, since 2026-09-02 (architect),
+// because its two refusals card in different words. An ineligible
 // focus — an owner, a phase reset, a disabled marker, the `P` column, nothing
 // focused — and an empty payload alike SAY SO ON A CARD since 2026-08-30
 // (architect, the strictness ruling), and they say the SAME words: from the
 // user's side both are "this marker has no resolved value", the difference
 // between them being which layer discovered it. A STACK MEMBER SAYS WHY
-// (R-16): its composed value is the raw owner's while the render applies the
-// stack's synthetic 1.00, so the sentence names the frame it shares
-// (kValueInCollapsedStack, app_state.h — one sentence for both chords, the
-// jump refusing on the same ground: the marker a render-inert value "came
-// from" is nowhere to stand). Iteration mode stopped being a term the same
-// day — the line was the retired readout's, and under it the copy carded "no
-// resolved value" on a marker that had one. THE COPY VALUE BUTTON GREYS ON
-// THE GATE'S ANSWER since 2026-08-30 (redesign_button_enabled, the
-// truthful-buttons ruling — for its first day it never greyed on the
+// (PayloadEligibility::CollapsedStack): its composed value is the raw
+// owner's while the render applies the stack's synthetic 1.00, so the sentence
+// names the frame it shares (kValueInCollapsedStack, app_state.h — one
+// sentence for both chords, the jump refusing on the same ground: the marker a
+// render-inert value "came from" is nowhere to stand). Iteration mode stopped
+// being a term the same day — the line was the retired readout's, and under it
+// the copy carded "no resolved value" on a marker that had one. THE COPY VALUE
+// BUTTON GREYS ON THE GATE'S ANSWER since 2026-08-30 (redesign_button_enabled,
+// the truthful-buttons ruling — for its first day it never greyed on the
 // selection's state, the refusal changing at interaction cadence), so the
 // gate's cards are the KEY's; the empty payload alone stays behind a lit
 // face, needing the composer run, and is the one refusal a button lift can
@@ -8666,7 +8665,7 @@ void GuiInputHandler::jump_to_value_source() {
             case PayloadEligibility::CollapsedStack:
                 // THE STACK'S OWN SENTENCE, the copy's verbatim: the value
                 // this marker would name a source for is one the render never
-                // applies, so there is no marker worth standing on (R-16).
+                // applies, so there is no marker worth standing on.
                 notifications.notify(AppState::NotificationClass::Normal,
                                      kValueInCollapsedStack);
                 return;
@@ -8913,7 +8912,7 @@ void GuiInputHandler::confirm_load_in_place() {
             // parked) the preview for the generation this load made, so the
             // fork's ensure_ready HONOURS that standing dispatch and its
             // completion rebinds — it no longer cancels and redispatches the
-            // identical render (architect 2026-09-02, R-8; the guard and its
+            // identical render (architect 2026-09-02; the guard and its
             // state table at GuiTargetRender).
             render_player.close();
             return;
@@ -9198,7 +9197,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // Navigation playhead step, through the MOVEMENT OWNER
     // (move_playhead_by_arrow_step -> move_playhead_to). AT THE WALL the
     // landing is the cursor itself (playhead_pixel_step_landing, the owner the
-    // Left button's face reads since planner decision 60): the key still runs
+    // Left button's face reads since 2026-08-30): the key still runs
     // the stop and the clear, the greyed button neither of them. THE
     // WALL IS THE SAME WALL IN BOTH UNITS — the landing owner clamps into the
     // live domain, so a hop near the end lands exactly ON the end and one

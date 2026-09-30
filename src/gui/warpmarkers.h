@@ -407,7 +407,7 @@ inline std::string format_iter_bound_cell(const GuiWarpMarker& m,
 // editor's commit, Ctrl+N's owner->pass and ref->pass conversions —
 // toggle_inherits, warpmarkers_ops.cpp). DISABLEMENT NEEDS NO CLEAR OF ITS OWN
 // (architect 2026-09-10, superseding the same day's clear-on-disable and the
-// DORMANT bracket of 2026-09-02's R-12 alike): a bracket exists only while
+// DORMANT bracket of 2026-09-02 alike): a bracket exists only while
 // grid iterations is lit, and while it is lit the piece is LOCKED — Ctrl+D,
 // the phase toggle and the state paste's disabling arm are all refused
 // (authoring_locked, app_state.h) — so no marker can lose its enabled bit
@@ -625,7 +625,7 @@ inline void strip_iter_fields(std::vector<GuiWarpMarker>& v) {
 // — the bpm owner had to be enabled (!m.disabled) while iter's did not,
 // because a disabled bpm owner was a render-inert rewrite (the sweep
 // authored a tempo onto a marker whose disabled state drops it from the
-// resolved map) — and since 2026-09-02 (R-12) both carry it, the iteration
+// resolved map) — and since 2026-09-02 both carry it, the iteration
 // sweep's through the vector/index form above. THIS ONE KEEPS THE PLAIN
 // FLAG, the recorded asymmetry: for an OWNING marker (the other two
 // conjuncts) raw disabled equals effective disabled — the effective-disabled

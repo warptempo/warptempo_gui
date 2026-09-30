@@ -568,7 +568,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // while TWO allowlist admissions are conditional on state they are asked about
 // (re-derived 2026-09-01) — the revert act's, on a subject standing on a
 // writable tab (history_revert_actionable — a selected diff flag, else the
-// focused one, and the lock since planner decision 58, 2026-08-30), and the
+// focused one, and the lock since 2026-08-30), and the
 // load-in-place's, on the active walk carrying a member. THE COMMIT ACT'S TWO
 // LEFT THIS LIST ON 2026-09-01 (architect: a gate's membership test is the
 // CHORD'S ALONE): Ctrl+S — head_delta_empty and history_checkpoint_in_flight —
@@ -2414,8 +2414,8 @@ private:
     // dispatch site must call this after build_render_request.
     void attach_shared_render_resources(RenderRequest& req);
 
-    // THE TRIM FALLBACK'S CARD ON THE ARCHIVAL ROAD (architect 2026-09-02,
-    // deep dive item L): raise kTrimFallbackCard when the live trim pair is a
+    // THE TRIM FALLBACK'S CARD ON THE ARCHIVAL ROAD (architect 2026-09-02):
+    // raise kTrimFallbackCard when the live trim pair is a
     // proper sub-window plan_trim will refuse, so the render this press
     // produces is the FULL, untrimmed piece under a hairline trim bar. Called
     // by the two archival CHORDS, whose requests carry the live stores and the
@@ -2889,27 +2889,27 @@ private:
 
     // -- THE AV SYNC STATS PANEL (architect 2026-09-03) --------------------
     //
-    // HELP → AV SYNC STATS: the folder overlay's THIRD content, a listing of
-    // TEXT rows over a bottom row that is **Copy to Clipboard · Close**. What
-    // it shows and why the two figures mean what they do is at
-    // av_sync_stats.h; what is here is the mode.
+    // THE PANEL IS the folder overlay's THIRD content, a listing of TEXT rows
+    // over a bottom row that is **Copy to Clipboard · Close**. What it shows
+    // and why the two figures mean what they do is at av_sync_stats.h; what is
+    // here is the mode.
     //
-    // ONE OPENER, REACHED TWO WAYS since 2026-09-09: Shift+L on the keyboard
+    // ONE OPENER, REACHED TWO WAYS: Shift+L on the keyboard
     // (is_av_sync_stats_key, gui_input.h — bare `l`'s shifted twin, both
     // toggles of one overlay), and the Play renders button's shift-click or
-    // long press, which synthesizes the same chord. A THIRD road, the Help
+    // long press, which synthesizes the same chord. (A THIRD road, the Help
     // menu's one row, stood 2026-09-03..09 — its chord like every other
     // command row once bound, dispatching Shift+L through on_key — and went
     // with that menu at the top strip relayout. The row carried no chord at
     // all from the panel's landing that morning until that evening, the
-    // opener's own body holding the gates
-    // a chord would have met; the gates stayed where they are and the road
-    // count changed. The opener refuses — silently, touching no playback —
-    // under a prompt, under any keyboard-modal editor, under the render
-    // player, under a picker, under a standing panel, in the `h` history view
-    // and during a load; past every one of those it takes the shared modal
-    // stop (stop_playback_for_modal_open, whose decision table names every
-    // dialog modal surface), raises the band and arms the display measurement.
+    // opener's own body holding the gates a chord would have met; the gates
+    // stayed where they are and the road count changed.) The opener refuses —
+    // silently, touching no playback — under a prompt, under any
+    // keyboard-modal editor, under the render player, under a picker, under a
+    // standing panel, in the `h` history view and during a load; past every
+    // one of those it takes the shared modal stop
+    // (stop_playback_for_modal_open, whose decision table names every dialog
+    // modal surface), raises the band and arms the display measurement.
     //
     // THE MEASUREMENTS RUN ONLY WHILE IT STANDS, which is the feature and not
     // an optimization (the architect's ruling). Three things are gated and

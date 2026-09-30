@@ -573,8 +573,8 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // cadence of a stream of repeats, not a hand resting until a hold means
     // something) and the rate is 25 Hz, a 40 ms period — labwc's
     // own <repeatRate>, the twin of the <repeatDelay> kHoldBeatMs matches
-    // (it read 30 until 2026-09-02, when the four-tier review found the
-    // number was not the convention the sentence claimed). They pace
+    // (it read 30 until 2026-09-02, when the number was found not to be
+    // the convention the sentence claimed). They pace
     // the chrome buttons' hold-repeat through key_repeat_period_ms(), and
     // whatever on-screen keyboard this backend comes to own.
     input_.set_repeat_info(25, kHoldBeatMs);

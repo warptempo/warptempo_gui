@@ -69,7 +69,7 @@ RendersBatchScan max_renders_batch_index(
     const std::filesystem::path& renders_dir);
 
 // THE FAILURE WHEN A BATCH FOLDER CANNOT BE MADE (architect 2026-08-30; the
-// two-clause shape 2026-09-02, the four-tier review's R-11). THREE
+// two-clause shape 2026-09-02). THREE
 // dispatchers create one under the root above — the iteration sweep, the BPM
 // sweep and the miscellaneous cell's allocator — and each used to print its
 // own tagged stderr line beside this file's card sentence. This composes BOTH

@@ -101,8 +101,8 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
 // serves only the render-end verdict. An authored reset at frame 0 derives
 // to query -N/2, exactly the engine's first analysis frame query position:
 // legal and inert. THE INERT RANGE IS WIDER THAN FRAME 0, AND THE REASON IS
-// NOT THE ONE THIS COMMENT GAVE (recorded 2026-09-02 from the truthfulness
-// deep dive's item D, measured; architect approval 2026-09-02, comment-only):
+// NOT THE ONE THIS COMMENT GAVE (recorded 2026-09-02, measured; architect
+// approval 2026-09-02, comment-only):
 // the engine's first TWO schedule frames read from before sample 0 and its
 // analysis guard leaves such a frame WHOLE-ZERO, so frames 0 and 1 seed from
 // ZEROS rather than from analysis phase, and every reset authored before the

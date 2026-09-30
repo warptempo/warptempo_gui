@@ -368,20 +368,20 @@ inline const char* authoring_lock_card(const AppState& a) {
 inline constexpr const char* kCheckpointPublishing =
     "Wait for the checkpoint to finish publishing";
 
-// THE PROJECTS PATH COMMIT'S SENTENCE (2026-09-02, the four-tier review's
-// R-22): a `projects_path=` commit from the settings editor rewrites the
-// device config and changes nothing on screen — the open project stays open
-// on its absolute paths — while File → Open project and the next launch read
-// the new folder at once (the whole account is at
-// GuiSettingsEditor::commit_device_setting, settings_editor.cpp). A press
-// whose result nothing paints says where it applies; one clause.
-// It is raised only when the config write succeeded (2026-09-04): the next
-// launch reads the file, so a failed write makes that half of the sentence
-// false, and the write's own failure card is then the press's whole answer.
+// THE PROJECTS PATH COMMIT'S SENTENCE (2026-09-02): a `projects_path=` commit
+// from the settings editor rewrites the device config and changes nothing on
+// screen — the open project stays open on its absolute paths — while File →
+// Open project and the next launch read the new folder at once (the whole
+// account is at GuiSettingsEditor::commit_device_setting,
+// settings_editor.cpp). A press whose result nothing paints says where it
+// applies; one clause. It is raised only when the config write succeeded
+// (2026-09-04): the next launch reads the file, so a failed write makes that
+// half of the sentence false, and the write's own failure card is then the
+// press's whole answer.
 inline constexpr const char* kProjectsPathAppliesCard =
     "Projects path applies at the next Open project and the next launch";
 
-// THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02, deep dive item L) — a
+// THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02) — a
 // proper sub-window whose TARGET span rounds below one output sample, which
 // plan_trim refuses and every orchestrator answers by rendering the FULL,
 // untrimmed piece (render-pipeline.md's trim section). The trim bar and the

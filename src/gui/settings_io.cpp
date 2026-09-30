@@ -205,17 +205,17 @@ std::expected<bool, GuiFailure> sidecar_present(
         const std::filesystem::path& p) {
     auto here = sidecar_exists(p);   // the EXISTS owner, sidecar_set.h
     if (!here) {
-        // THE TWO CLAUSES (GuiFailure, failure.h — 2026-09-02, the four-tier
-        // review's R-11): the display is one of the Open project picker's
-        // card lines by way of source_load_dry_run, so it names the project
-        // folder and the file rather than the projects path
-        // (shown_project_path, device_config.h, the basename rule); the
-        // diagnostic names the full path, and it is what both stderr roads
-        // print — the picker's line and create_if_missing's below. (Until
-        // that day one shown sentence served both surfaces, the folder name
-        // being read as diagnosis enough; the universal rule puts the full
-        // path on the terminal.) The core hands its words PATH-FREE, which is
-        // exactly what makes this composition the wrapper's own.
+        // THE TWO CLAUSES (GuiFailure, failure.h — 2026-09-02): the display is
+        // one of the Open project picker's card lines by way of
+        // source_load_dry_run, so it names the project folder and the file
+        // rather than the projects path (shown_project_path, device_config.h,
+        // the basename rule); the diagnostic names the full path, and it is
+        // what both stderr roads print — the picker's line and
+        // create_if_missing's below. (Until that day one shown sentence served
+        // both surfaces, the folder name being read as diagnosis enough; the
+        // universal rule puts the full path on the terminal.) The core hands
+        // its words PATH-FREE, which is exactly what makes this composition
+        // the wrapper's own.
         return std::unexpected(path_failure("Cannot read ", p,
                                             shown_project_path(p),
                                             ": " + here.error()));

@@ -6,9 +6,9 @@
 #include <utility>
 
 // A FAILURE THAT REACHES A CARD IS TWO CLAUSES, COMPOSED AT ITS ONE FAILURE
-// POINT (architect 2026-09-02, the four-tier review's R-11 — "option 1,
-// applied universally"). The terminal and the card want different sentences
-// about one fact: the terminal wants the FULL PATH and every word (it is the
+// POINT (architect 2026-09-02 — "option 1, applied universally"). The
+// terminal and the card want different sentences about one fact: the
+// terminal wants the FULL PATH and every word (it is the
 // debugging surface, and on the tablet it is logcat), while the card is one
 // line of a small stack that CLIPS, so a path there names the FILE the
 // basename rule's way (messaging.md) and the system's own words follow it.

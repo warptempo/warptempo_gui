@@ -184,7 +184,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 
 std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg) {
     // THE TWO CLAUSES ARE COMPOSED HERE (GuiFailure, failure.h — 2026-09-02,
-    // the four-tier review's R-11 applied to this writer when the settings
+    // the two-clause rule applied to this writer when the settings
     // editor's device-key arms began carding its failure): the diagnostic
     // carries the full path and the system's words where a call gave any,
     // the display names the file the basename rule's way — `config`, the one
@@ -228,7 +228,7 @@ std::expected<DeviceConfig, std::string> load_device_config(
     }
 
     // A FAILED STAT READS AS ABSENCE HERE, AND THAT IS ACCEPTED ADVERSARIAL
-    // (recorded 2026-09-02, the four-tier review's R-19(e)): `exists` answers
+    // (recorded 2026-09-02): `exists` answers
     // false both when the file is not there and when the query itself failed
     // (an unreadable config directory, say), and this arm then goes on to
     // stamp the template — the opposite of `sidecar_present`'s rule one layer

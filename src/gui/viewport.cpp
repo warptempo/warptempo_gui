@@ -295,7 +295,7 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
 //     the WARP STATUS/VALUE FAMILY admitted in W+target with them — Ctrl+D,
 //     Ctrl+N and Delete (warpmarkers_ops.cpp) and the flag editor's payload
 //     commit (flag_editor.cpp), whose shared contract is stated at the head of
-//     warpmarkers_ops.cpp; and since 2026-09-02 (the four-tier review's R-17d) THE TWO OTHER
+//     warpmarkers_ops.cpp; and since 2026-09-02 THE TWO OTHER
 //     WHOLE-MAP REWRITES, which had kept the playhead's NUMBER where the family
 //     keeps its INSTANT — the SETTINGS ENGINE COMMIT (settings_editor.cpp; the
 //     engine scale is a warp-map input) and the `h` view's WARP REVERT
@@ -486,7 +486,7 @@ void Viewport::clamp_display_state_to_live_domain() {
 
 // WHERE ONE PIXEL STEP WOULD LAND — the contract is at the declaration
 // (app_state.h); the arithmetic is move_playhead_by_arrow_step's own, which
-// reads this for its landing since 2026-08-30 (planner decision 60) through
+// reads this for its landing since 2026-08-30 through
 // playhead_arrow_step_landing's Columns arm, the Left / Right buttons' face
 // reading the same owner. The two degenerate cases the act
 // used to return on — no audio, no painted grid — answer the resting cursor
@@ -538,8 +538,8 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // The recovery nearbyint is the column direction and is this walk's own; the
     // landing is the shared owner's. move_playhead_to still owns the walls, and
     // a playhead parked off-lattice re-snaps onto it at its first step. THE
-    // WHOLE ARITHMETIC LIVES AT playhead_pixel_step_landing since 2026-08-30
-    // (planner decision 60), the Left / Right buttons' face reading the same
+    // WHOLE ARITHMETIC LIVES AT playhead_pixel_step_landing since 2026-08-30,
+    // the Left / Right buttons' face reading the same
     // landing; a step at a wall still reaches move_playhead_to, whose
     // unconditional audition end is the KEY's to keep (the greyed button
     // forgoes it, the skips' own shape). ON THE PHASE-RESET COLUMN THE UNIT

@@ -110,7 +110,7 @@ void GuiAbAudition::start() {
     // itself — the lamp cannot be lit while ANY tab is locked — so the act
     // has nothing to ask, and the ask-ahead above lost the same term.)
     // THE DEVICE IS THE PREFLIGHT'S FIRST QUESTION (2026-08-30), AND THE
-    // QUESTION REOPENS IT (2026-09-02, architect — R-3: a dead AAudio stream
+    // QUESTION REOPENS IT (2026-09-02, architect: a dead AAudio stream
     // is closed and reopened at this press through
     // GuiPlayback::ensure_device_available_for_play, play()'s own head check
     // hoisted, and the card comes only when that reopen failed; JACK answers

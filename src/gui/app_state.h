@@ -804,9 +804,9 @@ struct UndoHistory {
     // invalid branch marks everything dirty until the next save rebinds it).
     // Stepping it to +1 instead would point one redo AHEAD over a redo stack
     // the burst's first push emptied, and the walk over that empty range reads
-    // CLEAN — the lie R-2 found. The arithmetic OWES ITSELF this arm whatever
-    // reaches it; what does reach it is nothing today: distance 0 under a
-    // valid stamp is unreachable since the save clears the stamp at
+    // CLEAN — the lie found 2026-09-02. The arithmetic OWES ITSELF this arm
+    // whatever reaches it; what does reach it is nothing today: distance 0
+    // under a valid stamp is unreachable since the save clears the stamp at
     // Undo::note_saved (a save inside a burst then ends it, and the next press
     // pushes, moving the reference to −1 before any merge can pop), every
     // other road to distance 0 — the load's reset, push()'s session-only
@@ -3447,7 +3447,7 @@ struct SettingsPopupItem {
 // A menu of KEYS TO EDIT does not care which file a key rests in.
 //
 // THE WAVEFORM MAGNIFICATION LEVEL'S ROW LIVED HERE FROM 2026-08-26 TO
-// 2026-09-02 (architect, the four-tier review's R-23: "it does not belong
+// 2026-09-02 (architect: "it does not belong
 // beside the device-config key it sits next to"). It joined as a third GUI
 // key beside `gui_scale` and `playback_speed`, the GUI half fell to two the
 // next day when playback_speed retired whole, and it was the WIDEST LABEL for
@@ -3463,7 +3463,7 @@ struct SettingsPopupItem {
 // right after it for the hold delay's one-day tuning phase, 2026-09-29, and
 // left with its key when the value was hard-coded), then the two
 // gesture-less device keys `Projects Repository` and `Projects Path`
-// (architect 2026-09-02, R-22), each opening the settings editor
+// (architect 2026-09-02), each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
 // answers all of them off the live struct) and committing through the device
 // config's writer under the key's own grammar (commit_device_setting,
@@ -3490,13 +3490,14 @@ inline constexpr int kSettingsPopupItemCount =
 // the accelerator column's text, the chord the release dispatches through
 // on_key, and where a category parts.
 //
-// IT HAS FOUR INSTANCES SINCE 2026-09-03 — the FILE table below
-// (2026-08-13), the EDIT one beside it (2026-08-20), SERIES (2026-08-27) and
-// HELP (2026-09-03) — and it was always going to grow them: it was
+// IT HAS TWO INSTANCES — the FILE table below (2026-08-13) and the EDIT one
+// beside it (2026-08-20) — and its count has moved with the menu row: it was
 // two from 2026-08-02 until 2026-08-15 (NAVIGATION was the other, and the
 // first — this row type is its shape, which File then landed on with no edit to
-// the painter or the release at all), one for five days, two again, and three
-// now. That
+// the painter or the release at all), one for five days, two again, three
+// from 2026-08-27 with SERIES (renamed ITERATIONS 2026-08-31), four from
+// 2026-09-03 with HELP until Iterations' deletion on 2026-09-04, three until
+// Help left with the top strip relayout on 2026-09-09, and two since. That
 // the type survived its lone-instance stretch unchanged is what made the Edit
 // menu a TABLE and nothing else, and Iterations a second one for the eight days
 // that menu stood (2026-08-27 to 2026-09-04). What it names is the
@@ -4502,14 +4503,14 @@ struct ViewState {
     OverviewRecall overview_recall;
 
     // IS THE WHOLE SONG VISIBLE — bare `0`'s own state, carried rather than
-    // recomputed from a number (architect 2026-09-02, the four-tier review's
-    // R-17g). The per-file zoom CEILING moves with the waveform's width and
-    // with the active domain's total, so "full zoom out" is not one level: a
-    // `0` in source view, then an S/T flip into the LONGER target domain,
-    // raised the ceiling out from under the level `0` had landed on, and the
-    // next `0` read itself as BELOW the ceiling — stamping that former ceiling
-    // over the magnification the user had actually been working at, so `0`
-    // `0` cycled between two ceilings instead of returning to it.
+    // recomputed from a number (architect 2026-09-02). The per-file zoom
+    // CEILING moves with the waveform's width and with the active domain's
+    // total, so "full zoom out" is not one level: a `0` in source view, then
+    // an S/T flip into the LONGER target domain, raised the ceiling out from
+    // under the level `0` had landed on, and the next `0` read itself as BELOW
+    // the ceiling — stamping that former ceiling over the magnification the
+    // user had actually been working at, so `0` `0` cycled between two
+    // ceilings instead of returning to it.
     //
     // ONE SETTER: run_overview_command's zoom-out arm, the same press that
     // writes the stamp above (input_handler.cpp). THE STAMP'S LIFETIME IS THIS
@@ -5574,18 +5575,20 @@ struct AppState {
     mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
-    // the three inputs it read to give it (2026-09-01: the Copy
-    // resolved value tooltip asks that question inside the redraw callback,
-    // which Wayland runs once per pending damage rectangle, so during playback
-    // the scanner's damage re-ran an O(markers) copy plus the parser composer
-    // at paint cadence). The key is the function's OWN inputs and nothing
-    // wider — the focused marker, the warp store's one generation (the store's
-    // own "did anything change" token, which the red-flag memos above and the
-    // flag-cache fingerprint already key on; the A/B tabs share this store, so
-    // no view or tab axis can change the answer without it) and the frame
-    // count the composer resolves against. Mutable and written by
-    // value_source_marker alone; invalidated by the key compare, so no mutator
-    // calls anything. Session-only, never serialized.
+    // the three inputs it read to give it (since 2026-09-01). Jump to Defining
+    // Marker's FACE (jump_to_value_source_actionable) asks that question every
+    // tick through the comparator and at every paint of its row through the
+    // roster painter — the redraw callback Wayland runs once per pending
+    // damage rectangle — so without the memo the scanner's damage during
+    // playback would re-run an O(markers) copy plus the parser composer at
+    // paint cadence on an unchanged answer. The key is the function's OWN
+    // inputs and nothing wider — the focused marker, the warp store's one
+    // generation (the store's own "did anything change" token, which the
+    // red-flag memos above and the flag-cache fingerprint already key on; the
+    // A/B tabs share this store, so no view or tab axis can change the answer
+    // without it) and the frame count the composer resolves against. Mutable
+    // and written by value_source_marker alone; invalidated by the key
+    // compare, so no mutator calls anything. Session-only, never serialized.
     struct ValueSourceMarkerCache {
         bool      valid        = false;
         long long markers_gen  = -1;
@@ -9648,7 +9651,7 @@ int render_player_highlight_act_row(const AppState& a);
 //   (toggle_pause's frames < 2 belt is not mirrored: it is unreachable from
 //   a bound item, that arm's own record.)
 //   AND THE DEVICE IS A TERM OF EVERY ARM THAT SOUNDS (architect 2026-09-02,
-//   the four-tier review's R-17a, closing the asymmetry with the roster's own
+//   closing the asymmetry with the roster's own
 //   Play face): a device that NEVER CAME UP plays nothing on any road, so
 //   !playback.device_absent() joins the highlight's WAV arm and the whole
 //   transport tail — a paused transport RESUMES, an idle one with an item
@@ -10628,25 +10631,24 @@ inline void warp_tempo_step_write(GuiWarpMarker& m,
 // 2026-09-13): it counts, walls on a pass, a ref or the bracket and steps —
 // the collapse term alone skipped for it, a disabled row of a collapsed run
 // being no stack member for the render — as the singleton
-// and the value drag step a disabled marker. From 2026-09-02 (the four-tier
-// review's R-12, "a disabled marker is invisible to the act" asked of this
-// step) until that ruling a disabled member was SKIPPED and the scan answered
-// a three-way verdict whose EMPTY arm refused an all-disabled selection; with
-// the skip gone that arm had no producer and went with its enum, the BPM and
-// grid-iteration sweeps keeping the invisibility rule for renders. THE
-// MAGNITUDE MATTERS HERE, unlike at the singleton — the group arm adds RAW and
-// clamping one member would pool it against its neighbours, which is exactly
-// what GROUP RIGIDITY refuses — so the ten-cent chord walls a selection the
-// one-cent chord would move. THE TWIN RULE IS ANSWERED BY MONOTONICITY: a
-// longer step in the same direction walls a SUPERSET, so the BARE step the
-// face hands this is the widest admitted answer and the button greys exactly
-// when no admitted variant would act. Defined in warpmarkers_ops.cpp
-// immediately above the act, which reads it as its own whole-press refusal
-// (adjust_tempo_cents_group, all-or-nothing by GROUP RIGIDITY — the
-// justification is at the definition; the unified wall policy is at the head
-// of position_nudge.h). The 2+ arm of the directional predicate below reads
-// it too, which is the whole point of the extraction: the face may not restate
-// the terms the act already owns.
+// and the value drag step a disabled marker. From 2026-09-02 ("a disabled
+// marker is invisible to the act" asked of this step) until that ruling a
+// disabled member was SKIPPED and the scan answered a three-way verdict whose
+// EMPTY arm refused an all-disabled selection; with the skip gone that arm had
+// no producer and went with its enum, the BPM and grid-iteration sweeps
+// keeping the invisibility rule for renders. THE MAGNITUDE MATTERS HERE,
+// unlike at the singleton — the group arm adds RAW and clamping one member
+// would pool it against its neighbours, which is exactly what GROUP RIGIDITY
+// refuses — so the ten-cent chord walls a selection the one-cent chord would
+// move. THE TWIN RULE IS ANSWERED BY MONOTONICITY: a longer step in the same
+// direction walls a SUPERSET, so the BARE step the face hands this is the
+// widest admitted answer and the button greys exactly when no admitted variant
+// would act. Defined in warpmarkers_ops.cpp immediately above the act, which
+// reads it as its own whole-press refusal (adjust_tempo_cents_group,
+// all-or-nothing by GROUP RIGIDITY — the justification is at the definition;
+// the unified wall policy is at the head of position_nudge.h). The 2+ arm of
+// the directional predicate below reads it too, which is the whole point of
+// the extraction: the face may not restate the terms the act already owns.
 bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
                                       int64_t delta_cents);
 
@@ -10712,22 +10714,21 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
                                           int64_t delta_cents);
 
 // WOULD A CENT STEP REFUSE ON THE FOCUS'S KIND — the sentence it would card
-// with, or nullptr (architect 2026-09-02, the four-tier review's R-17e, as the
-// TARGET view's block; ONE VERDICT FOR BOTH VIEWS since 2026-09-13). It is the
-// SINGLETON arm's kind refusal lifted whole: the LABEL-REFERENCE refusal in
-// EITHER audio view ("A label reference has no tempo of its own" — until that
-// ruling the source-view reference was refused at the act's no-change tail
-// with the same literal, where neither the face nor the tooltip could ask it)
-// and, in target view alone, the COINCIDENT-COLLAPSE one ("That marker shares
-// its frame with another", asked of the red cache's collapse subset), with the
-// P column, a GROUP press and a stale focus all answering nullptr because none
-// of them is this refusal's business — the group arm's own refusals are the
-// wall scan's, and the belt says nothing by GuiOpRefusal's contract. A
-// DISABLED marker is not refused (architect 2026-09-13, "disabled should be
-// steppable"), a disabled row inside a collapsed run included: the parser's
-// collapse set carries the whole raw run, disabled rows too, so the collapse
-// arm is asked of an enabled row alone. Defined in warpmarkers_ops.cpp beside
-// the act.
+// with, or nullptr (architect 2026-09-02, as the TARGET view's block; ONE
+// VERDICT FOR BOTH VIEWS since 2026-09-13). It is the SINGLETON arm's kind
+// refusal lifted whole: the LABEL-REFERENCE refusal in EITHER audio view ("A
+// label reference has no tempo of its own" — until that ruling the source-view
+// reference was refused at the act's no-change tail with the same literal,
+// where neither the face nor the tooltip could ask it) and, in target view
+// alone, the COINCIDENT-COLLAPSE one ("That marker shares its frame with
+// another", asked of the red cache's collapse subset), with the P column, a
+// GROUP press and a stale focus all answering nullptr because none of them is
+// this refusal's business — the group arm's own refusals are the wall scan's,
+// and the belt says nothing by GuiOpRefusal's contract. A DISABLED marker is
+// not refused (architect 2026-09-13, "disabled should be steppable"), a
+// disabled row inside a collapsed run included: the parser's collapse set
+// carries the whole raw run, disabled rows too, so the collapse arm is asked
+// of an enabled row alone. Defined in warpmarkers_ops.cpp beside the act.
 //
 // A PASS IS NOT REFUSED (architect 2026-09-13: "why not just allow tempo step
 // by collapsing the inherit as we already do in S+W?"): the singleton step
@@ -11607,7 +11608,7 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // lock's refusal is the GATE'S (read_only_key_blocked, above the dispatch),
 // not the lane branch's, so the lock's answer for the arrows has its own
 // owner just below (horizontal_arrow_step_lock_admits) which the gate and
-// the face both read — the faces compose the two (planner decision 52).
+// the face both read — the faces compose the two (2026-08-30).
 //
 // `direction` IS A SIGN, and the step both branches ask is the ONE STEP THE
 // PRESS WILL TAKE, horizontal_arrow_step(direction, active column) — a
@@ -12804,7 +12805,7 @@ inline int64_t active_marker_time_frame(const AppState& a, int idx) {
 }
 
 // WHERE ONE MARKER-WALK STEP WOULD LAND — the cycle's landing, ONE owner
-// (planner decision 59, 2026-08-30): the index of the ENABLED marker of the
+// (2026-08-30): the index of the ENABLED marker of the
 // ACTIVE store that a Tab (`forward`) or Shift+Tab step would focus from the
 // current seat, or -1 when the step would land nothing. The seat is the
 // playhead's frame (the sole cycle anchor): when the focused marker sits on
@@ -13674,7 +13675,7 @@ inline std::size_t history_walk_step_landing(
 
 // WOULD THE GRID-ITERATION SWEEP RENDER ANYTHING? — the sweep's two
 // USER-CONSTRUCTIBLE pre-dispatch refusals asked ahead of the press (architect
-// 2026-09-02, the four-tier review's R-10). With iteration mode on, Ctrl+Alt+R
+// 2026-09-02). With iteration mode on, Ctrl+Alt+R
 // IS the sweep and the Render button dispatches that same chord, so a button
 // that stays lit over a store carrying no bracket at all — or over a bracket
 // product the cap refuses — promises a render the press then answers with a
@@ -13684,7 +13685,7 @@ inline std::size_t history_walk_step_landing(
 // the sweep's own on each column (iter_popup_eligible_marker, warpmarkers.h,
 // and phase_reset_iter_eligible_marker, phaseresetmarkers.h — CALLED rather
 // than spelled again, so a change to either predicate lands on the face for
-// free — as the disabled verdict did on 2026-09-02, R-12: a disabled marker is
+// free — as the disabled verdict did on 2026-09-02: a disabled marker is
 // invisible here as at the dispatch, and it carries no bracket for either to
 // see, disablement and a standing bracket being mutually unreachable under the
 // lock), and the cell count
@@ -14328,7 +14329,7 @@ inline bool playback_launch_playable(const AppState& a,
 // MARKER's own wall under the same pair in the marker lane, the tempo
 // bracket's two ends under Up/Down, the walk's "nothing ahead" and
 // the history walk's ends — are NOT on that list: each reads its act's own
-// landing owner (planner decisions 59 and 60).
+// landing owner (2026-08-30).
 // A GREYED REFUSAL MUST TOUCH NOTHING THE KEY WOULD NOT (2026-08-31): a
 // disabled press returns before dispatch, so wherever an act carries a SIDE
 // EFFECT ahead of the refusal its face mirrors, the key and the button diverge
@@ -14417,19 +14418,19 @@ inline bool playback_launch_playable(const AppState& a,
 //     2026-08-18 relayout; they were seven until bare `/` went with the
 //     measures feature whole on 2026-09-16, which took the measure editor, its
 //     button and its chord together), the FOUR CARDINAL
-//     ARROWS since 2026-08-30 (planner decision 52 under the truthful-buttons
-//     ruling: Up/Down whenever the tab is locked, Left/Right only while a
-//     selection stands, the transport block's arrow arms), THE ITERATION
-//     PAIR since 2026-09-04, back in the icon row from the deleted Iterations
-//     menu with faces to grey again — and its own entry
-//     is below — and FLATTEN since 2026-09-19. THEY ARE NOT THIRTEEN ARMS:
-//     the LOAD IN PLACE moved to the history group on 2026-09-01 and took its
-//     lock term into THAT arm, where it composes with the mode and the walk's
-//     admission, so the button greys for the mode outside the view and for the
-//     lock inside it; and FLATTEN carries no lock term at an arm at all, its
-//     face reading tempo_flatten_actionable, which composes authoring_locked
-//     itself. So the read-only arm below holds SEVEN — the count and its
-//     members are that arm's, restated here only as this sum's result.
+//     ARROWS since 2026-08-30 (under the truthful-buttons ruling: Up/Down
+//     whenever the tab is locked, Left/Right only while a selection stands,
+//     the transport block's arrow arms), THE ITERATION PAIR since 2026-09-04,
+//     back in the icon row from the deleted Iterations menu with faces to grey
+//     again — and its own entry is below — and FLATTEN since 2026-09-19. THEY
+//     ARE NOT THIRTEEN ARMS: the LOAD IN PLACE moved to the history group on
+//     2026-09-01 and took its lock term into THAT arm, where it composes with
+//     the mode and the walk's admission, so the button greys for the mode
+//     outside the view and for the lock inside it; and FLATTEN carries no lock
+//     term at an arm at all, its face reading tempo_flatten_actionable, which
+//     composes authoring_locked itself. So the read-only arm below holds
+//     SEVEN — the count and its members are that arm's, restated here only
+//     as this sum's result.
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
 //   * Save takes BOTH of its route's stable-state refusals (GuiSaveOps::save):
@@ -14575,7 +14576,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     blocked outright, Left and Right blocked only while a selection stands —
 //     the per-selection blink the 2026-08-15 ruling removed; the 2026-08-30
 //     truthful-buttons ruling gave the pairs SELECTION terms of their own at
-//     the transport block, and planner decision 52 the same day the LOCK'S
+//     the transport block, and the same day the LOCK'S
 //     term too — Up/Down as hand-listed members, Left/Right through the
 //     gate's own owner horizontal_arrow_step_lock_admits — so this class's
 //     first member is now mirrored and stays here as the record of why the
@@ -14661,8 +14662,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     target_render.h includes this header — the class can only be
 //     forward-declared here, and the trampoline is a forwarding call, not a
 //     second spelling of the condition.
-// THE VALUE PAIR'S GATE ANSWERS A THREE-WAY VERDICT since 2026-09-02
-// (architect, the four-tier review's R-16): Eligible, or one of TWO refusals
+// THE VALUE PAIR'S GATE ANSWERS A THREE-WAY VERDICT, PayloadEligibility,
+// since 2026-09-02 (architect): Eligible, or one of TWO refusals
 // that card in different words — NoResolvedValue (nothing focused, the P
 // column, an owner, an effectively disabled marker) and CollapsedStack (a
 // pass or a ref inside a coincident-collapsed group, whose composed value is
@@ -15539,8 +15540,8 @@ inline bool redesign_button_enabled(const AppState& a,
         //   (THE WALLS AND THE WALK'S "NOTHING AHEAD" WERE ON THIS LIST for the
         //   day of 2026-08-30 — "although I suppose at zero, it can't move
         //   further left", the roster's standing treatment of walls, and the
-        //   walk arm mirroring the empty store alone — and planner decisions
-        //   59 and 60 that evening put both in under the absolute rule, each
+        //   walk arm mirroring the empty store alone — and two decisions
+        //   that evening put both in under the absolute rule, each
         //   through the ACT'S OWN LANDING OWNER: playhead_pixel_step_landing
         //   for Left / Right at frame 0 and the last frame, marker_walk_landing
         //   for the walk pair's all-disabled store and nothing-ahead. "Walls
@@ -15566,13 +15567,13 @@ inline bool redesign_button_enabled(const AppState& a,
         //   pairing rather than a replacement: it greys AND it cards, a group
         //   edit not being the one-dimensional refusal a silence needs.)
         //   (THE LOCK ON THE ARROWS WAS ON THIS LIST for the hours of
-        //   2026-08-30 between the ruling's first landing and planner decision
-        //   52: read_only_key_blocked drops Up/Down outright and Left/Right
-        //   while a selection stands, and both are MIRRORED now — Up/Down as
-        //   hand-listed members of the lock's set, Left/Right through the
-        //   gate's own owner horizontal_arrow_step_lock_admits — at the arrow
-        //   arms below. The arrows were the 2026-08-15 ruling's own exclusions
-        //   from that set.)
+        //   2026-08-30 between the ruling's first landing and the lock's own
+        //   decision that evening: read_only_key_blocked drops Up/Down
+        //   outright and Left/Right while a selection stands, and both are
+        //   MIRRORED now — Up/Down as hand-listed members of the lock's set,
+        //   Left/Right through the gate's own owner
+        //   horizontal_arrow_step_lock_admits — at the arrow arms below. The
+        //   arrows were the 2026-08-15 ruling's own exclusions from that set.)
         //
         // PLAY'S FACE READS THE LAUNCH'S OWN REFUSALS AGAIN (2026-08-30, at the
         // second switch): while a transport session is live it is STOP and
@@ -15647,8 +15648,8 @@ inline bool redesign_button_enabled(const AppState& a,
         //     PAIR MIRRORS EXACTLY THAT REFUSAL: a selection standing with the
         //     column off home (horizontal_arrow_step_actionable, the dispatch's
         //     marker-lane refusal); with no selection the waveform-lane step
-        //     acts everywhere but AT THE WALLS, and since planner decision 60
-        //     the pair greys there too (the landing owner's compare, a live
+        //     acts everywhere but AT THE WALLS, and since that evening the
+        //     pair greys there too (the landing owner's compare, a live
         //     transport session keeping it lit because the press then stops).
         //     SINCE 2026-08-31 THE MARKER LANE GREYS AT ITS WALLS TOO (R3),
         //     closing the inversion that had the navigating lane truthful
@@ -15709,7 +15710,7 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportPlayStop:
             break;
-        // THE LOCK GREYS THE ARROWS TOO (planner decision 52, 2026-08-30):
+        // THE LOCK GREYS THE ARROWS TOO (2026-08-30):
         // Up / Down join the read-only arm's hand-listed membership — the
         // lock drops them outright — and Left / Right grey where the lock bit
         // meets the marker lane, through the gate's own owner
@@ -16054,7 +16055,7 @@ inline bool redesign_button_enabled(const AppState& a,
             return history_step_button_actionable(a, a.history.undo_stack);
         case RedesignButton::Redo:
             return history_step_button_actionable(a, a.history.redo_stack);
-        // RENDER'S ITERATION TERM (2026-09-02, the four-tier review's R-10):
+        // RENDER'S ITERATION TERM (2026-09-02):
         // with grid iterations on, this button's chord IS the sweep, so the
         // face reads the sweep's own pre-dispatch verdict
         // (iteration_sweep_actionable, above — no brackets authored on
@@ -17853,13 +17854,12 @@ inline RedesignTooltipText redesign_button_tooltip(
         // day, so Copy Value is one line in every state and the jump's
         // questions are that button's FACE now (jump_to_value_source_actionable).)
         // THE VERTICAL ARROWS' STEP-LADDER LINE drops where EVERY RUNG of the
-        // ladder refuses alike (architect 2026-09-02, the four-tier review's
-        // R-17e): "Press Shift for a 10-step, Ctrl for 3." exists to say that
-        // a modified press does something DIFFERENT, and in the two states
-        // below the bare, the shifted and the ctrl press all raise the SAME
-        // card. Each arm reads the act's own owner and restates nothing; the
-        // word comes back from the constant table so the direction is spelled
-        // once.
+        // ladder refuses alike (architect 2026-09-02): "Press Shift for a
+        // 10-step, Ctrl for 3." exists to say that a modified press does
+        // something DIFFERENT, and in the two states below the bare, the
+        // shifted and the ctrl press all raise the SAME card. Each arm reads
+        // the act's own owner and restates nothing; the word comes back from
+        // the constant table so the direction is spelled once.
         //
         // UP / DOWN: the tempo step's KIND refusal
         // (tempo_cent_step_kind_refusal — a label ref in either view, a
@@ -18471,7 +18471,7 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // synthetic 1.00 owner. Iteration mode is NOT a term since 2026-09-02: the
 // line refusing under it was the retired readout's, carried past the
 // readout's death, and it made `j` card "no resolved value" on a marker that
-// had one (architect, the four-tier review's R-16). A ref whose definition is
+// had one (architect). A ref whose definition is
 // missing entirely stays Eligible — resolved_marker_payload already yields an
 // empty string for that case and both acts refuse an empty payload, so it
 // never surfaces a stale tempo. ITS FOUR CALLERS, re-greped 2026-09-29: the
