@@ -486,6 +486,23 @@ public class MainActivity extends NativeActivity {
     // app, which is the one the user is watching. Verified on the device: with
     // our session gone the earbud press resumed MPV at its own position.
     //
+    // THE AAUDIO STREAM IS NOT A LEVER HERE AND WILL NOT BE MADE ONE (architect
+    // 2026-09-18, after verifying this fix on his AirPods Pro): stopping it so
+    // the tablet stops reading as a player was proposed and REFUSED -- "I can
+    // accept closing the GUI. I prefer that to crackling issues in the car or a
+    // wild goose chase for a fix that won't happen" -- the crackle ruling
+    // standing. Nor is it needed: with this app in the background and its
+    // session released, three earbud presses reached MPV and MPV obeyed all
+    // three. WHAT REMAINS IS ANOTHER APP'S CHURN: the tablet's AVRCP layer moves
+    // its "active player" between every app holding an active session, and
+    // YouTube Music holds one permanently, so a press can land there. CLOSING
+    // THIS APP is the accepted answer when the buds misbehave; our own release
+    // is honoured within 43 ms of onStop. The diagnosis road costs no build:
+    // `dumpsys media_session` (the media-button session and its key-event log),
+    // `dumpsys bluetooth_manager`'s AvrcpTargetService section (the controllers,
+    // the active-player events, every key the buds sent and where it went) and
+    // `dumpsys audio` (which players are started or paused).
+    //
     // THE GATE IS THE DISPLAY, NOT THE WAKEFULNESS, AND IT IS CONSERVATIVE BY
     // DESIGN: it steps aside only when BOTH the activity's own display reads
     // STATE_ON AND PowerManager.isInteractive() agrees the screen is up, and

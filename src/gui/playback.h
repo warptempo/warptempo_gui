@@ -91,7 +91,10 @@
 // whole on 2026-09-03. It is in git history; nothing in this tree reads a
 // latency figure any more. THE ONE PIECE THAT STAYED is the RESYNC'S ANCHOR
 // (below): it takes a stamp rather than the main thread's `now`, which is
-// accuracy about the same raw line, not compensation.
+// accuracy about the same raw line, not compensation. The whole ruling — why
+// the compensated line went, every correction that stays and on what ground,
+// and that it is not re-proposed — is the record above playback_publish_play
+// (playback_common.cpp), its one owner.
 //
 // THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
 // (architect 2026-09-02; a periodic cadence was proposed that day and does

@@ -435,12 +435,30 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // first fill, the reported output latency added to every anchor under a
 // per-epoch re-anchor, a self-measured display lead added to the position
 // read, and a natural-end hold keeping the line alive until the last queued
-// frame was heard — lives in git history and nowhere else in this tree. What
-// SURVIVES it is not compensation: the RESYNC anchors on the cycle stamp,
-// (the read cursor, the instant that cursor's frame enters the port), rather
-// than on the main thread's `now`, which is an ACCURACY choice for the same
-// raw line — it takes the period-wide phase re-roll out of a resync so the
-// step is the accumulated drift alone.
+// frame was heard — lives in git history and nowhere else in this tree. WHY
+// IT WENT is perceptual and his: the compensated line's START varied with the
+// pickup phase, so the line left "sometimes from the marker, sometimes in
+// front of it", which reads as non-determinism, where a deliberate constant
+// lag read as the program waiting for something. He perceives asynchrony at
+// the top few percent, so the residue that stands is ACCEPTED, never
+// unnoticed. DO NOT RE-PROPOSE A COMPENSATED LINE (closed_questions.md).
+//
+// THIS RECORD IS THE PLAYBACK LINE'S ONE OWNER, and what stayed is every
+// CORRECTION, each on its own ground and none of it compensation — read this
+// list before deleting any of it as lead residue: (1) THE WINDOW TRAVELS AS A
+// COMMAND PACKET UNDER A SEQLOCK (below: a fill consumes only the packet of
+// the generation its own gate acquired, so a publish landing mid-fill moves
+// neither the start it seated nor the end it renders against); (2) THE
+// SESSION WORD AND ITS GENERATION (the generation-qualified terminal, bind
+// resetting the cycle stamp with the word — playback_common.h); (3) THE
+// AAUDIO DISCONNECT FENCE (playback_aaudio.cpp); (4) THE CYCLE-STAMPED
+// RESYNC: every resync anchors on the cycle stamp, (the read cursor, the
+// instant that cursor's frame enters the port), rather than on the main
+// thread's `now`, which is an ACCURACY choice for the same raw line — it takes
+// the period-wide phase re-roll out of a resync so the step is the accumulated
+// drift alone; and (5) THE WAYLAND SINGLE-COMMIT ORDERING, kept by his ruling
+// of 2026-09-03 though the presentation feedback it was landed for is gone
+// (paint_one_frame, platform_wayland.cpp).
 //
 // AND NO MEASUREMENT IS TAKEN OR PRINTED. The instruments the arc added —
 // the JACK port-latency figure with its two callbacks and its stderr line,
@@ -448,7 +466,9 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // leads on the same ruling: the product does not measure what the user has
 // not asked it to measure. The AV Sync Stats panel that offered the two
 // figures on demand (2026-09-03) was deleted with its instrument on
-// 2026-09-30, so the playback line carries no latency measurement at all.
+// 2026-09-30, so the playback line carries no latency measurement at all, on
+// either backend, and no stderr line reports one. ANDROID RUNS THE SAME RAW
+// PREDICTOR, so no asymmetry is left on this axis to record.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample, int64_t loop_begin) {
     if (!state.samples || state.total_frames <= 0) return false;

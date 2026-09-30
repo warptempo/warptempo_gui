@@ -18,6 +18,11 @@
 // `struct foo*` so the compiler treats them as forward declarations and the
 // real interface headers stay private to platform_wayland.cpp.
 //
+// LIBWAYLAND-CLIENT ONLY, ON labwc: no X11 fallback, no portability shim, no
+// SDL, GTK or GLFW, and no wlroots-specific protocol — wayland-cursor is the
+// one helper library. The desktop build is one host's (-march=native, so a
+// Linux binary is not portable; the APK is — CMakeLists.txt's arch block).
+//
 // THE INPUT POLICY IS NOT HERE. It lives in the ONE portable GuiInputCore this
 // class holds (input_core.h): the touch translation, key-repeat synthesis, the
 // logical pointer, the notional-x bookkeeping and the containment conversion.
@@ -54,7 +59,7 @@ public:
     // BACKEND is born with, stamped into
     // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
     // file there and never consulted again (device_config.h owns the file, its
-    // schema and its six keys). It is a PLATFORM FACT and lives on the seam for
+    // schema and its five keys, kDeviceConfigKeys). It is a PLATFORM FACT and lives on the seam for
     // exactly that reason: the scale a panel wants and where on THIS device the
     // projects live are
     // answers only the backend has, and routing them through here is what keeps

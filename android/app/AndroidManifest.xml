@@ -6,17 +6,17 @@
      hasCode="true" since the Java sliver: the APK carries a classes.dex
      holding exactly ONE class, .MainActivity (a NativeActivity subclass), and
      build_apk.sh grew a javac -> d8 step for it. Its body is
-     setDecorFitsSystemWindows(true) plus the status bar's colour — Java-only,
-     and the first of them ASKS rather than wins:
+     setDecorFitsSystemWindows(true) plus FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS —
+     Java-only, and the first of them ASKS rather than wins:
      the native surface is the whole panel whatever this or the theme says, and
      what the call plus targetSdk 34 actually buy is the framework reporting a
      real CONTENT RECT — the band inside the system bars, which the Android
      backend then makes the window (src/gui/platform_android.cpp;
      android/toolchain/00_env.sh owns the target and its reasoning). Without it
      the product paints under the taskbar, whose INPUT it owns across the whole
-     bottom row. The port's other Java needs (SAF's
-     onActivityResult, the system clipboard, the key-repeat cadence) join THAT
-     class as methods.
+     bottom row. The port's other Java needs join THAT class as methods: the
+     car's MediaSession and the system clipboard have; SAF's onActivityResult
+     would.
 
      Not the spike's package: com.warptempo.gui is the product's own name, so
      installing or removing either one leaves the other alone. -->
@@ -63,10 +63,10 @@
          Theme.NoTitleBar, not .Fullscreen: the status bar and the taskbar SHOW
          (architect 2026-08-27, retiring immersive mode), and no title bar
          because an app of this kind carries none — the STATUS bar is this
-         window's title bar and MainActivity paints it the product's row ground
-         (which is why that class also sets FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
-         by hand: this legacy theme does not), while the taskbar's colors stay
-         the system's.
+         window's title bar and wears the product's row ground, painted by the
+         native top band under it (top_band_word, platform_android.cpp; that
+         class sets FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS by hand because this
+         legacy theme does not), while the taskbar's icons stay the launcher's.
 
          No windowLayoutInDisplayCutoutMode: the default never lays a landscape
          window into a cutout, and this panel has none anyway.

@@ -67,5 +67,5 @@ Example output, also in lossy audio format:
 
 - [`INSTALL.md`](INSTALL.md): installing, building, the first run, the tablet, daily use, trouble, and migrating an older project folder.
 - The tooltips: every button and its key, with the tooltip lamp lit.
-- `docs/engineering/architecture/`: the engineering record of the rulings behind the behaviour, not user reading.
+- The source comments and `docs/engineering/closed_questions.md`: the engineering record of the rulings behind the behaviour, not user reading.
 - [`README.md`](../README.md): credits and licence.

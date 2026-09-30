@@ -66,7 +66,10 @@
 // session word's playing bit
 // takes the silence arm and the render body is never reached, so an idle stream
 // reads no samples and costs the tablet a few mW of an already screen-on
-// device, which is the price the architect accepted for the click. (A
+// device, which is the price the architect accepted for the click. THE
+// TABLET'S IDLE DRAIN IS THIS RUNNING STREAM, KNOWN (architect 2026-09-29,
+// closing the power exploration): he closes the app when he is done, and no
+// Car Mode lamp, idle timer or power cap is built or re-proposed. (A
 // step-shaped click at the START of a play, from the render body beginning
 // mid-waveform at whatever sample value sits there with no ramp, is a
 // different thing and is untouched here.)
@@ -553,6 +556,11 @@ bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
 // wants — so the honest answer is to be able to name what happened, not to
 // react to it. A negative return (the call unimplemented on a path, an
 // invalid stream) is not a count and is dropped.
+//
+// THE JACK HALF HAS NO TWIN, the recorded asymmetry: playback.cpp registers
+// no jack_set_xrun_callback and says nothing, because the laptop's graph is
+// the architect's own and its xruns are already visible in the server's own
+// output, while this stream is inside a phone the app is the only window onto.
 void report_xrun_count(GuiPlayback::Impl& impl) {
     if (!impl.stream) return;
     // NO SESSION STANDING — a stop with no launch since the last one, or since

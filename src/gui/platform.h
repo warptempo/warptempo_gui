@@ -43,6 +43,9 @@
 // field's), and the key that committed is a session key the repeat probe never arms. The
 // next set's first configure is redelivered explicitly (redeliver_geometry),
 // since the window will not send one for a size that did not change.
+// PLAYBACK DOES NOT SURVIVE: it is per project, shut down and re-inited with
+// the set, so a reopen costs one AAudio stream start (its one transient), the
+// accepted price.
 #ifdef __ANDROID__
 #include "platform_android.h"
 #else

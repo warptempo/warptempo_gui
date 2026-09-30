@@ -1544,6 +1544,14 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // the new word buys the full-surface post the flag owes it, exactly
             // as an adoption does.
             surface_bands_owed_ = true;
+            // FOCUS LEAVING PAUSES NOTHING, and that is recorded rather than
+            // fixed (2026-09-02): "no background playback" is BUILD scope —
+            // no service ships to keep sound alive properly — not behaviour,
+            // so a backgrounded tablet keeps sounding, which is right for the
+            // car (the head unit's own screen is what is in front). The
+            // MediaSession is not touched on this edge either; its step-aside
+            // is the activity's onStop (MainActivity.java). A stop-body arm
+            // here is the shape if the architect ever wants the other answer.
             if (!active) {
                 // FOCUS LEAVING IS A HARD END FOR TOUCH: the window system has
                 // taken the contacts (a notification shade pull, a task
@@ -1625,8 +1633,9 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
         // own below), so a KeyEvent that is not
         // BACK is handed back to the system rather than swallowed by a GUI
         // with no use for it. The road INTO the core's key path exists and is
-        // public — synthesize_key — for an on-screen keyboard this backend
-        // owns, and for the car's media buttons that ride it.
+        // public — synthesize_key — for the on-screen keyboard this backend
+        // owns, its one producer since the car's commands became direct acts
+        // (2026-09-12; GuiRenderPlayer::on_media_command).
         //
         // (THE SYSTEM DESTROY IS NOT THIS ROAD and cannot be: APP_CMD_DESTROY
         // / destroyRequested is the system stating the activity is already

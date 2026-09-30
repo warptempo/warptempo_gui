@@ -648,7 +648,8 @@ consumer, and the seam has no addition at all — §13.3.)*
   under its own ident after the worker range, drained into its own flag and
   dispatched after the worker completions. A fifth worker eventfd, the
   Synchronize act's, stood 2026-08-28..09-27 and was struck with the act. The
-  live account is platform-seam.md's loop contract and car section.)*
+  live account is the loop at `platform_android.cpp`'s `pump()` and the car's
+  road at `platform_wayland.h`'s two car members.)*
   `drain_events()` — whose live caller is a blocking LOAD's progress callback —
   **is the paint and nothing else**. Its Wayland counterpart is
   `wl_display_dispatch_pending`, which dispatches already-read events and reads
@@ -1206,8 +1207,8 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > **THE SLIVER STAYS**: `setDecorFitsSystemWindows(true)` plus target 34 is what
 > makes the framework report an inset content rect at all, and the SAF /
 > clipboard / key-repeat needs still join it. Everything below is the record of
-> what 2026-08-26 landed; `docs/engineering/architecture/platform-seam.md` and
-> the class's own head comment are authoritative for what stands.
+> what 2026-08-26 landed; `MainActivity.java`'s head comment and
+> `src/gui/platform_android.{h,cpp}` are authoritative for what stands.
 >
 > ### 12.6 The title strip (architect 2026-08-27, evening, on glass)
 >
@@ -1384,8 +1385,7 @@ platform-shaped parts are the two seam members that gate it.
 > Shift, Backspace, Space, Cancel, Enter — which took §13.5's five icons out
 > whole (`kIconCount` 51 → 46, `dialog-cancel` untouched, Render's mid-render
 > face being its own reader) and left shift's one-shot arm on the ARMED FACE
-> alone. `docs/engineering/architecture/platform-seam.md` and
-> `src/gui/onscreen_keyboard.h` are authoritative; what follows is the record of
+> alone. `src/gui/onscreen_keyboard.h` is authoritative; what follows is the record of
 > what M5 landed.
 
 ### 13.1 The shape
@@ -1634,4 +1634,4 @@ Nothing git-related has run on the device yet: installing is the planner's, at
 the arc's end. The app also needs the INTERNET permission (the manifest carries
 it since this arc; without it the process is outside the inet group and every
 socket fails with EACCES), a placed clone and the deploy key in
-`files/warptempo_gui/` (platform-seam.md, git_repo.h).
+`files/warptempo_gui/` (git_repo.h).

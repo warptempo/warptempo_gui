@@ -38,6 +38,9 @@ export WT_BUILD_TOOLS_SHA1="b0b6376977657e8ad9b969bacf4093601da2c6fb"
 # TWO SEPARATE NUMBERS, stated only here: the manifest's targetSdkVersion, and
 # the INSTALLED platform we compile and link against. They do not have to match
 # -- runtime behaviour gates on the target aapt2 stamps, not on the jar.
+# THE TARGET IS PINNED, and that is the whole freeze story: Android gates
+# behaviour on the stamped target and a sideload has no ceiling, so a
+# decade-later replacement tablet runs the same APK.
 #
 # targetSdk 34 (architect 2026-08-27), NOT 35: from Android 15 on, an app whose
 # target is 35 or higher is laid out EDGE-TO-EDGE by the platform whatever it

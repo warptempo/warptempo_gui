@@ -24,7 +24,14 @@
 // platform_wayland.h keeps for the same reason.
 //
 // THE PUBLIC API IS THE SEAM AND IS IDENTICAL TO platform_wayland.h's, member
-// for member and signature for signature. It grew on 2026-08-27, three
+// for member and signature for signature, and there is NO ANDROID-ONLY MEMBER:
+// where the two machines differ, both sides declare the member and each
+// answers its own way (the on-screen keyboard's pair, device_config_defaults,
+// the car's pair and the pen's pair are of that shape).
+// THE PROOF IS A DIFF, never a carried count: strip `//` comments and blank
+// lines from each header's `public:` section and the two come out line for
+// line equal but for the pen pair's two inline bodies — re-derive it at every
+// seam change. It grew on 2026-08-27, three
 // times and each time on BOTH sides: the on-screen keyboard's two members
 // (synthesize_key, which had stood here alone as the seam's one addition, and
 // the new wants_onscreen_keyboard) grew Wayland twins, because the keyboard's
@@ -35,7 +42,8 @@
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
 // LAST GREW ON 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
-// the mechanism is platform-seam.md's car section): set_on_media_command, the
+// the contracts are at platform_wayland.h's two declarations, the JNI road at
+// this backend's definitions and MainActivity.java): set_on_media_command, the
 // hook the loop fires with each head-unit button the Java sliver's
 // MediaSession hands down — stored and never fired on Wayland, which is the
 // STORED-HOOK SHAPE set_on_close itself carried on THIS side until BACK became
@@ -66,6 +74,15 @@
 // It lives in the ONE portable GuiInputCore this class holds (input_core.h);
 // this class decodes AMotionEvent units and lifecycle commands on its own side
 // and hands the core plain values.
+//
+// THE ONE GLASS HOST is the Galaxy Tab S10 FE (SM-X520): Android 16 / One UI
+// 8.0.5, 2304x1440 at 280 dpi (exactly 1.75x), the panel pinned to 90 Hz
+// (adopt_window) so the tick is 5 ms, PAGE_SIZE 4096 (the APK's 16 KB
+// alignment is headroom), `/storage` 0711 (traversable, never listable), one
+// USB-C port (cable and any OTG device exclusive; wireless adb for the rest),
+// and `block_usb_lock` blocking USB while locked (it reads like Auto Blocker
+// and is not). Every number this backend hard-codes was measured on it; the
+// provisioning log is the architect's, outside the repo.
 
 class GuiPlatform {
 public:
@@ -206,7 +223,11 @@ public:
     // is the system stating the activity is already going, with nobody left to
     // answer a prompt and nothing allowed to block, so the loop returns at
     // once and the teardown runs on the way out of gui_main. BACK asks; a
-    // destroy cannot.
+    // destroy cannot (a session killed from the task switcher goes unasked,
+    // the accepted residual loss). PREDICTIVE BACK DOES NOT TAKE THIS ROAD
+    // AWAY: the manifest declares no android:enableOnBackInvokedCallback and
+    // targets SDK 34, so the framework dispatches the legacy KEYCODE_BACK to
+    // the activity — measured on the tablet (android/NOTES.md).
     void set_on_close(CloseCallback cb);
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);

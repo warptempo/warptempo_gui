@@ -27,10 +27,13 @@
 // and the ONE probe it asks the backend (the codepoint refill, at
 // set_codepoint_probe).
 //
-// GuiPlatform HOLDS ONE OF THESE AND FORWARDS TO IT. The GUI's seven
-// consumers hold GuiPlatform and see no change: every setter, query and
+// GuiPlatform HOLDS ONE OF THESE AND FORWARDS TO IT. The GUI's consumers
+// (every file that includes platform.h) hold GuiPlatform and see no change: every setter, query and
 // capture door on that class is the same call it always was, with the body
-// living here.
+// living here. COMMENTS HERE SPEAK THE CORE'S EVENT NAMES (touch_frame,
+// touch_cancel, pointer_leave, set_modifiers, set_repeat_info), a Wayland
+// instance named once in parentheses where it helps; a provenance sentence (a
+// measured compositor behaviour, labwc's repeat delay) keeps its words.
 
 // THE POINTER CURSOR KINDS. EVERY ONE OF THEM IS A NAMED CURSOR FROM THE USER'S
 // OWN XCURSOR THEME, UNMODIFIED (architect 2026-08-03): the product ships no

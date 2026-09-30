@@ -212,8 +212,11 @@ wt_say "VERIFY 3/5 -- every LOAD segment 16 KB aligned (align 2**14)"
 
 echo
 wt_say "VERIFY 4/5 -- DT_NEEDED is exactly the NDK stable-ABI set (nothing that would have to ship beside the app)"
-# The documented set (NOTES.md, platform-seam.md), compared exactly: an extra
-# entry or a missing one fails the build.
+# The set, compared exactly (this allowlist is its one statement; NOTES.md
+# records how it was measured): an extra entry or a missing one fails the
+# build. libnativewindow is in it since the frame-rate pin
+# (ANativeWindow_setFrameRate lives there, not in libandroid); the git stack
+# added nothing, zlib being libgit2's bundled copy.
 wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" \
     libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so liblog.so \
     || wt_die "DT_NEEDED of $LIBNAME is not the allowlist (above)"

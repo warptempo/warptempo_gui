@@ -33,6 +33,22 @@
 // (history_commit_worker.cpp) for its whole run — so no two of them ever
 // overlap on the remote-tracking refs, an abandoned check of a closed session
 // included.
+//
+// ONE CODE ON BOTH DEVICES (arc 4, architect 2026-09-27). The APK carries
+// libgit2 1.9.7 over libssh2 1.11.1 over OpenSSL 3.6.4's libcrypto — the
+// laptop's own three versions — cross-built static (android/NOTES.md §14 owns
+// the build's choices: HTTPS off, zlib bundled so the NDK's libz adds no
+// DT_NEEDED line, threads on, ED25519 in). THE SIZE WAS ACCEPTED as the plain
+// OpenSSL build, over a trimmed one 1.4 MB smaller: the APK went 7.9 ->
+// 15.4 MB. THE SEAM NEEDS NOTHING PER BACKEND: the tablet's $HOME is the app's
+// internal files/ (no .gitconfig, no .ssh), the deploy key resolves beside the
+// device config there as here, the host-key pin, the fsync switch and the time
+// bound are the same code, the COMMIT IDENTITY is each clone's own
+// .git/config (no identity constant in code), and SIGPIPE is ignored in
+// gui_main for both. THE APP NEVER CLONES: the clone, its storage config
+// (core.filemode=false, core.symlinks=false, core.ignorecase=true on the
+// tablet's external storage), the identity and the key are placed by
+// scripts/warptempo_sync's `setup` (docs/INSTALL.md is the recipe).
 
 #include <atomic>
 #include <cstddef>
