@@ -51,7 +51,7 @@
 // EVERY STRING THE STATE CELL CARRIES — the queue/render status and the
 // history walk line — IS THE CLOCK'S MONOSPACE, since 2026-08-31: the state
 // text joined the clock's run as ONE monospace run right of it (the block at
-// the cell's painter below and messaging.md are the live record), so the
+// the cell's painter below and notifications.h are the live record), so the
 // cell is one of the two monospace cells named above and not a third
 // sans surface. It was the redesign's sans at the redesign's size through
 // its three earlier homes — the bottom row to the tab row on 2026-08-13, the
@@ -109,7 +109,7 @@ static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // CELL it had been for those two days into the clock's own string). The lower
 // left is ONE MONOSPACE LINE — `00:00.100 | Updating...`, the pipe a literal
 // character — painted by paint_bottom_row_buttons_and_clock with the clock; the
-// ruling is docs/engineering/architecture/messaging.md. It is SHAPED AS TWO
+// ruling is this block and that painter's own. It is SHAPED AS TWO
 // RUNS on the one face, size and baseline (the clock, then " | " + the state
 // butted at its advance) because the two halves take different clips: the
 // clock is never clipped and the state is clipped to its own room, or absent
@@ -362,7 +362,7 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     sentence, so its tail starts no second one. A producer whose string is
 //     ever used WHOLE is itself a sentence and capitalizes at that producer;
 //     the system's own words (`ec.message()`, `strerror`) arrive capitalized
-//     and are the accepted class. The card-side statement is messaging.md's,
+//     and are the accepted class. The card-side statement is notifications.h's,
 //     and the one seam helper is lowercase_initial (notifications.h).
 //
 // THE SUCCESSION IN ONE SENTENCE: sentence case with a Title Case pair

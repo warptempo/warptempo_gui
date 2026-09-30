@@ -4085,7 +4085,7 @@ inline int grab_moved_threshold_px() {
 // EVERY TRIGGER IS A QUESTION (architect 2026-08-30). ERROR_NOTICE — the
 // dismiss-only error popup for the environmental and tripwire-class refusals,
 // one "OK" on Esc over the owner's own error string — retired whole that day:
-// the messaging split (messaging.md) sends a refusal that answers an act to a
+// the messaging split (notifications.h) sends a refusal that answers an act to a
 // NORMAL CARD, which is what the iteration sweep's cell cap is now, and the
 // target-view entry gate refuses silently on stderr. The record is at
 // GuiPrompt, where the opener stood.
@@ -8463,8 +8463,8 @@ struct AppState {
     // line, the `h` walk's line) lives in ROW 8'S STATE CELL, right of the
     // clock; what HAPPENED becomes a CARD here. The model,
     // the ops and the whole inventory of what is and is not notified are at
-    // notifications.h (GuiNotifications); docs/engineering/architecture/
-    // messaging.md is the ruling. This is only what the product remembers.
+    // notifications.h (GuiNotifications), whose head is the ruling whole.
+    // This is only what the product remembers.
     //
     //   `cards`   newest FIRST, AND EVERY ONE OF THEM ON SCREEN (2026-08-30,
     //             the queue's retirement): a card is visible from its push
@@ -8482,8 +8482,8 @@ struct AppState {
     //                        keyboard dismisses it deliberately: it leaves at
     //                        its X, or at bare Esc's clearing of the whole
     //                        stack (2026-09-01, which reads no class; the arm
-    //                        took the oldest card alone from 2026-08-31). The
-    //                        three checkpoint failures are its producers.
+    //                        took the oldest card alone from 2026-08-31). Its
+    //                        producers are enumerated at notifications.h.
     //             `paused` with `remaining_ms` is the HOVER BANK: while the
     //             pointer rests on a normal card its clock stops, the
     //             remaining time banked at hover-enter and re-armed at
@@ -17714,7 +17714,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // out of the compare anyway, so "Press Ctrl to ignore the trim window"
         // advertises the ctrl form exactly where it lands somewhere else. The
         // first line never forks: standing already at the bound is a benign
-        // one-dimensional refusal, silent on every surface (messaging.md),
+        // one-dimensional refusal, silent on every surface (notifications.h),
         // and the name is the name of the press.
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward: {

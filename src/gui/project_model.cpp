@@ -23,7 +23,7 @@ bool is_sidecar_extension(const std::string& ext) {
 std::expected<GuiProjectSource, std::string> resolve_project(
         const std::filesystem::path& folder) {
     // EVERY REFUSAL BELOW NAMES THE FOLDER BY ITS NAME AND A FILE BY ITS
-    // BASENAME, never the projects path (the basename rule, messaging.md):
+    // BASENAME, never the projects path (the basename rule, failure.h):
     // these sentences are the Open project picker's second refusal, one line
     // on a notification card that CLIPS, and the leading
     // `/home/.../projects/` is the one part of them the reader already knows —

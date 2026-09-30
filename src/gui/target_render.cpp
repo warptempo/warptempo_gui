@@ -460,7 +460,7 @@ void GuiTargetRender::dispatch_render_now() {
     // screen shows meanwhile is the hairline window he drew — the trim bar and
     // the waveform overlay derive from the resting bounds — so this is the
     // "what shows would mislead" half of the success rule, not a silent-refusal
-    // exemption (messaging.md).
+    // exemption (notifications.h).
     //
     // THE REACHABLE PRODUCER IS THE SUB-SAMPLE SPAN. compute_buffer_start_frame_for
     // carries two fallbacks and this cards both with one sentence, because the

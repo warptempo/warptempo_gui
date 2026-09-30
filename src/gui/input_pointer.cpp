@@ -1843,7 +1843,7 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
     // buffer, which Space refuses — so the scrub launch refuses it too, and
     // silently since 2026-09-04. Row 8's state cell already carries the
     // preview render's own `Updating...` for as long as that render runs,
-    // which is the rule stated in messaging.md's silent list as the second
+    // which is the rule stated in notifications.h's silent list as the second
     // member of the one-dimensional class — a bound key's refusal is silent
     // when row 8's process line already names the reason. (The greyed Play
     // button is the other half of the answer here too: its face reads
@@ -4804,7 +4804,7 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     if (!rect_contains(track, x, y)) return false;
     // Consumed from here; a modified press does nothing on the track. That
     // one stays SILENT (a modified press on the band's rows is silent too —
-    // the overlay's ruled pad-and-gap silence, messaging.md): the answer is
+    // the overlay's ruled pad-and-gap silence, notifications.h): the answer is
     // that the plain press works, and a chord on a slider is not an act
     // anyone spelled.
     if (mods.ctrl || mods.shift || mods.alt) return true;

@@ -273,7 +273,7 @@ struct GuiHistoryWarpEntry {
     // run's FIRST pre-act row whichever row the flag showed — a `4 → 3` flag
     // on the second of two coincident rows reverted the first. THE ORDINAL IS
     // WITHIN THE RUN, NOT A FULL-SIDE ROW INDEX, deliberately: the act is
-    // blind to the reading (github-recheck.md), so a flag's now side is the
+    // blind to the reading (run_history_revert), so a flag's now side is the
     // live store only in the cumulative reading and at the newest index; a
     // full-side index would name nothing on the live store anywhere else,
     // while (frame, ordinal) stays an address on any store's own run. The
@@ -383,7 +383,7 @@ struct GuiHistoryCommitDelta {
     // displaying. The vocabulary is
     // exactly this struct's — the two marker columns and `scale` — which is why
     // a settings-only drift the mode never displays reads as empty here too (the
-    // asymmetry is recorded at the field and in github-recheck.md).
+    // asymmetry is recorded at the field, HistoryMode::head_delta_empty).
     bool is_empty() const {
         return warp_added.empty() && warp_removed.empty() &&
                warp_changed.empty() && phase_reset_added.empty() &&

@@ -591,7 +591,7 @@ first, and a tablet wav with no fingerprint deleting the laptop's, which would
 otherwise describe another render; `warptempo_sync ot` opens an interactive shell on
 the tablet as the app, in its projects folder or a named piece's, the app
 stopped while the shell stands and started again on exit. The sidecars
-never travel by the sync script: the app commits, pushes and pulls them (github-recheck.md).
+never travel by the sync script: the app commits, pushes and pulls them (history_diff.h's commit act and pull).
 The `current` file an older sync script wrote is read by nothing; `warptempo_sync setup` deletes
 it with the exported `history/` folders and any `.magnificationlevelmarkers`. Placing a
 source by hand is one push plus the chmod below:
@@ -1634,4 +1634,4 @@ Nothing git-related has run on the device yet: installing is the planner's, at
 the arc's end. The app also needs the INTERNET permission (the manifest carries
 it since this arc; without it the process is outside the inet group and every
 socket fails with EACCES), a placed clone and the deploy key in
-`files/warptempo_gui/` (platform-seam.md, github-recheck.md).
+`files/warptempo_gui/` (platform-seam.md, git_repo.h).

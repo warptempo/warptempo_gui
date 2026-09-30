@@ -307,7 +307,7 @@ drag coordinates floor instead of truncating.
   (device_config.h owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the projects clone's `projects/`
-  (`$HOME/.warptempo/warptempo_projects/projects`, github-recheck.md), Android 225 %
+  (`$HOME/.warptempo/warptempo_projects/projects`, `kDefaultProjectsRepo`), Android 225 %
   and `<externalDataPath>/projects`; both stamp `max_waveform_height=500`
   (the waveform cap, the retired `kWaveformMaxHeightPx`'s value),
   `kDefaultProjectsRepo` and a
@@ -403,7 +403,7 @@ drag coordinates floor instead of truncating.
   notional-x FIELD survives and tracks the finger), cursor kinds stored and
   never applied, the title — **and the title stub stopped costing the user
   anything on 2026-09-09**, when the DIRTY MARK moved onto row 8 as the
-  clock's `*` suffix (messaging.md's state-cell section): the title was the
+  clock's `*` suffix (`paint_bottom_row_buttons_and_clock`): the title was the
   mark's ONE home from 2026-08-01, and a fullscreen `NativeActivity` has no
   titlebar, so unsaved work showed nowhere at all on the tablet until then.
   The mark is painted by the PORTABLE painter out of `app.dirty`, so it needs
@@ -1122,7 +1122,7 @@ step 5 compiles the directory (`aapt2 compile --dir`) and links the result.
 
 GIT ON THE TABLET (arc 4, architect 2026-09-27). The GitHub recheck asks
 git through libgit2 IN PROCESS (`src/gui/git_repo.cpp`, the one file that
-includes `<git2.h>`, in the shared source list; github-recheck.md), and the
+includes `<git2.h>`, in the shared source list; `GuiGitRepo`, git_repo.h), and the
 APK carries it: libgit2 1.9.7 over libssh2 1.11.1 over OpenSSL 3.6.4's
 libcrypto — the laptop's own three versions, so both devices run the same git
 code — cross-built static into `android/prebuilt` by
@@ -1157,7 +1157,7 @@ storage needs (`core.filemode=false`, `core.symlinks=false`,
 `core.ignorecase=true`) and the commit identity. THE TABLET READS
 ITS OWN CLONE since arc 4b (2026-09-27): the exported-history folder road that
 served it from 2026-09-17 is deleted, and the GitHub status, the fetch-first
-checkpoint and the pull (github-recheck.md) run on both devices through the
+checkpoint and the pull (history_diff.h) run on both devices through the
 same code — fetch and push alike on the checkpoint worker, a check in flight
 abandoned rather than waited on at a quit or a project switch.
 
@@ -1170,8 +1170,8 @@ there exactly as it does when bare `g` chooses it — `,` / `.`, the diff lane,
 `'`, bare `v`, the paired march, Ctrl+Tab. WHAT NEEDS GIT IS REFUSED
 TRUTHFULLY: the walk lamp greys and bare `g` cards the bootstrap's own reason,
 Save and Commit greys and Ctrl+S cards the same, and the entry itself says
-nothing on screen (one stderr line, as ever). github-recheck.md's own section
-owns the ruling.
+nothing on screen (one stderr line, as ever). `history_remote_walk_available`
+(app_state.h) owns the ruling.
 
 ## Device facts (Galaxy Tab S10 FE, SM-X520)
 

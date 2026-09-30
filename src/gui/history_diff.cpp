@@ -586,7 +586,7 @@ std::string normalize_repo_url(const std::string& raw) {
 
 // HOW THE CLONE IS NAMED ON A CARD: by its folder name — the one part of its
 // canonical absolute path that is not the machine's layout, which the
-// basename rule keeps off a card (messaging.md; the full path is the
+// basename rule keeps off a card (failure.h; the full path is the
 // diagnostic clause's). A root with no leaf (a filesystem root, unreachable
 // from any real clone) falls back to its own spelling rather than to nothing.
 std::string clone_name(const std::string& repo_root) {
@@ -634,7 +634,7 @@ std::string clone_name(const std::string& repo_root) {
 // ITS REASONS ARE LOWERCASE, like every other reason in this file: both of
 // its consumers APPEND (the mode's entry composes "History is unavailable: " and
 // the push composes stderr's "Push refused: "), and an appended reason does not
-// start a second sentence — the rule is stated once in messaging.md's card
+// start a second sentence — the rule is stated once in notifications.h's card
 // section, over the product's one statement of the text rules at
 // paint_handler.cpp's menu-row block.
 // AND EACH IS TWO CLAUSES (GuiFailure, failure.h): the clone's FULL path on
@@ -1379,7 +1379,7 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // resolve_repo_root_for_source's alike: each is consumed ONLY appended
     // ("History is unavailable: <reason>", the one entry owner's card and its
     // stderr twin), and an appended reason does not start a second sentence
-    // (messaging.md's card section states the rule). Eleven of them were
+    // (notifications.h's card section states the rule). Eleven of them were
     // capitalized until 2026-09-01, when the one that already agreed —
     // `git named '…' as the clone holding '…', which is not a directory` —
     // turned out to be the sibling in the right, and the family moved to it.
@@ -2227,6 +2227,17 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
 // ---------------------------------------------------------------------------
 // THE COMMIT ACT — the first of the product's three mutating git routes
 // (the GitHub check and the pull follow it)
+//
+// THE GIT ROUTES DO NOT BACKSTOP ADVERSARIAL USE (architect 2026-09-28):
+// hand-made or hostile commits, tampered git config, terminal git racing the
+// app and branch switching meet a hard fail with a stderr line, which is
+// already generous — never a precondition, a re-read or a recovery built for
+// them. The backstops that policy removed are closed_questions.md's; what it
+// kept (the unnamed-remote fetch with its explicit refspec,
+// push_update_reference's rejection capture, github_status_from_refs,
+// make_scratch_dir, the repository lane, the cold-start lock recovery and
+// Reload's reopen gate) answers ordinary use: a kill, a power loss, two
+// sessions of one process, a checkpoint that would not reload.
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -2388,8 +2399,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // retry" of 2026-08-09): the status reads Ahead, and Ctrl+S in the `h` view
 // runs this act again, whose clean-but-owing arm pushes the branch. OUT-OF-APP
 // GIT UNDER projects/ is unsanctioned use: a commit racing this act may yield
-// a blunt error rather than a graded diagnosis (github-recheck.md carries the
-// history of what this replaced).
+// a blunt error rather than a graded diagnosis (git and closed_questions.md
+// carry the history of what this replaced).
 //
 // THE PROJECTS-HOME GUARD STAYS, and it is not an outcome observation — it is
 // the FENCE that keeps a checkpoint from publishing to the wrong place. It runs
@@ -2415,7 +2426,10 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //
 // THE COMMIT IDENTITY IS THE MACHINE'S: author and committer come from the
 // clone's git configuration and the global files (or git's own environment
-// variables), and this program embeds no name and no address. THE PUSH'S
+// variables), and this program embeds no name and no address — the laptop's
+// from its ~/.gitconfig, the tablet's from its clone's own .git/config
+// written at clone time (architect 2026-09-27; its HOME holds no gitconfig,
+// so without that the commit step refuses, CommitFailed). THE PUSH'S
 // CREDENTIAL IS THE DEPLOY KEY beside the device config, never the account's
 // ssh key, and GitHub's host keys are pinned (git_repo.cpp owns both). THE
 // FETCH MEETS THEM FIRST: a missing key, a refused key or a host key off the
@@ -2560,7 +2574,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // folder, so the coincident double write is now the ONLY case — the same
     // bytes through two atomic renames, deliberately not deduped, and race-free
     // because every other save is locked out for the act's duration (the act's
-    // head and github-recheck.md own that reasoning).
+    // head and GuiSaveOps::save's in-flight arm own that reasoning).
     for (std::size_t e = 0; e < kSidecarCount; ++e) {
         const std::string absolute = repo_root + "/" + paths[e];
         if (!atomic_write_string_to_path(absolute, *texts[e])) {
@@ -3022,9 +3036,15 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
     // it) when step 2 failed after it — so the recovery takes the files BACK
     // to the index: on the laptop `git restore projects`
     // in the clone and the pull again; on the tablet, which has no terminal,
-    // `warptempo_sync setup` from the laptop re-places the clone. The pull is
-    // not made crash-transactional (architect 2026-09-28; github-recheck.md,
-    // THE PULL). INDEX FAILED and BRANCH FAILED left the files the upstream's
+    // `warptempo_sync setup` from the laptop re-places the clone. THE PULL IS
+    // NOT MADE CRASH-TRANSACTIONAL (architect 2026-09-28): no journal, staged
+    // publication or pre-load recovery is built, so a kill, a power loss or a
+    // full disk mid-checkout can leave some paths the upstream's and the rest
+    // the old tip's — the window is a few small files, it is rare, and it has
+    // this recovery: under one device per movement the tablet is almost never
+    // behind, and the laptop, the device that pulls, holds no work of its
+    // own, so a restore and a second pull lose nothing (a kill leaves no
+    // stderr; the same recovery applies). INDEX FAILED and BRANCH FAILED left the files the upstream's
     // (the open piece's three as Reload or Keep left them), and what is left
     // is to bring the index and the branch along WITHOUT touching the working
     // tree. With the index unwritten that is a MIXED reset — HEAD and the

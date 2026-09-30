@@ -830,7 +830,7 @@ GuiRect top_marker_row_area(const AppState& a) {
 // IS A TENANT HERE, AND IT IS THE ONLY ONE: the clock wears the `*` suffix
 // while app.dirty stands (paint_bottom_row_buttons_and_clock appends it; the
 // transition is the lane's own damage, Undo::recompute_dirty's tail, and
-// messaging.md carries the ruling). The Wayland title carried a SECOND
+// paint_handler.cpp carries the ruling). The Wayland title carried a SECOND
 // asterisk until 2026-09-09, when the architect ruled the duplicate signal off
 // — the title is the project name alone now on both backends, and the seam
 // member that pushed the flag is deleted. THE LANE IS THE ICON ROW'S
@@ -2426,7 +2426,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // on a real change like the others, so a relaunch of the same
             // project rewrites nothing. A failed write is advisory and SAID
             // (2026-09-02): a background act the user was not watching
-            // finishing badly is a card by messaging.md's own division, the
+            // finishing badly is a card by notifications.h's own division, the
             // writer composing both clauses at its failure point and this
             // site printing the one and raising the other.
             if (device_config.last_project != project.name) {

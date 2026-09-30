@@ -136,7 +136,7 @@ struct GuiFileLoader {
 // display is a NOTIFICATION CARD'S ONE LINE (the picker's third refusal), so
 // a path in it names THE PROJECT FOLDER AND THE FILE and never the projects
 // path — shown_project_path, device_config.h, the basename rule's one
-// composer (messaging.md) — and the diagnostic, which the picker prints on
+// composer (failure.h) — and the diagnostic, which the picker prints on
 // stderr, names the full path.
 std::optional<GuiFailure> source_load_dry_run(
     const std::filesystem::path& source);

@@ -126,7 +126,7 @@ struct GuiPrompt {
     // RETIRED WHOLE 2026-08-30, architect. It was the pre-split surface for a
     // sentence the user had to be shown: the environmental and tripwire-class
     // refusals, painted in the modal like every other prompt, dismissed by its
-    // lone "OK" on Esc. The messaging split (messaging.md) left it with
+    // lone "OK" on Esc. The messaging split (notifications.h) left it with
     // nothing to carry. A refusal that answers an act is an EVENT, so the
     // ITERATION SWEEP'S CELL-CAP refusal is a NORMAL CARD now, with the same
     // sentence; and the TARGET-VIEW ENTRY GATE refuses SILENTLY the way its

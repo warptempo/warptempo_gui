@@ -105,7 +105,7 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
 // toggle_playback: in target view with nothing playing and the preview not
 // ready the press is a silent refusal — row 8's process line already carries
 // the preview render's `Updating...`, the one-dimensional class
-// (messaging.md's silent list). The stop arm never meets it:
+// (notifications.h's silent list). The stop arm never meets it:
 // `!playback.is_playing()` is the gate's own term.
 void GuiCarTransport::car_toggle() {
     if (!admits()) return;

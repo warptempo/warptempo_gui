@@ -1473,7 +1473,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // cell already carries the preview render's own `Updating...`
             // while it runs, and the Play button greys on this very
             // predicate, so the screen says why. That is the rule stated in
-            // messaging.md's silent list as the second member of the
+            // notifications.h's silent list as the second member of the
             // one-dimensional class — a bound key's refusal is silent when
             // row 8's process line already names the reason. It carded from
             // 2026-08-30 to that day, in the sentence the waveform scrub's
@@ -2492,7 +2492,7 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
         // benign one-dimensional refusal already at its state — the hold
         // walked the history to its end, and the restores it just ran are
         // the screen's answer. A DELIBERATE press keeps the card, the
-        // counter-class rule (messaging.md) standing for it. The other
+        // counter-class rule (notifications.h) standing for it. The other
         // tab's lock below is not a wall the hold ran into but a reason,
         // so it cards on a repeat too, once per burst through
         // HeldRepeatDispatchScope. The held BUTTON never reaches this
@@ -3066,7 +3066,7 @@ void GuiInputHandler::run_overview_command() {
     // because we've changed views, zero should just lose its meaning"): a
     // ceiling this key did not produce, or a stamp taken in the other audio
     // view. A benign refusal already at its state — silent, no card
-    // (messaging.md) — and the button greys unless Reset Trim, its shifted
+    // (notifications.h) — and the button greys unless Reset Trim, its shifted
     // twin, would act. The whole-song state is left standing, so a flip back
     // brings the stamp into reach again. (Until that ruling a cross-view
     // stamp was re-expressed through the live map and the unstamped ceiling
@@ -3547,7 +3547,7 @@ bool GuiInputHandler::apply_editor_clipboard(
         // are one rule rather than an inconsistency (2026-09-03).
         //
         // A FAILED COPY CHANGES NOTHING ON SCREEN, so it says nothing: the
-        // editor is its own world (messaging.md), the text it did not take is
+        // editor is its own world (notifications.h), the text it did not take is
         // still sitting there selected, and the paste that follows shows the
         // truth the moment it is asked for. The CARDED copy is the one whose
         // result nothing paints at all (the main window's Ctrl+C).

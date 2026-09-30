@@ -198,7 +198,7 @@ struct DeviceConfig {
 // REPOSITORY IS ITS OWN, SEPARATE AND PUBLIC (architect 2026-09-27): the
 // pieces' sidecar history lives in warptempo_projects, laid out as
 // `projects/<piece>/` inside it, and this program's own repository ignores
-// `projects/` (github-recheck.md).
+// `projects/` (the walk's match, is_piece_sidecar_path, history_diff.h).
 inline constexpr const char* kDefaultProjectsRepo =
     "github.com/warptempo/warptempo_projects";
 
@@ -345,7 +345,7 @@ inline bool is_projects_repo(const std::string& v) {
 
 // HOW A PATH UNDER THE PROJECTS PATH IS NAMED IN A SENTENCE — the basename
 // rule's composer for everything the project model and the loaders say
-// (messaging.md). A sentence that carries a path names THE PROJECT FOLDER
+// (failure.h). A sentence that carries a path names THE PROJECT FOLDER
 // AND THE FILE — `550 - 1/07 - Menuetto.settings` — and never the projects
 // path itself, because every one of those sentences is one line on a
 // notification card that CLIPS, and the leading `/home/.../projects/` is the
@@ -444,7 +444,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // 2026-09-04, blessing what landed 2026-09-02 in the two-clause shape): a
 // 2026-09-02 review had classed a failed persist as adversarial reach and
 // asked for no message at all, but each of these writes is a deliberate press
-// whose result nothing paints, and the deliberate-press rule (messaging.md)
+// whose result nothing paints, and the deliberate-press rule (notifications.h)
 // is what decides such a case — so the failure says its sentence, on a
 // NORMAL card, where the caller has a card surface.
 //

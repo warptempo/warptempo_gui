@@ -171,7 +171,7 @@ struct GuiInputHandler;
 //      the tick fires it the moment the preview settles (PendingCarPlay,
 //      below, where the clears are enumerated). Nothing is carded for that
 //      wait: the refusal is the silent one-dimensional class row 8 already
-//      answers with `Updating...` (messaging.md), and the latch turns that
+//      answers with `Updating...` (notifications.h), and the latch turns that
 //      silence into a wait rather than a refusal. It is asynchronous and it
 //      makes SOUND, not a popup — the 2026-09-15 no-async-popups ruling is
 //      about popups and stands.

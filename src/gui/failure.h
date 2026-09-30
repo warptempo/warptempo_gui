@@ -11,7 +11,7 @@
 // terminal wants the FULL PATH and every word (it is the
 // debugging surface, and on the tablet it is logcat), while the card is one
 // line of a small stack that CLIPS, so a path there names the FILE the
-// basename rule's way (messaging.md) and the system's own words follow it.
+// basename rule's way (below) and the system's own words follow it.
 // Until this landed the two surfaces shared ONE composed string — chosen so
 // they could not drift — and the render road's card ended mid-path on the
 // architect's ~160-character titles, the system's words never reaching the
@@ -27,8 +27,21 @@
 //   diagnostic — the stderr line's clause: full paths, every word, the
 //                instruction sentence a stderr reader can act on.
 //   display    — the card's clause: ONE clause under the card rules
-//                (messaging.md's "words on a card"), the path named the way
+//                (notifications.h's "words on a card"), the path named the way
 //                its family names it, the system's words as they arrive.
+//
+// THE BASENAME RULE (this header owns it): a message that carries a
+// filesystem path names the FILE — its basename, a batch cell's
+// `N_tag/NN.wav` id, or the project folder and file — never the full path,
+// the subject being the row on screen and the card's clip the backstop. ONE
+// SENTENCE PER REASON AND NO ROAD FORK: the fatal roads that print the same
+// words (startup's resolve, gui_main's reopen) print the shortened sentence
+// too, the projects path being the device config's one setting. A frozen
+// loader that bundles its path into its sentence publishes THE WORDS WITH NO
+// PATH beside it (path_free_reason, an optional out-parameter its open and
+// read arms alone write; its presence is the discriminator), so an appending
+// composer names the file once, its family's way, and never parses the
+// path back out of the English.
 //
 // EACH FAMILY KEEPS ITS OWN NAMING RULE and hands the shown spelling in: the
 // project's files through shown_project_path (device_config.h — the folder

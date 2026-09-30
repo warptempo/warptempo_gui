@@ -40,7 +40,7 @@ bool atomic_write_string_to_path(const std::string& path,
 // GuiFailure (failure.h), the full path on the diagnostic for the stderr line
 // and the file named the basename rule's way (the project folder and the file,
 // shown_project_path) on the display, because the dry run hands that clause to
-// a notification card (messaging.md). Its own caller is create_if_missing's
+// a notification card (the basename rule, failure.h). Its own caller is create_if_missing's
 // belt; the set walk below no longer goes through it (it calls the core
 // directly and composes the same two clauses from the core's defect).
 std::expected<bool, GuiFailure> sidecar_present(

@@ -35,7 +35,7 @@ void GuiRenderPlayer::status(const std::string& line) {
 // the card keeps saying the wav reader's own words
 // alone, as it always did — the subject is the highlighted row on screen, so
 // the sentence needs no name (the basename rule's own reasoning,
-// messaging.md) — and the stderr line, new with the shape, names the FULL
+// failure.h) — and the stderr line, new with the shape, names the FULL
 // path beside those words, which is what a terminal is for. Composed here
 // from the path and the words, never by parsing either.
 void GuiRenderPlayer::refuse_decode(const std::filesystem::path& path,

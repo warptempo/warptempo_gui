@@ -15,7 +15,7 @@ namespace {
 // 2026-09-02; the two-clause shape the same day): a deliberate Ctrl+S that
 // could not write is answered with words rather than with a dirty dot that
 // simply stays lit, which is what the strictness ruling asks of every refusal
-// that has a reason (messaging.md). BOTH CLAUSES ARE COMPOSED HERE
+// that has a reason (notifications.h). BOTH CLAUSES ARE COMPOSED HERE
 // (GuiFailure, failure.h): the DIAGNOSTIC is the arm's own stderr line, the
 // tag it always printed and the FULL path after it, and the DISPLAY is ONE
 // CLAUSE naming the file THE BASENAME RULE'S WAY — the bare filename, not the

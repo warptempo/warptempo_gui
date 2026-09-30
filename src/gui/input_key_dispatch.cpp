@@ -4277,7 +4277,7 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
         return false;   // fall through to the close route
     }
     // Every other chord is inert while the popup is up — AND SILENT, a BOUND
-    // one included: it is a RULED silence (messaging.md's what-stays-silent
+    // one included: it is a RULED silence (notifications.h's what-stays-silent
     // list, recorded 2026-09-02), the standing prompt's own — a popup is a
     // question on screen, its rows are the answer, and the keyboard's next act
     // is to close it. `chord_is_bound` is deliberately not asked here, so this
@@ -5002,7 +5002,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         //
         // A NORMAL CARD (architect 2026-08-30): a refusal that answers an act
         // the user just gave is an EVENT, and events are cards
-        // (messaging.md's split). It wore the dismiss-only ERROR_NOTICE modal
+        // (notifications.h's split). It wore the dismiss-only ERROR_NOTICE modal
         // until the cards landed — the pre-split surface for a sentence the
         // user had to be shown — and that prompt kind retired whole with this
         // move, its other caller (the target-view entry gate) having become a
@@ -5013,7 +5013,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // this card keeps sentence case).
         //
         // ONE CLAUSE, ONE NUMBER, NO PERIOD (architect 2026-09-01, the
-        // capitalization sweep's sentence-shape rule — messaging.md's card
+        // capitalization sweep's sentence-shape rule — notifications.h's card
         // section). It was the product's only TWO-SENTENCE card, said the cap
         // twice and closed with an instruction ("more than N cells (cap N).
         // Narrow the marker brackets and retry."), which was the retired
@@ -5750,7 +5750,7 @@ void GuiInputHandler::apply_recipe_in_place(
 // NOTIFICATION CARD "Load in place refused: <reason>", which is the `h`
 // view's own load acts' form, so the product's load-in-place roads answer
 // alike. First-error-only holds by construction (each arm returns), and the
-// card names the file the BASENAME RULE's way (messaging.md) — the cell's own
+// card names the file the BASENAME RULE's way (failure.h) — the cell's own
 // id, or a sidecar through shown_project_path (device_config.h), the SAME
 // folder-and-file composer the loaders and the dry run use, never a full path
 // — SINGLE-QUOTED like every other name in a sentence. Until 2026-09-01 this
@@ -8509,7 +8509,7 @@ void GuiInputHandler::render_player_delete(bool all) {
     if (app.render_player.transport == AppState::RenderPlayer::Transport::Live)
         render_player.toggle_pause();
     app.render_player.pending_delete = folders;
-    // THE QUESTION (a prompt is a question, messaging.md): the one folder is
+    // THE QUESTION (a prompt is a question, notifications.h): the one folder is
     // NAMED — its own name, the path's last component, SINGLE-QUOTED and
     // spelled raw like the load question's entry id — because the deletion is
     // permanent, the question is its only safeguard, and the band returns to

@@ -376,7 +376,7 @@ void GuiInputHandler::tick_promote_render_status() {
 // The 2026-08-13 move to the tab row's top right addressed that and nothing
 // else. THE LABEL'S HOME TODAY IS ROW 8'S STATE CELL, right of the clock
 // (2026-08-29's evening fold, after that morning's one-day status bar;
-// messaging.md) — the fourth surface it has had, and the three causes above
+// paint_bottom_row_buttons_and_clock) — the fourth surface it has had, and the three causes above
 // are untouched by every one of the moves.
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {
@@ -548,7 +548,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 }
                 // THE FAILURE'S CARD (architect 2026-09-02): a background act
                 // the user was not watching finishing badly is an EVENT
-                // (messaging.md), and until now a failed archival render
+                // (notifications.h), and until now a failed archival render
                 // cleared the state cell to the same blank a rung-served
                 // success shows. The reason is do_render's own composition,
                 // ITS DISPLAY CLAUSE (GuiFailure, failure.h — the worker

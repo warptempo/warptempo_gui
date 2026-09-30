@@ -1046,7 +1046,7 @@ void Viewport::follow_scroll_if_needed() {
         // own fallback case). The retired centered pin (2026-08-31 to
         // 2026-09-13) proved the synchronous rebuild fits inside a frame EVERY
         // frame; follow pays it once per page — and the 2026-08-07 flicker
-        // ruling (github-recheck.md) put a reported flicker onto this path the
+        // ruling (republish_history_lane_now) put a reported flicker onto this path the
         // same way. The tail was spelled here inline until 2026-09-22, minus
         // the top-strip damage the shared tail carries — which a page owes all
         // the same, the flags moving with the viewport.

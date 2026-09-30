@@ -95,7 +95,7 @@ struct GuiProjectSource {
 // verbatim). EVERY ONE OF THOSE SENTENCES NAMES THE FOLDER BY ITS NAME AND A
 // FILE BY ITS BASENAME, never the projects path: they are one line on a card
 // that clips, and the leading path is the one part the reader already knows
-// (the basename rule, messaging.md; the loaders' own composer for a file
+// (the basename rule, failure.h; the loaders' own composer for a file
 // under a project is shown_project_path, device_config.h). The directory is
 // walked ONCE (std::filesystem::directory_iterator,
 // regular files only); a folder that cannot be walked refuses with the

@@ -1,143 +1,275 @@
 #pragma once
 
-// THE NOTIFICATION CARDS (architect design 2026-08-29, docs/engineering/
-// architecture/messaging.md) — the product's surface for EVENTS: something
-// happened that answers an act, or that the user was not watching. A small
-// dark card stacked top-right under row 1's view radios, newest on top,
-// EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
-// the one sans, a Breeze glyph at the left naming the class, an X at the
-// right, and ONE PAD around all three (notification_pad_px below — the
-// card's chrome reads one number on all six of its distances). A sentence
-// too long for one line WRAPS DOWNWARD UNDER THE TWO ICONS (architect
-// 2026-08-30): the card grows taller, the glyph and the X stay at the first
-// line's height, and nothing reflows beside them. Two classes and nothing
-// else — no remaining-time bar, no actions, no title/body split, no sound
-// (the architect is "not a big fan of notifications": minimal):
+// THE NOTIFICATION CARDS (architect design 2026-08-29; THIS HEADER IS THE
+// RULING WHOLE — the split, the two classes, the inventory of what is and is
+// not notified, and the words on a card). The product's surface for EVENTS:
+// something happened that answers an act, or that the user was not watching.
+// A small dark card stacked top-right under row 1's view radios, newest on
+// top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
+// the one sans, a Breeze glyph at the left naming the class
+// (dialog-information / dialog-error), an X at the right, and ONE PAD around
+// all three (notification_pad_px below — the card's chrome reads one number
+// on all six of its distances). A sentence too long for one line WRAPS
+// DOWNWARD UNDER THE TWO ICONS (architect 2026-08-30): the card grows taller,
+// the glyph and the X stay at the first line's height, and nothing reflows
+// beside them. Two classes and nothing else — no remaining-time bar, no
+// actions, no title/body split, no sound (the architect is "not a big fan of
+// notifications": minimal, and the inventory below is closed).
 //
-//   NORMAL   — every refusal that has a sentence and every act's report
-//              (the inventory is messaging.md's, re-greped there): the load
-//              act's own refusals and the player's two before them, the
-//              player's opener and decode refusals, the propagate pastes'
-//              "Stopped at …" reports, the picker's
-//              three refusals, "Target render
-//              failed", "History is unavailable", and — since 2026-08-30 —
-//              THE GATES' OWN CARDS, the swallowed press answered by the
-//              state that swallowed it (the editor gate, the FOUR drag gates
-//              — the editor text drag, the pointer gestures' drag-modal gate
-//              and the player's and the picker's own arms above it — the
-//              loading gate, the `h` allowlist and the read-only lock). THREE
-//              OF THEM NAME THE CHORD through the one speller spell_chord
-//              (gui_input.h), and every gate ON THE MAIN DISPATCH speaks only
-//              for a chord this product BINDS (chord_is_bound, gui_input.h —
-//              the unbound-keys ruling below; the player's and the picker's
-//              own drag arms are the two that do not ask, each standing
-//              inside a mode whose router is its own vocabulary). And THE
-//              ACTS' OWN REFUSALS beside them — the
-//              home-view binding's four sentences, the marker verbs' subject
-//              refusals, the walls and the value facts, the four clipboard
-//              chords, the value pair, undo and redo, the ten arms of the
-//              BPM gate, the marker walk's wall, the `h` walk's and the diff
-//              cycle's ends, the trim family's four, playback's and the
-//              audition's, and the render chords' — and, beside them, EVERY
-//              RED FLASH'S REASON (2026-08-30): the seven commit refusals of
-//              the flag-editor cluster, the settings editor's (the three
-//              device-key grammars among them since 2026-09-02), the
-//              commit title's blank and the text editor's two capacity
-//              refusals. Each
-//              is ONE SENTENCE WITH TWO READERS, the stderr line the site
-//              already printed and the card; the one that never had an stderr
-//              line has the card alone. Leaves on its own
-//              kNotificationMs after it
-//              became visible (gui_input.h; the pointer resting on it pauses
-//              the clock), at its X, or at a bare Esc that reaches the stack
-//              and takes the whole of it.
-//   CRITICAL — the three checkpoint failures and nothing else today. Stands
-//              until its X or that same Esc; no clock.
+// THE SPLIT, STATE AND EVENTS (2026-08-29), which decides the surface: STATE
+// is what is true right now, replaced as it changes, never timed out and
+// never cleared by a key press — the render's progress line and the `h`
+// walk's line, which live in ROW 8'S STATE CELL right of the clock
+// (paint_bottom_row_buttons_and_clock, paint_handler.cpp, owns that cell); an
+// EVENT is an act answered with a sentence, or a background act that
+// finished badly — a CARD. The state surface has NO TIMEOUTS because nothing
+// in it is a claim about a past moment, so nothing there can go stale.
 //
-// WHAT IS NOT A CARD, by ruling. ALMOST EVERY SUCCESS: a render's completion
-// ("that would get annoying"), a
-// propagate walk that pasted what it had, and THE SAVE — an act that did what
-// was asked says nothing, its result being on screen, the save's being the
-// dirty mark going out (architect 2026-08-30: "the disc
-// writes — there is something that paints, the dirty dot goes away"). THAT
-// RULING NAMED THE WINDOW TITLE, which the tablet has none of, so the save was
-// silent AND invisible there for the nine days until the mark moved onto ROW 8
-// as the clock's `*` suffix (architect 2026-09-09); the reasoning is the
-// same on both machines now, and stronger. THE
-// SAVE'S FAILURE IS A CARD, that ruling having been about the SUCCESS
-// (architect 2026-09-02): a write that did not happen leaves the dirty mark
-// exactly where the press found it, so the three write arms and the
-// numeric-locale refusal say so themselves at the one save owner
-// (save_ops.cpp), every caller inheriting the sentence.
-// THE ONE EXCEPTION IS THE CLIPBOARD WRITE (architect 2026-08-30, the
-// invariant that an accepted press shows something): NOTHING PAINTS A
-// CLIPBOARD, and since the resolved readout retired no standing surface
-// paints a resolved value either, so the TWO COPIES — Ctrl+C's resolved
-// value and Ctrl+P's phase resets, each with its button or menu row
-// inheriting the chord — say so on a normal card, which is the whole
-// of what those presses show (Ctrl+C's card naming the copied value in
-// single quotes, architect 2026-09-13). THE EDITORS' OWN Ctrl+C IS NOT ONE OF THEM: an
-// editor is its own world with that world's conventions, and its copy stays
-// silent (its Ctrl+V over an empty clipboard with it).
-// And THE SILENCES THE STRICTNESS RULING LEFT
-// STANDING, which are these and no others (2026-08-30, re-greped; the
-// off-home DROPS, `m` on a bad run and bare `h` with a checkpoint publishing
-// left this list that day, and every one of them speaks now):
-//   * A CHORD THIS PRODUCT BINDS NOWHERE, wherever it is pressed and whatever
-//     swallowed it (architect 2026-08-30, the day's last ruling): "bound keys
-//     either show an effect or a card, so an unbound key is identified by its
-//     silence". THE DEDUCTION IS THE POINT — every other refusal answers now,
-//     so a press with no card and no visible change can only be a press with
-//     no binding — and it is why the "<chord> is not bound" class retired
-//     whole that evening (the strict-modifier tail, the unbound bare default,
-//     the render player's and the picker's two catch-alls each, the folder
-//     overlay's modified press on a row, and the pointer's own
-//     "<modifier>+click is not bound here"), and why every gate ON THE MAIN
-//     DISPATCH asks chord_is_bound (gui_input.h) before it speaks. THE
-//     UNBOUND POINTER PRESS goes with it: a modified press the waveform, the
-//     top strip or the overlay's band binds nothing for says nothing.
+// THE STRICTNESS RULING (architect 2026-08-30: "go very verbose — a card for
+// every refusal / no-op that is silent today") and THE DELIBERATE-PRESS RULE
+// beside it: every consumed no-op cards its sentence unless a ruled silence
+// below covers it, and a deliberate press whose result nothing paints says
+// its failure. ONE CARD PER PRESS: where a refusal is asked twice on one road
+// the OUTERMOST site that has the reason raises it and the inner one stays a
+// silent belt. The ops do not know about cards: the authoring cluster
+// composes its sentence and RETURNS it (GuiOpRefusal, warpmarkers_ops.h) for
+// the dispatch arm to raise. A card's sentence has ONE composer and, where
+// the site printed one, TWO READERS — its stderr line (which keeps any
+// offending text, and alone carries full paths) and the card (which never
+// carries the `warptempo_gui: ` prefix).
+//
+// NORMAL — leaves on its own kNotificationMs after its push (gui_input.h; the
+// pointer resting on it pauses the clock), at its X, at a BUMP, or at a bare
+// Esc that reaches the stack. THE INVENTORY, by family and owner (each
+// family's sentences are literals at their raisers; re-grep `notify(` before
+// restating a count):
+//   * THE GATES' OWN CARDS, the swallowed press answered by the state that
+//     swallowed it, each asked only for a chord the product BINDS IN THE
+//     STANDING MODE (chord_is_bound, gui_input.h): "Close the editor first:
+//     <chord> is ignored while it is open" (the keyboard-modal editor gate —
+//     a typed character is the editor's own and says nothing),
+//     kKeysDuringDrag (input_handler.cpp: the editor text drag, the pointer
+//     gestures' drag-modal gate, the render player's and the picker's own
+//     arms — those two, their routers being their vocabulary, do not ask
+//     chord_is_bound), "No audio is loaded yet", "<chord> is not available
+//     in the history view" (on_key's call site, never the predicate's) and
+//     read_only_chord_card below; the lock's own composer
+//     authoring_lock_card; kIterationLockUndoCard / kIterationLockRedoCard
+//     (app_state.h). THREE of them name the chord through the one speller
+//     spell_chord (gui_input.h). A GATE'S MEMBERSHIP IS THE CHORD'S ALONE
+//     (architect 2026-09-01: "look for instances where it lies by saying it's
+//     not allowed when, in fact, it's only contextually not allowed") — a
+//     chord the state owns is admitted and its ACT answers the contextual
+//     refusal with the true reason; the `h` allowlist's two state-conditional
+//     admissions fork their own truthful sentences ("There is nothing to
+//     load" for bare `'`, "Select a change to revert" / kTabReadOnlyCard for
+//     bare `v`). A card naming the chord pressed says what happened, never
+//     what to press instead — it is not a gesture hint.
+//   * THE VERBS' OWN REFUSALS, naming a subject or a view, never a chord: the
+//     home-view binding ("Markers are placed in source view", "Markers are
+//     moved in source view", Shift+S's "Already in phase reset view"); the
+//     subject refusals ("Select a marker to …", "Select a warp marker to …");
+//     the column ("Phase resets carry no tempo to inherit"); the value facts
+//     (the GROUP step's "One of the selected markers cannot take this tempo
+//     change", the singleton's "That marker shares its frame with another" and
+//     "A label reference has no tempo of its own"); the clipboard chords'
+//     (kSelectOneRun and its siblings, input_key_dispatch.cpp); the value
+//     pair's three (payload_eligibility — Ctrl+C and Ctrl+J); undo and redo's
+//     ("There is nothing to undo" / "…redo", "That step belongs to the other
+//     tab, which is read-only", the Restrict Undo lamp's "That undo would
+//     switch the view" / "That redo …", ranked last); the `h` view's
+//     kHistoryViewMovesNoMarkersCard; the off-edge pair below; bare `m`'s
+//     NINE-arm BPM gate, one card per press carrying the first failure (the
+//     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).
+//   * THE MODES: the picker's "Choose a project first" and its opener's
+//     "Close the editor first"; kCheckpointPublishing (below — bare `h`, the
+//     `h` view's Ctrl+S, the save owner, the picker, File → Revert); "History
+//     is unavailable[: <reason>]" (the press that asks for git on a visit
+//     that could not bootstrap the remote walk — bare `g` at set_history_delta
+//     and Ctrl+S at open_history_commit_editor — plus the commit-title
+//     editor's Enter into a closed mode and the failed-scan arrival; the
+//     entry opens on the local walk and raises none); the trim bar's "A trim
+//     bound must stay inside its partner" (the act's, never
+//     trim_bound_click_frame's); playback's kPlaybackDeviceUnavailableCard
+//     (playback_lifecycle.h — the one launch body, the two pre-launch gates
+//     and the A/B audition's own tick) and the audition's "One of the two
+//     tabs has nothing to play from here"; kNoRenderRunningCard (the painted
+//     Cancel with no render running); the render player's (GuiRenderPlayer::
+//     status and its load act's `refuse`, render_player.cpp /
+//     input_key_dispatch.cpp: "Nothing to play: no renders under tmp/",
+//     "Render player is unavailable while rendering", "A folder carries no
+//     recipe to load in place", "Cannot load in place while a render is
+//     running", the decode's rate / channel, empty and no-device sentences
+//     and the frozen reader's own words, "There is no folder to delete", and
+//     every `Load in place refused: …`); the `h` view's `'` and revert
+//     refusals (`Load in place refused: …`, `Revert refused: …`, the
+//     duplicate-label grammar's `Revert refused: label '<l>' is already
+//     defined at another marker`); the Open project picker's three refusals
+//     and File → Revert's three, the same words for the same reasons.
+//   * THE RENDER ROAD: "Target render failed" (a cancelled preview says
+//     nothing); the archival road's "Render failed: <reason>" (GuiFailure's
+//     display clause through lowercase_initial) and a sweep's "Rendered N of
+//     M" when it produced fewer cells than it counted and was not cancelled
+//     (a failed CELL raises nothing of its own — one sweep, one answer);
+//     kTrimFallbackCard below; the render chords' refusals ("Turn off grid
+//     iterations to render one file", "A marker's iteration bracket runs
+//     backwards", "No iteration ranges are authored", the sweep's two verdict
+//     cards at iteration_sweep_plan, app_state.h) and
+//     render_folder_creation_card (renders_dir.h). THE TWO SWEEPS ARE NOT
+//     CARDED FOR THE TRIM FALLBACK, a recorded asymmetry: a cell rewrites the
+//     warp markers, so the live verdict is an assertion about maps it cannot
+//     see, and a per-cell verdict would be up to 391 cards for one act.
+//   * THE WRITES WHOSE RESULT NOTHING PAINTS: the save's failures at the one
+//     save owner (GuiSaveOps::save — its three write arms, the numeric-locale
+//     refusal and kCheckpointPublishing, every Ctrl+S road inheriting them);
+//     the device config's write failure (write_device_config, device_config.h)
+//     and kProjectsPathAppliesCard below on a successful persist.
+//   * EVERY RED FLASH'S REASON (2026-08-30): the flag-editor cluster's
+//     "Edit rejected: …", "Range bound rejected: …" and the BPM editor's
+//     three "BPM edit rejected: …" (flag_editor.cpp); the settings editor's
+//     five "Settings edit rejected: …" (settings_editor.cpp); the commit
+//     title's "Enter a title for the checkpoint" (a card and no stderr line);
+//     the text editor's two capacity refusals, reported by text_editor.cpp and
+//     carded by the dispatch ("The pasted text is too long for this field",
+//     "This field is full" at route_modal_editor_key — the settings recall's
+//     own replace_selection call staying silent, that text being the
+//     product's). The card drops the offending text, which stands on screen
+//     in the red field.
+//   * THE PROPAGATE REPORTS: the phase-reset pastes' "Stopped at …" and
+//     kNothingMatched (propagate_blocks.h, two readers); a paste that wrote
+//     no block skips the switch to target view, the card being the whole
+//     answer, while a paste that paired blocks lands even byte-equal.
+//   * THE CLIPBOARD WRITES, the one class of success that cards (nothing
+//     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+C)
+//     and "Copied the selected markers' phase resets" (Ctrl+P); a refused
+//     system-clipboard write cards through card_clipboard_refusal ("The
+//     clipboard did not take the copy" / "…the cut" — the editors' Ctrl+X,
+//     the one editor clipboard chord that cards, and only there); and the
+//     phase copy that captured nothing, "No labeled, enabled markers are
+//     selected, so nothing was copied". THE EDITORS' OWN Ctrl+C and Ctrl+V are
+//     silent: an editor is its own world with that world's conventions.
+//   * THE GITHUB CARDS (2026-09-27), Ctrl+S in the `h` view forking on the
+//     status (open_history_commit_editor), each the KEY'S — the Save face
+//     greys on the same status: "GitHub is still being checked", "GitHub
+//     refused this device", "This device and GitHub have both moved" (stderr
+//     names the fix), "GitHub has not been checked"; the pull's synchronous
+//     refusals "Pull refused: this device has moved", "Pull refused:
+//     '<piece>' has changes not committed", "Pull refused: GitHub's
+//     checkpoint of this piece would not load" and "Pull failed: nothing was
+//     changed". UNDER `offline` Ctrl+S CARDS NOTHING (architect 2026-09-28):
+//     the press asks GitHub again and row 8's state cell carries the answer.
+//     The GitHub CHECK itself raises nothing — its failing readings print one
+//     stderr line each and the status word is state.
+//
+// CRITICAL — never TIMED OUT and never BUMPED (architect 2026-08-30:
+// "critical cards keep standing"): no clock, and a later success clears
+// nothing. Down only by a DELIBERATE dismissal, its X or bare Esc's whole-stack
+// clear. THE PRODUCERS, and nothing else (re-greped 2026-09-30): the three
+// checkpoint failures ("Checkpoint failed: nothing was committed", "Checkpoint
+// failed: files written but not committed", "Checkpoint committed but not
+// pushed") and the three pre-commit refusals ("Checkpoint refused: GitHub has
+// newer checkpoints" / "… cannot be reached" / "… refused this device"), all
+// at the checkpoint completion (input_key_dispatch.cpp), critical because the
+// act is asynchronous; the pull's one partial failure, "Pull failed: the
+// files were updated but the branch did not move" (execute_history_pull — the
+// clone left for the user to finish by hand); and the render player's
+// "Could not delete '<folder>': <system words>" (render_player.cpp, one card
+// per folder, since files may be half gone and the listing is all that says
+// which).
+//
+// WHAT IS NOT A CARD, by ruling — these and no others:
+//   * A BENIGN REFUSAL OF A ONE-DIMENSIONAL COMMAND ALREADY AT ITS STATE
+//     (architect 2026-08-31): a refusal cards UNLESS it alters no output and
+//     refuses a command that moves ONE THING IN ONE PLACE, where one glance
+//     at that place answers whether anything happened — the Home / End jumps
+//     (both forms and the `h` view's), the marker walk at an empty store or a
+//     wall, the singleton tempo step at its bracket's end, Space with nothing
+//     left to play, the history walk's walls and the diff cycle's ends,
+//     Shift+0 over a full window, the picker's row on the project already
+//     open, the render player's folder-end skips, Backspace at the root and
+//     its idle family (no render loaded, seeking before playback), the
+//     position nudge at its wall in both columns, the `h` view's Ctrl+S over
+//     an empty head delta, and a held Ctrl+Z / Ctrl+Shift+Z whose repeat runs
+//     out of history. THE COUNTER-CLASS IS THE TEST: a command whose effect
+//     would have spread across the screen keeps its card even where its
+//     button greys, "because they can be subtle and required me to check the
+//     whole screen" — undo / redo over an empty stack on a deliberate press,
+//     the GROUP tempo step, Shift+S in the P column, the propagate reports.
+//     The act is unchanged where its sentence went; each site carries a
+//     one-line comment naming this rule, and a reverse is per item.
+//   * A BOUND KEY'S REFUSAL WHOSE REASON ROW 8 IS ALREADY SAYING (architect
+//     2026-09-04): the target preview's two gates, Space's play edge and the
+//     waveform scrub's launch, silent under the `Updating...` process line
+//     with the Play face greyed. It is the ONE RECORDED EXCEPTION to the
+//     deduction below: a silent press in target view under `Updating...` is
+//     this refusal, not an unbound chord.
+//   * A SUCCESS WHOSE RESULT IS ON SCREEN (architect 2026-08-31): a success
+//     cards only where nothing shows (the clipboard writes above) or where
+//     what shows would MISLEAD (kTrimFallbackCard) — and in the second case
+//     the misleading thing is fixed where it can be. So: a render's
+//     completion ("that would get annoying") and a cancelled one; THE SAVE,
+//     the dirty mark going out being its answer (architect 2026-08-30: "the
+//     disc writes — there is something that paints, the dirty dot goes
+//     away"), row 8's `*` on both machines since 2026-09-09; a clean
+//     propagate walk; a landed checkpoint or pull; and the crossed-trim reset
+//     (auto_clear_crossed_trim — the endcaps snapping to the song's edges is
+//     the cue, and a full window changes no output).
+//   * A CHORD THIS PRODUCT BINDS NOWHERE IN THE STANDING MODE, wherever it is
+//     pressed and whatever swallowed it (architect 2026-08-30, THE DEDUCTION
+//     RULE: "bound keys either show an effect or a card, so an unbound key is
+//     identified by its silence"), which retired the "<chord> is not bound"
+//     class whole; the `h` view's seven shapes are bound only while the view
+//     stands (2026-09-01), the render player's and the picker's keys only
+//     inside their routers. THE UNBOUND POINTER PRESS goes with it: a
+//     modified press the waveform, the top strip or the folder overlay's
+//     band (pad, gaps and rows) binds nothing for says nothing, and the
+//     render player's modified press on the scrub track likewise.
 //   * TOP-LEVEL BARE ESC WITH AN EMPTY STACK — a retraction with nothing to
-//     dismiss. That arm's other half is an ACT since 2026-08-31: Esc clears
-//     the stack when one stands (the key is the X's bulk keyboard twin, the
-//     hit section below), and the silence is what is left when there is none.
-//     Esc inside a
-//     gate is NOT this case: Esc is a BOUND chord, so the drag gates card it
-//     with every other bound key.
-//   * THE RENDER PLAYER'S MODIFIED PRESS ON THE SCRUB TRACK (the folder
-//     overlay's band, pad, gaps and rows joined the unbound-gesture silence
-//     above).
+//     dismiss (the arm's other half clears the stack; the hit section below).
+//     Esc inside a drag gate is NOT this case: Esc is bound, so the gate
+//     cards it with every other bound key.
+//   * EVERY CHORD UNDER AN OPEN MENU DROPDOWN (2026-09-02): dropdown_key_blocked
+//     consumes everything but bare Esc and Ctrl+Q, bound chords included,
+//     without asking chord_is_bound — a popup is a question on screen, the
+//     standing prompt's own silence.
 //   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
-//     DOUBLE-CLICK DROP (re-greped 2026-08-30; the WARP column's alone since
-//     the P column opened to both audio views that day — it stands in its
-//     target home alone since 2026-09-21 — the four P-column
-//     cards retiring with their refusals) — because a pointer gesture that
-//     never begins is its own
-//     answer: the flag does not move and no marker appears. The double-click
-//     drop's READ-ONLY arm is silent on the same ground, the keyboard's own
-//     lock speaking for the chord.
-//   * A GREYED BUTTON'S LIFT — the grey IS the message (the truthful-buttons
-//     ruling's division: the roster answers the pointer, the card answers the
-//     keyboard), so the press dies at arm_redesign_press's disabled line.
-//   * THE TARGET-VIEW ENTRY GATE — the preview must never receive a map its
-//     builder refuses, and its refusals are unreachable from program-written
-//     input, so it prints one stderr line and shows nothing, exactly as the
-//     load road's own fallback always did.
+//     DOUBLE-CLICK DROP (the warp column's alone), because a gesture that
+//     never begins is its own answer; the double-click drop's READ-ONLY arm is
+//     silent on the same ground. Their keyboard twins card.
+//   * A GREYED BUTTON'S LIFT and A GREYED DROPDOWN ITEM'S PRESS (the latter
+//     consumed with the menu left open, 2026-09-24): the grey IS the message,
+//     the card answering the keyboard; the grey is the PAINTED grey, so a
+//     face painted live whose act refused inside the comparator's tick
+//     dispatches and is answered as its key is. A tooltip states no reason
+//     (2026-09-12: "cards for card-like info; tooltips for tooltips only;
+//     disabled — or the lamp off — IS the message").
+//   * THE TARGET-VIEW ENTRY GATE — one stderr line with the builder's words
+//     (validate_target_view_entry): its refusals are unreachable from
+//     program-written input, and a builder / resolver disagreement would
+//     surface as "Target render failed".
 //   * THE NO-PRODUCER BELTS, where an error arm would exist without a
-//     producer (validation_topology.md): the drop's last-frame wall (both
-//     columns — every drop road authors at the playhead, which rests inside
-//     the domain), the position nudge's leading state guards (each either the
-//     loading gate's card one level up or a belt against a state the
-//     selection layer cannot be in), and
-//     enter_bpm_mode's five-bail recheck, whose every arm the `m` gate has
-//     already carded one level up.
-// Also not a card: the loader's fatal exits (adversarial class:
-// stderr and exit 1); every QUESTION (the prompts and the dialog editors); and
-// what is TRUE NOW rather than what happened — the render's progress line and
-// the `h` walk's line, the two STATE strings, which live in ROW 8'S STATE CELL
-// right of the clock. (The player's LOAD UNDER A RUNNING RENDER was on this
-// list for the one day a status bar stood at the window's foot to explain it,
-// and is a card since the fold: the state cell is row 8's, whose lane the
-// player's own modal row takes whole, so that refusal has nothing beside it.)
+//     producer (validation_topology.md): the two drops' past-EOF walls, the
+//     position nudge's leading state guards, and enter_bpm_mode's five-bail
+//     recheck.
+//   * The loader's fatal exits (the adversarial class: stderr and exit 1);
+//     every QUESTION (the prompts and the dialog editors); the peaks-cache
+//     rebuild lines (audio.cpp, stderr — they self-heal); the `h` entry's
+//     fallback onto the local walk (its stderr line; the press that asks for
+//     git is what cards); and what is TRUE NOW — the two state strings.
+//
+// THE WORDS ON A CARD (the product's text rules are stated once at
+// paint_handler.cpp's menu-row block; a card is a DESCRIPTION, sentence case):
+//   * ONE CLAUSE PER CARD, a statement, not a paragraph: no sentence-final
+//     period, no second sentence, no instruction clause after the reason, no
+//     number said twice. A PROMPT, by contrast, is always a QUESTION.
+//   * NAMES AND PATHS ARE SINGLE-QUOTED ('…'), never backticked — one quoting
+//     form across cards, prompts and stderr.
+//   * A PATH NAMES THE FILE, never the full path (the basename rule and its
+//     two-clause mechanism are GuiFailure's, failure.h).
+//   * AN APPENDED REASON IS LOWERCASE (lowercase_initial below); THE SYSTEM'S
+//     OWN WORDS (ec.message(), strerror) are appended as they arrive —
+//     nothing lowercases libc.
+//   * A KEY IS SPELLED BY spell_chord (gui_input.h) and nothing else.
 //
 // ONE PUSH CHOKEPOINT: GuiNotifications::notify. Every producer above calls
 // it and nothing else writes a card.
@@ -446,7 +578,7 @@ inline constexpr const char* kHistoryViewMovesNoMarkersCard =
     "The history view moves no markers";
 
 // AN APPENDED REASON IS LOWERCASE (architect 2026-09-01, the capitalization
-// sweep; the rule is stated once in messaging.md's card section, over the one
+// sweep; the rule is stated once in this header's card section, over the one
 // statement of the product's text rules at paint_handler.cpp's menu-row
 // block). A sentence composed as "<Act> refused: <reason>" is ONE sentence, so
 // its tail does not start a second one; a producer whose string is ever used
@@ -604,7 +736,7 @@ int notification_card_max_w_px(const AppState& a);
 // and is cut at the room's foot, so no card ever paints over the bottom row,
 // and the painter publishes its rects CLIPPED TO THE ROOM TOO, so nothing
 // under that foot is ever claimed by a card. (A stack that tall is the
-// contrived case messaging.md already declines to cater for.)
+// contrived case this design declines to cater for.)
 //
 // Every change to the stack damages this rect
 // (Viewport::invalidate_notification_stack): the painted cards lie inside it

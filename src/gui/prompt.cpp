@@ -91,7 +91,7 @@ void GuiPrompt::open_revert_confirm() {
 // (THE DISMISS-ONLY ERROR NOTICE RETIRED WHOLE 2026-08-30, with its
 // ERROR_NOTICE trigger, its Esc-only response set and its lone "OK" button.
 // It was the pre-split surface for a sentence the user had to be shown, and
-// the messaging split (messaging.md) left it with nothing to carry: a refusal
+// the messaging split (notifications.h) left it with nothing to carry: a refusal
 // that answers an act is an EVENT, so its ONE remaining loud caller — the
 // iteration sweep's cell-cap refusal — is a NORMAL CARD now, and its other,
 // the target-view entry gate, refuses SILENTLY the way the load road always

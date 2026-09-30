@@ -2188,7 +2188,7 @@ inline int bottom_row_h_px() {
 // in two cells; `kStatusBarContentPx` and its three accessors went with it,
 // and the STATE TEXT is row 8's own cell right of the clock. The reasoning is
 // at main.cpp's bottom lane table and in
-// docs/engineering/architecture/messaging.md.)
+// paint_bottom_row_buttons_and_clock (paint_handler.cpp).)
 
 // THE REDESIGN'S SHARED TEXT SIZE, in device pixels — and since row 7 the ONLY
 // text size in the product. Every row's text is 12pt through the existing

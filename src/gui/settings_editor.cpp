@@ -769,7 +769,7 @@ void GuiSettingsEditor::commit() {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
         // The path names its BASENAME on the card, SINGLE-QUOTED as every
-        // name is (messaging.md), and the stderr line has always named the
+        // name is (notifications.h's card rules), and the stderr line has always named the
         // same.
         // ONE CLAUSE AND NO INSTRUCTION AFTER IT (2026-09-01, the
         // capitalization sweep's sentence shape): the reason IS the message,

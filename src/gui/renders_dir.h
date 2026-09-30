@@ -77,10 +77,10 @@ RendersBatchScan max_renders_batch_index(
 // failure.h): the diagnostic is the tagged stderr line with the WHOLE path
 // (`render-bpm: Could not create '/…/tmp/3_bpm': Permission denied`, the text
 // each site printed before, now printed from here), and the display is the
-// card's. A PATH IN A SENTENCE IS ITS BASENAME (messaging.md), which on the
+// card's. A PATH IN A SENTENCE IS ITS BASENAME (failure.h), which on the
 // card is the folder the render would have gone into — `3_iterations`,
 // `2_miscellaneous` — the only part of it the user authored. SINGLE-QUOTED,
-// the product's one quoting form on a card (messaging.md's card section); it
+// the product's one quoting form on a card (notifications.h's card rules); it
 // wore backticks until 2026-09-01. `tag` is the road's own stderr tag, the
 // one thing the three lines differ by.
 inline GuiFailure render_folder_creation_failure(
