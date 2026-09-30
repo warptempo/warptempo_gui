@@ -255,11 +255,6 @@ public:
     // inventory are all at GuiInputCore::set_touch_slop_px, input_core.h.
     void set_touch_slop_px(double px);
 
-    // THE REGION HOLD, in milliseconds — the device's hold delay pushed down.
-    // Contract and the two-call-site inventory are at
-    // GuiInputCore::set_touch_region_hold_ms, input_core.h.
-    void set_touch_region_hold_ms(int ms);
-
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
     // the iteration's FULLY SETTLED state. That placement is the whole point: a

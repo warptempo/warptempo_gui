@@ -4275,15 +4275,6 @@ void GuiInputHandler::apply_max_waveform_height(int authored_px) {
     paint_handler.on_resize(app.width, app.height);
 }
 
-void GuiInputHandler::apply_hold_delay_ms(int ms) {
-    // The contract is at the declaration (input_handler.h). The two installs
-    // are the startup's two (gui_main, main.cpp) in the same order; a hold
-    // already running when this lands (a press, a region hold) is measured
-    // at its own lift or window against the value standing then.
-    set_hold_delay_ms(ms);
-    gui.set_touch_region_hold_ms(hold_delay_ms());
-}
-
 void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     // The contract — sole writer, band resolved by tab, damage only when the
     // named band is the active one, history-less — is at the declaration

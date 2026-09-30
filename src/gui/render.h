@@ -2,7 +2,6 @@
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
-#include "gui_input.h"        // kHoldBeatMs: the hold delay's construction state
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 
 #include <cairo/cairo.h>
@@ -2603,28 +2602,6 @@ inline int playhead_head_half_px(int device_row, double s) {
     return scaled_px(kPlayheadHeadHalf[src], 1);
 }
 
-// THE HOLD DELAY — the device config's `hold_delay_ms` (architect 2026-09-29;
-// the range's one owner is is_hold_delay_ms, device_config.h): how long a
-// deliberate hold rests before it crosses into its held meaning, in
-// milliseconds, riding no scale (a duration is not a length).
-//
-// THE PLUMBING IS gui_scale's: the configured value is file-scope state in
-// render.cpp installed by set_hold_delay_ms at the scale's own two
-// application points — gui_main's startup read of the device config, beside
-// set_gui_scale_percent and before the window exists, and the settings
-// editor's `hold_delay_ms=` commit (commit_device_setting, whose live apply
-// is GuiInputHandler::apply_hold_delay_ms). Its construction state is
-// kHoldBeatMs, the key's default. It governs TWO holds: the chrome shift long
-// press reads it through its named reader, chrome_shift_hold_ms()
-// (app_state.h), and the touch region hold sits in the input core below this
-// header and takes the value PUSHED DOWN
-// (GuiPlatform::set_touch_region_hold_ms, at the same two points). The hover
-// tooltip's wait is NOT a hold and does not read it (kTooltipWakeUpMs below).
-// The readers' whole inventory, and the beats that stay on kHoldBeatMs, are
-// at that constant (gui_input.h).
-void set_hold_delay_ms(int ms);
-int  hold_delay_ms();
-
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, the
 // five durations of its life and the slop of its wait. They live out here,
 // rather than with the rest of the tooltip's anatomy in paint_handler.cpp,
@@ -2653,7 +2630,7 @@ inline int tooltip_damage_h_px() {
 // shows — SH_ToolTip_WakeUpDelay (qcommonstyle.cpp), restarted by every
 // motion past the slop below. Its own number: no hold and no beat reads it,
 // and it reads neither (the chrome shift long press is timed by
-// `hold_delay_ms` alone and has no visual announcement).
+// kHoldDelayMs alone and has no visual announcement).
 inline constexpr int64_t kTooltipWakeUpMs = 700;
 // THE AWAKE WAKE-UP: 20 ms instead, while the product is awake (below) —
 // QApplication::notify's `toolTipFallAsleep.isActive() ? 20 : wakeDelay`

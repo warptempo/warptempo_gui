@@ -295,22 +295,22 @@ void GuiTargetRender::stamp_updating() {
     // THE REPEAT-RUN TIMELINE (the HELD cent step in W+target, each repeat
     // killing and redispatching the render — the blink the hold exists for),
     // walked against the live windows (kUpdatingRunDetectMs /
-    // kUpdatingRunQuietMs, both 75) and labwc's repeat shape (575 ms delay, then
+    // kUpdatingRunQuietMs, both 75) and labwc's repeat shape (600 ms delay, then
     // one repeat every 40 ms):
     //   t=0     the physical press. No previous trigger: no run. The dispatch
     //           misses the reuse rungs and stamps here — label shows.
     //   t=40    that render completes; complete_successful_buffer clears the
     //           label immediately, exactly as it always did (no run stands, so
     //           nothing holds it). A single tap ends here, with no linger.
-    //   t=575   repeat 1, the compositor's repeat DELAY later. 575 is nowhere
+    //   t=600   repeat 1, the compositor's repeat DELAY later. 600 is nowhere
     //           near the DETECT window, so this is still not a run: it takes the
     //           one-off lifecycle in full — stamp, then its own completion
     //           clear. THE ACCEPTED BLINKS ARE ALL BEFORE THIS POINT; nothing
     //           can see a run before its second event, and a held key does not
     //           produce one until the repeats proper start.
-    //   t=615   repeat 2, one 40 ms repeat interval after repeat 1 (40 < 75):
+    //   t=640   repeat 2, one 40 ms repeat interval after repeat 1 (40 < 75):
     //           run_active_. The dispatch stamps again — label shows.
-    //   t=615+  every later repeat arrives another 40 ms on, comfortably inside
+    //   t=640+  every later repeat arrives another 40 ms on, comfortably inside
     //           the window, and each one kills and redispatches; every
     //           completion and cancellation along the way HOLDS the label. It
     //           stands steady for the rest of the hold, however long the key is

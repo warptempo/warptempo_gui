@@ -3420,7 +3420,7 @@ redesign_button_hover_fade_kind(RedesignButton b) {
 // paint_handler.cpp; "GUI Scale" and "URL" keep their acronym caps under it)
 // with the SETTINGS KEY the click prefills into the editor, and
 // `separator_before` marks the one place the two categories part: the four
-// SIDECAR keys a hand edits (the metadata), then the five editable DEVICE CONFIG keys
+// SIDECAR keys a hand edits (the metadata), then the four editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
 // `last_project` is the program's own and has no row).
 //
@@ -3457,11 +3457,11 @@ struct SettingsPopupItem {
 // 2026-09-14), the picture's gain varying over source time since (the
 // continuous curve derived from the source since 2026-09-23).
 //
-// THE DEVICE HALF IS FIVE: `GUI Scale`, then `Max Waveform Height` right
+// THE DEVICE HALF IS FOUR: `GUI Scale`, then `Max Waveform Height` right
 // after it in kDeviceConfigKeys' order (architect 2026-09-13; it commits
-// through commit_device_setting and relays out live), then `Hold Delay`
-// right after that (architect 2026-09-29; it commits through the same body
-// and applies live through apply_hold_delay_ms), then the two
+// through commit_device_setting and relays out live; `Hold Delay` stood
+// right after it for the hold delay's one-day tuning phase, 2026-09-29, and
+// left with its key when the value was hard-coded), then the two
 // gesture-less device keys `Projects Repository` and `Projects Path`
 // (architect 2026-09-02, R-22), each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
@@ -3479,7 +3479,6 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Cover",               "cover",         false},
     {"GUI Scale",           "gui_scale",     true},
     {"Max Waveform Height", "max_waveform_height", false},
-    {"Hold Delay",          "hold_delay_ms", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
 };
@@ -3831,22 +3830,21 @@ inline int dropdown_h_px(DropdownMenu m) {
 // compare site reads that accessor and never the constant. The window, like
 // every other duration in the product, is untouched by the scale.
 //
-// THE WINDOW IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 575 ms,
+// THE WINDOW IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 600 ms,
 // the architect's own labwc <repeatDelay> matched by convention (architect
-// 2026-08-27, on the glass: "I'm definitely sure about the interval") — and
-// it STAYS ON THE CONSTANT while the holds read the device's `hold_delay_ms`
-// (architect 2026-09-29): a window measures the gap between two presses, a
-// cadence, not a hand resting on a thing until it changes meaning, which is
-// what that key tunes. It was
+// 2026-08-27, on the glass: "I'm definitely sure about the interval"; 575
+// until 2026-09-29, when the beat and the compositor moved to 600 together) —
+// and it STAYS ON THE BEAT while the holds read kHoldDelayMs (architect
+// 2026-09-29): a window measures the gap between two presses, a cadence, not
+// a hand resting on a thing until it changes meaning, which is what the hold
+// delay times. It was
 // its own 500 until that evening. A RELAXED DOUBLE TAP IS SLOWER THAN A
 // MOUSE'S DOUBLE CLICK: the finger leaves the panel between the two taps and
 // has to come back, and 500 was cutting the second one off — the same gesture
 // the scaled slack fixed on the distance axis the same day, missing on the
 // time axis instead. Tying it to the beat rather than picking a second number
-// keeps the product on ONE cadence: at the default hold delay the interval a
-// deliberate hold has to cross is the interval a deliberate second tap has to
-// arrive inside. It is NOT a hold, which is why the beat's own declaration
-// lists it apart and why a retuned hold delay leaves it where it is.
+// keeps the product's cadences on ONE beat. It is NOT a hold, which is why
+// the beat's own declaration lists it apart from the hold delay.
 //
 // kTapCoalesceMs (the undo-coalescing window, undo.h) measures a DIFFERENT
 // thing — how long a standing undo subject keeps accepting rapid taps of the
@@ -3896,36 +3894,33 @@ inline int double_click_slack_px() {
 // modal buttons to admit a modified press. Same hold, same term, same reason:
 // glass has no shift key.
 //
-// IT READS THE HOLD DELAY (hold_delay_ms, render.h — the device config's
-// `hold_delay_ms`, architect 2026-09-29), the value every deliberate hold in
-// the product crosses its threshold on; its default is kHoldBeatMs, matched by
-// convention with the compositor's key-repeat delay. The constant's own
-// declaration (gui_input.h) carries the readers' one inventory, including why
-// the keyboard's delay and the held buttons' first repeat stay on the fixed
-// beat rather than on this key.
+// IT READS THE HOLD DELAY (kHoldDelayMs, gui_input.h — 300 ms, architect
+// 2026-09-29), the value both deliberate holds in the product cross their
+// threshold on; that constant's declaration names its two holds and the
+// beat's (kHoldBeatMs) carries the cadences' inventory, including why the
+// keyboard's delay and the held buttons' first repeat stay on the fixed beat
+// rather than on the hold delay.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
 // nothing to say about it (the same rule the drag-slop and region-hold
 // values carry for their own reason — they model the hand, not the pixels).
 //
-// The hold is DELIBERATELY LONG relative to a click. A shifted act is the rarer
+// The hold is DELIBERATELY LONGER than a click. A shifted act is the rarer
 // one on every button that admits shift (the membership is
 // redesign_button_shift_admits, never a count restated here), so the cost of an
 // accidental hold must land on the
-// rare act rather than on the common one; the hold is well past any ordinary
-// click-and-lift and just short of the point where a user would assume the
-// press was lost — the default does, and the key's range
-// (is_hold_delay_ms, device_config.h) keeps both ends of that sentence.
+// rare act rather than on the common one; the hold is past an ordinary tap's
+// lift, and how far past is the architect's hand on the glass, which settled
+// it at 300 (2026-09-29).
 //
 // THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect 2026-09-29): nothing on
 // screen marks the moment it is crossed. The hover tooltip reads neither this
 // value nor the beat, and no tooltip rises under a held press at all (Qt's
 // model, AppState::RedesignTooltip); the ruling's home is the read site.
 //
-// A NAMED READER OF THE ONE INSTALLED VALUE, not a constant (2026-09-29): the
-// two read sites say which hold they measure while the value itself has one
-// owner (set_hold_delay_ms / hold_delay_ms, render.h).
-inline int64_t chrome_shift_hold_ms() { return hold_delay_ms(); }
+// A NAMED READER OF THE ONE CONSTANT: the two read sites say which hold they
+// measure while the value itself has one owner (kHoldDelayMs, gui_input.h).
+inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
 // DRAG (architect-tunable), shared by every press whose drag is a SWEEP or a
@@ -6901,7 +6896,7 @@ struct AppState {
     //     context). The first fire is one kHoldBeatMs
     //     after the press — the product's FIXED beat, the key-repeat delay's
     //     own convention, so the button hold and the key hold cross their
-    //     threshold together, and deliberately NOT the device's hold delay (a
+    //     threshold together, and deliberately NOT the hold delay (a
     //     repeat delay is a cadence, not a hold; the ruling is at
     //     kHoldBeatMs, gui_input.h) — and every later fire is
     //     THE COMPOSITOR'S OWN advertised key-repeat interval

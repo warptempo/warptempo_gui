@@ -3695,18 +3695,6 @@ private:
     // already written the live struct and the file and gated the no-op case.
     void apply_max_waveform_height(int authored_px);
 
-    // THE HOLD DELAY'S LIVE APPLY (the device config's `hold_delay_ms`,
-    // architect 2026-09-29): install the value into the renderer's one owner
-    // (set_hold_delay_ms, render.h — read by chrome_shift_hold_ms) and push
-    // it down into the input core's region hold
-    // (GuiPlatform::set_touch_region_hold_ms), so the two holds read
-    // the new value from the next hold on, with no restart. Nothing is
-    // painted from it, so nothing is damaged. It ASSIGNS AND PERSISTS
-    // NOTHING: its sole caller, the settings editor's device-key body
-    // (commit_device_setting), has already written the live struct and the
-    // file and gated the no-op case.
-    void apply_hold_delay_ms(int ms);
-
     // The read-only bit's one setter (2026-09-04, converting a codex finding
     // that the two roads had drifted apart on damage). Two roads write the
     // bit: bare `o` on the active tab, which the icon row's Lock button

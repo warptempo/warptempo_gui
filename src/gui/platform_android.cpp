@@ -531,9 +531,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // 225 % it scales to 1125, above the content rect's 722 px leftover, so
     // the tablet's waveform stays unclamped exactly as before the key).
     cfg.max_waveform_height = 500;
-    // The hold delay's default, the product's fixed beat (kHoldDelayMsDefault,
-    // device_config.h) — the same on both templates.
-    cfg.hold_delay_ms = kHoldDelayMsDefault;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;
@@ -571,11 +568,10 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // Android advertises no repeat rate to a native activity — there is no
     // wl_keyboard.repeat_info counterpart and no system setting a native app
     // can read — so the numbers are labwc's own, taken BY CONVENTION: the
-    // delay is kHoldBeatMs (575, gui_input.h, the product's fixed beat and the
-    // hold delay's default — and it STAYS the fixed beat when the device's
-    // `hold_delay_ms` is retuned, architect 2026-09-29: a repeat delay
-    // measures the cadence of a stream of repeats, not a hand resting until
-    // a hold means something) and the rate is 25 Hz, a 40 ms period — labwc's
+    // delay is kHoldBeatMs (600, gui_input.h, the product's fixed beat — never
+    // the hold delay, architect 2026-09-29: a repeat delay measures the
+    // cadence of a stream of repeats, not a hand resting until a hold means
+    // something) and the rate is 25 Hz, a 40 ms period — labwc's
     // own <repeatRate>, the twin of the <repeatDelay> kHoldBeatMs matches
     // (it read 30 until 2026-09-02, when the four-tier review found the
     // number was not the convention the sentence claimed). They pace
@@ -2480,7 +2476,6 @@ void GuiPlatform::set_touch_nav_hooks(
 }
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
-void GuiPlatform::set_touch_region_hold_ms(int ms)          { input_.set_touch_region_hold_ms(ms); }
 void GuiPlatform::set_capture_restore_x(double surface_x)   { input_.set_capture_restore_x(surface_x); }
 void GuiPlatform::clear_capture_restore_x()                 { input_.clear_capture_restore_x(); }
 void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) { input_.set_capture_restore_kind(kind); }

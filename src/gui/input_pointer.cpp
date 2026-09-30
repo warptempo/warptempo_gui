@@ -128,8 +128,8 @@ struct ToolbarChord {
     // button's modifier ladder). A `repeats` row's long press IS ITS REPEAT,
     // never its shift: the hold that would read as Shift on a non-repeating
     // shift-admitting button (chrome_shift_hold_ms(), the hold delay) is the
-    // burst's first fire here (at kHoldBeatMs, the fixed beat — the two
-    // numbers coincide at the key's default and need not), so the lift's
+    // burst's first fire here (at kHoldBeatMs, the fixed beat — two numbers
+    // that differ, the hold delay the shorter), so the lift's
     // hold-as-shift term reads
     // `!tc.repeats` off this column (finish_chrome_press_release) and the
     // burst's chord never carries a held shift (arm_redesign_press). A
@@ -580,7 +580,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // THE CADENCE IS THE KEYBOARD'S, not a constant of this table's: the first
     // fire one kHoldBeatMs after the press (the product's FIXED beat — never
-    // the device's hold delay, a repeat delay being a cadence and not a hold —
+    // the hold delay, a repeat delay being a cadence and not a hold —
     // so the button hold and the key hold cross their threshold on the same
     // beat) and
     // every later fire at THE COMPOSITOR'S OWN advertised key-repeat interval,
@@ -8341,7 +8341,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // carries.
         //
         // THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect 2026-09-29): the hand
-        // learns the device's hold delay, and nothing on screen marks the
+        // learns the hold delay, and nothing on screen marks the
         // instant this term starts answering true. The hover tooltip is not
         // its cue: no tooltip rises under a held press at all (Qt's model,
         // AppState::RedesignTooltip), the press being one of its hard ends.
@@ -8374,15 +8374,15 @@ void GuiInputHandler::finish_chrome_press_release(
         // OUTRANKS THE LONG-PRESS SHIFT, the principle stated at
         // ToolbarChord::repeats, and this term is where it is read
         // (2026-08-31, the round-B conversion). A repeating row's burst and
-        // this hold are measured AGAINST TWO NUMBERS THAT MAY DIFFER — the
-        // arm schedules its first fire at press + kHoldBeatMs, the fixed
-        // beat, while chrome_shift_hold_ms() reads the device's hold delay
-        // (2026-09-29), the two coinciding only at the key's default — and a
-        // fired burst consumes its own lift above. EVEN AT ONE INSTANT,
-        // SHARING A TIMESTAMP IS NOT AN ORDERING: a lift delivered just past
-        // the beat but before the next tick finds repeat_fired still false,
-        // and a hold delay shorter than the beat would reach the shift term
-        // with no fire at all, so without this term the release would
+        // this hold are measured AGAINST TWO DIFFERENT NUMBERS — the arm
+        // schedules its first fire at press + kHoldBeatMs, the fixed beat
+        // (600), while chrome_shift_hold_ms() reads the hold delay,
+        // kHoldDelayMs (300; architect 2026-09-29) — and a fired burst
+        // consumes its own lift above. THE HOLD DELAY BEING THE SHORTER, a
+        // lift between the two reaches the shift term with no fire at all,
+        // and even at one instant sharing a timestamp would not be an
+        // ordering (a lift delivered just past the beat but before the next
+        // tick finds repeat_fired still false), so without this term the release would
         // dispatch a SHIFT ten-step where the user was owed a plain one. So
         // the exclusion is
         // read off kToolbarChords' own `repeats` column — the arm's
@@ -8452,12 +8452,12 @@ void GuiInputHandler::finish_chrome_press_release(
 //
 // THE SCHEDULE'S TWO NUMBERS COME FROM DIFFERENT OWNERS ON PURPOSE. The FIRST
 // fire is one kHoldBeatMs after the press — the product's FIXED beat, matched
-// to the architect's compositor delay, and DECOUPLED FROM THE DEVICE'S HOLD
-// DELAY on both devices (architect 2026-09-29): a repeat delay measures the
-// cadence of a stream of repeats, as the double-click window and the tap
-// coalesce measure the gap between two presses, and none of them is a hand
-// resting on a thing until it changes meaning, which is what
-// `hold_delay_ms` tunes (the readers' inventory is at kHoldBeatMs). Every
+// to the architect's compositor delay, and DECOUPLED FROM THE HOLD DELAY on
+// both devices (architect 2026-09-29): a repeat delay measures the cadence of
+// a stream of repeats, as the double-click window and the tap coalesce
+// measure the gap between two presses, and none of them is a hand resting on
+// a thing until it changes meaning, which is what kHoldDelayMs times (the
+// readers' inventory is at kHoldBeatMs). Every
 // LATER fire is THE COMPOSITOR'S ADVERTISED KEY-REPEAT INTERVAL
 // (GuiPlatform::key_repeat_period_ms), read PER FIRE because repeat_info may be
 // re-sent at any time, and a compositor advertising rate 0 has key repeat

@@ -3564,13 +3564,6 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE HOLD DELAY RIDES IT TOO (the device config's `hold_delay_ms`,
-    // 2026-09-29): installed before the first frame, so the first shift long
-    // press already holds for the device's value; live at the settings
-    // editor's commit (commit_device_setting then
-    // GuiInputHandler::apply_hold_delay_ms). The one reader is hold_delay_ms
-    // (render.h); the input core's region hold takes it pushed down below.
-    set_hold_delay_ms(device_config.hold_delay_ms);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under
@@ -3592,10 +3585,6 @@ int gui_main(const char* argument) {
     // size it is opened at.
     GuiPlatform gui;
     gui.set_touch_slop_px(drag_moved_threshold_px());
-    // THE REGION HOLD, the same push for the same reason — the core never
-    // reads the config, so the GUI hands it the hold delay (the inventory is
-    // at GuiInputCore::set_touch_region_hold_ms).
-    gui.set_touch_region_hold_ms(hold_delay_ms());
 
     // THE RENDER CACHE, ONCE PER PROCESS: its keying is fingerprint-only — the
     // source path and its identity are INSIDE the key (render_fingerprint,
@@ -3621,8 +3610,8 @@ int gui_main(const char* argument) {
     // a REOPEN (the Open project picker's, or File → Revert's naming the
     // project already open) — and the outcome carries which. WHAT IS
     // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
-    // the renderer's file-scope scale (set_gui_scale_percent), waveform cap
-    // (set_max_waveform_height_px) and hold delay (set_hold_delay_ms), the text
+    // the renderer's file-scope scale (set_gui_scale_percent) and waveform cap
+    // (set_max_waveform_height_px), the text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),
     // the bottom row's clock metrics memo (keyed on the text size, not the
     // piece), the modal session-id counter (text_editor::next_session_id —

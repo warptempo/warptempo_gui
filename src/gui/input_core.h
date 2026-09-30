@@ -203,12 +203,6 @@ inline int containing_pixel(double v) {
 // learns the scale.
 inline constexpr double kDefaultTouchSlopPx = 8.0;
 
-// THE REGION HOLD's DEFAULT, in milliseconds — the value a freshly built core
-// carries until the GUI pushes the device's hold delay
-// (set_touch_region_hold_ms): kHoldBeatMs, the device config key's own
-// default, so a core nobody pushes to holds as it always did.
-inline constexpr int kDefaultTouchRegionHoldMs = kHoldBeatMs;
-
 // THE MONOTONIC CLOCK EVERY DEADLINE IN THIS LAYER IS MEASURED AGAINST, in
 // microseconds. One owner for the whole GUI: the key-repeat deadline, the touch
 // window and the backend's own bounded clipboard read all read
@@ -601,7 +595,7 @@ public:
     // the SAME update hook with the finger as the centroid and dist_ratio
     // pinned at 1.0 (one finger has no distance, so no zoom), a HOLD
     // past the zone's stretched
-    // window (touch_region_hold_ms_) is THE REGION HOLD — the expiry drives the
+    // window (kTouchRegionHoldMs) is THE REGION HOLD — the expiry drives the
     // GUI's region former through the region trio, so hold-then-drag sweeps
     // a region on glass (the eighth ruling: pan is the common act and takes
     // the primary drag, the region is the deliberate act and takes the
@@ -667,7 +661,7 @@ public:
     //     one-finger PAN SURFACE? Asked ONCE per touch stream, at the FIRST
     //     finger's down; the answer is captured beside the down point and
     //     DECIDES WHETHER A WINDOW OPENS AT ALL (2026-09-25): ON the zone the
-    //     window runs to the region-hold beat (touch_region_hold_ms_) and its
+    //     window runs to the region-hold beat (kTouchRegionHoldMs) and its
     //     slop crossing is the pan, its expiry the region hold, a second
     //     finger inside it the pinch; OFF it (and outside an open editor's
     //     field) the down resolves to the POINTER ON CONTACT — no wait, no
@@ -827,27 +821,6 @@ public:
     // Reached through GuiPlatform, which re-exports it like every other door of
     // this class.
     void set_touch_slop_px(double px) { touch_slop_px_ = px; }
-
-    // THE REGION HOLD, in milliseconds — how long a finger rests motionless
-    // on the pan zone before its window expires into the region former (the
-    // eighth glass ruling; the constants block in input_core.cpp carries it).
-    // IT IS THE DEVICE'S HOLD DELAY (the device config's `hold_delay_ms`,
-    // architect 2026-09-29), one of the two holds that read that key
-    // (the inventory is at kHoldBeatMs, gui_input.h), and it is PUSHED DOWN
-    // for the slop's reason: this layer sits below the GUI model and never
-    // reads the config. The default is kDefaultTouchRegionHoldMs. A push
-    // takes effect at the next window a down opens; a window already running
-    // keeps the deadline its down computed.
-    //
-    // THE PUSH HAS TWO CALL SITES, the slop's own two roads, and this is
-    // their inventory:
-    //   * gui_main's startup, beside the set_touch_slop_px push and before
-    //     the first window — main.cpp;
-    //   * the settings editor's `hold_delay_ms=` commit —
-    //     GuiInputHandler::apply_hold_delay_ms, input_handler.cpp.
-    // Reached through GuiPlatform, which re-exports it like every other door
-    // of this class.
-    void set_touch_region_hold_ms(int ms) { touch_region_hold_ms_ = ms; }
 
     // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
     // Idle. The full rationale (and why Drain's inclusion is harmless) is at
@@ -1348,7 +1321,7 @@ private:
     //     been delivered. IT OPENS IN TWO PLACES ONLY (2026-09-25, architect:
     //     "zoom is not useful outside waveform", and the second finger's only
     //     use is the pinch): ON THE PAN ZONE, where it runs to
-    //     touch_region_hold_ms_ (the region-hold beat), and IN AN OPEN EDITOR'S
+    //     kTouchRegionHoldMs (the region-hold beat), and IN AN OPEN EDITOR'S
     //     FIELD, where it runs to NOTHING AT ALL (kTouchWindowNoExpiry,
     //     2026-09-05: the field's vocabulary has no hold meaning, so a
     //     resting finger there simply stays Pending). Anywhere else the down
@@ -1481,7 +1454,7 @@ private:
     //     tap's press consumes the candidate).
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
     //     deadline, and lazily at every touch event's arrival) — the ZONE'S
-    //     window only -> Region (the region hold at the touch_region_hold_ms_
+    //     window only -> Region (the region hold at the kTouchRegionHoldMs
     //     beat; the begin hook fires at the down point, and any sub-slop
     //     drift inside the window stages as the gesture's first frame). THE
     //     EDITOR'S FIELD HAS NO EXPIRY EDGE AT ALL (2026-09-05): its window
@@ -1647,7 +1620,7 @@ private:
     // user is aiming or gesturing, and the autopager must not move the song
     // under it. It is not a nicety — the window's whole design defers
     // conversion: a TAP delivers its press+release burst AT THE LIFT carrying
-    // the DOWN point's coordinates (up to touch_region_hold_ms_ later on the
+    // the DOWN point's coordinates (up to kTouchRegionHoldMs later on the
     // zone, any time later in an editor's field) and the REGION HOLD converts the
     // down point at the beat's EXPIRY, so a chase that paged in between would
     // land the act on whatever frame had slid under that screen column instead
@@ -1671,16 +1644,12 @@ private:
     // set_touch_slop_px. Born at the authored 100 % value so a core nobody
     // pushes to is the core this file always had.
     double     touch_slop_px_     = kDefaultTouchSlopPx;
-    // The pan zone's window deadline past the down, in milliseconds — the
-    // REGION HOLD (contract at set_touch_region_hold_ms). Born at the default
-    // for the slop's reason.
-    int        touch_region_hold_ms_ = kDefaultTouchRegionHoldMs;
     double     touch_down_x_      = 0.0;
     double     touch_down_y_      = 0.0;
     double     touch_last_x_      = 0.0;
     double     touch_last_y_      = 0.0;
     // Pending only: the window's deadline (monotonic; event timestamps ride a
-    // base this program never compares against — touch_region_hold_ms_ on the
+    // base this program never compares against — kTouchRegionHoldMs on the
     // pan zone, kTouchWindowNoExpiry in an editor's field, the only two
     // places a window opens)
     // and whether any sub-slop motion arrived inside the window (the queued
@@ -1927,7 +1896,7 @@ private:
     // delivered and the touch hold is never raised.
     void resolve_touch_window_to_single_nav();
     // Resolve the Pending window to the REGION HOLD (the on-zone expiry at
-    // the touch_region_hold_ms_ beat — the eighth glass ruling): fire the
+    // the kTouchRegionHoldMs beat — the eighth glass ruling): fire the
     // region begin at the DOWN point and stage any sub-slop window drift as
     // the gesture's first frame. Nothing pointer-shaped starts — no press,
     // no hold bit — the single-nav model.

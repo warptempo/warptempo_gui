@@ -710,8 +710,8 @@ consumer, and the seam has no addition at all — §13.3.)*
 - **Key repeat**: `set_repeat_info(25, kHoldBeatMs)`, hard-coded (architect
   ruling 2026-08-23) — Android advertises no cadence to a native activity, so
   the numbers are labwc's by convention: `<repeatRate>` 25 and `<repeatDelay>`
-  575, the latter being `kHoldBeatMs` itself. The rate read 30 until
-  2026-09-02, which was nobody's convention.
+  600, the latter being `kHoldBeatMs` itself (575 for both until 2026-09-29).
+  The rate read 30 until 2026-09-02, which was nobody's convention.
 
 Stubs, each with its Wayland twin named at the site: the **clipboard** is one
 stored string (ClipboardManager is a Java surface with no NDK door); **pointer

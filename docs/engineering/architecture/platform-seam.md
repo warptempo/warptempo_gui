@@ -333,18 +333,18 @@ drag coordinates floor instead of truncating.
   shape `ensure_device_available_for_play` already set.)
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. The SIX keys it stamps are per-DEVICE preferences
+  both-sides member. The FIVE keys it stamps are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the projects clone's `projects/`
   (`$HOME/.warptempo/warptempo_projects/projects`, github-recheck.md), Android 225 %
   and `<externalDataPath>/projects`; both stamp `max_waveform_height=500`
   (the waveform cap, the retired `kWaveformMaxHeightPx`'s value),
-  `hold_delay_ms=575` (the hold delay, `kHoldDelayMsDefault` = `kHoldBeatMs`,
-  2026-09-29),
   `kDefaultProjectsRepo` and a
   blank `last_project`. (Keys the template no longer
-  stamps: `sync_path`, struck with Synchronize 2026-09-27 — settings.md; the lit plate's picture keys — `fg_color` / `bg_color` 2026-09-26,
+  stamps: `sync_path`, struck with Synchronize 2026-09-27 — settings.md;
+  `hold_delay_ms`, stamped `575` for its one-day tuning phase 2026-09-29 and
+  struck when the hold delay was hard-coded at 300 ms (`kHoldDelayMs`); the lit plate's picture keys — `fg_color` / `bg_color` 2026-09-26,
   then `fg_color` / `fg_border_color` / `bg_color` / `bg_border_color` and `waveform_widening`
   2026-09-27, and `waveform_compressor_threshold_db` / `waveform_compressor_ratio` (2026-09-25, and again
   2026-09-27 with `waveform_foreground_gain_db`) — each stamped for its tuning phase and
@@ -409,10 +409,9 @@ drag coordinates floor instead of truncating.
   `GuiPlatform::init` is the one per-process act that RUNS INSIDE the loop, in
   the FIRST session (`run_project`, guarded by `window_up`): it takes the cold
   window size, which is a per-project object's, and every later session
-  inherits the window standing. The scale, the hold delay, the touch slop and
-  the touch region hold are installed by `gui_main` ahead of it either way,
-  so the first configure is at the user's scale and the first hold at the
-  device's hold delay.
+  inherits the window standing. The scale and the touch slop are installed
+  by `gui_main` ahead of it either way, so the first configure is at the
+  user's scale.
   `run()` returns for an EXIT (`request_exit`; `exit_requested()` true) or a
   RUN STOP (`request_run_stop`, the reopen — the Open project picker's, or
   File → Revert's on the project already open — the window and the
@@ -493,15 +492,16 @@ drag coordinates floor instead of truncating.
 - **Key repeat on Android** is hard-coded `set_repeat_info(25, kHoldBeatMs)`
   (architect 2026-08-23: labwc's numbers by convention; the platform
   advertises none) — his `rc.xml`'s `<repeatRate>` 25 beside the
-  `<repeatDelay>` 575 that IS `kHoldBeatMs`. THE RATE READ 30 UNTIL 2026-09-02,
+  `<repeatDelay>` 600 that IS `kHoldBeatMs` (575 for both until 2026-09-29,
+  when he moved them to 600 together). THE RATE READ 30 UNTIL 2026-09-02,
   a number the convention sentence did not support, corrected under the
-  four-tier review's R-18(a). THE DELAY STAYS `kHoldBeatMs`, DECOUPLED FROM
-  THE DEVICE'S `hold_delay_ms` (architect 2026-09-29): that key tunes the
+  four-tier review's R-18(a). THE DELAY STAYS `kHoldBeatMs`, NEVER THE HOLD
+  DELAY `kHoldDelayMs` (300, architect 2026-09-29): that constant times the
   holds — the chrome shift long press and the touch region hold (the
-  tooltip reads neither; its wait is Qt's, render.h) — and a repeat delay measures the cadence of a stream of repeats,
-  not a hand resting until a hold means something, so retuning the hold delay
-  on the tablet leaves its key repeat (and the held buttons' first fire) at
-  575. Hardware keyboards are out of scope; the owned
+  tooltip reads neither; its wait is Qt's, render.h) — and a repeat delay
+  measures the cadence of a stream of repeats, not a hand resting until a
+  hold means something, so the tablet's key repeat (and the held buttons'
+  first fire) stays on the beat. Hardware keyboards are out of scope; the owned
   painted keyboard reaches the core through `synthesize_key`.
 - **The S Pen on Android** (architect 2026-09-25; the ruling is `touch.md`'s
   pen section). The source gate admits a touchscreen source and a stylus
