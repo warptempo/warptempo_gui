@@ -75,7 +75,8 @@ All in `docs/engineering/architecture/` unless noted. Each file holds the full r
 | Any guard/validator (add/move/remove) | `docs/engineering/validation_topology.md` |
 | Engine performance (closed campaign; retired candidates need new measured data) | `docs/engineering/perf_campaign_2026_07.md` |
 | The retired waveform antialiasing | `docs/engineering/waveform_antialiasing_retired.md` |
-| User-facing behaviour reference | `docs/HELP.md` |
+| The concepts and the working method (user reading; the interface itself is its tooltips) | `docs/HELP.md` |
+| Installing, building, first run, the tablet, daily use, trouble, migrating an old folder (the runbook; every personal value an environment variable, no `wts` named) | `docs/INSTALL.md` |
 
 Trim spans several files: store/commit rules in `normalization-and-boundaries.md`, endcaps/router/geometry in `pointer-hit-testing.md` and `marker-ui.md`, the prepost render window in `render-pipeline.md`, the waveform overlay in `region-scrub-esc.md`.
 

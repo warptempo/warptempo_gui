@@ -424,7 +424,8 @@ fingerprint v15). Findings from the implementation:
 - Resulting model: the fully static CLI is the archival truth, immune to
   every system update; the GUI matches it from each rebuild until the next
   glibc update, then may drift ulp-class until the next chosen rebuild
-  (epoch semantics, documented in HELP's Reproducibility section).
+  (epoch semantics; the user-facing rule, re-render after a glibc or FFTW
+  upgrade, is in docs/INSTALL.md's Build).
 
 ## 13. Postscript 2: the vendored-math attempt (implemented, measured, ROLLED BACK)
 
