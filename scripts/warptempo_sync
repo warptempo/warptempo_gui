@@ -1,0 +1,1117 @@
+#!/usr/bin/env bash
+[ -t 0 ] || { printf 'warptempo_sync: run it from a terminal\n' >&2; exit 1; }
+# IFS is a newline alone (the \b only keeps $(...) from eating it), so word
+# splitting never breaks a piece name on its spaces.
+IFS=$(echo -en "\n\b")
+shopt -s nocaseglob
+
+# warptempo_sync — the laptop's four errands to the tablet (warptempo).
+#
+#   warptempo_sync tt [piece ...|all]   TO the tablet:   the source audio, and
+#                                       nothing else.
+#   warptempo_sync ft [piece ...|all]   FROM the tablet: the renders (each wav
+#                                       with its fingerprint), and nothing else.
+#   warptempo_sync ot [piece]           ON the tablet: an interactive shell as the
+#                                       app, in its projects folder (or the named
+#                                       piece's); the app is stopped while you are
+#                                       in and started again on exit.
+#   warptempo_sync setup                ONE COMMAND that makes a tablet ready:
+#                                       GitHub's projects clone placed on it, its
+#                                       deploy key, its settings file corrected,
+#                                       the audio, the app started. It shows its
+#                                       plan and asks Proceed? [y/N] before it
+#                                       changes anything.
+#
+#   -n   a DRY RUN: say in words what the run would do, and do none of it
+#        (setup -n prints its plan and asks nothing).
+#   -v   show the raw commands under each line (with or without -n).
+#
+#   warptempo_sync   with no verb prints the how-to below.
+#
+# ============================== HOW TO USE IT ==============================
+#
+#   A new piece: put its folder, holding its one source .wav, under the
+#   projects/ folder your device config's projects_path names, then
+#
+#       warptempo_sync tt          <- every piece's audio the tablet lacks
+#
+#   A render finished on the tablet and you want it on the laptop:
+#
+#       warptempo_sync ft          <- every piece's newer renders
+#
+#   A new or replacement tablet, after the APK is installed:
+#
+#       warptempo_sync setup       <- shows the plan, asks Proceed? [y/N]: type y
+#
+#   Recipe for the whole of it: docs/INSTALL.md in the warptempo_gui repository.
+#
+# ===========================================================================
+#
+# THE SIDECARS NEVER TRAVEL HERE (architect 2026-09-27). Both devices hold a clone
+# of github.com/warptempo/warptempo_projects and the app itself commits, pushes
+# and pulls them (Save and Commit in `h`); GitHub is the hub. warptempo_sync
+# carries only what git does not: the audio in, the renders out. ONE DEVICE PER
+# MOVEMENT: a movement is authored on one device, so no verb here ever settles a
+# disagreement.
+#
+# SCOPE. No name and `all` are the same: every piece under the laptop's projects/.
+# Both verbs are cheap to repeat (tt skips a wav the tablet already has at the same
+# size and date; ft skips a render the laptop already has at the same size and date,
+# to the nanosecond, with the same fingerprint), so
+# there is nothing to choose. Names narrow it to those folders. `all` is reserved.
+# A piece git ignores, or whose name holds the word `test` or a `~`, never travels
+# (`unsyncable`): `all` passes it by and says so, naming it is a refusal.
+#
+# THE SOURCE IS FOUND AS THE APP FINDS IT (resolve_project), every rule of it: the
+# .wav named by the ONE stem the folder's sidecars (.warpmarkers,
+# .phaseresetmarkers, .settings) share, with no other .wav beside it; or, in a
+# folder with no sidecar yet (a new piece), its one .wav. Any other shape — several
+# sidecar stems, a sidecar stem with no wav, an extra wav beside the source, no wav
+# or several and no sidecar — is a folder the app refuses: tt and setup copy
+# nothing for it, say why on its line, and name it again at the end of the run.
+#
+# tt NEITHER STOPS NOR STARTS THE APP: a new wav is a piece the app cannot have
+# open, and an unsaved session on the tablet is left alone. A new piece appears in
+# File -> Open Project.
+#
+# ft brings each piece's `render/` DELIVERABLE, the `<title>.wav` and its
+# `<title>.fingerprint`, into the laptop's `<piece>/render/`, AS ONE PAIR: the
+# fingerprint is the recipe the app reads to reuse that wav instead of rendering
+# again, so a wav beside another render's fingerprint would be reused for a
+# recipe it is not. A WAV'S IDENTITY IS ITS SIZE AND ITS DATE TO THE NANOSECOND,
+# exactly what its fingerprint records (`size=`, `mtime=`) and what the app compares
+# before it reuses the wav; so every copy is dated as on the tablet to the
+# nanosecond (toybox's %y carries the fraction), since a date rounded to the second
+# makes a pair the app rejects. NEWER WINS, by the wav: one the laptop holds NEWER is
+# left alone with its fingerprint and said so. A pair is SKIPPED only when the wav
+# matches (same size and nanosecond date) AND the fingerprint matches (the tablet's
+# sha256 equals the laptop's, or neither has one); a matching wav whose fingerprint
+# does not is repaired alone. A COPY fetches both members to part files beside
+# their targets and checks each against the tablet's own sha256. A fingerprint
+# that does not describe the listed wav (a render in progress, or one cut short)
+# is left on the tablet and nothing on the laptop moves.
+# Only then does it publish: the laptop's old fingerprint is removed FIRST, then the
+# wav renamed into place, then the new fingerprint — so a new wav never stands beside
+# an old fingerprint, and a run cut short between the two renames leaves a wav with
+# no fingerprint, which the next run repairs — and the pair is complete only when
+# the published wav's size and nanosecond date equal what the fingerprint beside it
+# records (else that fingerprint is removed and the run stops: this is what refuses
+# a pair crossed by a render the tablet published during the copy). A TABLET WAV
+# WITH NO FINGERPRINT DELETES THE LAPTOP'S: the one file on the laptop ft ever deletes, because a fingerprint
+# that describes no wav the tablet holds would make the app reuse the wrong
+# render (without one it simply renders again). Nothing is committed. The
+# tablet's render/ is the app's own folder (its uid, mode 770), which adb's shell
+# user cannot enter, so it is read AS THE APP: `adb exec-out run-as
+# com.warptempo.gui cat <file>` streams each file out and the tablet's sha256 of
+# it is checked against the laptop's, each part dated as on the tablet to the
+# nanosecond.
+#
+# setup SHOWS ITS PLAN AND ASKS FIRST (architect 2026-09-28: "add y/n confirm, and
+# that's enough insurance"). THERE IS NO BACKUP: what the plan lists as deleted or
+# copied over is gone once the answer is y, and the tablet's old .git goes whole,
+# with any commit on it GitHub lacks.
+#   THE PLAN IS READ-ONLY ON THE TABLET: nothing is written there, and the app is
+#   not stopped or started. It makes a FRESH CLONE of GitHub's projects repository
+#   in a laptop scratch folder (over https: the repository is public, so the clone
+#   needs no key) and gives its .git/config what the tablet needs: origin =
+#   ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git (GitHub's SSH
+#   over port 443, both clones' remote), core.filemode=false, core.symlinks=false,
+#   core.ignorecase=true (the tablet's storage is FUSE, case-insensitive, no
+#   symlinks, no meaningful mode bits), user.name and user.email (the identity the
+#   app commits under). It lists the tablet's files. Then it prints every step
+#   below as the run would take it: every file it would delete,
+#   every file it would copy over, the settings file it would write, the audio.
+#   -n prints the plan and stops there. A real run then asks `Proceed? [y/N]` on
+#   the terminal: only y or Y goes on; anything else (Enter alone, another word,
+#   end of input) prints "nothing was changed" and exits. On a y the steps run in
+#   order, each saying what it does as it does it. The file lists are the plan's;
+#   the deploy key, the settings file and the audio are read again once the app
+#   is stopped, so a last_project the app wrote meanwhile is kept:
+#   1. the app is stopped, and setup stops unless the stop succeeds and the
+#      app's process is then gone. If Android has not yet made the app's
+#      folder, or the app has not yet written its settings file, the app is
+#      started once to do both (with no piece on the tablet it then closes) and
+#      stopped again, checked the same way.
+#   2. what the old sync left and nothing reads any more is DELETED: each piece's
+#      `history/` folder (the retired exported history), every
+#      `.magnificationlevelmarkers` (a retired sidecar), and the `current` file.
+#   3. the tablet's .git, if any, is deleted and the clone's .git copied in its
+#      place (whole, so no stale ref of an older .git can survive), and EVERY
+#      tracked file is copied from GitHub's main, over whatever the tablet holds
+#      (the plan lists apart the ones the tablet lacks and the ones it holds). The
+#      audio, peaks, renders and tmp/ are the clone's ignored files and are not
+#      touched.
+#   4. the tablet's deploy key, $WARPTEMPO_TABLET_DEPLOY_KEY (and its .pub), goes
+#      into the app's private folder beside its settings file
+#      (files/warptempo_gui/deploy_key, .pub), reachable only through run-as.
+#   5. the tablet's settings file (files/warptempo_gui/config): the projects_repo
+#      line is made to read github.com/warptempo/warptempo_projects and any
+#      sync_path line (a struck key the app refuses to start with) is removed;
+#      every other line is kept.
+#   6. the audio, exactly as `warptempo_sync tt all`.
+#   7. the directories adb made are opened to the app (below), and the app started.
+#   Run twice it does the same again: the clone is fresh each time and the tracked
+#   files are copied again. What it never touches: a file GitHub's main neither
+#   tracks nor ignores (a piece begun on the tablet, or by hand) is listed and
+#   left alone.
+#
+# THE FOLDERS adb MAKES ARE OPENED TO THE APP. A directory `adb push` creates
+# belongs to `shell` with mode 770, and the app's uid is neither its owner nor in
+# its group, so the app could not even list it. chmod takes on this storage, so one
+# pass sets every shell-owned directory under projects/ and .git to 777. The app's
+# own directories (render/, tmp/, peaks/) are skipped and not entered: shell may not.
+#
+# THE TABLET IS ADDRESSED OVER adb, USB first and the wireless address in
+# WARPTEMPO_TABLET_ADDR (host:port, from the environment) as the fallback;
+# ANDROID_SERIAL is pinned once so a second transport appearing mid-run
+# can never make adb refuse with "more than one device". Everything under the app's
+# private folder and every folder the app made is reached through `run-as`, which
+# needs the installed APK to be debuggable; the build's is.
+
+set -u
+
+PKG="com.warptempo.gui"
+# The app's external files dir, THE ROOT OF THE TABLET'S CLONE: its projects/ is the
+# app's projects_path. adb writes into it with no permission granted.
+FAR="/sdcard/Android/data/$PKG/files"
+# The app's private folder, relative to where run-as starts (the app's data dir).
+APPCFG="files/warptempo_gui"
+TABLET_WIRELESS="${WARPTEMPO_TABLET_ADDR:-}"
+GITHUB_CLONE_URL="https://github.com/warptempo/warptempo_projects.git"
+ORIGIN_URL="ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git"
+PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
+TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
+
+die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
+note() { printf 'warptempo_sync: %s\n' "$1" >&2; }
+
+usage() {
+    cat <<'HELP'
+warptempo_sync — the laptop's errands to the tablet
+
+  warptempo_sync tt [piece ...|all]    TO the tablet:   the source audio the tablet lacks
+  warptempo_sync ft [piece ...|all]    FROM the tablet: the renders newer than the laptop's
+  warptempo_sync ot [piece]            ON the tablet:   a shell as the app in its projects folder (exit returns)
+  warptempo_sync setup                 make a new (or this) tablet ready: clone, key, settings, audio
+                                       (it shows the plan and asks Proceed? [y/N]; nothing is backed up)
+
+  no name = all = every piece       -n = dry run, in words       -v = show the commands too
+
+  The sidecars never travel here: the app commits, pushes and pulls them (h, Ctrl+S).
+  Recipe: docs/INSTALL.md in the warptempo_gui repository
+HELP
+}
+
+# Single-quote one argument for the REMOTE shell. adb shell joins its arguments with
+# spaces and hands the result to sh on the device, so a far path with a space in it
+# has to arrive already quoted or it arrives as two paths.
+q() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
+
+# ------------------------------------------------------------------ arguments
+
+USAGE="usage: warptempo_sync tt|ft [-n] [-v] [piece ...|all]    or    warptempo_sync ot [piece]    or    warptempo_sync setup [-n] [-v]"
+[[ $# -gt 0 ]] || { usage; exit 0; }
+mode=""; dry=0; verbose=0; names=(); all=0
+for a in "$@"; do
+    case "$a" in
+        tt|ft|ot|setup) [[ -z "$mode" ]] || die "$USAGE"; mode="$a" ;;
+        -n)    dry=1 ;;
+        -v)    verbose=1 ;;
+        -h|--help) usage; exit 0 ;;
+        -*)    die "$USAGE" ;;
+        all)   all=1 ;;                     # the reserved word: every piece
+        *)     names+=( "$a" ) ;;
+    esac
+done
+[[ -n "$mode" ]] || die "$USAGE"
+(( all )) && [[ "${#names[@]}" -gt 0 ]] && die "all and piece names do not mix"
+if [[ "$mode" == "ot" ]]; then
+    (( dry )) && die "ot is a shell; there is nothing to rehearse"
+    (( all )) && die "ot takes one piece name, or none for projects/"
+    [[ "${#names[@]}" -le 1 ]] || die "ot takes one piece name, or none for projects/"
+fi
+if [[ "$mode" == "setup" ]]; then
+    [[ "${#names[@]}" -eq 0 ]] || die "setup takes no piece names: it places every piece"
+    all=1
+fi
+
+# THE NARRATION: every step says in words what it is about to do, before it does it.
+# A dry run prints "would ..." and stops there; a real run prints the same sentence
+# in the -ing form and then does it. A sentence opening with a word not in the list
+# prints as written.
+ing() {
+    local rest="${1#* }"
+    case "${1%% *}" in
+        copy)    printf 'copying %s' "$rest" ;;
+        leave)   printf 'leaving %s' "$rest" ;;
+        DELETE)  printf 'DELETING %s' "$rest" ;;
+        stop)    printf 'stopping %s' "$rest" ;;
+        start)   printf 'starting %s' "$rest" ;;
+        open)    printf 'opening %s' "$rest" ;;
+        clone)   printf 'cloning %s' "$rest" ;;
+        set)     printf 'setting %s' "$rest" ;;
+        rewrite) printf 'rewriting %s' "$rest" ;;
+        make)    printf 'making %s' "$rest" ;;
+        *)       printf '%s' "$1" ;;
+    esac
+}
+step() {
+    if (( dry )); then printf '  would %s\n' "$1"; else printf '  %s\n' "$(ing "$1")"; fi
+}
+head_step() {                           # the same, unindented, for run-wide acts
+    if (( dry )); then printf 'would %s\n' "$1"; else printf '%s\n' "$(ing "$1")"; fi
+}
+
+# THE ONE GATE EVERY MUTATION GOES THROUGH, so -n cannot miss one: a push, a far
+# deletion or write, a force-stop, a launch and every laptop-side write are run()
+# calls (or check `dry` themselves, as put_as_app below does), and a dry run
+# makes none of them. Reads are NOT routed through it: listing the far side is what
+# a rehearsal needs to print the truth rather than a guess. -v shows each command.
+show() { if (( verbose )); then printf '      $'; printf ' %q' "$@"; printf '\n'; fi; }
+run() {
+    show "$@"
+    (( dry )) && return 0
+    "$@"
+}
+
+# THE TRANSFERS ARE QUIET: adb push narrates every file with a progress bar on
+# stderr, which buries the sentences. Its output is shown only when it fails.
+quiet() {
+    show "$@"
+    (( dry )) && return 0
+    if "$@" >"$scratch/transfer.log" 2>&1; then return 0; fi
+    cat "$scratch/transfer.log" >&2
+    return 1
+}
+
+plural() { if [[ "$1" -eq 1 ]]; then printf '%s %s' "$1" "$2"; else printf '%s %ss' "$1" "$2"; fi; }
+join() { local first=1 x; for x in "$@"; do (( first )) || printf ', '; printf '%s' "$x"; first=0; done; }
+
+# ------------------------------------------------------------------ the tablet
+
+# USB FIRST, and a USB entry is the one whose serial carries no colon — a wireless
+# device is listed as host:port. Only then is the wireless address tried, and only
+# after an `adb connect`, since a disconnected address is not in the list at all.
+usb="$(adb devices | awk 'NR > 1 && $2 == "device" && index($1, ":") == 0 { print $1; exit }')"
+if [[ -n "$usb" ]]; then
+    dev="$usb"; link="USB"
+else
+    [[ -n "$TABLET_WIRELESS" ]] || die "no tablet: nothing on USB, and WARPTEMPO_TABLET_ADDR is not set"
+    adb connect "$TABLET_WIRELESS" >/dev/null 2>&1
+    dev="$(adb devices | awk -v w="$TABLET_WIRELESS" \
+           'NR > 1 && $2 == "device" && $1 == w { print $1; exit }')"
+    [[ -n "$dev" ]] || die "no tablet: nothing on USB, and $TABLET_WIRELESS did not answer"
+    link="wireless"
+fi
+# PINNED FOR EVERY LATER CALL. Without this, plugging the cable in halfway through a
+# wireless run (or the reverse) makes the next adb refuse outright.
+export ANDROID_SERIAL="$dev"
+
+# A script on the tablet AS THE APP (run-as): the script and each argument go over
+# single-quoted, the script reading them as $1, $2... app_sh reads nothing from the
+# laptop's stdin (a loop around it keeps its own), app_sh_in feeds it the caller's,
+# app_out returns the bytes untouched (exec-out: no pty, no line-ending rewrite).
+app_cmd() {
+    local cmd="run-as $PKG sh -c $(q "$1") sh" a
+    shift
+    for a in "$@"; do cmd+=" $(q "$a")"; done
+    printf '%s' "$cmd"
+}
+app_sh()    { adb shell -T "$(app_cmd "$@")" </dev/null; }
+app_sh_in() { adb shell -T "$(app_cmd "$@")"; }
+app_out()   { adb exec-out "$(app_cmd "$@")" </dev/null; }
+
+# EVERY READING THAT DECIDES A DELETION OR AN OVERWRITE IS CHECKED: `adb shell
+# -T` carries the tablet's exit status, so each such reading is one command
+# whose status is read (never a `; true`, never a producer inside `< <(...)`,
+# whose status bash throws away), its output materialized or captured whole,
+# checked for shape, and only then believed. A reading that fails, or answers
+# in a shape it should not, stops the run — "the tablet did not answer" is
+# never taken for "there is nothing there".
+#
+# far_is: does a far path pass `[ <flag> ]` AS THE APP — yes or no, and a
+# tablet that does not answer yes or no stops the run.
+far_is() {                              # $1 = -e | -d | -f, $2 = far path
+    local out
+    out="$(app_sh 'if [ "$1" "$2" ]; then echo yes; else echo no; fi' "$1" "$2")" || \
+        die "the tablet did not answer whether $2 exists: stopping here"
+    out="${out//$'\r'/}"
+    case "$out" in
+        yes) return 0 ;;
+        no)  return 1 ;;
+        *)   die "the tablet answered '$out' about $2: stopping here" ;;
+    esac
+}
+
+adb shell -T "pm path $PKG" </dev/null 2>/dev/null | grep -q '^package:' || \
+    die "the app is not installed on the tablet: install the APK first (docs/INSTALL.md)"
+app_sh 'true' >/dev/null 2>&1 || \
+    die "run-as $PKG failed: the installed APK must be the debuggable build from build_apk.sh"
+
+# ------------------------------------------------------------------------------ ot
+
+# A SHELL ON THE TABLET AS THE APP (run-as), standing in its projects folder or the
+# named piece's. The app is stopped while you are in (so nothing writes under you)
+# and started again when the shell exits.
+if [[ "$mode" == "ot" ]]; then
+    if [[ "${#names[@]}" -eq 1 ]]; then
+        piece="${names[0]%/}"; far_dir="$FAR/projects/$piece"; where="projects/$piece"
+    else
+        far_dir="$FAR/projects"; where="projects/"
+    fi
+    printf 'warptempo_sync ot — a shell on the tablet (%s %s), in %s\n' "$link" "$dev" "$where"
+    printf 'you are the app'"'"'s own user, so every folder opens and what you create is the app'"'"'s.\n'
+    printf 'the app is stopped while you are in; exit (or Ctrl+D) returns and starts it again.\n\n'
+    adb shell -T "am force-stop $(q "$PKG")" </dev/null
+    # -t -t: a pty on the device even though adb's own stdin is checked first.
+    adb shell -t -t "run-as $PKG sh -c 'cd \"\$1\" && exec sh -i' sh $(q "$far_dir")"
+    printf '\nstarting the app on the tablet\n'
+    adb shell -T "am start -n $(q "$PKG/.MainActivity")" </dev/null >/dev/null || die "could not start the app"
+    exit 0
+fi
+
+# THE LAPTOP'S PROJECTS FOLDER IS THE DEVICE CONFIG'S projects_path, the one the
+# GUI opens; the projects clone is the folder above it.
+PROJECTS="$(sed -n 's/^projects_path=//p' "${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/config" 2>/dev/null)"
+PROJECTS="${PROJECTS%/}"
+[[ -n "$PROJECTS" ]] || die "no projects_path in the device config: run the GUI once"
+REPO="${PROJECTS%/*}"
+[[ -d "$PROJECTS" ]] || die "no projects folder at $PROJECTS"
+
+scratch="$(mktemp -d "${TMPDIR:-/tmp}/warptempo_sync.XXXXXXXX")" || die "cannot make a scratch folder"
+cleanup() {
+    # Only ever the folder mktemp just made: the name is checked before it goes.
+    case "$scratch" in
+        "${TMPDIR:-/tmp}"/warptempo_sync.????????) [[ -d "$scratch" ]] && rm -rf -- "$scratch" ;;
+    esac
+}
+trap cleanup EXIT
+
+# ------------------------------------------------------------------ scope
+
+# The one never-travels predicate (the prose at the head): prints the reason and
+# succeeds when the folder must not travel.
+unsyncable() {                          # $1 = piece folder name
+    # "test" as a WORD, any case: a piece called "Contest" is not a test folder.
+    if [[ "${1,,}" =~ (^|[^[:alnum:]])test([^[:alnum:]]|$) ]]; then printf 'its name contains the word "test"'; return 0; fi
+    if [[ "$1" == *'~'* ]]; then printf 'its name contains "~"'; return 0; fi
+    if git -C "$REPO" check-ignore -q "projects/$1"; then printf 'git ignores it'; return 0; fi
+    return 1
+}
+
+skipped=()
+targets=()
+if [[ "${#names[@]}" -gt 0 ]]; then
+    for n in "${names[@]}"; do
+        n="${n%/}"
+        [[ "$n" == */* ]] && n="$(basename "$n")"
+        [[ -d "$PROJECTS/$n" ]] || die "no piece folder '$n' under $PROJECTS"
+        if why="$(unsyncable "$n")"; then die "'$n' never travels: $why"; fi
+        targets+=( "$n" )
+    done
+else
+    shopt -s nullglob
+    dirs=( "$PROJECTS"/*/ )
+    shopt -u nullglob
+    for d in "${dirs[@]}"; do
+        name="$(basename "$d")"
+        if unsyncable "$name" >/dev/null; then skipped+=( "$name" ); continue; fi
+        targets+=( "$name" )
+    done
+fi
+
+# ------------------------------------------------------------------ shared bodies
+
+# The piece's source .wav, EXACTLY as the app resolves it (resolve_project,
+# project_model.cpp): one listing of the folder's regular files (a symlink to one
+# counts, as the app's is_regular_file follows it; dotfiles included), each split
+# at its LAST dot unless that dot leads the name (std::filesystem's stem and
+# extension: `.warpmarkers` alone has no extension, `.x.wav` is the wav `.x`),
+# extensions compared EXACTLY (lowercase `.wav` and the three sidecar spellings;
+# `.WAV` is no source). Then the app's three decisions: SEVERAL sidecar stems
+# refuse; ONE sidecar stem needs exactly its `<stem>.wav` and no other root wav
+# (another is the legacy layout, "Move it into render/"); NO sidecar needs exactly
+# one wav. Prints the source's path and succeeds, or prints the app's own refusal
+# (naming the folder) and fails.
+source_wav() {                          # $1 = piece
+    local dir="$PROJECTS/$1" f base stem ext s
+    local -a wav_stems=() car_stems=()
+    local -A seen=()
+    shopt -s nullglob dotglob
+    local -a entries=( "$dir"/* )
+    shopt -u nullglob dotglob
+    for f in "${entries[@]}"; do
+        [[ -f "$f" ]] || continue
+        base="${f##*/}"
+        stem="${base%.*}"
+        [[ "$stem" != "$base" && -n "$stem" ]] || continue     # no extension
+        ext="${base:${#stem}}"
+        case "$ext" in
+            .wav) wav_stems+=( "$stem" ) ;;
+            .warpmarkers|.phaseresetmarkers|.settings)
+                [[ -n "${seen[$stem]:-}" ]] || { seen["$stem"]=1; car_stems+=( "$stem" ); } ;;
+        esac
+    done
+    if [[ "${#car_stems[@]}" -gt 1 ]]; then
+        printf "several sidecar stems in '%s': %s" "$1" \
+            "$(printf '%s\n' "${car_stems[@]}" | LC_ALL=C sort | sed "s/.*/'&'/" | paste -sd, - | sed 's/,/, /g')"
+        return 1
+    fi
+    if [[ "${#car_stems[@]}" -eq 1 ]]; then
+        stem="${car_stems[0]}"
+        local have=0
+        for s in "${wav_stems[@]}"; do [[ "$s" == "$stem" ]] && have=1; done
+        if (( ! have )); then printf "no '%s.wav' in '%s' for its sidecars" "$stem" "$1"; return 1; fi
+        for s in "${wav_stems[@]}"; do
+            if [[ "$s" != "$stem" ]]; then
+                printf "'%s' holds '%s.wav' beside its source: move it into render/" "$1" "$s"
+                return 1
+            fi
+        done
+        printf '%s' "$dir/$stem.wav"
+        return 0
+    fi
+    if [[ "${#wav_stems[@]}" -eq 0 ]]; then printf "no wav in '%s'" "$1"; return 1; fi
+    if [[ "${#wav_stems[@]}" -gt 1 ]]; then printf "several wavs and no sidecar in '%s'" "$1"; return 1; fi
+    printf '%s' "$dir/${wav_stems[0]}.wav"
+}
+
+# A FILE'S IDENTITY TO THE NANOSECOND, as the app's fingerprint records it
+# (render_cache.cpp: `size=` and `mtime=` in whole nanoseconds, compared exactly).
+# From one `stat -c '%Y|%s|%y'` line, on either device: %Y is whole seconds and
+# the nanoseconds are %y's fraction (toybox on the tablet has no %.9Y; GNU and
+# toybox both print %y's nine digits). Prints "NS SIZE SEC.FRAC" — the last is
+# what `touch -d @...` takes to restore the date exactly. Fails on a malformed line.
+ns_identity() {                         # $1 = "%Y|%s|%y"
+    local sec="${1%%|*}" rest="${1#*|}" size y frac=000000000
+    size="${rest%%|*}"; y="${rest#*|}"
+    [[ "$sec" =~ ^[0-9]+$ && "$size" =~ ^[0-9]+$ ]] || return 1
+    if [[ "$y" =~ \.([0-9]+) ]]; then frac="${BASH_REMATCH[1]}000000000"; frac="${frac:0:9}"; fi
+    printf '%s %s %s.%s' "$(( 10#$sec * 1000000000 + 10#$frac ))" "$size" "$sec" "$frac"
+}
+# The laptop file's "NS SIZE" (ns_identity's first two fields), or fails.
+near_identity() {                       # $1 = laptop path
+    local id
+    id="$(ns_identity "$(stat -c '%Y|%s|%y' -- "$1" 2>/dev/null)")" || return 1
+    printf '%s' "${id% *}"
+}
+# What a fingerprint says its wav is, as "NS SIZE" (its mtime= and size= lines),
+# or fails when it does not say.
+fp_records() {                          # $1 = laptop path of a .fingerprint
+    local sz mt
+    sz="$(sed -n 's/^size=//p' -- "$1" 2>/dev/null)"
+    mt="$(sed -n 's/^mtime=//p' -- "$1" 2>/dev/null)"
+    [[ "$sz" =~ ^[0-9]+$ && "$mt" =~ ^[0-9]+$ ]] || return 1
+    printf '%s %s' "$mt" "$sz"
+}
+
+# One far file OUT, as the app, to a laptop PART file: streamed, checked by sha256
+# against the tablet's own, dated as on the tablet TO THE NANOSECOND (ns_identity:
+# a render's fingerprint records its wav's date exactly, so a date rounded to the
+# second would make the laptop's copy a pair the app rejects). Prints the sha256 it
+# checked. Fails with the part removed. Publishing it (the rename) is the caller's.
+fetch_as_app() {                        # $1 = far path, $2 = laptop part path
+    local far_sum near_sum id
+    mkdir -p -- "$(dirname -- "$2")" || return 1
+    if app_out 'cat "$1"' "$1" > "$2"; then :; else rm -f -- "$2"; return 1; fi
+    far_sum="$(app_sh 'sha256sum "$1"' "$1" | cut -c1-64)"
+    near_sum="$(sha256sum < "$2" | cut -c1-64)"
+    if [[ -z "$far_sum" || "$far_sum" != "$near_sum" ]]; then rm -f -- "$2"; return 1; fi
+    id="$(ns_identity "$(app_sh 'stat -c "%Y|%s|%y" "$1"' "$1" | tr -d '\r')")" || { rm -f -- "$2"; return 1; }
+    touch -d "@${id##* }" -- "$2" || { rm -f -- "$2"; return 1; }
+    printf '%s' "$near_sum"
+    return 0
+}
+
+# One laptop file IN, as the app, into the app's private folder: written beside the
+# target and renamed over it, then checked by sha256.
+put_as_app() {                          # $1 = laptop file, $2 = far path (relative to run-as's home), $3 = mode
+    show adb shell -T "run-as $PKG sh -c 'cat > $2.part && mv $2.part $2 && chmod $3 $2'" "<" "$1"
+    (( dry )) && return 0
+    app_sh_in 'cat > "$1.part" && mv -f "$1.part" "$1" && chmod "$2" "$1"' "$2" "$3" < "$1" || return 1
+    [[ "$(app_sh 'sha256sum "$1"' "$2" | cut -c1-64)" == "$(sha256sum < "$1" | cut -c1-64)" ]]
+}
+
+# THE TWO SHAPES setup EVER DELETES WHOLE, and nothing else: the clone root's .git
+# and a piece's history/ folder. Any other path is refused before adb is asked.
+far_rm_tree() {                         # $1 = absolute far path
+    local mid
+    case "$1" in
+        "/sdcard/Android/data/com.warptempo.gui/files/.git") ;;
+        "/sdcard/Android/data/com.warptempo.gui/files/projects/"*"/history")
+            mid="${1#/sdcard/Android/data/com.warptempo.gui/files/projects/}"
+            mid="${mid%/history}"
+            [[ -n "$mid" && "$mid" != */* && "$mid" != "." && "$mid" != ".." ]] || \
+                die "refusing to delete '$1': not a piece's history folder"
+            ;;
+        *) die "refusing to delete '$1': not a folder setup deletes" ;;
+    esac
+    run app_sh 'rm -rf "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
+    far_gone "$1"
+}
+far_rm_file() {                         # $1 = absolute far path of one file
+    case "$1" in
+        "$FAR"/*) ;;
+        *) die "refusing to delete '$1': outside the app's folder" ;;
+    esac
+    [[ "$1" == *"/../"* || "$1" == *"/./"* || "$1" == *"//"* ]] && die "refusing to delete '$1'"
+    [[ "${1,,}" == "${FAR,,}/.git/"* || "${1,,}" == *"/.git/"* ]] && die "refusing to delete '$1': inside a .git"
+    run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
+    far_gone "$1"
+}
+# EVERY DELETION IS VERIFIED: a checked far_is must say the path is gone, else
+# setup stops (a dry run deletes nothing, so it asks nothing).
+far_gone() {                            # $1 = absolute far path just deleted
+    (( dry )) && return 0
+    far_is -e "$1" && die "$1 is still on the tablet after its deletion: stopping here"
+    return 0
+}
+
+# THE APP IS NOT RUNNING, read checked like far_is: pidof asked on the tablet,
+# yes or no, and a tablet that does not answer stops the run.
+app_running() {
+    local out
+    out="$(adb shell -T "if pidof $(q "$PKG") >/dev/null; then echo yes; else echo no; fi" </dev/null)" || \
+        die "the tablet did not answer whether the app is running: stopping here"
+    out="${out//$'\r'/}"
+    case "$out" in
+        yes) return 0 ;;
+        no)  return 1 ;;
+        *)   die "the tablet answered '$out' about the app: stopping here" ;;
+    esac
+}
+# THE APP STOPPED, AS A PREREQUISITE: the force-stop must succeed and the app's
+# process must then be gone (given a few seconds to exit), else setup stops with
+# nothing deleted or overwritten — a live app could write its old session, or
+# its old clone, over what setup places.
+stop_app() {
+    run adb shell -T "am force-stop $(q "$PKG")" </dev/null || \
+        die "could not stop the app on the tablet: nothing was deleted or overwritten"
+    (( dry )) && return 0
+    local i
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        app_running || return 0
+        sleep 0.5
+    done
+    die "the app is still running on the tablet after it was stopped: nothing was deleted or overwritten"
+}
+
+# The folders adb made, opened to the app (the head's paragraph). Each root that
+# exists; a shell-owned directory is set to 777, any other is pruned unentered.
+open_far_dirs() {                       # $@ = far roots
+    local cmd="find" r n=0
+    for r in "$@"; do
+        if adb shell -T "[ -d $(q "$r") ]" </dev/null; then cmd+=" $(q "$r")"; n=$((n + 1)); fi
+    done
+    if (( dry )) && [[ "$n" -eq 0 ]]; then
+        # A dry run on a tablet that has nothing yet: the pushes would have made them.
+        for r in "$@"; do cmd+=" $(q "$r")"; done
+        n=1
+    fi
+    [[ "$n" -gt 0 ]] || return 0
+    cmd+=" -type d \\( -user shell -exec chmod 777 {} + -o -prune \\)"
+    head_step "open the folders adb made to the app (chmod 777 on each shell-owned directory)"
+    run adb shell -T "$cmd" </dev/null || die "could not open the pushed folders to the app"
+}
+
+# THE AUDIO: every target's source wav the tablet lacks, or holds at another size
+# or date. Sets `pushed` to the number of wavs copied (or that would be). A piece
+# whose folder the app would refuse (source_wav) is SKIPPED LOUDLY, not stopped
+# on: its line says why, and `unresolved` carries it to the run's last lines.
+pushed=0
+unresolved=()
+push_audio() {
+    local p src base farp near far size
+    for p in "${targets[@]}"; do
+        printf '%s\n' "$p"
+        if src="$(source_wav "$p")"; then :; else
+            step "leave it, NOT COPIED: $src (the app refuses this folder as it stands)"
+            unresolved+=( "$p: $src" )
+            continue
+        fi
+        base="$(basename "$src")"
+        farp="$FAR/projects/$p/$base"
+        near="$(stat -c '%s %Y' -- "$src")"
+        # THE TABLET'S COPY, READ CHECKED: its "size date", or `absent`; a
+        # tablet that does not answer in one of those shapes stops the run
+        # rather than read as "absent" and overwrite.
+        far="$(app_sh 'if [ -e "$1" ]; then stat -c "%s %Y" "$1"; else echo absent; fi' "$farp")" || \
+            die "could not read the tablet's $p/$base: nothing more was copied"
+        far="${far//$'\r'/}"
+        [[ "$far" == absent || "$far" =~ ^[0-9]+\ [0-9]+$ ]] || \
+            die "the tablet answered '$far' about $p/$base: nothing more was copied"
+        [[ "$far" == absent ]] && far=""
+        size="$(du -h -- "$src" | cut -f1)"
+        if [[ "$near" == "$far" ]]; then
+            step "leave the source wav: the tablet has it ($size)"
+            continue
+        fi
+        if [[ -z "$far" ]]; then
+            step "copy the source wav to the tablet ($size; a minute or so the first time)"
+        else
+            step "copy the source wav to the tablet ($size): the tablet's differs in size or date"
+        fi
+        quiet adb push --sync "$src" "$farp" || die "push failed: $src"
+        pushed=$((pushed + 1))
+    done
+}
+
+# The pieces push_audio skipped, said again at the end of the run, where they
+# cannot scroll past unseen.
+report_unresolved() {
+    [[ "${#unresolved[@]}" -gt 0 ]] || return 0
+    printf 'NOT COPIED — the app refuses these folders as they stand; fix them on the laptop and run it again:\n' >&2
+    local u
+    for u in "${unresolved[@]}"; do printf '    %s\n' "$u" >&2; done
+    printf '\n' >&2
+}
+
+# ------------------------------------------------------------------ the banner
+
+case "$mode" in
+    tt)    printf 'warptempo_sync tt%s — the audio, laptop -> tablet (%s %s)\n' "$( (( dry )) && printf ' -n' )" "$link" "$dev" ;;
+    ft)    printf 'warptempo_sync ft%s — the renders, tablet -> laptop (%s %s)\n' "$( (( dry )) && printf ' -n' )" "$link" "$dev" ;;
+    setup) printf 'warptempo_sync setup%s — the tablet made ready (%s %s)\n' "$( (( dry )) && printf ' -n' )" "$link" "$dev" ;;
+esac
+if [[ "${#names[@]}" -gt 0 ]]; then
+    printf 'pieces: %s\n' "$(join "${targets[@]}")"
+else
+    printf 'pieces: every one — %s\n' "$(join "${targets[@]}")"
+fi
+[[ "${#skipped[@]}" -gt 0 ]] && \
+    printf '        passed by, never travel (a test or a backup): %s\n' "$(join "${skipped[@]}")"
+(( dry )) && printf '(dry run: nothing on the tablet or in your folders is changed)\n'
+[[ "$mode" == "setup" ]] && (( ! dry )) && \
+    printf '(the plan first: nothing on the tablet changes until you answer y)\n'
+printf '\n'
+
+# ------------------------------------------------------------------------------ tt
+
+if [[ "$mode" == "tt" ]]; then
+    [[ "${#targets[@]}" -gt 0 ]] || die "no pieces"
+    push_audio
+    printf '\n'
+    if [[ "$pushed" -gt 0 ]]; then
+        open_far_dirs "$FAR/projects"
+    fi
+    printf '\n'
+    report_unresolved
+    if (( dry )); then printf 'nothing was changed. run it without -n to do this.\n'
+    elif [[ "$pushed" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
+    else printf 'done: %s copied. A new piece opens from File -> Open Project on the tablet.\n' "$(plural "$pushed" wav)"
+    fi
+    exit 0
+fi
+
+# ------------------------------------------------------------------------------ ft
+
+if [[ "$mode" == "ft" ]]; then
+    [[ "${#targets[@]}" -gt 0 ]] || die "no pieces"
+    # ONE PAIR ON THE TABLET, as one line: the wav's `%Y|%s|%y` (ns_identity's
+    # input), its fingerprint's sha256 or "-" when it has none, and the wav's name
+    # last (a name may hold anything but a newline). The inventory runs it over
+    # every render wav.
+    # Every utility is handed the `./` spelling (a name may begin with `-`); the
+    # line carries the bare name.
+    far_pair='fp="./${f%.*}.fingerprint"; s=-; [ -f "$fp" ] && s="$(sha256sum "$fp" | cut -c1-64)"; echo "$(stat -c "%Y|%s|%y" "./$f")|$s|$f"'
+    # A pair line as "NS SIZE FPSHA", or fails.
+    pair_token() {                      # $1 = a far_pair line
+        local sec size y fsum name id
+        IFS='|' read -r sec size y fsum name <<<"$1"
+        id="$(ns_identity "$sec|$size|$y")" || return 1
+        [[ "$fsum" == "-" || "$fsum" =~ ^[0-9a-f]{64}$ ]] || return 1
+        printf '%s %s' "${id% *}" "$fsum"
+    }
+    took=0
+    for p in "${targets[@]}"; do
+        printf '%s\n' "$p"
+        fard="$FAR/projects/$p/render"
+        neard="$PROJECTS/$p/render"
+        # THE INVENTORY, BY PAIR. Checked: a missing render/ is an empty answer,
+        # any other failure
+        # stops the run (a line that fails its own read dies at pair_token).
+        # Dot-leading names too (a title may begin with `.`): the two globs are
+        # disjoint, and one that matches nothing stays literal and fails -f.
+        listing="$(app_sh '[ -d "$1" ] || exit 0; cd "$1" || exit 1; for f in *.wav .*.wav; do [ -f "./$f" ] || continue; '"$far_pair"'; done' "$fard")" || \
+            die "could not list the tablet's renders for $p: nothing more was copied"
+        listing="${listing//$'\r'/}"
+        if [[ -z "$listing" ]]; then
+            step "leave it: the tablet has no render for this piece"
+            continue
+        fi
+        while IFS= read -r line; do
+            [[ -n "$line" ]] || continue
+            name="${line#*|}"; name="${name#*|}"; name="${name#*|}"; name="${name#*|}"
+            token="$(pair_token "$line")" || die "could not read the tablet's render '$name' in $p"
+            fid="${token% *}"            # "NS SIZE" of the tablet's wav
+            ffp="${token##* }"           # its fingerprint's sha256, or "-"
+            fns="${fid% *}"
+            near="$neard/$name"
+            fp="${name%.*}.fingerprint"
+            nearfp="$neard/$fp"
+            nfp="-"
+            [[ -f "$nearfp" ]] && nfp="$(sha256sum < "$nearfp" | cut -c1-64)"
+            # THE WAV'S IDENTITY IS ITS SIZE AND ITS DATE TO THE NANOSECOND — what
+            # the fingerprint attests, and what a new render always changes.
+            wav_same=0
+            if [[ -f "$near" ]]; then
+                nid="$(near_identity "$near")" || die "could not read $p/render/$name on the laptop"
+                if [[ "$nid" == "$fid" ]]; then
+                    wav_same=1
+                elif [[ "$fns" -le "${nid% *}" ]]; then
+                    step "leave '$name' and its fingerprint: the laptop's copy is newer than the tablet's"
+                    continue
+                fi
+            fi
+            if (( wav_same )); then
+                # THE WAV MATCHES: the pair is whole when the fingerprint does too.
+                if [[ "$ffp" == "$nfp" ]]; then
+                    step "leave '$name': the laptop has it, and its fingerprint"
+                    continue
+                fi
+                if [[ "$ffp" == "-" ]]; then
+                    # No generation check: removing a fingerprint is always safe
+                    # (without one the app renders again) and copies nothing.
+                    step "DELETE the laptop's '$fp': the tablet's '$name' has no fingerprint, so it describes another render"
+                    run rm -f -- "$nearfp" || die "could not remove $p/render/$fp"
+                    took=$((took + 1))
+                    continue
+                fi
+                step "copy '$fp' from the tablet: the laptop has '$name' but not its fingerprint"
+                show adb exec-out "run-as $PKG cat $fard/$fp" ">" "$nearfp.warptempo_sync-part"
+                if (( ! dry )); then
+                    fetch_as_app "$fard/$fp" "$nearfp.warptempo_sync-part" >/dev/null || \
+                        die "could not bring $p/render/$fp: nothing was replaced"
+                    if [[ "$(fp_records "$nearfp.warptempo_sync-part")" != "$fid" ]]; then
+                        rm -f -- "$nearfp.warptempo_sync-part"
+                        step "leave '$name': the tablet's fingerprint does not describe its wav (a render in progress, or one cut short)"
+                        continue
+                    fi
+                fi
+                run mv -f -- "$nearfp.warptempo_sync-part" "$nearfp" || die "could not place $p/render/$fp"
+                took=$((took + 1))
+                continue
+            fi
+            if [[ "$ffp" == "-" ]]; then pair="'$name' (the tablet has no fingerprint for it)"
+            else pair="'$name' and its fingerprint"; fi
+            if [[ -f "$near" ]]; then step "copy $pair from the tablet, over the laptop's older copy"
+            else step "copy $pair from the tablet"; fi
+            [[ "$ffp" == "-" && -f "$nearfp" ]] && \
+                step "DELETE the laptop's old '$fp' as the wav lands: it describes another render"
+            # BOTH MEMBERS TO PART FILES, both checked — each against the tablet's
+            # own sha256, and the fingerprint against the listed wav — before
+            # either is published.
+            show adb exec-out "run-as $PKG cat $fard/$name" ">" "$near.warptempo_sync-part"
+            [[ "$ffp" != "-" ]] && show adb exec-out "run-as $PKG cat $fard/$fp" ">" "$nearfp.warptempo_sync-part"
+            if (( ! dry )); then
+                if fetch_as_app "$fard/$name" "$near.warptempo_sync-part" >/dev/null; then :; else
+                    die "could not bring $p/render/$name: nothing was replaced"
+                fi
+                if [[ "$ffp" != "-" ]]; then
+                    fetch_as_app "$fard/$fp" "$nearfp.warptempo_sync-part" >/dev/null || {
+                        rm -f -- "$near.warptempo_sync-part"
+                        die "could not bring $p/render/$fp: nothing was replaced"
+                    }
+                fi
+                if [[ "$ffp" != "-" && "$(fp_records "$nearfp.warptempo_sync-part")" != "$fid" ]]; then
+                    rm -f -- "$near.warptempo_sync-part" "$nearfp.warptempo_sync-part"
+                    step "leave '$name': the tablet's fingerprint does not describe its wav (a render in progress, or one cut short)"
+                    continue
+                fi
+            fi
+            # THE PUBLISH: the old fingerprint first, then the wav, then the new one.
+            run rm -f -- "$nearfp" || die "could not remove $p/render/$fp"
+            run mv -f -- "$near.warptempo_sync-part" "$near" || die "could not place $p/render/$name"
+            if [[ "$ffp" != "-" ]]; then
+                run mv -f -- "$nearfp.warptempo_sync-part" "$nearfp" || die "could not place $p/render/$fp ('$name' is in place without it: run it again)"
+                # THE PAIR IS COMPLETE only when the published wav is what the
+                # fingerprint beside it says, to the nanosecond. Otherwise the
+                # fingerprint goes (the app then renders again) and the run stops.
+                if (( ! dry )) && [[ "$(near_identity "$near")" != "$(fp_records "$nearfp")" ]]; then
+                    rm -f -- "$nearfp"
+                    die "$p/render/$name does not match its fingerprint after the copy: the fingerprint was removed; run warptempo_sync ft again"
+                fi
+            fi
+            took=$((took + 1))
+        done <<<"$listing"
+    done
+    printf '\n'
+    if (( dry )); then printf 'nothing was changed. run it without -n to do this.\n'
+    elif [[ "$took" -eq 0 ]]; then printf 'done: nothing newer on the tablet.\n'
+    else printf 'done: %s copied into the pieces'"'"' render/ folders.\n' "$(plural "$took" render)"
+    fi
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- setup
+
+[[ -n "$TABLET_KEY" ]] || die "no tablet deploy key: set WARPTEMPO_TABLET_DEPLOY_KEY"
+[[ -f "$TABLET_KEY" && -f "$TABLET_KEY.pub" ]] || \
+    die "no tablet deploy key at $TABLET_KEY (and .pub): restore it from your backup first"
+
+# ---- THE PLAN (the head's paragraph). READ-ONLY ON THE TABLET: nothing from here
+# to the answer writes to it, stops the app or starts it. What it writes is laptop
+# scratch alone (the fresh clone, the listings).
+dry_asked=$dry
+
+far_root=0; far_is -d "$FAR" && far_root=1
+
+# THE FRESH CLONE, in scratch.
+clone="$scratch/clone"
+printf 'cloning GitHub'"'"'s projects repository into a scratch folder on the laptop (the tablet is not touched)\n'
+show git clone --quiet "$GITHUB_CLONE_URL" "$clone"
+git clone --quiet "$GITHUB_CLONE_URL" "$clone" || die "the clone from GitHub failed (is the laptop online?)"
+printf 'setting the clone'"'"'s config for the tablet: origin over ssh.github.com:443, filemode/symlinks off, ignorecase on, user warptempo\n'
+for kv in "remote.origin.url=$ORIGIN_URL" core.filemode=false core.symlinks=false core.ignorecase=true \
+          user.name=warptempo user.email=warptempo@gmail.com; do
+    show git -C "$clone" config "${kv%%=*}" "${kv#*=}"
+    git -C "$clone" config "${kv%%=*}" "${kv#*=}" || die "git config failed: $kv"
+done
+placed="$(git -C "$clone" log -1 --format='%h %s')"
+printf '  GitHub main is %s\n' "$placed"
+
+# THE TABLET'S INVENTORY — every file under the clone root but .git — IS THE SET
+# EVERY LATER DECISION READS (what is copied over, what is stale), so it is taken
+# whole or not at all: ONE CHECKED COMMAND, find's NUL-separated names (a name
+# may hold any byte but NUL) and then a `warptempo_sync-end` record, written as
+# it comes to a scratch file. A listing command that fails (find met a folder it
+# could not read, say, or the transport dropped) stops setup; so does any record
+# that is not a `./`-relative name, a missing end record, or anything after it —
+# with nothing changed. A tablet with no app folder yet lists nothing.
+far_list=()
+if (( far_root )); then
+    far_inv="$scratch/far_inventory"
+    app_sh 'cd "$1" && find . -path ./.git -prune -o -type f -print0 && printf "warptempo_sync-end\0"' "$FAR" > "$far_inv" || \
+        die "could not list the tablet's files (the listing command failed): nothing was changed"
+    inv_end=0; rec=""
+    while IFS= read -r -d '' rec; do
+        (( inv_end )) && die "the tablet's file listing runs on past its end: nothing was changed"
+        if [[ "$rec" == "warptempo_sync-end" ]]; then inv_end=1; continue; fi
+        [[ "$rec" == ./?* ]] || die "the tablet's file listing holds a malformed name ('$rec'): nothing was changed"
+        far_list+=( "${rec#./}" )
+        rec=""
+    done < "$far_inv"
+    [[ "$inv_end" -eq 1 && -z "$rec" ]] || \
+        die "the tablet's file listing is incomplete: nothing was changed"
+fi
+declare -A far_has=()
+for f in "${far_list[@]}"; do far_has["$f"]=1; done
+
+# The fresh clone's tracked set, likewise materialized and checked.
+git -C "$clone" ls-files -z > "$scratch/tracked" || die "could not list the clone's tracked files"
+tracked=()
+while IFS= read -r -d '' f; do tracked+=( "$f" ); done < "$scratch/tracked"
+declare -A is_tracked=()
+for f in "${tracked[@]}"; do is_tracked["$f"]=1; done
+
+# The stale kinds (the run's step 2), each matched exactly: `current` at the root,
+# projects/<piece>/history/..., projects/<piece>/<name>.magnificationlevelmarkers.
+stale_files=(); stale_members=(); stale_dir_list=(); declare -A stale_dirs=()
+for f in "${far_list[@]}"; do
+    [[ -n "${is_tracked[$f]:-}" ]] && continue
+    if [[ "$f" == "current" ]]; then stale_files+=( "$f" ); continue; fi
+    [[ "$f" == projects/*/* ]] || continue
+    rest="${f#projects/}"; piece="${rest%%/*}"; sub="${rest#*/}"
+    if [[ "$sub" == history/* ]]; then
+        if [[ -z "${stale_dirs["projects/$piece/history"]:-}" ]]; then
+            stale_dirs["projects/$piece/history"]=1; stale_dir_list+=( "projects/$piece/history" )
+        fi
+        stale_members+=( "$f" )
+    elif [[ "$sub" != */* && "$sub" == *.magnificationlevelmarkers ]]; then
+        stale_files+=( "$f" )
+    fi
+done
+
+declare -A stale_set=()
+for f in "${stale_files[@]}" "${stale_members[@]}"; do stale_set["$f"]=1; done
+
+# EVERY TRACKED FILE IS COPIED, so the placed tree is exactly GitHub's main: the
+# ones the tablet lacks, and the ones it holds, over whatever they hold. The plan
+# lists the two apart, the second being what the tablet loses.
+to_new=(); to_over=()
+for f in "${tracked[@]}"; do
+    if [[ -n "${far_has[$f]:-}" ]]; then to_over+=( "$f" ); else to_new+=( "$f" ); fi
+done
+
+# Anything else untracked, not ignored and not stale: said, never touched. A
+# REPORT ONLY (nothing is deleted or overwritten from it), so its reading need
+# not stop the run; NUL-separated like the inventory.
+others=()
+if [[ "${#far_list[@]}" -gt 0 ]]; then
+    declare -A ignored=()
+    while IFS= read -r -d '' f; do ignored["$f"]=1; done < \
+        <(printf '%s\0' "${far_list[@]}" | git -C "$clone" check-ignore --no-index --stdin -z)
+    for f in "${far_list[@]}"; do
+        [[ -n "${is_tracked[$f]:-}" || -n "${ignored[$f]:-}" || -n "${stale_set[$f]:-}" ]] && continue
+        others+=( "$f" )
+    done
+fi
+printf '\n'
+
+# ---- THE RUN, as one body taken twice: first with `dry` set, which PRINTS THE
+# PLAN (every run() and step makes nothing and says "would"), then, on a y, with
+# `dry` clear, which DOES it and narrates as it goes. Each pass reads what it
+# needs of the tablet for itself, so the real pass reads the settings file, the
+# deploy key and the audio again after the app is stopped: a last_project the
+# app wrote since the plan is kept.
+apply_setup() {
+    local d f k src key_same root cfg i
+    pushed=0; unresolved=()
+
+    # 1. THE APP STOPPED, AND ITS FOLDERS THERE.
+    head_step "stop the app on the tablet"
+    stop_app
+    root=0; far_is -d "$FAR" && root=1
+    cfg=0;  far_is -f "$APPCFG/config" && cfg=1
+    if [[ "$root" -eq 0 || "$cfg" -eq 0 ]]; then
+        head_step "start the app once, so Android makes its folder and the app writes its settings file (with no piece yet it closes), then stop it"
+        run adb shell -T "am start -n $(q "$PKG/.MainActivity")" </dev/null >/dev/null || die "could not start the app"
+        if (( ! dry )); then
+            for i in $(seq 1 30); do
+                app_sh '[ -d "$1" ]' "$FAR" && app_sh '[ -f "$1" ]' "$APPCFG/config" && break
+                sleep 1
+            done
+            stop_app
+            far_is -d "$FAR" || die "the app's folder $FAR did not appear: start the app by hand once, then run warptempo_sync setup again"
+            far_is -f "$APPCFG/config" || die "the app wrote no settings file: start it by hand once, then run warptempo_sync setup again"
+            root=1
+        fi
+    fi
+
+    # 2. THE STALE LEFTOVERS.
+    if [[ "${#stale_dir_list[@]}" -eq 0 && "${#stale_files[@]}" -eq 0 ]]; then
+        head_step "leave the tablet's folders: nothing stale from the old sync"
+    else
+        head_step "DELETE what the old sync left and nothing reads:"
+        for d in "${stale_dir_list[@]}"; do
+            printf '    %s/  (the exported history)\n' "$d"
+            far_rm_tree "$FAR/$d"
+        done
+        for f in "${stale_files[@]}"; do
+            printf '    %s\n' "$f"
+            far_rm_file "$FAR/$f"
+        done
+    fi
+
+    # 3. THE .git, WHOLE, AND THE TRACKED FILES. The push lands only where a
+    # checked reading says no .git stands: far_is here, or far_rm_tree's own check
+    # after the deletion — so it replaces, never overlays.
+    if (( root )) && far_is -e "$FAR/.git"; then
+        head_step "DELETE the tablet's .git: it is replaced whole, and a commit on it that GitHub lacks goes with it"
+        far_rm_tree "$FAR/.git"
+    fi
+    head_step "copy the clone's .git to the tablet ($(du -sh -- "$clone/.git" | cut -f1))"
+    quiet adb push "$clone/.git" "$FAR" || die "could not copy .git to the tablet"
+    if [[ "${#to_new[@]}" -gt 0 ]]; then
+        head_step "copy $(plural "${#to_new[@]}" "tracked file") the tablet lacks from GitHub's main:"
+        for f in "${to_new[@]}"; do
+            printf '    %s\n' "$f"
+            quiet adb push "$clone/$f" "$FAR/$f" || die "could not copy $f to the tablet"
+        done
+    fi
+    if [[ "${#to_over[@]}" -gt 0 ]]; then
+        head_step "copy $(plural "${#to_over[@]}" "tracked file") from GitHub's main over the tablet's own, whatever they hold:"
+        for f in "${to_over[@]}"; do
+            printf '    %s\n' "$f"
+            quiet adb push "$clone/$f" "$FAR/$f" || die "could not copy $f to the tablet"
+        done
+    fi
+    if (( ! dry )); then
+        [[ "$(adb shell -T "cat $(q "$FAR/.git/HEAD")" </dev/null | tr -d '\r')" == "ref: refs/heads/main" ]] || \
+            die "the tablet's .git/HEAD does not read refs/heads/main after the copy"
+    fi
+
+    # 4. THE DEPLOY KEY.
+    # NOT A CHECKED READING, AND NEED NOT BE: a reading that fails counts as
+    # "differs", and the answer to "differs" is to put the laptop's own key there
+    # again, verified by sum (put_as_app) — the key's one source is the laptop, so
+    # overwriting the tablet's copy with it can lose nothing.
+    key_same=1
+    for k in deploy_key deploy_key.pub; do
+        src="$TABLET_KEY"; [[ "$k" == *.pub ]] && src="$TABLET_KEY.pub"
+        [[ "$(app_sh 'sha256sum "$1" 2>/dev/null; true' "$APPCFG/$k" | cut -c1-64)" == "$(sha256sum < "$src" | cut -c1-64)" ]] || key_same=0
+    done
+    if [[ "$key_same" -eq 1 ]]; then
+        head_step "leave the deploy key: the tablet has this one"
+    else
+        head_step "copy the tablet's deploy key into the app's private folder ($APPCFG/deploy_key, .pub)"
+        run app_sh 'mkdir -p "$1"' "$APPCFG" || die "could not make $APPCFG on the tablet"
+        put_as_app "$TABLET_KEY" "$APPCFG/deploy_key" 600 || die "the deploy key did not arrive intact"
+        put_as_app "$TABLET_KEY.pub" "$APPCFG/deploy_key.pub" 644 || die "the deploy key's .pub did not arrive intact"
+    fi
+
+    # 5. THE SETTINGS FILE: projects_repo made right, sync_path gone, the rest kept.
+    # READ CHECKED, because it is rewritten from what is read: the whole file and
+    # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
+    # file), or `warptempo_sync-absent`; a failed or unmarked reading stops setup
+    # before the file is touched.
+    local old_cfg="$scratch/config.tablet" new_cfg="$scratch/config.new" cfg_raw
+    cfg_raw="$(app_sh 'if [ -e "$1" ]; then cat "$1" && printf "warptempo_sync-end"; else printf "warptempo_sync-absent"; fi' "$APPCFG/config")" || \
+        die "could not read the tablet's settings file: it was left as it was"
+    cfg_raw="${cfg_raw//$'\r'/}"
+    case "$cfg_raw" in
+        warptempo_sync-absent) : > "$old_cfg" ;;
+        *warptempo_sync-end)   printf '%s' "${cfg_raw%warptempo_sync-end}" > "$old_cfg" ;;
+        *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
+    esac
+    if [[ -s "$old_cfg" ]]; then
+        awk -v repo="$PROJECTS_REPO_LINE" '
+            /^sync_path=/     { next }
+            /^projects_repo=/ { print repo; had = 1; next }
+                              { print }
+            END               { if (had == 0) print repo }' "$old_cfg" > "$new_cfg"
+        if cmp -s "$old_cfg" "$new_cfg"; then
+            head_step "leave the tablet's settings file: it already names the projects repository and has no sync_path"
+        else
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, and no sync_path line"
+            put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
+        fi
+        sed 's/^/    /' "$new_cfg"
+    else
+        # Only the plan reaches this: the real pass started the app above until it wrote one.
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, and no sync_path line"
+    fi
+    printf '\n'
+
+    # 6. THE AUDIO, as tt all.
+    head_step "copy the audio, as warptempo_sync tt all:"
+    push_audio
+    printf '\n'
+
+    # 7. THE FOLDERS OPENED, THE APP STARTED.
+    open_far_dirs "$FAR/.git" "$FAR/projects"
+    if [[ "${#others[@]}" -gt 0 ]]; then
+        printf 'left alone, untracked in the tablet'"'"'s clone (a piece begun there, or by hand):\n'
+        for f in "${others[@]}"; do printf '    %s\n' "$f"; done
+    fi
+    head_step "start the app on the tablet"
+    run adb shell -T "am start -n $(q "$PKG/.MainActivity")" </dev/null >/dev/null || die "could not start the app"
+
+    printf '\n'
+    report_unresolved
+}
+
+dry=1
+apply_setup
+if (( dry_asked )); then
+    printf 'nothing was changed. run it without -n to do this.\n'
+    exit 0
+fi
+
+# THE ANSWER, from the terminal: y or Y alone goes on; anything else — Enter
+# alone, another word, end of input, no terminal — changes nothing.
+printf 'that is the plan: nothing on the tablet has been changed, and there is no backup.\n'
+printf 'Proceed? [y/N] '
+answer=""
+if { IFS= read -r answer < /dev/tty; } 2>/dev/null; then :; else printf '\n'; answer=""; fi
+case "$answer" in
+    y|Y) ;;
+    *)   printf 'nothing was changed.\n'; exit 0 ;;
+esac
+printf '\n'
+
+dry=0
+apply_setup
+printf 'done: the tablet holds GitHub'"'"'s main (%s).\n' "$placed"
+printf 'check: the app opens a piece; press h, and the bottom row ends "GitHub: up to date".\n'
+exit 0

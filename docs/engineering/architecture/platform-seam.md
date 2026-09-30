@@ -1170,9 +1170,9 @@ owns the reasoning): the tablet's clone lives on external storage, which the
 app sees through FUSE with the LOWER owner, and it has two legitimate writer
 uids by design — adb's shell places the clone and the audio, the app writes
 the sidecars — so a shell-owned `.git` would otherwise refuse every git
-question. The clone itself and the deploy key are placed by `wts setup` (the
-architect's `~/.pc/bash/wts`, outside the repo; its recipe is
-`~/.pc/distro/tablet/tablet_setup.txt`), which also sets the clone config the
+question. The clone itself and the deploy key are placed by
+`scripts/warptempo_sync setup` (its recipe is `docs/INSTALL.md`), which also
+sets the clone config the
 storage needs (`core.filemode=false`, `core.symlinks=false`,
 `core.ignorecase=true`) and the commit identity. THE TABLET READS
 ITS OWN CLONE since arc 4b (2026-09-27): the exported-history folder road that

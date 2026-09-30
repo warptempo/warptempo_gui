@@ -512,9 +512,9 @@ GuiPlatform::~GuiPlatform() {
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
 // with no permission granted and the app reads and writes without
 // MANAGE_EXTERNAL_STORAGE — the `projects/` of the tablet's clone of the
-// projects repository, whose root is the external files dir itself (`wts
-// setup` places the clone; the pull and `wts tt`'s audio fill it). It is
-// stamped as a LITERAL absolute
+// projects repository, whose root is the external files dir itself
+// (`warptempo_sync setup` places the clone; the pull and `warptempo_sync tt`'s
+// audio fill it). It is stamped as a LITERAL absolute
 // path: the config is a file the user may read and edit, and a file that names
 // where the projects are is worth more than one that says "ask the activity".
 // A STATIC THAT READS THE BACKEND'S GLOBAL: this accessor is asked before any
@@ -538,7 +538,7 @@ DeviceConfig GuiPlatform::device_config_defaults() {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,
                             "no externalDataPath: the projects folder is the "
                             "projects/ of the tablet's clone there, placed "
-                            "by wts setup");
+                            "by warptempo_sync setup");
         abort();
     }
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();

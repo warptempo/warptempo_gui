@@ -12,8 +12,9 @@
 // project's name ("550 - 1"). `projects_path` is a DEVICE CONFIG key
 // (device_config.h) — the laptop's is the projects clone's `projects/`, the
 // tablet's the app's external files dir's `projects/`, which is its own
-// clone's `projects/`, the clone's root being that dir (placed by `wts
-// setup`, filled by the pull and by `wts tt`'s audio) — and this file owns
+// clone's `projects/`, the clone's root being that dir (placed by
+// `warptempo_sync setup`, filled by the pull and by `warptempo_sync tt`'s
+// audio) — and this file owns
 // the three questions the model asks of a filesystem and nothing else: what
 // a folder's SOURCE is, which
 // folders there are, and which one the program opens at startup. It creates

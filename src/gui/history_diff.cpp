@@ -3022,9 +3022,9 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
     // it) when step 2 failed after it — so the recovery takes the files BACK
     // to the index: on the laptop `git restore projects`
     // in the clone and the pull again; on the tablet, which has no terminal,
-    // `wts setup` from the laptop re-places the clone. The pull is not made
-    // crash-transactional (architect 2026-09-28; github-recheck.md, THE
-    // PULL). INDEX FAILED and BRANCH FAILED left the files the upstream's
+    // `warptempo_sync setup` from the laptop re-places the clone. The pull is
+    // not made crash-transactional (architect 2026-09-28; github-recheck.md,
+    // THE PULL). INDEX FAILED and BRANCH FAILED left the files the upstream's
     // (the open piece's three as Reload or Keep left them), and what is left
     // is to bring the index and the branch along WITHOUT touching the working
     // tree. With the index unwritten that is a MIXED reset — HEAD and the
@@ -3040,7 +3040,7 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
                      "projects' in the terminal, then pull again (Ctrl+S "
                      "in h)\n"
                      "warptempo_gui:   on the tablet: re-place the clone "
-                     "with 'wts setup' from the laptop\n",
+                     "with 'warptempo_sync setup' from the laptop\n",
                      branch.c_str(), diag.c_str(), plan.repo_root.c_str());
         return GuiHistoryPullOutcome::FilesFailed;
     case GuiGitFastForward::IndexFailed:

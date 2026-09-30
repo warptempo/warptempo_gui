@@ -665,7 +665,7 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // THE PROBE'S ANSWER IS STALE BY CONSTRUCTION: wav_read_full REOPENS the
     // path, so the file object it decoded need not be the one probed here — a
     // wav republished between the two opens (every writer in this tree
-    // publishes by rename: the render's own staging, wts) is a different file at the same name. The probe is kept as the
+    // publishes by rename: the render's own staging, warptempo_sync) is a different file at the same name. The probe is kept as the
     // CHEAP EARLY REFUSAL — it is what lets the allocation policy
     // (checked_audio_sample_count) answer on a header before any payload is
     // read — and the post-decode check below is what the bind rests on,

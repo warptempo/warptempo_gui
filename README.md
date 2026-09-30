@@ -24,7 +24,7 @@ cmake --build build -j$(nproc)
 
 The program always opens a project — a folder under the per-device `projects_path`, holding the source WAV and the program-written sidecar files beside it. With no argument it opens the project it had open last, or the first valid project folder it finds; with one argument — a project's source WAV, inside its own project folder — it opens that project, and anything else refuses with the reason on stderr. `Ctrl+O` switches projects from inside.
 
-The GUI targets Linux with a Wayland compositor and JACK audio. The same GUI also builds as an Android APK, over the Android framework and AAudio rather than Wayland and JACK — the build road is in the runbook, [`docs/INSTALL.md`](docs/INSTALL.md). A headless render CLI (`-DWARPTEMPO_BUILD_CLI=ON`) builds and runs without Wayland or JACK, including under WSL2, and renders byte-identically to the GUI.
+The GUI targets Linux with a Wayland compositor and JACK audio. The same GUI also builds as an Android APK, over the Android framework and AAudio rather than Wayland and JACK — the build road is in the runbook, [`docs/INSTALL.md`](docs/INSTALL.md). `scripts/warptempo_sync` moves the source audio from the laptop to the tablet and the renders back (the runbook has the detail). A headless render CLI (`-DWARPTEMPO_BUILD_CLI=ON`) builds and runs without Wayland or JACK, including under WSL2, and renders byte-identically to the GUI.
 
 Two documents carry the rest: [`docs/HELP.md`](docs/HELP.md), the concepts and the working method, and [`docs/INSTALL.md`](docs/INSTALL.md), the runbook for installing, building, the first run, the tablet and upkeep. The interface is documented by its own tooltips.
 

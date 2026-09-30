@@ -2,14 +2,14 @@
 
 This file is how warptempo_gui is installed, built, run for the first time and kept running on its two devices. It is a copy-paste recipe: paste one block at a time into a terminal on the laptop, read what it prints (the `#` lines say what to expect), and only then go on to the next. Blocks run from the root of this repository unless they say otherwise. How to use the program is not here: its tooltips (the tooltip lamp, bare `\`) and [`HELP.md`](HELP.md) carry that.
 
-The two devices are an Arch Linux laptop (labwc, Wayland, JACK), where the program is built and tested, and one Android tablet (a Galaxy Tab S10 FE), which runs the same program as an APK built on the laptop. The pieces' marker files live in their own public repository, [warptempo_projects](https://github.com/warptempo/warptempo_projects), and each device keeps its own clone of it. The program itself commits, pushes and pulls those files (the history view `h`, then `Ctrl+S`). The tablet authors and commits; the laptop tests and never commits, pulling the tablet's work when it wants it. What git does not carry, the source audio in and the renders out, travels by `scripts/warptempo_sync`, which is upcoming (not yet in the repository); until it lands, the audio goes in by hand (Daily use) and the renders stay on the tablet.
+The two devices are an Arch Linux laptop (labwc, Wayland, JACK), where the program is built and tested, and one Android tablet (a Galaxy Tab S10 FE), which runs the same program as an APK built on the laptop. The pieces' marker files live in their own public repository, [warptempo_projects](https://github.com/warptempo/warptempo_projects), and each device keeps its own clone of it. The program itself commits, pushes and pulls those files (the history view `h`, then `Ctrl+S`). The tablet authors and commits; the laptop tests and never commits, pulling the tablet's work when it wants it. What git does not carry, the source audio in and the renders out, travels by `scripts/warptempo_sync` (Daily use).
 
 Every value that belongs to one person's setup is an environment variable. Export these in your shell profile (`~/.bashrc` or the like) and open a new terminal:
 
 | Variable | What it holds |
 |---|---|
-| `WARPTEMPO_TABLET_ADDR` | the tablet's wireless adb address, host:port (e.g. `192.168.0.20:5555`) |
-| `WARPTEMPO_TABLET_DEPLOY_KEY` | path of the tablet's GitHub deploy key; its `.pub` lies beside it |
+| `WARPTEMPO_TABLET_ADDR` | the tablet's wireless adb address, host:port (e.g. `192.168.0.20:5555`); read by `scripts/warptempo_sync` |
+| `WARPTEMPO_TABLET_DEPLOY_KEY` | path of the tablet's GitHub deploy key; its `.pub` lies beside it; read by `scripts/warptempo_sync` |
 | `WARPTEMPO_KEYSTORE_BACKUP` | path of your backup copy of `~/.android/debug.keystore` |
 | `WARPTEMPO_SIGNING_CERT_SHA256` | the SHA-256 fingerprint of that keystore's certificate, as keytool prints it |
 | `ANDROID_SERIAL` | the tablet's USB serial (adb's own variable) |
@@ -228,7 +228,14 @@ adb install -r android/app/build-android/warptempo.apk
 
 ### Put the projects on it
 
-Upcoming: `scripts/warptempo_sync setup` makes the tablet ready in one command. It shows its plan (every file it would delete or copy over, the settings file it would write, the audio) and asks `Proceed? [y/N]`; any answer but `y` changes nothing, and nothing is backed up. It starts the app once if it never ran (with no piece yet, it closes), places a fresh clone of GitHub's projects on the tablet, gives the tablet its deploy key from `$WARPTEMPO_TABLET_DEPLOY_KEY`, corrects the tablet's config, copies the audio and starts the app. If you have no tablet key yet, make one as the laptop's (Trouble, "the laptop has no deploy key") with `-f "$WARPTEMPO_TABLET_DEPLOY_KEY"`, titled `tablet` on GitHub, with write access.
+`scripts/warptempo_sync setup` makes the tablet ready in one command. It shows its plan (every file it would delete or copy over, the settings file it would write, the audio) and asks `Proceed? [y/N]`; any answer but `y` changes nothing, and nothing is backed up. It starts the app once if it never ran (with no piece yet, it closes), places a fresh clone of GitHub's projects on the tablet, gives the tablet its deploy key from `$WARPTEMPO_TABLET_DEPLOY_KEY`, corrects the tablet's config, copies the audio and starts the app. If you have no tablet key yet, make one as the laptop's (Trouble, "the laptop has no deploy key") with `-f "$WARPTEMPO_TABLET_DEPLOY_KEY"`, titled `tablet` on GitHub, with write access.
+
+```bash
+scripts/warptempo_sync setup -n
+# the plan alone, and nothing on the tablet changes
+scripts/warptempo_sync setup
+# the same plan, then "Proceed? [y/N]": read it, then type y. The last line starts "done:"
+```
 
 Then check. On the tablet, tap Toggle History View in the icon row (hold the S Pen just above an icon to read its name), or press `h` on a keyboard; after a moment the bottom row ends with `GitHub: up to date`. From the laptop:
 
@@ -273,7 +280,17 @@ adb logcat -s warptempo:I
 
 ## Daily use
 
-Audio in. Upcoming: `scripts/warptempo_sync tt` copies every piece's source wav the tablet lacks. By hand today, for a new piece (its folder under the laptop's `projects_path`, holding its one `.wav`):
+`scripts/warptempo_sync` reads the laptop's projects from the device config's `projects_path` and finds the tablet on the cable first, then at `$WARPTEMPO_TABLET_ADDR`. `tt` and `ft` take piece names (folder names under `projects_path`) to narrow a run; with none they take every piece. `-n` rehearses `tt`, `ft` or `setup`, saying in words what it would do and doing none of it; `-v` adds the commands. It runs only from a terminal; with no verb it prints its usage.
+
+Audio in, for a new piece (its folder under the laptop's `projects_path`, holding its one `.wav`):
+
+```bash
+scripts/warptempo_sync tt
+# copies every piece's source wav the tablet lacks; the app is neither stopped nor started.
+# Then on the tablet: File > Open Project.
+```
+
+By hand, what it does for one piece:
 
 ```bash
 piece="<the piece's folder name>"
@@ -286,9 +303,24 @@ adb shell "chmod 777 '$far/$piece'"
 # list; the chmod opens it. Then on the tablet: File > Open Project.
 ```
 
-Renders out. Upcoming: `scripts/warptempo_sync ft` brings every render newer than the laptop's. A render is a wav and its `.fingerprint` together, and the fingerprint names the wav by its size and its date to the nanosecond, so a hand copy that rounds the date makes a pair the program rejects; there is no hand road.
+Renders out:
 
-A shell on the tablet as the app: `adb shell run-as com.warptempo.gui` today (it starts in the app's data folder; the projects are under `/sdcard/Android/data/com.warptempo.gui/files/projects`). Upcoming: `scripts/warptempo_sync ot [piece]` opens one in the projects folder (or the piece's), with the app stopped until you type `exit`.
+```bash
+scripts/warptempo_sync ft
+# brings every render newer than the laptop's into its piece's render/ folder
+```
+
+A render is a wav and its `.fingerprint` together, and the fingerprint names the wav by its size and its date to the nanosecond, so a hand copy that rounds the date makes a pair the program rejects; there is no hand road.
+
+A shell on the tablet as the app:
+
+```bash
+scripts/warptempo_sync ot "<piece>"
+# in that piece's folder (with no name, in the projects folder); the app is stopped
+# until you type exit, which starts it again
+```
+
+By hand, `adb shell run-as com.warptempo.gui` opens one in the app's data folder, with the app running; the projects are under `/sdcard/Android/data/com.warptempo.gui/files/projects`.
 
 The tablet commits the marker files: in the app, `h`, then `Ctrl+S` on a keyboard or the Save button (its tooltip: Save and Commit) sends them to GitHub. The laptop is for testing and never commits; it may stay behind GitHub for as long as you like. To bring the tablet's work to the laptop, open a piece, press `h`, and when the bottom row says `GitHub: behind`, press `Ctrl+S` (it reads Pull). When the pull changes the open piece it asks `Reload this piece from GitHub's newer checkpoint?`: Reload takes GitHub's.
 
@@ -326,7 +358,7 @@ adb logcat -d -s warptempo:I | tail -20
 
 ```bash
 adb pull /sdcard/Android/data/com.warptempo.gui/files ~/tablet_files_copy
-# then run the upcoming scripts/warptempo_sync setup again, reading its plan before you answer y
+# then run scripts/warptempo_sync setup again, reading its plan before you answer y
 ```
 
 The laptop has no deploy key (`GitHub: refused` on the laptop):
@@ -345,7 +377,7 @@ cat ~/.config/warptempo_gui/deploy_key.pub
 projects="$(sed -n 's/^projects_path=//p' ~/.config/warptempo_gui/config)"
 git -C "$projects/.." reset --hard origin/main
 # HEAD is now at … : the laptop is GitHub's again. On the tablet, diverged means its
-# clone is re-placed by the upcoming scripts/warptempo_sync setup (copy its files home first, above)
+# clone is re-placed by scripts/warptempo_sync setup (copy its files home first, above)
 ```
 
 Moving the projects to another GitHub repository: point each clone's origin at it (`git remote set-url origin ssh://git@ssh.github.com:443/<owner>/<repository>.git`), give it the devices' deploy keys, and change Projects Repository in the Settings menu to match, on each device. The program pins GitHub's host keys, so the projects stay on GitHub.

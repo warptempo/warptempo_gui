@@ -3100,7 +3100,7 @@ void GuiInputHandler::open_history_commit_editor() {
             "have both moved; on the laptop discard its local commits with "
             "'git reset --hard origin/main' in the projects clone (it holds "
             "nothing authored), and on the tablet copy its sidecars off and "
-            "re-place its clone with 'wts setup'\n");
+            "re-place its clone with 'warptempo_sync setup'\n");
         notifications.notify(AppState::NotificationClass::Normal,
                              "This device and GitHub have both moved");
         return;
