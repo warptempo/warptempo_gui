@@ -15,11 +15,11 @@
 #
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
-#   0. debug keystore (keytool)         5. aapt2 link (manifest + assets)
-#   1. assets (the two Liberation TTFs)  6. zip the .so (-0) + classes.dex in
-#   2. cmake configure                  7. zipalign -P 16
-#   3. cmake build (the .so)            8. apksigner sign  9. verify
-#   4. javac -> d8 (the Java sliver)
+#   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
+#   1. assets (the two Liberation TTFs)     (manifest + res + assets)
+#   2. cmake configure                  6. zip the .so (-0) + classes.dex in
+#   3. cmake build (the .so)            7. zipalign -P 16
+#   4. javac -> d8 (the Java sliver)    8. apksigner sign  9. verify
 
 set -euo pipefail
 
@@ -136,18 +136,26 @@ wt_say "d8 --min-api $WT_API"
 [ -f "$DEXDIR/classes.dex" ] || wt_die "d8 produced no classes.dex"
 wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 
-# --- 5. aapt2 link --------------------------------------------------------
-# No res/ dir at all: the app declares no @drawable/@string (every pixel is
-# painted by cairo and every icon is an in-tree path), and aapt2 still emits a
-# valid binary manifest plus resources.arsc. (It is also why targetSdk stepped
-# to 34 rather than opting out of Android 15's edge-to-edge enforcement with the
-# windowOptOutEdgeToEdgeEnforcement theme attribute: that attribute needs a
-# res/values style and the aapt2 compile step this script does not have.)
+# --- 5. aapt2 compile + link ----------------------------------------------
+# res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
+# adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
+# layers per density, rendered once from Breeze's audio-x-generic and committed
+# (that XML's head comment is the recipe; nothing here renders). Every GUI pixel
+# is still painted by cairo and every roster icon is still an in-tree path; the
+# app declares no @string, no style, no res/values. aapt2 compile turns the
+# directory into res.zip, which link takes as a positional input.
+# (targetSdk stays 34 rather than opting out of Android 15's edge-to-edge
+# enforcement with the windowOptOutEdgeToEdgeEnforcement theme attribute: the
+# compile step exists now, but that attribute also needs a res/values style,
+# which the app still does not have, and stepping back to 34 is the same result
+# with no theme machinery -- 00_env.sh owns the reasoning, 36 included.)
 #
 # -I is the INSTALLED platform jar (android-$WT_PLATFORM_SDK) and
 # --target-sdk-version is the manifest's own number ($WT_TARGET_SDK). They are
 # deliberately different and 00_env.sh states both: the runtime gates behaviour
 # on the stamped target, never on the jar the app was compiled against.
+wt_say "aapt2 compile (res/)"
+"$WT_BUILD_TOOLS/aapt2" compile --dir "$APPDIR/res" -o "$PKGDIR/res.zip"
 wt_say "aapt2 link"
 "$WT_BUILD_TOOLS/aapt2" link \
     -o "$PKGDIR/base.apk" \
@@ -159,7 +167,8 @@ wt_say "aapt2 link"
     --version-code 1 \
     --version-name "2.0" \
     -0 ttf \
-    --auto-add-overlay
+    --auto-add-overlay \
+    "$PKGDIR/res.zip"
 
 # --- 6. store the .so, add classes.dex ------------------------------------
 # -0 (STORED) is REQUIRED for -P 16 to mean anything, and pairs with the
@@ -209,8 +218,8 @@ wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" \
 "$READELF" -d "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -E "SONAME" || true
 
 echo
-wt_say "VERIFY 5/5 -- the launchable activity is the sliver, and classes.dex is aboard"
-"$WT_BUILD_TOOLS/aapt2" dump badging "$APK" | grep -E "launchable-activity|application-label:"
+wt_say "VERIFY 5/5 -- the launchable activity is the sliver, the launcher icon is aboard, and so is classes.dex"
+"$WT_BUILD_TOOLS/aapt2" dump badging "$APK" | grep -E "launchable-activity|application-label:|application-icon"
 unzip -l "$APK" | grep -E "classes.dex|$LIBNAME"
 
 echo

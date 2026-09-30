@@ -11,7 +11,8 @@ namespace {
 
 // -- The icon table ---------------------------------------------------------
 //
-// One row per committed SVG (assets/icons/breeze/), each holding that file's
+// One row per committed SVG (assets/icons/breeze/; audio-x-generic.svg, the
+// launcher logo, excepted — icons.h's PROVENANCE), each holding that file's
 // path elements in file order. `d` is copied VERBATIM from the file; `ink` is
 // the color the file resolves to, and every path is FILLED in it.
 //

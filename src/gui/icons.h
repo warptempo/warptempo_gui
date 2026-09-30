@@ -36,7 +36,10 @@
 // d-strings here are copied from them VERBATIM, so a diff between the two is a
 // transcription bug and nothing else — with the two `<rect>` plates'
 // derivations as the stated exception just above. They are read by no code at runtime — the
-// product ships no icon files and reads none.
+// product reads no icon files. The one committed SVG with no table row is
+// audio-x-generic.svg (the 64 px mimetype rendition), the program's logo: the
+// Linux .desktop's Icon=, and the Android launcher icon, rendered once to the
+// PNG layers under android/app/res/ that the launcher, never this code, reads.
 //
 // EVERY ENTRY IS A ROW'S. The icons here are painted by the redesigned rows and
 // nowhere else — the pointer cursor is not one of them: every cursor the product
@@ -157,8 +160,8 @@ enum class Icon {
     // later" attached to it.
     //
     // THE 22px FILE IS HIS OWN PICK AND THE SET'S SIZE
-    // (/usr/share/icons/breeze/actions/22/merge.svg): every asset in this set
-    // is 22 and every IconDef is {22.0, ...}, so the glyph is transcribed at
+    // (/usr/share/icons/breeze/actions/22/merge.svg): every transcribed asset
+    // in this set is 22 and every IconDef is {22.0, ...}, so the glyph is transcribed at
     // the size the rest of the roster already wears. NO SWAP IS PENDING.
     Merge,               // Flatten tempo deviations (`Ctrl+F`)
     // (EDITCOPY AND EDITPASTE ARE DELETED — 2026-08-20, with their buttons:

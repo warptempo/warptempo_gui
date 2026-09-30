@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
+     recents card). It is the Linux one: Breeze's audio-x-generic, the
+     packaging/warptempo_gui.desktop's Icon=, vendored verbatim as
+     assets/icons/breeze/audio-x-generic.svg (the 64 px mimetype rendition).
+     An ADAPTIVE icon, the whole of it: minSdk is 30, so no legacy
+     ic_launcher.png set exists beside it.
+
+     Two layers per density under res/mipmap-<density>/:
+       ic_launcher_background.png  solid opaque #292C30, the row ground
+                                   kRedesignRowGround (src/gui/render.h), the
+                                   colour the tablet's status bar wears, so the
+                                   launcher's mask is filled with the app's
+                                   chrome colour;
+       ic_launcher_foreground.png  the glyph, RGBA, on a transparent surround.
+
+     THE 58-OF-108 RULE. The adaptive canvas is 108 dp and only its central
+     66 dp circle is guaranteed visible under every mask (circle, squircle,
+     rounded square: the launcher's choice). The SVG's 64-unit document is
+     scaled to 58 dp and centred on the canvas (25 dp each side): the sheet,
+     50 units wide, spans about 45 dp, whose diagonal (about 64 dp) is within
+     the 66 dp circle, and the disc's rim, 29 units from the document's
+     centre, lands about 26 dp out, inside the 33 dp radius. (The sheet sits
+     2 units left of the document's centre, so its two left corners reach
+     about 33.4 dp: on the safe circle's edge, and inside the 36 dp radius of
+     the 72 dp viewport every mask is drawn within.) The glyph's own
+     visual centre, (33, 32) in its 64 units, is near enough the document's
+     that no offset is taken. At density factor f (mdpi 1, hdpi 1.5, xhdpi 2,
+     xxhdpi 3, xxxhdpi 4) the canvas is 108·f px and the glyph 58·f px, both
+     whole; the page offset (108·f − 58·f) / 2 is 37.5 at hdpi, which
+     rsvg-convert places exactly (antialiased) instead of flooring it.
+
+     A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop and
+     committed; a retouch is a re-run of this recipe, never a build step
+     (build_apk.sh only compiles res/). The recipe, from the repo root
+     (rsvg-convert 2.62, ImageMagick 7), for each density n at factor f with
+     C = 108·f, G = 58·f, O = (C − G) / 2:
+
+       mdpi     C=108 G=58  O=25      hdpi    C=162 G=87  O=37.5
+       xhdpi    C=216 G=116 O=50      xxhdpi  C=324 G=174 O=75
+       xxxhdpi  C=432 G=232 O=100
+
+       rsvg-convert -w G -h G \
+           - -page-width C - -page-height C - -left O - -top O \
+           assets/icons/breeze/audio-x-generic.svg -o fg.png
+       magick fg.png -strip -define png:compression-level=9 \
+           -define png:compression-filter=5 \
+           PNG32:android/app/res/mipmap-n/ic_launcher_foreground.png
+       magick -size CxC xc:'#292C30' -strip \
+           PNG8:android/app/res/mipmap-n/ic_launcher_background.png
+
+     (The long options are spelt "- -" above only because an XML comment may
+     not hold two adjacent hyphens: type them as the usual double hyphen.)
+     The foreground stays RGBA: a palette encoding of it is not lossless (its
+     antialiased alpha edges), while the one-colour background is. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>

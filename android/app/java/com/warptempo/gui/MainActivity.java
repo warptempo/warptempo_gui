@@ -59,7 +59,8 @@ import java.nio.charset.StandardCharsets;
  * <p>targetSdk is 34 for the neighbouring reason (android/toolchain/00_env.sh
  * owns the number): at 35 Android 15's edge-to-edge enforcement lays the window
  * out over the bars whatever it asks for, and the opt-out there is a theme
- * attribute needing a res/ this APK does not have.
+ * attribute needing a res/values style this APK does not have (its res/ holds
+ * the launcher icon alone).
  *
  * <p>IMMERSIVE MODE IS RETIRED (architect 2026-08-27). Both bars were hidden
  * here -- sticky-immersive at create and re-applied at every focus gain -- and
@@ -193,9 +194,9 @@ import java.nio.charset.StandardCharsets;
  * foreground service, no background playback, no lock-screen transport. The
  * tablet is a kiosk on a stand -- the native side keeps the screen on -- with
  * the app in the foreground and the head unit reading the session over AVRCP,
- * and none of the machinery those would need (a res/, a service, the
- * FOREGROUND_SERVICE and POST_NOTIFICATIONS permissions) is added to the
- * manifest or the build.
+ * and none of the machinery those would need (a notification's res/ drawable,
+ * a service, the FOREGROUND_SERVICE and POST_NOTIFICATIONS permissions) is
+ * added to the manifest or the build.
  */
 public class MainActivity extends NativeActivity {
 

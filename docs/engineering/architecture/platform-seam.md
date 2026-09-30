@@ -806,7 +806,9 @@ exactly as they were. The activity's theme is `Theme.NoTitleBar` (not `.Fullscre
 and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
 target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
 is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a
-`res/values` style and an `aapt2 compile` step this APK has never had. Every
+`res/values` style this APK has never had (nor, until the launcher icon brought
+one on 2026-09-29, an `aapt2 compile` step; the target stays 34 all the same,
+the style being the missing piece). Every
 later Java need (the SAF picker's `onActivityResult` is the one still
 outstanding) joins this class as a method, and TWO HAVE — THE CAR'S
 MediaSession on 2026-08-28 (the section below) and THE SYSTEM CLIPBOARD on
@@ -1081,7 +1083,7 @@ min / 34 target; the COMPILE platform is a third number, 35) → cross-build
 (`add_library(warptempo_gui SHARED)` over the
 same `WARPTEMPO_GUI_SOURCES` the Linux target draws, three per-backend
 arms; `-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__` mandatory; no
-`-march=native`) → javac/d8 → aapt2 → zipalign `-P 16` → apksigner. Deps
+`-march=native`) → javac/d8 → aapt2 compile + link → zipalign `-P 16` → apksigner. Deps
 are STATIC from `android/prebuilt/arm64-v8a` (gitignored; rebuilt by
 `android/deps/build_all.sh` from pinned checksummed sources — fftw double
 +NEON+threads, freetype without fontconfig, harfbuzz, pixman, cairo
@@ -1094,11 +1096,31 @@ measured on the linked image. targetSdk is PINNED
 at 34 (Android gates behavior on it; sideload has no ceiling), the whole
 freeze story: a decade-later replacement tablet runs the same APK. It was 35
 until 2026-08-27, when the system bars came back and 35's edge-to-edge
-enforcement proved unopt-out-able without a `res/` — 36 was never a candidate,
+enforcement proved unopt-out-able without a `res/values` style (a `res/` and
+its compile step arrived 2026-09-29 for the launcher icon alone; no style came
+with them, and stepping back to 34 stays the same result with no theme
+machinery) — 36 was never a candidate,
 Android 16 revoking `screenOrientation` on a screen this size. The COMPILE
 platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
 runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
+
+THE LAUNCHER ICON (architect 2026-09-29). The manifest's `android:icon` is
+`@mipmap/ic_launcher`, the Linux one: Breeze's `audio-x-generic` (the
+`.desktop`'s `Icon=`), vendored verbatim as
+`assets/icons/breeze/audio-x-generic.svg` and never transcribed into
+`icons.cpp`. It is an ADAPTIVE icon and nothing else (minSdk 30, so no legacy
+PNG set): `android/app/res/mipmap-anydpi-v26/ic_launcher.xml` over
+`ic_launcher_foreground.png` (the glyph, RGBA) and
+`ic_launcher_background.png` (solid opaque #292C30, the row ground whose owner
+is `kRedesignRowGround`, render.h) in each of `mipmap-{m,h,xh,xxh,xxxh}dpi`,
+108·f px square. THE 58-OF-108 RULE: the SVG's 64-unit document is scaled to
+58 dp and centred on the 108 dp canvas, so the sheet and the disc sit within
+the 66 dp circle every mask keeps (the sheet's two left corners on its edge). The PNGs are a ONE-SHOT render
+(rsvg-convert + magick), committed; the XML's head comment is the recipe, and
+a retouch re-runs it, never a build step. `res/` holds that icon alone: the
+app still declares no `@string`, no style, no `res/values`; `build_apk.sh`'s
+step 5 compiles the directory (`aapt2 compile --dir`) and links the result.
 
 GIT ON THE TABLET (arc 4, architect 2026-09-27). The GitHub recheck asks
 git through libgit2 IN PROCESS (`src/gui/git_repo.cpp`, the one file that

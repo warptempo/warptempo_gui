@@ -46,9 +46,10 @@ export WT_BUILD_TOOLS_SHA1="b0b6376977657e8ad9b969bacf4093601da2c6fb"
 # place, the log still said `window 2304x1440`, so the taskbar sat over the
 # bottom row whose INPUT it owns (android/NOTES.md 11.7). The documented opt-out
 # at 35 is the windowOptOutEdgeToEdgeEnforcement THEME attribute, which needs a
-# res/values style and an aapt2 compile step this APK does not have (it ships no
-# res/ at all); stepping the target back to 34 is the same result with no build
-# machinery at all. NOT 36 either, which was 35's own reason: Android 16 revokes
+# res/values style this APK does not have (its res/ holds the launcher icon
+# alone, compiled by build_apk.sh's aapt2 compile step since 2026-09-29, and it
+# declares no style); stepping the target back to 34 is the same result with no
+# theme machinery at all. NOT 36 either, which was 35's own reason: Android 16 revokes
 # screenOrientation on screens >=600dp and this activity asks for landscape
 # only (sensorLandscape: either landscape, never portrait).
 # The spike's build script reads this same variable.
