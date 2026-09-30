@@ -110,8 +110,13 @@ shopt -s nocaseglob
 # that's enough insurance"). THERE IS NO BACKUP: what the plan lists as deleted or
 # copied over is gone once the answer is y, and the tablet's old .git goes whole,
 # with any commit on it GitHub lacks.
-#   THE PLAN IS READ-ONLY ON THE TABLET: nothing is written there, and the app is
-#   not stopped or started. It makes a FRESH CLONE of GitHub's projects repository
+#   THE PLAN IS READ-ONLY ON THE TABLET BUT FOR ONE REPAIR: nothing of the
+#   project data is written there, and the app is not stopped or started. The one
+#   write is the folder-opening pass (chmod 777 on each directory adb made, which
+#   is owned by shell and closed to the app) run FIRST, before the listing: a
+#   setup that died mid-transfer (the cable dropped, a push failed after y) left
+#   such folders, and the listing, which runs as the app, could not enter them —
+#   so a rerun repairs its own failure and goes on. It makes a FRESH CLONE of GitHub's projects repository
 #   in a laptop scratch folder (over https: the repository is public, so the clone
 #   needs no key) and gives its .git/config what the tablet needs: origin =
 #   ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git (GitHub's SSH
@@ -849,12 +854,21 @@ fi
 [[ -f "$TABLET_KEY" && -f "$TABLET_KEY.pub" ]] || \
     die "no tablet deploy key at $TABLET_KEY (and .pub): restore it from your backup first"
 
-# ---- THE PLAN (the head's paragraph). READ-ONLY ON THE TABLET: nothing from here
-# to the answer writes to it, stops the app or starts it. What it writes is laptop
-# scratch alone (the fresh clone, the listings).
+# ---- THE PLAN (the head's paragraph). READ-ONLY ON THE TABLET but for the
+# folder-opening repair below: nothing from here to the answer writes project
+# data to it, stops the app or starts it. What it writes is laptop scratch alone
+# (the fresh clone, the listings).
 dry_asked=$dry
 
 far_root=0; far_is -d "$FAR" && far_root=1
+
+# THE REPAIR FIRST (the head's paragraph): a setup that died after y leaves the
+# folders adb had made owned by shell at a mode the app cannot enter, and the
+# listing below runs as the app — so the same opening pass the apply runs last
+# runs here first, on whatever stands. Idempotent: on a tablet a setup completed
+# it changes nothing. Under -n the pass is printed, not run, so the listing may
+# still refuse on such a tablet; its refusal says so.
+(( far_root )) && open_far_dirs "$FAR/.git" "$FAR/projects"
 
 # THE FRESH CLONE, in scratch.
 clone="$scratch/clone"
@@ -882,7 +896,7 @@ far_list=()
 if (( far_root )); then
     far_inv="$scratch/far_inventory"
     app_sh 'cd "$1" && find . -path ./.git -prune -o -type f -print0 && printf "warptempo_sync-end\0"' "$FAR" > "$far_inv" || \
-        die "could not list the tablet's files (the listing command failed): nothing was changed"
+        die "could not list the tablet's files (the listing command failed; a setup that died mid-transfer leaves folders the listing cannot enter — a run without -n opens them first): nothing was changed"
     inv_end=0; rec=""
     while IFS= read -r -d '' rec; do
         (( inv_end )) && die "the tablet's file listing runs on past its end: nothing was changed"
