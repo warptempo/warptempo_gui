@@ -1181,7 +1181,9 @@ private:
     // the nav drag's ctrl-down pop. CTRL GOES BACK TO MEANING ONE THING — it
     // seats the stem where the cursor is, full stop, the seat rule that has
     // stood since the simple-rule ruling. A reader who wants the old rule has
-    // git.
+    // git. A RECENTRING DELAY WAS CONSIDERED AND DECLINED (architect
+    // 2026-08-14: "that would make it feel less responsive") — the third
+    // refusal of a preventative backstop on this surface.
     //
     // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN. Wayland gives a client no
     // pointer-warp request at all, so a VISIBLE cursor can never be moved by us

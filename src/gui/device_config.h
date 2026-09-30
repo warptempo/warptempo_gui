@@ -112,7 +112,7 @@
 // region hold) read it, placed right after max_waveform_height with a
 // Settings row of its own, until the architect closed the phase on the
 // glass the same day on 300 ms, now constexpr (kHoldDelayMs, gui_input.h);
-// the key's name is settings.md's record. A config still carrying it is
+// the key was `hold_delay_ms`, [100, 2000] ms. A config still carrying it is
 // unknown-key fatal, no migration.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).

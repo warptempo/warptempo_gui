@@ -575,7 +575,7 @@ void render_playhead(cairo_t* cr,
     // zoom-out of a 30-minute movement, where one column is nearly a second
     // wide). The POINT model is what is load-bearing and it is not traded for
     // the cell rule here: every column→frame landing in the product rides it,
-    // with the worst-case round-trip residue of zoom-viewport-strip.md's
+    // with the worst-case round-trip residue of the target-view landing's
     // derivation (half a source frame at the 1/16 slope floor plus three half
     // target frames, 9.5 / q px at the deepest zoom's q, half the working
     // column): 0.345 px on the laptop at 44.1 kHz (q = 27.5), 0.413 px on the

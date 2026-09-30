@@ -2186,6 +2186,10 @@ inline int bottom_row_h_px() {
 //   * a full offscreen re-render of the crop's own string at 16px, pen x=13,
 //     baseline 22 fits the crop better than every neighbouring size, baseline
 //     and pen tried (15 / 15.5 / 16 / 16.5 / 17 x 21/22/23 x 12..14).
+//
+// THE TEXT IS NOT FLOORED (architect 2026-08-10, with the gui_scale floor's
+// move to 50): it scales straight to 6pt at 50 %, while the structural
+// lengths keep scaled_px's per-metric floors so no 1 px line rounds to 0.
 inline constexpr double kRedesignFontSizePt = 12.0;   // -> 16.0 px at 100%
 inline double redesign_font_size_px() {
     return kRedesignFontSizePt * 96.0 / 72.0 * gui_scale_factor();

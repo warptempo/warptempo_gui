@@ -33,7 +33,7 @@ contract. The port split them:
   below), and ROSE BY TWO the same day with the AV sync panel's pair,
   `set_display_measurement` and `display_stats` (the Display measurement seam
   below), FELL BY ONE on 2026-09-27 with
-  `set_sync_worker_completion_fd`, Synchronize being struck (settings.md),
+  `set_sync_worker_completion_fd`, Synchronize being struck (closed_questions.md),
   and FELL BY TWO on 2026-09-30 when that pair went with the panel.
   Re-derive it; never decrement the number you find.
   There is NO Android-only member any more — the on-screen keyboard's
@@ -304,7 +304,7 @@ drag coordinates floor instead of truncating.
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. The FIVE keys it stamps are per-DEVICE preferences
-  (settings.md owns the file and its schema), and the values a
+  (device_config.h owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the projects clone's `projects/`
   (`$HOME/.warptempo/warptempo_projects/projects`, github-recheck.md), Android 225 %
@@ -312,16 +312,16 @@ drag coordinates floor instead of truncating.
   (the waveform cap, the retired `kWaveformMaxHeightPx`'s value),
   `kDefaultProjectsRepo` and a
   blank `last_project`. (Keys the template no longer
-  stamps: `sync_path`, struck with Synchronize 2026-09-27 — settings.md;
+  stamps: `sync_path`, struck with Synchronize 2026-09-27 — closed_questions.md;
   `hold_delay_ms`, stamped `575` for its one-day tuning phase 2026-09-29 and
   struck when the hold delay was hard-coded at 300 ms (`kHoldDelayMs`); the lit plate's picture keys — `fg_color` / `bg_color` 2026-09-26,
   then `fg_color` / `fg_border_color` / `bg_color` / `bg_border_color` and `waveform_widening`
   2026-09-27, and `waveform_compressor_threshold_db` / `waveform_compressor_ratio` (2026-09-25, and again
   2026-09-27 with `waveform_foreground_gain_db`) — each stamped for its tuning phase and
-  struck at its close — settings.md; the S Pen's plane
+  struck at its close — closed_questions.md; the S Pen's plane
   keys, the single `pen_plane_distance` and then the pair `pen_plane_enter` /
   `pen_plane_exit`, 2026-09-27 for theirs, struck at its close the same day
-  — settings.md; and `audio_player`, which stood here until
+  — closed_questions.md; and `audio_player`, which stood here until
   2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
   spawnable player existing there — and retired whole with the in-app render
   player, which plays a render through the product's own engine on both
@@ -637,7 +637,7 @@ a project's `render/` and batch folders onto a USB stick under
 row 8's `Synchronizing...` line, the device key `sync_path` and the seam's
 `set_sync_worker_completion_fd` (the loop's fifth worker eventfd). `\` is
 unbound. A config still carrying `sync_path=` is unknown-key fatal, no
-migration (settings.md). The act's design, the per-backend discoveries it
+migration (closed_questions.md). The act's design, the per-backend discoveries it
 replaced on 2026-08-30 and the tablet's OTG measurements are in git history.
 
 ## The content rect is the window

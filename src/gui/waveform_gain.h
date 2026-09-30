@@ -217,6 +217,12 @@
 //   when the inner was a solid bar and reconfirmed by eye 2026-09-27 with the
 //   inner drawn as an outline; the half below widens every gap by 6.02 dB.
 //
+//   RULED OUT with the stage, never to be re-proposed (architect
+//   2026-09-25..27): three bars; the inner without the expander; a
+//   compressor reading the column's peak (c reads L, never an oscillation);
+//   a gate on either bar (it would draw a line where the gain crosses it);
+//   and any flat level on the inner but the settled half below.
+//
 // THE FOREGROUND GAIN (architect 2026-09-27): a FLAT LINEAR gain of exactly
 // ONE HALF (kForegroundGain 0.5, waveform_gain.cpp) on the INNER bar alone,
 // folded into the inner's per-hop scale at the derivation; the outer is

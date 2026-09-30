@@ -72,7 +72,7 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
 // by construction. Same inputs always produce byte-identical output WITHIN ONE
 // LIBRARY EPOCH — the library-environment term is retired (2026-08-09, record
-// in settings.md), so a reuse crossing a glibc or FFTW upgrade may differ at
+// at render_cache.cpp's version block), so a reuse crossing a glibc or FFTW upgrade may differ at
 // the accepted inaudible class rather than byte-exactly; the
 // result is hashed to name a cache file and stored verbatim for an
 // exact-compare confirm on lookup.

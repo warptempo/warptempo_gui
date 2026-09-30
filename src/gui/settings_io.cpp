@@ -21,6 +21,18 @@ namespace {
 // format_default_settings_template (template build) and
 // write_settings_file (Ctrl+S). Reading is order-insensitive —
 // read_settings_file (the parser-side schema) does not consult this list.
+//
+// ADDING AN ENGINE KEY IS SIX EDITS IN FOUR FILES: the EngineSettings field
+// (with its member default) and its EngineField (engine_settings.h),
+// kEngineKeys and validate_engine_setting (engine_settings_io.cpp), a
+// descriptor here, and kCanonicalSettingsKeys (settings_file.cpp) — every
+// key is required, so there is no load-side default to add. A GUI-kind key
+// takes validate_gui_setting's arm and read_settings_file's assignment
+// instead of the engine pair, plus its SettingKind and format_nonengine_value
+// arm here and its NonEngineSettingsSnapshot member (settings_io.h). REMOVING
+// a key is the same inventory in reverse, and a file still carrying it is
+// then unknown-key fatal in both products, no migration (the retired-key
+// record at kCanonicalSettingsKeys).
 enum class SettingKind {
     EnginePassthrough,
     ActiveAudioViewChar,

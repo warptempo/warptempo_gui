@@ -2997,8 +2997,9 @@ private:
     // existence and all three sidecars BEFORE mutating any store, and returns
     // false leaving authoring untouched on any missing/malformed input — each
     // such genuine-failure arm naming its cause and path on stderr since
-    // 2026-08-02, while the caller's unknown-id refusal (a typo) stays silent
-    // behind its red flash; otherwise applies the recipe through
+    // 2026-08-02 and on a `Load in place refused: …` card since 2026-08-30
+    // (the local `refuse`; the typed road's silent unknown-id refusal went
+    // with that road); otherwise applies the recipe through
     // apply_recipe_in_place above — the two marker columns and the engine
     // block, the
     // file's view keys and tab bands ignored — wipes tmp/, and returns true.
@@ -3013,6 +3014,10 @@ private:
     // that is not typing. Then bare `'` outside the `h` view became the
     // player's opener, leaving the typed road unreachable, and it was deleted
     // — so the exception is spent and the doctrine holds here plainly again.
+    // THE ENTRY'S SIDECARS ARE TRUSTED: written once at dispatch and never
+    // hand-edited, so a malformed one fails its own parse and there is no
+    // adversarial content re-attestation — the render worker's source-clobber
+    // backstop and the engine tripwires are the last-ditch guards.
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its

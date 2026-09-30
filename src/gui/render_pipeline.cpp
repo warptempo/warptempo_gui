@@ -237,7 +237,10 @@ RenderOutcome do_render(const RenderRequest& req,
     // relative target column, absolute source frames, always untrimmed). The
     // dir is removed at shutdown and orphans
     // are swept at the next launch, so the pair rests only between a render
-    // and program close and nothing accumulates. Buffer-route previews
+    // and program close and nothing accumulates. THE PAIR IS STRICTLY INERT
+    // (architect-ruled): no product path reads it back — its intended
+    // consumer is a hypothetical future diff-capable algorithm — so nothing
+    // may come to depend on it. Buffer-route previews
     // deliberately skip; the CLI writes the same pair through the same shared
     // write_frame_map_pair into the same cache convention, its pid dir swept as
     // a dead-PID orphan by the GUI's next launch. This write is non-fatal — a

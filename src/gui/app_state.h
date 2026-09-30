@@ -87,8 +87,8 @@ constexpr double kWorkingZoomLevel = 2.0;  // spp = the working column exactly;
 //     target pixel, so its whole-frame rounding error, 8 / q px, stays under
 //     half a pixel only for q > 16, and each adjacent column is a whole frame
 //     away only for q >= 16;
-//   * THE TARGET-VIEW ROUND TRIP (render.cpp's playhead comment,
-//     zoom-viewport-strip.md): its worst-case residue is 9.5 / q px, under
+//   * THE TARGET-VIEW ROUND TRIP (render.cpp's playhead comment carries
+//     the derivation): its worst-case residue is 9.5 / q px, under
 //     half a pixel only for q > 19.
 // 20 holds both at every width (8 / 20 = 0.4 px, 9.5 / 20 = 0.475 px). It is a
 // whole number of frames, so it sits on the sixteenth-frame grid and the
@@ -304,7 +304,17 @@ inline double nav_zoom_px_per_level() {
 // kStripSegmentPauseMs 75) and the ruled last resort they carried are git
 // history; the generic 8 px press-becomes-drag gate below is a DIFFERENT job
 // (drag_moved_threshold_px() — press-becomes-drag, not classification) and
-// stands untouched.)
+// stands untouched.
+//
+// THE DY RESERVOIR WAS TRIED AND REVERTED WHOLE THE SAME DAY (architect
+// 2026-08-14): every dy passed a ±8 px band (kNavZoomReservoirPx) that spent
+// only its overflow, SIGN PERSISTENCE as the discriminator instead of
+// amplitude, returning dual-axis to the ctrl phase — and the accordion
+// survived, because a wrist arc is ONE sign-persistent sweep, not an
+// oscillation, so no band width separates it from a deliberate pull. It is
+// NOT TO BE RE-PROPOSED WITHOUT NEW MEASURED DATA; damping and hysteresis
+// stay rejected; DUAL-AXIS STAYS OFF BUT NOT CLOSED, a new mechanism being a
+// new design question.)
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.
@@ -12939,7 +12949,7 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 // landing in at every other zoom, finer or coarser. The nudge
 // reads no zoom (nudge_camera above). (The first zoom-derived walk, a
 // predicate and a frame chooser of 2026-09-13 to 2026-09-22, was deleted with
-// the placement-instrument principle; zoom-viewport-strip.md keeps its
+// the placement-instrument principle; closed_questions.md and git keep its
 // record.)
 
 // THE SELECTION HAS BEEN SPENT (architect 2026-09-12, the lamps resolved by use

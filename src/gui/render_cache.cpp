@@ -148,8 +148,8 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // cache hit). The key is a conservative over-approximation of byte identity,
 // and that direction is the point: a match guarantees byte-identical output;
 // a mismatch at worst re-renders redundantly. THE KEY NAMES AUTHORED STATE AND
-// RECIPE ONLY — the library-environment term is retired (2026-08-09, record in
-// settings.md), so the guarantee holds WITHIN ONE LIBRARY EPOCH and a reuse
+// RECIPE ONLY — the library-environment term is retired (2026-08-09, record at
+// the version block below), so the guarantee holds WITHIN ONE LIBRARY EPOCH and a reuse
 // that crosses a glibc or FFTW upgrade may differ at the accepted inaudible
 // class rather than byte-exactly.
 // CALLERS OWN THE RESOLVE AND THE TRIM ARM: render_fingerprint is pure
@@ -198,7 +198,14 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // post-change key naming different input could otherwise byte-collide — here a
 // post-change key beginning with the source path can equal a pre-change key
 // whose first digest happened to serialize those same bytes. Same accepted cost
-// as above.
+// as above. WHY THE TERM WENT (architect 2026-08-09, overruling the one-day
+// reading that kept it as a silent-wrong guard): with -ffp-contract=off in the
+// build, library drift is measured and bounded at inaudible classes (the
+// -38 dBFS / two-samples limiter class), and anything material fails loudly
+// through the limiter's knife-edge rather than silently — the argument that
+// retired the four attestation keys (settings_file.cpp's retired-key record)
+// kills this term identically. Byte-comparison across a library epoch is the
+// user's own discipline: re-render what you keep comparing.
 //
 // THE SECOND BUMP RULE — DSP IDENTITY (architect 2026-09-02; stated here as the
 // rule's authoritative home, its origin being perf_campaign_2026_07.md's
