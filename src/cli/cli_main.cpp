@@ -81,6 +81,8 @@ void usage(const char* argv0) {
 }  // namespace
 
 int main(int argc, char** argv) {
+    // The locale and argument checks are environment preconditions: they
+    // guard the launch, not the data.
     if (!verify_c_numeric_locale("warptempo_cli")) return 1;
 
     std::string source_path;
@@ -323,7 +325,9 @@ int main(int argc, char** argv) {
 
     // --- full (untrimmed) frame map, do_render's full_warp_frame_map: the
     // parser knows nothing of trim; a trimmed render hands the engine the
-    // prepost trimmer's translated maps derived from this one below. ---
+    // prepost trimmer's translated maps derived from this one below. The two
+    // builders' refusals are breach backstops surfaced at load: past the
+    // load's own checks nothing reachable remains, the tempo arm included. ---
     auto resolved = resolve_warp_markers_for_render(markers, sample_rate,
                                                     total_frames);
     auto r = build_warp_frame_map(resolved,

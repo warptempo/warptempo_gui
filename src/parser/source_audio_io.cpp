@@ -13,6 +13,9 @@ std::expected<void, std::string> load_source_range_to_buffer(const std::string& 
                                  std::vector<float>& out_samples,
                                  int& out_sample_rate,
                                  int& out_channels) {
+    // Not a duplicate of wav_read_range's range check: that one reads equal
+    // bounds as an empty success, and this one refuses them (ruled KEEP
+    // 2026-07-17).
     if (end_frame <= begin_frame) {
         return std::unexpected("end_frame <= begin_frame");
     }

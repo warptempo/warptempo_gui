@@ -10,7 +10,8 @@
 // WAV, which yields that owner's concrete diagnostic). Callers compare
 // a probe failure against this to tell "unrecognized format" apart from
 // "corrupt supported container", and append the convert-once acquisition
-// hint only for the former.
+// hint only for the former. Every probe refusal is load-fatal adversarial
+// input; the GUI's hint is its own message vocabulary, not a second check.
 //
 // Its sentence-initial capital is part of the 2026-08-02 terminal
 // capitalization pass (architect approval 2026-08-02) — text-only, otherwise

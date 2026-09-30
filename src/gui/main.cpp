@@ -604,8 +604,8 @@ GuiRect waveform_area(const AppState& a) {
     // the logical spp exactly at every rate.
     constexpr int kGridStepPx = 16;
     const int effective_w = w - (w % kGridStepPx);
-    // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
-    // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
+    // DEFENSIVE NON-NEGATIVE FLOOR on the height, a constructive DOMAIN INVARIANT
+    // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and at today's ceiling
     // it fits: gui_scale's 350 (architect 2026-08-29, down from the 400 that

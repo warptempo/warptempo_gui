@@ -89,8 +89,9 @@ struct MarkerEffective {
 // the resolver, whose coincidence collapse guarantees >= 1-frame spacing;
 // kept because the engine validates strict ascent but NOT the >= 1-frame
 // gap, so a sub-frame segment is the one map defect that would render
-// silently wrong bytes), tempo <= 0 (reachable — the ruled async-stderr
-// backstop for the sweep batches' per-cell computed tempo mutations, kept for
+// silently wrong bytes), tempo <= 0 (producer-less since the iteration lock of
+// 2026-09-10, which keeps every sweep cell in-bracket — the definition's
+// comment has the whole account — and kept for
 // its message vocabulary: without it a NEGATIVE tempo degrades to a decreasing
 // target the engine refuses as "not strictly ascending" and a ZERO tempo to a
 // non-finite target the emission finiteness arm below refuses first, and
@@ -207,9 +208,10 @@ std::vector<char> warp_coincident_collapse_members(
 // is a TOTAL NORMALIZER, infallible by design — every ambiguous state
 // resolves and the stderr line is the only signal, so there is no error to
 // report. build_warp_frame_map keeps its std::expected because it is a
-// different KIND of function, a partial compiler whose error arm has real
-// producers (the sweep's unbracketed per-cell tempo can drive a non-positive
-// product) plus the kept breach guards; the two signatures rightly differ.
+// different KIND of function, a partial compiler whose error arms are breach
+// guards for hand-assembled marker lists reaching the build directly (the
+// map-artifact contract, and the tempo arm's vocabulary); the two signatures
+// rightly differ.
 // sample_rate feeds only the stderr timestamps; total_frames only the
 // envelope check's last-segment distance.
 // Stages 1-3 live in one shared projection function
@@ -271,7 +273,8 @@ std::optional<double> resolve_inherited_tempo_scale(
 // Effective (base_cents, scale, source, reason) a marker resolves to, for
 // display/authoring callers in hover/popup and marker operation paths.
 // base_cents == 0 means "could not resolve" (mirrors
-// resolved_marker_payload's "" guards). scale == nullopt means no typed
+// resolved_marker_payload's "" guards; both are display-only safe returns,
+// writing no bytes and printing nothing). scale == nullopt means no typed
 // scale (treated as 1.0 by callers). total_frames is the source length in
 // frames; it bounds the last projection segment (the resolver's own rule),
 // so a last-segment ref resolves and classifies exactly as it renders.

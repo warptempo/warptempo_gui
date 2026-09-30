@@ -35,7 +35,10 @@
 // stem, the whole sorted set named so the words do not depend on the walk's
 // order; no wav for the sidecar's stem; several wavs and no sidecar; no wav at
 // all. The settings `title=` is never consulted — a title names the RENDER, and
-// the sidecar stem is what names the piece.
+// the sidecar stem is what names the piece. These refusals are the adversarial
+// class at the PROJECT boundary, one above the sidecar load and no duplicate of
+// it: the program makes none of these states, so each is a hand's, refused
+// first error only; the unwalkable-folder and failed-status arms are IO.
 //
 // A WAV IN THE ROOT THAT IS NOT THE SOURCE IS THE LEGACY LAYOUT. Outputs live
 // outside the project root (the deliverable in `render/`, named by the parser's

@@ -138,7 +138,8 @@ struct SettingsTrim {
 // the compare a second time — and inside the GUI most of them ask through the
 // single TrimState forwarder (trim_is_full_window, app_state.h). The kinds:
 //   - the RENDER ORCHESTRATORS, in both products: a full window builds NO trim
-//     plan, so plan_trim and its vocabulary see proper SUB-WINDOWS only;
+//     plan, so plan_trim and its vocabulary see proper SUB-WINDOWS only (the
+//     predicate refuses nothing: it scopes the trimmer's constructive refusal);
 //   - the PLAYBACK / NAVIGATION range owners: a full source pair becomes the
 //     whole live domain rather than a mapped inclusive end, in both views;
 //   - the RENDER FINGERPRINT: a full window hashes as the old unset bytes, which
@@ -317,12 +318,13 @@ struct GuiSettingValue {
 // GUI-kind sibling of validate_engine_setting. STATE-FREE: it parses and
 // vocabulary-checks one (key, value) pair; state-dependent rules stay at the
 // boundaries (the load-side trim past-EOF walls live in
-// first_past_eof_wall_defect; the editor adds its read-only-tab trim refusal,
-// its own trim walls, and active/inactive routing on top). Both the whole-file
-// reader below and the GUI settings editor call this, so a spelling is loadable
-// iff it commits. Returns std::nullopt when `key` is not a GUI-kind key (the
-// caller falls through to its own unknown-key handling, mirroring
-// try_engine_key); an expected error carries the bad_value-style reason text.
+// first_past_eof_wall_defect; the editor adds its own trim walls and
+// active/inactive routing on top). Both the whole-file reader below
+// (load-fatal) and the GUI settings editor (the red flash) call this, so a
+// spelling is loadable iff it commits. Returns std::nullopt when `key` is not
+// a GUI-kind key (the caller falls through to its own unknown-key handling,
+// mirroring try_engine_key); an expected error carries the bad_value-style
+// reason text.
 std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     const std::string& key, const std::string& value);
 

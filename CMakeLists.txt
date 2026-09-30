@@ -470,6 +470,11 @@ endif()
 # same -O3 -march=native -ffp-contract=off everywhere. Each target is appended
 # only under its own guard.
 #
+# No CMAKE_BUILD_TYPE is set on either host (android/app/configure.sh empties
+# it too), so NDEBUG is never defined: every assert in the tree is a live
+# breach check in the shipped binaries, a breach stopping the program rather
+# than running on.
+#
 # -ffp-contract=off forbids FMA contraction, measured as the SOLE source of
 # output divergence between this engine's two x86-64 GCC codegens: a contracting
 # -march=native build differs from a non-contracting generic one in 14% of

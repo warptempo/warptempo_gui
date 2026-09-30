@@ -322,7 +322,9 @@ public:
     // line naming the path; an absent file is the ordinary case and prints
     // nothing. THE CALLER owns "once per clone per process, before this
     // process's first write, holding the repository lane"
-    // (recover_stale_locks_once, history_diff.cpp).
+    // (recover_stale_locks_once, history_diff.cpp). NOT A GUARD: a repair with
+    // no predicate and no error arm; a removal that fails prints its line and
+    // the job meets libgit2's own refusal as before.
     void clear_stale_locks(const std::string& branch);
 
 private:

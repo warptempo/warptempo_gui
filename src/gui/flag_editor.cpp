@@ -557,7 +557,9 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
 // name. Pushes one undo entry covering all touched markers.
 //
 // On failure: sets `red`, leaves pending/cursor intact, leaves the
-// editor active.
+// editor active. The red flash CALLS the loader's own line predicate, no
+// second grammar, so a payload loads iff it commits; the load's face of the
+// same function is load-fatal.
 void GuiFlagEditor::commit_top_flag_edit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     const int idx = app.top_flag_editor.target;

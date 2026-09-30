@@ -41,7 +41,8 @@ class GuiHistoryPrefetch;
 // THE ENTRY IS NO LONGER AMONG THEM (architect 2026-09-04): a bootstrap the
 // remote walk cannot answer opens the view on the LOCAL walk instead of
 // refusing it, so the fact belongs to the press that asks for git rather than
-// to the press that opens the view.
+// to the press that opens the view. Each such refusal is input routing with an
+// environment term: a fact about the HOST's clone, never about authored data.
 inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
@@ -553,7 +554,9 @@ struct GuiHistoryCommitLoad {
 
 // THE STRICT WHOLE-SET LOAD — the load-in-place gate, and since 2026-08-04 THE
 // WALK'S MEMBERSHIP TEST, one predicate for both askers by the architect's
-// ruling (no second predicate, no relaxed variant anywhere).
+// ruling (no second predicate, no relaxed variant anywhere). The product's
+// third adversarial load boundary beside the GUI's and the CLI's loaders,
+// differing only in reading a git blob: the same strict parsers, first error.
 //
 // The sequence is the `'` act's own validation, whole: read_commit_sidecars
 // resolves the spelling and reads the three blobs out of that commit's own
@@ -1173,7 +1176,11 @@ std::string history_checkpoint_title(const std::string& project_directory);
 
 // HOW FAR THE ACT GOT — eight answers over ONE sanctioned path (the act's own
 // head in the .cpp owns the model; this says what each value means to the
-// caller). Each is the verdict of the step that ended the act.
+// caller). Each is the verdict of the step that ended the act. All eight are
+// the write side's advisory verdicts, each with a reachable producer; the
+// three pre-commit refusals ask "is GitHub ahead" a second time beside the
+// Save face, justified because only the act's own fetch sees the remote at
+// the mutating boundary while the face reads a check minutes old.
 //
 // WriteFailed — NOTHING WAS COMMITTED. The three sidecars into the projects
 // repository could not be written, or the act refused before writing them
@@ -1281,7 +1288,8 @@ const char* github_status_word(GuiGitHubStatus status);
 // The reading, or Unchecked where there is none
 // (GuiGitHubStatus). Offline and Refused print their cause on one stderr
 // line, and so does a fetch that failed in the clone (GuiGitFetch::
-// LocalFailed), which answers Unchecked. `cancel` is the worker's abandon
+// LocalFailed), which answers Unchecked — advisory: a state and one line,
+// owning no failure and raising no card. `cancel` is the worker's abandon
 // token: a set token ends the fetch at its next callback and answers
 // Unchecked, which nobody reads.
 GuiGitHubStatus check_github(const std::string&       source_audio_path,

@@ -534,6 +534,8 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;
+    // A breach abort, like this file's four others: the glue handed a state
+    // that cannot exist, so fail loudly and the user relaunches.
     if (!dir || !*dir) {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,
                             "no externalDataPath: the projects folder is the "

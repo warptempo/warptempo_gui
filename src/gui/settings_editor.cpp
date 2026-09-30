@@ -588,7 +588,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // second spelling of the refusal here. Shift+0 is the maximizer.
         const int64_t v = gv.i64;
         // Per-bound walls, exactly the load guard's compare: both bounds
-        // 0..EOF-1, the unified inclusive [0, total-1] authored domain.
+        // 0..EOF-1, the unified inclusive [0, total-1] authored domain. The
+        // typed route's OWNER, not a backstop, and it re-spells
+        // first_past_eof_wall_defect's compare because validate_gui_setting is
+        // audio-blind: without it the GUI could save a bound both products
+        // then refuse at load.
         const int64_t total = audio.total_frames();
         const int64_t wall = total - 1;
         if (v < 0 || v > wall) {

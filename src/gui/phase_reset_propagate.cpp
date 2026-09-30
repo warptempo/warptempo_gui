@@ -338,7 +338,7 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // arm's own gates, spelled there term for term and CARDED there, so a
     // card here would be the second for one press; the third is a belt
     // against a stale index the selection layer cannot produce. An error arm
-    // exists iff a producer exists (validation_topology.md).
+    // exists iff a producer exists (the type rule).
     if (app.phase_reset_clipboard.empty()) return;
     if (app.selected_markers.size() != 1) return;
     const int anchor = *app.selected_markers.begin();

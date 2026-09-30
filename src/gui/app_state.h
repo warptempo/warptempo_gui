@@ -9799,6 +9799,11 @@ bool render_player_home_takes_previous(const AppState& a,
 // command parked behind it, which the worker-idle pump then starts — so
 // both halves of this predicate are "a run stands", and the open reads it
 // whole rather than spelling a sibling that could drift from it.
+// Every reader is input routing, judging no data. The act and the mutator ask
+// it twice on one road, justified by the sentence: the act cards it because
+// no progress line shows under the player, and the mutator's self-guard is
+// breach-only from that road. Refuse, never cancel: a running batch may be
+// irreplaceable queued work.
 inline bool load_in_place_render_blocked(const AppState& a) {
     return a.queue_running || a.pending_archival.armed;
 }
@@ -13547,7 +13552,9 @@ inline bool history_pull_actionable(const AppState& a) {
 // exists to run, which is a lie about the vocabulary. So the ACT answers now
 // (open_history_commit_editor) and the FACE reads this predicate.
 // ONE READER: redesign_button_enabled's Save arm (scoped to the mode, the
-// button being the plain disk save everywhere else).
+// button being the plain disk save everywhere else). Like the pull's and the
+// recheck's beside it, a face over the act's own subject refusal: live
+// session state, no data judged, outside the guard topology.
 inline bool history_checkpoint_actionable(const AppState& a) {
     if (!a.history_mode.active || !history_remote_walk_available(a) ||
         a.history_checkpoint_in_flight) {
@@ -13631,6 +13638,10 @@ inline std::size_t history_walk_step_landing(
 // that stays lit over a store carrying no bracket at all — or over a bracket
 // product the cap refuses — promises a render the press then answers with a
 // card, which is the drift the truthful-buttons ruling exists to prevent.
+// The cap and CellWouldNotLoad below are the owning stage's constructive
+// refusals of a LEGAL but unhonorable request, each reachable and asked
+// pre-mutation (no allocation, folder, request or render kill), so the mode
+// and every bracket survive for correction.
 //
 // ONE WALK ANSWERS BOTH QUESTIONS, and neither is restated: the eligibility is
 // the sweep's own on each column (iter_popup_eligible_marker, warpmarkers.h,
@@ -14050,7 +14061,10 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // admission), a non-empty selection, an in-range one, CONTIGUITY, no
 // effectively-enabled label ref in [owner .. boundary], an eligible owner, an
 // owner outside every coincident-collapse run, and ONE TEMPO across the
-// selected run.
+// selected run. Every arm is input routing: it judges the selection's
+// arrangement and the view, not data, and has no producer on disk; its card
+// is a message, not an error arm, and the coincident arm CALLS the render's
+// one collapse classifier rather than re-spelling it.
 //
 // IT ALLOCATES NOTHING AND RUNS PER TICK. The collapse membership comes from
 // warp_red_flag_set_cached's `collapsed` set — the same classifier verdict the

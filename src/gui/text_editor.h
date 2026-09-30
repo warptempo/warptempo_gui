@@ -503,7 +503,8 @@ enum class KeyClass {
 // modifier its arm does not bind (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V,
 // Ctrl+Alt+A, Alt+Left, Ctrl+Alt+BackSpace) is simply NotEditorKey: unbound and
 // not-ours need not be told apart, because every keyboard-modal editor drops
-// both at the gate and nothing downstream can act on either.
+// both at the gate and nothing downstream can act on either. An input routing
+// decision, judging no data.
 KeyClass classify_key(GuiKey key, GuiInputState mods);
 
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);

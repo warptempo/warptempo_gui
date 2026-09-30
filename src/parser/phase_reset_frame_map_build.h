@@ -79,7 +79,8 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
 // S - N/2 (the window-centering rationale sits at the definition). The
 // result stays in exact doubles; quantization to the engine's integer query
 // schedule is engine-owned, happening at placement time. Non-participating
-// positions are dropped, so the result can be shorter than the input. The
+// positions are dropped, so the result can be shorter than the input — a
+// normalization, silent by design (no stderr line). The
 // .phaseresetframemap artifact is this list derived against the exact map
 // shipped beside it, so the artifact pair is exactly the engine's input,
 // and the in-process render derives its engine-input list through this same

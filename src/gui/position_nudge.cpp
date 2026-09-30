@@ -39,7 +39,7 @@ PositionNudgePrologue position_nudge_prologue(
     // is a belt against the never-parked rule (the selection layer keeps the
     // focus a member at every mutator); and the geometry terms are belts
     // against degenerate state. An error arm exists iff a producer exists
-    // (validation_topology.md), so the reason channel this pair's callers use
+    // (the type rule), so the reason channel this pair's callers use
     // (GuiOpRefusal, warpmarkers_ops.h) carries nothing from here — and
     // nothing from the WALL either since 2026-08-31, when that one-day card
     // retired into a silence with a greyed button beside it. THE ONE THAT

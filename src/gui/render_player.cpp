@@ -647,6 +647,11 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // the allocation owner on the probed shape, then the read — and THE SAME
     // EQUALITY AGAIN ON THE DECODED BUFFER'S OWN SHAPE, which is the one that
     // binds. Every refusal is its own words and the item does not change.
+    // The probe, allocation and read arms are the frozen owners' own
+    // adversarial and IO refusals, unduplicated; the equality is a breach
+    // check at the engine's caller contract (a mismatched buffer plays at the
+    // wrong speed rather than failing), reachable only by a hand-placed
+    // foreign wav, and the same predicate asked at two points is no duplicate.
     //
     // THE PROBE'S ANSWER IS STALE BY CONSTRUCTION: wav_read_full REOPENS the
     // path, so the file object it decoded need not be the one probed here — a

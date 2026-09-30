@@ -983,6 +983,11 @@ GuiTargetRender::compute_buffer_start_frame_for(
         // monotone means e <= b implies the span check would also fire, but with
         // the wrong reason string). Exact source-domain integer compare; a
         // resting store cannot reach it any more, so this is the breach mirror.
+        // The two literals below re-spell trimmer.cpp's refusal strings, an
+        // accepted duplicate with its drift risk (2026-07-17): a shared
+        // constant is the fix when the trimmer next opens, never the reason
+        // to open it. The re-derivation itself is minimal coupling: the reuse
+        // rungs never run plan_trim and the dispatch stamp precedes it.
         if (e <= b) {
             return {0, true, "Trim end at or before trim begin"};
         }

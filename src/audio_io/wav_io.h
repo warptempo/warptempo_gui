@@ -23,7 +23,8 @@ inline constexpr uint64_t kMaxPlausibleAudioAllocBytes =
 // is a plausible allocation: shape sanity, multiplication overflow, the
 // kMaxPlausibleAudioAllocBytes refusal, and size_t fit. Returns the element
 // count for the allocation so every read path applies one policy and produces
-// one message.
+// one message. Load-fatal: the 8 GiB arm is reachable by an adversarial
+// header, the other arms are breach-only on a 64-bit host.
 std::expected<size_t, std::string>
 checked_audio_sample_count(int64_t frames, int channels);
 
@@ -79,6 +80,10 @@ public:
     static std::expected<WavWriter, std::string>
     open_memory(std::vector<char>& out, int channels, int sample_rate);
 
+    // The state and argument refusals are breach checks, breach-only; the
+    // RIFF-limit refusal is the backstop at the write that crosses the limit,
+    // behind validate_render_projection's refuse-before-cost (trimmer.h); the
+    // non-finite refusal is a breach check; the IO arms are IO.
     std::expected<void, std::string> write_frames(const float* interleaved,
                                                   int64_t frames);
     std::expected<void, std::string> close();

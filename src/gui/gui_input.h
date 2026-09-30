@@ -453,7 +453,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // chord_is_bound admits, and no value in those blocks was in that inventory —
 // and they stood one more day as "one owner of what a key is called, complete
 // rather than caller-shaped". THE ARCHITECT RULED THAT KEEPING OUT: an arm
-// exists iff a producer exists (validation_topology.md), and there is no
+// exists iff a producer exists (the type rule), and there is no
 // FUNCTIONAL side to the deletion at all — the ignoring of a keypad or a
 // vendor press never lived in this speller, it lives in the dispatch, which
 // binds none of them and answers them with the silence either way. A future
@@ -477,7 +477,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // them") and the Android backend produces GuiKeys only through synthesize_key,
 // so no F-key can reach a card on either host — and none is bound, so none
 // could reach this speller in any case. An arm exists iff a producer does
-// (validation_topology.md): a backend that delivered one would have to BIND it
+// (the type rule): a backend that delivered one would have to BIND it
 // before a card could name it, and the compile-time pin above is what would
 // then ask for the name.
 //

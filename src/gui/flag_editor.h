@@ -80,7 +80,9 @@ struct GuiFlagEditor {
     // the signed two-decimal cent bound on warp, the signed whole hop on
     // phase — and satisfy the walls, which are the partner bound plus the
     // tempo window on warp and the partner bound plus the reset's HOP WINDOW
-    // on phase, else the editor stands, red, and a card says which. On success
+    // on phase, else the editor stands, red, and a card says which (an
+    // editor-owned refusal: a bracket is session state no parser reads, its
+    // backstops the sweep's inverted-bracket breach arm). On success
     // the pair is written through that column's one write site
     // (iter_bound_step_write / phase_iter_bound_step_write, so two zeroes
     // clear there too) and NOTHING ELSE MOVES: no undo entry, no dirty

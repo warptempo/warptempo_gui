@@ -36,6 +36,8 @@ struct LimiterState {
             double v = static_cast<double>(slot[c]) * att;
             // Hardclip backstop. Envelope math should keep |v| <= ceiling;
             // this catches floating-point drift and pathological inputs.
+            // A constructive clamp, never a refusal: kept, outside the
+            // refusal topology.
             if (v >  ceiling) v =  ceiling;
             if (v < -ceiling) v = -ceiling;
             out.push_back(static_cast<float>(v));

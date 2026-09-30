@@ -18,7 +18,11 @@
 // before rounding, so finite out-of-range inputs and infinities both saturate
 // to full scale with no invalid integer conversion. Scaling and rounding run
 // in double via llrint, the project's round-half-to-even convention, which is
-// sign-symmetric by parity; NaN maps to code zero.
+// sign-symmetric by parity; NaN maps to code zero. That NaN arm is a silent
+// guard kept for the wind-down keep class (a NaN would otherwise be an
+// invalid integer conversion) and is live nowhere: both callers run behind
+// a non-finite refusal (WavWriter::write_frames, and finish_render's
+// whole-buffer scan ahead of the GUI's quantize) (re-swept 2026-09-02).
 int32_t pcm24_code_from_float(float x);
 
 // Every signed 24-bit code divided by 8388608.0f is exactly representable in

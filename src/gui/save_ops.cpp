@@ -88,6 +88,7 @@ bool GuiSaveOps::save() {
     // prompt's "Retry the failed save?" rung and the card is its reason. The
     // commit act's prelude save never meets it (ordering, above), and the
     // `h` view's Ctrl+S cards the same sentence at open_history_commit_editor.
+    // Input routing, judging no data.
     if (app.history_checkpoint_in_flight) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kCheckpointPublishing);
@@ -114,7 +115,8 @@ bool GuiSaveOps::save() {
         return false;
     }
 
-    // THE BELT WITH NO PRODUCER stays silent (validation_topology.md): a loaded
+    // THE BELT WITH NO PRODUCER stays silent, a breach check with no error
+    // arm to speak through (an arm exists iff a producer does): a loaded
     // project always has this path, and a save is unreachable before the load.
     if (app.warpmarkers_path.empty()) return false;
     // Capture the active tab's current values before any writes — both
@@ -130,6 +132,8 @@ bool GuiSaveOps::save() {
     // its path on stderr AND cards its basename, and `dirty` survives below,
     // so the unsaved-work prompt offers retry). A true fix would need one
     // combined project file, a frozen-parser change out of scope for this tool.
+    // The write arms are advisory in class: each composes its own GuiFailure
+    // and cards it, the session and its dirty mark standing.
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
         report(notifications,

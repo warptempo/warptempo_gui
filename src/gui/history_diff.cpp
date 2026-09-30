@@ -1011,9 +1011,11 @@ struct ScratchDirGuard {
 // points TMPDIR at persistent app-private storage), a later process can reuse
 // the pid, and staging into a crashed call's leftover directory would hand the
 // loaders files the commit being judged does not carry. Unique across threads
-// and processes by the creation itself. `Made` sets `dir` to the new
-// directory; `CreateFailed` sets it to the pattern tried, `why` to the cause;
-// `NoTempDir` sets `why`.
+// and processes by the creation itself, `mkdtemp` owning the exclusivity with
+// no predicate of the app's; a failure is each caller's existing I/O arm (the
+// load's refusal, the pull's Unreadable), no new one. `Made` sets `dir` to
+// the new directory; `CreateFailed` sets it to the pattern tried, `why` to the
+// cause; `NoTempDir` sets `why`.
 enum class ScratchDirMade { Made, NoTempDir, CreateFailed };
 ScratchDirMade make_scratch_dir(const std::string&     stem,
                                 std::filesystem::path& dir,

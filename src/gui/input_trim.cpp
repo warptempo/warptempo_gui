@@ -1067,7 +1067,8 @@ void GuiInputHandler::commit_trim_drag() {
 // release and the settings commit still reset a crossed pair to the song edges.
 // The refusal is where it is — past the clamps, ahead of every write — because
 // resetting the whole window on a mis-click is the outcome trim cannot afford
-// (trim has no undo). SINCE 2026-08-30 THE REFUSAL SAYS SO on a notification
+// (trim has no undo): a constructive refusal of a legal state at the gesture
+// boundary, the ruled exception to the crossed-pair normalization. SINCE 2026-08-30 THE REFUSAL SAYS SO on a notification
 // card, raised by the ACT and not by the decider this comment heads — the
 // cursor map asks that decider once per motion, and a card raised inside it
 // would stack while the pointer merely hovered the bar.

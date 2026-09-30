@@ -86,6 +86,9 @@ struct GuiFileLoader {
 // create. An unwritable folder under his own projects path is not a
 // supported state, so no writability probe was added. It writes nothing and keeps nothing: every parsed value is discarded.
 // Returns the first refusal's one line, or nothing when the load would succeed.
+// A second boundary for the load's own class-1 refusals within one product,
+// justified as shared implementation: it adds no predicate, every arm CALLING
+// the owner the load calls, so nothing is re-derived and nothing can drift.
 //
 // THE INVENTORY, walked in load_file's own order, each refusal through the same
 // owner the load calls, so the words are the load's words — WITH ONE

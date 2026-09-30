@@ -1071,7 +1071,8 @@ GuiGitFastForward GuiGitRepo::fast_forward(
     // index entry against the baseline — the checked-out tree, `from_sha`'s —
     // and refuses the WHOLE checkout, before writing anything, when one differs
     // or an untracked file stands in the way. The notify callback names the
-    // first such path. Paths are literal (no pathspec matching).
+    // first such path. Paths are literal (no pathspec matching). The refusal
+    // is libgit2's alone: the app maps it to Conflict and keeps no predicate.
     if (!safe.empty()) {
         std::vector<char*> specs;
         for (std::string& p : safe) specs.push_back(p.data());
@@ -1131,7 +1132,8 @@ GuiGitFastForward GuiGitRepo::fast_forward(
         diag = last_error("could not write the index");
         return GuiGitFastForward::IndexFailed;
     }
-    // (4) THE BRANCH MOVES, only from the commit the pull was planned on.
+    // (4) THE BRANCH MOVES, only from the commit the pull was planned on —
+    // libgit2's own guard (the matching create), no predicate of the app's.
     git_reference* moved = nullptr;
     const std::string ref = "refs/heads/" + branch;
     if (git_reference_create_matching(&moved, repo_, ref.c_str(), &to_oid,

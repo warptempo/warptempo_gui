@@ -236,7 +236,10 @@ std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 // THIS IS THE LOADER'S RULE, RESTATED ON THIS SIDE OF THE BOUNDARY. A
 // `.warpmarkers` file that defines one label twice is LOAD-FATAL in both
 // binaries (parse_warpmarkers_file's seen_def set, warpmarkers_parse.cpp), so
-// a GUI act that wrote one would make its own saved work unloadable. THE
+// a GUI act that wrote one would make its own saved work unloadable. The
+// second statement is justified twice: the loader cannot catch it cleanly (by
+// then it refuses the user's own saved work, not the act that wrote it), and
+// only a producer can NAME the label and refuse the act. THE
 // DISABLE BIT IS NOT ASKED, exactly as the loader does not ask it: a disabled
 // row's definition still occupies the name.
 //

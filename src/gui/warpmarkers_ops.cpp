@@ -128,7 +128,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // the same body — and the playhead rests in [0, total-1] by every writer's
     // own clamp, warp's SOURCE home making that conversion the identity. So
     // the wall is a structural belt, not a refusal a press can meet; an error
-    // arm exists iff a producer exists (validation_topology.md).
+    // arm exists iff a producer exists, so this breach wall is silent.
     if (drop_frame > audio.total_frames() - 1)
         return;
     const auto& mv = app.warpmarkers.markers();

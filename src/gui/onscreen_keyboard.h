@@ -483,8 +483,8 @@ inline int surface_height_px() {
 // producer being the Open project prompt, whose text editor stood UNDER the
 // picker's band. The prompt lost its field and the pickers became a
 // modal owner that is NOT an editor, so the term lost its producer and was
-// deleted (a gate term exists iff a producer exists — validation_topology.md's
-// rule applied to a gate). THE EXCLUSION IS STRUCTURAL NOW: the overlay
+// deleted (a gate term exists iff a producer exists — the type rule
+// applied to a gate). THE EXCLUSION IS STRUCTURAL NOW: the overlay
 // stands only under the render player or a picker, neither of which is a
 // text editor; each opener refuses under every editor and each router
 // consumes every editor opener; each veil consumes every pointer press that

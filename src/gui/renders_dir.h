@@ -82,7 +82,8 @@ RendersBatchScan max_renders_batch_index(
 // `2_miscellaneous` — the only part of it the user authored. SINGLE-QUOTED,
 // the product's one quoting form on a card (notifications.h's card rules); it
 // wore backticks until 2026-09-01. `tag` is the road's own stderr tag, the
-// one thing the three lines differ by.
+// one thing the three lines differ by. Advisory in class: the dispatch
+// refuses and cards, and no partial batch is left.
 inline GuiFailure render_folder_creation_failure(
         const char*                  tag,
         const std::filesystem::path& folder,
@@ -172,6 +173,9 @@ void prune_render_folder(const std::string& source_audio_path,
 //                 directory), left alone;
 //   Failed      — the remove itself failed, `ec` holding the system's words
 //                 (a partial removal leaves what it could not take).
+// The bounds test is a BREACH-CLASS BELT on a destructive act: both callers'
+// paths come from that root's own listing, so no producer reaches
+// OutOfBounds, which each answers on stderr alone; Failed is IO.
 // TWO CALLERS: the render player's Delete (GuiRenderPlayer::
 // delete_batch_folders, the folders the root listing parked) and the load in
 // place's tail (load_render_entry_in_place, every folder under `tmp/` through

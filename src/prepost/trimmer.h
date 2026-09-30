@@ -66,11 +66,14 @@ struct TrimPlan {
 };
 
 // Render-boundary trim validation — the sole author of the trim-validity
-// vocabulary. The trimmer requires the pair: both bounds are set by contract,
-// so a lone bound (exactly one of begin/end) never reaches here — the
-// orchestrators COMPLETE a lone bound to its extreme at the render boundary
-// (missing begin -> 0, missing end -> total) before calling, so the trimmer
-// still always receives the pair (architect ruling 2026-07-19).
+// vocabulary, and the owning stage's CONSTRUCTIVE refusal: a legal but
+// unhonorable window renders untrimmed, never a failed render. The trimmer
+// receives the pair: the trim window is always set (the lone bound died
+// 2026-07-30), and a FULL window never reaches here, the orchestrators
+// recognizing it first (trim_window_is_full, settings_file.h), so this sees
+// proper sub-windows alone. Its two wall arms ask marker_store_validate's
+// predicate in another class, keyed on provenance: a persisted bound past
+// its wall is load-fatal there, a live one renders untrimmed here.
 // Authored bounds arrive as whole int64_t source frames — the authored domain
 // itself — and widen exactly into the double map arithmetic at one point
 // inside the trimmer. Refusals, in check order: end at or before begin (e_src
@@ -120,7 +123,9 @@ std::expected<TrimPlan, std::string> plan_trim(
 // covers begin_sample + samples (the crop comment there), so a buffer that
 // cannot supply the window means the engine/trimmer extent contract broke —
 // an internal breach, refused loudly (the error fails finish_render) rather
-// than silently zero-padding a manufactured deliverable.
+// than silently zero-padding a manufactured deliverable. Breach-only, and
+// owned here because this is the one site holding both the buffer and the
+// crop window; the engine is trim-ignorant.
 std::expected<void, std::string> apply_post_trim(
     std::vector<float>& buffer, int channels, const PostTrim& post);
 
@@ -131,7 +136,9 @@ std::expected<void, std::string> apply_post_trim(
 // engine_output_frames is llrint of the engine map's last anchor target (the
 // emission the engine will buffer); encoded_frames is what lands on disk
 // (post-crop when trimmed, the same value untrimmed). The RIFF check applies
-// only when encoding to disk, against the PCM 24 deliverable format.
+// only when encoding to disk, against the PCM 24 deliverable format. A legal
+// request refused as unhonorable: the RIFF arm is reachable by a render past
+// 4 GB, the overflow arm breach-only; WavWriter's RIFF refusal backs it.
 std::expected<void, std::string> validate_render_projection(
     int64_t engine_output_frames, int64_t encoded_frames,
     int channels, bool encode_to_disk);

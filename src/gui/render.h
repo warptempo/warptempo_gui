@@ -1543,7 +1543,8 @@ inline int scaled_px(double authored) {
     return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
 }
 // The floored form: `floor_px` is the PER-METRIC minimum the accessor states,
-// so a small factor cannot zero a structural dimension.
+// so a small factor cannot zero a structural dimension. Each floor is a
+// constructive domain invariant: it never refuses and clamps no setting.
 //
 // THE FLOORS ARE LIVE, NOT DEFENSIVE, SINCE 2026-08-10 (the gui_scale floor
 // 100->50). They were written when the schema's own floor was 100% and could

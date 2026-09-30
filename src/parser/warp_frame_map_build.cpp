@@ -806,6 +806,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
                      double scale, long sample_rate, long total_frames) {
     std::vector<WarpFrameMapSegment> out;
 
+    // A breach check, breach-only: every caller passes the loaded source's shape.
     if (sample_rate <= 0 || total_frames <= 0) {
         return std::unexpected("Invalid source audio metadata");
     }

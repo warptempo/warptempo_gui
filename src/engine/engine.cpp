@@ -46,6 +46,7 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
         fftw_plan_with_nthreads(1);
         audio_stft.fftw_threads_inited = true;
     } else {
+        // Advisory: one stderr line and the render goes on, owning no failure.
         std::cerr << "! fftw_init_threads failed; fftw will run single-threaded.\n";
     }
 }
@@ -174,7 +175,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     init_fftw_threads(audio_stft);
 
     // Buffer-out only: the output buffer is the engine's sole sink; encode
-    // lives orchestrator-side in the prepost chain.
+    // lives orchestrator-side in the prepost chain. The null check is a
+    // crash-prevention breach check, breach-only (both orchestrators set it).
     if (p.output_buffer == nullptr) {
         std::cerr << "Error: output_buffer is required "
                      "(the engine is buffer-out only).\n";
@@ -188,6 +190,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     if (!validate_warp_frame_map_strictly_ascending(audio_stft.warp_frame_map)) return EngineResult::Failed;
     if (!validate_phase_reset_frame_map_strictly_ascending(p.phase_reset_frame_map)) return EngineResult::Failed;
 
+    // Source-buffer parameters: a crash-prevention breach check, breach-only.
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||
         p.source_channels <= 0 || p.source_sample_rate <= 0) {
         std::cerr << "Error: source buffer parameters are invalid "

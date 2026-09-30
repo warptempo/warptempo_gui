@@ -436,7 +436,9 @@ inline int displayed_column_at(double displayed, double vp_start, double spp) {
 // three cameras that ask it — Viewport::reseat_playhead_to's keep-visible
 // edge-align, follow_scroll_if_needed and land_subject — pass the live
 // viewport and the live grid step q (painter_samples_per_pixel), the grid
-// their own writes land on. `spp` > 0 and `w` > 0 are the caller's.
+// their own writes land on. `spp` > 0 and `w` > 0 are the caller's. A
+// camera's decision, not a guard: it refuses nothing, and every write it
+// chooses still passes clamp_viewport_start.
 inline bool displayed_frame_on_screen(double displayed, double vp_start,
                                       double spp, int w) {
     const int col = displayed_column_at(displayed, vp_start, spp);
@@ -554,7 +556,11 @@ int painted_column_of_source_frame_on_basis(
 // drop_phase_reset_lead_in_at_playhead, the `s` / Shift+S roads). The load is
 // not one of them: whether a marker paints depends on the zoom, not on the
 // data, so a marker in the last half-column stays loadable (the two-category
-// rule) and is reachable by zooming in or by the Tab walk.
+// rule) and is reachable by zooming in or by the Tab walk. So the refusal is
+// input routing, never an adversarial class: it judges no data and no render
+// stage sees it. Its error arm has a producer (a Right press in the song's
+// last columns, End then `s` at the whole-song zoom); the pointer roads need
+// no copy, their columns stopping at w − 1.
 bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
                                  int64_t source_frame);
 

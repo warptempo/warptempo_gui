@@ -207,7 +207,9 @@ RenderOutcome do_render(const RenderRequest& req,
     // or the source literally named `<final>.tmp`) would destroy it just as
     // surely. This is the render-time inode backstop, so it also covers
     // batch-folder stagings, whose finals are composed from the batch folder
-    // rather than the deliverable folder.
+    // rather than the deliverable folder. A breach backstop beside the load's
+    // collision predicate, justified because only the worker composes batch
+    // paths and sees write-time races.
     for (const std::filesystem::path& candidate :
              {output_path,
               std::filesystem::path(

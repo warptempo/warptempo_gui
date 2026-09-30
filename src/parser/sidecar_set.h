@@ -97,7 +97,11 @@ inline std::expected<bool, std::string> sidecar_exists(
 // legacy — strictly migrate to the new and require manual update"): a source's
 // sidecar set is ALL OR NOTHING. `None` — no sidecar present at all — and `All`
 // are the two verdicts; SOME AND NOT ALL is the Missing defect below, naming
-// the first absent file in kSidecarExtensions order.
+// the first absent file in kSidecarExtensions order. The adversarial class:
+// the GUI writes all three on every save and every new project's open, so a
+// partial set is a hand-built or pre-rule folder, refused first error only
+// (a crash between the three template writes aside, which the next open
+// answers the same way). Every road CALLS this one owner.
 //
 // WHAT `None` MEANS IS THE CALLER'S, and the three callers differ by what they
 // are allowed to author: the GUI's source load treats it as a NEW PROJECT and

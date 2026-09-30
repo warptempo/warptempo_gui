@@ -624,6 +624,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key, GuiInputState mods);
 // lit). It is written as
 // read_only_key_blocked's answer plus its own deltas rather than as a
 // second copy of that list, and both deltas are stated at the definition.
+// Input routing like it, judging no data; the composed predicate
+// authoring_locked (app_state.h) and its card authoring_lock_card
+// (notifications.h) add no class.
 // (A SECOND PREDICATE STOOD BESIDE IT until 2026-09-10, spelling delta (a)
 // on its own so the gate could ask it BESIDE the wider list on a locked
 // tab. Bare `o`'s refusal under a lit lamp made that state unreachable and
@@ -3942,7 +3945,8 @@ private:
     // explicitly EXEMPT and keeps a live audition playing). So a new modal
     // surface inherits the wheel swallow from this predicate and its playback
     // answer from that owner — it grows neither by hand.
-    // The gate is the sibling of read_only_key_blocked's allowlist shape: true
+    // The gate is the sibling of read_only_key_blocked's allowlist shape, and
+    // input routing like it (it judges no data): true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
     // Ctrl+Q). It serves all five editor kinds, top strip included (the list is

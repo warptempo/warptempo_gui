@@ -45,7 +45,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // target arm subtracts kN/2 output samples, the source arm authors at
     // the cursor exactly, and the playhead rests in [0, total-1] by every
     // writer's clamp — so no press can reach this wall.
-    // An error arm exists iff a producer exists (validation_topology.md).
+    // An error arm exists iff a producer exists: a silent breach wall.
     if (drop_frame > audio.total_frames() - 1)
         return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
@@ -219,8 +219,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // there, so S+P has no use and is load-fatal — and the
 // source-view arm that stood here (S+P's STUB of 2026-09-02: no lead-in, the
 // reset seated exactly at the source cursor) had no producer left and is
-// deleted; the assert below is its belt (an error arm exists iff a producer
-// exists, validation_topology.md). Every route reaches it with T+P standing:
+// deleted; the assert below is its breach belt (an error arm exists iff a
+// producer exists). Every route reaches it with T+P standing:
 // bare `s` and the empty-lane double-click are P-column routes, and the
 // column writer refuses 'P' outside target view
 // (GuiActiveViews::switch_active_markers_view_to) while the audio writer lands

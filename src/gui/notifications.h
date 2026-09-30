@@ -115,7 +115,7 @@
 //     iterations to render one file", "A marker's iteration bracket runs
 //     backwards", "No iteration ranges are authored", the sweep's two verdict
 //     cards at iteration_sweep_plan, app_state.h) and
-//     render_folder_creation_card (renders_dir.h). THE TWO SWEEPS ARE NOT
+//     render_folder_creation_failure (renders_dir.h). THE TWO SWEEPS ARE NOT
 //     CARDED FOR THE TRIM FALLBACK, a recorded asymmetry: a cell rewrites the
 //     warp markers, so the live verdict is an assertion about maps it cannot
 //     see, and a per-cell verdict would be up to 391 cards for one act.
@@ -248,7 +248,7 @@
 //     program-written input, and a builder / resolver disagreement would
 //     surface as "Target render failed".
 //   * THE NO-PRODUCER BELTS, where an error arm would exist without a
-//     producer (validation_topology.md): the two drops' past-EOF walls, the
+//     producer (the type rule): the two drops' past-EOF walls, the
 //     position nudge's leading state guards, and enter_bpm_mode's five-bail
 //     recheck.
 //   * The loader's fatal exits (the adversarial class: stderr and exit 1);

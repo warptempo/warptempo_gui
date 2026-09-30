@@ -682,7 +682,10 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     // wayland.xml as wl_seat, so a compositor without it is not a compositor —
     // which makes either absence a broken environment rather than a degraded
     // one, and the program's answer to a broken environment is to fail at
-    // startup rather than run undecorated or with a dead clipboard.
+    // startup rather than run undecorated or with a dead clipboard: an
+    // environment precondition, guarding the launch and not the data (the data
+    // device manager's v2 floor rides it, an older one left unbound). The
+    // pointer-capture warning below is advisory: one line, a defined degrade.
     if (!wl_compositor_ || !wl_shm_ || !xdg_wm_base_ ||
         !xdg_decoration_manager_ || !wl_data_device_manager_) {
         std::fprintf(stderr,

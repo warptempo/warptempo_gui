@@ -67,6 +67,16 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // Source-view read-only allowlist. True when key+mods is not on the allowlist
 // and should be dropped.
 //
+// AN INPUT ROUTING GATE, outside the guard topology: it decides whether a
+// press reaches a command at all, judges no data, and has no error arm and no
+// producer; the swallowed press cards only for a chord chord_is_bound admits
+// in the standing mode, a message rather than an error arm. Where the gate is
+// the SOLE defense for a mutation it says so (the is_playhead_step entry
+// below), and a deeper check on the same route is justified or deleted —
+// an unreachable one is deleted rather than the gate's inventory widened
+// (the 2026-07-28 audit deleted the trim region toggle's and the maximizer's
+// unreachable read-only returns, which would refuse admitted keys today).
+//
 // WHAT READ-ONLY PROTECTS, in one sentence (architect 2026-08-07, RECLASSIFYING
 // the old "persistent mutation" standard): read-only protects the AUTHORED
 // MUSICAL CONTENT — the two marker stores and the engine settings — AND NOTHING
@@ -3156,7 +3166,9 @@ void GuiInputHandler::commit_title_editor_exit_no_commit() {
 // in the "C"
 // locale — the settings editor's own trim rule), and the flash leaves the
 // editor open with the text in place to be corrected, which is every editor's
-// refusal shape here.
+// refusal shape here. A constructive refusal of a legal but unhonorable
+// keystroke sequence, pre-save and pre-dispatch, and editor-owned: the one
+// editor with no parser validator behind it, its subject being a git message.
 //
 // THE TITLE IS TAKEN VERBATIM OTHERWISE — free UTF-8 text through the one
 // incoming filter (text_editor::replace_selection), leading and trailing
@@ -4804,7 +4816,9 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // index, which is the evidence; the card says the fact, which is the
     // answer to the press, and names no index because the sweep's whole
     // dispatch refused rather than one cell of it. Pre-mutation on both arms:
-    // nothing above has touched app state or the queue.
+    // nothing above has touched app state or the queue. A breach-only check,
+    // loud here because the engine cannot see it: an inverted bracket
+    // enumerates no cells, a silently wrong cell set over valid maps.
     const auto refuse_inverted_bracket = [&](const char* column, int index) {
         std::fprintf(stderr,
             "warptempo_gui: render-iterations refused: %s %d "
@@ -5266,7 +5280,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // backstop behind that, never a wall of its own. Disabled rows sort
         // with the rest — the sidecar's grammar is non-decreasing over EVERY
         // row, participation not being a term of it. Stable so equal frames
-        // keep the store's own order.
+        // keep the store's own order. A normalizer, not a guard: it judges
+        // nothing and has no error arm, and non-decreasing is its whole claim.
         std::stable_sort(cell_phase_resets.begin(), cell_phase_resets.end(),
                          [](const GuiPhaseResetMarker& a,
                             const GuiPhaseResetMarker& b) {
@@ -5741,7 +5756,11 @@ void GuiInputHandler::apply_recipe_in_place(
 // first strict loader's cannot-open words. On ANY failure — the running-batch
 // self-guard, a missing wav, an incomplete recipe, or a malformed / unreadable
 // sidecar — return false with NO state mutation, so a failure leaves authoring
-// untouched.
+// untouched. Every false arm is one of three kinds: the self-guard, an IO
+// refusal (the wav or a sidecar vanished since the listing: the trusted-
+// sidecar rule covers a file's content, not its continued existence), or
+// the reader's own adversarial grammar arm, making no new judgment here —
+// the reader's words, printed verbatim, say which.
 //
 // THE ACT OWNS ITS REFUSALS, on BOTH surfaces (architect 2026-08-30, taking
 // the caller's useless "Load refused" out): every arm names its cause once
@@ -8411,9 +8430,9 @@ void GuiInputHandler::render_player_load_in_place() {
     // progress line was its explanation, and THAT LINE IS NOT ON SCREEN HERE:
     // the state cell is row 8's, the modal row takes that lane whole while
     // the player stands, so a refusal with nothing beside it would read as a
-    // dead button (validation_topology.md's row, and the batch-cell refusal
-    // one arm down is the same class). THE SENTENCE NAMES THE ACT IT
-    // REFUSES (architect 2026-08-30, his own example): a bare "Render
+    // dead button (the reasoning at load_in_place_render_blocked, and the
+    // batch-cell refusal one arm down is the same class). THE SENTENCE NAMES
+    // THE ACT IT REFUSES (architect 2026-08-30, his own example): a bare "Render
     // running" was a fact with no verb, and a card answers a press. THE
     // CONDITION IS ONE OWNER (load_in_place_render_blocked, app_state.h —
     // 2026-09-01), read by the mutator's backstop and the button's face too.
@@ -8426,8 +8445,9 @@ void GuiInputHandler::render_player_load_in_place() {
     if (entry == nullptr) {
         // Said on a card because the button and `'` are live on every row
         // the band can hold, so a silent nothing would read as a broken
-        // button (validation_topology.md's row). THE SENTENCE NAMES THE
-        // EXCLUDED SET (2026-08-30) AND NAMES ONLY WHAT IS REACHABLE
+        // button. The act's own subject test, input routing: it judges no
+        // data, and the load's data guards are its mutator's. THE SENTENCE
+        // NAMES THE EXCLUDED SET (2026-08-30) AND NAMES ONLY WHAT IS REACHABLE
         // (2026-09-01, the gates-stop-lying rule — a refusal's wording, like a
         // gate's membership, must describe the state the user can actually be
         // in): it named the `..` row and the DELIVERABLE under render/ too,

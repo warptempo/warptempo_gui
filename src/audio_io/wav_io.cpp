@@ -160,6 +160,9 @@ bool guid_is_subformat(const unsigned char* p, uint32_t tag)
     return read_u32(p) == tag && std::memcmp(p + 4, tail, sizeof(tail)) == 0;
 }
 
+// Every container refusal below is the adversarial-load contract: load-fatal,
+// first error only, in both products, reachable only by a hand-made or corrupt
+// file; the short-read and seek arms are the same class's IO arms.
 std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
 {
     char riff[4];
@@ -348,6 +351,7 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
     auto parsed = parse_wav_layout(src);
     if (!parsed) return std::unexpected(parsed.error());
     const WavLayout& layout = *parsed;
+    // A caller-contract breach check, breach-only (equal bounds read as empty).
     if (begin_frame < 0 || end_frame < begin_frame ||
         end_frame > layout.info.frames) {
         return std::unexpected("Invalid WAV frame range");
