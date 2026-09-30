@@ -135,6 +135,14 @@
 // SUB-WINDOWS only (a full window never reaches plan_trim) and a refusal at
 // render time still means "render untrimmed" (do_render's fallback), not a
 // refused render.
+//
+// THE BOUNDS STAY OUTSIDE THE SELECTION SYSTEM (architect 2026-07-18): never
+// selected, never a Tab stop, no Delete, no keyboard nudge — Home / End are
+// their navigation, and Shift+0, the endcap / bridge drags, the sweep and the
+// bound-set clicks are trim's whole interface. The flow is DOWNWARD ONLY: a
+// setter EMPTIES the selection and nothing a trim route does ever selects; the
+// playhead is an OUTPUT (the park above) and never an input, no trim route
+// reading it. Any further trim-vs-marker asymmetry needs architect approval.
 
 namespace {
 

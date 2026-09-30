@@ -244,6 +244,11 @@
 // a card's real height needs its line count, the line count needs a shaped
 // run, and shaping needs the paint's own font, so the painter is the only
 // place that can answer it and the room is what the damage owner uses.
+//
+// NO DOUBLE SPACE, ANYWHERE THE PRODUCT WRITES TEXT: prompt text and its
+// options join with single spaces, and no card, prompt or stderr line carries
+// two spaces in a row (the WARPTEMPO_PROFILE instrumentation that was the
+// sole exception is removed).
 
 #include "app_state.h"
 #include "viewport.h"
@@ -380,12 +385,12 @@ inline constexpr const char* kProjectsPathAppliesCard =
 // THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02) — a
 // proper sub-window whose TARGET span rounds below one output sample, which
 // plan_trim refuses and every orchestrator answers by rendering the FULL,
-// untrimmed piece (render-pipeline.md's trim section). The trim bar and the
+// untrimmed piece (the window's purpose is at TrimState, app_state.h). The trim bar and the
 // waveform overlay go on painting the hairline window the user drew, so the
 // screen says "this span" while the audio is the whole movement — the shape
 // the strictness ruling's "what shows would mislead" test cards. A MINIMUM
 // TRIM SIZE WAS THE ALTERNATIVE AND IS REJECTED (2026-08-19,
-// normalization-and-boundaries.md: kMinTrimSpanFrames quantized the shift+drag
+// write_trim_from_sweep's record: kMinTrimSpanFrames quantized the shift+drag
 // unpleasantly and was retired one day after it landed) — the sweep authors
 // exactly the span it draws and the outcome is announced instead.
 //

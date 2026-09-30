@@ -1575,7 +1575,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // pointer set).
     phase_reset_propagate.input = &input_handler;
     // And Undo's, for the same chokepoint: a restore puts the reader back in the
-    // view the entry recorded (selection-model.md), and the S/T axis of it is
+    // view the entry recorded (UndoEntry, app_state.h), and the S/T axis of it is
     // the input handler's (the other two are GuiActiveViews', which Undo holds
     // outright).
     // Its one reader is recorded at the member, undo.h.

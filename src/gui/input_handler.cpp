@@ -1667,7 +1667,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // ALT IS UNBOUND HERE and stays that way: the target
     // compositor (labwc) grabs Ctrl+Alt+Z / Ctrl+Alt+Shift+Z, so the GUI never
     // receives them — the alt pair that briefly meant stay-put undo/redo was
-    // rolled back for that collision (selection-model.md), and an alt-carrying
+    // rolled back for that collision (closed_questions.md), and an alt-carrying
     // shape is again a plain no-op under strict modifier validation.
     if (ctrl && !alt && key == GuiKeys::Z) {
         run_undo_redo_command(/*redo=*/shift, mods.synthesized_repeat);
@@ -4141,8 +4141,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //     The entry's three view tags are therefore T / P / the standing tab, the
 //     view the act LANDED in, which is where Ctrl+Z lands the reader: a
 //     restore puts him back where the act landed, and the act landed in
-//     T+P (the restore's contract is at UndoEntry, app_state.h;
-//     selection-model.md is authoritative). The view he
+//     T+P (the restore's contract, the landing-view rule with it, is at
+//     UndoEntry, app_state.h). The view he
 //     pressed the key IN is not recoverable from a phase-reset entry —
 //     op_mode is that entry's KIND and its landing_column its column tag,
 //     neither the pressed view — and the whole

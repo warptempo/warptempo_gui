@@ -362,7 +362,7 @@ std::expected<TrimPlan, std::string> plan_trim(
     // RECORDED (architect 2026-09-02;
     // architect approval 2026-09-02, comment-only). The kept output is
     // [llrint(tgt(b)), llrint(tgt(e))), so the authored end frame e — the last
-    // frame INSIDE the window by data-model.md's inclusive [0, total-1]
+    // frame INSIDE the window by the authored domain's inclusive [0, total-1]
     // ruling, the frame End lands on and the endcap sits on — is the first
     // frame NOT rendered, one source frame's target span — 1 / (tempo ·
     // marker_scale · settings_scale) output samples, the LOCAL SEGMENT SLOPE

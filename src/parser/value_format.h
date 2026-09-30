@@ -73,11 +73,11 @@ inline constexpr int    kBpmBeatsMax  = 9999; // beats stays a positive int, cap
 // — and a term's own spelling is the bracket cell's spelling too.
 inline constexpr int64_t kIterDeltaMaxCents = 400;
 
-// Integer tempo cents -> the tempo double. The ONE cents-to-double
-// boundary: the authored tempo domain is integer cents by type, and a
-// double tempo exists only past this helper — at the DSP slope product
-// (build_warp_frame_map's effective_tempo), the fingerprint's f64 encoding,
-// the bpm derivation's scale division, and the label-ref hover multiplier.
+// Integer tempo cents -> the tempo double. The ONE cents-to-double boundary,
+// crossed in TWO places (re-grepped 2026-09-30): warp_frame_map_build.cpp (the
+// slope product, the label-ref quantities beside it), and the BPM divisor
+// (input_handler.h); the fingerprint puts tempo_cents as int64 and the BPM cell
+// rescales in cents, neither a crossing (architect approval 2026-09-28, comment-only).
 // IEEE division is correctly rounded, so cents / 100.0 IS the double
 // nearest the exact centesimal value — bit-identical to what
 // strtod/from_chars produced for the same value's N.NN text, which is what

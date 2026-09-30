@@ -12,7 +12,7 @@
 // Premise (architect-ruled, RETOLD 2026-09-02 — architect approval 2026-09-02,
 // comment-only). Trim is a RENDER WINDOW ON THE WAV ON EVERY ROAD, THE
 // DELIVERABLE'S INCLUDED: the older sentence here ("a transient inspection
-// tool … not an archival deliverable") was retired in render-pipeline.md and
+// tool … not an archival deliverable") was retired from the topic docs and
 // is retired here with it. Accepted
 // caveats: head phase is wrong until the first phase reset marker; the tail
 // may fade over R_s multiples — and "fade" is the ordinary case rather than

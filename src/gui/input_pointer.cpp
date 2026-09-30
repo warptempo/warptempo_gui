@@ -8205,7 +8205,7 @@ void GuiInputHandler::finish_chrome_press_release(
             // edge needs no arm: a painted RENDER whose queue has gone live
             // dispatches the chord below, and a dispatch killing the running
             // render and starting anew is the keyboard's own semantics
-            // (render-pipeline.md).
+            // (GuiTargetRender::trigger).
             if (app.queue_running)
                 cancel_archival_session();
             else
@@ -9078,7 +9078,7 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 // this multi-selection a finger has, there being no ctrl key on glass
 // (AppState::add_to_selection). It
 // is the LIVE selection model re-expressed over the mode's own list
-// (selection-model.md):
+// (run_marker_click_act, AppState::add_to_selection):
 //
 //   SHIFT extends: the contiguous ordinal RANGE from the focus to the clicked
 //   flag, inclusive, REPLACING whatever stood — the list is frame-sorted, so an

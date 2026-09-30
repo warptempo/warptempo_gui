@@ -170,7 +170,13 @@ void GuiTargetRender::trigger() {
     // is short, and dispatch_render_now's reuse rungs absorb an
     // identity-unchanged re-derive as a cache hit, so pre-detection would buy
     // nothing but a parallel classification surface. (A fingerprint-gated
-    // design existed briefly and was removed by this ruling.)
+    // design existed briefly and was removed by this ruling.) A DISPATCH
+    // KILLS THE RUNNING RENDER UNCONDITIONALLY — the session-fingerprint
+    // match-wait that let an identical dispatch wait and adopt the running
+    // render was removed as over-engineering — and THE REUSE RUNGS ARE
+    // LOAD-BEARING for this model: undo/redo is a common event whose dominant
+    // shape is A->B->A, which the cache absorbs (architect 2026-07-17: a
+    // proposed cache removal was rolled back for exactly this).
     is_dirty_ = true;
     // THE ONE WRITER OF THE DIRTY GENERATION (the contract at the two counters,
     // target_render.h): this mutation is a new generation, whatever the view

@@ -338,7 +338,7 @@ struct SettingsSnapshot {
 // live view at push, which is the landing view for every act that stays where
 // it is; the one class that pushes and then crosses, the two phase-reset paste
 // bodies, restamps its own entry's tab/audio-view tags after the landing;
-// selection-model.md is authoritative). S+P itself is no state since
+// Undo::stamp_top_entry_with_landing_view). S+P itself is no state since
 // 2026-09-21 (the phase-reset column is target view only): a 'P' entry takes
 // its audio view before its column at the restore, and the two writers refuse
 // the pair on every road (undo.cpp carries the order).
@@ -4353,6 +4353,22 @@ inline std::string modal_dialog_button_hint(std::string_view word,
 }
 
 
+// WHY THE WINDOW EXISTS AT ALL (architect 2026-08-19: "its purpose is to speed
+// up target view segment renders"): it MAKES A TARGET-VIEW SEGMENT RENDER FAST,
+// so a passage is iterated on at the cadence of a thought instead of the whole
+// piece being synthesized again for every change — the prepost pipeline is that
+// motive made structural (pre_trim hands the engine a CUT source view, so a
+// narrower window is less audio to analyse and synthesize; post_trim pares the
+// emission to the exact bounds; plan_trim, trimmer.h). Every rule below serves
+// that render: the window is BAND and not authored content, so it sits OUTSIDE
+// UNDO (Shift+0 the recovery) and stays legal on a read-only tab; a shorter
+// window shortens the target audition as well as the wait, the preview buffer
+// being the window (source-view playback runs to the song's end); Home / End
+// land on its bounds, the passage under work; and the `h` view, which auditions
+// nothing and dispatches no render, freezes it. A trimmed Ctrl+Alt+R lands the
+// excerpt under the full title in render/ (architect 2026-09-02, accepted):
+// truthful at the press, the trim bar showing the window the render takes.
+//
 // Trim store (architect-ruled hardfail model). begin and end are authored
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
 // whole source frames in int64_t, exactly like marker times (a fractional
@@ -4378,8 +4394,10 @@ inline std::string modal_dialog_button_hint(std::string_view word,
 // Every trim GESTURE clamps each bound to its own absolute walls: BOTH bounds
 // span frame 0 to EOF-1, the shared inclusive [0, total-1] authored domain —
 // plain integer compares, the load guard's own comparison — so past-EOF cannot
-// be gestured. There are NO partner walls — a bound crosses its partner freely
-// during any gesture — but crossed or equal bounds can no longer REST
+// be gestured. PARTNER WALLS ARE PER-ROUTE (architect 2026-08-02; the one
+// statement is input_trim.cpp's header — the single-bound drag clamps
+// inclusively at its partner, the bound-set clicks refuse, the typed and loaded
+// routes cross freely) — but crossed or equal bounds can no longer REST
 // anywhere: every trim commit RESETS a pair left with end_frame <= begin_frame
 // back to the full window (GuiInputHandler::auto_clear_crossed_trim, the trim
 // sibling of the marker normalizations — the endcaps jumping to the song edges
@@ -5080,6 +5098,14 @@ struct AppState {
     // Undo/Redo buttons' faces read. Nothing else in the
     // product asks this bit: it does not reach the camera, the walk or any
     // other act — it only decides whether one step runs at all.
+    // IT REFUSES AND NEVER PARTIALLY RESTORES: a step that runs puts back all
+    // three axes exactly as a dark lamp's does, so a half-restored view cannot
+    // exist. HELD BY HAND AND DERIVED FROM NOTHING — deriving it from the zoom
+    // was considered and rejected (architect 2026-09-16). THE LOCK OUTRANKS
+    // IT: on a read-only tab Ctrl+Z never reaches the lamp, the refusal being
+    // the lock's. A HELD Ctrl+Z cards once per burst (HeldRepeatDispatchScope,
+    // input_handler.cpp, moves the standing card), and a held Undo / Redo
+    // BUTTON never cards, its face greying on this same verdict.
     bool    restrict_undo_to_current_view = false;
 
     // WAVEFORM MAGNIFICATION — the lamp on the bare backtick (architect
@@ -12986,9 +13012,11 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     this writer exists for an act that SPENDS a selection, and a flatten
 //     reads none at all (tempo_flatten_actionable, above), so putting the
 //     lamp out here would end a selecting pass the act never touched;
-//   * THE LEFT / RIGHT POSITION NUDGE — a group press REFUSES WHOLE
-//     (position_nudge.h), so the nudge never acts on a selection at all; what
-//     it acts on is a singleton, which is not a selection that was built;
+//   * THE LEFT / RIGHT POSITION NUDGE — a 2+ press COLLAPSES the selection
+//     to its focus in the twins' shared prologue (position_nudge_prologue,
+//     through Selection::collapse_to_focused — a mutator, and a different
+//     axis from this bit), so what the step acts on is a singleton, which is
+//     not a selection that was built;
 //   * BARE `j` and Ctrl+J — they read the FOCUS and write no store;
 //   * THE MARKER DROP, the FOUR marker-lane EDITORS and the TAB WALK — none
 //     of them consumes a selection: the drop makes one, the editors edit one

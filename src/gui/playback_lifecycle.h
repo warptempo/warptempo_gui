@@ -419,7 +419,7 @@ private:
     //     this is a no-op on the ordinary press and a rescue on the rare one.
     //   * `Leave` — the launch writes no camera at all.
     // NO DEFAULT ARGUMENT: every caller states its own, as MarkerLandingFrame
-    // is stated at cycle_marker_focus (selection-model.md's precedent — a
+    // is stated at cycle_marker_focus (MarkerLandingFrame's precedent — a
     // camera term that defaults is a camera term nobody reads).
     enum class LaunchCamera { PageIn, Leave };
     // THE ONE LAUNCH BODY FOR THE PROJECT'S AUDIO (contract at the

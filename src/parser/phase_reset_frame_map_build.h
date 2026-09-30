@@ -52,7 +52,11 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
 // source positions -> the engine's origin-centered query domain, always
 // against the FULL map (the parser knows nothing of trim; the prepost
 // trimmer translates and range-filters this chain's output for a trimmed
-// render).
+// render, never a separately windowed derivation). A reset fires exactly at
+// its authored frame: no anticipation offset, no target-domain displacement
+// and no lead-in exist here or in the engine — the N/2 lead-in is the GUI's
+// authoring gesture alone (kPhaseResetLeadInSamples, app_state.h; comment
+// added under the architect's 2026-09-28 approval, comment-only).
 //
 // The parser is the sole authored-to-engine compiler on both columns: the
 // engine consumes only engine-domain inputs, blind to the N/2 query-origin

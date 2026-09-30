@@ -21,6 +21,16 @@
 // positions are NOT guarded here: they are display scratch, not authored
 // data, and the runtime clamps (clamp_viewport_start, the playhead clamp at
 // first use) own any out-of-range value harmlessly.
+// THE TWO-CATEGORY RULE this guard instances (architect-ruled, 2026-07-15): a
+// state the GUI lets the user COMMIT always loads and always renders,
+// normalized to 1.00 / no trim where ambiguous with stderr the signal; a state
+// it can NEVER produce is adversarial and hard-fails the load, stderr only,
+// FIRST error only, identically in both binaries — no friendly listing, since
+// fixing one defect can create another. Gestures move freely and NOTHING
+// POPS: no commit opens a modal (the defect-resolution funnel is retired,
+// directive #11), ambiguity being normalized at the render boundary instead
+// (resolve_warp_markers_for_render) (comment-only, architect approval
+// 2026-09-28).
 
 // The adversarial past-EOF load guard (see the past-EOF paragraph above),
 // shared by GUI file_loader and CLI so the six wall checks can never

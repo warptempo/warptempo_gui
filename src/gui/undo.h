@@ -232,8 +232,8 @@ struct Undo {
     // AN ENTRY'S VIEW TAGS ARE THE VIEW THE ACT LANDED IN (architect
     // 2026-09-21) — the A/B tab (`tab`) and the S/T audio view
     // (`audio_view`), the two the restore writes back beside the column
-    // (the three-axis restore is at restore_history_entry, the rule's prose
-    // home selection-model.md), and `landing_column`, the column tag (the
+    // (the three-axis restore is at restore_history_entry, the rule's other
+    // statement at UndoEntry, app_state.h), and `landing_column`, the column tag (the
     // field, app_state.h, carries its split from op_mode). Every push helper above reads them off the
     // live view, which IS the landing view for every act that stays where it
     // is. THIS IS THE ONE REWRITE, for an act that pushes its entry and THEN

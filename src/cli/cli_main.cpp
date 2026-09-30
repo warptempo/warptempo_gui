@@ -515,7 +515,7 @@ int main(int argc, char** argv) {
     // THIS PUBLISH WRITES THE WAV AND NO `.fingerprint`, THE CLI'S SECOND
     // RECORDED ASYMMETRY WITH THE GUI (recorded 2026-09-02; architect
     // approval 2026-09-02, comment-only — the
-    // first is the missing prune, render-pipeline.md). The GUI publishes the
+    // first is the missing prune, prune_render_folder). The GUI publishes the
     // deliverable together with its fingerprint sidecar, which is what later
     // lets it recognize that deliverable as current and serve the up-to-date
     // rung; a CLI deliverable therefore can never prove itself current, and

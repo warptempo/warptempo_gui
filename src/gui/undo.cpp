@@ -764,7 +764,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // The three context tags travel VERBATIM onto the counter rather than being
     // re-captured from live state: they describe the OP, and the counter is the
     // same op in the opposite direction, so redoing it must land the same
-    // view undoing it did (selection-model.md).
+    // view undoing it did (UndoEntry, app_state.h).
     counter.audio_view          = entry.audio_view;
     // THE COUNTER NEEDS NO ITER STRIP OF ITS OWN, though it is built from the
     // LIVE stores and not from a push helper: a bracket exists only while grid
@@ -794,8 +794,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // -- THE VIEW, ALL THREE AXES, EACH THROUGH ITS OWN OWNER ---------------
     //
     // A restore puts the reader back in the view the op LANDED in (the rule and
-    // its one exception, the phase-reset pastes' restamp, are in
-    // selection-model.md), and the view has
+    // its one exception, the phase-reset pastes' restamp, are at
+    // UndoEntry, app_state.h), and the view has
     // THREE axes, not two (architect bug report 2026-08-28; the field list and
     // the defect the third one closes are at UndoEntry, app_state.h). Each is
     // written by the chokepoint that owns it — the same body its own key runs —
