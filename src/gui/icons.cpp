@@ -12,9 +12,10 @@ namespace {
 // -- The icon table ---------------------------------------------------------
 //
 // One row per committed SVG (assets/icons/breeze/; audio-x-generic.svg, the
-// program's logo, excepted — icons.h's PROVENANCE), each holding that file's
-// path elements in file order. `d` is copied VERBATIM from the file; `ink` is
-// the color the file resolves to, and every path is FILLED in it.
+// launcher icon's colour source, excepted — icons.h's PROVENANCE), each
+// holding that file's path elements in file order. `d` is copied VERBATIM
+// from the file; `ink` is the color the file resolves to, and every path is
+// FILLED in it.
 //
 // THERE IS NO STROKED FILE since 2026-09-22, and so no stroked arm:
 // tool-rect-selection (the Show trim region button's marching-ants rectangle,

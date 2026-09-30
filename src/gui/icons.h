@@ -37,14 +37,14 @@
 // transcription bug and nothing else — with the two `<rect>` plates'
 // derivations as the stated exception just above. They are read by no code at runtime — the
 // product reads no icon files. The one committed SVG with no table row is
-// audio-x-generic.svg (the 64 px mimetype rendition), the program's logo, the
-// Linux .desktop's Icon=, which lends the Android launcher icon its sheet grey
-// and its note's ink (white at .75). The launcher's glyph is music-note-16th's
-// outer contour, which IS transcribed here for the roster (MusicNote16th):
-// its d, truncated before the two subpaths that cut the head and the flag
-// hollow, is a verbatim prefix of the file's in
-// android/app/ic_launcher_foreground.svg, rendered once to the PNG layers
-// under android/app/res/ that the launcher, never this code, reads.
+// audio-x-generic.svg (the 64 px mimetype rendition), which lends the launcher
+// icon on both devices its sheet grey and its note's ink (white at .75). The
+// launcher's glyph is music-note-16th's outer contour, which IS transcribed
+// here for the roster (MusicNote16th): its d, truncated before the two
+// subpaths that cut the head and the flag hollow, is a verbatim prefix of the
+// file's in android/app/ic_launcher_foreground.svg, rendered once to the PNG
+// layers under android/app/res/, and in packaging/warptempo_gui.svg, the
+// .desktop's Icon=; the launchers, never this code, read them.
 //
 // EVERY ENTRY IS A ROW'S. The icons here are painted by the redesigned rows and
 // nowhere else — the pointer cursor is not one of them: every cursor the product
@@ -392,8 +392,8 @@ enum class Icon {
     // architect's desktop paints beside a folder row (pcmanfm-qt and
     // kdenlive's Open dialog alike), and mimetypes/22/audio-x-wav, the glyph
     // pcmanfm-qt paints beside a wav — a bracket-shaped double note in
-    // Breeze's own #44aaeb (the file's literal fill; audio-x-generic stays
-    // the program's logo alone, the architect's ruling). Both are painted by
+    // Breeze's own #44aaeb (the file's literal fill; audio-x-generic is
+    // never a row glyph, the architect's ruling). Both are painted by
     // folder_overlay rows (paint_handler.cpp) and by nothing else; the names
     // are their Breeze file names, the theme-provenance rule.
     Folder,              // a folder row (a batch folder at the player's root,

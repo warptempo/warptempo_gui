@@ -3,11 +3,14 @@
      recents card). Its glyph is Breeze's music-note-16th, the flagged
      quaver the BPM button wears (assets/icons/breeze/music-note-16th.svg,
      the 22 px action icon, transcribed for the roster as
-     Icon::MusicNote16th), with its head and flag FILLED, painted as the
-     Linux one paints its note, white at .75 opacity, and centred on that
-     one's sheet grey. The Linux one is Breeze's audio-x-generic (the
-     packaging/warptempo_gui.desktop's Icon=, vendored verbatim as
-     assets/icons/breeze/audio-x-generic.svg, never transcribed) (architect
+     Icon::MusicNote16th), with its head and flag FILLED, painted as Breeze's
+     audio-x-generic paints its note, white at .75 opacity, and centred on
+     that file's sheet grey (vendored verbatim as
+     assets/icons/breeze/audio-x-generic.svg, never transcribed; the
+     packaging/warptempo_gui.desktop's Icon= until 2026-09-30). Its desktop
+     twin is packaging/warptempo_gui.svg, the same picture with the plate
+     drawn in, carrying the same d, so a change to one is a change to both
+     (architect
      2026-09-30, his pick between two mock-ups: "Music note 16th ...
      definitely use the white color, the filled-in note head, the same style
      as the original icon"). Its two earlier renderings that night: the note

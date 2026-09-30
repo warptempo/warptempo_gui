@@ -1108,12 +1108,16 @@ Linux target's flags and object set are byte-identical to before the port.
 THE LAUNCHER ICON (architect 2026-09-29; the filled quaver 2026-09-30).
 The manifest's `android:icon` is `@mipmap/ic_launcher`: Breeze's
 `music-note-16th`, the flagged quaver the BPM button wears, with its head and
-flag FILLED, painted as the Linux one paints its note — white at .75 opacity
-— and centred on its sheet grey #aaaaaa. The Linux one is Breeze's
-`audio-x-generic` (the `.desktop`'s `Icon=`), vendored verbatim under
-`assets/icons/breeze/` and never transcribed into `icons.cpp`; it lends the
-launcher its grey and its note's ink. `music-note-16th.svg` is the roster's
-own asset (`Icon::MusicNote16th`). It is an ADAPTIVE icon and nothing else
+flag FILLED, painted as Breeze's `audio-x-generic` paints its note — white
+at .75 opacity — and centred on that file's sheet grey #aaaaaa.
+`audio-x-generic.svg` is vendored verbatim under `assets/icons/breeze/` and
+never transcribed into `icons.cpp`; it lends the launcher its grey and its
+note's ink. `music-note-16th.svg` is the roster's own asset
+(`Icon::MusicNote16th`). The desktop's `packaging/warptempo_gui.svg` is the
+same picture with the plate the tablet's mask supplies drawn in (a 72-unit
+rounded square, radius 14, the note 44 tall and centred, the same `d`), the
+`.desktop`'s `Icon=warptempo_gui` since 2026-09-30 (`audio-x-generic` was
+its icon name until then). The tablet's is an ADAPTIVE icon and nothing else
 (minSdk 30, so no legacy PNG set):
 `android/app/res/mipmap-anydpi-v26/ic_launcher.xml` over
 `ic_launcher_foreground.png` (the filled quaver, RGBA, white at alpha .75)

@@ -43,9 +43,9 @@
 
   <!-- android:icon is the launcher and recents icon: Breeze's
        music-note-16th with its head and flag filled, white as the note of
-       audio-x-generic (the Linux .desktop's Icon=) and centred on that file's
-       sheet grey, rendered once into an adaptive icon under res/
-       (res/mipmap-anydpi-v26/ic_launcher.xml holds the recipe). -->
+       audio-x-generic and centred on that file's sheet grey, rendered once
+       into an adaptive icon under res/ (res/mipmap-anydpi-v26/ic_launcher.xml
+       holds the recipe); packaging/warptempo_gui.svg is its desktop twin. -->
   <application
       android:label="Warptempo"
       android:icon="@mipmap/ic_launcher"

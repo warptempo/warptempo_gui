@@ -1,0 +1,18 @@
+<!-- The desktop launcher icon, the .desktop's Icon=warptempo_gui: the tablet's
+     launcher icon made whole. The tablet's adaptive icon draws its note alone
+     (android/app/ic_launcher_foreground.svg) and its mask supplies the plate;
+     the desktop shows no mask, so the plate is drawn here: a rounded square in
+     the sheet grey #aaaaaa (Breeze's audio-x-generic's sheet fill), the full
+     72 by 72, corner radius 14. The note is that file's path, its d byte for
+     byte (music-note-16th's outer contour, head and flag filled), fill #fff at
+     opacity .75, so a change to one is a change to both. THE TWO NUMBERS: the
+     note's box is x 6..16, y 3..19 in its own units (10 by 16, centre (11, 11));
+     the tablet rule puts it 44 tall in the 72 the mask shows, so the scale is
+     44 / 16 = 2.75, and the translate 36 - 11 * 2.75 = 5.75 on both axes lands
+     the box's centre on the plate's (architect 2026-09-30). -->
+<svg version="1.1" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <rect width="72" height="72" rx="14" fill="#aaaaaa"/>
+    <g transform="translate(5.75,5.75) scale(2.75)">
+        <path d="m 11,3 0,1 0,3 0,1 0,4 0,2.640625 C 10.450691,14.229206 9.7385673,14.001104 9,14 7.3431458,14 6,15.119288 6,16.5 6,17.880712 7.3431458,19 9,19 c 1.656854,0 3,-1.119288 3,-2.5 L 12,12 12,8.0957031 c 1.473938,0.2519592 3.180894,1.3814645 4,2.1485529 L 16,9.5 16,9 16,8.84375 16,5.5 16,4.84375 C 14.788541,3.8472864 12.971189,3 11,3 Z" fill="#fff" opacity=".75"/>
+    </g>
+</svg>

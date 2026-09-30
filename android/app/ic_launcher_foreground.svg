@@ -11,10 +11,11 @@
      verbatim prefix of the vendored d (grep -F of this d followed by
      " m 1,1.0957031" against the vendored file finds it) and a diff between
      the two is a transcription bug. The ink and opacity are the note's of
-     Breeze's audio-x-generic (assets/icons/breeze/audio-x-generic.svg, the
-     Linux .desktop's Icon=): its group's fill #fff and its path's opacity
-     .75, white over the sheet grey, in place of the vendored file's
-     ColorScheme-Text. The vendored path carries no transform, so d is in the
+     Breeze's audio-x-generic (assets/icons/breeze/audio-x-generic.svg): its
+     group's fill #fff and its path's opacity .75, white over the sheet grey,
+     in place of the vendored file's ColorScheme-Text. The desktop twin,
+     packaging/warptempo_gui.svg (the .desktop's Icon=), carries this same d
+     on its drawn plate, so a change to one is a change to both. The vendored path carries no transform, so d is in the
      22-unit frame's own coordinates. The viewBox is the filled glyph's own
      bounding box there, measured by rendering the path alone and trimming
      it (x 6..16, y 3..19: 10 by 16 units), so this file renders the glyph
