@@ -36,12 +36,14 @@
 // d-strings here are copied from them VERBATIM, so a diff between the two is a
 // transcription bug and nothing else — with the two `<rect>` plates'
 // derivations as the stated exception just above. They are read by no code at runtime — the
-// product reads no icon files. The two committed SVGs with no table row are
-// the Android launcher icon's: audio-x-generic.svg (the 64 px mimetype
-// rendition), the program's logo, the Linux .desktop's Icon=, which lends the
-// launcher its sheet grey; and minuet-scales.svg (the 22 px action icon), the
-// launcher's glyph, its path d copied verbatim into
-// android/app/ic_launcher_foreground.svg and rendered once to the PNG layers
+// product reads no icon files. The one committed SVG with no table row is
+// audio-x-generic.svg (the 64 px mimetype rendition), the program's logo, the
+// Linux .desktop's Icon=, which lends the Android launcher icon its sheet grey
+// and its note's ink (white at .75). The launcher's glyph is music-note-16th's
+// outer contour, which IS transcribed here for the roster (MusicNote16th):
+// its d, truncated before the two subpaths that cut the head and the flag
+// hollow, is a verbatim prefix of the file's in
+// android/app/ic_launcher_foreground.svg, rendered once to the PNG layers
 // under android/app/res/ that the launcher, never this code, reads.
 //
 // EVERY ENTRY IS A ROW'S. The icons here are painted by the redesigned rows and
@@ -511,9 +513,7 @@ enum class Icon {
 // together — having been 49 for that one day. It was
 // 48 from 2026-09-16, THE MEASURES FEATURE'S DELETION (architect
 // 2026-09-16): minuet-scales left with the Marker Measure button that wore
-// it — enumerator, def and asset together (the asset RETURNED 2026-09-30 for
-// the Android launcher icon alone, with no enumerator and no def, so this
-// count did not move). It was 49 from 2026-09-15, the
+// it — enumerator, def and asset together. It was 49 from 2026-09-15, the
 // per-marker magnification's retirement, when zoom-in-y left with the
 // Magnification button the same way. It was 50 earlier that day, after the
 // two view lamps' deletion, when document-import and chronometer-start left

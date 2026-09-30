@@ -140,7 +140,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, rendered once from the staff of Breeze's minuet-scales
+# layers per density, rendered once from Breeze's music-note-16th, filled
 # (android/app/ic_launcher_foreground.svg, outside res/) and committed (that
 # XML's head comment is the recipe; nothing here renders). Every GUI pixel
 # is still painted by cairo and every roster icon is still an in-tree path; the

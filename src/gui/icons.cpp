@@ -11,11 +11,10 @@ namespace {
 
 // -- The icon table ---------------------------------------------------------
 //
-// One row per committed SVG (assets/icons/breeze/; audio-x-generic.svg and
-// minuet-scales.svg, the launcher icon's, excepted — icons.h's PROVENANCE),
-// each holding that file's path elements in file order. `d` is copied VERBATIM
-// from the file; `ink` is the color the file resolves to, and every path is
-// FILLED in it.
+// One row per committed SVG (assets/icons/breeze/; audio-x-generic.svg, the
+// program's logo, excepted — icons.h's PROVENANCE), each holding that file's
+// path elements in file order. `d` is copied VERBATIM from the file; `ink` is
+// the color the file resolves to, and every path is FILLED in it.
 //
 // THERE IS NO STROKED FILE since 2026-09-22, and so no stroked arm:
 // tool-rect-selection (the Show trim region button's marching-ants rectangle,
@@ -1202,8 +1201,7 @@ const IconDef& icon_def(Icon icon) {
 // numbers there that appear in no file. EXPONENT NOTATION JOINED 2026-08-20 THE
 // SAME WAY (the scanner's own comment at parse_number carries the record; its
 // one producer, minuet-scales.svg, left the roster 2026-09-16 with the
-// measures feature (its file returned 2026-09-30 for the launcher icon alone,
-// with no table row), and the scanner stays — the subset grows with a producer
+// measures feature, and the scanner stays — the subset grows with a producer
 // and is not shrunk when one leaves). No Q/q, T/t: absent from every
 // committed file, so they have no producer here and the parser refuses them
 // loudly rather than guessing. Elliptical 'a' is implemented
@@ -1244,9 +1242,8 @@ void skip_separators(PathCursor& c) {
 // appear in no file and broken the one invariant this whole table rests on: the
 // `d` string is the committed asset's, byte for byte, so a diff between them is
 // a transcription bug and nothing else. THAT PRODUCER LEFT 2026-09-16
-// (minuet-scales, with the measures feature) and no table row spells an
-// exponent today (the file returned 2026-09-30 for the launcher icon alone,
-// untranscribed); the scanner stays, the subset growing with a producer and
+// (minuet-scales, with the measures feature) and no committed file spells an
+// exponent today; the scanner stays, the subset growing with a producer and
 // not shrinking when one leaves.
 //
 // IT IS SCANNED STRICTLY: the `e` is consumed only when an optional sign and at

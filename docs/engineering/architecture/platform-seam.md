@@ -1105,38 +1105,44 @@ platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
 runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
 
-THE LAUNCHER ICON (architect 2026-09-29; the staff 2026-09-30). The
-manifest's `android:icon` is `@mipmap/ic_launcher`: Breeze's `minuet-scales`,
-three notes climbing a four-line staff (the glyph the Marker Measure button
-wore until 2026-09-16), in the file's own `ColorScheme-Text` ink #232629,
-centred on the sheet grey #aaaaaa of `audio-x-generic`, the Linux one (the
-`.desktop`'s `Icon=`). Both files are vendored verbatim under
-`assets/icons/breeze/` and never transcribed into `icons.cpp`
-(`minuet-scales.svg` returned for the launcher alone; it is not a roster
-icon). It is an ADAPTIVE icon and nothing else (minSdk 30, so no legacy PNG
-set): `android/app/res/mipmap-anydpi-v26/ic_launcher.xml` over
-`ic_launcher_foreground.png` (the staff and notes, RGBA, opaque #232629) and
-`ic_launcher_background.png` (solid opaque #aaaaaa, audio-x-generic's own
+THE LAUNCHER ICON (architect 2026-09-29; the filled quaver 2026-09-30).
+The manifest's `android:icon` is `@mipmap/ic_launcher`: Breeze's
+`music-note-16th`, the flagged quaver the BPM button wears, with its head and
+flag FILLED, painted as the Linux one paints its note — white at .75 opacity
+— and centred on its sheet grey #aaaaaa. The Linux one is Breeze's
+`audio-x-generic` (the `.desktop`'s `Icon=`), vendored verbatim under
+`assets/icons/breeze/` and never transcribed into `icons.cpp`; it lends the
+launcher its grey and its note's ink. `music-note-16th.svg` is the roster's
+own asset (`Icon::MusicNote16th`). It is an ADAPTIVE icon and nothing else
+(minSdk 30, so no legacy PNG set):
+`android/app/res/mipmap-anydpi-v26/ic_launcher.xml` over
+`ic_launcher_foreground.png` (the filled quaver, RGBA, white at alpha .75)
+and `ic_launcher_background.png` (solid opaque #aaaaaa, audio-x-generic's own
 sheet fill, so the platter is the sheet) in each of
 `mipmap-{m,h,xh,xxh,xxxh}dpi`, 108·f px square. Its succession: the whole
 audio-x-generic file rendered at fit over the row ground stood one evening
 and read, on his glass, as a small square off centre in the platter ("remove
 the little CD finger tab altogether and center the icon", architect
-2026-09-30); its music note alone, centred on the sheet grey, stood an hour
-and gave way at his look to the measures glyph ("look for a musical measures
-icon … the one we used for the measures … center the other icon there",
-architect 2026-09-30). THE 44-OF-72 RULE: the glyph's bounding box (x 3..19,
-y 3..19.409 in the file's 22-unit frame, whose two translates cancel;
-measured by rendering the path alone and trimming it) is 44 dp on its longer
-side, the height, of the 72 dp viewport every mask is drawn within, the width
-following the aspect, and centred on the 108 dp canvas. The render's input
-is the derived `android/app/ic_launcher_foreground.svg`, beside the manifest
-and outside `res/` (aapt2 refuses an unknown file there): the one path, its
-`d` copied byte for byte from the vendored `minuet-scales.svg`, exponent
-spellings included (a diff between the two is a transcription bug), in a
-viewBox that is the glyph's box. The PNGs are a ONE-SHOT render
-(rsvg-convert + magick), committed; the XML's head comment is the recipe, and
-a retouch re-runs it, never a build step. `res/` holds that icon alone: the
+2026-09-30); its music note alone, centred on the sheet grey (c8ae868e),
+stood an hour and gave way at his look to the notes on a staff of
+`minuet-scales` in their own dark ink (fd1160df), which gave way within the
+hour to the filled quaver, his pick between two mock-ups ("Music note 16th …
+definitely use the white color, the filled-in note head, the same style as
+the original icon", architect 2026-09-30). THE 44-OF-72 RULE: the glyph's
+bounding box (x 6..16, y 3..19 in the file's 22-unit frame, measured by
+rendering the filled path alone and trimming it: 10 by 16 units) is 44 dp on
+its longer side, the height, of the 72 dp viewport every mask is drawn
+within, the width following the aspect, and centred on the 108 dp canvas.
+The render's input is the derived `android/app/ic_launcher_foreground.svg`,
+beside the manifest and outside `res/` (aapt2 refuses an unknown file
+there): one path whose `d` is the vendored `music-note-16th.svg`'s truncated
+before its second subpath — the outer contour byte for byte through its own
+closing `Z`, a verbatim prefix of the file's `d` (a diff between the two is a
+transcription bug) — the dropped second and third subpaths being the two
+that cut the flag and the head hollow, in `fill="#fff"` at `opacity=".75"`,
+audio-x-generic's note's own, in a viewBox that is the glyph's box. The PNGs
+are a ONE-SHOT render (rsvg-convert + magick), committed; the XML's head
+comment is the recipe, and a retouch re-runs it, never a build step. `res/` holds that icon alone: the
 app still declares no `@string`, no style, no `res/values`; `build_apk.sh`'s
 step 5 compiles the directory (`aapt2 compile --dir`) and links the result.
 

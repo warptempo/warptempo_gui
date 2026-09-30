@@ -41,9 +41,10 @@
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-  <!-- android:icon is the launcher and recents icon: the staff of Breeze's
-       minuet-scales, centred on the sheet grey of audio-x-generic (the Linux
-       .desktop's Icon=), rendered once into an adaptive icon under res/
+  <!-- android:icon is the launcher and recents icon: Breeze's
+       music-note-16th with its head and flag filled, white as the note of
+       audio-x-generic (the Linux .desktop's Icon=) and centred on that file's
+       sheet grey, rendered once into an adaptive icon under res/
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the recipe). -->
   <application
       android:label="Warptempo"
