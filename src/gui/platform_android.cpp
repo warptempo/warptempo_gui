@@ -510,11 +510,12 @@ GuiPlatform::~GuiPlatform() {
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
-// with no permission granted and the app reads and writes without
-// MANAGE_EXTERNAL_STORAGE — the `projects/` of the tablet's clone of the
-// projects repository, whose root is the external files dir itself
-// (`warptempo_sync setup` places the clone; the pull and `warptempo_sync tt`'s
-// audio fill it). It is stamped as a LITERAL absolute
+// with no permission granted and the app reads and writes with no storage
+// permission at all (MANAGE_EXTERNAL_STORAGE, declared for the struck
+// Synchronize / OTG arc, left the manifest 2026-09-30) — the `projects/` of
+// the tablet's clone of the projects repository, whose root is the external
+// files dir itself (`warptempo_sync setup` places the clone; the pull and
+// `warptempo_sync tt`'s audio fill it). It is stamped as a LITERAL absolute
 // path: the config is a file the user may read and edit, and a file that names
 // where the projects are is worth more than one that says "ask the activity".
 // A STATIC THAT READS THE BACKEND'S GLOBAL: this accessor is asked before any

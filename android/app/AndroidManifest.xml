@@ -23,13 +23,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="com.warptempo.gui">
 
-  <!-- DECLARED FOR M6, granted by hand in Settings, and unused until then. The
-       source and its three sidecars live in the app's own external files dir
-       (/sdcard/Android/data/com.warptempo.gui/files), which needs no permission
-       at all; All-files access is what the OTG / arbitrary-folder arc will
-       need, and declaring it now keeps the manifest stable across that landing. -->
-  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-
   <!-- THE HISTORY VIEW'S GIT TALKS TO GITHUB (src/gui/git_repo.cpp: libgit2
        over SSH with the device's deploy key). Without this permission the
        app's process is not in the inet group: socket(AF_INET) fails with
