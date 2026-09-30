@@ -1105,18 +1105,28 @@ platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
 runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
 
-THE LAUNCHER ICON (architect 2026-09-29). The manifest's `android:icon` is
-`@mipmap/ic_launcher`, the Linux one: Breeze's `audio-x-generic` (the
-`.desktop`'s `Icon=`), vendored verbatim as
+THE LAUNCHER ICON (architect 2026-09-29; the note alone 2026-09-30). The
+manifest's `android:icon` is `@mipmap/ic_launcher`, drawn from the Linux one:
+Breeze's `audio-x-generic` (the `.desktop`'s `Icon=`), vendored verbatim as
 `assets/icons/breeze/audio-x-generic.svg` and never transcribed into
 `icons.cpp`. It is an ADAPTIVE icon and nothing else (minSdk 30, so no legacy
 PNG set): `android/app/res/mipmap-anydpi-v26/ic_launcher.xml` over
-`ic_launcher_foreground.png` (the glyph, RGBA) and
-`ic_launcher_background.png` (solid opaque #292C30, the row ground whose owner
-is `kRedesignRowGround`, render.h) in each of `mipmap-{m,h,xh,xxh,xxxh}dpi`,
-108·f px square. THE 58-OF-108 RULE: the SVG's 64-unit document is scaled to
-58 dp and centred on the 108 dp canvas, so the sheet and the disc sit within
-the 66 dp circle every mask keeps (the sheet's two left corners on its edge). The PNGs are a ONE-SHOT render
+`ic_launcher_foreground.png` (the file's music note ALONE, RGBA, white at the
+file's .75 opacity) and `ic_launcher_background.png` (solid opaque #aaaaaa,
+the file's own sheet grey, so the platter is the sheet) in each of
+`mipmap-{m,h,xh,xxh,xxxh}dpi`, 108·f px square. The disc, the sheet's edges
+and lines and the gradient are dropped and the note is centred: the whole
+file rendered at fit over the row ground stood one evening and read, on his
+glass, as a small square off centre in the platter ("remove the little CD
+finger tab altogether and center the icon", architect 2026-09-30). THE
+44-OF-72 RULE: the note's bounding box (x 15..37, y 24.994..46.997 in the
+file's units, measured by rendering the path alone and trimming it) is 44 dp
+tall, of the 72 dp viewport every mask is drawn within, and centred on the
+108 dp canvas. The render's input is the derived
+`android/app/ic_launcher_foreground.svg`, beside the manifest and outside
+`res/` (aapt2 refuses an unknown file there): the one note path, its `d`
+copied byte for byte from the vendored file (a diff between the two is a
+transcription bug), in a viewBox that is the note's box. The PNGs are a ONE-SHOT render
 (rsvg-convert + magick), committed; the XML's head comment is the recipe, and
 a retouch re-runs it, never a build step. `res/` holds that icon alone: the
 app still declares no `@string`, no style, no `res/values`; `build_apk.sh`'s

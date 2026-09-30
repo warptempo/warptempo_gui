@@ -1,0 +1,12 @@
+<!-- The launcher's foreground: the music note of Breeze's audio-x-generic
+     (assets/icons/breeze/audio-x-generic.svg, vendored verbatim), alone. Its
+     path d is copied byte for byte from that file, so a diff between the two
+     d strings is a transcription bug; its fill and opacity are the file's
+     (the group's #fff and the path's .75). The viewBox is the note's own
+     bounding box in the file's coordinates (x 15..37, y 24.994..46.997), so
+     this file renders the note edge to edge. It lives beside the manifest,
+     outside res/, which aapt2 compiles whole; the PNG layers are rendered
+     from it once by the recipe in res/mipmap-anydpi-v26/ic_launcher.xml. -->
+<svg version="1.1" viewBox="15 24.994 22 22.003" xmlns="http://www.w3.org/2000/svg">
+    <path d="m21 25v16.05c-0.635-0.648-1.517-1.053-2.5-1.053-1.939 0-3.5 1.561-3.5 3.5s1.561 3.5 3.5 3.5c1.905 0 3.437-1.509 3.49-3.4h0.01v-13.6h14v8.05c-0.635-0.648-1.517-1.053-2.5-1.053-1.939 0-3.5 1.561-3.5 3.5s1.561 3.5 3.5 3.5 3.5-1.561 3.5-3.5v-15.5h-15zm1 2h14v2h-14z" fill="#fff" opacity=".75"/>
+</svg>

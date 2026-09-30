@@ -38,8 +38,10 @@
 // derivations as the stated exception just above. They are read by no code at runtime — the
 // product reads no icon files. The one committed SVG with no table row is
 // audio-x-generic.svg (the 64 px mimetype rendition), the program's logo: the
-// Linux .desktop's Icon=, and the Android launcher icon, rendered once to the
-// PNG layers under android/app/res/ that the launcher, never this code, reads.
+// Linux .desktop's Icon=, and the Android launcher icon's source: its music
+// note alone, the path d copied verbatim into android/app/ic_launcher_foreground.svg,
+// is rendered once to the PNG layers under android/app/res/ that the launcher,
+// never this code, reads.
 //
 // EVERY ENTRY IS A ROW'S. The icons here are painted by the redesigned rows and
 // nowhere else — the pointer cursor is not one of them: every cursor the product
