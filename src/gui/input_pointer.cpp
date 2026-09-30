@@ -2840,7 +2840,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
 
     // ONE FINGER PANS, TWO FINGERS ZOOM — architect 2026-08-14, the whole
     // gesture model on glass (the ruling and its friction argument at the
-    // declaration; touch.md's two-finger section is authoritative). The terms
+    // declaration, which is authoritative). The terms
     // are NEVER two at once: a two-finger frame's centroid travel is
     // discarded outright, which is what kills the accordion, and a
     // single-finger frame carries no distance to zoom by. The one-finger
@@ -3112,8 +3112,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // and the waveform". A finger in the field therefore reaches the
     // platform's editor-field query (touch_point_in_editor_field), which
     // routes a DRAG to the CARET DRAG while a tap and the double press reach
-    // the field's own press — the third ruled divergence, touch.md's
-    // caret-drag section — and a finger on a RIDING box beside the field
+    // the field's own press — the third ruled divergence,
+    // begin_touch_caret_drag's declaration — and a finger on a RIDING box
+    // beside the field
     // keeps the flag box's pointer answer, hit_test_flag resolving a riding
     // box to its marker since 2026-09-05.)
     // AND IT YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-08-27), for the flag
@@ -3240,7 +3241,7 @@ void GuiInputHandler::end_touch_region() {
 // The third ruled divergence (architect 2026-09-05) — the contract, the
 // drain rule and the one record the bodies keep (the editing session the
 // stream began on) are at the declarations
-// (input_handler.h); touch.md's caret-drag section is the ruling's home.
+// (input_handler.h), the machine at GuiInputCore::set_touch_nav_hooks.
 // Every seat is THE ONE POINTER SEAT (set_editor_caret_from_x), which is
 // what keeps the finger's caret and the mouse's on one byte rule and one
 // blink rule; nothing here selects, commits or seeds.
@@ -5332,7 +5333,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // for the release's seed alone (EditorTextDragState).
                 // PLASTIC ONLY, recorded rather than fixed: the touch
                 // translation carries `current_mods()` like every other
-                // delivery (touch.md), and the on-screen keyboard's Shift is
+                // delivery (current_mods, input_core.h), and the on-screen
+                // keyboard's Shift is
                 // ONE-SHOT FOR THE NEXT CHARACTER KEY — it produces a capital
                 // codepoint through shifted_char and sets no modifier bit — so
                 // a tablet with no physical shift key has no road onto this

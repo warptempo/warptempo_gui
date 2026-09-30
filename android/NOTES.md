@@ -703,7 +703,7 @@ consumer, and the seam has no addition at all — §13.3.)*
   the UP after tracking the DOWN; DOWN repeats fire nothing. THE SYSTEM DESTROY
   is untouched and cannot ask — BACK asks, a destroy cannot — so a session
   killed from the task switcher still goes unasked. EVERY OTHER KEY still
-  returns 0: hardware keyboards are out of scope (touch.md), and the road into
+  returns 0: hardware keyboards are out of scope (`on_input_event`'s key arm), and the road into
   the core's key path is `synthesize_key`.
 - **Mouse**: consumed, not routed and not returned — a click that fell through
   would act on whatever is behind the activity.

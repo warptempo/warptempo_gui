@@ -1619,7 +1619,8 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
         // hooks below do not.
         //
         // EVERY OTHER KEY STILL RETURNS 0, unchanged: HARDWARE KEYBOARDS ARE
-        // OUT OF SCOPE ON THIS PLATFORM (touch.md), so a KeyEvent that is not
+        // OUT OF SCOPE ON THIS PLATFORM (this arm owns the ruling; a mouse's
+        // own below), so a KeyEvent that is not
         // BACK is handed back to the system rather than swallowed by a GUI
         // with no use for it. The road INTO the core's key path exists and is
         // public — synthesize_key — for an on-screen keyboard this backend
@@ -1649,7 +1650,7 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     // system would act on whatever is behind the activity.
     //
     // THE S PEN IS NOT IN THAT CLASS: IT IS A FINGER WITH THREE AMENDMENTS
-    // (architect 2026-09-25, touch.md's pen section). The architect uses the
+    // (architect 2026-09-25; GuiTouchTool, gui_input.h). The architect uses the
     // Tab S10 FE's pen daily, and Samsung reports it as a touchscreen source
     // with the stylus bits beside (TOUCHSCREEN|STYLUS), so its contacts ride
     // the finger road — the phone-model pan, the region hold, the caret drag,

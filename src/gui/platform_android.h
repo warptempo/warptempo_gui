@@ -248,8 +248,8 @@ public:
     // GuiInputCore::touch_contact_active, input_core.h.
     bool touch_contact_active() const;
 
-    // THE PEN'S RETAINED ZOOM ANCHOR (architect 2026-09-27; touch.md's pen
-    // section): the laptop's Ctrl + left button held while the mouse is
+    // THE PEN'S RETAINED ZOOM ANCHOR (architect 2026-09-27): the laptop's
+    // Ctrl + left button held while the mouse is
     // lifted off the table and set down again, carried onto the S Pen. The
     // platform owns the pen facts (its button, its plane, its contacts) and
     // the GUI owns the seat (TouchNavZoomState, app_state.h); these two
@@ -378,7 +378,8 @@ public:
     bool wants_onscreen_keyboard() const;
 
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. Hardware
-    // keyboards are out of scope on this platform (touch.md) and this backend
+    // keyboards are out of scope on this platform (on_input_event's key arm)
+    // and this backend
     // translates none: AInputEvent key events are handed back to the system so
     // BACK still leaves the app. THIS IS THE ROAD THE OWNED ON-SCREEN KEYBOARD
     // TAKES INTO THE CORE'S KEY PATH — a painted surface emitting keysyms

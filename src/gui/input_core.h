@@ -581,7 +581,7 @@ public:
     // begin/update/end, the dead trim-move members' exact pattern reborn for
     // the region former — and TEN since 2026-09-05, when the EDITOR-FIELD
     // query and the CARET-DRAG trio joined for the third ruled divergence;
-    // touch.md carries the arc). ONE
+    // the retired shapes are closed_questions.md's touch section). ONE
     // finger on
     // the glass IS the pointer — translated whole inside this class, so the
     // GUI sees ordinary pointer deliveries and cannot tell which device
@@ -607,7 +607,8 @@ public:
     // are the ZOOM gesture: this layer measures both the
     // centroid delta and the distance ratio and delivers both, and the GUI
     // discards the centroid delta on a two-finger frame — two fingers zoom
-    // and never pan since 2026-08-14 (touch.md's two-finger section), which
+    // and never pan since 2026-08-14 (the model at apply_touch_nav_update's
+    // declaration, input_handler.h), which
     // is a GESTURE POLICY and therefore the GUI's, not this layer's. None of
     // the four delivers pointer events.
     // All are handed to the GUI through these hooks (the
@@ -841,7 +842,7 @@ public:
     // platform_android.cpp): THE PEN'S BARREL BUTTON IS THE CTRL BIT ONLY FOR
     // A GESTURE THE PEN OWNS, or for its hover with nothing on the glass, so
     // an ignored pen beside a finger never converts that finger's pan or
-    // pending window (touch.md, The Pen and the Pointer on Contact).
+    // pending window (architect 2026-09-25; GuiTouchTool, gui_input.h).
     std::optional<GuiTouchTool> touch_owner_tool() const {
         if (touch_phase_ == TouchPhase::Idle ||
             touch_phase_ == TouchPhase::Drain)
@@ -1306,8 +1307,10 @@ private:
     // branch; the bare-`e` precedent applied to glass). TWO fingers are the
     // navigation gesture, delivered through the touch-nav hooks and NEVER as
     // pointer events. The WINDOW is what buys that vocabulary ON THE PAN ZONE
-    // (a pinch whose press landed at contact would jump the playhead before it
-    // could zoom — touch.md's record), and the pan zone is the only surface
+    // (a real pinch's two fingers land tens of milliseconds apart, so a press
+    // delivered at the first contact jumps the playhead before it can zoom —
+    // the timer-free model died of exactly that on the glass, 2026-08-12:
+    // "every time I pinch, it jumps"), and the pan zone is the only surface
     // with a pinch, so off it the finger is the pointer on contact
     // (2026-09-25). A PEN is a finger here (GuiTouchTool, gui_input.h): the
     // backend tells the core which tool touched, and the core reads it only
@@ -1964,6 +1967,10 @@ private:
     // input reads: the finger is the centroid and the distance stays 0.0, so
     // the pinch latch arm is structurally false and the ratio guard delivers
     // 1.0 — everything downstream is shared verbatim.
+    // A DELIVERED FRAME IS NEITHER A KEY-REPEAT DISARM EDGE NOR A TRANSPORT
+    // HOLD EDGE, by judgment rather than omission: those are ruled event-edge
+    // enumerations (a key press, a pointer press, a completed wheel emission)
+    // and a navigation frame is none of them.
     // deliver_even_if_no_op exempts THIS call from the body's exact-no-op
     // return (dx 0.0 and ratio 1.0 deliver nothing), and it has TWO callers,
     // each a change of meaning under a finger that may be standing still (the

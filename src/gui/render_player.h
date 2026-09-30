@@ -375,9 +375,10 @@ struct GuiRenderPlayer {
     // A SILENT consumed no-op at the root, which is `tmp/` (the wall's one
     // owner is render_player_up_actionable, app_state.h, which the button's
     // face reads too). Past that wall it UNLOADS THE ITEM (unload_item) and
-    // re-enters the root, so the player stands as a fresh open leaves it:
-    // nothing bound, nothing sounding, the band on row 0. The reasoning is at
-    // the body and nowhere else.
+    // re-enters the root, so the player stands as a fresh open leaves it —
+    // nothing bound, nothing sounding — but for the band, which it seats on
+    // the folder it just left (rebuild_rows' seat rule, architect
+    // 2026-09-11). The reasoning is at the body and nowhere else.
     void up();
     // THE ROOT'S DELETE, ANSWERED (architect 2026-09-29) — the one body the
     // DELETE_FOLDER_CONFIRM prompt's Delete runs, through

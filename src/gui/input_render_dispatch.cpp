@@ -637,6 +637,10 @@ void GuiInputHandler::dispatch_next_batch_entry() {
 
     // Batch terminates if Esc was pressed since the last dispatch OR if
     // we ran out of entries. Either way: log a summary and clean up.
+    // A FINISHED SWEEP OPENS NOTHING (architect 2026-09-15): the terminal
+    // raises no modal and does not open the render player, because an
+    // asynchronous modal would interrupt whatever the user is doing at that
+    // moment; the cells stay on disk and bare `l` opens the player.
     const bool out_of_entries = (batch_.next_index >= total);
     const bool cancelled      = app.queue_cancel_requested;
     if (out_of_entries || cancelled) {

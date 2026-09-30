@@ -246,7 +246,7 @@ drag coordinates floor instead of truncating.
   the measurements were re-homed under the AV Sync Stats panel (`Shift+L`),
   running only while it stood and never reaching the line; THE PANEL AND ITS
   INSTRUMENTS WERE DELETED WHOLE ON 2026-09-30 (the Display measurement
-  entry below, and render-player.md), so THE PLAYBACK LINE CARRIES NO
+  entry below, and closed_questions.md), so THE PLAYBACK LINE CARRIES NO
   LATENCY MEASUREMENT AT ALL, on either backend, and no stderr line reports
   one.
 
@@ -325,7 +325,7 @@ drag coordinates floor instead of truncating.
   2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
   spawnable player existing there — and retired whole with the in-app render
   player, which plays a render through the product's own engine on both
-  devices; render-player.md.) `gui_main` asks it before
+  devices; `GuiRenderPlayer`, render_player.h.) `gui_main` asks it before
   `GuiPlatform::init` and stamps the file if none exists, which is what
   keeps the GUI proper free of the `#ifdef` the alternative would need.
 - **Fonts**: `gui_font.h` is the ONE face owner (`GuiFontFamily::Sans/Mono`);
@@ -448,7 +448,7 @@ drag coordinates floor instead of truncating.
   Firing from the input drain is safe under `drain_looper`'s "nothing may
   block" rule — the callback raises a bottom-row prompt or requests an exit
   and returns. Every other key still returns 0 (hardware keyboards are out of
-  scope, `touch.md`), and the road into the core's key path stays
+  scope, `on_input_event`'s key arm), and the road into the core's key path stays
   `synthesize_key`. **BACK ASKS; A DESTROY
   CANNOT** is the residual loss, recorded at `drain_looper`'s
   `destroyRequested` arm: `APP_CMD_DESTROY` is the system stating the activity
@@ -473,8 +473,8 @@ drag coordinates floor instead of truncating.
   hold means something, so the tablet's key repeat (and the held buttons'
   first fire) stays on the beat. Hardware keyboards are out of scope; the owned
   painted keyboard reaches the core through `synthesize_key`.
-- **The S Pen on Android** (architect 2026-09-25; the ruling is `touch.md`'s
-  pen section). The source gate admits a touchscreen source and a stylus
+- **The S Pen on Android** (architect 2026-09-25; the ruling is at `GuiTouchTool`,
+  gui_input.h). The source gate admits a touchscreen source and a stylus
   source (a mouse or touchpad stays consumed), and `on_motion_event` reads
   THREE pen facts per event, each through a door of the portable core so no
   Android type crosses the seam: the TOOL TYPE (STYLUS or ERASER) rides
@@ -503,7 +503,7 @@ drag coordinates floor instead of truncating.
   `kPenPlaneExit` = 100, about 8.5 and 10 mm, constexpr beside the latch in
   the Android backend, the architect's glass-tuned numbers closing the
   same day's tuning phase, whose device keys and startup push are struck;
-  the latch's transitions are touch.md's pen section): a hover
+  the latch's transitions are at `pen_report_in_plane`): a hover
   or hovering button edge above it ends the hover (`pointer_leave` with
   `GuiPointerLeaveReason::PenHoverEnd`, which keeps no face and gives a
   standing tooltip box its hide grace, the leave's one soft end) and drops the
@@ -550,7 +550,7 @@ overlay being able to stand together (the record is at the predicate) — while
 describes the SLOT rather than either surface
 (`AppState::keyboard_slot_painted_standing`). The overlay takes no platform
 term, unlike this surface's — it serves the pointer and the finger alike and
-stands on both backends. render-player.md owns it.
+stands on both backends. `folder_overlay.h` owns it.
 
 THE BAND CARRIES NO CHROME OF ITS OWN (architect 2026-08-27, on his first glass
 drive of the surface): no line at its top edge. Its ground IS the bottom row's
@@ -846,8 +846,7 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   THE HOOK ITSELF IS THE PARTITION**: main.cpp's installed lambda forks on the
   render player's mode bit — `GuiRenderPlayer::on_media_command` while the
   player stands, `GuiCarTransport::on_media_command` while it is closed, the
-  latter driving the project's own transport (render-player.md's *The car with
-  the player closed*). The player keeps its own `!rp.active` guard inside its
+  latter driving the project's own transport (`GuiCarTransport`, car_transport.h). The player keeps its own `!rp.active` guard inside its
   body as a belt. And
   **EVERY COMMAND IS A DIRECT ACT ON EITHER OWNER** (architect 2026-09-12,
   from the car: *"the car is a separate interface"*) — NO KEY IS SYNTHESIZED
@@ -864,7 +863,7 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   2026-08-28, R36 — the player's own Stop key rather than the pause it had
   been mapped to — and became PAUSE AND THEN HOME on 2026-09-01, a direct act,
   when that key and its button retired; the mapping table is
-  render-player.md's.)
+  `GuiRenderPlayer::on_media_command`'s.)
 - **`publish_media_state`** — the push UP, from TWO owners since 2026-09-17,
   exactly one of them live at a time: `GuiRenderPlayer::publish_media_state`
   while the render player stands, at every edge where the display should
@@ -901,7 +900,7 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   state's number in the session walk and its distance from the save) and
   ARTIST is THE A/B TAB AND THE VIEW (`A) T+W`), with the duration THE TRIM
   WINDOW'S LENGTH while the car's loop sounds and unknown at rest —
-  render-player.md's *The car with the player closed* owns that half. And the
+  `GuiCarTransport`'s head (car_transport.h) owns that half. And the
   `PlaybackState`
   (with the position and every action declared). **THE DISPLAY IS A DUMMY: THE
   STATE IS PLAYING FOR AS LONG AS THE APP RUNS** (architect 2026-09-12, from
@@ -921,7 +920,7 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   TRACK naming the
   highlighted row at position 0 with the duration unknown — title and album are
   never empty on any push either owner makes (the three-line rule is
-  `GuiRenderPlayer::publish_media_state`'s, render-player.md's car section the
+  `GuiRenderPlayer::publish_media_state`'s, `on_media_command`'s table the
   behaviour). It calls
   `setActive(active)` — **THE SESSION IS ACTIVE FROM THE FIRST TICK OF THE
   FIRST PROJECT UNTIL `onDestroy`** (architect 2026-09-17), created in
@@ -995,8 +994,8 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   down as `FocusLost` / `FocusLostTransient` and STOPS WHATEVER IS SOUNDING:
   with the player standing it pauses the item through
   its TRANSPORT DIRECTLY (`transport_toggle_act`, past the highlight fork, so
-  an imposed interrupt can never start a walked-to row; render-player.md's car
-  section owns the table), and with the player closed it takes the project
+  an imposed interrupt can never start a walked-to row; `on_media_command`'s
+  table owns it), and with the player closed it takes the project
   transport's one stop body. It is
   "Android's one imposed interrupt", and it always stops. GAIN is forwarded and
   does nothing — NOTHING RECOVERS BY ITSELF. Ducking stays the framework's

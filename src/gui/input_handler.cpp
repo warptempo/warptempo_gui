@@ -1985,7 +1985,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // input_key_dispatch.cpp), through the movement owner as always. The two
     // skip buttons dispatch it on a ctrl-click (redesign_button_ctrl_admits,
     // app_state.h), which on the tablet is the S Pen's side button held on
-    // the skip (touch.md).
+    // the skip.
     //
     // THEY DISPATCH HERE, WITH THE OTHER CTRL CHORDS, because the bare pair's
     // arms live in a switch this function reaches only with no modifier held —

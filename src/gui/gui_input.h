@@ -1293,7 +1293,8 @@ enum class GuiMouseButton {
 // bookkeeping (dx / dist_ratio against the previous DELIVERED frame, the
 // latch, the frame coalescing) and applies NO gesture policy of its own; the
 // GUI owns the model on top, which since 2026-08-14 is ONE FINGER PANS, TWO
-// FINGERS ZOOM (touch.md's two-finger section), and since 2026-09-25 ONE
+// FINGERS ZOOM (apply_touch_nav_update's declaration, input_handler.h), and
+// since 2026-09-25 ONE
 // FINGER UNDER CTRL ZOOMS TOO (the S Pen's side button) — hence the finger
 // count and the ctrl bit below, the two fields the GUI forks on. Every field
 // here is read.
@@ -1349,7 +1350,8 @@ struct GuiTouchNavFrame {
 // contract at GuiInputCore::set_touch_nav_hooks). It names the
 // one surface whose plain drag diverges by device: inside an OPEN EDITOR'S
 // FIELD a finger that drags moves the caret through the caret-drag hook trio
-// and never becomes a pointer drag (touch.md's caret-drag section), while a
+// and never becomes a pointer drag (begin_touch_caret_drag's declaration,
+// input_handler.h), while a
 // mouse drag there is the ordinary press road's selection sweep.
 //   * Outside     — not in the active editor's field (or no editor is open):
 //                   the ordinary window, whatever surface it is.
@@ -1378,7 +1380,8 @@ enum class GuiTouchEditorField { Outside, Field, DoublePress };
 // THE TOOL THAT TOUCHED (2026-09-25, the S Pen) — the backend's answer at a
 // contact's down, handed through GuiInputCore::touch_down (the door's
 // contract there). THE PEN IS A FINGER WITH THREE AMENDMENTS (architect
-// 2026-09-25, touch.md's pen section): it enters the touch machine exactly as
+// 2026-09-25; the Android backend's pen rules are at on_motion_event,
+// platform_android.cpp): it enters the touch machine exactly as
 // a finger does — the phone-model pan, the region hold, the caret drag and
 // the tap-at-lift all its own — and differs in three places only: its side
 // button is the Ctrl bit (the modifier door, not this enum), it waits for no

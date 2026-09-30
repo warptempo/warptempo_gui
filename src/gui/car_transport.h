@@ -19,7 +19,7 @@ struct GuiInputHandler;
 // Bluetooth as GuiMediaCommand values through main.cpp's hook, and that hook
 // FORKS ON THE PLAYER'S MODE BIT — the one partition of the head unit between
 // its two owners: with the player standing every command is the player's
-// (GuiRenderPlayer::on_media_command, render-player.md's car section), and
+// (GuiRenderPlayer::on_media_command, whose declaration owns that table), and
 // with it closed every command is THIS cluster's. The console's Bluetooth
 // face is exactly three buttons — rewind (Previous), play/pause, fast-forward
 // (Next) — and his spec for them: the middle button is the play transport
@@ -271,7 +271,12 @@ struct GuiCarTransport {
     //     stands, because a remote that believes PLAYING sends PAUSE, and the
     //     earbuds with the GUI in front behave as the car does. NOT A TIMING
     //     GESTURE: no timer and no window after the connect; the rule is the
-    //     key's kind alone.
+    //     key's kind alone. THE CONSOLE'S PAUSE AS IT SHUTS OFF IS LEFT ALONE
+    //     (read from two drives' logs, 2026-09-18): believing us PLAYING, the
+    //     Accord sends Pause a fraction of a second before the link drops,
+    //     and under the one toggle a Pause that finds the transport at rest
+    //     starts the loop and the dying link stops it, while one that finds it
+    //     playing stops it — no gate is built, a gate being a timing gesture.
     //   Previous -> car_previous(): run_undo_redo_without_key(false), UNDO
     //     WHOLE — Ctrl+Z's head gates, refusals and cards, then the restore
     //     (which stops a live session, the car's loop included) — AND THEN

@@ -299,7 +299,8 @@ inline double nav_zoom_px_per_level() {
 // zoom modifier at any time, drop it at any time, so nothing has to infer
 // which axis a drag meant.
 // The two-finger finger-agreement variant of the same lock lived one day on
-// glass and is recorded in touch.md's two-finger succession. The retired
+// glass and is recorded in apply_touch_nav_update's succession
+// (input_handler.h). The retired
 // constants (kStripSegmentClassifyPx 8.0, kStripSegmentZoomAngleDeg 60.0,
 // kStripSegmentPauseMs 75) and the ruled last resort they carried are git
 // history; the generic 8 px press-becomes-drag gate below is a DIFFERENT job
@@ -951,7 +952,8 @@ struct RegionDragState {
 // the desk's own text vocabulary, restored whole on 2026-09-05 after one day
 // under a press-age fork (the architect: the desk sweeps, the tablet's plain
 // drag moves the caret, and that divergence lives in the touch translation,
-// not here — touch.md's caret-drag section). Only one editor is active at a
+// not here — the caret drag at GuiInputCore::set_touch_nav_hooks). Only one
+// editor is active at a
 // time, so the active editor (and thus its text geometry) is discoverable
 // from the per-editor is_active checks; a single armed record is enough. Set
 // on a press that lands on the active editor's field; cleared on release, on
@@ -1728,8 +1730,10 @@ struct ScrollDragState {
 // because it had no persistent anchor for an off-screen column to corrupt.
 // NO RE-JOIN WINDOW is built for a panel that drops a contact mid-pinch: the
 // downgrade clears the seat and the next upgrade takes a fresh one, which is
-// the architect's explicit ruling for the second time (touch.md's two-finger
-// section carries the first and his reason).
+// the architect's explicit ruling for the second time (the first and its
+// reason are at the downgrade site, input_core.cpp's touch_up; the second's:
+// "we don't know that we need preventative backstops for events that may not
+// happen").
 // THE SEAT IS ALSO THE ANCHOR STEM'S GATE since 2026-08-14, the pinch being
 // one of the stem's TWO producers (paint_strip_drag_anchor,
 // paint_handler.cpp): the
@@ -2745,7 +2749,8 @@ enum class RedesignButton {
     // cannot reach them — a held repeat outranks the long-press shift, the
     // principle at ToolbarChord::repeats (input_pointer.cpp) — so the shift
     // rung is PLASTIC-ONLY and the ctrl rung's one glass road is the S Pen's
-    // side button (touch.md). LEFT / RIGHT ADMIT NEITHER since
+    // side button (the Ctrl bit, platform_android.cpp's on_motion_event).
+    // LEFT / RIGHT ADMIT NEITHER since
     // 2026-09-21 (the horizontal ladder retired on every column): their one
     // bare step is the active column's unit — a painted column on W and M, a
     // HOP on the phase-reset column — so the hop is glass-reachable by the
@@ -2759,7 +2764,7 @@ enum class RedesignButton {
     // exactly as a shift press elsewhere dispatches a shifted one, with
     // nothing translated between the two axes (redesign_button_ctrl_admits,
     // below, owns the membership). ON GLASS THE CTRL IS THE S PEN'S SIDE
-    // BUTTON held on the skip (touch.md), so the whole-piece jump is
+    // BUTTON held on the skip, so the whole-piece jump is
     // reachable on the tablet.
     //
     // THEY ADMIT NO SHIFT, which is what keeps the LONG PRESS off this act BY
@@ -4048,7 +4053,8 @@ inline int drag_moved_threshold_px() {
 //     distance, as they always have.
 // THE TOUCH CORE NEEDS NO SECOND SLOP: the core's pan zone is the waveform
 // alone (touch_point_in_pan_zone asks point_on_nav_surface), so a finger on
-// a flag or the trim bar is the pointer on contact (2026-09-25, touch.md) and
+// a flag or the trim bar is the pointer on contact (2026-09-25, the edge
+// inventory at input_core.h's touch state block) and
 // its travel reaches this gate raw — the core's slop crossing never delivers
 // a grab press, and the twin-gate invariant (input_core.h's
 // set_touch_slop_px) binds the slop to the DRAG gate alone.
@@ -5544,7 +5550,7 @@ struct AppState {
     // stands and the cells stay the pointer's. What the pair buys is the
     // pointer road onto a multi-marker selection under a lit lamp: several
     // markers ctrl-clicked on their flag boxes, and on glass this lamp is the
-    // fingertip's road to ctrl, the S Pen's side button the other (touch.md).
+    // fingertip's road to ctrl, the S Pen's side button the other.
     // The other direction stopped being a refusal on
     // 2026-09-12 — bare `i`'s ON edge calls selection_consumed and puts this
     // lamp out, the mode being a use case that ends the selecting — so the
@@ -16637,10 +16643,13 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // the menu rule (a command with an icon-row road is not also in the menu) is
 // untouched.
 //
-// ON GLASS THE CTRL IS THE S PEN'S SIDE BUTTON (touch.md): held on a chrome
-// button it carries the ctrl bit into the press like a held Ctrl key, so the
-// skips' whole-piece jump, the arrows' three-step and the walk's tab switch
-// are reachable on the tablet with the pen. The SHIFT LONG PRESS — glass's
+// ON GLASS THE CTRL IS THE S PEN'S SIDE BUTTON (architect 2026-09-25; the
+// Ctrl bit's sampling is platform_android.cpp's on_motion_event): held on a
+// chrome button it carries the ctrl bit into the press like a held Ctrl key,
+// so the skips' whole-piece jump, the arrows' three-step and the walk's tab
+// switch are reachable on the tablet with the pen. NO CTRL ADMISSION IS BUILT
+// FOR GLASS ALONE: the pen reaches the roster's own admissions and nothing
+// more. The SHIFT LONG PRESS — glass's
 // held shift — COMPOSES WITH THAT CARRIED CTRL ONLY WHERE THE PAIR IS
 // ADMITTED: the pen's button held through a long press on the walk is its
 // ctrl-shift press, the march (the lift's hold-as-shift term,

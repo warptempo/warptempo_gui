@@ -781,7 +781,12 @@ struct GuiInputHandler {
     // ONLY ONE gesture fires them — the one nav drag: begin at the threshold
     // crossing,
     // end on every exit path (release, lost button, and the force-end
-    // finalizer — there is no cancel path, 2026-07-29). Both
+    // finalizer — there is no cancel path, 2026-07-29). NO TOUCH GESTURE
+    // REACHES IT, BY THE VOCABULARY (closed 2026-08-12, again 2026-08-15):
+    // on the pan zone a finger's quick drag is the nav hooks' pan and its
+    // hold the region hook gesture, neither pointer-shaped, and off it the
+    // finger is the pointer on a surface whose drags capture nothing — so
+    // glass never hides the mouse cursor or warps it. Both
     // platform methods are self-guarding — begin no-ops when a capture is live
     // or the compositor lacks the managers, end is idempotent — so a drag
     // that never captured (degraded compositor) still calls end harmlessly.
@@ -1275,7 +1280,9 @@ struct GuiInputHandler {
     // the pan is way more common": the pan zone's stretched window expires
     // at the region-hold beat into THE REGION FORMER, so
     // hold-then-drag sweeps a region on glass; the dead trim-move hooks'
-    // exact pattern reborn — touch.md carries both records). The three ARE
+    // exact pattern reborn — closed_questions.md carries the trim move's
+    // end, and why this beat cannot repeat its dwell collision is at
+    // kTouchRegionHoldMs, input_core.cpp). The three ARE
     // the one region former's own machinery driven from the platform's
     // region hooks: no pending and no second former anywhere — the beat
     // already disambiguated, so the begin goes straight to the former's
@@ -1345,8 +1352,14 @@ struct GuiInputHandler {
     // tiny text box not feel broken" — a finger dragged inside the open
     // editor moves the caret, the phone's own text vocabulary, while the
     // mouse's drag there stays the selection sweep; the THIRD ruled touch
-    // divergence, taking the region hold's shape — touch.md's caret-drag
-    // section is the record). These three are the GUI's answer to the
+    // divergence, taking the region hold's shape). GLASS'S TEXT VOCABULARY IS
+    // THE PHONE'S, AND ONLY THAT: a TAP seats the caret, a plain DRAG moves
+    // it, a HOLD MEANS NOTHING (a rest then a drag moves the caret, a rest
+    // then a lift is still a tap, kTouchWindowNoExpiry), a DOUBLE TAP selects
+    // the word and a double-tap-drag extends by words, a later single tap
+    // collapses the selection — no selection handles, no magnifier, no
+    // toolbar and no free-form sweep by finger. These three are the GUI's
+    // answer to the
     // platform's caret trio. They arm no drag record and nothing joins
     // any_pointer_gesture_active; what they DO keep is ONE NUMBER, the
     // EDITING SESSION THE STREAM BEGAN ON (AppState::touch_caret_session,
@@ -3950,7 +3963,7 @@ private:
     //
     // THE PLAYER'S ONE POINTER RULE IS THE VEIL: while the player stands every
     // press outside the folder overlay's band and the modal row is CONSUMED —
-    // the tab row's tabs, the marker lane's flags, the waveform, the four dead
+    // the tab row's tabs, the marker lane's flags, the waveform, the two dead
     // menu anchors, the view bar, all of it — and the roster's buttons are
     // dead through redesign_button_enabled's first arm (their faces grey,
     // their press claims refuse). THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
@@ -3981,8 +3994,8 @@ private:
     // stands (architect 2026-08-28, revised the same day): Tab / Shift+Tab
     // walk the ring [list, buttons…]; Enter presses a ring-focused button
     // (press-at-press, commit-at-release, the modal's own) or, with none
-    // focused, OPENS the highlight (a folder enters, `..` goes up, a wav
-    // plays); Space is the Play button's act; Up / Down move the highlight;
+    // focused, OPENS the highlight (a folder enters, a wav plays); Space is
+    // the Play button's act; Up / Down move the highlight;
     // Left / Right seek ∓5 s; bare Home the item's own start, or THE PREVIOUS
     // ENTRY when the press lands inside the item's first three seconds
     // (kPlayerPreviousThresholdMs, the previous-track window, 2026-08-31);
@@ -4003,7 +4016,10 @@ private:
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
     // neither gesture restates the step). EVERY OTHER
-    // CHORD IS CONSUMED (strict modifier validation's no-op). Returns true
+    // CHORD IS CONSUMED (strict modifier validation's no-op). THE KEYBOARD IS
+    // THE CLOSE ROAD ON PLASTIC AND THE CLOSE BUTTON IS THE ROAD ON GLASS
+    // (architect: "ctrl+q should still work on laptop, tablet requires cancel
+    // to close"). Returns true
     // when the key is consumed here, false for the two fall-throughs.
     bool route_render_player_key(GuiKey key, GuiInputState mods);
 

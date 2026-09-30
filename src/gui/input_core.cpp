@@ -45,6 +45,13 @@ namespace {
 // deliberate band drag into the trim move; that GESTURE stayed dead — this
 // beat revives only its two-deadline PATTERN, on a surface whose quick drag
 // is the pan, not a pointer drag, so the dwell collision cannot recur).
+// NOR DOES IT COLLIDE WITH THE DOUBLE TAP, though the two numbers differ since
+// 2026-09-29 (the double-click window rides the 600 ms beat, kDoubleClickMs):
+// a tap's whole burst delivers at the LIFT, so a double-click candidate is
+// only ever seeded by a finger that has already left the glass, and a finger
+// held motionless to this beat becomes the region hold with no press
+// delivered at all — the two readings are exclusive by construction, not by
+// their numbers.
 //
 // THE SLOP IS NO LONGER A CONSTANT HERE. It is touch_slop_px_, a settable
 // member whose default is the authored kDefaultTouchSlopPx and whose live
@@ -1284,7 +1291,10 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     the recorded accepted cost of press-time acting, undo the mitigation;
     //     the surfaces that still commit nothing at an unmoved press are the
     //     ones whose act was never owed until the lift, the nav surface's
-    //     deferred click among them. touch.md's hard-end bullet is the ruling.
+    //     deferred click among them. The ruling is the architect's
+    //     (2026-08-29): an edge back-swipe that began on a bottom-row button
+    //     toggled playback or authored on its way out of the app, the clean
+    //     release it used to deliver speaking for a lift that never happened.
     //     AND THE ARMS THE CHROME / MODAL / MENU SURFACES HOLD ARE
     //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below:
     //     the GUI ends its release-time claims — the chrome
@@ -1363,8 +1373,7 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     OTHER anchor, the hover switch switches to it. Those are the armed
     //     mode's defining semantics for a pointer at that position, not
     //     surprises to suppress — suppression would need a "restore" mark on
-    //     the motion, a device branch in spirit (judgment recorded here and
-    //     in touch.md).
+    //     the motion, a device branch in spirit (the judgment's one record).
     //   * physical pointer NOT focused — the leave: no mouse rests in the
     //     window, so the contact ending IS the pointer leaving. Its REASON
     //     is the one term clean_release still decides here: the lift passes

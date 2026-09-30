@@ -523,7 +523,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // with it. THE TWO LAMPS STAND TOGETHER, which is what the pointer road onto a
 // multi-marker selection under the lamp wants: several markers ctrl-clicked on
 // their flag boxes, and on glass this lamp is the fingertip's road to ctrl,
-// the S Pen's side button the other (touch.md). Bare
+// the S Pen's side button the other. Bare
 // `i`'s ON edge still PUTS ADD TO SELECTION OUT (architect 2026-09-12, its own
 // arm calling selection_consumed — raising the cells is an act that ends a
 // selecting pass), which is a use case ending rather than a refusal, so

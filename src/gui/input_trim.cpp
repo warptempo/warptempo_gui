@@ -1350,4 +1350,4 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
 // glass ruling): on glass the trim bar is an ordinary pointer surface — a
 // finger or the pen landing there is the pointer on contact (2026-09-25) and
 // reaches the endcap/bridge machinery through the ordinary press path like
-// every other pointer gesture; touch.md carries the record.)
+// every other pointer gesture; closed_questions.md carries the ruling.)
