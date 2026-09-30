@@ -46,6 +46,18 @@
 // layers under android/app/res/, and in packaging/warptempo_gui.svg, the
 // .desktop's Icon=; the launchers, never this code, read them.
 //
+// BREEZE IS THE RULED GLYPH SOURCE AND AN AUTHORING-TIME DEPENDENCY ONLY
+// (architect 2026-08-08: the one theme addressing Qt and GTK both, with a
+// commitment to stay so). A glyph is transcribed from the installed
+// breeze-dark theme's actions/22 files — breeze-dark because it resolves
+// `.ColorScheme-Text` to the #fcfcfc every row carries, the `d` geometry
+// being the light theme's own — and consulted exactly then: building and
+// running need no icon theme installed on any machine, the glyphs being
+// compiled-in geometry, so there is no broken-icon state to degrade to. A
+// glyph of our own authoring is ruled out in favour of Breeze's own file
+// (2026-08-08, an authored three-bars glyph reverted the day it landed). The
+// one runtime theme consultation in the product is the cursor set (below).
+//
 // EVERY ENTRY IS A ROW'S. The icons here are painted by the redesigned rows and
 // nowhere else — the pointer cursor is not one of them: every cursor the product
 // shows is a NAMED CURSOR FROM THE USER'S OWN XCURSOR THEME (architect

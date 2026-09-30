@@ -727,8 +727,8 @@ COLOURS, ON THE ACTIVATION EDGE THE ROWS ALREADY TAKE (architect 2026-09-06, on
 a shade pull with the cover open — the bar *"does not change to the
 disabled/inactive color that labwc uses"*): the ruling's second half.
 `window.inactive.title.bg.color: #202326` IS `kRedesignRowGroundUnfocused`, the
-value rows 1–2 swap to on deactivation (kdenlive-redesign.md's UNFOCUSED-WINDOW
-GROUND).
+value the menu row's ground swaps to on deactivation (the unfocused-window
+ground's ruling is at that constant, render.h).
 
 **THE BAR'S COLOUR IS THE NATIVE TOP BAND'S, AND THE CHAIN ENDS AT THE BAND
 WORDS** (2026-09-06, replacing the JNI up-call landed hours earlier the same

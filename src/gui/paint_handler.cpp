@@ -633,13 +633,13 @@ ViewBarFace view_bar_face(GuiColor bg, bool focused, int hover_steps,
 // it; what SURVIVES of row 2's measured anatomy is the MODAL DIALOG BUTTONS'
 // box — kModalBtnBoxPx and the two label pads at the kModal* block below,
 // which used to read the row's constants and now own the numbers, with the
-// derivation recorded there. The crops and the full row-2 record stay in
-// kdenlive-redesign.md.)
+// derivation recorded there. The crops and the full row-2 record are git
+// history.)
 
 // ROW 3 — THE TAB ROW, measured at 100% off row_3_tab_{rest,hover,selected}.png
-// (30 tall) with the padding taken from row_3_tab_pcmanfmqt.png and the border
-// color from row_3_bottom_border.png. The lane metrics (30 content + 1 border)
-// live in render.h with rows 1 and 2's, for the same reason.
+// (30 tall) with the padding taken from row_3_tab_pcmanfmqt.png and the base
+// line's colour from row_3_bottom_border.png. The lane metrics (30 content + a
+// 6px margin-bottom) live in render.h with row 1's, for the same reason.
 //
 // THE CSS FLOAT MODEL AT ITS PUREST: the tabs are FLUSH at the row's left edge,
 // margin zero, adjacent with no gap, each filling the full 30px content height.
@@ -690,9 +690,9 @@ constexpr double kTabBorderPx        = 1.0;   // side borders / the base line
 // last group (RedesignButton::IconReadOnly), reporting the ACTIVE tab's bit,
 // which is what makes it its chord literally. A TAB IS ITS LABEL FIELD AGAIN:
 // no slot, no added width, no rect. The crop provenance and the two numbers
-// stay in kdenlive-redesign.md's row-3 record, and the slot's own
+// are git history, and so is the slot's own
 // partition bug — a third rounded constant that did not partition,
-// 2026-08-10 — is history there too.)
+// 2026-08-10.)
 
 // THE PAINTER'S HALF OF THE TAB ROSTER: each tab's roster id, its A/B letter
 // and its label. The press claim (input_pointer.cpp) reads the same ids out of
@@ -1547,7 +1547,7 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // The floor IS the cell rule (containing_pixel, input_core.h) and not an
 // exception to it: a half-row tie belongs to the row that contains it, which
 // is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
-// LABEL and both monospace clocks.
+// LABEL and both monospace clocks (Qt's integer box rule fails the crops).
 //
 // THE MEASURED FACES (pycairo on the same fontconfig faces the product
 // resolves, hint metrics on, so every extent is a whole pixel):
@@ -1657,7 +1657,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // keyboard chord
     // opens or closes a popup. The menus lead only where the keyboard already
     // goes: the bare `;` key still opens the settings editor directly, and
-    // File's four items are Ctrl+O, Ctrl+Alt+O, bare `\` and Ctrl+Q. (The left float
+    // File's three items are Ctrl+O, Ctrl+Alt+O and Ctrl+Q. (The left float
     // held a CHORD button until that day — Quit, dispatched through the shared
     // chord table like every other redesigned button; the act is the File menu's
     // item now, and the chord is untouched. It held a THIRD ANCHOR, Navigation,
@@ -2105,8 +2105,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // fills in the row's ground, so the tabs sit at the foot of one tall lane
     // (main.cpp's vertical rule) — and directly ON the trim bar. (A 1px line
     // at the lane's TOP stood
-    // 2026-08-13..2026-09-09 and is gone for good; kdenlive-redesign.md's
-    // closing section carries the relayout.)
+    // 2026-08-13..2026-09-09 and is gone for good; main.cpp's vertical rule
+    // carries the relayout.)
     //
     // THE LANE CARRIES A 6px MARGIN-BOTTOM (architect 2026-09-09: "PCManFM-Qt
     // has six pixels of margin below the tab row; with the icons moved up,
@@ -6664,8 +6664,8 @@ constexpr double kModalFieldWidthPx   = 520.0;  // authored; see the block above
 // be the icon buttons'" — is unchanged, only the numbers' home moved). The
 // 32 IS row 2's derivation frozen: its 44px content minus its two 6px
 // vertical button margins, the box the crop's own buttons measure exactly;
-// the 9/10 pads are its label paddings (the row-2 record, kdenlive-redesign
-// .md, keeps the crop provenance). It fits the bottom row's 46px content band
+// the 9/10 pads are its label paddings (the row-2 crop provenance is git
+// history). It fits the bottom row's 46px content band
 // with 7px of margin either side — the same box, in the same band, that the
 // row's own buttons wear, which is why the band's 2026-08-14 shrink cost the
 // dialog nothing.

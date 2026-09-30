@@ -481,8 +481,8 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // plus the row's own 6px MARGIN-BOTTOM and nothing else — the lane sits
 // under the ICON ROW's own border-bottom with gap 1 between, and the margin
 // holds the base line off the lane below (the
-// tab-row metric block further down this file, and kdenlive-redesign.md's
-// closing section) — and the last `kTabBorderPx` rows of that CONTENT are
+// tab-row metric block further down this file) — and the last `kTabBorderPx`
+// rows of that CONTENT are
 // the line.
 //
 // THE LINE STANDS ONLY WHERE NO TAB DOES (architect 2026-09-09, his third
@@ -1706,14 +1706,13 @@ inline int menu_row_h_px() {
 // kToolbarRowHeightPx / kToolbarBorderPx and their accessors went with it;
 // the row's 32px button box and 9/10 label pads survive as the MODAL DIALOG
 // BUTTONS' own constants — kModalBtnBoxPx and friends, paint_handler.cpp —
-// which used to read row 2's. The crops and the row-2 record stay in
-// kdenlive-redesign.md.)
+// which used to read row 2's. The row's crop record is git history.)
 
 // Authored pixel geometry of the TAB ROW — the top strip's lane 2 since
 // 2026-09-09, under the icon row and directly ON the trim bar (row 3 of
 // the redesign: the "A" / "B" Breeze tabs; it was lane 1, under the menu row,
-// from the 2026-08-12 relayout until the 2026-09-09 one — kdenlive-redesign.md's
-// closing section). Measured at 100% gui_scale off
+// from the 2026-08-12 relayout until the 2026-09-09 one — main.cpp's vertical
+// rule). Measured at 100% gui_scale off
 // row_3_tab_{rest,hover,selected}.png (30 tall) and, for its geometry since
 // 2026-09-09, the three PCManFM-Qt/Breeze crops that section names.
 //
@@ -1798,7 +1797,7 @@ inline int tab_spill_px() {
 // 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
-// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-THREE
+// main.cpp's vertical rule) (row 4 of the redesign: TWENTY-THREE
 // view/mode/action buttons since 2026-09-29's late evening, when the Edit Flag
 // button was deleted and Copy Value sat between Redo and Render; TWENTY-FOUR
 // for that evening's hour, Edit Flag and Copy Value
@@ -1827,7 +1826,10 @@ inline int tab_spill_px() {
 // second-last, the first and last columns in the row's ground): the painter
 // starts the line icon_row_border_h_px() in from each edge, so the inset
 // scales with the line — one column at 100%, two at the tablet's 225%. The
-// bottom row's border-top takes the same inset (its block below).
+// bottom row's border-top takes the same inset (its block below). THE ROW IS
+// MODELLED ON KDENLIVE'S SECOND TOOLBAR, the one under its timeline; the
+// first, sharing the menubar's ground, was left out for space (architect
+// 2026-09-09), so nothing sits between the menu row and this one.
 //
 // 46, AND THE ARITHMETIC CLOSES EXACTLY (architect 2026-07-31, settling the
 // discrepancy this constant first recorded): the row was briefed as 48 tall
@@ -3649,7 +3651,9 @@ struct TrimBarHit {
 // OFFSCREEN BOUND rather than stopping short — an out-of-view bound means the
 // window continues past that edge, so the bar runs flush to it and the lane
 // clip trims the overhang. It is the one "this is the trim window" signal and
-// the visual affordance of the pair (bridge) drag's grab band.
+// the visual affordance of the pair (bridge) drag's grab band, and it carries
+// NO CENTRE GRIP (ruled at the lane's landing, 2026-08-01): the bar itself is
+// the handle.
 // BOTH ENDCAPS always paint unless the viewport culls them (the window is
 // always set since 2026-07-30), EDGE-ANCHORED on their bound columns with
 // their bodies facing inward: the begin cap's LEFT edge on its column, the end

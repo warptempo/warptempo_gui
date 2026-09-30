@@ -816,6 +816,9 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // the whole mechanism goes rather than surviving for one convenience chord.
 // SO THE VEIL IS EXCEPTIONLESS AGAIN: while a dialog editor stands, EVERY
 // press outside the modal is consumed, and the roster hovers nothing. THE
+// VEIL IS BEHAVIOURAL AND PAINTS NOTHING (architect 2026-08-12): no dim layer
+// — the palette is fully opaque and kdenlive's own parent window stays
+// undimmed under its dialogs — and the cursor is the Arrow over it. THE
 // KEYBOARD CONTRACT IS UNTOUCHED — route_modal_editor_key still admits bare
 // Esc, Ctrl+S and Ctrl+Q while an editor stands, which is where that pair's
 // pointer-side mirror note used to point.)
@@ -5459,8 +5462,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // return to row 4; a MODAL's yield is the one place the shape survives) —
     // never re-shaped here, so the clickable rect is the painted one. THE ACT
     // IS AT THE RELEASE (architect 2026-08-13, the chrome-wide rule —
-    // authoritative statement in kdenlive-redesign.md's act-at-release
-    // section): the press ARMS through arm_redesign_press, carrying the
+    // authoritative statement at AppState::ChromePress): the press ARMS through arm_redesign_press, carrying the
     // press-time shift, and the lift on that same button dispatches through
     // finish_chrome_press_release (on_button_release). Nothing on these rows
     // drags — no threshold, no double-click surface — and the arm is the whole
@@ -7885,9 +7887,8 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
 }
 
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect
-// 2026-08-13; the authoritative statement of the rule is
-// kdenlive-redesign.md's act-at-release section, the state's contract at
-// AppState::ChromePress) for every redesigned button whose action IS a chord —
+// 2026-08-13; the rule's authoritative statement and the state's contract
+// are at AppState::ChromePress) for every redesigned button whose action IS a chord —
 // rows 1, 3 and 4 and the bottom row, driven entirely by kToolbarChords'
 // per-button flags so no row carries a special case of its own. Returns true
 // when a button's rect claimed the press, whether or not anything was armed (a

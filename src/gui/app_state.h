@@ -3376,6 +3376,16 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // on 2026-09-30 — a value gained or
 // lost in a field that holds one, which is the whole of what a menu costs
 // here either way.
+// THE NO-SECOND-ROAD DOCTRINE decided every one of those departures: A
+// DROPDOWN IS A POINTER HOME FOR AN EXISTING ROAD, NEVER A SECOND ONE, so a
+// command with an icon-row road is not also a menu row. Which road survives
+// is the architect's call and never "keep both": Navigation's seven rows went
+// when the roster carried all seven (2026-08-15), the propagate commands
+// arrived in Edit as the icon row's copy / paste buttons left it
+// (2026-08-20), and the Iterations and Help anchors went for their buttons
+// (2026-09-04, 2026-09-09). The menu row is File / Edit / Settings, SETTINGS
+// PAINTING LAST (architect 2026-08-03; the enum order is the painted order,
+// RedesignButton's own rule).
 enum class DropdownMenu { None, File, Edit, Settings };
 
 // EVERY MENU THERE IS, in one place, so the routes that must walk them all —
@@ -3555,7 +3565,11 @@ struct CommandPopupItem {
 // GuiInputHandler::revert_project; on the tablet this row is the act's only
 // road, dispatching the chord through on_key with no key pressed), then
 // **Quit** (architect 2026-08-13, the
-// standard home for it and where kdenlive keeps it). Save and Render stay the
+// standard home for it and where kdenlive keeps it — and the answer to the
+// act-at-release conversion that day: row 1 paints two faces and nothing on a
+// press, so a Quit BUTTON acting at the lift read as broken, where a menu
+// item's own pressed face is the feedback; row 1 took no third face for it).
+// Save and Render stay the
 // icon row's, and the menu is deliberately minimal. The separator parts the
 // two categories, the two acts on the project from an exit, exactly as
 // kdenlive's own File menu does.
@@ -6800,9 +6814,26 @@ struct AppState {
     // finger up for consistency"). A press on any chrome target ARMS this and
     // dispatches nothing; the release with the pointer ON that same target
     // runs the act; a release anywhere else — or a release under a prompt or
-    // a non-admitting dialog veil — drops it and nothing dispatches. The
-    // authoritative statement of the rule and its scope is
-    // kdenlive-redesign.md's act-at-release section.
+    // a non-admitting dialog veil — drops it and nothing dispatches. THIS
+    // DECLARATION IS THE RULE'S AUTHORITATIVE STATEMENT; every other site
+    // states its own class and points here. EVERY CLICKABLE CHROME SURFACE
+    // ACTS AT THE LIFT with slide-away cancel — the model the dropdown items
+    // always had and the modal dialog buttons took first — and a press-time
+    // refusal (the modifier admissions, a painted-dead face, the radio
+    // consume) arms nothing and paints nothing. WHAT STAYS AT THE PRESS, by
+    // ruling: (1) the dropdown ANCHORS' toggle (below); (2) EVERY DISMISSAL —
+    // the open dropdown's press-anywhere close, the menu-row mode's any-press
+    // end, the flag editor's outside-press close, the veil's consumption —
+    // only ACTS moved to the lift; (3) THE KEYBOARD — a chord dispatches at
+    // its key's press (button-is-its-chord names WHAT a button runs, not
+    // WHEN), the modal ring's Enter/Space press-and-lift being the one
+    // keyboard act-at-release; key commands at the release were tried
+    // 2026-08-16 and returned the same evening (closed_questions.md); (4) the
+    // CONTENT surfaces — waveform, ruler, marker lane, trim bar — keep their
+    // own press / lift vocabularies under the timing doctrine at
+    // GuiInputHandler::on_key. Touch inherits all of it through the pointer
+    // translation: a finger or the pen on a chrome button is the pointer on
+    // contact, pressing at the down point and releasing at the lift.
     //
     // `kind` names the TARGET CLASS, and ONE class arms since 2026-08-18:
     //   Roster — a chord-table button; `index` is the roster index.

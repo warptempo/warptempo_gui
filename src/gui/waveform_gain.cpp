@@ -63,17 +63,17 @@ constexpr double kSilentGain = 8.0;
 // entry, the lone accent's halo — is at the header.
 constexpr double kWindowSeconds = 3.0;
 
-// kTargetDb -14: measured 2026-09-24 on the 40th's first and
-// second movements, each window's peak against the same window's short-term
-// RMS on the samples, the peak sits 14.3 / 14.8 dB above the RMS at the
-// median with a 4 dB spread from p10 to p90 — so -14 puts the typical
-// window's peak at the lane edge and reproduces the peak leveler's average
-// picture, transient-rich windows overshooting the edge (by more than 3 dB on
-// about one hop in fifteen, clipped flat by the clamp) and smooth ones
-// sitting a little under it. It is also the streaming loudness standard the
-// 2024 mastering of this 1972 recording was made for (the architect's
-// reading; not a coincidence), and the material he brings in is expected to
-// be mastered to it or slightly lower.
+// kTargetDb -14: measured 2026-09-24 on the 40th's first and second movements,
+// each window's peak sits 14.3 / 14.8 dB above its own short-term RMS at the
+// median (a 4 dB spread p10..p90), so -14 puts the typical window's peak at the
+// lane edge and reproduces the peak leveler's average picture (transient windows
+// overshoot, by over 3 dB on one hop in fifteen, clipped flat by the clamp;
+// smooth ones sit a little under). It is the streaming standard this 1972
+// recording's 2024 mastering was made for (his reading; no coincidence), as his
+// material is, or a little under. CLOSED AS A CONSTANT (architect 2026-09-30):
+// 406 sources over seven masterings put each mastering's implied target within
+// 1.7 dB of it while one album's crest spread reaches 4.1 dB, so no per-piece
+// derivation beats it short of grouping a whole set, which the app does not do.
 constexpr double kTargetDb = -14.0;
 
 // kGateDb -50: columns whose peak is under it are silence or

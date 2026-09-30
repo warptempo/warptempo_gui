@@ -1694,8 +1694,8 @@ struct GuiInputHandler {
     bool tooltip_dwell_suppressed() const;
 
     // THE CHROME ACT'S TWO HALVES (architect 2026-08-13, act-at-release — the
-    // authoritative rule is kdenlive-redesign.md's act-at-release section;
-    // the arm state and its contract are at AppState::ChromePress).
+    // authoritative rule, the arm state and its contract are at
+    // AppState::ChromePress).
     // arm_redesign_press is every chord-bearing band claim's press half:
     // hit-test the painter-published rects against the chord table and, on a
     // hit, apply the button's shift / enabled / radio refusals, then ARM —

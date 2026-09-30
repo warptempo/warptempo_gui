@@ -201,8 +201,8 @@ namespace {
 // device config's `max_waveform_height`, default 500 on both templates, 0
 // meaning no maximum, read through waveform_max_h_px at render.h), AND THE MENU ROW AND THE ICON ROW STAND AT THE
 // WINDOW'S TOP WITH THE FLEXIBLE BAND UNDER THEM (architect 2026-09-09, the
-// top strip relayout, from his mockup tmp/previous/review_2026-09-09/his_screenshots/z.png — kdenlive-redesign.md's
-// closing section). The window stacks, top to bottom:
+// top strip relayout, from his mockup tmp/previous/review_2026-09-09/his_screenshots/z.png).
+// The window stacks, top to bottom:
 //   THE MENU ROW, at the window's top, at its natural height;
 //   THE ICON ROW, directly under it with nothing between, its border-bottom
 //     inset one thickness at each end (the toolbar);
