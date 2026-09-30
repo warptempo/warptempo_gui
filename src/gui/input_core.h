@@ -723,7 +723,8 @@ public:
     //     window to the POINTER AT THE DOWN ITSELF, the press delivered on
     //     contact: a second down inside the double-click window and slack of
     //     a seed can only be the double press, so nothing waits (the third
-    //     clause, conventions.md), the GUI's consumed second press selects
+    //     clause, GuiInputHandler::on_key), the GUI's consumed second press
+    //     selects
     //     the word, and the finger's motion from there is ordinary Pointer
     //     motion driving the GUI's word-wise extension.
     //     Null — or answering Outside — means no field: off the pan zone,

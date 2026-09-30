@@ -418,8 +418,8 @@ drag coordinates floor instead of truncating.
   is now the SYSTEM clipboard over the MediaSession's own JNI road — two more
   `MainActivity` methods, `clipboardSet(byte[])` / `clipboardGet()`, the ids
   looked up in the same init block as `mediaState`'s and the payload crossing
-  as BYTES because JNI strings are modified UTF-8 (conventions.md's clipboard
-  section owns the whole ruling; the stored string survives only as the
+  as BYTES because JNI strings are modified UTF-8 (`MainActivity.clipboardSet` / `clipboardGet` and platform_android.cpp's
+  clipboard block own the whole ruling; the stored string survives only as the
   road-absent fallback, for a failed attach or a missing method). The static
   capability `clipboard_publishes()` went with the stub: both backends now
   publish, so it had no producer and no face reads it. THE READ'S PAYLOAD

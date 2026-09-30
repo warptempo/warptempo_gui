@@ -135,8 +135,9 @@ struct GuiTargetRender;
 // image by kRs, so Right then Left returns it where it started give or take a
 // frame). THE P COLUMN'S ARROW UNIT IS A HOP because the render depends only
 // on the window a reset seeds in, so a column nudge there is almost always
-// silent — the recorded exception between columns (conventions.md; the fork's
-// own comment). The hop takes the prologue, the landing owner's walls, the
+// silent — the recorded exception between columns (horizontal_arrow_step's
+// own comment, gui_input.h). The hop takes the prologue, the landing
+// owner's walls, the
 // post-clamp identity no-op and the commit tail exactly as the column step
 // does; only the landing's step arithmetic forks, in position_nudge_landing,
 // and the hop makes no pixel claim.

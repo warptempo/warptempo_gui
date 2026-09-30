@@ -34,7 +34,8 @@
 // TIMING: KEYS ARE HOTKEYS AND ACT AT THE PRESS (architect: phone muscle
 // memory; and the core's repeat needs the press edge). That is the modality
 // ruling's own split read straight — ICONS ARE UP, HOTKEYS ARE DOWN
-// (conventions.md) — with these keys on the hotkey side and the editors' own
+// (GuiInputHandler::on_key) — with these keys on the hotkey side and the
+// editors' own
 // BUTTONS (a dialog's OK and Cancel) still chrome, still acting at the lift.
 // A key held down repeats through the core exactly as a held physical key
 // does, on the platform's advertised cadence.
@@ -612,7 +613,8 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 //
 // IT IS THE EXPOSURE GATE AND THE CLIP, NEVER A GEOMETRY INPUT: the column
 // mapping and every hit test keep reading waveform_area itself (the displayed
-// basis, pointer-hit-testing.md), so paint and hit cannot drift — this rect
+// basis, the strictly-as-painted rule at app_state.h), so paint and hit
+// cannot drift — this rect
 // says only WHERE THE PIXELS MAY LAND.
 //
 // The band is a full-width lane flush on the bottom row's top edge, so what it

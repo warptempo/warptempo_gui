@@ -474,6 +474,25 @@ inline constexpr const char* kHistoryViewMovesNoMarkersCard =
 // ONLY, by construction: it lowers `A`-`Z` and touches nothing else, so a
 // reason opening with a digit, a quote or a UTF-8 lead byte passes through
 // unchanged (every producer it serves is ASCII prose).
+//
+// THE TERMINAL'S CASES (architect approval 2026-08-02, the terminal
+// capitalization pass — text-only, otherwise byte-identical; stderr / stdout
+// prose follows the product's one set of text rules, paint_handler.cpp's
+// menu-row block): the first prose word after the program-name prefix
+// capitalizes (`warptempo_gui:` / `warptempo_cli:` and routing tags such as
+// `icons:` keep their spelling); a new sentence after ". " capitalizes; text
+// after ":" or ";" stays lowercase; a message headed by an identifier, key
+// name, path or expression keeps that token verbatim and starts
+// uncapitalized (`tab_%c`, `projects_repo set:` — the underscore spelling is
+// a key, the spaced one prose); the engine's dot-leader progress rows and
+// bracketed status tags are STRUCTURED READOUT and unchanged; a feeder string
+// printed whole anywhere carries its capital AT ITS DEFINITION, the embedded
+// mid-clause capital being the accepted cost, while an embedded-ONLY clause
+// vocabulary (the settings and parse rejection reasons, the flag editor's
+// clauses) stays lowercase. BPM capitalizes always as an acronym, "iterations"
+// never, and every bpm DATA token (the `<N>_bpm` folder tag, `bpm=`, the
+// schema key) stays lowercase; flag labels are lowercase by grammar
+// (is_valid_label_format).
 inline std::string lowercase_initial(std::string_view s) {
     std::string out(s);
     if (!out.empty() && out[0] >= 'A' && out[0] <= 'Z')

@@ -3304,7 +3304,7 @@ constexpr TransportRowDef kTransportGroup[] = {
 // Breeze's go-jump-declaration, a flag with a return arrow — took the seat
 // after Toggle Inherit, Add to Selection closing the group behind it. The jump
 // was Copy Value's shifted twin until that day; it is a dedicated button now
-// under the dissolved shift-twin rule (conventions.md). It is an act, wears no
+// under the dissolved shift-twin rule (closed_questions.md). It is an act, wears no
 // lamp, and greys where Ctrl+J would refuse (jump_to_value_source_actionable)
 // and in the `h` view; neither lock greys it, the jump authoring nothing.
 //
@@ -6318,8 +6318,8 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // and faking one wouldn't work"). NOTHING ABOUT THE RENDERER MOVED — one
 // window, one surface, one frame, one painter, exactly as before; only the
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
-// emphatically not the scrapped second-toplevel model (conventions.md carries
-// that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
+// emphatically not the scrapped second-toplevel model (closed_questions.md
+// carries that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
 // YIELDS WHOLE: all SEVENTEEN buttons — the VERB GROUP'S SIX, the marker
 // walk group's four, the four arrows and the transport three — plus the clock and the
 // row's three separators stand down, nothing negotiates for space, and
@@ -6540,7 +6540,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // surface, a window or a second buffer: only the modal's RECTANGLE moved,
 // from the window's centre to the bottom row, so this is NOT the scrapped
 // second-toplevel model (that attempt was reverted byte-exact and is recorded
-// do-not-re-propose in conventions.md). The row yields whole while a modal
+// do-not-re-propose in closed_questions.md). The row yields whole while a modal
 // stands — modal_owns_bottom_row, above, is the shared fork, and this body
 // paints into the lane the row's tenants left.
 //

@@ -790,8 +790,9 @@ public class MainActivity extends NativeActivity {
     // AN EMPTY ARRAY IS THE EMPTY ANSWER, never null and never an exception:
     // no clip, an empty clip, a first item carrying no text, or a system that
     // withholds the clip all mean "there is nothing to paste", which is the
-    // consumed no-op the GUI already handles (conventions.md's clipboard
-    // ruling). On Android 10 and later getPrimaryClip answers null unless the
+    // consumed no-op the GUI already handles (the clipboard section of
+    // platform_wayland.cpp states the rule). On Android 10 and later
+    // getPrimaryClip answers null unless the
     // app has window focus; this one is a foreground kiosk, so the withheld
     // case is the same empty answer rather than a state to detect.
     //

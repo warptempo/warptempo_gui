@@ -2109,7 +2109,7 @@ void render_phase_reset_flags(cairo_t* cr,
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
         // THE BOUND CELLS ARE THE ONLY BOXES THIS COLUMN SUPPRESSES, and the
         // asymmetry is real rather than an oversight (the warp/phase-reset
-        // symmetry rule, conventions.md): the BOUND editor is both columns'
+        // symmetry rule, warpmarkers.h): the BOUND editor is both columns'
         // since 2026-09-09, while the PAYLOAD editor is a
         // WARP-column surface by its own open gates — a phase reset authors
         // no payload line, its flag carrying a display-only token — so no

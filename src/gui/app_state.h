@@ -855,8 +855,8 @@ struct UndoHistory {
 // The SHIFT-exact PRESS on the NAVIGATION SURFACE — the WHOLE waveform and
 // nothing else since 2026-09-25 (the RULER lane and the MARKER lane's empty
 // stretches, members until then, are PLACEMENT LANES: a shift press there
-// arms the placement pending, never this drag — pointer-hit-testing.md's
-// placement-lanes section; a shift press on a FLAG stays the range click) —
+// arms the placement pending, never this drag — point_on_placement_lanes;
+// a shift press on a FLAG stays the range click) —
 // does its press-time work (deselect-all, playhead
 // placement, live-playback reseek — it never SELECTS a marker) and arms this
 // drag; motion past the shared press-becomes-drag threshold
@@ -4222,7 +4222,7 @@ enum class DialogTrigger {
 // IS the mechanism, and it is precisely what a SECOND Wayland surface cannot
 // have (the scrapped real-window modal needed five commits of
 // tail-sync machinery and each round found another span; the record is in
-// conventions.md).
+// closed_questions.md and git).
 // WHAT THE GATE COSTS: while `painted` is false the prompt consumes EVERY
 // key — not just the response letters but Esc and Delete too (the prompt
 // dispatch, input_handler.cpp), because a consumed no-answer is the only
@@ -4253,7 +4253,9 @@ enum class DialogTrigger {
 //   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
 //                 the three-way prompts alone: the unsaved-work prompt and
 //                 its save-failed rung (Save / Discard / Cancel, Retry /
-//                 Discard / Cancel). Those are NOT confirmations of an act
+//                 Discard / Cancel) and, since 2026-09-27, the `h` view's
+//                 PULL QUESTION (Reload / Keep / Cancel, whose Reload
+//                 discards the session). Those are NOT confirmations of an act
 //                 already asked for — they interpose a question the user did
 //                 not raise — so their Enter must commit nothing.
 //   FirstButton — THE CONFIRMATIONS: the LOAD CONFIRMATION on both its
@@ -8707,8 +8709,10 @@ struct AppState {
     // folder as sidecars. So it's more truthful to exclude them from the dirty
     // dot and from the history."). ONE PREDICATE carries it —
     // authoring_locked, below, the read-only lock's shape with the cells
-    // admitted — ONE GATE at the keyboard, ONE COMPOSER for the card. The rule
-    // and its consequences live in marker-ui.md's Iteration Mode section.
+    // admitted — ONE GATE at the keyboard (iteration_lock_key_blocked,
+    // input_key_dispatch.cpp, which states its deltas), ONE MEMBERSHIP for the
+    // faces (iteration_lock_greys) and ONE COMPOSER for the card
+    // (authoring_lock_card, notifications.h).
     //
     // SO THE UNDO OF AN IN-MODE ACT CANNOT EXIST, and that closes the hidden-
     // bracket class whole: nothing pushes while the lamp is lit, so no stack
@@ -8741,9 +8745,11 @@ struct AppState {
     // reach over every cell and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
     //
-    // WRITTEN TO A CELL BY THREE ROUTES, each behind the selection write it
+    // WRITTEN TO A CELL BY FOUR ROUTES, each behind the selection write it
     // rides: a marker press inside run_marker_click_act (the pressed cell,
-    // all three, on all three click shapes), the bound editor's open (Lower
+    // all three, on all three click shapes), the plain WHEEL over a flag cell
+    // through the plain click's select body (run_marker_plain_select,
+    // 2026-09-14), the bound editor's open (Lower
     // or Upper) — an editor open seats the cell it edits — and, since
     // 2026-09-10, THE BARE TAB WALK
     // (GuiInputHandler::cycle_marker_focus), which steps through the focused
@@ -12297,8 +12303,8 @@ inline const ViewState& active_view_state(const AppState& a) {
 // arm that existed only to describe it went with it, including the per-tab
 // switch refusal that stood for a few hours of that afternoon.)
 //
-// The whole rule and its consequences live in marker-ui.md's Iteration Mode
-// section; every owner here points there rather than restating it.
+// The rule's statement is AppState::iteration_mode_enabled's; the keyboard
+// gate, the faces and the card each state their own half at their owners.
 inline bool authoring_locked(const AppState& a) {
     return active_view_state(a).read_only || a.iteration_mode_enabled;
 }
@@ -18150,6 +18156,47 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 // always rests), so there is no pair gate.
 bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 
+// STRICTLY AS PAINTED — THE RULE'S ONE STATEMENT (architect 2026-09-24, in his
+// words: "the live painted face should correspond to reality, and reality to
+// the face, with cards being preferred over no-ops on a face that falsely
+// advertises an action"). INPUT ACTS ON THE PICTURE THE USER IS LOOKING AT: a
+// press resolves against the geometry and the face the painter last put on
+// screen, never against a live derivation that may be a tick ahead of the
+// pixels; the tick keeps the painter honest, so what the press does and what
+// the screen promised are one thing, and where they cannot be (a state moved
+// inside the one tick between paint and press) the act answers with a card
+// rather than a silent nothing. TWO HALVES, each older than its name:
+//   * THE WAVEFORM AND THE TOP STRIP: the painter's stash IS the hit geometry
+//     (flag_hit_rects, staged by the flag-cache rebuild and promoted by the
+//     frame that blits the flag surface, so a flag's hit advances with its
+//     pixels; TrimBarHit for the trim bar's caps and bridge), and every
+//     gesture's mechanics run on the displayed paint basis — this map AND the
+//     painted viewport, item_viewport_basis below: the marker drag's anchor
+//     and motion, the trim drags' conversions and commit snap, the sweep, the
+//     bound-set click's decider, both nudges' pixel anchoring, the drag's
+//     viewport clamp, and the click placements through
+//     playhead_frame_at_click_column (the live forms
+//     painted_column_of_source_frame / authored_frame_at_column are deleted;
+//     the `_on_basis` pair is the whole pixel-anchoring API,
+//     warp_frame_map_view.h). Every pending press that aims a painted subject
+//     freezes that basis until its release (displayed_basis_frozen below), and
+//     a drag's playhead tow writes through Viewport::translate_playhead_to, so
+//     no synchronous plate render moves the flag off the pointer mid-drag.
+//   * CHROME: every claim — roster press, lift and hold-repeat, menu anchors,
+//     dropdown rows, the render player's row — reads the FACE the painter
+//     published (AppState::RedesignButtonFace, Dropdown::item_enabled,
+//     ModalDialogButton::enabled), the per-tick comparators carry reality onto
+//     it, and a face painted live dispatches, its act's own body answering. No
+//     input road reads redesign_button_enabled, dropdown_item_enabled,
+//     menu_anchor_live or render_player_button_enabled as a claim gate.
+// WHAT IS NOT IN IT: the KEYBOARD, which has no painted face — a key acts on
+// live state and its gate answers with its own card (its thread swept every
+// chord with a painted twin against the twin's face predicate the same day);
+// and the seams below that are irreducible. A face lit only by a modified
+// twin whose plain press is a one-dimensional silence (Full Zoom Out by
+// Shift+0, the walk by the other direction, Play by the A/B audition, the
+// player's Home by Shift+Home) is no false advertisement and stands.
+//
 // displayed_or_live_target_map: the warp_frame_map the item PAINTERS and the
 // gesture mechanics decide against — the map the aimed-at item pixels (flags
 // from the committed cache; the live trim lane's bar and endcaps, which read it
@@ -18184,8 +18231,9 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 // follow lamp's camera paging, which WRITE the viewport rather than read a
 // snapshot of it, so staying live is what keeps them from chasing their own
 // tail — while walls stay integer source frames outside either basis;
-// pointer-hit-testing.md is the AUTHORITATIVE inventory of
-// both sides and of the THREE-GATE freeze (worker dispatch + completion drop
+// the rule is STRICTLY AS PAINTED, stated whole at the head of this block,
+// and displayed_basis_frozen below owns the THREE-GATE freeze (worker
+// dispatch + completion drop
 // + the frame paint's staged promote, all gated by displayed_basis_frozen
 // below, the promote additionally by its own outstanding repair debt) that
 // keeps this map from swapping
@@ -18252,7 +18300,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // sweep_trim_frame_at_column) — it is excluded here because it writes the
 // trim from a fixed anchor to the live pointer and holds no grabbed subject
 // to protect, not because its conversion reads the live viewport
-// (pointer-hit-testing.md owns the derivation). This is a
+// (playhead_frame_at_click_column states the conversion). This is a
 // SUBSET of any_pointer_gesture_active under its own derivation, not a
 // consumer of it: that predicate answers "some pointer gesture is live", this
 // one "the displayed paint basis may not move".

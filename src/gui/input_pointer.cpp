@@ -872,9 +872,9 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // stays the strict consumed no-op it has always been. One body for all four
 // rows, the band-claim shape's own rule rather than a row's.
 //
-// ALT IS REFUSED EVERYWHERE: the roster has no alt chord, and alt's whole
-// pointer vocabulary is the WHEEL's stepped pan (2026-08-27), which no press
-// can spell (conventions.md).
+// ALT IS REFUSED EVERYWHERE: the roster has no alt chord, and alt's pointer
+// vocabulary is empty since 2026-09-14, when the Alt+wheel stepped pan went
+// (the alt vocabulary at chord_is_bound, gui_input.h).
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
 // two SKIPS, whose ctrl-click is Ctrl+Home / Ctrl+End, the Up / Down step
@@ -1967,7 +1967,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // editor families: the blanket answers first while a dialog editor stands
     // and would decide its drag by position, while the marker lane's flag
     // box falls THROUGH the blanket (keyboard-modal, pointer- and
-    // wheel-transparent — conventions.md) to the box's own hover arm far
+    // wheel-transparent — modal_dialog_editor_active, input_handler.h) to the
+    // box's own hover arm far
     // below. One arm above both covers both. THE CARDS AND THE FOUR BLANKETS
     // ABOVE STILL WIN, the rank the trim and marker drags already take under
     // them: a card is opaque to the pointer and can be raised from a worker
@@ -4148,8 +4149,9 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         // selects and lands on every shape and the axis is one more thing the
         // press says. Written AFTER the fork, because every mutator above resets
         // the axis to the payload as it seats the focus (Selection::seat_focus),
-        // and a press is one of the THREE routes that name a cell — the bound
-        // editor's open and the TAB WALK's cell step are
+        // and a press is one of the FOUR routes that name a cell — the plain
+        // wheel over a cell (run_marker_plain_select), the bound editor's open
+        // and the TAB WALK's cell step are
         // the others, each writing behind its own selection write; a focus reached
         // by none of them is addressed at its payload. Read-only does not refuse
         // it: the axis is navigation, as the selection is, and the act it
@@ -4337,7 +4339,7 @@ void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
 // dispatch and the release's owed key-up.
 
 // THERE IS NO CURSOR ZONE FOR THIS SURFACE, and that is a decision rather than
-// an omission (pointer-hit-testing.md's zone map is derived from the press
+// an omission (pointer_cursor_kind's zone map is derived from the press
 // routers, so a new press zone would ordinarily earn one). The map's whole job
 // is that THE CURSOR PROMISES THE GESTURE — and this surface exists only where
 // wants_onscreen_keyboard() is true, which is only on glass, where there is no
@@ -4522,7 +4524,8 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 //
 // The panel's geometry and its one row walk are folder_overlay.h's; the row
 // table and the press arm are AppState::folder_overlay's, where every field
-// is described. THE ROWS ARE CHROME (conventions.md's third clause): the
+// is described. THE ROWS ARE CHROME (the timing doctrine at
+// GuiInputHandler::on_key): the
 // press ARMS because the same press may still become the band's scroll drag,
 // so its identity is not certain at the press; THE MOTIONLESS LIFT HIGHLIGHTS
 // THE ROW AND OPENS IT — a click activates (architect 2026-08-29), which is
@@ -5888,8 +5891,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // nothing on the pointer at all. An alt-exact press falls to the
         // strict-modifier discard below, a consumed no-op like every other
         // unbound combination; on the keyboard alt survives only inside the
-        // Ctrl+Alt chords, whose inventory is conventions.md's alt
-        // vocabulary.)
+        // Ctrl+Alt chords, whose inventory is the alt vocabulary at
+        // chord_is_bound, gui_input.h.)
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the

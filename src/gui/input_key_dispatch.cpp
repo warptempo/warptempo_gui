@@ -6344,7 +6344,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // back on an editor's FIELD carries no strength and clears it.
 //
 // EVERY SHAPE IS BARE-EXACT WITH ONE DELIBERATE EXCEPTION, THE REVERSE WALK:
-// the strict-modifier rule's own text (conventions.md) names THREE families
+// the strict-modifier rule's own text (GuiInputHandler::on_key) names THREE
+// families
 // left untightened BECAUSE the modifier is a real binding there — is_tab_cycle,
 // Ctrl+Z's shift-selects-redo, and the editors' motion arm — and the ring's
 // reverse Tab is exactly that shape, shift meaning "go back" here as it does in
@@ -8211,7 +8212,7 @@ void GuiInputHandler::copy_focused_marker_value() {
         app.last_selected_marker, audio.total_frames());
     // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes the
     // string and hands it straight over, holding no copy of its own
-    // (conventions.md's clipboard ruling).
+    // (the clipboard section of platform_wayland.cpp).
     if (payload.empty()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kNoResolvedValueToCopy);

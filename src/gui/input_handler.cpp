@@ -1661,7 +1661,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Z undo / Ctrl+Shift+Z redo — the WHOLE family, SHIFT the one
     // meaningful bit (which is why this arm is one of strict modifier
-    // validation's deliberately-untightened families, conventions.md). Placed
+    // validation's deliberately-untightened families,
+    // GuiInputHandler::on_key). Placed
     // before the GuiKeys::S save handling so modifier dispatch reads
     // left-to-right in the source. AN EMPTY STACK SAYS SO SINCE 2026-08-30.
     // ALT IS UNBOUND HERE and stays that way: the target
@@ -2391,7 +2392,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // press would say two different things depending on the state it landed
     // in. Strict modifier validation itself is untouched — the no-op it makes
     // of an unbound combination is the same no-op it always was
-    // (conventions.md).
+    // (GuiInputHandler::on_key states the rule).
     //
     // THE BARE HALF is handle_plain_bare_keys' default arm, silent in the same
     // words for the same reason. Both carded "<chord> is not bound" for the

@@ -958,13 +958,64 @@ struct GuiInputHandler {
     // identically — the chrome lift, the dropdown item, and the arrow
     // buttons' hold-repeat tick (input_pointer.cpp). Its boundaries each
     // live at their own homes: the editors' modality
-    // (route_modal_editor_key), strict modifier validation (an unbound
-    // modifier combination is a consumed no-op; conventions.md), the Super
+    // (route_modal_editor_key), strict modifier validation (stated in full
+    // below), the Super
     // press drop (deliver_key, input_core.cpp), the modal Enter/Space
     // act at the RELEASE — the product's one act-on-lift keyboard edge
     // (on_key_release, below) — bare `e` as the left mouse button, swallowed
     // at the platform boundary (kLeftClickKey, gui_input.h), and the held
     // arrow BUTTONS' repeat burst (AppState::ChromePress).
+    //
+    // THE TIMING DOCTRINE, WHOLE — three clauses, and every control classifies
+    // ONCE and keeps ONE timing everywhere it is operated:
+    //   * ICONS ARE UP (the kdenlive button rule): chrome acts at the lift
+    //     whoever operates it — mouse, finger, or the keyboard on a focused
+    //     dialog button (bare Enter / Space, which is why that release arm is
+    //     no hotkey exception; bare `e` is the keyboard operating the pointer
+    //     and follows pointer rules).
+    //   * HOTKEYS ARE DOWN, and the reason is the architect's (2026-08-16): a
+    //     played command binds to the press because THE PRESS IS THE INSTANT
+    //     THE HAND CAN CONTROL — "on the warp side, a lot of the timing has to
+    //     do with how quickly I press the space key"; a lift's latency varies
+    //     in a way the press's does not, so acting at it spends accuracy for
+    //     consistency, and on the warp side accuracy is the product.
+    //   * CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN (2026-08-17): at the
+    //     press where the press can only mean one thing (a flag click, every
+    //     double-click's second press), at the motionless release only where
+    //     the same press arms a drag whose reading genuinely differs (the
+    //     navigation surface's click, the placement lanes, the trim bar's
+    //     bound sets — PendingClickAct, the one deferred click). Deferring
+    //     content for PARITY with the icons is the over-generalization this
+    //     clause exists to refuse.
+    // "ICONS ARE UP, HOTKEYS ARE DOWN. TOUCH USES ICONS, PLASTIC USES BOTH. NO
+    // DISAGREEMENT." Glass and plastic are each kept coherent within
+    // themselves rather than made to match ("there's no way to force glass on
+    // the plastic"). The keyup model that moved key commands to the release
+    // was built and retired in one day (closed_questions.md).
+    //
+    // STRICT MODIFIER VALIDATION (architect 2026-07-28, project-wide, the
+    // pointer included): a modifier combination with no explicit binding is a
+    // CONSUMED NO-OP, uniformly. Space is bare-exact at its one owner
+    // (is_play_pause_key, shared with the read-only allowlist), Escape at all
+    // its readers, the editors' session keys (Escape / Return / KpEnter)
+    // bare-exact and their clipboard chords (A / C / X / V) ctrl-exact, and
+    // the modal prompt's responses match the CODEPOINT, so a capital from
+    // Shift or CapsLock never answers a lowercase key. THREE FAMILIES ARE
+    // DELIBERATELY NOT TIGHTENED because the modifier is a real binding there:
+    // is_tab_cycle (Shift+Tab is the reverse walk), Ctrl+Z (shift selects
+    // redo) and the editors' MOTION arm, which admits its six keys under ctrl
+    // and shift in every combination (word motion, word erase, selection
+    // extension, each degrading to the plain gesture where it adds nothing, as
+    // an ordinary one-line field does) but NEVER alt — the line is drawn at
+    // alt, not at exactness, since exactness would break them. Printable
+    // insertion keeps shift and excludes ctrl and alt. AN UNBOUND COMBINATION
+    // SAYS NOTHING (architect 2026-08-30): every other refusal answers, so a
+    // press with no card and no change can only be unbound — the gates ask
+    // chord_is_bound (gui_input.h) before they speak. The strictness is asked
+    // AT THE PRESS against the delivered chord and is the key path's only
+    // modifier refusal; modifiers-at-the-press is an ARMED-ACT rule
+    // (AppState::ChromePress), and a continuous viewport gesture reading ctrl
+    // live is outside its scope, not an exception to it.
     void on_key(GuiKey key, GuiInputState mods);
     // THE KEY RELEASE, and the ONE thing in this product that acts on one
     // (2026-08-13): bare Enter / bare Space on a focused DIALOG BUTTON press it
@@ -2932,6 +2983,16 @@ private:
     // same sequence minus the live-playhead clamp and the basis reset). So the
     // rule lives here rather than in three places, and the three acts differ
     // only in where their three pieces come from and in the tail each keeps.
+    // "LOAD IN PLACE" IS ONE CONCEPT TOKEN (architect 2026-08-04): the act that
+    // applies a saved state into the live session is named so on every
+    // surface — prose "load a render in place", identifiers `load_in_place`
+    // (`IconLoadInPlace`, `PlayerButtonAct::LoadInPlace`, the three acts
+    // above) — because it IS a load (the source load's own applier, disk
+    // untouched) and "in place" says the session stays. It is never shortened
+    // to bare "load" where it names the act (bare "load" is the launch-time
+    // source load's word), "adopt" is retired, and "commit" means the git
+    // checkpoint commit alone (an editor's Enter-commits-the-line keeps its
+    // ordinary sense).
     //
     // ITS PRECONDITIONS, both the caller's: every input is read, validated and
     // past its last refusal (nothing here can fail, and nothing may mutate
@@ -3872,7 +3933,10 @@ private:
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
     // Ctrl+Q). It serves all five editor kinds, top strip included (the list is
-    // text_editor::Kind).
+    // text_editor::Kind). ONE CONSEQUENCE, ACCEPTED: Ctrl+Z is not in the
+    // admitted set, so typing inside an editor has NO UNDO — the gap these
+    // editors have always had, which is also why a refused clipboard cut must
+    // not erase (apply_editor_clipboard, input_handler.cpp).
     // THE PREDICATE IS PUBLIC since 2026-09-17 for one outside reader, the
     // car transport's gate (GuiCarTransport::admits: a head-unit button is
     // dropped under a dialog editor, the tenth calling function); the key

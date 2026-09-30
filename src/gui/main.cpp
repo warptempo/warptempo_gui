@@ -171,7 +171,7 @@ namespace {
 // height since 2026-09-23 + a PLACEMENT LANE since 2026-09-25 — a
 // motionless click places the playhead and every drag there does nothing,
 // the navigation surface being the waveform alone
-// (pointer-hit-testing.md's placement-lanes section); its dedicated zoom
+// (point_on_placement_lanes, app_state.h); its dedicated zoom
 // entry and its one-day region former both died 2026-08-12) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the
 // playhead's column under them — the head sat on this lane's bottom rows from

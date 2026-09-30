@@ -121,7 +121,8 @@
 // values — kdenlive's project bin and pcmanfm-qt's compact view, which agree.
 // NO ALTERNATING ROWS.
 //
-// THE ROWS ARE CHROME (conventions.md's third clause): a row press ARMS —
+// THE ROWS ARE CHROME (the timing doctrine at GuiInputHandler::on_key): a
+// row press ARMS —
 // the same press may become the band's scroll drag, so the row's identity is
 // not certain at the press — and A MOTIONLESS LIFT HIGHLIGHTS THE ROW AND
 // THEN OPENS IT. A CLICK ACTIVATES (architect 2026-08-29, over the

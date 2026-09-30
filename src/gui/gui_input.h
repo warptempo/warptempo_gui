@@ -284,7 +284,8 @@ struct HorizontalArrowStep {
 // (`markers_view`, the column letter) and never on the subject: `direction`
 // is -1 for Left and +1 for Right. One painted COLUMN on W and M; on the
 // PHASE-RESET column ONE HOP — THE P COLUMN'S ARROW UNIT IS A HOP (architect
-// 2026-09-21, the recorded exception between columns, conventions.md), for
+// 2026-09-21, the recorded exception between columns, warpmarkers.h's
+// naming rules), for
 // the focused reset and the playhead with an empty selection alike. The unit
 // follows from the engine's lattice, which only P has: the render depends
 // only on the window a reset seeds in (S - N/2, the engine seeding at the
@@ -685,6 +686,17 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool cs    =  ctrl && !alt &&  shift;   // Ctrl+Shift
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
+    // THE ALT VOCABULARY, WHOLE (re-derived 2026-09-23 off the `ca` / `cas`
+    // arms, the only ones that read alt): ALT IS THE FIVE KEYBOARD Ctrl+Alt
+    // CHORDS AND NOTHING ELSE — Ctrl+Alt+R / Ctrl+Alt+Shift+R (the render
+    // pair), Ctrl+Alt+P / Ctrl+Alt+Shift+P (the phase reset propagate's two
+    // pastes) and Ctrl+Alt+O (File → Revert). No bare-Alt chord binds (the
+    // static_asserts below pin Alt+Tab's family), and alt's POINTER vocabulary
+    // is empty: no alt-modified press or wheel binds anything. THE SHAPE IS
+    // THE INVARIANT rather than the number: alt marks a HEAVIER SIBLING of a
+    // plain chord — a write that replays or emits (a render, a paste of
+    // captured state onto a run of markers; the copy sits on bare Ctrl+P), or
+    // the reopen that DISCARDS (Revert is Open's own letter with alt added).
     switch (key) {
         // -- letters, bare only, bound in EVERY state: the mode toggles (`i`
         // iteration, `k` add to selection; `c` left this group 2026-09-29 for
@@ -1353,7 +1365,8 @@ struct GuiTouchNavFrame {
 //                   editor's text stands within the double-click window and
 //                   slack of this point: the down can only be the SECOND
 //                   PRESS, so the translation delivers it at the down (the
-//                   third clause, conventions.md), the GUI's consumed second
+//                   third clause, GuiInputHandler::on_key), the GUI's
+//                   consumed second
 //                   press selects the word, and the finger's later motion
 //                   extends that selection by words through the GUI's own
 //                   drag arm — the desk's double-click-drag, one arm.

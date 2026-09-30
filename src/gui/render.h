@@ -706,6 +706,16 @@ inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 // The bright cell is the whole of the addressed cell's cue: it carries no
 // underline and no mark of its own.
 //
+// A FLAG HAS TWO COLOURS, UNSELECTED AND SELECTED, AND NO HOVER FACE
+// (architect 2026-09-29). A flag hover stood for that one day — a 50 % fill
+// toward the selected colour, then a deselect disarm, then a press face 150 %
+// along the rest→selected line — and was struck the same day: a roster icon's
+// hover outline and its pressed / lamp state are SEPARATE faces that coexist,
+// while a flag has ONE fill, so every hover face on it competed with the
+// selection's two colours. The pointer over a flag says what a press will do
+// through the CURSOR alone (pointer_cursor_kind). Do not re-propose a flag
+// hover.
+//
 // The RED crop is 56x17 and supplies COLORS ONLY — its dimensions are the
 // regular class's (the architect's own instruction).
 inline constexpr GuiColor kMarkerFlagFill        = hex(0x9B59B6);
@@ -780,7 +790,18 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // a standing ruling since 2026-09-02; kept under the same-hue pairing of a
 // flag and its own cells too, architect 2026-09-15: the boundary is worth
 // marking — purple on purple then, and blue on blue on the phase-reset
-// column since 2026-09-21). The rest of a
+// column since 2026-09-21). THE WHY IS OPTICAL: two saturated fields of
+// different hue meeting edge to edge read as lying on different planes
+// (chromostereopsis — the purple flag against a blue box, the `h` view's red
+// half against its green, the strongest pairing in the palette), and a dark
+// rule between them stops the hue boundary doing the work alone; it stands on
+// every seam whether or not two hues meet. ONE BOUNDARY, THREE RENDERINGS, all
+// taking the divider so it never appears or vanishes on an editor open: the
+// resting and the riding cell through the one cell painter
+// (paint_iter_bound_cell) and the open bound field's left border; the diff
+// pair's seam is render_history_diff_flags'. The published cell boundary IS
+// the seam column, so a press on the divider reads as the cell it introduces.
+// The rest of a
 // cell's anatomy is the flag's — a 1px edge over the fill across the whole
 // box. (Recorded: "no right border, the flag's own open right edge" was the
 // rule until 2026-09-25, when the architect gave every run a closing column —
@@ -4261,10 +4282,11 @@ struct HistoryDiffFlag {
 // the anatomy is shared, so the ink is too; the ruling covers every colour and
 // every state, this mode's green and red included). A CHANGED pair is that same box at double width — the
 // halves' own fills and top edges side by side, ONE border column wrapping the
-// whole at its left, and — SINCE 2026-08-20, an EXPERIMENT that may be reverted
-// whole — a SECOND column of that same border ink ON THE SEAM between them,
+// whole at its left, and — SINCE 2026-08-20, a trial ruled standing
+// 2026-09-02 — a SECOND column of that same border ink ON THE SEAM between them,
 // against the depth illusion two adjacent saturated hues produce (the ruling
-// and the rationale are at the paint site and in marker-ui.md). The pair is
+// and the rationale are at the paint site and at THE SEAM COLUMN block in the
+// palette above). The pair is
 // still ONE flag: one rect, one focus, one claim. The top edge splits with the halves because it is part of each
 // half's face; it runs horizontally and so is never a divider.
 //
@@ -4407,7 +4429,7 @@ std::string flag_display_text(const std::vector<GuiWarpMarker>& markers,
 //
 // IT IS A PAINTED LABEL AND NOT AN IDENTIFIER, which is the whole reason it
 // may read `reset` when no name in the code may: the naming rule that "phase
-// reset" is ONE CONCEPT TOKEN, never shortened to "reset" (conventions.md),
+// reset" is ONE CONCEPT TOKEN, never shortened to "reset" (warpmarkers.h),
 // governs TYPE, FUNCTION and VARIABLE names — what an engineer reads — and a
 // string the marker lane paints for a musician is outside it. This constant's
 // own name spells the concept in full, and so does every identifier around it.

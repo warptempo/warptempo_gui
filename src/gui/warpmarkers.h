@@ -17,6 +17,32 @@
 // slicing). At the render boundary the GUI slices a GuiWarpMarker vector
 // down to a std::vector<WarpMarker> via slice_to_warp_markers below, so the
 // resolver and the engine path never see these GUI-only fields.
+//
+// THE NAMING RULES THESE TYPES CARRY, stated once here:
+//   * TYPE NAMES: marker and related GUI types carry the `Gui` prefix
+//     (GuiWarpMarker, GuiPhaseResetMarker, GuiAudio, GuiPlayback), and a new
+//     marker-side type follows it; small policy and verdict enums do not.
+//   * WARP AND PHASE RESET ARE CO-EQUAL AXES, named as parallel columns on
+//     every surface: the artifact pair `.warpframemap` / `.phaseresetframemap`
+//     (extensions concatenate without separators, identifiers underscore the
+//     same concepts), the GUI pair `warp_X` / `phase_reset_X` (`warp_dirty` /
+//     `phase_reset_dirty`), and warp is never the unmarked default. "Phase
+//     reset" is ONE CONCEPT TOKEN, never shortened to "reset" in a type,
+//     function or variable name (a painted label is outside the rule,
+//     kPhaseResetLaneToken, render.h). A new pipeline surface ships both
+//     columns or records its asymmetry in a comment at its site. The
+//     recorded asymmetries, each stated at its own site: scale is warp-only;
+//     the resolver cascade (resolve_warp_markers_for_render) is warp-only,
+//     a phase reset's whole normalization being the exact-equal collapse; the
+//     trimmer keeps a connected warp map but range-filters phase resets
+//     (plan_trim); derive_phase_reset_frame_map has no warp sibling; the
+//     phase-reset overlay is a phase-only paint surface
+//     (paint_phase_reset_overlay_ring); trim lives outside the selection
+//     system; the phase-reset propagate carries a STATE paste its family
+//     alone has; the P column's arrow unit is a HOP (horizontal_arrow_step,
+//     gui_input.h), only P having an engine lattice. The validators are fully
+//     symmetric per column; the map's two columns against the reset list's
+//     one is arity, not asymmetry.
 struct GuiWarpMarker : WarpMarker {
     // Iteration mode. Session-only render-parameter scratchpad: never
     // serialized, lost on app close, authored on the flag's two BOUND CELLS
