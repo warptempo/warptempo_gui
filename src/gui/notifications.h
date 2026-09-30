@@ -22,17 +22,15 @@
 //              three refusals, "Target render
 //              failed", "History is unavailable", and — since 2026-08-30 —
 //              THE GATES' OWN CARDS, the swallowed press answered by the
-//              state that swallowed it (the editor gate, the FIVE drag gates
+//              state that swallowed it (the editor gate, the FOUR drag gates
 //              — the editor text drag, the pointer gestures' drag-modal gate
-//              and the player's, the picker's and the AV Sync Stats panel's
-//              own arms above it — the
+//              and the player's and the picker's own arms above it — the
 //              loading gate, the `h` allowlist and the read-only lock). THREE
 //              OF THEM NAME THE CHORD through the one speller spell_chord
 //              (gui_input.h), and every gate ON THE MAIN DISPATCH speaks only
 //              for a chord this product BINDS (chord_is_bound, gui_input.h —
-//              the unbound-keys ruling below; the player's, the picker's and
-//              the AV Sync Stats panel's
-//              own drag arms are the three that do not ask, each standing
+//              the unbound-keys ruling below; the player's and the picker's
+//              own drag arms are the two that do not ask, each standing
 //              inside a mode whose router is its own vocabulary). And THE
 //              ACTS' OWN REFUSALS beside them — the
 //              home-view binding's four sentences, the marker verbs' subject
@@ -74,9 +72,8 @@
 // THE ONE EXCEPTION IS THE CLIPBOARD WRITE (architect 2026-08-30, the
 // invariant that an accepted press shows something): NOTHING PAINTS A
 // CLIPBOARD, and since the resolved readout retired no standing surface
-// paints a resolved value either, so the THREE COPIES — Ctrl+C's resolved
-// value, Ctrl+P's phase resets and
-// the AV Sync Stats panel's own copy, each with its button or menu row
+// paints a resolved value either, so the TWO COPIES — Ctrl+C's resolved
+// value and Ctrl+P's phase resets, each with its button or menu row
 // inheriting the chord — say so on a normal card, which is the whole
 // of what those presses show (Ctrl+C's card naming the copied value in
 // single quotes, architect 2026-09-13). THE EDITORS' OWN Ctrl+C IS NOT ONE OF THEM: an
@@ -202,7 +199,7 @@
 // EVERY VEIL because a card must be dismissable under any modal, while Esc
 // sits UNDER all of them — every other Esc place is earlier in the dispatch,
 // so the key reaches the stack only when nothing modal stands and no render
-// is in flight (the NINE places are enumerated at on_key,
+// is in flight (the EIGHT places are enumerated at on_key,
 // input_handler.cpp; the arm itself is handle_plain_bare_keys').
 // It reads no class — a critical card is dismissed like any other, exactly as
 // the X takes any class — so the key is the one act that reaches a critical
@@ -221,7 +218,7 @@
 // should clear all notifications", one act wanting one chord rather than two
 // roads onto it. Ctrl+Esc is unbound-silent now like every other modified
 // Escape, and the bare key's rank is unchanged — it is still the LAST of the
-// nine places, under every modal, so a standing surface takes the press for
+// eight places, under every modal, so a standing surface takes the press for
 // its own close and the stack waits.
 //
 // The pointer's own rule, unchanged: on both backends, a press on the
@@ -232,7 +229,6 @@
 // and the X's box is the icon row's 32 px button box, already the product's
 // glass target, which is why no finger-fattened body target exists. The
 // claim ranks ABOVE EVERY VEIL (the prompt's, the player's, the picker's, the
-// AV Sync Stats panel's, the
 // dialog editors') because a card is not a reach into the veiled surface: it
 // is the message about the act the veil stands over, and it must be
 // dismissable under any of them. The press is the act (content acts the
@@ -357,7 +353,7 @@ inline const char* authoring_lock_card(const AppState& a) {
 // translation unit. ONE FACT, ONE WORDING, and its readers are: the SAVE
 // OWNER's in-flight refusal (GuiSaveOps::save, save_ops.cpp), which every
 // plain Ctrl+S road reaches — on_key, the editors' modal contract, the
-// picker's and the stats panel's routers, the render player's fall-through —
+// picker's router, the render player's fall-through —
 // and the close prompt's Save answer; bare `h`'s entry refusal (which also
 // prints it on stderr); the Open project picker's open act and File > Revert;
 // and the commit act's own opener (open_history_commit_editor), the `h`

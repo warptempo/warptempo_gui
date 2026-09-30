@@ -29,28 +29,28 @@
 // live in input_handler.h so this TU and flag_editor.cpp can reach them.
 
 // THE DRAG GATES' ONE SENTENCE (architect 2026-08-30): the keyboard is
-// swallowed while a gesture holds the pointer, and the FIVE sites that
+// swallowed while a gesture holds the pointer, and the FOUR sites that
 // swallow it refuse for the SAME reason and therefore say the same words —
 // the editor text-selection drag's gate, above the editor handlers; the
-// pointer gestures' drag-modal gate below them; and THE RENDER PLAYER'S, THE
-// PICKER'S AND THE AV SYNC STATS PANEL'S OWN ARMS above both (re-greped
-// 2026-09-03 off this constant's raisers, the panel's arm having joined that
-// day), which outrank that gate and so ask its
+// pointer gestures' drag-modal gate below them; and THE RENDER PLAYER'S AND
+// THE PICKER'S OWN ARMS above both (re-greped 2026-09-30 off this constant's
+// raisers, the AV Sync Stats panel's arm having gone with the panel), which
+// outrank that gate and so ask its
 // question themselves rather than letting the band's row press or the scrub's
 // marker drag swallow a key in silence. One literal, so a retune moves all
-// five. (THE CAR'S TWO ROADS raise it too, re-greped 2026-09-17 — the undo /
+// four. (THE CAR'S TWO ROADS raise it too, re-greped 2026-09-17 — the undo /
 // redo road run_undo_redo_without_key and the play's gate
 // car_play_refused_by_key_gates, twice each, asking the first two gates' own
 // verdicts for a chord that never passes through on_key; neither is a sixth
 // gate.)
 //
-// THE FIRST TWO SPEAK ONLY FOR A BOUND CHORD and the last three speak for every
+// THE FIRST TWO SPEAK ONLY FOR A BOUND CHORD and the last two speak for every
 // chord (the unbound-keys ruling, chord_is_bound in gui_input.h): the two
 // below sit on the MAIN DISPATCH, where an unbound press is answered by
-// silence, while the three mode arms sit inside a mode whose
+// silence, while the two mode arms sit inside a mode whose
 // router is the whole vocabulary — bare `r` flips Repeat one in there — and
 // that
-// vocabulary is not what the inventory knows, so those three ask nothing and
+// vocabulary is not what the inventory knows, so those two ask nothing and
 // answer every swallowed key.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
 
@@ -376,34 +376,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // THE AV SYNC STATS PANEL IS KEYBOARD-MODAL THE SAME WAY (2026-09-03,
-    // architect): the folder overlay's THIRD content, at the picker's rank
-    // (none of the three list owners stands with another) and with the
-    // picker's shape — ITS ROUTER IS THE WHOLE VOCABULARY
-    // (route_stats_panel_key), Ctrl+Q the one fall-through (with the panel
-    // already closed by the close road), Ctrl+S consumed by the router as the
-    // save, and the File menu above the band reading exactly as it does under
-    // the other two. Its Up/Down SCROLL the band rather than walking a highlight, which
-    // is the difference that made it a router and a modal owner of its own
-    // rather than a second tenant of the picker's (the record is at
-    // AppState::ModalDialogOwner). The gesture clause is the player's own: the
-    // overlay's band arm is a member of any_pointer_gesture_active under this
-    // owner too, and while it stands every key is swallowed but the drag-modal
-    // gate's Ctrl+Q hatch.
-    if (app.stats_panel.active) {
-        if (any_pointer_gesture_active(app)) {
-            // The player's arm above, verbatim — the same gate's question
-            // asked earlier, the same sentence.
-            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
-                notifications.notify(AppState::NotificationClass::Normal,
-                                     kKeysDuringDrag);
-                return;
-            }
-        } else if (route_stats_panel_key(key, mods)) {
-            return;
-        }
-    }
-
     // Blank / loading state: only the quit / close-gesture bindings run;
     // everything else no-ops. Dialog can't fire here because dirty is
     // always false in blank state (the only blank state is the transient
@@ -616,8 +588,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-09-29, Copy Resolved Value's chord (is_copy_value_key, gui_input.h;
     // the arm is in the ordinary dispatch below, beside Ctrl+J's jump). The
     // editors' own ctrl-exact Ctrl+C / Ctrl+X / Ctrl+V are handled in the
-    // editor blocks above and never reach it, and the AV sync stats panel's
-    // Ctrl+C is its router's, which runs ahead of this body while it stands.)
+    // editor blocks above and never reach it.)
 
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
@@ -919,7 +890,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              selection/region ladder it used to serve here
     //                              is deleted, so a bare Esc with no render
     //                              running and no card standing is a plain
-    //                              no-op (the nine-place contract at its
+    //                              no-op (the eight-place contract at its
     //                              enumeration's home, input_handler.cpp's
     //                              on_key)
     //   - Ctrl+Q                 → close-prompt routing
@@ -1247,17 +1218,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
     // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN
-    // NINE PLACES AND NOWHERE ELSE (re-greped 2026-09-03, when the AV SYNC
-    // STATS PANEL joined as (c5) — the drag-modal gate above tests only
-    // Ctrl+Q, so Esc is UNBOUND there and falls through with every other key
-    // while a gesture is in flight; it is NOT one of the nine), the first
-    // eight earlier in this function than this point, so reaching here means
+    // EIGHT PLACES AND NOWHERE ELSE (re-greped 2026-09-30, when the AV SYNC
+    // STATS PANEL's (c5) left with the panel — the drag-modal gate above tests
+    // only Ctrl+Q, so Esc is UNBOUND there and falls through with every other
+    // key while a gesture is in flight; it is NOT one of the eight), the first
+    // seven earlier in this function than this point, so reaching here means
     // the press has nothing left to do BUT the stack. THE LETTERING BELOW IS
     // AN ENUMERATION, NOT THE DISPATCH'S ORDER (corrected 2026-09-02): on_key
     // tests the PROMPT gate first of all, ahead of the loading gate and so
     // ahead of the editor hatch and the editors — which is right, a prompt
     // outranking an editor everywhere — while the letters below run
-    // editor-first. Read them as a list of the nine places, and read on_key
+    // editor-first. Read them as a list of the eight places, and read on_key
     // itself for which one answers when two could:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
@@ -1303,16 +1274,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       replaced were members of (b), so the count grew by one place, and
     //       it did not move again when the `h` view's own picker retired
     //       2026-08-29 — that key raises a PROMPT there now, rung (c);
-    //   (c5) THE AV SYNC STATS PANEL (2026-09-03, the ninth — the folder
-    //       overlay's THIRD content, one router of its own) — Esc closes it
-    //       (route_stats_panel_key, at the picker's rank: none of the three
-    //       list owners stands with another). It joined its own rung rather
-    //       than the picker's for the same reason the picker did not join the
-    //       player's: a surface that shares an existing route adds no place
-    //       (the commit-title editor into (b), every menu into (c2)), a
-    //       surface with its own router does. It cannot collide with (a)/(b)
-    //       for the player's and the picker's own two reasons: it opens under
-    //       no editor and admits no editor opener;
+    //   ((c5), THE AV SYNC STATS PANEL's own router, was the ninth place
+    //       from 2026-09-03 and went with the panel on 2026-09-30.)
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
     //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
@@ -1353,7 +1316,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is place (e) — the stack's clear, and an explicit no-op with no card
     // standing (handle_plain_bare_keys) — the one place the press ends.
-    // THE NINE PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
+    // THE EIGHT PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
     // every Escape reader. CTRL+ESC IS THE RETIREMENT RECORD: it was bound at
     // the very head of this function on the morning of 2026-09-01 to clear the
     // whole notification stack from above every gate, a DIFFERENT CHORD that
@@ -1377,8 +1340,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // consumed no-op. IT SITS BESIDE QUIT because it is the same family — the
     // two acts on the session as a whole — and the placement is otherwise free:
     // every state that must refuse the picker refuses it ABOVE this line (a
-    // standing prompt, the player's, the picker's and the AV Sync Stats
-    // panel's own routers, an open
+    // standing prompt, the player's and the picker's own routers, an open
     // dropdown, loading-or-absent audio, the editor text drag, any
     // keyboard-modal editor) or inside the opener's own body, which is the
     // road the File menu's row takes and carries the gates for both. Nothing
@@ -1399,7 +1361,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // sits beside Open and Quit for the same reason they sit together — the
     // acts on the session as a whole — and the placement is otherwise free on
     // the same terms as Open's: every state that must refuse it refuses it
-    // ABOVE this line (a standing prompt, the three list owners' routers, which
+    // ABOVE this line (a standing prompt, the two list owners' routers, which
     // consume it in silence as they consume Ctrl+O, an open dropdown, the
     // loading gate, the editor text drag, any keyboard-modal editor) or inside
     // the act's own body. The `h` view and both locks ADMIT it (their
@@ -1713,8 +1675,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // P / I / K / L letter keys (the Ctrl+P-family phase-reset clipboard
-    // ops, `i` iteration mode, `k` add-to-selection, and `l` / Shift+L, the folder overlay's two
-    // openers).
+    // ops, `i` iteration mode, `k` add-to-selection, and `l`, the render
+    // player's opener).
     if (handle_mode_keys(key, mods)) return;
 
     // The platform boundary case-folds letters and delivers the
@@ -2578,7 +2540,7 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
 // editors reach here; the car drops the dialog editors itself), and the
 // authoring lock (a read-only tab cards the chord; the iteration lock admits
 // it so the command's own arm names undo). The routers ranked above those
-// gates — the prompt, the three folder-overlay contents, the dialog editors —
+// gates — the prompt, the two folder-overlay contents, the dialog editors —
 // and the `h` view's gate are the CALLER'S to drop (GuiCarTransport::admits),
 // and chord_is_bound answers true for both chords, which the helpers ask
 // anyway. Then the command itself, as a deliberate press (no repeat).
@@ -3585,9 +3547,8 @@ bool GuiInputHandler::apply_editor_clipboard(
         // A FAILED COPY CHANGES NOTHING ON SCREEN, so it says nothing: the
         // editor is its own world (messaging.md), the text it did not take is
         // still sitting there selected, and the paste that follows shows the
-        // truth the moment it is asked for. The two CARDED copies are the ones
-        // whose result nothing paints at all (the main window's Ctrl+C, the
-        // stats panel's report).
+        // truth the moment it is asked for. The CARDED copy is the one whose
+        // result nothing paints at all (the main window's Ctrl+C).
         //
         // A FAILED CUT IS DIFFERENT IN KIND, because a cut is a copy AND a
         // deletion: erasing on a refused claim would destroy the bytes with
@@ -4312,7 +4273,7 @@ void GuiInputHandler::set_show_tooltips(bool desired) {
     // ending the model whole — is at the declaration (input_handler.h), and
     // so are its callers: the main window's bare-backslash arm (which the
     // icon row's button reaches by synthesizing that press) and the folder
-    // overlay's three routers' own backslash arms.
+    // overlay's two routers' own backslash arms.
     app.show_tooltips = desired;
     if (desired) return;
     end_tooltip_hover(TooltipHoverEnd::Hard);

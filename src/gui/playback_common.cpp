@@ -446,8 +446,9 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // the JACK port-latency figure with its two callbacks and its stderr line,
 // and the Wayland presentation-feedback lead with its own — went with the
 // leads on the same ruling: the product does not measure what the user has
-// not asked it to measure. The panel that is to offer them on demand is a
-// later arc and leaves no stub here.
+// not asked it to measure. The AV Sync Stats panel that offered the two
+// figures on demand (2026-09-03) was deleted with its instrument on
+// 2026-09-30, so the playback line carries no latency measurement at all.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample, int64_t loop_begin) {
     if (!state.samples || state.total_frames <= 0) return false;

@@ -28,8 +28,7 @@ std::string car_transport_title_line(const UndoHistory& history) {
 
 // THE GATE (the terms and their reasons are at the head of car_transport.h).
 // The render player never reaches this: main.cpp's hook forks on its mode
-// bit ahead of this cluster, so the overlay term below is the picker's and
-// the stats panel's.
+// bit ahead of this cluster, so the overlay term below is the picker's.
 bool GuiCarTransport::admits() const {
     if (app.prompt.active) return false;
     if (folder_overlay_stands(app)) return false;

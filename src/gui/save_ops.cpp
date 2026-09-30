@@ -54,8 +54,8 @@ bool GuiSaveOps::save() {
     // act is already refused, single-in-flight).
     //
     // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the editors' own Ctrl+S
-    // admission (route_modal_editor_key), the picker's and the stats panel's
-    // routers' Ctrl+S and the close prompt's Save answer all funnel through
+    // admission (route_modal_editor_key), the picker's router's Ctrl+S and
+    // the close prompt's Save answer all funnel through
     // here, so the lockout needs no second spelling.
     //
     // THE CLOSE PROMPT'S Save answer IS REACHABLE HERE, and it answers with the arm

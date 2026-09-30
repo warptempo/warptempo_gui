@@ -217,7 +217,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // pointer home for the copy, BETWEEN REDO AND RENDER since 2026-09-29
     // (kdenlive's own order — Save | Undo, Redo, Copy, …): CTRL+C, which the
     // main window binds to nothing else (bare `c` is the centre key; the text
-    // editors' and the AV sync stats panel's own Ctrl+C are their routers').
+    // editors' own Ctrl+C is their router's).
     // Its lift copies the focused marker's resolved value to the system
     // clipboard, exactly as the key does — button-is-its-chord literally, the
     // press dispatching Ctrl+C through on_key at the LIFT while the KEY acts at
@@ -416,7 +416,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (its row moved with it, the table being read by id and never by
     // position). Bare `l` is the player's one BUTTON now; bare `'` outside the
     // `h` view still opens the same player from the keyboard, which is why
-    // listen stays lit in every state this row is live in.
+    // listen stays lit in every state this row is live in but a running
+    // render, which the open refuses (redesign_button_enabled).
     {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, true},   // bare l
     // THE READ-ONLY TOGGLE (2026-08-14, the padlock's move off the tabs): bare
     // `o` toggles the ACTIVE tab's read-only bit. A TOGGLE like
@@ -822,8 +823,7 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // THE NOTIFICATION CARDS ARE HIT ABOVE THE VEIL, BY RULING, AND ARE NOT AN
 // EXCEPTION TO IT (architect 2026-08-29): a card is not a reach into the
 // veiled surface — it is the message about the act the veil stands over —
-// so its X must answer under a prompt, the player, the picker, the AV Sync
-// Stats panel and every
+// so its X must answer under a prompt, the player, the picker and every
 // dialog editor alike. The claim sits at on_button_press's head, ahead of
 // every gate (the rule at notifications.h).
 
@@ -842,20 +842,21 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 }
 
 // IS THIS PRESS ON A MENU ANCHOR THE STANDING MODE LEAVES LIVE? THE ONE
-// EXEMPTION the folder overlay's three veils carry (architect 2026-09-03
+// EXEMPTION the folder overlay's two veils carry (architect 2026-09-03
 // evening: "leave File open, because Quit should still be enabled —
 // everything else like what we do with history ... Leave that for the player,
-// the picker and the AV stats"). While a content stands, the menu row shows
+// the picker and the AV stats" — the AV Sync Stats panel, deleted
+// 2026-09-30). While a content stands, the menu row shows
 // above the band and File alone answers on it, so its press has to reach the
 // menu-row claim at the foot of on_button_press instead of dying in the veil
-// — and this predicate, ONE OWNER read by all three veils, is where that is
+// — and this predicate, ONE OWNER read by both veils, is where that is
 // said. It walks kDropdownMenus like every other anchor road here and asks
 // each anchor's PAINTED face (RedesignButtonFace::enabled, which
 // publish_button_face stamps from menu_anchor_live) — the claim reads what is
 // on screen (architect 2026-09-24, strictly as-painted), the per-tick
 // comparator keeping it true — so the exemption cannot part from the FACE or
 // from toggle_dropdown's guard, which reads the same bit: what is lit is
-// pressable and what is grey is veiled, one enumeration behind all three.
+// pressable and what is grey is veiled, one enumeration behind both.
 bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
     for (const DropdownMenu m : kDropdownMenus) {
         const RedesignButton b = dropdown_anchor_button(m);
@@ -1947,11 +1948,6 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // overlay's rows and the modal row's one Cancel button — are a list and a
     // button, and it has no field to name the I-beam for.
     if (app.picker.active) return GuiCursorKind::Arrow;
-    // AND SO IS THE AV SYNC STATS PANEL (2026-09-03), with less to say than
-    // either: its band is inert text and its row is two word buttons (Copy
-    // to clipboard, Close), so the whole surface promises nothing a cursor
-    // could name.
-    if (app.stats_panel.active) return GuiCursorKind::Arrow;
     // A LIVE EDITOR TEXT DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
     // cursor in flag editor becomes the pointer during drag-to-highlight — it
     // should remain the i-beam — that's what other editors do"), on the
@@ -3178,12 +3174,10 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // drag's own !active guard, so the refused stream is dead rather than a
     // fallback pointer drag (the pan gestures' model).
     if (app.prompt.active) return;
-    // THE RENDER PLAYER'S, THE PICKER'S AND THE STATS PANEL'S VEILS
-    // (2026-08-28; the panel joined 2026-09-03), restated here for the gesture
-    // that skips the press path: a held finger on the band or the waveform
-    // under any of the three modes begins no sweep.
-    if (app.render_player.active || app.picker.active ||
-        app.stats_panel.active) return;
+    // THE RENDER PLAYER'S AND THE PICKER'S VEILS (2026-08-28), restated here
+    // for the gesture that skips the press path: a held finger on the band or
+    // the waveform under either mode begins no sweep.
+    if (app.render_player.active || app.picker.active) return;
     if (keyboard_modal_editor_active()) return;
     if (app.dropdown.open()) return;
     if (app.loading || audio.total_frames() <= 0) return;
@@ -3569,8 +3563,7 @@ void GuiInputHandler::clear_modal_dialog_key_press() {
 }
 
 // A dialog button's PRESS: arm the index and paint it, dispatching nothing.
-// Shared by the prompt claim, the player's, the picker's, the AV Sync Stats
-// panel's and the editor claim
+// Shared by the prompt claim, the player's, the picker's and the editor claim
 // — they differ in what their RELEASE runs, not in what their press does.
 // Returns true when a button was hit (the claim then consumes the press; the
 // veil consumes it either way).
@@ -3593,9 +3586,8 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // as-painted), the per-tick comparator (main.cpp) keeping it honest, and
     // a face painted live dispatches, its act answering for itself. THE
     // PLAYER'S SEVEN ARE THE ONLY
-    // BUTTONS THAT PUBLISH IT (re-greped 2026-09-03; the stats panel's Copy
-    // to clipboard did for one day, off a backend capability that is gone),
-    // so this line is inert off every other owner's row.
+    // BUTTONS THAT PUBLISH IT (re-greped 2026-09-30), so this line is inert
+    // off every other owner's row.
     if (!app.modal_dialog.buttons[static_cast<size_t>(hit)].enabled)
         return true;
     if (shift &&
@@ -3669,15 +3661,14 @@ bool GuiInputHandler::modal_dialog_stash_current() const {
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (!dlg.valid || dlg.session == 0) return false;
     // THE LIVE OWNER'S CLASS, in the painter's own precedence (prompt over
-    // player over picker over the AV sync stats panel over editor —
-    // paint_modal_dialog's fork; the three list owners never stand together
-    // and none stands beside an editor, so their order is free). THIS IS ONE
+    // player over picker over editor — paint_modal_dialog's fork; the two
+    // list owners never stand together and neither stands beside an editor,
+    // so their order is free). THIS IS ONE
     // OF THE THREE PLACES THE RANKING IS SPELLED and they must agree.
     const AppState::ModalDialogOwner live =
         app.prompt.active         ? AppState::ModalDialogOwner::Prompt
       : app.render_player.active  ? AppState::ModalDialogOwner::Player
       : app.picker.active         ? AppState::ModalDialogOwner::Picker
-      : app.stats_panel.active    ? AppState::ModalDialogOwner::Stats
                                   : AppState::ModalDialogOwner::Editor;
     if (dlg.owner != live) return false;
     return dlg.session == app.modal_dialog_live_session();
@@ -3821,27 +3812,6 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     if (app.picker.active) {
         close_picker();
         return true;
-    }
-    // THE STATS PANEL'S TWO BUTTONS (2026-09-03): the act the stash names,
-    // decided against the live panel — which for this owner means the mode bit
-    // this arm has already been reached under. BOTH ARE UNCONDITIONAL: the
-    // copy had one ahead-of-press condition for a day (a backend whose
-    // clipboard reached no other program), and it is gone with that
-    // capability, so the whole of the copy's verdict is the act's own card
-    // (copy_stats_panel_report). Its row was **Close** alone for its first
-    // hours, and that arm read no bit at all.
-    if (app.stats_panel.active) {
-        switch (b.stats_act) {
-            case AppState::StatsButtonAct::CopyReport:
-                copy_stats_panel_report();
-                return true;
-            case AppState::StatsButtonAct::Close:
-                close_stats_panel();
-                return true;
-            case AppState::StatsButtonAct::None:
-                return false;
-        }
-        return false;
     }
     dispatch_modal_dialog_editor_act(b.editor_ok);
     return true;
@@ -4559,13 +4529,12 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // edge that can tell a click from a drag, and a second press has nothing
 // left to mean.
 //
-// ONE PRESS ROUTER, THREE CONTENTS. The claim below stands ABOVE the three
-// mode veils (the player's, the picker's and the AV sync stats panel's), each
-// of which admits exactly the band and its own modal row, and BELOW the prompt
-// gate, which outranks every surface as it always has. What the OPEN means is
-// the owner's, and the two forks below are the whole of it — the stats panel
-// answering NOTHING at either, its rows being inert: nothing else in this
-// file asks which content fills the rows.
+// ONE PRESS ROUTER, TWO CONTENTS. The claim below stands ABOVE the two mode
+// veils (the player's and the picker's), each of which admits exactly the
+// band and its own modal row, and BELOW the prompt gate, which outranks every
+// surface as it always has. What the OPEN means is the owner's, and the two
+// forks below are the whole of it: nothing else in this file asks which
+// content fills the rows.
 
 // THE MOTIONLESS LIFT'S FIRST HALF: the band moves, under every owner — the
 // picker has no field beside it (architect R22), so the band IS what Enter
@@ -4579,12 +4548,6 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
             return;
         case AppState::FolderOverlay::Owner::ProjectPicker:
             picker_set_highlight(index);
-            return;
-        case AppState::FolderOverlay::Owner::Stats:
-            // A TEXT ROW IS INERT (the kind's own rule, app_state.h): the AV
-            // sync panel has no highlight to move, so this content's arm is a
-            // return. Its band still scrolls — that is the widget's, not a
-            // row's.
             return;
     }
 }
@@ -4602,10 +4565,6 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
             return;
         case AppState::FolderOverlay::Owner::ProjectPicker:
             open_project_commit(index);
-            return;
-        case AppState::FolderOverlay::Owner::Stats:
-            // Nothing opens: the AV sync panel's rows are lines of text with
-            // no act behind them.
             return;
     }
 }
@@ -4641,25 +4600,6 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // it, the modified press claiming the band and arming nothing wherever it
     // lands.
     if (mods.ctrl || mods.shift || mods.alt) return true;
-    // THE AV SYNC PANEL ARMS THE BAND AND NEVER A ROW (2026-09-03): its rows
-    // are inert, so there is no row identity to arm and no act for a lift to
-    // run — but the band still SCROLLS under the finger, which is the widget's
-    // own gesture and not a row's, so the arm is taken with `row` at -1 from
-    // anywhere inside the band (the pad and the gaps included, which is more
-    // than a row arm reaches). The motion below turns it into the scroll drag
-    // at the gate exactly as a row arm becomes one, and the release finds no
-    // row and does nothing.
-    if (app.folder_overlay.owner == AppState::FolderOverlay::Owner::Stats) {
-        AppState::FolderOverlayPress& band = app.folder_overlay.press;
-        band.armed           = true;
-        band.row             = -1;
-        band.press_x         = x;
-        band.press_y         = y;
-        band.scroll_at_press = app.folder_overlay.scroll_px;
-        band.inside          = false;
-        band.scrolling       = false;
-        return true;
-    }
     const int hit = folder_overlay::row_at(app, x, y);
     if (hit < 0) return true;
     // THE PRESS ONLY ARMS — a click activates, but the act rides the
@@ -4709,10 +4649,6 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
             press.inside    = false;
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
         } else {
-            // A ROW-LESS BAND ARM (the AV sync panel's) has no row to light or
-            // unlight, so the feint's inside bit is not tracked for it: the
-            // arm exists only to become the scroll drag above.
-            if (press.row < 0) return;
             const bool inside = folder_overlay::row_at(app, x, y) == press.row;
             if (inside != press.inside) {
                 press.inside = inside;
@@ -4740,9 +4676,6 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
         viewport.invalidate_rect(folder_overlay::row_rect(app, press.row));
     // A scroll drag ends here with nothing else owed.
     if (press.scrolling) return true;
-    // A ROW-LESS BAND ARM (the AV sync panel's) has no act either: it named no
-    // row at the press and cannot name one at the lift.
-    if (press.row < 0) return true;
     // A MOTIONLESS LIFT ON THE ARMED ROW HIGHLIGHTS IT AND THEN OPENS IT — A
     // CLICK ACTIVATES (architect 2026-08-29: in the player a wav plays from
     // its start, a folder is entered and `..` goes up; in the Open project
@@ -4759,14 +4692,6 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
 
 void GuiInputHandler::update_folder_overlay_hover(int x, int y) {
     if (!folder_overlay::stands(app)) return;
-    // NO ROW HOVERS UNDER THE AV SYNC STATS PANEL (2026-09-03): its rows are
-    // inert, and a hover face is a PROMISE THE POINTER CAN ACT — the roster's
-    // own rule read on this surface. The painter already skips the ladder for
-    // a Text row, so this line is not what keeps the face off; what it keeps
-    // off is the DAMAGE, a pair of row repaints per crossing for a picture
-    // that cannot change.
-    if (app.folder_overlay.owner == AppState::FolderOverlay::Owner::Stats)
-        return;
     // A NOTIFICATION CARD IS OPAQUE TO THE POINTER (notifications.h), the
     // roster walk's own term one surface over: the stack grows DOWN from row
     // 1 and the band's ceiling is the icon row's foot since 2026-09-09 (the
@@ -5096,7 +5021,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE CLAIM'S RANK IS THE FIX FOR THE STRANDED ARM (2026-09-03): it sits
     // BELOW the notification cards, the on-screen keyboard and the prompt gate
     // — the three surfaces that outrank every band — and ABOVE EVERYTHING ELSE
-    // the pointer has: the folder overlay's band claim, its three mode veils
+    // the pointer has: the folder overlay's band claim, its two mode veils
     // and the modal-row arm inside each of them, the dialog editors' field and
     // button claims and their veil. It stood under all of those until this
     // ruling, which is what let a press on the overlay's modal row while the
@@ -5143,12 +5068,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // popup line of its own. What still reaches those veils is the LIVE ANCHOR
     // alone (menu_row_press_admitted, below), the menu row standing above the
     // band. THE PANEL STILL CANNOT RISE UNDER A POPUP, which is the other
-    // direction and unchanged: every opener the three contents
-    // have — bare `l`, bare `'`, Ctrl+O, Shift+L, the Play renders button's
-    // plain and shifted presses and the File menu's Open project row — either
+    // direction and unchanged: every opener the two contents
+    // have — bare `l`, bare `'`, Ctrl+O, the Play renders button's press and
+    // the File menu's Open project row — either
     // arrives through on_key, whose popup gate admits Esc and Ctrl+Q and
     // swallows the rest, or is a menu row whose own release CLOSES the popup
-    // BEFORE it acts. (This claim stood BELOW the three veils for the evening
+    // BEFORE it acts. (This claim stood BELOW the mode veils for the evening
     // of 2026-09-03 alone, and below the editor gates from the redesign until
     // then; on 2026-09-02, with the panel's ceiling at row 1's foot, it stood
     // above the veils and no popup could reach the band at all for the hours
@@ -5239,16 +5164,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // player's load confirmation and the reopen's unsaved-tab question paint
     // over their own rows), under the OPEN DROPDOWN'S claim just above (a
     // standing menu owns the press before any band does, so a row press
-    // dismisses the menu instead of opening the row) and above the THREE mode
-    // veils below — the
-    // player's, the picker's and the AV Sync Stats panel's, each of which
+    // dismisses the menu instead of opening the row) and above the TWO mode
+    // veils below — the player's and the picker's, each of which
     // admits the band and its own modal row
     // and consumes the rest. The claim is opaque and owns its own button
     // gate, so a non-left press on the band falls to whichever veil stands
     // and is consumed there.
     if (claim_folder_overlay_press(x, y, button, mods)) return;
 
-    // THE ONE THING THE THREE VEILS BELOW LET THROUGH (architect 2026-09-03
+    // THE ONE THING THE TWO VEILS BELOW LET THROUGH (architect 2026-09-03
     // evening): the LIVE MENU ANCHOR — File. The menu row stands above the
     // band with File lit and the other two anchors dead, so its press must
     // reach the menu-row claim at the foot of this function, which sits BELOW
@@ -5307,22 +5231,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // and so no caret claim and no text drag — the picker has nothing to
     // type into. The whole rule is stated at picker_active (input_handler.h).
     if (app.picker.active && !menu_row_press_admitted) {
-        if (button != GuiMouseButton::Left) return;
-        if (!mods.ctrl && !mods.shift && !mods.alt &&
-            modal_dialog_stash_current()) {
-            arm_modal_dialog_press(x, y);
-        }
-        return;
-    }
-
-    // THE AV SYNC STATS PANEL'S VEIL (2026-09-03), the picker's shape one mode
-    // over: the band above is inert text (claimed for its scroll and consumed
-    // there), so the pressable things while the panel stands are the modal
-    // row's two word buttons (Copy to clipboard, Close) and the live File
-    // anchor above the band (the exemption above), and EVERY OTHER PRESS IS
-    // CONSUMED. No field, no caret claim, no text drag. The whole
-    // rule is stated at stats_panel_active (input_handler.h).
-    if (app.stats_panel.active && !menu_row_press_admitted) {
         if (button != GuiMouseButton::Left) return;
         if (!mods.ctrl && !mods.shift && !mods.alt &&
             modal_dialog_stash_current()) {
@@ -6998,15 +6906,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         return;
     }
-    // THE STATS PANEL'S RELEASE (2026-09-03), the picker's line one mode over:
-    // the modal row's armed Close through the one shared dispatch, and every
-    // other lift consumed.
-    if (app.stats_panel.active) {
-        if (button == GuiMouseButton::Left) {
-            dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
-        }
-        return;
-    }
     // THE EDITOR DIALOG'S ACT, the same shape over the other surface: the lift
     // on the armed OK / Cancel runs the session's own Enter / Esc through the
     // one modal key route. Above the text-drag branch because the two are
@@ -7655,10 +7554,10 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // file) and the two collapsed into this one. The pointer-transparent FLAG
     // editor raises no veil: it is not a dialog and its roster presses were
     // never blocked.
-    // THE FOLDER OVERLAY'S THREE OWNERS ARE DELIBERATELY NOT TERMS HERE
+    // THE FOLDER OVERLAY'S TWO OWNERS ARE DELIBERATELY NOT TERMS HERE
     // (2026-09-03 evening, as on 2026-09-02 and for the same reason): the
     // menu row stands above the band with the FILE ANCHOR LIVE, its press
-    // exempted from all three veils, and a blanket term would refuse that one
+    // exempted from both veils, and a blanket term would refuse that one
     // lit button its hover pill while it is the one thing on screen the
     // pointer can act on. Nothing else lights: redesign_button_enabled's
     // first arm greys the whole roster but that anchor, and the `inside` term
@@ -7809,8 +7708,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // (update_modal_dialog_hover) owns that surface's wait. A DIALOG SURFACE
     // IS LIVE exactly where on_motion runs that walk, re-derived by grep
     // 2026-09-25: the prompt and the editor dialogs (the veil's two terms)
-    // and the folder overlay's three owners (the player, the picker, the
-    // stats panel — folder_overlay_stands). The liveness test reads the LIVE
+    // and the folder overlay's two owners (the player and the picker —
+    // folder_overlay_stands). The liveness test reads the LIVE
     // surfaces, never the painted stash, so the frame a dialog closes on is
     // the frame this walk takes its hint down, whatever road closed it — the
     // two that carry no input event of their own (a modal button dispatched
@@ -7826,20 +7725,18 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // stays live, so without the stamp the wait would ripen into the
     // PLAYER's button at the same index, a hint beside a pointer not on it.
     // The picker cannot host a prompt (open_project_commit runs close_picker
-    // before request_close, and request_close takes the player, the picker
-    // and the stats panel down before it asks anything) and the stats panel
-    // raises none of its own (Ctrl+Q's fall-through and File → Quit reach
-    // that same request_close). THE STASH LAGS THE CLOSE BY ONE PAINT: the
+    // before request_close, and request_close takes the player and the
+    // picker down before it asks anything). THE STASH LAGS THE CLOSE BY ONE
+    // PAINT: the
     // frame that repaints the player's row republishes the stash,
     // paint_shift_tooltip refuses the mismatch on that same frame, and this
     // walk's hide lands on the tick after it, so no hint of the wrong surface
     // is ever painted.
     // Under the veil `hovered_tip` is -1 by construction (the veil and the
     // no-wait rule above), so the veil needs no branch of its own. Under the
-    // FOLDER OVERLAY, whose three owners are not veil terms, `hovered_tip` is
+    // FOLDER OVERLAY, whose two owners are not veil terms, `hovered_tip` is
     // -1 through the no-wait rule alone, and the "surface stands" arm is what
-    // keeps the player's, the picker's and the stats panel's button hints
-    // alive: handing "none" to the writer there would stop the dialog's wait
+    // keeps the player's and the picker's button hints alive: handing "none" to the writer there would stop the dialog's wait
     // on every tick.
     if (hovered_tip < 0) {
         AppState::RedesignTooltip& t = app.redesign_tooltip;
@@ -8219,14 +8116,13 @@ void GuiInputHandler::finish_chrome_press_release(
     // once, above the switch, rather than per branch.)
     // A PROMPT needs no term here for any kind: on_button_release's prompt
     // gate returns unconditionally above this call, so no arm reaches this
-    // body while one stands — and neither does THE RENDER PLAYER's, THE
-    // PICKER's or THE AV SYNC STATS PANEL's, whose release blocks return above
-    // this call the same way; the
+    // body while one stands — and neither does THE RENDER PLAYER's or THE
+    // PICKER's, whose release blocks return above this call the same way; the
     // term below is the editor OPENED MID-HOLD's, and any of the three
-    // opened mid-hold (bare `l`, Ctrl+O, `'` or Shift+L typed under a
-    // held button) takes the same refusal through it.
+    // opened mid-hold (bare `l`, Ctrl+O or `'` typed under a held button)
+    // takes the same refusal through it.
     if (modal_dialog_editor_active() || app.render_player.active ||
-        app.picker.active || app.stats_panel.active) return;
+        app.picker.active) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
         return;
@@ -9322,9 +9218,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // ordinary chord row, Shift+L, a chord the view's allowlist refuses in
     // the mode's own sentence, so the one row was a box that opened onto
     // nothing; chord-less for its first hours it was the SETTINGS case — and
-    // LEFT IT WITH ITS OWN DELETION on 2026-09-09, the top strip relayout:
-    // the panel's two roads are the chord and the Play renders button's
-    // shifted press, and the view answers both for itself.)
+    // LEFT IT WITH ITS OWN DELETION on 2026-09-09, the top strip relayout;
+    // the panel itself was deleted on 2026-09-30.)
     //
     // THE GUARD READS THE ANCHOR'S PAINTED FACE (architect 2026-09-24,
     // strictly as-painted): RedesignButtonFace::enabled, which
@@ -9541,8 +9436,8 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 // hit IS "on the row"; the exit half above owns the band question, at the one
 // placement that can answer it for every branch.
 //
-// (THE FOLDER OVERLAY'S THREE MOTION BRANCHES RETURN BEFORE THIS TAIL, which
-// is what keeps the armed hover open out of the three overlay contents. It is
+// (THE FOLDER OVERLAY'S TWO MOTION BRANCHES RETURN BEFORE THIS TAIL, which
+// is what keeps the armed hover open out of the two overlay contents. It is
 // their rank and not the anchors' faces that does it: FILE IS LIVE above the
 // band again since 2026-09-03 evening, so toggle_dropdown's guard would admit
 // it — the three dead anchors are the ones that guard refuses. The branches
@@ -9857,15 +9752,14 @@ void GuiInputHandler::tick_tooltip() {
 }
 
 // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's one
-// expression, read by the roster's hover walk. The three list owners are terms
+// expression, read by the roster's hover walk. The two list owners are terms
 // because each takes the keyboard whole; the pointer-transparent FLAG editor is
 // a term through keyboard_modal_editor_active for the same reason, and it is
 // the case the walk's veil cannot see: the roster stays hoverable under one
 // (that editor raises no veil).
 bool GuiInputHandler::tooltip_dwell_suppressed() const {
     return app.prompt.active || keyboard_modal_editor_active() ||
-           app.render_player.active || app.picker.active ||
-           app.stats_panel.active;
+           app.render_player.active || app.picker.active;
 }
 
 // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss hook's
@@ -10369,15 +10263,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // anchor), nothing else — no
     // field, no drag, no scrub; the overlay's own arm and hover ran above.
     if (app.picker.active) {
-        update_modal_dialog_hover(mouse_x, mouse_y);
-        recompute_redesign_button_hover();
-        return;
-    }
-    // THE STATS PANEL'S MOTION (2026-09-03), the picker's shape: the modal
-    // button's hover face and the roster recompute (all-false under the veil
-    // term but the live File anchor), nothing else — the band's own arm and
-    // hover ran above.
-    if (app.stats_panel.active) {
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;

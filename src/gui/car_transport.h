@@ -93,8 +93,8 @@ struct GuiInputHandler;
 // WHERE THE CAR ACTS AND WHERE IT IS DROPPED — admits(), one predicate: a
 // command is DROPPED under a prompt (a question on screen is answered there,
 // the player's own rule), while the folder overlay stands (the Open project
-// picker and the AV Sync Stats panel — the player is forked ahead at the
-// hook, so its owner tag never reaches this test), under a DIALOG modal
+// picker — the player is forked ahead at the hook, so its owner tag never
+// reaches this test), under a DIALOG modal
 // editor (modal_dialog_editor_active: the settings editor, the commit-title
 // editor and the BPM bracket editor, the surfaces whose open stopped
 // playback and whose keys are theirs alone) and in the `h` history view
@@ -413,7 +413,7 @@ private:
     // the tick can read):
     //   * THE PLAYER TOOK THE WIRE (tick's own early arm) — the head unit has
     //     another owner now and this wait is not its business.
-    //   * !admits() — a prompt, the picker or the stats panel, a dialog
+    //   * !admits() — a prompt, the picker, a dialog
     //     editor, the `h` view: the wait is over.
     //   * THE SNAPSHOT MOVED — any of the three fields above.
     //   * A GUI TRANSPORT PRESS LANDED — the fourth field above: bare Space,

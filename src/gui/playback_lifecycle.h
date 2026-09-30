@@ -141,7 +141,7 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-09-23 — NINE
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-09-30 — NINE
     // sites: GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
     // (history_load_in_place — the history picker it replaced on 2026-08-29
@@ -149,14 +149,17 @@ struct GuiPlaybackLifecycle {
     // bpm editor (handle_mode_keys), the history view's COMMIT-TITLE editor
     // (open_history_commit_editor), the OPEN PROJECT PICKER
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
-    // 2026-08-28) and the AV SYNC STATS PANEL (open_av_sync_stats); the TWO
+    // 2026-08-28) and the `h` view's PULL question (run_history_pull_press,
+    // Reload / Keep / Cancel); the TWO
     // prompt opens (prompt.cpp: unsaved, and File → Revert's confirmation —
     // the error notice's was a third until that prompt kind retired whole on
     // 2026-08-30); THE RENDER PLAYER's open
     // (GuiRenderPlayer::open, render_player.cpp — the third modal owner,
     // 2026-08-28; the project's audition ends where the player's transport
     // begins, and the player's own stops all take stop_playback_if_playing
-    // through the fork inside it). (The Generate Magnification Level Markers
+    // through the fork inside it). (The AV Sync Stats panel's opener was a
+    // caller from 2026-09-03 until the panel's deletion on 2026-09-30.) (The
+    // Generate Magnification Level Markers
     // confirmation was a tenth from 2026-09-22 until the act's deletion on
     // 2026-09-23, the count going back TEN to NINE with it.) It had gone seven
     // to six on 2026-08-09, when the render-library advisory prompt was
@@ -193,15 +196,9 @@ struct GuiPlaybackLifecycle {
     // cannot restart until the surface closes.
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
-    //   * DIALOG modal surfaces — the three dialog editors, the prompts, the
-    //     picker and (since 2026-09-03) the AV SYNC STATS PANEL, all painted
-    //     as the bottom row's modal since 2026-08-13 — STOP. The panel is a
-    //     hardware reading rather than an authoring surface, so it was worth
-    //     asking whether it owed the stop at all; it takes it because it is
-    //     the picker's own shape one content over — a full-window band, a
-    //     modal row and a keyboard vocabulary of its own — and because the
-    //     LINE it measures against is behind that band, so a session left
-    //     playing under it would be running with nothing to watch.
+    //   * DIALOG modal surfaces — the three dialog editors, the prompts and
+    //     the picker, all painted as the bottom row's modal since 2026-08-13
+    //     — STOP.
     //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
     //     omission: modality there is CHORDS ONLY (the editor stays pointer- and
     //     wheel-transparent), and editing flag text while listening to the

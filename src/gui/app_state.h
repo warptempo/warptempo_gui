@@ -2066,11 +2066,10 @@ enum class RedesignButton {
     // command row that was its chord, Shift+L, dispatching through on_key.
     // The architect DELETED IT with the top strip relayout on the Iterations
     // anchor's own precedent: a command with an icon-row road does not also
-    // live in the menu row, and the panel has two — the chord and the Play
-    // renders button's shift-click or long press, both untouched
-    // (is_av_sync_stats_key, toggle_av_sync_stats, redesign_button_shift_
-    // admits). kHelpPopupItems, DropdownMenu::Help and every arm that named
-    // the anchor went with it.)
+    // live in the menu row, and the panel had two — the chord and the Play
+    // renders button's shift-click or long press — until the panel itself
+    // was deleted on 2026-09-30. kHelpPopupItems, DropdownMenu::Help and every
+    // arm that named the anchor went with it.)
     File, Edit, Settings, ViewSW, ViewTW, ViewTP,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
@@ -2505,9 +2504,8 @@ enum class RedesignButton {
     // in the `h` view (bare backslash is on all three allowlists), so it greys
     // only with the WHOLE ROSTER at redesign_button_enabled's head gates — no
     // audio to dispatch on, and the folder overlay standing. Under the
-    // overlay the KEY stays live: the render player's, the picker's and the
-    // stats panel's routers each answer bare backslash through the same
-    // setter (architect 2026-09-29), so the player row's hints can be lit and
+    // overlay the KEY stays live: the render player's and the picker's
+    // routers each answer bare backslash through the same setter (architect 2026-09-29), so the player row's hints can be lit and
     // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
     // SETTINGS (architect 2026-09-29), right after the tooltip lamp, closing
@@ -3359,7 +3357,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // 2026-08-27 with the BPM/iteration relocation and LEFT 2026-09-04 when the
 // architect sent both commands back to the icon row, and HELP joined
 // 2026-09-03 with the AV sync panel and LEFT 2026-09-09 with the top strip
-// relayout, the panel keeping its chord and its button — a value gained or
+// relayout, the panel keeping its chord and its button until its own deletion
+// on 2026-09-30 — a value gained or
 // lost in a field that holds one, which is the whole of what a menu costs
 // here either way.
 enum class DropdownMenu { None, File, Edit, Settings };
@@ -3694,10 +3693,10 @@ inline constexpr int kEditPopupItemCount =
 // Shift+L, dispatched through on_key, bare `l`'s shifted twin — after a few
 // chord-less hours calling its opener directly. The anchor went on the Iterations
 // menu's own precedent: a command with an icon-row road does not also live
-// in the menu row, and the panel keeps both of its other roads untouched —
-// the chord (is_av_sync_stats_key, toggle_av_sync_stats) and the Play renders
-// button's shift-click or long press (redesign_button_shift_admits). NOT ONE
-// ACT WAS REMOVED; the menu row is File / Edit / Settings, Settings its last
+// in the menu row, and the panel kept both of its other roads — the chord and
+// the Play renders button's shift-click or long press — until the panel was
+// deleted whole on 2026-09-30. NOT ONE ACT WAS REMOVED by the menu's
+// deletion; the menu row is File / Edit / Settings, Settings its last
 // anchor again, and the accelerator column's producers are File's three rows
 // and Edit's three.)
 
@@ -6113,8 +6112,7 @@ struct AppState {
     DialogEditorText dialog_editor_text;
 
     // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the three dialog
-    // editors, the render player, the picker and the AV Sync Stats panel paint
-    // ON THE BOTTOM ROW since
+    // editors, the render player and the picker paint ON THE BOTTOM ROW since
     // 2026-08-13 (architect, scrapping
     // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
     // shadow, and faking one wouldn't work"): while one stands the row's
@@ -6218,25 +6216,10 @@ struct AppState {
     // and the player are NEVER LIVE TOGETHER (each opener refuses under the
     // other, and neither is an editor), as neither is live beside an editor
     // (both openers refuse under one, both routers consume every editor
-    // opener) — so the order among the three lower ranks is free.
-    // THE FIFTH OWNER IS THE AV SYNC STATS PANEL (2026-09-03, architect): the
-    // folder overlay's THIRD content — a listing of TEXT rows, no highlight and
-    // no act — over a row that is **Copy to Clipboard · Close** (Close alone
-    // for its first hours), flush RIGHT under the
-    // alignment rule (a list's buttons go right). IT IS A FIFTH OWNER RATHER
-    // THAN A REUSE OF THE PICKER'S, and the test that decided it is the
-    // picker's own: reuse was preferable if the picker's router and veil served
-    // unchanged. THE VEIL DOES; THE ROUTER DOES NOT — route_picker_key binds
-    // Enter to picker_open_highlight and Up/Down to picker_move_highlight, and
-    // this panel has no highlight to open or walk (its Up/Down SCROLL the
-    // band) — and reuse would additionally make `picker_active()` answer true
-    // for a thing that is not a picker, a predicate read by the veil, the
-    // cursor map, the hover walk, the chrome release's re-ask, the touch region
-    // begin and the stash's live ladder. It is ranked WITH the player and the
-    // picker: the three list owners never stand together (each opener refuses
-    // under the others) and none stands beside an editor, so the order among
-    // the three is free.
-    enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker, Stats };
+    // opener) — so the order among the three lower ranks is free. (A FIFTH
+    // OWNER, the AV Sync Stats panel, stood 2026-09-03..30 and was deleted
+    // with the panel.)
+    enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker };
     // THE PLAYER'S SEVEN BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
@@ -6301,22 +6284,6 @@ struct AppState {
         None, Home, PlayPause, NextTrack, RepeatOne, Up, LoadInPlace, Delete,
         Close
     };
-    // THE AV SYNC STATS PANEL'S TWO BUTTONS (architect 2026-09-03), the FOURTH
-    // dispatch vocabulary on this row: what a panel button DOES at its lift
-    // (dispatch_modal_dialog_button reads it under the Stats owner and the
-    // other three vocabularies are zero/false there). The panel's row was
-    // **Close** alone for its first hours, its arm reading no bit exactly as
-    // the picker's still does; a SECOND button needs an act to name, and an
-    // index into the published plan would be geometry DECIDING (the doctrine
-    // at ModalDialogGeometry) rather than selecting. The order below is the
-    // ROW's, Close last as the escape sentinel.
-    //
-    // COPY TO CLIPBOARD is the panel's whole reason to be quotable (architect
-    // 2026-09-03: "all I really want is to select the whole thing, not just
-    // parts of it", the same morning's selection model retired for being more
-    // machinery than the need): its act copies the report WHOLE and its key
-    // twin is Ctrl+C in the panel's own router.
-    enum class StatsButtonAct { None, CopyReport, Close };
     // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
     // session's own Enter / Esc. The picker shared it for a day, its OK being
     // the open act on the highlight, and lost the button rather than the bit
@@ -6328,7 +6295,6 @@ struct AppState {
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
-        StatsButtonAct  stats_act  = StatsButtonAct::None;   // the panel's
         // THE PLAYER ROW'S DISABLED FACE (architect 2026-08-30: the
         // transport keys are their own class), published per frame exactly
         // as the rects are, from render_player_button_enabled (whose
@@ -6408,11 +6374,10 @@ struct AppState {
     // WM close can raise the unsaved-work prompt over a standing editor), so
     // this and paint_modal_dialog cannot disagree about whose geometry the
     // stash holds.
-    // THE RENDER PLAYER, THE PICKER AND THE STATS PANEL ARE THE LOWER RANKS
-    // (2026-08-28; the panel joined 2026-09-03): under the prompt, beside the
-    // editors — no two of the four can stand together, so the order among them
-    // is free, and the three mode bits are asked first only because each is
-    // cheaper than the four is_active tests. THIS IS ONE OF THE THREE PLACES
+    // THE RENDER PLAYER AND THE PICKER ARE THE LOWER RANKS (2026-08-28):
+    // under the prompt, beside the editors — no two of the three can stand
+    // together, so the order among them is free, and the two mode bits are
+    // asked first only because each is cheaper than the is_active tests. THIS IS ONE OF THE THREE PLACES
     // THE RANKING IS SPELLED and they must agree (paint_modal_dialog's `*_up`
     // fork and modal_dialog_stash_current's live ladder are the others), or the
     // owner-tag doctrine above breaks.
@@ -6420,7 +6385,6 @@ struct AppState {
         if (prompt.active) return prompt.session;
         if (render_player.active) return render_player.session;
         if (picker.active) return picker.session;
-        if (stats_panel.active) return stats_panel.session;
         return dialog_editor_session();
     }
 
@@ -8399,46 +8363,6 @@ struct AppState {
     };
     Picker picker;
 
-    // -- THE AV SYNC STATS PANEL'S WHOLE STATE (architect 2026-09-03) -------
-    //
-    // Shift+L, the AV Sync Stats panel: the folder overlay's THIRD content, a listing of
-    // TEXT rows saying what the audio device and the display report about
-    // themselves and, from the two, by how much the painted line leads the
-    // sound (the readings are av_sync_stats.h's, the rows are
-    // compose_av_sync_rows'). It holds NOTHING beyond the two fields below —
-    // the rows live in the overlay like every other content's, and the figures
-    // are read fresh every frame and never stored.
-    //   `active`   the mode bit — the FIFTH ModalDialogOwner (Stats) and, with
-    //              the overlay's tag, the panel's standing predicate;
-    //   `session`  its modal session id from the one counter
-    //              (text_editor::next_session_id), minted at every open.
-    //
-    // THE MEASUREMENTS RUN ONLY WHILE THIS BIT IS UP, and that is the whole
-    // point of the feature (the architect's ruling: "in all cases the
-    // measurements should be disabled when not explicitly requested by the
-    // user"). The open arms the display instrument through
-    // GuiPlatform::set_display_measurement and the close disarms it; the audio
-    // half is a plain query the per-frame refresh makes, and that refresh runs
-    // under this bit alone (GuiInputHandler::refresh_stats_panel_rows, called
-    // from the run loop's tick). With the panel down no feedback object exists,
-    // no ring turns and no port latency is read.
-    //
-    // The opener refuses under a prompt, an editor, the render player, a
-    // standing picker, a standing panel, the `h` history view and a load; the
-    // one close body is GuiInputHandler::close_stats_panel (Esc, the Close
-    // button and Ctrl+Q's road all pass through it), which resets the overlay
-    // with it. It authors nothing: no undo, no dirty, legal on a read-only tab.
-    //
-    // THE ROWS ARE ALSO THE COPY (2026-09-03): the row table below is what the
-    // modal row's **Copy to Clipboard** button and the router's Ctrl+C join and
-    // hand to the system clipboard (GuiInputHandler::copy_stats_panel_report),
-    // so the report quoted and the report painted are one set of strings.
-    struct StatsPanel {
-        bool     active  = false;
-        uint64_t session = 0;
-    };
-    StatsPanel stats_panel;
-
     // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
     // onto a background worker.) Written on the MAIN THREAD at exactly two
     // edges — true when run_history_commit dispatches the job, false when the
@@ -8882,16 +8806,14 @@ struct AppState {
     // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28) ---------------------
     //
     // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
-    // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
-    // output folders and their wavs; the OPEN PROJECT PICKER, with the
-    // valid project folders under `projects_path`; and, since 2026-09-03, the
-    // AV SYNC STATS PANEL, with TEXT rows that are lines and nothing else.
-    // (A fourth stood for one
-    // day — the `h` view's history picker, retired 2026-08-29: "overengineered;
-    // I don't really need it", the view's `'` raising its confirmation on the
-    // viewed member directly now — and the TEXT kind it introduced is what the
-    // stats panel produces.) Everything the panel remembers is
-    // here and nothing else is:
+    // fills it. TWO CONTENTS FILL IT: the RENDER PLAYER, with the project's
+    // output folders and their wavs; and the OPEN PROJECT PICKER, with the
+    // valid project folders under `projects_path`. (A third, the AV Sync
+    // Stats panel's text lines, stood 2026-09-03..30 and was deleted with the
+    // panel; a fourth stood for one day — the `h` view's history picker,
+    // retired 2026-08-29: "overengineered; I don't really need it", the view's
+    // `'` raising its confirmation on the viewed member directly now.)
+    // Everything the panel remembers is here and nothing else is:
     //   `owner`       WHOSE CONTENT THE ROWS ARE, and THE PANEL'S ONE
     //                 STANDING PREDICATE: the overlay stands iff this is not
     //                 None (folder_overlay_stands, below — every paint site,
@@ -8900,16 +8822,13 @@ struct AppState {
     //                 None at its close; the picker writes ProjectPicker at
     //                 its open and None at every close
     //                 path (the reopen's tail included, all of them through
-    //                 close_picker); the stats panel writes Stats at its open
-    //                 and None at close_stats_panel. ONE ROW ACT FORKS ON IT —
+    //                 close_picker). ONE ROW ACT FORKS ON IT —
     //                 the OPEN, which
     //                 under the player enters a batch folder or plays a wav
     //                 (going UP is the row's act no longer: since 2026-09-01
     //                 the listings carry no `..` row and Up is a button and
     //                 Backspace) and under the picker reopens the row's
-    //                 project, WHILE THE STATS PANEL HAS NO OPEN AND NO
-    //                 HIGHLIGHT AT ALL, its rows being inert; the
-    //                 lift's highlight is the other two owners' alike (the
+    //                 project; the lift's highlight is both owners' alike (the
     //                 picker's band IS its whole state — there is no field to
     //                 feed);
     //   `rows`        the listing, rebuilt WHOLE at every folder entry and
@@ -8979,27 +8898,17 @@ struct AppState {
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph: Folder wears the folder glyph and Wav
     // the wav glyph (the transport glyph on the item's row). A KIND EXISTS IFF
-    // A CONTENT PRODUCES IT, which is why this enum has lost one and regained
-    // another:
+    // A CONTENT PRODUCES IT, which is why this enum has lost two:
     //   * UP — the `..` row, the folder glyph over the parent — went on
     //     2026-09-01, when the player moved inside `tmp/` and going up became a
     //     BUTTON on the modal row (PlayerButtonAct::Up) instead of a row in the
     //     listing. It has no producer and is not here.
     //   * TEXT — no glyph, no act — carried the one-day history picker's rows
-    //     and went with that content on 2026-08-29. IT IS BACK WITH A PRODUCER
-    //     SINCE 2026-09-03: the AV sync stats panel's every row is one, and the
-    //     kind is what the painter reads to draw no glyph, seat the text at the
-    //     button's own inset and skip the face ladder whole.
-    // (The project picker produces neither: its rows are Folder rows.)
-    //
-    // A TEXT ROW IS INERT. It takes no hover face, no highlight face and no
-    // press arm, and the two row-act switches (folder_overlay_open_row and
-    // folder_overlay_highlight_row, input_pointer.cpp) answer nothing under its
-    // owner. What the band still does under it is what the band does anywhere:
-    // it CONSUMES a press (it is opaque) and it SCROLLS, by the wheel on
-    // plastic and by the band's own drag on glass.
+    //     (to 2026-08-29) and then the AV Sync Stats panel's lines
+    //     (2026-09-03..30), and went with the panel.
+    // (The project picker produces Folder rows alone.)
     struct FolderOverlayRow {
-        enum class Kind { Folder, Wav, Text };
+        enum class Kind { Folder, Wav };
         Kind                       kind = Kind::Wav;
         std::string                name;
         std::filesystem::path      path;
@@ -9015,16 +8924,12 @@ struct AppState {
         bool    scrolling       = false;
     };
     struct FolderOverlay {
-        // THE THREE CONTENTS (Stats joined 2026-09-03). The tag IS the standing
-        // predicate (folder_overlay_stands, below), and it is the one thing the
-        // open act forks on — and, since 2026-09-03, the one thing the ROW
-        // PITCH AND THE FACE fork on (folder_overlay::text_listing: the stats
-        // panel's rows are monospace text lines and stand at that line's
-        // height, the other two contents' rows the sans in the button's box).
-        // Everything else about
-        // the panel — the band, the scroll, the walk — is the widget's and
-        // knows nothing about which content fills it.
-        enum class Owner { None, Player, ProjectPicker, Stats };
+        // THE TWO CONTENTS. The tag IS the standing predicate
+        // (folder_overlay_stands, below), and it is the one thing the open act
+        // forks on. Everything else about the panel — the band, the scroll,
+        // the walk — is the widget's and knows nothing about which content
+        // fills it.
+        enum class Owner { None, Player, ProjectPicker };
         Owner              owner         = Owner::None;
         std::vector<FolderOverlayRow> rows;
         int                scroll_px     = 0;
@@ -9828,13 +9733,14 @@ bool render_player_home_takes_previous(const AppState& a,
 
 // IS A RENDER RUNNING THAT A LOAD IN PLACE MUST NOT RACE — the batch queue
 // or an armed archival, both publishing into the folders the load wipes.
-// ONE OWNER, FOUR READERS as re-greped 2026-09-15 (the expression stood
+// ONE OWNER, FIVE READERS as re-greped 2026-09-30 (the expression stood
 // spelled twice before the face joined): the player's load act
 // (render_player_load_in_place, input_key_dispatch.cpp — the card "Cannot
 // load in place while a render is running"), the standalone mutator's own
 // backstop (load_render_entry_in_place), the Load in place button's face
-// (render_player_button_enabled) and, since 2026-09-15, THE PLAYER'S OPEN
-// (GuiRenderPlayer::open, the card kRenderPlayerWhileRenderingCard below).
+// (render_player_button_enabled), since 2026-09-15 THE PLAYER'S OPEN
+// (GuiRenderPlayer::open, the card kRenderPlayerWhileRenderingCard below) and,
+// since 2026-09-30, the Play renders button's face (redesign_button_enabled).
 // THE OPEN ASKS THE SAME QUESTION FOR A REASON OF ITS OWN, not the load's
 // race: closing the player — or pressing its Up — runs the unload's view
 // re-express, whose target-view ensure_ready triggers a fresh preview over a
@@ -10173,19 +10079,19 @@ inline int64_t snap_authored_frame(double frame) {
 // through scroll_drag, exactly as a held upper-half press is. The target-view
 // TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// NINE CONSUMERS AT NINE CALL SITES, re-greped 2026-09-13 (the render
+// EIGHT CONSUMERS AT EIGHT CALL SITES, re-greped 2026-09-30 (the render
 // player's key gate joined with the player's two arms above and THE PICKER'S
 // GATE with the picker, both on 2026-08-28 — the count read SEVEN until the
 // 2026-08-29 re-grep found the second of that pair missing from this list; the
 // CENTERED VIEWPORT'S derive joined 2026-09-01 at two call sites of its own
-// and left with the pin on 2026-09-13; THE STATS PANEL'S KEY GATE joined
-// 2026-09-03; the follow
+// and left with the pin on 2026-09-13; THE AV SYNC STATS PANEL'S KEY GATE
+// joined 2026-09-03 and left with the panel on 2026-09-30; the follow
 // chase joined 2026-08-12; the
 // eighth ruling's touch half had left FIVE, its mouse half FOUR — deleting the
 // bare right-press scrub's gate — and the timer-free touch model had deleted
 // begin_touch_trim_move the same day). EACH STATES THE SAME
 // "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and they split into
-// two kinds: the SEVEN INPUT-ROUTE consumers refuse events, and the run loop's
+// two kinds: the SIX INPUT-ROUTE consumers refuse events, and the run loop's
 // TWO — the per-tick hover refresh and the pre-paint follow chase — pause the
 // world's autonomous movers for the gesture's life:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
@@ -10211,11 +10117,6 @@ inline int64_t snap_authored_frame(double frame) {
 //     swallows every key under a live gesture with the same single Ctrl+Q
 //     hatch. Two gates rather than one because each owns its own router;
 //     folder_overlay_stands is what makes the arm one thing under both;
-//   * THE AV SYNC STATS PANEL'S KEY GATE (input_handler.cpp's on_key,
-//     2026-09-03) — the picker's clause spelled a third time at the panel's
-//     own rank, on the same argument and with the same single Ctrl+Q hatch:
-//     the overlay's band arm is a member of this predicate under this owner
-//     too, and the panel's router is its whole vocabulary;
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
@@ -14205,9 +14106,9 @@ bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
 // (press_on_live_menu_anchor, input_pointer.cpp). A button that is not an
 // anchor answers false; no caller asks one. TWO CLAUSES:
 //
-//   * THE MODE PARTITION (the `h` history view and the folder overlay's three
-//     contents — the render player, the Open project picker, the AV Sync
-//     Stats panel): EDIT AND SETTINGS ARE DEAD, FILE IS NOT. Settings because
+//   * THE MODE PARTITION (the `h` history view and the folder overlay's two
+//     contents — the render player and the Open project picker): EDIT AND
+//     SETTINGS ARE DEAD, FILE IS NOT. Settings because
 //     its rows reach the settings editor by a direct call that meets no mode
 //     gate; Edit because every row is a chord the view's allowlist and the
 //     overlay's routers drop (architect 2026-08-04, 2026-08-20, and for the
@@ -14610,8 +14511,8 @@ inline bool playback_launch_playable(const AppState& a,
 // term, recompute_redesign_button_hover — but that is the pointer's fact,
 // not a face state this predicate answers). THE FOLDER OVERLAY IS THE
 // EXCEPTION (architect 2026-08-28, R3: "everything else greys as in the `h`
-// view"): while the band stands — under the render player, the picker or the
-// AV Sync Stats panel — EVERY roster button is dead BUT THE FILE ANCHOR,
+// view"): while the band stands — under the render player or the picker —
+// EVERY roster button is dead BUT THE FILE ANCHOR,
 // which the menu row keeps lit above the band (architect 2026-09-03 evening;
 // the anchors answer at the head of the body from menu_anchor_live, whose
 // mode clause kills the other two, and the view bar is dead with the rest).
@@ -14861,11 +14762,10 @@ inline bool redesign_button_enabled(const AppState& a,
     // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER BUT THE FILE ANCHOR,
     // whichever content owns it (architect 2026-08-28, the ruled exception
     // recorded above the signature: "everything else greys as in the `h`
-    // view"). Under the PLAYER, the PICKER and the AV SYNC STATS PANEL the
-    // pointer rule is the veil (every press outside the overlay band and the
-    // modal row is consumed — render_player_active, picker_active and
-    // stats_panel_active, input_handler.h), and this line is the face that
-    // says so for all three. It is ranked first, above the `h` partition, so
+    // view"). Under the PLAYER and the PICKER the pointer rule is the veil
+    // (every press outside the overlay band and the modal row is consumed —
+    // render_player_active and picker_active, input_handler.h), and this line
+    // is the face that says so for both. It is ranked first, above the `h` partition, so
     // a band standing over any state greys everything that partition would
     // have lit.
     //
@@ -15075,7 +14975,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // toggle always acts, so the lamp never greys for them, and a
         // modified press whose step would refuse reaches the key's own card.
         case RedesignButton::IconRestrictUndo:
-        // PLAY RENDERS MIRRORS NOTHING (2026-08-28, when bare `l` became the
+            return true;
+        // PLAY RENDERS IGNORES THE LOCK (2026-08-28, when bare `l` became the
         // RENDER PLAYER's opener): the player plays a rendered wav and authors
         // nothing, so the lock admits the chord and this face follows the key
         // rather than greying under it — the read-only-legal set's own rule.
@@ -15089,21 +14990,17 @@ inline bool redesign_button_enabled(const AppState& a,
         // `h` view greys it through the derived partition above, bare `l`
         // being consumed in there. THE LOAD is what the lock refuses, and that
         // refusal belongs to the player's own Load in place button.
-        // Its shifted twin (Shift+L, the AV sync stats panel — 2026-09-03)
-        // costs this arm nothing, and the twin rule says why: an arm greys
-        // only where BOTH admitted forms would change nothing, and neither
-        // form is mirrored here at all. The `h` view's partition answers for
-        // both, its allowlist dropping the shifted chord exactly as it drops
-        // the bare one.
-        // A RUNNING RENDER DOES NOT GREY IT EITHER (architect 2026-09-15), and
-        // here the twin rule is the whole reason: the plain press's open
-        // refuses while a run stands (load_in_place_render_blocked, carding
-        // kRenderPlayerWhileRenderingCard), but the shifted press opens the
-        // stats panel, which touches no render and stays live — so one admitted
-        // form always does something, the button stays ENABLED, and the plain
-        // lift reaches the act, whose card says why.
+        // A RUNNING RENDER GREYS IT (2026-09-30): the open refuses while a run
+        // stands (load_in_place_render_blocked, carding
+        // kRenderPlayerWhileRenderingCard), a flag read and so a cheap
+        // refusal this face mirrors. From 2026-09-15 the button stayed enabled
+        // under a run because its shifted twin opened the AV Sync Stats panel,
+        // which touched no render (the twin rule); the twin went with the
+        // panel on 2026-09-30, and the face reads the plain act alone. The
+        // per-tick roster comparator (main.cpp) carries the run's start and
+        // end onto the face.
         case RedesignButton::IconListen:
-            return true;
+            return !load_in_place_render_blocked(a);
         // THE READ-ONLY TOGGLE MIRRORED NOTHING UNTIL 2026-09-10 (2026-08-14):
         // bare `o` was always meaningful on a loaded piece — it locks a
         // writable tab and unlocks a locked one — so there was nothing to
@@ -16581,13 +16478,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // rung's one glass road is the S Pen's side button. The admission stays
 // because the SHIFT-CLICK is real and because the tooltip's second line is
 // bound to this predicate.)
-// (PLAY RENDERS JOINED 2026-09-03 EVENING, with Shift+L: its plain act opens
-// the render player and its shifted twin opens the AV sync stats panel — the
-// same rule as the drop's and the copy's above, a shift-enabled gesture whose
-// bare form has a button. The long press is what the admission is really for
-// here: this was the tablet's first road to the panel that was not the Help
-// menu — and since that menu's 2026-09-09 deletion the tablet's ONLY road,
-// the panel being a hardware check a glass rig wants most.)
+// (Play Renders admitted shift from 2026-09-03 to 2026-09-30, its shifted
+// press and its long press opening the AV Sync Stats panel; the admission
+// went with the panel.)
 // (THE TWO TABS JOINED 2026-09-14 with Ctrl+Shift+Tab, the PAIRED MARCH
 // (architect): the chord is Ctrl+Tab's shifted form and Ctrl+Tab's buttons
 // are the tabs, so the rule above put the march on them and deleted the bottom
@@ -16667,7 +16560,6 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconMarkerDrop ||
            b == RedesignButton::IconMarkerInherit ||
            b == RedesignButton::IconFlatten ||
-           b == RedesignButton::IconListen ||
            b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportSwitchTab ||
            b == RedesignButton::TransportUp ||
@@ -17085,11 +16977,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // KEYS are untouched: bare `'` still opens the player from the
         // keyboard outside the view, an alias the no-second-road doctrine
         // permits because that doctrine is about pointer homes.
-        // ITS SECOND LINE ARRIVED 2026-09-03 EVENING with Shift+L, the AV sync
-        // stats panel — the shift-twin rule, one letter carrying the folder
-        // overlay's two contents.
+        // One line: its second, "Press Shift for the AV sync stats.", went with
+        // the AV Sync Stats panel on 2026-09-30, and the button admits no
+        // modifier.
         case RedesignButton::IconListen:
-            return {"Play Renders (L)", "Press Shift for the AV sync stats."};
+            return {"Play Renders (L)", nullptr};
         // THE READ-ONLY TOGGLE (2026-08-14), one line: bare `o` toggles and
         // has no shifted twin. The TEXT NAMES THE TOGGLE (the lamp rule at
         // this table's head) while the glyph and the lamp carry the state;

@@ -633,14 +633,14 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // existing lock refusal are untouched, and drift here stays what it always was
 // — a MISSED CARD, never a wrong act.
 //
-// THE THREE MODE ROUTERS ARE NOT, and that is the line: while the RENDER
-// PLAYER, the PICKER or the AV SYNC STATS PANEL stands, its router IS the whole
-// vocabulary and the dispatch
+// THE TWO MODE ROUTERS ARE NOT, and that is the line: while the RENDER
+// PLAYER or the PICKER stands, its router IS the whole vocabulary and the
+// dispatch
 // below it never runs, so its keys are its own world and not the product's —
 // bare `r` flips Repeat one in the player and binds nothing anywhere else
 // (the render chords are Ctrl+Alt), and an `r` pressed outside it must be as
-// silent as any unbound letter. None of the three
-// routers can reach a gate below it either (all are ranked above all six), so
+// silent as any unbound letter. Neither
+// router can reach a gate below it either (both are ranked above all six), so
 // no term for them could ever be asked. THE EDITORS ARE THE SAME KIND OF
 // WORLD: an editor's own keys (its motion arm, its ctrl-exact clipboard
 // chords, its printable insertion) are consumed by the editor itself and
@@ -694,9 +694,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // 2026-09-13, `y` the keep-centered lamp 2026-08-31 to 2026-09-14,
         // `m` the bpm opener and `t` the S/T flip both 2026-08-01 (`m`)/
         // earlier to 2026-09-15, when the architect moved the opener to
-        // Ctrl+B, below, and deleted `t` whole with its view lamp).
+        // Ctrl+B, below, and deleted `t` whole with its view lamp; `l` the
+        // render player's opener left it 2026-09-03 for Shift+L, the AV Sync
+        // Stats panel, and rejoined it 2026-09-30 when the panel was deleted).
         case GuiKeys::I:
         case GuiKeys::K:
+        case GuiKeys::L:
             return bare;
         // THE LETTER CARRIES TWO ACTS: bare `c` centres (every state), and
         // CTRL+C copies the focused marker's resolved value (architect
@@ -715,11 +718,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The BPM opener, Ctrl+B since 2026-09-15 (moved off bare `m`: a Ctrl
         // chord guards against a stray bare press, as Ctrl+D / Ctrl+N do).
         case GuiKeys::B: return cl;
-        // The folder overlay's two openers on one letter (2026-09-03): bare
-        // `l` toggles the render player and Shift+L toggles the AV sync stats
-        // panel. It left the bare-only group above the day the shifted twin
-        // landed.
-        case GuiKeys::L: return bare || sh;
         // -- THE `h` VIEW'S OWN BARE LETTERS, bound while it stands and unbound
         // outside it (2026-09-01, U4): `g` the walk source, `u` the compare
         // reading — both handle_history_mode_key's, behind its mode return —
@@ -868,7 +866,7 @@ static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
               "bare 1 is the S+W view selector and bare 3 the T+P one; "
               "digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
-              "bare Esc is bound; it is one of the nine-place contract's own "
+              "bare Esc is bound; it is one of the eight-place contract's own "
               "arms (the notification stack's clear), and its top-level "
               "silence is that arm's own, reached only with no card standing");
 static_assert(!chord_is_bound(GuiKeys::Escape,
@@ -949,13 +947,14 @@ static_assert(!chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Minus, GuiInputState{}, false),
               "`=` and `-` are unbound: the stepped zoom and its buttons were "
               "removed 2026-09-25, zoom being on every surface");
-// `l` is the one letter whose two forms are two contents of one band, so its
-// anchor witnesses the "only" whole: the two positives, then EVERY non-bare,
-// non-shift-only combination of the three modifiers as a negative. A widening
-// onto any of them trips here rather than at the next review.
+// `l` binds bare only since 2026-09-30, when Shift+L went with the AV Sync
+// Stats panel, so its anchor witnesses the "only" whole: the one positive,
+// then EVERY non-bare combination of the three modifiers as a negative — the
+// shifted form first, the one that was bound. A widening onto any of them
+// trips here rather than at the next review.
 static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::L,
-                                 GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::L,
+                                  GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::L,
                                   GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::L,
@@ -968,9 +967,8 @@ static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
                                   GuiInputState{false, true, true}, false) &&
                   !chord_is_bound(GuiKeys::L,
                                   GuiInputState{true, true, true}, false),
-              "`l` binds bare and shifted only — the render player and its "
-              "shifted twin the AV sync stats panel — and none of the six "
-              "other modifier combinations spells anything");
+              "`l` binds bare only — the render player — and none of the "
+              "seven modifier combinations spells anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
 // Ctrl+Alt File → Revert — and no shifted spelling of any of them.
 static_assert(chord_is_bound(GuiKeys::O,
@@ -1219,28 +1217,6 @@ inline bool is_trim_maximize_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Digit0 && mods.shift && !mods.ctrl && !mods.alt;
 }
 
-// True for the chord that opens and closes the AV sync stats panel (architect
-// 2026-09-03): Shift+L exactly, no ctrl and no alt. Bare `l` is the render
-// player's opener and this is its shifted twin, so the folder overlay's two
-// list-and-panel contents sit on one letter in the shape `s` / Shift+S already
-// carries (and `j` / Shift+J carried until 2026-09-29). The shifted `l` was the strict rule's consumed
-// no-op until this date, so the binding costs no other chord anything. The act
-// is GuiInputHandler::toggle_av_sync_stats, whose open half carries every gate
-// in its own body — the modal refusals, the `h` view, the loading state — which
-// is what let the Help menu's row (2026-09-03..09) reach it with no chord at
-// all for its first hours. Since that menu's deletion this chord and the Play
-// renders button's shifted press are the panel's two roads.
-// Three readers, the shape shared so none can drift: on_key's dispatch arm
-// (handle_mode_keys, beside bare `l`), the read-only allowlist
-// (read_only_key_blocked, which admits it — the panel measures the hardware and
-// authors nothing) and the panel's own router, where this same chord is the
-// closer. The `h` view refuses it at that mode's allowlist like every chord it
-// does not name (the same answer the dead Help anchor gave the pointer in
-// there while it stood).
-inline bool is_av_sync_stats_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::L && !mods.ctrl && mods.shift && !mods.alt;
-}
-
 // THE VALUE PAIR (architect 2026-08-29), the two acts that replaced the
 // retired resolved readout: CTRL+C COPIES the focused marker's resolved value
 // to the system clipboard (architect 2026-09-29, Copy Resolved Value's chord
@@ -1249,9 +1225,8 @@ inline bool is_av_sync_stats_key(GuiKey key, GuiInputState mods) {
 // pass's owner or the ref's definition — on the OTHER A/B tab, so the two tabs
 // stand on the reference and its definition at once (Jump to Defining Marker,
 // the bottom row's verb group). Ctrl+C is free in the main window: bare `c`
-// is the centre key, and the text editors' and the AV sync stats panel's own
-// Ctrl+C are their routers', which run ahead of this dispatch while they
-// stand.
+// is the centre key, and the text editors' own Ctrl+C is their router's,
+// which runs ahead of this dispatch while it stands.
 //
 // BOTH ARE CTRL-EXACT, so shift and alt decorations stay
 // the strict rule's consumed no-ops, and both are ONE-SHOT
@@ -1285,7 +1260,7 @@ inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
 // view's allowlist (history_mode_key_blocked, which admits it — the lamp is
 // chrome, not that view's business) and the dispatch arm (Backslash's case in
 // handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
-// reaches). The folder overlay's three routers answer the same bare key in
+// reaches). The folder overlay's two routers answer the same bare key in
 // their own bare switches (a Backslash case under each router's bare-only
 // catch-all), outside the main dispatch this predicate serves.
 inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {

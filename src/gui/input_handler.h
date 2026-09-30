@@ -640,8 +640,8 @@ bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
 // THE CLIPBOARD REFUSAL'S ONE SENTENCE, composed for whichever write met it —
 // the verb is the act's own word ("copy", "cut"). The body and the reasoning
 // are at its definition (input_key_dispatch.cpp); it is declared here because
-// its raisers now live in two translation units, the editor's cut having
-// joined the two carded copies on 2026-09-03.
+// its raisers live in two translation units, the editor's cut having
+// joined the carded copies on 2026-09-03.
 void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
 
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
@@ -1491,7 +1491,7 @@ struct GuiInputHandler {
     //     anchor OPENS that menu through toggle_dropdown. It PRESUMES NO MENU IS
     //     OPEN and no modal or gesture owns the pointer, which that placement
     //     guarantees — the open-dropdown branch returns far above the tail, and
-    //     so do the prompt, the dialog editors, the folder overlay's three
+    //     so do the prompt, the dialog editors, the folder overlay's two
     //     contents and every live gesture —
     //     plus ONE condition the call site restates because nothing above
     //     returns on it: a HELD PRIMARY BUTTON refuses the open (the
@@ -1499,7 +1499,7 @@ struct GuiInputHandler {
     //     anchors the `h` view and the folder overlay kill are refused inside
     //     toggle_dropdown (the anchor's painted face, stamped from
     //     menu_anchor_live), not here. SO THE ARMED
-    //     HOVER OPEN IS UNREACHABLE UNDER THE BAND — the three overlay
+    //     HOVER OPEN IS UNREACHABLE UNDER THE BAND — the two overlay
     //     branches return above this tail — while the hover SWITCH, which
     //     lives in the open-dropdown branch above them, is live there: File
     //     can be opened by a press over the band and the pointer can cross to
@@ -1580,7 +1580,7 @@ struct GuiInputHandler {
     // rect (the box hangs outside the strip; the argument is at the
     // definition).
     // NO ROSTER WAIT RUNS UNDER A MODAL SURFACE: the roster's walk refuses one
-    // while a prompt, a keyboard-modal editor or one of the three list owners
+    // while a prompt, a keyboard-modal editor or one of the two list owners
     // is up, through tooltip_dwell_suppressed (the rule is stated at the
     // walk's tail), so a roster tooltip cannot come back under one. THE
     // MODAL'S OWN BUTTONS DO carry hints since 2026-08-13 — a different
@@ -1805,18 +1805,6 @@ struct GuiInputHandler {
     // picker cluster below, private beside its openers); public for that one
     // caller, exactly as the editors' body above is.
     void close_picker();
-    // AND THE AV SYNC STATS PANEL'S, the same road one line further
-    // (2026-09-03): the one close body of the panel — it disarms the display
-    // measurement, so the close road cannot leave the instrument running
-    // behind a torn-down window. Public for that one caller, exactly as the
-    // two above are; its contract is with the panel's cluster below.
-    void close_stats_panel();
-    // AND THE PANEL'S PER-FRAME REFRESH, public for the run loop's tick, which
-    // is its ONE caller (main.cpp). It returns on its first line with the mode
-    // bit down, which is what makes the measurements gated: no reading is
-    // taken and no frame is driven while the panel is closed. Contract with
-    // the panel's cluster below.
-    void refresh_stats_panel_rows();
 
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // — THE DEFECT IS WHY THIS EXISTS, and it is worth stating before the
@@ -2609,8 +2597,8 @@ private:
 
     // P / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
     // clipboard ops, `i` iteration mode, `k` ADD TO
-    // SELECTION (the sticky ctrl, 2026-08-18) and `l` / Shift+L, the folder
-    // overlay's two openers. Returns true if key+mods matched one (on_key then
+    // SELECTION (the sticky ctrl, 2026-08-18) and `l`, the render player's
+    // opener. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
     // The two phase-reset pastes' shared refusal ladder, carded (true =
@@ -2748,8 +2736,8 @@ private:
     //       Ctrl+O in silence, and the File menu's Open Project row IS that
     //       chord (the row dispatches it through on_key), so no road reaches
     //       this body from in there even with the anchor live above the band
-    //       since that evening — and the picker's and the stats panel's
-    //       routers answer the same way. ("Close the render player first"
+    //       since that evening — and the picker's router answers the same
+    //       way. ("Close the render player first"
     //       stood from 2026-08-30 and a close-then-open body replaced it for
     //       the one day the File anchor stayed lit under the panel; both are
     //       retired.) It
@@ -2868,7 +2856,7 @@ private:
     // render is killed by the teardown's worker join, as the picker's reopen
     // kills one. Legal on a read-only tab, under the iteration lock and in the
     // `h` view (the three allowlists admit is_revert_project_key); unreachable
-    // under the three list owners, whose routers consume the chord and the
+    // under the two list owners, whose routers consume the chord and the
     // File menu's Revert row with it.
     //
     // `question_asked` IS THE PULL'S RELOAD (architect 2026-09-27): its own
@@ -2886,103 +2874,6 @@ private:
     // release's re-ask, the touch region begin, the stash's live owner) say
     // what they mean, exactly as render_player_active below does.
     bool picker_active() const { return app.picker.active; }
-
-    // -- THE AV SYNC STATS PANEL (architect 2026-09-03) --------------------
-    //
-    // THE PANEL IS the folder overlay's THIRD content, a listing of TEXT rows
-    // over a bottom row that is **Copy to Clipboard · Close**. What it shows
-    // and why the two figures mean what they do is at av_sync_stats.h; what is
-    // here is the mode.
-    //
-    // ONE OPENER, REACHED TWO WAYS: Shift+L on the keyboard
-    // (is_av_sync_stats_key, gui_input.h — bare `l`'s shifted twin, both
-    // toggles of one overlay), and the Play renders button's shift-click or
-    // long press, which synthesizes the same chord. (A THIRD road, the Help
-    // menu's one row, stood 2026-09-03..09 — its chord like every other
-    // command row once bound, dispatching Shift+L through on_key — and went
-    // with that menu at the top strip relayout. The row carried no chord at
-    // all from the panel's landing that morning until that evening, the
-    // opener's own body holding the gates a chord would have met; the gates
-    // stayed where they are and the road count changed.) The opener refuses —
-    // silently, touching no playback — under a prompt, under any
-    // keyboard-modal editor, under the render player, under a picker, under a
-    // standing panel, in the `h` history view and during a load; past every
-    // one of those it takes the shared modal stop
-    // (stop_playback_for_modal_open, whose decision table names every dialog
-    // modal surface), raises the band and arms the display measurement.
-    //
-    // THE MEASUREMENTS RUN ONLY WHILE IT STANDS, which is the feature and not
-    // an optimization (the architect's ruling). Three things are gated and
-    // each is gated at its own owner: the DISPLAY instrument, armed and
-    // disarmed by this pair through GuiPlatform::set_display_measurement, so
-    // no presentation feedback object is ever created with the panel down; the
-    // AUDIO read, which is a plain query refresh_stats_panel_rows makes and
-    // nothing else in the product calls; and the PER-FRAME PAINT, which is
-    // that same refresh, called from the run loop's tick under the mode bit
-    // (main.cpp) and from nowhere else.
-    //
-    //   open_av_sync_stats:       the opener (above), with
-    //     toggle_av_sync_stats the keyboard's toggle over it and the one close
-    //     body.
-    //   close_stats_panel:        THE ONE CLOSE BODY — Esc, the Close button
-    //     and Ctrl+Q's / the compositor's close road (GuiPrompt::request_close,
-    //     beside the player's and the picker's) all pass through it. It
-    //     DISARMS the measurement, drops the overlay (the reset restores
-    //     Owner::None, which IS the band's standing predicate answering false)
-    //     and damages the whole window. A no-op when no panel stands.
-    //   refresh_stats_panel_rows: recompose the rows from the two live
-    //     readings and damage the band when a line changed. Called once per
-    //     tick while the panel stands; a no-op otherwise.
-    //   route_stats_panel_key:    THE WHOLE PLASTIC VOCABULARY while it
-    //     stands, in route_picker_key's shape and at its rank in on_key:
-    //     Ctrl+S saves (the save owner cards a checkpoint in flight);
-    //     Ctrl+C copies the whole report (copy_stats_panel_report, the button's
-    //     key twin); Ctrl+Q is THE ONE FALL-THROUGH; Tab / Shift+Tab walk the
-    //     ring [band, Copy to Clipboard, Close]; Esc closes; Up / Down SCROLL
-    //     THE BAND (there is no
-    //     highlight to walk — which is exactly why this panel could not reuse
-    //     route_picker_key and needed a modal owner of its own, the record
-    //     being at AppState::ModalDialogOwner); Shift+L closes, the opener's
-    //     own chord answering in here as bare `l` answers inside the player;
-    //     bare `\` toggles the tooltip lamp (set_show_tooltips, the player's
-    //     arm); every other bare key and every other modified chord is consumed,
-    //     silently.
-    //
-    // No undo, nothing authored, LEGAL ON A READ-ONLY TAB — it reads hardware
-    // and touches no piece.
-    void open_av_sync_stats();
-    // The panel's opener toggle for Shift+L (2026-09-03), bare `l`'s shifted
-    // twin and toggle_render_player's own shape: a standing panel closes
-    // through the one close body, and anything else opens through the one
-    // opener above, whose gates decide whether the open happens at all. Two
-    // callers, both keyboard: the dispatch arm in handle_mode_keys beside bare
-    // `l`, and the Play renders button's shift-click or long press, which
-    // synthesizes that same chord.
-    void toggle_av_sync_stats();
-    // Compose the rows from the two live readings and seat them in the
-    // overlay's table (the TABLE alone, so a refresh keeps the scroll offset
-    // and the band's press arm). A frame in which no line changed leaves the
-    // stored strings untouched and costs one composition — it does NOT decide
-    // whether the refresh damages, which is unconditional while the panel
-    // stands (the heartbeat's record is at refresh_stats_panel_rows). Two
-    // callers: the opener's first listing and the tick's refresh.
-    void build_stats_panel_rows();
-    // THE WHOLE REPORT ONTO THE SYSTEM CLIPBOARD, and its card. TWO CALLERS,
-    // one body: the modal row's Copy to Clipboard button at its lift
-    // (dispatch_modal_dialog_button's Stats arm) and Ctrl+C in the router
-    // below. It reads the overlay's own rows — no second copy of the text
-    // exists — and it CANNOT REFUSE, which is why its button carries no face
-    // arm (the reasoning is at the definition, input_key_dispatch.cpp).
-    void copy_stats_panel_report();
-    bool route_stats_panel_key(GuiKey key, GuiInputState mods);
-    // (close_stats_panel and refresh_stats_panel_rows are declared public
-    // above, beside close_picker, for GuiPrompt::request_close and for the run
-    // loop's tick.)
-    // The panel's standing predicate, the mode bit and nothing else — named so
-    // its readers (the veil, the cursor, the hover walk, the chrome release's
-    // re-ask, the touch region begin, the stash's live owner) say what they
-    // mean, exactly as picker_active above and render_player_active below do.
-    bool stats_panel_active() const { return app.stats_panel.active; }
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's
     // dialog pattern for the history view's OTHER act. Ctrl+S while the view
@@ -3821,8 +3712,8 @@ private:
     // THE TOOLTIP LAMP'S ONE SETTER (architect 2026-09-29) — one key: bare
     // backslash, which the icon row's Enable Tooltips button reaches by
     // synthesizing that press, in every state the roster is live (both locks
-    // and the `h` view admit it), and which the folder overlay's three
-    // routers (the render player's, the picker's, the stats panel's) answer
+    // and the `h` view admit it), and which the folder overlay's two
+    // routers (the render player's and the picker's) answer
     // through this setter too while the button is greyed there. The bit (AppState::show_tooltips) is a
     // per-project session posture, dark at every project open, never
     // serialized and never in the undo domain. THE DARK EDGE ENDS THE MODEL
@@ -3954,15 +3845,13 @@ private:
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // waveform press reaches the audio under it, and its roster presses were
     // never blocked to begin with.
-    // THE RENDER PLAYER, THE PICKER AND THE AV SYNC STATS PANEL ARE
-    // DELIBERATELY NOT IN IT (the first two 2026-08-28, the panel 2026-09-03):
-    // each is a MODE and not a text editor, so each has its own
-    // predicate (render_player_active, picker_active and stats_panel_active,
-    // above) and every
+    // THE RENDER PLAYER AND THE PICKER ARE DELIBERATELY NOT IN IT
+    // (2026-08-28): each is a MODE and not a text editor, so each has its own
+    // predicate (render_player_active and picker_active, above) and every
     // reader here was audited for whether the mode belongs in its answer —
     // the veil, the cursor, the hover walk's veil term and the chrome
-    // release's re-ask took a term of their own for all three (the wheel reads
-    // the overlay's standing predicate, which covers all three); the field's
+    // release's re-ask took a term of their own for both (the wheel reads
+    // the overlay's standing predicate, which covers both); the field's
     // I-beam,
     // the editors' Tab admission and the repeat arms did not (the ring's Tab
     // and the list walk repeat through each router's own arm).
@@ -3997,7 +3886,7 @@ private:
     // dead through redesign_button_enabled's first arm (their faces grey,
     // their press claims refuse). THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
     // above the band (architect 2026-09-03 evening — the `h` view's partition
-    // extended to all three overlay contents): its press reaches the menu-row
+    // extended to both overlay contents): its press reaches the menu-row
     // claim through press_on_live_menu_anchor, and its OPEN MENU then owns
     // every press outright, the dropdown's claim ranking above this veil and
     // above the band (so a press on a row while the menu stands dismisses the
@@ -4039,8 +3928,8 @@ private:
     // button); `r` the Repeat one lamp; `'` the Load in
     // place button's chord; bare Delete / Shift+Delete the Delete button's
     // two acts, at the root listing alone; bare `\` the tooltip lamp
-    // (set_show_tooltips, architect 2026-09-29 — the picker and the stats
-    // panel answer it too); `l` and Esc close; Ctrl+S falls through to the
+    // (set_show_tooltips, architect 2026-09-29 — the picker answers it
+    // too); `l` and Esc close; Ctrl+S falls through to the
     // save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
@@ -4070,9 +3959,8 @@ private:
     // the arm dropped, nothing committed). The claim is RANKED under the
     // prompt gate and under the OPEN DROPDOWN'S claim (a standing menu owns
     // every press before any band does — 2026-09-03, on_button_press), and
-    // ABOVE the THREE mode veils (the player's, the picker's
-    // and the AV Sync Stats panel's), each of which admits exactly the band
-    // and its own modal row;
+    // ABOVE the TWO mode veils (the player's and the picker's), each of which
+    // admits exactly the band and its own modal row;
     // it owns its own button gate so the rank costs the veils nothing.
     bool claim_folder_overlay_press(int x, int y, GuiMouseButton button,
                                     GuiInputState mods);

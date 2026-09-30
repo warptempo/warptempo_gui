@@ -282,9 +282,8 @@ enum class Kind {
 // AppState::ModalDialogOwner (app_state.h), which is the modal surfaces' ONE
 // authoritative enumeration and where a new one is added: the PROMPT
 // (PromptState::present, app_state.h), the RENDER PLAYER
-// (GuiRenderPlayer::open), the PICKER (GuiInputHandler::open_project_picker)
-// and, since 2026-09-03, the AV SYNC STATS PANEL
-// (GuiInputHandler::open_av_sync_stats, the open half of the Shift+L toggle).
+// (GuiRenderPlayer::open) and the PICKER
+// (GuiInputHandler::open_project_picker).
 // So the ids never collide across the classes and one integer compare answers
 // "is this published geometry the surface that owns input right now" (the
 // doctrine and the comparison's one owner are at

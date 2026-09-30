@@ -11,18 +11,12 @@
 //
 // The two families are the product's whole face inventory: the proportional
 // sans every row shapes and paints on (12pt x gui_scale, the text_shape
-// chokepoint's subject) and the monospace — ONE FACE, THREE CELLS since
-// 2026-09-03 (it was two, the clock's pair, from 2026-08-28): the row-8 clock,
-// the render player's `<position> / <length>` on the modal row, which takes
-// the row-8 cell's size and metrics, and the AV SYNC STATS PANEL's rows
-// (architect 2026-09-03 — a column of figures rebuilt every frame, which a
-// proportional face would make walk under the eye; the widening's own record
-// is at paint_handler.cpp's bottom-row text block, which owns the rule). The
-// RENDER PLAYER'S and the OPEN PROJECT PICKER'S listings were a fourth and a
-// fifth for the few hours of that evening he tried the monospace on them, and
-// he reverted them to the sans himself — the folder overlay's band forks its
-// face on folder_overlay::text_listing again, the panel alone taking this
-// one. Slant and weight are not parameters: every site is normal/normal, so a
+// chokepoint's subject) and the monospace — ONE FACE, TWO CELLS (since
+// 2026-08-28): the row-8 clock and the render player's `<position> /
+// <length>` on the modal row, which takes the row-8 cell's size and metrics.
+// The AV SYNC STATS PANEL's rows were a third from 2026-09-03 and went with
+// the panel on 2026-09-30; the rule's own record is at paint_handler.cpp's
+// bottom-row text block. Slant and weight are not parameters: every site is normal/normal, so a
 // face is named by its family and nothing else.
 //
 // This selects the FACE only. Size stays the caller's — each site sets its own

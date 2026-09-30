@@ -1,16 +1,12 @@
 #pragma once
 
 // THE FOLDER OVERLAY — the keyboard-slot LIST PANEL (architect design
-// 2026-08-28). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
-// and their wavs, the OPEN PROJECT PICKER's valid project folders, and — since
-// 2026-09-03 — the AV SYNC STATS PANEL's text lines (Shift+L,
-// av_sync_stats.h), the first content whose rows are INERT: no glyph, no
-// highlight, no act, the band scrolling and consuming presses under it as it
-// does under any content. (A fourth stood for one day, the `h` view's history
-// picker; it was retired 2026-08-29 as overengineered, that view's `'` raising
-// its confirmation on the viewed member with no list at all — and the TEXT
-// KIND it introduced is what the stats panel produces now.) Which one fills it
-// is
+// 2026-08-28). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
+// and their wavs, and the OPEN PROJECT PICKER's valid project folders. (A third
+// stood 2026-09-03..30, the AV Sync Stats panel's inert text lines, and went
+// with the panel; a fourth for one day, the `h` view's history picker, retired
+// 2026-08-29 as overengineered, that view's `'` raising its confirmation on
+// the viewed member with no list at all.) Which one fills it is
 // AppState::FolderOverlay::owner, and that tag IS the standing predicate
 // (folder_overlay_stands, app_state.h; stands() below forwards to it). This
 // header is the panel's ONE OWNER of everything that is not pixels, a press
@@ -24,8 +20,8 @@
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
-// icon and a name, and TEXT rows, which are a line and nothing else (an UP
-// row, `..`, was a fourth kind until 2026-09-01, when
+// icon and a name (a glyph-less TEXT kind went with the AV Sync Stats panel
+// on 2026-09-30, and an UP row, `..`, was a kind until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
 // row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
 // full window width, standing from DIRECTLY UNDER THE ICON ROW'S BORDER
@@ -44,7 +40,7 @@
 // (architect 2026-09-03 evening: "leave File open, because Quit should still
 // be enabled — everything else like what we do with history ... Leave that
 // for the player, the picker and the AV stats"). So FILE IS LIVE above the
-// band on every content — its press exempted from the three veils at
+// band on every content — its press exempted from the two veils at
 // press_on_live_menu_anchor, its menu opening onto Quit (Open Project and
 // Revert grey there since 2026-09-24, the overlay's routers consuming their
 // chords) — while Edit and Settings grey through
@@ -112,16 +108,9 @@
 //     button analogy"; "the buttons are good enough size for my finger"). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
 //     ("project and file names will be short"), the painter clipping it to
-//     the row. A TEXT ROW IS A LINE OF TEXT AND STANDS AT A TEXT LINE'S
-//     PITCH (architect 2026-09-03, on the stats panel's lines sitting one
-//     to a button box: "the copy button uses single line spacing (correct)
-//     but the display shows double spacing (incorrect)"): the monospace
-//     face's own ascent plus descent at the clock's size, measured and not
-//     authored, with NO gap between lines — a line's leading is inside its
-//     extents, and the copy the same rows yield has no blank line between
-//     them either — and its words at the button's own inset, where a glyph
-//     row seats its glyph. The button ruling is untouched for the folder and
-//     wav rows; the row geometry forks ONCE, at text_listing below.
+//     the row. (The AV Sync Stats panel's text rows stood at a monospace
+//     line's pitch, the row geometry's one fork, from 2026-09-03 until the
+//     panel's deletion on 2026-09-30.)
 // The panel's ONE authored number of its own is the outer inset below.
 //
 // THE PALETTE IS THE FILE MANAGER'S, NOT THE KEYBOARD'S (R32, the ladder at
@@ -143,8 +132,7 @@
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
 // highlights under every owner — the picker has no field beside the band):
 // under the PLAYER an open enters a folder or plays a wav; under
-// the PROJECT PICKER it reopens the row's project; under the STATS PANEL there
-// is no open and no highlight at all, its rows being inert. Enter on the highlight is
+// the PROJECT PICKER it reopens the row's project. Enter on the highlight is
 // the keyboard's own click and reaches the same fork, which is at
 // the press router and the key routers, never here — the panel knows rows,
 // not projects.
@@ -158,19 +146,16 @@
 #include "render.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 
 namespace folder_overlay {
 
 // -- The geometry ------------------------------------------------------------
 //
-// THE ROW IS THE ICON ROW'S BUTTON (the ruling above) — OR A MONOSPACE LINE:
-// every number below is that button's own, read from render.h where it is
-// measured, or the monospace face's own, measured at the clock's size
-// through render.h's one measure, so a retune of the roster or of the clock's
-// size carries down here by construction and this file spells no literal of
-// its own but the two it owns.
+// THE ROW IS THE ICON ROW'S BUTTON (the ruling above): every number below is
+// that button's own, read from render.h where it is measured, so a retune of
+// the roster carries down here by construction and this file spells no
+// literal of its own but the two it owns.
 
 // THE PANEL'S OUTER INSET, its ONE authored number — the margin between the
 // band's edge and the rows, at the top, the bottom and both sides.
@@ -184,13 +169,10 @@ inline constexpr double kRowIconGapPx = 8.0;
 
 // THE ROW BOX: the button's box, the button's between-boxes gap, the button's
 // glyph. A folder row wears icons::Icon::Folder and a wav row
-// icons::Icon::AudioXWav. NOT EVERY ROW HAS ONE: the glyph-less TEXT kind,
-// which went with the history picker on 2026-08-29, is BACK WITH A PRODUCER
-// since 2026-09-03 — the AV sync stats panel's every row — and its text starts
-// where the glyph would have, at the button's own inset. (The UP kind, which
-// wore the folder glyph because it named a folder, went with the player's move
-// inside `tmp/` on 2026-09-01 and has no producer.) A folder or wav row IS
-// the button's box, a wide button; a TEXT row is a LINE, at the pitch below.
+// icons::Icon::AudioXWav. (The glyph-less TEXT kind went with the AV Sync
+// Stats panel on 2026-09-30, and the UP kind, which wore the folder glyph
+// because it named a folder, with the player's move inside `tmp/` on
+// 2026-09-01.) A row IS the button's box, a wide button.
 inline int button_row_height_px() { return scaled_px(kIconBtnPx, 1); }
 inline int button_row_gap_px()    { return scaled_px(kIconBtnGapPx, 1); }
 inline int pad_px()               { return scaled_px(kPanelPadPx); }
@@ -200,56 +182,9 @@ inline int row_icon_gap_px()      { return scaled_px(kRowIconGapPx); }
 // of its glyph in its box, (32 - 22) / 2 at 100%, taken from the two scaled
 // numbers so it cannot disagree with either. It is the LEFT PAD of the icon in
 // the row as well — a row is a wide button — and not the modal word buttons'
-// text pad, which belongs to a different surface. A TEXT ROW'S WORDS TAKE
-// THIS SAME LEFT PAD (the painter seats them where a glyph would sit), which
-// is why it reads the BUTTON's box and not the row's forked height: the pad
-// is the button family's, whatever a row's pitch.
+// text pad, which belongs to a different surface.
 inline int row_icon_inset_px() {
     return (button_row_height_px() - row_icon_px()) / 2;
-}
-
-// THE TEXT ROW'S PITCH, the panel's one owner of it (the ruling is in the head
-// prose): the monospace face's ascent plus descent at the clock's own size —
-// render.h's memoised measure at render.h's size, so the pitch follows the
-// face, the size and gui_scale and authors no pixel count — rounded UP to a
-// whole pixel. Up, not to nearest: a row clips its glyphs to its own rect and
-// abuts the next row with no gap, so the row must hold the whole band or shave
-// a descender. (The hinted extents are whole pixels on this face anyway, and
-// the rounding then changes nothing.) The gap between text rows is ZERO — a
-// line's leading is inside its extents — and it is spelled at row_gap_px
-// rather than named here, there being no number to own.
-inline int text_row_pitch_px() {
-    return static_cast<int>(std::ceil(mono_line_height_px(clock_font_size_px())));
-}
-
-// THE ONE FORK OF THE ROW GEOMETRY — ON THE LISTING, NOT ON A ROW. A listing
-// is homogeneous in kind: the AV sync stats panel composes Text rows and
-// nothing else (build_stats_panel_rows), and neither the player's listing nor
-// the project picker's holds one (their builders produce Folder and Wav rows
-// alone), so asking the standing owner loses nothing a row's kind would
-// answer. It is the OWNER TAG rather than a read of the rows for two reasons.
-// The pitch is a property of the FACE the words are painted in, and the face
-// is what the painter already selects on this tag — the monospace at the
-// clock's size under the stats panel, the sans at the redesign's size
-// everywhere else — so pitch and face share ONE predicate and cannot part (a
-// row shaped sans at 16 px on a monospace line, or the reverse, would be two
-// surfaces disagreeing about one row, fc40318e). The pairing collapsed for
-// the few hours of 2026-09-03 the two listings wore the monospace too, and
-// the architect's own reversal that evening put it back — the quote is at the
-// painter's selection. And it is a fact of the standing state and
-// not of a table
-// entry, so row_rect(a, i) answers for any index — an empty table, a table
-// mid-rebuild — and paint, hit and damage read one number by reading one
-// tag. A row's KIND stays what the painter reads per row to draw no glyph
-// and skip the face ladder; the painter asserts the two agree.
-inline bool text_listing(const AppState& a) {
-    return a.folder_overlay.owner == AppState::FolderOverlay::Owner::Stats;
-}
-inline int row_height_px(const AppState& a) {
-    return text_listing(a) ? text_row_pitch_px() : button_row_height_px();
-}
-inline int row_gap_px(const AppState& a) {
-    return text_listing(a) ? 0 : button_row_gap_px();
 }
 
 // (THE BAND'S OWN TOP BORDER IS RETIRED — architect 2026-09-09, the top strip
@@ -275,13 +210,14 @@ inline bool stands(const AppState& a) {
 // -- The surface's rect ------------------------------------------------------
 
 // The content's whole height: the pad at both ends, every row and the gaps
-// between them, at the standing listing's pitch. Zero for an empty listing.
+// between them. Zero for an empty listing.
 // IT SIZES NOTHING (R35 took the band's height off it): its ONE consumer is
 // the scroll ceiling below, which is how far the content runs past the band.
 inline int content_height_px(const AppState& a) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (n <= 0) return 0;
-    return 2 * pad_px() + n * row_height_px(a) + (n - 1) * row_gap_px(a);
+    return 2 * pad_px() + n * button_row_height_px() +
+           (n - 1) * button_row_gap_px();
 }
 
 // THE BAND: the slot's band (its x, its width and its bottom edge — one
@@ -306,8 +242,7 @@ inline int content_height_px(const AppState& a) {
 // test already read as nothing. An EMPTY LISTING is a painted band with no
 // rows in it — no content can stand empty anyway (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
-// always lists at least the project that is open, and the stats panel's rows
-// are composed rather than enumerated, so it always has some).
+// always lists at least the project that is open).
 inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
@@ -343,14 +278,13 @@ inline void clamp_scroll(AppState& a) {
 // -- The rows ----------------------------------------------------------------
 
 // Row `index`'s PAINTED rect under the live scroll offset — full band width
-// less the pad on both sides, at the standing listing's row pitch (the one
-// fork above; the painter, the press router and the stats panel's damage all
-// read their rects from here and nowhere else). It may lie partly or wholly
+// less the pad on both sides, at the button's row pitch (the painter and the
+// press router read their rects from here and nowhere else). It may lie partly or wholly
 // outside the band; the painter clips and the hit test asks the band first.
 inline GuiRect row_rect(const AppState& a, int index) {
     const GuiRect band = content_rect(a);
-    const int h = row_height_px(a);
-    const int y = band.y + pad_px() + index * (h + row_gap_px(a)) -
+    const int h = button_row_height_px();
+    const int y = band.y + pad_px() + index * (h + button_row_gap_px()) -
                   a.folder_overlay.scroll_px;
     return GuiRect{band.x + pad_px(), y, band.w - 2 * pad_px(), h};
 }
@@ -458,12 +392,12 @@ inline bool move_highlight(AppState& a, int delta) {
     return set_highlight(a, std::clamp(walk_origin_row(a) + delta, 0, n - 1));
 }
 
-// Scroll the band by `rows` rows (the wheel's detent step) at the standing
-// listing's pitch — a line under the stats panel, a button box elsewhere —
-// clamped. Returns whether the offset moved.
+// Scroll the band by `rows` rows (the wheel's detent step) at the button
+// row's pitch, clamped. Returns whether the offset moved.
 inline bool scroll_rows(AppState& a, int rows) {
     const int before = a.folder_overlay.scroll_px;
-    a.folder_overlay.scroll_px += rows * (row_height_px(a) + row_gap_px(a));
+    a.folder_overlay.scroll_px +=
+        rows * (button_row_height_px() + button_row_gap_px());
     clamp_scroll(a);
     return a.folder_overlay.scroll_px != before;
 }

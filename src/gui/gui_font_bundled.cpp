@@ -135,8 +135,9 @@ void gui_select_font_face(cairo_t* cr, GuiFontFamily family) {
     if (f.face == nullptr) return;
     cairo_set_font_face(cr, f.face);
     // The hint style rides with the face at every select, which is why no site
-    // above knows about it: the painters, the measures that borrow a scratch
-    // context (mono_line_height_px, clock_cell_metrics) and the Android
-    // install probe all arrive here before they size, shape, measure or paint.
+    // above knows about it: the painters (clock_cell_metrics measures on the
+    // painter's own font) and the Android install probe, which borrows a
+    // scratch context, all arrive here before they size, shape, measure or
+    // paint.
     cairo_set_font_options(cr, g_options);
 }

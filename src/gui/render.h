@@ -197,12 +197,11 @@ inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 // like every other window_activated face.
 //
 // ITS SCOPE IS THE FOLDER OVERLAY'S PANEL — the highlighted row's band and its
-// list-focused outline — AND THE MODAL ROW UNDER EVERY ONE OF ITS FIVE OWNERS,
+// list-focused outline — AND THE MODAL ROW UNDER EVERY ONE OF ITS FOUR OWNERS,
 // where it is the buttons' ACTIVE-FOCUS outline: the panel is what the ruling
 // was taken on, but the row is ONE visual role and the ring is a claim about
 // the KEYBOARD, which an unfocused window does not have, so a prompt's and a
-// dialog editor's rings dim with the player's, the picker's and the AV Sync
-// Stats panel's (the fork is on
+// dialog editor's rings dim with the player's and the picker's (the fork is on
 // the flag alone at accent_for_focus, paint_handler.cpp, and the activation
 // hook damages whichever modal row stands). It is the FOURTH reader class of
 // AppState::window_activated after rows 1 and 2 (the ground) and the scrub
@@ -231,8 +230,8 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 //
 // IT IS DRIVEN BY chrome_focused (app_state.h), WHICH IS
 // AppState::window_activated AND NOTHING ELSE: the header does NOT go
-// inactive under the render player, the picker or the AV Sync Stats panel
-// (architect 2026-09-03 evening, with the File anchor left live on this row —
+// inactive under the render player or the picker (architect 2026-09-03
+// evening, with the File anchor left live on this row —
 // "the title bar is still the regular one — the window has focus"; the modal
 // term it carried from 2026-09-02 lives at view_bar_focused now, the bar
 // being the surface that needed it). (GAP 1's band wore this shade from the
@@ -2209,23 +2208,6 @@ inline constexpr double kClockFontSizePt = 11.0;   // -> ~14.67 px at 100%
 inline double clock_font_size_px() {
     return kClockFontSizePt * 96.0 / 72.0 * gui_scale_factor();
 }
-
-// THE MONOSPACE FACE'S LINE HEIGHT AT A SIZE — its ascent plus its descent,
-// MEASURED off the face the face owner resolves and never an authored pixel
-// count (the clock cell's own principle, above: nothing about a monospace
-// cell is authored in pixels). It is what the AV SYNC STATS PANEL's text rows
-// stand at (folder_overlay::text_row_pitch_px reads it at clock_font_size_px
-// and rounds it to a pixel count; architect 2026-09-03, on the panel painting
-// its lines at the icon button's box: "the copy button uses single line
-// spacing (correct) but the display shows double spacing (incorrect)"). It
-// is declared here, beside the size it is measured at, because its reader is
-// cairo-free and hit-tests and damages with it; the measure needs a scaled
-// font, so it lives in paint_handler.cpp beside the clock cell's memo and is
-// keyed on the size the way that memo is. It measures the face on a private
-// surface rather than a painter's context, so the answer does not depend on
-// a frame having been painted first, and paint, hit and damage read one
-// number.
-double mono_line_height_px(double size_px);
 
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
 // (56x20 = a 1px left border plus a 55x20 fill box; the border's own record is

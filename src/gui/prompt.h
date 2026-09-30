@@ -62,8 +62,8 @@ struct GuiPrompt {
     // GuiInputHandler (confirm_load_in_place, cancel_load_in_place)
     // — the three load acts being private to that struct — and
     // request_close's own closing steps
-    // (close_picker, close_stats_panel and close_modal_editors_no_commit),
-    // the picker's close, the panel's and each editor's exit body living
+    // (close_picker and close_modal_editors_no_commit),
+    // the picker's close and each editor's exit body living
     // there beside the surfaces themselves.
     GuiInputHandler*      input = nullptr;
 
