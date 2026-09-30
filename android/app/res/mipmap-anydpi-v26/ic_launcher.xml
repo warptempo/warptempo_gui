@@ -1,56 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). It is the note of the Linux one: Breeze's
-     audio-x-generic, the packaging/warptempo_gui.desktop's Icon=, vendored
-     verbatim as assets/icons/breeze/audio-x-generic.svg (the 64 px mimetype
-     rendition), with its disc dropped and its note alone centred on the
-     platter (architect 2026-09-30, on his glass look: "the logo is off
-     center. Better to just remove the little CD finger tab altogether and
-     center the icon"; the whole file rendered at fit stood one evening,
-     2026-09-29). An ADAPTIVE icon, the whole of it: minSdk is 30, so no
-     legacy ic_launcher.png set exists beside it.
+     recents card). Its glyph is Breeze's minuet-scales, three notes climbing
+     a four-line staff, the glyph the Marker Measure button wore until
+     2026-09-16, vendored verbatim as assets/icons/breeze/minuet-scales.svg
+     (the 22 px action icon; it is not a roster icon), centred on the sheet
+     grey of the Linux one, Breeze's audio-x-generic (the
+     packaging/warptempo_gui.desktop's Icon=, vendored verbatim as
+     assets/icons/breeze/audio-x-generic.svg) (architect 2026-09-30, on his
+     look at the note-only rendering: "look for a musical measures icon ...
+     the one we used for the measures ... center the other icon there"). The
+     note of audio-x-generic alone, centred on the same grey (c8ae868e),
+     stood an hour that night and was replaced at his look; the whole
+     audio-x-generic file rendered at fit stood one evening, 2026-09-29. An
+     ADAPTIVE icon, the whole of it: minSdk is 30, so no legacy
+     ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/:
        ic_launcher_background.png  solid opaque #aaaaaa, the sheet's own fill
-                                   in the Breeze file (fill="#aaa"): the
+                                   in audio-x-generic (fill="#aaa"): the
                                    platter IS the sheet, its edges gone;
-       ic_launcher_foreground.png  the note, RGBA, white at the file's .75
-                                   opacity (so it lands #eaeaea over the grey,
-                                   as the Breeze glyph paints it), on a
-                                   transparent surround.
-     Nothing else of the file is drawn: no disc, no sheet outline, no top or
-     bottom line, no gradient.
+       ic_launcher_foreground.png  the staff and notes, RGBA, opaque #232629
+                                   (minuet-scales' ColorScheme-Text colour,
+                                   the Breeze light rendering: dark on the
+                                   light grey), on a transparent surround.
 
      THE 44-OF-72 RULE. Every mask (circle, squircle, rounded square: the
      launcher's choice) is drawn within the central 72 dp viewport of the
-     108 dp canvas; the note's bounding box is 44 dp tall there, the ordinary
-     launcher-glyph proportion, and centred on the canvas. The box, measured
-     by rendering the note path alone and trimming it, is x 15..37,
-     y 24.994..46.997 in the file's coordinates (before its group's
-     translate): 22 by 22.003 units, so the width at 44 dp tall rounds to
-     44 dp at every density and the box is square.
+     108 dp canvas; the glyph's bounding box is 44 dp on its longer side
+     there, the ordinary launcher-glyph proportion, and centred on the
+     canvas. The box, measured by rendering the path alone and trimming it,
+     is x 3..19, y 3..19.409 in the file's 22-unit frame (its group's
+     translate(0 -1030.4) and its path's translate(0,1030.4) cancel exactly):
+     16 by 16.409 units, so the height is the longer side, H = 44 dp, and the
+     width follows the aspect, W = H·16/16.409 rounded to whole pixels.
 
      THE DERIVED SVG. The recipe's input is android/app/ic_launcher_foreground.svg,
      beside the manifest and outside res/ (aapt2 compiles res/ whole and
      refuses an unknown file there): one path whose d is copied byte for byte
-     from the vendored file (a diff between the two d strings is a
-     transcription bug), fill #fff, opacity .75, in a viewBox that is the
-     note's box, so the file renders the note edge to edge.
+     from the vendored minuet-scales.svg, its exponent spellings included (a
+     diff between the two d strings is a transcription bug), fill #232629, no
+     transform, in a viewBox that is the glyph's box, so the file renders the
+     glyph edge to edge.
 
      A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop and
      committed; a retouch is a re-run of this recipe, never a build step
      (build_apk.sh only compiles res/). The recipe, from the repo root
      (rsvg-convert 2.62, ImageMagick 7), for each density n at factor f
      (mdpi 1, hdpi 1.5, xhdpi 2, xxhdpi 3, xxxhdpi 4) with C = 108·f,
-     H = 44·f, W = H (the box's aspect, rounded to whole pixels) and the
-     page offset O = (C − H) / 2 = 32·f on both axes:
+     H = 44·f, W = H·16/16.409 rounded, and the page offsets
+     L = (C − W) / 2 (a half pixel where C − W is odd) and T = (C − H) / 2
+     = 32·f:
 
-       mdpi     C=108 H=W=44  O=32      hdpi    C=162 H=W=66  O=48
-       xhdpi    C=216 H=W=88  O=64      xxhdpi  C=324 H=W=132 O=96
-       xxxhdpi  C=432 H=W=176 O=128
+       mdpi     C=108 H=44  W=43  L=32.5  T=32
+       hdpi     C=162 H=66  W=64  L=49    T=48
+       xhdpi    C=216 H=88  W=86  L=65    T=64
+       xxhdpi   C=324 H=132 W=129 L=97.5  T=96
+       xxxhdpi  C=432 H=176 W=172 L=130   T=128
 
        rsvg-convert -w W -h H \
-           - -page-width C - -page-height C - -left O - -top O \
+           - -page-width C - -page-height C - -left L - -top T \
            android/app/ic_launcher_foreground.svg -o fg.png
        magick fg.png -strip -define png:compression-level=9 \
            -define png:compression-filter=5 \

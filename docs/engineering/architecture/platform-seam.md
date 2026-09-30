@@ -1105,28 +1105,36 @@ platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
 runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
 
-THE LAUNCHER ICON (architect 2026-09-29; the note alone 2026-09-30). The
-manifest's `android:icon` is `@mipmap/ic_launcher`, drawn from the Linux one:
-Breeze's `audio-x-generic` (the `.desktop`'s `Icon=`), vendored verbatim as
-`assets/icons/breeze/audio-x-generic.svg` and never transcribed into
-`icons.cpp`. It is an ADAPTIVE icon and nothing else (minSdk 30, so no legacy
-PNG set): `android/app/res/mipmap-anydpi-v26/ic_launcher.xml` over
-`ic_launcher_foreground.png` (the file's music note ALONE, RGBA, white at the
-file's .75 opacity) and `ic_launcher_background.png` (solid opaque #aaaaaa,
-the file's own sheet grey, so the platter is the sheet) in each of
-`mipmap-{m,h,xh,xxh,xxxh}dpi`, 108·f px square. The disc, the sheet's edges
-and lines and the gradient are dropped and the note is centred: the whole
-file rendered at fit over the row ground stood one evening and read, on his
-glass, as a small square off centre in the platter ("remove the little CD
-finger tab altogether and center the icon", architect 2026-09-30). THE
-44-OF-72 RULE: the note's bounding box (x 15..37, y 24.994..46.997 in the
-file's units, measured by rendering the path alone and trimming it) is 44 dp
-tall, of the 72 dp viewport every mask is drawn within, and centred on the
-108 dp canvas. The render's input is the derived
-`android/app/ic_launcher_foreground.svg`, beside the manifest and outside
-`res/` (aapt2 refuses an unknown file there): the one note path, its `d`
-copied byte for byte from the vendored file (a diff between the two is a
-transcription bug), in a viewBox that is the note's box. The PNGs are a ONE-SHOT render
+THE LAUNCHER ICON (architect 2026-09-29; the staff 2026-09-30). The
+manifest's `android:icon` is `@mipmap/ic_launcher`: Breeze's `minuet-scales`,
+three notes climbing a four-line staff (the glyph the Marker Measure button
+wore until 2026-09-16), in the file's own `ColorScheme-Text` ink #232629,
+centred on the sheet grey #aaaaaa of `audio-x-generic`, the Linux one (the
+`.desktop`'s `Icon=`). Both files are vendored verbatim under
+`assets/icons/breeze/` and never transcribed into `icons.cpp`
+(`minuet-scales.svg` returned for the launcher alone; it is not a roster
+icon). It is an ADAPTIVE icon and nothing else (minSdk 30, so no legacy PNG
+set): `android/app/res/mipmap-anydpi-v26/ic_launcher.xml` over
+`ic_launcher_foreground.png` (the staff and notes, RGBA, opaque #232629) and
+`ic_launcher_background.png` (solid opaque #aaaaaa, audio-x-generic's own
+sheet fill, so the platter is the sheet) in each of
+`mipmap-{m,h,xh,xxh,xxxh}dpi`, 108·f px square. Its succession: the whole
+audio-x-generic file rendered at fit over the row ground stood one evening
+and read, on his glass, as a small square off centre in the platter ("remove
+the little CD finger tab altogether and center the icon", architect
+2026-09-30); its music note alone, centred on the sheet grey, stood an hour
+and gave way at his look to the measures glyph ("look for a musical measures
+icon … the one we used for the measures … center the other icon there",
+architect 2026-09-30). THE 44-OF-72 RULE: the glyph's bounding box (x 3..19,
+y 3..19.409 in the file's 22-unit frame, whose two translates cancel;
+measured by rendering the path alone and trimming it) is 44 dp on its longer
+side, the height, of the 72 dp viewport every mask is drawn within, the width
+following the aspect, and centred on the 108 dp canvas. The render's input
+is the derived `android/app/ic_launcher_foreground.svg`, beside the manifest
+and outside `res/` (aapt2 refuses an unknown file there): the one path, its
+`d` copied byte for byte from the vendored `minuet-scales.svg`, exponent
+spellings included (a diff between the two is a transcription bug), in a
+viewBox that is the glyph's box. The PNGs are a ONE-SHOT render
 (rsvg-convert + magick), committed; the XML's head comment is the recipe, and
 a retouch re-runs it, never a build step. `res/` holds that icon alone: the
 app still declares no `@string`, no style, no `res/values`; `build_apk.sh`'s
