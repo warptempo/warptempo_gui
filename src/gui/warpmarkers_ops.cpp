@@ -1042,14 +1042,15 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // never its paint cue `red` — the resolver
 // replaces the stack with one 1.00 owner, so the write is render-inert), or
 // a marker that cannot take the WHOLE step without leaving the tempo bracket
-// (the edge compare's generalization, R12 — at the bare ±1 the two are the
-// same test). Collapse is render-inert regardless of the authoring view, so it
-// walls in SOURCE view too — a DELIBERATE asymmetry with the SINGLETON step,
-// whose collapsed refusal is target-view-only, and whose pass->owner FREEZE
-// CONVERSION stays a singleton-only act (a bulk payload conversion from one
-// keystroke is refused by design). No freeze conversion here: every stepped
-// member is already an owner, so a plain integer add is the whole mutation.
-// THE WALL SCAN AS A CONST OWNER (architect 2026-08-31, R3): the act below is
+// (the edge compare's generalization under the step ladder — at the bare ±1
+// the two are the same test). Collapse is render-inert regardless of the
+// authoring view, so it walls in SOURCE view too — a DELIBERATE asymmetry with
+// the SINGLETON step, whose collapsed refusal is target-view-only, and whose
+// pass->owner FREEZE CONVERSION stays a singleton-only act (a bulk payload
+// conversion from one keystroke is refused by design). No freeze conversion
+// here: every stepped member is already an owner, so a plain integer add is
+// the whole mutation.
+// THE WALL SCAN AS A CONST OWNER (architect 2026-08-31): the act below is
 // the first reader and the Up / Down buttons' face is the second, through the
 // directional predicate. It is EXTRACTED rather than mirrored — the terms are
 // the group's own and a face may not restate them — and it mutates nothing,
@@ -1089,7 +1090,7 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
         // disabled marker.
         if (collapsed.count(idx) && !effective_disabled(mv, idx)) return false;
         // THE WALL IS "CAN THIS MEMBER TAKE THE WHOLE STEP", not "is it AT the
-        // bracket edge" (2026-08-31, with the step ladder — R12): the group
+        // bracket edge" (2026-08-31, with the step ladder): the group
         // arm applies delta_cents whole, so with the ten-cent chord a member
         // three cents from the max would land OUT of bracket, and clamping it
         // would be exactly the pooling GROUP RIGIDITY refuses. Asked through

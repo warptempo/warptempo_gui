@@ -247,7 +247,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // a stack cleared by a load/reset.
     //
     // THE KIND IS BLIND TO DIRECTION AND, SINCE 2026-08-31, TO MAGNITUDE (the
-    // step ladder — R12: Ctrl+Up / Down steps three units and Shift+Up / Down
+    // step ladder: Ctrl+Up / Down steps three units and Shift+Up / Down
     // ten since 2026-09-21, shift the long stride).
     // The blindness is UNCHANGED rather than newly granted: a Left tap and a
     // Right tap inside the window have always merged into one entry, and a

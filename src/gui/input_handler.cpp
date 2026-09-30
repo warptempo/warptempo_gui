@@ -348,8 +348,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (2026-08-28, architect
-    // R22/R23): the field-less Open project picker over the folder
+    // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-08-28): the
+    // field-less Open project picker over the folder
     // overlay, at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
@@ -2069,7 +2069,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (tempo_cent_step_direction_actionable, app_state.h), the kind refusal
     // (since 2026-09-13) and the group's wall greying AND carding beside it.
     //
-    // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
+    // THE MODIFIER IS THE MAGNITUDE (architect 2026-08-31): bare
     // steps ONE cent, Ctrl THREE and Shift TEN (the rungs swapped 2026-09-21,
     // shift the long stride), through the ladder's one owner
     // arrow_step_magnitude (gui_input.h) — the vertical pair's alone since
@@ -2993,9 +2993,10 @@ OverviewCommandTarget overview_command_target(const AppState& app,
         t.arm = OverviewCommandTarget::Arm::NoOp;
         return t;
     }
-    // THE WHOLE-SONG STATE ANSWERS FIRST (R-17g): a `0` that landed on the
-    // ceiling is still out after a resize or an S/T flip has moved that
-    // ceiling, and its stamp is the answer — in the stamp's own audio view.
+    // THE WHOLE-SONG STATE ANSWERS FIRST (since 2026-09-02): a `0` that
+    // landed on the ceiling is still out after a resize or an S/T flip has
+    // moved that ceiling, and its stamp is the answer — in the stamp's own
+    // audio view.
     if (overview_recall_restorable(app)) {
         t.arm   = OverviewCommandTarget::Arm::RestoreView;
         t.level = clamp_zoom_level(

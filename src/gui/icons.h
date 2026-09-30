@@ -308,7 +308,7 @@ enum class Icon {
     MediaPlaybackStop,   // Stop (bare Space, the face while an audition runs
                          // — the ROSTER'S own, and its one reader since the
                          // render player's Stop button retired 2026-09-01)
-    // THE RENDER PLAYER'S PAUSE FACE (2026-08-28, architect R36): its row
+    // THE RENDER PLAYER'S PAUSE FACE (architect 2026-08-28): its row
     // carried Play/Pause AND Stop as two buttons — "one button that's either
     // play or pause, and the other one is stop" — so the two-faced button
     // needed a pause glyph of its own rather than the stop square it wore
@@ -400,7 +400,7 @@ enum class Icon {
                          // a project row in the Open project picker)
     AudioXWav,           // a wav row
 
-    // THE RENDER PLAYER'S REPEAT TOGGLE (2026-08-28, architect R30): Breeze's
+    // THE RENDER PLAYER'S REPEAT TOGGLE (architect 2026-08-28): Breeze's
     // actions/22/media-repeat-single — the loop with a "1" — worn in BOTH
     // states by the modal row's one lamp, "a plain toggle: off is the
     // unpressed face, on is the pressed/lit face", so the glyph never

@@ -56,8 +56,8 @@ void GuiRenderPlayer::refuse_decode(const std::filesystem::path& path,
 // NAMING-FOR-SHARING CONVENIENCE OUTSIDE THE GUI'S WORKFLOW — the tablet's
 // engine differs from the laptop's by ULPs, so the deliverable is never driven
 // from the glass, and it carries no sidecars, so it cannot be loaded in place
-// (the load road's own refusal, R15) — while `tmp/`'s batch cells are the
-// player's whole subject on both hosts.
+// (the load road's own refusal, 2026-08-28) — while `tmp/`'s batch cells are
+// the player's whole subject on both hosts.
 //
 // WHAT WENT WITH THE RULING: GuiRenderPlayer::deliverable_wav (the one-file
 // folder's question, which PRUNED before it answered), the `Folder::Root` that
@@ -142,14 +142,14 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     // item is never sought out. A named folder that is not in the listing —
     // deleted while the player stood, the listing being rebuilt from disk at
     // every entry — falls through to row 0 like any other miss.
-    // ROW 0 IS THE FIRST REAL ROW since 2026-09-01, and that DISSOLVES R6'S
-    // ONE SURFACED EDGE structurally: while every non-root listing opened with
-    // a `..` row, entering a folder that does not hold the playing item seated
-    // the band on it, so the highlight-driven Space (R6) went UP a folder
-    // instead of playing something — the one case where a highlight the user
-    // had not consciously placed drove the key. With the `..` row gone the
-    // seat is a batch folder or a wav, and Space at every entry acts on
-    // content.
+    // ROW 0 IS THE FIRST REAL ROW since 2026-09-01, and that DISSOLVES THE
+    // HIGHLIGHT-DRIVEN SPACE'S ONE SURFACED EDGE structurally: while every
+    // non-root listing opened with a `..` row, entering a folder that does not
+    // hold the playing item seated the band on it, so the highlight-driven
+    // Space (2026-08-31) went UP a folder instead of playing something — the
+    // one case where a highlight the user had not consciously placed drove the
+    // key. With the `..` row gone the seat is a batch folder or a wav, and
+    // Space at every entry acts on content.
     ov.scroll_px     = 0;
     ov.hovered_row   = -1;
     ov.press         = AppState::FolderOverlayPress{};
@@ -182,9 +182,9 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     folder_overlay::clamp_scroll(app);
     if (ov.highlight_row >= 0)
         folder_overlay::scroll_row_into_view(app, ov.highlight_row);
-    // THE BAND IS ONE RECT (R35): its height is the slot's ceiling whatever
-    // this listing's length, so the rebuild's damage is the same band every
-    // other damage takes. THE ROW REPAINTS WITH IT since 2026-08-30: the
+    // THE BAND IS ONE RECT (2026-08-28): its height is the slot's ceiling
+    // whatever this listing's length, so the rebuild's damage is the same band
+    // every other damage takes. THE ROW REPAINTS WITH IT since 2026-08-30: the
     // rebuild reseats the highlight, which the Load in place button's face
     // reads (render_player_button_enabled).
     damage_band();
@@ -452,7 +452,7 @@ const AppState::RenderEntry* GuiRenderPlayer::highlighted_entry() const {
     return render_player_highlighted_entry(app);
 }
 
-// THE ROW SPACE WOULD OPEN (architect 2026-08-31, R6) — the contract and the
+// THE ROW SPACE WOULD OPEN (architect 2026-08-31) — the contract and the
 // three-reader inventory are at the declaration (app_state.h). The fork is the
 // row's KIND plus one identity compare: a folder is always somewhere to go, a
 // wav is somewhere to go unless it is what is already bound, and the
@@ -559,14 +559,14 @@ bool render_player_button_enabled(const AppState& a,
             // own owner rather than a copy of its conditions.
             return render_player_next_track_actionable(a);
         case AppState::PlayerButtonAct::PlayPause: {
-            // THE HIGHLIGHT'S ARM FIRST, the act's own order since R6: a row
-            // to open is an act in every transport state, so the button is
-            // live even where the transport alone would have nothing to do.
+            // THE HIGHLIGHT'S ARM FIRST, the act's own order since 2026-08-31:
+            // a row to open is an act in every transport state, so the button
+            // is live even where the transport alone would have nothing to do.
             // AND THE DEVICE TERM SITS INSIDE IT, on the row's own KIND —
-            // open_row's fork read without acting (2026-09-02, R-17a): a
-            // FOLDER row ENTERS a listing and sounds nothing, so it needs no
-            // device and stays lit; the other arm is a play and takes the
-            // term. The reasoning is at the declaration.
+            // open_row's fork read without acting (2026-09-02): a FOLDER
+            // row ENTERS a listing and sounds nothing, so it needs no device
+            // and stays lit; the other arm is a play and takes the term. The
+            // reasoning is at the declaration.
             if (const int row = render_player_highlight_act_row(a); row >= 0) {
                 const Row& r = a.folder_overlay.rows[static_cast<size_t>(row)];
                 if (r.kind == Row::Kind::Folder) return true;
@@ -588,7 +588,7 @@ bool render_player_button_enabled(const AppState& a,
             // root is `tmp/` and there is nothing above it. No twin — the
             // button admits no modifier, so the plain form is the whole set.
             return render_player_up_actionable(a);
-        // (STOP's arm stood here — the no-item belt and R36's already-resting
+        // (STOP's arm stood here — the no-item belt and its already-resting
         // return — and went with the button on 2026-09-01.)
         // LOAD IN PLACE: the act's three leading refusals in the act's own
         // order — the lock, the running render (load_in_place_render_blocked,
@@ -736,11 +736,11 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // project's playhead does not move.
     playback.play(0, rp.frames);
     rp.transport = Transport::Live;
-    // THE BAND FOLLOWS THE ITEM AT A CHANGE (R38, the contract at the head of
-    // render_player.h): this is the ONE place the item changes, so seating the
-    // highlight here covers every change the transport makes on its own —
-    // Home's previous-track window, the folder's ends and the auto-advance —
-    // with no membership list to keep. THE GATE IS
+    // THE BAND FOLLOWS THE ITEM AT A CHANGE (2026-08-28, the contract at the
+    // head of render_player.h): this is the ONE place the item changes, so
+    // seating the highlight here covers every change the transport makes on its
+    // own — Home's previous-track window, the folder's ends and the
+    // auto-advance — with no membership list to keep. THE GATE IS
     // WHAT KEEPS THE
     // OTHER HALF OF THE RULE: a user's own highlight moves are untouched, and
     // the road that would otherwise fight the band back onto the item is the
@@ -769,8 +769,8 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
 }
 
 void GuiRenderPlayer::play_button_act() {
-    // THE HIGHLIGHT LEADS (architect 2026-08-31, R6 — SPACE IS HIGHLIGHT-
-    // DRIVEN IN THE PLAYER, narrowing R40's "the Play button never reads the
+    // THE HIGHLIGHT LEADS (architect 2026-08-31 — SPACE IS HIGHLIGHT-
+    // DRIVEN IN THE PLAYER, narrowing the rule "the Play button never reads the
     // highlight, in any state" of two days before). A folder or
     // a wav that is NOT the transport's item under the band is somewhere to
     // GO, and Space goes there whatever is playing; the transport's own item
@@ -781,13 +781,14 @@ void GuiRenderPlayer::play_button_act() {
     // architect's ruling from the car is that the Accord's play does exactly
     // what the tablet's Play button does, band and all.
     //
-    // R40'S BUG CANNOT COME BACK, which is what makes the narrowing safe: it
-    // was a band left BEHIND the transport (a Next advanced the item and the
-    // highlight stayed on the row he had double-clicked, so the live button
-    // played that row instead of pausing what sounded), and THE BAND FOLLOWS
-    // THE ITEM since R38 — at every item change the transport makes on its own
-    // — so a highlight that is somewhere else is somewhere the user WALKED it,
-    // deliberately, and going there is what he asked for.
+    // THE BUG THAT RULE ANSWERED CANNOT COME BACK, which is what makes the
+    // narrowing safe: it was a band left BEHIND the transport (a Next advanced
+    // the item and the highlight stayed on the row he had double-clicked, so
+    // the live button played that row instead of pausing what sounded), and THE
+    // BAND FOLLOWS THE ITEM since 2026-08-28 — at every item change the
+    // transport makes on its own — so a highlight that is somewhere else is
+    // somewhere the user WALKED it, deliberately, and going there is what he
+    // asked for.
     //
     // ONE ACTIVATION ROAD: open_row is the row click's and Enter's own body,
     // so the three row acts have one owner and this fork adds no second walk
@@ -807,14 +808,14 @@ void GuiRenderPlayer::transport_toggle_act() {
     // THE TRANSPORT'S OWN BUSINESS — play_button_act's tail, LIFTED INTO A BODY
     // OF ITS OWN (2026-08-31, the round-B conversion) because the IMPOSED
     // INTERRUPTS need exactly this and NOT the highlight fork
-    // above it. R6 made Space highlight-driven, and a focus loss
+    // above it. Space became highlight-driven that day, and a focus loss
     // that reached the transport through the whole act would then have STARTED
     // a walked-to row (or opened a folder) instead of pausing what sounded —
-    // the very shape of R40's bug, arriving from the car's side. So the split
-    // is by NAME: the car's own toggle takes the WHOLE act off its LIVE arm
-    // (a play past the band could start nothing at all with nothing bound),
-    // while the two focus losses and Stop's leading pause
-    // call THIS (on_media_command's table carries the reasoning at each arm).
+    // the very shape of the band-left-behind bug, arriving from the car's side.
+    // So the split is by NAME: the car's own toggle takes the WHOLE act off its
+    // LIVE arm (a play past the band could start nothing at all with nothing
+    // bound), while the two focus losses and Stop's leading pause call THIS
+    // (on_media_command's table carries the reasoning at each arm).
     //
     // THE STATE IS THE STORED FIELD (AppState::RenderPlayer::transport), so a
     // transport parked at frame 0 — the no-device pause on a wav that never
@@ -827,11 +828,11 @@ void GuiRenderPlayer::transport_toggle_act() {
         case Transport::Idle:
             break;
     }
-    // IDLE. THE FOLDER-END RESTART IS RETIRED (architect 2026-08-31, R7 — "we
+    // IDLE. THE FOLDER-END RESTART IS RETIRED (architect 2026-08-31 — "we
     // simplify — play on last file means play last file"), and this is where
     // its arm stood: from 2026-08-28 a Play at a rest the natural end had left
     // on the item folder's LAST wav started the folder's FIRST file instead
-    // (R27, the car's Play at the end of a playlist), off the one bit
+    // (the car's Play at the end of a playlist), off the one bit
     // `ended_at_folder_end`. The bit, its writer at the natural end and its
     // seven clears are deleted with the arm; a folder-end rest is now an
     // ordinary idle rest on the last item, and the car's Play there replays
@@ -844,7 +845,7 @@ void GuiRenderPlayer::transport_toggle_act() {
     // unload — and toggle_pause's resume arm reads exactly that field.
     //
     // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (architect
-    // 2026-08-31, R5 — the one-dimensional rule): a player resting with
+    // 2026-08-31 — the one-dimensional rule): a player resting with
     // nothing bound shows that state on its own row, the clock at zero and the
     // slider at its left end, so a sentence only repeats what is painted. This
     // body carried a carded guard of its own from 2026-08-30 as the OUTERMOST
@@ -918,20 +919,21 @@ void GuiRenderPlayer::toggle_pause() {
 }
 
 // THE STOP BODY STOOD HERE AND IS RETIRED WHOLE (architect 2026-09-01,
-// reversing R8's keep of the day before once the row's symmetry with the main
+// reversing his keep of the day before once the row's symmetry with the main
 // window's transport became the goal — the record and the reasoning are at the
-// head of render_player.h). It was R36's act: the rest written to frame 0 and
-// the transport moved to IDLE, over the one stop body's player fork where the
-// transport was sounding, a consumed no-op with no item and on an item already
-// resting there. ITS THREE ROADS WERE ALL USER ACTS AND ALL DELETED WITH IT —
-// the modal row's Stop button, bare `v` in route_render_player_key, and the
-// head unit's Stop, which composes a pause with a seek to the top at
-// on_media_command's own arm now. Nothing else called it, so nothing had to be
-// kept: THE ONE STOP BODY (GuiPlaybackLifecycle::stop_playback_if_playing) is
-// untouched, and every close, pause, natural end and rebind still passes
-// through it exactly as before.
+// head of render_player.h). It was the act of 2026-08-28: the rest written to
+// frame 0 and the transport moved to IDLE, over the one stop body's player fork
+// where the transport was sounding, a consumed no-op with no item and on an
+// item already resting there. ITS THREE ROADS WERE ALL USER ACTS AND ALL
+// DELETED WITH IT — the modal row's Stop button, bare `v` in
+// route_render_player_key, and the head unit's Stop, which composes a pause
+// with a seek to the top at on_media_command's own arm now. Nothing else called
+// it, so nothing had to be kept: THE ONE STOP BODY
+// (GuiPlaybackLifecycle::stop_playback_if_playing) is untouched, and every
+// close, pause, natural end and rebind still passes through it exactly as
+// before.
 
-// THE TWO FOLDER WALKS SAY NOTHING AT ALL (architect 2026-08-31, R5 — the
+// THE TWO FOLDER WALKS SAY NOTHING AT ALL (architect 2026-08-31 — the
 // one-dimensional rule, which took the END'S OWN pair that morning and the
 // NO-ITEM arm that evening): a benign refusal already at its state is silent.
 // At the end, the highlighted row sitting at the listing's first or last line
@@ -945,9 +947,9 @@ void GuiRenderPlayer::toggle_pause() {
 // took the same sentences on bare `,` / `.`; the step back lives inside home()
 // now.)
 //
-// THE ITEM FOLDER'S ENDS (R37) — the play road with the index named outright
-// instead of stepped. THE END ITSELF REFUSES: an item that is already the
-// folder's first is already where "go to the first" would put it, and bare
+// THE ITEM FOLDER'S ENDS (2026-08-28) — the play road with the index named
+// outright instead of stepped. THE END ITSELF REFUSES: an item that is already
+// the folder's first is already where "go to the first" would put it, and bare
 // Home is what restarts a wav in place.
 // BOTH WALLS ARE ONE OWNER EACH (2026-09-01): the no-item and the
 // already-there returns are render_player_first_in_item_folder_actionable /
@@ -977,7 +979,7 @@ void GuiRenderPlayer::seek_by(int64_t delta_frames) {
 
 void GuiRenderPlayer::seek_to(int64_t frame) {
     AppState::RenderPlayer& rp = app.render_player;
-    // NO ITEM IS A SILENT CONSUME (architect 2026-08-31, R5, with the idle arm
+    // NO ITEM IS A SILENT CONSUME (architect 2026-08-31, with the idle arm
     // below): a player with nothing bound rests with its clock at zero and its
     // slider at the left end, so the row already says what a sentence would.
     if (rp.item.empty() || rp.frames <= 0) return;
@@ -991,7 +993,7 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     // PAUSED are unchanged below, and this is why `resume_frame` is always 0
     // at an idle rest, by construction (the field's own comment,
     // app_state.h).
-    // AND IT SAYS NOTHING (architect 2026-08-31, R5, reversing 2026-08-30's
+    // AND IT SAYS NOTHING (architect 2026-08-31, reversing 2026-08-30's
     // "and it says so"): the refusal is unchanged and only the card leaves —
     // an idle transport is a one-dimensional state the row itself shows, the
     // slider resting and the clock at zero, so the sentence repeated what was
@@ -1218,13 +1220,13 @@ void GuiRenderPlayer::on_natural_end() {
     // THE REST IS IDLE, NOT PAUSED: the item rests AT ITS START, and there is
     // nothing there to resume that a Play from the start does not do
     // identically — so the next Play replays this item, at the folder's end
-    // included (R7). Written over the PAUSED the
+    // included (2026-08-31). Written over the PAUSED the
     // stop body's fork leaves on
     // every live transport, and ahead of the two arms below, which play again
     // and take LIVE with them.
     rp.transport = Transport::Idle;
     // REPEAT ONE, ONE OF NOTHING LOOPS' TWO SANCTIONED EXCEPTIONS (architect
-    // 2026-08-28, R26; the other is the car's loop of the trim on the project
+    // 2026-08-28; the other is the car's loop of the trim on the project
     // transport, 2026-09-17, which reaches no player audio): the lamp
     // replays THIS item from its start through the
     // player's own play road — the same road a user's Play takes, so the item
@@ -1251,11 +1253,11 @@ void GuiRenderPlayer::on_natural_end() {
         }
         return;
     }
-    // AUTO-ADVANCE WITHIN THE ITEM'S FOLDER ONLY (R2), never across folders
-    // and never a wrap: the next wav of the list the item was played from, or
-    // the rest at the item's start. THE WALK IS ONE BODY SINCE 2026-09-04,
-    // shared with the deliberate Next the right skip runs, so the two cannot
-    // walk different folders.
+    // AUTO-ADVANCE WITHIN THE ITEM'S FOLDER ONLY (2026-08-28), never across
+    // folders and never a wrap: the next wav of the list the item was played
+    // from, or the rest at the item's start. THE WALK IS ONE BODY SINCE
+    // 2026-09-04, shared with the deliberate Next the right skip runs, so the
+    // two cannot walk different folders.
     if (advance_to_next_in_item_folder()) return;
     // THE FOLDER IS AT ITS END (or the next wav refused to decode, its own
     // words on a card and the item unchanged) and the transport rests at the
@@ -1265,8 +1267,8 @@ void GuiRenderPlayer::on_natural_end() {
     // USER ACT AMONG THEM since 2026-09-04 — no press reached the state
     // between the player's Stop retiring (2026-09-01) and that evening.
     //
-    // THE FOLDER-END RESTART STOOD HERE (architect 2026-08-28, R27) and IS
-    // RETIRED (architect 2026-08-31, R7 — "we simplify — play on last file
+    // THE FOLDER-END RESTART STOOD HERE (architect 2026-08-28) and IS
+    // RETIRED (architect 2026-08-31 — "we simplify — play on last file
     // means play last file"): this arm was `ended_at_folder_end`'s one writer,
     // setting the bit at the item folder's last wav with the lamp off so that
     // the next Play — the car's Play at the end of a playlist above all —
@@ -1426,7 +1428,7 @@ bool GuiRenderPlayer::open() {
     rp.transport      = Transport::Idle;
     // REPEAT ONE IS SESSION-ONLY AND LIT AT EVERY OPEN (architect 2026-09-11
     // — the default is repeat the one item; it was off at every open from
-    // 2026-08-28, R26). The lamp is reset here and nowhere else, like the
+    // 2026-08-28). The lamp is reset here and nowhere else, like the
     // mode's every other bit: it forgets at the close, survives the Up act's
     // unload, and bare `r` and the row's lamp flip it from lit.
     rp.repeat_one     = true;
@@ -1447,9 +1449,9 @@ bool GuiRenderPlayer::open() {
     // above, so this is the whole entry — no separate enter() call chases
     // it with a second rebuild and a second publish. THE HEAD UNIT IS
     // PUBLISHED BY THIS REBUILD and the open adds no push of its own: the
-    // session goes ACTIVE with the mode (R7) and its title is the silence
-    // track naming the fresh band's row — the newest batch folder's first
-    // cell, or `tmp/`'s own top row (its first batch folder, or nothing
+    // session goes ACTIVE with the mode (2026-08-28) and its title is the
+    // silence track naming the fresh band's row — the newest batch folder's
+    // first cell, or `tmp/`'s own top row (its first batch folder, or nothing
     // listed at all) on the fallback. Every field the push reads is written
     // above this line.
     rebuild_rows({});
@@ -1646,14 +1648,14 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
         case Kind::Stop:
             // THE HEAD UNIT'S STOP IS PAUSE AND THEN HOME (architect
             // 2026-09-01, with the player's own Stop act retired — it was that
-            // act's key from R36, and a plain pause before R36 gave the row a
-            // stop). AUDIBLY IT IS THE OLD STOP: silence now, the top on the
-            // next Play. What differs is the state left behind — the CLASS IS
-            // PAUSED rather than IDLE, so the scrub stays live under it and
-            // the next Play resumes a rest that happens to be frame 0.
+            // act's key from 2026-08-28, and a plain pause before that day gave
+            // the row a stop). AUDIBLY IT IS THE OLD STOP: silence now, the top
+            // on the next Play. What differs is the state left behind — the
+            // CLASS IS PAUSED rather than IDLE, so the scrub stays live under
+            // it and the next Play resumes a rest that happens to be frame 0.
             //
             // The pause is the transport's own tail (transport_toggle_act,
-            // R6's conversion — the tablet's Play act would have read the
+            // split off 2026-08-31 — the tablet's Play act would have read the
             // highlight first), gated on LIVE; the seek is seek_to(0) DIRECT
             // AND NEVER the left skip's act, whose previous-track window would
             // step a head unit's Stop back a TRACK inside a file's first three
@@ -1717,9 +1719,9 @@ void GuiRenderPlayer::publish_media_state() {
     const AppState::RenderPlayer&  rp = app.render_player;
     const AppState::FolderOverlay& ov = app.folder_overlay;
     // NO REPEAT MODE IS PUBLISHED and no media command maps to one: the lamp
-    // (R26) is the app's own state, the head unit shows what is playing and
-    // its buttons are the transport's, and a repeat mode nothing can set from
-    // the wheel is not worth a field on the wire.
+    // (2026-08-28) is the app's own state, the head unit shows what is playing
+    // and its buttons are the transport's, and a repeat mode nothing can set
+    // from the wheel is not worth a field on the wire.
     GuiMediaState st;
     // `session_active` SAYS PLAYING (architect 2026-09-12, from the car): the
     // consuming side's fork is "inactive -> STOPPED, else PLAYING" at speed

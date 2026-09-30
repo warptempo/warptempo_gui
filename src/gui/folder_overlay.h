@@ -64,7 +64,7 @@
 // that the tab row has up at the top — add that to the overlays", painted
 // inside the band as its first row and taken out of the content's room
 // until the relayout retired the tab row's borders with the band's.)
-// The architect's ruling (R3):
+// The architect's ruling (2026-08-28):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
 // replacing the keyboard there" — on glass the keyboard would occupy that
 // space, and no use of the panel needs typing. So THE OVERLAY AND THE
@@ -77,8 +77,8 @@
 // row visible. No header row, no columns, no scrollbar: the offset is the
 // whole scroll state, and an over-long listing simply scrolls.
 //
-// THE BAND IS THE SLOT'S AND THE ROW IS THE BUTTON'S (architect 2026-08-28,
-// R31/R33; before that day both were the keyboard's). Two owners, neither
+// THE BAND IS THE SLOT'S AND THE ROW IS THE BUTTON'S (architect 2026-08-28;
+// before that day both were the keyboard's). Two owners, neither
 // restated here:
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
 //     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
@@ -86,17 +86,18 @@
 //     EXTENT, every time it stands: from DIRECTLY UNDER THE ICON ROW'S BORDER
 //     (keyboard_slot_max_height_px, the same header — the bottom row's top
 //     less the icon row's foot) down to the bottom row,
-//     whatever the listing's length — architect 2026-08-28, R35: "we should
+//     whatever the listing's length — architect 2026-08-28: "we should
 //     automatically make the height ... so that it's not a fluid height —
 //     it's always a fixed height", 2026-09-03 for a fixed start under the
 //     header ("start right at the first pixel of the tab row", the first
 //     lane under the menu row then) and 2026-09-09 for the toolbar's foot,
 //     the tab row having moved below the flexible gap. A
 //     SHORT LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one
-//     scrolls. R35 retired the growing half of R33 (which read "it grows with
-//     its content up to that cap, then scrolls") the same day, the panel
-//     having jumped under the pointer as the listings changed size; that half
-//     stands, and only WHERE the ceiling sits has moved — R33's waveform
+//     scrolls. The fixed height retired the growing half of the day's
+//     earlier ceiling ruling (which read "it grows with its content up to
+//     that cap, then scrolls") the same day, the panel having jumped under
+//     the pointer as the listings changed size; the rest of it stands, and
+//     only WHERE the ceiling sits has moved — the earlier ruling's waveform
 //     midpoint until 2026-09-02, row 1's foot for that one day, the window's
 //     top for some hours of 2026-09-03, the tab row's first pixel from that
 //     evening and the icon row's foot since 2026-09-09. The content's height
@@ -113,10 +114,10 @@
 //     panel's deletion on 2026-09-30.)
 // The panel's ONE authored number of its own is the outer inset below.
 //
-// THE PALETTE IS THE FILE MANAGER'S, NOT THE KEYBOARD'S (R32, the ladder at
-// the painter and the constants in render.h's palette block): the band's
-// ground is kModalFieldGround, a resting row paints no fill at all, and the
-// hover, selected and hovered+selected faces are the three kFolderRow*
+// THE PALETTE IS THE FILE MANAGER'S, NOT THE KEYBOARD'S (2026-08-28, the
+// ladder at the painter and the constants in render.h's palette block): the
+// band's ground is kModalFieldGround, a resting row paints no fill at all, and
+// the hover, selected and hovered+selected faces are the three kFolderRow*
 // values — kdenlive's project bin and pcmanfm-qt's compact view, which agree.
 // NO ALTERNATING ROWS.
 //
@@ -211,8 +212,9 @@ inline bool stands(const AppState& a) {
 
 // The content's whole height: the pad at both ends, every row and the gaps
 // between them. Zero for an empty listing.
-// IT SIZES NOTHING (R35 took the band's height off it): its ONE consumer is
-// the scroll ceiling below, which is how far the content runs past the band.
+// IT SIZES NOTHING (the band's height is fixed since 2026-08-28): its ONE
+// consumer is the scroll ceiling below, which is how far the content runs
+// past the band.
 inline int content_height_px(const AppState& a) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (n <= 0) return 0;
@@ -221,9 +223,10 @@ inline int content_height_px(const AppState& a) {
 }
 
 // THE BAND: the slot's band (its x, its width and its bottom edge — one
-// owner, app_state.h) AT THE CEILING'S WHOLE EXTENT, a FIXED height (R35, the
-// ruling above), from under the icon row's border to the bottom row. Like
-// the keyboard's own accessor it does not ask whether the panel stands.
+// owner, app_state.h) AT THE CEILING'S WHOLE EXTENT, a FIXED height
+// (2026-08-28, the ruling above), from under the icon row's border to the
+// bottom row. Like the keyboard's own accessor it does not ask whether the
+// panel stands.
 //
 // IT IS THE PANEL'S ONE RECT, and that is what the fixed height bought: the
 // band a damage must erase is the band that was painted, so a listing that

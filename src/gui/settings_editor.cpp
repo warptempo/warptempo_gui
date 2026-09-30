@@ -465,8 +465,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // Parked zoom is display-scratch like the persisted
             // viewport/playhead fields -- clamp_viewport_start's level-clamp
             // is the sole owner of honoring it, at tab-in.
-            // AND THE PARKED BAND'S WHOLE-SONG STATE GOES WITH IT (2026-09-02,
-            // R-17g): a typed level is a zoom write like any other, and
+            // AND THE PARKED BAND'S WHOLE-SONG STATE GOES WITH IT (2026-09-02):
+            // a typed level is a zoom write like any other, and
             // leaving the bit standing would have the tab-in clamp pin this
             // very value back to the ceiling (the inventory of the four clears
             // is at ViewState::whole_song_visible).

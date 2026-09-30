@@ -751,7 +751,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ToolbarChord::repeats).
     //
     // THEIR MODIFIER COLUMNS STAY FALSE and that is the split these four make
-    // visible (2026-08-31, R12 — THE STEP LADDER): the table's `shift` and
+    // visible (2026-08-31, THE STEP LADDER): the table's `shift` and
     // `ctrl` columns spell a row's OWN base chord (Redo's Ctrl+Shift+Z, the
     // Undo's Ctrl+Z), while an ADMISSION is a press-time modifier the
     // lift moves into the dispatched chord — and the ladder is the second
@@ -3568,13 +3568,13 @@ void GuiInputHandler::clear_modal_dialog_key_press() {
 // Returns true when a button was hit (the claim then consumes the press; the
 // veil consumes it either way).
 //
-// `shift` IS THE PRESS-TIME MODIFIER (R37), and only the player's claim ever
-// passes true — every other claim admits a plain press alone. A SHIFT PRESS ON
-// A BUTTON WITH NO SHIFTED TWIN IS A CONSUMED NOTHING, never the unshifted
-// act: the roster's own rule (arm_redesign_press), and a silent unshifted act
-// would be a lie about what the modifier did. THE CLOCK IS STAMPED FOR EVERY
-// ARM, a press having a time whatever it landed on; what the lift makes of it
-// is modal_dialog_press_shifted's.
+// `shift` IS THE PRESS-TIME MODIFIER (2026-08-28), and only the player's claim
+// ever passes true — every other claim admits a plain press alone. A SHIFT
+// PRESS ON A BUTTON WITH NO SHIFTED TWIN IS A CONSUMED NOTHING, never the
+// unshifted act: the roster's own rule (arm_redesign_press), and a silent
+// unshifted act would be a lie about what the modifier did. THE CLOCK IS
+// STAMPED FOR EVERY ARM, a press having a time whatever it landed on; what the
+// lift makes of it is modal_dialog_press_shifted's.
 bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     const int hit = modal_dialog_button_hit(x, y);
     if (hit < 0) return false;
@@ -3606,10 +3606,11 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     return true;
 }
 
-// THE SHIFTED-TWIN VERDICT for the arm as it stands (R37) — the roster lift's
-// own term over this surface: the CARRIED press-time shift ORed with a press
-// HELD past chrome_shift_hold_ms(), so a physical Shift+click and a long press
-// reach the same dispatch and holding a shift-clicked button changes nothing.
+// THE SHIFTED-TWIN VERDICT for the arm as it stands (2026-08-28) — the roster
+// lift's own term over this surface: the CARRIED press-time shift ORed with a
+// press HELD past chrome_shift_hold_ms(), so a physical Shift+click and a long
+// press reach the same dispatch and holding a shift-clicked button changes
+// nothing.
 // It is measured at the LIFT against the arm's own stamp — no timer, no tick —
 // and it asks nothing about WHICH button: the dispatch reads it only where
 // player_button_shift_admits says so, which is what lets a button with no twin
@@ -3742,14 +3743,14 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         // the act's own body answers exactly as its key does: carding where
         // the key cards (the load in place's three refusals), silent where
         // the silence is ruled (the folder walks' and the seeks' benign
-        // refusals at their state, R5). The KEYS never come through here, and
-        // THE CAR never does either: on_media_command runs the player's bodies
-        // DIRECT, so a head unit's button reaches neither this line nor a
-        // button's face.
+        // refusals at their state, 2026-08-31). The KEYS never come through
+        // here, and THE CAR never does either: on_media_command runs the
+        // player's bodies DIRECT, so a head unit's button reaches neither this
+        // line nor a button's face.
         if (!b.enabled) return true;
         switch (b.player_act) {
-            // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
-            // keys are Home and End since 2026-08-31 — the main window's
+            // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (2026-08-28):
+            // their keys are Home and End since 2026-08-31 — the main window's
             // own transport pair, "just like the regular GUI" — with the plain
             // acts home() and next_track(), the right one a NEXT TRACK since
             // 2026-09-04; THIS IS THE SECOND OF EACH ACT'S TWO ROADS, the key
@@ -4537,8 +4538,8 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // content fills the rows.
 
 // THE MOTIONLESS LIFT'S FIRST HALF: the band moves, under every owner — the
-// picker has no field beside it (architect R22), so the band IS what Enter
-// opens.
+// picker has no field beside it (architect 2026-08-28), so the band IS what
+// Enter opens.
 void GuiInputHandler::folder_overlay_highlight_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -4641,7 +4642,7 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
         // its act is gone — once a drag, always a drag, on both axes — so a
         // purely sideways crossing simply scrolls nothing and ends with no act,
         // which is the answer Plasma's single-click and GNOME's touch both give
-        // (the ruling's own references, R39).
+        // (the ruling's own references).
         if (std::max(std::abs(x - press.press_x),
                      std::abs(y - press.press_y)) >=
                 drag_moved_threshold_px()) {
@@ -4804,7 +4805,7 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     // that the plain press works, and a chord on a slider is not an act
     // anyone spelled.
     if (mods.ctrl || mods.shift || mods.alt) return true;
-    // THE TWO STATE REFUSALS ARE SILENT (architect 2026-08-31, R5): they are
+    // THE TWO STATE REFUSALS ARE SILENT (architect 2026-08-31): they are
     // the seek's own two, met here instead of at seek_to because the press
     // must not ARM the handle drag either, and they went silent with seek_to's
     // — a slider resting at the left end under a zeroed clock IS the state
@@ -5206,7 +5207,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // 2026-09-02 too, when it stopped at row 1's foot; it was consumed here
     // for the hours between the gap's close and that evening's ruling.)
     // The whole rule is stated at render_player_active (input_handler.h).
-    // THE ONE ROW THAT ADMITS SHIFT (2026-08-28, R37): the player's two skips
+    // THE ONE ROW THAT ADMITS SHIFT (2026-08-28): the player's two skips
     // carry a shifted twin — the item folder's ends — so a SHIFT press reaches
     // the arm here and the lift dispatches that twin, the roster's own
     // shift-click over this surface. The arm body applies the admission (a
@@ -6889,8 +6890,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         if (button == GuiMouseButton::Left) {
             if (finish_player_scrub_release(x, y)) return;
             // THE SHIFTED-TWIN VERDICT IS READ BEFORE THE TAKE, which clears
-            // the arm the hold is measured against (R37; the term's two roads
-            // are at modal_dialog_press_shifted).
+            // the arm the hold is measured against (2026-08-28; the term's two
+            // roads are at modal_dialog_press_shifted).
             const bool shifted = modal_dialog_press_shifted();
             dispatch_modal_dialog_button(take_modal_dialog_release(x, y),
                                          shifted);
@@ -8008,7 +8009,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // "press-time" is simply the state this press found.
         //
         // THE CHORD IS THE LIFT'S MINUS ITS LONG-PRESS TERM, and it carries
-        // BOTH press-time modifiers since 2026-08-31 (R12, the step ladder):
+        // BOTH press-time modifiers since 2026-08-31 (the step ladder):
         // Up / Down are `repeats` rows that admit shift AND ctrl, so a
         // Shift+hold walks ten units a fire and a Ctrl+hold three —
         // A HELD REPEAT CARRIES ITS MODIFIER, the burst continuing the gesture
@@ -8419,7 +8420,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
         if (tc.id != id) continue;
         // THE FIRE CARRIES THE ARM'S OWN MODIFIERS, the arm-time chord build's
         // twin (arm_redesign_press) and the same expression: a HELD REPEAT
-        // CARRIES ITS MODIFIER (2026-08-31, R12), so a Shift+hold on Up / Down
+        // CARRIES ITS MODIFIER (2026-08-31), so a Shift+hold on Up / Down
         // fires the ten-unit step and a Ctrl+hold the three-unit one, every
         // fire (Left / Right admit no modifier since 2026-09-21). Both bits
         // were narrowed at the press to a button that admits them, so this

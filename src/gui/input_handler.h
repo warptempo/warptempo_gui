@@ -2613,7 +2613,7 @@ private:
     // if key+mods matched one (on_key then returns), false otherwise.
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
-    // THE WAVEFORM-LANE PLAYHEAD STEP'S ONE ACT BODY (2026-08-31, R12): the
+    // THE WAVEFORM-LANE PLAYHEAD STEP'S ONE ACT BODY (2026-08-31): the
     // stop, the stale-focus clear, the signed step and the camera, called by
     // bare Left / Right (handle_plain_bare_keys' two arms below; Ctrl+Left /
     // Ctrl+Right were a second road 2026-09-22 to 2026-09-23). `step` is
@@ -2706,7 +2706,7 @@ private:
     // that day is reverted with the ruling).
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
-    // -- THE PICKER (architect 2026-08-28, R22/R23; bodies in
+    // -- THE PICKER (architect 2026-08-28; bodies in
     //    input_key_dispatch.cpp) ---------------------------------------------
     //
     // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
@@ -2758,7 +2758,7 @@ private:
     //       already drops every name the device config cannot carry) filtered
     //       here by the model (resolve_project), so a row that would refuse at
     //       Enter is not a row: an invalid folder simply does not show
-    //       (architect R8). Never
+    //       (architect 2026-08-28). Never
     //       kept fresh (a project that appears or vanishes while the picker
     //       stands shows at the next open), no `..` row and no folder inside
     //       a project — a project is a leaf here. The band opens on the
@@ -3893,10 +3893,10 @@ private:
     // menu rather than opening the row, and arms no modal button). The wheel scrolls the overlay one row per detent over
     // the band and is consumed everywhere else; the cursor is the Arrow; the
     // tooltip dwell is the modal buttons' own. A MODIFIED PRESS IS CONSUMED
-    // WITH ONE ADMISSION (R37): a SHIFT press on the modal row's two skips
-    // arms their shifted twin, the roster's shift-click over this surface, and
-    // ctrl, alt and every other shift press stay the consumed nothing they
-    // were. THE CHORD MODALITY is the key
+    // WITH ONE ADMISSION (2026-08-28): a SHIFT press on the modal row's two
+    // skips arms their shifted twin, the roster's shift-click over this
+    // surface, and ctrl, alt and every other shift press stay the consumed
+    // nothing they were. THE CHORD MODALITY is the key
     // router below, which runs in on_key ahead of every ordinary dispatch (the
     // prompt gate and the dropdown gate above it, a prompt outranking the
     // player). This predicate is what every one of those readers asks; it is
@@ -3921,10 +3921,10 @@ private:
     // (2026-09-04; the item's own end 2026-08-30..09-04), a silent wall at
     // the folder's last; Backspace up one
     // folder (a consumed no-op at the root); SHIFT+Home / Shift+End the
-    // folder's FIRST / LAST wav (R37, re-keyed off Page Up / Page Down
-    // 2026-08-30 and off comma/period 2026-08-31 — bare `,` / `.` are unbound
-    // here and fall to the silent catch-all below, and bare `v` joined them
-    // 2026-09-01 when the player's Stop retired with its
+    // folder's FIRST / LAST wav (2026-08-28, re-keyed off Page Up / Page
+    // Down 2026-08-30 and off comma/period 2026-08-31 — bare `,` / `.` are
+    // unbound here and fall to the silent catch-all below, and bare `v` joined
+    // them 2026-09-01 when the player's Stop retired with its
     // button); `r` the Repeat one lamp; `'` the Load in
     // place button's chord; bare Delete / Shift+Delete the Delete button's
     // two acts, at the root listing alone; bare `\` the tooltip lamp
@@ -3949,9 +3949,9 @@ private:
     // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp), ONE ROUTER
     // FOR EVERY CONTENT: the row press claim (arm at the press — a modified or
     // non-left press is consumed, the shift the player's MODAL ROW admits
-    // since R37 being the row's, never a row of the list's), the release (A
-    // MOTIONLESS LIFT HIGHLIGHTS THE ROW AND OPENS IT — a click activates,
-    // architect 2026-08-29; a scroll drag ends), the motion
+    // since 2026-08-28 being the row's, never a row of the list's), the
+    // release (A MOTIONLESS LIFT HIGHLIGHTS THE ROW AND OPENS IT — a click
+    // activates, architect 2026-08-29; a scroll drag ends), the motion
     // (past the drag gate — the sweeps' and pans' Chebyshev crossing, on
     // EITHER axis — the arm is the band's scroll drag; inside
     // it the feint's inside bit), the hover walk, and the hard end (the
@@ -4023,8 +4023,8 @@ private:
     void copy_focused_marker_value();
     void jump_to_value_source();
 
-    // THE LOAD ROAD (design R10 / R15, revised 2026-08-28 into a button): the
-    // Load in place button's act and bare `'`'s inside the player — says
+    // THE LOAD ROAD (the player's design, revised 2026-08-28 into a button):
+    // the Load in place button's act and bare `'`'s inside the player — says
     // "Cannot load in place while a render is running" on a card over a
     // running or parked render (silent for the one day a status bar stood at
     // the window's foot to explain it) and
@@ -4136,8 +4136,8 @@ private:
     //                               button the lift LANDED on if it is the one
     //                               armed, else -1.
     //   modal_dialog_press_shifted — the SHIFTED-TWIN verdict for the arm that
-    //                               is still standing (R37): the press-time
-    //                               shift ORed with a hold past
+    //                               is still standing (2026-08-28): the
+    //                               press-time shift ORed with a hold past
     //                               chrome_shift_hold_ms(), the roster lift's own
     //                               term. Read BEFORE the take, which clears
     //                               the arm.

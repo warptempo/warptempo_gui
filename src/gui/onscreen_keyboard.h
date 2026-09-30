@@ -477,10 +477,10 @@ inline int surface_height_px() {
 //
 // THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND, AND NO THIRD TERM SAYS SO
 // (2026-08-28): the folder overlay REPLACES the keyboard in this band
-// (architect R3, "neither use needs typing"), and for one afternoon that day
+// (architect, "neither use needs typing"), and for one afternoon that day
 // this predicate carried `!folder_overlay::stands(a)` as a third term — its
 // producer being the Open project prompt, whose text editor stood UNDER the
-// picker's band. The prompt lost its field (R22) and the pickers became a
+// picker's band. The prompt lost its field and the pickers became a
 // modal owner that is NOT an editor, so the term lost its producer and was
 // deleted (a gate term exists iff a producer exists — validation_topology.md's
 // rule applied to a gate). THE EXCLUSION IS STRUCTURAL NOW: the overlay
@@ -523,8 +523,8 @@ inline GuiRect surface_rect(const AppState& a) {
 // keyboard's four key rows and the overlay's ceiling (both bands are fixed and
 // both rise from the slot's one bottom edge, so the taller contains the
 // other). It stays a MAX rather than collapsing with the overlay's own fixed
-// height (R35): the two tenants still differ, this keyboard's height being its
-// rows' and the panel's the ceiling.
+// height (architect 2026-08-28): the two tenants still differ, this
+// keyboard's height being its rows' and the panel's the ceiling.
 // THE SHOW/HIDE COMPARATOR TAKES IT (main.cpp): those two edges damage a band
 // whose tenant is arriving or has already gone, so the rect cannot be either
 // tenant's own — on the hide the departed surface's pixels are exactly what

@@ -502,8 +502,8 @@ std::string short_sha(const std::string& sha);
 // ALREADY HOLDS since 2026-08-28 — the walk's scan its candidate, the `'`
 // confirmation its viewed member — so the resolution is a verification rather
 // than a lookup (the typed load prompt that took "a SHA pasted from GitHub's web
-// UI" retired with its field, architect R23). It must name a COMMIT in this
-// clone; anything else refuses as naming none.
+// UI" retired with its field, architect 2026-08-28). It must name a COMMIT in
+// this clone; anything else refuses as naming none.
 //
 // The sidecar directory is the one THIS COMMIT TOUCHED for the base name, the
 // same rule the walk uses, so a commit from before a corpus rename reads with no

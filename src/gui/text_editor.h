@@ -252,7 +252,7 @@ constexpr int kMaxPendingCharsCommitTitle = 256;
 // 2026-09-05, when every cell became a mini flag with its own editor (the
 // MeasureText kind, the marker measure editor, stood from 2026-08-19 until the
 // measures feature was deleted whole 2026-09-16); TWO
-// KINDS RETIRED WHOLE on 2026-08-28 (architect, R22/R23: "we're not allowing
+// KINDS RETIRED WHOLE on 2026-08-28 (architect: "we're not allowing
 // free-form typing there") — LoadInPlace, the `h` view's typed load prompt,
 // and OpenProject, the Open project prompt's field, both replaced by the
 // FIELD-LESS PICKER over the folder overlay (AppState::Picker, app_state.h),

@@ -1151,7 +1151,7 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
     // governed here only once they go live -- at Ctrl+Tab restore or tab-in.
     //
     // AND 'THE WHOLE SONG IS VISIBLE' IS A STATE THE LEVEL FOLLOWS (architect
-    // 2026-09-02, R-17g; the field is ViewState::whole_song_visible, whose
+    // 2026-09-02; the field is ViewState::whole_song_visible, whose
     // declaration carries the ruling, the one setter and the four clears).
     // The per-file ceiling moves with the waveform's width and with the active
     // domain's total, so a resize or an S/T flip into the LONGER domain leaves
@@ -2201,7 +2201,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // TOP-STRIP damage is the exact rect — rows 1 and 2 read the flag for
     // their ground, and both live there — PLUS THE MODAL ROW (2026-08-28: the
     // play-scrub's played groove takes the focused blue or the dimmed one,
-    // architect R29) PLUS THE FOLDER OVERLAY'S PANEL WHILE IT STANDS
+    // as the architect ruled) PLUS THE FOLDER OVERLAY'S PANEL WHILE IT STANDS
     // (2026-09-02: the highlighted row's band and its list-focused outline
     // take kRedesignAccentInactive, and so does the modal row's active-focus
     // outline). THE READER CLASSES ARE FOUR AND THE DAMAGE IS THREE RECTS,

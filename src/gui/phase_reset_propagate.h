@@ -165,7 +165,7 @@ struct PhaseResetPropagate {
     // `created` is the exact post-insert index set of the resets this paste
     // materialized (empty for the state-only tail, which flips flags on resets
     // that already exist).
-    // ONLY A PASTE THAT WROTE A BLOCK REACHES IT (architect 2026-08-31, R10):
+    // ONLY A PASTE THAT WROTE A BLOCK REACHES IT (architect 2026-08-31):
     // a run that produced nothing says its sentence on a card and leaves the
     // view exactly where it stands, the switch being a change of scene that
     // reads as a paste. The produced-nothing arms SKIP this call rather than

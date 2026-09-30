@@ -4214,7 +4214,7 @@ void GuiInputHandler::run_history_revert() {
         else       undo.push_undo_warp(std::move(warp_pre));
         undo.recompute_dirty();
         // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT under a standing target
-        // view (2026-09-02, R-17d): the warp arm has just rewritten the map the
+        // view (2026-09-02): the warp arm has just rewritten the map the
         // cursor's NUMBER was expressed in, and keeping that number would move
         // the cursor in the music. THROUGH THE RESEAT and never a movement
         // owner — an image moving out from under a resting cursor is a
@@ -4537,8 +4537,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         (key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
          key == GuiKeys::Comma || key == GuiKeys::Period))
         return true;
-    // THE FOUR ARROWS REPEAT IN EVERY FORM THEY BIND (architect 2026-08-31,
-    // R12): a HELD REPEAT CARRIES ITS MODIFIER, so a held Shift+Up walks ten
+    // THE FOUR ARROWS REPEAT IN EVERY FORM THEY BIND (architect 2026-08-31):
+    // a HELD REPEAT CARRIES ITS MODIFIER, so a held Shift+Up walks ten
     // cents a fire — the burst continues the gesture the press began, which
     // is the whole meaning of a hold. Up / Down bind bare, Shift and Ctrl
     // (the ladder, arrow_step_magnitude); Left / Right bind BARE ONLY
@@ -5995,9 +5995,10 @@ bool GuiInputHandler::load_render_entry_in_place(
 // member's INDEX in the commit walk — the one caller (confirm_load_in_place)
 // hands it the index it parked and nothing else; the typed spelling, and with
 // it the "short SHA pasted out of GitHub's web UI" use case, retired with the
-// load prompt's field (architect R23). ONE STATE IN, ONE STATE OUT: the four
-// sidecars THAT checkpoint carried become the live session, in memory, and the
-// disk is never touched — not the corpus, not the working sidecars, not tmp/.
+// load prompt's field (architect 2026-08-28). ONE STATE IN, ONE STATE OUT:
+// the four sidecars THAT checkpoint carried become the live session, in
+// memory, and the disk is never touched — not the corpus, not the working
+// sidecars, not tmp/.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
 // contract load_render_entry_in_place states and this path mirrors: ONE call,
@@ -6379,7 +6380,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     if (!dlg.valid || dlg.buttons.empty()) return false;
     if (!modal_dialog_stash_current()) return false;
     const bool prompt_up = app.prompt.active;
-    // THE RENDER PLAYER'S RING (architect R9, 2026-08-28) is [LIST, buttons…]:
+    // THE RENDER PLAYER'S RING (architect 2026-08-28) is [LIST, buttons…]:
     // the folder overlay's list is one member, standing where an editor's
     // field stands (-1) with one difference — the player OPENS with the ring
     // NOWHERE (-1 and `list_focused` false), and the first Tab lands on the
@@ -6841,8 +6842,8 @@ void GuiInputHandler::open_project_picker() {
     // THE BAND RISES WITH THE PICKER and IS its whole state: the rows and
     // the highlight, nothing beside them. On glass the band takes the
     // on-screen keyboard's place, so the picker shows THE LIST there and no
-    // keyboard — the architect's R3, "neither use needs typing", made
-    // literal by R22.
+    // keyboard — the architect's "neither use needs typing" (2026-08-28),
+    // made literal when the picker lost its field.
     build_project_picker_rows();
     // A modal OPEN damages the whole window (the row's rect does not exist
     // before its first paint — the settings opener carries the rule).
@@ -6858,10 +6859,11 @@ void GuiInputHandler::build_project_picker_rows() {
     // project_model.h), filtered by the model (resolve_project), and the
     // survivors become the band's ROWS. A row that would refuse at the open
     // is not a row, so the band and the act AGREE BY CONSTRUCTION: an invalid
-    // folder simply does not show up (architect R8). THE NAME GRAMMAR IS NOT
-    // ASKED HERE: is_last_project_name (device_config.h) is the ENUMERATION's
-    // own membership rule now — a folder the device config cannot name is not
-    // a project on any opening road — so the walk this loop reads has already
+    // folder simply does not show up (architect 2026-08-28). THE NAME GRAMMAR
+    // IS NOT ASKED HERE: is_last_project_name (device_config.h) is the
+    // ENUMERATION's own membership rule now — a folder the device config
+    // cannot name is not a project on any opening road — so the walk this
+    // loop reads has already
     // dropped those names, and a second copy of the test here would be a
     // duplicate predicate with no producer of its own. The act's remaining
     // arms are not filters either: the same-project no-op is a legal answer
@@ -7977,7 +7979,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // then, deliberately — the player's ring has no Left/Right walk, since
     // those keys are the car's rewind and fast-forward.
 
-    // THE ITEM FOLDER'S ENDS (architect 2026-08-28, R37; re-keyed 2026-08-31):
+    // THE ITEM FOLDER'S ENDS (architect 2026-08-28; re-keyed 2026-08-31):
     // Shift+Home and Shift+End are the two skips' keys with the modifier — the
     // first and the last wav of the transport item's own folder, never a wrap
     // and a carded refusal with no item. Ahead of the blanket below because
@@ -8027,17 +8029,17 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::L:
             render_player.close();
             return true;
-        // BARE `v` WAS STOP (R36, on this letter since 2026-08-30 — Audacious
-        // and Winamp before it stop on V) AND IS UNBOUND HERE since 2026-09-01:
-        // the player's Stop act retired whole with its button, leaving the row
-        // the main window's own transport triple, so the letter falls to the
-        // silent catch-all below like every other chord this router does not
-        // name.
+        // BARE `v` WAS STOP (the act from 2026-08-28, on this letter since
+        // 2026-08-30 — Audacious and Winamp before it stop on V) AND IS
+        // UNBOUND HERE since 2026-09-01: the player's Stop act retired whole
+        // with its button, leaving the row the main window's own transport
+        // triple, so the letter falls to the silent catch-all below like every
+        // other chord this router does not name.
         case GuiKeys::Apostrophe:
             render_player_load_in_place();
             return true;
         case GuiKeys::R:
-            // REPEAT ONE (architect 2026-08-28, R26), the Repeat one button's
+            // REPEAT ONE (architect 2026-08-28), the Repeat one button's
             // own chord: one-shot like every other act key here, and bare-
             // exact like all of them — every modified spelling of `r` is
             // consumed above by the router's `if (!bare) return true`.
@@ -8062,7 +8064,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.open_row(highlight);
             return true;
         case GuiKeys::Space:
-            // THE PLAY BUTTON'S ACT, which since R6 (2026-08-31) reads the
+            // THE PLAY BUTTON'S ACT, which since 2026-08-31 reads the
             // HIGHLIGHT first and the transport second (the fork at
             // play_button_act): a band standing on a folder row or on a
             // wav that is not the item goes THERE, and anywhere else it is
@@ -8804,7 +8806,7 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
         playhead_skip_landing_frame(app, audio, forward, whole_piece));
 }
 
-// THE WAVEFORM-LANE PLAYHEAD STEP, one act owner (architect 2026-08-31, R12,
+// THE WAVEFORM-LANE PLAYHEAD STEP, one act owner (architect 2026-08-31,
 // when the step ladder made it three magnitudes; ONE STEP IN THE ACTIVE
 // COLUMN'S UNIT since 2026-09-21, the horizontal ladder retired on every
 // column). The unit is horizontal_arrow_step's (gui_input.h): one painted

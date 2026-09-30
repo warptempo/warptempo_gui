@@ -182,7 +182,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 }
 
 // THE MARKER LANE'S WALL TERM FOR THE LEFT / RIGHT BUTTONS (architect
-// 2026-08-31, R3): declared in app_state.h, where the face reads it, and
+// 2026-08-31): declared in app_state.h, where the face reads it, and
 // defined here beside the landing it compares. The order of its terms is the
 // PROLOGUE'S OWN, so the face and the press agree at every one of them; the
 // full reasoning — why a 2+ selection stays lit, why the geometry guards are

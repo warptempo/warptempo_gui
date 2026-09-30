@@ -434,8 +434,8 @@ void PhaseResetPropagate::paste_apply() {
         // first its own `Stopped at …` report — AND IT DOES NOT SWITCH VIEWS:
         // the always-switch tail below is a change of scene that looks exactly
         // like a paste, which is the "what shows would mislead" half of the
-        // success rule, so THE SWITCH RETIRES ON THIS PATH rather than the card
-        // (R10). The view stays exactly where the user left it and the sentence
+        // success rule, so THE SWITCH RETIRES ON THIS PATH rather than the
+        // card. The view stays exactly where the user left it and the sentence
         // is the whole answer. THE LAND IS SKIPPED, NOT STUBBED: every caller
         // that DID paste still runs land_paste_in_target_view unchanged.
         // A CLEAN PARTIAL WALK (one side simply ran out, with blocks matched)
@@ -825,7 +825,7 @@ void PhaseResetPropagate::paste_state_apply() {
                              kNothingMatched);
     }
 
-    // AND A RUN THAT WROTE NO BLOCK DOES NOT MOVE (architect 2026-08-31, R10 —
+    // AND A RUN THAT WROTE NO BLOCK DOES NOT MOVE (architect 2026-08-31 —
     // the twin of paste_apply's matched==0 arm above). The switch to target
     // view is a change of scene that looks exactly like a paste, so on the
     // produced-nothing path it retires and the card stands alone: the view
@@ -838,9 +838,9 @@ void PhaseResetPropagate::paste_state_apply() {
     // kNothingMatched above), a LABEL DIVERGENCE at block 0, and a MARKER COUNT
     // MISMATCH at block 0. The last two are paste_apply's enumerated block-0
     // divergence read across (architect 2026-08-31, closing the asymmetry the
-    // R10 pass surfaced): the walk stopped before writing anything, so the run
-    // pasted nothing, said its `Stopped at …`, and must stand still exactly as
-    // its sibling does.
+    // ruling above surfaced): the walk stopped before writing anything, so the
+    // run pasted nothing, said its `Stopped at …`, and must stand still exactly
+    // as its sibling does.
     //
     // AND CASE 2 IS RULED THE OTHER WAY, DELIBERATELY (architect 2026-08-31): a
     // run that PAIRED blocks and left the store byte-equal — every destination
@@ -872,7 +872,7 @@ void PhaseResetPropagate::paste_state_apply() {
 // Ctrl+Z/Ctrl+Shift+Z round-trip: the PHASE RESET propagate starts in the warp
 // (source) view and ends in target view, and this tail is shared by the paste
 // actions — BY EVERY RUN THAT WROTE A BLOCK, and by no other since 2026-08-31
-// (R10; the produced-nothing arms skip it and stand still, the ruling and its
+// (the produced-nothing arms skip it and stand still, the ruling and its
 // two halves at the declaration). IT IS NO LONGER THE ONLY ACT OF THAT SHAPE — SHIFT+S, the
 // drop from any view (2026-08-28,
 // GuiInputHandler::drop_phase_reset_in_target_view), does the same trip for

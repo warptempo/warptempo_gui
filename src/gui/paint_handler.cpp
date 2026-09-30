@@ -1010,7 +1010,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // makes it TWENTY-SIX in SIX: the BPM and ITERATION buttons left the
     // roster for the new menu, and FOLLOW and the SHOW TRIM REGION button
     // joined the zoom group, dissolving two separator-led groups into it; the
-    // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
+    // KEEP-CENTERED LAMP (2026-08-31) lands beside Follow at that group's
     // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
     // carries the current count — TWENTY-ONE in SIX.)
     // THE ZOOM GROUP OPENS HERE, on the separator the TRIM GROUP held from
@@ -3926,7 +3926,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
             dlg.buttons[static_cast<size_t>(owner.index)];
         if (b.tooltip.empty()) return;
         line1 = b.tooltip.c_str();
-        // THE MODIFIER LINE, on the buttons that have one (2026-08-28, R37 —
+        // THE MODIFIER LINE, on the buttons that have one (2026-08-28 —
         // the player's two skips): the roster branch's own two-line form,
         // reached here through the published pair instead of a table, since a
         // modal button's words are the painter's to compose.
@@ -6849,7 +6849,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // while the transport is live, the bottom row's one-button-two-faces
     // rule) and MediaSkipForward — the row was FOUR, MediaPlaybackStop among
     // them, until the player's Stop retired 2026-09-01, and the middle
-    // button's live face stays the pause it took from R36 — the REPEAT
+    // button's live face stays the pause it took on 2026-08-28 — the REPEAT
     // ONE toggle wears
     // MediaRepeatSingle in both its states, the UP button GoParentFolder, and
     // since 2026-09-01 the LOAD IN PLACE wears DialogOkApply and CLOSE
@@ -6857,8 +6857,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // label box every prompt and editor button has always had. THE PLAYER'S
     // ROW IS ALL GLYPHS NOW and the word kind is the other three owners'
     // alone: a prompt's answers, the dialog editors' OK / Cancel and the
-    // picker's Cancel. A GLYPH BUTTON
-    // WEARS NO RESTING OUTLINE (architect R25: "icon buttons have no border —
+    // picker's Cancel. A GLYPH BUTTON WEARS NO RESTING OUTLINE
+    // (architect 2026-08-28: "icon buttons have no border —
     // the regular transport has none; text buttons keep theirs"), which is the
     // face ladder's one fork on this field. `lit` is the roster's SELECTED
     // face — the row's one lamp, Repeat one, and no other button has a state
@@ -6899,7 +6899,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan.push_back(std::move(b));
         }
     } else if (player_up) {
-        // THE PLAYER'S ROW, in painted order (architect 2026-08-28, R25; the
+        // THE PLAYER'S ROW, in painted order (architect 2026-08-28; the
         // transport is THE MAIN WINDOW'S OWN TRIPLE since 2026-09-01): the
         // two SKIPS around Play/Pause, on Home and End since 2026-08-31 and
         // wearing the skip glyphs still —
@@ -6911,9 +6911,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // this row.
         // Close LAST, the escape sentinel by construction as every prompt has
         // it. The plan's order is also the ring's, so Tab walks the row left to
-        // right. A STOP BUTTON SAT AFTER PLAY/PAUSE from R36 (2026-08-28,
-        // Audacious's own order) until the act retired.
-        // THE PAUSE FACE IS TRUTHFUL (architect 2026-08-31, R6): the button
+        // right. A STOP BUTTON SAT AFTER PLAY/PAUSE from 2026-08-28
+        // (Audacious's own order) until the act retired.
+        // THE PAUSE FACE IS TRUTHFUL (architect 2026-08-31): the button
         // wears PAUSE only where its press would PAUSE — the transport live
         // AND the highlight on the transport's own item (or nowhere), which
         // is exactly render_player_highlight_act_row answering −1. Under a
@@ -7006,7 +7006,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::Home,
                      icons::Icon::MediaSkipBackward);
         // PLAY/PAUSE WEARS THE PAUSE GLYPH ON THE PAUSE FACE (above), not the
-        // stop square it wore until R36 gave the row a Stop button of its own.
+        // stop square it wore until the row took a Stop button (2026-08-28).
         // THAT BUTTON RETIRED 2026-09-01 AND THE PAUSE GLYPH STAYS: this is a
         // player's transport, where a pause is a resumable rest, and the row
         // is now the main window's triple with the pause face on the middle
@@ -7229,7 +7229,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                               static_cast<double>(content.h)));
         cairo_restore(cr);
     } else if (player_up) {
-        // -- THE RENDER PLAYER'S ROW (architect 2026-08-28, R25 — the relaid
+        // -- THE RENDER PLAYER'S ROW (architect 2026-08-28 — the relaid
         //    row): TRANSPORT · separator · SCRUB · CLOCK · separator · REPEAT
         //    ONE ......... LOAD IN PLACE · CLOSE, the last two flush right.
         //    The arrangement is Audacious-Qt's under Breeze Dark, which is
@@ -7356,13 +7356,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         paint_separator(sep1_x);
         paint_separator(sep2_x);
 
-        // -- THE PLAY-SCRUB, A BREEZE SLIDER (R29; the metrics, the colours
-        //    and their provenance are at render.h's scrub block). The ITEM is
-        //    published (dlg.scrub) and it is the button box's own band, so a
-        //    press anywhere on it is on the slider and the per-position damage
-        //    covers the handle's whole travel; the MAPPING owns the inset
-        //    (render_player_scrub_x_of), the handle's centre being the frame's
-        //    position. --
+        // -- THE PLAY-SCRUB, A BREEZE SLIDER (2026-08-28; the metrics, the
+        //    colours and their provenance are at render.h's scrub block). The
+        //    ITEM is published (dlg.scrub) and it is the button box's own band,
+        //    so a press anywhere on it is on the slider and the per-position
+        //    damage covers the handle's whole travel; the MAPPING owns the
+        //    inset (render_player_scrub_x_of), the handle's centre being the
+        //    frame's position. --
         const AppState::RenderPlayer& rp = app.render_player;
         const int64_t pos = render_player_position(app, playback);
         if (scrub_w > 0) {
@@ -7386,11 +7386,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 const int hx = rp.scrub.armed
                                    ? rp.scrub.marker_x
                                    : render_player_scrub_x_of(app, pos);
-                // THE PLAYED PART TAKES THE WINDOW'S FOCUS (R29): the 17:46
-                // shot's blue while the window is activated, the 16:46 shot's
-                // dimmed one while it is not — the scrub is the third surface
-                // that reads AppState::window_activated, after rows 1 and 2,
-                // and the activation hook damages this row for it.
+                // THE PLAYED PART TAKES THE WINDOW'S FOCUS (2026-08-28): the
+                // 17:46 shot's blue while the window is activated, the 16:46
+                // shot's dimmed one while it is not — the scrub is the third
+                // surface that reads AppState::window_activated, after rows 1
+                // and 2, and the activation hook damages this row for it.
                 const bool     act = app.window_activated;
                 const GuiColor played_fill =
                     act ? kScrubPlayed : kScrubPlayedInactive;
@@ -7449,7 +7449,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             }
         }
 
-        // -- THE CLOCK, after the scrub (R25 put the time there; the cell
+        // -- THE CLOCK, after the scrub (there since 2026-08-28; the cell
         //    itself is unchanged). Its cell is PUBLISHED (dlg.clock) for the
         //    tick's per-position damage, beside the scrub's, and it CLIPS at
         //    the lane's right pad on a narrow window. --
@@ -7485,14 +7485,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // so the row's `font` is RE-TAKEN here rather than assumed to have
         // survived. (This is the one branch that switches faces before the
         // buttons are painted; the clock's own cell was painted after them
-        // until R25 moved the time.) IT STAYS THOUGH THIS OWNER'S ROW PAINTS
-        // NO WORD BUTTON SINCE 2026-09-01: the walk below is SHARED, its word
-        // arm reads `font`, and this line is what keeps that arm's
-        // precondition a property of the body rather than of which branch
-        // happened to run.
+        // until the relaid row of 2026-08-28 moved the time.) IT STAYS THOUGH
+        // THIS OWNER'S ROW PAINTS NO WORD BUTTON SINCE 2026-09-01: the walk
+        // below is SHARED, its word arm reads `font`, and this line is what
+        // keeps that arm's precondition a property of the body rather than of
+        // which branch happened to run.
         font = select_bottom_row_face(cr);
     } else if (picker_up) {
-        // -- THE PICKER'S ROW (2026-08-28, architect R22; ONE BUTTON since
+        // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
         //    2026-08-29): **Cancel** and NOTHING ELSE — no label, no field,
         //    no OK. The list in the
         //    band above is the whole question, a click on a row is the answer,
@@ -7832,7 +7832,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //   the icon row paints nothing (the row ground still shows through —
         //   no fill, the icon buttons plus that one line). A GLYPH BUTTON
         //   TAKES THE ICON ROW'S REST INSTEAD — nothing at all — which is
-        //   architect R25 (2026-08-28): "icon buttons have no border (the
+        //   architect 2026-08-28: "icon buttons have no border (the
         //   regular transport has none), text buttons keep theirs", the player
         //   row's transport reading as the transport it replaces. So the rest
         //   line is the `glyph` fork and not the unconditional it was.
@@ -7841,7 +7841,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //   halo painted below. A GLYPH BUTTON KEEPS IT WHOLE — the ring must
         //   be visible wherever it lands, and a borderless button with no
         //   focus face would swallow it.
-        // THE SELECTED FACE ARRIVED WITH THE ROW'S ONE LAMP (2026-08-28, R26 —
+        // THE SELECTED FACE ARRIVED WITH THE ROW'S ONE LAMP (2026-08-28 —
         // Repeat one): kRedesignSelectedFill under the resting line, the
         // roster's own SELECTED face, ranked under the press and over the
         // focus fill exactly as the icon row ranks them — the fill says the
@@ -7970,7 +7970,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // while something claims it or its lamp stands (the ladder above).
         // SINCE 2026-09-01 THE FORK IS OWNER-SHAPED: the player's row is SEVEN
         // glyph buttons and no word, so none of them wears a resting outline
-        // (architect R25's "icon buttons have no border — the regular
+        // (architect 2026-08-28: "icon buttons have no border — the regular
         // transport has none", now true of the whole row), while a prompt's,
         // an editor's and the picker's buttons are all words and all keep
         // theirs. The expression is unchanged — it asks the button, not the
@@ -8037,9 +8037,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                                      plan[i].response_key,
                                                      plan[i].editor_ok)
                           : plan[i].tooltip;
-        // THE MODIFIER LINE (R37), published beside it and empty on every
-        // button with no shifted twin — the roster hint's `line2` over this
-        // surface, and its one producer is the player's plan above.
+        // THE MODIFIER LINE (2026-08-28), published beside it and empty on
+        // every button with no shifted twin — the roster hint's `line2` over
+        // this surface, and its one producer is the player's plan above.
         out.tooltip2 = plan[i].tooltip2;
         dlg.buttons.push_back(out);
     }
@@ -8248,7 +8248,7 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // THE BAND IS THE STANDING TENANT'S OWN (2026-08-28): the overlay's is the
     // CEILING BAND every time it stands — the icon row's foot through the
     // bottom row's top since 2026-09-09 (the tab row's first pixel
-    // 2026-09-03..09), whatever its listing's length (R35's fixed height,
+    // 2026-09-03..09), whatever its listing's length (its fixed height,
     // the architect's ceiling) — and the keyboard's
     // is its four key rows,
     // so "the band" is a question with two answers and the bit describes
@@ -8288,7 +8288,7 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // 2026-09-03 to 2026-09-30 and went with the panel.)
 //
 // THE BUTTON ROWS ARE THE ICON ROW'S BUTTON AND THE PALETTE IS THE FILE
-// MANAGER'S (architect 2026-08-28, R31/R32, superseding the keyboard's
+// MANAGER'S (architect 2026-08-28, superseding the keyboard's
 // palette this band opened with): each such row is the ICON ROW'S BUTTON —
 // its box, its gap, its corner radius, its glyph inset (folder_overlay.h
 // reads all four from render.h) — and its faces come off kdenlive's project
@@ -8419,10 +8419,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             const bool pressed     = ov.press.armed &&
                                      ov.press.row == index &&
                                      ov.press.inside && !ov.press.scrolling;
-            // THE FACE IS TWO AXES, NOT A LADDER (R32's own table): LIT — the
-            // highlight, or a live press arm promising it — and HOVERED. A
-            // row that is neither takes NO FILL and the band's ground shows
-            // through it.
+            // THE FACE IS TWO AXES, NOT A LADDER (the palette ruling's own
+            // table): LIT — the highlight, or a live press arm promising it —
+            // and HOVERED. A row that is neither takes NO FILL and the band's
+            // ground shows through it.
             const bool lit = pressed || highlighted;
             const GuiColor fill =
                 lit     ? (hovered ? kFolderRowHoverSelected : accent)
@@ -8461,9 +8461,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                         static_cast<double>(glyph));
             const int text_x = gx + glyph + gap;
 
-            // THE NAME, shaped through the one chokepoint, after the glyph —
-            // in the band's ONE ink (black on the
-            // accent would be the marker lane's rule, not this band's: R32
+            // THE NAME, shaped through the one chokepoint, after the glyph — in
+            // the band's ONE ink (black on the accent would be the marker
+            // lane's rule, not this band's: the palette ruling of 2026-08-28
             // gives the selected row white text, kdenlive's own band carries
             // it, and a row that changes ink with its face would be a second
             // thing to read).
@@ -8474,9 +8474,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             const double baseline =
                 redesign_baseline(font, static_cast<double>(r.y),
                                   static_cast<double>(r.h));
-            // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (R31: no wrap,
-            // no ellipsis — "project and file names will be short"), and the
-            // clip to the ROW's own right edge is what "off the edge" means
+            // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (2026-08-28: no
+            // wrap, no ellipsis — "project and file names will be short"), and
+            // the clip to the ROW's own right edge is what "off the edge" means
             // here: the glyphs stop at the row, not at the window.
             cairo_save(cr);
             cairo_rectangle(cr, text_x, r.y,

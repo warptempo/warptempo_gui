@@ -1377,9 +1377,9 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 inline constexpr GuiColor kModalFieldGround = hex(0x141618);
 inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 
-// THE FOLDER OVERLAY'S ROW FACES (architect 2026-08-28, R32) — the list panel
+// THE FOLDER OVERLAY'S ROW FACES (architect 2026-08-28) — the list panel
 // that stands in the keyboard's band (folder_overlay.h), whose ROWS ARE
-// BUTTONS (R31) painted on a FILE MANAGER'S palette rather than the
+// BUTTONS painted on a FILE MANAGER'S palette rather than the
 // keyboard's. THE REFERENCE IS TWO PROGRAMS THAT AGREE: kdenlive's project
 // bin and pcmanfm-qt's compact view, both read off the architect's own screen
 // (his 2026-08-28 17:46..18:04 shots). NO ALTERNATING ROWS — the band's
@@ -1832,7 +1832,7 @@ inline int icon_row_h_px() {
 // crops as the lane above (row_4_button_{rest,hover,click,selected,
 // selectedhover}.png). These three lived as file-local constants in
 // paint_handler.cpp beside the row's walk until 2026-08-28, when THE FOLDER
-// OVERLAY'S ROWS BECAME BUTTONS (architect R24/R31: "we've gone for the button
+// OVERLAY'S ROWS BECAME BUTTONS (architect: "we've gone for the button
 // analogy", "the buttons are good enough size for my finger") and a second
 // file needed them — so the numbers moved up here beside the lane metrics they
 // were always measured with, ONE DEFINITION EACH, and both painters and
@@ -1863,7 +1863,7 @@ inline constexpr double kIconGlyphPx  = 22.0;   // the icon box inside the butto
 // so it does not come through scaled_px.
 inline constexpr double kIconCornerRadiusPx = 5.0;
 
-// -- THE PLAY-SCRUB: A BREEZE SLIDER (architect 2026-08-28, R25/R29) --------
+// -- THE PLAY-SCRUB: A BREEZE SLIDER (architect 2026-08-28) -----------------
 //
 // The render player's modal row carries the transport's scrub bar, and the
 // architect ruled its design to be the one his own desktop paints: a plain

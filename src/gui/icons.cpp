@@ -576,7 +576,7 @@ constexpr IconPath kAudioXWavPaths[] = {
      "M 8 4 L 18 4 L 18 6 L 8 6 L 8 4 z "},
 };
 
-// -- THE PLAYER ROW'S REPEAT TOGGLE (2026-08-28, architect R30) ---------------
+// -- THE PLAYER ROW'S REPEAT TOGGLE (architect 2026-08-28) --------------------
 //
 // PROVENANCE, per the theme-provenance rule: breeze-dark's
 // actions/22/media-repeat-single.svg, a real file on this host; the committed
@@ -597,9 +597,10 @@ constexpr IconPath kAudioXWavPaths[] = {
 // the `d` stays verbatim; an attribute that changes no pixel does not become a
 // row.)
 //
-// ONE GLYPH FOR BOTH STATES (R30, "a plain toggle: off is the unpressed face,
-// on is the pressed/lit face"), so there is no second file here and no glyph
-// swap at the painter — the modal row's lamp carries the state.
+// ONE GLYPH FOR BOTH STATES (architect 2026-08-28, "a plain toggle: off is
+// the unpressed face, on is the pressed/lit face"), so there is no second
+// file here and no glyph swap at the painter — the modal row's lamp carries
+// the state.
 constexpr IconPath kMediaRepeatSinglePaths[] = {
     {kIconText, "m6 12-3 2.5 3 2.5v-2h9v-1h-9z"},
     {kIconText,
@@ -683,7 +684,7 @@ constexpr IconPath kMediaPlaybackStopPaths[] = {
      "m3 3h16v16h-16z"},
 };
 
-// THE PLAYER ROW'S PAUSE FACE (2026-08-28, R36). Same rules: the `d` verbatim
+// THE PLAYER ROW'S PAUSE FACE (2026-08-28). Same rules: the `d` verbatim
 // from the committed file, the fill the file's own `.ColorScheme-Text`
 // #fcfcfc. TWO SUBPATHS IN ONE STRING — m/v/h/z twice, the second `m`
 // relative — which the interpreter's oldest arms already cover (the two

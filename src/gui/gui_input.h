@@ -83,7 +83,7 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // TWO HOLDS and of nothing else:
 //   * THE CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at
 //     both of its read sites — the roster lift and the RENDER PLAYER'S MODAL
-//     ROW, which joined 2026-08-28 (R37): its two skips admit a modified
+//     ROW, which joined 2026-08-28: its two skips admit a modified
 //     press, so their long press reaches the same twin a shift-click does,
 //     one value and one term. It has NO VISUAL ANNOUNCEMENT: the span is
 //     measured at the lift and nothing on screen marks the moment it is
@@ -211,7 +211,7 @@ struct GuiInputState {
     bool     synthesized_repeat  = false;
 };
 
-// -- THE ARROW STEP LADDER (architect 2026-08-31, R12) -----------------------
+// -- THE ARROW STEP LADDER (architect 2026-08-31) ----------------------------
 //
 // THE MODIFIER IS THE STEP'S MAGNITUDE ON THE VERTICAL ARROWS, AND ON THEM
 // ALONE: bare is ONE unit, Ctrl is THREE and Shift is TEN (the two rungs
@@ -826,7 +826,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // live walk admits it.
         case GuiKeys::IsoLeftTab: return bare || sh;
         // The value step on the addressed cell (the tempo or a bound), IN
-        // THREE MAGNITUDES since 2026-08-31 (R12):
+        // THREE MAGNITUDES since 2026-08-31:
         // bare one unit, Ctrl three, Shift ten since 2026-09-21 (the
         // ladder's owner is arrow_step_magnitude above). Ctrl+Shift spells
         // nothing.

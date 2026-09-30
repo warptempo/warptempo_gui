@@ -2724,7 +2724,7 @@ enum class RedesignButton {
     // column; the burst's state and its whole edge inventory are at
     // AppState::ChromePress.
     //
-    // UP / DOWN ADMIT BOTH MODIFIERS since 2026-08-31 (architect, R12 — THE
+    // UP / DOWN ADMIT BOTH MODIFIERS since 2026-08-31 (architect, THE
     // STEP LADDER): a CTRL-click steps THREE units and a SHIFT-click TEN on
     // the addressed cell's own unit (shift the long stride since 2026-09-21).
     // They are one of the two-modifier rule's two shapes (the walk, which
@@ -3530,11 +3530,11 @@ struct CommandPopupItem {
 
 // THE FILE DROPDOWN'S ITEMS — THREE ROWS, in two categories over one
 // separator: **Open Project** first
-// (architect 2026-08-27, the
-// project model's one pointer home on both platforms; the label is the
-// architect's own, R8: "we would call it open project instead of open file",
-// and the row raises the Open project picker — the folder overlay's list of
-// projects in the keyboard's band over a Cancel-alone row), **Revert** right
+// (architect 2026-08-27, the project model's one pointer home on both
+// platforms; the label is the architect's own (2026-08-28): "we would call it
+// open project instead of open file", and the row raises the Open project
+// picker — the folder overlay's list of projects in the keyboard's band over a
+// Cancel-alone row), **Revert** right
 // after it (architect 2026-09-13, Ctrl+Alt+O: reopen the CURRENT project to its
 // last saved state, discarding unsaved changes and the undo history —
 // GuiInputHandler::revert_project; on the tablet this row is the act's only
@@ -3885,7 +3885,7 @@ inline int double_click_slack_px() {
 // redesign_button_shift_admits alone, never a count) before its lift
 // dispatches the SHIFTED twin instead of the plain act. It is what gives glass
 // the shift acts: the road rig has no keyboard, so a finger could reach only
-// half of each shifted pair. TWO READ SITES since 2026-08-28 (R37), each a
+// half of each shifted pair. TWO READ SITES since 2026-08-28, each a
 // LIFT measuring the hold against its own arm's press stamp: the roster's
 // chord build (finish_chrome_press_release, input_pointer.cpp, against
 // AppState::ChromePress::press_ms) and the RENDER PLAYER'S MODAL ROW
@@ -6192,19 +6192,19 @@ struct AppState {
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
     // the two skips around Play-Pause (Home / Play-Pause / End, the main
     // window's own triple since 2026-09-01), the play-scrub, the clock, the
-    // Repeat one lamp, the Up button and the right-flushed pair Load in place
-    // / Close (R25's order; R36's Stop sat after the two-faced button until it
-    // retired 2026-09-01, and Up took its place beside the lamp — the pair
-    // were WORD buttons until later that same day, when the architect gave
-    // them the checkmark and Breeze's window-close X and the row became seven
-    // glyphs) — is
+    // Repeat one lamp, the Up button and the right-flushed pair Load in place /
+    // Close (the order of 2026-08-28; that day's Stop sat after the two-faced
+    // button until it retired 2026-09-01, and Up took its place beside the lamp
+    // — the pair were WORD buttons until later that same day, when the
+    // architect gave them the checkmark and Breeze's window-close X and the row
+    // became seven glyphs) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation paints over the player's row
     // exactly as the quit prompt paints over an editor); the player and an
     // editor are never live together (its opener refuses under any editor and
     // its key router consumes every editor opener).
-    // THE FOURTH OWNER IS THE PICKER (2026-08-28, architect R22/R23): the
+    // THE FOURTH OWNER IS THE PICKER (architect 2026-08-28): the
     // FIELD-LESS modal over the folder overlay's list — the Open project
     // picker — whose row is **Cancel** and nothing else since 2026-08-29 (a
     // click on a row opens it). Ranked WITH the player, though NOTHING EVER
@@ -6224,22 +6224,22 @@ struct AppState {
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and the other two vocabularies are zero/false
-    // there). REPEAT ONE joined 2026-08-28 (architect R26) — the row's one
+    // there). REPEAT ONE joined (architect 2026-08-28) — the row's one
     // LAMP, the only member here whose face carries a state. The order below
     // is the ROW's.
     //
-    // STOP IS RETIRED (architect 2026-09-01, reversing his R8 keep of the day
+    // STOP IS RETIRED (architect 2026-09-01, reversing his keep of the day
     // before): the modal row is THE MAIN WINDOW'S OWN TRANSPORT TRIPLE —
     // Home · Play/Pause · End, the same three keys as the roster's (and the
     // same three ACTS until 2026-09-04, when the right one became the next
-    // track) — and the member, its button, its act, its key and its
-    // face arm are all deleted. It was R36's (2026-08-28, "one button that's
+    // track) — and the member, its button, its act, its key and its face arm
+    // are all deleted. It was the architect's (2026-08-28, "one button that's
     // either play or pause, and the other one is stop"), and what made it
-    // superfluous is the row it now matches: Home already puts the playing
-    // file back at its beginning, and the highlight-driven Space (R6) reaches
-    // any file from its start with one press. The IDLE transport state stays
-    // — open(), the natural end and close() still produce it — but no user
-    // act writes it any more.
+    // superfluous is the row it now matches: Home already puts the playing file
+    // back at its beginning, and the highlight-driven Space (2026-08-31)
+    // reaches any file from its start with one press. The IDLE transport state
+    // stays — open(), the natural end and close() still produce it — but no
+    // user act writes it any more.
     //
     // THE TWO SKIPS ARE HOME AND END ON THE KEYS (architect 2026-08-31): "the
     // transport keys are mapped to Home and End in the media player just like
@@ -6310,8 +6310,8 @@ struct AppState {
         bool        enabled      = true;
         std::string tooltip;            // "<word> (<key>)"; never empty
         // THE MODIFIER LINE, empty on every button that admits no modified
-        // press — the roster tooltip's `line2` over this surface (2026-08-28,
-        // R37). Its ONE producer is the player's two skips, and it says the
+        // press — the roster tooltip's `line2` over this surface (2026-08-28).
+        // Its ONE producer is the player's two skips, and it says the
         // same thing their shift-click and their long press do; the painter
         // shows a second line exactly when this is non-empty.
         std::string tooltip2;
@@ -6467,7 +6467,7 @@ struct AppState {
     // on a rect that fully covers THE STANDING TENANT'S BAND — two different
     // rects: the overlay's is the CEILING BAND every time it stands (from the
     // WINDOW'S TOP down since 2026-09-03, whatever its listing's length —
-    // R35's fixed height at the architect's new ceiling) while the
+    // its fixed height of 2026-08-28 at the architect's new ceiling) while the
     // keyboard's is its four key rows, and with neither standing the band to
     // cover is the slot's tallest, which is what the hide's own damage draws
     // — and then paints whichever tenant stands, so neither painter can claim
@@ -6574,7 +6574,7 @@ struct AppState {
     // `pressed >= 0 && !press_inside`.
     bool modal_dialog_press_inside = false;
 
-    // THE ARM'S SHIFT AND ITS CLOCK (2026-08-28, architect R37) — the roster
+    // THE ARM'S SHIFT AND ITS CLOCK (architect 2026-08-28) — the roster
     // arm's two fields over this surface, and they arrive together because the
     // two roads to a shifted act are one term: a SHIFT HELD AT THE PRESS
     // (modifiers are read at the press, never re-read at the lift) and a press
@@ -8141,7 +8141,7 @@ struct AppState {
     // those rows changes: separators, borders, the accent, labels and icons
     // all keep their colors, and there is NO fade — a hard swap on the edge.
     // Row 3's ground is already the unfocused value and does not move.
-    // THE READERS ARE THREE since 2026-08-28 (architect R29): those two rows
+    // THE READERS ARE THREE (architect 2026-08-28): those two rows
     // and THE RENDER PLAYER'S PLAY-SCRUB, whose played groove takes the
     // focused blue or the shot's dimmed one — the only reader below the
     // waveform, and the reason the activation hook damages the modal row too
@@ -8323,7 +8323,7 @@ struct AppState {
     text_editor::State commit_title_editor;
     bool commit_title_editor_blink_last = false;
 
-    // -- THE PICKER'S WHOLE STATE (architect 2026-08-28, R22/R23) ----------
+    // -- THE PICKER'S WHOLE STATE (architect 2026-08-28) -------------------
     //
     // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
     // allowing free-form typing there; the preview doesn't use a text field
@@ -8852,7 +8852,7 @@ struct AppState {
     //                 rebuild seats it on the transport's item's row if that
     //                 row is in the new listing, else on row 0; -1 only for an
     //                 empty listing. Under the PLAYER it is what Enter, the
-    //                 Load in place button and — since 2026-08-31, R6 — the
+    //                 Load in place button and — since 2026-08-31 — the
     //                 PLAY BUTTON act on: Play reads the highlight FIRST
     //                 (render_player_highlight_act_row) and falls to the
     //                 transport's own toggle only where the band stands on
@@ -8959,9 +8959,9 @@ struct AppState {
     //              are deleted, and `Root` names the batch root now;
     //   `item` / `item_folder` / `item_index` THE TRANSPORT'S ITEM — the wav
     //              decoded and bound (empty path: none yet), the WAV ROWS OF
-    //              ITS FOLDER as listed when it was played (R2: auto-advance,
-    //              the folder's two ends and Home's previous-track window walk
-    //              this folder
+    //              ITS FOLDER as listed when it was played (2026-08-28:
+    //              auto-advance, the folder's two ends and Home's
+    //              previous-track window walk this folder
     //              and never another, and the item keeps playing while the
     //              highlight walks and while a folder is entered — the
     //              displayed listing and the item's folder are two things;
@@ -8969,9 +8969,9 @@ struct AppState {
     //              it, leaving the player as a fresh open leaves it, with
     //              nothing bound at all), and the item's index in
     //              that list. A row whose path is the item's wears the
-    //              transport glyph, and since R38 the HIGHLIGHT FOLLOWS the
-    //              item at every change the transport makes on its own, where
-    //              its row is in the listing on screen;
+    //              transport glyph, and since 2026-08-28 the HIGHLIGHT FOLLOWS
+    //              the item at every change the transport makes on its own,
+    //              where its row is in the listing on screen;
     //   `buffer` / `frames` the decoded item bound to the one playback engine
     //              (interleaved float32 at the device's own channel count and
     //              rate — the decode refuses any other shape); freed at the
@@ -8979,8 +8979,8 @@ struct AppState {
     //              (GuiRenderPlayer::unload_item) and only AFTER the view's
     //              buffer is rebound, the engine holding the pointer until
     //              then;
-    //   `transport` THE TRANSPORT'S STATE, STORED and never derived (R36's
-    //              three states; the table is at
+    //   `transport` THE TRANSPORT'S STATE, STORED and never derived (the
+    //              three states of 2026-08-28; the table is at
     //              GuiRenderPlayer::play_button_act): IDLE — nothing to
     //              resume, which is no item, an item a natural end left
     //              resting at its start, or a fresh open; LIVE —
@@ -9043,7 +9043,7 @@ struct AppState {
     //              handle then is a consumed no-op — no seek and no arm — and
     //              the painter still draws the handle at the resting point;
     //   `repeat_one` ONE OF NOTHING LOOPS' TWO SANCTIONED EXCEPTIONS (architect
-    //              2026-08-28, R26; the other is the car's loop of the trim
+    //              2026-08-28; the other is the car's loop of the trim
     //              on the project transport, 2026-09-17): a two-state toggle — off, or repeat the
     //              ONE item — with no repeat-all ("the user can just press
     //              play once the playlist finishes... repeat one is much more
@@ -9062,7 +9062,7 @@ struct AppState {
     //              2026-08-28 to 2026-08-31: the natural end set it at the
     //              item folder's last wav and play_button_act read it as
     //              "start the folder's FIRST file". THE FOLDER-END RESTART
-    //              RETIRED WHOLE — architect 2026-08-31, R7, "we simplify —
+    //              RETIRED WHOLE — architect 2026-08-31, "we simplify —
     //              play on last file means play last file" — so the bit, its
     //              writer and its seven clears went with it and a folder-end
     //              rest is now an ordinary idle rest on the last item;)
@@ -9077,8 +9077,8 @@ struct AppState {
         // above carries the ruling). It was four — Root / Deliverable /
         // Batches / Batch — while the player listed both output folders.
         enum class Folder { Root, Batch };
-        // THE TRANSPORT'S THREE STATES (R36), stored in `transport` below —
-        // the reasons, the writers and the readers are at the field.
+        // THE TRANSPORT'S THREE STATES (2026-08-28), stored in `transport`
+        // below — the reasons, the writers and the readers are at the field.
         enum class Transport { Idle, Live, Paused };
         bool                       active         = false;
         uint64_t                   session        = 0;
@@ -9266,7 +9266,7 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 // THE STATE THE PLAYER'S HINTS FORK ON, resolved by the plan builder
 // (paint_modal_dialog, paint_handler.cpp) once per frame from the predicates
 // the ACTS and the FACES already read — the same shape the pause bit took
-// from R6 until 2026-09-01, widened to every state a hint names:
+// from 2026-08-31 until 2026-09-01, widened to every state a hint names:
 //   play_face       render_player_play_face above (Play/Pause's word);
 //   home_previous   render_player_home_takes_previous — the left skip's own
 //                   FIRST fork, the previous-track window with a file before
@@ -9399,7 +9399,7 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
     return std::string();
 }
 
-// THE PLAYER ROW'S SHIFT-ADMITTING BUTTONS (2026-08-28, architect R37) —
+// THE PLAYER ROW'S SHIFT-ADMITTING BUTTONS (architect 2026-08-28) —
 // redesign_button_shift_admits one surface over, and for the same reason: a
 // button that admits a modified press gets its SHIFT-CLICK on plastic and,
 // through the hold delay (chrome_shift_hold_ms), its LONG PRESS on glass, so
@@ -9506,10 +9506,10 @@ static_assert(
 const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 
 // THE ROW SPACE WOULD OPEN, or −1 for "the transport's own business"
-// (architect 2026-08-31, R6 — SPACE IS HIGHLIGHT-DRIVEN IN THE PLAYER,
-// narrowing R40's "the Play button never reads the highlight"). It answers the
-// highlighted row's index when that row is a FOLDER or a WAV THAT IS NOT THE
-// TRANSPORT'S ITEM — the two rows whose open act Space runs
+// (architect 2026-08-31 — SPACE IS HIGHLIGHT-DRIVEN IN THE PLAYER, narrowing
+// the architect's 2026-08-29 "the Play button never reads the highlight"). It
+// answers the highlighted row's index when that row is a FOLDER or a WAV THAT
+// IS NOT THE TRANSPORT'S ITEM — the two rows whose open act Space runs
 // instead of toggling (it was three until 2026-09-01, the `..` row having been
 // the first of them; going up is the modal row's own button now) — and −1 on
 // the transport's own item, on an empty band
@@ -9549,7 +9549,7 @@ int render_player_highlight_act_row(const AppState& a);
 //     when these two acts walked the band at rest and neither greyed with no
 //     item; the walk is the CAR'S alone again and these faces are the acts'.)
 //   PLAY/PAUSE mirrors play_button_act's forks in their own order: THE
-//   HIGHLIGHT'S OWN ARM FIRST (R6 — a folder or another wav under the
+//   HIGHLIGHT'S OWN ARM FIRST (2026-08-31 — a folder or another wav under the
 //   band is always an act, whatever the transport is doing), then a live or
 //   paused transport, then an idle one on its resting item; only an idle
 //   transport with no item and no usable highlight is the consumed no-op.
@@ -9575,7 +9575,7 @@ int render_player_highlight_act_row(const AppState& a);
 //   ACT the press would run and never a reason, so a greyed Play goes on
 //   saying "Play (Space)" — the grey is the message, the roster's own shape
 //   for a device that is not there.
-//   (STOP had an arm of its own here — the no-item belt and R36's
+//   (STOP had an arm of its own here — the no-item belt and its
 //   already-resting return — and it went with the button on 2026-09-01.)
 //   UP greys AT THE ROOT, which is `tmp/` itself — the act's own wall, read
 //   through the one owner render_player_up_actionable below, so the face and
@@ -9620,7 +9620,7 @@ int render_player_highlight_act_row(const AppState& a);
 // repaint whole), and the HIGHLIGHT movers damage it since the Load face
 // reads the highlight (move_highlight, set_highlight, rebuild_rows) — the
 // same three carry PLAY/PAUSE'S face and its PAUSE GLYPH, which read the
-// highlight too since R6, so the band walk repaints the button with no
+// highlight too since 2026-08-31, so the band walk repaints the button with no
 // damage call of its own at the walk. The
 // read-only bit cannot change while the player stands —
 // route_render_player_key consumes bare `o` and the Settings menu's opener
@@ -9984,9 +9984,9 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // where it ran [70, 1164) — and its CONTENT lost 102, the band having spent
 // two of those pixels on the border row that retired with the move.
 //
-// THE FIXED-HEIGHT HALF OF R35 STANDS AND ITS MIDPOINT HALF DOES NOT
-// (architect 2026-08-28, R33/R35: "from the bottom strip up to the middle of
-// the waveform"; "it's not a fluid height — it's always a fixed height"). What
+// THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
+// (architect 2026-08-28: "from the bottom strip up to the middle of the
+// waveform"; "it's not a fluid height — it's always a fixed height"). What
 // that ruling settled was that the band does NOT grow and shrink with its
 // listing, and that is unchanged: a short listing leaves ground and a long one
 // scrolls, whatever the ceiling is. Only WHERE the ceiling sits has moved —
@@ -10442,7 +10442,7 @@ inline bool tempo_cent_step_column_allowed(const AppState& app) {
 //     through all three states; only its reader count moved.
 // What was live-faced under both mirrors was the VALUE-shaped tail, on the
 // claim that it needed the act's own resolution run. THAT LIST IS EMPTY since
-// 2026-09-13: THE TEMPO BRACKET WALL left it on 2026-08-31 (R3), a PASS left
+// 2026-09-13: THE TEMPO BRACKET WALL left it on 2026-08-31, a PASS left
 // it when the target-view step began freezing it as source view does, and the
 // KIND REFUSAL — a label ref in either view, a coincident-collapse member in
 // target view — left it the same day, the claim being false for both (a ref is
@@ -10555,7 +10555,7 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 
 // WOULD A CENT STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
 // Up / Down face, asked past tempo_cent_step_actionable above (architect
-// 2026-08-31, R3 of the refinement arc: "the tempo step greys at its bracket
+// 2026-08-31, in the refinement arc: "the tempo step greys at its bracket
 // end"). `delta_cents` is the press's own signed step (+1 Up, -1 Down), and
 // the answer forks exactly where the act forks:
 //   * a 2+ selection takes the GROUP scan above — the SAME whole-refusal the
@@ -10587,16 +10587,16 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 //     cache's memoized collapse subset.
 // WHAT IT STILL ANSWERS TRUE FOR, and deliberately: a PASS in both views,
 // which always freezes and so always changes. THE TOOLTIP'S MODIFIER LINE drops
-// on the kind refusal (2026-09-02, R-17e, widened to source view 2026-09-13):
+// on the kind refusal (2026-09-02, widened to source view 2026-09-13):
 // it is magnitude-blind, so all three rungs refuse alike and the Up / Down
 // hint shows the one-line form, read off the same owner.
 // Defined in warpmarkers_ops.cpp beside both step arms.
 //
 // THE TWIN RULE IS RESOLVED, AND IT COSTS THIS PREDICATE NOTHING (2026-08-31,
-// R12, closing the note this declaration carried for the hours between the
-// faces commit and the ladder's): the modified steps are live — Shift+Up /
-// Down ten cents, Ctrl+Up / Down three (the rungs swapped 2026-09-21) — and a
-// button with a live modified twin
+// closing the note this declaration carried for the hours between the faces
+// commit and the step ladder's): the modified steps are live — Shift+Up / Down
+// ten cents, Ctrl+Up / Down three (the rungs swapped 2026-09-21) — and a button
+// with a live modified twin
 // must stay ENABLED, so the honest question is "would ANY admitted variant
 // act". THE FACE STILL ASKS THE BARE ±1, because that question and this one
 // have the same answer in each direction:
@@ -11406,7 +11406,7 @@ int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
                                     HorizontalArrowStep step);
 
 // WOULD ONE MARKER NUDGE THIS WAY CHANGE ANYTHING — the MARKER lane's own
-// wall term, both columns (architect 2026-08-31, R3 of the refinement arc:
+// wall term, both columns (architect 2026-08-31, in the refinement arc:
 // "TransportLeft/Right grey directionally at the marker walls with a selection
 // standing"). It reads the ACT'S OWN LANDING OWNER, position_nudge_landing
 // (position_nudge.h — the wall-regime middle both twins now commit through),
@@ -12085,7 +12085,7 @@ bool overview_recall_restorable(const AppState& a);
 // no-op the same day — "if there's nothing to return to ... zero should just
 // lose its meaning"):
 //   * RestoreView — overview_recall_restorable (the whole-song state stands,
-//     read FIRST since 2026-09-02, R-17g, so a resize or an S/T flip that
+//     read FIRST since 2026-09-02, so a resize or an S/T flip that
 //     moved the ceiling does not make the press forget it is out; and the
 //     stamp is the live audio view's): `level` is the stamp's level clamped
 //     into the live window.
@@ -14510,7 +14510,7 @@ inline bool playback_launch_playable(const AppState& a,
 // for (the HOVER faces do go dark under the veil — the hover walk's veil
 // term, recompute_redesign_button_hover — but that is the pointer's fact,
 // not a face state this predicate answers). THE FOLDER OVERLAY IS THE
-// EXCEPTION (architect 2026-08-28, R3: "everything else greys as in the `h`
+// EXCEPTION (architect 2026-08-28: "everything else greys as in the `h`
 // view"): while the band stands — under the render player or the picker —
 // EVERY roster button is dead BUT THE FILE ANCHOR,
 // which the menu row keeps lit above the band (architect 2026-09-03 evening;
@@ -15425,7 +15425,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
         // tempo bracket's two ends and the group step's whole refusal under
         // UP / DOWN, the nudged marker's frame walls under LEFT / RIGHT in the
-        // marker lane (R3; each pair's arm names its owner) — and
+        // marker lane (2026-08-31; each pair's arm names its owner) — and
         // THE TRANSPORT THREE at the second switch below the loading guard —
         // the two SKIPS where the jump would change nothing ("even the transport's back/forward when
         // you're already at the home or the beginning of the trim", read
@@ -15453,7 +15453,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //     in source? we grey out Left for a marker at 0". The ref is a
         //     plain field and the collapse test a memoized cache read, so the
         //     face asks the act's own owner and greys, the key still carding.)
-        //   (THE BRACKET WALL LEFT THIS LIST on 2026-08-31, R3 of the
+        //   (THE BRACKET WALL LEFT THIS LIST on 2026-08-31, in the
         //   refinement arc: Up greys with the focused owner resting on the
         //   tempo bracket's max and Down on its min, through the act's own
         //   landing owner (tempo_cent_step_landing) — the same move planner
@@ -15548,7 +15548,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //     acts everywhere but AT THE WALLS, and since that evening the
         //     pair greys there too (the landing owner's compare, a live
         //     transport session keeping it lit because the press then stops).
-        //     SINCE 2026-08-31 THE MARKER LANE GREYS AT ITS WALLS TOO (R3),
+        //     SINCE 2026-08-31 THE MARKER LANE GREYS AT ITS WALLS TOO,
         //     closing the inversion that had the navigating lane truthful
         //     about its walls while the AUTHORING lane stayed lit over a dead
         //     press: marker_nudge_actionable compares the nudge's own landing
@@ -15674,7 +15674,7 @@ inline bool redesign_button_enabled(const AppState& a,
                 break;
             }
             if (!tempo_cent_step_actionable(a)) return false;
-            // AND THE DIRECTIONAL HALF since 2026-08-31 (architect, R3): the
+            // AND THE DIRECTIONAL HALF (architect 2026-08-31): the
             // singleton's bracket end and the group's whole refusal, and since
             // 2026-09-13 the singleton's KIND refusal (a label ref in either
             // view, a collapse member in target view), all through the acts'
@@ -16457,7 +16457,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // the jump to CTRL+J on a dedicated button, Jump to Defining Marker, on
 // 2026-09-29; Shift+J binds nothing since, so the copy admits no modifier and
 // left this set.)
-// (THE TWO VERTICAL ARROWS JOINED 2026-08-31 with the STEP LADDER — R12,
+// (THE TWO VERTICAL ARROWS JOINED 2026-08-31 with the STEP LADDER —
 // Shift+Up / Shift+Down = a TEN-unit step on the addressed cell since
 // 2026-09-21, a three until the architect made shift the long stride — and
 // they ALSO ADMIT CTRL, the three-unit step (redesign_button_ctrl_admits
@@ -16576,8 +16576,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // modified press owes is the WHOLE-PIECE jump, whose keyboard spelling is
 // CTRL+Home / CTRL+End (architect 2026-09-26, restated 2026-09-29): the jump
 // ignores the trim window, a different axis from anything shift means
-// elsewhere on the roster. The VERTICAL ARROWS' ctrl-click (R12,
-// 2026-08-31)
+// elsewhere on the roster. The VERTICAL ARROWS' ctrl-click (2026-08-31)
 // is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
 // shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
 // WALK'S ctrl-click (architect 2026-09-26) dispatches Ctrl+Tab, the one-shot
@@ -17284,7 +17283,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // by id and carries no order of its own.)
         //
         // UP / DOWN'S SECOND LINE NAMES BOTH RUNGS OF THE STEP LADDER
-        // (2026-08-31, R12), the ladder being one of the two-modifier rule's
+        // (2026-08-31), the ladder being one of the two-modifier rule's
         // two shapes (the walk's three-form line above is the other): shift is a
         // ten-unit step and ctrl a three on the addressed cell's own unit
         // (swapped 2026-09-21, shift the long stride), so
@@ -17293,7 +17292,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // kArrowStepCtrl, gui_input.h) and this is the one place they are
         // written as words; a retune there is a retune here.
         // THE STATEFUL OVERLOAD DROPS THIS LINE where every rung of the ladder
-        // refuses alike (2026-09-02, R-17e): on the step's kind refusals; the
+        // refuses alike (2026-09-02): on the step's kind refusals; the
         // reasoning is at that arm.
         // LEFT / RIGHT CARRY NO SECOND LINE since 2026-09-21: the horizontal
         // ladder is retired on every column, their ctrl form binds nothing
@@ -17889,7 +17888,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // crossing in the P column, the audition's shift over a standing sequence
 // (the jump with no eligible focus or no source was a member while it was
 // Copy Value's twin, until 2026-09-29), the skips' ctrl form where
-// the two landings coincide, since 2026-09-02 (R-17e) UP / DOWN'S STEP
+// the two landings coincide, since 2026-09-02 UP / DOWN'S STEP
 // LADDER where every
 // rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
 // from a wall, where the jump names the member the step already reaches, and
