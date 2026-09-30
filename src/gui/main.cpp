@@ -1090,6 +1090,48 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     return viewport_grid_point(k, q);
 }
 
+// THE RESTING START — the grid snap and the wall clamp the chokepoint below
+// applies to a requested start, as a PURE question at the live zoom, the
+// arithmetic's one copy (the chokepoint's body calls it after its level
+// clamp). Its second reader is hold_derived_on_arrival (viewport.cpp), which
+// asks where a centring of the playhead WOULD rest — the wall winning there as
+// at every centring — without writing the camera. It reads the live zoom as it
+// stands: a caller that has just written the level passes the chokepoint's
+// level clamp first, which the chokepoint does.
+int64_t resting_viewport_start(const AppState& a, const GuiAudio& audio,
+                               int64_t start) {
+    const int64_t visible = samples_visible(a, audio);
+    const int64_t total   = live_total_frames(a, audio);
+    if (visible >= total) return 0;
+    if (start < 0) start = 0;
+
+    // The rightmost on-grid rest, through the shared right-wall owner (the same
+    // wall the strip drag's pan clamp uses). max_viewport_start_grid re-derives
+    // visible/total/q and returns max(0, total-visible) when q is non-numeric.
+    const int64_t max_start_grid = max_viewport_start_grid(a, audio);
+
+    const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
+    if (q <= 0.0) return std::min(start, max_start_grid);
+
+    // Snap the viewport to a whole-pixel (grid) boundary: every rest viewport is
+    // then a true grid point, so the SOURCE-view single-rounding warp-marker commit
+    // (authored_frame_at_column_on_basis's source branch via
+    // displayed_grid_position_at_column) lands EXACTLY on the frame-0 authoring
+    // grid, and the waveform rests pixel-aligned. The same painter spp the item
+    // basis carries into authored_frame_at_column_on_basis, so viewport grid and
+    // marker grid are one grid.
+    //
+    // Snap the viewport to its nearest grid point, then clamp into
+    // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid
+    // max_start first — that would pull a valid flush-right grid rest back
+    // off-grid.)
+    int64_t snapped = viewport_grid_point(static_cast<int64_t>(
+        std::nearbyint(static_cast<double>(start) / q)), q);
+    if (snapped < 0)               snapped = 0;
+    if (snapped > max_start_grid)  snapped = max_start_grid;
+    return snapped;
+}
+
 namespace {
 void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
     // Level ceiling (the chokepoint): every zoom write funnels through this
@@ -1125,43 +1167,10 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
     }
     a.zoom_level = clamp_zoom_level(a, audio, a.zoom_level);
 
-    const int64_t visible = samples_visible(a, audio);
-    const int64_t total   = live_total_frames(a, audio);
-    if (visible >= total) {
-        a.viewport_start_sample = 0;
-        return;
-    }
-    if (a.viewport_start_sample < 0) a.viewport_start_sample = 0;
-
-    // The rightmost on-grid rest, through the shared right-wall owner (the same
-    // wall the strip drag's pan clamp uses). max_viewport_start_grid re-derives
-    // visible/total/q and returns max(0, total-visible) when q is non-numeric.
-    const int64_t max_start_grid = max_viewport_start_grid(a, audio);
-
-    const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
-    if (q <= 0.0) {
-        if (a.viewport_start_sample > max_start_grid)
-            a.viewport_start_sample = max_start_grid;
-        return;
-    }
-
-    // Snap the viewport to a whole-pixel (grid) boundary: every rest viewport is
-    // then a true grid point, so the SOURCE-view single-rounding warp-marker commit
-    // (authored_frame_at_column_on_basis's source branch via
-    // displayed_grid_position_at_column) lands EXACTLY on the frame-0 authoring
-    // grid, and the waveform rests pixel-aligned. The same painter spp the item
-    // basis carries into authored_frame_at_column_on_basis, so viewport grid and
-    // marker grid are one grid.
-    //
-    // Snap the viewport to its nearest grid point, then clamp into
-    // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid
-    // max_start first — that would pull a valid flush-right grid rest back
-    // off-grid.)
-    int64_t snapped = viewport_grid_point(static_cast<int64_t>(
-        std::nearbyint(static_cast<double>(a.viewport_start_sample) / q)), q);
-    if (snapped < 0)               snapped = 0;
-    if (snapped > max_start_grid)  snapped = max_start_grid;
-    a.viewport_start_sample = snapped;
+    // The grid snap and the two walls, at the level just settled
+    // (resting_viewport_start above, the arithmetic's one copy).
+    a.viewport_start_sample =
+        resting_viewport_start(a, audio, a.viewport_start_sample);
 }
 }  // namespace
 
@@ -1177,7 +1186,12 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // AppState::camera_hold and AppState::follow_suspended. THE
     // CAMERA IS FOUR FIELDS (AppState::camera_posture_identity): the tab and
     // the audio view ride beside the start and the zoom, so a switch that
-    // lands the same two numbers still registers as the change it is.
+    // lands the same two numbers still registers as the change it is. THE
+    // TWO SWITCHES THEN DERIVE THE HOLD AFRESH behind this clear (architect
+    // 2026-09-29): the tab switch and the S/T switch each assign
+    // hold_derived_on_arrival (viewport.cpp) once their camera and cursor
+    // have settled, so the bit put out here stands again on arrival in a view
+    // that rests centred on its playhead at the working zoom.
     const AppState::CameraPostureIdentity settled{
         a.viewport_start_sample, a.zoom_level,
         a.active_tab_view, a.active_audio_view};

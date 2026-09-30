@@ -739,6 +739,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     const int64_t cursor_before_restore = app.playhead_cursor_sample;
     const ItemViewportBasis painted_before_restore =
         item_viewport_basis(app, viewport.audio);
+    // THE VIEW BEFORE THE RESTORE, beside the painted pair: a restore that
+    // crosses the tab or the audio view never takes the held column, which
+    // belongs to the view it leaves (the visual tail's hold rule below).
+    const char tab_before_restore        = app.active_tab_view;
+    const char audio_view_before_restore = app.active_audio_view;
     UndoEntry entry = std::move(from.back());
     from.pop_back();
     // A restore rewrites BOTH stack tops, so it invalidates the coalesce stamp for
@@ -1067,10 +1072,19 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     is the one AS PAINTED (strictly as painted, architect 2026-09-24):
     //     the cursor's pre-restore frame on the item basis, both read at this
     //     body's head. A restore that moved no cursor moves no camera and
-    //     keeps the bit. Since the tab switch and the S/T flip are always a
-    //     changed camera at the chokepoint, a restore that crossed either
-    //     reaches this arm with the bit already out, so the held column is
-    //     always the same view's.
+    //     keeps the bit.
+    //   * A RESTORE THAT CROSSED THE TAB OR THE AUDIO VIEW NEVER HOLDS THE
+    //     COLUMN (architect 2026-09-29): the held column was painted in the
+    //     view the restore left, so the arm reads the tab and the audio view
+    //     captured at this body's head beside the painted pair and, when
+    //     either changed, takes the landing owner's Restore WHATEVER THE BIT.
+    //     The switch it ran derived the bit on arrival
+    //     (hold_derived_on_arrival: armed iff the entered view rests at the
+    //     working zoom within a column of its playhead's centring), and it
+    //     then stands or falls as that answer and the land leave it — the
+    //     land puts it out if it moves the cursor, an off-screen centring at
+    //     the chokepoint, and an on-screen no-move keeps it, the arrival's own
+    //     answer.
     //   * A SINGLETON RESTORE WITH THE HOLD DARK takes the landing owner's
     //     Restore (above), whose off-screen centring cannot arm it.
     //   * A GROUP RESTORE DROPS THE HOLD, explicitly at its arm: a group
@@ -1078,9 +1092,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     nothing at the landing owner, so the chokepoint alone would not put
     //     it out. Its camera is the landing owner's Restore and the framer.
     // THE RESTORE NEVER ARMS THE POSTURE FROM DARK (architect 2026-09-24):
-    // only the walk's centring, bare `c` and Ctrl+J do; the singleton's
-    // re-arm keeps a bit that already stood. The playhead head's lamp shows
-    // which posture stands. (From 2026-09-23 to 2026-09-25 the restore kept
+    // only the walk's centring, bare `c`, the paired march and Ctrl+J arm it
+    // as acts, and the singleton's re-arm keeps a bit that already stood. THE
+    // SWITCH A RESTORE RUNS MAY (architect 2026-09-29): a restore that crosses
+    // the tab or the audio view arrives with the hold that view's picture
+    // says (hold_derived_on_arrival), the switch's answer and not the
+    // restore's. The playhead head's lamp shows which posture stands. (From 2026-09-23 to 2026-09-25 the restore kept
     // the bit across its land and let the landing owner decide, so an
     // on-screen singleton left the cursor off the held column with the lamp
     // still white.)
@@ -1121,9 +1138,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // Playback is already stopped above, so land's
                 // scanner-inactive premise holds and the camera's subject is
                 // the cursor it seats.
+                // A CROSSED RESTORE never holds the column (the rule above):
+                // the held column was painted in the view this restore left.
+                const bool crossed =
+                    app.active_tab_view   != tab_before_restore ||
+                    app.active_audio_view != audio_view_before_restore;
                 const NudgeCamera camera = nudge_camera(app);
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
-                if (camera == NudgeCamera::HoldColumn) {
+                if (camera == NudgeCamera::HoldColumn && !crossed) {
                     // THE HOLD STANDS: the nudge's camera on the column the
                     // cursor painted in before the restore, then the re-arm.
                     if (painted_before_restore.spp > 0.0 &&
@@ -1135,8 +1157,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                                 painted_before_restore.spp));
                     app.camera_hold = true;
                 } else {
-                    // THE HOLD IS DARK: the landing owner's Restore at the
-                    // current zoom. A single marker always fits, so the
+                    // THE HOLD IS DARK, OR THE RESTORE CROSSED A VIEW: the
+                    // landing owner's Restore at the current zoom, the bit
+                    // standing or falling as the arrival's derivation and the
+                    // land left it. A single marker always fits, so the
                     // verdict is dropped.
                     (void)viewport.land_subject(app.playhead_cursor_sample,
                                                 app.playhead_cursor_sample,

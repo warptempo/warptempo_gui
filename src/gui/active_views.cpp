@@ -17,7 +17,10 @@
 // only the live fields move and the backing slot is intentionally stale
 // until the next boundary. THE SELECTION IS NOT PART OF THIS: it is never
 // parked (the rule is at ViewState, app_state.h) — a column or tab switch
-// CLEARS it and re-acquires by coincidence at the entry.
+// CLEARS it and re-acquires by coincidence at the entry. NOR IS THE HOLD
+// POSTURE (AppState::camera_hold): it is stored per project alone, and the
+// tab switch derives it afresh from the entering band at its tail
+// (hold_derived_on_arrival, architect 2026-09-29).
 
 // Overwrite the active tab's snapshot with the live AppState viewport /
 // zoom / playhead. Shared by Ctrl+Tab (pre-flip) and Ctrl+S (pre-write)
@@ -147,7 +150,8 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // Nothing is stashed and nothing is restored: the tab's remembered spot is
     // its VALUE-shaped band alone (viewport / zoom / playhead / trim /
     // read_only), and the entry re-acquires a selection by coincidence at the
-    // tail. Placed HERE, before the band flips, so clear_selection's
+    // tail — and the hold posture likewise, derived from the entering band at
+    // the tail (hold_derived_on_arrival, architect 2026-09-29). Placed HERE, before the band flips, so clear_selection's
     // stem/overlay/playhead-column damage resolves against the LEAVING tab's
     // basis — the basis of the pixels it erases. It also subsumes the
     // shift-range anchor clear this site used to spell out by hand (every
@@ -190,6 +194,18 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // narrow damage superseded by the kick below, exactly as the deleted collapse
     // at this site was.
     auto_select_marker_at_playhead(app, audio, selection, viewport);
+    // THE HOLD DERIVED ON ARRIVAL (architect 2026-09-29), the hold's twin of
+    // the auto-select above: clamp_viewport_start has just put the bit out
+    // (a tab switch is always a changed camera), and the entering tab arrives
+    // with the hold its picture says — armed iff it rests at the working zoom
+    // within one column of a centring of its playhead (the rule at
+    // hold_derived_on_arrival, app_state.h). Read here, after the auto-select,
+    // whose reseat writes the cursor it already holds, so the derivation
+    // reads the settled camera and playhead. An assignment, not an arm: the
+    // bit is the derivation. Every road through this switch inherits it; the
+    // roads that then move the playhead or the camera put it out through the
+    // usual owners, and `c`'s roads re-arm it behind the switch.
+    app.camera_hold = hold_derived_on_arrival(app, audio);
     // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
     // and publish the displayed fingerprint now instead of leaving it to the

@@ -4831,7 +4831,8 @@ struct AppState {
     // audio view): a CHANGED CAMERA CLEARS THE HOLD AND SUSPENDS FOLLOW FOR
     // THE PLAY IN FLIGHT (follow_suspended below; the lamp itself is never
     // touched there), and a tab switch or an S/T flip is always a changed
-    // camera. So a write that lands the camera where
+    // camera — after which those two switches DERIVE THE HOLD AFRESH
+    // (hold_derived_on_arrival, below at camera_hold). So a write that lands the camera where
     // it already was (a wall-saturated pan, a resize that rounds back onto
     // the same grid point) clears nothing, and no writer can forget the clear.
     // THE WRITER INVENTORY THE CLAIM RESTS ON, grepped 2026-09-23 (every
@@ -4880,7 +4881,8 @@ struct AppState {
     // WHY: an explicit centring means "I want to stay right here", so the
     // nudges that follow it keep the subject where the centring put it and
     // the waveform slides under it.
-    //   * SET by the EXPLICIT CENTRING ACTS and nothing else: bare `c` (live
+    //   * SET by the EXPLICIT CENTRING ACTS and, among acts, nothing else (the
+    //     switches' arrival derivation, below, is the one other arm): bare `c` (live
     //     and in the `h` view; run_center_key_command), the paired march
     //     Ctrl+Shift+Tab (live and `h`; each of its two steps runs
     //     run_center_key_command, 2026-09-26), Ctrl+J (its closing
@@ -4895,14 +4897,32 @@ struct AppState {
     //     chokepoint, which clears the bit — so THE HOLD STANDS ONLY AT THE
     //     WORKING ZOOM (on a file too short for it, `c`'s clamped level, the
     //     file's own ceiling).
+    //     AND ONE NON-EXPLICIT ARM, THE HOLD DERIVED ON ARRIVAL (architect
+    //     2026-09-29): the two arrival chokepoints — the tab switch
+    //     (GuiActiveViews::switch_active_tab_view_to) and the S/T switch
+    //     (GuiInputHandler::switch_active_audio_view_to) — ASSIGN the bit
+    //     from hold_derived_on_arrival (the rule's one owner, beside
+    //     nudge_camera below) once their camera and cursor have settled:
+    //     armed iff the entered view rests at the working zoom as painted
+    //     with its viewport within ONE COLUMN of a centring of its playhead
+    //     (walls winning, no marker needed), so a switch away and back keeps
+    //     a hold it found, each tab keeping its own, and a switch into a
+    //     centred rest arms one. The bit is stored nowhere per tab or per
+    //     view: the coincidence auto-select's twin, re-acquired from the
+    //     picture at the entry. The W/P column switch moves no camera and is
+    //     no arrival; it leaves the bit as it stands.
     //     WHY SO FEW (architect 2026-09-24): an automatic arm on arrival at
     //     the centre would freeze the viewport under a run of nudges that
     //     happened to reach the middle; `c` then nudging means "I'm looking
     //     for a place to drop a marker" and wants the hold, `c` then panning
     //     means "I want the working zoom but my own viewport" and the pan
-    //     clears it. The head's lamp tells the two postures apart.
+    //     clears it. The head's lamp tells the two postures apart. A SWITCH
+    //     IS DIFFERENT (architect 2026-09-29): it is a discrete arrival at a
+    //     view the user last left, not a run of nudges reaching the middle,
+    //     so its derivation answers what that view's picture already says.
     //   * NOT SET by arrival at the centre by any other road (an arrow step,
-    //     a drop, a click), by THE UNDO / REDO RESTORE from a dark bit in any
+    //     a drop, a click — the 2026-09-24 reason above stands for every road
+    //     but the two switches), by THE UNDO / REDO RESTORE from a dark bit in any
     //     arm (its singleton centring of an off-screen marker included: the
     //     landing owner's LandingKind::Restore never arms), by the walk's
     //     no-move and
@@ -4911,7 +4931,10 @@ struct AppState {
     //     press (neither is a centring since 2026-09-23: the second press
     //     restores the stamped view). The undo / redo singleton's re-arm
     //     under the hold (below) keeps a bit that already stood; it never
-    //     arms one from dark.
+    //     arms one from dark — though a tab or audio-view switch the restore
+    //     runs derives the bit on arrival as every switch does, and a
+    //     restore that crossed either view never holds the column
+    //     (restore_history_entry, undo.cpp).
     //   * KEPT by every
     //     play and every stop that moves no camera (a stop moves no
     //     playhead), by THE NUDGE ITSELF, the first exemption from the
@@ -4933,7 +4956,8 @@ struct AppState {
     //     pans, the drags, the pointer zooms, `0`'s both presses (the second
     //     also through move_playhead_to when it moves the playhead), follow's
     //     page-in — a camera move not on the subject — the landing owner's
-    //     page-in, the span framer, the tab and view switches), by THE UNDO /
+    //     page-in, the span framer, and the tab and audio-view switches at the
+    //     chokepoint, which then derive the bit afresh), by THE UNDO /
     //     REDO GROUP RESTORE, explicitly at its arm whether or not its camera
     //     moves (a group framing is not a hold; undo.cpp), and by the three
     //     playhead MOVEMENT OWNERS
@@ -5022,7 +5046,9 @@ struct AppState {
     // numbers — both tabs at their default start and zoom, an identity map —
     // so without the two letters such a switch would leave the hold standing
     // and the other tab's nudges would hold on an arm made in the view just
-    // left. The two letters' writers are the
+    // left. (The two switches then assign the bit afresh from the entered
+    // view's own picture, hold_derived_on_arrival, architect 2026-09-29.)
+    // The two letters' writers are the
     // tab switch (GuiActiveViews::switch_active_tab_view_to), the S/T flip
     // (input_handler.cpp) and the load paths (file_loader.cpp), each passing
     // clamp_viewport_start after its write.
@@ -11868,6 +11894,13 @@ void remap_marker_indices_after_reorder(AppState& app,
 int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
+// THE START THE CHOKEPOINT ABOVE WOULD REST `start` AT, at the live zoom:
+// its grid snap and its two walls as a pure function, the arithmetic's one
+// copy (clamp_viewport_start's body calls it after its level clamp). Its
+// other reader is hold_derived_on_arrival (below). Body in main.cpp beside
+// the chokepoint.
+int64_t resting_viewport_start(const AppState& a, const GuiAudio& audio,
+                               int64_t start);
 // Returns the pixel column (offset from waveform_area.x) for the cursor.
 // ONE FORM ONLY, and it takes the viewport AND its samples-per-pixel
 // EXPLICITLY: there is no live-viewport convenience overload any more (both
@@ -12177,7 +12210,9 @@ OverviewCommandTarget overview_command_target(const AppState& a,
 // The rightmost on-grid viewport start (the flush-right rest). The single
 // right-wall owner, hoisted out of the clamp_viewport_start chokepoint when the
 // deleted strip drag's per-event pan clamp needed the same wall; that caller
-// left with the gesture (2026-08-15) and the chokepoint is the one reader again.
+// left with the gesture (2026-08-15). Its readers are the chokepoint's resting
+// start (resting_viewport_start, main.cpp) and source_frame_off_right_edge
+// (warp_frame_map_view.h), which asks where a frame paints at the wall.
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
@@ -12917,8 +12952,9 @@ enum class MarkerLandingFrame { Center, Land };
 
 // THE NUDGE'S CAMERA, ONE OWNER (architect 2026-09-23): the hold posture
 // read — HoldColumn while AppState::camera_hold stands (an explicit centring
-// armed it: bare `c`, Ctrl+J or the walk's centring; the playhead head's
-// white is its lamp), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
+// armed it: bare `c`, the paired march, Ctrl+J or the walk's centring; or a
+// tab or audio-view switch derived it on arrival, hold_derived_on_arrival
+// below; the playhead head's white is its lamp), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
 // marker lane's arm, input_handler.cpp, and the waveform lane's step,
 // run_waveform_lane_playhead_step) and by the undo / redo singleton restore
 // (restore_history_entry's visual tail, undo.cpp, where FollowEdge means the
@@ -12929,6 +12965,28 @@ enum class MarkerLandingFrame { Center, Land };
 inline NudgeCamera nudge_camera(const AppState& a) {
     return a.camera_hold ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;
 }
+
+// THE HOLD DERIVED ON ARRIVAL (architect 2026-09-29), the rule's one owner:
+// does the view just entered rest where an explicit centring of its playhead
+// would have left it — the painted step q EXACTLY the working column (the
+// landing owner's own at-working test, Viewport::land_subject), and the
+// viewport within ONE COLUMN (|start − C| ≤ q) of C, the centring of the
+// playhead taken through the chokepoint's grid snap and walls
+// (resting_viewport_start), so a playhead near either end of the piece,
+// where the wall keeps a centring off centre, still counts. No marker need
+// stand under the playhead: bare `c` arms without one. THE HOLD'S TWIN OF THE
+// COINCIDENCE AUTO-SELECT (auto_select_marker_at_playhead): the bit is stored
+// nowhere per tab or per view, and is re-acquired at the entry from the
+// picture. Its TWO CALLERS are the two arrival chokepoints, each assigning
+// camera_hold from it after its clamp_viewport_start (which has just put the
+// bit out, a switch being a changed camera) and after its cursor re-seat:
+// GuiActiveViews::switch_active_tab_view_to and
+// GuiInputHandler::switch_active_audio_view_to. The W/P column switch moves
+// no camera and is no arrival. Degenerate geometry (no strip width, no
+// sample rate, nothing visible, a non-numeric step) answers false. Body in
+// viewport.cpp beside the centring's placement, which carries the reason for
+// the one-column tolerance.
+bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 
 // NO PICTURE DERIVES FROM THE ZOOM LEVEL (architect 2026-09-22, narrowed
 // 2026-09-23): nothing painted may change with the level beyond the scale

@@ -395,9 +395,10 @@ struct Viewport {
     // edge margin of the window) returns FALSE having written nothing. The
     // WALK's centring ARMS THE HOLD POSTURE, so the hold stands only at the
     // working zoom (architect 2026-09-28); a restore's centring never arms
-    // it (architect 2026-09-24), and a singleton restore reaches it only with
-    // the hold dark (under it the restore holds the column instead,
-    // 2026-09-25). The zoom is never written. Its readers, the one
+    // it (architect 2026-09-24), and a singleton restore reaches it with the
+    // hold dark or across a tab or audio-view switch (under a hold in the view
+    // it started in the restore holds the column instead, 2026-09-25). The
+    // zoom is never written. Its readers, the one
     // caller of the false verdict and the ruled-out cameras are at the
     // definition (viewport.cpp).
     [[nodiscard]] bool land_subject(int64_t lo, int64_t hi, LandingKind kind);

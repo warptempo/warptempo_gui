@@ -4093,6 +4093,20 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // viewport.cpp).
     if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
         reseat_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
+    // THE HOLD DERIVED ON ARRIVAL (architect 2026-09-29), the second arrival
+    // chokepoint beside the tab switch's: clamp_viewport_start above has put
+    // the bit out (an S/T flip is always a changed camera), and the entering
+    // domain arrives with the hold its picture says — armed iff it rests at
+    // the working zoom within one column of a centring of the playhead (the
+    // rule, and why one column absorbs this flip's re-snap of the anchored
+    // start, at hold_derived_on_arrival, app_state.h / viewport.cpp). Read
+    // after the focus re-express above, a cursor write that moves no
+    // viewport, so the derivation reads the settled playhead. An assignment,
+    // not an arm. Every caller of this chokepoint inherits it — bare 1/2/3
+    // and the view bar, the typed `active_audio_view=`, Shift+S's and bare
+    // `i`'s crossings, the phase-reset paste's landing tail and the undo /
+    // redo restore's audio-view tag.
+    app.camera_hold = hold_derived_on_arrival(app, audio);
     // One-shot discrete jump with a domain change: is_target, the viewport, and
     // the warp_frame_map hash all flip, so the displayed plate must change. Render it
     // synchronously and publish the displayed fingerprint now, so the

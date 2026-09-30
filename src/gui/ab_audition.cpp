@@ -172,9 +172,11 @@ void GuiAbAudition::start() {
     //
     // THE ACT IGNORES THE HOLD POSTURE (architect 2026-09-23;
     // AppState::camera_hold): its camera writes — the two `c`s and the tab
-    // switch here, the switch back and its `c` at the second pair — neither
-    // arm nor clear it, so what stood before the act stands after it. The
-    // bit is read here and written back behind the writes. The follow lamp
+    // switch here, the switch back and its `c` at the second pair — leave
+    // the bit as the act found it, so what stood before the act stands after
+    // it. The switches now derive the bit on arrival (hold_derived_on_arrival,
+    // architect 2026-09-29) and the `c`s arm it; the bit is read here and the
+    // write-back behind the writes restores what stood. The follow lamp
     // needs no such care: nothing here writes it, and the suspension its
     // camera writes leave behind is cleared by the next launch
     // (AppState::follow_suspended).
@@ -220,7 +222,8 @@ void GuiAbAudition::advance_after_natural_end(
             // first for a second reason: switch_active_tab_view_to takes the
             // one stop body, which clears the sequence, so a rest armed ahead
             // of it would be wiped.
-            // The hold posture is kept across both writes, the act's rule at
+            // The hold posture is written back across both writes (the
+            // switch's derivation and the `c`'s arm), the act's rule at
             // start().
             {
                 const bool hold_before  = app.camera_hold;
