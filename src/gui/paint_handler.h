@@ -823,7 +823,7 @@ private:
     // overlap the rows they hang over. They cannot coexist, and the claim rests
     // on the OPEN EDGE rather than on which gestures can reach it: toggle_
     // dropdown's open path hides the tooltip outright (a press opens a menu, and
-    // so does an armed row-1 hover), and while the popup stands NO roster button
+    // so does the hover switch), and while the popup stands NO roster button
     // answers the pointer at all (redesign_button_hover_zone — the term the hint
     // and the hover face still share), so nothing can start a tooltip wait
     // under it. Both PUBLISH the rect

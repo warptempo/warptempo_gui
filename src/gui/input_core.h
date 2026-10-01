@@ -120,8 +120,8 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     No position event arrives WHILE the pointer stays outside, but a
 //     re-entry (or the next touch) synthesizes
 //     a motion, a held button still releases, and the held state survives — so a
-//     consumer may knowingly KEEP a face or a mode across this edge and rely on
-//     that return motion to re-derive it.
+//     consumer may knowingly KEEP state across this edge and rely on that
+//     return motion to re-derive it.
 //   * CapabilityLoss is pointer_capability_lost — the pointer capability going
 //     away (the seat losing wl_pointer on Wayland): the hard end of the stream.
 //     No leave, no motion, no release will ever arrive on that object again, so
@@ -142,24 +142,22 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     across a mouse's release, so the S Pen's hover coming back within the
 //     slop of the lift point is stillness and starts no wait (the rule is at
 //     AppState::RedesignTooltip). Every other consumer reads it as it reads
-//     OrdinaryLeave, the menu row's keep below included.
+//     OrdinaryLeave.
 //   * PenHoverEnd is the Android backend's S Pen HOVER ENDING
 //     (GuiPlatform::end_pen_hover: a HOVER_EXIT, a report above the GUI's
 //     plane, any first down, focus loss — architect 2026-09-27, every pen
 //     hover effect acts only within the plane). An ordinary leave in every
-//     respect but two: the pen has NO TITLEBAR, so the menu row's keep below
-//     — a step one pixel up off row 1 being a step onto the titlebar rather
-//     than out of the visit — does not apply to it (a pen rising off row 1
-//     has left the visit, and the row's fill and mode go with every other
-//     face); and a standing tooltip takes its hide grace rather than going
-//     down at once. The Wayland backend never passes it.
-// The distinction is read in one place, main.cpp's hook body, by exactly two
-// consumers: the menu row's armed mode and its hovered button, which survive
-// an ordinary leave (or a contact's lift) through row 1 and never survive the
-// hard one or the pen's; and the tooltip's leave (end_tooltip_hover), which the
-// pen's hover ending makes soft and the contact's lift makes no leave at all.
-// Every other clear the hook performs is unconditional and reads this not at
-// all.
+//     respect but one: a standing tooltip takes its hide grace rather than
+//     going down at once. The Wayland backend never passes it.
+// The distinction is read in one place, main.cpp's hook body, by exactly one
+// consumer: the tooltip's leave (end_tooltip_hover), which the pen's hover
+// ending makes soft and the contact's lift makes no leave at all, the
+// ordinary leave and capability loss both being its hard end. Every other
+// clear the hook performs is unconditional and reads this not at all. (The
+// menu row's keep — its armed mode and hovered button surviving an ordinary
+// leave through row 1 onto the titlebar — was this distinction's other
+// consumer until 2026-10-01, deleted with that mode; since then nothing
+// tells OrdinaryLeave from CapabilityLoss.)
 enum class GuiPointerLeaveReason {
     OrdinaryLeave,
     CapabilityLoss,
@@ -1962,7 +1960,7 @@ private:
     // reason (TouchLift for a lift, OrdinaryLeave for a hard end): the
     // finger's OWN LIFT passes true, and the ends where no finger left — the
     // HARD ENDS (2026-08-29) — pass false. Rationale, edges and
-    // the armed-anchor judgment at the definition.
+    // the resting-anchor judgment at the definition.
     void deliver_touch_translation_end(bool clean_release);
     // Compute + deliver the Nav frame's centroid/distance update through the
     // update hook (latch, fold-at-crossing, per-frame deltas — the contract

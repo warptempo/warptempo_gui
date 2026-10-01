@@ -1638,16 +1638,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             cairo_fill(cr);
         }
 
-        // The pill under the label is the whole hover cue, and the label's ink
-        // follows the ground it sits on: kRedesignLabel on the row ground,
-        // kRedesignLabelOnAccent on the pill (architect 2026-10-01 — the
-        // accent is the light ink, on which the label white reads 1.91:1;
-        // render.h's block at that constant). Dead, the label is the one thing
-        // that dims (keep above) — mixed toward the ROW GROUND, which is what
-        // is under it there, since a dead button never wears the pill.
-        const GuiColor label_c =
-            pill ? kRedesignLabelOnAccent
-                 : mix_color(kRedesignLabel, ground, keep);
+        // The label color is the SAME in the row's two live faces; the pill
+        // under it is the whole hover cue. White on the pill is his eye's
+        // ruling (architect 2026-10-01: the one text colour over the chrome,
+        // its 1.91:1 on the light ink known and accepted — render.h's block
+        // after kRedesignLabel). Dead, the label is the one thing that dims
+        // (keep above) — mixed toward the ROW GROUND, which is what is under
+        // it there, since a dead button never wears the pill.
+        const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
         cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
         // THE LABEL CENTERS IN THE PILL, which IS the lane: the pill is the
         // button, and Qt's own menu bar centers an item's text in the item
@@ -4289,15 +4287,15 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
-        // THE PRESSED ITEM'S INKS ARE kRedesignLabelOnAccent (architect
-        // 2026-10-01): the press fills the item with the accent, the light
-        // ink, on which the label white reads 1.91:1 and the accelerator's
-        // dim far less, so both the label and the accelerator take the dark
-        // label for the press's duration (render.h's block at that constant);
-        // every other face keeps the inks below.
+        // THE PRESSED ITEM'S INKS ARE THE LABEL WHITE (architect 2026-10-01:
+        // the one text colour over the chrome, its 1.91:1 on the light ink
+        // known and accepted — render.h's block after kRedesignLabel). The
+        // label is white in every live face already (a pressed item is a
+        // live one), so only the accelerator below changes for the press:
+        // its dim would all but vanish on the ink, so it takes the white too
+        // for the press's duration.
         const GuiColor& label_ink =
-            pressed    ? kRedesignLabelOnAccent
-            : enabled[i] ? kRedesignLabel : kRedesignPopupDisabledLabel;
+            enabled[i] ? kRedesignLabel : kRedesignPopupDisabledLabel;
         cairo_set_source_rgb(cr, label_ink.r, label_ink.g, label_ink.b);
         text_shape::show_shaped_run(cr, runs[i],
                                     static_cast<double>(x + pad_l), base);
@@ -4306,8 +4304,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // margin, not to the item box's: the margin is a fact about the box the
         // crop measured, and aligning to it keeps every hotkey's last ink column
         // on one line whatever the item inset is. Its ink is the sampled dim
-        // (kRedesignPopupHotkey) in every face but the PRESSED one (the dark
-        // label above) — the item's fill is the whole hover/press cue, as it
+        // (kRedesignPopupHotkey) in every face but the PRESSED one (the label
+        // white, above) — the item's fill is the whole hover/press cue, as it
         // is for the label. (A DISABLED row swapped it
         // for the sampled dim pair's other half, keeping the accelerator dimmer
         // than its own label exactly as the live pair does; both derivations are
@@ -4327,7 +4325,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
             const GuiColor& hot_ink =
-                pressed    ? kRedesignLabelOnAccent
+                pressed    ? kRedesignLabel
                 : enabled[i] ? kRedesignPopupHotkey
                              : kRedesignPopupDisabledHotkey;
             cairo_set_source_rgb(cr, hot_ink.r, hot_ink.g, hot_ink.b);
@@ -7385,67 +7383,31 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
         // THE SELECTION BAND IS THE ACCENT (architect 2026-08-28, the palette
         // block beside kMarkerFlagLabel): kRedesignAccent behind the selected
-        // substring, kRedesignLabelOnAccent for its glyphs (the dark letters
-        // since 2026-10-01, the accent being the light ink) — the product's
-        // one selection pairing, which the flag editor's marker-lane box
-        // paints too. THE RUN IS SHOWN ONCE PER REGION, the flag editor's own
-        // rule (render_flag_editor_box): with a selection standing, the label
-        // white run is clipped to the band's COMPLEMENT inside the text
-        // viewport and the dark run to the band, so no pixel takes both inks
-        // and every antialiased edge blends against the ground it sits on.
-        // The complement is FOUR rectangles here — the columns left and right
-        // of the band and the strips above and below it, the band being the
-        // line's ascent-plus-descent inside a taller field — and a part with
-        // nothing in it is left out. The red-flash ground reaches only the
-        // unselected glyphs: a selection standing through an invalid flash
-        // reads accent-on-red, the same selection it read before the flash.
+        // substring, kRedesignLabel for its glyphs (held white over the light
+        // ink by his eye 2026-10-01, the one text colour over the chrome) —
+        // the product's one selection pairing, which the flag editor's
+        // marker-lane box paints too. Here it costs no pass: the run is the
+        // label white on both sides of the band, so the band paints first and
+        // the run shows ONCE over it, every antialiased edge blending against
+        // whichever ground it sits on with one ink. The red-flash ground
+        // never reaches the selected glyphs — a selection standing through an
+        // invalid flash reads accent-on-red, the same selection it read before
+        // the flash.
         if (has_sel) {
             const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
             const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
-            const int sel_w = (hx1 > hx0) ? (hx1 - hx0) : 1;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                                  kRedesignAccent.b);
-            cairo_rectangle(cr, hx0, band_y, sel_w, band_h);
+            cairo_rectangle(cr, hx0, band_y,
+                            (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
             cairo_fill(cr);
             cairo_restore(cr);
-
-            const double fy0 = static_cast<double>(field_inner.y);
-            const double fy1 = fy0 + static_cast<double>(field_inner.h);
-            const double bx0 = static_cast<double>(hx0);
-            const double bx1 = static_cast<double>(hx0 + sel_w);
-            const double by0 = static_cast<double>(band_y);
-            const double by1 = static_cast<double>(band_y + band_h);
-            cairo_save(cr);
-            if (bx0 > view_x0)
-                cairo_rectangle(cr, view_x0, fy0, bx0 - view_x0, fy1 - fy0);
-            if (view_x0 + view_w > bx1)
-                cairo_rectangle(cr, bx1, fy0, (view_x0 + view_w) - bx1,
-                                fy1 - fy0);
-            if (by0 > fy0)
-                cairo_rectangle(cr, bx0, fy0, bx1 - bx0, by0 - fy0);
-            if (fy1 > by1)
-                cairo_rectangle(cr, bx0, by1, bx1 - bx0, fy1 - by1);
-            cairo_clip(cr);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-            cairo_restore(cr);
-
-            cairo_save(cr);
-            cairo_rectangle(cr, hx0, band_y, sel_w, band_h);
-            cairo_clip(cr);
-            cairo_set_source_rgb(cr, kRedesignLabelOnAccent.r,
-                                 kRedesignLabelOnAccent.g,
-                                 kRedesignLabelOnAccent.b);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-            cairo_restore(cr);
-        } else {
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
         }
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(cr, run, tx, baseline);
         // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
         // IT (architect 2026-08-13, at his live test: "the blinking caret, the
         // I-beam, continues to blink in the text field even though it has lost
@@ -7971,9 +7933,9 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 //   a RESTING row         -> NO FILL AT ALL: the ground shows through, which
 //                            is what makes a lit row the only thing the eye
 //                            lands on
-//   the INK               -> kRedesignLabel, but kRedesignLabelOnAccent on
-//                            a LIT row wearing the live accent or its hovered
-//                            lift (the icon glyphs carry their own inks)
+//   the INK               -> kRedesignLabel in EVERY face, the lit ones
+//                            included (architect 2026-10-01: white on the
+//                            accent; the icon glyphs carry their own inks)
 //   HOVER                 -> kFolderRowHover under a 1px kFolderRowHoverOutline
 //                            frame, the button's own outline width and inset
 //   the HIGHLIGHT band    -> kRedesignAccent, kdenlive's own selection band
@@ -8134,20 +8096,12 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                         static_cast<double>(glyph));
             const int text_x = gx + glyph + gap;
 
-            // THE NAME, shaped through the one chokepoint, after the glyph.
-            // ITS INK FOLLOWS THE GROUND UNDER IT (architect 2026-10-01): the
-            // label white on the band's ground, the hover wash and the
-            // INACTIVE accent (#2d454f, white 9.86:1), and
-            // kRedesignLabelOnAccent on a lit row wearing the LIVE accent —
-            // the light ink, on which white reads 1.91:1 — or its hovered
-            // lift kFolderRowHoverSelected (white 1.58:1); render.h's block
-            // at that constant. The lit fill above is the live accent exactly
-            // when the window is activated (accent_for_focus) or the row is
-            // hovered, so the same two terms pick the ink.
-            const bool on_accent =
-                lit && (hovered || app.window_activated);
-            const GuiColor& name_ink =
-                on_accent ? kRedesignLabelOnAccent : kRedesignLabel;
+            // THE NAME, shaped through the one chokepoint, after the glyph — in
+            // the band's ONE ink, the label white, in every face (architect
+            // 2026-10-01: white on the accent by his eye, its 1.91:1 on the
+            // live accent and 1.58:1 on kFolderRowHoverSelected known and
+            // accepted — render.h's block after kRedesignLabel). A row that
+            // changed ink with its face would be a second thing to read.
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
             // THE SEAT: a row is a box, so its label takes the box solver's
@@ -8163,7 +8117,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            cairo_set_source_rgb(cr, name_ink.r, name_ink.g, name_ink.b);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);

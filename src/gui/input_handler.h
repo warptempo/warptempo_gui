@@ -1484,18 +1484,14 @@ struct GuiInputHandler {
     // re-resolves the cursor's last position against the painter's stashed rects
     // and is called from on_motion's no-gesture tail and from the run loop's
     // TICK; it REFUSES OUTRIGHT while the pointer is outside the window (its own
-    // first lines), which is what keeps the tick's call inert in both directions
-    // out there. clear_ is the pointer-LEAVE
+    // first lines), which is what keeps the tick's call inert out there.
+    // clear_ is the pointer-LEAVE
     // / capability-loss drop, wired in main.cpp on the pointer-leave hook,
     // because a face is an answer to "where is the pointer" and the pointer is
     // gone: capability loss ends that stream outright, and an ordinary leave has
     // no motion only WHILE the pointer stays outside — long enough for a lit
     // pill to sit there unowned until a re-entry's synthesized motion recomputes
-    // it. THAT CALL IS CONDITIONAL (architect 2026-08-08): an ORDINARY leave
-    // through ROW 1's band with the menu row's mode armed KEEPS the faces, so the
-    // hovered row-1 button stays lit while the pointer rests on the titlebar —
-    // the same leave that keeps the mode itself, argued at the hook, and scoped
-    // there to the soft edge, capability loss clearing unconditionally. Both damage ONLY on a
+    // it. Both damage ONLY on a
     // real transition, and at most one invalidate_top_strip per call however many
     // faces moved.
     void recompute_redesign_button_hover();
@@ -1523,8 +1519,8 @@ struct GuiInputHandler {
     // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
     // Both damage the top strip AND the popup's published rect, because the
     // popup hangs below the strip. toggle_ does NOT record the press claim that
-    // the anchor-press gesture needs: two of its callers carry no press at all
-    // (the menu-row hover open, the hover switch), so the claim is the press
+    // the anchor-press gesture needs: its other caller carries no press at all
+    // (the hover switch), so the claim is the press
     // site's, written from this toggle's outcome (AppState::Dropdown::
     // press_began_on_item). recompute_ resolves the item hover while it is open
     // AND, under a live press CLAIMED BY THE POPUP — one that went down on an
@@ -1542,58 +1538,21 @@ struct GuiInputHandler {
     // (finish_dropdown_release). It refuses while the pointer is outside
     // the window (its own first lines), so the per-iteration caller cannot
     // re-light what the pointer-leave drop cleared.
-    // They are also the mode's two writers: toggle_'s open
-    // ARMS the menu row and close_ DISARMS it — unconditionally, ABOVE its own
-    // "nothing is open" return, since the mode outlives the popup and a
-    // dismissal must reach it in that state too (the one close that re-arms is
-    // named at close_'s definition).
     void toggle_dropdown(DropdownMenu menu);
     void close_dropdown();
     void recompute_dropdown_hover(GuiInputState mods);
 
-    // THE MENU ROW'S MODE — the three entries that maintain the armed bit outside
-    // toggle_ (which sets it) and close_ (which clears it on every dismissal);
-    // the contract, and the authoritative list of what ends the mode, are at the
-    // field, AppState::Dropdown::menu_row_armed.
-    // THE TWO MOTION HALVES ARE SPLIT BECAUSE THEIR GUARD LISTS DIFFER, and that
-    // is the whole reason there are two functions rather than one:
-    //   * open_menu_row_anchor_on_hover is the COLD ROW'S motion answer, called
-    //     from on_motion's no-gesture tail and nowhere else: armed and over an
-    //     anchor OPENS that menu through toggle_dropdown. It PRESUMES NO MENU IS
-    //     OPEN and no modal or gesture owns the pointer, which that placement
-    //     guarantees — the open-dropdown branch returns far above the tail, and
-    //     so do the prompt, the dialog editors, the folder overlay's two
-    //     contents and every live gesture —
-    //     plus ONE condition the call site restates because nothing above
-    //     returns on it: a HELD PRIMARY BUTTON refuses the open (the
-    //     two held-motion producers are recorded at the call). The four
-    //     anchors the `h` view and the folder overlay kill are refused inside
-    //     toggle_dropdown (the anchor's painted face, stamped from
-    //     menu_anchor_live), not here. SO THE ARMED
-    //     HOVER OPEN IS UNREACHABLE UNDER THE BAND — the two overlay
-    //     branches return above this tail — while the hover SWITCH, which
-    //     lives in the open-dropdown branch above them, is live there: File
-    //     can be opened by a press over the band and the pointer can cross to
-    //     the dead anchors, where that guard answers;
-    //   * update_menu_row_exit is "the pointer left row 1, go cold", called from
-    //     the TOP of on_motion so that it runs under every one of those branches
-    //     too. A modal owning the pointer is a reason not to open a menu, and no
-    //     reason to forget that the pointer left the row.
-    // disarm_ is the mode's end, called from both of those, from the
-    // pointer-leave hook (main.cpp, beside the row's other face clears — a
-    // pointer that has left the window has left the VISIT, which is the same
-    // reason the band exit disarms, at a coarser edge; it is not a claim that no
-    // motion can follow, since a re-entry synthesizes one — and that call is
-    // skipped when an ORDINARY leave went out through ROW 1's own band, a step
-    // onto the titlebar the mode survives; a capability loss makes it always),
-    // and from the top of
-    // on_button_press and
-    // on_key (any press, any chord). It carries the "no menu open" gate, because
-    // leaving the WINDOW is not a dismissal, a menu left standing is still the
-    // mode, and while one is up the POPUP's own routes own the mode.
-    void open_menu_row_anchor_on_hover(int mouse_x, int mouse_y);
-    void update_menu_row_exit(int mouse_x, int mouse_y);
-    void disarm_menu_row();
+    // THE MENU ROW'S POINTER VOCABULARY, the whole of it: a menu OPENS ON A
+    // CLICK (the anchor press, toggle_dropdown), SWITCHES on a hover over the
+    // other anchor while one is up (on_motion's open-dropdown branch, refused
+    // under a held primary button), and CLOSES on its own routes — the
+    // popup's, Esc's and the dismissals' through close_dropdown. A COLD ROW
+    // ANSWERS A CLICK ALONE: with no menu up a hover opens nothing. (The row's
+    // "closed but armed" mode — a hover-open from a closed row once a menu had
+    // been opened, its band exit, its disarms on every press and key, and the
+    // pointer-leave hook's titlebar exception — was deleted whole 2026-10-01,
+    // architect: its one producer, a non-menu row-1 button's hover close, went
+    // with the view bar, and the mode had been unreachable since.)
     // Which item is at (x, y), or -1 — the painter's published boxes. PURE
     // GEOMETRY: whether the row is live is its painted enabled bit
     // (AppState::Dropdown::item_enabled), asked by each caller on its own
@@ -1632,10 +1591,7 @@ struct GuiInputHandler {
     // pointer" and the pointer is
     // gone; the painter lights the hovered item with no in-window term of its
     // own, so dropping the arm alone would leave an item lit outside the
-    // window. The menu stays OPEN and the row stays ARMED — leaving the window
-    // is not a dismissal, and the mode is disarm_menu_row's question, asked
-    // beside this call and asked only of an ORDINARY leave that did NOT go out
-    // through row 1's band (a capability loss disarms whatever the position).
+    // window. The menu stays OPEN — leaving the window is not a dismissal.
     void clear_dropdown_pointer_state();
 
     // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
@@ -1904,9 +1860,9 @@ struct GuiInputHandler {
     // point: the edge is the invariant, not the device.
     //
     // WHAT IT IS NOT: an end for anything the pointer's POSITION owns. The
-    // roster's hover faces, the menu row's armed mode and the tooltip stay with
+    // roster's hover faces and the tooltip stay with
     // the leave hook, which is a different question ("where is the pointer") —
-    // so that hook still calls its own three clears plus those, and this is a
+    // so that hook still calls its own clears plus those, and this is a
     // strict subset of it rather than a replacement.
     // NOR IS IT AN END FOR THE PENDINGS, and the deferred bound-set click
     // (PendingClickAct) did NOT join it though it too acts at a

@@ -142,14 +142,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // cannot leave a lit pill behind it. The pointer-transparent FLAG editor
     // raises no veil and needs none: its roster presses were never blocked.
     hide_shift_tooltip();
-    // ANY KEY PRESS ALSO ENDS THE MENU ROW'S MODE, the keyboard half of the same
-    // blanket rule at the top of on_button_press. It needs no exception list for
-    // the reason stated there and one more: no keyboard chord opens a dropdown at
-    // all, so nothing here has to survive. The bare Esc and Ctrl+Q the ruling
-    // names as dismissals are covered by this without being enumerated, and so is
-    // every key that opens a modal. Gated inside disarm_menu_row: with a popup
-    // OPEN this is inert and the popup's own keyboard gate below decides.
-    disarm_menu_row();
     // (THE HELD ARROW BUTTONS' REPEAT BURST is NOT disarmed here, and its
     // key-press disarm deliberately does not live in this body: since the
     // burst's own fires dispatch THROUGH on_key — the tick's opener goes out

@@ -2982,13 +2982,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                     view_w, static_cast<double>(lane.h));
     cairo_clip(cr);
 
-    // 2. The selection highlight, then 3. the text — THE ACCENT UNDER
-    //    kRedesignLabelOnAccent, the product's one selection pairing (since
-    //    2026-08-28; the dark letters since 2026-10-01 — the palette block at
-    //    kMarkerFlagLabel's neighbour carries the ruling and its contrast).
-    //    The dialog editors' field paints the same two colours and the same
-    //    two shows; the surfaces differ only in their UNSELECTED ink, the
-    //    lane's black here and the label white there.
+    // 2. The selection highlight, then 3. the text — THE ACCENT UNDER THE LABEL
+    //    WHITE, the product's one selection pairing since 2026-08-28, held
+    //    white over the light ink by his eye 2026-10-01 at a known 1.91:1
+    //    (the palette block at kMarkerFlagLabel's neighbour carries the
+    //    ruling and its contrast). The dialog editors' field paints the same
+    //    two colours; this surface differs only in that its UNSELECTED run is
+    //    the lane's black rather than that same white, which is why the
+    //    selected substring here needs a second show and the field's does not.
     //
     //    IT REPLACES THE WHITE FIELD / BLACK TEXT BAND of 2026-08-20, and
     //    kMarkerEditorSelectionBand went with it. That band was kdenlive's
@@ -3025,7 +3026,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    (The deleted pass this is NOT: the old two-tone re-show painted the
     //    selected glyphs in `face.fill` — saturated ink ANTIALIASED AGAINST A
     //    WHITE band, which fringed every edge pale and read as washed out.
-    //    A dark ink on the light accent has no such blend to make.)
+    //    The label white on the accent has no such blend to make.)
     //
     //    Both edges come from byte_x, so the highlight cannot drift off the
     //    glyphs it marks however proportional they are.
@@ -3052,9 +3053,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     }
 
     // THE RUN, SHOWN ONCE PER REGION (the ruling in the block above): the
-    // whole run in the lane's black off the band, the whole run again in
-    // kRedesignLabelOnAccent on it, neither reaching a pixel the other
-    // painted.
+    // whole run in the lane's black off the band, the whole run again in the
+    // label white on it, neither reaching a pixel the other painted.
     cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
     if (!has_sel) {
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
@@ -3089,9 +3089,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         cairo_save(cr);
         cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_clip(cr);
-        cairo_set_source_rgb(cr, kRedesignLabelOnAccent.r,
-                             kRedesignLabelOnAccent.g,
-                             kRedesignLabelOnAccent.b);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
         cairo_restore(cr);
     }

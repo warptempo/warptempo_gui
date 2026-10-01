@@ -4888,17 +4888,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // PRESS (Qt's model, architect 2026-09-29 — AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
-    // ANY PRESS ENDS THE MENU ROW'S MODE, beside it and for a related reason: the
-    // ruling ends the mode on every ordinary dismissal, and with no popup open a
-    // press is the only pointer act there is — the press on the anchor, the press
-    // on any other button, the press on the waveform underneath. THIS NEEDS NO
-    // EXCEPTION LIST because the one press that must KEEP the mode re-arms
-    // immediately through toggle_dropdown's open path a few lines below, which is
-    // the mode's one producer; so "any press ends it" costs exactly nothing and
-    // cannot be forgotten by a press route added later.
-    // It is gated inside disarm_menu_row: with a popup OPEN this is inert, and
-    // the press then belongs to the popup, whose own routes decide the mode.
-    disarm_menu_row();
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
@@ -5503,7 +5492,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // other non-admitting button.
                 //
                 // THE ANCHORS ARE WALKED rather than spelled one by one — the
-                // same shape on_motion's two anchor walks take, over the one
+                // same shape on_motion's anchor walk takes, over the one
                 // menu list (app_state.h), so
                 // dropdown_anchor_button stays the one place that knows which
                 // button emits which menu — and the walk is what gives the CLAIM
@@ -5565,9 +5554,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     //
                     // THE CLAIM IS THIS PRESS SITE'S TO RECORD, NOT
                     // toggle_dropdown'S, and the reason is that owner's other
-                    // callers: the menu-row hover open and the hover switch carry
-                    // NO held button at all, so a claim written inside the toggle
-                    // would be a lie on those routes. Its open path also RESETS
+                    // caller: the hover switch carries NO held button at all, so
+                    // a claim written inside the toggle would be a lie on that
+                    // route. Its open path also RESETS
                     // the popup struct, which is exactly what makes a mid-hold
                     // hover switch onto the other anchor drop claim and arm
                     // together — the recorded rule, kept.
@@ -7516,26 +7505,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // pointer-derived face: the remembered coordinates name a point INSIDE the
     // window even after the pointer has left, so this walk has no honest answer
     // to give while it is out. Its per-TICK caller (main.cpp) keeps running after
-    // a leave, and the refusal is what makes that call inert in both directions —
-    // it can neither re-light a face the pointer-leave hook dropped nor CLEAR the
-    // one that hook deliberately KEEPS when an ORDINARY leave went out through
-    // row 1 with the menu row's mode armed (the rule is at that hook, the band
-    // predicate at point_in_menu_row_band). That the refusal would equally
-    // prevent REPAIRING a kept face is why the hook keeps none on the hard
-    // capability-loss edge, where no return motion exists to repair it. Nothing
-    // else can move a face out there: the only writer of `hovered = true` is
-    // this walk, and the only other writers of false are the leave hook itself
-    // and the dropdown open edge, which no out-of-window event can reach.
+    // a leave, and the refusal is what makes that call inert: it cannot
+    // re-light a face the pointer-leave hook dropped. Nothing else can move a
+    // face out there: the only writer of `hovered = true` is this walk, and the
+    // only other writers of false are the leave hook itself and the dropdown
+    // open edge, which no out-of-window event can reach.
     // THE GUARD LIVES HERE, NOT AT THE WIRING, because this function is the
     // faces' one derivation — on_motion, the other caller, writes
     // app.pointer_in_window true at its top and seeds the coordinates in the same
     // breath, so it is unaffected by construction, and a future third caller
     // inherits the rule instead of having to remember it.
-    // ACCEPTED, and it is the leave hook's cost rather than this line's: a kept
-    // face is FROZEN for as long as the pointer stays out, so a row-1 button that
-    // changed its enabled or selected bit meanwhile keeps the hovered bit it left
-    // with until the re-entry motion re-derives the whole roster. The paint reads
-    // both bits, and row 1's faces are the ones this can reach at all.
     if (!app.pointer_in_window) return;
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
@@ -8652,23 +8631,11 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // rect from the last paint is exactly the region to erase, which is why the
 // close reads it BEFORE zeroing the state.
 //
-// EVERY CLOSE THROUGH HERE ALSO DISARMS THE MENU ROW
-// (AppState::Dropdown::menu_row_armed): bare Esc, an item activating, the anchor
-// click that closes its own menu, a press anywhere else, the wheel, Ctrl+Q, the
-// WM close and a resize all end the mode through this one owner, because a
-// dismissal the user MEANT must end the mode — or Esc would put away a menu that
-// the next pointer twitch reopens.
-// THE CLEAR SITS ABOVE THE "NOTHING IS OPEN" RETURN, and that placement is the
-// whole point rather than a detail: the mode's defining state is menu CLOSED and
-// row ARMED, so a dismissal arriving in it finds nothing to close and must
-// still go cold. Riding the whole-struct
-// reset alone would have made every one of those routes a no-op in exactly the
-// state the mode exists for. Below the return the reset re-clears the bit, which
-// costs nothing and keeps the struct one initializer.
-// NO CLOSE KEEPS THE MODE since 2026-10-01: the one that did, the row-1 hover
-// close onto a view-bar button, left with the bar, so toggle_dropdown's open
-// is the only writer of that bit true (the consequence is stated at
-// AppState::Dropdown::menu_row_armed).
+// A CLOSED MENU LEAVES NOTHING BEHIND (architect 2026-10-01): the row kept
+// no "closed but armed" mode after its one producer — a non-menu row-1
+// button's hover close — went with the view bar, and the mode was deleted
+// whole, so every close is the struct reset and a cold row answers a click
+// alone.
 // THE `h` HISTORY MODE's POINTER ALLOWLIST and its acts. True = the press is
 // CONSUMED here (refused outright, or handled as one of the mode's own acts);
 // false = the press is one of the navigation gestures the mode leaves alone, and
@@ -9135,7 +9102,6 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
 }
 
 void GuiInputHandler::close_dropdown() {
-    app.dropdown.menu_row_armed = false;
     if (!app.dropdown.open()) return;
     const GuiRect painted = app.dropdown.rect;
     app.dropdown = AppState::Dropdown{};
@@ -9149,8 +9115,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // mode refuses to OPEN while a popup stands (the entry sits below on_key's
     // dropdown gate), and this line refuses THAT menu while the MODE stands. The
     // guard belongs here for the same reason the flag-editor teardown below
-    // does — this is the ONE route every open passes, the anchor click, the
-    // hover switch and the armed re-open alike.
+    // does — this is the ONE route every open passes, the anchor click and
+    // the hover switch alike.
     //
     // IT IS ALSO WHAT CLOSES THE MODE'S ONE POINTER BYPASS, and that bypass is
     // exactly what the SETTINGS half is scoped to. Every other route out of row 1
@@ -9268,10 +9234,10 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // looks focused.
     //
     // IT SITS ON THE OPEN PATH RATHER THAN AT THE BAND CLAIM because this is the
-    // ONE route every open passes — the anchor click, the hover switch and the
-    // armed re-open all arrive here — while the band claim carries only the
-    // click. The hover routes are arguably out of reach with an edit open (the
-    // row arms only through a click, which would itself have closed the edit),
+    // ONE route every open passes — the anchor click and the hover switch both
+    // arrive here — while the band claim carries only the click. The hover
+    // switch is arguably out of reach with an edit open (it needs a menu
+    // already up, opened by a click, which would itself have closed the edit),
     // but a rule that is impossible by construction is worth more here than one
     // that is unreachable by argument. A toggle that CLOSES a menu discards
     // nothing: it returned above.
@@ -9279,7 +9245,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // The teardown is called DIRECTLY rather than through
     // close_top_flag_editor_for_outside_press, whose job includes the
     // is-the-press-inside-the-box test. There is no press here at all on the
-    // hover routes, and the rect test is not merely skipped but INAPPLICABLE: a
+    // hover switch, and the rect test is not merely skipped but INAPPLICABLE: a
     // row-1 button cannot be inside the flag editor's box, which lives in the
     // marker lane below the whole top strip's button rows.
     //
@@ -9299,14 +9265,6 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // (nothing painted, nothing clickable), for at most one frame.
     app.dropdown.menu         = menu;
     app.dropdown.hovered_item = -1;
-    // OPENING A MENU ARMS THE ROW — the mode's ONE producer, and it sits here
-    // because this is the ONE route that opens any menu: the anchor click, the
-    // hover switch, and the armed hover re-open all arrive through it, and no
-    // keyboard chord opens a dropdown at all. So "a menu is open" implies "the
-    // row is armed" by construction, with no second producer to keep in step.
-    // The bit's contract — what the mode does and what ends it — is at the field
-    // (AppState::Dropdown::menu_row_armed).
-    app.dropdown.menu_row_armed = true;
     // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
     // published until paint_dropdown runs, and a redraw is CLIPPED to the
     // damage it was handed — so strip damage alone would clip away whatever the
@@ -9382,112 +9340,6 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     viewport.invalidate_top_strip();
 }
 
-// THE MENU ROW'S MODE, EXIT HALF — "the pointer left row 1, go cold", which is
-// what keeps the mode from outliving the visit: wander down to the waveform and
-// Settings needs a click again. The band is point_in_menu_row_band (app_state.h),
-// which wraps top_menu_row_area — the press claim's own rect, so "on the row"
-// means one thing to the claim, to this exit and to the pointer-leave hook, the
-// predicate's second consumer.
-//
-// IT RUNS WHEREVER MOTION IS SEEN — on_motion's very top, above every branch —
-// and that is the half's whole design. The OPEN half below has a guard list (it
-// must not spring a menu open under a modal or mid-gesture); this half has none,
-// because a modal owning the pointer is a reason not to OPEN a menu and no
-// reason at all to forget that the pointer left the row. Sitting in the
-// no-gesture tail with the open half is exactly what it must not do: a prompt,
-// an editor, an editor text drag or any live gesture returns above that tail, so
-// the pointer could leave row 1 unnoticed and carry an invisible armed mode out
-// of the visit.
-// RUNNING IT DURING A GESTURE COSTS NOTHING AND IS NOT A CHANGE OF RULE: a press
-// already ended the mode (on_button_press's top), so a live gesture's motion
-// finds the bit false and this is a compare. What it buys is the modal branches.
-// WITH A MENU OPEN IT MUST NOT FIRE — the popup hangs below the row, so the
-// pointer leaves the band the moment it moves into it — and it cannot:
-// disarm_menu_row carries that gate for all of its callers.
-void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
-    if (!app.dropdown.menu_row_armed) return;
-    if (point_in_menu_row_band(app, mouse_x, mouse_y)) return;
-    disarm_menu_row();
-}
-
-// THE MENU ROW'S MODE, OPEN HALF (architect 2026-08-03): once a menu has been
-// opened from row 1, the anchors open on the POINTER ALONE — the menu-bar
-// behaviour every desktop has. The bit and its whole contract — and why this
-// half finds the bit false today, no close leaving the row armed — are at
-// AppState::Dropdown::menu_row_armed.
-//
-// ITS PLACEMENT IS ITS GUARD LIST. It is called from on_motion's no-gesture
-// tail and nowhere else, so the conditions the re-open must not fire under are
-// the branches that already return above it — an open dropdown (which owns the
-// motion outright), the prompt, the editor text drag, the dialog
-// modal editors, and every live gesture and pending — PLUS THE ONE
-// condition the call site restates: a HELD PRIMARY BUTTON,
-// which does not return above (a held motion that armed no gesture reaches the
-// tail — the touch resolution burst's pre-press entry motion, and a mouse
-// press-hold sliding along the armed row; the producers are recorded at the
-// call). With that guard the hover opens a menu in precisely the states in
-// which a click opens one — a held-button motion could never be a fresh press
-// anyway. (The pointer-transparent FLAG editor gates
-// neither route, by its own ruling — see the press claim; the open it leads to
-// ENDS that edit, which is toggle_dropdown's business and not restated here.)
-// IT TESTS NO BAND. Every anchor rect lies inside row 1 by construction, so a
-// hit IS "on the row"; the exit half above owns the band question, at the one
-// placement that can answer it for every branch.
-//
-// (THE FOLDER OVERLAY'S TWO MOTION BRANCHES RETURN BEFORE THIS TAIL, which
-// is what keeps the armed hover open out of the two overlay contents. It is
-// their rank and not the anchors' faces that does it: FILE IS LIVE above the
-// band again since 2026-09-03 evening, so toggle_dropdown's guard would admit
-// it — the three dead anchors are the ones that guard refuses. The branches
-// called this tail for the one day of 2026-09-02, when the panel stopped at
-// row 1's foot.)
-void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
-    if (!app.dropdown.menu_row_armed) return;
-    // ON AN ANCHOR, OPEN ITS MENU — through toggle_dropdown, the same owner the
-    // CLICK uses, so the anchor expression, the open edge's damage and the roster
-    // clear are one route with nothing restated. The walk covers every menu that
-    // HAS an anchor rather than naming them, so dropdown_anchor_button stays
-    // the one place that knows which button emits which menu. Anywhere ELSE on
-    // the row — the ground right of the anchors — is simply not an anchor: the
-    // row stays armed and nothing opens.
-    for (const DropdownMenu m : kDropdownMenus) {
-        if (!redesign_button_hit(app, dropdown_anchor_button(m),
-                                 mouse_x, mouse_y)) continue;
-        toggle_dropdown(m);
-        break;
-    }
-}
-
-// THE MODE'S END, the one gated writer every route that is not close_dropdown
-// goes through. Its callers, re-derived by grep: the band exit above, the
-// pointer-leave hook (main.cpp, beside the row's other face clears — a pointer
-// that has left the window has left the VISIT, the band exit's own reason at a
-// coarser edge, NOT a claim that no motion can follow: a re-entry synthesizes
-// one, and it finds a cold row that takes a click again, which is the intent —
-// and that call is CONDITIONAL since 2026-08-08: an ORDINARY leave whose last
-// position was inside row 1's band is a step onto the titlebar, not out of the
-// visit, so the hook skips this call entirely there — while a pointer-CAPABILITY
-// loss, the hard end of the stream, always makes it), ANY pointer press (on_button_press's
-// top) and ANY key press (on_key's top). It damages nothing: the mode is
-// invisible, painting no face of its own; what it changes is what the NEXT
-// motion does.
-//
-// THE "NO MENU OPEN" GATE IS THIS FUNCTION'S REASON TO EXIST rather than four
-// inline writes. Leaving the window is NOT a dismissal — the popup stays up, as
-// clear_dropdown_pointer_state beside it states (only the popup's
-// POINTER-DERIVED faces go) — and a menu still standing is still the
-// mode, so re-entering over the other anchor must SWITCH rather than find a cold
-// row. The same answer serves the two press callers for
-// a second reason: while a popup is up, a press or a chord belongs to the POPUP,
-// whose own routes (close_dropdown, the toggle) decide the mode — so these
-// blanket disarms cannot get in front of them. A dismissal with a menu open
-// therefore always ends the mode through close_dropdown, and a dismissal with
-// none open ends it here.
-void GuiInputHandler::disarm_menu_row() {
-    if (app.dropdown.open()) return;
-    app.dropdown.menu_row_armed = false;
-}
-
 // THE POPUP'S POINTER-DERIVED STATE, DROPPED AT THE ONE HOOK FIRED ON BOTH
 // the pointer-leave AND capability-loss edges (2026-08-03: the two are
 // not the same). Capability loss ends that pointer stream outright — no
@@ -9512,14 +9364,9 @@ void GuiInputHandler::disarm_menu_row() {
 //     its per-iteration caller (main.cpp's settled hook) from re-lighting from
 //     the remembered coordinates what this function drops — and
 //     close_dropdown's struct reset needs a dismissal this edge is not.
-// THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — and the
-// row's armed mode is the leave hook's own question, asked beside this call:
-// with a menu open disarm_menu_row is inert (its no-menu-open gate), and with
-// none open the hook skips it altogether when an ORDINARY leave went out THROUGH
-// row 1's band, so the mode survives that leave the way the standing menu
-// survives this one. On CAPABILITY LOSS neither survives on this reasoning: the
-// popup does stay up, having no pointer-derived existence at all, but nothing
-// pointer-derived is kept there — the leave reason gates the exception.
+// THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — on
+// every leave reason, capability loss included: the popup has no
+// pointer-derived existence at all, and only its pointer-derived faces go.
 // THE PRESS CLAIM GOES ABOVE THE TRANSITION GATE: this is the button-LOST edge,
 // so a re-entry that still reports the button down must not resurrect an arm no
 // release will ever be attributed to. Coming back takes a fresh press, exactly
@@ -9997,20 +9844,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // layer's abnormal end) cannot leave the wait refused
     // (AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
-    // THE MENU ROW'S MODE ENDS WHEN THE POINTER LEAVES ROW 1, and that half is
-    // resolved HERE, above every branch, because it is the only placement that
-    // sees every motion: the modal branches and every live gesture return before
-    // the no-gesture tail where the mode's OPEN half lives, and a mode that could
-    // not notice the pointer leaving under a prompt or an editor would be carried
-    // invisibly out of the visit. A modal owning the pointer is a reason not to
-    // OPEN a menu, not a reason to forget where the pointer went. The two halves
-    // and their asymmetric guard lists are at their definitions
-    // (update_menu_row_exit / open_menu_row_anchor_on_hover).
-    update_menu_row_exit(mouse_x, mouse_y);
-    // THE NOTIFICATION CARDS' HOVER (2026-08-29), above every branch for the
-    // menu-row exit's reason: the cards are hit above every veil, so their
-    // hover must be answered under every modal too, and every branch below
-    // returns.
+    // THE NOTIFICATION CARDS' HOVER (2026-08-29), above every branch: the cards
+    // are hit above every veil, so their hover must be answered under every
+    // modal too, and every branch below returns.
     //
     // THE CARD'S OPACITY IS NOT SPELLED HERE, and deliberately not: the two
     // hover walks a card can stand over — the roster's
@@ -10087,12 +9923,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // outright — no re-open, no close, no damage. Row 1 holds the anchors
         // alone, so every row-1 button the pointer meets here is one.
         //
-        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON — the row-1 hover-act
-        // FAMILY RULE: NO ROW-1 HOVER ACT FIRES WHILE THE PRIMARY BUTTON IS
-        // HELD, its two members this switch and the armed hover-OPEN
-        // (on_motion's no-gesture tail), stated here, its one home — a held
-        // button is not a resting hover here either, on the same two producers:
-        // the TOUCH resolution burst's pre-press entry motion (with a menu OPEN
+        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON — this switch is row
+        // 1's ONE HOVER ACT (the armed hover-open from a closed row was deleted
+        // 2026-10-01, see input_handler.h's menu-row block), and a held button
+        // is not a resting hover, on two producers: the TOUCH resolution burst's pre-press entry motion (with a menu OPEN
         // and the other anchor tapped, that motion reached this walk, switched
         // menus, and the burst's press then found its own menu already open and
         // toggle-closed it — the tap closed the popup instead of switching to
@@ -10649,40 +10483,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // motion, and a press cannot reach one mid-gesture anyway.
         // The redesigned rows' hover is the ONLY hover left: the marker hover
         // popup and its whole recompute machinery died with the marker-text lane
-        // (row 5), so the no-gesture tail has nothing else to resolve.
-        //
-        // THE MENU ROW'S MODE, OPEN HALF, resolves here beside the faces and for
-        // the same reason: opening a menu at a pointer is a thing only a
-        // gesture-free, modal-free pointer may do, and every branch that must
-        // forbid it has returned above. With the row ARMED, this opens an
-        // anchor's menu on the pointer alone. Its EXIT half is deliberately not
-        // here — it runs at the top of this function, where every branch is still
-        // ahead of it. This call runs BEFORE the recompute so an open it
-        // performs is already standing when the faces resolve — toggle_dropdown
-        // clears them, and the recompute then re-derives the whole roster false
-        // under the new popup, which is the correct answer for a pointer the
-        // popup has taken.
-        // ONE CONDITION IS RESTATED FOR THE OPEN: a HELD PRIMARY
-        // BUTTON refuses the hover-open. This is the FIRST MEMBER of the row-1
-        // hover-act family rule — no row-1 hover act fires while the primary
-        // button is held; the statement lives at the open-dropdown branch's
-        // anchor-switch walk, its sibling. A held button is not a resting hover,
-        // and it does NOT return above — a held motion with no armed gesture
-        // reaches this tail, on two producers: the TOUCH resolution burst's
-        // pre-press entry motion (the platform raises the touch hold before
-        // delivering it, so this guard is what stops that motion hover-opening
-        // an armed anchor's menu one event before the press toggle-closes it —
-        // the tap then opens the menu through the press path, as intended), and
-        // a MOUSE press that armed no gesture sliding along row 1 (springing a
-        // menu open under a held button would hand the coming release to an
-        // item that was never pressed). Since 2026-10-01 neither can find the
-        // row armed with no menu up — the close that left it so went with the
-        // view bar (AppState::Dropdown::menu_row_armed) — and the guard stands
-        // as the family rule's statement. The mode itself is
-        // untouched — the row stays armed; only the OPEN waits for a free
-        // button, and the next resting motion performs it.
-        if (!mods.primary_button_held)
-            open_menu_row_anchor_on_hover(mouse_x, mouse_y);
+        // (row 5), so the no-gesture tail has nothing else to resolve. With no
+        // menu up a hover opens nothing (a cold anchor answers a click alone,
+        // input_handler.h's menu-row block).
         recompute_redesign_button_hover();
         return;
     }

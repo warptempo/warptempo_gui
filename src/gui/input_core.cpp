@@ -656,13 +656,9 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // fires its hook once, ahead of its own hold ends, and records the resulting
     // staleness as an accepted glitch. This edge keeps the ordering because it
     // costs one call site and the pointer here is expected back.)
-    // THE ONE EFFECT THE HOOK COULD NOT UNDO CANNOT FIRE: the tail's armed-hover
-    // menu OPEN. It needs AppState::Dropdown::menu_row_armed, and every gesture
-    // that can stage a relative motion began with a PRESS, which disarms the row
-    // at on_button_press's top — so the bit is false at every reachable flush,
-    // and the tail's open half returns at its own guard. (A stale hover PILL for
-    // the frames until the hook is not a case either: the hook clears the faces
-    // it just recomputed, in the same event.)
+    // (A stale hover PILL for the frames until the hook is not a case: the
+    // hook clears the faces it just recomputed, in the same event, and the
+    // no-gesture tail opens no menu on a hover.)
     // NO CALLER OF finalize_active_drags IS ASKED TO CLEAR THE STAGE, and that
     // is a judgement rather than an omission: the post-finalize delivery is
     // harmless on its own terms — it recomputes hover at a point that hit-tests
@@ -674,10 +670,8 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // OrdinaryLeave is the argument, and the sentence above is exactly what it
     // buys the consumer: the stream continues, so this is the edge on which the
     // hook body is permitted to keep state it expects a return motion to
-    // re-derive (2026-08-08 — the menu row's armed mode and its hovered button,
-    // on a leave whose last position was inside row 1's band). The Android
-    // pen's hover ending passes PenHoverEnd instead, the one leave with no
-    // titlebar to step onto (the enum carries the rule).
+    // re-derive. The Android pen's hover ending passes PenHoverEnd instead
+    // (the enum carries the rule).
     if (pointer_left_hook_) pointer_left_hook_(reason);
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because
@@ -1110,13 +1104,13 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // THE HOLD BIT GOES UP BEFORE THE ENTRY MOTION: the finger
     // has factually been down since the window opened, so EVERY delivery in
     // this burst — the entry motion included — reads primary_button_held
-    // through current_mods(). That is the state the GUI's armed hover-open
-    // guard reads (on_motion's no-gesture tail refuses the menu-row hover-open
-    // under a held primary button): with the bit raised only after the entry
-    // motion, that pre-press motion read UNHELD, hover-opened an armed
+    // through current_mods(). That is the state the GUI's hover-switch guard
+    // reads (on_motion's open-dropdown branch refuses the anchor switch under
+    // a held primary button): with the bit raised only after the entry
+    // motion, that pre-press motion read UNHELD, switched to the tapped
     // anchor's menu, and the press in the same burst toggle-closed it — a tap
-    // on ANY menu anchor with the row armed visibly did nothing. The
-    // was_held capture reads the two SIBLING sources only, so its value is
+    // on the other anchor with a menu up closed the popup instead of
+    // switching. The was_held capture reads the two SIBLING sources only, so its value is
     // order-independent.
     const bool was_held = pointer_left_held_ || synth_left_held_;
     touch_left_held_ = true;
@@ -1364,15 +1358,13 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     fields under the recorded split; after a touch-armed capture the
     //     release already rewrote them to the warp-restore position, so the
     //     value is the cursor's honest whereabouts) INSTEAD of the leave: the
-    //     motion re-derives hover, the menu-row mode's own exit test and the
-    //     settled cursor from truth. It runs the ordinary motion path WHOLE —
-    //     deliberately unmarked, so every consequence of the pointer standing
-    //     at the mouse's resting spot is the standing rules' own: with the
-    //     menu row ARMED and the mouse resting on an anchor, the hover-open
-    //     opens that menu; with a menu OPEN and the mouse resting on the
-    //     OTHER anchor, the hover switch switches to it. Those are the armed
-    //     mode's defining semantics for a pointer at that position, not
-    //     surprises to suppress — suppression would need a "restore" mark on
+    //     motion re-derives hover and the settled cursor from truth. It runs
+    //     the ordinary motion path WHOLE — deliberately unmarked, so every
+    //     consequence of the pointer standing at the mouse's resting spot is
+    //     the standing rules' own: with a menu OPEN and the mouse resting on
+    //     the OTHER anchor, the hover switch switches to it. That is the open
+    //     menu's defining semantics for a pointer at that position, not a
+    //     surprise to suppress — suppression would need a "restore" mark on
     //     the motion, a device branch in spirit (the judgment's one record).
     //   * physical pointer NOT focused — the leave: no mouse rests in the
     //     window, so the contact ending IS the pointer leaving. Its REASON

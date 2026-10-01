@@ -1904,8 +1904,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the reason below — the two floating surfaces go down together.
         input_handler.hide_shift_tooltip();
         // THE POPUP GOES DOWN BEFORE THE PROMPT GOES UP — including its armed
-        // item and the menu row's mode, all three being the one close owner's
-        // job. Without this the two would stand together and ownership would
+        // item, both being the one close owner's job. Without this the two would stand together and ownership would
         // SPLIT: the prompt takes keys and presses (its gates are tested first),
         // but motion reaches the DROPDOWN branch, which sits above the prompt's,
         // and a left RELEASE reaches finish_dropdown_release, which sits above
@@ -1980,16 +1979,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // item faces plus its press claim, the render player's row press and
     // scrub drag, the hover faces of the folder overlay's band, the
     // notification cards and the modal row (its buttons and its field), the
-    // scrub handle's damage, and the PAIR that a leave through row 1
-    // skips, the roster hover clear and the menu-row disarm (which is itself
-    // gated a second time, on no menu being open). The platform-side sites name
-    // their OWN concern and point
-    // here rather than each keeping a list that can drift (the setter contract
+    // scrub handle's damage, and the roster hover clear. The platform-side
+    // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h, and the capability-loss fire
     // site in input_core.cpp).
     // THE TWO EDGES ARE NOT THE SAME EDGE (2026-08-03) — and SINCE
     // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
-    // GuiPointerLeaveReason, because one effect below now differs between them.
+    // GuiPointerLeaveReason, because one effect below differs between them —
+    // the tooltip's end, read last in this account.
     // (SINCE TOUCH PHASE 1, 2026-08-11, a touch pointer translation's end
     // fires this hook too — as TouchLift for the contact's own lift and as
     // OrdinaryLeave for the hard end, and ONLY on its no-focus arm:
@@ -2000,8 +1997,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // deliver_touch_translation_end, input_core.cpp). On the arm that
     // DOES fire, the body needed no change:
     // clearing hover faces where a finger last was is precisely what the
-    // no-hover-under-touch consequence asks for, and the row-1 keep below
-    // reads the remembered position exactly as it does for a mouse. The fire
+    // no-hover-under-touch consequence asks for. The fire
     // sites are the touch edge inventory's, input_core.h.
     // ONE OF THOSE FIRINGS IS THE TOUCH HARD END (a cancel, capability or
     // focus loss on a live pointer translation, hard_end_touch_stream), whose
@@ -2020,11 +2016,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // button releases normally afterward. WHAT MAKES EVERY CLEAR HERE SAFE is
     // that each drops a VISUAL FACE or a press CLAIM, so a later motion or
     // release lands unowned or as a harmless no-op — never an inability of those
-    // events to arrive. WHAT MAKES THE ONE KEPT FACE SAFE is the other half of
-    // the same sentence, and it holds on the soft edge ONLY: the return motion
-    // that re-derives it exists there and nowhere else.
-    // The hover-driven faces must therefore be cleared here — EXCEPT on the one
-    // leave named below, which keeps its button lit on purpose — or a pointer
+    // events to arrive.
+    // The hover-driven faces must therefore be cleared here, or a pointer
     // that slides out of the window over a button leaves its pill / outline lit
     // for as long as it stays outside. THE MARKER
     // HOVER USED TO RIDE THIS EDGE TOO and no longer exists (row 5) — the
@@ -2049,57 +2042,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // claim (clear_dropdown_pointer_state), and dropping the claim is what
     // leaves a re-entry's motion and any later release owning nothing; the MENU
     // ITSELF STAYS UP, because leaving the window is not a dismissal.
-    // THE MENU ROW'S MODE ENDS HERE TOO, BUT NOT WHEN THE POINTER LEAVES THROUGH
-    // ROW 1 (the armed bit, AppState::Dropdown::menu_row_armed; architect
-    // 2026-08-08). Once a menu has been opened from row 1 the anchors open on
-    // hover alone, and a pointer that has left the window has left the visit, so
-    // coming back must take a click again — the same rule the band-exit disarm
-    // states, at the coarser edge. It is a no-op while a menu is OPEN (the gate is
-    // inside disarm_menu_row): leaving the window is not a dismissal, and the
-    // popup that stays up stays the mode.
-    // THE EXCEPTION IS THAT SAME SENTENCE APPLIED TO THE CLOSED-AND-ARMED STATE.
-    // Row 1 ABUTS THE TITLEBAR, so the commonest way to leave the window from the
-    // row is to slide one pixel UP off it — and the mode's own band question,
-    // asked of the remembered position (point_in_menu_row_band, the exact
-    // predicate the motion exit uses), answers "still on the row". Leaving the
-    // window that way is no more a dismissal than leaving it with a menu standing
-    // is: that case already keeps the popup up, keeps the mode, and behaves
-    // stickily on return, and the two must not disagree over which pixel the
-    // pointer crossed. So on that leave the mode SURVIVES and the hovered row-1
-    // button KEEPS ITS FACE — a menu button stays lit under a pointer resting
-    // on the
-    // titlebar, which is the visible half of the rule — and the first motion back
-    // in re-derives hover normally and, over an anchor, opens its menu (the armed
-    // hover open at on_motion's tail).
-    // THE FACE IS KEPT WHOLESALE, not per button, because with the pointer inside
-    // row 1's band no OTHER roster button can be hovered: hover is resolved from
-    // that one position against disjoint rects, so "the faces standing at the
-    // leave" is exactly "the row-1 button under the pointer, if any".
-    // NOTHING ELSE MAY CLEAR IT WHILE THE POINTER IS OUT, and one refusal covers
-    // that: recompute_redesign_button_hover — the tick's per-frame repair and the
-    // only writer of these bits that runs without a pointer event — returns early
-    // while app.pointer_in_window is false (stated there). A RESIZE still ends the
-    // mode, deliberately: it runs close_dropdown, which clears the armed bit above
-    // its own early return, and a relayout is a real dismissal. Any OTHER leave —
-    // below the row, or with the mode not armed — behaves exactly as it always
-    // did.
-    // THE EXCEPTION IS SCOPED TO THE ORDINARY LEAVE (a contact's lift,
-    // TouchLift, reading as one here), and that is a correctness
-    // term rather than tidiness (2026-08-08): this body is shared with
-    // POINTER-CAPABILITY LOSS, the hard end of the stream, where no leave, no
-    // motion and no release will ever arrive again. Keeping anything there would
-    // strand it — a lit row-1 button with no event left to unlight it (the
-    // in-window refusal above, the very thing that protects the kept face, would
-    // then also be what prevents its repair), an armed mode with no pointer, and
-    // a later capability RETURN whose first motion over an anchor would spring a
-    // menu open with no click ever given. So the reason the platform hands in
-    // (GuiPointerLeaveReason) is the first term of the test: the ruled titlebar
-    // trip keeps its face and its mode, the hard end of the stream keeps nothing
-    // and runs the unconditional clear and disarm.
-    // AND THE PEN'S HOVER ENDING KEEPS NOTHING EITHER (PenHoverEnd, architect
-    // 2026-09-27: every pen hover effect acts only within the GUI's plane): a
-    // pen rising off row 1 steps onto no titlebar, so the row's fill and its
-    // mode leave with the pen like every other face.
     // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
     // must end HERE rather than be left to the tick's hover recompute, which
     // refuses outright while the pointer is outside. THE REASON FORKS IT (Qt's
@@ -2118,18 +2060,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // anchor and the seen position stand at the lift point as a mouse's
     // release leaves them, and the S Pen hovering back within the slop of
     // that point starts no wait (end_tooltip_hover). Every other effect here
-    // reads the lift exactly as the ordinary leave, the row-1 keep included.
+    // reads every reason alike. (THE ROW-1 KEEP — an ordinary leave through
+    // row 1's band onto the titlebar keeping the hovered row-1 face and the
+    // menu row's armed mode — was deleted 2026-10-01 with that mode, architect:
+    // the mode's one producer went with the view bar.)
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
-        // Read the band BEFORE the in-window flag goes false: the answer is about
-        // the remembered position, which this hook does not touch, but the two
-        // reads belong together and the order says which leave this is. The
-        // REASON is the first term: only the ordinary leave has the return motion
-        // the exception is built on.
-        const bool through_menu_row =
-            (reason == GuiPointerLeaveReason::OrdinaryLeave ||
-             reason == GuiPointerLeaveReason::TouchLift) &&
-            app.dropdown.menu_row_armed &&
-            point_in_menu_row_band(app, app.last_mouse_x, app.last_mouse_y);
         app.pointer_in_window = false;
         using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
         input_handler.end_tooltip_hover(
@@ -2138,10 +2073,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             : reason == GuiPointerLeaveReason::PenHoverEnd
                 ? TooltipHoverEnd::Soft
                 : TooltipHoverEnd::Hard);
-        if (!through_menu_row) {
-            input_handler.clear_redesign_button_hover();
-            input_handler.disarm_menu_row();
-        }
+        input_handler.clear_redesign_button_hover();
         // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end:
         // they also die at the BUTTON-LOST edge, an unheld
         // motion while one of them stands — which is what the touch layer's
@@ -2149,8 +2081,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (clear_release_time_press_arms). The calls stay spelled out here
         // rather than routed through that owner because THIS edge asks a
         // different question and clears more with it: a pointer that has left
-        // is on no button AND at no position, so the hover faces, the menu
-        // row's mode and the tooltip go too, and the popup's HOVERED item goes
+        // is on no button AND at no position, so the hover faces and the
+        // tooltip go too, and the popup's HOVERED item goes
         // whether or not anything was armed. The narrower owner is a subset of
         // this body, deliberately.
         input_handler.clear_redesign_button_press();

@@ -2078,9 +2078,8 @@ void GuiPlatform::set_pen_ctrl(bool held) {
 void GuiPlatform::end_pen_hover() {
     if (!pen_hovering_) return;
     pen_hovering_ = false;
-    // PenHoverEnd, not OrdinaryLeave: the pen has no titlebar to step onto,
-    // so the leave hook keeps nothing — not even the menu row's fill and mode
-    // that a mouse sliding one pixel up off row 1 keeps (the rule is at
+    // PenHoverEnd, not OrdinaryLeave: the pen's hover ending is the tooltip's
+    // SOFT end, its box taking the hide grace (the rule is at
     // GuiPointerLeaveReason, input_core.h).
     input_.pointer_leave(GuiPointerLeaveReason::PenHoverEnd);
     input_.pointer_frame();

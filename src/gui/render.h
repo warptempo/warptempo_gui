@@ -178,11 +178,10 @@ inline constexpr GuiColor kPlayheadScanner = hex(0xFCFCFC);
 // OUTLINE and every other accent role below — so the equality is written as
 // the reference it is, and a retune of the ink is a retune of the accent. THE
 // LUMINANCE FACT, not an impression: the ink is Y 0.485, LIGHTER than Breeze's
-// #3daee9 (Y 0.371), which is why every ground the accent fills under text
-// takes the dark kRedesignLabelOnAccent below rather than the label white.
-// Everything DERIVED from the accent (kRedesignClickMix's pressed face, the
-// dropdown's hover outline, every mix_color over it) follows the constant by
-// itself. The label white is
+// #3daee9 (Y 0.371) — the block after these constants records what that costs
+// the label white over it. Everything DERIVED from the accent
+// (kRedesignClickMix's pressed face, the dropdown's hover outline, every
+// mix_color over it) follows the constant by itself. The label white is
 // Breeze's paper white #fcfcfc, a screenshot sample spelled out here rather
 // than borrowed. The LINE is row 2's separator and its
 // border-bottom, one sampled value for both (they are the same rule seen twice —
@@ -201,22 +200,22 @@ inline constexpr GuiColor kRedesignAccent    = kWaveformInk;
 inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
 inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 
-// THE LABEL ON AN ACCENT GROUND (architect 2026-10-01): #232629, Breeze
-// LIGHT's own text colour — the natural counterpart of the Breeze-Light
-// selection pairing the selection band already cites (the block beside
-// kMarkerFlagLabel). The ink is LIGHT (Y 0.485), so the label white on it
-// reads 1.91:1 where this reads 7.76:1. It replaces kRedesignLabel WHEREVER
-// THE ACCENT, OR A FACE DERIVED LIGHTER THAN IT, IS THE GROUND UNDER TEXT:
-// the editors' selection band (the dialog field and the flag editor's box),
-// row 1's hover pill, a dropdown's pressed item (label and accelerator), and
-// the folder overlay's lit rows (the highlight band and the pressed row while
-// they wear the live accent, and the hovered+highlighted kFolderRowHoverSelected,
-// 9.39:1 against white's 1.58). The INACTIVE accent is dark (#2d454f, white
-// 9.86:1), so a band wearing it keeps the label white. Every 30 % wash of the
-// accent that carries text stays dark enough for the white label — the modal
-// buttons' pressed face 7.92:1, the dropdown's hover 8.30, kFolderRowHover
-// 9.10 — and kModalFocusFill under the word buttons reads 8.98.
-inline constexpr GuiColor kRedesignLabelOnAccent = hex(0x232629);
+// THE LABEL WHITE IS THE ONE TEXT COLOUR OVER THE CHROME, THE ACCENT GROUNDS
+// INCLUDED (architect 2026-10-01, at a dark label on the ink on the glass:
+// "the dark font just looks weird … I can read it, let's go with the
+// white"). kRedesignLabel carries the glyphs on every ground the accent, or a
+// face derived lighter than it, fills under text: the editors' selection band
+// (the dialog field and the flag editor's box, the block beside
+// kMarkerFlagLabel), row 1's hover pill, a dropdown's pressed item (label and
+// accelerator), and the folder overlay's lit rows (the highlight band, the
+// pressed row, the hovered+highlighted kFolderRowHoverSelected). THE CONTRAST
+// IS KNOWN AND ACCEPTED: white on the ink reads 1.91:1 and on
+// kFolderRowHoverSelected 1.58:1 — the reading is the single user's own and
+// the product his alone, and one ink over every chrome ground was the point.
+// Every other accent-family ground under text is dark enough to need no
+// argument: the INACTIVE accent #2d454f 9.86:1, the 30 % washes (the modal
+// buttons' pressed face 7.92, the dropdown's hover 8.30, kFolderRowHover
+// 9.10) and kModalFocusFill under the word buttons 8.98.
 
 // THE ACCENT'S UNFOCUSED FACE — Breeze's INACTIVE selection rule applied to
 // the accent (architect 2026-09-02 named the role: "breeze blue should change
@@ -841,8 +840,7 @@ inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x704083);
 // they share its ink), and the flag editor's unrolled text and its caret,
 // which resolve through the same face. THE ONE EXCEPTION IS THE FLAG EDITOR'S
 // SELECTED SUBSTRING (architect 2026-08-28): a selected span is the accent
-// under kRedesignLabelOnAccent on every text surface in the product, the
-// block below.
+// under kRedesignLabel on every text surface in the product, the block below.
 //
 // IT IS ITS OWN CONSTANT AND NOT A RETUNE OF kRedesignLabel, which stays
 // #fcfcfc: that value is the whole redesign's label ink — the menu row, the
@@ -870,15 +868,15 @@ inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x704083);
 // glass check rather than pre-corrected here.
 inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 
-// THE SELECTION GROUND IS THE ACCENT AND THE SELECTED LETTERS ARE
-// kRedesignLabelOnAccent, ON EVERY TEXT SURFACE (architect 2026-08-28: "what
-// Breeze Light does with dark text... let's just do that everywhere for
-// consistency"; the dark letters 2026-10-01). One pairing for every run the
+// THE SELECTION GROUND IS THE ACCENT AND THE SELECTED LETTERS ARE THE LABEL
+// WHITE, ON EVERY TEXT SURFACE (architect 2026-08-28: "what Breeze Light does
+// with dark text... let's just do that everywhere for consistency"; the
+// letters held white over the light ink 2026-10-01, the one text colour over
+// the chrome — the block after kRedesignLabel). One pairing for every run the
 // product lets a user select in — the three dialog editors' shared field and
 // the marker lane's flag editor alike: kRedesignAccent (the ink #7ac3e0)
-// behind the selected substring, kRedesignLabelOnAccent #232629 for its
-// glyphs. It is Breeze Light's own selection pairing — a light highlight under
-// Breeze Light's own text colour — worn in the product's own accent.
+// behind the selected substring, kRedesignLabel #fcfcfc for its glyphs. It is
+// Breeze Light's own selection pairing, worn in the product's own accent.
 //
 // THE GROUND NEEDS NO CONSTANT OF ITS OWN, and the one it had is RETIRED:
 // kMarkerEditorSelectionBand (#fcfcfc) named the WHITE FIELD / BLACK TEXT band
@@ -889,21 +887,23 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 //
 // THE UNSELECTED INK IS UNTOUCHED on both surfaces: the flag editor's run
 // stays kMarkerFlagLabel black (the lane's ink, above) and the dialog field's
-// stays kRedesignLabel. Only the SELECTED substring changes colour, so BOTH
-// painters show the run once per region — the unselected ink clipped to the
-// band's complement inside the text viewport, the selected ink clipped to the
-// band — and no pixel is painted by both inks.
+// stays kRedesignLabel. So the two painters differ by one pass: the FLAG
+// EDITOR'S selected substring changes colour, black to white, and it shows
+// the run once per region — the black ink clipped to the band's complement
+// inside the text viewport, the white clipped to the band — so no pixel is
+// painted by both inks; the DIALOG FIELD'S run is already the label white,
+// so the band goes under it and the run shows once, with no second pass.
 //
 // THE CARETS ARE UNTOUCHED TOO. A caret is the CURSOR's ink, not the
 // selection's, so each keeps its own surface's — black in the flag editor,
 // kRedesignLabel in the dialog field — and neither changes colour on crossing
-// the band. (The flag editor's black reads on the accent; the dialog field's
-// white caret sits on the band only where the cursor is the selection's first
-// column, at 1.91:1.)
+// the band.
 //
-// THE CONTRAST: #232629 on the ink is 7.76:1 (the label white would read
-// 1.91). The paint sites are render_flag_editor_box (render.cpp) and the modal
-// field painter (paint_handler.cpp).
+// THE CONTRAST: #fcfcfc on the ink is 1.91:1 (black would read 10.7), known
+// and accepted by his eye 2026-10-01 — a SELECTION is transient and is marked
+// by its GROUND as much as by its ink, and one ink over every chrome ground
+// was the ruling's stated point. The paint sites are render_flag_editor_box
+// (render.cpp) and the modal field painter (paint_handler.cpp).
 
 // THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
 // row_5_lane_3_marker_green_{unselected,selected}.png and
@@ -1281,8 +1281,9 @@ inline constexpr double kRedesignHoverLightenMix = 0.15;
 // It is the item's ink in every face but the PRESSED one: like the label
 // above it, the hotkey does not change color under the hover tint (the fill
 // IS the whole cue, exactly as the settings menu's rows have always worked),
-// and under the pressed accent fill both take kRedesignLabelOnAccent, the
-// accent being the light ink (architect 2026-10-01).
+// and under the pressed accent fill both take the label white, the one text
+// colour over the chrome (architect 2026-10-01; the block after
+// kRedesignLabel) — the dim would read below even white's 1.91:1 on the ink.
 inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 
 // A DISABLED MENU ITEM'S TWO INKS — kRedesignPopupDisabledLabel #686a6c and
@@ -1389,9 +1390,9 @@ inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 //                       frame (the button's own outline width and inset);
 //   SELECTED         -> kRedesignAccent, the ink (the highlight band, which
 //                       is also the list's keyboard focus) under
-//                       kRedesignLabelOnAccent — the dark label every LIT
-//                       face takes while it wears the live accent, the
-//                       other faces keeping kRedesignLabel;
+//                       kRedesignLabel, the ink every row wears in every
+//                       face (architect 2026-10-01: white on the accent,
+//                       the block after kRedesignLabel);
 //   HOVERED+SELECTED -> kFolderRowHoverSelected, the band lifted under the
 //                       pointer exactly as the hover face lifts the ground.
 //
