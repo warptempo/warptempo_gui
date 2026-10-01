@@ -1351,13 +1351,14 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 // and kModalWindowMarginPx (the
 // narrow-window clamp — the row IS the clamp) are all deleted producer-less.
 // The crop's #292c30 titlebar band stays untranscribed (ours has no title
-// bar). ITS #4882a1 IS TRANSCRIBED SINCE 2026-08-13's SECOND MODAL RULING, as
-// kModalFocusLinePassive below: this block used to record it as the
-// Enter-default's half that we decline to have, and the two focus STRENGTHS
-// gave it a job — a passively focused button is exactly what Enter answers,
-// so the shade is doing the same work here it does in the crop, under a name
-// that says focus rather than default. Its #2d4655 companion was transcribed
-// the same day as the keyboard-focus FILL, which both strengths share.
+// bar). ITS #4882a1 IS THE SOURCE OF kModalFocusLinePassive's DERIVATION
+// below (2026-08-13's second modal ruling; the constant is that shade's
+// relationship applied to the ink, 2026-10-01): the two focus STRENGTHS gave
+// the shade a job — a passively focused button is exactly what Enter
+// answers, so the line does the same work here the shade does in the crop,
+// under a name that says focus rather than default. Its #2d4655 companion is
+// likewise the source of the keyboard-focus FILL's derivation
+// (kModalFocusFill), which both strengths share.
 //
 // The modal's BUTTONS carry no constants here APART FROM THE FOCUS PAIR below:
 // their box is the deleted toolbar
@@ -1450,18 +1451,18 @@ inline constexpr GuiColor kFolderRowHoverSelected  = hex(0x86D6F6);
 //   kRedesignAccent — the ordinary 1px outline, the hover face's own, so a
 //                   focused button reads as "pointed at" plus the halo rather
 //                   than as a fourth outline color.
-//   kModalFocusFill — the interior, a shade the crop carries and this
-//                   product had never transcribed until that day.
+//   kModalFocusFill — the interior, derived from a shade the crop carries
+//                   (the derivation below).
 // A PASSIVELY focused button paints TWO — the same fill under
 // kModalFocusLinePassive, and NO halo. The two strengths and where
 // each is assigned are at AppState::modal_dialog_focus_active; what the
 // palette says about them is only this: the FILL is the focus itself and both
 // strengths wear it, while the OUTLINE is the strength, rising to the accent
 // when the pointer or the keyboard's own walk has claimed the button.
-// PROVENANCE — ALL THREE TRANSCRIBED FROM A CROP, like every other sampled
-// color here (Screenshot_2026-08-13_03-04-28.png, the kdenlive screenshots'
-// folder; the crops are authoring-time artifacts and are not in the
-// repository, exactly as modal_popup.png and editor.png are not). A
+// PROVENANCE — ALL THREE DERIVED FROM A CROP'S SAMPLES, applied to the ink by
+// the relationships below (Screenshot_2026-08-13_03-04-28.png, the kdenlive
+// screenshots' folder; the crops are authoring-time artifacts and are not in
+// the repository, exactly as modal_popup.png and editor.png are not). A
 // horizontal scan through the focused "Cancel" button's middle (y=584) reads,
 // left to right: 2px #284c61 at x=1222..1223, 1px #3daee9 at x=1224, then the
 // #2d4655 interior from x=1225 — mirrored at the right edge (#3daee9 at 1307,

@@ -1983,10 +1983,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h, and the capability-loss fire
     // site in input_core.cpp).
-    // THE TWO EDGES ARE NOT THE SAME EDGE (2026-08-03) — and SINCE
-    // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
-    // GuiPointerLeaveReason, because one effect below differs between them —
-    // the tooltip's end, read last in this account.
+    // THE TWO EDGES ARE NOT THE SAME EDGE (2026-08-03), but the body reads
+    // them alike: both hand in OrdinaryLeave (architect 2026-10-01). The
+    // GuiPointerLeaveReason it is handed tells only the pen's hover ending and
+    // a translated contact's lift from that leave, for the one effect below
+    // that differs — the tooltip's end, read last in this account.
     // (SINCE TOUCH PHASE 1, 2026-08-11, a touch pointer translation's end
     // fires this hook too — as TouchLift for the contact's own lift and as
     // OrdinaryLeave for the hard end, and ONLY on its no-focus arm:
@@ -2045,9 +2046,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
     // must end HERE rather than be left to the tick's hover recompute, which
     // refuses outright while the pointer is outside. THE REASON FORKS IT (Qt's
-    // model, architect 2026-09-29): the ORDINARY leave and capability loss are
-    // HARD ends — the box goes down in this same event, through the one hide
-    // that damages the box's own published rect as well as the strip (the
+    // model, architect 2026-09-29): the ORDINARY leave and capability loss
+    // (both OrdinaryLeave) are HARD ends — the box goes down in this same
+    // event, through the one hide that damages the box's own published rect as well as the strip (the
     // hover clear below queues strip damage alone, and the box hangs outside
     // the strip) — while the pen leaving the plane (PenHoverEnd) is SOFT: the
     // box keeps its owner and stays painted for the hide grace, so a pen
@@ -2060,10 +2061,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // anchor and the seen position stand at the lift point as a mouse's
     // release leaves them, and the S Pen hovering back within the slop of
     // that point starts no wait (end_tooltip_hover). Every other effect here
-    // reads every reason alike. (THE ROW-1 KEEP — an ordinary leave through
-    // row 1's band onto the titlebar keeping the hovered row-1 face and the
-    // menu row's armed mode — was deleted 2026-10-01 with that mode, architect:
-    // the mode's one producer went with the view bar.)
+    // reads every reason alike.
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
         app.pointer_in_window = false;
         using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
@@ -2843,9 +2841,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // an ACTIVE GESTURE FREEZES HOVER — the motion path enforces that by
         // returning before its tail, and an ungated tick would quietly undo it.
         // A pointer that has LEFT the window is handled inside the recompute
-        // (it returns early on app.pointer_in_window), so the tick can neither
-        // re-light what the leave hook cleared nor clear the row-1 face that hook
-        // deliberately keeps when the pointer left through the menu row.
+        // (it returns early on app.pointer_in_window), so the tick cannot
+        // re-light what the leave hook cleared.
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
 

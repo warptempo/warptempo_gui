@@ -667,11 +667,10 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // that delivers it when no leave follows, so clearing it at the finalize
     // would change behaviour on paths with no defect behind them.
     flush_deferred_motion();
-    // OrdinaryLeave is the argument, and the sentence above is exactly what it
-    // buys the consumer: the stream continues, so this is the edge on which the
-    // hook body is permitted to keep state it expects a return motion to
-    // re-derive. The Android pen's hover ending passes PenHoverEnd instead
-    // (the enum carries the rule).
+    // OrdinaryLeave is the argument, the same reason the capability loss
+    // passes (architect 2026-10-01): the stream continues here, but no
+    // consumer keeps anything across either edge. The Android pen's hover
+    // ending passes PenHoverEnd instead (the enum carries the rule).
     if (pointer_left_hook_) pointer_left_hook_(reason);
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because
@@ -706,8 +705,10 @@ void GuiInputCore::pointer_capability_lost() {
     // capability loss, a staged-motion flush may leave pointer_in_window true
     // and a hover face stale until the pointer next enters; accepted, do not
     // re-guard.
+    // OrdinaryLeave, the leave's own reason: every consumer reads the two
+    // edges the same (architect 2026-10-01; GuiPointerLeaveReason).
     if (pointer_left_hook_)
-        pointer_left_hook_(GuiPointerLeaveReason::CapabilityLoss);
+        pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
     end_left_hold_source(/*physical=*/true);
     end_left_hold_source(/*physical=*/false);
 }

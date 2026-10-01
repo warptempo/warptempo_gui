@@ -106,33 +106,36 @@ inline constexpr int kGuiCursorKindCount = 8;
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop
 // may leave standing (2026-08-08).
-//   * OrdinaryLeave is pointer_leave (wl_pointer.leave on Wayland) — and,
-//     since touch phase 1 (2026-08-11), a touch POINTER TRANSLATION's
-//     ABNORMAL end WITH NO PHYSICAL POINTER FOCUSED: the window system took
-//     the contact and no mouse rests in the window, so the pointer is gone
-//     (delivered after the lost-button motion; the fires are touch_cancel
+//   * OrdinaryLeave is the pointer focus dropping, for either of two reasons
+//     every consumer reads the same (architect 2026-10-01):
+//     THE LEAVE — pointer_leave (wl_pointer.leave on Wayland) and, since
+//     touch phase 1 (2026-08-11), a touch POINTER TRANSLATION's ABNORMAL end
+//     WITH NO PHYSICAL POINTER FOCUSED: the window system took the contact
+//     and no mouse rests in the window, so the pointer is gone (delivered
+//     after the lost-button motion; the fires are touch_cancel
 //     (wl_touch.cancel on Wayland) and touch-capability loss — the edge
 //     inventory at the touch state block). A translation ending with the
 //     physical pointer FOCUSED fires this hook NOT AT ALL — it delivers a
-//     restore MOTION at the mouse's own position instead (the focus
-//     fork; the one statement is at deliver_touch_translation_end's
-//     definition). Either way the stream is NOT over.
-//     No position event arrives WHILE the pointer stays outside, but a
-//     re-entry (or the next touch) synthesizes
-//     a motion, a held button still releases, and the held state survives — so a
-//     consumer may knowingly KEEP state across this edge and rely on that
-//     return motion to re-derive it.
-//   * CapabilityLoss is pointer_capability_lost — the pointer capability going
-//     away (the seat losing wl_pointer on Wayland): the hard end of the stream.
-//     No leave, no motion, no release will ever arrive on that object again, so
-//     nothing may be KEPT DELIBERATELY across it — a consumer's keep has no
-//     event left to redeem it. WHAT THE EDGE PROMISES IS BOUNDED, and no more
-//     than the fire site does: the logical left hold ends in both its sources,
-//     the popup's claim drops, and every face clears ONCE. It does not promise a
-//     cold stream at a later capability return — a staged-motion flush can put
-//     `pointer_in_window` back and leave a hover face stale, which is a recorded
-//     ACCEPTED GLITCH (architect 2026-08-09; the record is at the fire site) and
-//     self-heals on the pointer's next entry.
+//     restore MOTION at the mouse's own position instead (the focus fork;
+//     the one statement is at deliver_touch_translation_end's definition).
+//     On the leave the stream is NOT over: no position event arrives WHILE
+//     the pointer stays outside, but a re-entry (or the next touch)
+//     synthesizes a motion, a held button still releases, and the held
+//     state survives — so state kept across this edge would be redeemed by
+//     that return motion.
+//     THE CAPABILITY LOSS — pointer_capability_lost (the seat losing
+//     wl_pointer on Wayland): the hard end of the stream. No leave, no
+//     motion, no release will ever arrive on that object again, so nothing
+//     may be KEPT DELIBERATELY across it — a keep would have no event left
+//     to redeem it; no consumer keeps anything across either edge, which is
+//     why one enumerator serves both. WHAT THE CAPABILITY LOSS PROMISES IS
+//     BOUNDED, and no more than its fire site does: the logical left hold
+//     ends in both its sources, the popup's claim drops, and every face
+//     clears ONCE. It does not promise a cold stream at a later capability
+//     return — a staged-motion flush can put `pointer_in_window` back and
+//     leave a hover face stale, which is a recorded ACCEPTED GLITCH
+//     (architect 2026-08-09; the record is at the fire site) and self-heals
+//     on the pointer's next entry.
 //   * TouchLift is the same translation's CLEAN end, the contact's own lift
 //     (touch_up), with no physical pointer focused — delivered after the
 //     release, the fork being the same one. An ordinary leave in every
@@ -151,16 +154,11 @@ inline constexpr int kGuiCursorKindCount = 8;
 //     going down at once. The Wayland backend never passes it.
 // The distinction is read in one place, main.cpp's hook body, by exactly one
 // consumer: the tooltip's leave (end_tooltip_hover), which the pen's hover
-// ending makes soft and the contact's lift makes no leave at all, the
-// ordinary leave and capability loss both being its hard end. Every other
-// clear the hook performs is unconditional and reads this not at all. (The
-// menu row's keep — its armed mode and hovered button surviving an ordinary
-// leave through row 1 onto the titlebar — was this distinction's other
-// consumer until 2026-10-01, deleted with that mode; since then nothing
-// tells OrdinaryLeave from CapabilityLoss.)
+// ending (PenHoverEnd) makes soft and the contact's lift (TouchLift) makes no
+// leave at all, OrdinaryLeave being its hard end. Every other clear the hook
+// performs is unconditional and reads this not at all.
 enum class GuiPointerLeaveReason {
     OrdinaryLeave,
-    CapabilityLoss,
     PenHoverEnd,
     TouchLift,
 };
@@ -317,11 +315,11 @@ public:
     void forget_keyboard_state();
 
     void pointer_enter(double x, double y);
-    // `reason` is OrdinaryLeave (every Wayland call, the default) or
-    // PenHoverEnd (the Android pen's hover ending, its one other caller);
-    // never CapabilityLoss, which is pointer_capability_lost's alone, nor
-    // TouchLift, which is deliver_touch_translation_end's alone
-    // (GuiPointerLeaveReason, above the class).
+    // `reason` tells the Android pen's hover ending (PenHoverEnd, its one
+    // other caller) from the ordinary leave (OrdinaryLeave: every Wayland
+    // call, the default); never TouchLift, which is
+    // deliver_touch_translation_end's alone (GuiPointerLeaveReason, above
+    // the class).
     void pointer_leave(
         GuiPointerLeaveReason reason = GuiPointerLeaveReason::OrdinaryLeave);
     void pointer_motion(double x, double y);
@@ -516,12 +514,13 @@ public:
     // ordinary leaves, for as long as the pointer stays outside — it may
     // re-enter
     // with a synthesized motion, and a held button still releases normally).
-    // WHICH EDGE FIRED IT IS THE ARGUMENT (GuiPointerLeaveReason, above the
-    // class; 2026-08-08). The body is shared, and the difference above is real:
-    // a consumer may keep pointer-derived state across the ordinary leave, where
-    // a return motion will re-derive it, and may keep NOTHING across the hard
-    // one, where no such event exists. Each fire site passes its own reason and
-    // neither infers it. The two consumers that read it are named at the enum.
+    // WHY IT FIRED IS THE ARGUMENT (GuiPointerLeaveReason, above the class;
+    // 2026-08-08): the ordinary leave and the capability loss both pass
+    // OrdinaryLeave (architect 2026-10-01) — the difference above is real, but
+    // no consumer keeps anything across either — while the pen's hover ending
+    // and a translated contact's lift pass their own reasons. Each fire site
+    // passes its own reason and none infers it. The one consumer that reads it
+    // is named at the enum.
     // The one owner of the drop-what-the-pointer-was-naming behavior. What
     // main.cpp wires it to is enumerated THERE, at the hook body, which is the
     // authoritative list — this contract deliberately does not keep a second
@@ -1794,9 +1793,10 @@ private:
     // re-resolve — permanently on capability loss, and for the duration of the
     // absence on an ordinary leave. Wired to everything derived from where the
     // pointer is, main.cpp's hook body holding the authoritative list; the marker
-    // hover popup it also dropped no longer exists. It carries WHICH of the two
-    // edges fired it, because a consumer may keep state across the soft one and
-    // none across the hard one (GuiPointerLeaveReason). Null-safe.
+    // hover popup it also dropped no longer exists. It carries why it fired —
+    // the pen's hover ending, a translated contact's lift, or the ordinary
+    // leave that covers the leave and the capability loss alike — because the
+    // tooltip's leave reads it (GuiPointerLeaveReason). Null-safe.
     std::function<void(GuiPointerLeaveReason)> pointer_left_hook_;
     // Fired at the platform's consumed keyboard edges (see
     // set_keyboard_intent_cancel_hook). Null-safe at each fire site.

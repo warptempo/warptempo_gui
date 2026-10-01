@@ -6224,8 +6224,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // outline" (2026-08-13). FIVE FACES, the ladder stated at the paint site
 // below: REST is that resting 1px kRedesignLine outline over the bare row
 // ground, HOVER swaps it for the accent, PRESSED adds the icon row's own 30%
-// accent interior, FOCUSED the sampled #2d4655 fill plus a 2px halo outside
-// the box, and there is no selected and no disabled face at all.
+// accent interior, FOCUSED the kModalFocusFill #394A53 fill plus a 2px halo
+// outside the box, and there is no selected and no disabled face at all.
 //
 // AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
 // lift"), which is what makes the click face real: a press ARMS the button
