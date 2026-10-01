@@ -151,10 +151,8 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // ROW 6: the ground is the CROP's #12312b, hard-coded (kWaveformCanvas).
-    // This was the one paint site of the old tunable `canvas` key, which is why
-    // that key went inert here and was deleted outright with the rest of the
-    // colors.conf system on 2026-08-02 (the record is at the palette header).
+    // ROW 6: the ground is kWaveformCanvas, the neutral #141618, hard-coded
+    // (the palette's row-6 block owns its provenance).
     cairo_set_source_rgb(cr, kWaveformCanvas.r, kWaveformCanvas.g,
                          kWaveformCanvas.b);
     cairo_rectangle(cr, x, y, w, h);
@@ -828,19 +826,19 @@ void render_trim_flags(cairo_t* cr,
         if (out_hit) out_hit->end = {true, lane_x + ec.col, r};
     }
 
-    // THE MIDPOINT MARK IS THE CROP, BLITTED VERBATIM (architect 2026-08-01, who
-    // overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled it
-    // implemented exactly; RE-FLIPPED with the rest of the lane on 2026-09-16,
-    // to kdenlive's own orientation — the crop file itself is the old one
-    // flipped vertically, verified pixel for pixel). The 9x9 crop (the shared
-    // bottom border row is the LANE's, painted once below for every surface
-    // including this one, never the tile's own) is a LANE-HEIGHT TILE, and
-    // every pixel of it is already one of this lane's own surfaces:
+    // THE MIDPOINT MARK IS THE CROP'S STRUCTURE IN THE LANE'S OWN COLOURS
+    // (architect 2026-08-01, who overlaid row_5_lane_1_trim_middle.png on the
+    // running GUI and ruled it implemented exactly; RE-FLIPPED with the rest of
+    // the lane on 2026-09-16, to kdenlive's own orientation; the cap and bar
+    // values it reads are the lane's neutral pair since 2026-09-30). The 9x9
+    // crop (the shared bottom border row is the LANE's, painted once below for
+    // every surface including this one, never the tile's own) is a LANE-HEIGHT
+    // TILE, and every pixel of it is one of this lane's own surfaces:
     //
-    //   row 0      #94b0c0  kTrimCapBevelLo    the endcap bevel pair, verbatim,
-    //   row 1      #9dbbcb  kTrimCapBevelHi    now at the tile's TOP
-    //   rows 2..8  #97b4c4  kTrimLaneEndcap    the tile's face
-    //   cols 2..6 } #2f6888 kTrimLaneBar       the inner square, inset 2px,
+    //   row 0      #9ea5ad  kTrimCapBevelLo    the endcap bevel pair, verbatim,
+    //   row 1      #a7b0b8  kTrimCapBevelHi    now at the tile's TOP
+    //   rows 2..8  #a1a9b1  kTrimLaneEndcap    the tile's face
+    //   cols 2..6 } #1b1d20 kTrimLaneBar       the inner square, inset 2px,
     //   rows 2..6 }                            flush UNDER the bevel
     //
     // So the tile is EXACTLY AN ENDCAP-COLOURED COLUMN RUN with a bar-coloured
@@ -1317,11 +1315,11 @@ struct FlagFace {
 // WHICH COLUMN'S DEFAULT/SELECTED PAIR THIS FACE WEARS (architect 2026-09-15,
 // retold the same day on the naming-symmetry ruling: warp is never the
 // unmarked default, so this is a REQUIRED argument at every call, never a
-// defaulted bool). The phase-reset flag box paints in the column's BLUE —
-// Breeze's highlight #3daee9 sampled, the other three RECORDED DERIVATIONS
-// off it (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
+// defaulted bool). The phase-reset flag box paints in the column's STEEL —
+// the accent's value, the other three RECORDED DERIVATIONS off it
+// (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
 // box and the warp column's bound cells stay on kMarkerFlagFill's purple,
-// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS BLUE (architect
+// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS STEEL (architect
 // 2026-09-21, superseding the 2026-09-15 purple-on-either-column choice: the
 // cells wear their own column's hue) — every bound-cell call site passes the
 // face of the column the cells belong to, the same `column_face` its flag box
@@ -3101,7 +3099,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    byte boundary, AA off — the same crisp-column convention the
     //    retired monospace box used, on a shaped position instead of a grid one.
     //    IT IS INK, NOT FIELD, so it stays `face.label` black wherever it
-    //    lands, over the accent band included — black reads on #3daee9, and a
+    //    lands, over the accent band included — black reads on steel, and a
     //    caret that changed colour on crossing a selection edge would be
     //    stating something about the selection rather than about the cursor.
     if (text_editor::cursor_visible_now(ed)) {

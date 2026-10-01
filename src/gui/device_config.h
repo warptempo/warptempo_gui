@@ -70,8 +70,9 @@
 // work"), then `fg_color` / `bg_color` (the two bars' flat inks, closed
 // 2026-09-26), then `fg_color` / `fg_border_color` / `bg_color` /
 // `bg_border_color` (each bar's fill and one-pixel outline), closed by eye
-// 2026-09-27 on both fills #1c816b and the inner's outline #176353, now
-// constexpr in render.h (kWaveformInk, kWaveformForegroundOutline). A config
+// 2026-09-27 on both fills in the plate's ink and the inner's outline its
+// linear-light blend over the canvas, constexpr in render.h since
+// (kWaveformInk, kWaveformForegroundOutline). A config
 // still carrying any of them is unknown-key fatal, no migration.
 // `waveform_widening` CAME AND WENT 2026-09-27 (architect), its own tuning
 // phase: k columns on each side of a plate column's peak read, closed by eye

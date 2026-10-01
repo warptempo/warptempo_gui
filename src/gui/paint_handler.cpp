@@ -250,15 +250,15 @@ int redesign_button_hover_steps(const AppState::RedesignButtonFace& face) {
     return face.enabled ? hover_fade_steps(face.fade) : 0;
 }
 
-// THE ACCENT'S FOCUS FORK — ONE OWNER for "which blue does a face that says
+// THE ACCENT'S FOCUS FORK — ONE OWNER for "which accent does a face that says
 // SELECTED or FOCUSED wear right now" (architect 2026-09-02: "breeze blue
 // should change to #1b4155 when window loses focus"). Its three readers
 // (re-grepped 2026-09-09) are the folder overlay's panel (the highlighted
 // row's band and its list-focused outline), the modal row's ACTIVE-FOCUS
 // outline, which is the row the panel's owners take whole, and since
 // 2026-09-09 THE SELECTED TAB'S CAP (paint_tab_row — the third Breeze crop of
-// the top strip relayout shows exactly this value on an unfocused window's
-// tab); the provenance, the scope and what is deliberately NOT in it are at
+// the top strip relayout shows exactly this role on an unfocused window's
+// tab); the value, the provenance, the scope and what is deliberately NOT in it are at
 // kRedesignAccentInactive (render.h).
 //
 // IT IS A FORK ON THE FLAG AND NOTHING ELSE — no owner term, no surface term.
@@ -587,7 +587,7 @@ ViewBarFace view_bar_face(GuiColor bg, bool focused, int hover_steps,
     //
     // THIS SUPERSEDES A CROP. row_right_disabled_hover (the UNFOCUSED hover)
     // shows the interior lifted to #44464a where row_right_hover (the FOCUSED
-    // one) keeps the flat #1e5774, and that asymmetry was reproduced faithfully
+    // one) keeps its flat ground, and that asymmetry was reproduced faithfully
     // before the ruling. The architect ruled the simpler rule instead: hover is
     // the frame's job on both grounds. The crops still govern everything else
     // here — the SELECTED lifts are unchanged in both focus states, which is why
@@ -2189,8 +2189,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // cap with rounded top corners, and 1px side borders flanking it from the
     // cap's arcs down to the lane's last row (no bottom edge: a tab is open
     // into what it selects). THE CAP TAKES accent_for_focus: an unfocused
-    // window's selected tab wears kRedesignAccentInactive, #1b4155, EXACTLY
-    // the third crop's cap — the fifth reader class of window_activated,
+    // window's selected tab wears kRedesignAccentInactive, the role the
+    // third crop's cap shows — the fifth reader class of window_activated,
     // inventoried at that constant (render.h), damaged by the activation
     // hook's top-strip invalidation like the header's ground. An UNSELECTED
     // tab is ONE GEOMETRY IN TWO COLOURS (architect 2026-09-09, his option 1):
@@ -5255,7 +5255,7 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 // (the content band) INTERSECT (the frame's damage clip), and writes every
 // OPAQUE plate pixel (alpha byte 0xFF) into the window surface as region_lift
 // of its word (render.h: +18 / +18 / +20 per channel, saturating, the doubled
-// Breeze step documented at kWaveformRegionCanvas). A
+// Breeze step documented at region_lift). A
 // transparent plate pixel is left alone, so the kWaveformRegionCanvas ground
 // the previous pass laid down still shows through the gaps unchanged. The
 // alpha is still BINARY (the antialiased plate is deleted;
@@ -7941,7 +7941,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // hovered, armed, pressed — keep the live accent, the pointer being
         // able to act on an unfocused window. The order below is what makes
         // that split exact: a hovered ACTIVE focus is still a pointer claim
-        // and takes the live blue, which is the same reading as the block
+        // and takes the live accent, which is the same reading as the block
         // above's "active focus plus hover is identical to active focus".
         const bool has_fill = pressed || focused || lit;
         // THE REST LINE is the ladder with the hover term taken out — the

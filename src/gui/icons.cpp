@@ -139,9 +139,9 @@ constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
 // tree's first user (2026-08-09) and dialog-information's plate is the one
 // standing since that glyph left with the 2026-09-04 collapse. It is recorded the same way
 // kIconText and kIconPreviewOn are, as THE VALUE THAT FILE RESOLVES TO, and it
-// deliberately does NOT reference render.h's kRedesignAccent even though the two
-// are the same 0x3DAEE9: that coincidence is shared Breeze ancestry, and the two
-// would have to move independently if a crop ever disagreed with a scheme.
+// deliberately does NOT reference render.h's kRedesignAccent: that constant is
+// the product's own steel #3a7a99 (architect 2026-09-30), this one is the
+// scheme's Breeze value, and the two move independently.
 constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
 
 

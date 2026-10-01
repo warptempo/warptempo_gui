@@ -171,25 +171,38 @@ inline constexpr GuiColor kPlayheadScanner = hex(0xFCFCFC);
 //
 // The row ground is a DELIBERATE MISMATCH with kBackground (#202326): the
 // kdenlive bars sit a shade lighter than this product's chrome and the crop
-// wins, so do not "fix" it to the chrome value. The accent is Breeze blue at
-// full saturation — #3daee9, which was also the closed form behind the retired
-// `marker` key's 30% hover wash — carried as row 1's FILLED hover pill and row
-// 2's 1px hover OUTLINE; the label white is Breeze's paper white #fcfcfc. Both
-// are spelled out here rather than borrowed, because these are screenshot
-// samples that happen to coincide with values the old tunable palette also
-// carried, not references to anything. The LINE is row 2's separator and its
+// wins, so do not "fix" it to the chrome value. THE ACCENT IS STEEL, #3a7a99
+// (architect 2026-09-30): the architect's own variation of Breeze's highlight
+// ("we've made it our own"), the very value of kWaveformInk — one colour across
+// the whole face, carried as row 1's FILLED hover pill, row 2's 1px hover
+// OUTLINE and every other accent role below. THE LUMINANCE FACT, not an
+// impression: steel is Y 0.171, against Breeze's #3daee9 at Y 0.371 and the
+// trim bar's former #2f6888 at Y 0.123 — lighter than that bar, but far less
+// saturated than Breeze's highlight (HSV s 0.62 against 0.74, v 0.60 against
+// 0.91), which is why it reads quieter than either. Everything DERIVED from
+// the accent (kRedesignClickMix's pressed face, the dropdown's hover outline,
+// every mix_color over it) follows the constant by itself. The label white is
+// Breeze's paper white #fcfcfc, a screenshot sample spelled out here rather
+// than borrowed. The LINE is row 2's separator and its
 // border-bottom, one sampled value for both (they are the same rule seen twice —
 // a 1px inert structural edge); the retired `line` key's #686a6c was a different
 // value for a different era's rules.
 inline constexpr GuiColor kRedesignRowGround = hex(0x292C30);
-inline constexpr GuiColor kRedesignAccent    = hex(0x3DAEE9);
+inline constexpr GuiColor kRedesignAccent    = hex(0x3A7A99);
 inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
 inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 
-// THE ACCENT'S UNFOCUSED FACE — Breeze's INACTIVE selection blue, ARCHITECT-
-// NAMED 2026-09-02: "breeze blue should change to #1b4155 when window loses
-// focus (inactive color, the scrub already does this — not sure if it's the
-// same color but it's at least similar)". It is NOT the scrub's own
+// THE ACCENT'S UNFOCUSED FACE — Breeze's INACTIVE selection rule applied to
+// steel (architect 2026-09-02 named the role: "breeze blue should change to
+// #1b4155 when window loses focus (inactive color, the scrub already does this
+// — not sure if it's the same color but it's at least similar)"; the value
+// follows the accent to steel, 2026-09-30). THE DERIVATION IS KDE'S OWN:
+// KColorScheme paints an inactive window's selection as the Window background
+// TINTED toward the active selection, KColorUtils::tint(#202326, selection,
+// 0.4) — a contrast-solved HCY tint, not a straight mix — and that reproduces
+// Breeze's #1b4155 from #3daee9 bit for bit. The same call on steel gives
+// #1e3744, hard-coded here (the palette's rule; no mix_color can express an
+// HCY tint). It is NOT the scrub's own
 // kScrubPlayedInactive #1d3847, which he measured off his 16:46 shot of a
 // Breeze slider: two Breeze roles that read alike and are not the same value,
 // so they stay two constants under the standing numerically-close-is-not-the-
@@ -207,19 +220,19 @@ inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 // AppState::window_activated after rows 1 and 2 (the ground) and the scrub
 // (its played groove) — AND THE SELECTED TAB'S CAP IS THE FIFTH since
 // 2026-09-09 (architect, from the third PCManFM-Qt/Breeze crop of the top
-// strip relayout: the unfocused window's selected tab wears EXACTLY this
-// value across its 3px cap, #1b4155, the same Breeze role), read through the
+// strip relayout: the unfocused window's selected tab wears EXACTLY Breeze's
+// inactive selection across its 3px cap, the same role), read through the
 // same accent_for_focus fork by paint_tab_row and damaged by the same
 // top-strip invalidation the header's ground swap already spends. WHAT IT
 // DOES NOT TOUCH: the hover faces on any surface. A hover is a promise that
 // the pointer can act, and a pointer over an unfocused window still can — so
 // kFolderRowHover, kFolderRowHoverOutline, kFolderRowHoverSelected and the
-// modal row's hovered / armed / pressed accents all keep the live blue, and
+// modal row's hovered / armed / pressed accents all keep the live accent, and
 // THE UNSELECTED TABS' TWO COLOURS DO NOT SWAP either (the third crop's
 // hovered B is the same #263f4d as the focused one's). The icon row's lamps,
 // the view bar and the flag editor's selection band are outside the ruling
 // entirely.
-inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
+inline constexpr GuiColor kRedesignAccentInactive = hex(0x1E3744);
 
 // THE UNFOCUSED GROUND for rows 1 and 2 (architect 2026-07-31, from live use).
 // The crops' #292c30 is Breeze's FOCUSED header shade; when the WINDOW LOSES
@@ -264,16 +277,21 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 inline constexpr GuiColor kRedesignRowGroundUnfocused = hex(0x202326);
 
 // ROW 2'S CLICK FACE (row_2_button_click.png): the pressed button's interior,
-// sampled #2f5368 and found to be EXACTLY 30% kRedesignAccent over the row
-// ground —
+// sampled #2f5368 and found to be EXACTLY 30% of Breeze's highlight #3daee9
+// over the row ground —
 //   r: 0.3*61  + 0.7*41 = 47   (0x2f)
 //   g: 0.3*174 + 0.7*44 = 83   (0x53)
 //   b: 0.3*233 + 0.7*48 = 103.5 -> 104 (0x68)
 // so what the crop pins down is a RELATIONSHIP to the ground, not a fifth
-// independent color, and the factor is what ships. THAT IS WHY THE FILL DERIVES
-// FROM THE CURRENT GROUND rather than being frozen at the sampled hex: over the
-// focused ground this reproduces #2f5368 bit-for-bit (the crop is honored
-// exactly), and over the UNFOCUSED ground it applies the same measured 30% tint
+// independent color, and the RATIO is what ships. Over the steel accent
+// (2026-09-30) the same 30% lands at
+//   r: 0.3*58  + 0.7*41 = 46.1  -> 46  (0x2e)
+//   g: 0.3*122 + 0.7*44 = 67.4  -> 67  (0x43)
+//   b: 0.3*153 + 0.7*48 = 79.5  -> 80  (0x50)   = #2e4350 on the focused ground,
+// and at #283d48 over the #202326 content ground. THAT IS WHY THE FILL DERIVES
+// FROM THE CURRENT GROUND rather than being frozen at a hex: one ratio, the
+// crop's, over whatever accent and ground are present — over the UNFOCUSED
+// ground it applies the same measured 30% tint
 // to the ground actually present — where a frozen literal would leave the
 // pressed button lighter relative to its darker surroundings, i.e. louder
 // unfocused than focused, which is not what the crop says. The 1px accent
@@ -357,12 +375,20 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // ITERATION lock since 2026-09-10. The view bar is untouched by the icon row's
 // two, its three selectors being navigation.)
 //
+// THE FOCUSED GROUND IS STEEL'S HUE AT THE SAMPLED GROUND'S LUMINANCE
+// (architect 2026-09-30): kdenlive's #1e5774 re-made at the accent's HSL hue
+// and saturation (steel #3a7a99: 199.6°, s 0.45) and solved to the crop's
+// luminance — #29566d at Y 0.0823 against the crop's Y 0.0835 (200.3°,
+// s 0.45) — so the bar sits exactly as dark as kdenlive's did, in the accent's
+// family. A derivation computed once and hard-coded (the palette's rule),
+// not a sample; the crops still fix every relationship below.
+//
 // kRedesignViewBarBgUnfocused is NUMERICALLY EQUAL to kRedesignRowGround
 // #292c30 and is NOT it: that constant is the FOCUSED CHROME ground, this one is
 // the UNFOCUSED BAR, sampled from kdenlive's own unfocused crop. Two facts that
 // happen to agree, like kRedesignContentGround and kBackground — a retune of
 // one must not follow the other.
-inline constexpr GuiColor kRedesignViewBarBg          = hex(0x1E5774);
+inline constexpr GuiColor kRedesignViewBarBg          = hex(0x29566D);
 inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 
 // EVERY FACE IS A RELATIONSHIP TO THE BAR BACKGROUND, never a frozen literal —
@@ -377,7 +403,7 @@ inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 //                    grounds: hover moves the OUTLINE only (architect
 //                    2026-08-02, from the live test). THIS SUPERSEDES A CROP —
 //                    row_right_disabled_hover lifts its interior to #44464a
-//                    where row_right_hover keeps the flat #1e5774, and that
+//                    where row_right_hover keeps its flat ground, and that
 //                    asymmetry was reproduced faithfully until he ruled the
 //                    simpler rule. The lift below is the SELECTED fact alone
 //                    now; everything else on this surface is still the crops'.
@@ -387,23 +413,27 @@ inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 //                    a frame lifted a fifth.
 //   SELECTED+HOVER — the selected fill under the accent frame.
 //
-// THE TWO LIFTS FIT THE CROPS PER CHANNEL. Focused bg (30, 87, 116) toward
-// (252, 252, 252):
-//   fill  1/8 : r 31.5 + 26.25  = 57.75  -> 58  (0x3a)
-//               g 31.5 + 76.125 = 107.63 -> 108 (0x6c)
-//               b 31.5 + 101.5  = 133.0  -> 133 (0x85)   = #3a6c85, exact
-//   frame 1/5 : r 50.4 + 24.0   = 74.4   -> 74  (0x4a)
-//               g 50.4 + 69.6   = 120.0  -> 120 (0x78)
-//               b 50.4 + 92.8   = 143.2  -> 143 (0x8f)   = #4a788f, exact
-// Unfocused bg (41, 44, 48), same two fractions:
+// THE TWO LIFTS FIT THE CROPS PER CHANNEL, which is what fixed the FRACTIONS:
+// over kdenlive's focused #1e5774 the eighth gave its selected fill #3a6c85
+// and the fifth its frame #4a788f, both exact; over the unfocused
+// (41, 44, 48), same two fractions:
 //   fill  1/8 : 67.375 -> 67, 70.0 -> 70, 73.5 -> 74     = #43464a
 //               vs the crop's #44464a — ONE UNIT LOW ON RED, identical on the
 //               other two channels.
 //   frame 1/5 : 83.2 -> 83, 85.6 -> 86, 88.8 -> 89       = #535659, exact
-// Five of the six channel triples land bit-for-bit and the sixth is off by a
+// Five of the six channel triples landed bit-for-bit and the sixth is off by a
 // single LSB, so the FRACTIONS ship — one relationship over both backgrounds —
 // rather than four literals that would have to be kept in step by hand. That
-// LSB is the whole cost of the derivation and it is not visible.
+// LSB is the whole cost of the derivation and it is not visible. The same
+// fractions over the steel ground (41, 86, 109) (architect 2026-09-30, "Va":
+// kdenlive's own structure kept) give
+//   fill  1/8 : r 35.875 + 31.5 = 67.375 -> 67  (0x43)
+//               g 75.25  + 31.5 = 106.75 -> 107 (0x6b)
+//               b 95.375 + 31.5 = 126.88 -> 127 (0x7f)   = #436b7f
+//   frame 1/5 : r 32.8   + 50.4 = 83.2   -> 83  (0x53)
+//               g 68.8   + 50.4 = 119.2  -> 119 (0x77)
+//               b 87.2   + 50.4 = 137.6  -> 138 (0x8a)   = #53778a
+// and the hover frame is the accent, steel.
 //
 // FRACTION AND BASE ARE BOTH KNOBS: the base is what the bar lifts TOWARD,
 // spelled out here rather than borrowed from kRedesignLabel because it is a
@@ -599,37 +629,55 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // face and, since the same ruling, a shared 1px BOTTOM BORDER (row 9,
 // kTrimLaneBottomBorder below) under all three surfaces and the midpoint tile
 // alike — the one row none of the three surfaces owns on its own. The bevel
-// pair is NOT a derivable rule (the three measured pairs fit neither a
+// pair is NOT a derivable rule (kdenlive's three measured pairs fit neither a
 // constant delta nor a constant mix toward white/black), so it ships as six
-// sampled constants, one pair per surface, unchanged by the flip — only their
-// ROW ORDER moved, from the lane's bottom to its top. A FOURTH bevelled
-// surface would have no pair and would force the question then, which is the
-// point of spelling them out rather than inventing a formula from three
-// samples.
-inline constexpr GuiColor kTrimLaneBar       = hex(0x2F6888);
-inline constexpr GuiColor kTrimLaneEndcap    = hex(0x97B4C4);
+// constants, one pair per surface, in kdenlive's row order since the flip.
+// The GROUND's pair is a sample; the CAP's pair is the sampled cap pair's own
+// deltas carried onto the new cap; the BAR's pair is a CHOICE (below).
+//
+// THE LANE HAS NO BLUE IN IT (architect 2026-09-30: "no blue anywhere" in the
+// lane; the steel accent and the waveform's ink own the colour). THE BAR IS
+// CHARCOAL #1b1d20 — numerically the resting tab's kRedesignTabRest, a
+// coincidence of choice and its own constant by the hard-coded rule. Against
+// the untrimmed ground #202326 it is 1.07:1, so the trimmed span reads by its
+// relief and its caps rather than by its face, which the architect accepted
+// at the mock-up. ITS RELIEF IS THE ARCHITECT'S CHOICE TO KEEP KDENLIVE'S 3D
+// LIP ON THE NEW FACE ("it's going for a 3D effect with the relief and we
+// should keep that definitely"), NOT A MEASUREMENT: hi #2b2f33 = face +
+// (16, 18, 19), lo #050706 = face + (-22, -22, -26), the values settled by
+// his eye on the mock-up (7a). Those offsets are the sampled ground pair's
+// against #292c30 (the row ground's value, within one unit on the lo pair's
+// green); against the lane's own ground #202326 the sampled pair sits at
+// (+25, +27, +29) / (-13, -14, -16).
+//
+// THE ENDCAPS ARE NEUTRAL: #a1a9b1 is Breeze's PlaceholderText grey (qt6ct
+// palette index 20), a documented neutral in the old cap's lightness class
+// (architect 2026-09-30, "T1"). Its pair is the old sampled cap pair's own
+// deltas (+6, +7, +7) / (-3, -4, -4) applied to it: #a7b0b8 / #9ea5ad.
+inline constexpr GuiColor kTrimLaneBar       = hex(0x1B1D20);
+inline constexpr GuiColor kTrimLaneEndcap    = hex(0xA1A9B1);
 // THE MIDPOINT MARK NEEDS NO COLOUR OF ITS OWN (architect 2026-08-01, second
 // pass — he overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled
 // the crop implemented VERBATIM; re-flipped with the rest of the lane on
 // 2026-09-16): the 9x9 crop is exactly a LANE-HEIGHT TILE built from the two
 // surfaces this block already declares — bevel rows 0..1 on top, then face
-// rows 2..8 in kTrimLaneEndcap #97b4c4 with a 5x5 kTrimLaneBar #2f6888 square
+// rows 2..8 in kTrimLaneEndcap #a1a9b1 with a 5x5 kTrimLaneBar #1b1d20 square
 // inset at cols 2..6 flush under the bevel (rows 2..6), the endcaps' own
-// #9dbbcb / #94b0c0 bevel pair over its top two rows. On our dark bar that
+// #a7b0b8 / #9ea5ad bevel pair over its top two rows. On our dark bar that
 // reads as a LIGHT SQUARE RING with a dark centre, which is the mark he
-// approved in the mockup.
+// approved in the mockup; the tile follows the cap and bar constants.
 //
-// The former kTrimMiddle constant (a lone #97b4c4 fill for a 5x5 square) is
+// The former kTrimMiddle constant (a lone cap-coloured fill for a 5x5 square) is
 // DELETED with the deviation it recorded — that deviation reasoned about which
 // half of a two-colour crop to keep when only ONE colour could be painted, and
 // the tile paints BOTH, so the question it answered no longer exists. The
 // painter's tile is the record now (render_trim_flags, render.cpp).
 inline constexpr GuiColor kTrimGroundBevelHi = hex(0x393E43);
 inline constexpr GuiColor kTrimGroundBevelLo = hex(0x131516);
-inline constexpr GuiColor kTrimBarBevelHi    = hex(0x3B7696);
-inline constexpr GuiColor kTrimBarBevelLo    = hex(0x286180);
-inline constexpr GuiColor kTrimCapBevelHi    = hex(0x9DBBCB);
-inline constexpr GuiColor kTrimCapBevelLo    = hex(0x94B0C0);
+inline constexpr GuiColor kTrimBarBevelHi    = hex(0x2B2F33);
+inline constexpr GuiColor kTrimBarBevelLo    = hex(0x050706);
+inline constexpr GuiColor kTrimCapBevelHi    = hex(0xA7B0B8);
+inline constexpr GuiColor kTrimCapBevelLo    = hex(0x9EA5AD);
 // THE LANE'S BOTTOM BORDER (architect 2026-09-16, the new crop
 // row_5_lane_1_trim_bottomborder.png, a 1px row under the WHOLE lane width —
 // ground, bar, endcaps and the midpoint tile alike, the one row no single
@@ -731,8 +779,8 @@ inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
 // exactly in QColor's 16-bit integer arithmetic for all sixteen sampled
 // values — warp 9B59B6/563165/C974ED/704083, red DA4453/79262E/FF6C7B/8E3C44,
 // the retired orange F47750/88422C/FFAC92/8E5F51, the history green
-// 1ABC9C/0E6857/22F4CB/138871 — and the phase-reset blue's RECORDED
-// DERIVATIONS below (3DAEE9/226181/73CFFF/40738E) are the same rule.
+// 1ABC9C/0E6857/22F4CB/138871 — and the phase-reset steel's RECORDED
+// DERIVATIONS below (3A7A99/204455/4B9FC7/2A586F) are the same rule.
 // kdenlive's nine marker category bases — #9b59b6 #3daee9 #1abc9c #1cdc9a
 // #c9ce3b #fdbc4b #f39c1f #f47750 #da4453 — are the palette any new pair
 // would be derived from.
@@ -743,7 +791,7 @@ inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
 // selection swap would mask the normalization cue. It does not: the class
 // ladder DISABLED > RED > default is untouched, so a red marker is red in both
 // pairs and only its BRIGHTNESS moves. So red joins the shape the purple, the
-// orange and the blue already have — the rest pair at rest, the bright pair on
+// orange and the steel already have — the rest pair at rest, the bright pair on
 // the ADDRESSED CELL of a selected marker, read on the SAME `selected` bit
 // those pairs read (resolve_flag_face's third argument). No new predicate and
 // no new term: a selected red marker lifts exactly as a selected calm one
@@ -789,7 +837,7 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // left of every flag and reads as a drop shadow there (architect 2026-08-20,
 // a standing ruling since 2026-09-02; kept under the same-hue pairing of a
 // flag and its own cells too, architect 2026-09-15: the boundary is worth
-// marking — purple on purple then, and blue on blue on the phase-reset
+// marking — purple on purple then, and steel on steel on the phase-reset
 // column since 2026-09-21). THE WHY IS OPTICAL: two saturated fields of
 // different hue meeting edge to edge read as lying on different planes
 // (chromostereopsis — the purple flag against a blue box, the `h` view's red
@@ -807,27 +855,28 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // rule until 2026-09-25, when the architect gave every run a closing column —
 // the upper cell carries it when cells paint, marker_flag_border_px.)
 
-// THE PHASE-RESET FLAG BOX'S PAIRS — BREEZE'S SELECTION BLUE, AGAIN SINCE
-// 2026-09-17 (architect): the phase-reset column's flag box — default
-// and selected classes, and the disabled blend of both — paints in Breeze's
-// highlight blue. THE SUCCESSION: this column took the blue when it gained a
-// hue of its own on 2026-09-15, wore an orange for the one day 2026-09-16
-// (trading hues with the since-deleted magnification level markers column),
-// and took the blue back on 2026-09-17, when the architect looked at both
-// devices and preferred it on the resets. THE PALETTE HOLDS TWO COLUMNS since
-// that column's deletion (architect 2026-09-23): the warp column's purple and
-// this blue, each through the one class ladder (FlagColumnFace,
+// THE PHASE-RESET FLAG BOX'S PAIRS — THE ACCENT'S STEEL (architect
+// 2026-09-30, following the accent; the column has worn the accent's hue
+// since 2026-09-17, when the architect looked at both devices and preferred
+// it on the resets): the phase-reset column's flag box — default and selected
+// classes, and the disabled blend of both — paints in the accent's family.
+// THE PALETTE HOLDS TWO COLUMNS since the magnification level markers
+// column's deletion (architect 2026-09-23): the warp column's purple and
+// this steel, each through the one class ladder (FlagColumnFace,
 // resolve_flag_face, render.cpp). Red's own double duty — the error cue here and the
 // history view's REMOVED class there — is ACCEPTED and not swapped away from:
 // an error on a regular view is meant to be worked away, so the two never mean
 // the same thing for long.
 //
-// PROVENANCE: #3daee9 is the Breeze highlight blue, the palette's one sampled
-// value; the other three are RECORDED DERIVATIONS off it in the relationships
-// the marker crops showed between their own four — the edge a darkened shade
-// of the fill, the selected pair a lifted fill over a mid-darkness edge. (The
-// derivation itself — kdenlive's own QColor darker(180) / lighter(130) rule —
-// is spelled once, at kMarkerFlagFill above.)
+// PROVENANCE: the fill #3a7a99 is kRedesignAccent's value, its literal twin
+// (two facts that agree, the hard-coded rule); the other three are RECORDED
+// DERIVATIONS off it by kdenlive's own QColor rule, spelled once at
+// kMarkerFlagFill above and reproduced in QColor's 16-bit HSV integer
+// arithmetic (the same arithmetic reproduces Breeze's #3daee9 quad
+// 226181/73CFFF/40738E exactly): edge = fill.darker(180) = #204455; selected
+// fill = fill.lighter(130) = #4b9fc7 — value x1.3 to 51117 of 65535, under
+// the ceiling, so no saturation is taken off and it is a plain V scaling;
+// selected edge = that.darker(180) = #2a586f.
 //
 // RED STAYS RED ON EVERY COLUMN (kMarkerFlagFillRed / kMarkerFlagEdgeRed and
 // their Sel pair, resolve_flag_face's first live arm, asked before the
@@ -847,10 +896,10 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // the same class ladder as the reset's own flag box (disabled > red >
 // default, the addressed cell bright in the Sel pair). The argument stays
 // required, never defaulted (warp is never the unmarked default).
-inline constexpr GuiColor kPhaseResetFlagFill    = hex(0x3DAEE9);
-inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x226181);
-inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0x73CFFF);
-inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x40738E);
+inline constexpr GuiColor kPhaseResetFlagFill    = hex(0x3A7A99);
+inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x204455);
+inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0x4B9FC7);
+inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x2A586F);
 
 // THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
 // (architect 2026-08-20, and it is a MEASUREMENT rather than a taste call: he
@@ -872,13 +921,15 @@ inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x40738E);
 // two constants.
 //
 // WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
-// replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
-// gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, the
-// red class 4.93 vs 4.15 at rest and 7.68 vs 2.66 selected, the PHASE-RESET
-// column's blue 8.43 vs 2.41 (the case that prompted the ruling: light ink on
-// #3daee9 was illegible) and 12.1 vs 1.66 selected, the diff lane's green 8.72 vs 2.33 and its red
-// 4.93 vs 4.11. So the one class that does not gain does not lose either,
-// which is what makes a single ink honest across the ladder.
+// replaces): the calm purple is a wash (4.50 vs 4.51) and so is the
+// PHASE-RESET column's steel at rest (4.42 vs 4.63, since the accent moved to
+// steel 2026-09-30; the ruling was prompted by Breeze's #3daee9 there, on
+// which light ink was illegible), and everything else is a gain, the brighter
+// the fill the larger — selected purple 7.21 vs 2.82, the red class 4.93 vs
+// 4.15 at rest and 7.68 vs 2.66 selected, the steel's selected fill 7.08 vs
+// 2.89, the diff lane's green 8.72 vs 2.33 and its red 4.93 vs 4.11. So the
+// two classes that do not gain lose at most a fifth of a ratio point, which is
+// what makes a single ink honest across the ladder.
 //
 // THE DISABLED FACE KEEPS ITS MECHANISM AND CHANGES DIRECTION. The label still
 // blends toward the surface it sits on, through the one mix_color owner at the
@@ -894,9 +945,9 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // with dark text... let's just do that everywhere for consistency"). One
 // pairing for every run the product lets a user select in — the three dialog
 // editors' shared field and the marker lane's flag editor alike:
-// kRedesignAccent #3daee9 behind the selected substring, kRedesignLabel
-// #fcfcfc for its glyphs. It is Breeze Light's own selection, which is where
-// that accent value came from to begin with.
+// kRedesignAccent (steel #3a7a99) behind the selected substring,
+// kRedesignLabel #fcfcfc for its glyphs. It is Breeze Light's own selection
+// pairing, worn in the product's own accent.
 //
 // IT NEEDS NO CONSTANT OF ITS OWN, and the one it had is RETIRED:
 // kMarkerEditorSelectionBand (#fcfcfc) named the WHITE FIELD / BLACK TEXT band
@@ -916,11 +967,10 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // own surface's: black in the flag editor, kRedesignLabel in the dialog field.
 // Both read against the accent, so neither needed a rule of its own.
 //
-// THE RECORDED COST: #fcfcfc on #3daee9 is a 2.41 contrast ratio, the same
-// pairing the marker lane's ink ruling above rejected for the flag boxes.
-// It stands here because a SELECTION is transient and is marked by its GROUND
-// as much as by its ink, and because one convention across every editor was
-// the ruling's stated point. The paint sites are render_flag_editor_box
+// THE CONTRAST: #fcfcfc on steel is 4.63:1 (black would read 4.42). The
+// pairing would stand at a lower ratio too, because a SELECTION is transient
+// and is marked by its GROUND as much as by its ink, and because one
+// convention across every editor was the ruling's stated point. The paint sites are render_flag_editor_box
 // (render.cpp) and the modal field painter (paint_handler.cpp).
 
 // THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
@@ -1057,36 +1107,33 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // strength. On the brighter dimmed pairs it lands where the ruling asked: the
 // selected flag 1.80, the red class 1.59 at rest and 1.81 selected (it gained
 // its rest pair 2026-09-16; the 1.81 is the bright pair the whole class used
-// to wear). (THE PHASE-RESET FLAG BOX reads ~1.90 against its own #274657 —
-// a lighter blue fill whose ceiling is 2.10, headroom the calm purple does not
-// have — off the generic mix_color call resolve_flag_face feeds it, no
+// to wear). (THE PHASE-RESET FLAG BOX reads ~1.61 against its own dimmed
+// steel ~#263943 — a ceiling of 1.75, near the calm purple's — off the
+// generic mix_color call resolve_flag_face feeds it, no
 // constant of its own and the fraction unchanged.) ONE
 // fraction for both surfaces, glass retunes.
 inline constexpr double kMarkerDisabledLabelMix = 0.75;
 
 // -- ROW 6: THE WAVEFORM ITSELF ---------------------------------------------
 //
-// Measured off row_6_waveform_full.png (741x338), row_6_waveform_border.png
-// (1x2) and row_6_waveform_filename.png (635x15). THE BLANKET HARD-CODING
-// RULING REACHES THE WAVEFORM AREA (architect 2026-08-01): the canvas ground and
-// the waveform ink were the LAST two colors the shrinking colors.conf domain was
-// contracting TOWARD, and the crops take them too. The old `canvas` and
-// `waveform_ink` keys kept their declarations for one more day under the
-// then-standing inert-conf rule and lost only their PAINT SITES, of which each
-// had exactly one: render_canvas (this file) and the two render_waveform calls
-// in waveform_cache.cpp.
+// THE WAVEFORM'S PALETTE IS "A STEEL" (architect 2026-09-30, settled by his
+// eye on mock-ups and hard-coded like every other colour here — no tuning
+// key): a NEUTRAL canvas under one ink in the accent's own steel, so the
+// picture carries the face's one hue and the ground casts no tint over it.
+// The border and the filename band are measured off row_6_waveform_border.png
+// (1x2) and row_6_waveform_filename.png (635x15); the canvas and the inks are
+// the architect's, with the derivations stated at each.
 //
-// Row 6 itself took only the ground and the ink; the waveform area's OTHER
-// tunables did not outlast the same day's work: the region highlight re-derived
-// onto kWaveformRegionCanvas, the phase-reset overlay ring onto kMarkerFlagFill,
-// the marker classes onto the row-5 kMarkerFlag* constants, and the trim lane
-// onto its own sampled surfaces. THE WHOLE TUNABLE SYSTEM RETIRED THE NEXT DAY
-// (2026-08-02) — every key above is deleted along with the loader and the config
-// file itself; the record is at the palette header.
-inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
+// THE CANVAS is Breeze's VIEW ground #141618 — the same value as
+// kModalFieldGround, a coincidence of samples and its own constant by the
+// hard-coded rule, like the other coincidences this palette records.
+// kWaveformRegionCanvas (below) derives from its word, which is why the
+// word is spelled once here and the colour built from it.
+inline constexpr uint32_t kWaveformCanvasRgb = 0x141618;  // (20, 22, 24)
+inline constexpr GuiColor kWaveformCanvas    = hex(kWaveformCanvasRgb);
 
 // THE WAVEFORM'S INKS. With the magnification lamp dark the plate is the raw
-// bar alone in kWaveformInk, row 6's crop sample, with no outline. With it
+// bar alone in kWaveformInk, with no outline. With it
 // lit the plate is two bars (the rule is at render_waveform's declaration):
 // the OUTER bar — the levelled, expanded one, painted first, behind — and the
 // INNER bar — the source's own bar through the compressor, painted over, the
@@ -1095,73 +1142,68 @@ inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 // waveform_line_px() (1 px at 100 %, 2 on the tablet), in
 // kWaveformForegroundOutline (settled by his eye 2026-09-27).
 //
-// THE PLATE'S INK: row 6's crop sample, the dark lamp's one ink and both lit
-// bars' fill.
-inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
+// THE PLATE'S INK, the dark lamp's one ink and both lit bars' fill: STEEL
+// #3a7a99, kRedesignAccent's value (its own constant by the hard-coded rule).
+// It is the accent's hue SOLVED TO A LUMINANCE, Y 0.171 against the 0.170
+// the picture was settled at, so the steel waveform is no brighter than the
+// one his eye tuned the lamp's inks on.
+inline constexpr GuiColor kWaveformInk = hex(0x3A7A99);  // (58, 122, 153)
 
-// THE LIT INNER BAR'S OUTLINE (architect 2026-09-27, picked by eye in GIMP):
-// a 50 % blend of kWaveformInk (28, 129, 107) over kWaveformCanvas
-// (18, 49, 43) IN LINEAR LIGHT, GIMP's default compositing — each sRGB
-// channel to linear, the two averaged, back to sRGB: (23.47, 99.13, 82.57)
-// -> (23, 99, 83), #176353 exactly (verified 2026-09-27). The sRGB-space
-// 50 % average would be #17594b (23, 89, 75), darker. It is NOT what
+// THE LIT INNER BAR'S OUTLINE (architect 2026-09-27, the rule picked by eye
+// in GIMP): a 50 % blend of kWaveformInk (58, 122, 153) over kWaveformCanvas
+// (20, 22, 24) IN LINEAR LIGHT, GIMP's default compositing — each sRGB
+// channel to linear, the two averaged, back to sRGB: (43.48, 89.61, 112.59)
+// -> (43, 90, 113), #2b5a71 exactly (verified 2026-09-30). The sRGB-space
+// 50 % average would be #274858 (39, 72, 88), darker. It is NOT what
 // mix_color produces (that blends in sRGB), hence the literal.
-inline constexpr GuiColor kWaveformForegroundOutline = hex(0x176353);  // (23, 99, 83)
+inline constexpr GuiColor kWaveformForegroundOutline = hex(0x2B5A71);  // (43, 90, 113)
 
-// A SUPERSEDED RECORD of the lit inks' tuning (2026-09-24..27): the bar
-// behind wore #1f8b4c, then #135647, then a per-column shade by the leveler's
-// gain, then #17594b (the canvas:ink 1:1 blend), then kWaveformInk; the core
-// wore #17594b, #1abc9c, #1b9e84 (the ink:teal #1abc9c 1:1 blend), then a
-// per-column blend toward #1abc9c by the bar gap (struck: "it doesn't work"),
-// then #1b9e84 again, then kWaveformInk with the #176353 outline; the device
-// keys `fg_color`, `fg_blend_loud` / `fg_blend_quiet`, `fg_color` /
-// `bg_color` and `fg_color` / `fg_border_color` / `bg_color` /
-// `bg_border_color` carried them in turn and are struck (device_config.h).
-// The canvas STAYS kWaveformCanvas #12312b.
+// THE REGION'S STEP — THE ONE REGION RULE (architect 2026-09-24): each of the
+// R, G and B bytes of an ARGB32 word raised by +18 / +18 / +20, saturating at
+// 255, the alpha byte kept. DERIVED, NOT SAMPLED: kdenlive has no comparable
+// highlight, so what is transplanted is a RELATIONSHIP — Breeze's own View ->
+// ViewAlternate lift, +9/+9/+10 per channel, TAKEN TWICE (architect
+// 2026-08-01: "the waveform highlight should be brighter"; one native step
+// was too quiet to find). ONE OWNER OF THE STEP for both halves of the
+// highlight: kWaveformRegionCanvas below is this step applied to the canvas
+// word at compile time, and paint_region_ink applies it to every opaque plate
+// pixel inside the region, each from its OWN colour, whatever ink the palette
+// holds — no ink is keyed and no lifted constant is pinned, so a change to
+// any ink's or the canvas's constexpr carries its lift with it; at full alpha
+// the premultiplied word (argb32_opaque_word, below) is the colour itself,
+// so lifting the bytes lifts the colour. Steel's lift is #4c8cad.
+inline constexpr uint32_t region_lift(uint32_t word) {
+    const auto lift = [](uint32_t byte, uint32_t step) {
+        return byte + step > 255u ? 255u : byte + step;
+    };
+    return (word & UINT32_C(0xFF000000)) |
+           (lift((word >> 16) & 0xFFu, 18) << 16) |
+           (lift((word >>  8) & 0xFFu, 18) <<  8) |
+            lift( word        & 0xFFu, 20);
+}
 
-// THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
-// old value read GREY on the green canvas — "start over, don't just tune it;
-// leave it more greenish").
-//
-// DERIVED, NOT SAMPLED — and deliberately so: there is no kdenlive reference for
-// it, because kdenlive has no comparable highlight. What is transplanted is the
-// RELATIONSHIP, not the colour. The old region highlight #42474d was the old
-// grey canvas #393e43 plus Breeze's own View -> ViewAlternate lift, +9/+9/+10 per
-// channel; applying that same lift to the crop's canvas keeps the
-// theme's-native-lift logic and lands same-hue and subtly lifted on the green,
-// which is what the grey pair was on the grey.
-//
-// THE LIFT IS DOUBLED (architect 2026-08-01: "the waveform highlight should be
-// brighter"). One native step was too quiet to find on the green ground, so the
-// step is applied TWICE — still the theme's own relationship, taken twice, not
-// a tint invented for it:
-//     kWaveformCanvas (18, 49, 43) + 2*(9, 9, 10) = (36, 67, 63) = #24433f
-// (one step gave (27, 58, 53) = #1b3a35, the value this constant held between
-// the row-6 re-derivation and the tweak).
-//
+// THE REGION HIGHLIGHT'S GROUND — the canvas lifted by the region's step:
+//     kWaveformCanvas (20, 22, 24) + (18, 18, 20) = (38, 40, 44) = #26282c
 // IT IS AN OPAQUE GROUND RECOLOR, NOT A BLEND (paint_region_ground, painted
 // BEFORE the plate blit): the span's canvas is REPLACED by this colour, and the
 // ink then composites over it exactly as it composites over the plain canvas.
 // Since the aliasing deletion the plate's alpha is BINARY, so an ink pixel is
 // fully opaque and a gap is fully transparent: this colour shows through the
 // gaps and blends with nothing.
-inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63)
+inline constexpr GuiColor kWaveformRegionCanvas = hex(region_lift(kWaveformCanvasRgb));
 
 // THE HIGHLIGHT'S OTHER HALF — THE SAME LIFT APPLIED TO THE INK (architect
 // 2026-08-18: "apply overlay alpha to wave along with canvas on region
 // highlight"). The ground recolor alone lit the background behind unlit
 // content; lifting the ink too makes the span read as ONE lit region. It is
 // no constant: paint_region_ink, a second pass AFTER the blit, writes every
-// opaque plate pixel inside the span as its own colour lifted by this same
-// doubled step (region_lift, beside argb32_opaque_word below), so each ink —
-// whatever the palette holds — lands on its own lift and every gap is left
-// untouched, still showing this ground. Still fully opaque, not a wash.
+// opaque plate pixel inside the span as its own colour lifted by region_lift,
+// so every gap is left untouched, still showing this ground. Still fully
+// opaque, not a wash.
 //
-// THE ARCHITECT'S TUNING KNOB, explicitly — both halves of it: each lift is a
-// derivation and not a measurement, so the step (region_lift's) and
-// kWaveformRegionCanvas above are the two to move if the highlight wants to be
-// stronger or weaker, and they are the whole of what the region path has to
-// tune.
+// THE ARCHITECT'S TUNING KNOB, explicitly: each lift is a derivation and not
+// a measurement, so region_lift's step is the one thing to move if the
+// highlight wants to be stronger or weaker — both halves follow it.
 
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
@@ -1274,15 +1316,18 @@ inline constexpr double kRedesignDimMix = 0.52;
 // fourth copy of the number.
 inline constexpr GuiColor kRedesignPopupGround = hex(0x1C1F22);
 
-// THE HOVER OUTLINE of a dropdown item: kRedesignAccent lightened 15% toward
-// white, sampled #5abaec = (90, 186, 236) and reproduced exactly —
+// THE HOVER OUTLINE of a dropdown item: the accent lightened 15% toward
+// white. The crop's #5abaec = (90, 186, 236) is Breeze's #3daee9 lightened so,
+// reproduced exactly —
 //   r: 61  + 0.15*(255-61)  = 90.1
 //   g: 174 + 0.15*(255-174) = 186.2
 //   b: 233 + 0.15*(255-233) = 236.3
-// so it ships as the FACTOR through the one mix_color owner, not as a literal.
+// so it ships as the FACTOR through the one mix_color owner, not as a literal;
+// over the steel accent it lands at (87.55, 141.95, 168.3) = #588ea8.
 // The item's hover FILL is kRedesignClickMix (30%) accent over the popup
-// ground — (38, 74, 94) = the crop's #264a5e exactly — one more instance of the
-// same ratio the row-2 click face established, over a different ground.
+// ground — over Breeze's highlight (38, 74, 94), the crop's #264a5e exactly;
+// over steel (37, 58, 70) = #253a46 — one more instance of the same ratio the
+// row-2 click face established, over a different ground.
 inline constexpr double kRedesignHoverLightenMix = 0.15;
 
 // THE NAVIGATION DROPDOWN'S ACCELERATOR COLUMN (2026-08-02, sampled off
@@ -1409,7 +1454,7 @@ inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 // the rows. The three faces a row adds to it:
 //   HOVER            -> kFolderRowHover under a 1px kFolderRowHoverOutline
 //                       frame (the button's own outline width and inset);
-//   SELECTED         -> kRedesignAccent #3daee9 (the highlight band, which is
+//   SELECTED         -> kRedesignAccent, steel (the highlight band, which is
 //                       also the list's keyboard focus) under kRedesignLabel
 //                       ink, the ink every row wears in every face;
 //   HOVERED+SELECTED -> kFolderRowHoverSelected, the band lifted under the
@@ -1418,12 +1463,16 @@ inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 // kFolderRowHover IS A DERIVATION, NOT A SAMPLE, and it is the row-2 click
 // face's own arrangement (kRedesignClickMix above) applied to this band's
 // ground: the accent at 30% over kModalFieldGround. The architect's reading of
-// the reference is #204357; the mix computes
+// the reference is #204357; over Breeze's #3daee9 the mix computes
 //   r: 0.3*61  + 0.7*20 = 32.3  -> 32  (0x20)
 //   g: 0.3*174 + 0.7*22 = 67.6  -> 68  (0x44)
 //   b: 0.3*233 + 0.7*24 = 86.7  -> 87  (0x57)
-// so it reproduces the sampled value on two channels and lands ONE 8-bit step
-// brighter on the green. The RELATIONSHIP ships rather than the literal — the
+// so it reproduced the sampled value on two channels and landed ONE 8-bit step
+// brighter on the green; over the steel accent (2026-09-30) it lands at
+//   r: 0.3*58  + 0.7*20 = 31.4  -> 31  (0x1f)
+//   g: 0.3*122 + 0.7*22 = 52.0  -> 52  (0x34)
+//   b: 0.3*153 + 0.7*24 = 62.7  -> 63  (0x3f)   = #1f343f.
+// The RELATIONSHIP ships rather than the literal — the
 // same judgment kRedesignClickMix's own block records — because what the
 // reference pins down is "the accent's click wash over this ground", and a
 // frozen literal would drift from that the moment either end is retuned.
@@ -1951,10 +2000,10 @@ inline constexpr double kIconCornerRadiusPx = 5.0;
 // constant rule (kRedesignRowGroundUnfocused): those two are kdenlive crops of
 // a header row and a separator, these are Breeze roles on a slider, and a
 // retune of one must not follow the other. The handle's HOVER/FOCUS outline is
-// `Helper::hoverColor` = [Colors:View] DecorationHover = #3daee9, which IS
-// kRedesignAccent's own value and role — the accent says "the pointer is
-// here" on this surface exactly as it does on every button — so that one is
-// READ from the accent rather than re-declared.
+// `Helper::hoverColor` = [Colors:View] DecorationHover, Breeze's highlight,
+// which IS kRedesignAccent's role — the accent says "the pointer is here" on
+// this surface exactly as it does on every button — so that one is READ from
+// the accent (steel since 2026-09-30) rather than re-declared.
 // NOT TRANSCRIBED: the handle's shadow (a 12.5% black crescent — an alpha,
 // which this palette does not have) and the disabled groove (a dialog surface
 // has no disabled state).
@@ -2983,8 +3032,8 @@ struct FlagHitRect {
 
 // The two ground fills, one per surface class (see the palette's ground split):
 // render_background erases CHROME in kBackground, render_canvas erases the
-// WAVEFORM AREA in kWaveformCanvas — the row-6 crop's own #12312b, which since
-// row 6 replaces the grey ground the area used to take. on_redraw calls the
+// WAVEFORM AREA in kWaveformCanvas, the neutral #141618 (the row-6 block owns
+// its provenance). on_redraw calls the
 // first over the whole exposed rect, then
 // the second over the exposed part of the waveform area, so the canvas wins
 // exactly the pixels the plate, the ground recolors, the playheads and the
@@ -3076,26 +3125,6 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
            (static_cast<uint32_t>(std::nearbyint(c.r * 255.0)) << 16) |
            (static_cast<uint32_t>(std::nearbyint(c.g * 255.0)) <<  8) |
            (static_cast<uint32_t>(std::nearbyint(c.b * 255.0)));
-}
-
-// THE REGION'S LIFT OF ONE PIXEL WORD — THE ONE REGION RULE for the plate's
-// pixels (architect 2026-09-24): each of the R, G and B bytes of an ARGB32
-// word raised by +18 / +18 / +20, saturating at 255, the alpha byte kept.
-// That is Breeze's View -> ViewAlternate step taken twice, the construction
-// documented at kWaveformRegionCanvas. paint_region_ink applies it to every
-// opaque plate pixel inside the region, each from its OWN colour, whatever
-// ink the palette holds — no ink is keyed and no lifted constant is pinned,
-// so a change to any ink's constexpr carries its lift with it; at full alpha the
-// premultiplied word is the colour itself, so lifting the bytes lifts the
-// colour.
-inline constexpr uint32_t region_lift(uint32_t word) {
-    const auto lift = [](uint32_t byte, uint32_t step) {
-        return byte + step > 255u ? 255u : byte + step;
-    };
-    return (word & UINT32_C(0xFF000000)) |
-           (lift((word >> 16) & 0xFFu, 18) << 16) |
-           (lift((word >>  8) & 0xFFu, 18) <<  8) |
-            lift( word        & 0xFFu, 20);
 }
 
 // Draws one channel's waveform into `area`, which holds the `area.w` columns
