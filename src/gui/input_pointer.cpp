@@ -92,8 +92,8 @@ struct ToolbarChord {
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
-    // user just clicked). THE TAB PAIR AND THE VIEW BAR'S THREE are the flag's
-    // users; the view lamps, the walk lamp, read-only, history and
+    // user just clicked). THE TAB PAIR AND THE ICON ROW'S VIEW GROUP are the
+    // flag's users; the walk lamp, read-only, history and
     // Cumulative are TOGGLES and press through in both directions, which is why
     // this is a flag and not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP
     // PAIR was a radio for hours on 2026-08-15, and the S/T, W/P and WALK pairs
@@ -103,19 +103,20 @@ struct ToolbarChord {
     // GENERIC throughout — keyed on the flag plus the lamp, with no id list
     // anywhere.)
     //
-    // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
+    // THE VIEW GROUP'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
     // ABSOLUTE selectors, which are IDEMPOTENT — on_key's own handler
     // already makes a press on the current combination a no-op, so dispatching
     // would be harmless rather than wrong. The flag is set anyway, and for the
-    // FACE: the crops give a selected face and a click face and nothing that is
-    // both, so consuming at the claim keeps the pressed interior from ever
-    // painting over a lit button. One rule, two justifications.
+    // FACE: the icon row's crops give a selected face and a click face and
+    // nothing that is both (the click fill wins while held, paint_icon_row),
+    // so consuming at the claim keeps a pressed interior from ever painting
+    // over the current view's lit button, as if a press there acted. One rule,
+    // two justifications.
     bool           radio;
-    // CLICK_FACE: row 4, the bottom row and the view bar show a pressed
-    // interior; row 1's
-    // two left-floating buttons and row 3 have two faces by scope and show
-    // nothing new on a press. (Since the act moved to the release the face
+    // CLICK_FACE: row 4 and the bottom row show a pressed interior; row 3 has
+    // two faces by scope and shows nothing new on a press (row 1's anchors
+    // carry no chord row at all). (Since the act moved to the release the face
     // tracks the pointer through the arm's `inside` bit — the paint reads
     // redesign_button_pressed_face, app_state.h.)
     bool           click_face;
@@ -186,16 +187,6 @@ struct ToolbarChord {
 // the prompt all read exactly as before. Everything else on rows 1, 3 and 4 and
 // the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
-    // Row 1's RIGHT FLOAT — the view bar (2026-08-02). The
-    // ABSOLUTE view selectors: S+W, T+W, T+P — THE ROW ORDER HERE IS THE
-    // BAR'S (kViewBarButtons, paint_handler.cpp). Everything
-    // the selectors own arrives by construction through on_key's own handler — the audio-first-then-markers
-    // order, the refused-target-entry abort of the whole press, the coincidence
-    // auto-select, the read-only admission (they are navigation), the modal
-    // swallow. There is no second route to keep in step.
-    {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
-    {RedesignButton::ViewTW,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
-    {RedesignButton::ViewTP,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
     // The toolbar four — icon-row members since the 2026-08-12 relayout
     // dissolved row 2 (the chords, gates and flags are UNCHANGED by the move;
     // only the face and the band changed hands).
@@ -528,6 +519,19 @@ constexpr ToolbarChord kToolbarChords[] = {
     // refused below the mode gate exactly as the key is, Revert's own shape.
     {RedesignButton::IconLoadInPlace,
      GuiKeys::Apostrophe, false, false, false, false, true},  // bare '
+    // THE VIEW GROUP, the icon row's last, flush at its right edge (architect
+    // 2026-10-01): the ABSOLUTE view
+    // selectors Source+Warp, Target+Warp, Target+Phase on bare 1 / 2 / 3, in
+    // the painter's order (kIconRowViewGroup, paint_handler.cpp). Everything
+    // the selectors own arrives by construction through on_key's own handler —
+    // the audio-first-then-markers order, the refused-target-entry abort of
+    // the whole press, the coincidence auto-select, the read-only admission
+    // (they are navigation), the modal swallow. There is no second route to
+    // keep in step. RADIOS, with the row's click face (the flag's two
+    // justifications are at the struct's `radio` column).
+    {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
+    {RedesignButton::ViewTW,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
+    {RedesignButton::ViewTP,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
@@ -565,7 +569,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // THE COLLAPSE REMOVES THE PROBLEM RATHER THAN SOLVING IT AGAIN: two
     // buttons over one chord was the whole difficulty, and one button has no
     // wrong half. The flag is deleted from these rows and the GENERIC radio
-    // consume is untouched — the S/T and W/P rows and the tabs still use it.
+    // consume is untouched — the view group's three and the tabs use it.
     // bare Space, toggle_playback and playback_launch_playable are untouched
     // by construction, as they were under the radio.
     //
@@ -832,13 +836,11 @@ static_assert(std::size(kToolbarChords) + 3 ==
 
 // Is (x, y) inside the PUBLISHED INTERACTION RECT of a redesigned button? The
 // rect is the painter's stash and nothing here re-shapes or re-measures, so the
-// pointer reads exactly what the painter published — which for every button but
-// the view bar's three is also the box it drew. THE VIEW BAR IS THE ONE
-// INTENTIONAL PAINT-ONLY INSET (architect 2026-09-09: the hit box is the blue
-// div's own height): the walk publishes the lane-tall rect and paints the
-// vertically inset face through `view_bar_face_rect`, so the top and bottom
-// margin rows answer the press and stay div ground. A zero rect (before that
-// row's first paint) contains no point, which is the correct cold answer.
+// pointer reads exactly what the painter published, which is the box it drew
+// — and where the icon row's overflow rule clips a member under the view
+// group, only the columns it painted (paint_icon_row). A zero rect (before
+// that row's first paint, or a member the overflow hides whole) contains no
+// point, which is the correct answer.
 bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
     return rect_contains(
         app.redesign_buttons[redesign_button_index(id)].rect, x, y);
@@ -1183,8 +1185,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // EVERY BUTTON WHOSE ACT THE VIEW CONSUMES WEARS ITS ROW'S DISABLED FACE and
 // ignores the pointer, and the ones that stay lit are exactly the ones that
 // still work. It is the mode-scoped exception to the icon row's never-grey rule
-// and to rows 1 and 3 having no disabled face, on the view bar's own precedent
-// (a whole surface wearing a state that is not the enabled bit).
+// and to rows 1 and 3 having no disabled face.
 //
 // IT IS DERIVED, NOT LISTED. Each roster button but three IS a chord
 // (finish_chrome_press_release synthesizes it and calls on_key at the lift),
@@ -1294,7 +1295,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the view bar's ViewSW/ViewTW/ViewTP (bare 1/2/3, the admitted
+//   LIVE — the icon row's view group, ViewSW/ViewTW/ViewTP (bare 1/2/3, the admitted
 //   view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
@@ -4890,7 +4891,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // ANY PRESS ENDS THE MENU ROW'S MODE, beside it and for a related reason: the
     // ruling ends the mode on every ordinary dismissal, and with no popup open a
     // press is the only pointer act there is — the press on the anchor, the press
-    // on a view-bar button, the press on the waveform underneath. THIS NEEDS NO
+    // on any other button, the press on the waveform underneath. THIS NEEDS NO
     // EXCEPTION LIST because the one press that must KEEP the mode re-arms
     // immediately through toggle_dropdown's open path a few lines below, which is
     // the mode's one producer; so "any press ends it" costs exactly nothing and
@@ -5209,8 +5210,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // on the track, the marker drag on its band), the modal row's buttons
     // (the arm every dialog button takes) and, since 2026-09-03 evening, the
     // FILE ANCHOR above the band (the exemption above), and EVERY OTHER PRESS
-    // IS CONSUMED — the tabs, the flags, the waveform, the three dead anchors,
-    // the view bar, the dead roster. (File was a target under the panel on
+    // IS CONSUMED — the tabs, the flags, the waveform, the two dead anchors,
+    // the dead roster. (File was a target under the panel on
     // 2026-09-02 too, when it stopped at row 1's foot; it was consumed here
     // for the hours between the gap's close and that evening's ruling.)
     // The whole rule is stated at render_player_active (input_handler.h).
@@ -5690,7 +5691,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // PLACED BELOW THE FOUR REDESIGNED ROWS' BAND CLAIMS ON PURPOSE. Those rows
     // dispatch their buttons as synthesized CHORDS through on_key, so they are
     // already covered by the keyboard gate — Save, Undo, Redo, Render and the
-    // view bar drop there exactly as their keys do, with no second membership to
+    // view group drop there exactly as their keys do, with no second membership to
     // keep in step — and letting them through here is what keeps that single
     // coverage true. ONE PRESS ROUTE IN THESE ROWS DISPATCHES NO CHORD
     // (re-derived 2026-08-06, again 2026-08-15 when the Navigation anchor left,
@@ -7462,9 +7463,10 @@ void GuiInputHandler::tick_hover_fades() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-three — the toolbar four included since the 2026-08-12
-// relayout, COPY VALUE and ENABLE TOOLTIPS since 2026-09-29, the
+// (row 1's three menu anchors, row 3's two
+// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
+// relayout, COPY VALUE and ENABLE TOOLTIPS since 2026-09-29, the VIEW GROUP's
+// three since 2026-10-01, the
 // history group's seven since 2026-08-18, the FLATTEN button in
 // the iteration group since 2026-09-19 and the WAVEFORM MAGNIFICATION lamp in
 // the zoom group since 2026-09-22 — and the bottom row's
@@ -7613,11 +7615,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // whether the button HAS a tooltip — a null line 1 — and that is the
         // menu-row exclusion the state-free table owns; the stateful overload
         // (whose every arm returns a non-null line 1) is the painter's, which
-        // reads the words at paint time. THE TWO PARTED ON ROW 1 ON 2026-09-10
-        // and this line is why nothing changed on screen: the view bar's
-        // selectors joined the iteration lock's membership, so the stateful overload's
-        // shared lock fork would hand them a sentence — and they are asked for
-        // one exactly never, the exclusion being the CONSTANT table's.
+        // reads the words at paint time.
         if (hovered_tip < 0 && under_pointer && !modal_owns_the_keyboard &&
             redesign_button_tooltip(id).line1 != nullptr)
             hovered_tip = i;
@@ -7672,9 +7670,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // and that membership is a CONSTANT: only the TEXT is stateful, never
     // whether a button has one. Re-derived from redesign_button_tooltip's
     // stateful overload, whose every arm returns a non-null line 1 and so
-    // takes no hint away from any button (and since 2026-09-10 its shared
-    // iteration-lock fork would GIVE one to the view bar's three, which the
-    // walk above never asks): it moved the words on THREE — SAVE
+    // takes no hint away from any button: it moved the words on THREE — SAVE
     // (a publishing checkpoint first, then the history view's "Save and
     // commit"), RENDER (the mid-render Cancel, then the iteration bit) and,
     // since 2026-08-15, THE BOTTOM ROW'S COLLAPSED PLAY/STOP BUTTON (the live
@@ -7933,15 +7929,12 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // true there — EXCEPT in two states. The `h` history view greys every
         // button whose act it consumes across all the rows
         // (history_mode_disables_button, above) — row 4's history group
-        // aside, which carries resting greys of its own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
-        // the VIEW BAR'S THREE answer false while grid iterations stands
-        // (iteration_lock_greys, app_state.h), so the press dies here — and
-        // that row DOES have a disabled paint since the architect's mockup the
-        // same day, the DEAD UNSELECTED selectors' labels at
-        // kRedesignDisabledMix over the bar's ground (the view bar's painter,
-        // paint_handler.cpp; the selected one keeps its full ink). The row
-        // still carries no tooltip, so the KEY's card carries the sentence
-        // (the account is at their arm in redesign_button_enabled).
+        // aside, which carries resting greys of its own. AND SINCE 2026-09-10 THE
+        // ITERATION LOCK: the VIEW GROUP'S THREE answer false while grid
+        // iterations stands (iteration_lock_greys, app_state.h), so the press
+        // dies here, the icon row's disabled face shows it, and the KEY's card
+        // carries the sentence (the account is at their arm in
+        // redesign_button_enabled).
         // THE BOTTOM ROW HAS A RESTING CONSUMER
         // HERE FOR EVERY MEMBER — the last, ADD TO SELECTION, having joined
         // on 2026-09-10 (below) — since
@@ -8667,15 +8660,15 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // the next pointer twitch reopens.
 // THE CLEAR SITS ABOVE THE "NOTHING IS OPEN" RETURN, and that placement is the
 // whole point rather than a detail: the mode's defining state is menu CLOSED and
-// row ARMED (what a row-1 hover close leaves behind), so a dismissal arriving in
-// it finds nothing to close and must still go cold. Riding the whole-struct
+// row ARMED, so a dismissal arriving in it finds nothing to close and must
+// still go cold. Riding the whole-struct
 // reset alone would have made every one of those routes a no-op in exactly the
 // state the mode exists for. Below the return the reset re-clears the bit, which
 // costs nothing and keeps the struct one initializer.
-// THE ONE CLOSE THAT KEEPS THE MODE is the row-1 hover close in on_motion —
-// sliding onto the view bar is a step ACROSS the bar, not a dismissal —
-// and it re-arms on the line after its call to this. It is the only site in the
-// tree that writes that bit true outside toggle_dropdown's open.
+// NO CLOSE KEEPS THE MODE since 2026-10-01: the one that did, the row-1 hover
+// close onto a view-bar button, left with the bar, so toggle_dropdown's open
+// is the only writer of that bit true (the consequence is stated at
+// AppState::Dropdown::menu_row_armed).
 // THE `h` HISTORY MODE's POINTER ALLOWLIST and its acts. True = the press is
 // CONSUMED here (refused outright, or handled as one of the mode's own acts);
 // false = the press is one of the navigation gestures the mode leaves alone, and
@@ -9290,10 +9283,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // row-1 button cannot be inside the flag editor's box, which lives in the
     // marker lane below the whole top strip's button rows.
     //
-    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. The view bar's three
-    // selectors drop at the keyboard-modal gate as consumed nothings — the modality
-    // ruling working as intended — and ending an edit there would be a behavior
-    // change nobody asked for. (Quit needed nothing here while it was a button,
+    // ROW 1 IS THE ANCHORS ALONE, so a menu's open is the whole of the row's
+    // reach into an edit. (Quit needed nothing here while it was a button,
     // its Ctrl+Q being one of the three chords that gate admits; since
     // 2026-08-13 it is an ITEM of this menu, so the discard above covers it like
     // every other row.)
@@ -9421,9 +9412,9 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 
 // THE MENU ROW'S MODE, OPEN HALF (architect 2026-08-03): once a menu has been
 // opened from row 1, the anchors open on the POINTER ALONE — the menu-bar
-// behaviour every desktop has, and the completion of the row-1 hover close,
-// which puts a menu away and now leaves the row able to bring one back. The bit
-// and its whole contract are at AppState::Dropdown::menu_row_armed.
+// behaviour every desktop has. The bit and its whole contract — and why this
+// half finds the bit false today, no close leaving the row armed — are at
+// AppState::Dropdown::menu_row_armed.
 //
 // ITS PLACEMENT IS ITS GUARD LIST. It is called from on_motion's no-gesture
 // tail and nowhere else, so the conditions the re-open must not fire under are
@@ -9457,8 +9448,8 @@ void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
     // clear are one route with nothing restated. The walk covers every menu that
     // HAS an anchor rather than naming them, so dropdown_anchor_button stays
     // the one place that knows which button emits which menu. Anywhere ELSE on
-    // the row — the view bar, the ground between the floats — is simply not an
-    // anchor: the row stays armed and nothing opens.
+    // the row — the ground right of the anchors — is simply not an anchor: the
+    // row stays armed and nothing opens.
     for (const DropdownMenu m : kDropdownMenus) {
         if (!redesign_button_hit(app, dropdown_anchor_button(m),
                                  mouse_x, mouse_y)) continue;
@@ -9486,8 +9477,7 @@ void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
 // clear_dropdown_pointer_state beside it states (only the popup's
 // POINTER-DERIVED faces go) — and a menu still standing is still the
 // mode, so re-entering over the other anchor must SWITCH rather than find a cold
-// row (and the row-1 hover close, which re-arms, must not be resurrecting a mode
-// something else meant to end). The same answer serves the two press callers for
+// row. The same answer serves the two press callers for
 // a second reason: while a popup is up, a press or a chord belongs to the POPUP,
 // whose own routes (close_dropdown, the toggle) decide the mode — so these
 // blanket disarms cannot get in front of them. A dismissal with a menu open
@@ -10065,11 +10055,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // the roster's ordinary staleness window.
     //
     // AN OPEN DROPDOWN REFUSES THE WHOLE ROSTER (redesign_button_hover_zone,
-    // app_state.h), so its branch below recomputes for one reason only: the frame
-    // on which a row-1 button CLOSES the menu must also light that button, and
-    // running the recompute after the close is what makes it one frame rather than
-    // two. While the menu stays up the walk re-derives all-false, which costs a
-    // pass of rect compares and no damage.
+    // app_state.h), so the recompute in its branch below re-derives all-false
+    // while the menu stays up, which costs a pass of rect compares and no
+    // damage.
     // The ANCHOR of the open menu lights through the paint condition
     // (paint_menu_row) rather than through the hover bit — that is what keeps its
     // pill through the open edge's clear and what makes a switch visible on the
@@ -10078,81 +10066,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
     // so no gesture can be live under it (its own press consumed everything).
     if (app.dropdown.open()) {
-        // A NON-MENU ROW-1 BUTTON CLOSES THE OPEN MENU (architect 2026-08-03,
-        // from kdenlive: only ONE button in that row is lit at a time, so sliding
-        // from an anchor onto a view-bar button must put that anchor's menu away
-        // rather than
-        // leave it hanging under a second lit button). This REVERSES the earlier
-        // "a menu bar keeps its menu up while the pointer crosses the rest of the
-        // bar" reading — the bar's other buttons are not menu titles here, they
-        // are commands, and a command button lighting beside an open menu is the
-        // state the row does not have.
-        //
-        // THE MEMBERSHIP IS redesign_button_in_menu_row (app_state.h), walked
-        // rather than named, so the rule covers whatever row 1 holds by the
-        // fact "row 1" and a new row-1 button inherits it by existing. WHAT IT
-        // COVERS TODAY, re-derived from the two predicates rather than
-        // remembered: THE VIEW BAR'S THREE — row 1's other two buttons are the
-        // anchors, and an
-        // ANCHOR is skipped (the OPEN menu's own does nothing at all — no
-        // re-open, no close — and another one SWITCHES through the walk below,
-        // both unchanged). It was "Quit and the view bar's three" until
-        // 2026-08-13, when the Quit button became the File menu and joined the
-        // skipped side; the Navigation anchor's 2026-08-15 deletion moved this
-        // membership not at all, an anchor being skipped either way. The close goes through close_dropdown, the one close
-        // owner, which carries the popup's damage.
-        //
-        // IT RUNS BEFORE THE ROSTER RECOMPUTE so the frame that closes the menu is
-        // the frame the button lights on: with the popup already gone,
-        // redesign_button_hover_zone's dropdown refusal no longer applies and
-        // the button under the pointer resolves to hovered in the very same
-        // call.
-        //
-        // THE FAMILY RULE, stated here at its first member in this branch (it
-        // was built one member at a time): NO ROW-1 HOVER ACT FIRES
-        // WHILE THE PRIMARY BUTTON IS HELD — the armed hover-OPEN (on_motion's
-        // no-gesture tail), the open-menu anchor-SWITCH (the walk below), and
-        // this hover CLOSE, its last unguarded member. A held button is not a
-        // resting hover at any of the three. For the TOUCH resolution burst's
-        // held entry motion the tap's outcome is unchanged by guarding the
-        // close: press-anywhere-closes at on_button_press already closes the
-        // menu on the burst's own press, so the tap nets the same result by the
-        // cleaner path. For the MOUSE, a mid-press slide across a non-anchor
-        // keeps the popup's live press claim exactly as the switch guard keeps
-        // it. The unheld hover close is untouched.
-        if (!mods.primary_button_held) {
-            for (int i = 0; i < kRedesignButtonCount; ++i) {
-                const RedesignButton id = static_cast<RedesignButton>(i);
-                if (!redesign_button_in_menu_row(id)) continue;
-                if (redesign_button_is_menu_anchor(id)) continue;
-                if (!redesign_button_hit(app, id, mouse_x, mouse_y)) continue;
-                // A DEAD BUTTON PERFORMS NO MENU ACT (2026-09-02): the hit is
-                // GEOMETRY ALONE, so a control that answers nothing must not
-                // close the standing menu and re-arm the row on the way past.
-                // The ENABLED term is the painted face's own bit (architect
-                // 2026-09-24, strictly as-painted), so what looks dead behaves
-                // dead. The anchors need no such guard — they are skipped
-                // above, and toggle_dropdown asks the mode gate for itself.
-                if (!app.redesign_buttons[static_cast<size_t>(i)].enabled)
-                    continue;
-                close_dropdown();
-                // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the
-                // other half of the same behaviour): sliding onto a view-bar
-                // button puts the
-                // menu away but leaves the row ARMED, so sliding BACK onto an
-                // anchor opens that menu again with no click.
-                // This is a step across the bar, not a dismissal, and
-                // close_dropdown disarms by default — so the exception is
-                // spelled here, at the only site that needs it.
-                app.dropdown.menu_row_armed = true;
-                break;
-            }
-        }
         // The roster's own faces. While a popup is up this re-derives false for
         // the WHOLE roster (redesign_button_hover_zone refuses every button
-        // then — the pointer belongs to the popup), and after the close above
-        // it resolves the row-1 button the pointer landed on normally, which is
-        // the one case that needs it here.
+        // then — the pointer belongs to the popup).
         recompute_redesign_button_hover();
         // HOVERING THE OTHER MENU'S BUTTON SWITCHES TO IT (architect
         // 2026-08-03) — the menu bar's standing behaviour: open one menu, slide
@@ -10163,19 +10079,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // not the open one makes that toggle's same-menu test false, which is
         // exactly the switch. The button it switches ONTO lights through the
         // painter's own anchor condition (paint_menu_row), not through the hover
-        // bit, which is why the order of these two blocks is set by the CLOSE rule
-        // above and not by the switch.
+        // bit.
         //
         // The walk covers every menu that HAS an anchor instead of naming
         // them, so the anchor owner stays the one place that knows which button
         // emits which menu. Hovering the OPEN menu's own anchor is skipped
-        // outright — no re-open, no close, no damage. A row-1 button owning no
-        // dropdown never reaches here at all: the close rule above consumed it
-        // and the menu is already down.
+        // outright — no re-open, no close, no damage. Row 1 holds the anchors
+        // alone, so every row-1 button the pointer meets here is one.
         //
-        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON — the
-        // family rule's second member (the three-member statement is at the
-        // close walk above; the armed hover-open is the first) — a held
+        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON — the row-1 hover-act
+        // FAMILY RULE: NO ROW-1 HOVER ACT FIRES WHILE THE PRIMARY BUTTON IS
+        // HELD, its two members this switch and the armed hover-OPEN
+        // (on_motion's no-gesture tail), stated here, its one home — a held
         // button is not a resting hover here either, on the same two producers:
         // the TOUCH resolution burst's pre-press entry motion (with a menu OPEN
         // and the other anchor tapped, that motion reached this walk, switched
@@ -10750,20 +10665,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // ONE CONDITION IS RESTATED FOR THE OPEN: a HELD PRIMARY
         // BUTTON refuses the hover-open. This is the FIRST MEMBER of the row-1
         // hover-act family rule — no row-1 hover act fires while the primary
-        // button is held; the three-member statement lives at the open-dropdown
-        // branch's close walk, beside its siblings (the anchor-switch and the
-        // hover close). A held button is not a resting hover,
+        // button is held; the statement lives at the open-dropdown branch's
+        // anchor-switch walk, its sibling. A held button is not a resting hover,
         // and it does NOT return above — a held motion with no armed gesture
         // reaches this tail, on two producers: the TOUCH resolution burst's
         // pre-press entry motion (the platform raises the touch hold before
         // delivering it, so this guard is what stops that motion hover-opening
         // an armed anchor's menu one event before the press toggle-closes it —
         // the tap then opens the menu through the press path, as intended), and
-        // a MOUSE press that armed no gesture sliding along row 1 (press-hold an
-        // anchor — its menu opens armed — slide onto a non-anchor row-1 button,
-        // whose close rule re-arms with the menu down, then back onto an anchor:
-        // springing a menu open under a held button would hand the coming
-        // release to an item that was never pressed). The mode itself is
+        // a MOUSE press that armed no gesture sliding along row 1 (springing a
+        // menu open under a held button would hand the coming release to an
+        // item that was never pressed). Since 2026-10-01 neither can find the
+        // row armed with no menu up — the close that left it so went with the
+        // view bar (AppState::Dropdown::menu_row_armed) — and the guard stands
+        // as the family rule's statement. The mode itself is
         // untouched — the row stays armed; only the OPEN waits for a free
         // button, and the next resting motion performs it.
         if (!mods.primary_button_held)

@@ -58,8 +58,8 @@ struct GuiInputHandler;
 // THE THREE LINES, with the player closed (architect 2026-09-17): the ALBUM
 // (the console's dim top line) is the project's name, the ARTIST is THE TAB
 // AND THEN THE VIEW ("A) T+W" — the active A/B tab's letter, a close
-// parenthesis and a space, then view_pair_label, the view bar's one speller,
-// which carries no tab term of its own), and the TITLE, the big line, is
+// parenthesis and a space, then view_pair_label, the view pair's one
+// speller, which carries no tab term of its own), and the TITLE, the big line, is
 // WHERE THE SESSION STANDS, SPELLED AS A BATCH CELL'S BASENAME IS —
 // "<index>_<distance>", the live state's number in the session walk's counting
 // and its distance from the save ("5_+2", "3_+0", "1_-2" —

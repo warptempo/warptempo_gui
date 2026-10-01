@@ -228,10 +228,8 @@ namespace {
 // AND NOTHING ELSE since 2026-09-03 evening: a standing folder overlay was a
 // second term from 2026-09-02 and the architect took it out with the ruling
 // that left the File anchor live under the band ("the title bar is still the
-// regular one — the window has focus"). What that term was landed for — the
-// view bar's three reading as disabled under a modal — moved to the bar's own
-// verdict, view_bar_focused, which is the only surface that needed it; the
-// owner carries both rulings and the successions between them. (GAP 1's band
+// regular one — the window has focus"); the owner carries both rulings.
+// (GAP 1's band
 // took this shade from paint_menu_row while it opened above the row,
 // 2026-09-03..09; the band is the tab row's since the top strip relayout and
 // wears the content ground, which does not swap.)
@@ -243,8 +241,8 @@ GuiColor redesign_row_ground(const AppState& app) {
 // A ROSTER TOOL BUTTON'S PAINTED HOVER, [0, kHoverFadeSteps] (architect
 // 2026-09-27, render.h's HoverFade): full while the pointer is on it, then
 // its SnapIn tail — cut on a dead button, as Breeze paints no animation on a
-// disabled one. The icon row, the bottom row and the view bar read it; the
-// tabs read their own two-way fade directly and the menu anchors none.
+// disabled one. The icon row and the bottom row read it; the tabs read
+// their own two-way fade directly and the menu anchors none.
 int redesign_button_hover_steps(const AppState::RedesignButtonFace& face) {
     if (face.hovered) return kHoverFadeSteps;
     return face.enabled ? hover_fade_steps(face.fade) : 0;
@@ -282,11 +280,7 @@ GuiColor accent_for_focus(const AppState& app) {
 // height — the 1px vertical inset that stood here was a misread of the crop
 // (those rows were the title-bar seam, not design). That content height is
 // kMenuRowHeightPx = 30, the crop's own height — the PILL'S — since
-// 2026-08-21 (it stood at 34 from 2026-08-02, an allowance for the right
-// float's 32px buttons, and again for the hours of 2026-09-09 between his
-// remeasure of kdenlive's 34 lane and his ruling the next morning that the
-// pill IS the lane; on both returns the view bar's box derives DOWN from the
-// row instead — render.h carries the succession), and since 2026-09-09 the
+// 2026-08-21 (render.h carries the succession), and since 2026-09-09 the
 // lane is exactly that: the 1px MARGIN-BOTTOM the lane carried from
 // 2026-08-02 (kMenuRowMarginPx) retired with the top strip relayout, so the
 // pill fills the row whole and the icon row's ground begins on the next
@@ -400,8 +394,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // "Quit", in the slot the Quit BUTTON held from 2026-07-31: row 1 paints no
     // held face, so a button acting at the lift said nothing while it was down,
     // and the standard home for Quit is a File menu (kdenlive's own). Nothing
-    // else moved — the label is shorter, so the float is 3px narrower at 100%
-    // (the measurement is in the right float's collision note below).
+    // else moved — the label is shorter, so the float is 3px narrower at 100%.
     {RedesignButton::File,       "File"},
     // THE EDIT MENU (architect 2026-08-20) — the row's THIRD dropdown again,
     // painted between File and Settings, the standard order and kdenlive's own.
@@ -409,9 +402,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // RELOCATION: IconCopy and IconPaste were deleted from the icon row in the
     // same ruling, so this menu is those commands' one pointer home rather than
     // a second road to them. Nothing here needed a width or pad term — the row
-    // is one left-to-right accumulation over this table — but the LABEL'S WIDTH
-    // does re-enter the right float's collision corner, which is recorded (and
-    // deliberately not acted on) in that note below.
+    // is one left-to-right accumulation over this table.
     {RedesignButton::Edit,       "Edit"},
     // (THE ITERATIONS MENU WAS THE ROW'S FOURTH DROPDOWN from 2026-08-27 to
     // 2026-09-04, painted between Edit and Settings — a COMMAND MENU of TWO
@@ -422,9 +413,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // the 2026-08-27 relocation runs in reverse and the doctrine it satisfied
     // is satisfied from the other side. This table simply lost a row: the
     // float is one left-to-right accumulation over it, with no width, pad,
-    // total or anchor expression to update — and what the deletion gives the
-    // LEFT FLOAT back is the 85px slot that label cost, which the right
-    // float's collision note below re-measures.)
+    // total or anchor expression to update.)
     // (THE SECOND DROPDOWN, "Navigation" — architect 2026-08-02, a COMMAND MENU
     // of the zoom and stepping commands — painted between these two from that
     // day until 2026-08-15, when the architect deleted it whole: every one of
@@ -440,189 +429,10 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // architect DELETED IT with the 2026-09-09 top strip relayout on the
     // Iterations anchor's own precedent: a command with an icon-row road —
     // the Play renders button's shift-click and long press — does not also
-    // live in the menu row. (The panel itself went on 2026-09-30.) Its
-    // label cost the float 54px at 100% and 118 at 225%, and the collision
-    // note below subtracts it. This table simply lost a row: no width, pad,
+    // live in the menu row. (The panel itself went on 2026-09-30.) This
+    // table simply lost a row: no width, pad,
     // total or anchor expression reads its length.)
 };
-
-// ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
-// workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
-// Color" bar, the one row the redesign had left out) reborn as the three
-// ABSOLUTE VIEW SELECTORS: S+W, T+W, T+P, which are bare 1/2/3; the bar reads
-// in the selectors' order left to right (the two target views traded slots and
-// keys, architect 2026-09-27). (A fourth, S+M on the backtick, led
-// the bar from 2026-09-15 until the magnification level markers column's
-// deletion, architect 2026-09-23. THE RIGHT-FLOAT FIGURES BELOW — 183 and 409
-// — WERE MEASURED WITH FOUR SELECTORS and are not re-measured: the bar is one
-// button narrower now, so every collision margin they feed only grows.)
-//
-// THE FLOAT'S ROOM, re-measured 2026-09-09 when the HELP ANCHOR was deleted
-// (and 2026-09-04 for the ITERATIONS one): the LEFT float is 173 authored px
-// at 100% (File 47 + Edit 48 + Settings 78, each a shaped run plus 2 x 10px
-// pad) and ~385 device px at the tablet's 225% — Help's own 54 / ~118 off
-// the 227 / ~503 the four-anchor float measured, which was itself the
-// Iterations slot's ~189 off the five-anchor 692; the device figures carry
-// their tilde because a shaped run's width is not exactly proportional to
-// its scale (the same caveat the collision note below states in full); the
-// RIGHT float below is 183 and 409. So the two meet only once the window is
-// narrower than 356 device px at 100% or ~794 at 225% — the laptop's 1920
-// leaves 1564 of clear ground and the tablet's 2304 leaves ~1510, and even
-// the 640px DEFENSIVE FLOOR at 100% keeps 284. THE FOUR-ANCHOR FIGURES WERE
-// 227 and ~503, meeting at 410 and ~912, THE FIVE-ANCHOR ONES 312 and 692,
-// meeting at 495 and 1101; each deletion moved the corner further away in
-// every column. The row
-// still carries NO COLLISION RULE, which is the redesign's own answer
-// everywhere (the statement is at kMinWindowWidthPx, render.h): a window driven
-// under those figures crops, and no host of this product is near them.
-//
-// THE CSS FLOAT VOCABULARY, and this is its first RIGHT float — recorded here
-// because the model has only ever walked left-to-right before. The div's right
-// edge is flush with the WINDOW's right edge (no margin stated, so none exists)
-// and it spans the row's full CONTENT height; the layout walk inside it runs
-// left to right from the div's own left edge, exactly like every other row's.
-// Only the div's ORIGIN is new, and it needs all three widths before it can be
-// placed, which is why the labels are shaped up front rather than in the walk.
-//
-// MARGINS DO NOT COLLAPSE HERE, ON EITHER AXIS (a stated fact, like every
-// margin in this redesign): each button carries 1px on its LEFT AND RIGHT,
-// so two adjacent buttons sit 2px apart and the div is
-// 1 + w + 2 + w + 2 + w + 1 wide, and each carries 1px ABOVE AND BELOW, so
-// the box is the row's content less 2 — 28 at 100% — and THE LANE SETS THE
-// BOX, not the box the lane (architect 2026-09-09, the morning after his
-// remeasure of kdenlive had put the lane on the box's 32 + 2: "make the
-// height of the top row based on the thirty pixels of File/Edit, keep all
-// the margins, borders and padding for the view buttons, and make the view
-// buttons also thirty so they all fit in a thirty-pixel row ... take from
-// the INSIDE height, the actual content, about four pixels"; render.h's menu
-// row block carries the crops and the whole succession). The walk below
-// spells exactly that: each button PUBLISHES the lane-tall rect and PAINTS
-// the box view_bar_face_rect derives from it — the row's y plus the margin,
-// its content less two. THE BOX WAS 28 from 2026-08-21 until the 2026-09-09
-// relayout too, the content whole (30) for the hours the vertical pair was
-// retired, and 32 inside a 34 lane for the hours after his remeasure — the
-// same arithmetic every time the pair stood, and the lane's derivation the
-// only thing that changed.
-//
-// AND THE LEFT FLOAT'S PILL IS THE LANE, so the row's two floats are ONE
-// height again — the pill fills the 30 and the div fills the 30, the box
-// standing 1px inside the div at each edge, which is what the crop shows of
-// kdenlive's own bar at its 34.
-//
-// THE HIT RECT IS THE LANE'S FULL HEIGHT, the button's columns by the lane's
-// rows (architect 2026-09-09: "I'm assuming the hit box for all of them is
-// the same as the entire background, the blue background ... they should
-// have the same sort of sizes and hit boxes because they sit on the row"),
-// so a view button and an anchor publish the same kind of rect and the
-// pointer reads the div's rows on both floats; the 28 box is a FACE inside
-// it, derived by the one helper below.
-//
-// A BUTTON'S OWN BOX is kdenlive's, read straight off the 82px "Logging" crop's
-// scanline: [frame 1][fill 12][text][fill 12][frame 1], so the width is the
-// shaped label plus 2*(border + padding) = label + 26, and the frame is drawn
-// INSIDE the box (the row-3 side-border precedent — a face, never a size
-// change). The 5px corner and the 1px frame fit the 28 box exactly as they
-// fit the 30 and the 32: the face box insets by half its stroke and rounds
-// inside it.
-constexpr double kViewBarBtnMarginPx = 1.0;    // all four sides, no collapse
-constexpr double kViewBarBtnBorderPx = 1.0;    // drawn inside the box
-constexpr double kViewBarBtnPadPx    = 12.0;   // per side, inside the border
-constexpr double kViewBarRadiusPx    = 5.0;    // the redesign's one radius
-
-// THE VIEW BAR'S FACE BOX FROM ITS PUBLISHED RECT — THE ONE SUBTRACTION
-// (architect 2026-09-09: the hit box is the lane-tall div's rows, the painted
-// box the lane less its two vertical margins). The walk publishes the
-// lane-tall rect through publish_button_face, so the press router, the hover
-// walk, the tooltip and the drift comparator all read the lane's rows, and
-// then paints the face inside it through THIS helper alone — the
-// displayed-basis doctrine holds because the painted box derives from the
-// published rect here and nowhere else, so the two cannot drift. The
-// horizontal pair is not in it: a button's columns are its own box on both
-// surfaces, the margins between neighbours being the walk's step.
-GuiRect view_bar_face_rect(const GuiRect& published, int margin) {
-    return GuiRect{published.x, published.y + margin, published.w,
-                   published.h - 2 * margin};
-}
-
-struct ViewBarButtonDef {
-    RedesignButton id;
-    // THE TWO LETTERS, NOT THE LABEL: the painted word is composed from them
-    // by the one speller view_pair_label (app_state.h, 2026-09-17), which the
-    // car transport's title reads too, so "S+W" is spelled in one place.
-    char           audio;
-    char           column;
-};
-// THE TABLE'S ORDER IS THE PAINT ORDER AND THE SELECTOR KEYS' ORDER: the walk
-// below lays the buttons left to right as listed, and each is its key's button
-// (kToolbarChords, input_pointer.cpp, keeps the same row order).
-constexpr ViewBarButtonDef kViewBarButtons[] = {
-    // Bare 1, 2 and 3 in order. Each is spelled audio letter then column
-    // letter.
-    {RedesignButton::ViewSW, 'S', 'W'},
-    {RedesignButton::ViewTW, 'T', 'W'},
-    {RedesignButton::ViewTP, 'T', 'P'},
-};
-constexpr int kViewBarButtonCount =
-    static_cast<int>(std::size(kViewBarButtons));
-
-// ONE FACE PAINTER FOR THE WHOLE BAR, parameterized on the BAR BACKGROUND —
-// the redesign_row_ground pattern, for its reason: every fill and every frame
-// in the nine crops is either the background flat, the accent, or a FIXED LIFT
-// OF THAT BACKGROUND, so the focused and unfocused bars are one rule applied to
-// two grounds rather than two hand-spelled state tables that could drift.
-// Provenance, the two fractions and their per-channel fits are at
-// kRedesignViewBarBg (render.h).
-struct ViewBarFace {
-    GuiColor fill;
-    GuiColor frame;
-    bool     filled;   // false = the bar background already shows the rest face
-    bool     framed;
-};
-ViewBarFace view_bar_face(GuiColor bg, bool focused, int hover_steps,
-                          bool selected, bool pressed) {
-    ViewBarFace f{};
-    // HOVER ONLY EVER MOVES THE OUTLINE, in BOTH focus states (architect
-    // 2026-08-02, from the live test) — so the interior is the selected fact
-    // alone and `hovered` never reaches this term.
-    //
-    // THIS SUPERSEDES A CROP. row_right_disabled_hover (the UNFOCUSED hover)
-    // shows the interior lifted to #44464a where row_right_hover (the FOCUSED
-    // one) keeps its flat ground, and that asymmetry was reproduced faithfully
-    // before the ruling. The architect ruled the simpler rule instead: hover is
-    // the frame's job on both grounds. The crops still govern everything else
-    // here — the SELECTED lifts are unchanged in both focus states, which is why
-    // the two fractions below survive the ruling intact.
-    const bool lift_fill  = selected;
-    // THE PRESSED INTERIOR IS THE FOCUSED FACE'S ALONE, because there is no
-    // unfocused click crop and there is no gesture that would need one: labwc is
-    // click-to-focus, so the press that would show it ACTIVATES THE WINDOW
-    // first and the button is already focused by the time it paints. If a press
-    // ever does land unfocused, this falls through to the hover/selected face
-    // rather than inventing a shade the crops never showed.
-    const bool click_fill = pressed && focused;
-    f.filled = click_fill || lift_fill;
-    f.fill   = click_fill
-                   ? mix_color(kRedesignAccent, bg, kRedesignClickMix)
-                   : mix_color(kRedesignViewBarLiftBase, bg,
-                               kRedesignViewBarSelectedMix);
-    f.framed = hover_steps > 0 || pressed || selected;
-    // The pointer's frame is the accent; a resting selected button's is the
-    // calmer lift — row 4's rule, on this bar's own pair of colors.
-    // THE HOVER FADES (architect 2026-09-27, render.h's HoverFade): the bar's
-    // buttons are tool buttons, so `hover_steps` is full while hovered and
-    // runs down the SnapIn tail after, blending the accent toward what the
-    // face paints unhovered — the selected lift's frame, else the bar's own
-    // ground under a frame the rest face does not draw. A press is the
-    // accent outright.
-    const GuiColor rest_frame =
-        selected ? mix_color(kRedesignViewBarLiftBase, bg,
-                             kRedesignViewBarFrameMix)
-                 : bg;
-    f.frame  = pressed ? kRedesignAccent
-                       : hover_fade_color(kRedesignAccent, rest_frame,
-                                          hover_steps);
-    return f;
-}
 
 // (ROW 2 — THE TOOLBAR — IS DELETED: 2026-08-12, the grand relayout's roster
 // commit. The labeled Save / Undo / Redo / Render lane of 2026-07-31
@@ -752,7 +562,7 @@ void redesign_rounded_rect_path(cairo_t* cr, double x, double y,
 // the corner stays concentric with the box. `radius` is the authored (outer)
 // corner radius; nullptr for either colour omits that pass.
 //
-// Callers: the view-bar buttons, the icon-row buttons, the popup chrome
+// Callers: the icon-row buttons, the popup chrome
 // (paint_popup_chrome) and the dropdown's hovered item. ONE surface in the
 // family deliberately keeps its own body: the selected tab strokes the
 // OPEN-BOTTOM redesign_rounded_top_rect_path (a shared closed box would seal
@@ -837,11 +647,13 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
 // republishes — the repair mechanism the comparator was always documented to
 // be. An EMPTY rect refreshes unconditionally (as does one wholly off the
 // surface): it publishes "not painted at all", no pixel can be stale for it, and refreshing is what keeps the
-// comparator from thrashing under a standing modal. THE MODAL YIELD IS THE ONE
-// PRODUCER of an empty rect since 2026-08-18 — every row paints every member
+// comparator from thrashing under a standing modal. TWO PRODUCERS of an empty
+// rect: THE MODAL YIELD (since 2026-08-18 — every row paints every member
 // otherwise, the bottom row's cluster swap having gone with the history
-// companions' return to the icon row — and the contract is at
-// paint_bottom_strip's yield branch.
+// companions' return to the icon row; the contract is at paint_bottom_strip's
+// yield branch) and, since 2026-10-01, the icon row's OVERFLOW RULE at a
+// window too narrow for the row, a member the view group covers whole
+// (kIconRowViewGroup).
 //
 // THE CLIP TEST SURVIVED THE FACE-POLICY REVERSAL THAT FOLLOWED IT, and that is
 // deliberate rather than an oversight: it landed in the same arc that made the
@@ -978,11 +790,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // — IconAudioView wearing document-import lit in Target, IconMarkerColumn
     // chronometer-start lit in Phase Reset, one button per axis where four
     // radios had stood before that day's collapse. The architect deleted the
-    // whole category 2026-09-15, group slot and separator with it: the four
-    // view selectors and the view bar are the axes' only faces now. The two glyphs the
-    // radios' retired halves wore, document-export and speedometer, had
-    // already left icons::Icon with the collapse; the picks and their
-    // runners-up are still recorded at that enum.)
+    // whole category 2026-09-15, group slot and separator with it: the three
+    // view selectors — the keys and the VIEW GROUP at this row's right end
+    // (kIconRowViewGroup below) — are the axes' only faces now, and that
+    // group wears the radios' 2026-08-11 glyphs again; the picks and their
+    // runners-up are recorded at icons.h's enum.)
     // (THE ROW'S GROWTH, in brief: an earlier ZOOM PAIR sat after the radios
     // 2026-08-01..02 and was deleted under the no-duplicate-commands ruling —
     // superseded for today's zoom GROUP by the 2026-08-12 relayout order, at
@@ -1199,6 +1011,38 @@ constexpr IconRowDef kIconRowButtons[] = {
     // no box was added: one box changed groups, so the row's authored-px walk
     // is what it was.
     {RedesignButton::IconLoadInPlace,   icons::Icon::DialogOkApply},
+};
+
+// THE VIEW GROUP — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
+// 2026-10-01): the three ABSOLUTE VIEW SELECTORS, Source+Warp, Target+Warp and
+// Target+Phase on bare 1 / 2 / 3, in their keys' order. THE ACTS CAME FROM
+// THE ROW-1 VIEW BAR (2026-08-02..2026-10-01), itself kdenlive's workspace
+// switcher — the blue "Logging | Editing | Audio | Effects | Color" bar at the
+// far right of its menu row — reborn as the selectors; the bar's three
+// labelled buttons are gone and the acts wear the architect's 2026-08-11
+// glyphs (icons.h). THE ROW'S OWN METRICS, NONE NEW: the 32px button box with
+// its 22px glyph (render.h's icon-row block), 2px between members, the 1x34
+// separator with its 4px gaps on the group's LEFT (its leader is Source+Warp
+// at redesign_button_opens_icon_group), and the row's 8px pad as the lead-out
+// from the lane's right edge. THE ROW'S FIVE FACES, and a RADIO OF THREE: the
+// lit button is the current view (redesign_button_selected reads the live
+// combination) and a press on it is the consumed nothing (the `radio` column,
+// kToolbarChords).
+//
+// THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
+// CANNOT HOLD EVERY GROUP, THE VIEW GROUP WINS. It paints LAST, whole, at its
+// flush-right place; the groups to its left yield, clipped at the column of
+// the view group's separator, and each yielding member PUBLISHES ONLY WHAT IT
+// PAINTED — its box cut at that column, or an empty rect when the view group
+// covers it whole — so a press, a hover and a tooltip land on exactly the
+// pixels on screen (on screen is as painted; paint_icon_row's two walks).
+// The row fits whole down to 940 authored px of window at 100% (the width
+// math at paint_icon_row), so neither host reaches the rule: the laptop's
+// 1920 and the tablet's 1152 logical px both clear it.
+constexpr IconRowDef kIconRowViewGroup[] = {
+    {RedesignButton::ViewSW, icons::Icon::DocumentExport},
+    {RedesignButton::ViewTW, icons::Icon::DocumentImport},
+    {RedesignButton::ViewTP, icons::Icon::ChronometerStart},
 };
 
 // A BUTTON'S ICON, by state — the tooltip overload's sibling (app_state.h,
@@ -1631,13 +1475,12 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
-    // "Settings", and the RIGHT one, the view bar's S+W / T+W / T+P (the right
-    // float 2026-08-02, File replacing the Quit button 2026-08-13, the
-    // Navigation anchor deleted from between them 2026-08-15, Edit arriving
-    // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and
-    // 2026-09-09). No ring;
-    // the kdenlive bar is flat.
+    // ground carrying ONE FLOAT, "File", "Edit" and "Settings" flush left
+    // (File replacing the Quit button 2026-08-13, the Navigation anchor
+    // deleted from between them 2026-08-15, Edit arriving 2026-08-20, the
+    // Iterations and Help anchors deleted 2026-09-04 and 2026-09-09; the
+    // right-floating view bar deleted 2026-10-01, its three acts the icon
+    // row's view group now). No ring; the kdenlive bar is flat.
     //
     // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for
     // EVERY anchor — plus ONE mode-scoped third, the history view's disabled
@@ -1646,7 +1489,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // history_mode_disables_button's and nothing here restates it) (below, at the
     // pill):
     // at rest the label paints bare on the row ground;
-    // hovered, a filled blue pill sits under it, FLUSH with the row's CONTENT
+    // hovered, a filled accent pill sits under it, FLUSH with the row's CONTENT
     // height (the css float model — a flat button fills its whole row, architect
     // 2026-07-31). A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
     // only pointer-out rests it. The click and disabled faces belong to rows 2
@@ -1663,31 +1506,20 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // item now, and the chord is untouched. It held a THIRD ANCHOR, Navigation,
     // until 2026-08-15: its every item was a key too, which is exactly what
     // deleted it — the keys had all grown buttons of their own.)
-    //
-    // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
-    // div, five faces from its own crops, and three chord buttons that are
-    // bare 1/2/3. Its layout, its box model and its face rule are
-    // at kViewBarButtons and view_bar_face above; its colors at
-    // kRedesignViewBarBg (render.h).
+
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
 
     // THE LANE IS ITS CONTENT (render.h's menu_row_* pair) since 2026-09-09:
     // the icon row's ground begins on the next pixel row with no margin,
     // border or line between — kdenlive's own menubar-over-toolbar seam.
-    // (The 1px margin-bottom the lane carried from 2026-08-02, holding the
-    // bar's blue off the lane below, retired with the relayout; render.h's
-    // block carries the succession.)
+    // (render.h's block carries the succession.)
     //
     // THE LANE IS THE PILL'S 30 (architect 2026-09-09, the morning after his
     // remeasure of kdenlive had put the row on 34 — render.h's menu row block
-    // carries the crops and both rulings): the LEFT float's anchors wear a
-    // pill that fills the lane top to bottom and is their published rect,
-    // and the RIGHT float's div fills the same lane, its button box the
-    // content less its two 1px vertical margins — 28 at 100% — painted
-    // INSIDE a lane-tall published rect (view_bar_face_rect, the one
-    // subtraction, at kViewBarBtnMarginPx). So the row's two floats are one
-    // height, and the pill's foot, the lane's foot and the icon row's first
+    // carries the crops and both rulings): the anchors wear a pill that fills
+    // the lane top to bottom and is their published rect. So the pill's foot,
+    // the lane's foot and the icon row's first
     // pixel are the same row — where the dropdown hangs. (For the hours the
     // lane stood at 34 the pill was its own 30 riding the lane's top edge
     // with 4 rows of ground under it; that constant is gone with the ruling.)
@@ -1806,11 +1638,16 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             cairo_fill(cr);
         }
 
-        // The label color is the SAME in the row's two live faces; the pill
-        // under it is the whole hover cue. Dead, it is the one thing that dims
-        // (keep above) — mixed toward the ROW GROUND, which is what is under it
-        // there, since a dead button never wears the pill.
-        const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
+        // The pill under the label is the whole hover cue, and the label's ink
+        // follows the ground it sits on: kRedesignLabel on the row ground,
+        // kRedesignLabelOnAccent on the pill (architect 2026-10-01 — the
+        // accent is the light ink, on which the label white reads 1.91:1;
+        // render.h's block at that constant). Dead, the label is the one thing
+        // that dims (keep above) — mixed toward the ROW GROUND, which is what
+        // is under it there, since a dead button never wears the pill.
+        const GuiColor label_c =
+            pill ? kRedesignLabelOnAccent
+                 : mix_color(kRedesignLabel, ground, keep);
         cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
         // THE LABEL CENTERS IN THE PILL, which IS the lane: the pill is the
         // button, and Qt's own menu bar centers an item's text in the item
@@ -1823,270 +1660,6 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                               static_cast<double>(content_h)));
 
         x += btn_w;
-    }
-
-    // -- THE RIGHT FLOAT: the view bar ---------------------------------------
-    //
-    // The div is placed from its RIGHT edge, so all three widths are needed
-    // before the first button can be drawn: the labels are shaped once here and
-    // both measured and painted from those runs (the shaping chokepoint's rule —
-    // one run is the single width truth), and the walk below re-uses them.
-    {
-        const int mar  = std::max(1, scaled_px(kViewBarBtnMarginPx));
-        const int bord = std::max(1, scaled_px(kViewBarBtnBorderPx));
-        const int bpad = scaled_px(kViewBarBtnPadPx);
-        // THE BOX IS THE LANE LESS ITS TWO 1px VERTICAL MARGINS, and the
-        // LANE is the pill's 30 (architect 2026-09-09: "keep all the
-        // margins, borders and padding for the view buttons ... take from
-        // the INSIDE height, the actual content, about four pixels"), so the
-        // box is 28 at 100% — where it stood from 2026-08-21 until the
-        // relayout — and 64 at the tablet's 225%. The margins do not
-        // collapse on this axis any more than on the horizontal one — one
-        // term, applied at each edge. The div itself fills the lane whole,
-        // so the bar's blue meets the row's top edge and the icon row's
-        // ground below with nothing between. THE SUBTRACTION LIVES IN ONE
-        // HELPER, view_bar_face_rect (at kViewBarBtnMarginPx): each button
-        // below PUBLISHES the lane-tall rect and PAINTS the box the helper
-        // derives from it, so the pointer's rows and the eye's cannot drift.
-        // (The box was the content whole for the hours of 2026-09-09 the
-        // lane stood at 30 without the pair, and 32 inside a 34 lane for the
-        // hours after his remeasure; the block at kViewBarBtnMarginPx
-        // carries the succession.)
-
-        text_shape::ShapedRun runs[kViewBarButtonCount];
-        int widths[kViewBarButtonCount];
-        int div_w = 0;
-        for (int i = 0; i < kViewBarButtonCount; ++i) {
-            runs[i] = text_shape::shape_text_run(
-                font, view_pair_label(kViewBarButtons[i].audio,
-                                      kViewBarButtons[i].column));
-            widths[i] = 2 * (bord + bpad) +
-                        static_cast<int>(std::nearbyint(runs[i].width_px));
-            // Each button's own left and right margin — they do not collapse, so
-            // the pair between two neighbours sums to 2px and the div's outer
-            // pair is its 1px inset on each side. One term, applied per button,
-            // spells the whole width. (The vertical pair is the FACE BOX's
-            // term, not the width's — view_bar_face_rect.)
-            div_w += widths[i] + 2 * mar;
-        }
-
-        // FLUSH AT THE WINDOW'S RIGHT EDGE (no margin stated, so none exists).
-        //
-        // THERE IS STILL NO COLLISION RULE, and the measurement that used to
-        // justify one has now changed three times — recorded rather than acted
-        // on, since an overlap layout is the architect's to specify. RE-DERIVED
-        // FOR THE TWO-BUTTON FLOAT from the face's own advance widths (Liberation
-        // Sans at this row's 16px; the method reproduces the three numbers the
-        // 2026-08-02 shaped-run walk recorded — Quit 29, Navigation 76,
-        // Settings 58 — exactly, which is what makes File's 26 comparable to
-        // them): the
-        // left float was 124px at 100% (shaped labels File 26 + Settings 58, each
-        // plus its two 10px pads — 46 + 78) and the div 183 — 307 of the 1920px
-        // deployment width, 1613px of slack, and 333 of the 640px floor. AT 200%
-        // IT WAS THE RECORDED THREE-BUTTON 439 LESS NAVIGATION'S OWN DOUBLED SLOT
-        // (~192), i.e. ~247, and the exact pixel is deliberately left unstated:
-        // the 2026-08-02 walk recorded only the TOTAL at that scale, and a
-        // shaped run's width is not exactly twice its 100% value — which is why
-        // that total reads 439 rather than 440. It did not matter which way
-        // that one pixel fell: against the div's 366 the pair came to ~613 on
-        // the 640px floor THAT DOES NOT SCALE, so the floats CLEARED IT BY ~26-27
-        // and the overlap was gone outright rather than narrowed.
-        //
-        // THE CORNER IS RE-ENTERED SINCE 2026-08-20, and the old answer returns
-        // with it. The EDIT ANCHOR adds a shaped "Edit" (~26px at 100%, the same
-        // four-glyph order as File) plus its two 10px pads — ~46px at 100%, ~92
-        // at 200% — so the three-button float is ~170 at 100% and ~339 at 200%.
-        // At 100% nothing is close: 170 + 183 = 353 of the 640px floor. AT 200%
-        // it is ~339 + 366 = ~705 ON THAT SAME 640 FLOOR, which OVERLAPS THE DIV
-        // BY ~65px — narrower than the Navigation era's 165 and the same KIND of
-        // corner. NO RULE IS BUILT FOR IT, deliberately and for the reason the
-        // record below already gives: the painters answer it themselves.
-        //
-        // AND RE-ENTERED AGAIN ON 2026-08-27 BY THE SERIES ANCHOR, with the
-        // same answer a third time. MEASURED by the same advance-width method
-        // (which still reproduces the 2026-08-02 walk's Quit 29, Navigation 76
-        // and Settings 58 exactly): "Series" shaped to 45px at 100%, the six
-        // glyphs putting it between Edit's 28 and Settings' 58, so its slot was
-        // 65px with its two 10px pads. The FOUR-button float was 237 at 100%
-        // (46 + 48 + 65 + 78) and ~473 at 200%. At 100% it was still nowhere:
-        // 237 + 183 = 420 of the 640px floor. At 200% it was ~473 + 366 = ~839
-        // on that floor, an overlap of ~199px, which finally passed the
-        // Navigation era's 165 — and it changed nothing, because the KIND of
-        // corner is unchanged and the div still fills its background last and
-        // covers the tail of the left float's labels.
-        //
-        // THE 2026-08-31 REBRAND WIDENED THAT ANCHOR AND THE ANSWER HELD A
-        // FOURTH TIME: "Iterations" shapes to 66px by the same method (ten
-        // glyphs, a hair under "Navigation"'s 76), so the slot is 86px and the
-        // four-button float is 258 at 100% (46 + 48 + 86 + 78), ~516 at 200%.
-        // At 100%: 258 + 183 = 441 of the 640px floor, still nowhere. At 200%:
-        // ~516 + 366 = ~882, an overlap of ~242px — 43 more than the Series
-        // era's and the same corner, answered the same way. THIS IS THE CHECK
-        // THE REBRAND OWED, and it is why the record is kept as numbers: a
-        // longer label is one term in a sum this note already spells.
-        //
-        // AND THE CORNER RECEDES ON 2026-09-04, the first move here that makes
-        // it SMALLER: the architect deleted the ITERATIONS ANCHOR and sent its
-        // two commands back to the icon row, so the float loses that 86px
-        // slot outright. By the same advance-width method the three
-        // application anchors come to 172 at 100% (46 + 48 + 78) and, with
-        // HELP'S OWN 74px slot (a 54px shaped run plus its two pads, the one
-        // term this note never carried — the five-anchor total is the view
-        // bar's note above), the FOUR-button float is 246 at 100% and ~492 at
-        // 200%. At 100%: 246 + 183 = 429 of the 640px floor, nowhere. At 200%:
-        // ~492 + 366 = ~858 on that floor, an overlap of ~218px — 24 LESS than
-        // the rebrand era's and the same corner, answered the same way. The
-        // deletion is the first term this sum has ever lost, and it is worth
-        // the line for exactly that reason: the record is a running one and it
-        // subtracts as readily as it adds.
-        //
-        // AND RECEDES AGAIN ON 2026-09-09, when the HELP ANCHOR went with the
-        // top strip relayout and took its 74px slot: the THREE-button float
-        // is 172 at 100% and ~344 at 200%. At 100%: 172 + 183 = 355 of the
-        // 640px floor, nowhere. At 200%: ~344 + 366 = ~710 on that floor, an
-        // overlap of ~70px — the Edit era's own ~65 within a few pixels, the
-        // float being that era's three anchors again — and the same corner,
-        // answered the same way.
-        // THE DEPLOYMENTS ARE NOT
-        // NEAR IT: 1920 on the laptop at 100%, and the tablet's 2304 at its
-        // own 225% is 1024 logical px against a ~429 logical-px float pair.
-        // IT WAS REAL WHILE THE NAVIGATION
-        // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
-        // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
-        // the 640px floor at ceiling scale, where the pre-Navigation pair had
-        // cleared it by 19. What happened there is what the painters already do:
-        // the div fills its background last and covered the tail of the left
-        // float's labels — nothing clickable, nothing else changed, and the
-        // deployment geometry was nowhere near it. THAT IS THE ANSWER AGAIN, and
-        // it is why this stayed a record rather than becoming a rule: the SHAPE
-        // of the answer ("the div covers the tail") was kept precisely for the
-        // third button this row has now, and it needed no code when it arrived.
-        // NEITHER DEPLOYMENT IS ANYWHERE NEAR IT — 1920 on the laptop, 1024 on
-        // the rig, both at 100% — so the overlap is a ceiling-scale, floor-width
-        // corner and nothing a real window reaches.
-        // Defensive only, and it takes the whole float: a lane so short that the
-        // two margins eat the button leaves nothing to paint and nothing to
-        // click, which is the same early-out the row's own content_h guard above
-        // makes. Unreachable at any schema-legal gui_scale (content_h floors at
-        // 5 and the margins at 1 each).
-        if (div_w <= 0 || content_h <= 2 * mar) { cairo_restore(cr); return; }
-
-        const int div_x = row.x + row.w - div_w;
-        // IT IS THE BAR'S OWN VERDICT (view_bar_focused, app_state.h): the
-        // header's answer AND no folder overlay standing, under which this
-        // row shows above the band with these three dead. The bar carries
-        // that second term ALONE since 2026-09-03 evening — the header went
-        // back to the activation flag when the File anchor went live on it,
-        // and these three have no dimmed face of their own, so the ground
-        // swap is the only thing that can show their grey (both rulings and
-        // the succession are at the owner). ONE local, read by the ground
-        // here and by view_bar_face's `focused` term below, so the pressed
-        // interior reads the same fact.
-        const bool bar_focused = view_bar_focused(app);
-        const GuiColor bar_bg = bar_focused
-                                    ? kRedesignViewBarBg
-                                    : kRedesignViewBarBgUnfocused;
-        cairo_set_source_rgb(cr, bar_bg.r, bar_bg.g, bar_bg.b);
-        cairo_rectangle(cr, div_x, row.y, div_w, content_h);
-        cairo_fill(cr);
-
-        const double bar_rad = std::nearbyint(kViewBarRadiusPx *
-                                              gui_scale_factor());
-        int vx = div_x;
-        for (int i = 0; i < kViewBarButtonCount; ++i) {
-            vx += mar;
-            const int btn_w = widths[i];
-
-            // THE PUBLISHED RECT IS LANE-TALL — the button's columns by the
-            // lane's rows — and THE FACE BOX DERIVES FROM IT through the one
-            // helper (view_bar_face_rect): the hit rect is what the pointer
-            // reads, the box is what the eye sees, and the second is the
-            // first less its two vertical margins, nowhere restated.
-            AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, audio, playback, target_render,
-                kViewBarButtons[i].id, GuiRect{vx, row.y, btn_w, content_h});
-            const GuiRect box = view_bar_face_rect(face.rect, mar);
-
-            const bool pressed =
-                redesign_button_pressed_face(app, kViewBarButtons[i].id);
-            const ViewBarFace f =
-                view_bar_face(bar_bg, bar_focused,
-                              redesign_button_hover_steps(face),
-                              face.selected, pressed);
-
-            if (f.filled || f.framed) {
-                // The shared face box (redesign_face_box — the half-stroke
-                // inset rule lives there). The REST face paints no fill at all:
-                // its color IS the div's background, already under it, which is
-                // why the crop's resting button is invisible.
-                redesign_face_box(cr, box.x, box.y, box.w, box.h, bord,
-                                  bar_rad,
-                                  f.filled ? &f.fill  : nullptr,
-                                  f.framed ? &f.frame : nullptr);
-            }
-
-            // The label is kRedesignLabel in every LIVE state, focused and
-            // unfocused — the nine crops agree — and sits at the box's own
-            // padding origin, which is the same place the width was measured
-            // from.
-            //
-            // THE ROW HAS A DISABLED FACE SINCE 2026-09-10 (architect, at his
-            // mockup: "accepted") AND IT IS THE LABEL'S INK ALONE: a dead
-            // UNSELECTED selector retains kRedesignDisabledMix of the label
-            // over the bar's own ground, exactly row 2's disabled ink through
-            // the same mix_color owner (the icon row's `keep`, this file's
-            // row-2 painter)
-            // — no second formula and no new constant, so a retune of that knob
-            // retunes this row with it. Nothing else on the row moves: the bar's
-            // ground, the box faces and every metric are what they were, and the
-            // crop set — which never had a disabled member to sample — is
-            // untouched, this face being BUILT from the row's own vocabulary
-            // rather than measured. It answers the question the lock's arm and
-            // kRedesignViewBarBg both left open, and it is why the bar's
-            // unfocused ground is NOT that face (it would keep the labels fully
-            // legible and say the window is inactive, which under a lit lamp on
-            // a focused window is untrue).
-            //
-            // THE SELECTED VIEW KEEPS ITS FULL INK even while it is dead: the
-            // three go dead TOGETHER under the lock (iteration_lock_greys,
-            // app_state.h — all three selector chords), and dimming the one
-            // that reports WHERE YOU STAND would dim a true statement. So the
-            // face reads the selected bit beside the enabled one, and what
-            // greys is the two selectors the press can no longer reach.
-            // face.selected is redesign_button_selected, the live audio-view x
-            // column combination — exactly one of the three since 2026-09-21,
-            // S+P being no state — so the selected one keeps its ink and the
-            // other two grey.
-            //
-            // IT READS THE ENABLED BIT AND NOT THE LOCK, which is the roster's
-            // own rule (a face arm never restates an act's condition) and
-            // costs a second membership list nowhere. THE FOLDER OVERLAY IS
-            // ITS OTHER PRODUCER, redesign_button_enabled's first arm having
-            // killed these three under the player and the picker since long
-            // before the lock: there the dimmed labels join
-            // the BAR'S UNFOCUSED GROUND (view_bar_focused's modal term), the
-            // two halves of one disabled face rather than a doubled cue — it
-            // was that ground alone that showed the state until 2026-09-10.
-            // THE `h` VIEW REACHES NEITHER: its three selectors are on the
-            // mode's allowlist, so all three answer enabled there.
-            const double keep = (face.enabled || face.selected)
-                                    ? 1.0 : kRedesignDisabledMix;
-            // Toward the BAR'S ground, which is what a dead selector sits on:
-            // its rest face paints no fill of its own, and the two faces that do
-            // — hover and pressed — cannot arise here (the hover recompute
-            // composes the enabled term and the press dies at
-            // arm_redesign_press's disabled line).
-            const GuiColor view_label_c =
-                mix_color(kRedesignLabel, bar_bg, keep);
-            cairo_set_source_rgb(cr, view_label_c.r, view_label_c.g,
-                                 view_label_c.b);
-            text_shape::show_shaped_run(
-                cr, runs[i], static_cast<double>(box.x + bord + bpad),
-                redesign_baseline(font, static_cast<double>(box.y),
-                                  static_cast<double>(box.h)));
-
-            vx += btn_w + mar;
-        }
     }
 
     cairo_restore(cr);
@@ -2134,7 +1707,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // literally. THREE FACES and a fourth state that is the absence of one:
     //   - kRedesignTabLine #4c4e51 ACROSS THE TROUGH — the stretch right of
     //     the last tab, and the row's only ground at that row;
-    //   - kRedesignTabHoverEdge #496170 across a HOVERED unselected tab's own
+    //   - kRedesignTabHoverEdge across a HOVERED unselected tab's own
     //     BOX — the hit rect, never the extended fill, which is what the crop
     //     fixes (row 29 of tmp/previous/review_2026-09-09/his_screenshots/Screenshot_2026-09-09_02-42-29-c.png: cols
     //     80..159 are the hover blue and col 79 is the selected neighbour's
@@ -2194,7 +1767,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // inventoried at that constant (render.h), damaged by the activation
     // hook's top-strip invalidation like the header's ground. An UNSELECTED
     // tab is ONE GEOMETRY IN TWO COLOURS (architect 2026-09-09, his option 1):
-    // rest #1b1d20 or hover #263f4d, no border and no click face — RECESSED
+    // kRedesignTabRest or kRedesignTabHover, no border and no click face — RECESSED
     // against the bar, Breeze's model. THE HOVER'S THIRD COLOUR IS THE BASE
     // LINE'S, not the fill's (the block above): a HOVERED tab's fill stops
     // one line short of the content's foot and the base row under it carries
@@ -2202,7 +1775,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // content height and no line is drawn under it at all. Its two colours do
     // NOT
     // follow the focus swap (the third crop's hovered B is the focused one's
-    // own #263f4d). There is no selected-hover face anywhere in this row (a
+    // own hover fill). There is no selected-hover face anywhere in this row (a
     // tab press is a chord, never a refusal), and this row has NO disabled
     // face at all.
     //
@@ -2716,8 +2289,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-THREE members
-    // in SIX groups (the width math below is the count's
+    // separator-divided groups of 32x32 buttons — TWENTY-SIX members
+    // in SEVEN groups (the width math below is the count's
     // one statement), RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row — SAVE ALONE and
@@ -2741,15 +2314,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (listen and the READ-ONLY toggle, the architect's own order on
     // 2026-08-14 less the load-in-place, which left for the history group on
     // 2026-09-01, and ENABLE TOOLTIPS and SETTINGS at its tail since
-    // 2026-09-29) and THE HISTORY
+    // 2026-09-29), THE HISTORY
     // GROUP, the opener leading THE WALK LAMP,
     // its four companions (2026-08-18, the companions back from the bottom
     // row and the walk surface down from row 3 later that day) and THE LOAD
-    // IN PLACE at the tail.
+    // IN PLACE at the tail — and, FLUSH AT THE ROW'S RIGHT EDGE since
+    // 2026-10-01, THE VIEW GROUP (kIconRowViewGroup, where its provenance and
+    // the overflow rule are stated).
     //
-    // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-three paint on every
-    // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
+    // NOTHING HERE IS EVER HIDDEN BY A MODE (architect 2026-08-14, "no more
+    // hiding/showing icons in top icon row"): all twenty-six paint on every
+    // frame and what a mode refuses wears the DEAD FACE (only a window too
+    // narrow for the row covers members, under the view group's overflow
+    // rule — a width, never a state). The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
     // consumed groups right of the history opener in the view — is deleted
@@ -2761,36 +2338,36 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // redesign_button_enabled, app_state.h).
     //
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
-    // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
-    // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups): TWENTY-THREE MEMBERS IN SIX GROUPS since 2026-09-29
-    // late evening, when the Edit Flag button was deleted (one box and one
-    // 2px gap, no separator moving; Copy Value's move between Redo and Render
-    // the same hour changed no width):
+    // pad + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
+    // separators is groups minus one — the view group's own included — and
+    // the count of gaps is buttons minus groups): TWENTY-SIX MEMBERS IN SEVEN
+    // GROUPS since 2026-10-01, the LEFT WALK twenty-three in six from the
+    // left pad,
     //   8 + 23·32 + (23−6)·2 + (6−1)·9 = 8 + 736 + 34 + 45 = 823px,
-    // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 831.
+    // and the VIEW GROUP's span from the right edge — its separator slot,
+    // three boxes, two gaps and the 8px lead-out —
+    //   9 + 3·32 + 2·2 + 8 = 117px,
+    // so the row holds every group, with the separator's full gap on both of
+    // its sides, in any window at least 823 + 117 = 940px wide, IN EVERY
+    // STATE. The laptop clears it outright at 940 of 1920.
     //
-    // THE TABLET FIT CEILING IS 279 (re-derived 2026-09-29 late evening; 270
-    // before the deletion, 304 that morning), and it is taken off THE PAINTED
-    // WALK, not off 823·factor: every element above is its own scaled_px,
-    // rounded on its own, so the walk's device width is 8s + 23·[32s] +
-    // 17·[2s] + 5·(2·[4s] + [1s]) with each bracket a banker's rounding. At
-    // 279 that is 22 + 23·89 + 17·6 + 5·(22 + 3) = 2296 of 2304, and at 280 it
-    // is 2319 (the box rounds up to 90). (Counting the trailing pad the
-    // ceiling is 276 — 2295 at 276, the pad being ground, not ink, so the
-    // icons themselves are the thing measured.) The tablet's 200 % paints the
-    // walk 1646 device px wide, clearing the panel by 658; a 225 would paint
-    // it 1842, clearing it by 462. The laptop clears it outright at 831 of
-    // 1920. The row's width succession is in git history; a roster move
-    // restates these numbers.
+    // THE TABLET FIT CEILING IS 245 (re-derived 2026-10-01), and it is taken
+    // off THE PAINTED WALKS, not off 940·factor: every element is its own
+    // scaled_px, rounded on its own, so the device width is
+    // 2·[8s] + 26·[32s] + 19·[2s] + 6·(2·[4s] + [1s]) with each bracket a
+    // banker's rounding. At 245 that is 2009 for the left walk and 286 for the
+    // view group's span, 2295 of 2304, and at 246 it is 2032 + 289 = 2321 (the
+    // box rounds up to 79). The tablet's 200 % paints the two 1646 + 234 =
+    // 1880 device px wide, clearing the panel by 424; a 225 would paint
+    // 1842 + 262 = 2104, clearing it by 200. The row's width succession is in
+    // git history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // 34px and a NEW GROUP costs 41, which at the tablet's 200% paint as 68
-    // and 82 device px — room for NINE more members at 200% (1646 + 9·68 =
-    // 2258 of 2304), a tenth cropping (2326); at 225% (76 and 92: the box's 72
-    // and the gap's 4.5 rounding to 4) room for SIX (1842 + 6·76 = 2298), a
-    // seventh cropping (2374).
+    // and 82 device px — room for SIX more members at 200% (1880 + 6·68 =
+    // 2288 of 2304), a seventh cropping under the view group (2356); at 225%
+    // (76 and 92: the box's 72 and the gap's 4.5 rounding to 4) room for TWO
+    // (2104 + 2·76 = 2256), a third cropping (2332).
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -2909,34 +2486,29 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const int btn_y = lane.y + (content_h - btn)   / 2;
     const int sep_y = lane.y + (content_h - sep_h) / 2;
 
-    int x = lane.x + icon_row_pad_x();
-    // THE WALK: one left-to-right accumulation, every member placed. A group
-    // LEADER (redesign_button_opens_icon_group, app_state.h — the roster's own
-    // divider owner) draws the 4px / 1px line / 4px separator ahead of itself
-    // and everything else takes the 2px gap; the ROW'S FIRST member needs no
-    // special case, `first` swallowing the separator its own leader would owe.
-    // (The collapse state machine that skipped members and carried an OWED
-    // separator across them is deleted, 2026-08-14 — this row hides nothing.)
-    bool first = true;
-    for (const IconRowDef& def : kIconRowButtons) {
-        if (!first) {
-            if (redesign_button_opens_icon_group(def.id)) {
-                x += sep_gap;
-                cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                                     kRedesignTabLine.b);
-                cairo_rectangle(cr, x, sep_y, sep_w, sep_h);
-                cairo_fill(cr);
-                x += sep_w + sep_gap;
-            } else {
-                x += btn_gap;
-            }
-        }
-        first = false;
+    // THE VIEW GROUP'S PLACE IS RESOLVED FIRST, because it decides where
+    // every group to its left may paint (the overflow rule at kIconRowViewGroup):
+    // its last button's right edge sits one row pad (icon_row_pad_x, the row's
+    // own 8px lead-in, read as the lead-out) in from the lane's right edge, its
+    // members 2px apart, and its separator — the row's 4px / 1px line / 4px —
+    // on its left. THE LEFT GROUPS' LIMIT IS THAT SEPARATOR'S COLUMN: they
+    // paint under a clip ending there and publish only the columns they
+    // painted, so a window too narrow for the row covers them and never the
+    // view group.
+    const int view_n = static_cast<int>(std::size(kIconRowViewGroup));
+    const int view_w = view_n * btn + (view_n - 1) * btn_gap;
+    const int view_x0 = lane.x + lane.w - icon_row_pad_x() - view_w;
+    const int view_sep_x = view_x0 - sep_gap - sep_w;
+    const int left_limit = view_sep_x;
 
+    // ONE MEMBER'S PAINT, shared by both walks: publish what is painted, then
+    // the five faces and the glyph at the member's full box — the clip, when
+    // the overflow rule has set one, cuts the pixels and the published rect
+    // says exactly which survived.
+    const auto paint_member = [&](const IconRowDef& def, int bx,
+                                  const GuiRect& published) {
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render,
-            def.id,
-            GuiRect{x, btn_y, btn, btn});
+            cr, app, audio, playback, target_render, def.id, published);
 
         // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
         // 2026-08-04) and, since 2026-08-15, the per-tab READ-ONLY LOCK. Both
@@ -2948,7 +2520,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // category's one survivor since the 2026-08-27 relocation),
         // listen, the read-only toggle, and the MOMENT-STATE
         // Save (an empty head delta or a checkpoint in flight). Nothing leaves
-        // the walk any more; the two view lamps, the zoom group and the
+        // the walk any more; the view group, the zoom group and the
         // history opener stay live, as do the FOUR HISTORY COMPANIONS and,
         // since 2026-09-01, the LOAD IN PLACE that joined their group — each
         // on the derivation's own answer, which is not one reason but two:
@@ -3047,7 +2619,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
                                                : kRedesignContentGround,
                                            hover),
                 kRedesignContentGround, keep);
-            redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
+            redesign_face_box(cr, bx, btn_y, btn, btn, lw, radius,
                               has_fill ? &fill : nullptr,
                               has_line ? &line : nullptr);
             if (has_fill) under = fill;
@@ -3080,11 +2652,65 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // two faces", and the architect made it one button with two faces
         // that day.)
         icons::draw(cr, redesign_button_icon(app, def.id, def.icon),
-                    static_cast<double>(x + (btn - glyph_px) / 2),
+                    static_cast<double>(bx + (btn - glyph_px) / 2),
                     static_cast<double>(btn_y + (btn - glyph_px) / 2),
                     static_cast<double>(glyph_px), keep, under);
+    };
 
+    // THE LEFT GROUPS' WALK: one left-to-right accumulation, every member
+    // placed. A group LEADER (redesign_button_opens_icon_group, app_state.h —
+    // the roster's own divider owner) draws the 4px / 1px line / 4px separator
+    // ahead of itself and everything else takes the 2px gap; the ROW'S FIRST
+    // member needs no special case, `first` swallowing the separator its own
+    // leader would owe. (The collapse state machine that skipped members and
+    // carried an OWED separator across them is deleted, 2026-08-14 — this row
+    // hides nothing at any width it fits.) Everything here paints under the
+    // clip that ends at the view group's separator column, and each member
+    // PUBLISHES ITS RECT CUT AT THAT COLUMN — whole at every width the row
+    // fits (the laptop's and the tablet's included), its painted columns
+    // alone when the view group covers part of it, and an empty rect when it
+    // covers it whole, which contains no point and refreshes its bits
+    // unconditionally (publish_button_face).
+    cairo_save(cr);
+    cairo_rectangle(cr, lane.x, lane.y,
+                    std::max(0, left_limit - lane.x), lane.h);
+    cairo_clip(cr);
+    int x = lane.x + icon_row_pad_x();
+    bool first = true;
+    for (const IconRowDef& def : kIconRowButtons) {
+        if (!first) {
+            if (redesign_button_opens_icon_group(def.id)) {
+                x += sep_gap;
+                cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                     kRedesignTabLine.b);
+                cairo_rectangle(cr, x, sep_y, sep_w, sep_h);
+                cairo_fill(cr);
+                x += sep_w + sep_gap;
+            } else {
+                x += btn_gap;
+            }
+        }
+        first = false;
+        const int shown_w = std::clamp(left_limit - x, 0, btn);
+        paint_member(def, x, GuiRect{x, btn_y, shown_w, btn});
         x += btn;
+    }
+    cairo_restore(cr);
+
+    // THE VIEW GROUP'S WALK, PAINTED LAST AND WHOLE: its leader's separator
+    // (redesign_button_opens_icon_group — the same divider owner, which names
+    // Source+Warp) at the column the left groups stop at, then its three
+    // members, each publishing the full box it paints.
+    int vx = view_x0;
+    for (const IconRowDef& def : kIconRowViewGroup) {
+        if (redesign_button_opens_icon_group(def.id)) {
+            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                 kRedesignTabLine.b);
+            cairo_rectangle(cr, view_sep_x, sep_y, sep_w, sep_h);
+            cairo_fill(cr);
+        }
+        paint_member(def, vx, GuiRect{vx, btn_y, btn, btn});
+        vx += btn + btn_gap;
     }
 
     cairo_restore(cr);
@@ -3619,8 +3245,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 350 ceiling: the block reaches the clock's right edge once the logical
     // width falls below about 698 (87 + 603 + 8), which is above the 640
     // floor — a window narrowed toward that floor paints the block over the
-    // clock's cell (the tablet's 200 % leaves 1152, its 279 % icon-row fit
-    // ceiling 826). THE STATE CELL CANNOT PUSH ANYTHING: it CLIPS at the
+    // clock's cell (the tablet's 200 % leaves 1152, its 245 % icon-row fit
+    // ceiling 940). THE STATE CELL CANNOT PUSH ANYTHING: it CLIPS at the
     // block's left edge less one pad, so a long line is cut rather than
     // colliding.
     int right_block_x = lane.x + lane.w - pad;
@@ -4663,8 +4289,15 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
+        // THE PRESSED ITEM'S INKS ARE kRedesignLabelOnAccent (architect
+        // 2026-10-01): the press fills the item with the accent, the light
+        // ink, on which the label white reads 1.91:1 and the accelerator's
+        // dim far less, so both the label and the accelerator take the dark
+        // label for the press's duration (render.h's block at that constant);
+        // every other face keeps the inks below.
         const GuiColor& label_ink =
-            enabled[i] ? kRedesignLabel : kRedesignPopupDisabledLabel;
+            pressed    ? kRedesignLabelOnAccent
+            : enabled[i] ? kRedesignLabel : kRedesignPopupDisabledLabel;
         cairo_set_source_rgb(cr, label_ink.r, label_ink.g, label_ink.b);
         text_shape::show_shaped_run(cr, runs[i],
                                     static_cast<double>(x + pad_l), base);
@@ -4673,8 +4306,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // margin, not to the item box's: the margin is a fact about the box the
         // crop measured, and aligning to it keeps every hotkey's last ink column
         // on one line whatever the item inset is. Its ink is the sampled dim
-        // (kRedesignPopupHotkey), in every face — the item's fill is the whole
-        // hover/press cue, as it is for the label. (A DISABLED row swapped it
+        // (kRedesignPopupHotkey) in every face but the PRESSED one (the dark
+        // label above) — the item's fill is the whole hover/press cue, as it
+        // is for the label. (A DISABLED row swapped it
         // for the sampled dim pair's other half, keeping the accelerator dimmer
         // than its own label exactly as the live pair does; both derivations are
         // recorded at render.h's palette block, where the retired pair lives.)
@@ -4692,8 +4326,10 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             const double hot_x =
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
-            const GuiColor& hot_ink = enabled[i] ? kRedesignPopupHotkey
-                                                 : kRedesignPopupDisabledHotkey;
+            const GuiColor& hot_ink =
+                pressed    ? kRedesignLabelOnAccent
+                : enabled[i] ? kRedesignPopupHotkey
+                             : kRedesignPopupDisabledHotkey;
             cairo_set_source_rgb(cr, hot_ink.r, hot_ink.g, hot_ink.b);
             text_shape::show_shaped_run(cr, hot_runs[i], hot_x, base);
         }
@@ -7749,31 +7385,67 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
         // THE SELECTION BAND IS THE ACCENT (architect 2026-08-28, the palette
         // block beside kMarkerFlagLabel): kRedesignAccent behind the selected
-        // substring, kRedesignLabel for its glyphs — the product's one
-        // selection pairing, which the flag editor's marker-lane box paints
-        // too. Here it costs a pass rather than adding one: the run ALREADY
-        // shows in kRedesignLabel, so the selected glyphs are the right white
-        // with no second show, and the KNOCKOUT that used to re-show them in
-        // the resolved field ground (a near-white band wanted dark letters) is
-        // DELETED with the band it served. The red-flash ground therefore no
-        // longer reaches the selected glyphs at all — a selection standing
-        // through an invalid flash reads accent-on-red, which is the same
-        // selection it read before the flash.
+        // substring, kRedesignLabelOnAccent for its glyphs (the dark letters
+        // since 2026-10-01, the accent being the light ink) — the product's
+        // one selection pairing, which the flag editor's marker-lane box
+        // paints too. THE RUN IS SHOWN ONCE PER REGION, the flag editor's own
+        // rule (render_flag_editor_box): with a selection standing, the label
+        // white run is clipped to the band's COMPLEMENT inside the text
+        // viewport and the dark run to the band, so no pixel takes both inks
+        // and every antialiased edge blends against the ground it sits on.
+        // The complement is FOUR rectangles here — the columns left and right
+        // of the band and the strips above and below it, the band being the
+        // line's ascent-plus-descent inside a taller field — and a part with
+        // nothing in it is left out. The red-flash ground reaches only the
+        // unselected glyphs: a selection standing through an invalid flash
+        // reads accent-on-red, the same selection it read before the flash.
         if (has_sel) {
             const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
             const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
+            const int sel_w = (hx1 > hx0) ? (hx1 - hx0) : 1;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                                  kRedesignAccent.b);
-            cairo_rectangle(cr, hx0, band_y,
-                            (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
+            cairo_rectangle(cr, hx0, band_y, sel_w, band_h);
             cairo_fill(cr);
             cairo_restore(cr);
+
+            const double fy0 = static_cast<double>(field_inner.y);
+            const double fy1 = fy0 + static_cast<double>(field_inner.h);
+            const double bx0 = static_cast<double>(hx0);
+            const double bx1 = static_cast<double>(hx0 + sel_w);
+            const double by0 = static_cast<double>(band_y);
+            const double by1 = static_cast<double>(band_y + band_h);
+            cairo_save(cr);
+            if (bx0 > view_x0)
+                cairo_rectangle(cr, view_x0, fy0, bx0 - view_x0, fy1 - fy0);
+            if (view_x0 + view_w > bx1)
+                cairo_rectangle(cr, bx1, fy0, (view_x0 + view_w) - bx1,
+                                fy1 - fy0);
+            if (by0 > fy0)
+                cairo_rectangle(cr, bx0, fy0, bx1 - bx0, by0 - fy0);
+            if (fy1 > by1)
+                cairo_rectangle(cr, bx0, by1, bx1 - bx0, fy1 - by1);
+            cairo_clip(cr);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(cr, run, tx, baseline);
+            cairo_restore(cr);
+
+            cairo_save(cr);
+            cairo_rectangle(cr, hx0, band_y, sel_w, band_h);
+            cairo_clip(cr);
+            cairo_set_source_rgb(cr, kRedesignLabelOnAccent.r,
+                                 kRedesignLabelOnAccent.g,
+                                 kRedesignLabelOnAccent.b);
+            text_shape::show_shaped_run(cr, run, tx, baseline);
+            cairo_restore(cr);
+        } else {
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(cr, run, tx, baseline);
         }
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
-        text_shape::show_shaped_run(cr, run, tx, baseline);
         // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
         // IT (architect 2026-08-13, at his live test: "the blinking caret, the
         // I-beam, continues to blink in the text field even though it has lost
@@ -8299,8 +7971,9 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 //   a RESTING row         -> NO FILL AT ALL: the ground shows through, which
 //                            is what makes a lit row the only thing the eye
 //                            lands on
-//   the INK               -> kRedesignLabel in EVERY face (the icon glyphs
-//                            carry their own Breeze inks)
+//   the INK               -> kRedesignLabel, but kRedesignLabelOnAccent on
+//                            a LIT row wearing the live accent or its hovered
+//                            lift (the icon glyphs carry their own inks)
 //   HOVER                 -> kFolderRowHover under a 1px kFolderRowHoverOutline
 //                            frame, the button's own outline width and inset
 //   the HIGHLIGHT band    -> kRedesignAccent, kdenlive's own selection band
@@ -8461,12 +8134,20 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                         static_cast<double>(glyph));
             const int text_x = gx + glyph + gap;
 
-            // THE NAME, shaped through the one chokepoint, after the glyph — in
-            // the band's ONE ink (black on the accent would be the marker
-            // lane's rule, not this band's: the palette ruling of 2026-08-28
-            // gives the selected row white text, kdenlive's own band carries
-            // it, and a row that changes ink with its face would be a second
-            // thing to read).
+            // THE NAME, shaped through the one chokepoint, after the glyph.
+            // ITS INK FOLLOWS THE GROUND UNDER IT (architect 2026-10-01): the
+            // label white on the band's ground, the hover wash and the
+            // INACTIVE accent (#2d454f, white 9.86:1), and
+            // kRedesignLabelOnAccent on a lit row wearing the LIVE accent —
+            // the light ink, on which white reads 1.91:1 — or its hovered
+            // lift kFolderRowHoverSelected (white 1.58:1); render.h's block
+            // at that constant. The lit fill above is the live accent exactly
+            // when the window is activated (accent_for_focus) or the row is
+            // hovered, so the same two terms pick the ink.
+            const bool on_accent =
+                lit && (hovered || app.window_activated);
+            const GuiColor& name_ink =
+                on_accent ? kRedesignLabelOnAccent : kRedesignLabel;
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
             // THE SEAT: a row is a box, so its label takes the box solver's
@@ -8482,8 +8163,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            cairo_set_source_rgb(cr, name_ink.r, name_ink.g, name_ink.b);
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);

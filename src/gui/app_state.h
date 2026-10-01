@@ -1689,7 +1689,7 @@ struct ScrollDragState {
 //   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE, ON THE WRITERS
 //     THEMSELVES — the S/T, W/P and A/B assignment sites,
 //     with every command that reaches one (the three view selectors, Ctrl+Tab,
-//     the view bar, the settings keys, the
+//     the icon row's view group, the settings keys, the
 //     propagate pastes and undo/redo) inheriting it by
 //     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
 //     ACTIVE DOMAIN, and nothing stops a keyboard command, a mouse click or a
@@ -1953,14 +1953,15 @@ struct TrimBarPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
-// (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
-// plus the view bar's THREE, row 3's two
-// TABS, row 4's TWENTY-THREE
+// (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus),
+// row 3's two
+// TABS, row 4's TWENTY-SIX
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout, COPY VALUE between Redo and Render since
 // 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
-// COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-29 evening,
+// COMPANIONS follow since 2026-08-18, with LOAD IN PLACE at their tail since
+// 2026-09-01, and THE VIEW GROUP'S THREE close the row flush right since
+// 2026-10-01), then the bottom row's SEVENTEEN (re-counted 2026-09-29 evening,
 // when Edit Flag and Copy Value went up and Jump to Defining Marker joined;
 // Edit Flag was deleted later that evening) —
 // the transport three, the MARKER-VERB GROUP'S SIX (kMarkerVerbGroup,
@@ -2006,11 +2007,10 @@ struct TrimBarPressSeed {
 // two of them (as row 1's Settings and Navigation were, 2026-08-03) renumbers
 // the stash harmlessly.
 enum class RedesignButton {
-    // Row 1, the menu row: the LEFT-FLOATING anchors, then the three of the
-    // RIGHT-FLOATING view bar (2026-08-02) in their painted order — the
-    // absolute view selectors S+W / T+W / T+P, which are bare 1/2/3. (A
-    // fourth, S+M on the backtick, led the bar from 2026-09-15 until the
-    // magnification level markers column's deletion, architect 2026-09-23.)
+    // Row 1, the menu row: the three anchors, flush left (the right-floating
+    // view bar's three absolute view selectors stood behind them from
+    // 2026-08-02 until 2026-10-01 and are the icon row's VIEW GROUP now, the
+    // row's last entries below).
     //
     // SETTINGS PAINTS LAST IN THE LEFT FLOAT (architect 2026-08-03, moving it
     // behind the NAVIGATION anchor that then sat between it and File). The float
@@ -2084,7 +2084,7 @@ enum class RedesignButton {
     // renders button's shift-click or long press — until the panel itself
     // was deleted on 2026-09-30. kHelpPopupItems, DropdownMenu::Help and every
     // arm that named the anchor went with it.)
-    File, Edit, Settings, ViewSW, ViewTW, ViewTP,
+    File, Edit, Settings,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
     // carry their ordinary tooltips, and their Ctrl+Tab switches the active
@@ -2151,10 +2151,9 @@ enum class RedesignButton {
     // their own group here from 2026-09-04 to 2026-09-15, one button per
     // axis toggling Source/Target and Warp/Phase Reset away from home. The
     // architect deleted the category whole (bare `t` and bare `p` with it):
-    // the axes stay reachable through the three view selectors and the view bar
-    // alone,
-    // which is what a two-button group bought nothing over. The row's group
-    // count drops by one with it.)
+    // the axes stay reachable through the three view selectors alone — the
+    // keys and the view group at this row's right end — which is what a
+    // two-button group bought nothing over.)
     //
     // THE 2026-08-18 ROSTER RELAYOUT is what gave the row that tail and took
     // its verbs away, both in the architect's own words: "move
@@ -2631,6 +2630,19 @@ enum class RedesignButton {
     // dialog-ok-apply, the checkmark, which is now the row's one checkmark and
     // is why the render player's own Load in place button took it too.
     IconLoadInPlace,
+    // THE VIEW GROUP (architect 2026-10-01) — THE ROW'S LAST, FLUSH AT ITS
+    // RIGHT EDGE, painted last and winning any overlap (the overflow rule is
+    // at paint_icon_row): the three ABSOLUTE VIEW SELECTORS, Source+Warp,
+    // Target+Warp and Target+Phase on bare 1 / 2 / 3, the acts of the row-1
+    // view bar that stood 2026-08-02..2026-10-01 — kdenlive's workspace
+    // switcher reborn — unchanged in meaning and dispatch, its three labelled
+    // buttons gone and the acts wearing the architect's 2026-08-11 glyphs
+    // (icons.h). A RADIO OF THREE, like the tabs: the lit button is the
+    // current view and a press on it is the consumed nothing (the `radio`
+    // column, kToolbarChords). LIVE in the `h` view (the three are on the
+    // mode's allowlist) and on a locked tab (navigation); DEAD under the grid
+    // iterations lamp (iteration_lock_greys).
+    ViewSW, ViewTW, ViewTP,
     // The BOTTOM ROW's transport cluster (row 8, architect-ratified
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
@@ -2725,8 +2737,8 @@ enum class RedesignButton {
     //     BUTTONS OVER ONE CHORD, which is what this collapse removes: with one
     //     button there is no wrong half to press, so the `radio` flag and the
     //     pair's `redesign_button_selected` lamp are DELETED rather than kept.
-    //     The generic radio consume is untouched — the view bar's three and the
-    //     tabs still use it. (The S/T and W/P rows used it too until 2026-09-04,
+    //     The generic radio consume is untouched — the icon row's view group
+    //     and the tabs use it. (The S/T and W/P rows used it too until 2026-09-04,
     //     when those pairs collapsed into single lamps for the same reason this
     //     one did: one button over one chord has no wrong half.)
     //
@@ -3009,11 +3021,10 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-09-29
-// late evening, when the Edit Flag button was deleted and Copy Value moved
-// between Redo and Render): SIX in row 1 (the
-// three menu anchors and the view bar's three), two in row 3, TWENTY-THREE in
-// row 4 and SEVENTEEN in the bottom row — 48. Of
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-01, when
+// the row-1 view bar's three selectors became the icon row's view group):
+// THREE in row 1 (the menu anchors), two in row 3, TWENTY-SIX in row 4 and
+// SEVENTEEN in the bottom row — 48. Of
 // those, FORTY-FIVE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
@@ -3038,95 +3049,6 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     // the current arithmetic coincidence.
     if (i < 0 || i >= kRedesignButtonCount) std::unreachable();
     return i;
-}
-
-// WHICH BUTTONS ARE ROW 1'S — the menu row's anchors plus the view bar's three,
-// named beside the roster because that is where a reader meets the membership.
-// The enum's order IS the painted order, so the six happen to be contiguous at
-// its head; this says ROW rather than "index < 6" anyway, because the row is
-// the fact and the contiguity is an accident of how the roster is written.
-//
-// ITS ONE CONSUMER IS THE DROPDOWN CLOSE RULE (on_motion's open-dropdown branch,
-// input_pointer.cpp): while a menu is up, a pointer inside a row-1 button that is
-// not a dropdown anchor CLOSES it, because only one button in that row is lit at
-// a time. WHAT THAT LEAVES, re-derived from the two predicates rather than
-// inherited (re-greped 2026-09-23 against the switch below and
-// redesign_button_is_menu_anchor): row 1 is SIX buttons and THREE of them are
-// anchors, so the close rule covers THE VIEW BAR'S THREE alone — the same
-// selectors it covered since EDIT became an anchor (2026-08-20), while
-// ITERATIONS was a fourth anchor (2026-08-27 to 2026-09-04), while HELP was
-// one (2026-09-03 to its deletion 2026-09-09) and while the magnification
-// level selector was the bar's fourth (2026-09-15 to its deletion
-// 2026-09-23). It was "Quit or the
-// view bar's three" while the Quit button
-// existed; the Navigation anchor's 2026-08-15 deletion moved this membership
-// not at all and neither Edit's arrival nor the Iterations anchor's arrival and
-// departure moved it either, an anchor JOINING
-// or LEAVING the row being the one change this rule cannot feel — which is why
-// the count above is re-derived here rather than the membership being edited.
-// It was briefly the hover predicate's too — an exemption letting row 1
-// hover under an open popup — and that exemption is retired: with the close rule
-// in front of it, a non-anchor row-1 button can no longer be hovered while a menu
-// is up (the motion that reaches it closes the menu first), and an ANCHOR's pill
-// comes from the painter's own open condition rather than the hover bit.
-//
-// EXHAUSTIVE, NO `default` ARM — redesign_button_enabled's rule for the same
-// reason: a new button fails to compile here until its row is stated, instead
-// of silently inheriting another row's answer.
-inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
-    switch (b) {
-        case RedesignButton::File:
-        case RedesignButton::Edit:
-        case RedesignButton::Settings:
-        case RedesignButton::ViewSW:
-        case RedesignButton::ViewTW:
-        case RedesignButton::ViewTP:
-            return true;
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
-        case RedesignButton::Save:
-        case RedesignButton::Undo:
-        case RedesignButton::Redo:
-        case RedesignButton::IconCopyValue:
-        case RedesignButton::IconRestrictUndo:
-        case RedesignButton::Render:
-        case RedesignButton::IconZoomFitBest:
-        case RedesignButton::IconWaveformMagnification:
-        case RedesignButton::IconFollow:
-        case RedesignButton::IconBpm:
-        case RedesignButton::IconIter:
-        case RedesignButton::IconFlatten:
-        case RedesignButton::IconListen:
-        case RedesignButton::IconReadOnly:
-        case RedesignButton::IconTooltips:
-        case RedesignButton::IconSettings:
-        case RedesignButton::IconHistory:
-        case RedesignButton::HistoryWalk:
-        case RedesignButton::HistoryCumulative:
-        case RedesignButton::HistoryRevert:
-        case RedesignButton::HistoryOlder:
-        case RedesignButton::HistoryNewer:
-        case RedesignButton::IconLoadInPlace:
-        case RedesignButton::TransportSkipBack:
-        case RedesignButton::TransportPlayStop:
-        case RedesignButton::TransportSkipForward:
-        case RedesignButton::IconMarkerDrop:
-        case RedesignButton::IconMarkerDelete:
-        case RedesignButton::IconMarkerDisable:
-        case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconJumpToDefiningMarker:
-        case RedesignButton::IconAddToSelection:
-        case RedesignButton::TransportWalkPrevious:
-        case RedesignButton::TransportWalk:
-        case RedesignButton::IconZoomOriginal:
-        case RedesignButton::TransportSwitchTab:
-        case RedesignButton::TransportDown:
-        case RedesignButton::TransportUp:
-        case RedesignButton::TransportLeft:
-        case RedesignButton::TransportRight:
-            break;
-    }
-    return false;
 }
 
 // WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-29 evening: the
@@ -3164,9 +3086,9 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // four verbs started answering with the bottom lane and the four companions
 // with the top strip the moment the membership above moved.
 // A membership predicate like redesign_button_is_tab, deliberately NOT the
-// exhaustive-switch shape: redesign_button_in_menu_row above is the roster's
-// one classification chokepoint (a new button fails to compile there until its
-// row is stated), and one chokepoint is enough.
+// exhaustive-switch shape: redesign_button_enabled is the roster's
+// classification chokepoint (a new button fails to compile there until its
+// answer is stated), and one chokepoint is enough.
 inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
     switch (b) {
         case RedesignButton::TransportSkipBack:
@@ -3236,9 +3158,10 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // table: it was hoisted for the collapse rule (which asked whole groups) and
 // KEPT when that rule was deleted on 2026-08-14, because the dividers are a
 // fact about the roster's order and this is where the order is stated. ONE
-// reader now — paint_icon_row's layout walk.
+// reader now — paint_icon_row's two layout walks (the left groups' and the
+// flush-right view group's).
 //
-// THE SIX GROUPS, in painted order: SAVE ALONE, then UNDO, REDO, COPY VALUE
+// THE SEVEN GROUPS, in painted order: SAVE ALONE, then UNDO, REDO, COPY VALUE
 // and RENDER (Copy Value up from the bottom row since 2026-09-29, members
 // joining and leaving and no boundary moving), THE
 // VIEWPORT-CLASS GROUP (Full zoom out leading, the
@@ -3248,9 +3171,14 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // 2026-09-29, ENABLE TOOLTIPS and SETTINGS — the load-in-place left it on
 // 2026-09-01) and THE
 // HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
-// load-in-place at the tail.
+// load-in-place at the tail — and, FLUSH AT THE ROW'S RIGHT EDGE, THE VIEW
+// GROUP: Source+Warp leading Target+Warp and Target+Phase.
 //
-// SIX SINCE 2026-09-29, UP FROM FIVE (architect, after his accidental Save
+// SEVEN SINCE 2026-10-01, UP FROM SIX: the row-1 view bar's three acts came
+// down as the view group, its own separator-led group at the row's right
+// end (paint_icon_row places it and states the overflow rule).
+//
+// SIX FROM 2026-09-29, UP FROM FIVE (architect, after his accidental Save
 // presses at the tablet's 200 %): UNDO OPENS A GROUP, so a separator stands
 // between Save and Undo and the toolbar four are two groups. The same day
 // CENTER left the viewport-class group for the bottom row's walk group (a
@@ -3262,7 +3190,7 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // leaving a hollowed group behind: IconAudioView stopped opening a group and
 // nothing takes its place, so the leader count fell by one and no other
 // group's membership moved (bare `t`/`p` and the lamps bought the group
-// nothing the view bar and the three view selectors do not already answer). The paragraphs
+// nothing the three view selectors do not already answer). The paragraphs
 // below are the group's history up to that deletion, kept for the record.
 //
 // SIX SINCE 2026-09-04'S ITERATIONS DELETION, which OPENED one group and moved
@@ -3352,6 +3280,9 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
         case RedesignButton::IconHistory:
+        // THE VIEW GROUP'S LEADER (architect 2026-10-01): Source+Warp opens
+        // the flush-right group, its separator standing on the group's left.
+        case RedesignButton::ViewSW:
             return true;
         default:
             return false;
@@ -3412,8 +3343,8 @@ inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
 
 // IS THIS BUTTON A MENU ANCHOR? DERIVED from the menu list above through the
 // anchor owner, never a second list — so a menu added here is an anchor
-// everywhere at once (the close rule's skip, the press claim, the history
-// partition). The COLLAPSE walk asked it too until 2026-08-13, then asked
+// everywhere at once (the press claim, the history partition, the
+// hover-fade kind). The COLLAPSE walk asked it too until 2026-08-13, then asked
 // `redesign_button_in_icon_row` instead; both are gone with that rule
 // (2026-08-14), and a menu cannot vanish because nothing hides a button in
 // these rows at all any more.
@@ -3425,8 +3356,8 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 
 // WHICH ROSTER BUTTONS FADE THEIR HOVER, AND HOW (architect 2026-09-27, the
 // Breeze port at render.h's HoverFade): the two tabs fade both ways and
-// restart (QTabBar's engine); every tool button — the icon row, the bottom
-// row, row 1's view bar — snaps in and fades out (QToolButton's); row 1's
+// restart (QTabBar's engine); every tool button — the icon row and the
+// bottom row — snaps in and fades out (QToolButton's); row 1's
 // MENU ANCHORS do not animate at all, Breeze having no QMenuBar engine, so
 // their pill stays the hard switch it was (std::nullopt: no edge is stamped).
 inline constexpr std::optional<HoverFadeKind>
@@ -5590,7 +5521,8 @@ struct AppState {
     // Active markers view — THE COLUMN AXIS, two letters: 'W' = warp markers,
     // 'P' = phase reset markers (a third, M, left with the magnification
     // level markers column, architect 2026-09-23). Selected absolutely by the
-    // three view selectors and the view bar. Determines which marker
+    // three view selectors (the keys and the icon row's view group).
+    // Determines which marker
     // collection is visible / edited / hit-tested and which colour set its
     // flags wear. 'P' PAIRS WITH TARGET VIEW ALONE (architect 2026-09-21: a
     // phase reset is heard accurately only in target view):
@@ -5604,8 +5536,9 @@ struct AppState {
     // Active audio view: 'S' = source (the authored timeline), 'T' =
     // target (the engine's deformed-output timeline). Orthogonal to
     // active_markers_view ('W'/'P'), and written by the same writers that
-    // axis has: the three absolute view selectors (with the view bar, which
-    // synthesizes them) and the settings editor's typed `active_audio_view=`.
+    // axis has: the three absolute view selectors (with the icon row's view
+    // group, which synthesizes them) and the settings editor's typed
+    // `active_audio_view=`.
     // While 'T', app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level carry target-frame values; the live fields'
     // interpretation flips on toggle. Target view was
@@ -7257,9 +7190,12 @@ struct AppState {
     //       ahead of the band (GuiPointerLeaveReason, input_core.h).
     // Entries (2)-(4) share one gated writer, disarm_menu_row, which is inert
     // while a menu is open — there the popup's own routes decide, and (1) is
-    // what they call. The ONE close that KEEPS the mode is the row-1 hover
-    // close, a step ACROSS the bar rather than a dismissal, and it re-arms
-    // explicitly at its own site.
+    // what they call. NO CLOSE KEEPS THE MODE since 2026-10-01: its one
+    // keeper, the row-1 hover close onto a view-bar button (a step ACROSS the
+    // bar rather than a dismissal, re-arming at its own site), left with the
+    // bar, so menu CLOSED and row ARMED has no producer today — the armed
+    // hover open, the band exit and the pointer-leave hook's row-1 exception
+    // below all meet the bit false whenever no menu is up.
     // IT LIVES IN THIS STRUCT because the popup and its mode are one surface's
     // state, and because the reset then carries the bit for free on the ordinary
     // path; the unconditional clear above the early return is what makes the
@@ -7413,7 +7349,7 @@ struct AppState {
     //   the SETTINGS anchor — the one anchor left in this column since
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
-    //   LIT — the view bar's three (bare 1/2/3), the
+    //   LIT — the view group's three (bare 1/2/3), the
     //   COMMIT-FACED SAVE (Ctrl+S, the act itself), BOTH row-3 tabs
     //   (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — the tabs switch tabs in here like everywhere else), the
@@ -7800,7 +7736,7 @@ struct AppState {
         //     lists, and the S/T flip re-lays the same list on another domain.
         //     The clear sits at each axis's own chokepoint — switch_active_-
         //     audio_view_to and GuiActiveViews::select_active_markers_view — which is
-        //     what makes the three view selectors and the view bar inherit it by
+        //     what makes the three view selectors and the view group inherit it by
         //     composition.
         //   - entry and exit (the whole-struct reset at both owners)
         //   - bare HOME / END (2026-08-05), the mode's SHIFT FORMER's press,
@@ -8712,7 +8648,7 @@ struct AppState {
     // in input_key_dispatch.cpp, Shift+S's crossing shape); and while the lamp
     // stands every road back to source refuses — bare 1 and its three
     // fellow selectors at the iteration lock's gate
-    // (iteration_lock_key_blocked's delta (a)), the view bar's three greying
+    // (iteration_lock_key_blocked's delta (a)), the view group's three greying
     // with them,
     // the settings editor's typed `active_audio_view=S` on the lock's card,
     // and the undo/redo restore, Shift+S, the load in place and the `h` entry
@@ -9219,7 +9155,6 @@ struct AppState {
 //   dropdown_item_enabled — every item greys but Quit
 //     (input_key_dispatch.cpp)
 //   GuiCarTransport::admits — the car transport refuses (car_transport.cpp)
-//   view_bar_focused — the view bar's focus answer (below)
 //   menu_anchor_live — the mode partition: Edit and Settings dead (below)
 //   redesign_button_enabled — the roster's greying arm (below)
 // (The on-screen keyboard's standing predicate carried
@@ -9262,68 +9197,17 @@ inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
 // inactive surface at all. It stood for the evening of 2026-09-02, was deleted
 // for the hours of 2026-09-03 the band covered row 1 (no producer), came back
 // with the gap's move above the menu row that evening, and is gone again with
-// this ruling; what it was landed FOR now lives at view_bar_focused below,
-// which is the surface that actually needed it.
+// this ruling.
 //
 // THE `h` HISTORY VIEW WAS NEVER IN IT: a MODE is not a MODAL. The view keeps
-// the keyboard, its own allowlist including the view bar's three selectors, so its
-// header stays focused and its bar stays blue.
+// the keyboard, its own allowlist including the three view selectors, so its
+// header stays focused.
 //
 // DAMAGE: the activation hook damages the top strip (and the standing modal
 // row and panel) on every focus edge, so the one producer of this verdict
 // repaints the header on both of its edges with no damage call of its own.
 inline bool chrome_focused(const AppState& a) {
     return a.window_activated;
-}
-
-// IS THE VIEW BAR FOCUSED? THE ROW'S RIGHT FLOAT ASKS ITS OWN QUESTION — the
-// header's verdict AND no folder overlay standing — and this is the one place
-// the second term lives (its readers are paint_menu_row's `bar_focused` local,
-// which hands it to the bar's background and to view_bar_face, so the div and
-// its four buttons cannot part).
-//
-// THE SECOND TERM IS KDENLIVE'S LOOK UNDER A MODAL (architect 2026-09-02, on
-// the view bar he had just been given its unfocused face: "top right 1/2/3
-// buttons — those look right when window loses focus but when media player/
-// picker is open they don't have the disabled background for the nonselected
-// buttons — if that was deliberate, they should have the disabled bg as that
-// is what kdenlive does with a modal"), and it was THE ONLY WAY THOSE BUTTONS
-// GREY until 2026-09-10 (there were three of them then): the crops named "disabled" are the unfocused window
-// (render.h's view-bar block), so the ground swap was all that showed
-// redesign_button_enabled's first arm had killed them. THE ROW HAS A DISABLED
-// FACE OF ITS OWN SINCE THAT DAY — the DEAD UNSELECTED labels at
-// kRedesignDisabledMix, the view bar's painter (three of them since the fourth
-// selector landed 2026-09-15) — and it reads the ENABLED bit,
-// so under the band the dimmed ink and this ground are the two halves of one
-// face rather than two cues; this term is unchanged by it.
-//
-// IT IS THE BAR'S AND NOT THE HEADER'S SINCE 2026-09-03 EVENING, when the
-// File anchor went live under the band and the header went back to reading
-// the activation flag alone (chrome_focused above): his two sentences that
-// evening are "leave File open" and "the 1/2/3 ... can keep the greyed-out
-// disabled face they have now", and the only way to honour both is for the
-// bar to carry the modal term by itself. Its unfocused ground #292c30 is
-// NUMERICALLY EQUAL to the focused header ground, so the bar now sits one
-// shade off the row it floats on rather than reading as part of it — which is
-// exactly the separation the crops show on a real focus loss.
-//
-// THE ITERATION LOCK IS NOT A TERM HERE (architect 2026-09-10, at his
-// screenshot): the lock kills these three exactly as a standing overlay does
-// (iteration_lock_greys, below, which their enabled arm reads), and the
-// obvious move was to show it the way the overlay shows it — but THIS FACE IS
-// NOT A DISABLED FACE. The unfocused bar keeps its labels fully legible; what
-// it says is "this window is not the active one", which is true under a modal
-// and false under a lit lamp on a focused window. So the ground stays out of
-// it and THE LOCK'S FACE IS THE LABEL'S INK (architect 2026-09-10 the same
-// day, at his mockup: "accepted") — a dead UNSELECTED selector's label at
-// kRedesignDisabledMix over this ground, the selected one full, painted at the
-// view bar's own painter (paint_handler.cpp) and read nowhere else.
-//
-// DAMAGE: a panel's open and close each invalidate the whole window, and the
-// activation hook damages the top strip on every focus edge, so both terms
-// repaint this bar with no damage call of its own.
-inline bool view_bar_focused(const AppState& a) {
-    return chrome_focused(a) && !folder_overlay_stands(a);
 }
 
 // THE PLAY/PAUSE BUTTON'S FACE — the word its hint says and the glyph it
@@ -10053,7 +9937,7 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // THE BOTTOM ROW: gap 1, the tab row, the trim bar, the
 // ruler, the marker lane, the waveform entire and gap 2 — and THE MENU ROW
 // AND THE ICON ROW STAND ABOVE IT, VISIBLE AND CARRYING THE `h` VIEW'S
-// PARTITION (File live, the other two anchors, the view bar and every icon
+// PARTITION (File live, the other two anchors and every icon
 // dead: the face is redesign_button_enabled's head over
 // menu_anchor_live, and the press is the veil's with the live anchor
 // exempted — architect 2026-09-03 evening). The height is the bottom row's
@@ -12393,7 +12277,7 @@ inline bool any_tab_read_only(const AppState& a) {
 //
 // THE MEMBERS FALL IN THREE GROUPS, as the keyboard gate's own admissions do:
 // the marker verbs, History, the padlock, BPM iterations, Settings and the
-// view bar's three GREY OUTRIGHT under a lit lamp; Up/Down grey UNLESS A
+// view group's three GREY OUTRIGHT under a lit lamp; Up/Down grey UNLESS A
 // BOUND CELL (Lower or Upper) IS ADDRESSED, the gate's bound-axis admission;
 // Left/Right follow the lane (horizontal_arrow_step_lock_admits).
 //
@@ -12403,7 +12287,7 @@ inline bool any_tab_read_only(const AppState& a) {
 //     verbs, Up/Down);
 //   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the
 //     Toggle History View button (a locked tab reads history exactly as a
-//     writable one does), the view bar's three (bare 1/2/3 are on
+//     writable one does), the view group's three (bare 1/2/3 are on
 //     read_only_key_blocked's allowlist) and the
 //     PADLOCK — so those arms read this predicate and nothing else. Nothing
 //     is lost by the omission: the two locks are MUTUALLY EXCLUSIVE
@@ -12435,23 +12319,12 @@ inline bool any_tab_read_only(const AppState& a) {
 //     The tab switch left this list for one afternoon on 2026-09-10, as a
 //     per-tab member, and came back to it that evening: under the piece-wide
 //     exclusion there is no locked tab to switch into.
-//   * THE VIEW BAR'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10 (architect,
-//     that morning) and they are the membership's one SILENT entry, in both
-//     of the ways a member usually speaks. NO SENTENCE, still: the row carries
-//     no tooltip in any state (the row-1 exclusion at the constant table), so
-//     the fork below can never be asked for them and their card is the KEY'S,
-//     raised by the gate. A FACE THEY DO HAVE since 2026-09-10 (architect, at
-//     his mockup: "accepted"), and it is the LABEL'S INK: view_bar_face still
-//     reads hovered / selected / pressed and no enabled bit — the ground, the
-//     box and the metrics are untouched — while the painter dims a DEAD
-//     UNSELECTED selector's label by kRedesignDisabledMix over the bar's
-//     ground, the icon row's own disabled ink through the one mix_color owner.
-//     THE SELECTED VIEW KEEPS ITS FULL INK: all four go dead together, and
-//     the one that reports where you stand is telling the truth. So membership
-//     buys them the dead press, the stopped hover outline (the face composes
-//     the enabled term) and now three dimmed labels; the bar's unfocused ground
-//     is still NOT that face, since it keeps every label legible and says the
-//     window is inactive, which under a lit lamp on a focused window is a lie.
+//   * THE VIEW GROUP'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10
+//     (architect, that morning, while they were the row-1 view bar): bare
+//     1/2/3 are refused under the lamp, so the three wear the icon row's own
+//     disabled face (2026-10-01) — the glyph and any lit selected fill at
+//     kRedesignDisabledMix, the selected view's dimmed lamp still saying
+//     where you stand — and the KEY's card carries the sentence.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
@@ -12519,18 +12392,15 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // and the face greys — its read-only half is the tab's bare bit, at
         // its enabled arm.
         case RedesignButton::IconSettings:
-        // THE VIEW BAR'S THREE (architect 2026-09-10): bare 1/2/3 run the
+        // THE VIEW GROUP'S THREE (architect 2026-09-10): bare 1/2/3 run the
         // audio-view and column switches, so the delta blocks all three
         // unconditionally
         // — iteration_lock_key_blocked's first test is a flat chord list
         // and not a "would this press move the column" question, which is why
         // S+W under a lit lamp in S+W refuses too. WHAT MEMBERSHIP BUYS THEM
-        // IS THE DEAD PRESS: arm_redesign_press consumes a disabled button
+        // IS THE DEAD PRESS — arm_redesign_press consumes a disabled button
         // silently, the road a standing overlay's greys already take, and the
-        // KEY carries the sentence. Their RESTING FACE IS UNCHANGED — the row
-        // has no disabled paint and the bar's unfocused ground is not one —
-        // and the hover outline is the one thing that follows the grey; the
-        // account of what a reader sees is at their enabled arm below.
+        // KEY carries the sentence — and the icon row's disabled face.
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTW:
         case RedesignButton::ViewTP:
@@ -14472,7 +14342,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     read-only term to compose: TOGGLE READ-ONLY (under a lit lamp no tab is
 //     locked at all), TOGGLE HISTORY VIEW, whose arm adds the publishing
 //     refusal (its mode is claimed above the gate and a locked tab reads
-//     history as a writable one does), and THE VIEW BAR'S THREE SELECTORS on
+//     history as a writable one does), and THE VIEW GROUP'S THREE SELECTORS on
 //     one arm of their own. TWO ARMS ASK A READ-ONLY BIT WITH NO
 //     ITERATION TERM, AND THEY ASK TWO DIFFERENT BITS: TOGGLE INHERIT reads
 //     the ACTIVE TAB's, then FORKS on the lamp rather than greying on it —
@@ -14520,7 +14390,7 @@ inline bool playback_launch_playable(const AppState& a,
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
-//     viewport), the VIEW BAR'S THREE
+//     viewport), the VIEW GROUP'S THREE
 //     (bare 1/2/3), Full zoom out and Center, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
@@ -14610,7 +14480,7 @@ inline bool playback_launch_playable(const AppState& a,
 // EVERY roster button is dead BUT THE FILE ANCHOR,
 // which the menu row keeps lit above the band (architect 2026-09-03 evening;
 // the anchors answer at the head of the body from menu_anchor_live, whose
-// mode clause kills the other two, and the view bar is dead with the rest).
+// mode clause kills the other two, and the view group is dead with the rest).
 // THE LOAD IS THE SAME SHAPE (architect 2026-09-24): with no piece to
 // dispatch on every button greys but the File anchor, whose Quit row stays
 // live.
@@ -14867,15 +14737,15 @@ inline bool redesign_button_enabled(const AppState& a,
     // THE MENU ROW STANDS ABOVE THE BAND AND TAKES THE `h` VIEW'S OWN
     // PARTITION (architect 2026-09-03 evening; the band started at the tab
     // row's first pixel then and starts at the ICON ROW'S FOOT since
-    // 2026-09-09, so the menu row — its three anchors and the view bar — and
+    // 2026-09-09, so the menu row — its three anchors — and
     // the icon row are the roster lanes on screen while a content stands,
     // and "everything
     // else like what we do with history: all the commands in File are
     // available in history mode. Leave that for the player, the picker and
     // the AV stats"). The anchors answered above, from the ANCHOR OWNER
     // (menu_anchor_live), which File alone survives; every other button on
-    // the row and off it — the view bar's three included, whose grey shows
-    // through view_bar_focused's ground swap — is dead. The anchors' OPEN
+    // the row and off it — the view group's three included — is dead. The
+    // anchors' OPEN
     // reads that same owner at toggle_dropdown's guard, and the veil consumes
     // every press but a live anchor's (press_on_live_menu_anchor,
     // input_pointer.cpp). (The band killed File too for the hours between the
@@ -14930,11 +14800,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // VIEW left the group on 2026-09-10 and for the same lock, at its own
         // arm below.)
         //
-        // (THE VIEW BAR'S SELECTORS LEFT THIS ARM ON 2026-09-10 with the
-        // iteration lock — they answer at their own arm below, where the
-        // `false` buys a
-        // DEAD PRESS and no paint at all, this row still having no disabled
-        // face to wear.)
+        // (THE VIEW GROUP'S SELECTORS answer at their own arm below, the
+        // iteration lock's members since 2026-09-10.)
         // (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
         // 2026-08-18 — the HISTORY COMPANIONS, whose keys are bound only inside
         // the `h` view and which grey at rest for that reason. They held the
@@ -15347,8 +15214,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // (iteration_lock_greys) with no read-only term — bare `p` and bare
         // `t` were each read-only-legal, a column or S/T switch authoring
         // nothing. The architect deleted both buttons whole that day; the
-        // view bar's three below carry the same delta on for the selectors.)
-        // THE VIEW BAR'S THREE TAKE THAT SAME DELTA (architect 2026-09-10),
+        // view group's three below carry the same delta on for the selectors.)
+        // THE VIEW GROUP'S THREE TAKE THAT SAME DELTA (architect 2026-09-10),
         // and they left the never-grey group above for it: the three selectors COMPOSE
         // the column chokepoint, so they are the three chords the column
         // selectors block (iteration_lock_key_blocked's first test), and a
@@ -15356,37 +15223,20 @@ inline bool redesign_button_enabled(const AppState& a,
         // here through arm_redesign_press's disabled line, which consumes the
         // press silently and lets the KEY's card be the one sentence.
         //
-        // WHAT THIS ARM BUYS AT REST IS THE LABEL'S INK. view_bar_face still
-        // reads hovered / selected / pressed and no enabled bit — the box's
-        // own faces are untouched — and the row still has no tooltip (the
-        // row-1 exclusion at the constant table), so a `false` here changes
-        // what the PRESS does and, in paint, the LABEL alone: the view bar's
-        // painter dims a dead UNSELECTED selector's by kRedesignDisabledMix
-        // over the bar's ground and leaves the SELECTED view's full. IT ALSO TAKES THE
-        // HOVER OUTLINE WITH IT, the row's one honest consequence: the hover
-        // recompute composes this term into `face.hovered`
+        // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
+        // three having come down from row 1 to the icon row's view group):
+        // the glyph and any lit selected fill at kRedesignDisabledMix, as on
+        // every dead button of that row (paint_icon_row), the selected view's
+        // dimmed lamp still saying where you stand; the hint names the act and
+        // the grey is the message. IT ALSO TAKES THE HOVER OUTLINE WITH IT: the
+        // hover recompute composes this term into `face.hovered`
         // (recompute_redesign_button_hover, input_pointer.cpp — the face gets
         // the enabled term and the hint does not), so under a lit lamp the
         // accent frame stops following the pointer here, which is the standing
         // reading of a hover as a promise the pointer can act. The repaint is
         // that walk's own per-tick comparator, no damage call anywhere here.
-        //
-        // THE BAR'S UNFOCUSED GROUND WAS TRIED AS
-        // THAT FACE AND HE REFUSED IT the same morning, at his screenshot: the
-        // unfocused bar keeps its labels fully legible and what it says is
-        // that the window is inactive, which under a lit lamp on a focused
-        // window is simply untrue — so view_bar_focused takes no lock term.
-        // THE FACE THAT FINISHED THIS ARM LANDED THAT EVENING (architect
-        // 2026-09-10, at his mockup: "accepted") AND IT IS THE LABEL'S INK
-        // ALONE: the view bar's painter (paint_handler.cpp) dims a DEAD
-        // UNSELECTED selector's label by kRedesignDisabledMix over the bar's
-        // ground — row 2's disabled ink through the one mix_color owner, no
-        // second formula — while the SELECTED view keeps its full ink, all
-        // three going dead together and the one that reports where you stand
-        // being true whatever the lamp does. The ground, the box faces and
-        // every metric are unchanged, and the row still has no tooltip, so the
-        // selector key's own card is what says it in words and the lit Grid
-        // Iterations lamp one row down is what says why.
+        // The selector key's own card is what says it in words and the lit
+        // Grid Iterations lamp beside it is what says why.
         //
         // NO READ-ONLY TERM, the column lamp's reading of the gate exactly:
         // the selectors are navigation, on read_only_key_blocked's allowlist,
@@ -15395,9 +15245,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // mutually exclusive. AND THE `h` VIEW NEVER REACHES
         // THIS ARM: bare 1/2/3 are on the mode's allowlist,
         // so the derived partition above answers LIVE for all three and the two
-        // modes' greys never meet on this row. THE CROPS NAMED "disabled" ARE
-        // THE UNFOCUSED WINDOW and never this bit (architect 2026-08-02; the
-        // record and the arithmetic are at kRedesignViewBarBg, render.h).
+        // modes' greys never meet on this row.
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTW:
         case RedesignButton::ViewTP:
@@ -16124,8 +15972,8 @@ inline bool redesign_button_enabled(const AppState& a,
     return true;
 }
 
-// THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
-// buttons, row 3's tabs and row 4's TOGGLES — the two VIEW LAMPS and the WALK
+// THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 3's tabs and row 4's
+// TOGGLES and its view group's three radios — the two VIEW LAMPS and the WALK
 // LAMP, which were three radio PAIRS until the architect collapsed them on
 // 2026-09-04; follow, iteration, the TRIM REGION toggle (a
 // toggle again since 2026-08-18, its lamp reading the overlay's visibility),
@@ -16151,9 +15999,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // cannot rest open, and `m` never reaches dispatch while it is up), so lighting
 // it would advertise a mode this product does not have.
 // THE VIEW PAIR'S ONE SPELLING (2026-09-17): "<audio>+<column>" — `S+W`,
-// `T+P` — the label the view bar's three buttons paint (kViewBarButtons,
-// paint_handler.cpp, each entry naming its two letters and composing here)
-// and the artist line the car transport publishes for the active views
+// `T+P` — the artist line the car transport publishes for the active views
 // (GuiCarTransport::derive, car_transport.cpp). One composer, so a respelling is
 // one edit; the letters are the two axes' own (`active_audio_view`,
 // `active_markers_view`).
@@ -16173,7 +16019,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     // tabs read app.active_tab_view in every state and the override is gone
     // with the repurposing.)
     switch (b) {
-        // THE VIEW BAR READS THE LIVE COMBINATION — both axes at once, which is
+        // THE VIEW GROUP READS THE LIVE COMBINATION — both axes at once, which is
         // what an ABSOLUTE selector reports — so a button lights however the
         // state was reached: a selector key, a restore, a typed setting or one
         // of these three. EXACTLY ONE IS EVER LIT since 2026-09-21: the three
@@ -16193,7 +16039,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // 2026-09-15 — Source + Warp is view 1 and the home state, so the
         // audio lamp lit in TARGET and the marker lamp in PHASE RESET, each
         // reading the very axis its own chord flipped. The architect deleted
-        // both buttons whole with bare `t`/`p`; the view bar's three above
+        // both buttons whole with bare `t`/`p`; the view group's three above
         // are the axes' one remaining face.)
         // FOLLOW'S LAMP (architect 2026-09-23): the same toggle pattern,
         // reading the live bit bare `f` flips. It reports the lamp, not
@@ -16396,7 +16242,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // not another predicate beside this one.
 //
 // A NAMED LIST WITH A `default`, deliberately, and not the exhaustive shape
-// redesign_button_in_menu_row takes: this is not a classification of the
+// redesign_button_enabled takes: this is not a classification of the
 // roster (where a new button must be forced to state its row) but a list of
 // the four buttons that HAVE a second glyph, so the honest default for a new
 // button is "wears its table icon".
@@ -16833,9 +16679,9 @@ static_assert(!redesign_button_shift_admits(RedesignButton::IconCopyValue) &&
 // button has no tooltip", and the buttons that carry none are the WHOLE MENU
 // ROW — stated as the row rather than as a count, so a button added to row 1
 // inherits the exclusion instead of falsifying a number. The switch's null arms
-// are exactly redesign_button_in_menu_row's true arms — the same NAMES, and the
-// count is deliberately not restated here: that predicate is the roster's one
-// forced-classification site and owns the membership.
+// are exactly redesign_button_is_menu_anchor's true arms, row 1 holding the
+// anchors alone — the same NAMES, and the count is deliberately not restated
+// here.
 //
 // THE MENU ROW CARRIES NO TOOLTIPS, and that is the RULE rather than a list of
 // names (architect 2026-07-31): row 1's buttons are word labels that already
@@ -16938,16 +16784,10 @@ struct RedesignTooltipText {
 };
 inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     switch (b) {
-        // Row 1 — the menu row: no tooltips, per the rule above. The view bar's
-        // THREE joined the exclusion with the row (2026-08-02; re-greped
-        // 2026-09-23 against the case labels below): their labels are the
-        // combinations themselves, so a hint could only restate them.
+        // Row 1 — the menu row: no tooltips, per the rule above.
         case RedesignButton::File:
         case RedesignButton::Edit:
-        case RedesignButton::Settings:
-        case RedesignButton::ViewSW:
-        case RedesignButton::ViewTW:
-        case RedesignButton::ViewTP:     return {nullptr, nullptr};
+        case RedesignButton::Settings:   return {nullptr, nullptr};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
@@ -16988,8 +16828,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (THE TWO VIEW LAMPS — Toggle Audio View (T) and Toggle Marker
         // Column (P), one line each, neither with a shifted twin — stood here
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
-        // category: their axes are the three view selectors' and the view bar's
-        // alone now.)
+        // category: their axes are the three view selectors' alone now.)
         // FULL ZOOM OUT AND CENTER (2026-08-12, the icon row's zoom pair until
         // Center moved to the bottom row's walk group on 2026-09-29 with its
         // words unchanged); the accelerators are the table's own
@@ -17189,6 +17028,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (tooltips-on-disabled, architect 2026-08-07).
         case RedesignButton::IconLoadInPlace:
             return {"Load in Place (')", nullptr};
+        // THE VIEW GROUP (architect 2026-10-01): each hint is its view's name
+        // and its bare digit, the acts' own names in Title Case. A radio's
+        // lit button keeps its name too — the press there is the consumed
+        // nothing the lamp shows.
+        case RedesignButton::ViewSW:     return {"Source+Warp (1)", nullptr};
+        case RedesignButton::ViewTW:     return {"Target+Warp (2)", nullptr};
+        case RedesignButton::ViewTP:     return {"Target+Phase (3)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // THE TWO SKIPS ADMIT CTRL (architect 2026-09-26, restated
@@ -17581,8 +17427,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         RedesignButton b) {
     // (THE TABS' IN-VIEW SILENCE IS DELETED — 2026-08-18. While the `h` view
     // repurposed row 3 as its walk selector the two slots dropped their hints
-    // entirely, on the view bar's reasoning: their labels WERE the thing a hint
-    // would name, and "Tab A (Ctrl+Tab)" would have been a lie about the act.
+    // entirely: their labels WERE the thing a hint would name, and "Tab A (Ctrl+Tab)" would have been a lie about the act.
     // Ctrl+Tab switches tabs in the view now, so the ordinary hint is true
     // there and the tabs carry it in every state.)
     // THE SAVE BUTTON'S ONE OVERRIDE: inside the `h` view the button IS the
@@ -18036,15 +17881,8 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // swallow (rows 3 and 4, which it floats over) or a second lit button in a row
 // that shows one at a time (row 1) — and a HINT under an open menu is the
 // two-floating-surfaces rule, which this same term is what makes structural.
-//
-// ROW 1 HELD A BRIEF EXEMPTION and it is retired (architect 2026-08-03): the
-// row-1 close rule (on_motion, input_pointer.cpp) means a pointer can no
-// longer BE over a non-anchor row-1 button while a menu is up — the motion
-// that arrives there closes the menu first, and this predicate then answers
-// for a closed popup on that same frame — while an ANCHOR's pill is the
-// painter's own open condition (paint_menu_row), not this bit. So the
-// exemption named no case the close rule does not already own, and one
-// mechanism per behaviour is the shape to keep.
+// Row 1 needs no exemption: it holds the anchors alone, and an ANCHOR's pill
+// is the painter's own open condition (paint_menu_row), not this bit.
 //
 // THE TAB CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter: the row is
 // the A/B tabs in every state, the `h` view included, and the lit tab is the
@@ -18071,15 +17909,14 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // carry — ENABLED, which the hover FACE adds at its one site and the hint does
 // not:
 //
-// ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and
-// that asymmetry with the tabs is the crops': both rows ship a selected-hover
-// state (the accent outline over the selected fill) and row 3 does not. So the
-// zone's carve-out names the tabs alone; the icon row's toggles — the
-// Cumulative one included, back on that row since 2026-08-18 — and the
-// view bar's three are hoverable in
+// ROW 4'S SELECTED BUTTONS DO HOVER, and that asymmetry with the tabs is the
+// crops': row 4 ships a selected-hover state (the accent outline over the
+// selected fill) and row 3 does not. So the zone's carve-out names the tabs
+// alone; the icon row's toggles — the Cumulative one included, back on that
+// row since 2026-08-18 — and its view group's three radios are hoverable in
 // both states, and a radio's already-selected press is refused in the ACTION
-// (the chord table's `radio` flag, whose users are the view bar and the tabs
-// since the 2026-09-04 collapse), not in its hoverability. (The transport's
+// (the chord table's `radio` flag, whose users are the view group and the
+// tabs), not in its hoverability. (The transport's
 // Play / Stop pair was a fourth such radio for hours on 2026-08-15 and is one
 // button with no lamp since that day's collapse.)
 //

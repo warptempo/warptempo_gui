@@ -646,7 +646,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // Toggle History View button, the
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
-// 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
+// 2026-09-10 — THE VIEW GROUP'S THREE SELECTORS, the column
 // switch's three chords, THE PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
 // TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
@@ -669,15 +669,12 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // mode's own bit for that pair's other direction. A change here needs a hand
 // edit there.
 //
-// TWO ROSTER MEMBERS THE GATE EATS HAVE NO SENTENCE TO CARRY, and they answer
-// it differently. THE VIEW BAR'S three selectors ARE in the membership since
-// 2026-09-10, so their PRESS dies at arm_redesign_press's disabled line as a
-// standing overlay's does, and their FACE followed the same day (architect, at
-// his mockup: the two dead UNSELECTED labels at kRedesignDisabledMix over the
-// bar's ground, the selected one full — the view bar's painter,
-// paint_handler.cpp). The row still carries no tooltip, so this gate's card is
-// the only thing that SPEAKS (the account is at their arm in
-// redesign_button_enabled). Every propagate PASTE's surface is a MENU ROW,
+// TWO ROSTER SURFACES THE GATE EATS ANSWER IT IN THEIR OWN WAY. THE VIEW
+// GROUP'S three selectors ARE in the membership since 2026-09-10, so their
+// PRESS dies at arm_redesign_press's disabled line as a standing overlay's
+// does and their FACE is the icon row's disabled face; their hint names the
+// act, so this gate's card is the only thing that SPEAKS the reason (the
+// account is at their arm in redesign_button_enabled). Every propagate PASTE's surface is a MENU ROW,
 // which greys on this same list since 2026-09-24 (dropdown_item_enabled asks
 // authoring_lock_drops_chord).
 bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
@@ -2445,8 +2442,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             — which the commit act already answers by
 //                             rebuilding the now side fresh (the drift inventory
 //                             is at AppState::HistoryMode).
-//                             THE VIEW BAR AND THE S/T + W/P RADIOS need no rule
-//                             of their own: they synthesize these very chords
+//                             THE ICON ROW'S VIEW GROUP needs no rule
+//                             of its own: its buttons synthesize these very chords
 //                             through the chrome press's release half
 //                             (finish_chrome_press_release), like every other
 //                             redesigned button.
@@ -2729,7 +2726,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // UNCHANGED, which is why they need no rule of their own: both synthesize a
 // chord and call on_key (finish_chrome_press_release and
 // finish_dropdown_release, each at its own lift),
-// so Save, Undo, Redo, Render and the view bar drop at this gate exactly as
+// so Save, Undo, Redo, Render and the view group drop at this gate exactly as
 // their keys do. AND A MENU'S ITEMS DO IT FOR REAL SINCE 2026-08-08, not
 // merely in principle: a command menu OPENS inside the view (the architect
 // narrowed toggle_dropdown's lockout to the Settings anchor, whose items reach
@@ -7524,8 +7521,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // lit."). It needs NO STAMP to be, and had one for a few hours of that
         // day: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
         // (the three absolute view selectors, bare 1/2/3, at
-        // iteration_lock_key_blocked; the view bar's three buttons grey with
-        // the sentence), so the column cannot move while the lamp stands
+        // iteration_lock_key_blocked; the view group's three buttons grey with
+        // the key carding the sentence), so the column cannot move while the lamp stands
         // and `iteration_column_lit` reads the LIVE column. There is no
         // second lamp, no second key and no column term on this button — and
         // no other column to stand on while lit.

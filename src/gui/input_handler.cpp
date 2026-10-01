@@ -1102,19 +1102,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (BARE `t` TOGGLED VIEW-DOMAIN (S <-> T) HERE FROM 2026-08-01 TO
     // 2026-09-15, when the architect deleted the key whole with its icon-row
     // view lamp: source/target is reachable through the three view selectors
-    // and the view bar alone now. handle_active_audio_view_toggle is the body
+    // alone now (the keys and the icon row's view group). handle_active_audio_view_toggle is the body
     // it called — it stays, and the selectors below are its only remaining
     // keyboard road.)
 
     // BARE 1 / 2 / 3 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01):
     // `1` is S+W, `2` is T+W, `3` is T+P (architect 2026-09-27: the two
-    // target views traded keys and bar slots). (The backtick was a fourth, S+M,
+    // target views traded keys and slots). (The backtick was a fourth, S+M,
     // from 2026-09-19 until the magnification level markers column's
     // deletion, architect 2026-09-23.) They name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
     // consumed no-op — that is the whole difference from the deleted `t` and
     // `p` toggles. The three are the product's WHOLE view space: S+P is no
     // state at all (the phase-reset column is target view only — architect
-    // 2026-09-21, load-fatal), and the view bar's three buttons synthesize the
+    // 2026-09-21, load-fatal), and the icon row's view group synthesizes the
     // three keys in the same order.
     //
     // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very chokepoint
@@ -3912,8 +3912,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // from the trim every frame, through trim_overlay_span, which re-crosses
     // the bounds into whichever domain is live, so the flip owes it nothing.
     // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-09-23: the three
-    // absolute view selectors on bare 1/2/3 (and the view bar, which
-    // synthesizes them),
+    // absolute view selectors on bare 1/2/3 (and the icon row's view group,
+    // which synthesizes them),
     // the settings editor's `active_audio_view=` GUI-key twin, the crossing
     // Shift+S, bare `i`'s own crossing into target, the undo/redo restore's
     // audio-view tag, and the phase-reset propagate paste's landing tail into

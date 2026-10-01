@@ -104,32 +104,37 @@ enum class Icon {
     VcsPull,             // Save, in the history view while GitHub is ahead
     // Row 4, the icon row.
     //
-    // (THE TWO VIEW LAMPS' FACES — document-import and chronometer-start,
-    // architect-picked 2026-08-11 off a rendered candidate sheet for the four
-    // radios these two buttons replaced — lived here from 2026-08-11 to
-    // 2026-09-15, when the architect deleted both lamp buttons whole with
-    // their view-lamp category: enumerators, table defs and assets together,
-    // the edit-cut precedent, since neither glyph had a second consumer.
-    // TARGET had worn document-import, the arrow ENTERING a document, its
-    // Source partner document-export having left the same way on 2026-09-04
-    // when the radios first collapsed to lamps; PHASE RESET had worn
-    // chronometer-start, the stopwatch with the solid play triangle in its
-    // dial — start the clock anew — picked over chronometer-reset and
-    // view-refresh (indistinguishable from each other at row size, and
+    // THE VIEW GROUP'S THREE FACES (architect 2026-10-01): the icon row's
+    // flush-right view group — Source+Warp, Target+Warp, Target+Phase, the
+    // three absolute view selectors on bare 1 / 2 / 3 — wears the glyphs he
+    // picked on 2026-08-11 for the view radios, RESTORED VERBATIM from git
+    // (enumerators, table defs and assets together, the edit-cut precedent in
+    // reverse) when the row-1 view bar's three labelled buttons were deleted
+    // and their acts came down to the icon row. SOURCE is document-export, the
+    // arrow LEAVING a document — his own metaphor, the source being where the
+    // audio comes FROM; TARGET is document-import, the arrow ENTERING one;
+    // PHASE RESET is chronometer-start, the stopwatch with the solid play
+    // triangle in its dial — start the clock anew. A WARP view wears its
+    // audio's glyph alone (warp is the column every audio view has; the one
+    // phase-reset view is the one that needs its own face).
+    // PROVENANCE OF THE PICKS (2026-08-11, off a rendered candidate sheet, for
+    // the four S/T and W/P radios that then stood in this row): the radios
+    // wore shaped LETTER GLYPHS from the row's first day until that pick —
+    // the row's only non-icon buttons, and the reason the architect briefly
+    // ruled them deleted altogether ("ugly letter blips") before reversing
+    // that the same day. chronometer-start was picked over chronometer-reset
+    // and view-refresh (indistinguishable from each other at row size, and
     // chronometer-reset's dial not surviving the rendering) and over the bare
-    // chronometer, its Warp partner speedometer having left with document-export
-    // on 2026-09-04 too. Before the 2026-08-11 glyphs, the S/T and W/P pairs
-    // wore shaped LETTER GLYPHS from the row's first day — the row's only
-    // non-icon buttons, and the reason the architect briefly ruled the radios
-    // deleted altogether ("ugly letter blips") before reversing that the same
-    // day; the painter's shaped-letter branch left with that reversal, well
-    // before the buttons themselves went. All picks and runners-up stay
-    // recorded here so none is re-proposed without a new ruling: document-export
-    // was the arrow LEAVING a document against document-import's arrow
-    // entering one; speedometer was the gauge with the needle, his first pick,
-    // reversed to distortionfx (the spiral, "time bends") in the same breath
-    // and restored at his second look that evening, leaving distortionfx and
-    // player-time the runners-up.)
+    // chronometer. Warp's own glyph was speedometer, the gauge with the
+    // needle, his first pick, reversed to distortionfx (the spiral, "time
+    // bends") in the same breath and restored at his second look that
+    // evening, leaving distortionfx and player-time the runners-up; it left
+    // with the radios' collapse to lamps on 2026-09-04 and is not restored.
+    // All picks and runners-up stay recorded here so none is re-proposed
+    // without a new ruling.
+    DocumentExport,      // Source+Warp (bare 1)
+    DocumentImport,      // Target+Warp (bare 2)
+    ChronometerStart,    // Target+Phase (bare 3)
     // (THE TRIM SCISSORS' EDIT-CUT IS DELETED with its button, 2026-08-18: the
     // architect retired the "set trim from region" BUTTON in the roster
     // relayout — and the ACT went with it later the same day, when the region
@@ -403,9 +408,9 @@ enum class Icon {
     // places/22/folder, the Breeze dark folder every file picker on the
     // architect's desktop paints beside a folder row (pcmanfm-qt and
     // kdenlive's Open dialog alike), and mimetypes/22/audio-x-wav, the glyph
-    // pcmanfm-qt paints beside a wav — a bracket-shaped double note in
-    // Breeze's own #44aaeb (the file's literal fill; audio-x-generic is
-    // never a row glyph, the architect's ruling). Both are painted by
+    // pcmanfm-qt paints beside a wav — a bracket-shaped double note, the
+    // file's literal Breeze blue converted to the ink (kIconWav, icons.cpp;
+    // audio-x-generic is never a row glyph, the architect's ruling). Both are painted by
     // folder_overlay rows (paint_handler.cpp) and by nothing else; the names
     // are their Breeze file names, the theme-provenance rule.
     Folder,              // a folder row (a batch folder at the player's root,
@@ -487,54 +492,12 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 54 SINCE THE EDIT FLAG BUTTON'S DELETION (architect 2026-09-29, late
-// evening): text-field left with the button that wore it. It was 55 from THE
-// ROSTER MOVES OF 2026-09-29'S EVENING (architect):
-// help-whatsthis joined with the Enable Tooltips lamp, go-jump-declaration
-// with Jump to Defining Marker and edit-delete with the render player's
-// Delete. It was 52 from THE WALK GROUP'S GROWTH earlier that day: bboxprev
-// came back with the Previous Marker button, tab-detach joined with Switch
-// Tab and settings-configure with the icon row's Settings button. It was 49 from
-// THE PULL (architect 2026-09-27): vcs-pull joined as Save's third
-// face. It was 48 from THE STEPPED ZOOM BUTTONS' REMOVAL (architect
-// 2026-09-25), re-counted off the enumerators above: zoom-in and zoom-out
-// left with the Zoom In / Zoom Out buttons that wore them. It was 50 from the follow lamp's
-// return (2026-09-23, evening): go-jump returned with the button that wears
-// it. It was 49 from the follow lamp's and the hold-column nudges'
-// deletion earlier that day: go-jump and the two turns of snap-nodes-midpoint
-// left with the three buttons that wore them. It was 52 from the hold-column nudges' glyph change earlier that day, when
-// go-previous-context and go-next-context left and the two turns of
-// snap-nodes-midpoint joined. It was 52 from the least-movement walk's deletion
-// earlier that day: snap-orthogonal and snap-node left
-// with it and bboxnext came back as the walk's glyph. It was 53 for the day
-// before, from the least-movement walk's arrival (2026-09-22, later still),
-// when bboxnext left and those two joined. It was 52 from the Zoom In /
-// Zoom Out restoration earlier on 2026-09-22:
-// zoom-in and zoom-out came back with
-// the two buttons that wear them. It was 50 from the Show trim region
-// button's deletion earlier that day, tool-rect-selection leaving with the
-// button that wore it. It was 51 from that day's walk-group change:
-// bboxprev left with the Previous marker button and go-previous-context
-// / go-next-context joined with the two hold-column nudges. It was 50 earlier
-// that day, re-counted rather than adjusted: zoom-out-y came back with the Waveform Magnification lamp
-// that wears it (architect 2026-09-22), and merge had joined on 2026-09-19
-// with the Flatten button without this number moving, so the count was 49
-// against a stated 48 until the recount. It was 48 from 2026-09-17 evening,
-// when waveform magnification became a function of the audio view and
-// zoom-out-y left with the `]` lamp that wore it — enumerator, def and asset
-// together — having been 49 for that one day. It was
-// 48 from 2026-09-16, THE MEASURES FEATURE'S DELETION (architect
-// 2026-09-16): minuet-scales left with the Marker Measure button that wore
-// it — enumerator, def and asset together. It was 49 from 2026-09-15, the
-// per-marker magnification's retirement, when zoom-in-y left with the
-// Magnification button the same way. It was 50 earlier that day, after the
-// two view lamps' deletion, when document-import and chronometer-start left
-// with the two lamp buttons that wore them, the edit-cut precedent. The
-// count's succession is in git history; a glyph joining or
-// leaving restates this number. It held at 50 through 2026-09-24's swap,
-// when zoom-in-y replaced zoom-out-y on the Waveform Magnification lamp at
-// its reversal, one glyph out and one in.
-inline constexpr int kIconCount = 54;
+// 57 SINCE THE VIEW GROUP'S ARRIVAL (architect 2026-10-01): document-export,
+// document-import and chronometer-start came back with the icon row's three
+// view buttons — enumerators, defs and assets together. The count's
+// succession is in git history; a glyph joining or leaving restates this
+// number.
+inline constexpr int kIconCount = 57;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

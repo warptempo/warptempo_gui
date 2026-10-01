@@ -631,8 +631,8 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // its band starts ABOVE the waveform, so
 // every waveform pass is clipped out whole while it stands, and the LANES it
 // also covers (every lane below the icon row; the menu row AND the icon row
-// stand above the band since 2026-09-09, File lit and the other two anchors,
-// the view bar and every icon greyed) are not
+// stand above the band since 2026-09-09, File lit and the other two anchors
+// and every icon greyed) are not
 // spared this way — their painters run and the panel covers them, because
 // they publish the roster's hit rects (the record is at the paint-order
 // block, paint_handler.cpp).

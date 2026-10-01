@@ -838,7 +838,7 @@ void render_trim_flags(cairo_t* cr,
     //   row 0      #9ea5ad  kTrimCapBevelLo    the endcap bevel pair, verbatim,
     //   row 1      #a7b0b8  kTrimCapBevelHi    now at the tile's TOP
     //   rows 2..8  #a1a9b1  kTrimLaneEndcap    the tile's face
-    //   cols 2..6 } #1b1d20 kTrimLaneBar       the inner square, inset 2px,
+    //   cols 2..6 } #2e3135 kTrimLaneBar       the inner square, inset 2px,
     //   rows 2..6 }                            flush UNDER the bevel
     //
     // So the tile is EXACTLY AN ENDCAP-COLOURED COLUMN RUN with a bar-coloured
@@ -1315,15 +1315,14 @@ struct FlagFace {
 // WHICH COLUMN'S DEFAULT/SELECTED PAIR THIS FACE WEARS (architect 2026-09-15,
 // retold the same day on the naming-symmetry ruling: warp is never the
 // unmarked default, so this is a REQUIRED argument at every call, never a
-// defaulted bool). The phase-reset flag box paints in the column's STEEL —
-// the accent's value, the other three RECORDED DERIVATIONS off it
-// (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
-// box and the warp column's bound cells stay on kMarkerFlagFill's purple,
-// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS STEEL (architect
-// 2026-09-21, superseding the 2026-09-15 purple-on-either-column choice: the
-// cells wear their own column's hue) — every bound-cell call site passes the
-// face of the column the cells belong to, the same `column_face` its flag box
-// takes. (A third face, the magnification level markers column's orange,
+// defaulted bool). The phase-reset flag box paints in its column's own pairs
+// (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h), which carry the warp
+// family's VALUES since 2026-10-01 ("phase resets take whatever warp markers
+// take") as separate constants; the warp flag box and the warp column's bound
+// cells wear kMarkerFlagFill's pairs, and THE PHASE-RESET COLUMN'S BOUND CELLS
+// WEAR ITS OWN COLUMN'S PAIRS (architect 2026-09-21: the cells wear their own
+// column's face) — every bound-cell call site passes the face of the column
+// the cells belong to, the same `column_face` its flag box takes. (A third face, the magnification level markers column's orange,
 // stood from 2026-09-15 until that column's deletion, architect 2026-09-23.)
 enum class FlagColumnFace { Warp, PhaseReset };
 
@@ -2983,13 +2982,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                     view_w, static_cast<double>(lane.h));
     cairo_clip(cr);
 
-    // 2. The selection highlight, then 3. the text — THE ACCENT UNDER THE LABEL
-    //    WHITE, the product's one selection pairing since 2026-08-28 (the
-    //    palette block at kMarkerFlagLabel's neighbour carries the ruling and
-    //    its recorded cost). The dialog editors' field paints the same two
-    //    colours; this surface differs only in that its UNSELECTED run is the
-    //    lane's black rather than that same white, which is why the selected
-    //    substring here needs a second show and the field's does not.
+    // 2. The selection highlight, then 3. the text — THE ACCENT UNDER
+    //    kRedesignLabelOnAccent, the product's one selection pairing (since
+    //    2026-08-28; the dark letters since 2026-10-01 — the palette block at
+    //    kMarkerFlagLabel's neighbour carries the ruling and its contrast).
+    //    The dialog editors' field paints the same two colours and the same
+    //    two shows; the surfaces differ only in their UNSELECTED ink, the
+    //    lane's black here and the label white there.
     //
     //    IT REPLACES THE WHITE FIELD / BLACK TEXT BAND of 2026-08-20, and
     //    kMarkerEditorSelectionBand went with it. That band was kdenlive's
@@ -3001,20 +3000,20 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    their own could kern the first glyph differently and shift the ink
     //    sideways under a band whose edges came from byte_x. THE CLIP TAKES THE
     //    BAND'S OWN ROUNDED COLUMNS, not the fractional byte_x pair the band
-    //    rounded FROM, so the white ink starts and stops exactly where the blue
-    //    does.
+    //    rounded FROM, so the selected ink starts and stops exactly where the
+    //    band does.
     //
     //    ONE INK PER PIXEL, AND THAT IS WHY THE BLACK RUN IS CLIPPED TOO
     //    (2026-08-28, off the architect's own screenshot of a selected word
     //    wearing a dingy grey halo). The black pass used to run UNCLIPPED
-    //    under the white one, so every pixel of a selected glyph's
+    //    under the selected one, so every pixel of a selected glyph's
     //    ANTIALIASED EDGE was painted twice: black at partial coverage first,
-    //    darkening the blue underneath it, then white at that same partial
-    //    coverage over the already-darkened blue — a grey rim no ink in the
-    //    palette names. A file manager paints each pixel once, and so does
+    //    darkening the band underneath it, then the selected ink at that same
+    //    partial coverage over the already-darkened band — a rim no ink in
+    //    the palette names. A file manager paints each pixel once, and so does
     //    this now: with a selection standing, THE BLACK RUN IS CLIPPED TO THE
-    //    COMPLEMENT OF THE BAND inside the text viewport and the white run to
-    //    the band, two disjoint regions whose union is the whole viewport, so
+    //    COMPLEMENT OF THE BAND inside the text viewport and the selected run
+    //    to the band, two disjoint regions whose union is the whole viewport, so
     //    no pixel is painted by both inks and every edge pixel antialiases
     //    against exactly the ground it sits on. THE COMPLEMENT IS THREE
     //    RECTANGLES, not two, because THE BAND IS NOT THE LANE: it starts
@@ -3026,7 +3025,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    (The deleted pass this is NOT: the old two-tone re-show painted the
     //    selected glyphs in `face.fill` — saturated ink ANTIALIASED AGAINST A
     //    WHITE band, which fringed every edge pale and read as washed out.
-    //    Near-white on the accent has no such blend to make.)
+    //    A dark ink on the light accent has no such blend to make.)
     //
     //    Both edges come from byte_x, so the highlight cannot drift off the
     //    glyphs it marks however proportional they are.
@@ -3037,7 +3036,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         static_cast<int>(std::nearbyint(text_origin_x + byte_x[s0]));
     const int ix1 =
         static_cast<int>(std::nearbyint(text_origin_x + byte_x[s1]));
-    // THE BAND'S WIDTH IN COLUMNS, resolved once: the fill below, the white
+    // THE BAND'S WIDTH IN COLUMNS, resolved once: the fill below, the selected
     // run's clip and the black run's complement all read this one expression,
     // so the three cannot disagree by a pixel. A selection whose glyphs carry
     // no advance still marks one column.
@@ -3053,8 +3052,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     }
 
     // THE RUN, SHOWN ONCE PER REGION (the ruling in the block above): the
-    // whole run in the lane's black off the band, the whole run again in the
-    // label white on it, neither reaching a pixel the other painted.
+    // whole run in the lane's black off the band, the whole run again in
+    // kRedesignLabelOnAccent on it, neither reaching a pixel the other
+    // painted.
     cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
     if (!has_sel) {
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
@@ -3089,8 +3089,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         cairo_save(cr);
         cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_clip(cr);
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        cairo_set_source_rgb(cr, kRedesignLabelOnAccent.r,
+                             kRedesignLabelOnAccent.g,
+                             kRedesignLabelOnAccent.b);
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
         cairo_restore(cr);
     }
@@ -3099,7 +3100,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    byte boundary, AA off — the same crisp-column convention the
     //    retired monospace box used, on a shaped position instead of a grid one.
     //    IT IS INK, NOT FIELD, so it stays `face.label` black wherever it
-    //    lands, over the accent band included — black reads on steel, and a
+    //    lands, over the accent band included — black reads on the accent, and a
     //    caret that changed colour on crossing a selection edge would be
     //    stating something about the selection rather than about the cursor.
     if (text_editor::cursor_visible_now(ed)) {

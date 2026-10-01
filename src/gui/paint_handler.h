@@ -745,7 +745,7 @@ private:
     // THE FOUR REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
     // flat
     // sampled ground plus the three menu
-    // buttons and the view bar), the TAB ROW
+    // buttons), the TAB ROW
     // (top lane 2 since the 2026-09-09 relayout swapped it with the icon row,
     // row 3: the
     // "A"/"B" Breeze tabs — the row carries no borders of its own since that
@@ -755,8 +755,10 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-three
-    // view/mode/action buttons since 2026-09-29's late evening, when the
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-six
+    // view/mode/action buttons since 2026-10-01, when the view bar's three
+    // acts came down as its flush-right view group — twenty-three from
+    // 2026-09-29's late evening, when the
     // Edit Flag button was deleted — twenty-four earlier that evening,
     // twenty-one from
     // the stepped zoom buttons' removal

@@ -408,7 +408,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The three view selectors, the view bar's three buttons (the two icon-row
+// The three view selectors, the icon row's view group (the two icon-row
 // VIEW LAMPS deleted 2026-09-15) and the settings keys all compose those
 // writers and inherit it.
 //
@@ -1455,8 +1455,8 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-three (the
+    // writer serving the WHOLE roster — row 1's three menu anchors,
+    // row 3's two tabs, row 4's twenty-six (the
     // toolbar four included since the 2026-08-12 relayout, COPY VALUE
     // between Redo and Render since 2026-09-29, Full zoom out
     // leading the zoom group (Center left it for the bottom row 2026-09-29),
@@ -1464,8 +1464,9 @@ struct GuiInputHandler {
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
     // 2026-09-19, the history group's
-    // seven closing it — the opener, the walk lamp and the four companions
-    // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
+    // seven — the opener, the walk lamp and the four companions
+    // since 2026-08-18, Load in place at the tail since 2026-09-01 — and the
+    // VIEW GROUP's three closing it flush right since 2026-10-01) and the
     // bottom
     // row's seventeen — the right block's MARKER-VERB GROUP of six
     // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the walk
@@ -1475,7 +1476,10 @@ struct GuiInputHandler {
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
     // with the history companions on 2026-08-18 (definitions beside
-    // on_motion in input_pointer.cpp).
+    // on_motion in input_pointer.cpp). The one exception is a window too
+    // narrow for the icon row, where a member the view group's overflow
+    // covers whole publishes a zero rect and one it covers in part only its
+    // painted columns (paint_icon_row).
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects
     // and is called from on_motion's no-gesture tail and from the run loop's
@@ -3968,7 +3972,7 @@ private:
     // THE PLAYER'S ONE POINTER RULE IS THE VEIL: while the player stands every
     // press outside the folder overlay's band and the modal row is CONSUMED —
     // the tab row's tabs, the marker lane's flags, the waveform, the two dead
-    // menu anchors, the view bar, all of it — and the roster's buttons are
+    // menu anchors, all of it — and the roster's buttons are
     // dead through redesign_button_enabled's first arm (their faces grey,
     // their press claims refuse). THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
     // above the band (architect 2026-09-03 evening — the `h` view's partition

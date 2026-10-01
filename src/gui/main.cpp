@@ -146,8 +146,7 @@ namespace {
 // THE 2026-09-09 TOP STRIP RELAYOUT GAVE THEM (the vertical rule below carries
 // the ruling): MENU ROW (its own authored menu_row_h_px(), row 1 of the
 // kdenlive redesign, PINNED AT THE WINDOW TOP at its natural 30 with no margin
-// — the anchors' pill IS the lane, and the view bar's box derives DOWN from
-// it as 28 inside its two 1px margins; it stood at 34 for the hours between
+// — the anchors' pill IS the lane; it stood at 34 for the hours between
 // his remeasure of kdenlive's lane on 2026-09-09 and his ruling the next
 // morning, sat on the tab row with gap 1 above it from 2026-09-03 until the
 // relayout, and stood at the window top with gap 1 below it from commit B
@@ -230,7 +229,7 @@ namespace {
 // stays where 2026-09-03 left it ("it's perfect right there") and the gap
 // BELOW it at the bottom row "looks correct" (a DAW would put more channels
 // there). THE SAME DAY TWO MEASUREMENTS CAME BACK IN — the menu row's 34 (his
-// remeasure of kdenlive: the view bar's 32px box inside two 1px margins) and
+// remeasure of kdenlive's lane) and
 // a 6px MARGIN-BOTTOM on the tab row ("PCManFM-Qt has six pixels of margin
 // below the tab row; with the icons moved up, the tab row abuts the lane
 // below it and the selected tab has a black bar running under it that looks
@@ -246,8 +245,7 @@ namespace {
 // menu row's four, 14 for the tab row's six), 428 -> 450 above, every lane
 // below the toolbar standing twenty-two pixels lower and the waveform paying
 // for all of it, 736 -> 714. THE NEXT MORNING THE MENU ROW'S FOUR CAME OFF
-// AGAIN (the pill IS the lane, 30 — the view bar's box shrinking from its
-// content instead): top lanes 200 -> 196, GAP 1 taking them back on the
+// AGAIN (the pill IS the lane, 30): top lanes 200 -> 196, GAP 1 taking them back on the
 // laptop (90 -> 94), and on the tablet 450 -> 442 above with the waveform
 // taking the eight back (714 -> 722).
 //
@@ -749,10 +747,11 @@ GuiRect top_flex_gap_area(const AppState& a) {
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the MENU row (the kdenlive menu bar: a flat ground carrying the
-// left float's three menu buttons and the right float's view bar, its
-// content whole), at the window's top since 2026-09-09 (the vertical rule;
+// three menu buttons flush left, its content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-three view/mode/action buttons since 2026-09-29's
+// ICON row (the twenty-six view/mode/action buttons since 2026-10-01, the
+// row-1 view bar's three acts arriving as its flush-right VIEW GROUP;
+// twenty-three from 2026-09-29's
 // late evening — Copy Value up from the bottom row between Redo and Render,
 // Enable Tooltips new, Edit Flag up and deleted the same evening —
 // twenty-one from the stepped zoom

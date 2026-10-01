@@ -44,12 +44,9 @@
 // press_on_live_menu_anchor, its menu opening onto Quit (Open Project and
 // Revert grey there since 2026-09-24, the overlay's routers consuming their
 // chords) — while Edit and Settings grey through
-// menu_anchor_live and refuse on that painted face, the
-// view bar's three grey through redesign_button_enabled's first arm — shown
-// by the bar's own inactive ground (view_bar_focused) and, since 2026-09-10,
-// by the row's disabled face, the two dead UNSELECTED labels dimmed while the
-// selected view keeps its ink — and every icon-row button
-// greys through that same first arm. The header behind them keeps its
+// menu_anchor_live and refuse on that painted face, and every icon-row
+// button — the view group's three included — greys through
+// redesign_button_enabled's first arm. The header behind them keeps its
 // FOCUSED ground: the title bar says the window is active, so the row does
 // too. The waveform's own passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and

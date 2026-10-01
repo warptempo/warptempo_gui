@@ -493,11 +493,12 @@ GuiPlatform::~GuiPlatform() {
 // glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
 // logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
 // the whole redesign was drawn against — every icon in the row fits, where the
-// fit ceiling is 279 % (the icon row's walk is 823 authored px since
-// 2026-09-29's late evening; the arithmetic is at paint_icon_row,
-// paint_handler.cpp, and its succession in git history) and anything past it
-// crops the rightmost history icons. 225 CLEARS IT BY 201 LOGICAL PX (the
-// tablet's own config stands at 200 since 2026-09-29, clearing it by 329).
+// fit ceiling is 245 % (the icon row holds every group in 940 authored px
+// since 2026-10-01; the arithmetic is at paint_icon_row, paint_handler.cpp,
+// and its succession in git history) and anything past it has the flush-right
+// view group cover the groups to its left (the overflow rule at
+// kIconRowViewGroup). 225 CLEARS IT BY 84 LOGICAL PX (the tablet's own config
+// stands at 200 since 2026-09-29, clearing it by 212).
 // 250 was tried as the TEMPLATE for one afternoon on 2026-08-27 for the
 // finger's sake — a
 // marker flag has to be tappable without the second tap of a double-tap landing

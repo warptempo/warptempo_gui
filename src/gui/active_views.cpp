@@ -227,7 +227,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
 // THE COLUMN ENTRY — the absolute form of the deleted `p` toggle (architect
 // 2026-09-15, when the column axis briefly grew a third letter and a toggle
 // stopped naming a destination): the writer above, then the entry's own tail. Its
-// callers are bare 1/2/3 (and the view bar, which
+// callers are bare 1/2/3 (and the icon row's view group, which
 // synthesizes them) and the
 // settings editor's typed `active_markers_view=`; the writer's other callers
 // reach it directly (its inventory).

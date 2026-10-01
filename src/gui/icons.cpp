@@ -134,15 +134,17 @@ constexpr IconPath kMediaRecordPaths[] = {
 constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
 
 // THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
-// written into its own file: `.ColorScheme-Accent`, which every Breeze file
-// carrying it resolves to #3daee9 — deep-history's curl-back arrow was this
-// tree's first user (2026-08-09) and dialog-information's plate is the one
-// standing since that glyph left with the 2026-09-04 collapse. It is recorded the same way
-// kIconText and kIconPreviewOn are, as THE VALUE THAT FILE RESOLVES TO, and it
-// deliberately does NOT reference render.h's kRedesignAccent: that constant is
-// the product's own steel #3a7a99 (architect 2026-09-30), this one is the
-// scheme's Breeze value, and the two move independently.
-constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
+// written into its own file: `.ColorScheme-Accent`, which a Breeze file
+// carrying it resolves to the SCHEME'S ACCENT — #3daee9 under stock Breeze —
+// deep-history's curl-back arrow was this tree's first user (2026-08-09) and
+// dialog-information's plate is the one standing since that glyph left with
+// the 2026-09-04 collapse. THE SCHEME'S ACCENT HERE IS THE INK #7ac3e0
+// (architect 2026-10-01: the leftover Breeze blues convert to the ink, and
+// this class's relationship to Breeze's blue is identity). It is recorded the
+// same way kIconText and kIconPreviewOn are, as THE VALUE THAT CLASS RESOLVES
+// TO, a literal of its own that deliberately does NOT reference render.h's
+// kRedesignAccent: two constants that agree, not one fact referenced twice.
+constexpr GuiColor kIconAccent    = hex(0x7AC3E0);
 
 
 // THE BPM OPENER'S ICON, 2026-08-01 to 2026-08-27 and again since 2026-09-04
@@ -268,29 +270,54 @@ constexpr IconPath kDialogOkApplyPaths[] = {
      icon_translate(-364.57143, -525.79075)},
 };
 
-// (ROW 4'S TWO VIEW LAMPS — document-import and chronometer-start, the audio-
-// view lamp and the marker-column lamp — ARE DELETED, 2026-09-15, with their
-// buttons and the whole category those two formed: the architect's roster
-// ruling retired both lamps whole, leaving these two glyphs with no consumer
-// at all. The enumerators, these two transcriptions and
-// assets/icons/breeze/document-import.svg / chronometer-start.svg went
-// together rather than the table carrying unpainted glyphs — edit-cut's own
-// precedent above. They had served the lamps since the architect's 2026-08-11
-// pick off a rendered candidate sheet (their four predecessor radios wore
-// shaped LETTER GLYPHS before that, the row's only non-icon buttons); TARGET's
-// document-import was the arrow ENTERING a document against Source's
-// document-export (gone on 2026-09-04, the radio-pair collapse), and PHASE
-// RESET's chronometer-start was the stopwatch with the solid play triangle —
-// start the clock anew — picked over chronometer-reset and view-refresh
-// (indistinguishable from each other at row size, and chronometer-reset's
-// dial not surviving the rendering) and over the bare chronometer, against
-// Warp's speedometer (also gone 2026-09-04, his first pick, reversed to
-// distortionfx in the same breath and restored at his second look that
-// evening, leaving distortionfx and player-time the recorded runners-up).
-// Both files were `.ColorScheme-Text` = #fcfcfc verbatim from their committed
-// SVGs; chronometer-start's style block had defined `.ColorScheme-Accent` too
-// with its one path never using it, the only committed file that declared a
-// class it did not use — that curiosity is history along with the rest.)
+// -- ROW 4'S VIEW GROUP (architect 2026-10-01; the glyphs his 2026-08-11 picks) --
+//
+// The three absolute view selectors, flush right in the icon row since the
+// row-1 view bar's deletion — Source+Warp, Target+Warp, Target+Phase — wear
+// these three, RESTORED VERBATIM from git with their enumerators and assets
+// (icons.h's enum carries the architect's metaphors and the runners-up). Same
+// rules as every entry above: `d` verbatim from the committed file, the colour
+// hard-coded to what that file resolves to — all three are
+// `.ColorScheme-Text` = #fcfcfc.
+//
+// CHRONOMETER-START'S STYLE BLOCK DEFINES `.ColorScheme-Accent` TOO and its one
+// path never uses it (the path is `.ColorScheme-Text`), so nothing accent-
+// coloured is missing from the entry below — stated here so a future diff
+// against the file does not read the absence as a transcription bug. It is the
+// only committed file that declares a class it does not use.
+//
+// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED: document-export and
+// document-import are absolute M/L/Z only; chronometer-start is absolute M/L/C
+// with lowercase `z` (and its trailing space, kept like document-save's), so
+// the strings need nothing new from the parser.
+constexpr IconPath kDocumentExportPaths[] = {
+    {kIconText,
+     "M 11 16 L 16.293 16 L 14 18.293 L 14.707 19 L 18.207 15.5 L 14.707 12 "
+     "L 14 12.707 L 16.293 15 L 11 15 L 11 16 Z M 5 18 L 5 4 L 13 4 L 13 8 L "
+     "17 8 L 17 13 L 18 13 L 18 7 L 14 3 L 4 3 L 4 19 L 13 19 L 13 18 L 5 18 "
+     "Z"},
+};
+
+constexpr IconPath kDocumentImportPaths[] = {
+    {kIconText,
+     "M 4 3 L 4 19 L 11 19 L 11 18 L 5 18 L 5 4 L 13 4 L 13 8 L 17 8 L 17 15 "
+     "L 12.707 15 L 15 12.707 L 14.293 12 L 10.793 15.5 L 14.293 19 L 15 "
+     "18.293 L 12.707 16 L 18 16 L 18 7 L 14 3 L 4 3 Z"},
+};
+
+constexpr IconPath kChronometerStartPaths[] = {
+    {kIconText,
+     "M 6.8769531 3 C 5.2125198 3.8561715 3.8561715 5.2125198 3 6.8769531 L "
+     "3 7 L 3.921875 7.3066406 C 4.6764786 5.8567461 5.8567461 4.6764786 "
+     "7.3066406 3.921875 L 7 3 L 6.8769531 3 z M 15.005859 3 L 14.699219 "
+     "3.921875 C 16.149109 4.676485 17.329374 5.8567506 18.083984 7.3066406 "
+     "L 19.005859 7 L 19.005859 6.8769531 C 18.149689 5.2125231 16.793336 "
+     "3.85617 15.128906 3 L 15.005859 3 z M 11 5 C 7.1220048 5 4 8.1220048 4 "
+     "12 C 4 15.877995 7.1220048 19 11 19 C 14.877995 19 18 15.877995 18 12 "
+     "C 18 8.1220048 14.877995 5 11 5 z M 11 6 C 14.323996 6 17 8.676004 17 "
+     "12 C 17 15.323996 14.323996 18 11 18 C 7.676004 18 5 15.323996 5 12 C "
+     "5 8.676004 7.676004 6 11 6 z M 9 9 L 9 15 L 14 12 L 9 9 z "},
+};
 
 // THE READ-ONLY TAB'S PADLOCK, from track-head/lock.svg — one path, currentColor
 // (the scheme's #fcfcfc, which is kIconText). Transcribed verbatim like every
@@ -533,8 +560,9 @@ constexpr IconPath kEditSelectPaths[] = {
 // PROVENANCE, per the theme-provenance rule: breeze-dark's places/22/folder.svg
 // and mimetypes/22/audio-x-wav.svg, both REAL FILES and not symlinks on this
 // host; the committed assets/icons/breeze/folder.svg and audio-x-wav.svg are
-// those installs' bytes verbatim, so a diff between this table and either
-// asset is a transcription bug and nothing else.
+// those installs' bytes verbatim, so a diff between this table's PATHS and
+// either asset is a transcription bug and nothing else (the wav's fill is
+// the one ruled departure, below).
 //
 // FOLDER: one `<path>` with `fill:currentColor` under the file's own
 // `.ColorScheme-Text { color: #fcfcfc }` stylesheet, so kIconText is what it
@@ -544,9 +572,11 @@ constexpr IconPath kEditSelectPaths[] = {
 // hollow as the file draws it). Nothing new for the interpreter.
 //
 // AUDIO-X-WAV: one `<path>` in the file's OWN LITERAL `fill:#44aaeb` — Breeze's
-// audio-mimetype blue, recorded here as the value the file states (kIconWav
-// below) and not as a palette key; it is neither kIconAccent's #3daee9 nor
-// anything render.h names. Absolute `M` / `L` and the ARC `A` (the four
+// audio-mimetype blue. kIconWav below is NOT that literal: the file's blue
+// records no relationship to Breeze's #3daee9 beyond being Breeze's blue, so
+// it converts to the ink #7ac3e0 with every other leftover Breeze blue
+// (architect 2026-10-01), its own literal coinciding with kIconAccent and the
+// ink rather than referencing either. Absolute `M` / `L` and the ARC `A` (the four
 // note-head circles as eight elliptical arcs), the interpreter's existing arm
 // (media-record's precedent, and the retired speedometer's). THE ONE THING WORTH READING
 // TWICE: the file wraps the path in a layer group carrying
@@ -557,7 +587,7 @@ constexpr IconPath kEditSelectPaths[] = {
 // numbers in the `d` are already viewBox coordinates (every one lands in
 // [3, 19]). A reader comparing this row against the file should expect no
 // transform here and find those two in the file.
-constexpr GuiColor kIconWav = hex(0x44AAEB);
+constexpr GuiColor kIconWav = hex(0x7AC3E0);
 
 constexpr IconPath kFolderPaths[] = {
     {kIconText,
@@ -1078,6 +1108,9 @@ constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
 constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
+constexpr IconDef kDocumentExport     {22.0, kDocumentExportPaths,      1};
+constexpr IconDef kDocumentImport     {22.0, kDocumentImportPaths,      1};
+constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kTimelineLift       {22.0, kTimelineLiftPaths,        3};
@@ -1135,6 +1168,9 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditUndo:            return kEditUndo;
         case Icon::EditRedo:            return kEditRedo;
         case Icon::MediaRecord:         return kMediaRecord;
+        case Icon::DocumentExport:      return kDocumentExport;
+        case Icon::DocumentImport:      return kDocumentImport;
+        case Icon::ChronometerStart:    return kChronometerStart;
         case Icon::BlackSum:            return kBlackSum;
         case Icon::GoJump:              return kGoJump;
         case Icon::TimelineLift:        return kTimelineLift;
