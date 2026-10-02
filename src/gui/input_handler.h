@@ -1260,13 +1260,16 @@ struct GuiInputHandler {
     // until 2026-09-22, when the overlay's endcap and bridge drags were
     // deleted with its resting form — the tablet's pen reaches the trim bar.)
     // THE BODY IS THE
-    // CARVE-OUT'S ONE INVENTORY: the notification cards, the
+    // CARVE-OUT'S ONE INVENTORY: the open dropdown's box (architect
+    // 2026-10-01 — a press on a row hanging over the waveform must arm it at
+    // the down; the why is at the clause), the notification cards, the
     // on-screen keyboard's band and the folder overlay's band. (The OPEN
     // MARKER-LANE EDITOR'S BOX had a clause from 2026-09-05 until the marker
     // lane left the zone on 2026-09-25; it paints in that lane, so it is off
     // the zone by the owner and the platform's editor-field query (below)
     // routes a drag there to the caret drag.) SURFACE GEOMETRY ONLY:
-    // every refusal (modal, prompt, dropdown, loading/empty audio, live
+    // every refusal (modal, prompt, a dropdown outside its box, loading/empty
+    // audio, live
     // pointer gesture) deliberately stays downstream — at
     // apply_touch_nav_update's per-frame
     // wheel_context answer, so a refused pan FREEZES exactly as a refused

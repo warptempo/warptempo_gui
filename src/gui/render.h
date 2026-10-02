@@ -2431,7 +2431,7 @@ inline int tooltip_hover_slop_px() {
 // opaque ground, which is mix_color here. Hard-coded like every other chrome
 // number; no device key.
 //
-// TWO KINDS, each one Breeze engine's own behaviour:
+// THREE KINDS, the first two each one Breeze engine's own behaviour:
 //   SnapIn — a tool or push button (renderButtonFrame forces the pen to the
 //     highlight while hovered, so the widget-state animation shows only on
 //     the way out): the outline is full the instant hover begins; when it
@@ -2442,6 +2442,16 @@ inline int tooltip_hover_slop_px() {
 //     hidden value climbs on from where the tail had brought it.
 //   Reversing — a line-edit frame (the input-widget engine on the same
 //     WidgetStateData): both ways, reversing from the current time.
+//   Holding — no Breeze engine; the menu row's pill by his ruling (architect
+//     2026-10-01, the why at redesign_button_hover_fade_kind, app_state.h):
+//     BINARY, full the instant hover begins and full for the whole kHoverFadeMs
+//     after it ends, then off at once — a 100 ms timeout on the same edge and
+//     the same clock, never a blend. Its rise has no hidden climb (the edge
+//     sets the animation time to its end at once), so every drop holds the
+//     full 100 ms however short the hover was, and a return inside the hold
+//     is full with no visible event and re-arms the whole hold at the next
+//     drop. Its painted level is only ever 0 or full, so the tick repaints a
+//     held face exactly once, at the hold's end.
 //
 // THE STATE IS AN EDGE, NOT AN ACCUMULATOR: each fade keeps the clock and the
 // animation time at its last hover edge, so the level at any instant is
@@ -2461,16 +2471,16 @@ inline int tooltip_hover_slop_px() {
 // where the pointer is; the fade only softens what that truth left behind.
 //
 // WHAT DOES NOT ANIMATE, because Breeze registers no engine for it: the
-// dropdown items (QMenu), the folder overlay's rows (item views); and, by his
-// pick, every keyboard-focus decoration, the tooltip's show and hide, and the
-// window-activation recolour. THE ONE DEPARTURE is the menu row's pill, which
-// Breeze snaps (QMenuBar has no engine) and which takes the roster's SnapIn
-// tail by his ruling (architect 2026-10-01, "do what the icons do" — the
-// why is at redesign_button_hover_fade_kind, app_state.h).
+// dropdown items (QMenu), the folder overlay's rows (item views), the menu
+// row's pill (QMenuBar); and, by his pick, every keyboard-focus decoration,
+// the tooltip's show and hide, and the window-activation recolour. THE PILL
+// DOES NOT FADE; IT HOLDS (architect 2026-10-01): Breeze snaps it off at the
+// hover's end and this snaps it off kHoverFadeMs late — the Holding kind
+// above, the why at redesign_button_hover_fade_kind, app_state.h.
 inline constexpr int64_t kHoverFadeMs    = 100;
 inline constexpr int     kHoverFadeSteps = 10;
 
-enum class HoverFadeKind : uint8_t { SnapIn, Reversing };
+enum class HoverFadeKind : uint8_t { SnapIn, Reversing, Holding };
 
 struct HoverFade {
     int64_t       edge_ms = 0;      // the clock at the last hover edge
@@ -2497,8 +2507,11 @@ inline int hover_fade_digitize(int64_t t) {
 
 // THE PAINTED LEVEL, [0, kHoverFadeSteps] — the one thing a painter reads. A
 // SnapIn face is full for as long as it is hovered, whatever its hidden
-// animation is doing.
+// animation is doing; a Holding face is full while hovered and for as long as
+// its tail runs, and zero once it has stopped — never between.
 inline int hover_fade_steps(const HoverFade& f) {
+    if (f.kind == HoverFadeKind::Holding)
+        return f.rising || f.running ? kHoverFadeSteps : 0;
     if (f.kind == HoverFadeKind::SnapIn && f.rising) return kHoverFadeSteps;
     return f.level;
 }
@@ -2510,7 +2523,11 @@ inline int hover_fade_steps(const HoverFade& f) {
 inline bool hover_fade_edge(HoverFade& f, HoverFadeKind kind, bool hovered,
                             int64_t now) {
     if (f.rising == hovered && f.kind == kind) return f.running;
-    const int64_t t = hover_fade_time(f, now);
+    // A Holding rise has no hidden climb: the hold's full length is armed at
+    // once, so the drop that follows always holds kHoverFadeMs.
+    const int64_t t = kind == HoverFadeKind::Holding && hovered
+                          ? kHoverFadeMs
+                          : hover_fade_time(f, now);
     f.kind    = kind;
     f.from    = t;
     f.edge_ms = now;

@@ -3044,6 +3044,23 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 // tap places the playhead (a double tap on the empty marker lane creates)
 // and a drag does nothing — the placement pending begins no pan.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
+    // THE ZONE YIELDS UNDER THE OPEN DROPDOWN'S BOX (architect 2026-10-01,
+    // from his glass pass: the Settings menu's device rows lost their pressed
+    // face at the pen's down while every other row took it). A menu hanging
+    // over the waveform puts its lower rows on the pan zone — the Settings
+    // menu's device group does, its sidecar group and the shorter File and
+    // Edit menus stand over the lanes above — and a contact there opened the
+    // zone's window and DELIVERED NO PRESS until the lift: the pen's
+    // HOVER_EXIT before the tip had already dropped the hover face, so the row
+    // painted at rest from the down to the lift, where the tap's burst
+    // delivered press and release together and the act ran. Answering false
+    // resolves the contact to the pointer on contact, so the press reaches
+    // the popup's own claim and arms the row at the down, as a mouse press
+    // does (the laptop's mouse never meets the zone). ONE SPELLING OF "ON THE
+    // BOX": the painted rect the card query yields under too
+    // (notification_card_at).
+    if (app.dropdown.open() && rect_contains(app.dropdown.rect, x, y))
+        return false;
     // THE ZONE YIELDS UNDER A NOTIFICATION CARD (2026-08-29), for the
     // keyboard clause's reason below: the cards stack over the waveform's
     // upper right, the whole waveform is the pan zone, and a finger landing
@@ -9231,12 +9248,12 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // business.
     clear_redesign_button_hover();
     // AND THE OPEN EDGE CUTS EVERY ANCHOR'S FADE (architect 2026-10-01, the
-    // anchors taking the roster's SnapIn tail — redesign_button_hover_fade_kind):
-    // the clear above stamps the pressed anchor a tail like any hover end, and
-    // a neighbour left a moment before may still be running one, but while a
-    // menu stands its anchor's pill is held by the painter's open term and no
-    // tail may paint under it or beside it — a hover switch inside the 100 ms
-    // would otherwise leave the old anchor's tail lit next to the new menu's
+    // anchors' 100 ms hold — redesign_button_hover_fade_kind): the clear above
+    // stamps the pressed anchor a hold like any hover end, and a neighbour
+    // left a moment before may still be running one, but while a menu stands
+    // its anchor's pill is held by the painter's open term and no hold may
+    // paint under it or beside it — a hover switch inside the 100 ms would
+    // otherwise leave the old anchor's pill lit next to the new menu's
     // pill. No anchor can start another while the menu is up
     // (redesign_button_hover_zone refuses the roster), so this one cut covers
     // the whole open; once the menu closes, each anchor's next hover edge
