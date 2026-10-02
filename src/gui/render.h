@@ -122,6 +122,12 @@ struct TrimRange {
 // config keys with Settings rows (device_config.h): `palette_passes` for the
 // chrome and `waveform_passes` for the waveform's canvas, its plate inks and
 // the region lift, both 0 by default, 0 being today's picture byte for byte.
+// ON THE TABLET THE WINDOW IS A DISPLAY-P3 LAYER (architect 2026-10-02, at
+// GuiPlatform::adopt_window, platform_android.cpp): the display hardware then
+// treats the app as it treats the viewer's P3-tagged image, so 1.00 reproduces
+// the viewer's look by construction, and the hardware's own treatment of a P3
+// layer is neither modelled nor needed. The laptop keeps its untagged sRGB
+// surface, where the knob is the model alone.
 // THE WAVEFORM HAS ITS OWN KEY because he found the transformed ink fringed
 // and holds it where it is, while the canvas, a near-neutral, barely moves
 // under the matrix either way. The model, the one transform and its matrix

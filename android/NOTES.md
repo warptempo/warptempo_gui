@@ -1395,6 +1395,13 @@ with `setDecorFitsSystemWindows` and `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS`. The
 same day the class gained the battery receiver (the menu row's battery + clock
 legend, `nativeBatteryState`). Not yet driven on the device at this writing.
 
+### 12.8 The window is a Display-P3 layer (architect 2026-10-02)
+
+The `<activity>` carries `android:colorMode="wideColorGamut"` and
+`adopt_window` tags the buffers `ADATASPACE_DISPLAY_P3` beside their format, so
+the display hardware treats the app's layer as it treats a gallery viewer's
+(the rule and the measurement are at the call and platform_android.cpp's head).
+
 ## 13. The on-screen keyboard (M5, 2026-08-27)
 
 The glass had no way to type. This is the surface that gives it one, and it is

@@ -66,7 +66,16 @@
          owns. So resizeableActivity="false" still buys the one geometry;
          orientation|screenSize are in configChanges so the flip never recreates
          the activity, and screenSize|screenLayout are there so a configuration
-         change never recreates it either. -->
+         change never recreates it either.
+
+         colorMode="wideColorGamut": THE WINDOW IS A DISPLAY-P3 LAYER
+         (architect 2026-10-02). Without it the window is colour-space
+         agnostic and the compositor treats every buffer as sRGB whatever it
+         is tagged; with it the compositor and the display hardware honour the
+         buffers' dataspace, which GuiPlatform::adopt_window
+         (src/gui/platform_android.cpp) tags DISPLAY_P3, so the panel receives
+         the app as it receives a gallery viewer's P3-tagged image. The rule
+         and its measurement are at that call and that file's head. -->
     <activity
         android:name=".MainActivity"
         android:exported="true"
@@ -76,7 +85,8 @@
         android:resizeableActivity="false"
         android:launchMode="singleTask"
         android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density|uiMode|navigation|keyboard"
-        android:windowSoftInputMode="adjustNothing">
+        android:windowSoftInputMode="adjustNothing"
+        android:colorMode="wideColorGamut">
 
       <!-- soname without the lib prefix and the .so suffix. -->
       <meta-data android:name="android.app.lib_name" android:value="warptempo_gui" />

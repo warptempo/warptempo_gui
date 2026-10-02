@@ -5,6 +5,7 @@
 
 #include <android/asset_manager.h>
 #include <android/configuration.h>
+#include <android/data_space.h>
 #include <android/input.h>
 #include <android/log.h>
 #include <android/looper.h>
@@ -52,6 +53,16 @@
 //
 // android_main lives at the bottom of this file: it is this platform's entry
 // point and calls the one portable GUI body, gui_main (gui_main.h).
+//
+// THE WINDOW IS A DISPLAY-P3 LAYER (architect 2026-10-02; the rule is at
+// adopt_window, the manifest's colorMode beside it). The measurement behind
+// it: a screencap of a gallery viewer showing a screencap PNG of this app is
+// bit-identical to a screencap of the live app, yet on the glass the viewer
+// reads paler and less saturated — SurfaceFlinger's record shows the viewer's
+// layer tagged DISPLAY_P3 and composed by the hardware composer against this
+// app's V0_SRGB, so the difference is Samsung's display hardware treating a
+// P3-tagged layer its own way, in closed code. Tagging this window P3 hands
+// the app to the hardware exactly as the viewer is handed.
 
 // ---------------------------------------------------------------------------
 // The logcat sink for the GUI's own diagnostics
@@ -693,6 +704,24 @@ void GuiPlatform::adopt_window(bool fire_resize) {
         std::fprintf(stderr,
                      "warptempo_gui: ANativeWindow_setBuffersGeometry"
                      "(RGBA_8888) refused (%d)\n", static_cast<int>(geom_rc));
+    }
+
+    // THE WINDOW IS A DISPLAY-P3 LAYER (architect 2026-10-02; the measurement
+    // is at this file's head). The app's sRGB-authored bytes are handed over
+    // untouched under the DISPLAY_P3 tag (the manifest's colorMode makes the
+    // compositor honour it), so the panel receives them as it receives a
+    // gallery viewer's P3-tagged image; the look is then one pass short of a
+    // screencap viewed in the gallery, which `palette_passes` and
+    // `waveform_passes` at 1.00 supply (render.h's tuning knob). A REFUSAL IS
+    // REPORTED AND NOT FATAL, as the geometry's is: the layer then stays sRGB
+    // and the knob still works as the model it is on the laptop, whose Wayland
+    // surface stays untagged sRGB. API 28; minSdk is 30.
+    const int32_t space_rc =
+        ANativeWindow_setBuffersDataSpace(window_, ADATASPACE_DISPLAY_P3);
+    if (space_rc != 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: ANativeWindow_setBuffersDataSpace"
+                     "(DISPLAY_P3) refused (%d)\n", static_cast<int>(space_rc));
     }
 
     // PIN THE PANEL TO 90 Hz (architect 2026-08-27). One device, one rate: the
