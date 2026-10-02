@@ -496,11 +496,12 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // THE HEAD IS THE OPAQUE PALETTE'S ONE RULED EXCEPTION (architect 2026-09-23,
 // when the head moved up onto the ruler lane's bottom rows): it composites at
 // kPlayheadHeadAlpha over the ruler's timestamps and ticks, "slightly
-// translucent" in his words, so the digits read through it. The same day the
-// ruler lane grew beneath its labels (kRulerLaneHeightPx) and the head no
-// longer reaches the digits, so the alpha now shows through a major tick's
-// rise alone. The value is his to tune by eye; the one other alpha in the
-// tree is the cards' drop shadow (kNotificationShadowAlpha, 2026-10-01).
+// translucent" in his words, so the digits read through it. The ruler lane
+// keeps one pixel of ground between the labels and the head
+// (kRulerLaneHeightPx), so the head never reaches the digits and the alpha
+// shows through a major tick's rise alone. The value is his to tune by eye;
+// the one other alpha in the tree is the cards' drop shadow
+// (kNotificationShadowAlpha, 2026-10-01).
 // (Until that
 // day a tick crossing the head painted the pre-blended #b7b7b7 measured off
 // row_5_lane_3_playhead_tick.png; with real compositing the tick shows through
@@ -733,10 +734,9 @@ inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x704083);
 //
 // IT IS ITS OWN CONSTANT AND NOT A RETUNE OF kRedesignLabel, which stays
 // #fcfcfc: that value is the whole redesign's label ink — the menu row, the
-// icon row, the bottom row, the tooltips, the dropdowns, the clock, the ruler's
-// emphasized labels — and this ruling is about the marker lane alone, whose
-// surfaces are the only SATURATED FILLS the product paints text on. Two facts,
-// two constants.
+// icon row, the bottom row, the tooltips, the dropdowns, the clock — and this
+// ruling is about the marker lane alone, whose surfaces are the only
+// SATURATED FILLS the product paints text on. Two facts, two constants.
 //
 // WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
 // replaces): the calm purple — both columns' rest fill since 2026-10-01 — is
@@ -1770,9 +1770,10 @@ inline int scrub_handle_box_px() {
 // top, with no gap. These replace the four legacy lanes (trim chip / marker
 // text / flag / triangle) and, like every redesigned row, ride
 // gui_scale_factor() rather than the monospace font's axis. (The trim lane
-// ADDITIONALLY scales by its own factor below, so the crop's y-map holds for
-// the ruler and marker lanes while the trim lane is taller than its measured
-// 10 rows now.)
+// ADDITIONALLY scales by its own factor below, and the ruler lane is
+// kRulerLaneHeightPx's 29 rows against the crop's 28 — the playhead head's
+// clearance beneath the labels, below — so the crop's y-map holds for the
+// marker lane's own 20 rows and not for the lanes' offsets.)
 //
 // THE TRIM BAR'S OWN SCALE FACTOR — a RULED RETUNABLE, back at 100 (architect
 // 2026-08-12, the seventh glass ruling). The 150 experiment lived one commit,
@@ -1804,23 +1805,26 @@ inline constexpr int kTrimBarScalePercent = 100;
 // alone — so the border row is part of the lane for the pointer exactly as it
 // is for paint, and no second, shorter rect had to be invented for it.
 inline constexpr int kTrimLaneHeightPx   = 10;
-// 32 SINCE 2026-09-23 (was 28, the crop's own): FOUR AUTHORED ROWS OF GROUND
-// UNDER THE TIMESTAMPS, so the playhead head on the lane's bottom rows clears
-// them (architect 2026-09-23, his eyeball of the head's first variant, which
-// overlapped the digits by three rows). The labels are anchored to the lane's
-// TOP (paint_ruler_row: line_baseline off lane.y + kRulerLabelPadTopPx), so the
-// growth lands entirely beneath them and they do not move. THE ARITHMETIC AT
-// 100%, measured through cairo on the product's sans at 16px (ascent 15, the
-// digits' and colon's ink the 12-row cap band, no descenders — Liberation's
-// numbers when the lane grew and Roboto's alike, re-measured 2026-10-02):
-// baseline = 4 + 15 = row 19, so the labels' lowest ink row is 18; the head's
-// top row is 32 - 12 = 20; ROW 19 IS THE ONE PIXEL OF EMPTY GROUND between
-// them, the ruling's gap (at 28 the head's top row was 16, three rows into the
-// digits). At 200% Roboto's ascent 30 gives a baseline of 8 + 30 = 38, ink to
-// row 37 and a head from 64 - 24 = 40 (two rows of ground); at 50%, ink to 9
-// and a head from 16 - 6 = 10 (none, touching). The major ticks' rise above
+// 29 SINCE 2026-10-02 (architect, judging the Y1 mock on the tablet: "tighten
+// up the timestamp lane"): the labels are anchored to the lane's TOP, their
+// cap top 4 rows under it (paint_ruler_row: line_baseline off lane.y +
+// kRulerLabelPadTopPx), and the rows beneath them are the PLAYHEAD HEAD'S
+// CLEARANCE — the head sits tip-down on the lane's bottom rows and stands ONE
+// PIXEL OF EMPTY GROUND clear of the digits' lowest ink at 100% (architect
+// 2026-09-23, his eyeball of the head's first variant, which overlapped the
+// digits). THE ARITHMETIC AT 100%, measured through the product's own road
+// (cairo-ft on fonts/Roboto-Regular.ttf, SLIGHT, the 16px sans: ascent 15, the
+// digits', colon's and point's ink the 12-row cap band, no descenders — the
+// metrics table at gui_font_bundled.cpp): baseline = 1 + 15 = row 16, so the
+// labels' ink runs rows 4..15; the head's top row is 29 - 12 = 17; ROW 16 IS
+// THE ONE PIXEL OF EMPTY GROUND between them, the ruling's gap. At 200% (the
+// tablet; lane 58, pad 2, the 32px face's ascent 30 and its 22-row cap) the
+// baseline is 2 + 30 = 32, ink rows 10..31 and a head from 58 - 24 = 34: two
+// rows of ground. At 50% (lane 14 off 14.5's tie to even, pad 0, the 8px
+// face's ascent 8 and 5-row ink) the baseline is 0 + 8 = 8, ink rows 3..7
+// and a head from 14 - 6 = 8: none, touching. The major ticks' rise above
 // the marker lane is unchanged.
-inline constexpr int kRulerLaneHeightPx  = 32;
+inline constexpr int kRulerLaneHeightPx  = 29;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
     return scaled_px(

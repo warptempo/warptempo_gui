@@ -3838,9 +3838,16 @@ constexpr int  kRulerMinorsPerStep = 8;
 // a rung is admissible while its minors stay at least this far apart, which puts
 // its labels at least 8x that apart.
 constexpr double kRulerMinMinorPitchPx = 12.0;
-// The label band's top padding; with the 12pt band this lands the baseline on
-// the composite's own label rows.
-constexpr double kRulerLabelPadTopPx   = 4.0;
+// The label line's top pad, the rows between the lane's top and the line's
+// own top (paint_ruler_row's line_baseline): 1, so the digits' CAP TOP lands 4
+// rows under the lane's top at 100% (architect 2026-10-02, judging the Y1 mock
+// on the tablet: "tighten up the timestamp lane"). line_baseline seats the
+// baseline ceil(ascent) under the line's top, and the 16px sans measures
+// ascent 15 and a 12-row cap band through the product's own road (the metrics
+// table at gui_font_bundled.cpp, re-measured on the digits' ink), so the cap
+// top is pad + 15 - 12 = pad + 3, and 4 asks pad 1. The head's clearance
+// beneath the labels is kRulerLaneHeightPx's arithmetic (render.h).
+constexpr double kRulerLabelPadTopPx   = 1.0;
 // How far a MAJOR tick rises above the marker lane. Minors rise none.
 constexpr double kRulerMajorRisePx     = 4.0;
 
@@ -3951,13 +3958,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                 std::nearbyint(kRulerLabelPadTopPx *
                                                gui_scale_factor()));
 
-    // SUB-SECOND EMPHASIS: while the step is finer than a second, the WHOLE
-    // SECONDS are the landmarks, so they take the brighter label white while
-    // every other label stays the ruler's dim grey. One color swap, no second
-    // type size — the simplest reproduction of Reaper's emphasis that survives
-    // at every scale.
-    const bool emphasize = step < 1000;
-
     // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
     // moments, a breathing comb; the majors read fine).
@@ -4036,9 +4036,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 ruler_label_text(label_ms, step);
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, txt.c_str());
-            const GuiColor c = (emphasize && (label_ms % 1000) == 0)
-                                   ? kRedesignLabel : kRulerLabel;
-            cairo_set_source_rgb(cr, c.r, c.g, c.b);
+            // EVERY LABEL IS ONE COLOUR, kRulerLabel (architect 2026-10-02,
+            // on the Y1 mock: "give the same colour to all the numbers").
+            cairo_set_source_rgb(cr, kRulerLabel.r, kRulerLabel.g,
+                                 kRulerLabel.b);
             text_shape::show_shaped_run(cr, run,
                                         static_cast<double>(lane.x + col +
                                                             waveform_line_px() +
@@ -4060,11 +4061,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // row, so the head's last pixel touches the marker lane's first and head
     // and flags never share a pixel: both stay whole at all times (architect
     // 2026-09-23; it sat on the marker lane's bottom rows from 2026-08-01,
-    // under the flags). THE HEAD CLEARS THE TIMESTAMPS TOO: the same day's
-    // eyeball found it three rows into the digits' ink, and the ruler lane
-    // grew four authored rows beneath the top-anchored labels (28 -> 32) so
-    // one pixel of ground stands between a digit's lowest ink and the head's
-    // top row at 100% (the arithmetic at kRulerLaneHeightPx, render.h).
+    // under the flags). THE HEAD CLEARS THE TIMESTAMPS TOO: the ruler lane
+    // keeps rows of ground beneath its top-anchored labels so one pixel of
+    // ground stands between a digit's lowest ink and the head's top row at
+    // 100% (the arithmetic, for 100%, 200% and 50%, at kRulerLaneHeightPx,
+    // render.h).
     //
     // SLIGHTLY TRANSLUCENT, THE ONE RULED EXCEPTION TO THE OPAQUE PALETTE
     // (architect 2026-09-23: "the timestamps are just a rough ballpark; the
@@ -4131,7 +4132,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                     kPlayheadHeadHeightPx * s));
             // THE BAND IS THE RULER LANE'S BOTTOM `rows`, its bottom edge the
             // marker lane's top (the two lanes abut, strip_row_rect): at 100%
-            // the ruler's last 12 of its 32 rows. The ruler is always taller
+            // the ruler's last 12 of its 29 rows. The ruler is always taller
             // than the head at every scale, so the band never leaves the lane.
             const int    head_bottom = marker.y;
             const int    head_top    = head_bottom - rows;

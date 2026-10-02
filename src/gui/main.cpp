@@ -206,34 +206,33 @@ namespace {
 //
 // THE STACKS BELOW ARE AT THE DEFAULT max_waveform_height OF 500 (both
 // templates'; a device carrying another value moves only W and the gaps), THE
-// ONE RECORD, re-derived from the lane table 2026-10-01 rather than adjusted.
-// AT 100% the top lanes are 138 = menu 30 + icon 46 + trim 10 + ruler 32 +
-// marker 20, of which 76 is the two toolbar rows above the gap and 62 the
+// ONE RECORD, re-derived from the lane table 2026-10-02 rather than adjusted.
+// AT 100% the top lanes are 135 = menu 30 + icon 46 + trim 10 + ruler 29 +
+// marker 20, of which 76 is the two toolbar rows above the gap and 59 the
 // block above the waveform; the BOTTOM STRIP is 47, the bottom row's 46
-// content and its 1px border-top. (The tab row's 36 and the icon row's 1px
-// border went on 2026-10-01 — the menu row's 6 rows of air above its pill
-// came and went the same evening: the top lanes went 175 -> 138, NET 37
-// SHORTER at 100%, and on a window with room every one of those pixels went
-// into GAP 1.)
-//   1920x1080 AT 100%, THE LAPTOP: leftover 895 -> waveform CLAMPED at 500,
-//     gap 1 = 152, gap 2 = 243
-//     — 30 menu / 46 icon / 152 blank / 62 block / 500 waveform / 243 blank
+// content and its 1px border-top. (On a window with room every authored pixel
+// the top lanes gain or lose goes into or out of GAP 1, the waveform's span
+// holding still; on a short window it moves the waveform's height instead.)
+//   1920x1080 AT 100%, THE LAPTOP: leftover 898 -> waveform CLAMPED at 500,
+//     gap 1 = 155, gap 2 = 243
+//     — 30 menu / 46 icon / 155 blank / 59 block / 500 waveform / 243 blank
 //     / 47 row, the waveform spanning y 290..790 about the window's midline
 //     540 (the clamp fixes its height and the midpoint rule its centre, so
 //     gap 1 absorbs every authored pixel the lanes above it gain or lose).
 //   2304x1440 AT gui_scale 200, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
-//   MainActivity.java's head): the lanes are 60 menu + 92 icon + 20 trim + 64
-//   ruler + 40 marker = 276 above and 94 below (92 + a 2px border), leftover
-//   1070 -> waveform CLAMPED at 1000 (the scaled 500), gap 1 = 0 (the
-//   midpoint rule would want -56), gap 2 = 70
-//     — 60 / 92 / 0 / 124 / 1000 / 70 / 94.
+//   MainActivity.java's head): the lanes are 60 menu + 92 icon + 20 trim + 58
+//   ruler + 40 marker = 270 above and 94 below (92 + a 2px border), leftover
+//   1076 -> waveform CLAMPED at 1000 (the scaled 500), gap 1 = 0 (the
+//   midpoint rule would want 720 - 270 - 500 = -50), gap 2 = 76
+//     — 60 / 92 / 0 / 118 / 1000 / 76 / 94.
 //   1024x600 AT 100%, A SHORT WINDOW (kept as the worked case the floors exist
 //   for; no host runs this geometry):
-//     leftover 415 -> waveform UNCLAMPED at 415, both gaps 0
-//     — 30 / 46 / 0 / 62 / 415 / 0 / 47. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -45), so the waveform keeps everything,
-//     which is the rule's own floor rather than a special case.
+//     leftover 418 -> waveform UNCLAMPED at 418, both gaps 0
+//     — 30 / 46 / 0 / 59 / 418 / 0 / 47. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = 300 - 135 - 209 = -44), so the
+//     waveform keeps everything, which is the rule's own floor rather than a
+//     special case.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -461,14 +460,14 @@ GuiRect waveform_area(const AppState& a) {
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and at today's ceiling
-    // it fits: gui_scale's 350 takes the six lanes' 191 authored px — the top
-    // strip's 144 plus the bottom row's 47 (re-derived 2026-10-01) — to 669
+    // it fits: gui_scale's 350 takes the six lanes' 182 authored px — the top
+    // strip's 135 plus the bottom row's 47 (re-derived 2026-10-02) — to 638
     // device px on a supported 1080-tall window (lane by lane through
-    // scaled_px, which is not one multiply of the sum: 126 menu + 161 icon +
-    // 35 trim + 112 ruler + 70 marker + 165 row), leaving 411 for the waveform
+    // scaled_px, which is not one multiply of the sum: 105 menu + 161 icon +
+    // 35 trim + 102 ruler + 70 marker + 165 row), leaving 442 for the waveform
     // and its gaps. (No host runs anything near it: the laptop is 100 % on
     // 1080 and the tablet 200 % on its 1440-tall surface, where the six lanes
-    // take 382.) The guard
+    // take 364.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved three times — and the lane set is one
     // the redesign keeps adding to and taking from. If

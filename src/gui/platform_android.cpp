@@ -496,7 +496,7 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale     = 225;
     // The waveform cap's authored 500 px, the laptop template's value (at
-    // 225 % it scales to 1125, above the 1010 px leftover the five top lanes
+    // 225 % it scales to 1125, above the 1030 px leftover the five top lanes
     // and the bottom row leave on the full-screen 1440-tall surface, so the
     // waveform is unclamped at the template's own scale).
     cfg.max_waveform_height = 500;

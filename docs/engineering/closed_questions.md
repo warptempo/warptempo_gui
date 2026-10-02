@@ -267,6 +267,7 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **A gate on either bar** — ruled out: it would draw a line where the gain crosses it. Owner: `waveform_gain.h`'s compressor block.
 - **A per-passage magnification override, a third lamp state, or the A/B tabs as an exceptions road** — ruled out, 2026-09-23: the lamp is the only exceptions road. Owner: `waveform_magnified` (warp_frame_map_view.h).
 - **Magnification flat in target view, the "Ignore Waveform Magnification" sense, or magnification derived from the zoom or the view** — repealed, 2026-09-24: one lamp, dark at every open, universal in both audio views. Owner: `waveform_magnified`.
+- **The ruler lane at 32 rows with the whole-second labels highlighted** — superseded, 2026-10-02, on the Y1 mock ("tighten up the timestamp lane"; "give the same colour to all the numbers"): the lane is 29, the labels' cap top 4 rows under its top, every label one colour. Owner: `kRulerLaneHeightPx` (render.h), `kRulerLabelPadTopPx` (paint_handler.cpp).
 
 ## The trim sweep, the scrub, the cursors and bare Esc
 
