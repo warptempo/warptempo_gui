@@ -7199,25 +7199,24 @@ void GuiInputHandler::finalize_active_drags() {
 // THE ROSTER'S HOVER FADE EDGE — the one place a button's HoverFade is
 // stamped (architect 2026-09-27, the Breeze port; the model is at render.h's
 // HoverFade), called by the two writers of `hovered` below on every flip and
-// by nothing else, so the fade's direction always mirrors the bit. A MENU
-// ANCHOR stamps nothing (redesign_button_hover_fade_kind: Breeze animates no
-// QMenuBar). A button that is DEAD at the edge is cut rather than faded —
-// Breeze paints no animation on a disabled button (renderButtonFrame's
-// `enabled` term), and the painters gate the tail on the same bit. The edge
+// by nothing else, so the fade's direction always mirrors the bit — on every
+// roster button, the menu anchors included (redesign_button_hover_fade_kind,
+// architect 2026-10-01). A button that is DEAD at the edge is cut rather than
+// faded — Breeze paints no animation on a disabled button
+// (renderButtonFrame's `enabled` term), and the painters gate the tail on the
+// same bit. The edge
 // raises AppState::hover_fades_running when an animation now runs, which is
 // what wakes the tick's walk (tick_hover_fades). No damage here: the caller's
 // own strip damage covers the edge frame, the tick the frames after it.
 void GuiInputHandler::stamp_redesign_button_hover_fade(RedesignButton id,
                                                        int64_t now) {
     AppState::RedesignButtonFace& f = app.redesign_buttons[static_cast<size_t>(id)];
-    const std::optional<HoverFadeKind> kind =
-        redesign_button_hover_fade_kind(id);
-    if (!kind) return;
     if (!f.enabled) {
         hover_fade_cut(f.fade, f.hovered);
         return;
     }
-    if (hover_fade_edge(f.fade, *kind, f.hovered, now))
+    if (hover_fade_edge(f.fade, redesign_button_hover_fade_kind(id), f.hovered,
+                        now))
         app.hover_fades_running = true;
 }
 
@@ -9231,6 +9230,22 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // roster buttons and the tooltip; the anchor's face is the paint condition's
     // business.
     clear_redesign_button_hover();
+    // AND THE OPEN EDGE CUTS EVERY ANCHOR'S FADE (architect 2026-10-01, the
+    // anchors taking the roster's SnapIn tail — redesign_button_hover_fade_kind):
+    // the clear above stamps the pressed anchor a tail like any hover end, and
+    // a neighbour left a moment before may still be running one, but while a
+    // menu stands its anchor's pill is held by the painter's open term and no
+    // tail may paint under it or beside it — a hover switch inside the 100 ms
+    // would otherwise leave the old anchor's tail lit next to the new menu's
+    // pill. No anchor can start another while the menu is up
+    // (redesign_button_hover_zone refuses the roster), so this one cut covers
+    // the whole open; once the menu closes, each anchor's next hover edge
+    // starts fresh. The strip damage below covers the frame.
+    for (const DropdownMenu m : kDropdownMenus)
+        hover_fade_cut(app.redesign_buttons[static_cast<size_t>(
+                           redesign_button_index(dropdown_anchor_button(m)))]
+                           .fade,
+                       false);
     viewport.invalidate_top_strip();
 }
 

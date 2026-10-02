@@ -2460,10 +2460,13 @@ inline int tooltip_hover_slop_px() {
 // and the painted faces exactly as before. The hover bits stay the truth of
 // where the pointer is; the fade only softens what that truth left behind.
 //
-// WHAT DOES NOT ANIMATE, because Breeze registers no engine for it: the menu
-// row's pill (QMenuBar), the dropdown items (QMenu), the folder overlay's rows
-// (item views); and, by his pick, every keyboard-focus decoration, the
-// tooltip's show and hide, and the window-activation recolour.
+// WHAT DOES NOT ANIMATE, because Breeze registers no engine for it: the
+// dropdown items (QMenu), the folder overlay's rows (item views); and, by his
+// pick, every keyboard-focus decoration, the tooltip's show and hide, and the
+// window-activation recolour. THE ONE DEPARTURE is the menu row's pill, which
+// Breeze snaps (QMenuBar has no engine) and which takes the roster's SnapIn
+// tail by his ruling (architect 2026-10-01, "do what the icons do" — the
+// why is at redesign_button_hover_fade_kind, app_state.h).
 inline constexpr int64_t kHoverFadeMs    = 100;
 inline constexpr int     kHoverFadeSteps = 10;
 

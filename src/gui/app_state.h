@@ -3289,8 +3289,7 @@ inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
 
 // IS THIS BUTTON A MENU ANCHOR? DERIVED from the menu list above through the
 // anchor owner, never a second list — so a menu added here is an anchor
-// everywhere at once (the press claim, the history partition, the
-// hover-fade kind). The COLLAPSE walk asked it too until 2026-08-13, then asked
+// everywhere at once (the press claim, the history partition). The COLLAPSE walk asked it too until 2026-08-13, then asked
 // `redesign_button_in_icon_row` instead; both are gone with that rule
 // (2026-08-14), and a menu cannot vanish because nothing hides a button in
 // these rows at all any more.
@@ -3301,13 +3300,25 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 }
 
 // WHICH ROSTER BUTTONS FADE THEIR HOVER, AND HOW (architect 2026-09-27, the
-// Breeze port at render.h's HoverFade): every tool button — the icon row
-// and the bottom row — snaps in and fades out (QToolButton's); row 1's
-// MENU ANCHORS do not animate at all, Breeze having no QMenuBar engine, so
-// their pill stays the hard switch it was (std::nullopt: no edge is stamped).
-inline constexpr std::optional<HoverFadeKind>
-redesign_button_hover_fade_kind(RedesignButton b) {
-    if (redesign_button_is_menu_anchor(b)) return std::nullopt;
+// Breeze port at render.h's HoverFade): EVERY ROSTER BUTTON snaps in and
+// fades out (QToolButton's) — the icon row, the bottom row, and row 1's MENU
+// ANCHORS (architect 2026-10-01, "do what the icons do"). The anchors'
+// pill takes the icons' SnapIn tail: full while the anchor is hovered or its
+// menu is open (paint_menu_row's open term), fading out over kHoverFadeMs in
+// kHoverFadeSteps once the bit drops with no menu holding it, full again at
+// once on a return mid-fade. It departs from Breeze on purpose — QMenuBar
+// registers no animation engine, so Breeze's pill snaps off — because every
+// other button in the app fades, and because the S Pen's two gaps fall
+// inside the tail: it sends HOVER_EXIT a few ms before every tip-down and
+// its lift precedes the next hover sample by a few ms, each a pointer leave
+// that clears the hover bits, and the Android loop paints after every input
+// drain, so a pill that snapped off blinked to rest at the first touch and
+// at the lift where a fading one paints at step 9 or 10. Paint only, as
+// every fade is: the press, hit tests, the cursor and the tooltip keep
+// reading the hover bits. A plain value: no roster button is without a
+// fade, so there is no "none" arm.
+inline constexpr HoverFadeKind
+redesign_button_hover_fade_kind(RedesignButton) {
     return HoverFadeKind::SnapIn;
 }
 
@@ -5890,8 +5901,11 @@ struct AppState {
         // ever paint on the button that left it; it is cut when the button
         // goes dead under it — at the edge, or mid-tail by the tick, which
         // reads `enabled` before each advance, so a re-enable revives no old
-        // tail — or stops being painted. Row 1's menu anchors never stamp
-        // one.
+        // tail — or stops being painted. Row 1's menu anchors stamp and tick
+        // exactly as the tool buttons do (architect 2026-10-01), save that a
+        // menu's OPEN EDGE cuts every anchor's fade (toggle_dropdown): the
+        // open term holds the opened anchor's pill while the menu stands, and
+        // no tail paints under it or beside it.
         HoverFade fade{};
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};

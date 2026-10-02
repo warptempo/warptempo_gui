@@ -206,11 +206,11 @@ namespace {
 // (The authored-length -> device-pixels conversion every dimension below takes
 // is scaled_px, render.h — the ONE conversion the whole scale axis shares.)
 
-// A ROSTER TOOL BUTTON'S PAINTED HOVER, [0, kHoverFadeSteps] (architect
+// A ROSTER BUTTON'S PAINTED HOVER, [0, kHoverFadeSteps] (architect
 // 2026-09-27, render.h's HoverFade): full while the pointer is on it, then
 // its SnapIn tail — cut on a dead button, as Breeze paints no animation on a
-// disabled one. The icon row and the bottom row read it; the menu anchors
-// none.
+// disabled one. The icon row, the bottom row and, since 2026-10-01, the menu
+// row's anchors read it (paint_menu_row adds its open-menu term above it).
 int redesign_button_hover_steps(const AppState::RedesignButtonFace& face) {
     if (face.hovered) return kHoverFadeSteps;
     return face.enabled ? hover_fade_steps(face.fade) : 0;
@@ -1315,8 +1315,10 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // at rest the label paints bare on the row ground;
     // hovered, a filled accent pill sits under it, FLUSH with the button's
     // row — the text box at the lane's foot (the css float model — a flat
-    // button fills its whole row, architect 2026-07-31). A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
-    // only pointer-out rests it. The click and disabled faces belong to rows 2
+    // button fills its whole row, architect 2026-07-31). A PRESS PAINTS
+    // NOTHING NEW — a click keeps the hover face and only pointer-out rests
+    // it, the pill fading out over the roster's SnapIn tail since 2026-10-01
+    // (below, at the pill). The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
     // EVERY ACTION ON THE FLOAT IS THE SAME KIND since 2026-08-13: each button
@@ -1446,22 +1448,38 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // can be open at all), but a button can go dead UNDER a resting hover
         // with no pointer event to refresh it — row 2's outline carries the same
         // guard for the same frame.
+        //
+        // THE PILL IS A LEVEL SINCE 2026-10-01 (architect, "do what the icons
+        // do" — redesign_button_hover_fade_kind holds the ruling and its why):
+        // full while the anchor is hovered or its menu is open, else the
+        // roster's SnapIn tail through the icons' own reader
+        // (redesign_button_hover_steps), and nothing on a dead anchor. The
+        // level paints the way the icon row paints its outline's: the opaque
+        // KColorUtils mix of the accent over what the anchor paints at rest
+        // at those pixels, the row ground (hover_fade_color), so a settled
+        // pill is the hard face bit for bit. The open menu's anchor never
+        // shows a tail — the open edge cuts every anchor's fade
+        // (toggle_dropdown) and the open term holds it full.
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
-        const bool pill = face.enabled &&
-                          (face.hovered ||
-                           (app.dropdown.open() &&
-                            def.id == dropdown_anchor_button(app.dropdown.menu)));
-        if (pill) {
-            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                                 kRedesignAccent.b);
+        const bool open_anchor =
+            app.dropdown.open() &&
+            def.id == dropdown_anchor_button(app.dropdown.menu);
+        const int pill = !face.enabled ? 0
+                         : open_anchor ? kHoverFadeSteps
+                                       : redesign_button_hover_steps(face);
+        if (pill > 0) {
+            const GuiColor pill_c =
+                hover_fade_color(kRedesignAccent, ground, pill);
+            cairo_set_source_rgb(cr, pill_c.r, pill_c.g, pill_c.b);
             redesign_rounded_rect_path(cr, x, text_y,
                                        static_cast<double>(btn_w),
                                        static_cast<double>(text_h), rad);
             cairo_fill(cr);
         }
 
-        // The label color is the SAME in the row's two live faces; the pill
-        // under it is the whole hover cue. White on the pill is his eye's
+        // The label color is the SAME in the row's two live faces and at every
+        // level of the pill's tail; the pill under it is the whole hover cue.
+        // White on the pill is his eye's
         // ruling (architect 2026-10-01: the one text colour over the chrome,
         // its 1.91:1 on the light ink known and accepted — render.h's block
         // after kRedesignLabel). Dead, the label is the one thing that dims
