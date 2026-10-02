@@ -71,7 +71,7 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'icons': 'app',
                 'bars': {'menu': 'flat', 'icon_row': 'flat', 'bottom_row': 'flat'},
                 'buttons': {'raised': False, 'rows': ['icon', 'bottom'], 'down': ['ViewTW'], 'down_shift': True,
-                            'toggled': None, 'down_dither': False, 'gap': None, 'sep_gap': None},
+                            'toggled': None, 'down_dither': False, 'gap': None, 'sep_gap': None, 'group_space': None},
                 'trim': {'bar': 'app', 'ground': 'app', 'handles': 'app', 'grip': 'app', 'cap_w': None, 'lane_h': None,
                          'style': 'app', 'acid_inset': 1},
                 'lane_order': ['trim', 'ruler', 'marker'],
@@ -126,6 +126,15 @@ class Theme:
         if sg is not None and (not isinstance(sg, int) or isinstance(sg, bool) or sg < 0):
             raise SystemExit(f'theme {path}: buttons.sep_gap is null (the scene\'s measured separator gaps) or a whole number of logical px '
                              f'>= 0 added to every separator gap on both sides, not {sg!r}')
+        gs = b['group_space']
+        if gs is not None and (not isinstance(gs, int) or isinstance(gs, bool) or gs < 0):
+            raise SystemExit(f'theme {path}: buttons.group_space is null (the scene\'s measured separator gaps) or a whole number of logical '
+                             f'px >= 0 of empty ground between adjacent groups, not {gs!r}')
+        if gs is not None and sg is not None:
+            raise SystemExit(f'theme {path}: buttons.group_space and buttons.sep_gap are exclusive (group_space is the whole space between groups)')
+        if gs is not None and self.opt['separators'] != 'none':
+            raise SystemExit(f'theme {path}: buttons.group_space needs separators "none" (no separator stands between the groups), '
+                             f'not {self.opt["separators"]!r}')
         self.button_geometry = None     # button_geometry's memo: (buttons, separators), computed at the first painter's call
         for k, vals in OPT_VALUES.items():
             if self.opt[k] not in vals: raise SystemExit(f'theme {path}: {k} must be one of {vals}, not {self.opt[k]!r}')
@@ -395,11 +404,11 @@ def draw_bars(cr, th):
 
 def button_geometry(th):
     """-> (buttons, separators), the boxes draw_buttons and draw_separators paint, computed once per theme (memoized on
-    it, after render() has rebound SCENE; the lane shifts and the restack never touch these boxes). buttons.gap and
-    buttons.sep_gap both null = the scene's own lists, its measured x. Either an integer re-packs both rows as the app
-    walks them (paint_handler.cpp: the
-    icon row's left groups walk right from the left pad, its view group and all of the bottom row sit flush at the right
-    margin), each button moved in x only (y, w, h and every other field as measured):
+    it, after render() has rebound SCENE; the lane shifts and the restack never touch these boxes). buttons.gap,
+    buttons.sep_gap and buttons.group_space all null = the scene's own lists, its measured x. Any one an integer
+    re-packs both rows as the app walks them (paint_handler.cpp: the icon row's left groups walk right from the left
+    pad, its view group and all of the bottom row sit flush at the right margin), each button moved in x only (y, w, h
+    and every other field as measured):
       GROUPS: a row's buttons in x order, a separator of the row lying between two of them closing a group.
       CHAINS: a separator whose two measured gaps (last button's right edge -> separator x, separator x + w -> next
         button x) are equal -- the standard gap, separator, gap -- joins its groups into one chain; unequal gaps (the
@@ -417,13 +426,18 @@ def button_geometry(th):
     kept gap (the view separator's 8 to Source+Warp: it moves left by the extra), so each row keeps its own base. It
     re-packs too: with buttons.gap null the within-group step is each pair's own measured gap (read off the scene before
     the pack, not assumed), so sep_gap 0 re-derives every measured x. Chains are still found on the MEASURED gaps.
+    buttons.group_space (only with separators "none", never with sep_gap) is ABSOLUTE: an integer is the whole empty
+    space between two adjacent groups of one chain in logical px, the same on both rows (group_space x S device px):
+    an inner separator's span (gap, separator, gap) becomes exactly that, the separator given w 0 and parked at the
+    span's middle (nothing paints it). A break separator keeps its measured kept gap (the view group stays flush at the
+    margin). It re-packs like sep_gap (gap null = each pair's measured within-group step).
     Two packed boxes of one row overlapping (a large gap pushing a left chain into a right one) is refused."""
     if th.button_geometry is not None: return th.button_geometry
-    gap = th.opt['buttons']['gap']; sep = th.opt['buttons']['sep_gap']
-    if gap is None and sep is None:
+    gap = th.opt['buttons']['gap']; sep = th.opt['buttons']['sep_gap']; gsp = th.opt['buttons']['group_space']
+    if gap is None and sep is None and gsp is None:
         th.button_geometry = (SCENE['buttons'], SCENE['separators']); return th.button_geometry
     extra = (sep or 0) * S
-    what = ', '.join(f'buttons.{k} {v}' for k, v in (('gap', gap), ('sep_gap', sep)) if v is not None)
+    what = ', '.join(f'buttons.{k} {v}' for k, v in (('gap', gap), ('sep_gap', sep), ('group_space', gsp)) if v is not None)
     btns = [dict(b) for b in SCENE['buttons']]; seps = [dict(s) for s in SCENE['separators']]
     margin = C.W - min(b['x'] for b in btns if b['row'] == 'icon')
     for row in sorted({b['row'] for b in btns}):
@@ -441,8 +455,13 @@ def button_geometry(th):
         chains = [{'groups': [groups[0]], 'inner': [], 'lead': None, 'trail': None}]
         for i, s in enumerate(between):
             gl = s['x'] - (groups[i][-1]['x'] + groups[i][-1]['w']); gr = groups[i + 1][0]['x'] - (s['x'] + s['w'])
-            if gl == gr:            # the measured gaps decide the chains; the pack lays them down widened by sep_gap
-                chains[-1]['inner'].append((s, gl + extra, gr + extra)); chains[-1]['groups'].append(groups[i + 1])
+            if gl == gr:            # the measured gaps decide the chains; the pack lays them down widened by sep_gap,
+                if gsp is None:     # or as group_space's whole span with the separator w 0 at its middle
+                    chains[-1]['inner'].append((s, gl + extra, gr + extra))
+                else:
+                    span = gsp * S; s['w'] = 0
+                    chains[-1]['inner'].append((s, span // 2, span - span // 2))
+                chains[-1]['groups'].append(groups[i + 1])
             else:
                 nxt = {'groups': [groups[i + 1]], 'inner': [], 'lead': None, 'trail': None}
                 if gl < gr: chains[-1]['trail'] = (s, gl + extra)
@@ -513,7 +532,7 @@ def draw_app_glyph(cr, th, g, x, y, under, enabled):
         C.src(cr, C.mix(ink_colour(th, ink), under, keep)); cr.mask_surface(a8_surface(pgm(g['files'][ink])), x, y)
 
 def draw_buttons(cr, th, rows):
-    """Faces and the app's glyphs through cairo, each box at button_geometry's x (measured, or re-packed by buttons.gap / sep_gap)."""
+    """Faces and the app's glyphs through cairo, each box at button_geometry's x (measured, or re-packed by buttons.gap / sep_gap / group_space)."""
     bo = th.opt['buttons']; raised = bo['raised']
     for b in button_geometry(th)[0]:
         if b['row'] not in rows: continue
