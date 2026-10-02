@@ -71,7 +71,7 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'icons': 'app',
                 'bars': {'menu': 'flat', 'icon_row': 'flat', 'bottom_row': 'flat'},
                 'buttons': {'raised': False, 'rows': ['icon', 'bottom'], 'down': ['ViewTW'], 'down_shift': True,
-                            'toggled': None, 'down_dither': False},
+                            'toggled': None, 'down_dither': False, 'gap': None},
                 'trim': {'bar': 'app', 'ground': 'app', 'handles': 'app', 'grip': 'app', 'cap_w': None, 'lane_h': None,
                          'style': 'app', 'acid_inset': 1},
                 'lane_order': ['trim', 'ruler', 'marker'],
@@ -118,6 +118,11 @@ class Theme:
             raise SystemExit(f'theme {path}: icons must be "app" (the retro icon sets were not shipped), not {self.opt["icons"]!r}')
         b = self.opt['buttons']
         if b['toggled'] is None: b['toggled'] = 'sunken' if b['raised'] else 'app'
+        bg = b['gap']
+        if bg is not None and (not isinstance(bg, int) or isinstance(bg, bool) or bg < 0):
+            raise SystemExit(f'theme {path}: buttons.gap is null (the scene\'s measured positions) or a whole number of logical px >= 0 '
+                             f'between adjacent buttons of one group, not {bg!r}')
+        self.button_geometry = None     # button_geometry's memo: (buttons, separators), computed at the first painter's call
         for k, vals in OPT_VALUES.items():
             if self.opt[k] not in vals: raise SystemExit(f'theme {path}: {k} must be one of {vals}, not {self.opt[k]!r}')
         for r in DEFAULTS: self.get(r)
@@ -384,12 +389,87 @@ def draw_bars(cr, th):
     for key, (y0, y1) in (('menu', L['menu']), ('icon_row', L['icon']), ('bottom_row', (SCENE['bottom_content'][0], C.H))):
         if bars.get(key, 'flat') == 'raised': edge(cr, 0, y0, C.W, y1, relief_lines(th, 'panel'))
 
+def button_geometry(th):
+    """-> (buttons, separators), the boxes draw_buttons and draw_separators paint, computed once per theme (memoized on
+    it, after render() has rebound SCENE; the lane shifts and the restack never touch these boxes). buttons.gap null =
+    the scene's own lists, its measured x. An integer re-packs both rows as the app walks them (paint_handler.cpp: the
+    icon row's left groups walk right from the left pad, its view group and all of the bottom row sit flush at the right
+    margin), each button moved in x only (y, w, h and every other field as measured):
+      GROUPS: a row's buttons in x order, a separator of the row lying between two of them closing a group.
+      CHAINS: a separator whose two measured gaps (last button's right edge -> separator x, separator x + w -> next
+        button x) are equal -- the standard gap, separator, gap -- joins its groups into one chain; unequal gaps (the
+        icon row's view separator: 432 device px from Load in Place, 8 from Source+Warp on 1002) break the chain there,
+        and that separator moves with the chain on its nearer side, keeping that gap.
+      ANCHOR: a chain whose last button's right edge is the row's right margin (C.W - the icon row's first button x,
+        the left pad mirrored: 2288 on 1002) is RIGHT-ANCHORED and packs leftward from that edge; any other chain is
+        LEFT-ANCHORED and packs rightward from its first button's measured x.
+      PACK: within a group the buttons stand at a pitch of w + gap x S device px; between groups the measured gaps
+        are kept (gap, separator, gap) and the separator's x moves with the pack.
+    gap 2 reproduces the scenes' measured pitch (64 + 4 = 68), so it re-derives every measured x. Two packed boxes
+    of one row overlapping (a large gap pushing a left chain into a right one) is refused."""
+    if th.button_geometry is not None: return th.button_geometry
+    gap = th.opt['buttons']['gap']
+    if gap is None:
+        th.button_geometry = (SCENE['buttons'], SCENE['separators']); return th.button_geometry
+    btns = [dict(b) for b in SCENE['buttons']]; seps = [dict(s) for s in SCENE['separators']]
+    margin = C.W - min(b['x'] for b in btns if b['row'] == 'icon')
+    for row in sorted({b['row'] for b in btns}):
+        bs = sorted((b for b in btns if b['row'] == row), key=lambda b: b['x'])
+        ss = [s for s in seps if s['row'] == row]
+        groups, between = [[bs[0]]], []         # between[i]: the separator closing groups[i]
+        for a, b in zip(bs, bs[1:]):
+            mid = [s for s in ss if a['x'] + a['w'] <= s['x'] and s['x'] + s['w'] <= b['x']]
+            if len(mid) > 1: raise SystemExit(f'scene {SCENE_TAG}: {len(mid)} separators between {row} buttons {a["button"]} and {b["button"]}')
+            if mid: groups.append([b]); between.append(mid[0])
+            else: groups[-1].append(b)
+        if len(between) != len(ss):
+            raise SystemExit(f'scene {SCENE_TAG}: a {row}-row separator stands outside its buttons; buttons.gap cannot re-pack it')
+        # chains: [groups, inner separators with their (left, right) gaps, a leading / trailing break separator]
+        chains = [{'groups': [groups[0]], 'inner': [], 'lead': None, 'trail': None}]
+        for i, s in enumerate(between):
+            gl = s['x'] - (groups[i][-1]['x'] + groups[i][-1]['w']); gr = groups[i + 1][0]['x'] - (s['x'] + s['w'])
+            if gl == gr:
+                chains[-1]['inner'].append((s, gl, gr)); chains[-1]['groups'].append(groups[i + 1])
+            else:
+                nxt = {'groups': [groups[i + 1]], 'inner': [], 'lead': None, 'trail': None}
+                if gl < gr: chains[-1]['trail'] = (s, gl)
+                else: nxt['lead'] = (s, gr)
+                chains.append(nxt)
+        step = gap * S
+        for ch in chains:
+            G, inner = ch['groups'], ch['inner']
+            last = G[-1][-1]
+            if last['x'] + last['w'] == margin:     # right-anchored: walk left from the margin
+                x = margin
+                for gi in range(len(G) - 1, -1, -1):
+                    for bi in range(len(G[gi]) - 1, -1, -1):
+                        b = G[gi][bi]; x -= b['w']; b['x'] = x
+                        if bi: x -= step
+                    if gi:
+                        s, gl, gr = inner[gi - 1]; x -= gr + s['w']; s['x'] = x; x -= gl
+                if ch['lead']: s, gr = ch['lead']; s['x'] = x - gr - s['w']     # (nothing follows the margin: no trail)
+            else:                                   # left-anchored: walk right from the first button's measured x
+                x = G[0][0]['x']
+                for gi, grp in enumerate(G):
+                    if gi:
+                        s, gl, gr = inner[gi - 1]; x += gl; s['x'] = x; x += s['w'] + gr
+                    for bi, b in enumerate(grp):
+                        if bi: x += step
+                        b['x'] = x; x += b['w']
+                if ch['trail']: s, gl = ch['trail']; s['x'] = x + gl
+                if ch['lead']: s, gr = ch['lead']; s['x'] = G[0][0]['x'] - gr - s['w']
+        boxes = sorted([(b['x'], b['x'] + b['w'], b['button']) for b in bs] + [(s['x'], s['x'] + s['w'], 'separator') for s in ss])
+        for (a0, a1, an), (b0, b1, bn) in zip(boxes, boxes[1:]):
+            if b0 < a1: raise SystemExit(f'buttons.gap {gap}: the {row} row\'s {an} ({a0}..{a1}) and {bn} ({b0}..{b1}) would overlap')
+    th.button_geometry = (btns, seps); return th.button_geometry
+
 def draw_separators(cr, th):
     # line: the app's 2-px separator; etched = Shadow then Hilight (the light side right), raised = Hilight then Shadow,
-    # both one LW line either side of the measured x; none = nothing drawn, the measured gap alone separates
+    # both one LW line either side of the separator's x (measured, or re-packed by buttons.gap: button_geometry);
+    # none = nothing drawn, the gap alone separates
     style = th.opt['separators']
     if style == 'none': return
-    for s in SCENE['separators']:
+    for s in button_geometry(th)[1]:
         if style in ('etched', 'raised'):
             a, b = ('bevel_shadow', 'bevel_hilight') if style == 'etched' else ('bevel_hilight', 'bevel_shadow')
             fill(cr, s['x'] - LW, s['y'], s['x'], s['y'] + s['h'], th.get(a))
@@ -417,9 +497,9 @@ def draw_app_glyph(cr, th, g, x, y, under, enabled):
         C.src(cr, C.mix(ink_colour(th, ink), under, keep)); cr.mask_surface(a8_surface(pgm(g['files'][ink])), x, y)
 
 def draw_buttons(cr, th, rows):
-    """Faces and the app's glyphs through cairo."""
+    """Faces and the app's glyphs through cairo, each box at button_geometry's x (measured, or re-packed by buttons.gap)."""
     bo = th.opt['buttons']; raised = bo['raised']
-    for b in SCENE['buttons']:
+    for b in button_geometry(th)[0]:
         if b['row'] not in rows: continue
         key = f"{b['row']}_{b['button']}"; g = GIDX[key]; enabled = g['enabled']
         x, y, w, h = b['x'], b['y'], b['w'], b['h']
@@ -449,7 +529,7 @@ def draw_buttons(cr, th, rows):
         elif styled:
             fill(cr, x, y, x + w, y + h, face); edge(cr, x, y, x + w, y + h, relief_lines(th, 'button')); under = face
         # the glyph: the app's own, recovered per ink from the capture (a disabled glyph mixed toward what is under it)
-        draw_app_glyph(cr, th, g, b['x'] + (w - SCENE['glyph_px']) // 2 + shift, b['y'] + (h - SCENE['glyph_px']) // 2 + shift, under, enabled)
+        draw_app_glyph(cr, th, g, x + (w - SCENE['glyph_px']) // 2 + shift, y + (h - SCENE['glyph_px']) // 2 + shift, under, enabled)
 
 def draw_trim(cr, th):
     T = SCENE['trim']; y0, y1 = T['y0'], T['y1']; o = th.opt['trim']
