@@ -18,7 +18,7 @@
 //
 // THIS FILE IS NOT IN THE LINUX TARGET: exactly one of playback.cpp and this
 // file is compiled into a given binary, the same one-arm-per-backend rule
-// gui_font_fontconfig.cpp / gui_font_bundled.cpp follow.
+// platform_wayland.cpp / platform_android.cpp follow.
 //
 // THE RATE. The stream is opened at AAUDIO_UNSPECIFIED and the GRANTED rate
 // becomes the engine's `output_rate`, so the render body's one increment

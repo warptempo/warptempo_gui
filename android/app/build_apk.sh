@@ -16,7 +16,7 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the two Liberation TTFs)     (manifest + res + assets)
+#   1. assets (the two Roboto TTFs)         (manifest + res + assets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
 #   4. javac -> d8 (the Java sliver)    8. apksigner sign  9. verify
@@ -79,20 +79,21 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
-# THE TWO LIBERATION FACES AND NOTHING ELSE. They are what gui_font_bundled.cpp
-# resolves the product's two families to, there being no fontconfig on the
-# platform, and android_main ABORTS if either is missing -- a font that failed
-# to install would otherwise paint silently in cairo's default face. They are
-# stored (-0 ttf at aapt2 link) so AAsset_getBuffer hands FreeType a pointer
-# straight into the mapped APK.
+# THE PRODUCT'S TWO FACES AND NOTHING ELSE: Roboto and Roboto Mono, copied from
+# the repository's own fonts/ (architect 2026-10-02, gui_font.h) -- the very
+# files the Linux executable compiles in, so both devices paint from the same
+# bytes and the build depends on no installed font package. They are what
+# gui_font_bundled.cpp builds the product's two families from, and android_main
+# ABORTS if either is missing -- a font that failed to install would otherwise
+# paint silently in cairo's default face. They are stored (-0 ttf at aapt2
+# link) so AAsset_getBuffer hands FreeType a pointer straight into the mapped
+# APK.
 #
-# They land under the build tree deliberately: .gitignore already ignores
-# `build*/`, so the copied third-party font binaries stay out of the repo with
-# no .gitignore edit, on the same reasoning that keeps android/prebuilt/ out.
-FONT_DIR="${WT_LIBERATION_DIR:-/usr/share/fonts/liberation}"
-for f in LiberationSans-Regular.ttf LiberationMono-Regular.ttf; do
-    [ -f "$FONT_DIR/$f" ] ||
-        wt_die "missing $FONT_DIR/$f (set WT_LIBERATION_DIR, or pacman -S ttf-liberation)"
+# The copies land under the build tree, which .gitignore already ignores
+# (`build*/`); the tracked originals are fonts/'s.
+FONT_DIR="$APPDIR/../../fonts"
+for f in Roboto-Regular.ttf RobotoMono-Regular.ttf; do
+    [ -f "$FONT_DIR/$f" ] || wt_die "missing $FONT_DIR/$f (the repository's fonts/)"
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done

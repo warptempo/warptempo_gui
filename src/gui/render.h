@@ -1811,13 +1811,15 @@ inline constexpr int kTrimLaneHeightPx   = 10;
 // TOP (paint_ruler_row: line_baseline off lane.y + kRulerLabelPadTopPx), so the
 // growth lands entirely beneath them and they do not move. THE ARITHMETIC AT
 // 100%, measured through cairo on the product's sans at 16px (ascent 15, the
-// digits' and colon's ink the 12-row cap band, no descenders): baseline =
-// 4 + 15 = row 19, so the labels' lowest ink row is 18; the head's top row is
-// 32 - 12 = 20; ROW 19 IS THE ONE PIXEL OF EMPTY GROUND between them, the
-// ruling's gap (at 28 the head's top row was 16, three rows into the digits).
-// At 225% the same measure gives ink to row 41 and a head from 72 - 27 = 45
-// (three rows of ground); at 50%, ink to 9 and a head from 16 - 6 = 10 (none,
-// touching). The major ticks' rise above the marker lane is unchanged.
+// digits' and colon's ink the 12-row cap band, no descenders — Liberation's
+// numbers when the lane grew and Roboto's alike, re-measured 2026-10-02):
+// baseline = 4 + 15 = row 19, so the labels' lowest ink row is 18; the head's
+// top row is 32 - 12 = 20; ROW 19 IS THE ONE PIXEL OF EMPTY GROUND between
+// them, the ruling's gap (at 28 the head's top row was 16, three rows into the
+// digits). At 200% Roboto's ascent 30 gives a baseline of 8 + 30 = 38, ink to
+// row 37 and a head from 64 - 24 = 40 (two rows of ground); at 50%, ink to 9
+// and a head from 16 - 6 = 10 (none, touching). The major ticks' rise above
+// the marker lane is unchanged.
 inline constexpr int kRulerLaneHeightPx  = 32;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
@@ -1970,8 +1972,10 @@ inline int bottom_row_h_px() {
 //   * the crop's capital band is rows 10..21 and its baseline row 22, i.e. CAP
 //     HEIGHT 12 and X-HEIGHT 9 (rows 13..21), with no partial rows on either
 //     edge (the source is hinted, so the measurement is exact);
-//   * our sans face (fontconfig "sans" -> Liberation Sans) at 16px reports
-//     cap 12 / x-height 9 — the crop's numbers, not near them;
+//   * our sans face at 16px reported cap 12 / x-height 9 — the crop's
+//     numbers, not near them — in Liberation Sans, the face fontconfig
+//     answered then, and Roboto, the product's own face since 2026-10-02,
+//     reports the same two;
 //   * a full offscreen re-render of the crop's own string at 16px, pen x=13,
 //     baseline 22 fits the crop better than every neighbouring size, baseline
 //     and pen tried (15 / 15.5 / 16 / 16.5 / 17 x 21/22/23 x 12..14).
@@ -2022,10 +2026,11 @@ inline double clock_font_size_px() {
 //
 // THE CROP SAYS 2 AND 3, AND THE ARCHITECT OVERRODE IT. Shaping the crop's
 // "Marker" offscreen through the same chokepoint at the same size (Liberation
-// Sans 16px) gives an advance of 49.797px with the first glyph's left side
-// bearing at exactly 1.00; against the 55px box that pins the left pad at 2
-// (2 + 1.00 = column 3, where the crop's ink core starts) and leaves 3 on the
-// right. Reproduced faithfully, that extra right pixel READS as slack rather
+// Sans 16px, the face then) gives an advance of 49.797px with the first
+// glyph's left side bearing at exactly 1.00; against the 55px box that pins
+// the left pad at 2 (2 + 1.00 = column 3, where the crop's ink core starts)
+// and leaves 3 on the right (Roboto, 2026-10-02: 49.953px on the same 1.00
+// bearing, the same two pins). Reproduced faithfully, that extra right pixel READS as slack rather
 // than as padding — so the box goes symmetric at 2 and comes out 54 wide where
 // kdenlive's is 55. A measured pixel deliberately given up, recorded here so
 // the next reader does not "fix" it back.
@@ -2090,9 +2095,9 @@ inline int marker_flag_border_px() {
     return scaled_px(kMarkerFlagBorderPx, 1);
 }
 // The label BASELINE, measured from the box's top edge. The crop's cap ink runs
-// rows 4..15 of the 20 — a 12-row cap height, which is what 16px Liberation
-// Sans produces — so the baseline is row 16 and the remaining 4 rows are the
-// descender band. Authored as a length rather than solved from font extents
+// rows 4..15 of the 20 — a 12-row cap height, which is what the product's sans
+// produces at 16px (Liberation then, Roboto since 2026-10-02, both 12) — so
+// the baseline is row 16 and the remaining 4 rows are the descender band. Authored as a length rather than solved from font extents
 // because the box height (kMarkerLaneHeightPx) is authored too: both come off
 // the same crop and must agree with it, not with a font's internal leading.
 inline constexpr int kMarkerFlagBaselinePx = 16;
@@ -2400,7 +2405,8 @@ inline int playhead_head_half_px(int device_row, double s) {
 // from the FACE'S OWN EXTENTS at both type sizes (one line, or 12pt over 10pt),
 // so the box follows the font instead of a literal that could drift from it;
 // the run loop only needs to know it can never exceed this. 60 clears the
-// two-line form (51 at 100%) with room for a font whose metrics run larger.
+// two-line form (52 at 100% in Roboto, 2026-10-02) with room for a font whose
+// metrics run larger.
 inline constexpr int     kTooltipDamageHeightPx = 60;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);

@@ -2324,17 +2324,24 @@ namespace {
 // picker. What this backend still owns of the convention is WHERE the projects
 // are: the template's projects_path, device_config_defaults above.)
 
-// LOAD THE TWO BUNDLED FACES OUT OF THE APK, or die. A missing or unreadable
-// asset is a BUILD defect — the packaging step puts both files in and there is
-// no runtime state that removes them — so there is no error arm to design: the
-// library logs and leaves the face unset, and painting would then silently use
-// cairo's default, which is worse than not starting. This ABORTS instead, and
-// the abort is the CALLER'S: gui_font_bundled.cpp keeps its own error arms
-// exactly as they are.
+// LOAD THE PRODUCT'S TWO FACES OUT OF THE APK, or die. The assets are the
+// repository's own `fonts/Roboto-Regular.ttf` and `fonts/RobotoMono-Regular.ttf`
+// (architect 2026-10-02, gui_font.h; build_apk.sh's asset step copies them). A
+// missing or unreadable asset is a BUILD defect — the packaging step puts both
+// files in and there is no runtime state that removes them — so there is no
+// error arm to design: painting would otherwise silently use cairo's default,
+// which is worse than not starting. This ABORTS instead, and the abort is the
+// CALLER'S: gui_font_bundled.cpp keeps its own log-and-leave-unset arms.
 //
-// The assets stay open for the process's life is NOT needed here — unlike the
-// spike, gui_font_install_bundled COPIES the bytes (its LIFETIME comment says
-// so), so both AAssets are closed as soon as it returns.
+// THE INSTALL IS OBSERVED, not assumed: gui_font_install_bundled answers
+// whether selecting each family actually puts an FT-BACKED face on a context
+// (its probe, gui_font.h), and false aborts here exactly as a missing asset
+// does — the Wayland backend's GuiPlatform::init asks the same owner the
+// same question of the bytes compiled into its executable.
+//
+// The assets need not stay open for the process's life — unlike the spike,
+// gui_font_install_bundled COPIES the bytes (its LIFETIME comment says so),
+// so both AAssets are closed as soon as it returns.
 void install_fonts_or_die(android_app* app) {
     AAssetManager* mgr = app->activity ? app->activity->assetManager : nullptr;
     if (!mgr) {
@@ -2345,8 +2352,8 @@ void install_fonts_or_die(android_app* app) {
 
     struct Slot { const char* name; AAsset* asset; const uint8_t* bytes; size_t len; };
     Slot slots[2] = {
-        {"LiberationSans-Regular.ttf", nullptr, nullptr, 0},
-        {"LiberationMono-Regular.ttf", nullptr, nullptr, 0},
+        {"Roboto-Regular.ttf",     nullptr, nullptr, 0},
+        {"RobotoMono-Regular.ttf", nullptr, nullptr, 0},
     };
     for (Slot& s : slots) {
         s.asset = AAssetManager_open(mgr, s.name, AASSET_MODE_BUFFER);
@@ -2361,30 +2368,11 @@ void install_fonts_or_die(android_app* app) {
         }
     }
 
-    gui_font_install_bundled(slots[0].bytes, slots[0].len,
-                             slots[1].bytes, slots[1].len);
+    const bool installed =
+        gui_font_install_bundled(slots[0].bytes, slots[0].len,
+                                 slots[1].bytes, slots[1].len);
     for (Slot& s : slots) AAsset_close(s.asset);
-
-    // THE INSTALL IS OBSERVED, not assumed. gui_font_install_bundled reports
-    // nothing (its failures are log-and-leave-unset, and that library arm
-    // stays as it is), so the caller asks the only question that matters: does
-    // selecting a family actually put an FT-BACKED face on a context? That is
-    // both what the install produces and what text_shape requires, and a
-    // context whose face is still cairo's toy default answers no.
-    cairo_surface_t* probe_surface =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
-    cairo_t* probe = cairo_create(probe_surface);
-    bool ft_backed = true;
-    for (GuiFontFamily family : {GuiFontFamily::Sans, GuiFontFamily::Mono}) {
-        gui_select_font_face(probe, family);
-        if (cairo_font_face_get_type(cairo_get_font_face(probe)) !=
-            CAIRO_FONT_TYPE_FT) {
-            ft_backed = false;
-        }
-    }
-    cairo_destroy(probe);
-    cairo_surface_destroy(probe_surface);
-    if (!ft_backed) {
+    if (!installed) {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,
                             "bundled fonts did not install; refusing to paint "
                             "with cairo's default face");

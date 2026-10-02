@@ -679,7 +679,8 @@ inline std::string lowercase_initial(std::string_view s) {
 // width.
 //
 // THE MEASUREMENT, at 100 % in the card's own face (the one sans at
-// redesign_font_size_px, 16 px): "There is nothing to undo" shapes to 172.73 px
+// redesign_font_size_px, 16 px, Liberation Sans then): "There is nothing to
+// undo" shapes to 172.73 px
 // and "…to redo" to 169.16, and the card then added its chrome — four pads
 // and two button boxes, 4 x 7 + 2 x 32 = 92 — for 265 px and 262 px (the
 // chrome of the day the floor was measured; today's is below).
@@ -690,10 +691,13 @@ inline std::string lowercase_initial(std::string_view s) {
 // CHROME AND MOVED NOT THE FLOOR, and neither did the text's matched right
 // air the same night: today's chrome is three pads, the glyph's inset and
 // the glyph's one box, 3 x 7 + 5 + 32 = 58 (the derivation at the painter,
-// paint_notifications), which puts the pair at 231 px and 228 px, both under
+// paint_notifications), which put the pair at 231 px and 228 px, both under
 // 272, so the clamp still answers the floor for both and they still paint
 // at one width; the width rule was not part of either ruling and the floor
-// keeps the number it was measured at. AUTHORED PX, so the relation
+// keeps the number it was measured at. NOR DID THE FACE'S CHANGE (Roboto,
+// 2026-10-02): the pair shapes to 172.41 and 168.50 px, the card's ceiled
+// text plus that chrome putting them at 231 px and 227 px, the floor still
+// answering for both. AUTHORED PX, so the relation
 // holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px.
 //

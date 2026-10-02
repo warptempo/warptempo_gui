@@ -32,7 +32,7 @@
 //
 // THIS FILE IS NOT IN THE ANDROID TARGET: exactly one of this file and
 // playback_aaudio.cpp is compiled into a given binary, the same one-arm-per-
-// backend rule gui_font_fontconfig.cpp / gui_font_bundled.cpp follow.
+// backend rule platform_wayland.cpp / platform_android.cpp follow.
 
 static_assert(std::is_same_v<jack_default_audio_sample_t, float>,
               "JACK default audio sample type must be float");

@@ -87,18 +87,20 @@ set(WARPTEMPO_PREPOST_SOURCES
 
 # ============================================================
 #  THE GUI'S SOURCE LIST, less the four per-directory lists and less the
-#  three files that have one arm per backend. Both GUI targets below draw it,
+#  files that have one arm per backend. Both GUI targets below draw it,
 #  which is what keeps the two builds from drifting into two rosters: a new
 #  GUI source is added HERE and both platforms get it.
 #
-#  THE THREE PER-BACKEND ARMS, each with exactly one arm linked into a given
+#  THE TWO PER-BACKEND ARMS, each with exactly one arm linked into a given
 #  binary and each named at its own site: the platform backend
 #  (platform_wayland.cpp / platform_android.cpp, chosen for the consumer by
-#  platform.h), the face owner (gui_font_fontconfig.cpp /
-#  gui_font_bundled.cpp, gui_font.h) and the playback DEVICE (playback.cpp,
-#  the JACK client / playback_aaudio.cpp, the AAudio stream) — the device
-#  half alone, the engine both drive being playback_common.cpp in the
-#  shared list.
+#  platform.h) and the playback DEVICE (playback.cpp, the JACK client /
+#  playback_aaudio.cpp, the AAudio stream) — the device half alone, the
+#  engine both drive being playback_common.cpp in the shared list. THE FACE
+#  OWNER IS ONE FILE ON BOTH (gui_font_bundled.cpp, here, since 2026-10-02 —
+#  gui_font.h): only the font BYTES' carrier differs, the Linux target
+#  compiling them in (gui_font_embedded.cpp, below) where the APK ships them
+#  as assets.
 #  main.cpp is in the list on BOTH: its Linux main() is #ifndef __ANDROID__
 #  and the body it wraps, gui_main, is the one entry both platforms call.
 # ============================================================
@@ -114,6 +116,9 @@ set(WARPTEMPO_GUI_SOURCES
     # source lists — warptempo_cli must never carry it, nor the
     # harfbuzz/cairo-ft link it implies.
     src/gui/text_shape.cpp
+    # GUI-ONLY, like text_shape.cpp: the one face owner (gui_font.h), which
+    # builds the product's two faces through FreeType on both platforms.
+    src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
     # subset over cairo paths) is a painting concern and exists only here,
     # so like text_shape.cpp it is deliberately in none of the four shared
@@ -228,12 +233,12 @@ set(WARPTEMPO_GUI_SOURCES
 #  other does not.
 # ============================================================
 if(WARPTEMPO_BUILD_GUI AND ANDROID)
-    # Cairo needs its FT backend (there is no fontconfig on the platform, so
-    # gui_font_bundled.cpp builds faces from the APK's own font assets) and
-    # HarfBuzz shapes on those faces, exactly as on Linux. freetype2 gets its
-    # own check here — unlike the Linux branch, which lets cairo-ft and
-    # harfbuzz carry it transitively — because the static link needs its
-    # archive named explicitly inside the group below.
+    # Cairo needs its FT backend (gui_font_bundled.cpp builds the product's
+    # faces from the APK's own font assets, and this cairo is built with no
+    # fontconfig at all) and HarfBuzz shapes on those faces, exactly as on
+    # Linux. freetype2 gets its own check here — unlike the Linux branch,
+    # which lets cairo-ft and harfbuzz carry it transitively — because the
+    # static link needs its archive named explicitly inside the group below.
     pkg_check_modules(WT_ANDROID_GFX REQUIRED cairo cairo-ft harfbuzz freetype2)
     # The history view's git (git_repo.cpp), as on Linux: libgit2 with its SSH
     # transport. Static like everything here; libgit2.pc's Requires.private
@@ -263,7 +268,6 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     add_library(warptempo_gui SHARED
         ${WARPTEMPO_GUI_SOURCES}
         src/gui/platform_android.cpp
-        src/gui/gui_font_bundled.cpp
         src/gui/playback_aaudio.cpp
         ${WARPTEMPO_GLUE_DIR}/android_native_app_glue.c
         ${WARPTEMPO_AUDIO_IO_SOURCES}
@@ -370,9 +374,13 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     pkg_check_modules(CAIRO REQUIRED cairo)
     # Proportional text shaping (src/gui/text_shape.cpp): HarfBuzz shapes on
     # the cairo scaled font's own FreeType face, which needs cairo's FT
-    # backend headers. freetype2 gets no check of its own — both cairo-ft and
-    # harfbuzz carry its include dir transitively — and hb-ft lives in
-    # libharfbuzz itself, so there is no separate hb-ft module either.
+    # backend headers, and the face owner (gui_font_bundled.cpp) builds its
+    # faces with FreeType directly. freetype2 gets no check of its own —
+    # cairo-ft.pc requires it, so its include dir and its -lfreetype come with
+    # cairo-ft's — and hb-ft lives in libharfbuzz itself, so there is no
+    # separate hb-ft module either. FONTCONFIG IS NOT ON THIS LINK LINE and
+    # the product never calls it (gui_font.h, 2026-10-02); libcairo's own
+    # dependency on it is the library's business.
     pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
     pkg_check_modules(CAIRO_FT REQUIRED cairo-ft)
     # Playback is a direct libjack client. JACK is required by policy; under
@@ -382,16 +390,38 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # its SSH transport (libssh2) for the checkpoint push.
     pkg_check_modules(LIBGIT2 REQUIRED libgit2)
 
+    # THE PRODUCT'S TWO FONT FILES, COMPILED IN (architect 2026-10-02; the
+    # rule and the mechanism's reasons at gui_font_embedded.cpp's head). Each
+    # file becomes `<name>.ttf.inc` in the build tree — its bytes as a
+    # comma-separated list of hex literals, which that source includes inside
+    # an array's braces. Written at CONFIGURE time, and only when the bytes
+    # changed (file(CONFIGURE) leaves an identical output untouched), and the
+    # two files are configure dependencies, so swapping a font re-runs the
+    # configure and rebuilds that one object.
+    set(WARPTEMPO_FONT_INC_DIR ${CMAKE_BINARY_DIR}/fonts-generated)
+    foreach(font Roboto-Regular.ttf RobotoMono-Regular.ttf)
+        set(font_src ${CMAKE_SOURCE_DIR}/fonts/${font})
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                     ${font_src})
+        file(READ ${font_src} font_hex HEX)
+        string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," font_bytes
+               "${font_hex}")
+        file(CONFIGURE OUTPUT ${WARPTEMPO_FONT_INC_DIR}/${font}.inc
+             CONTENT "${font_bytes}\n")
+    endforeach()
+
     add_executable(warptempo_gui
         ${WARPTEMPO_GUI_SOURCES}
-        # The three per-backend arms, Linux's: the Wayland platform backend,
-        # the fontconfig face owner (gui_font.h) and the JACK playback device.
-        # The Android library above compiles platform_android.cpp,
-        # gui_font_bundled.cpp and playback_aaudio.cpp in their places; exactly
-        # one arm of each is ever linked.
+        # The two per-backend arms, Linux's: the Wayland platform backend and
+        # the JACK playback device. The Android library above compiles
+        # platform_android.cpp and playback_aaudio.cpp in their places; exactly
+        # one arm of each is ever linked. Beside them, the product's two font
+        # files compiled in (the font step above; the mechanism and why at the
+        # file's head): the APK carries the same files as assets instead, and
+        # warptempo_cli, which paints nothing, carries neither.
         src/gui/platform_wayland.cpp
-        src/gui/gui_font_fontconfig.cpp
         src/gui/playback.cpp
+        src/gui/gui_font_embedded.cpp
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}
@@ -406,6 +436,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${CMAKE_SOURCE_DIR}/src/prepost
         ${CMAKE_SOURCE_DIR}/src/gui
         ${CMAKE_BINARY_DIR}/wayland-generated
+        ${WARPTEMPO_FONT_INC_DIR}
         ${FFTW3_INCLUDE_DIRS}
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${WAYLAND_CURSOR_INCLUDE_DIRS}

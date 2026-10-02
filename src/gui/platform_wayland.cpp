@@ -1,5 +1,6 @@
 #include "platform_wayland.h"
 
+#include "gui_font.h"
 #include "render.h"          // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
@@ -655,6 +656,25 @@ DeviceConfig GuiPlatform::device_config_defaults() {
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {
+    // THE PRODUCT'S TWO FACES, INSTALLED BEFORE ANYTHING ELSE (architect
+    // 2026-10-02, gui_font.h): the bytes compiled into this executable
+    // (gui_font_embedded.cpp) go to the one face owner once, ahead of the
+    // window and so of the first paint — init() runs once per process (the
+    // loop contract, platform.h) and nothing selects a face before it. THE
+    // INSTALL IS OBSERVED, not assumed: its return is the probe that each
+    // family selects an FT-backed face, and false fails the launch rather
+    // than painting in cairo's default face — the Android backend's
+    // install_fonts_or_die asks the same question of the same owner.
+    if (!gui_font_install_bundled(gui_font_embedded_sans,
+                                  gui_font_embedded_sans_len,
+                                  gui_font_embedded_mono,
+                                  gui_font_embedded_mono_len)) {
+        std::fprintf(stderr,
+                     "warptempo_gui: the bundled fonts did not install; "
+                     "refusing to paint with cairo's default face\n");
+        return false;
+    }
+
     wl_display_ = wl_display_connect(nullptr);
     if (!wl_display_) {
         const char* wd = std::getenv("WAYLAND_DISPLAY");

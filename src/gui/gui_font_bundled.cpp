@@ -1,64 +1,70 @@
 #include "gui_font.h"
 
-// THE BUNDLED FACE OWNER (gui_font.h): Android has no fontconfig, so the two
-// families resolve to two font FILES the backend ships in the APK and hands in
-// once through gui_font_install_bundled. The faces are built with FreeType and
-// wrapped as cairo font faces, which is the same FT-backed shape the Linux toy
-// path produces — text_shape's precondition (an FT-backed scaled font) holds
-// unchanged, and no site below the seam learns which backend answered.
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the two
+// families resolve to the product's own two font FILES, Roboto and Roboto Mono
+// from the repository's `fonts/`, handed in once through
+// gui_font_install_bundled — the Linux executable's compiled-in copy
+// (gui_font_embedded.cpp) or the APK's two assets. The faces are built with
+// FreeType and wrapped as cairo font faces, which is the FT-backed shape
+// text_shape requires (an FT-backed scaled font), and no site below the seam
+// learns which device handed the bytes in.
 //
-// WHAT THIS BACKEND REPRODUCES IS FONTCONFIG'S WHOLE ANSWER — THE FACE AND ITS
-// HINT STYLE. The Linux answer for "sans" is Liberation Sans under
-// `hintstyle: 1`, i.e. SLIGHT: FreeType's light autohinter, which grid-fits
-// the vertical direction only; "monospace" is Liberation Mono under the same.
-// The APK's two assets are those very files, byte for byte. But a face alone
-// is not the answer, because a HINTER grid-fits the outline before anything
+// THE ANSWER IS THE PRODUCT'S OWN — THE FACE AND ITS HINT STYLE (architect
+// 2026-10-02: "the app becomes its own thing"). Until that day the laptop's
+// faces were fontconfig's "sans" and "monospace" (Liberation under
+// `hintstyle: 1`) and this file reproduced that answer on the tablet; now
+// nothing is asked of fontconfig and this file IS the answer. A face alone is
+// not an answer, because a HINTER grid-fits the outline before anything
 // measures it: the same bytes at the same size report different whole-pixel
 // ink under a different hinter, and cairo's own default for a face built here
-// is the font's NATIVE TrueType bytecode. One portable GUI wants ONE set of
-// text rows on both backends, so the install builds a font-options object
-// carrying SLIGHT and every select puts it on the context beside the face.
+// is the font's NATIVE TrueType bytecode. THE PRODUCT'S HINTER IS SLIGHT —
+// FreeType's light autohinter. It was first chosen to match fontconfig's
+// answer and it STAYS ON ITS OWN MERITS: it grid-fits the VERTICAL direction
+// alone, so the advances stay unhinted (text_shape's come off hb-ft, which
+// loads its own glyphs unhinted), and both devices measure one set of rows.
+// The install builds a font-options object carrying SLIGHT and every select
+// puts it on the context beside the face.
 //
 // WHY IT SHOWS: the chrome baseline centres the face's CAP BAND
 // (redesign_baseline, paint_handler.cpp), so a seat reads an INK extent, and
-// the two hinters disagree about the sans cap at three of the product's four
-// sans sizes. Measured on the shipped bytes through this very road (an FT face
-// wrapped by cairo_ft_font_face_create_for_ft_face) with hint metrics on:
+// the two hinters disagree about the sans cap at the tablet's two sans sizes.
+// Measured on the shipped bytes through this very road (an FT face wrapped by
+// cairo_ft_font_face_create_for_ft_face, on an image surface, hint metrics at
+// its default) — Roboto, 2026-10-02, the tablet at 200 % since 2026-09-29:
 //
 //     face / size            cap unhinted   native   SLIGHT   ascent/descent
-//     sans 16px    (12pt @100%)    11.01       12       12         15 / 4
-//     sans 36px    (12pt @225%)    24.77       25       26         33 / 8
-//     sans 13.33px (10pt @100%)     9.17       10        9         13 / 3
-//     sans 30px    (10pt @225%)    20.64       21       20         28 / 7
-//     mono 14.67px (11pt @100%)     9.66       10       10         13 / 5
-//     mono 33px    (11pt @225%)    21.74       22       22        28 / 10
+//     sans 16px    (12pt @100%)    11.38       12       12         15 / 4
+//     sans 32px    (12pt @200%)    22.75       23       22         30 / 8
+//     sans 13.33px (10pt @100%)     9.48        9        9         13 / 4
+//     sans 26.67px (10pt @200%)    18.96       19       18         25 / 7
+//     mono 14.67px (11pt @100%)    10.43       11       11         16 / 4
+//     mono 29.33px (11pt @200%)    20.85       21       21         31 / 8
 //
 // Ascent and descent are the SAME under both hinters at every size, which is
-// why only the cap-centred seats ever forked. NO WIDTH MOVES EITHER, twice
-// over: the light autohinter grid-fits the VERTICAL direction alone, and
-// text_shape's advances come off hb-ft, which loads its own glyphs unhinted. Under SLIGHT all six rows are
-// the laptop's numbers, so every solver answer — box seats and line seats
-// alike — is identical on both backends: "File" sits 21 rows above its cap
-// band and 21 below in the tablet's 68 pill exactly as it sits 9/9 in the
-// laptop's 30, where the native hinter's 25-row cap had seated it 21/22.
+// why only the cap-centred seats ever fork. NO WIDTH MOVES EITHER, for the
+// two reasons above. Under SLIGHT the tablet's seats keep the laptop's
+// symmetry: "File" sits 19 rows above its cap band and 19 below in the
+// tablet's 60-row menu lane, as it sits 9/9 in the laptop's 30; the native
+// hinter's 23-row cap would seat it 18/19 there.
 //
-// NOT REPRODUCED, and deliberately: fontconfig's `rgba`. The laptop paints
-// subpixel RGB antialiasing; a tablet ROTATES, so a subpixel order is not a
-// face fact there and the bundled road leaves antialias and subpixel order at
-// cairo's defaults — the tablet keeps GRAY antialiasing. That is a per-pixel
-// coverage difference and not a metric one. HINT METRICS also stay at cairo's
-// default, which is ON for the image surfaces both backends paint to, and that
-// is what keeps every extent in the table above a whole pixel.
+// ANTIALIASING AND SUBPIXEL ORDER STAY AT CAIRO'S DEFAULTS, on both devices:
+// GRAY antialiasing, no subpixel order. A tablet ROTATES, so a subpixel order
+// is not a face fact there, and the laptop takes the same coverage now that
+// it takes the same road (fontconfig's `rgba` had painted it subpixel RGB
+// until 2026-10-02) — a per-pixel coverage difference and not a metric one.
+// HINT METRICS also stay at cairo's default, which is ON for the image
+// surfaces both backends paint to, and that is what keeps every extent in the
+// table above a whole pixel.
 //
-// THIS FILE IS NOT IN THE LINUX TARGET; it compiles only into the Android
-// library, beside platform_android.cpp.
+// A RETUNE IS A FILE SWAP PLUS THIS TABLE RE-MEASURED (fonts/README.md): the
+// seats and the comments that quote these rows (redesign_baseline's table,
+// the ruler lane's arithmetic, the clock's) re-derive from it.
 //
 // LIFETIME: the library, the two FT faces, the two cairo faces and the font
 // options are created once and never destroyed — the process's exit reclaims
 // them, and there is no second install. The byte buffers are COPIES this file
 // owns, because FT_New_Memory_Face does not copy and the face reads from them
-// for as long as it lives, while the caller's asset mapping is its own to
-// release.
+// for as long as it lives, while the caller's bytes are its own to release.
 
 #include <cairo/cairo-ft.h>
 
@@ -67,6 +73,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <initializer_list>
 #include <vector>
 
 namespace {
@@ -87,9 +94,10 @@ BundledFace           g_mono;
 
 // Build one face from a copy of `data`. A failure leaves `out` empty, which
 // gui_select_font_face reads as "nothing installed" and answers by leaving the
-// context's own face alone — cairo's default, which paints something rather
-// than nothing. There is no error arm beyond the log: an APK that shipped a
-// broken asset is a build fault, not a runtime state to recover from.
+// context's own face alone — and the install's probe below then answers
+// false, which each caller dies on. The log names which face failed; there is
+// no recovery arm: the bytes are the repository's own files, so a face that
+// fails to build is a build fault, not a runtime state.
 void build_face(BundledFace& out, const uint8_t* data, size_t len,
                 const char* what) {
     if (data == nullptr || len == 0) return;
@@ -111,23 +119,48 @@ void build_face(BundledFace& out, const uint8_t* data, size_t len,
     }
 }
 
+// THE INSTALL OBSERVED (gui_font.h): does selecting each family actually put
+// an FT-BACKED face on a context? Asked through gui_select_font_face on a
+// scratch context — the very road every painter takes — rather than read off
+// this file's own state, so the answer is the one text_shape will meet.
+bool faces_select_ft_backed() {
+    cairo_surface_t* probe_surface =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* probe = cairo_create(probe_surface);
+    bool ft_backed = true;
+    for (GuiFontFamily family : {GuiFontFamily::Sans, GuiFontFamily::Mono}) {
+        gui_select_font_face(probe, family);
+        if (cairo_font_face_get_type(cairo_get_font_face(probe)) !=
+            CAIRO_FONT_TYPE_FT) {
+            ft_backed = false;
+        }
+    }
+    cairo_destroy(probe);
+    cairo_surface_destroy(probe_surface);
+    return ft_backed;
+}
+
 } // namespace
 
-void gui_font_install_bundled(const uint8_t* sans, size_t sans_len,
+bool gui_font_install_bundled(const uint8_t* sans, size_t sans_len,
                               const uint8_t* mono, size_t mono_len) {
-    if (g_library != nullptr) return;   // once per process; see LIFETIME above
+    // Once per process (see LIFETIME above): a second call builds nothing and
+    // reports the standing install.
+    if (g_library != nullptr) return faces_select_ft_backed();
     if (FT_Init_FreeType(&g_library) != 0) {
         std::fprintf(stderr, "warptempo_gui: FreeType failed to initialize\n");
         g_library = nullptr;
-        return;
+        return false;
     }
-    // FONTCONFIG'S HINT STYLE, and nothing else set: the head comment owns the
-    // reasoning. The options are built beside the faces so that a face and the
-    // hinter that measured this file's table can never be installed apart.
+    // THE PRODUCT'S HINT STYLE, and nothing else set: the head comment owns
+    // the reasoning. The options are built beside the faces so that a face
+    // and the hinter that measured this file's table can never be installed
+    // apart.
     g_options = cairo_font_options_create();
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     build_face(g_sans, sans, sans_len, "sans");
     build_face(g_mono, mono, mono_len, "monospace");
+    return faces_select_ft_backed();
 }
 
 void gui_select_font_face(cairo_t* cr, GuiFontFamily family) {
@@ -136,7 +169,7 @@ void gui_select_font_face(cairo_t* cr, GuiFontFamily family) {
     cairo_set_font_face(cr, f.face);
     // The hint style rides with the face at every select, which is why no site
     // above knows about it: the painters (clock_cell_metrics measures on the
-    // painter's own font) and the Android install probe, which borrows a
+    // painter's own font) and the install's own probe, which borrows a
     // scratch context, all arrive here before they size, shape, measure or
     // paint.
     cairo_set_font_options(cr, g_options);

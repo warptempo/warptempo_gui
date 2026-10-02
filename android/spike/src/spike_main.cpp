@@ -195,9 +195,9 @@ bool load_fonts(Spike& s) {
         return AAsset_getBuffer(*slot);
     };
 
-    const void* sans_bytes = open("LiberationSans-Regular.ttf", &s.sans_asset);
+    const void* sans_bytes = open("Roboto-Regular.ttf", &s.sans_asset);
     if (!sans_bytes) return false;
-    const void* mono_bytes = open("LiberationMono-Regular.ttf", &s.mono_asset);
+    const void* mono_bytes = open("RobotoMono-Regular.ttf", &s.mono_asset);
     if (!mono_bytes) return false;
 
     // The AAssets stay open for the process's life: FT_New_Memory_Face does not

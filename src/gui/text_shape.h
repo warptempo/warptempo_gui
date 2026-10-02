@@ -22,8 +22,9 @@
 //
 // PRECONDITIONS (stated, not guarded — no error arm without a producer):
 //   - `font` is a FreeType-backed cairo_scaled_font_t in a non-error state.
-//     Every cairo font on this platform's Linux/Wayland target is FT-backed,
-//     so a non-FT font has no producer here.
+//     Every face the product selects is FT-backed on both platforms (the one
+//     face owner builds them so and observes it at install, gui_font.h), so
+//     a non-FT font has no producer here.
 //   - `utf8` is well-formed UTF-8. Free-text fields and the editors carry real
 //     UTF-8 (architect 2026-08-02); it arrives already filtered
 //     (text_editor::replace_selection is the one incoming boundary) or
@@ -31,7 +32,8 @@
 //     safely in any case, so there is no validation here.
 //   - ONE FACE, NO FALLBACK. A codepoint the face does not cover shapes to
 //     .notdef and paints as the empty box — accepted, in the same class as the
-//     no-bidi exclusion below. Liberation Sans covers Latin, Greek and Cyrillic.
+//     no-bidi exclusion below. Roboto covers Latin, Greek and Cyrillic
+//     (2026-10-02).
 //   - `show_shaped_run` is called with the SAME scaled font set on `cr` that
 //     the run was shaped with; the glyph ids are that face's, and no other.
 //

@@ -319,7 +319,9 @@ means exactly what a first run means.
    be, so an R/B swap is legible rather than inferred), a comb of 1-px rules at
    gaps 1…6 px plus eight 1-px horizontals (any scaling between backbuffer and
    panel shows up here long before it shows up in text), and two harfbuzz-shaped
-   lines at a fixed 48 px — one Liberation Sans, one Liberation Mono.
+   lines at a fixed 48 px — one in the sans, one in the monospace (Liberation
+   Sans and Liberation Mono when the spike ran; the product's own Roboto and
+   Roboto Mono, from the repository's `fonts/`, since 2026-10-02).
 2. **Live touch echo** — a ring + dot per active finger labelled with its POINTER
    ID and coordinates, tracked by id (never by index).
 3. **PLAY WAV / STOP WAV** — a tap region running the bundled 3 s 44.1 kHz stereo
@@ -344,15 +346,16 @@ android/spike/
   src/spike_wav.h         the spike's OWN minimal WAV reader (16/24-bit stereo)
   src/spike_storage.{h,cpp} the OTG write probe + the isExternalStorageManager read
   src/spike_log.h         logcat macros
-  tools/gen_assets.sh     copies the two Liberation faces, generates the WAV
+  tools/gen_assets.sh     copies the two faces from fonts/, generates the WAV
   tools/gen_wav.py        deterministic 44.1 kHz stereo 16-bit WAV writer
   build/                  ALL output, incl. assets/ (gitignored by `build*/`)
 ```
 
 The assets land under `build/assets/` deliberately: `.gitignore` already ignores
-`build*/`, so the generated WAV and the copied third-party font binaries stay out
-of the repo with no `.gitignore` edit, on the same reasoning that keeps
-`android/prebuilt/` out.
+`build*/`, so the generated WAV and the font copies stay out of the repo with no
+`.gitignore` edit (the tracked originals are `fonts/`'s since 2026-10-02; until
+then the fonts were copied from the host's Liberation package and stayed out on
+the same reasoning that keeps `android/prebuilt/` out).
 
 ### 9.3 The keystore
 
@@ -745,11 +748,15 @@ Two things the backend does that are not on the Wayland side at all:
   see 10.4.
 
 Font install failure is a **hard abort**, not a fallback: `install_fonts_or_die`
-opens both Liberation assets, installs them, and then ASKS whether selecting a
-family actually put an FT-backed face on a probe context. A missing asset is a
-build defect with no runtime producer, and painting silently in cairo's default
-face is worse than not starting. `gui_font_bundled.cpp`'s own error arms are
-untouched — the abort is the caller's.
+opens both font assets — Roboto and Roboto Mono, copied by `build_apk.sh` from the
+repository's `fonts/` since 2026-10-02 (Liberation from the host's package
+before) — installs them, and the install ANSWERS whether selecting each family
+actually put an FT-backed face on a probe context (the probe moved from this
+caller into `gui_font_install_bundled` the same day, when the Wayland backend
+became its second caller). A missing asset is a build defect with no runtime
+producer, and painting silently in cairo's default face is worse than not
+starting. `gui_font_bundled.cpp`'s own error arms are untouched — the abort is
+the caller's.
 
 ### 10.3 The build branch
 
@@ -767,7 +774,8 @@ re-rooted). Target: `add_library(warptempo_gui SHARED …)`, static deps inside
 **THE LINUX TARGET IS BYTE-UNAFFECTED, and it was proved rather than asserted.**
 The GUI's source list moved into one shared `WARPTEMPO_GUI_SOURCES` variable
 both targets draw (the three per-backend arms — platform, face owner, playback
-device — are named at each target), so the two builds cannot drift into two
+device — are named at each target; the face owner left the arms 2026-10-02, one
+implementation on both, `gui_font.h`), so the two builds cannot drift into two
 rosters. Re-configuring the desktop build across that change:
 `CMakeFiles/warptempo_gui.dir/flags.make` is **byte-identical**, the object set
 is the **same 70 objects**, and the link line's library list is identical in

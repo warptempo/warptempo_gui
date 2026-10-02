@@ -38,11 +38,11 @@ sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config git fftw-devel \
     libxkbcommon-devel pipewire-jack-audio-connection-kit-devel libgit2-devel
 ```
 
-The tablet side adds adb, the Android build's host tools and the Liberation fonts the APK carries. On Arch:
+The tablet side adds adb and the Android build's host tools; its two fonts, Roboto and Roboto Mono, are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
 
 ```bash
-sudo pacman -S --needed android-tools meson ninja ttf-liberation zip unzip
-pacman -Q git libgit2 android-tools cmake meson ninja ttf-liberation fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip
+sudo pacman -S --needed android-tools meson ninja zip unzip
+pacman -Q git libgit2 android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip
 # every line shows a version; "was not found" names a package still to install
 ```
 

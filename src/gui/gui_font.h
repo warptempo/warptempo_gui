@@ -1,13 +1,20 @@
 #pragma once
 
 // THE ONE FACE OWNER: every text surface selects its face here and nowhere
-// else; what "sans" and "monospace" RESOLVE TO is the backend's business —
-// fontconfig's answer on Linux, the bundled Liberation files on Android — so
-// the painters never name a font. THE RESOLUTION INCLUDES THE HINT STYLE, not
-// the face alone: a hinter grid-fits the outline, so two backends holding the
-// same font bytes report different whole-pixel ink under different hinters,
-// and the bundled road carries fontconfig's own (SLIGHT) so both backends
-// measure one set of text rows (gui_font_bundled.cpp's head, with its table).
+// else, so the painters never name a font. THE PRODUCT'S FACES ARE ITS OWN
+// (architect 2026-10-02: "the app becomes its own thing; it has its own fonts,
+// and those are Roboto and Roboto Mono"): the two files under the repository's
+// `fonts/` directory, carried by both binaries — compiled into the Linux
+// executable (gui_font_embedded.cpp), shipped as the APK's two assets on
+// Android — and turned into faces by ONE implementation on both devices,
+// gui_font_bundled.cpp, through FreeType. Neither device asks anything for a
+// face: fontconfig is never consulted on the laptop (its answer for a missing
+// family is a silent substitute, a backstop by another name), and the tablet
+// has nothing to consult (Samsung's font setting is a framework substitution a
+// native app never sees). THE ANSWER INCLUDES THE HINT STYLE, not the face
+// alone: a hinter grid-fits the outline, so the same bytes report different
+// whole-pixel ink under different hinters, and the product's own choice is
+// SLIGHT on both devices (gui_font_bundled.cpp's head, with its table).
 //
 // The two families are the product's whole face inventory: the proportional
 // sans every row shapes and paints on (12pt x gui_scale, the text_shape
@@ -16,18 +23,12 @@
 // <length>` on the modal row, which takes the row-8 cell's size and metrics.
 // The AV SYNC STATS PANEL's rows were a third from 2026-09-03 and went with
 // the panel on 2026-09-30; the rule's own record is at paint_handler.cpp's
-// bottom-row text block. Slant and weight are not parameters: every site is normal/normal, so a
-// face is named by its family and nothing else.
+// bottom-row text block. Slant and weight are not parameters: every site is
+// normal/normal, and each family is exactly one file.
 //
 // This selects the FACE only. Size stays the caller's — each site sets its own
 // cairo_set_font_size after selecting, and the scaled font it then borrows is
 // what text_shape must be handed (shape with the font you paint with).
-//
-// TWO IMPLEMENTATIONS, ONE PER BACKEND, exactly one of them compiled into a
-// given binary: gui_font_fontconfig.cpp (Linux — cairo's toy font API, so the
-// resolution is fontconfig's) and gui_font_bundled.cpp (Android — two
-// FreeType faces built from font files the backend hands in, there being no
-// fontconfig on the platform).
 
 #include <cairo/cairo.h>
 
@@ -38,11 +39,29 @@ enum class GuiFontFamily { Sans, Mono };
 
 void gui_select_font_face(cairo_t* cr, GuiFontFamily family);
 
-// THE BUNDLED BACKEND'S ONE SETUP CALL, defined by gui_font_bundled.cpp alone:
-// the Android backend calls it once, before the first paint, with the two font
-// files it read out of the APK's assets. The bytes are COPIED — the caller may
-// free or unmap them the moment it returns — and the two faces built from them
-// live for the process's life. On the Linux build there is nothing to install
-// (fontconfig answers), so no caller exists and the symbol is not linked.
-void gui_font_install_bundled(const uint8_t* sans, size_t sans_len,
+// THE ONE SETUP CALL, with TWO CALLERS, one per platform, each once before the
+// first paint: the Wayland backend (GuiPlatform::init) hands in the bytes
+// compiled into the executable, the Android backend (install_fonts_or_die)
+// the two files it read out of the APK's assets. The bytes are COPIED — the
+// caller may free or unmap them the moment it returns — and the two faces
+// built from them live for the process's life.
+//
+// THE RETURN IS THE INSTALL OBSERVED, not assumed: true when selecting each
+// family actually puts an FT-BACKED face on a context, which is both what the
+// install produces and what text_shape requires; a context whose face is
+// still cairo's toy default answers false. Its producer is breach-only (the
+// bytes are the repository's own, so a face that fails to build is a build
+// defect), and each caller dies on false rather than painting in cairo's
+// default face.
+bool gui_font_install_bundled(const uint8_t* sans, size_t sans_len,
                               const uint8_t* mono, size_t mono_len);
+
+// THE LINUX BINARY'S COPY OF THE TWO FILES, defined by gui_font_embedded.cpp,
+// which only the Linux target compiles (the APK carries the same files as
+// assets instead, so the Android library defines none of these and its one
+// caller above never names them). Byte for byte `fonts/Roboto-Regular.ttf`
+// and `fonts/RobotoMono-Regular.ttf`.
+extern const uint8_t gui_font_embedded_sans[];
+extern const size_t  gui_font_embedded_sans_len;
+extern const uint8_t gui_font_embedded_mono[];
+extern const size_t  gui_font_embedded_mono_len;

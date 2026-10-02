@@ -197,11 +197,11 @@ namespace {
 // THE KDENLIVE REDESIGN'S SHARED TEXT FACE. The SIZE (kRedesignFontSizePt /
 // redesign_font_size_px) moved to render.h when row 5's marker flags began
 // shaping their own labels inside render.cpp — one design size cannot have two
-// definitions. THE FACE itself is stated here, where every row selects it: it
-// is cairo's toy "sans" selector, which fontconfig resolves to Liberation Sans
-// on the target — the family the crops were rendered in. The monospace face
-// survives untouched on every un-redesigned surface, and each redesign row
-// moves its own text over.
+// definitions. THE FACE is the one face owner's sans (gui_font.h): Roboto on
+// both devices since 2026-10-02 — the product's own face, no longer the
+// family the kdenlive crops were rendered in (Liberation, which the laptop's
+// fontconfig answered until that day). Every row selects it through that
+// owner.
 
 // (The authored-length -> device-pixels conversion every dimension below takes
 // is scaled_px, render.h — the ONE conversion the whole scale axis shares.)
@@ -1011,8 +1011,9 @@ constexpr double kPopupCornerRadiusPx = 5.0;
 // above the first band and below the last. So the box height falls out as
 //     pad + band1 [+ gap + band2] + pad
 // and the top and bottom air are equal by the arithmetic rather than by a
-// measured pair that could drift. At 100% on the target face that is 6 + 19 + 6
-// = 31 for one line and 6 + 19 + 4 + 16 + 6 = 51 for two — replacing the old
+// measured pair that could drift. At 100% on the product's face (Roboto,
+// 2026-10-02: the 12pt band 15 + 4, the 10pt band 13 + 4) that is 6 + 19 + 6
+// = 31 for one line and 6 + 19 + 4 + 17 + 6 = 52 for two — replacing the old
 // 41px two-line box, which the architect read as too tight between the lines and
 // bottom-heavy. render.h carries only a BOUND on this for the damage band.
 constexpr double kTooltipShiftFontSizePt = 10.0;
@@ -1220,33 +1221,32 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
 // LABEL and both monospace clocks (Qt's integer box rule fails the crops).
 //
-// THE MEASURED FACES (pycairo on the same fontconfig faces the product
-// resolves, hint metrics on, so every extent is a whole pixel):
+// THE MEASURED FACES (the product's own, through the one face owner's road —
+// Roboto, 2026-10-02 — hint metrics on, so every extent is a whole pixel):
 //
 //     face / size          ascent  descent  asc-desc  cap "H"  asc+desc
 //     sans 16px  (100%)      15       4        11       12        19
-//     sans 36px  (225%)      33       8        25       26        41
-//     mono 14.67px (100%)    13       5         8       10        18
-//     mono 33px  (225%)      28      10        18       22        38
+//     sans 32px  (200%)      30       8        22       22        38
+//     mono 14.67px (100%)    16       4        12       11        20
+//     mono 29.33px (200%)    31       8        23       21        39
 //
-// THE TABLE HOLDS ON BOTH BACKENDS. The bundled road ships those same
-// Liberation bytes AND carries fontconfig's own hint style beside them
-// (gui_font_bundled.cpp, whose head owns that ruling and carries the
-// measurement), so the two backends grid-fit identically and every seat below
-// is one answer rather than two.
+// THE TABLE HOLDS ON BOTH DEVICES BY CONSTRUCTION: one implementation builds
+// both faces from the same bytes under the same hint style
+// (gui_font_bundled.cpp, whose head owns that ruling and carries the full
+// measurement), so every seat below is one answer rather than two.
 //
-// ON THE SANS FACE AT THE REDESIGN'S SIZE cap = (ascent - descent) + 1 at BOTH
-// scales, so `floor((h + cap) / 2)` is arithmetically the same row as the
-// ascent-minus-descent proxy resolved with a half-up tie, for every box height
-// and at every scale. NOT ONE SANS SURFACE MOVES under this rule: every
-// kdenlive crop stays landed (the menu row's 30-row lane at row 21, the 32
-// box at 22, the 29 dropdown item at 20, the 31 field at 21 —
-// tmp/previous/review_2026-09-09/his_screenshots/kden-hover.png, tmp/previous/review_2026-09-09/his_screenshots/kden-view.png, the PCManFM-Qt tab crops and
-// tmp/keep/screenshots/kdenlive/redesign/), and the answer is independent of
-// the box's y by construction rather than by a tie rule. The identity is the
-// SIZE'S and not the FACE'S — the tooltip's 10pt hint line reports cap 9
-// against a 10-row ascent-descent difference, the other way round — which
-// costs nothing, because that size paints on a LINE BAND and never in a box.
+// THE KDENLIVE CROPS STAY LANDED AT 100 %: the sans cap is 12 rows there —
+// Liberation's when the rule landed, Roboto's since 2026-10-02 — so the menu
+// row's 30-row lane seats at row 21, the 32 box at 22, the 29 dropdown item
+// at 20 and the 31 field at 21 (tmp/previous/review_2026-09-09/his_screenshots/kden-hover.png,
+// tmp/previous/review_2026-09-09/his_screenshots/kden-view.png, the
+// PCManFM-Qt tab crops and tmp/keep/screenshots/kdenlive/redesign/), and the
+// answer is independent of the box's y by construction rather than by a tie
+// rule. When the rule landed, cap = (ascent - descent) + 1 held for the sans
+// at both scales then run, so it moved no sans surface off the
+// ascent-minus-descent proxy it replaced; the rule never needed that
+// identity, and in Roboto it holds at 100 % and not at 200 % (cap 22 against
+// a 22-row difference), which costs nothing for the same reason.
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
@@ -1269,9 +1269,9 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // off the same kdenlive crop the lane's own height comes off, which is why it
 // must agree with the crop and not with a face's metric. The two rules meet at
 // 100% — the crop's 12-row cap centred in the 20-tall lane seats row 16 either
-// way — and part at 225%, where the authored baseline scales to row 36 while
-// cap-centring the 26-row cap in the 45-tall lane would seat row 35. That
-// divergence is the crop's answer winning, not drift.
+// way — and part at 200%, where the authored baseline scales to row 32 while
+// cap-centring Roboto's 22-row cap in the 40-tall lane would seat row 31
+// (2026-10-02). That divergence is the crop's answer winning, not drift.
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
@@ -1280,6 +1280,9 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring (46 - 10 = 36 rows of margin, eighteen above the digits'
 // cap band and eighteen below), so the offset is gone and neither clock moved.
+// In Roboto Mono (2026-10-02) the digits' cap is 11 rows: the same row 28 at
+// 100% (seventeen rows above the band, eighteen below, the floor taking the
+// half) and row 56 in the 92-row band at 200%.
 // AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop, which is what levels it with OK
 // and Cancel at every scale (the reasoning is at the modal's own site).
@@ -2357,11 +2360,12 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // stated at that row's own header block; the chain has been the TAB ROW's
 // since 2026-08-13 and this is the only text left on this lane).
 //
-// THE FACE IS "monospace" at NORMAL weight, which fontconfig resolves to
-// Liberation Mono on this host (it shipped BOLD for the row's first hours and
-// the architect dropped the weight at his second look — keep the face, lose the
-// bold; the specimen derivation below is weight-agnostic and the memoised
-// metrics key on size, so nothing else about the cell moved). THE SIZE IS
+// THE FACE IS THE PRODUCT'S MONOSPACE at NORMAL weight — Roboto Mono on both
+// devices since 2026-10-02 (gui_font.h). It shipped BOLD for the row's first
+// hours and the architect dropped the weight at his second look (keep the
+// face, lose the bold); the specimen derivation below is agnostic to weight
+// and face alike and the memoised metrics key on size, so the cell measures
+// whatever face it is handed and neither change needed a second edit. THE SIZE IS
 // 11pt SINCE 2026-08-14 (clock_font_size_px, render.h — the architect's live
 // call, and the product's one departure from the redesign's shared 12pt); it
 // rides gui_scale like every other string, and it is a RETUNABLE rather than
