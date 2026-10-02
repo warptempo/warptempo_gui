@@ -1,0 +1,2075 @@
+{
+ "tag": "1002",
+ "source": "tmp/tablet_base_1002.png",
+ "size": [
+  2304,
+  1440
+ ],
+ "scale": 2,
+ "params": {
+  "first_label": "0:45.500",
+  "step_ms": 125.0,
+  "flags": [
+   "1.27+0.00:b.33",
+   "b.33",
+   "b.33",
+   "b.33",
+   "b.33"
+  ],
+  "clock": "B | 00:45.621",
+  "legend": "100% \u2191 | 7:01 AM"
+ },
+ "lanes": {
+  "menu": [
+   0,
+   60
+  ],
+  "icon": [
+   60,
+   152
+  ],
+  "trim": [
+   152,
+   172
+  ],
+  "marker": [
+   228,
+   268
+  ],
+  "ruler": [
+   172,
+   228
+  ],
+  "well": [
+   268,
+   1346
+  ],
+  "bottom": [
+   1346,
+   1440
+  ]
+ },
+ "table_rows": {
+  "menu": 60,
+  "icon": 92,
+  "trim": 20,
+  "ruler": 56,
+  "marker": 40,
+  "bottom": 94,
+  "wave_default": 1000
+ },
+ "ruler_rule": {
+  "pad": 0,
+  "ascent": 30,
+  "ground": 2,
+  "head": 24,
+  "lane": 56,
+  "baseline_off": 30
+ },
+ "canvas": [
+  272,
+  1342
+ ],
+ "well_border_rows": [
+  4,
+  4
+ ],
+ "bottom_border": {
+  "y": 1346,
+  "h": 2,
+  "x0": 2,
+  "x1": 2302
+ },
+ "bottom_content": [
+  1348,
+  1440
+ ],
+ "menu": {
+  "pad": 20,
+  "items": [
+   {
+    "text": "File",
+    "enabled": true
+   },
+   {
+    "text": "Edit",
+    "enabled": false
+   },
+   {
+    "text": "Settings",
+    "enabled": true
+   }
+  ],
+  "legend": "100% \u2191 | 7:01 AM",
+  "legend_right": 2288,
+  "baseline": 41
+ },
+ "buttons": [
+  {
+   "row": "icon",
+   "button": "Save",
+   "icon": "DocumentSave",
+   "table_icon": "DocumentSave",
+   "x": 16,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 26,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "Undo",
+   "icon": "EditUndo",
+   "table_icon": "EditUndo",
+   "x": 98,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 108,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "Redo",
+   "icon": "EditRedo",
+   "table_icon": "EditRedo",
+   "x": 166,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 176,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "IconCopyValue",
+   "icon": "EditCopy",
+   "table_icon": "EditCopy",
+   "x": 234,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 244,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "Render",
+   "icon": "MediaRecord",
+   "table_icon": "MediaRecord",
+   "x": 302,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 312,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconZoomFitBest",
+   "icon": "ZoomFitBest",
+   "table_icon": "ZoomFitBest",
+   "x": 384,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 394,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconWaveformMagnification",
+   "icon": "ZoomInY",
+   "table_icon": "ZoomInY",
+   "x": 452,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 462,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconFollow",
+   "icon": "GoJump",
+   "table_icon": "GoJump",
+   "x": 520,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 530,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconRestrictUndo",
+   "icon": "TimelineLift",
+   "table_icon": "TimelineLift",
+   "x": 588,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 598,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconBpm",
+   "icon": "MusicNote16th",
+   "table_icon": "MusicNote16th",
+   "x": 670,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 680,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "IconIter",
+   "icon": "Mathmode",
+   "table_icon": "Mathmode",
+   "x": 738,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 748,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconFlatten",
+   "icon": "Merge",
+   "table_icon": "Merge",
+   "x": 806,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 816,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconListen",
+   "icon": "PreviewRenderOn",
+   "table_icon": "PreviewRenderOn",
+   "x": 888,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 898,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconReadOnly",
+   "icon": "Unlock",
+   "table_icon": "Lock",
+   "x": 956,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 966,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconSettings",
+   "icon": "SettingsConfigure",
+   "table_icon": "SettingsConfigure",
+   "x": 1024,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1034,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconTooltips",
+   "icon": "HelpWhatsthis",
+   "table_icon": "HelpWhatsthis",
+   "x": 1092,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1102,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "IconHistory",
+   "icon": "VcsDiff",
+   "table_icon": "VcsDiff",
+   "x": 1174,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1184,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "HistoryWalk",
+   "icon": "ShallowHistory",
+   "table_icon": "ShallowHistory",
+   "x": 1242,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1252,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "HistoryCumulative",
+   "icon": "BlackSum",
+   "table_icon": "BlackSum",
+   "x": 1310,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1320,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "HistoryRevert",
+   "icon": "DocumentRevert",
+   "table_icon": "DocumentRevert",
+   "x": 1378,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1388,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "HistoryOlder",
+   "icon": "KeyframePrevious",
+   "table_icon": "KeyframePrevious",
+   "x": 1446,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1456,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "HistoryNewer",
+   "icon": "KeyframeNext",
+   "table_icon": "KeyframeNext",
+   "x": 1514,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1524,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "IconLoadInPlace",
+   "icon": "DialogOkApply",
+   "table_icon": "DialogOkApply",
+   "x": 1582,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1592,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "icon",
+   "button": "ViewSW",
+   "icon": "DocumentExport",
+   "table_icon": "DocumentExport",
+   "x": 2088,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 2098,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "ViewTW",
+   "icon": "DocumentImport",
+   "table_icon": "DocumentImport",
+   "x": 2156,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": true,
+   "under": [
+    60,
+    63,
+    65
+   ],
+   "glyph_x": 2166,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "icon",
+   "button": "ViewTP",
+   "icon": "ChronometerStart",
+   "table_icon": "ChronometerStart",
+   "x": 2224,
+   "y": 74,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 2234,
+   "glyph_y": 84,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "IconMarkerDrop",
+   "icon": "ListAdd",
+   "table_icon": "ListAdd",
+   "x": 1082,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1092,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "IconMarkerDelete",
+   "icon": "ListRemove",
+   "table_icon": "ListRemove",
+   "x": 1150,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1160,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "bottom",
+   "button": "IconMarkerDisable",
+   "icon": "ViewHidden",
+   "table_icon": "ViewHidden",
+   "x": 1218,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1228,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "bottom",
+   "button": "IconMarkerInherit",
+   "icon": "InsertLink",
+   "table_icon": "InsertLink",
+   "x": 1286,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1296,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "bottom",
+   "button": "IconJumpToDefiningMarker",
+   "icon": "GoJumpDeclaration",
+   "table_icon": "GoJumpDeclaration",
+   "x": 1354,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1364,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "bottom",
+   "button": "IconAddToSelection",
+   "icon": "EditSelect",
+   "table_icon": "EditSelect",
+   "x": 1422,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1432,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "TransportWalkPrevious",
+   "icon": "BboxPrev",
+   "table_icon": "BboxPrev",
+   "x": 1508,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1518,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "TransportWalk",
+   "icon": "BboxNext",
+   "table_icon": "BboxNext",
+   "x": 1576,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1586,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "IconZoomOriginal",
+   "icon": "ZoomOriginal",
+   "table_icon": "ZoomOriginal",
+   "x": 1644,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1654,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "TransportSwitchTab",
+   "icon": "TabDetach",
+   "table_icon": "TabDetach",
+   "x": 1712,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1722,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "TransportDown",
+   "icon": "GoDown",
+   "table_icon": "GoDown",
+   "x": 1798,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1808,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "bottom",
+   "button": "TransportUp",
+   "icon": "GoUp",
+   "table_icon": "GoUp",
+   "x": 1866,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1876,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "bottom",
+   "button": "TransportLeft",
+   "icon": "GoPrevious",
+   "table_icon": "GoPrevious",
+   "x": 1934,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 1944,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "TransportRight",
+   "icon": "GoNext",
+   "table_icon": "GoNext",
+   "x": 2002,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 2012,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "TransportSkipBack",
+   "icon": "MediaSkipBackward",
+   "table_icon": "MediaSkipBackward",
+   "x": 2088,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 2098,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  },
+  {
+   "row": "bottom",
+   "button": "TransportPlayStop",
+   "icon": "MediaPlaybackStart",
+   "table_icon": "MediaPlaybackStart",
+   "x": 2156,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 2166,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": false
+  },
+  {
+   "row": "bottom",
+   "button": "TransportSkipForward",
+   "icon": "MediaSkipForward",
+   "table_icon": "MediaSkipForward",
+   "x": 2224,
+   "y": 1362,
+   "w": 64,
+   "h": 64,
+   "selected": false,
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "glyph_x": 2234,
+   "glyph_y": 1372,
+   "glyph_px": 44,
+   "enabled": true
+  }
+ ],
+ "separators": [
+  {
+   "row": "icon",
+   "x": 88,
+   "y": 72,
+   "w": 2,
+   "h": 68
+  },
+  {
+   "row": "icon",
+   "x": 374,
+   "y": 72,
+   "w": 2,
+   "h": 68
+  },
+  {
+   "row": "icon",
+   "x": 660,
+   "y": 72,
+   "w": 2,
+   "h": 68
+  },
+  {
+   "row": "icon",
+   "x": 878,
+   "y": 72,
+   "w": 2,
+   "h": 68
+  },
+  {
+   "row": "icon",
+   "x": 1164,
+   "y": 72,
+   "w": 2,
+   "h": 68
+  },
+  {
+   "row": "icon",
+   "x": 2078,
+   "y": 72,
+   "w": 2,
+   "h": 68
+  },
+  {
+   "row": "bottom",
+   "x": 1496,
+   "y": 1362,
+   "w": 2,
+   "h": 64
+  },
+  {
+   "row": "bottom",
+   "x": 1786,
+   "y": 1362,
+   "w": 2,
+   "h": 64
+  },
+  {
+   "row": "bottom",
+   "x": 2076,
+   "y": 1362,
+   "w": 2,
+   "h": 64
+  }
+ ],
+ "glyph_px": 44,
+ "glyphs": "glyphs/1002",
+ "trim": {
+  "y0": 152,
+  "y1": 172,
+  "caps": [
+   [
+    660,
+    678
+   ],
+   [
+    1289,
+    1307
+   ],
+   [
+    1919,
+    1937
+   ]
+  ],
+  "handles": [
+   [
+    660,
+    678
+   ],
+   [
+    1919,
+    1937
+   ]
+  ],
+  "grip": [
+   1289,
+   1307
+  ],
+  "bar_bevel_hi_rows": [
+   152,
+   153
+  ],
+  "bar_bevel_lo_rows": [
+   168,
+   169
+  ],
+  "bar_edge": 2,
+  "bar": [
+   660,
+   1937
+  ],
+  "cap_bevel_lo_rows": [
+   152,
+   153
+  ],
+  "cap_bevel_hi_rows": [
+   154,
+   155
+  ],
+  "ground_bevel_lo_rows": [
+   152,
+   153
+  ],
+  "ground_bevel_hi_rows": [
+   154,
+   155
+  ],
+  "bottom_border_rows": [
+   170,
+   171
+  ],
+  "grip_hollow": {
+   "x0": 1293,
+   "x1": 1303,
+   "y0": 156,
+   "y1": 166
+  }
+ },
+ "ruler": {
+  "y0": 172,
+  "y1": 228,
+  "major_top": 220,
+  "minor_top": 228,
+  "tick_bottom": 268,
+  "tick_w": 2,
+  "baseline": 202,
+  "ms_per_px": 0.5628107055171154,
+  "vp_ms": 45455.537954264146,
+  "step_ms": 125.0,
+  "ticks": [
+   {
+    "x": 23,
+    "major": false,
+    "ms": 45375.0
+   },
+   {
+    "x": 51,
+    "major": false,
+    "ms": 45375.0
+   },
+   {
+    "x": 79,
+    "major": true,
+    "ms": 45500.0
+   },
+   {
+    "x": 107,
+    "major": false,
+    "ms": 45500.0
+   },
+   {
+    "x": 135,
+    "major": false,
+    "ms": 45500.0
+   },
+   {
+    "x": 162,
+    "major": false,
+    "ms": 45500.0
+   },
+   {
+    "x": 190,
+    "major": false,
+    "ms": 45500.0
+   },
+   {
+    "x": 218,
+    "major": false,
+    "ms": 45500.0
+   },
+   {
+    "x": 245,
+    "major": false,
+    "ms": 45500.0
+   },
+   {
+    "x": 273,
+    "major": false,
+    "ms": 45500.0
+   },
+   {
+    "x": 301,
+    "major": true,
+    "ms": 45625.0
+   },
+   {
+    "x": 329,
+    "major": false,
+    "ms": 45625.0
+   },
+   {
+    "x": 357,
+    "major": false,
+    "ms": 45625.0
+   },
+   {
+    "x": 384,
+    "major": false,
+    "ms": 45625.0
+   },
+   {
+    "x": 412,
+    "major": false,
+    "ms": 45625.0
+   },
+   {
+    "x": 440,
+    "major": false,
+    "ms": 45625.0
+   },
+   {
+    "x": 467,
+    "major": false,
+    "ms": 45625.0
+   },
+   {
+    "x": 495,
+    "major": false,
+    "ms": 45625.0
+   },
+   {
+    "x": 523,
+    "major": true,
+    "ms": 45750.0
+   },
+   {
+    "x": 551,
+    "major": false,
+    "ms": 45750.0
+   },
+   {
+    "x": 579,
+    "major": false,
+    "ms": 45750.0
+   },
+   {
+    "x": 606,
+    "major": false,
+    "ms": 45750.0
+   },
+   {
+    "x": 634,
+    "major": false,
+    "ms": 45750.0
+   },
+   {
+    "x": 662,
+    "major": false,
+    "ms": 45750.0
+   },
+   {
+    "x": 689,
+    "major": false,
+    "ms": 45750.0
+   },
+   {
+    "x": 717,
+    "major": false,
+    "ms": 45750.0
+   },
+   {
+    "x": 745,
+    "major": true,
+    "ms": 45875.0
+   },
+   {
+    "x": 773,
+    "major": false,
+    "ms": 45875.0
+   },
+   {
+    "x": 801,
+    "major": false,
+    "ms": 45875.0
+   },
+   {
+    "x": 828,
+    "major": false,
+    "ms": 45875.0
+   },
+   {
+    "x": 856,
+    "major": false,
+    "ms": 45875.0
+   },
+   {
+    "x": 884,
+    "major": false,
+    "ms": 45875.0
+   },
+   {
+    "x": 911,
+    "major": false,
+    "ms": 45875.0
+   },
+   {
+    "x": 939,
+    "major": false,
+    "ms": 45875.0
+   },
+   {
+    "x": 967,
+    "major": true,
+    "ms": 46000.0
+   },
+   {
+    "x": 995,
+    "major": false,
+    "ms": 46000.0
+   },
+   {
+    "x": 1023,
+    "major": false,
+    "ms": 46000.0
+   },
+   {
+    "x": 1050,
+    "major": false,
+    "ms": 46000.0
+   },
+   {
+    "x": 1078,
+    "major": false,
+    "ms": 46000.0
+   },
+   {
+    "x": 1106,
+    "major": false,
+    "ms": 46000.0
+   },
+   {
+    "x": 1133,
+    "major": false,
+    "ms": 46000.0
+   },
+   {
+    "x": 1161,
+    "major": false,
+    "ms": 46000.0
+   },
+   {
+    "x": 1189,
+    "major": true,
+    "ms": 46125.0
+   },
+   {
+    "x": 1217,
+    "major": false,
+    "ms": 46125.0
+   },
+   {
+    "x": 1245,
+    "major": false,
+    "ms": 46125.0
+   },
+   {
+    "x": 1273,
+    "major": false,
+    "ms": 46125.0
+   },
+   {
+    "x": 1301,
+    "major": false,
+    "ms": 46125.0
+   },
+   {
+    "x": 1328,
+    "major": false,
+    "ms": 46125.0
+   },
+   {
+    "x": 1356,
+    "major": false,
+    "ms": 46125.0
+   },
+   {
+    "x": 1384,
+    "major": false,
+    "ms": 46125.0
+   },
+   {
+    "x": 1412,
+    "major": true,
+    "ms": 46250.0
+   },
+   {
+    "x": 1440,
+    "major": false,
+    "ms": 46250.0
+   },
+   {
+    "x": 1468,
+    "major": false,
+    "ms": 46250.0
+   },
+   {
+    "x": 1495,
+    "major": false,
+    "ms": 46250.0
+   },
+   {
+    "x": 1523,
+    "major": false,
+    "ms": 46250.0
+   },
+   {
+    "x": 1551,
+    "major": false,
+    "ms": 46250.0
+   },
+   {
+    "x": 1578,
+    "major": false,
+    "ms": 46250.0
+   },
+   {
+    "x": 1606,
+    "major": false,
+    "ms": 46250.0
+   },
+   {
+    "x": 1634,
+    "major": true,
+    "ms": 46375.0
+   },
+   {
+    "x": 1662,
+    "major": false,
+    "ms": 46375.0
+   },
+   {
+    "x": 1690,
+    "major": false,
+    "ms": 46375.0
+   },
+   {
+    "x": 1717,
+    "major": false,
+    "ms": 46375.0
+   },
+   {
+    "x": 1745,
+    "major": false,
+    "ms": 46375.0
+   },
+   {
+    "x": 1773,
+    "major": false,
+    "ms": 46375.0
+   },
+   {
+    "x": 1800,
+    "major": false,
+    "ms": 46375.0
+   },
+   {
+    "x": 1828,
+    "major": false,
+    "ms": 46375.0
+   },
+   {
+    "x": 1856,
+    "major": true,
+    "ms": 46500.0
+   },
+   {
+    "x": 1884,
+    "major": false,
+    "ms": 46500.0
+   },
+   {
+    "x": 1912,
+    "major": false,
+    "ms": 46500.0
+   },
+   {
+    "x": 1939,
+    "major": false,
+    "ms": 46500.0
+   },
+   {
+    "x": 1967,
+    "major": false,
+    "ms": 46500.0
+   },
+   {
+    "x": 1995,
+    "major": false,
+    "ms": 46500.0
+   },
+   {
+    "x": 2022,
+    "major": false,
+    "ms": 46500.0
+   },
+   {
+    "x": 2050,
+    "major": false,
+    "ms": 46500.0
+   },
+   {
+    "x": 2078,
+    "major": true,
+    "ms": 46625.0
+   },
+   {
+    "x": 2106,
+    "major": false,
+    "ms": 46625.0
+   },
+   {
+    "x": 2134,
+    "major": false,
+    "ms": 46625.0
+   },
+   {
+    "x": 2161,
+    "major": false,
+    "ms": 46625.0
+   },
+   {
+    "x": 2189,
+    "major": false,
+    "ms": 46625.0
+   },
+   {
+    "x": 2217,
+    "major": false,
+    "ms": 46625.0
+   },
+   {
+    "x": 2244,
+    "major": false,
+    "ms": 46625.0
+   },
+   {
+    "x": 2272,
+    "major": false,
+    "ms": 46625.0
+   },
+   {
+    "x": 2300,
+    "major": true,
+    "ms": 46750.0
+   }
+  ],
+  "labels": [
+   {
+    "text": "0:45.500",
+    "x": 85
+   },
+   {
+    "text": "0:45.625",
+    "x": 307
+   },
+   {
+    "text": "0:45.750",
+    "x": 529
+   },
+   {
+    "text": "0:45.875",
+    "x": 751
+   },
+   {
+    "text": "0:46.000",
+    "x": 973
+   },
+   {
+    "text": "0:46.125",
+    "x": 1195
+   },
+   {
+    "text": "0:46.250",
+    "x": 1418
+   },
+   {
+    "text": "0:46.375",
+    "x": 1640
+   },
+   {
+    "text": "0:46.500",
+    "x": 1862
+   },
+   {
+    "text": "0:46.625",
+    "x": 2084
+   },
+   {
+    "text": "0:46.750",
+    "x": 2306
+   }
+  ]
+ },
+ "playhead": {
+  "col": 293,
+  "w": 2,
+  "head_top": 204,
+  "head_rows": 24,
+  "head_half": [
+   18,
+   18,
+   16,
+   16,
+   14,
+   14,
+   12,
+   12,
+   12,
+   12,
+   10,
+   10,
+   8,
+   8,
+   8,
+   8,
+   6,
+   6,
+   4,
+   4,
+   2,
+   2,
+   2,
+   2
+  ],
+  "head_alpha": 0.8,
+  "stem_y0": 268,
+  "stem_y1": 1346,
+  "stem_suppressed": false
+ },
+ "flags": {
+  "y0": 228,
+  "y1": 268,
+  "border_w": 2,
+  "edge_h": 2,
+  "pad_l": 4,
+  "baseline": 260,
+  "stem_w": 2,
+  "stem_y0": 268,
+  "stem_y1": 1346,
+  "flags": [
+   {
+    "x": 398,
+    "selected": false,
+    "text": "1.27+0.00:b.33",
+    "w": 221,
+    "clipped": false
+   },
+   {
+    "x": 871,
+    "selected": false,
+    "text": "b.33",
+    "w": 70,
+    "clipped": false
+   },
+   {
+    "x": 1343,
+    "selected": false,
+    "text": "b.33",
+    "w": 70,
+    "clipped": false
+   },
+   {
+    "x": 1816,
+    "selected": false,
+    "text": "b.33",
+    "w": 70,
+    "clipped": false
+   },
+   {
+    "x": 2289,
+    "selected": false,
+    "text": "b.33",
+    "w": 70,
+    "clipped": true
+   }
+  ]
+ },
+ "clock": {
+  "text": "B | 00:45.621",
+  "x": 16,
+  "baseline": 1404,
+  "size_px": 29.333333333333332
+ },
+ "waveform": "waveform_1002.json",
+ "constants": {
+  "kBackground": [
+   32,
+   35,
+   38
+  ],
+  "kPlayheadScanner": [
+   252,
+   252,
+   252
+  ],
+  "kWaveformInk": [
+   122,
+   195,
+   224
+  ],
+  "kRedesignRowGround": [
+   41,
+   44,
+   48
+  ],
+  "kRedesignLabel": [
+   252,
+   252,
+   252
+  ],
+  "kRedesignLine": [
+   83,
+   86,
+   89
+  ],
+  "kRedesignAccentInactive": [
+   45,
+   69,
+   79
+  ],
+  "kRedesignRowGroundUnfocused": [
+   32,
+   35,
+   38
+  ],
+  "kRedesignContentGround": [
+   32,
+   35,
+   38
+  ],
+  "kRedesignTabLine": [
+   76,
+   78,
+   81
+  ],
+  "kRedesignSelectedFill": [
+   60,
+   63,
+   65
+  ],
+  "kTrimLaneBar": [
+   46,
+   49,
+   53
+  ],
+  "kTrimLaneEndcap": [
+   161,
+   169,
+   177
+  ],
+  "kTrimGroundBevelHi": [
+   57,
+   62,
+   67
+  ],
+  "kTrimGroundBevelLo": [
+   19,
+   21,
+   22
+  ],
+  "kTrimBarBevelHi": [
+   58,
+   63,
+   67
+  ],
+  "kTrimBarBevelLo": [
+   39,
+   42,
+   45
+  ],
+  "kTrimCapBevelHi": [
+   167,
+   176,
+   184
+  ],
+  "kTrimCapBevelLo": [
+   158,
+   165,
+   173
+  ],
+  "kTrimLaneBottomBorder": [
+   19,
+   21,
+   22
+  ],
+  "kRulerLabel": [
+   194,
+   194,
+   194
+  ],
+  "kRulerTick": [
+   115,
+   115,
+   115
+  ],
+  "kPlayheadHead": [
+   142,
+   143,
+   145
+  ],
+  "kPlayheadStem": [
+   252,
+   252,
+   252
+  ],
+  "kMarkerFlagFill": [
+   155,
+   89,
+   182
+  ],
+  "kMarkerFlagEdge": [
+   86,
+   49,
+   101
+  ],
+  "kMarkerFlagFillSel": [
+   201,
+   116,
+   237
+  ],
+  "kMarkerFlagEdgeSel": [
+   112,
+   64,
+   131
+  ],
+  "kMarkerFlagFillRed": [
+   218,
+   68,
+   83
+  ],
+  "kMarkerFlagEdgeRed": [
+   121,
+   38,
+   46
+  ],
+  "kMarkerFlagFillRedSel": [
+   255,
+   108,
+   123
+  ],
+  "kMarkerFlagEdgeRedSel": [
+   142,
+   60,
+   68
+  ],
+  "kMarkerStemRed": [
+   218,
+   68,
+   83
+  ],
+  "kPhaseResetFlagFill": [
+   155,
+   89,
+   182
+  ],
+  "kPhaseResetFlagEdge": [
+   86,
+   49,
+   101
+  ],
+  "kPhaseResetFlagFillSel": [
+   201,
+   116,
+   237
+  ],
+  "kPhaseResetFlagEdgeSel": [
+   112,
+   64,
+   131
+  ],
+  "kMarkerFlagLabel": [
+   0,
+   0,
+   0
+  ],
+  "kHistoryAddedFill": [
+   26,
+   188,
+   156
+  ],
+  "kHistoryAddedEdge": [
+   14,
+   104,
+   87
+  ],
+  "kHistoryAddedFillSel": [
+   34,
+   244,
+   203
+  ],
+  "kHistoryAddedEdgeSel": [
+   19,
+   136,
+   113
+  ],
+  "kHistoryRemovedFill": [
+   218,
+   68,
+   83
+  ],
+  "kHistoryRemovedEdge": [
+   121,
+   38,
+   46
+  ],
+  "kHistoryRemovedFillSel": [
+   255,
+   108,
+   123
+  ],
+  "kHistoryRemovedEdgeSel": [
+   142,
+   60,
+   68
+  ],
+  "kMarkerFlagBorder": [
+   19,
+   21,
+   22
+  ],
+  "kWaveformCanvas": [
+   20,
+   22,
+   24
+  ],
+  "kWaveformForegroundOutline": [
+   89,
+   144,
+   165
+  ],
+  "kWaveformBorder": [
+   0,
+   0,
+   0
+  ],
+  "kRedesignPopupGround": [
+   28,
+   31,
+   34
+  ],
+  "kRedesignPopupHotkey": [
+   184,
+   185,
+   186
+  ],
+  "kRedesignPopupDisabledLabel": [
+   104,
+   106,
+   108
+  ],
+  "kRedesignPopupDisabledHotkey": [
+   81,
+   83,
+   86
+  ],
+  "kModalFieldGround": [
+   20,
+   22,
+   24
+  ],
+  "kModalFieldBorder": [
+   76,
+   78,
+   81
+  ],
+  "kFolderRowHoverOutline": [
+   105,
+   166,
+   190
+  ],
+  "kFolderRowHoverSelected": [
+   134,
+   214,
+   246
+  ],
+  "kModalFocusFill": [
+   57,
+   74,
+   83
+  ],
+  "kModalFocusRing": [
+   59,
+   83,
+   94
+  ],
+  "kModalFocusLinePassive": [
+   102,
+   140,
+   156
+  ],
+  "kScrubGroove": [
+   70,
+   73,
+   76
+  ],
+  "kScrubGrooveOutline": [
+   88,
+   90,
+   92
+  ],
+  "kScrubPlayed": [
+   98,
+   150,
+   171
+  ],
+  "kScrubPlayedOutline": [
+   98,
+   134,
+   149
+  ],
+  "kScrubPlayedInactive": [
+   42,
+   59,
+   66
+  ],
+  "kScrubPlayedInactiveOutline": [
+   61,
+   74,
+   79
+  ],
+  "kScrubHandleFill": [
+   41,
+   44,
+   48
+  ],
+  "kScrubHandleOutline": [
+   83,
+   86,
+   89
+  ]
+ },
+ "icon_inks": {
+  "text": [
+   252,
+   252,
+   252
+  ],
+  "record": [
+   218,
+   68,
+   83
+  ],
+  "preview_on": [
+   210,
+   77,
+   87
+  ],
+  "accent": [
+   122,
+   195,
+   224
+  ],
+  "lift_cross": [
+   210,
+   77,
+   87
+  ],
+  "wav": [
+   122,
+   195,
+   224
+  ],
+  "negative": [
+   218,
+   68,
+   83
+  ],
+  "plain_white": [
+   255,
+   255,
+   255
+  ]
+ },
+ "disabled_mix": 0.322,
+ "label_box": {
+  "x0": 300,
+  "y0": 1382,
+  "x1": 560,
+  "y1": 1408,
+  "note": "mock A's file-name label; compare.py excludes it"
+ },
+ "mismatches": [
+  "waveform area: 1078 device rows (268..1345) with gap 2 = 0 -- the device's config is max_waveform_height 0 (no maximum), main.cpp's \"At 0\" tablet stack: the waveform takes the whole leftover; the templates' default 500 would give 1000 + gap 2 = 78",
+  "brief says \"26 + 3 view icons\"; the source has kIconRowButtons 23 + kIconRowViewGroup 3 = 26 in all (groups [1, 4, 4, 3, 4, 7] + 3); this extraction follows the source and the capture",
+  "render95icons.py ICON_GROUPS lists IconTooltips before IconSettings; kIconRowButtons (and the capture: sliders, then the i-with-pointer) has IconSettings then IconTooltips -- its S-mocks gave each the other's set icon"
+ ]
+}
