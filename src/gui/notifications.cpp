@@ -60,26 +60,6 @@ GuiRect notification_stack_bound(const AppState& a) {
     return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }
 
-GuiRect notification_shadow_bound(const AppState& a) {
-    // THE ROOM PLUS THE SHADOW'S REACH ON EACH SIDE (the rule and its fences
-    // at the declaration). The rings are device pixels, one per pixel of the
-    // scaled spread, and the offset moves them down, so the reach is
-    // asymmetric only vertically: spread - offset above, offset + spread
-    // below. The fences are the menu lane's foot, the bottom row's top and
-    // the window's two side edges.
-    const GuiRect room = notification_stack_bound(a);
-    if (room.w <= 0 || room.h <= 0) return GuiRect{0, 0, 0, 0};
-    const GuiRect menu   = top_menu_row_area(a);
-    const int     off    = scaled_px(kNotificationShadowOffsetPx);
-    const int     spread = scaled_px(kNotificationShadowSpreadPx, 1);
-    const int x0 = std::max(0, room.x - spread);
-    const int x1 = std::min(a.width, room.x + room.w + spread);
-    const int y0 = std::max(menu.y + menu.h, room.y - (spread - off));
-    const int y1 = std::min(bottom_row_area(a).y,
-                            room.y + room.h + off + spread);
-    return GuiRect{x0, y0, std::max(0, x1 - x0), std::max(0, y1 - y0)};
-}
-
 int notification_capacity(const AppState& a) {
     // ONE-LINE CARDS IN THE ROOM (the reasoning and the two measured numbers
     // at the declaration): n cards take n heights and n-1 gaps, so the room

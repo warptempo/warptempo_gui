@@ -88,7 +88,12 @@ struct IconDef {
 };
 
 constexpr GuiColor kIconText   = hex(0xFCFCFC);
-constexpr GuiColor kIconRecord = hex(0xDA4453);
+// THE ICON INKS ARE THE PALETTE'S P3 BYTES (architect 2026-10-02, render.h's
+// palette head): each Breeze class or literal colour below is that colour
+// taken through the two sRGB -> Display-P3 passes the frozen palette baked in
+// (Breeze's #da4453 -> #bb575a, #d24d57 -> #b65c5d; the white classes are
+// unmoved), and the scheme's accent class is the accent role itself.
+constexpr GuiColor kIconRecord = hex(0xBB575A);
 
 constexpr IconPath kDocumentSavePaths[] = {
     {kIconText,
@@ -131,20 +136,18 @@ constexpr IconPath kMediaRecordPaths[] = {
 // red in this tree and deliberately not a reference to media-record's #da4453
 // or to the marker ring.
 
-constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
+constexpr GuiColor kIconPreviewOn = hex(0xB65C5D);
 
 // THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
 // written into its own file: `.ColorScheme-Accent`, which a Breeze file
 // carrying it resolves to the SCHEME'S ACCENT — #3daee9 under stock Breeze —
 // deep-history's curl-back arrow was this tree's first user (2026-08-09) and
 // dialog-information's plate is the one standing since that glyph left with
-// the 2026-09-04 collapse. THE SCHEME'S ACCENT HERE IS THE INK #7ac3e0
-// (architect 2026-10-01: the leftover Breeze blues convert to the ink, and
-// this class's relationship to Breeze's blue is identity). It is recorded the
-// same way kIconText and kIconPreviewOn are, as THE VALUE THAT CLASS RESOLVES
-// TO, a literal of its own that deliberately does NOT reference render.h's
-// kRedesignAccent: two constants that agree, not one fact referenced twice.
-constexpr GuiColor kIconAccent    = hex(0x7AC3E0);
+// the 2026-09-04 collapse. THE SCHEME'S ACCENT IS THE ACCENT ROLE
+// (kRedesignAccent, render.h — architect 2026-10-01: the leftover Breeze blues
+// convert to the ink, the accent's twin; derived since 2026-10-02, the
+// palette's scaffold, so a retune of the role moves the class with it).
+constexpr GuiColor kIconAccent    = kRedesignAccent;
 
 
 // THE BPM OPENER'S ICON, 2026-08-01 to 2026-08-27 and again since 2026-09-04
@@ -236,7 +239,7 @@ constexpr IconPath kGoJumpPaths[] = {
 // though both files write #d24d57: the two coincide by shared Breeze ancestry,
 // which is exactly what media-record's #da4453 and the marker ring say about
 // each other at the head of this table.
-constexpr GuiColor kIconLiftCross = hex(0xD24D57);
+constexpr GuiColor kIconLiftCross = hex(0xB65C5D);
 
 constexpr IconPath kTimelineLiftPaths[] = {
     {kIconText,
@@ -574,9 +577,9 @@ constexpr IconPath kEditSelectPaths[] = {
 // AUDIO-X-WAV: one `<path>` in the file's OWN LITERAL `fill:#44aaeb` — Breeze's
 // audio-mimetype blue. kIconWav below is NOT that literal: the file's blue
 // records no relationship to Breeze's #3daee9 beyond being Breeze's blue, so
-// it converts to the ink #7ac3e0 with every other leftover Breeze blue
-// (architect 2026-10-01), its own literal coinciding with kIconAccent and the
-// ink rather than referencing either. Absolute `M` / `L` and the ARC `A` (the four
+// it converts to the ink with every other leftover Breeze blue (architect
+// 2026-10-01) — the accent role, the ink's twin, read since 2026-10-02 (the
+// palette's scaffold). Absolute `M` / `L` and the ARC `A` (the four
 // note-head circles as eight elliptical arcs), the interpreter's existing arm
 // (media-record's precedent, and the retired speedometer's). THE ONE THING WORTH READING
 // TWICE: the file wraps the path in a layer group carrying
@@ -587,7 +590,7 @@ constexpr IconPath kEditSelectPaths[] = {
 // numbers in the `d` are already viewBox coordinates (every one lands in
 // [3, 19]). A reader comparing this row against the file should expect no
 // transform here and find those two in the file.
-constexpr GuiColor kIconWav = hex(0x7AC3E0);
+constexpr GuiColor kIconWav = kRedesignAccent;
 
 constexpr IconPath kFolderPaths[] = {
     {kIconText,
@@ -849,7 +852,7 @@ constexpr IconPath kZoomOriginalPaths[] = {
 // diff-is-a-transcription-bug property. Coverage: absolute M/L/A/C/Z, every
 // family with a committed producer.
 
-constexpr GuiColor kIconNegativeText = hex(0xDA4453);
+constexpr GuiColor kIconNegativeText = hex(0xBB575A);
 
 constexpr IconPath kListAddPaths[] = {
     {kIconText,

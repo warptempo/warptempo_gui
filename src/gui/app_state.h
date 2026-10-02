@@ -3299,35 +3299,6 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
     return false;
 }
 
-// WHICH ROSTER BUTTONS FADE THEIR HOVER, AND HOW (architect 2026-09-27, the
-// Breeze port at render.h's HoverFade): the icon row and the bottom row snap
-// in and fade out (QToolButton's SnapIn), and row 1's MENU ANCHORS HOLD
-// (architect 2026-10-01, "still binary, but just a 100-millisecond
-// timeout"). The anchor's pill is BINARY — the accent or nothing: full while
-// the anchor is hovered or its menu is open (paint_menu_row's open term), and
-// when the bit drops with no menu holding it the pill STAYS FULL for
-// kMenuPillHoldMs (render.h), then goes off at once; a return inside the hold
-// keeps it full with no visible event. The hold exists for the S Pen's two
-// gaps: its HOVER_EXIT comes with every tip-down and its lift precedes the
-// next hover sample, each a pointer leave that clears the hover bits, and the
-// Android loop paints after every input drain, so a pill that snapped off at
-// the leave blinked to rest at the first touch and at the lift. The two
-// reports carry one event timestamp; the gap is the loop's handling, one pass
-// at most (11 ms the largest measured, 2026-10-01), so the hold absorbs
-// both — he ruled the 100 ms timeout first, the measurement brought it to
-// 25 and his glass pass to 20 for feel (the number and its why at the
-// constant). It is a hold rather than the icons' fade because a fade-out on a
-// menu bar read as odd on the glass (a fade lasted one pass the same day):
-// Breeze's QMenuBar registers no engine and snaps its pill off, and this
-// snaps kMenuPillHoldMs late. Paint only, as every fade is: the press, hit
-// tests, the cursor and the tooltip keep reading the hover bits. A plain
-// value: no roster button is without a kind, so there is no "none" arm.
-inline constexpr HoverFadeKind
-redesign_button_hover_fade_kind(RedesignButton b) {
-    return redesign_button_is_menu_anchor(b) ? HoverFadeKind::Holding
-                                             : HoverFadeKind::SnapIn;
-}
-
 // THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
 // what the menu row's Settings button drops down. Each row pairs the HUMAN
 // LABEL (Title Case since 2026-09-03, kdenlive's own menu spelling and, since
@@ -3373,15 +3344,11 @@ struct SettingsPopupItem {
 // 2026-09-14), the picture's gain varying over source time since (the
 // continuous curve derived from the source since 2026-09-23).
 //
-// THE DEVICE HALF IS SIX: `GUI Scale`, then `Max Waveform Height` right
+// THE DEVICE HALF IS FOUR: `GUI Scale`, then `Max Waveform Height` right
 // after it in kDeviceConfigKeys' order (architect 2026-09-13; it commits
 // through commit_device_setting and relays out live; `Hold Delay` stood
 // right after it for the hold delay's one-day tuning phase, 2026-09-29, and
-// left with its key when the value was hard-coded), then `Palette Passes`
-// and `Waveform Passes`, the palette's tuning knob for its tuning phase
-// (architect 2026-10-02; they commit through the same body and repaint
-// live, and leave with their keys when the values are hard-coded), then the
-// two
+// left with its key when the value was hard-coded), then the two
 // gesture-less device keys `Projects Repository` and `Projects Path`
 // (architect 2026-09-02), each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
@@ -3399,8 +3366,6 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Cover",               "cover",         false},
     {"GUI Scale",           "gui_scale",     true},
     {"Max Waveform Height", "max_waveform_height", false},
-    {"Palette Passes",      "palette_passes",      false},
-    {"Waveform Passes",     "waveform_passes",     false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
 };
@@ -4157,11 +4122,11 @@ enum class DialogTrigger {
 // save-failed rung, the one such route — leaves rects whose Discard/Cancel
 // keys are still live at coordinates the new (differently laid out) button row
 // no longer uses, so the stale-rect press was answerable and destructive. The
-// button HOVER face is deliberately not gated: a stale index mislights a
-// button until THE NEXT DELIVERED MOTION, which is what re-runs
-// update_modal_dialog_hover (the modal branches of on_motion are its only
-// callers — it does not ride the per-tick roster recompute), and mislighting
-// is all it can do.
+// button HOVER index is deliberately not gated: a stale index names a button
+// for the tooltip's wait until THE NEXT DELIVERED MOTION, which is what
+// re-runs update_modal_dialog_hover (the modal branches of on_motion are its
+// only callers — it does not ride the per-tick roster recompute), and that is
+// all it can do.
 // EDITOR DIALOGS ARE DELIBERATELY NOT GATED: a queued key types into the
 // buffer, which is non-destructive and self-evident the moment the field
 // paints, and the commit is a separate deliberate Enter. The destructive
@@ -5862,9 +5827,9 @@ struct AppState {
     //
     // `hovered` is written only on a TRANSITION (the motion tail's recompute and
     // the pointer-leave hook), a transition paying one invalidate_top_strip. A
-    // press does not change it — the hover face survives a click; what a press
+    // press does not change it — the hover bit survives a click; what a press
     // writes instead is the armed chrome press (AppState::ChromePress), whose
-    // Roster arm is the click face.
+    // Roster arm is the pressed face.
     //
     // `enabled` is the ENABLED VECTOR THE PAINTER LAST PAINTED, stashed beside
     // the rect for one reason: the facts it derives from (the undo/redo stacks,
@@ -5895,9 +5860,8 @@ struct AppState {
     // redesign_button_glyph_swapped.
     // THE THREE BITS ARE ALSO THE CLAIM (architect 2026-09-24, strictly
     // as-painted: "the live painted face should correspond to reality, and
-    // reality to the face"): the roster's press, lift, hold-repeat fire,
-    // menu-row slide and hover pill read these stashed bits and never the live
-    // predicates, so input agrees with what is on screen; the comparator is
+    // reality to the face"): the roster's press, lift, hold-repeat fire and
+    // menu-row slide read these stashed bits and never the live predicates, so input agrees with what is on screen; the comparator is
     // what keeps them true, and a face painted live whose act has since become
     // refused dispatches and its act answers for itself.
     struct RedesignButtonFace {
@@ -5908,32 +5872,8 @@ struct AppState {
         // The painted glyph's index (redesign_button_glyph: 0 the table
         // glyph, 1 the second, 2 Save's third) — the third stashed term.
         int     glyph         = 0;
-        // THE HOVER FADE (render.h's HoverFade, architect 2026-09-27): paint
-        // state only, its edges stamped by the two writers of `hovered`
-        // (recompute_redesign_button_hover and clear_redesign_button_hover)
-        // on the button's own kind (redesign_button_hover_fade_kind), and its
-        // level advanced by the tick. KEYED TO THE BUTTON'S IDENTITY by
-        // construction — one slot per roster button — so a tail can only
-        // ever paint on the button that left it; it is cut when the button
-        // goes dead under it — at the edge, or mid-tail by the tick, which
-        // reads `enabled` before each advance, so a re-enable revives no old
-        // tail — or stops being painted. Row 1's menu anchors stamp and tick
-        // as the tool buttons do on their own kind, the kMenuPillHoldMs hold
-        // (architect 2026-10-01), save that a menu's OPEN EDGE cuts every
-        // anchor's fade (toggle_dropdown): the open term holds the opened
-        // anchor's pill while the menu stands, and no hold paints under it or
-        // beside it.
-        HoverFade fade{};
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
-
-    // ANY HOVER FADE RUNNING — the tick's one cheap check (tick_hover_fades,
-    // input_pointer.cpp). Raised by every edge that starts an animation, on
-    // every surface that fades (the roster, the modal row's buttons and field;
-    // the notification cards' close buttons were the third until their X
-    // retired, 2026-10-01); lowered by the tick's walk once
-    // none is left running. While it is false the tick does nothing more.
-    bool hover_fades_running = false;
 
     // (THE ACTIVE TAB'S LOCK RECT IS DELETED — architect 2026-08-14, "we
     // should move the icon out of the tab and into the icon row, then show the
@@ -6289,10 +6229,6 @@ struct AppState {
         uint64_t                       session = 0;
         GuiRect                        box{0, 0, 0, 0};
         GuiRect                        field{0, 0, 0, 0};
-        // THE FIELD'S OUTER BOX, its border included — the one rect a hover
-        // fade frame on the field damages (tick_hover_fades); `field` above
-        // is the inner rect every press reads.
-        GuiRect                        field_frame{0, 0, 0, 0};
         // THE PLAYER'S TWO PUBLISHED CELLS (2026-08-28), zero under every
         // other owner: the PLAY-SCRUB — THE WHOLE SLIDER ITEM, the button
         // box's own band, so a press anywhere on it is on the slider and the
@@ -6449,35 +6385,6 @@ struct AppState {
     // the walk's own fade edge.
     int modal_dialog_hovered = -1;
 
-    // THE POINTER IS OVER THE EDITOR FIELD — the same pointer fact as the
-    // index above, in the same model and written by the same walk
-    // (update_modal_dialog_hover: one motion, one answer, one damage of the
-    // stashed box), because the field grew a HOVER FACE when it took the
-    // buttons' chrome (architect 2026-08-13: "the same outline — the breeze
-    // blue highlight — when it's hovered and when it has the focus"). It is a
-    // bool rather than a second index because there is exactly one field.
-    // Resolved against modal_dialog.field, which a prompt publishes zero, so
-    // this is false under a prompt by construction; reset with the three face
-    // indices in paint_modal_dialog's no-dialog and owner-change arms, and
-    // cleared with the index above on the pointer-leave hook.
-    bool modal_dialog_field_hovered = false;
-
-    // THE MODAL ROW'S HOVER FADES (architect 2026-09-27, render.h's
-    // HoverFade): one per dialog button, indexed like modal_dialog_hovered,
-    // SnapIn — Breeze's QPushButton — and the field's, Reversing — Breeze's
-    // line-edit frame, which fades both ways. Written on the hover walk's
-    // edges (stamp_modal_dialog_hover_fades, called by
-    // update_modal_dialog_hover and by the pointer-leave hook's
-    // clear_modal_dialog_hover) and KEYED TO THE PAINTED SURFACE'S
-    // SESSION (`modal_dialog_fades_session`), so a fade outlives neither its
-    // dialog nor a change of dialog: reset_modal_dialog_face_state drops them
-    // with the face indices, and the tick drops a set whose session is no
-    // longer the one on screen and cuts a button's tail once the painter
-    // publishes that button dead.
-    std::vector<HoverFade> modal_dialog_button_fades;
-    HoverFade              modal_dialog_field_fade{};
-    uint64_t               modal_dialog_fades_session = 0;
-
     // THE ARMED DIALOG BUTTON — the CLICK FACE and, unlike the roster's, THE
     // ACT'S OWN RECORD: these buttons act AT THE RELEASE (architect 2026-08-13,
     // "everything else acts on lift"), so this index is what a release
@@ -6513,9 +6420,10 @@ struct AppState {
     // So the arm is one index for the life of the hold and
     // `modal_dialog_press_inside` below is the pointer's answer about it:
     //   pointer ON the armed button   -> the PRESSED face; the release COMMITS
-    //   pointer OFF it                -> the PASSIVE-plus-hover face; the
-    //                                    release commits NOTHING and leaves
-    //                                    the button PASSIVELY FOCUSED
+    //   pointer OFF it                -> the button rests (its focus frame,
+    //                                    the passive focus); the release
+    //                                    commits NOTHING and leaves the
+    //                                    button PASSIVELY FOCUSED
     // Sliding back on restores the pressed face and a release there DOES
     // commit — the arm never died, so there is nothing to re-arm. The reason
     // is in the ruling itself: a button that keeps a lit face while held away
@@ -8096,15 +8004,13 @@ struct AppState {
     // seed is the REOPEN's, and the edge alone is not enough for it: each
     // project's session builds a fresh AppState whose bit is born false while
     // the platform's is already true and fires no edge for a focus that never
-    // changed. THE READERS (re-grepped 2026-10-01): THE RENDER PLAYER'S
-    // PLAY-SCRUB, whose played groove takes the focused blue or the shot's
-    // dimmed one (architect 2026-08-28), and accent_for_focus
-    // (paint_handler.cpp) — the folder overlay's panel and the modal row's
-    // active-focus outline, which take kRedesignAccentInactive (2026-09-02).
-    // The CHROME'S GROUND READS NOTHING HERE since 2026-10-01: the menu row
-    // takes the content ground, which does not swap. There is NO fade — a
-    // hard swap on the edge; the activation hook (main.cpp) states the
-    // damage.
+    // changed. THE READERS (re-grepped 2026-10-02): accent_for_focus
+    // (paint_handler.cpp), whose one reader is the folder overlay's
+    // highlighted row, taking kRedesignAccentInactive (2026-09-02), and that
+    // painter's choice of the row's ink beside it. The render player's scrub
+    // and the modal row's focus read nothing here since 2026-10-02 (neither
+    // carries an accent). A hard swap on the edge; the activation hook
+    // (main.cpp) states the damage.
     // False until the first configure IN THE FIRST SESSION, which is
     // the honest cold answer (the platform's accessor states why that is never
     // visible); every later session starts from the platform's live reading
@@ -8149,7 +8055,7 @@ struct AppState {
     // Is the pointer INSIDE the window? last_mouse_{x,y} keep the last position
     // the pointer was seen at, which is a point INSIDE the window even after it
     // has left — so anything that re-resolves from those coordinates without this
-    // flag would answer for a pointer that is gone (a re-lit hover pill, a
+    // flag would answer for a pointer that is gone (a re-armed tooltip wait, a
     // re-lit menu item, a cursor kind for a zone nobody is over). That is the
     // shared guard of all three repairs above, each carrying it inside its OWN
     // body rather than at its wiring: the tick and the settled hook keep running
@@ -8830,17 +8736,16 @@ struct AppState {
     //                 opens, with no field beside it. The picker seats it on
     //                 the CURRENT project's row at the open;
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
-    //                 nothing at all (false, the open state). IT PAINTS, on
-    //                 the HIGHLIGHTED ROW'S OUTLINE: the ring's active accent
-    //                 while the list holds the ring, the passive line while it
-    //                 does not (the painter's outline fork, paint_handler.cpp)
-    //                 — the two focus strengths a modal button wears, worn by
-    //                 the list here. The highlight itself is unmoved by it,
+    //                 nothing at all (false, the open state). IT PAINTS, as
+    //                 the focus frame round the HIGHLIGHTED ROW while the
+    //                 list holds the ring (paint_folder_overlay) — the frame
+    //                 a focused modal button wears, worn by the list here. The highlight itself is unmoved by it,
     //                 Up/Down walking it either way, and it also decides what
     //                 a bare Enter means: on the list, the highlight's OPEN
     //                 act; on a button, that button's press.
     //                 Reset with the modal face state, being part of it;
-    //   `hovered_row` the pointer's row (-1 none), the hover face — written
+    //   `hovered_row` the pointer's row (-1 none; it paints no face since
+    //                 2026-10-02) — written
     //                 by the motion's own walk, cleared at every listing
     //                 rebuild and at the pointer-leave edge
     //                 (clear_folder_overlay_hover), the one end a motion
@@ -15094,16 +14999,14 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
         // three having come down from row 1 to the icon row's view group):
-        // the glyph and any lit selected fill at kRedesignDisabledMix, as on
-        // every dead button of that row (paint_icon_row), the selected view's
-        // dimmed lamp still saying where you stand; the hint names the act and
-        // the grey is the message. IT ALSO TAKES THE HOVER OUTLINE WITH IT: the
-        // hover recompute composes this term into `face.hovered`
-        // (recompute_redesign_button_hover, input_pointer.cpp — the face gets
-        // the enabled term and the hint does not), so under a lit lamp the
-        // accent frame stops following the pointer here, which is the standing
-        // reading of a hover as a promise the pointer can act. The repaint is
-        // that walk's own per-tick comparator, no damage call anywhere here.
+        // the glyph at kRedesignDisabledMix, as on every dead button of that
+        // row (paint_icon_row), the selected view's sunken lamp still saying
+        // where you stand; the hint names the act and the grey is the
+        // message. The hover recompute composes this term into
+        // `face.hovered` (recompute_redesign_button_hover, input_pointer.cpp
+        // — the face gets the enabled term and the hint does not). The
+        // repaint is that walk's own per-tick comparator, no damage call
+        // anywhere here.
         // The selector key's own card is what says it in words and the lit
         // Grid Iterations lamp beside it is what says why.
         //
@@ -17674,16 +17577,16 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // because the two things a hover produces stopped agreeing on that one term
 // (architect 2026-08-07): the FACE still refuses on a disabled button, the
 // TOOLTIP no longer does. Everything else the two share — the open dropdown —
-// is stated once, here, so the hint and the pill can differ in exactly the one
-// way that was ruled and in no other.
+// is stated once, here, so the hint and the hover bit can differ in exactly
+// the one way that was ruled and in no other.
 //
 // AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON HOVERS UNDER IT. A lit
 // button beside an open menu would advertise a click the popup is about to
 // swallow (the icon row, which it floats over) or a second lit button in a row
 // that shows one at a time (row 1) — and a HINT under an open menu is the
 // two-floating-surfaces rule, which this same term is what makes structural.
-// Row 1 needs no exemption: it holds the anchors alone, and an ANCHOR's pill
-// is the painter's own open condition (paint_menu_row), not this bit.
+// Row 1 needs no exemption: it holds the anchors alone, and an ANCHOR's open
+// frame is the painter's own open condition (paint_menu_row), not this bit.
 inline bool redesign_button_hover_zone(const AppState& a, RedesignButton) {
     return !a.dropdown.open();
 }
@@ -17692,10 +17595,9 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton) {
 // carry — ENABLED, which the hover FACE adds at its one site and the hint does
 // not:
 //
-// SELECTED BUTTONS DO HOVER: row 4 ships a selected-hover state (the accent
-// outline over the selected fill), so the icon row's toggles — the Cumulative
-// one included — and its view group's three radios are hoverable in both
-// states, and a radio's already-selected press is refused in the ACTION (the
+// SELECTED BUTTONS DO HOVER (for the tooltip; no hover face is painted since
+// 2026-10-02), so the icon row's toggles — the Cumulative one included — and
+// its view group's three radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION (the
 // chord table's `radio` flag, whose users are the view group's three), not in
 // its hoverability.
 //
@@ -17785,9 +17687,9 @@ enum class TrimHit { None, Begin, End };
 // architect 2026-09-24 — strictly as-painted): the two caps the live trim pass
 // last DREW, never the store's pair, so a press between a trim write and its
 // repaint grabs the cap on screen. Each bound's mark is one of the trim bar's
-// two HANDLES (architect 2026-10-01: the centre grip's square filled solid,
-// which replaced the 2px endcaps under the same names): a trim_endcap_w_px()
-// column run spanning the trim bar's full height, EDGE-ANCHORED on the bound's
+// two HANDLES (architect 2026-10-01, which replaced the 2px endcaps under the
+// same names; a solid raised square since 2026-10-02): a trim_endcap_w_px()
+// column run, published at the lane's full height, EDGE-ANCHORED on the bound's
 // painted column — the begin handle's LEFT edge on it, the end handle's RIGHT
 // edge on it — from trim_endcap_rect, the ONE rect owner render_trim_flags
 // fills through and publishes from. THE HIT RECT IS THAT HANDLE INFLATED by

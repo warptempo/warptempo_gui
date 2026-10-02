@@ -1522,7 +1522,9 @@ one per tick, and changes no pixel and no route.
   (architect ruling, measured off his own Maliit screenshot): key face
   `kRedesignRowGround`, the ground around and between keys
   `kRedesignContentGround`, caps and glyphs `kRedesignLabel`. Pressed and armed
-  reuse the icon row's own CLICK and SELECTED faces verbatim.
+  reuse the icon row's own CLICK and SELECTED faces verbatim. (Since 2026-10-02
+  the keys are the roster's raised buttons on the one ground, armed and pressed
+  sunken — `paint_button_box`.)
 - **Damage**: per key on press and lift; the show and hide are the tick
   comparator's (`main.cpp`, the roster faces' own mechanism) — the editors' open
   and close damage the marker lane or the bottom row, never this band, so the

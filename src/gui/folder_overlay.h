@@ -86,8 +86,8 @@
 //     midpoint until 2026-09-02 and the icon row's foot since 2026-09-09. The
 //     content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
-//   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON: the same 32px box, the same
-//     2px gap between boxes, the same corner radius, the same 22px glyph
+//   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON BOX: the same 32px box, the
+//     same 2px gap between boxes, the same 22px glyph
 //     centred at the box's own (32-22)/2 inset, every number read from
 //     render.h's icon-button block where it is measured ("we've gone for the
 //     button analogy"; "the buttons are good enough size for my finger"). A
@@ -98,11 +98,10 @@
 //     panel's deletion on 2026-09-30.)
 // The panel's ONE authored number of its own is the outer inset below.
 //
-// THE PALETTE IS THE FILE MANAGER'S, NOT THE KEYBOARD'S (2026-08-28, the
-// ladder at the painter and the constants in render.h's palette block): the
-// band's ground is kModalFieldGround, a resting row paints no fill at all, and
-// the hover, selected and hovered+selected faces are the three kFolderRow*
-// values — kdenlive's project bin and pcmanfm-qt's compact view, which agree.
+// THE FACES ARE WINDOWS' LIST (architect 2026-10-02, the ladder at the
+// painter): the band is the ground inside a thin raised frame (content_rect
+// below spends the frame), a resting row paints no fill at all, and the
+// highlighted row is a flat accent fill under black text. No hover face and
 // NO ALTERNATING ROWS.
 //
 // THE ROWS ARE CHROME (the timing doctrine at GuiInputHandler::on_key): a
@@ -220,7 +219,7 @@ inline int content_height_px(const AppState& a) {
 // the painter grounds, what a damage erases and what the band's OUTER CLAIM
 // contains — the press router asks this rect to decide that the band, not the
 // waveform under it, owns the press. The rows are painted and hit inside the
-// content rect below, which is this band whole.
+// content rect below, this band inside its frame.
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
@@ -231,14 +230,17 @@ inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
 
-// The rows' band: THE SURFACE WHOLE (the band owns no line — the head
-// prose). Every geometry below reads this and not the surface — the rows, the
-// scroll ceiling, the keep-visible walk, the painter's row-walk clip and
-// row_at's containment — so the one place a band-less-chrome answer would be
-// spelled is still this one, and a line arriving here (the architect's "we
-// can mock something up") would be one edit.
+// The rows' band: THE SURFACE INSIDE ITS RAISED FRAME (architect 2026-10-02:
+// the panel is the ground inside a thin raised frame, one relief line a side,
+// relief_line_px). Every geometry below reads this and not the surface — the
+// rows, the scroll ceiling, the keep-visible walk, the painter's row-walk clip
+// and row_at's containment — so the frame is spelled here once and a row can
+// never paint over it or be pressed through it.
 inline GuiRect content_rect(const AppState& a) {
-    return surface_rect(a);
+    const GuiRect s  = surface_rect(a);
+    const int     lw = relief_line_px();
+    if (s.w <= 2 * lw || s.h <= 2 * lw) return GuiRect{s.x, s.y, 0, 0};
+    return GuiRect{s.x + lw, s.y + lw, s.w - 2 * lw, s.h - 2 * lw};
 }
 
 // -- The scroll state --------------------------------------------------------
@@ -287,7 +289,7 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
 // cannot be pressed through the waveform above or the bottom row below. It is
 // the content rect and not the surface because the surface is the band's
 // outer CLAIM (the press router's own test, one call up) while the rows live
-// in the content — the same rect while the band owns no line (content_rect).
+// in the content — the surface inside its frame (content_rect).
 // The painter clips its row walk to this same rect, so paint and hit agree on
 // every pixel of the band.
 inline int row_at(const AppState& a, int x, int y) {

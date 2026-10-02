@@ -1505,15 +1505,6 @@ struct GuiInputHandler {
     // faces moved.
     void recompute_redesign_button_hover();
     void clear_redesign_button_hover();
-    // THE HOVER FADES (architect 2026-09-27, Breeze's hover animation; the
-    // model is at render.h's HoverFade). The roster's edge stamp, called by the
-    // two writers above on every flip of a button's `hovered` bit; the tick's
-    // advance (main.cpp), which is one bit test while no fade runs and damages
-    // a face's own paint (its rect, a tab's widened by its spill) only when
-    // its painted level changes, and cuts a face painted dead mid-tail. Both
-    // are paint state only — no input road reads a fade.
-    void stamp_redesign_button_hover_fade(RedesignButton id, int64_t now);
-    void tick_hover_fades();
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
@@ -3646,21 +3637,6 @@ private:
     // already written the live struct and the file and gated the no-op case.
     void apply_max_waveform_height(int authored_px);
 
-    // THE PALETTE KNOB'S LIVE APPLY (the device config's `palette_passes` and
-    // `waveform_passes`, architect 2026-10-02 — the model is at the palette
-    // head, render.h): install both values into the renderer's one knob owner
-    // (set_palette_passes), damage the WHOLE WINDOW — the plain whole-surface
-    // invalidate, nothing having moved geometrically, so the resize path owes
-    // nothing — and take the synchronous plate route
-    // (Viewport::kick_waveform_sync), so the plate re-renders in its new words
-    // and the flag cache repaints under its new passes, both by fingerprint
-    // field (fp_plate_words, fp_palette_passes), in the frame the commit
-    // paints rather than a tick later. It ASSIGNS AND PERSISTS NOTHING: its
-    // sole caller, the settings editor's device-key body
-    // (commit_device_setting), has already written the live struct and the
-    // file and gated the no-op case.
-    void apply_palette_passes(double chrome, double waveform);
-
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the
     // bit: bare `o` on the active tab, which the icon row's Lock button
@@ -4167,9 +4143,6 @@ private:
     // button-is-its-chord.
     int  modal_dialog_button_hit(int x, int y) const;
     void update_modal_dialog_hover(int x, int y);
-    // The modal row's hover fade edges, the walk above's own (the buttons'
-    // SnapIn tails and the field's two-way fade, keyed to the painted session).
-    void stamp_modal_dialog_hover_fades(int hit, bool in_field);
     void dispatch_modal_dialog_editor_act(bool ok);
 
     // -- THE ON-SCREEN KEYBOARD'S POINTER HALF (2026-08-27) ----------------

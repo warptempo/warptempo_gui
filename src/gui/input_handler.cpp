@@ -4229,15 +4229,6 @@ void GuiInputHandler::apply_max_waveform_height(int authored_px) {
     paint_handler.on_resize(app.width, app.height);
 }
 
-void GuiInputHandler::apply_palette_passes(double chrome, double waveform) {
-    // The contract is at the declaration (input_handler.h). Every surface
-    // paints colour, so the whole window; the plate and the flag cache are
-    // cached pixels, so the synchronous route re-renders them now.
-    set_palette_passes(chrome, waveform);
-    viewport.invalidate_all();
-    viewport.kick_waveform_sync();
-}
-
 void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     // The contract — sole writer, band resolved by tab, damage only when the
     // named band is the active one, history-less — is at the declaration

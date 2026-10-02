@@ -511,11 +511,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // and the bottom row leave on the full-screen 1440-tall surface, so the
     // waveform is unclamped at the template's own scale).
     cfg.max_waveform_height = 500;
-    // The palette's tuning knob at rest (architect 2026-10-02, the palette
-    // head in render.h): no extra pass for either half, the authored palette
-    // byte for byte; the same on both templates.
-    cfg.palette_passes  = 0.0;
-    cfg.waveform_passes = 0.0;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;
@@ -707,15 +702,15 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     }
 
     // THE WINDOW IS A DISPLAY-P3 LAYER (architect 2026-10-02; the measurement
-    // is at this file's head). The app's sRGB-authored bytes are handed over
-    // untouched under the DISPLAY_P3 tag (the manifest's colorMode makes the
-    // compositor honour it), so the panel receives them as it receives a
-    // gallery viewer's P3-tagged image; the look is then one pass short of a
-    // screencap viewed in the gallery, which `palette_passes` and
-    // `waveform_passes` at 1.00 supply (render.h's tuning knob). A REFUSAL IS
-    // REPORTED AND NOT FATAL, as the geometry's is: the layer then stays sRGB
-    // and the knob still works as the model it is on the laptop, whose Wayland
-    // surface stays untagged sRGB. API 28; minSdk is 30.
+    // is at this file's head). The app's bytes are handed over untouched
+    // under the DISPLAY_P3 tag (the manifest's colorMode makes the compositor
+    // honour it), so the panel receives them as it receives a gallery
+    // viewer's P3-tagged image — and the palette's constants are authored as
+    // Display-P3 bytes (render.h's palette head, 2026-10-02): a hex there is
+    // what this panel shows. A REFUSAL IS REPORTED AND NOT FATAL,
+    // as the geometry's is: the layer then stays sRGB and the colours read a
+    // little differently, as they do on the laptop, whose Wayland surface
+    // stays untagged sRGB. API 28; minSdk is 30.
     const int32_t space_rc =
         ANativeWindow_setBuffersDataSpace(window_, ADATASPACE_DISPLAY_P3);
     if (space_rc != 0) {
@@ -1405,8 +1400,8 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             if (active == window_activated_) break;
             window_activated_ = active;
             // What takes an unfocused face is the caller's business (main.cpp's
-            // activation hook: the modal row's and the folder overlay panel's
-            // accents go to kRedesignAccentInactive, and the tooltip ends);
+            // activation hook: the folder overlay panel's highlight goes to
+            // kRedesignAccentInactive, and the tooltip ends);
             // this hook is the EDGE, the same shape the Wayland backend's
             // configure-driven one takes for the same reason.
             if (activation_changed_hook_) activation_changed_hook_();

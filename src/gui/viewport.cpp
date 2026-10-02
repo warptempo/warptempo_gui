@@ -1,7 +1,7 @@
 #include "viewport.h"
 
 #include "audio.h"
-#include "notifications.h"   // notification_shadow_bound (the stack's damage rect)
+#include "notifications.h"   // notification_stack_bound (the stack's damage rect)
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
@@ -172,10 +172,10 @@ void Viewport::invalidate_modal_dialog_area() {
     }
 }
 
-// THE NOTIFICATION STACK'S DAMAGE — its room grown by the cards' shadow,
-// whole; the callers and the reasoning are at the declaration, viewport.h.
+// THE NOTIFICATION STACK'S DAMAGE — its room, whole; the callers and the
+// reasoning are at the declaration, viewport.h.
 void Viewport::invalidate_notification_stack() {
-    const GuiRect r = notification_shadow_bound(app);
+    const GuiRect r = notification_stack_bound(app);
     gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 

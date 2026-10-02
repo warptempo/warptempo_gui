@@ -646,11 +646,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // carried until the key replaced it (is_max_waveform_height,
     // device_config.h); the same on both templates, gui_scale doing the rest.
     cfg.max_waveform_height = 500;
-    // The palette's tuning knob at rest (architect 2026-10-02, the palette
-    // head in render.h): no extra pass for either half, the authored palette
-    // byte for byte; the same on both templates.
-    cfg.palette_passes  = 0.0;
-    cfg.waveform_passes = 0.0;
     if (const char* home = std::getenv("HOME"); home && home[0]) {
         cfg.projects_path =
             std::string(home) + "/.warptempo/warptempo_projects/projects";

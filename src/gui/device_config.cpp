@@ -3,7 +3,6 @@
 #include "settings_io.h"       // atomic_write_string_to_path
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
-#include "value_format.h"      // parse_value_double / format_value_double
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
 #include <cstddef>
@@ -18,13 +17,12 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SEVEN keys; the count's
+// set the shared scanner enforces after the loop (FIVE keys; the count's
 // succession, up to seventeen with the tuning phases of 2026-09-23..27, is
 // the header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
 // with the fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
 // last_project — max_waveform_height placed right after gui_scale (architect
-// 2026-09-13), and the two palette keys right after it, the chrome's first
-// (architect 2026-10-02). The scanner takes it as a
+// 2026-09-13). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -34,8 +32,6 @@ namespace {
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "max_waveform_height",
-    "palette_passes",
-    "waveform_passes",
     "projects_repo",
     "projects_path",
     "last_project",
@@ -53,19 +49,6 @@ std::string format_max_waveform_height(int authored_px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", authored_px);
     return std::string(buf);
-}
-
-std::string format_palette_passes(double passes) {
-    return format_value_double(passes, 2);
-}
-
-bool parse_palette_passes(const std::string& value, double& out) {
-    double v = 0.0;
-    if (!parse_value_double(value, v)) return false;
-    if (format_palette_passes(v) != value) return false;
-    if (!is_palette_passes(v)) return false;
-    out = v;
-    return true;
 }
 
 std::filesystem::path device_config_path() {
@@ -97,10 +80,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_gui_scale_percent(cfg.gui_scale);
         } else if (k == "max_waveform_height") {
             s += format_max_waveform_height(cfg.max_waveform_height);
-        } else if (k == "palette_passes") {
-            s += format_palette_passes(cfg.palette_passes);
-        } else if (k == "waveform_passes") {
-            s += format_palette_passes(cfg.waveform_passes);
         } else if (k == "projects_repo") {
             // Free text, verbatim; blank is legal and never matches a remote.
             s += cfg.projects_repo;
@@ -158,18 +137,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                                  kMaxWaveformHeightGrammarReason);
             }
             out.max_waveform_height = static_cast<int>(v);
-            return {};
-        }
-        if (key == "palette_passes" || key == "waveform_passes") {
-            // The one double route's canonical spelling and the one range
-            // owner, both keys alike (parse_palette_passes and
-            // is_palette_passes, the header).
-            double v = 0.0;
-            if (!parse_palette_passes(value, v)) {
-                return bad_value(ln, key, value, kPalettePassesGrammarReason);
-            }
-            (key == "palette_passes" ? out.palette_passes
-                                     : out.waveform_passes) = v;
             return {};
         }
         if (key == "projects_repo") {

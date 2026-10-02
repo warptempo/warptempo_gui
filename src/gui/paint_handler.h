@@ -145,8 +145,8 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, inset_px, line_px, the plate's words,
-    // the GAIN field, target, and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
+    // vp_start, vp_end, area_w, area_h, inset_px, line_px, the GAIN field, target,
+    // and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
     // on, and each is keyed BY FIELD rather than through whatever else happens
     // to move with it.
     int64_t   fp_vp_start    = 0;
@@ -170,12 +170,6 @@ struct WaveformCache {
     // gui_scale change that moves it re-renders the plate BY FIELD, keyed
     // directly like the inset.
     int       fp_line_px = -1;
-    // THE PLATE'S WORDS the live pixels were written with (WaveformPlateWords,
-    // render.h — the two inks through the palette's tuning knob, and their
-    // lifted twins): a `waveform_passes` commit re-renders the plate BY FIELD,
-    // keyed directly like the line width, and paint_region_ink reads this
-    // field to map the published plate's own words to their twins.
-    WaveformPlateWords fp_plate_words;
     // THE GAIN FIELD the live pixels were rendered under — the derived
     // curve's version where the picture is magnified, 0 where the gate answers
     // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
@@ -219,7 +213,6 @@ struct WaveformCache {
     int       pending_fp_area_h      = 0;
     int       pending_fp_inset_px = -1;
     int       pending_fp_line_px = -1;
-    WaveformPlateWords pending_fp_plate_words;
     uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
@@ -243,7 +236,6 @@ struct WaveformCache {
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured waveform inset
     int       supersede_line_px     = 0;   // GUI-captured waveform line width
-    WaveformPlateWords supersede_plate_words;  // GUI-captured plate words
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
@@ -334,12 +326,6 @@ struct FlagCache {
     // geometry where the strip height sat on a floor would leave the whole
     // fingerprint unchanged across a scale commit and blit the old flags.)
     int       fp_gui_scale_percent   = -1;
-    // THE CHROME'S PASSES THESE PIXELS WERE PAINTED UNDER (palette_passes(),
-    // render.h — the palette's tuning knob, architect 2026-10-02): every flag
-    // colour goes through it at its set_source call, so a `palette_passes`
-    // commit moves every pixel of this surface and no other field; keyed BY
-    // FIELD like the scale. -1 is construction state, outside the key's range.
-    double    fp_palette_passes      = -1.0;
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -533,7 +519,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (26 fields, RE-DERIVED 2026-10-02 off the compare in
+    // (25 fields, RE-DERIVED 2026-09-23 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -544,9 +530,6 @@ struct GuiPaintHandler {
     //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
     //     rather than left to ride whichever strip dimension happens to move
     //     with it (2026-08-29);
-    //   - THE PALETTE, one field read live off render.h: fp_palette_passes —
-    //     the chrome's tuning knob, which every flag colour passes through
-    //     (2026-10-02);
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash,
     //     fp_selection_hash, fp_active_markers_view;
@@ -699,10 +682,6 @@ private:
         // and for the same reason: the lit inner bar's outline erodes at that
         // distance, so it is both a render input and a fingerprint field.
         int      line_px       = 0;
-        // The plate's words through the palette's tuning knob
-        // (waveform_plate_words), captured the same way: a render input and a
-        // fingerprint field.
-        WaveformPlateWords plate_words;
         // The waveform PICTURE's gain field (waveform_gain_fingerprint): nonzero
         // means apply the audio's derived curve. It is both the render input
         // and the fingerprint field, exactly like inset_px above: it feeds the
@@ -827,10 +806,10 @@ private:
     // surface a modal does coexist with.
     void paint_shift_tooltip(cairo_t* cr);
     void paint_dropdown(cairo_t* cr);
-    // The shared box shape both draw, dressed by the caller: the tooltip takes
-    // #292c30 under #535659, the dropdown its own darker #1c1f22 under #4c4e51.
-    void paint_popup_chrome(cairo_t* cr, const GuiRect& r,
-                            GuiColor ground, GuiColor border);
+    // The shared box every floating surface draws, on the one ground: a thin
+    // RAISED frame (`raised`: the dropdown, the notification cards) or the
+    // tooltip's one DkShadow line all round.
+    void paint_popup_chrome(cairo_t* cr, const GuiRect& r, bool raised);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box and before the dropdown —
     // above every lane and the keyboard slot, below the two pointer-transient
@@ -851,8 +830,7 @@ private:
     // PLATE BLIT (the Ableton model, extended to the ink 2026-08-18). The GROUND
     // half paints after render_canvas and BEFORE the blit; the INK half
     // rewrites each opaque blitted plate pixel as its own colour lifted by the
-    // region's step (region_lift, keyed by the alpha and taken through the
-    // plate's word map under the palette's tuning knob — render.h)
+    // region's step (region_lift, keyed by the alpha alone)
     // immediately AFTER it, over the identical span. Neither half is a wash, and the two share the
     // basis and column owners so they cannot disagree. The region is the only
     // recolor there is: the phase-reset overlay recolors nothing (architect

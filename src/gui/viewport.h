@@ -172,13 +172,6 @@ struct Viewport {
     //    plate CONTENT change with no geometry behind it, so the reclamp below
     //    is a pure no-op for it. It touches no audio: the gain is the
     //    picture's.
-    //  - THE PALETTE'S TUNING KNOB (architect 2026-10-02): the settings
-    //    editor's `palette_passes=` / `waveform_passes=` commit, through
-    //    GuiInputHandler::apply_palette_passes. The gain's class exactly — a
-    //    CONTENT change with no geometry behind it: the waveform's passes move
-    //    the plate's words (WaveformCache::fp_plate_words) and the chrome's
-    //    move the flag cache's fp_palette_passes, each BY FIELD, and the kick
-    //    lands both in the frame the commit paints instead of a tick late.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries
@@ -649,11 +642,9 @@ struct Viewport {
     void invalidate_rect(const GuiRect& r);
     // THE NOTIFICATION STACK'S DAMAGE (2026-08-29): the stack's ROOM —
     // notification_stack_bound, notifications.h — the whole space between row
-    // 1 and the bottom row's lane that the cards may grow into, GROWN BY THE
-    // CARDS' DROP SHADOW since 2026-10-01 (notification_shadow_bound, the
-    // shadow's pixels being the card's), so one call both erases what stood,
-    // shadow and all, and admits what comes, and no caller shapes a glyph to
-    // size the damage. It was three one-line cards' worth until
+    // 1 and the bottom row's lane that the cards may grow into, so one call
+    // both erases what stood and admits what comes, and no caller shapes a
+    // glyph to size the damage. It was three one-line cards' worth until
     // 2026-08-30, when a card's text began to WRAP: a line count needs a
     // shaped run and no window arithmetic has one, so the damage owner takes
     // the room and the painter clips to it.

@@ -142,7 +142,7 @@ static inline double frame_to_paint_sample(
 
 void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
-    set_palette_source(cr, kBackground);
+    set_palette_source(cr, kRedesignContentGround);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
     cairo_restore(cr);
@@ -151,30 +151,86 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // ROW 6: the ground is kWaveformCanvas, the neutral #141618, hard-coded
-    // (the palette's row-6 block owns its provenance), through the waveform's
-    // tuning knob (set_waveform_source, render.h).
+    // The ground is the CANVAS role (the palette's row-6 block), through the
+    // waveform's chokepoint (set_waveform_source, render.h).
     set_waveform_source(cr, kWaveformCanvas);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
-    // THE BORDER, taken FROM the area: its topmost and bottommost rows, painted
-    // in the same pass as the ground so the two can never disagree about where
-    // the area ends. Row 6 made it 2px of pure black (it was 1px of the tunable
-    // grey #686a6c, whose last paint site this was); the shape is unchanged, and
-    // waveform_content_rect — the band every band-filling pass clips to — reads
-    // the same waveform_border_px, so the two cannot drift. Nothing covers the
-    // border but the deliberate full-height verticals (playheads, stems,
-    // waveform_line_px() wide),
-    // which is their recorded z-intent and survives row 6 unchanged. Integer-
-    // edged rects with AA off, the crisp-line convention. An area too short to
-    // carry both borders draws neither rather than overlapping them.
+    // THE WELL (architect 2026-10-02; the colours at the row-6 palette block,
+    // the thickness at waveform_border_px): taken FROM the area, painted in
+    // the same pass as the ground so the two can never disagree about where
+    // the canvas ends — on top a Hilight line then a DkShadow line, at the
+    // bottom a DkShadow line then a Hilight line, each one relief line,
+    // full width. waveform_content_rect reads the same thickness, and every
+    // vertical stops at it, so nothing crosses these lines. An area too short
+    // to carry both borders draws neither rather than overlapping them.
     const int border = waveform_border_px();
+    const int lw     = relief_line_px();
     if (h > 2 * border) {
-        set_palette_source(cr, kWaveformBorder);
-        cairo_rectangle(cr, x, y, w, border);
-        cairo_rectangle(cr, x, y + h - border, w, border);
-        cairo_fill(cr);
+        paint_cell_rect(cr, GuiRect{x, y, w, lw}, kReliefHilight);
+        paint_cell_rect(cr, GuiRect{x, y + lw, w, border - lw},
+                        kReliefDkShadow);
+        paint_cell_rect(cr, GuiRect{x, y + h - border, w, border - lw},
+                        kReliefDkShadow);
+        paint_cell_rect(cr, GuiRect{x, y + h - lw, w, lw}, kReliefHilight);
     }
+    cairo_restore(cr);
+}
+
+// -- The relief helpers (the contract at the declaration, render.h) ---------
+
+void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
+    if (r.w <= 0 || r.h <= 0) return;
+    set_palette_source(cr, c);
+    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+    cairo_fill(cr);
+}
+
+void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
+                        GuiColor bottom_right) {
+    const int lw = relief_line_px();
+    if (r.w <= 0 || r.h <= 0) return;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{r.x, r.y, r.w, std::min(lw, r.h)}, top_left);
+    paint_cell_rect(cr, GuiRect{r.x, r.y, std::min(lw, r.w), r.h}, top_left);
+    // The dark pair LAST: it owns the top-right and bottom-left corners.
+    paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - std::min(lw, r.h), r.w,
+                                std::min(lw, r.h)},
+                    bottom_right);
+    paint_cell_rect(cr, GuiRect{r.x + r.w - std::min(lw, r.w), r.y,
+                                std::min(lw, r.w), r.h},
+                    bottom_right);
+    cairo_restore(cr);
+}
+
+void paint_relief_raised(cairo_t* cr, const GuiRect& r) {
+    paint_relief_frame(cr, r, kReliefHilight, kReliefShadow);
+}
+
+void paint_relief_sunken(cairo_t* cr, const GuiRect& r) {
+    paint_relief_frame(cr, r, kReliefShadow, kReliefHilight);
+}
+
+void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
+    paint_relief_frame(cr, r, c, c);
+}
+
+void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h) {
+    const int lw = relief_line_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{x - lw, y, lw, h}, kReliefShadow);
+    paint_cell_rect(cr, GuiRect{x, y, lw, h}, kReliefHilight);
+    cairo_restore(cr);
+}
+
+void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
+    const int lw = relief_line_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{x, y, w, lw}, kReliefShadow);
+    paint_cell_rect(cr, GuiRect{x, y + lw, w, lw}, kReliefHilight);
     cairo_restore(cr);
 }
 
@@ -186,7 +242,6 @@ void render_waveform(cairo_surface_t* dest,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
                      int outline_px,
-                     const WaveformPlateWords& plate_words,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -309,14 +364,14 @@ void render_waveform(cairo_surface_t* dest,
     // self-contained and there is nothing for an offscreen neighbour to
     // contribute: pan invariance strengthened rather than weakened here.
     //
-    // THE PREMULTIPLIED WORDS, built once per render on the GUI thread
-    // (waveform_plate_words, render.h — the row-6 constants through the
-    // palette's tuning knob and the one word owner, argb32_opaque_word) and
-    // handed in with the job, so this writer reads no knob: the plate's ink,
-    // worn by the dark lamp's raw bar and by both lit bars' fills, and the
-    // inner bar's outline (written only when lit).
-    const uint32_t ink_word     = plate_words.ink;
-    const uint32_t outline_word = plate_words.outline;
+    // THE PREMULTIPLIED WORDS, each built once per call through the one word
+    // owner (argb32_opaque_word, render.h — its byte-order and rounding
+    // contract lives there): the plate's ink (the row-6 constant), worn by
+    // the dark lamp's raw bar and by both lit bars' fills, and the inner
+    // bar's outline (kWaveformForegroundOutline; built always, written only
+    // when lit).
+    const uint32_t ink_word     = argb32_opaque_word(kWaveformInk);
+    const uint32_t outline_word = argb32_opaque_word(kWaveformForegroundOutline);
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -590,8 +645,11 @@ void render_playhead(cairo_t* cr,
     // ONE SOLID LINE, straight over whatever it crosses — waveform ink included.
     // A saturated stem over the dark ink reads without any cut, so there is no
     // two-tone overdraw here (see the declaration for the retirement).
+    // THE CANVAS'S ROWS ONLY (architect 2026-10-02): the line stops at the
+    // well's lines (waveform_content_rect).
+    const GuiRect canvas = waveform_content_rect(area);
     set_palette_source(cr, color);
-    fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
+    fill_waveform_line(cr, area.x, area.w, col, canvas.y, canvas.y + canvas.h);
     cairo_restore(cr);
 }
 
@@ -614,8 +672,10 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     // is deliberately no longer "less loud
     // than a marker stem": it is a position line during a gesture, and the
     // product's position lines are this white.
+    // The canvas's rows only, as every vertical (waveform_content_rect).
+    const GuiRect canvas = waveform_content_rect(area);
     set_palette_source(cr, kPlayheadStem);
-    fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
+    fill_waveform_line(cr, area.x, area.w, col, canvas.y, canvas.y + canvas.h);
     cairo_restore(cr);
 }
 
@@ -743,63 +803,34 @@ void render_trim_flags(cairo_t* cr,
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
-    // The lane is the crop's 10 rows times kTrimBarScalePercent (back at 100
-    // since the seventh glass ruling, 2026-08-12, so 10 at 100% scale — one
-    // more than the 9 the crop measured before the 2026-09-16 flip to
-    // kdenlive's own orientation added its shared bottom border row;
-    // render.h carries the one-commit 150 experiment's record): the border
-    // and the bevel pair keep their crop heights whatever the factor, so any
-    // extra rows land in the face band alone.
-    const int border_h = std::min(trim_lane_border_h_px(), lane_h);
-    const int body_h   = lane_h - border_h;  // the crop's rows 0..8: bevel + face
-    const int bevel_h  = std::min(trim_bevel_h_px(), body_h);
-    const int face_h   = body_h - bevel_h;   // the crop's rows 2..8, grown
-    const int hi_h     = bevel_h / 2;        // the row against the face: the lighter shade
-    const int lo_h     = bevel_h - hi_h;     // the lane's outer row: the darker one
+    // THE LANE IS A SUNKEN TROUGH ONE RELIEF LINE A SIDE (architect
+    // 2026-10-02; the geometry at kTrimLaneHeightPx): the interior — every row
+    // between the trough's top and bottom lines — is where the bar and the
+    // caps stand, so the caps are squares of the interior's height.
+    const int lw      = std::min(relief_line_px(), lane_h / 2);
+    const int in_y    = lane_y + lw;
+    const int in_h    = lane_h - 2 * lw;
 
     cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
-    // ONE PAINTER FOR A SURFACE'S WHOLE COLUMN RUN: the two bevel rows at the
-    // lane's TOP — darker then lighter, kdenlive's own orientation since the
-    // 2026-09-16 flip (this file painted them at the bottom, lighter then
-    // darker, before that day) — then the face rows below them, all
-    // pixel-bound integer fills (crisp by construction, no stroke, no
-    // antialiasing anywhere in this lane). The shared bottom border is NOT
-    // this lambda's: it is one fill across the whole lane, painted once after
-    // every surface below has had its turn (below).
-    auto surface = [&](int x0, int w, GuiColor face, GuiColor hi, GuiColor lo) {
-        if (w <= 0) return;
-        if (lo_h > 0) {
-            set_palette_source(cr, lo);
-            cairo_rectangle(cr, x0, lane_y, w, lo_h);
-            cairo_fill(cr);
-        }
-        if (hi_h > 0) {
-            set_palette_source(cr, hi);
-            cairo_rectangle(cr, x0, lane_y + lo_h, w, hi_h);
-            cairo_fill(cr);
-        }
-        set_palette_source(cr, face);
-        cairo_rectangle(cr, x0, lane_y + lo_h + hi_h, w, face_h);
-        cairo_fill(cr);
-    };
+    // THE TROUGH, BACK TO FRONT: the ground, then the sunken frame — a Shadow
+    // line along the lane's top row and a Hilight line along its bottom row.
+    // THE TROUGH RUNS PAST BOTH WINDOW EDGES: its frame is laid on the lane
+    // grown by one line at each side, so its two side lines fall outside the
+    // clip above and the trough reads as continuing beyond the view, as the
+    // bar does past an offscreen bound (below).
+    paint_cell_rect(cr, GuiRect{lane_x, lane_y, lane_w, lane_h},
+                    kRedesignContentGround);
+    paint_relief_sunken(cr, GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw,
+                                    lane_h});
 
-    // GROUND everywhere first, then the window's BAR over it, then the two
-    // handles over that — painting back to front means no run has to know
-    // what its neighbour is, and an inverted or degenerate window simply
-    // leaves the ground showing. The ground keeps the lane's own two-row bevel.
-    surface(lane_x, lane_w, kRedesignContentGround,
-            kTrimGroundBevelHi, kTrimGroundBevelLo);
-
-    // THE BAR IS ONE SOLID RAISED OBJECT (architect 2026-10-01): its face
-    // under a 1px relief — the LIGHT edge along its top AND its left, the
-    // DARK edge along its bottom AND its right, the two shared corners (top
-    // right, bottom left) taking the dark, which is the order Windows'
-    // DrawEdge paints a raised edge in: the light pair first, the dark pair
-    // over it. The edges are trim_bar_edge_px() thick, the bar's height the
-    // lane's body (every row above the lane's shared bottom border).
+    // THE BAR IS ONE SOLID RAISED OBJECT (architect 2026-10-01; its face
+    // kTrimLaneBar since 2026-10-02): the interior's rows, a Hilight line
+    // along its top and its left and a Shadow line along its bottom and its
+    // right, the dark pair last (paint_relief_raised).
     //
     // THE BAR SPANS THE WINDOW, and it follows a bound OFFSCREEN rather than
     // stopping short: an out-of-view bound means the window continues past
@@ -809,131 +840,73 @@ void render_trim_flags(cairo_t* cr,
     const int bar_lo = (bc.side == TrimBoundSide::OffLeft)  ? -1 : bc.col;
     const int bar_hi = (ec.side == TrimBoundSide::OffRight) ? lane_w + 1
                                                             : ec.col + 1;
-    if (bar_hi > bar_lo && body_h > 0) {
-        const int bx   = lane_x + bar_lo;
-        const int bw   = bar_hi - bar_lo;
-        const int edge = std::min({trim_bar_edge_px(), bw, body_h});
-        const auto fill = [&](GuiColor c, int x, int y, int w, int h) {
-            set_palette_source(cr, c);
-            cairo_rectangle(cr, x, y, w, h);
-            cairo_fill(cr);
-        };
-        fill(kTrimLaneBar,    bx, lane_y, bw, body_h);
-        fill(kTrimBarBevelHi, bx, lane_y, bw, edge);                    // top
-        fill(kTrimBarBevelHi, bx, lane_y, edge, body_h);                // left
-        fill(kTrimBarBevelLo, bx, lane_y + body_h - edge, bw, edge);    // bottom
-        fill(kTrimBarBevelLo, bx + bw - edge, lane_y, edge, body_h);    // right
+    if (bar_hi > bar_lo && in_h > 0) {
+        const GuiRect bar{lane_x + bar_lo, in_y, bar_hi - bar_lo, in_h};
+        paint_cell_rect(cr, bar, kTrimLaneBar);
+        paint_relief_raised(cr, bar);
     }
 
-    // THE TWO HANDLES ARE THE CENTRE GRIP FILLED SOLID (architect
-    // 2026-10-01): the grip's own drawing — the light face under its two-row
-    // bevel, kTrimLaneEndcap with kTrimCapBevelLo / kTrimCapBevelHi — with no
-    // dark square punched into it, trim_endcap_w_px() wide (the grip's own 9
-    // at 100%) and the bar's full height, one at each end of the bar, flush
-    // with it: the begin handle starts at its bound's column and the end
-    // handle ends on its own, so a bound's handle sits on the column the bound
-    // actually occupies. A culled bound paints no handle: it has no column on
-    // screen to stand on, and the bar's flush edge is what says the window
-    // continues past the view.
-    // Both handles come from the ONE rect owner (trim_endcap_rect), and THE
+    // ONE CAP: a SOLID RAISED SQUARE in kTrimLaneCap over the interior's rows
+    // at the given columns (architect 2026-10-02 — the two handles and the
+    // centre grip alike, the grip's hollow gone).
+    const auto cap = [&](int x0, int w) {
+        if (w <= 0 || in_h <= 0) return;
+        const GuiRect r{x0, in_y, w, in_h};
+        paint_cell_rect(cr, r, kTrimLaneCap);
+        paint_relief_raised(cr, r);
+    };
+
+    // THE TWO HANDLES, one at each end of the bar, flush with it: the begin
+    // handle starts at its bound's column and the end handle ends on its own,
+    // so a bound's handle sits on the column the bound actually occupies. A
+    // culled bound paints no handle: it has no column on screen to stand on,
+    // and the bar's flush edge is what says the window continues past the
+    // view. Both come from the ONE rect owner (trim_endcap_rect), and THE
     // PUBLICATION RIDES THE FILLS (TrimBarHit, render.h): each handle is
-    // stashed from the rect it was just painted with, so the painted handle
-    // and the grabbable one describe the same edge — the hit side adds only
-    // its stated grab tolerance — and the hit reads the pixels rather than a
-    // second derivation of them.
+    // stashed from the rect it was just painted at — its columns, at the
+    // lane's whole height, the band the hit side reads (adding only its
+    // stated grab tolerance) — so the painted handle and the grabbable one
+    // describe the same columns.
     if (bc.in_viewport) {
         const GuiRect r = trim_endcap_rect(true, lane_x, bc.col, trim_bar);
-        surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
+        cap(r.x, r.w);
         if (out_hit) out_hit->begin = {true, lane_x + bc.col, r};
     }
     if (ec.in_viewport) {
         const GuiRect r = trim_endcap_rect(false, lane_x, ec.col, trim_bar);
-        surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
+        cap(r.x, r.w);
         if (out_hit) out_hit->end = {true, lane_x + ec.col, r};
     }
 
-    // THE MIDPOINT MARK — THE CENTRE GRIP — IS THE CROP'S STRUCTURE IN THE LANE'S OWN COLOURS
-    // (architect 2026-08-01, who overlaid row_5_lane_1_trim_middle.png on the
-    // running GUI and ruled it implemented exactly; RE-FLIPPED with the rest of
-    // the lane on 2026-09-16, to kdenlive's own orientation; the cap and bar
-    // values it reads are the lane's neutral pair since 2026-09-30). The 9x9
-    // crop (the shared bottom border row is the LANE's, painted once below for
-    // every surface including this one, never the tile's own) is a LANE-HEIGHT
-    // TILE, and every pixel of it is one of this lane's own surfaces:
-    //
-    //   row 0      #9ea5ad  kTrimCapBevelLo    the handles' bevel pair, verbatim,
-    //   row 1      #a7b0b8  kTrimCapBevelHi    now at the tile's TOP
-    //   rows 2..8  #a1a9b1  kTrimLaneEndcap    the tile's face
-    //   cols 2..6 } #2e3135 kTrimLaneBar       the inner square, inset 2px,
-    //   rows 2..6 }                            flush UNDER the bevel
-    //
-    // So the tile is EXACTLY A HANDLE-COLOURED COLUMN RUN with a bar-coloured
-    // square punched into it, and it paints through the SAME `surface` lambda
-    // the handles do — four constants reused, none invented (the handles are
-    // this tile with the square left out, 2026-10-01). On our dark bar it
-    // reads as the light square RING with the dark centre the mockup shows
-    // (tmp/screenshots/kdenlive/redesign/row_5_lane_1_trim_middle_example.png).
-    // The earlier 5x5 single-colour square and its recorded deviation are gone:
-    // that deviation existed only because one flat fill could carry one half of
-    // a two-colour crop, and the tile carries both.
-    //
-    // Painted last, over the bar — and, where the window is narrow enough for
-    // them to meet, it would sit over a handle's face too, though the clearance
-    // rule below means that cannot actually happen.
+    // THE CENTRE GRIP — the window's MIDPOINT, a third cap (architect
+    // 2026-10-02: a solid raised square like the handles).
     //
     // INFORMATIONAL ONLY. It publishes no rect, claims no hit area and changes
     // no routing: the bar's press / pair-drag / span-framing double-click all
-    // read the same bands they always did, and a click on the tile is a click
-    // on the bar. It is paint and nothing else.
+    // read the same bands they always did, and a click on the grip is a click
+    // on the bar.
     //
     // THE MIDPOINT IS THE WINDOW'S, not the visible bar's: the two bounds'
     // midpoint goes through the SAME trim_bound_column owner the bar's own
-    // edges use, on the same displayed basis, so the mark sits on the column
+    // edges use, on the same displayed basis, so the grip sits on the column
     // the window's middle actually occupies and scrolls off the view with it
-    // rather than sliding to the middle of whatever is on screen. The tile and
-    // its inner square share that centre — at 100% the tile spans the midpoint
-    // column ±4 and the square ±2, both centred on it.
+    // rather than sliding to the middle of whatever is on screen.
     //
-    // IT PAINTS ONLY WHERE IT FITS, a clean binary verdict on integer columns
-    // (so it cannot flicker — no hysteresis, none needed) and the ONLY thing
-    // that hides it: the TILE's whole extent must sit inside the visible
-    // interior BETWEEN the handles (trim_bridge_gap, the shared owner, clamped
-    // to the effective width) with a clearance each side. The clearance is
-    // what keeps the tile apart from a handle, the tile's face being the
-    // handles' own colour and merging with one it touched. Below the threshold it simply does not
-    // paint: no shrink, no clamp of the TILE. (The INNER SQUARE's height is a
-    // separate matter — it IS clamped, to keep the tile's BOTTOM rim (the TOP
-    // rim before the 2026-09-16 flip moved the square to hang under the bevel
-    // instead of on it) from collapsing at small scales; that rule and its
-    // reasoning live at the paint site below.)
+    // IT PAINTS ONLY WHERE IT FITS WHOLE, a clean binary verdict on integer
+    // columns (so it cannot flicker): the grip's whole extent must sit inside
+    // the visible interior BETWEEN the handles (trim_bridge_gap, the shared
+    // owner, clamped to the effective width). Below that it does not paint —
+    // no shrink and no clamp — so it never covers a handle.
     {
-        const int tile  = trim_middle_size_px();
-        const int inset = trim_middle_inset_px();
-        const int clear = trim_middle_clear_px();
-        // THE INNER SQUARE'S WIDTH IS THE PARTITION'S REMAINDER, never its own
-        // rounding (2026-08-10 — the tab lock slot's fix applied
-        // to the crop's other composite). The crop's ring is symmetric,
-        // inset + inner + inset == tile, and it USED to be three independent
-        // nearbyints: the left rim was `inset` and the right rim was whatever
-        // tile - inset - inner happened to leave, so the two disagreed at 71
-        // legal scales (at 75% the ring read 2 left / 1 right, at 62% 1 left /
-        // 2 right — a mark that is visibly off-centre in a 6px tile). Derived,
-        // both rims ARE `inset` at every scale by construction and the mark is
-        // centred by arithmetic. Byte-identical where the ring already closed:
-        // 9 - 2*2 == 5 at 100%, 14 - 2*3 == 8 at 150%, 18 - 2*4 == 10 at 200%.
-        // The >= 1 guard mirrors the height's below; measured, it never fires
-        // in [50, 350] (the tightest tile is 4 columns at 50%, giving 2).
-        const int inner_w_raw = tile - 2 * inset;
-        const int inner_w = inner_w_raw < 1 ? 1 : inner_w_raw;
+        const int tile = trim_middle_size_px();
         const TrimBridgeGap gap =
             trim_bridge_gap(bc, ec, trim_endcap_w_px(), lane_w);
         const int vis_lo = std::max(gap.lo, 0);
         const int vis_hi = std::min(gap.hi, lane_w);
         // THE BRIDGE'S PUBLICATION is this same visible interior — the bar's
         // stretch between the handles' inner edges, clipped to the lane's
-        // painted width — so the pair drag's band and the midpoint mark's room
-        // are one interval, and the handles sit outside it by the gap's own
-        // inset.
+        // painted width — so the pair drag's band and the grip's room are one
+        // interval, and the handles sit outside it by the gap's own inset.
         if (out_hit) {
             out_hit->published = true;
             out_hit->lane      = GuiRect{lane_x, lane_y, lane_w, lane_h};
@@ -946,82 +919,8 @@ void render_trim_flags(cairo_t* cr,
             viewport_start_sample, viewport_end_sample, lane_w);
         const int x_lo = mc.col - tile / 2;    // waveform-relative, inclusive
         const int x_hi = x_lo + tile;          // exclusive
-        if (mc.in_viewport && inner_w <= face_h &&
-            x_lo >= vis_lo + clear && x_hi <= vis_hi - clear) {
-            // The tile's own column run, bevel included — the handle surface at
-            // the midpoint, which is what rows 0..8 of the crop are.
-            surface(lane_x + x_lo, tile, kTrimLaneEndcap,
-                    kTrimCapBevelHi, kTrimCapBevelLo);
-            // The inner square, at the crop's own offsets. It hangs FLUSH
-            // UNDER the bevel since the 2026-09-16 flip — crop rows 2..6 of a
-            // 2..8 face, immediately below the bevel pair — which is the
-            // relationship that scales with the lane, and it insets from the
-            // tile's left by the crop's 2px.
-            //
-            // THE BOTTOM RIM IS CLAMPED INTO EXISTENCE (2026-08-10,
-            // with the gui_scale floor 100->50; the rim this
-            // clamp protects moved from the top to the bottom with the
-            // 2026-09-16 flip — the reasoning and the arithmetic are
-            // untouched, only which edge of the face the square hangs from).
-            // The bottom rim is the one length here that is NOT handed over
-            // by the partition — the square hangs flush under the bevel, so
-            // the rim is whatever face_h - inner_h leaves, and face_h is the
-            // LANE's arithmetic while inner_h is the TILE's. Nothing holds
-            // the two apart: wherever the derived width reaches face_h the
-            // difference is 0, the square runs to the face's own bottom row,
-            // and the handle-coloured rim of the ruled silhouette vanishes
-            // with no metric having gone to zero.
-            //
-            // SO THE HEIGHT GIVES WAY AND THE RIM DOES NOT: inner_h caps the
-            // square's height at face_h - 1, keeping one face row below it —
-            // the accepted trade where it binds, the rim being the
-            // load-bearing silhouette feature where the squareness is not.
-            // THE WIDTH IS UNTOUCHED BY
-            // THE CLAMP: it is the partition's own remainder above, so the two
-            // side rims stay exactly `inset` even where the height gives way,
-            // and the square still hangs FLUSH UNDER THE BEVEL.
-            //
-            // A FLOOR, NOT A RESHAPE: at 100% and above the clamp never binds
-            // (5 against face_h 7 at 100%, 10 against 14 at 200%, 20 against 28
-            // at 400% — zero binding scales in [100, 400]), so every pixel there
-            // is what it was. (With
-            // kTrimBarScalePercent at the one-commit 150, 2026-08-12, the taller
-            // face made this a pure backstop at every legal scale; the factor's
-            // return to 100 restored the 50..74 binding band the clamp was
-            // written for.) The
-            // degenerate arm below face_h <= 1 is unreachable in [50, 350] and
-            // skips THE SQUARE ALONE — never the tile, whose own paint-or-not
-            // verdict is the fit test above and is unchanged.
-            // THE HEIGHT RIDES THE DERIVED WIDTH and keeps its own clamp, which
-            // is a MEASURED choice rather than a preference: the alternative
-            // spelling — deriving the height as face_h - inset, the vertical
-            // mirror of the width's derivation — produces the IDENTICAL value
-            // at all 351 legal scales, and this one needs no extra guard (a min
-            // is bounded where a subtraction is not). Either way the bottom rim
-            // comes out exactly `inset` at every scale in [50, 350], so the
-            // crop's vertical relationship is now a consequence of the
-            // partition rather than a coincidence of two roundings.
-            const int inner_h = inner_w < face_h - 1 ? inner_w : face_h - 1;
-            if (inner_h > 0) {
-                set_palette_source(cr, kTrimLaneBar);
-                cairo_rectangle(cr, lane_x + x_lo + inset,
-                                lane_y + bevel_h, inner_w, inner_h);
-                cairo_fill(cr);
-            }
-        }
-    }
-
-    // THE SHARED BOTTOM BORDER (architect 2026-09-16, the flip's new crop
-    // row_5_lane_1_trim_bottomborder.png): ONE fill across the WHOLE lane
-    // width, painted LAST so it sits over every surface above it — the
-    // ground, the bar, the handles and the midpoint tile alike, none of which
-    // owns this row on its own. The clip at the top of this function already
-    // bounds it to the lane, so the rectangle below can run the full width
-    // with no further clamping.
-    if (border_h > 0) {
-        set_palette_source(cr, kTrimLaneBottomBorder);
-        cairo_rectangle(cr, lane_x, lane_y + body_h, lane_w, border_h);
-        cairo_fill(cr);
+        if (mc.in_viewport && x_lo >= vis_lo && x_hi <= vis_hi)
+            cap(lane_x + x_lo, tile);
     }
 
     cairo_restore(cr);
@@ -1419,8 +1318,8 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         // chooses WHICH pair to damp, and there is only ever one border to damp.
         //
         // "DIMS" HERE MEANS DAMPED TOWARD THE GROUND, NOT DARKENED. The border
-        // is DARKER than the lane ground (#131516 against #202326), so 25% of
-        // itself over that ground moves it UP to ~#1d1f22 — it loses contrast
+        // is DARKER than the lane ground (#151515 against #303030), so 25% of
+        // itself over that ground moves it UP to ~#292929 — it loses contrast
         // with the lane exactly as the fill loses contrast with it, which is the
         // property the disabled face is after. A reader expecting "dimmer =
         // darker" would mis-read the direction and try to fix it.
@@ -2548,104 +2447,14 @@ int waveform_max_h_px() {
     return scaled_px(g_max_waveform_height_px, 1);
 }
 
-// -- The palette's tuning knob (the model and the record are at
-// kSrgbToDisplayP3Linear and the palette head, render.h) ------------------
-
-namespace {
-    // The two installed pass counts — the device config's `palette_passes`
-    // (the chrome) and `waveform_passes` (the waveform). Installed by
-    // set_palette_passes at the cap's two application points (the contract is
-    // at the declaration, render.h). 0 is construction state, the templates'
-    // value; startup installs the config's before any read.
-    double g_palette_passes  = 0.0;
-    double g_waveform_passes = 0.0;
-
-    // The sRGB transfer function and its inverse, the IEC 61966-2-1 pair
-    // tmp/palette/derive.py's s2l / l2s spell (without their 8-bit
-    // quantization: the result goes to cairo, or to argb32_opaque_word, which
-    // rounds once).
-    double srgb_decode(double c) {
-        return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4);
-    }
-    double srgb_encode(double v) {
-        return v <= 0.0031308 ? v * 12.92
-                              : 1.055 * std::pow(v, 1.0 / 2.4) - 0.055;
-    }
-    double clip_unit(double v) { return v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v); }
-
-    // ONE PASS of kSrgbToDisplayP3Linear over a linear-light triple, each
-    // channel clipped to [0, 1] after it.
-    void p3_pass(double (&v)[3]) {
-        const auto& m = kSrgbToDisplayP3Linear;
-        double o[3];
-        for (int r = 0; r < 3; ++r)
-            o[r] = clip_unit(m[r][0] * v[0] + m[r][1] * v[1] + m[r][2] * v[2]);
-        v[0] = o[0];
-        v[1] = o[1];
-        v[2] = o[2];
-    }
-
-    // `passes` passes of the matrix in linear light (the model at
-    // kSrgbToDisplayP3Linear): floor(passes) whole passes, then — for a
-    // fraction — one more, the two results interpolated linearly in linear
-    // light by the fraction before the encode. 0 is a plain return, so the
-    // knob at rest is bit-identical to no knob.
-    GuiColor apply_passes(GuiColor c, double passes) {
-        if (passes == 0.0) return c;
-        double lo[3] = {srgb_decode(c.r), srgb_decode(c.g), srgb_decode(c.b)};
-        const double whole = std::floor(passes);
-        const double frac  = passes - whole;
-        for (int i = 0; i < static_cast<int>(whole); ++i) p3_pass(lo);
-        double out[3] = {lo[0], lo[1], lo[2]};
-        if (frac > 0.0) {
-            double hi[3] = {lo[0], lo[1], lo[2]};
-            p3_pass(hi);
-            for (int k = 0; k < 3; ++k) out[k] = lo[k] + (hi[k] - lo[k]) * frac;
-        }
-        return GuiColor{srgb_encode(out[0]), srgb_encode(out[1]),
-                        srgb_encode(out[2])};
-    }
-} // namespace
-
-void set_palette_passes(double chrome, double waveform) {
-    g_palette_passes  = chrome;
-    g_waveform_passes = waveform;
-}
-double palette_passes() { return g_palette_passes; }
-
-GuiColor tuned_palette(GuiColor c)  { return apply_passes(c, g_palette_passes); }
-GuiColor tuned_waveform(GuiColor c) { return apply_passes(c, g_waveform_passes); }
+// -- The palette's chokepoints (the contract is at their declaration,
+// render.h) ---------------------------------------------------------------
 
 void set_palette_source(cairo_t* cr, GuiColor c) {
-    const GuiColor t = tuned_palette(c);
-    cairo_set_source_rgb(cr, t.r, t.g, t.b);
-}
-void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha) {
-    const GuiColor t = tuned_palette(c);
-    cairo_set_source_rgba(cr, t.r, t.g, t.b, alpha);
+    cairo_set_source_rgb(cr, c.r, c.g, c.b);
 }
 void set_waveform_source(cairo_t* cr, GuiColor c) {
-    const GuiColor t = tuned_waveform(c);
-    cairo_set_source_rgb(cr, t.r, t.g, t.b);
-}
-
-WaveformPlateWords waveform_plate_words() {
-    // Each authored word lifted BEFORE the transform (the rule and the choice
-    // are at region_lift, render.h). hex() of a word is its exact n/255
-    // channels, so at 0 passes argb32_opaque_word gives the lifted word back
-    // bit for bit.
-    const auto lifted_twin = [](GuiColor authored) {
-        const uint32_t lifted = region_lift(argb32_opaque_word(authored));
-        return argb32_opaque_word(
-            tuned_waveform(hex(lifted & UINT32_C(0x00FFFFFF))));
-    };
-    WaveformPlateWords w;
-    w.ink            = argb32_opaque_word(tuned_waveform(kWaveformInk));
-    w.outline        = argb32_opaque_word(
-                           tuned_waveform(kWaveformForegroundOutline));
-    w.ink_lifted     = lifted_twin(kWaveformInk);
-    w.outline_lifted = lifted_twin(kWaveformForegroundOutline);
-    return w;
+    cairo_set_source_rgb(cr, c.r, c.g, c.b);
 }
 
 // (THE TIP-DOWN TRIANGLE MASK IS GONE — 2026-08-02. build_triangle_mask,

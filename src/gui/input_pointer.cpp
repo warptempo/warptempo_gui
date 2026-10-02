@@ -3349,49 +3349,6 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
     return -1;
 }
 
-// THE MODAL ROW'S HOVER FADE EDGES (architect 2026-09-27, the Breeze port at
-// render.h's HoverFade), called by the walk below on a change and before it
-// writes the new answer, and by the leave hook's clear_modal_dialog_hover
-// with no button and no field: the button the pointer left starts its SnapIn tail
-// (QPushButton), the one it reached snaps full, and the field fades either
-// way (Reversing — Breeze's line-edit frame animates hover in and out). The
-// slots are keyed to the PAINTED surface's session — the stash the hit was
-// read from — and a set carried over from another session is dropped first,
-// so no tail lands on a button of a different dialog. A button the painter
-// published dead is cut, not faded (the roster edge's rule).
-void GuiInputHandler::stamp_modal_dialog_hover_fades(int hit, bool in_field) {
-    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    if (!dlg.valid) return;
-    if (app.modal_dialog_fades_session != dlg.session) {
-        app.modal_dialog_button_fades.clear();
-        app.modal_dialog_field_fade   = HoverFade{};
-        app.modal_dialog_fades_session = dlg.session;
-    }
-    const int64_t now = monotonic_ms();
-    const auto edge = [&](int index, bool hovered) {
-        if (index < 0 || static_cast<size_t>(index) >= dlg.buttons.size())
-            return;
-        std::vector<HoverFade>& fades = app.modal_dialog_button_fades;
-        if (fades.size() <= static_cast<size_t>(index))
-            fades.resize(static_cast<size_t>(index) + 1);
-        HoverFade& fd = fades[static_cast<size_t>(index)];
-        if (!dlg.buttons[static_cast<size_t>(index)].enabled) {
-            hover_fade_cut(fd, hovered);
-            return;
-        }
-        if (hover_fade_edge(fd, HoverFadeKind::SnapIn, hovered, now))
-            app.hover_fades_running = true;
-    };
-    if (hit != app.modal_dialog_hovered) {
-        edge(app.modal_dialog_hovered, false);
-        edge(hit, true);
-    }
-    if (in_field != app.modal_dialog_field_hovered &&
-        hover_fade_edge(app.modal_dialog_field_fade, HoverFadeKind::Reversing,
-                        in_field, now))
-        app.hover_fades_running = true;
-}
-
 // The dialog buttons' hover face — the pointer fact, written on every motion
 // under a standing dialog; a change damages the stashed box (the painter
 // reads the index back). The index resets with the stash in
@@ -3406,19 +3363,11 @@ void GuiInputHandler::stamp_modal_dialog_hover_fades(int hit, bool in_field) {
 // sliding back on restore the pressed face and its release commit — nothing
 // was cancelled, so nothing has to be re-armed. Leaving the button is what
 // assigns the PASSIVE FOCUS the ruling gives the feint, and the face that
-// results (the focus fill under an accent outline, no halo) is the ladder's
-// own composition rather than a case (paint_modal_dialog). The whole rule and
+// results (the focus frame) is the painter's own composition rather than a
+// case (paint_modal_dialog). The whole rule and
 // the pair's read-as-one-fact contract are at AppState::modal_dialog_pressed.
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const int hit = modal_dialog_button_hit(x, y);
-    // THE FIELD'S OWN HOVER FACE rides this same walk (2026-08-13, when the
-    // field took the buttons' outline on hover and focus): one pointer fact
-    // resolved beside the buttons', against the painter's published field
-    // rect, damaging the same stashed box on the same transition. A prompt
-    // publishes a zero field, so this is false there without a term.
-    const bool in_field =
-        app.modal_dialog.valid &&
-        rect_contains(app.modal_dialog.field, x, y);
     const int  armed  = app.modal_dialog_pressed;
     const bool inside = armed >= 0 && armed == hit;
     // THE FEINT'S ASSIGNMENT, on the leave edge alone: the pointer has left the
@@ -3430,11 +3379,8 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
                        (app.modal_dialog_focus != armed ||
                         app.modal_dialog_focus_active);
     if (app.modal_dialog_hovered != hit || feint ||
-        app.modal_dialog_press_inside != inside ||
-        app.modal_dialog_field_hovered != in_field) {
-        stamp_modal_dialog_hover_fades(hit, in_field);
+        app.modal_dialog_press_inside != inside) {
         app.modal_dialog_hovered       = hit;
-        app.modal_dialog_field_hovered = in_field;
         app.modal_dialog_press_inside  = inside;
         if (feint) {
             // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's second
@@ -3450,9 +3396,9 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
             // list-bearing owners the ring's stops are [list, buttons…], and
             // a feint REPLACES whatever focus the dialog had, of EITHER
             // STRENGTH — the ruling's own words. Without this the band kept
-            // its accent outline beside the button's new passive face, so the
-            // ring looked like it was in two places at once. Paint-only, but
-            // the outline is the ring's whole cue.
+            // its focus frame beside the button's new one, so the ring looked
+            // like it was in two places at once. Paint-only, but the frame is
+            // the ring's whole cue.
             if (app.folder_overlay.list_focused) {
                 app.folder_overlay.list_focused = false;
                 viewport.invalidate_rect(folder_overlay::surface_rect(app));
@@ -3492,22 +3438,17 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
 // THE HOVER'S LEAVE END — the pointer-leave / capability-loss hook (main.cpp),
 // beside the roster's clear_redesign_button_hover, the folder overlay's and
 // the notification cards' (architect 2026-09-28): a pointer that has left is
-// on no button and no field, and a leave delivers no motion for the walk above
-// to answer, so without this the lit outline would stand until the next motion
-// landed somewhere. It covers every leave reason the hook is handed — the mouse
+// on no button, and a leave delivers no motion for the walk above to answer,
+// so without this the hover index would name a button until the next motion
+// landed somewhere (the tooltip's subject reads it). It covers every leave reason the hook is handed — the mouse
 // leaving the window, the pen leaving the plane (PenHoverEnd keeps no face),
 // a finger's lift with no mouse resting in the window, capability loss. It is
-// a hover end like any other and goes through the walk's own edge
-// (stamp_modal_dialog_hover_fades), so the button left takes its SnapIn tail
-// and the field its Reversing one, with the walk's own damage of the stashed
-// box. The focus face is untouched: focus is hard and is not a pointer fact.
+// a hover end like any other, with the walk's own damage of the stashed
+// box. The focus face is untouched: focus is not a pointer fact.
 // Transition-gated.
 void GuiInputHandler::clear_modal_dialog_hover() {
-    if (app.modal_dialog_hovered < 0 && !app.modal_dialog_field_hovered)
-        return;
-    stamp_modal_dialog_hover_fades(-1, false);
+    if (app.modal_dialog_hovered < 0) return;
     app.modal_dialog_hovered       = -1;
-    app.modal_dialog_field_hovered = false;
     if (app.modal_dialog.valid)
         viewport.invalidate_rect(app.modal_dialog.box);
 }
@@ -7285,128 +7226,6 @@ void GuiInputHandler::finalize_active_drags() {
     app.trim_bar_press = TrimBarPressSeed{};
 }
 
-// THE ROSTER'S HOVER FADE EDGE — the one place a button's HoverFade is
-// stamped (architect 2026-09-27, the Breeze port; the model is at render.h's
-// HoverFade), called by the two writers of `hovered` below on every flip and
-// by nothing else, so the fade's direction always mirrors the bit — on every
-// roster button, the menu anchors included (redesign_button_hover_fade_kind,
-// architect 2026-10-01). A button that is DEAD at the edge is cut rather than
-// faded — Breeze paints no animation on a disabled button
-// (renderButtonFrame's `enabled` term), and the painters gate the tail on the
-// same bit. The edge
-// raises AppState::hover_fades_running when an animation now runs, which is
-// what wakes the tick's walk (tick_hover_fades). No damage here: the caller's
-// own strip damage covers the edge frame, the tick the frames after it.
-void GuiInputHandler::stamp_redesign_button_hover_fade(RedesignButton id,
-                                                       int64_t now) {
-    AppState::RedesignButtonFace& f = app.redesign_buttons[static_cast<size_t>(id)];
-    if (!f.enabled) {
-        hover_fade_cut(f.fade, f.hovered);
-        return;
-    }
-    if (hover_fade_edge(f.fade, redesign_button_hover_fade_kind(id), f.hovered,
-                        now))
-        app.hover_fades_running = true;
-}
-
-// THE HOVER FADES' CLOCK — the tick's one tenant for them (main.cpp, right
-// after the roster's hover recompute, on every tick past the startup load,
-// gestures included: a fade is time, not a pointer fact). ONE BIT WHEN IDLE:
-// with AppState::hover_fades_running false this returns at once, so a settled
-// GUI pays no walk and no repaint. While any fade runs it walks the two
-// fading surfaces — the roster and the modal row (the notification cards'
-// close buttons were the third until their X retired, 2026-10-01) —
-// advances each running fade to the tick's clock and damages
-// THAT FACE'S OWN PAINT — its published rect, which contains everything a
-// tool button paints — and only
-// when its painted level changed: at most kHoverFadeSteps repaints per fade,
-// never one per tick (Android's loop has no vsync pacing, so a per-tick
-// damage would post at the tick's rate), and never the whole strip the edge
-// writers damage.
-//
-// A FACE THAT IS GONE TAKES ITS FADE WITH IT, here as a second line behind
-// the surfaces' own drops: a roster button that publishes no rect (the bottom
-// row yielded to a modal) is cut; a modal set whose session is not the
-// painted one is dropped whole, and a slot past the painted row's buttons is
-// cut. So a tail can never paint on a different button than the one that
-// left it.
-//
-// A FACE THAT WENT DEAD UNDER ITS TAIL IS CUT, the edges' own rule carried to
-// the frames between them: before a roster or modal fade advances, the walk
-// reads the face's PAINTED enabled bit (RedesignButtonFace::enabled, the
-// modal row's published ModalDialogButton::enabled) and a dead face's fade is
-// cut to the settled look for its hover bit — at rest for a tail — and leaves
-// the running set, so no frame is spent on an animation the painters gate
-// off, and a face enabled again inside the interval has no old tail to
-// revive: its next hover edge starts fresh. A cut that changes the painted
-// level damages the face as an advance does.
-//
-// PAINT ONLY — the strictly-as-painted rule is untouched: nothing this writes
-// is read by a press, a cursor, a tooltip or a hit test (the rule is stated
-// at render.h's HoverFade).
-void GuiInputHandler::tick_hover_fades() {
-    if (!app.hover_fades_running) return;
-    const int64_t now = monotonic_ms();
-    bool running = false;
-
-    for (int i = 0; i < kRedesignButtonCount; ++i) {
-        AppState::RedesignButtonFace& f = app.redesign_buttons[i];
-        if (!f.fade.running) continue;
-        if (f.rect.w <= 0 || f.rect.h <= 0) {
-            hover_fade_cut(f.fade, f.hovered);
-            continue;
-        }
-        const GuiRect damage = f.rect;
-        if (!f.enabled) {
-            const int before = hover_fade_steps(f.fade);
-            hover_fade_cut(f.fade, f.hovered);
-            if (hover_fade_steps(f.fade) != before)
-                viewport.invalidate_rect(damage);
-            continue;
-        }
-        if (hover_fade_advance(f.fade, now)) viewport.invalidate_rect(damage);
-        running = running || f.fade.running;
-    }
-
-    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    if (!dlg.valid || dlg.session != app.modal_dialog_fades_session) {
-        app.modal_dialog_button_fades.clear();
-        hover_fade_cut(app.modal_dialog_field_fade, false);
-    } else {
-        for (size_t i = 0; i < app.modal_dialog_button_fades.size(); ++i) {
-            HoverFade& fd = app.modal_dialog_button_fades[i];
-            if (!fd.running) continue;
-            if (i >= dlg.buttons.size()) {
-                hover_fade_cut(fd, false);
-                continue;
-            }
-            if (!dlg.buttons[i].enabled) {
-                const int before = hover_fade_steps(fd);
-                hover_fade_cut(fd,
-                               static_cast<int>(i) == app.modal_dialog_hovered);
-                if (hover_fade_steps(fd) != before)
-                    viewport.invalidate_rect(dlg.buttons[i].rect);
-                continue;
-            }
-            if (hover_fade_advance(fd, now))
-                viewport.invalidate_rect(dlg.buttons[i].rect);
-            running = running || fd.running;
-        }
-        HoverFade& ff = app.modal_dialog_field_fade;
-        if (ff.running) {
-            if (dlg.field_frame.w <= 0 || dlg.field_frame.h <= 0) {
-                hover_fade_cut(ff, false);
-            } else {
-                if (hover_fade_advance(ff, now))
-                    viewport.invalidate_rect(dlg.field_frame);
-                running = running || ff.running;
-            }
-        }
-    }
-
-    app.hover_fades_running = running;
-}
-
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors, row 4's twenty-six — the toolbar four
 // included since the 2026-08-12
@@ -7435,16 +7254,10 @@ void GuiInputHandler::clear_redesign_button_hover() {
     // one of its own faces moved).
     bool changed_top       = false;
     bool changed_transport = false;
-    const int64_t now = monotonic_ms();
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         if (!f.hovered) continue;
         f.hovered = false;
-        // THE CLEAR IS A HOVER END LIKE ANY OTHER, so it leaves the button's
-        // own tail (stamp_redesign_button_hover_fade) — the pointer leaving
-        // the window, the pen rising out of the plane and the dropdown's open
-        // edge all end a hover the way Qt's Leave event does under Breeze.
-        stamp_redesign_button_hover_fade(static_cast<RedesignButton>(i), now);
         if (redesign_button_in_transport_row(static_cast<RedesignButton>(i)))
             changed_transport = true;
         else
@@ -7503,8 +7316,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // (2026-09-03 evening, as on 2026-09-02 and for the same reason): the
     // menu row stands above the band with the FILE ANCHOR LIVE, its press
     // exempted from both veils, and a blanket term would refuse that one
-    // lit button its hover pill while it is the one thing on screen the
-    // pointer can act on. Nothing else lights: redesign_button_enabled's
+    // live button its hover (and so its tooltip) while it is the one thing on
+    // screen the pointer can act on. Nothing else lights: redesign_button_enabled's
     // first arm greys the whole roster but that anchor, and the `inside` term
     // below asks it. (They were terms for the hours of 2026-09-03 the anchors
     // were all dead.)
@@ -7513,7 +7326,6 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     bool changed_top       = false;
     bool changed_transport = false;
     int  hovered_tip = -1;
-    const int64_t fade_now = monotonic_ms();
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         const RedesignButton id = static_cast<RedesignButton>(i);
@@ -7535,12 +7347,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // place the two consumers of a hover part company, which is why both are
         // resolved in this single walk. The term is the PAINTED bit
         // (f.enabled), the one the press claims on (architect 2026-09-24,
-        // strictly as-painted): the pill lights exactly where a press would
-        // arm, and the per-tick comparator keeps the bit honest.
+        // strictly as-painted): the hover bit stands exactly where a press
+        // would arm, and the per-tick comparator keeps the bit honest.
         const bool inside = under_pointer && f.enabled;
         if (f.hovered != inside) {
             f.hovered = inside;
-            stamp_redesign_button_hover_fade(id, fade_now);
             if (redesign_button_in_transport_row(id))
                 changed_transport = true;
             else
@@ -9295,33 +9106,10 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // recompute per frame, gesture-gated only) once the popup is down. That
     // costs nothing visible: the only row-1 button the pointer can be on at an
     // open edge is the one just pressed, and that is the popup's ANCHOR, whose
-    // pill the paint condition below keeps regardless of the hover bit.
-    //
-    // IT NO LONGER DECIDES THE MENU BUTTON'S PILL, and the inversion is worth
-    // stating because this line used to be what darkened it: since 2026-08-02
-    // the pill paints on the popup's own ANCHOR as well as on hover (kdenlive's
-    // behaviour, argued at the paint site), so the button whose menu is up stays
-    // blue for exactly as long as it is up. This clear now serves the OTHER
-    // roster buttons and the tooltip; the anchor's face is the paint condition's
-    // business.
+    // open frame is the painter's own open condition (paint_menu_row),
+    // regardless of the hover bit. This clear serves the OTHER roster buttons
+    // and the tooltip.
     clear_redesign_button_hover();
-    // AND THE OPEN EDGE CUTS EVERY ANCHOR'S FADE (architect 2026-10-01, the
-    // anchors' kMenuPillHoldMs hold — redesign_button_hover_fade_kind): the
-    // clear above stamps the pressed anchor a hold like any hover end, and a
-    // neighbour
-    // left a moment before may still be running one, but while a menu stands
-    // its anchor's pill is held by the painter's open term and no hold may
-    // paint under it or beside it — a hover switch inside the hold would
-    // otherwise leave the old anchor's pill lit next to the new menu's
-    // pill. No anchor can start another while the menu is up
-    // (redesign_button_hover_zone refuses the roster), so this one cut covers
-    // the whole open; once the menu closes, each anchor's next hover edge
-    // starts fresh. The strip damage below covers the frame.
-    for (const DropdownMenu m : kDropdownMenus)
-        hover_fade_cut(app.redesign_buttons[static_cast<size_t>(
-                           redesign_button_index(dropdown_anchor_button(m)))]
-                           .fade,
-                       false);
     viewport.invalidate_top_strip();
 }
 

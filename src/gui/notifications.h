@@ -10,9 +10,9 @@
 // (dialog-information / dialog-error), and ONE PAD around both
 // (notification_pad_px below — the card's chrome reads one number on all
 // five of its distances, the text's right air adding the glyph's own inset
-// so it matches the air the eye sees left of the text, 2026-10-01). Each
-// card stands over a tight drop shadow (kNotificationShadowAlpha, render.h).
-// THE WHOLE CARD IS ONE BUTTON (architect
+// so it matches the air the eye sees left of the text, 2026-10-01), on the
+// ground inside a thin raised frame, square, with no drop shadow (architect
+// 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card
 // dismisses it at the lift (the hit section below). A sentence too long for
@@ -806,32 +806,13 @@ int notification_card_max_w_px(const AppState& a);
 // under that foot is ever claimed by a card. (A stack that tall is the
 // contrived case this design declines to cater for.)
 //
-// Every change to the stack damages this rect GROWN BY THE CARDS' SHADOW
-// (notification_shadow_bound below, the rect
+// Every change to the stack damages this rect whole (the rect
 // Viewport::invalidate_notification_stack takes): the painted cards lie
-// inside the room by construction and their shadows inside the grown rect,
-// so it erases what stood and admits what comes without shaping a single
-// glyph off the paint clock. A window with no room between row 1 and the
+// inside the room by construction, so it erases what stood and admits what
+// comes without shaping a single glyph off the paint clock. A window with no room between row 1 and the
 // bottom row answers a zero height and paints nothing — a window with no
 // waveform at all, in the contrived class.
 GuiRect notification_stack_bound(const AppState& a);
-
-// THE ROOM GROWN BY THE CARDS' DROP SHADOW (architect 2026-10-01, the
-// shadow's look at render.h's kNotificationShadow* block): the rect every
-// stack change damages (Viewport::invalidate_notification_stack) and the clip
-// the painter lays the shadows under. THE SHADOW'S PIXELS BELONG TO THE CARD,
-// so a card leaving must erase its shadow and a card arriving must paint it
-// whole: the room grows by the spread on the left and the right, by the
-// spread less the offset above (the shadow's top ring stands that far over
-// the card's top) and by the offset plus the spread below. IT STAYS BETWEEN
-// THE LANES THE STACK NEVER PAINTS OVER — never above the menu lane's foot,
-// never into the bottom row's lane, never past the window's right edge (where
-// the outermost ring is cut, render.h). The CARDS keep the room itself: their
-// paint clips to it and their publication (AppState::Notifications::painted)
-// stays the card's rect clipped to it — a shadow is paint, never a claim, so
-// the hit, the hover walk, the press claim and the pan zone see only cards.
-// A window with no room answers an empty rect, as the room does.
-GuiRect notification_shadow_bound(const AppState& a);
 
 // HOW MANY CARDS THE ROOM HOLDS, and so what a push bumps past (architect
 // 2026-08-30, the uncapped stack): the number of ONE-LINE cards that fit the

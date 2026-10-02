@@ -399,9 +399,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // did.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
-// what says the arm is the key's ARMED FACE — kRedesignSelectedFill under a
-// kRedesignLine frame, the icon row's own lit-toggle face, which this key and
-// the symbol-mode key (while a symbol page stands) wear off their lamps — and
+// what says the arm is the key's ARMED FACE — sunken on the down face, the
+// roster's own lamp face (paint_button_box), which this key and the
+// symbol-mode key (while a symbol page stands) wear off their lamps — and
 // the letter caps themselves, every one of which turns capital while the arm
 // stands. The page key wears no lamp: its cap already says the page.
 inline const char* cap_word(const KeyDef& k, Page page) {
@@ -440,10 +440,6 @@ inline constexpr Page page_after(Role role, Page page) {
 inline constexpr double kKeyHeightPx = 40.0;   // one row's key box
 inline constexpr double kKeyGapPx    = 4.0;    // between adjacent keys, both axes
 inline constexpr double kPadPx       = 4.0;    // the surface's own outer margin
-// The roster's own radius, READ rather than restated (render.h's icon-button
-// block, where it is measured): a key is a button-shaped face like every
-// other in the product.
-inline constexpr double kCornerPx    = kIconCornerRadiusPx;
 
 inline int key_height_px()  { return scaled_px(kKeyHeightPx, 1); }
 inline int key_gap_px()     { return scaled_px(kKeyGapPx, 1); }
@@ -453,9 +449,7 @@ inline int pad_px()         { return scaled_px(kPadPx); }
 // outer margin at both ends. THE BAND HAS NO CHROME OF ITS OWN — no line at its
 // top edge (architect 2026-08-27, on glass): the keyboard's ground is the
 // bottom row's ground, so the two lanes read as one block and a seam between
-// them would draw a border through the middle of it. The 1px line under the
-// band is the BOTTOM ROW'S own border-top (bottom_row_border_h_px, painted by
-// that row), which this surface neither owns nor touches.
+// them would draw a border through the middle of it.
 inline int surface_height_px() {
     return 2 * pad_px() + kRowCount * key_height_px() +
            (kRowCount - 1) * key_gap_px();
