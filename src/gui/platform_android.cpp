@@ -500,6 +500,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // and the bottom row leave on the full-screen 1440-tall surface, so the
     // waveform is unclamped at the template's own scale).
     cfg.max_waveform_height = 500;
+    // The palette's tuning knob at rest (architect 2026-10-02, the palette
+    // head in render.h): no extra pass for either half, the authored palette
+    // byte for byte; the same on both templates.
+    cfg.palette_passes  = 0.0;
+    cfg.waveform_passes = 0.0;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;

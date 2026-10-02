@@ -284,10 +284,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other three editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, and since 2026-09-13
-    // max_waveform_height — take their one direct-set body in commit(),
-    // commit_device_setting, ahead of this router.)
+    // move. (The other five editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-09-13 max_waveform_height, and
+    // since 2026-10-02 palette_passes and waveform_passes — take their one
+    // direct-set body in commit(), commit_device_setting, ahead of this
+    // router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -678,9 +679,10 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The three device keys other than the scale — one body, ahead of the
+    // 2. The five device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
-    //    rest, max_waveform_height's live relayout included).
+    //    rest, max_waveform_height's live relayout and the palette keys'
+    //    live apply included).
     if (commit_device_setting(key, value)) return;
 
     // 3a. GUI-kind keys. Every key that can appear in a `.settings` file is
@@ -901,7 +903,7 @@ void GuiSettingsEditor::commit() {
     target_render.trigger();
 }
 
-// THE THREE DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
+// THE FIVE DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
 // a direct-set arm here since it was a `.settings` key — free text, no undo
 // history, no dirty tracking, the settings editor its sole authoring surface
 // — and since 2026-08-27 it is a DEVICE preference: ONE user has ONE
@@ -936,7 +938,18 @@ void GuiSettingsEditor::commit() {
 // tuning phase (architect 2026-09-29), struck with its Settings row when the
 // value was hard-coded (kHoldDelayMs, gui_input.h).
 //
-// WHEN EACH IS IN FORCE. `max_waveform_height`: at once, by that relayout.
+// THE PALETTE'S TWO KEYS JOINED 2026-10-02 (architect, a tuning phase) as
+// the body's one DECIMAL arm, serving both: `palette_passes` and
+// `waveform_passes`, the same grammar-then-no-op-then-write shape over a
+// double, the grammar the product's one double route at its canonical
+// two-decimal spelling and the range is_palette_passes (parse_palette_passes,
+// device_config.h), the refusal the same composer. Like the cap they CHANGE
+// THE SCREEN AT THE COMMIT: past the write the body hands both live values to
+// GuiInputHandler::apply_palette_passes (install, whole-window damage, the
+// synchronous plate route). No Tab completion.
+//
+// WHEN EACH IS IN FORCE. `max_waveform_height`, `palette_passes` and
+// `waveform_passes`: at once, by their live applies.
 // `projects_repo`: at once — every reader reads
 // `app.projects_repo`, the live field, whose source moved 2026-08-27 and whose
 // readers did not (an empty value simply never matches any remote, which
@@ -1013,6 +1026,27 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         (void)persist();
         applied();
         input->apply_max_waveform_height(v);
+        return true;
+    }
+
+    if (key == "palette_passes" || key == "waveform_passes") {
+        double v = 0.0;
+        if (!parse_palette_passes(value, v)) {
+            reject(kPalettePassesGrammarReason);
+            return true;
+        }
+        double& live_passes = (key == "palette_passes")
+                                  ? app.device_config->palette_passes
+                                  : app.device_config->waveform_passes;
+        if (v == live_passes) {
+            unchanged();
+            return true;
+        }
+        live_passes = v;
+        (void)persist();
+        applied();
+        input->apply_palette_passes(app.device_config->palette_passes,
+                                    app.device_config->waveform_passes);
         return true;
     }
 
@@ -1155,8 +1189,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, max_waveform_height,
-    // projects_repo, projects_path — gui_scale and the last three
+    // gui_scale, max_waveform_height, palette_passes, waveform_passes,
+    // projects_repo, projects_path — gui_scale and the last five
     // the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.

@@ -9,11 +9,14 @@
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Five keys live here and nowhere else:
+// piece (architect 2026-08-27). Seven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
 //                            an integer [0, 9999], 0 meaning no maximum
+//   palette_passes=<passes>  the chrome's sRGB -> Display-P3 passes, a
+//                            decimal [0.00, 4.00] — for a TUNING PHASE (below)
+//   waveform_passes=<passes> the same for the waveform, its own value
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
 //                            GitHub recheck's corpus; free text, may be blank
 //   projects_path=<path>     the ABSOLUTE folder whose subfolders are the
@@ -22,7 +25,8 @@
 //                            successful open; blank until the first
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
-// max_waveform_height, 2026-09-13, placed right after gui_scale;
+// max_waveform_height, 2026-09-13, placed right after gui_scale; the two
+// palette keys, 2026-10-02, right after it;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
 // them left 2026-09-27, below);
 // the list above is this file's telling of it and
@@ -115,6 +119,15 @@
 // glass the same day on 300 ms, now constexpr (kHoldDelayMs, gui_input.h);
 // the key was `hold_delay_ms`, [100, 2000] ms. A config still carrying it is
 // unknown-key fatal, no migration.
+// THE PALETTE'S TWO KEYS ARRIVED 2026-10-02 (architect), A TUNING PHASE:
+// `palette_passes` and `waveform_passes`, placed right after
+// max_waveform_height with a Settings row each, set how many extra
+// sRGB -> Display-P3 passes the chrome and the waveform take between their
+// constants and cairo (the model, the matrix and the record are render.h's —
+// the palette head and kSrgbToDisplayP3Linear). Both templates stamp 0.00,
+// the picture before the keys byte for byte. Missing-key fatal like every
+// other key, no migration; when the phase closes the values are hard-coded in
+// render.h and both keys are struck.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -128,7 +141,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the five keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -140,8 +153,8 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// max_waveform_height, projects_repo, projects_path, last_project) and it is
-// what
+// max_waveform_height, palette_passes, waveform_passes, projects_repo,
+// projects_path, last_project) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -156,7 +169,8 @@
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`,
-// `Max Waveform Height` (since 2026-09-13), `Projects Repository` and
+// `Max Waveform Height` (since 2026-09-13), `Palette Passes` and
+// `Waveform Passes` (since 2026-10-02), `Projects Repository` and
 // `Projects Path` as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
 // writer under the key's own grammar below. Until that day the path keys
@@ -171,7 +185,7 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// five.
+// seven.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -184,6 +198,8 @@
 struct DeviceConfig {
     int         gui_scale = 100;
     int         max_waveform_height = 500;
+    double      palette_passes  = 0.0;
+    double      waveform_passes = 0.0;
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
@@ -265,6 +281,31 @@ inline constexpr const char* kGuiScaleGrammarReason =
     "must be an integer in [50, 350] in canonical spelling";
 inline constexpr const char* kMaxWaveformHeightGrammarReason =
     "must be an integer in [0, 9999] in canonical spelling";
+
+// THE PALETTE PASSES' RANGE — the ONE owner for BOTH keys, `palette_passes`
+// and `waveform_passes` (architect 2026-10-02, the tuning phase): they are the
+// same quantity, how many sRGB -> Display-P3 passes a colour takes in linear
+// light (the model at kSrgbToDisplayP3Linear, render.h), so one predicate and
+// one reason serve both, asked by this file's reader and by the settings
+// editor's commit (commit_device_setting) exactly as the cap's two askers ask
+// theirs. The SPELLING is the product's one double route, not a second
+// decimal grammar: parse_value_double, then the round trip through
+// format_value_double at two decimals (value_format.h) must give the value
+// back byte for byte — so `0.00`, `1.00` and `1.50` are the canonical forms,
+// a finer value carries its shortest digits (`1.25`, `0.333`), and `1.5`,
+// `1.500`, `01.00` and `-0.00` refuse. The serializer is
+// format_palette_passes below. [0, 4]: 0 is the authored palette, one pass is
+// about the paleness the mock-ups showed him, and four is far past anything
+// the eye wants.
+inline constexpr bool is_palette_passes(double v) {
+    return v >= 0.0 && v <= 4.0;
+}
+
+// The passes' reason, spelled once for both keys' two readers each (the config
+// reader's `bad_value` line and the settings editor's card).
+inline constexpr const char* kPalettePassesGrammarReason =
+    "must be a decimal in [0.00, 4.00] in canonical spelling, two decimals "
+    "at least";
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -413,6 +454,20 @@ std::string format_gui_scale_percent(int percent);
 // settings editor's recall (recall_gui_setting_value) both call it.
 std::string format_max_waveform_height(int authored_px);
 
+// The canonical on-disk spelling of a pass count, for both palette keys —
+// format_value_double at two decimals (value_format.h), THE ONE SERIALIZER
+// for the value: this file's writer and the settings editor's recall
+// (recall_gui_setting_value) both call it, and the reader's round-trip test
+// (parse_palette_passes) demands exactly its output.
+std::string format_palette_passes(double passes);
+
+// The reader half of the same grammar, for both keys and both askers (this
+// file's reader and the settings editor's commit): the value parsed through
+// parse_value_double, accepted only if format_palette_passes gives it back
+// byte for byte and is_palette_passes holds. Answers whether it was; `out` is
+// written only on success.
+bool parse_palette_passes(const std::string& value, double& out);
+
 // The resolved config path, or an EMPTY path when neither XDG_CONFIG_HOME nor
 // HOME is set (the loader turns that into its own fatal line; the writer
 // reports the failure and writes nothing).
@@ -457,13 +512,15 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE FIVE KEY COMMITS, and this is their inventory
-// (re-greped 2026-09-29):
+// THREE CALL SITES CARRY THE SEVEN KEY COMMITS, and this is their inventory
+// (re-greped 2026-10-02):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves three keys —
-// `max_waveform_height=`, `projects_repo=` and `projects_path=`
+// the settings editor's ONE device-key body, which serves five keys —
+// `max_waveform_height=`, `palette_passes=`, `waveform_passes=`,
+// `projects_repo=` and `projects_path=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the cap's
-// arm joined 2026-09-13, the path arm 2026-09-02); and gui_main's
+// arm joined 2026-09-13, the path arm 2026-09-02, the palette arm
+// 2026-10-02); and gui_main's
 // `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value
@@ -477,8 +534,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 225 % and its external files dir's `projects/`;
-// both stamp a max_waveform_height of 500, kDefaultProjectsRepo and a blank
-// last_project),
+// both stamp a max_waveform_height of 500, a palette_passes and a
+// waveform_passes of 0.00, kDefaultProjectsRepo and a blank last_project),
 // so a first run on either device lands a
 // file that is
 // already right for it and the user edits

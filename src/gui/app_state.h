@@ -3373,11 +3373,15 @@ struct SettingsPopupItem {
 // 2026-09-14), the picture's gain varying over source time since (the
 // continuous curve derived from the source since 2026-09-23).
 //
-// THE DEVICE HALF IS FOUR: `GUI Scale`, then `Max Waveform Height` right
+// THE DEVICE HALF IS SIX: `GUI Scale`, then `Max Waveform Height` right
 // after it in kDeviceConfigKeys' order (architect 2026-09-13; it commits
 // through commit_device_setting and relays out live; `Hold Delay` stood
 // right after it for the hold delay's one-day tuning phase, 2026-09-29, and
-// left with its key when the value was hard-coded), then the two
+// left with its key when the value was hard-coded), then `Palette Passes`
+// and `Waveform Passes`, the palette's tuning knob for its tuning phase
+// (architect 2026-10-02; they commit through the same body and repaint
+// live, and leave with their keys when the values are hard-coded), then the
+// two
 // gesture-less device keys `Projects Repository` and `Projects Path`
 // (architect 2026-09-02), each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
@@ -3395,6 +3399,8 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Cover",               "cover",         false},
     {"GUI Scale",           "gui_scale",     true},
     {"Max Waveform Height", "max_waveform_height", false},
+    {"Palette Passes",      "palette_passes",      false},
+    {"Waveform Passes",     "waveform_passes",     false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
 };

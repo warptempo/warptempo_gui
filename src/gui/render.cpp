@@ -142,7 +142,7 @@ static inline double frame_to_paint_sample(
 
 void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
-    cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
+    set_palette_source(cr, kBackground);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
     cairo_restore(cr);
@@ -152,9 +152,9 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // ROW 6: the ground is kWaveformCanvas, the neutral #141618, hard-coded
-    // (the palette's row-6 block owns its provenance).
-    cairo_set_source_rgb(cr, kWaveformCanvas.r, kWaveformCanvas.g,
-                         kWaveformCanvas.b);
+    // (the palette's row-6 block owns its provenance), through the waveform's
+    // tuning knob (set_waveform_source, render.h).
+    set_waveform_source(cr, kWaveformCanvas);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
     // THE BORDER, taken FROM the area: its topmost and bottommost rows, painted
@@ -170,8 +170,7 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     // carry both borders draws neither rather than overlapping them.
     const int border = waveform_border_px();
     if (h > 2 * border) {
-        cairo_set_source_rgb(cr, kWaveformBorder.r, kWaveformBorder.g,
-                             kWaveformBorder.b);
+        set_palette_source(cr, kWaveformBorder);
         cairo_rectangle(cr, x, y, w, border);
         cairo_rectangle(cr, x, y + h - border, w, border);
         cairo_fill(cr);
@@ -187,6 +186,7 @@ void render_waveform(cairo_surface_t* dest,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
                      int outline_px,
+                     const WaveformPlateWords& plate_words,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -309,14 +309,14 @@ void render_waveform(cairo_surface_t* dest,
     // self-contained and there is nothing for an offscreen neighbour to
     // contribute: pan invariance strengthened rather than weakened here.
     //
-    // THE PREMULTIPLIED WORDS, each built once per call through the one word
-    // owner (argb32_opaque_word, render.h — its byte-order and rounding
-    // contract lives there): the plate's ink (the row-6 constant), worn by
-    // the dark lamp's raw bar and by both lit bars' fills, and the inner
-    // bar's outline (kWaveformForegroundOutline; built always, written only
-    // when lit).
-    const uint32_t ink_word     = argb32_opaque_word(kWaveformInk);
-    const uint32_t outline_word = argb32_opaque_word(kWaveformForegroundOutline);
+    // THE PREMULTIPLIED WORDS, built once per render on the GUI thread
+    // (waveform_plate_words, render.h — the row-6 constants through the
+    // palette's tuning knob and the one word owner, argb32_opaque_word) and
+    // handed in with the job, so this writer reads no knob: the plate's ink,
+    // worn by the dark lamp's raw bar and by both lit bars' fills, and the
+    // inner bar's outline (written only when lit).
+    const uint32_t ink_word     = plate_words.ink;
+    const uint32_t outline_word = plate_words.outline;
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -590,7 +590,7 @@ void render_playhead(cairo_t* cr,
     // ONE SOLID LINE, straight over whatever it crosses — waveform ink included.
     // A saturated stem over the dark ink reads without any cut, so there is no
     // two-tone overdraw here (see the declaration for the retirement).
-    cairo_set_source_rgb(cr, color.r, color.g, color.b);
+    set_palette_source(cr, color);
     fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     cairo_restore(cr);
 }
@@ -614,7 +614,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     // is deliberately no longer "less loud
     // than a marker stem": it is a position line during a gesture, and the
     // product's position lines are this white.
-    cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g, kPlayheadStem.b);
+    set_palette_source(cr, kPlayheadStem);
     fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     cairo_restore(cr);
 }
@@ -772,16 +772,16 @@ void render_trim_flags(cairo_t* cr,
     auto surface = [&](int x0, int w, GuiColor face, GuiColor hi, GuiColor lo) {
         if (w <= 0) return;
         if (lo_h > 0) {
-            cairo_set_source_rgb(cr, lo.r, lo.g, lo.b);
+            set_palette_source(cr, lo);
             cairo_rectangle(cr, x0, lane_y, w, lo_h);
             cairo_fill(cr);
         }
         if (hi_h > 0) {
-            cairo_set_source_rgb(cr, hi.r, hi.g, hi.b);
+            set_palette_source(cr, hi);
             cairo_rectangle(cr, x0, lane_y + lo_h, w, hi_h);
             cairo_fill(cr);
         }
-        cairo_set_source_rgb(cr, face.r, face.g, face.b);
+        set_palette_source(cr, face);
         cairo_rectangle(cr, x0, lane_y + lo_h + hi_h, w, face_h);
         cairo_fill(cr);
     };
@@ -814,7 +814,7 @@ void render_trim_flags(cairo_t* cr,
         const int bw   = bar_hi - bar_lo;
         const int edge = std::min({trim_bar_edge_px(), bw, body_h});
         const auto fill = [&](GuiColor c, int x, int y, int w, int h) {
-            cairo_set_source_rgb(cr, c.r, c.g, c.b);
+            set_palette_source(cr, c);
             cairo_rectangle(cr, x, y, w, h);
             cairo_fill(cr);
         };
@@ -1003,8 +1003,7 @@ void render_trim_flags(cairo_t* cr,
             // partition rather than a coincidence of two roundings.
             const int inner_h = inner_w < face_h - 1 ? inner_w : face_h - 1;
             if (inner_h > 0) {
-                cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
-                                     kTrimLaneBar.b);
+                set_palette_source(cr, kTrimLaneBar);
                 cairo_rectangle(cr, lane_x + x_lo + inset,
                                 lane_y + bevel_h, inner_w, inner_h);
                 cairo_fill(cr);
@@ -1020,8 +1019,7 @@ void render_trim_flags(cairo_t* cr,
     // bounds it to the lane, so the rectangle below can run the full width
     // with no further clamping.
     if (border_h > 0) {
-        cairo_set_source_rgb(cr, kTrimLaneBottomBorder.r,
-                             kTrimLaneBottomBorder.g, kTrimLaneBottomBorder.b);
+        set_palette_source(cr, kTrimLaneBottomBorder);
         cairo_rectangle(cr, lane_x, lane_y + body_h, lane_w, border_h);
         cairo_fill(cr);
     }
@@ -1529,7 +1527,7 @@ static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
                                   const FlagFace& face, bool closes) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
+    set_palette_source(cr, face.border);
     cairo_rectangle(cr, seam_x, lane.y, border_w, lane.h);
     cairo_fill(cr);
     if (closes) {
@@ -1537,14 +1535,14 @@ static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
                         lane.h);
         cairo_fill(cr);
     }
-    cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
+    set_palette_source(cr, face.fill);
     cairo_rectangle(cr, seam_x + border_w, lane.y, fill_w, lane.h);
     cairo_fill(cr);
-    cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
+    set_palette_source(cr, face.edge);
     cairo_rectangle(cr, seam_x + border_w, lane.y, fill_w, edge_h);
     cairo_fill(cr);
     cairo_restore(cr);
-    cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+    set_palette_source(cr, face.label);
     text_shape::show_shaped_run(
         cr, run, static_cast<double>(seam_x + border_w + pad_l), baseline);
 }
@@ -1829,14 +1827,13 @@ void render_flag_boxes_impl(
                 // past it is ruled off rather than blending fill into fill.
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                cairo_set_source_rgb(cr, face.border.r, face.border.g,
-                                     face.border.b);
+                set_palette_source(cr, face.border);
                 cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
                 cairo_fill(cr);
-                cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
+                set_palette_source(cr, face.fill);
                 cairo_rectangle(cr, bx, lane.y, bw, lane.h);
                 cairo_fill(cr);
-                cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
+                set_palette_source(cr, face.edge);
                 cairo_rectangle(cr, bx, lane.y, bw, edge_h);
                 cairo_fill(cr);
                 // THE CLOSING COLUMN ON A CELL-LESS RUN: the flag box is the
@@ -1845,8 +1842,7 @@ void render_flag_boxes_impl(
                 // `closes`), and the flag's right side is the lower cell's
                 // one-pixel seam.
                 if (pass_closes && !paint_lower) {
-                    cairo_set_source_rgb(cr, face.border.r, face.border.g,
-                                         face.border.b);
+                    set_palette_source(cr, face.border);
                     cairo_rectangle(cr, bx + bw, lane.y, close_w, lane.h);
                     cairo_fill(cr);
                 }
@@ -1854,8 +1850,7 @@ void render_flag_boxes_impl(
 
                 // The label, on the run just measured — same font, same glyphs,
                 // so the box width and the painted text cannot disagree.
-                cairo_set_source_rgb(cr, face.label.r, face.label.g,
-                                     face.label.b);
+                set_palette_source(cr, face.label);
                 text_shape::show_shaped_run(
                     cr, run, static_cast<double>(bx + pad_l), baseline);
             }
@@ -2382,7 +2377,7 @@ void render_history_diff_flags(
             // disabled blend was a live-marker face and this lane painted none,
             // and the lane carries the disabled axis now): the pick is at
             // box_border above.
-            cairo_set_source_rgb(cr, box_border.r, box_border.g, box_border.b);
+            set_palette_source(cr, box_border);
             cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
             cairo_fill(cr);
             // The halves, left (removed / red) then right (added / green). Each
@@ -2405,34 +2400,29 @@ void render_history_diff_flags(
             // BOTH HALVES DO (2026-08-22, at seam_ink above): the divider
             // belongs to neither half by itself.
             if (w_removed > 0) {
-                cairo_set_source_rgb(cr, removed_fill.r, removed_fill.g,
-                                     removed_fill.b);
+                set_palette_source(cr, removed_fill);
                 cairo_rectangle(cr, bx, lane.y, w_removed, lane.h);
                 cairo_fill(cr);
-                cairo_set_source_rgb(cr, removed_edge.r, removed_edge.g,
-                                     removed_edge.b);
+                set_palette_source(cr, removed_edge);
                 cairo_rectangle(cr, bx, lane.y, w_removed, edge_h);
                 cairo_fill(cr);
             }
             if (seam_w > 0) {
-                cairo_set_source_rgb(cr, seam_ink.r, seam_ink.g, seam_ink.b);
+                set_palette_source(cr, seam_ink);
                 cairo_rectangle(cr, bx + w_removed, lane.y, seam_w, lane.h);
                 cairo_fill(cr);
             }
             if (w_added > 0) {
-                cairo_set_source_rgb(cr, added_fill.r, added_fill.g,
-                                     added_fill.b);
+                set_palette_source(cr, added_fill);
                 cairo_rectangle(cr, bx + w_removed + seam_w, lane.y, w_added,
                                 lane.h);
                 cairo_fill(cr);
-                cairo_set_source_rgb(cr, added_edge.r, added_edge.g,
-                                     added_edge.b);
+                set_palette_source(cr, added_edge);
                 cairo_rectangle(cr, bx + w_removed + seam_w, lane.y, w_added,
                                 edge_h);
                 cairo_fill(cr);
             }
-            cairo_set_source_rgb(cr, close_border.r, close_border.g,
-                                 close_border.b);
+            set_palette_source(cr, close_border);
             cairo_rectangle(cr, bx + bw, lane.y, border_w, lane.h);
             cairo_fill(cr);
             cairo_restore(cr);
@@ -2445,14 +2435,12 @@ void render_history_diff_flags(
             // above), which is what lets a disable toggle show a dimmed label on
             // one side of the seam and a full one on the other.
             if (w_removed > 0) {
-                cairo_set_source_rgb(cr, removed_label.r, removed_label.g,
-                                     removed_label.b);
+                set_palette_source(cr, removed_label);
                 text_shape::show_shaped_run(
                     cr, run_removed, static_cast<double>(bx + pad_l), baseline);
             }
             if (w_added > 0) {
-                cairo_set_source_rgb(cr, added_label.r, added_label.g,
-                                     added_label.b);
+                set_palette_source(cr, added_label);
                 text_shape::show_shaped_run(
                     cr, run_added,
                     static_cast<double>(bx + w_removed + seam_w + pad_l),
@@ -2558,6 +2546,106 @@ void set_max_waveform_height_px(int authored_px) {
 int waveform_max_h_px() {
     if (g_max_waveform_height_px <= 0) return std::numeric_limits<int>::max();
     return scaled_px(g_max_waveform_height_px, 1);
+}
+
+// -- The palette's tuning knob (the model and the record are at
+// kSrgbToDisplayP3Linear and the palette head, render.h) ------------------
+
+namespace {
+    // The two installed pass counts — the device config's `palette_passes`
+    // (the chrome) and `waveform_passes` (the waveform). Installed by
+    // set_palette_passes at the cap's two application points (the contract is
+    // at the declaration, render.h). 0 is construction state, the templates'
+    // value; startup installs the config's before any read.
+    double g_palette_passes  = 0.0;
+    double g_waveform_passes = 0.0;
+
+    // The sRGB transfer function and its inverse, the IEC 61966-2-1 pair
+    // tmp/palette/derive.py's s2l / l2s spell (without their 8-bit
+    // quantization: the result goes to cairo, or to argb32_opaque_word, which
+    // rounds once).
+    double srgb_decode(double c) {
+        return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4);
+    }
+    double srgb_encode(double v) {
+        return v <= 0.0031308 ? v * 12.92
+                              : 1.055 * std::pow(v, 1.0 / 2.4) - 0.055;
+    }
+    double clip_unit(double v) { return v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v); }
+
+    // ONE PASS of kSrgbToDisplayP3Linear over a linear-light triple, each
+    // channel clipped to [0, 1] after it.
+    void p3_pass(double (&v)[3]) {
+        const auto& m = kSrgbToDisplayP3Linear;
+        double o[3];
+        for (int r = 0; r < 3; ++r)
+            o[r] = clip_unit(m[r][0] * v[0] + m[r][1] * v[1] + m[r][2] * v[2]);
+        v[0] = o[0];
+        v[1] = o[1];
+        v[2] = o[2];
+    }
+
+    // `passes` passes of the matrix in linear light (the model at
+    // kSrgbToDisplayP3Linear): floor(passes) whole passes, then — for a
+    // fraction — one more, the two results interpolated linearly in linear
+    // light by the fraction before the encode. 0 is a plain return, so the
+    // knob at rest is bit-identical to no knob.
+    GuiColor apply_passes(GuiColor c, double passes) {
+        if (passes == 0.0) return c;
+        double lo[3] = {srgb_decode(c.r), srgb_decode(c.g), srgb_decode(c.b)};
+        const double whole = std::floor(passes);
+        const double frac  = passes - whole;
+        for (int i = 0; i < static_cast<int>(whole); ++i) p3_pass(lo);
+        double out[3] = {lo[0], lo[1], lo[2]};
+        if (frac > 0.0) {
+            double hi[3] = {lo[0], lo[1], lo[2]};
+            p3_pass(hi);
+            for (int k = 0; k < 3; ++k) out[k] = lo[k] + (hi[k] - lo[k]) * frac;
+        }
+        return GuiColor{srgb_encode(out[0]), srgb_encode(out[1]),
+                        srgb_encode(out[2])};
+    }
+} // namespace
+
+void set_palette_passes(double chrome, double waveform) {
+    g_palette_passes  = chrome;
+    g_waveform_passes = waveform;
+}
+double palette_passes() { return g_palette_passes; }
+
+GuiColor tuned_palette(GuiColor c)  { return apply_passes(c, g_palette_passes); }
+GuiColor tuned_waveform(GuiColor c) { return apply_passes(c, g_waveform_passes); }
+
+void set_palette_source(cairo_t* cr, GuiColor c) {
+    const GuiColor t = tuned_palette(c);
+    cairo_set_source_rgb(cr, t.r, t.g, t.b);
+}
+void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha) {
+    const GuiColor t = tuned_palette(c);
+    cairo_set_source_rgba(cr, t.r, t.g, t.b, alpha);
+}
+void set_waveform_source(cairo_t* cr, GuiColor c) {
+    const GuiColor t = tuned_waveform(c);
+    cairo_set_source_rgb(cr, t.r, t.g, t.b);
+}
+
+WaveformPlateWords waveform_plate_words() {
+    // Each authored word lifted BEFORE the transform (the rule and the choice
+    // are at region_lift, render.h). hex() of a word is its exact n/255
+    // channels, so at 0 passes argb32_opaque_word gives the lifted word back
+    // bit for bit.
+    const auto lifted_twin = [](GuiColor authored) {
+        const uint32_t lifted = region_lift(argb32_opaque_word(authored));
+        return argb32_opaque_word(
+            tuned_waveform(hex(lifted & UINT32_C(0x00FFFFFF))));
+    };
+    WaveformPlateWords w;
+    w.ink            = argb32_opaque_word(tuned_waveform(kWaveformInk));
+    w.outline        = argb32_opaque_word(
+                           tuned_waveform(kWaveformForegroundOutline));
+    w.ink_lifted     = lifted_twin(kWaveformInk);
+    w.outline_lifted = lifted_twin(kWaveformForegroundOutline);
+    return w;
 }
 
 // (THE TIP-DOWN TRIANGLE MASK IS GONE — 2026-08-02. build_triangle_mask,
@@ -2973,14 +3061,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     if (left_border_w > 0) {
-        cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
+        set_palette_source(cr, face.border);
         cairo_rectangle(cr, bx - left_border_w, lane.y, left_border_w, lane.h);
         cairo_fill(cr);
     }
-    cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
+    set_palette_source(cr, face.fill);
     cairo_rectangle(cr, bx, lane.y, box_w, lane.h);
     cairo_fill(cr);
-    cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
+    set_palette_source(cr, face.edge);
     cairo_rectangle(cr, bx, lane.y, box_w, edge_h);
     cairo_fill(cr);
     // THE CLOSING COLUMN, when the field is the run's last box: the field's
@@ -2988,7 +3076,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // of this box), standing just past the fill, OUTSIDE the text viewport, so
     // nothing the viewport or the view offset computed moves.
     if (field_close_w > 0) {
-        cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
+        set_palette_source(cr, face.border);
         cairo_rectangle(cr, bx + box_w, lane.y, field_close_w, lane.h);
         cairo_fill(cr);
     }
@@ -3072,8 +3160,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     if (has_sel) {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                             kRedesignAccent.b);
+        set_palette_source(cr, kRedesignAccent);
         cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_fill(cr);
         cairo_restore(cr);
@@ -3082,7 +3169,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE RUN, SHOWN ONCE PER REGION (the ruling in the block above): the
     // whole run in the lane's black off the band, the whole run again in the
     // label white on it, neither reaching a pixel the other painted.
-    cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+    set_palette_source(cr, face.label);
     if (!has_sel) {
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
     } else {
@@ -3116,8 +3203,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         cairo_save(cr);
         cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_clip(cr);
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        set_palette_source(cr, kRedesignLabel);
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
         cairo_restore(cr);
     }
@@ -3134,7 +3220,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             static_cast<int>(std::nearbyint(text_origin_x + caret_off));
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+        set_palette_source(cr, face.label);
         cairo_rectangle(cr, cx, band_y, caret_px, band_h);
         cairo_fill(cr);
         cairo_restore(cr);

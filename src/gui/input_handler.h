@@ -3646,6 +3646,21 @@ private:
     // already written the live struct and the file and gated the no-op case.
     void apply_max_waveform_height(int authored_px);
 
+    // THE PALETTE KNOB'S LIVE APPLY (the device config's `palette_passes` and
+    // `waveform_passes`, architect 2026-10-02 — the model is at the palette
+    // head, render.h): install both values into the renderer's one knob owner
+    // (set_palette_passes), damage the WHOLE WINDOW — the plain whole-surface
+    // invalidate, nothing having moved geometrically, so the resize path owes
+    // nothing — and take the synchronous plate route
+    // (Viewport::kick_waveform_sync), so the plate re-renders in its new words
+    // and the flag cache repaints under its new passes, both by fingerprint
+    // field (fp_plate_words, fp_palette_passes), in the frame the commit
+    // paints rather than a tick later. It ASSIGNS AND PERSISTS NOTHING: its
+    // sole caller, the settings editor's device-key body
+    // (commit_device_setting), has already written the live struct and the
+    // file and gated the no-op case.
+    void apply_palette_passes(double chrome, double waveform);
+
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the
     // bit: bare `o` on the active tab, which the icon row's Lock button

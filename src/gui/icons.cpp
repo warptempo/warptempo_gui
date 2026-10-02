@@ -1632,7 +1632,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         // enabled caller takes) returns the table's color bit-identically, so
         // the enabled path is unchanged by the existence of this one.
         const GuiColor c = mix_color(p.ink, mixed_with, keep_own);
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        set_palette_source(cr, c);
         cairo_fill(cr);
         cairo_restore(cr);
     }

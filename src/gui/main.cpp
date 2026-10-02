@@ -3310,6 +3310,14 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
+    // THE PALETTE'S TUNING KNOB RIDES IT TOO (the device config's
+    // `palette_passes` and `waveform_passes`, architect 2026-10-02): installed
+    // before the first frame so the first paint is already in the configured
+    // palette, and live at the settings editor's commit (commit_device_setting
+    // then GuiInputHandler::apply_palette_passes). The readers are
+    // tuned_palette and tuned_waveform (render.h).
+    set_palette_passes(device_config.palette_passes,
+                       device_config.waveform_passes);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under
@@ -3356,8 +3364,9 @@ int gui_main(const char* argument) {
     // a REOPEN (the Open project picker's, or File → Revert's naming the
     // project already open) — and the outcome carries which. WHAT IS
     // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
-    // the renderer's file-scope scale (set_gui_scale_percent) and waveform cap
-    // (set_max_waveform_height_px), the text
+    // the renderer's file-scope scale (set_gui_scale_percent), waveform cap
+    // (set_max_waveform_height_px) and palette knob (set_palette_passes), the
+    // text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),
     // the bottom row's clock metrics memo (keyed on the text size, not the
     // piece), the modal session-id counter (text_editor::next_session_id —

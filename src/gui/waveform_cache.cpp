@@ -42,6 +42,7 @@ void render_waveform_to_cache_surface(
     int area_h,
     int inset_px,
     int line_px,
+    const WaveformPlateWords& plate_words,
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,
@@ -104,8 +105,9 @@ void render_waveform_to_cache_surface(
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
     // ROW 6: the plate's inks are constexpr (kWaveformInk and
-    // kWaveformForegroundOutline, render.h), read by render_waveform itself,
-    // so they need no fingerprint term: a retune is a recompile. The lamp
+    // kWaveformForegroundOutline, render.h) put through the palette's tuning
+    // knob into `plate_words` on the GUI thread (waveform_plate_words), a
+    // job input and a fingerprint field like the line width below. The lamp
     // dark, the raw bar alone in the plate's ink; lit, each column paints its
     // OUTER bar (the levelled, expanded one) and its INNER bar (the
     // compressed, expanded one) over it, both in the plate's ink, the inner
@@ -125,9 +127,9 @@ void render_waveform_to_cache_surface(
     // distance (render_waveform), so it is a render input and a fingerprint
     // field like the inset.
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, gain, line_px, warp_frame_map_or_null);
+                    basis, gain, line_px, plate_words, warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, gain, line_px, warp_frame_map_or_null);
+                    basis, gain, line_px, plate_words, warp_frame_map_or_null);
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------
@@ -179,6 +181,9 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
     in.line_px       = waveform_line_px();
+    // The plate's words through the palette's tuning knob, read here on the
+    // GUI thread (waveform_plate_words, render.h) for the same reason.
+    in.plate_words   = waveform_plate_words();
     // The waveform PICTURE's gain field — the gate's whole answer off the
     // magnification lamp (waveform_gain_fingerprint,
     // which owns the rule; the `h` view's plate included, it being the live
@@ -261,6 +266,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         int     fp_aw,   int     fp_ah,
         int     fp_inset,
         int     fp_line,
+        const WaveformPlateWords& fp_words,
         uint64_t fp_gain,
         bool    fp_t,
         uint64_t fp_h) -> bool {
@@ -270,6 +276,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_ah   != in.area_h)          return true;
         if (fp_inset != in.inset_px)       return true;
         if (fp_line  != in.line_px)        return true;
+        if (fp_words != in.plate_words)    return true;
         if (fp_gain != in.gain_hash) return true;
         if (fp_t    != in.is_target)       return true;
         if (fp_h    != in.warp_frame_map_hash) return true;
@@ -283,6 +290,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_inset_px,
         wf_cache.pending_fp_line_px,
+        wf_cache.pending_fp_plate_words,
         wf_cache.pending_fp_gain_hash,
         wf_cache.pending_fp_target,
         wf_cache.pending_fp_warp_frame_map_hash);
@@ -302,6 +310,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_inset_px    = in.inset_px;
         wf_cache.supersede_line_px     = in.line_px;
+        wf_cache.supersede_plate_words = in.plate_words;
         wf_cache.supersede_gain_hash = in.gain_hash;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -332,6 +341,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.area_h         = in.area_h;
     job.inset_px       = in.inset_px;
     job.line_px        = in.line_px;
+    job.plate_words    = in.plate_words;
     job.gain_hash = in.gain_hash;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
@@ -351,6 +361,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_inset_px = in.inset_px;
     wf_cache.pending_fp_line_px  = in.line_px;
+    wf_cache.pending_fp_plate_words = in.plate_words;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -411,6 +422,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
         wf_cache.pending_fp_inset_px            = wf_cache.fp_inset_px;
         wf_cache.pending_fp_line_px             = wf_cache.fp_line_px;
+        wf_cache.pending_fp_plate_words         = wf_cache.fp_plate_words;
         wf_cache.pending_fp_gain_hash   = wf_cache.fp_gain_hash;
         wf_cache.pending_fp_target              = wf_cache.fp_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
@@ -468,6 +480,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_h         = sh;
         job.inset_px       = wf_cache.supersede_inset_px;
         job.line_px        = wf_cache.supersede_line_px;
+        job.plate_words    = wf_cache.supersede_plate_words;
         job.gain_hash = wf_cache.supersede_gain_hash;
         job.target         = wf_cache.supersede_target;
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
@@ -488,6 +501,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_h      = sh;
         wf_cache.pending_fp_inset_px = wf_cache.supersede_inset_px;
         wf_cache.pending_fp_line_px  = wf_cache.supersede_line_px;
+        wf_cache.pending_fp_plate_words = wf_cache.supersede_plate_words;
         wf_cache.pending_fp_gain_hash = wf_cache.supersede_gain_hash;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.supersede_warp_frame_map_hash;
@@ -515,6 +529,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
     wf_cache.fp_inset_px = wf_cache.pending_fp_inset_px;
     wf_cache.fp_line_px  = wf_cache.pending_fp_line_px;
+    wf_cache.fp_plate_words = wf_cache.pending_fp_plate_words;
     wf_cache.fp_gain_hash = wf_cache.pending_fp_gain_hash;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
@@ -707,7 +722,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // in.audio is the source audio.
     render_waveform_to_cache_surface(
         wf_cache.surface,
-        in.area_w, in.area_h, in.inset_px, in.line_px,
+        in.area_w, in.area_h, in.inset_px, in.line_px, in.plate_words,
         *in.audio,
         in.vp_start, in.painter_spp, in.gain_hash != 0,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
@@ -722,6 +737,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_area_h       = in.area_h;
     wf_cache.fp_inset_px = in.inset_px;
     wf_cache.fp_line_px  = in.line_px;
+    wf_cache.fp_plate_words = in.plate_words;
     wf_cache.fp_gain_hash = in.gain_hash;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = in.is_target;
@@ -733,6 +749,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_area_h       = in.area_h;
     wf_cache.pending_fp_inset_px = in.inset_px;
     wf_cache.pending_fp_line_px  = in.line_px;
+    wf_cache.pending_fp_plate_words = in.plate_words;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -1068,6 +1085,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THE SCALE THE FLAG PIXELS ARE LAID OUT AT, keyed by field (contract at
     // FlagCache::fp_gui_scale_percent).
     const int gui_scale = gui_scale_percent();
+    // THE CHROME'S PASSES the flag pixels are painted under, keyed by field
+    // (contract at FlagCache::fp_palette_passes).
+    const double chrome_passes = palette_passes();
 
     // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
     // positioned at marker times only.
@@ -1156,6 +1176,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_gui_scale_percent       == gui_scale &&
+        flag_cache.fp_palette_passes          == chrome_passes &&
         flag_cache.fp_target                  == is_target &&
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
         flag_cache.fp_warp_generation   == warp_gen &&
@@ -1365,6 +1386,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_gui_scale_percent       = gui_scale;
+    flag_cache.fp_palette_passes          = chrome_passes;
     flag_cache.fp_target                  = is_target;
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
     flag_cache.fp_warp_generation   = warp_gen;

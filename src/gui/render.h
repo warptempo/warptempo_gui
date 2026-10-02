@@ -42,7 +42,8 @@ struct GuiColor {
 
 // Build a GuiColor from a 0xRRGGBB hex literal, converting each 8-bit
 // channel to an exact [0,1] double. constexpr so palette constants stay
-// compile-time. RGB only (the renderer uses cairo_set_source_rgb); if an
+// compile-time. RGB only (the renderer hands colours to cairo through
+// set_palette_source and its two siblings, below); if an
 // alpha channel is ever needed, add a separate 0xRRGGBBAA overload rather
 // than widening this one.
 inline constexpr GuiColor hex(uint32_t rgb) {
@@ -104,7 +105,30 @@ struct TrimRange {
 // recompile. Every painted surface in the product takes its value from one of
 // these constants, WITH NO EXCEPTION: the waveform's inks were device-config
 // keys for short tuning phases (2026-09-25..27) and are constexpr at row 6
-// below, on the values the architect closed them on by eye.
+// below, on the values the architect closed them on by eye. ONE STEP STANDS
+// BETWEEN A CONSTANT AND CAIRO since 2026-10-02: the palette's tuning knob
+// (the paragraph below), which every colour passes through at the very call
+// that hands it to cairo, so the constants stay the authored palette.
+//
+// THE PALETTE'S TUNING KNOB (architect 2026-10-02). The tablet's screencaps
+// carry the panel's Display-P3 coordinates — these sRGB constants, converted
+// once by the compositor — and the gallery viewer showed him those PNGs with
+// one more sRGB -> Display-P3 pass, so every mock-up he judged was this
+// palette put through one or two EXTRA passes of that matrix in linear light:
+// paler, less saturated, hues a touch toward red. He prefers that paleness for
+// the chrome ("the desaturation and paleness of whatever process was doubled
+// ... pretty good") and tunes it in the app rather than on more mock-ups. ONE
+// EXTRA PASS IS ABOUT WHAT THE VIEWER SHOWED HIM. The knob is two device
+// config keys with Settings rows (device_config.h): `palette_passes` for the
+// chrome and `waveform_passes` for the waveform's canvas, its plate inks and
+// the region lift, both 0 by default, 0 being today's picture byte for byte.
+// THE WAVEFORM HAS ITS OWN KEY because he found the transformed ink fringed
+// and holds it where it is, while the canvas, a near-neutral, barely moves
+// under the matrix either way. The model, the one transform and its matrix
+// are at kSrgbToDisplayP3Linear and tuned_palette below. THE PLAN IS THE
+// TUNING RULE's (the hold delay's precedent, kHoldDelayMs, gui_input.h): the
+// values he settles on are hard-coded here and both keys are struck,
+// unknown-key fatal.
 //
 // WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
 // residue. The palette used to be 23 MUTABLE globals overwritten once at startup
@@ -136,6 +160,65 @@ struct TrimRange {
 // (region_lift), keyed by nothing but the plate's BINARY alpha so every
 // pixel ends up fully one color or fully another and nothing blends; a disabled face resolves to a solid color through
 // mix_color before it reaches cairo, never a fade.
+
+// -- THE PALETTE'S TUNING KNOB (architect 2026-10-02; the record is the
+// palette head above) --------------------------------------------------------
+//
+// THE ONE PASS: sRGB-encoded channels decoded to linear light, multiplied by
+// M = inv(M_p3) * M_srgb — the linear sRGB -> Display-P3 matrix, both
+// primaries' RGB -> XYZ matrices at D65 as tmp/palette/derive.py spells them
+// (M_srgb, M_p3, srgb_to_p3), its product printed to double precision — each
+// channel clipped to [0, 1] (an out-of-gamut channel is clipped, never
+// wrapped), and the result read back as sRGB coordinates: the colour the
+// panel shows when Display-P3 numbers are displayed as if they were sRGB. k
+// PASSES is M applied k times in linear light, clipping after each. A
+// FRACTIONAL k takes floor(k) and ceil(k) passes and interpolates between the
+// two linearly in linear light by the fraction, then encodes — exact at the
+// integers. The rows sum to 1 within the source matrices' seven digits, so
+// white and black stay put and greys barely move.
+inline constexpr double kSrgbToDisplayP3Linear[3][3] = {
+    {0.8225928603140232,   0.17753394961590635, -7.2168633569180685e-09},
+    {0.03319951730363724,  0.9667835499233396,   3.1519729982304456e-08},
+    {0.017085351380853327, 0.07239572049899251,  0.9103014476422671},
+};
+
+// THE KNOB'S OWNER — the two installed values, file-scope state in render.cpp
+// beside the waveform cap's, installed the way set_max_waveform_height_px
+// installs the cap: by gui_main's startup read of the device config before the
+// window exists, and by the settings editor's two commits
+// (commit_device_setting, whose live apply is
+// GuiInputHandler::apply_palette_passes). Both 0 until then, the templates'
+// value. `chrome` is the `palette_passes` key, `waveform` the
+// `waveform_passes` key; their range is is_palette_passes (device_config.h).
+// GUI-THREAD STATE: the waveform worker never reads it — the plate's inks ride
+// into the job as words (WaveformPlateWords, below).
+void   set_palette_passes(double chrome, double waveform);
+double palette_passes();    // the installed chrome value (the flag cache keys it)
+
+// THE TWO TRANSFORMS: a colour put through the installed chrome passes, or the
+// installed waveform passes. AT 0 PASSES THE COLOUR COMES BACK UNTOUCHED, a
+// plain return, so the picture with both keys at 0 is the picture before the
+// knob, byte for byte. BLEND BEFORE TRANSFORM: every derivation from the
+// palette — mix_color, hover_fade_color, the disabled face, region_lift —
+// happens in the authored palette and only the colour that reaches cairo is
+// transformed, which is what applying these at the set_source call gives by
+// construction. A 3x3 per call; nothing is ever transformed per pixel.
+GuiColor tuned_palette(GuiColor c);
+GuiColor tuned_waveform(GuiColor c);
+
+// THE CHOKEPOINTS — every colour this product hands cairo goes through one of
+// these three, and no site calls cairo_set_source_rgb(a) itself (re-grepped
+// 2026-10-02: none outside render.cpp's three bodies). The chrome's is
+// set_palette_source; set_palette_source_alpha is the same for the two
+// composited alphas (the playhead head's and the cards' shadow rings), the
+// ALPHA PASSED THROUGH UNTOUCHED — an alpha is not a colour; and
+// set_waveform_source is the waveform's, for its two cairo fills, the canvas
+// (render_canvas) and the region's ground (paint_region_ground). The plate's
+// own pixels are written as words, not through cairo — their transform is at
+// waveform_plate_words.
+void set_palette_source(cairo_t* cr, GuiColor c);
+void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha);
+void set_waveform_source(cairo_t* cr, GuiColor c);
 
 // THE BASE CHROME ERASE (render_background) — and the surviving half of the
 // GROUND SPLIT: this goes under everything, and the redesigned rows then paint
@@ -985,13 +1068,29 @@ inline constexpr GuiColor kWaveformForegroundOutline = hex(0x5990A5);  // (89, 1
 // 2026-08-01: "the waveform highlight should be brighter"; one native step
 // was too quiet to find). ONE OWNER OF THE STEP for both halves of the
 // highlight: kWaveformRegionCanvas below is this step applied to the canvas
-// word at compile time, and paint_region_ink applies it to every opaque plate
-// pixel inside the region, each from its OWN colour, whatever ink the palette
-// holds — no ink is keyed and no lifted constant is pinned, so a change to
-// any ink's or the canvas's constexpr carries its lift with it; at full alpha
-// the premultiplied word (argb32_opaque_word, below) is the colour itself,
-// so lifting the bytes lifts the colour. The ink's lift is (122, 195, 224) +
+// word at compile time, and the plate's two inks take it from their own
+// authored words (WaveformPlateWords, below), whatever inks the palette
+// holds — no lifted constant is pinned, so a change to any ink's or the
+// canvas's constexpr carries its lift with it; at full alpha the
+// premultiplied word (argb32_opaque_word, below) is the colour itself, so
+// lifting the bytes lifts the colour. The ink's lift is (122, 195, 224) +
 // (18, 18, 20) = #8cd5f4.
+//
+// UNDER THE PALETTE'S TUNING KNOB (architect 2026-10-02, the waveform's key
+// `waveform_passes`): THE LIFT IS TAKEN IN THE AUTHORED PALETTE AND THE
+// RESULT TRANSFORMED, for both halves alike. The ground is
+// tuned_waveform(kWaveformRegionCanvas) at its fill (set_waveform_source,
+// paint_region_ground). The ink's half had a choice, and THE ONE TAKEN IS THE
+// MAP: the plate carries exactly two opaque words, the transformed ink and
+// the transformed outline, and paint_region_ink rewrites each as ITS TWIN —
+// the authored word lifted, then transformed — both pairs built together
+// once per render and published with the plate (WaveformPlateWords,
+// WaveformCache::fp_plate_words), so the pass maps the very words the pixels
+// on screen were written with. The other shape, lifting the transformed word
+// directly, would have put the ink's lift after the transform and the
+// ground's before it — the two halves of one highlight on two rules; the map
+// keeps them on one, with no asymmetry left. At 0 passes the twin is
+// region_lift of the word exactly, the pass before the knob.
 inline constexpr uint32_t region_lift(uint32_t word) {
     const auto lift = [](uint32_t byte, uint32_t step) {
         return byte + step > 255u ? 255u : byte + step;
@@ -1017,7 +1116,8 @@ inline constexpr GuiColor kWaveformRegionCanvas = hex(region_lift(kWaveformCanva
 // highlight"). The ground recolor alone lit the background behind unlit
 // content; lifting the ink too makes the span read as ONE lit region. It is
 // no constant: paint_region_ink, a second pass AFTER the blit, writes every
-// opaque plate pixel inside the span as its own colour lifted by region_lift,
+// opaque plate pixel inside the span as its own colour lifted by region_lift
+// (through the plate's word map under the palette's tuning knob, above),
 // so every gap is left untouched, still showing this ground. Still fully
 // opaque, not a wash.
 //
@@ -2912,6 +3012,30 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
            (static_cast<uint32_t>(std::nearbyint(c.b * 255.0)));
 }
 
+// THE PLATE'S WORDS (architect 2026-10-02, the palette's tuning knob): the
+// two opaque words the plate's writer stores — the ink (kWaveformInk, the
+// dark lamp's bar and both lit bars' fill) and the lit inner bar's outline
+// (kWaveformForegroundOutline) — each through tuned_waveform, and beside each
+// the word the region highlight writes over it: the AUTHORED word lifted by
+// region_lift, THEN through tuned_waveform, so the ink's lift follows the
+// same "lift in the authored palette, transform the result" rule the region's
+// ground does (kWaveformRegionCanvas through set_waveform_source). At 0 passes
+// every word is exactly what the writer and region_lift produced before the
+// knob. Built ONCE PER RENDER on the GUI thread (waveform_plate_words, which
+// reads the installed knob) and carried into the worker's job, so the worker
+// reads no knob, and kept with the plate as a FINGERPRINT FIELD
+// (WaveformCache::fp_plate_words): a knob commit re-renders the plate by
+// field, and paint_region_ink maps the published plate's own words — the
+// words the pixels on screen were written with — to their lifted twins.
+struct WaveformPlateWords {
+    uint32_t ink            = 0;
+    uint32_t outline        = 0;
+    uint32_t ink_lifted     = 0;
+    uint32_t outline_lifted = 0;
+    bool operator==(const WaveformPlateWords&) const = default;
+};
+WaveformPlateWords waveform_plate_words();
+
 // Draws one channel's waveform into `area`, which holds the `area.w` columns
 // starting at GLOBAL column `col0` — i.e. the column sub-range [col0,
 // col0+area.w) of `basis`. Both callers are full-plate renders and pass
@@ -3057,7 +3181,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // The outline recolours pixels of the bar's own shape and adds none, each
 // written once with the fill's word or the outline's. paint_region_ink lifts
 // outline pixels as it lifts every opaque plate pixel, from the pixel's own
-// colour. Nothing else in this painter moves
+// authored colour (the plate's word map, at region_lift). Nothing else in
+// this painter moves
 // (the column grid, the >=1px floor, the carried-endpoint chain and the
 // aliased-only writer are untouched). A loud passage's outer clips flat at
 // the lane's edges while the inner still shows its compressed height inside
@@ -3159,6 +3284,7 @@ void render_waveform(cairo_surface_t* dest,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
                      int outline_px,
+                     const WaveformPlateWords& plate_words,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a waveform_line_px()-wide vertical LINE across `area` at the column

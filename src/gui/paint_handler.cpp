@@ -96,7 +96,7 @@ static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
                             std::string_view text, GuiColor color) {
     if (text.empty()) return 0.0;
     const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
-    cairo_set_source_rgb(cr, color.r, color.g, color.b);
+    set_palette_source(cr, color);
     text_shape::show_shaped_run(cr, run, x, baseline);
     return run.width_px;
 }
@@ -451,12 +451,12 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
                                static_cast<double>(h - lw),
                                radius - half);
     if (fill != nullptr) {
-        cairo_set_source_rgb(cr, fill->r, fill->g, fill->b);
+        set_palette_source(cr, *fill);
         if (line != nullptr) cairo_fill_preserve(cr);
         else                 cairo_fill(cr);
     }
     if (line != nullptr) {
-        cairo_set_source_rgb(cr, line->r, line->g, line->b);
+        set_palette_source(cr, *line);
         cairo_set_line_width(cr, static_cast<double>(lw));
         cairo_stroke(cr);
     }
@@ -1358,7 +1358,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // the whole lane. It has one value focused and unfocused, so this row no
     // longer darkens on the window's focus loss.
     const GuiColor ground = kRedesignContentGround;
-    cairo_set_source_rgb(cr, ground.r, ground.g, ground.b);
+    set_palette_source(cr, ground);
     cairo_rectangle(cr, row.x, row.y, row.w, row.h);
     cairo_fill(cr);
 
@@ -1470,8 +1470,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             face.enabled &&
             (open_anchor || redesign_button_hover_steps(face) > 0);
         if (pill) {
-            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                                 kRedesignAccent.b);
+            set_palette_source(cr, kRedesignAccent);
             redesign_rounded_rect_path(cr, x, row.y,
                                        static_cast<double>(btn_w),
                                        static_cast<double>(row.h), rad);
@@ -1487,7 +1486,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (keep above) — mixed toward the ROW GROUND, which is what is under
         // it there, since a dead button never wears the pill.
         const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
-        cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
+        set_palette_source(cr, label_c);
         // THE LABEL CENTERS IN THE PILL, which IS the lane: the pill is the
         // button, and Qt's own menu bar centers an item's text in the item
         // rect — the crop's File sits 9 rows under the pill's top and 9 above
@@ -1523,8 +1522,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             text_shape::shape_text_run(font, app.menu_legend.text);
         const int right = row.x + row.w - icon_row_pad_x();
         const int lx = right - static_cast<int>(std::nearbyint(run.width_px));
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        set_palette_source(cr, kRedesignLabel);
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(lx),
             redesign_baseline(font, static_cast<double>(row.y),
@@ -1799,9 +1797,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
     cairo_save(cr);
 
-    cairo_set_source_rgb(cr, kRedesignContentGround.r,
-                         kRedesignContentGround.g,
-                         kRedesignContentGround.b);
+    set_palette_source(cr, kRedesignContentGround);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
 
@@ -2032,8 +2028,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         if (!first) {
             if (redesign_button_opens_icon_group(def.id)) {
                 x += sep_gap;
-                cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                                     kRedesignTabLine.b);
+                set_palette_source(cr, kRedesignTabLine);
                 cairo_rectangle(cr, x, sep_y, sep_w, sep_h);
                 cairo_fill(cr);
                 x += sep_w + sep_gap;
@@ -2055,8 +2050,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     int vx = view_x0;
     for (const IconRowDef& def : kIconRowViewGroup) {
         if (redesign_button_opens_icon_group(def.id)) {
-            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                                 kRedesignTabLine.b);
+            set_palette_source(cr, kRedesignTabLine);
             cairo_rectangle(cr, view_sep_x, sep_y, sep_w, sep_h);
             cairo_fill(cr);
         }
@@ -2558,8 +2552,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int sep_y   = content_y + (content_h - sep_h) / 2;
     const auto paint_separator = [&](int pen) {
         pen += sep_gap - btn_gap;
-        cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                             kRedesignTabLine.b);
+        set_palette_source(cr, kRedesignTabLine);
         cairo_rectangle(cr, pen, sep_y, sep_w, sep_h);
         cairo_fill(cr);
         return pen + sep_w + sep_gap;
@@ -3083,8 +3076,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // laid end to end with the authored gap between them, which is what makes
     // the symmetry above true of the ink and not merely of the arithmetic.
     cairo_set_font_size(cr, size1);
-    cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                         kRedesignLabel.b);
+    set_palette_source(cr, kRedesignLabel);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
         line_baseline(cairo_get_scaled_font(cr),
@@ -3094,7 +3086,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         // The hint line is DIMMED by the one measured factor, uniformly.
         const GuiColor dim =
             mix_color(kRedesignLabel, kRedesignRowGround, kRedesignDimMix);
-        cairo_set_source_rgb(cr, dim.r, dim.g, dim.b);
+        set_palette_source(cr, dim);
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
             line_baseline(cairo_get_scaled_font(cr),
@@ -3429,7 +3421,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                     static_cast<double>(c.card.w + 2 * j),
                     static_cast<double>(c.card.h + 2 * j),
                     rad + static_cast<double>(j));
-                cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, a);
+                set_palette_source_alpha(cr, GuiColor{0.0, 0.0, 0.0}, a);
                 cairo_fill(cr);
             }
             cairo_pop_group_to_source(cr);
@@ -3464,8 +3456,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            set_palette_source(cr, kRedesignLabel);
             // The FIRST line's baseline is the one-line card's, solved over
             // the first line's own band; each further line is one face
             // line-height lower.
@@ -3672,8 +3663,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         if (row.separator_before) {
             // 1px line, inset horizontally, with its own vertical margin against
             // the item on each side. Pixel-bound fill, crisp by construction.
-            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                                 kRedesignTabLine.b);
+            set_palette_source(cr, kRedesignTabLine);
             cairo_rectangle(cr, x + sep_inset, iy + sep_mar,
                             w - 2 * sep_inset, border);
             cairo_fill(cr);
@@ -3724,8 +3714,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             // box corner), which is what the crops show — each saturates in the
             // same column.
             if (pressed) {
-                cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                                     kRedesignAccent.b);
+                set_palette_source(cr, kRedesignAccent);
                 redesign_rounded_rect_path(cr, item.x, item.y,
                                            static_cast<double>(item.w),
                                            static_cast<double>(item.h), radius);
@@ -3761,7 +3750,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // for the press's duration.
         const GuiColor& label_ink =
             enabled[i] ? kRedesignLabel : kRedesignPopupDisabledLabel;
-        cairo_set_source_rgb(cr, label_ink.r, label_ink.g, label_ink.b);
+        set_palette_source(cr, label_ink);
         text_shape::show_shaped_run(cr, runs[i],
                                     static_cast<double>(x + pad_l), base);
 
@@ -3793,7 +3782,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
                 pressed    ? kRedesignLabel
                 : enabled[i] ? kRedesignPopupHotkey
                              : kRedesignPopupDisabledHotkey;
-            cairo_set_source_rgb(cr, hot_ink.r, hot_ink.g, hot_ink.b);
+            set_palette_source(cr, hot_ink);
             text_shape::show_shaped_run(cr, hot_runs[i], hot_x, base);
         }
         iy += item_h;
@@ -3897,9 +3886,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    cairo_set_source_rgb(cr, kRedesignContentGround.r,
-                         kRedesignContentGround.g,
-                         kRedesignContentGround.b);
+    set_palette_source(cr, kRedesignContentGround);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
 
@@ -4015,7 +4002,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const bool major = (i == 0);
             // waveform_line_px() wide (render.h, the class's one inventory),
             // left edge on the tick's own column, clipped at the right edge.
-            cairo_set_source_rgb(cr, kRulerTick.r, kRulerTick.g, kRulerTick.b);
+            set_palette_source(cr, kRulerTick);
             fill_waveform_line(cr, lane.x, wave_w, col,
                                major ? major_top : minor_top, tick_bottom);
             if (!major) continue;
@@ -4038,8 +4025,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 text_shape::shape_text_run(font, txt.c_str());
             // EVERY LABEL IS ONE COLOUR, kRulerLabel (architect 2026-10-02,
             // on the Y1 mock: "give the same colour to all the numbers").
-            cairo_set_source_rgb(cr, kRulerLabel.r, kRulerLabel.g,
-                                 kRulerLabel.b);
+            set_palette_source(cr, kRulerLabel);
             text_shape::show_shaped_run(cr, run,
                                         static_cast<double>(lane.x + col +
                                                             waveform_line_px() +
@@ -4147,8 +4133,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
             cairo_clip(cr);
-            cairo_set_source_rgba(cr, head.r, head.g, head.b,
-                                  kPlayheadHeadAlpha);
+            set_palette_source_alpha(cr, head, kPlayheadHeadAlpha);
             for (int r = 0; r < rows; ++r) {
                 // Each device row reads its SOURCE row's half-width through the
                 // ONE silhouette accessor (playhead_head_half_px, render.h),
@@ -4162,8 +4147,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             cairo_restore(cr);
 
             if (!playhead_stem_suppressed()) {
-                cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g,
-                                     kPlayheadStem.b);
+                set_palette_source(cr, kPlayheadStem);
                 fill_waveform_line(cr, lane.x, wave_w, col, marker.y,
                                    marker.y + marker.h);
             }
@@ -4282,10 +4266,11 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // -- GuiPaintHandler::paint_region_ground --------------------------------
 
 // THE REGION HIGHLIGHT'S GROUND HALF (the Ableton model, architect 2026-07-26):
-// the span's CANVAS becomes the opaque kWaveformRegionCanvas over
-// the full
-// content height. Called from on_redraw after render_canvas and BEFORE
-// paint_waveform_plate, so the ARGB32 plate composites over the recolored
+// the span's CANVAS becomes the opaque kWaveformRegionCanvas over the full
+// content height, through the waveform's tuning knob (set_waveform_source —
+// the lift taken in the authored palette and the result transformed, the
+// rule at region_lift, render.h). Called from on_redraw after render_canvas
+// and BEFORE paint_waveform_plate, so the ARGB32 plate composites over the recolored
 // ground — and since the aliased renderer's alpha is BINARY (the antialiased
 // plate is deleted; docs/engineering/waveform_antialiasing_retired.md), an ink
 // pixel is fully opaque and a gap fully transparent, so this fill shows through
@@ -4327,8 +4312,7 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
     const GuiRect content = waveform_content_rect(area);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, kWaveformRegionCanvas.r, kWaveformRegionCanvas.g,
-                         kWaveformRegionCanvas.b);
+    set_waveform_source(cr, kWaveformRegionCanvas);
     cairo_rectangle(cr, x0, static_cast<double>(content.y),
                     x1 - x0, static_cast<double>(content.h));
     cairo_fill(cr);
@@ -4348,14 +4332,19 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 // retired form the opaque recolor model rejects. The plate's inks are
 // render.h's — kWaveformInk dark, and with the magnification lamp lit
 // kWaveformInk for both bars with the inner's kWaveformForegroundOutline
-// — yet the pass
-// keys on no known word and pins no lifted constant; each pixel is lifted
-// from ITS OWN colour, so the rule holds whatever inks the plate wears. The pass reads the
-// plate's ARGB32 words directly inside (the region's column span) INTERSECT
-// (the content band) INTERSECT (the frame's damage clip), and writes every
-// OPAQUE plate pixel (alpha byte 0xFF) into the window surface as region_lift
-// of its word (render.h: +18 / +18 / +20 per channel, saturating, the doubled
-// Breeze step documented at region_lift). A
+// — and the pass pins no lifted constant: each pixel is lifted from ITS OWN
+// authored colour, so the rule holds whatever inks the plate wears. The pass
+// reads the plate's ARGB32 words directly inside (the region's column span)
+// INTERSECT (the content band) INTERSECT (the frame's damage clip), and writes
+// every OPAQUE plate pixel (alpha byte 0xFF) into the window surface as ITS
+// WORD'S LIFTED TWIN (render.h: region_lift's +18 / +18 / +20 per channel,
+// saturating, the doubled Breeze step, taken on the AUTHORED word and then put
+// through the waveform's tuning knob — the map and why it is the map are at
+// region_lift). THE PLATE CARRIES EXACTLY TWO OPAQUE WORDS, the ink and the
+// outline (render_waveform writes no other), and the twins are the ones
+// published WITH the plate (WaveformCache::fp_plate_words), so the map keys on
+// the words the blitted pixels were written with, never on the live knob; a
+// pixel that is not the ink is the outline. A
 // transparent plate pixel is left alone, so the kWaveformRegionCanvas ground
 // the previous pass laid down still shows through the gaps unchanged. The
 // alpha is still BINARY (the antialiased plate is deleted;
@@ -4444,6 +4433,9 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
     const int plate_stride = cairo_image_surface_get_stride(plate);
     const int plate_w      = cairo_image_surface_get_width(plate);
     const int plate_h      = cairo_image_surface_get_height(plate);
+    // The published plate's two words and their lifted twins (the map's
+    // contract is above).
+    const WaveformPlateWords& words = wf_cache.fp_plate_words;
 
     for (int k = 0; k < clip->num_rectangles; ++k) {
         const cairo_rectangle_t& r = clip->rectangles[k];
@@ -4465,7 +4457,9 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
                 tgt_data + static_cast<size_t>(y) * tgt_stride);
             for (int x = wx0; x < wx1; ++x) {
                 const uint32_t w = src[x - area.x];
-                if ((w >> 24) == 0xFFu) dst[x] = region_lift(w);
+                if ((w >> 24) != 0xFFu) continue;
+                dst[x] = (w == words.ink) ? words.ink_lifted
+                                          : words.outline_lifted;
             }
         }
         cairo_surface_mark_dirty_rectangle(target, wx0, wy0,
@@ -4813,7 +4807,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // cache's fingerprint, whose rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own repaint.
     const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
-    cairo_set_source_rgb(cr, ring.r, ring.g, ring.b);
+    set_palette_source(cr, ring);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
     // bottom border's last), with the verticals spanning every row between them.
@@ -5038,7 +5032,7 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             stem.x - static_cast<double>(area.x)));
         const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
                                                             : stem.color;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        set_palette_source(cr, c);
         fill_waveform_line(cr, area.x, area.w, col, y0, y1);
     }
     cairo_restore(cr);
@@ -5533,13 +5527,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kRedesignContentGround.r,
-                             kRedesignContentGround.g,
-                             kRedesignContentGround.b);
+        set_palette_source(cr, kRedesignContentGround);
         cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
         cairo_fill(cr);
-        cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                             kRedesignTabLine.b);
+        set_palette_source(cr, kRedesignTabLine);
         if (lane.w > 2 * border) {
             cairo_rectangle(cr, lane.x + border, lane.y,
                             lane.w - 2 * border, border);
@@ -6323,8 +6314,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         cairo_save(cr);
         cairo_rectangle(cr, cx0, content.y, msg_clip, content.h);
         cairo_clip(cr);
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        set_palette_source(cr, kRedesignLabel);
         text_shape::show_shaped_run(
             cr, msg, static_cast<double>(cx0),
             redesign_baseline(font, static_cast<double>(content.y),
@@ -6385,8 +6375,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const auto paint_separator = [&](int line_x) {
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                                 kRedesignTabLine.b);
+            set_palette_source(cr, kRedesignTabLine);
             cairo_rectangle(cr, line_x, sep_y, sep_w, sep_h);
             cairo_fill(cr);
             cairo_restore(cr);
@@ -6539,12 +6528,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 cairo_new_path(cr);
                 cairo_arc(cr, static_cast<double>(hx), hcy, hrad,
                           0.0, 2.0 * 3.14159265358979323846);
-                cairo_set_source_rgb(cr, kScrubHandleFill.r, kScrubHandleFill.g,
-                                     kScrubHandleFill.b);
+                set_palette_source(cr, kScrubHandleFill);
                 cairo_fill_preserve(cr);
                 const GuiColor hline =
                     hovered ? kRedesignAccent : kScrubHandleOutline;
-                cairo_set_source_rgb(cr, hline.r, hline.g, hline.b);
+                set_palette_source(cr, hline);
                 cairo_set_line_width(cr, static_cast<double>(gs));
                 cairo_stroke(cr);
                 cairo_restore(cr);
@@ -6746,9 +6734,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 rad - static_cast<double>(fbord));
             cairo_clip(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kMarkerFlagEdgeRedSel.r,
-                                 kMarkerFlagEdgeRedSel.g,
-                                 kMarkerFlagEdgeRedSel.b);
+            set_palette_source(cr, kMarkerFlagEdgeRedSel);
             cairo_rectangle(cr, field_inner.x, field_inner.y,
                             field_inner.w, marker_flag_edge_h_px());
             cairo_fill(cr);
@@ -6866,15 +6852,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                                 kRedesignAccent.b);
+            set_palette_source(cr, kRedesignAccent);
             cairo_rectangle(cr, hx0, band_y,
                             (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
             cairo_fill(cr);
             cairo_restore(cr);
         }
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        set_palette_source(cr, kRedesignLabel);
         text_shape::show_shaped_run(cr, run, tx, baseline);
         // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
         // IT (architect 2026-08-13, at his live test: "the blinking caret, the
@@ -6894,8 +6878,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const double caret_x = tx + caret_off;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            set_palette_source(cr, kRedesignLabel);
             cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
                             band_y, caret_px, band_h);
             cairo_fill(cr);
@@ -7247,9 +7230,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // as one block and a seam between them would draw a border through the
     // middle of it. The 1px line below the band belongs to the BOTTOM ROW (its
     // own border-top, painted by that row's body).
-    cairo_set_source_rgb(cr, kRedesignContentGround.r,
-                         kRedesignContentGround.g,
-                         kRedesignContentGround.b);
+    set_palette_source(cr, kRedesignContentGround);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
 
@@ -7318,8 +7299,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 r.x + (r.w - run.width_px) * 0.5);
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            set_palette_source(cr, kRedesignLabel);
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
         });
 
@@ -7450,8 +7430,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // RECT'S CLIP, because a scrolled listing's first and last rows straddle
     // the content's edges and must not paint into the waveform above, the
     // bottom row below, or the band's own top border.
-    cairo_set_source_rgb(cr, kModalFieldGround.r, kModalFieldGround.g,
-                         kModalFieldGround.b);
+    set_palette_source(cr, kModalFieldGround);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
@@ -7578,8 +7557,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            set_palette_source(cr, kRedesignLabel);
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);

@@ -172,6 +172,13 @@ struct Viewport {
     //    plate CONTENT change with no geometry behind it, so the reclamp below
     //    is a pure no-op for it. It touches no audio: the gain is the
     //    picture's.
+    //  - THE PALETTE'S TUNING KNOB (architect 2026-10-02): the settings
+    //    editor's `palette_passes=` / `waveform_passes=` commit, through
+    //    GuiInputHandler::apply_palette_passes. The gain's class exactly — a
+    //    CONTENT change with no geometry behind it: the waveform's passes move
+    //    the plate's words (WaveformCache::fp_plate_words) and the chrome's
+    //    move the flag cache's fp_palette_passes, each BY FIELD, and the kick
+    //    lands both in the frame the commit paints instead of a tick late.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries

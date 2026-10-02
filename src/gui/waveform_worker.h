@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render.h"           // WaveformPlateWords
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <atomic>
@@ -59,6 +60,13 @@ struct WaveformJob {
     // the inset for the same reason: the lit inner bar's outline erodes at
     // that distance.
     int       line_px          = 0;
+    // THE PLATE'S WORDS (waveform_plate_words, render.h): the ink and outline
+    // through the palette's tuning knob, built on the GUI thread at dispatch
+    // beside the geometry, so the worker reads no knob. Also a FINGERPRINT
+    // field (WaveformCache::fp_plate_words): a `waveform_passes` commit
+    // re-renders the plate by field. The two lifted twins ride along unused by
+    // the render — they are published with the plate for paint_region_ink.
+    WaveformPlateWords plate_words;
 
     // THE WAVEFORM'S GAIN FIELD (waveform_gain_fingerprint,
     // warp_frame_map_view.h, which owns the gate): the derivation's version
@@ -183,9 +191,11 @@ private:
 // the GUI thread (force_synchronous_waveform_rebuild), touching only the
 // supplied dest surface, the audio handle's peak pyramid (read-only after
 // load), the caller's warp_frame_map snapshot, and the job-captured geometry
-// scalars (area_w/area_h/inset_px/line_px) — no other shared or main-thread
-// state. The inset, the line width and the MAGNIFICATION are passed in rather than read off live state so
-// the render touches no gui_scale and no settings state: ALL scale-dependent
+// scalars (area_w/area_h/inset_px/line_px) and the plate's words — no other
+// shared or main-thread state. The inset, the line width, the plate's words
+// and the MAGNIFICATION are passed in rather than read off live state so
+// the render touches no gui_scale, no palette knob and no settings state: ALL
+// scale-dependent
 // geometry
 // is snapshotted on the GUI thread at dispatch, closing the race with a
 // mid-render set_gui_scale_percent. Such a job COMPLETES from its coherent
@@ -201,6 +211,7 @@ void render_waveform_to_cache_surface(
     int area_h,
     int inset_px,
     int line_px,
+    const WaveformPlateWords& plate_words,
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,
