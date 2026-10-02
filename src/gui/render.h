@@ -515,10 +515,10 @@ inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 // THE NOTIFICATION CARDS' DROP SHADOW (architect 2026-10-01, his pick of the
 // S4 mock: "a light and close-by shadow, a tight, small shadow") — THE
 // PALETTE'S SECOND COMPOSITING ALPHA, after the playhead head's above. The
-// mock, at 200 % on the tablet, was the card's rect offset 2 device px down
-// and blurred by a ~2 px gaussian, black at 80 % at the edge; AUTHORED, at
-// 100 %: the card's rect OFFSET this far down, black at
-// kNotificationShadowAlpha over that offset rect and at its edge, falling
+// mock, at 200 % on the tablet, was the card's rect offset 2 device px down,
+// black at 80 % and blurred by a ~2 px gaussian; AUTHORED, at 100 %: the
+// card's rect OFFSET this far down, black at kNotificationShadowAlpha over
+// that offset rect and at its edge, falling
 // linearly to nothing across a SPREAD this wide outward from it — painted as
 // one device-pixel ring per pixel of the scaled spread, the k-th of n at
 // alpha·(n − k)/n (paint_notifications draws it and states the order: every
@@ -536,9 +536,16 @@ inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 // 2026-10-01), the edge the eye reads being the card's. NO SETTINGS KEY: the
 // design is committed on the mock (a temporary key comes only if he asks
 // for a tune).
+// THE ALPHA IS 0.4, HALF THE MOCK'S 80 % (architect 2026-10-02, on the
+// glass: "way too dark, but in a good direction; small and tight, which is
+// good"): a gaussian-blurred step reads half its interior value at its edge,
+// so the mock's darkest pixel beside the card was ~0.4, decaying outward.
+// The rings put the whole number at the edge where the mock's blur put half
+// of it, so the innermost ring carries 0.4 and the same linear fall across
+// the same spread keeps the mock's tight extent.
 inline constexpr double kNotificationShadowOffsetPx = 1.0;
 inline constexpr double kNotificationShadowSpreadPx = 3.0;
-inline constexpr double kNotificationShadowAlpha    = 0.8;
+inline constexpr double kNotificationShadowAlpha    = 0.4;
 
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
 // selected,red}.png (56x20, and 56x17 for red). Each class is a FILL plus a
