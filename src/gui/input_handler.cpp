@@ -3337,9 +3337,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // waveform and the bottom row, needs no band of its own — it lies below
     // every area this probe tests, so a wheel there falls to the no-context 0
     // exactly as the old blank foot's did — while GAP 1, BETWEEN THE ICON ROW
-    // AND THE TAB ROW since 2026-09-09 (above the menu row 2026-09-03..09,
-    // between the menu row and the centered block from commit B until then;
-    // main.cpp's vertical rule is the owner), lies INSIDE top_strip_area and
+    // AND THE TRIM LANE (main.cpp's vertical rule is the owner), lies INSIDE
+    // top_strip_area and
     // therefore JOINS THE INERT BAND LIST below, that band being no more a
     // panning surface under the toolbar than the blank ground at the
     // window's foot.
@@ -3405,16 +3404,15 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // relayout dissolved row 2 into the icon row, whose band below
             // covers its four buttons now.)
             top_menu_row_area(app),  top_icon_row_area(app),
-            // GAP 1's band, the ONE non-lane member (commit B; between the
-            // icon row and the tab row since 2026-09-09, wearing the tab
-            // row's ground): it sits inside the top-strip area below, which
+            // GAP 1's band, the ONE non-lane member (between the icon row
+            // and the trim lane, window ground): it sits inside the
+            // top-strip area below, which
             // pans, so without this entry a wheel over that ground would
             // scroll the song — exactly the fault row 1's ruling named. Not
             // a redesigned row, but the same answer for the same reason, and
             // the reason it needs a rect at all is at top_flex_gap_area
             // (app_state.h).
             top_flex_gap_area(app),
-            top_tab_row_area(app),
             // The bottom row joined the family's inert band list 2026-08-11
             // (as the transport row), exactly as the rule above promises a
             // future row would, and the 2026-08-12 unification widened its
@@ -3422,7 +3420,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // that displaces it are as wheel-inert as the buttons. It is a bottom-strip
             // lane, so the top-strip area test below would never have routed it
             // anyway; membership here is what stops the sub-detent accumulator
-            // growing remainder over it, like its four siblings.
+            // growing remainder over it, like its three siblings.
             bottom_row_area(app),
         };
         for (const GuiRect& b : bands) {

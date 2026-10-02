@@ -344,10 +344,11 @@ struct GuiRenderPlayer {
     bool open();
     // THE CLOSER (the contract above). A no-op when the mode is down.
     //
-    // ITS CAUSES, FIVE CALL SITES (re-grepped 2026-08-28): the modal row's
+    // ITS CAUSES, SIX CALL SITES (re-grepped 2026-10-01): the modal row's
     // Close button; bare Esc and bare `l` in the mode's key router; the `l`
     // toggle the icon row's Play renders button shares with it; the load
-    // road's success; and THE CLOSE ROAD — GuiPrompt::request_close, which
+    // road's success; the root's delete leaving no folder
+    // (delete_batch_folders, architect 2026-10-01); and THE CLOSE ROAD — GuiPrompt::request_close, which
     // takes the mode down at its head, so Ctrl+Q AND the compositor's
     // title-bar X (main.cpp's set_on_close, the same road with no key behind
     // it) both leave the ordinary window standing before the unsaved-work
@@ -395,7 +396,9 @@ struct GuiRenderPlayer {
     // the full path and the system's words on stderr (failure.h's two
     // clauses), and the walk goes on to the next folder. The root listing is
     // rebuilt from disk after, whatever failed. A success is silent: the rows
-    // leaving the listing are its answer.
+    // leaving the listing are its answer — and when the rebuilt root lists
+    // no folder at all, the player closes itself through close(), its own
+    // close act (architect 2026-10-01; the rule is at the body).
     void delete_batch_folders(const std::vector<std::filesystem::path>& folders);
     // The widget's three mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the

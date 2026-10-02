@@ -25,6 +25,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <string>
 #include <system_error>
@@ -2289,6 +2292,66 @@ void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) 
 }
 
 void GuiPlatform::publish_media_state(const GuiMediaState& /*state*/) {}
+
+// THE HOST'S BATTERY, from sysfs (the contract is at the declaration). The
+// minute is the wall clock's: every real time zone sits a whole number of
+// minutes off UTC, so time() / 60 turns over exactly when the legend's local
+// clock does, and the re-read lands on the same tick as the clock's new
+// minute.
+namespace {
+// One small sysfs attribute, its first line with the newline taken off; an
+// unreadable node answers the empty string.
+std::string read_sysfs_line(const std::filesystem::path& p) {
+    std::ifstream in(p);
+    std::string line;
+    if (in) std::getline(in, line);
+    return line;
+}
+}  // namespace
+
+GuiBattery GuiPlatform::battery_status() {
+    const int64_t minute = static_cast<int64_t>(std::time(nullptr)) / 60;
+    if (minute == battery_minute_) return battery_;
+    battery_minute_ = minute;
+
+    namespace fs = std::filesystem;
+    const fs::path root = "/sys/class/power_supply";
+    fs::path bat, ac;
+    std::error_code ec;
+    for (fs::directory_iterator it(root, ec), end; !ec && it != end;
+         it.increment(ec)) {
+        const std::string name = it->path().filename().string();
+        // The FIRST of each kind by name, so the pick is stable across reads.
+        if (name.starts_with("BAT") && (bat.empty() || it->path() < bat))
+            bat = it->path();
+        if (name.starts_with("AC") && (ac.empty() || it->path() < ac))
+            ac = it->path();
+    }
+
+    GuiBattery b;
+    if (bat.empty()) {
+        battery_ = b;   // has_battery false: the clock alone
+        return battery_;
+    }
+    b.has_battery = true;
+    const std::string cap = read_sysfs_line(bat / "capacity");
+    int pct = -1;
+    if (std::sscanf(cap.c_str(), "%d", &pct) == 1) b.percent = pct;
+    if (!ac.empty()) {
+        const std::string online = read_sysfs_line(ac / "online");
+        if (online == "1")      b.plugged = GuiBattery::Plugged::Plugged;
+        else if (online == "0") b.plugged = GuiBattery::Plugged::Unplugged;
+    } else {
+        const std::string status = read_sysfs_line(bat / "status");
+        if (status == "Charging" || status == "Full" ||
+            status == "Not charging")
+            b.plugged = GuiBattery::Plugged::Plugged;
+        else if (status == "Discharging")
+            b.plugged = GuiBattery::Plugged::Unplugged;
+    }
+    battery_ = b;
+    return battery_;
+}
 
 void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
                                         uint32_t depressed,

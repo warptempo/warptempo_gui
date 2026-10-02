@@ -502,9 +502,8 @@ struct Viewport {
     //     GuiRenderPlayer::damage_row for every transport, highlight and
     //     clock/scrub change (render_player.cpp), the one stop body's player
     //     fork for the play/pause face (playback_lifecycle.cpp), and the
-    //     WINDOW-ACTIVATION hook, gated on the player standing (main.cpp),
-    //     the scrub's played part being the third surface that reads
-    //     AppState::window_activated.
+    //     WINDOW-ACTIVATION hook (main.cpp), the scrub's played part and
+    //     the active-focus outline reading AppState::window_activated.
     //   * THE PER-TICK COMPARATORS (main.cpp): the player row's enabled-face
     //     drift, and a standing dialog hint whose words the row's paint has
     //     recomposed past the ones the box last drew (2026-09-29, below).

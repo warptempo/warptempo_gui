@@ -1,15 +1,19 @@
 package com.warptempo.gui;
 
 import android.app.NativeActivity;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,108 +21,53 @@ import android.os.PowerManager;
 import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
+import android.view.WindowInsets;
 import android.view.WindowInsetsController;
-import android.view.WindowManager;
 import java.nio.charset.StandardCharsets;
 
 /**
- * The product's ONE Java class: a NativeActivity subclass. Its body is
- * setDecorFitsSystemWindows(true), which ASKS for the window's content to be
- * laid out inside the system bars' insets rather than under them, the flag
- * that leaves BOTH system bars' backgrounds transparent so the native side's
- * own bands are the colour seen under them, and -- since the car's arc -- the
+ * The product's ONE Java class: a NativeActivity subclass. Its body is the
+ * FULL-SCREEN WINDOW (both system bars hidden, the block below), the
  * MediaSession that hands the head unit's buttons down to the render player
- * and its state back up (the block at the end of this comment).
+ * and its state back up (the block at the end of this comment), the system
+ * clipboard, and the battery broadcast the menu row's legend reads.
  *
- * <p>IT DOES NOT SHRINK THE NATIVE SURFACE, and nothing here can. An app
- * window's frame is the whole display by construction on modern Android
- * (FLAG_LAYOUT_IN_SCREEN | FLAG_LAYOUT_INSET_DECOR on the window's own layout
- * params), and "fitting the system windows" is DecorView PADDING -- which a
- * NativeActivity never sees, because it takes the WINDOW's own surface through
- * Window#takeSurface. Measured on the tablet 2026-08-27: frame=[0,0][2304,1440]
- * with this call in place, at targetSdk 35 and again at 34. What this call and
- * the target DO buy is the framework reporting a real CONTENT RECT, and THAT
- * RECT ALREADY EXCLUDES BOTH BARS. Measured on an AWAKE panel under the
- * architect's own Screen zoom (override density 320): `window 2304x1270 at
- * (0,74) of surface 2304x1440` -- a 60 px status bar plus the 14 px of air the
- * native side adds above it (16 for the forty-five minutes between the strip's
- * landing and its retune on 2026-08-27), and a 96 px taskbar below. Nothing here has to
- * measure or subtract a bar. (History, one line: an earlier reading of
- * 2304x1387 at (0,53) showed the status bar alone, because the taskbar
- * reported no inset while the panel DOZED with the cover shut -- dumpsys had
- * it as a `tappableElement` and as `mAppBounds`, with
- * `type=navigationBars ... visible=false`. The next step recorded from that
- * reading -- a `native` method handing the backend
- * WindowInsets.Type.tappableElement()'s bottom to subtract -- IS RETIRED: on
- * an awake panel it would subtract the taskbar twice.) The rect
- * reaches native code as onContentRectChanged. THE ANDROID BACKEND MAKES THAT
- * RECT THE WINDOW (src/gui/platform_android.cpp; the rule is at origin_x_ in its header): the
- * GUI is told the rect's size, the origin is added at the blit and subtracted
- * at the touch decode, and nothing above the seam knows either exists.
+ * <p>FULL SCREEN, ALWAYS: NO STATUS BAR AND NO TASKBAR (architect 2026-10-01:
+ * "change the shim so that it's always going to be full screen with no
+ * taskbar, no status bar"). Both bars are hidden through the window's
+ * WindowInsetsController — hide(statusBars() | navigationBars()) under
+ * BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE, sticky immersive — at onCreate and
+ * again at EVERY FOCUS GAIN (onWindowFocusChanged), since the system brings the
+ * bars back across a dialog, the shade or a task switch. A swipe from an edge
+ * shows them TRANSIENTLY, translucent over the app, and they slide away again
+ * by themselves; he accepts that reveal ("the gallery does the same"). THE
+ * NATIVE SURFACE IS THE WINDOW: an app window's frame is the whole display by
+ * construction (FLAG_LAYOUT_IN_SCREEN | FLAG_LAYOUT_INSET_DECOR), a
+ * NativeActivity takes that WINDOW's own surface through Window#takeSurface,
+ * and the Android backend hands the GUI the surface whole
+ * (src/gui/platform_android.cpp, adopt_window), reading no content rect and
+ * painting no band, so nothing here sizes, colours or measures a bar.
+ * setDecorFitsSystemWindows IS NOT CALLED: its one use was shaping the content
+ * rect the native side no longer reads, and with both bars hidden there is
+ * nothing for it to fit around. Nor is FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS set or
+ * the bars' appearance touched: they existed to put the native side's own
+ * bands under permanently shown bars, and a transient bar draws its own
+ * translucent scrim over whatever the app shows.
  *
- * <p>targetSdk is 34 for the neighbouring reason (android/toolchain/00_env.sh
- * owns the number): at 35 Android 15's edge-to-edge enforcement lays the window
- * out over the bars whatever it asks for, and the opt-out there is a theme
- * attribute needing a res/values style this APK does not have (its res/ holds
- * the launcher icon alone).
- *
- * <p>IMMERSIVE MODE IS RETIRED (architect 2026-08-27). Both bars were hidden
- * here -- sticky-immersive at create and re-applied at every focus gain -- and
- * they now show permanently, like any ordinary app. On the glass a swipe
- * brought the taskbar's icons up OVER the app with no background of their own
- * (Android's transient bars behaving as designed, and reading as a bug), and
- * the waveform is plenty tall enough to lose the bars' height.
- *
- * <p>THE STATUS BAR IS THE TITLE BAR (architect 2026-08-27, later the same
- * day): with the bars showing permanently, the one across the top reads as this
- * window's title bar, so it takes the colour the architect's own labwc theme
- * gives a title bar. PROVENANCE, and it is a chain rather than a derivation
- * (~/.config/labwc/themerc-override): `window.active.title.bg.color: #292c30`,
- * which is kRedesignRowGround in src/gui/render.h -- the product's row ground,
- * sampled from the same Breeze source -- with `window.active.label.text.color:
- * #fcfcfc` = kRedesignLabel, which is why the bar's own icons stay light. The
- * system's default painted it ~#212326 (measured on a screencap), near the
- * CONTENT ground and so a shade off the menu row below it. AND A TITLE BAR
- * DARKENS WHEN ITS WINDOW IS DEACTIVATED (architect 2026-09-06, on a shade
- * pull with the cover open -- the bar "does not change to the
- * disabled/inactive color that labwc uses"): the ruling's second half, and the
- * same edge rows 1 and 2 already take, `window.inactive.title.bg.color:
- * #202326` being kRedesignRowGroundUnfocused.
- * WHAT PAINTS BOTH VALUES IS THE NATIVE SIDE, NOT THIS FILE (2026-09-06): the
- * bar's own background is transparent under the flag onCreate sets, this
- * activity's decor draws nothing at all (Window#takeSurface, the paragraph
- * above), and the pixels the bar shows are the top BAND of the native blit --
- * kRedesignRowGround / kRedesignRowGroundUnfocused chosen on the same
- * window_activated_ bit rows 1 and 2 read (top_band_word, present, src/gui/-
- * platform_android.cpp). The setStatusBarColor call this file used to carry
- * never reached a pixel -- no decor, no fill -- and agreed with the band only
- * by carrying the same number; it is deleted, and the bar has ONE owner with
- * the rows. The native side also leaves air under the bar in the same ground
- * (kStatusBarAirPx), so bar, air and menu row read as one strip and darken
- * together. The bar's ICONS do not change with it: labwc's
- * `window.inactive.label.text.color` is the same #fcfcfc, so
- * APPEARANCE_LIGHT_STATUS_BARS -- which IS the system's and is not inert --
- * is cleared once in onCreate and never touched again.
- * THE TASKBAR'S ICONS ARE THE LAUNCHER'S AND NOTHING HERE TOUCHES THEM: the
- * architect -- "the taskbar looks great, it's already the correct color". THE
- * BAND UNDER THEM IS OURS, and has been since the bar-backgrounds flag landed:
- * neither bar's background is the system's any more, so that strip is the
- * native blit's other band, kRedesignContentGround #202326 -- the ground the
- * taskbar's icons already sit on, and the same value the inherited
- * navigationBarColor carried (measured on the device at (33,35,38)).
+ * <p>targetSdk is 34 (android/toolchain/00_env.sh owns the number and says
+ * why it stays where it is now that its edge-to-edge reason is inert).
  *
  * <p>EVERY LATER JAVA NEED JOINS THIS CLASS, as a method -- never as a second
- * top-level class (the MediaSession.Callback below is an INNER class of this
- * one and is not a second class in that sense: it is the session's own
- * listener shape and can be nothing else). TWO HAVE LANDED: the car's
- * MediaSession (the block at the end of this comment) and, on 2026-09-03, THE
- * SYSTEM CLIPBOARD -- clipboardSet / clipboardGet, ClipboardManager being a
- * Java object with no NDK surface, so copy and paste reach every other app on
- * the tablet over the same JNI road the session opened. A THIRD LANDED AND WAS
- * RETIRED THE SAME DAY: windowActive(boolean), the status bar's activation
- * edge (2026-09-06), deleted once the bar was found to be the native band's
- * pixels rather than the framework's -- a Window setter no decor draws. One
- * need is still known and unbuilt: the SAF picker's onActivityResult, which is
+ * top-level class (the MediaSession.Callback and the battery receiver below
+ * are INNER classes of this one and are not second classes in that sense:
+ * each is its framework's own listener shape and can be nothing else). THREE
+ * HAVE LANDED: the car's MediaSession (the block at the end of this comment),
+ * on 2026-09-03 THE SYSTEM CLIPBOARD -- clipboardSet / clipboardGet,
+ * ClipboardManager being a Java object with no NDK surface, so copy and paste
+ * reach every other app on the tablet over the same JNI road the session
+ * opened -- and on 2026-10-01 THE BATTERY, the sticky ACTION_BATTERY_CHANGED
+ * broadcast handed down through nativeBatteryState for the menu row's legend
+ * (the block at batteryReceiver). One need is still known and unbuilt: the SAF picker's onActivityResult, which is
  * exactly why a subclass is required at all, NativeActivity never forwarding
  * it. The key-repeat cadence stays hard-coded from labwc's numbers in
  * platform_android.cpp because nothing native reports it.
@@ -293,78 +242,21 @@ public class MainActivity extends NativeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // AFTER super, not before: NativeActivity's own onCreate installs the
-        // decor (setContentView), which is where the platform's own default is
-        // applied, so this has to land on top of it rather than under it. One
-        // javac deprecation warning is expected -- the method is deprecated in
-        // the API 35 jar this compiles against, which is the platform we have
-        // installed rather than the level the manifest declares.
-        getWindow().setDecorFitsSystemWindows(true);
+        // FULL SCREEN FROM THE FIRST FRAME (the rule is at the head of this
+        // class), AFTER super: NativeActivity's own onCreate installs the
+        // decor (setContentView), and the insets controller is the decor's.
+        hideSystemBars();
 
-        // THE FLAG IS WHAT LETS OUR PIXELS BE THE BARS' BACKGROUNDS, and on
-        // this activity that is the whole of its job. Documented behaviour:
-        // with FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS set (and FLAG_TRANSLUCENT_-
-        // STATUS clear, which nothing here sets) the system bars are drawn
-        // with a TRANSPARENT background and the window is responsible for the
-        // colour underneath them. The Material and DeviceDefault themes set it
-        // through windowDrawsSystemBarBackgrounds; this activity's theme is
-        // the legacy @android:style/Theme.NoTitleBar (the manifest says why),
-        // which does not -- so it is set here by hand. WITHOUT IT the system
-        // draws its own opaque bar background over that strip and our band is
-        // never seen.
-        //
-        // THE SECOND HALF OF THE DOCUMENTED SENTENCE -- the window filling
-        // those areas from getStatusBarColor() / getNavigationBarColor() -- is
-        // the DECOR VIEW's work, and a NativeActivity has no decor drawing at
-        // all: it takes the window's own surface (Window#takeSurface), so the
-        // statusBarBackground colour view never paints. THE COLOUR THAT LANDS
-        // THERE IS THE NATIVE SIDE'S TOP BAND (top_band_word, src/gui/platform_-
-        // android.cpp), which is why there is no setStatusBarColor call here
-        // any more: it never reached a pixel and only ever agreed with the
-        // band by carrying the same number (measured on the
-        // tablet 2026-09-06 -- Java set 0xff202326 and read it back while the
-        // displayed bar stayed #292c30, the band's word). The navigation
-        // colour's setter went the same way and for the same reason, so NEITHER
-        // bar has a Java colour any more: both are bands of the native blit.
-        getWindow().addFlags(
-                WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-
-        // THE TASKBAR'S BAND IS OURS TOO, and stating it is the point. The
-        // FLAG above makes the system draw no background over EITHER bar, so
-        // the strip under the taskbar has been painted by us since that flag
-        // landed -- by the native side's own band (kBandWord = kRedesign-
-        // ContentGround #202326, src/gui/platform_android.cpp), the product's
-        // content ground and the ground the taskbar's icons already sit on. It
-        // is NOT a labwc colour -- the taskbar itself is the launcher's and we
-        // paint none of it; we own only the band beneath. Its ICONS are left
-        // exactly as they are: nothing here touches
-        // APPEARANCE_LIGHT_NAVIGATION_BARS.
-        //
-        // THERE IS NO JAVA COLOUR FOR THAT BAND AND THERE WAS NEVER A NEED FOR
-        // ONE. A setNavigationBarColor(0xFF202326) stood here until 2026-09-06,
-        // naming the colour the DECOR would fill the area with; this activity's
-        // decor draws nothing (Window#takeSurface, the paragraph above), so the
-        // value that landed was always the band's, and the inherited default it
-        // restated was measured on the device at (33,35,38) -- the system's own
-        // #202326 -- so no reading ever distinguished the two. It is deleted:
-        // a dead statement duplicating a palette number in Java can only come to
-        // disagree with the band at the next retune, and it kept a deprecation
-        // warning alive for nothing.
-
-        // LIGHT ICONS ON THE STATUS BAR, by CLEARING the light-background
-        // appearance (the NAVIGATION bar's own appearance bit is deliberately
-        // not touched -- the taskbar's icons are the launcher's):
-        // APPEARANCE_LIGHT_STATUS_BARS means "the bar's background is light,
-        // draw its icons dark", so a dark bar is the flag ABSENT -- the mask
-        // names the flag and the value clears it. getInsetsController() is
-        // declared nullable for a window with no decor view; super.onCreate
-        // installed the decor above, so this is the API's contract rather than
-        // a fault with a producer here.
-        final WindowInsetsController bars = getWindow().getInsetsController();
-        if (bars != null) {
-            bars.setSystemBarsAppearance(
-                    0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
-        }
+        // THE BATTERY, for the menu row's legend: the registration answers the
+        // sticky ACTION_BATTERY_CHANGED intent at once, so the native side's
+        // cold answer (level and plug unknown) is replaced within the
+        // activity's first moments, and the receiver keeps it current (the block at batteryReceiver). No
+        // permission is needed, and no export flag: the action is a protected
+        // system broadcast, which a context-registered receiver may take
+        // without one.
+        final Intent sticky = registerReceiver(batteryReceiver,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (sticky != null) pushBattery(sticky);
 
         // THE MEDIA SESSION, through its ONE owner below and on the UI thread,
         // which is why the call is here and not on the native side's road: a
@@ -396,6 +288,66 @@ public class MainActivity extends NativeActivity {
                         new FocusListener(), new Handler(Looper.getMainLooper()))
                 .build();
     }
+
+    // THE BARS COME BACK AT EVERY FOCUS GAIN, so they are hidden again here
+    // (the full-screen rule is at the head of this class): the system shows
+    // them across the shade, a dialog or a task switch, and a window that
+    // regains focus re-asserts its own mode. super FIRST: NativeActivity's
+    // override is what hands the focus edge to the native side
+    // (APP_CMD_GAINED_FOCUS / APP_CMD_LOST_FOCUS).
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideSystemBars();
+    }
+
+    // BOTH BARS HIDDEN, STICKY IMMERSIVE (architect 2026-10-01): a swipe from
+    // an edge shows them transiently over the app and they hide again by
+    // themselves. getInsetsController() is declared nullable for a window with
+    // no decor view; super.onCreate installed the decor before the first call,
+    // so this is the API's contract rather than a fault with a producer here.
+    private void hideSystemBars() {
+        final WindowInsetsController bars = getWindow().getInsetsController();
+        if (bars == null) return;
+        bars.setSystemBarsBehavior(
+                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        bars.hide(WindowInsets.Type.statusBars()
+                | WindowInsets.Type.navigationBars());
+    }
+
+    // THE BATTERY, THE THIRD JNI ROAD DOWN (architect 2026-10-01): one call per
+    // ACTION_BATTERY_CHANGED, the car's road (nativeMediaCommand) rather than a
+    // native read up into Java at each refresh, because the broadcast IS the
+    // change (the reasoning is at GuiPlatform::battery_status,
+    // src/gui/platform_android.h). The native side stores the reading in one
+    // atomic word, so the call is safe before the native loop's init and after
+    // its shutdown and needs no lock here. `percent` is 0..100, or -1 for a
+    // level the intent did not carry (a missing or negative EXTRA_LEVEL, or no
+    // usable EXTRA_SCALE); `plugged` is EXTRA_PLUGGED as carried -- 0 on
+    // battery, any positive power source plugged, -1 for a missing extra,
+    // which the legend shows as its unknown glyph.
+    private static native void nativeBatteryState(boolean present, int percent,
+                                                  int plugged);
+
+    private void pushBattery(Intent intent) {
+        final boolean present =
+                intent.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true);
+        final int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        final int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+        final int percent = (level >= 0 && scale > 0) ? level * 100 / scale : -1;
+        final int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+        nativeBatteryState(present, percent, plugged);
+    }
+
+    // THE RECEIVER keeps the reading current for the activity's life:
+    // registered in onCreate (whose registration also answers the sticky
+    // intent) and unregistered in onDestroy. onReceive runs on the UI thread.
+    private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null) pushBattery(intent);
+        }
+    };
 
     // THE SESSION'S ONE CREATOR, with TWO callers -- onCreate's and onStart's
     // rebuild after a step-aside -- and both are on the UI thread, which is the
@@ -578,8 +530,13 @@ public class MainActivity extends NativeActivity {
     // (the session stands for the app's life, the step-aside apart), so this is
     // the abandon a running app always reaches -- which is also why it was
     // already written to cover a process ending with something still sounding.
+    // THE BATTERY RECEIVER IS UNREGISTERED FIRST (2026-10-01): its pushes touch
+    // one native atomic and nothing the session's lock guards, so its place
+    // ahead of super is free, and unregistering a receiver registered in
+    // onCreate is the pairing the framework expects.
     @Override
     protected void onDestroy() {
+        unregisterReceiver(batteryReceiver);
         super.onDestroy();
         synchronized (this) {
             released = true;

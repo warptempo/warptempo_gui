@@ -42,18 +42,16 @@ export WT_BUILD_TOOLS_SHA1="b0b6376977657e8ad9b969bacf4093601da2c6fb"
 # behaviour on the stamped target and a sideload has no ceiling, so a
 # decade-later replacement tablet runs the same APK.
 #
-# targetSdk 34 (architect 2026-08-27), NOT 35: from Android 15 on, an app whose
-# target is 35 or higher is laid out EDGE-TO-EDGE by the platform whatever it
-# asks for, and Window#setDecorFitsSystemWindows(true) does not step out of it
-# -- measured on the device that evening with the sliver's explicit call in
-# place, the log still said `window 2304x1440`, so the taskbar sat over the
-# bottom row whose INPUT it owns (android/NOTES.md 11.7). The documented opt-out
-# at 35 is the windowOptOutEdgeToEdgeEnforcement THEME attribute, which needs a
-# res/values style this APK does not have (its res/ holds the launcher icon
-# alone, compiled by build_apk.sh's aapt2 compile step since 2026-09-29, and it
-# declares no style); stepping the target back to 34 is the same result with no
-# theme machinery at all. NOT 36 either, which was 35's own reason: Android 16 revokes
-# screenOrientation on screens >=600dp and this activity asks for landscape
+# targetSdk 34 (architect 2026-08-27). ITS REASON NOT TO BE 35 IS INERT SINCE
+# 2026-10-01: from Android 15 on, an app targeting 35 or higher is laid out
+# EDGE-TO-EDGE whatever it asks for, which mattered while the bars showed and
+# the window had to sit inside them (android/NOTES.md 11.7) -- and the window
+# is FULL SCREEN now, both bars hidden (MainActivity.java's head), the native
+# side taking the whole surface and reading no content rect. It STAYS at 34
+# because moving a pinned target is its own act, with behaviour changes of its
+# own across the platform, and nothing asks for one. NOT 36 either, which was
+# 35's own reason: Android 16 revokes screenOrientation on screens >=600dp and
+# this activity asks for landscape
 # only (sensorLandscape: either landscape, never portrait).
 # The spike's build script reads this same variable.
 export WT_TARGET_SDK="34"

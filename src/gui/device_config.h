@@ -49,7 +49,7 @@
 // at startup. `max_waveform_height` JOINED 2026-09-13 (architect): the waveform's cap had
 // been the render.h constant kWaveformMaxHeightPx = 500 since commit B, and
 // how tall a waveform wants to be is a fact about the PANEL — a tall external
-// monitor and the tablet's content rect answer differently — so the cap became
+// monitor and the tablet's panel answer differently — so the cap became
 // a key of this file, both templates stamping the old constant's 500.
 // THE WAVEFORM PICTURE'S KEYS came and went (architect): the leveler's
 // `waveform_gain_*` joined 2026-09-23 and the expander's `waveform_expander_*`

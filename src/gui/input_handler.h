@@ -1456,11 +1456,12 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors,
-    // row 3's two tabs, row 4's twenty-six (the
+    // row 4's twenty-six (the
     // toolbar four included since the 2026-08-12 relayout, COPY VALUE
     // between Redo and Render since 2026-09-29, Full zoom out
     // leading the zoom group (Center left it for the bottom row 2026-09-29),
-    // ENABLE TOOLTIPS and SETTINGS behind the padlock since 2026-09-29, the
+    // SETTINGS and ENABLE TOOLTIPS behind the padlock since 2026-09-29 (help
+    // after settings since 2026-10-01), the
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
     // 2026-09-19, the history group's
@@ -3927,7 +3928,7 @@ private:
     //
     // THE PLAYER'S ONE POINTER RULE IS THE VEIL: while the player stands every
     // press outside the folder overlay's band and the modal row is CONSUMED —
-    // the tab row's tabs, the marker lane's flags, the waveform, the two dead
+    // the marker lane's flags, the waveform, the two dead
     // menu anchors, all of it — and the roster's buttons are
     // dead through redesign_button_enabled's first arm (their faces grey,
     // their press claims refuse). THE ONE EXEMPTION IS THE LIVE FILE ANCHOR

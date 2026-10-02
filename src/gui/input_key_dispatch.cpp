@@ -1746,8 +1746,8 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     bottom row's WALK BUTTON (since 2026-08-15), answered LIVE in the view
 //     by this predicate: it steps the mode's own diff-flag cycle, so it does
 //     not grey in the view. CTRL+SHIFT+TAB, the march over
-//     that same cycle (2026-08-18), is the tab row's shifted press since
-//     2026-09-14 and the walk button's ctrl-shift press since 2026-09-26,
+//     that same cycle (2026-08-18), is Switch Tab's shifted press since
+//     2026-09-29 and the walk button's ctrl-shift press since 2026-09-26,
 //     neither greying (Ctrl+Tab, their plain and ctrl presses, acting in
 //     every state);
 //   * BARE Left / BARE Right — the bottom row's LEFT and RIGHT arrows, the
@@ -2004,7 +2004,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // (THE CHORD WAS CTRL+TAB FROM 2026-08-05 TO 2026-08-18, with
     // Ctrl+Shift+Tab as its reverse from 2026-08-07, because row 3's tabs were
     // the walk's surface and their own chord had to become the cycle. The walk
-    // has buttons of its own now and Ctrl+Tab switches A/B tabs in here like
+    // has its own lamp now and Ctrl+Tab switches A/B tabs in here like
     // everywhere else.)
     //
     // THE ROW ORDER IS SPELLED ONCE, as a table read by this step and by
@@ -2893,10 +2893,10 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // everything, and the admitted Ctrl+Q already ends the view the same way.
     // The picker it raises stands OVER the mode — its router runs ahead of
     // this gate in on_key, its veil consumes the view's presses, and its band
-    // starts under the ICON ROW's border and runs to the bottom row, covering
-    // gap 1 and lanes 2..6 (the diff lane with them), the waveform and gap 2,
-    // with only the two toolbar rows standing above it, dead but for File
-    // (the tab row's first pixel 2026-09-03..09) — so a Cancel or an
+    // starts under the ICON ROW and runs to the bottom row, covering gap 1
+    // and lanes 2..4 (the diff lane with them), the waveform and gap 2, with
+    // only the two toolbar rows standing above it, dead but for File — so a
+    // Cancel or an
     // Esc leaves the view exactly as it stood, this view owning no navigation
     // state to disturb. Until this date the chord fell through this list as a
     // consumed no-op, which left the File menu's Open row dead in here.
@@ -6823,7 +6823,7 @@ void GuiInputHandler::open_project_picker() {
     // everything — Ctrl+Q, which is admitted, ends the view the same way. The
     // picker stands OVER the view (its router runs ahead of the mode's gate in
     // on_key, its veil consumes the view's presses, and its band starts under
-    // the icon row's border and covers gap 1 and lanes 2..6 — the diff lane
+    // the icon row and covers gap 1 and lanes 2..4 — the diff lane
     // with them — the waveform and gap 2, the two toolbar rows alone above it
     // with File live on the menu row), a Cancel or Esc leaves
     // the view exactly as it stood — this view owns no navigation state — and

@@ -5,17 +5,13 @@
 
      hasCode="true" since the Java sliver: the APK carries a classes.dex
      holding exactly ONE class, .MainActivity (a NativeActivity subclass), and
-     build_apk.sh grew a javac -> d8 step for it. Its body is
-     setDecorFitsSystemWindows(true) plus FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS —
-     Java-only, and the first of them ASKS rather than wins:
-     the native surface is the whole panel whatever this or the theme says, and
-     what the call plus targetSdk 34 actually buy is the framework reporting a
-     real CONTENT RECT — the band inside the system bars, which the Android
-     backend then makes the window (src/gui/platform_android.cpp;
-     android/toolchain/00_env.sh owns the target and its reasoning). Without it
-     the product paints under the taskbar, whose INPUT it owns across the whole
-     bottom row. The port's other Java needs join THAT class as methods: the
-     car's MediaSession and the system clipboard have; SAF's onActivityResult
+     build_apk.sh grew a javac -> d8 step for it. It makes the window FULL
+     SCREEN — both system bars hidden, sticky immersive (architect 2026-10-01;
+     the rule is at the class's head) — so the native surface, which is the
+     whole panel whatever this or the theme says, is the window the Android
+     backend hands the GUI whole (src/gui/platform_android.cpp). The port's
+     other Java needs join THAT class as methods: the car's MediaSession, the
+     system clipboard and the battery broadcast have; SAF's onActivityResult
      would.
 
      Not the spike's package: com.warptempo.gui is the product's own name, so
@@ -47,19 +43,17 @@
       android:allowBackup="false"
       android:debuggable="true">
 
-    <!-- The subclass, not android.app.NativeActivity: it is what puts the
-         window inside the system bars. android.app.lib_name stays here on the
+    <!-- The subclass, not android.app.NativeActivity: it is what hides the
+         system bars. android.app.lib_name stays here on the
          <activity> — NativeActivity's own onCreate reads it and dlopens the
          library exactly as before, so the native side is unaware this class
          exists. Component name: com.warptempo.gui/.MainActivity
 
-         Theme.NoTitleBar, not .Fullscreen: the status bar and the taskbar SHOW
-         (architect 2026-08-27, retiring immersive mode), and no title bar
-         because an app of this kind carries none — the STATUS bar is this
-         window's title bar and wears the product's row ground, painted by the
-         native top band under it (top_band_word, platform_android.cpp; that
-         class sets FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS by hand because this
-         legacy theme does not), while the taskbar's icons stay the launcher's.
+         Theme.NoTitleBar: no title bar, because an app of this kind carries
+         none. Not .Fullscreen: that theme's FLAG_FULLSCREEN hides the status
+         bar alone and non-sticky, while the class hides BOTH bars sticky
+         through the window's insets controller at create and at every focus
+         gain (architect 2026-10-01), which is the one owner of the bars.
 
          No windowLayoutInDisplayCutoutMode: the default never lays a landscape
          window into a cutout, and this panel has none anyway.
@@ -71,8 +65,8 @@
          size, moving nothing but the surface's transform, which the compositor
          owns. So resizeableActivity="false" still buys the one geometry;
          orientation|screenSize are in configChanges so the flip never recreates
-         the activity, and screenSize|screenLayout are there so a bar coming or
-         going resizes the window instead of recreating it either. -->
+         the activity, and screenSize|screenLayout are there so a configuration
+         change never recreates it either. -->
     <activity
         android:name=".MainActivity"
         android:exported="true"

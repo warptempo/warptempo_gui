@@ -760,13 +760,11 @@ GuiRect notification_stack_bound(const AppState& a);
 // criticals that will not be bumped.
 //
 // A pure function of the window and the scale, like the room. At a 1080 px
-// window and 100 % it is 20 (a 999 px room over 46 + 2); on the tablet at
-// 225 % it is 10 (1088 over 104 + 4). THE TABLET'S NUMBER IS THE CONTENT
-// WINDOW'S, not the panel's: the panel is 1440 px tall but the framework hands
-// the app a 1270 px content rect with both system bars taken out (the two
-// stacks are recorded at main.cpp's vertical-stack owner), and it is the
-// window this function is given. Every window this product runs in holds more
-// cards than the architect will ever stack.
+// window and 100 % it is 20 (a 993 px room over 46 + 2); on the tablet at
+// 200 % it is 13 (1266 over 92 + 4), its window being the whole 1440-tall
+// panel since the activity went full screen (2026-10-01; the stacks are
+// recorded at main.cpp's vertical-stack owner). Every window this product
+// runs in holds more cards than the architect will ever stack.
 int notification_capacity(const AppState& a);
 
 // Whether `id` names a card that is IN THE LIVE STACK — which is the same as

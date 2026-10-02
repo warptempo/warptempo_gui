@@ -217,9 +217,9 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // TWO until 2026-08-29 — the second took the state lane for the RESOLVED
     // READOUT, whose eligibility read the marker view; that readout retired
     // whole with the one-day status bar and nothing this switch writes is a
-    // state string, so the call went with it. The A/B letter the status line
-    // also used to cover left the row with the row-7 collapse; the tabs show
-    // the active tab now.)
+    // state string, so the call went with it.) THE CELL CARRIES THE A / B
+    // LETTER since 2026-10-01 (its head, paint_bottom_row_buttons_and_clock),
+    // so this one damage repaints the letter the switch changed too.
     viewport.kick_waveform_sync();
     viewport.invalidate_clock_area();
 }

@@ -109,14 +109,12 @@ cp -f "$SO" "$STAGING/lib/$WT_ABI/$LIBNAME"
 wt_say "linked: $(stat -c%s "$STAGING/lib/$WT_ABI/$LIBNAME") bytes (stripped)"
 
 # --- 4. the Java sliver: javac -> d8 --------------------------------------
-# ONE class, com.warptempo.gui.MainActivity, whose whole body is one call:
-# setDecorFitsSystemWindows(true) -- Java-only, and with the manifest's targetSdk
-# 34 it is what makes the framework report a CONTENT RECT: the band inside the
-# system bars, which the Android backend treats as the window (the native
-# surface is always the whole panel). Without it the product paints under the
-# taskbar, which owns the input of the band the transport and the modal surface
-# live in. Every later Java need joins that class as a method, so this step is
-# built to compile a TREE, not a file.
+# ONE class, com.warptempo.gui.MainActivity: the full-screen window (both
+# system bars hidden, architect 2026-10-01), the car's MediaSession, the system
+# clipboard and the battery broadcast -- the Java-only needs, each with no NDK
+# surface (the class's head comment carries each one's reasoning). Every later
+# Java need joins that class as a method, so this step is built to compile a
+# TREE, not a file.
 #
 # -classpath, NOT -bootclasspath: since JDK 9 the latter is refused unless
 # -source/-target is 8 or lower, and the private JDK here is 21. --min-api

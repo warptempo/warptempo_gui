@@ -382,7 +382,7 @@ struct FlagCache {
     // any live marker, so what it must contain is decided by: whether the mode
     // stands at all (entering and leaving both swap the whole lane), WHICH
     // commit is shown (`,` / `.` step it), WHICH READING of it is shown (the two
-    // compare modes, the tabs switching them), which diff flag holds the mode's
+    // compare modes, the Cumulative toggle switching them), which diff flag holds the mode's
     // focus and WHICH ARE SELECTED (colour swaps, exactly as the live selection
     // hash is a field for the live lane), and WHICH SESSION those are indices
     // into.
@@ -738,67 +738,34 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE RULER LANE (top lane 4): the timestamp ladder and its ticks. Reads the
+    // THE RULER LANE (top lane 3): the timestamp ladder and its ticks. Reads the
     // DISPLAYED plate basis, so it re-derives on every pan/zoom along with the
     // strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);
-    // THE FOUR REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
-    // flat
-    // sampled ground plus the three menu
-    // buttons), the TAB ROW
-    // (top lane 2 since the 2026-09-09 relayout swapped it with the icon row,
-    // row 3: the
-    // "A"/"B" Breeze tabs — the row carries no borders of its own since that
-    // day, and it fills GAP 1 above them in its own ground, the tabs sitting
-    // at the foot of one tall lane; it paints no other content since
-    // 2026-08-29, when the STATUS CHAIN it
-    // had carried under them from 2026-08-13 was deleted for the one-day
-    // status bar whose state text is row 8's own cell now),
-    // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-six
-    // view/mode/action buttons since 2026-10-01, when the view bar's three
-    // acts came down as its flush-right view group — twenty-three from
-    // 2026-09-29's late evening, when the
-    // Edit Flag button was deleted — twenty-four earlier that evening,
-    // twenty-one from
-    // the stepped zoom buttons' removal
-    // 2026-09-25, twenty-three from Follow's return on the evening of
-    // 2026-09-23, twenty-two for the hours of that day it was deleted,
-    // twenty-three from Zoom In and Zoom Out's restoration
-    // later on 2026-09-22, twenty-one from the Show trim region button's
-    // deletion that day, twenty-two from the WAVEFORM MAGNIFICATION
-    // lamp's arrival that day, twenty-one from the FLATTEN button's arrival from the
-    // bottom row 2026-09-19, twenty from the two view lamps' whole-category
-    // deletion 2026-09-15 and twenty-two before that —
-    // the deleted toolbar row's four lead them since the 2026-08-12 relayout,
-    // the ITERATION GROUP came back from the menu row on 2026-09-04
-    // and the history group's seven close them since 2026-08-18 — their
-    // separators and its border-bottom, all of them painted on every frame
-    // since 2026-08-14), and the UNIFIED BOTTOM ROW's button
-    // cluster (bottom lane 0, the strip's ONE lane, ON THE WINDOW'S FOOT since
-    // the relayout's commit B apart from the one day the STATUS BAR stood
-    // under it, 2026-08-29:
-    // the clock and the STATE CELL left, then the marker verbs, the marker
-    // walk, the arrow four and the transport three flush right behind their
-    // separators, declared below).
-    // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
+    // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
+    // flat sampled ground, the three menu anchors flush left and the battery +
+    // clock legend flush right), the ICON ROW (top lane 1, row 4: the
+    // twenty-six view/mode/action buttons and their separators, no border of
+    // its own since 2026-10-01, every button painted on every frame), and the
+    // UNIFIED BOTTOM ROW's button cluster (bottom lane 0, the strip's ONE
+    // lane, ON THE WINDOW'S FOOT: the clock cell and the STATE CELL left, then
+    // the marker verbs, the marker walk, the arrow four and the transport
+    // three flush right behind their separators, declared below).
+    // All three PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
     // doctrine) — and every one stashes the ENABLED and SELECTED bits it
     // painted beside them, through the one publisher (publish_button_face),
     // for main.cpp's staleness comparator.
     //
-    // All four are called from on_redraw OUTSIDE the loading / total>0
+    // All three are called from on_redraw OUTSIDE the loading / total>0
     // branches, each gated on its OWN exposure — they are the passes with no
     // dependence on the loaded audio, so a button is visible exactly whenever it
     // is clickable (their press claims sit above the pointer path's loading
     // guard). The exposure gate matters: each shapes labels through HarfBuzz,
     // which a narrow per-frame playhead damage must not pay for. Nothing painted
-    // after them touches the three lanes, the flag cache being transparent
-    // there. (paint_toolbar_row died with row 2 at the 2026-08-12 relayout —
-    // its four buttons are the icon row's first group.)
+    // after them touches their lanes, the flag cache being transparent there.
     void paint_menu_row(cairo_t* cr);
-    void paint_tab_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29): the monospace clock at

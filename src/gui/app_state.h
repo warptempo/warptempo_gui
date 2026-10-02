@@ -3,6 +3,7 @@
 #include "device_config.h"
 #include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lead-in's one quantity
 #include "engine_settings.h"
+#include "gui_battery.h"
 #include "gui_input.h"
 #include "history_diff.h"
 #include "playback.h"
@@ -1954,8 +1955,7 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus),
-// row 3's two
-// TABS, row 4's TWENTY-SIX
+// row 4's TWENTY-SIX
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout, COPY VALUE between Redo and Render since
 // 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
@@ -1977,18 +1977,12 @@ struct TrimBarPressSeed {
 // press claim's chord table (input_pointer.cpp). Adding a button is one row
 // here plus one row in each of those two tables.
 //
-// THE TABS ARE BUTTONS IN THE ROSTER SENSE (2026-07-31) and joined it rather
-// than growing a parallel pair: their rect is painter-published from a shaped
-// label exactly as every other entry's is, their hover is the same one-transition
-// recompute, and their press is the same band claim dispatching a chord through
-// on_key. What they do NOT take is the two row-2-only faces — no click face, and
-// no disabled face of their own — which is stated at each face's site rather
-// than modelled here (row 4 takes the click face but not the disabled one; the
-// `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
-// and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
+// WHICH FACES EACH ROW TAKES is stated at each face's site rather than
+// modelled here (the disabled verdict's one owner is redesign_button_enabled
+// below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped against kDropdownMenus and the chord table (45 chord rows + 3
-// anchors = 48 = kRedesignButtonCount, re-counted 2026-09-29; the count's
+// re-greped against kDropdownMenus and the chord table (43 chord rows + 3
+// anchors = 46 = kRedesignButtonCount, re-counted 2026-10-01; the count's
 // own statement is at kRedesignButtonCount below);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -2085,48 +2079,13 @@ enum class RedesignButton {
     // was deleted on 2026-09-30. kHelpPopupItems, DropdownMenu::Help and every
     // arm that named the anchor went with it.)
     File, Edit, Settings,
-    // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
-    // since 2026-08-18: they say "A" and "B", they light the active tab, they
-    // carry their ordinary tooltips, and their Ctrl+Tab switches the active
-    // navigation tab wherever it is pressed — the `h` history view included,
-    // which is the architect's own ruling on it ("ctrl+tab should work as
-    // normal in history view — it becomes essentially another view but in
-    // mostly readonly mode").
-    //
-    // THE ROW WAS THE `h` VIEW'S WALK SELECTOR FROM 2026-08-05 TO 2026-08-18,
-    // and the shape is recorded because it is an easy one to re-invent: while
-    // the view stood the two slots read "Remote" and "Local", their selected
-    // face marked the live WALK SOURCE instead of the live tab, they carried no
-    // tooltip, their presses were routed to set_history_delta by a band claim
-    // of the mode's own, and Ctrl+Tab cycled the walks rather than switching
-    // tabs. (The row grew to four slots for the (walk source, reading) product
-    // on 2026-08-07 and went back to two the following day, when the READING
-    // left for its own toggle button in row 4 — HistoryCumulative below. TabC
-    // and TabD are deleted whole with that arc.) THE WALK SELECTOR IS ROW 4'S
-    // OWN LAMP NOW (HistoryWalk on bare `g`, below — a radio pair from
-    // 2026-08-18 until the 2026-09-04 collapse), which is what freed this row:
-    // a repurposed surface was the only reason the tabs ever stopped being
-    // tabs.
-    //
-    // THE OTHER TAB CARRIES THE PAIRED MARCH (architect 2026-09-14): its
-    // shift-click and its chrome_shift_hold_ms() long press dispatch Ctrl+Shift+Tab
-    // through on_key, the shifted form of the tabs' own Ctrl+Tab, so the
-    // shift-admission rule places the march here (redesign_button_shift_admits).
-    // The bottom row's Walk Both Tabs button was deleted the same day for
-    // standing apart from the button whose chord it shifts. THE CHORD HAS A
-    // SECOND POINTER ROAD since 2026-09-26, the walk button's ctrl-shift press
-    // (a modified press spells its button's own key, and the walk's is Tab —
-    // redesign_button_ctrl_shift_admits), as Ctrl+Tab has the walk's
-    // ctrl-click: a consequence of the grammar, not a second listing. Only
-    // the OTHER tab ever takes the press: the selected
-    // tab is a radio (a press on it is a consumed nothing, shifted or not) and
-    // has no hover zone (redesign_button_hover_zone), so it carries no tooltip
-    // and advertises no second line. SINCE THE MARCH BECAME A ROUND TRIP
-    // (architect 2026-09-26) the press ends on THIS tab, the one already
-    // selected, having stepped and centred the other one unseen; the road
-    // stays on the other tab by ruling (the record is at the tab row's
-    // kToolbarChords entry, input_pointer.cpp).
-    TabA, TabB,
+    // (THE TAB ROW — row 3, the A / B tabs TabA and TabB — IS DELETED
+    // (architect 2026-10-01: "a waste of space"). The active tab's letter is
+    // the bottom row's clock cell ("A | 00:45.115",
+    // paint_bottom_row_buttons_and_clock), and the switch keeps Ctrl+Tab and
+    // the bottom row's TransportSwitchTab button; the paired march keeps
+    // Ctrl+Shift+Tab, Switch Tab's shifted press and the walk's ctrl-shift
+    // press.)
     // Row 4, the icon row, in painted order: the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
@@ -2142,7 +2101,8 @@ enum class RedesignButton {
     // from the toolbar group later on 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
-    // 2026-09-29, ENABLE TOOLTIPS and SETTINGS — and THE ROW'S LAST GROUP —
+    // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
+    // 2026-10-01: help comes after settings) — and THE ROW'S LAST GROUP —
     // the HISTORY OPENER leading its WALK LAMP, its four companions and
     // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
     // for it.
@@ -2503,9 +2463,22 @@ enum class RedesignButton {
     // of read_only beside the key. Recorded so the harder variant is not
     // revived.
     IconReadOnly,
-    // ENABLE TOOLTIPS (architect 2026-09-29), between the padlock and
-    // Settings: THE TOOLTIP LAMP on bare backslash, wearing Breeze's
-    // help-whatsthis. A per-project session lamp in the magnification lamp's
+    // SETTINGS (architect 2026-09-29), right after the padlock and AHEAD of
+    // the tooltip lamp (architect 2026-10-01: help comes after settings):
+    // bare `;`, the bare settings prompt, wearing Breeze's
+    // settings-configure. The button IS the key, so it greys exactly where
+    // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
+    // allowlist), grid iterations (the iteration lock's gate inherits that
+    // refusal; iteration_lock_greys names it) and the `h` view (off that
+    // mode's allowlist, through the derived partition) — and a dialog editor
+    // already standing is the veil's, the press never reaching it. It is not
+    // the menu row's Settings ANCHOR (RedesignButton::Settings), whose rows
+    // each prefill one key and open on a locked tab; this is the typed road's
+    // pointer spelling. An act, not a mode: no lamp.
+    IconSettings,
+    // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
+    // since 2026-10-01 (architect: help comes after settings): THE TOOLTIP
+    // LAMP on bare backslash, wearing Breeze's help-whatsthis. A per-project session lamp in the magnification lamp's
     // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
     // settings vocabulary and not carried by `'` — and while it is DARK NO
     // TOOLTIP SHOWS ANYWHERE: the tooltip model's one wait writer
@@ -2521,18 +2494,6 @@ enum class RedesignButton {
     // routers each answer bare backslash through the same setter (architect 2026-09-29), so the player row's hints can be lit and
     // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
-    // SETTINGS (architect 2026-09-29), right after the tooltip lamp, closing
-    // the render-entry group: bare `;`, the bare settings prompt, wearing Breeze's
-    // settings-configure. The button IS the key, so it greys exactly where
-    // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
-    // allowlist), grid iterations (the iteration lock's gate inherits that
-    // refusal; iteration_lock_greys names it) and the `h` view (off that
-    // mode's allowlist, through the derived partition) — and a dialog editor
-    // already standing is the veil's, the press never reaching it. It is not
-    // the menu row's Settings ANCHOR (RedesignButton::Settings), whose rows
-    // each prefill one key and open on a locked tab; this is the typed road's
-    // pointer spelling. An act, not a mode: no lamp.
-    IconSettings,
     // THE HISTORY GROUP — the row's LAST, and its own again since 2026-08-18
     // (architect: "place a separator before the history button, and place
     // cumulative/etc after the history button"). The OPENER leads it: bare
@@ -2579,10 +2540,6 @@ enum class RedesignButton {
     // state reset to Commit at every entry — so a lit lamp outside the view
     // would advertise a selection that is not a live fact. It is unlit out
     // there whatever the last visit left (redesign_button_selected).
-    //
-    // THIS SURFACE IS WHY ROW 3 IS THE A/B TABS AGAIN (the row's own entry
-    // above carries the superseded shape): the walk had no surface of its own,
-    // so it borrowed one.
     HistoryWalk,
     // THE FOUR COMPANIONS, behind the walk lamp in the order they have always
     // held
@@ -2637,7 +2594,7 @@ enum class RedesignButton {
     // view bar that stood 2026-08-02..2026-10-01 — kdenlive's workspace
     // switcher reborn — unchanged in meaning and dispatch, its three labelled
     // buttons gone and the acts wearing the architect's 2026-08-11 glyphs
-    // (icons.h). A RADIO OF THREE, like the tabs: the lit button is the
+    // (icons.h). A RADIO OF THREE: the lit button is the
     // current view and a press on it is the consumed nothing (the `radio`
     // column, kToolbarChords). LIVE in the `h` view (the three are on the
     // mode's allowlist) and on a locked tab (navigation); DEAD under the grid
@@ -2738,7 +2695,7 @@ enum class RedesignButton {
     //     button there is no wrong half to press, so the `radio` flag and the
     //     pair's `redesign_button_selected` lamp are DELETED rather than kept.
     //     The generic radio consume is untouched — the icon row's view group
-    //     and the tabs use it. (The S/T and W/P rows used it too until 2026-09-04,
+    //     uses it. (The S/T and W/P rows used it too until 2026-09-04,
     //     when those pairs collapsed into single lamps for the same reason this
     //     one did: one button over one chord has no wrong half.)
     //
@@ -2958,7 +2915,7 @@ enum class RedesignButton {
     // redesign_button_ctrl_shift_admits) — on glass the S Pen's side button
     // with a tap and with a long press. The tab switch acting in every state,
     // the twin rule leaves its face lit wherever the roster is
-    // (redesign_button_enabled, the tabs' arm). Its bare landing's camera is
+    // (redesign_button_enabled, the walk's arm). Its bare landing's camera is
     // the landing owner's walk (Viewport::land_subject, LandingKind::Walk):
     // centred at the working zoom, on screen or not; at every other zoom,
     // finer or coarser, nothing on screen and paged in off screen.
@@ -2969,11 +2926,9 @@ enum class RedesignButton {
     //
     // (WALK BOTH TABS, the group's third button on Ctrl+Shift+Tab, stood here
     // from 2026-08-15 to 2026-09-14, when the architect DELETED it under the
-    // shift-admission rule: the chord is Ctrl+Tab's shifted form, and
-    // Ctrl+Tab's buttons are the tab row's, so the march is the OTHER TAB's
-    // shift-click and long press — the record is at TabA above — and, since
+    // shift-admission rule: the march is Switch Tab's shifted press and, since
     // this button admits ctrl, its own ctrl-shift press. The key is untouched
-    // in every state. Its glyph, boost, left with it.)
+    // in every state.)
     //
     // A DOUBLE-CLICK-MEANS-CTRL+SHIFT RULE WAS CONSIDERED AND DECLINED, and
     // the reason is mechanical rather than a preference: EVERY double-click
@@ -3001,15 +2956,16 @@ enum class RedesignButton {
     // posture (AppState::camera_hold).
     IconZoomOriginal,
     // SWITCH TAB (architect 2026-09-29), the group's last: CTRL+TAB, the
-    // one-shot other-tab act, its table row carrying the ctrl as the tabs'
-    // rows do, wearing Breeze's tab-detach. It ADMITS SHIFT and nothing else:
-    // the shift-click and the long press OR the shift into the row's ctrl and
-    // dispatch CTRL+SHIFT+TAB, the paired march — the tabs' own shape, which
-    // it shares with the other tab's press (so the tab switch has three
-    // pointer roads: the other tab, the walk's ctrl-click and this button).
-    // Not a radio: the chord toggles the tab, so there is no lit half. It
-    // NEVER GREYS: Ctrl+Tab acts in every state the roster is live in (the
-    // tabs' and the walk's arm in redesign_button_enabled). In the `h` view
+    // one-shot other-tab act, its table row carrying the ctrl, wearing
+    // Breeze's tab-detach. It ADMITS SHIFT and nothing else: the shift-click
+    // and the long press OR the shift into the row's ctrl and dispatch
+    // CTRL+SHIFT+TAB, the paired march (so the tab switch has two pointer
+    // roads since the tab row's deletion on 2026-10-01: the walk's ctrl-click
+    // and this button). Not a radio: the chord toggles the tab, so there is
+    // no lit half — the active tab's letter is the clock cell's
+    // (paint_bottom_row_buttons_and_clock). It NEVER GREYS: Ctrl+Tab acts in
+    // every state the roster is live in (its and the walk's arm in
+    // redesign_button_enabled). In the `h` view
     // Ctrl+Tab is on the mode's allowlist and the march is its own
     // vocabulary, so the derived partition answers live.
     TransportSwitchTab,
@@ -3022,16 +2978,16 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-10-01, when
-// the row-1 view bar's three selectors became the icon row's view group):
-// THREE in row 1 (the menu anchors), two in row 3, TWENTY-SIX in row 4 and
-// SEVENTEEN in the bottom row — 48. Of
-// those, FORTY-FIVE carry a chord in kToolbarChords
+// the tab row was deleted with its two tabs):
+// THREE in row 1 (the menu anchors), TWENTY-SIX in row 4 and
+// SEVENTEEN in the bottom row — 46. Of
+// those, FORTY-THREE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 48;
+inline constexpr int kRedesignButtonCount = 46;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3085,7 +3041,7 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // one of them keys off THIS predicate rather than off a button list, so the
 // four verbs started answering with the bottom lane and the four companions
 // with the top strip the moment the membership above moved.
-// A membership predicate like redesign_button_is_tab, deliberately NOT the
+// A membership predicate, deliberately NOT the
 // exhaustive-switch shape: redesign_button_enabled is the roster's
 // classification chokepoint (a new button fails to compile there until its
 // answer is stated), and one chokepoint is enough.
@@ -3126,17 +3082,6 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // resting as a definition nothing asks. The four's RESTING grey outside the
 // view was never this predicate's; it is their own arm's.)
 
-// WHICH BUTTONS ARE ROW 3'S — the two tabs, which are the A/B pair in every
-// state since 2026-08-18. ONE consumer, re-greped rather than inherited: the
-// HOVER CARVE-OUT (the selected tab has no hover face), which is about the ROW
-// rather than about either slot. It had three more while the row was the `h`
-// view's walk selector — a tooltip override, a label override and the mode's
-// own press claim — and all three are deleted with that repurposing; the roster
-// entry for TabA/TabB carries the record.
-inline constexpr bool redesign_button_is_tab(RedesignButton b) {
-    return b == RedesignButton::TabA || b == RedesignButton::TabB;
-}
-
 // (WHICH BUTTONS ARE ROW 4'S — `redesign_button_in_icon_row`, derived from the
 // other three rows rather than listed — IS DELETED PRODUCER-LESS with the
 // collapse rule it was written for, 2026-08-14. Its two readers were that
@@ -3168,7 +3113,8 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // magnification lamp, FOLLOW and the restrict-undo lamp), THE ITERATION
 // GROUP (the BPM opener, the grid-iterations lamp and, since 2026-09-19,
 // FLATTEN), the render-entry group (listen, the read-only toggle and, since
-// 2026-09-29, ENABLE TOOLTIPS and SETTINGS — the load-in-place left it on
+// 2026-09-29, SETTINGS and ENABLE TOOLTIPS, help after settings since
+// 2026-10-01 — the load-in-place left it on
 // 2026-09-01) and THE
 // HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
 // load-in-place at the tail — and, FLUSH AT THE ROW'S RIGHT EDGE, THE VIEW
@@ -3355,15 +3301,13 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 }
 
 // WHICH ROSTER BUTTONS FADE THEIR HOVER, AND HOW (architect 2026-09-27, the
-// Breeze port at render.h's HoverFade): the two tabs fade both ways and
-// restart (QTabBar's engine); every tool button — the icon row and the
-// bottom row — snaps in and fades out (QToolButton's); row 1's
+// Breeze port at render.h's HoverFade): every tool button — the icon row
+// and the bottom row — snaps in and fades out (QToolButton's); row 1's
 // MENU ANCHORS do not animate at all, Breeze having no QMenuBar engine, so
 // their pill stays the hard switch it was (std::nullopt: no edge is stamped).
 inline constexpr std::optional<HoverFadeKind>
 redesign_button_hover_fade_kind(RedesignButton b) {
     if (redesign_button_is_menu_anchor(b)) return std::nullopt;
-    if (redesign_button_is_tab(b)) return HoverFadeKind::Restarting;
     return HoverFadeKind::SnapIn;
 }
 
@@ -5965,9 +5909,8 @@ struct AppState {
     // slot from 2026-08-01 with a padlock in it, the ACTIVE tab's rect
     // published here for a press that dispatched bare `o`; the padlock is a
     // roster button in the icon row's last group now
-    // (RedesignButton::IconReadOnly), so the tabs reserve no slot, draw no
-    // lock and publish nothing, and ChromePress::Kind::TabLock went with the
-    // rect.)
+    // (RedesignButton::IconReadOnly), and ChromePress::Kind::TabLock went
+    // with the rect; the tab row itself is deleted since 2026-10-01.)
 
     // THE MARKER PAINTER'S STASH — the second surface on the painter-publishes
     // contract the roster above established, and for a harder reason than the
@@ -6778,8 +6721,7 @@ struct AppState {
     // toggle is a roster button now and arms as Roster like every other chord
     // button. HistoryWalkTab armed the `h` view's walk-selector TABS, whose act
     // was set_history_delta rather than a chord, and went with that
-    // repurposing on 2026-08-18: row 3 is the A/B pair in every state, so a
-    // press on a tab arms as Roster and dispatches Ctrl+Tab like any other.)
+    // repurposing on 2026-08-18.)
     // (The THREE dropdown ANCHORS — File, Edit and Settings,
     // re-greped 2026-09-09 against kDropdownMenus, a Navigation anchor having
     // left 2026-08-15, Edit having arrived 2026-08-20, Iterations having
@@ -6846,16 +6788,15 @@ struct AppState {
     // the armed target's published rect at its own coordinates, the derive
     // doctrine; the bit serves the paint alone.
     //
-    // Its edges: the band claims' arm route writes it (arm_redesign_press and
-    // the tab row's two direct claims, input_pointer.cpp), the release takes
+    // Its edges: the band claims' arm route writes it (arm_redesign_press,
+    // input_pointer.cpp), the release takes
     // it whole at the top of on_button_release (take_chrome_press — armed or
     // not, so an early return cannot strand it), and
     // clear_redesign_button_press drops it on the pointer-leave /
     // capability-loss edge (main.cpp's hook): a pointer that has left the
     // window is on no button, and an act that has not happened yet must not
-    // wait on a release that may never come. WHICH buttons paint the face is
-    // the chord table's `click_face` column, not restated here — row 3's two
-    // tabs set it false, keeping their own two faces.
+    // wait on a release that may never come. EVERY chord-table button paints
+    // the face (the chord table's note at ToolbarChord, input_pointer.cpp).
     //
     // THE HOLD-REPEAT RIDES THIS ARM (architect 2026-08-16, reversing his own
     // 2026-08-13 deletion of the arrows' repeat: the touch panel has no
@@ -7301,9 +7242,9 @@ struct AppState {
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
     //   LIT — the view group's three (bare 1/2/3), the
-    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), BOTH row-3 tabs
+    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), SWITCH TAB
     //   (Ctrl+Tab, which the ALLOWLIST admits since
-    //   2026-08-18 — the tabs switch tabs in here like everywhere else), the
+    //   2026-08-18 — a tab switch works in here like everywhere else), the
     //   history button and the WALK LAMP
     //   (bare `h` and bare `g`, the mode's OWN vocabulary, which the derivation
     //   asks about
@@ -7341,7 +7282,7 @@ struct AppState {
     // — and it is read live from `active` below, so leaving the mode restores
     // every face on the next frame with nothing latched.
     //
-    // ROW 3'S TABS ARE ORDINARY TABS IN HERE (architect 2026-08-18: "ctrl+tab
+    // THE A / B TABS ARE ORDINARY TABS IN HERE (architect 2026-08-18: "ctrl+tab
     // should work as normal in history view — it becomes essentially another
     // view but in mostly readonly mode, with no playback since trim is not
     // mutable"). A Ctrl+Tab in the view is an ORDINARY A/B SWITCH — not a
@@ -7353,12 +7294,8 @@ struct AppState {
     // delta's whole vocabulary is those two stores plus `scale` — so the
     // walks, the frozen now side and the head delta describe the same piece on
     // either tab.
-    // (From 2026-08-05 to 2026-08-18 the tabs were the WALK SELECTOR instead —
-    // two slots, "Remote" and "Local" — with Ctrl+Tab cycling the walk; the walk
-    // has its own lamp in row 4 now, and the row's record is at
-    // RedesignButton::TabA. The row carried the walk-and-reading PRODUCT as four
-    // slots for one day, 2026-08-07..08; the READING is row 4's own Cumulative
-    // toggle, over a session bit that is not in this struct at all —
+    // (The walk has its own lamp in row 4, and the READING is row 4's own
+    // Cumulative toggle, over a session bit that is not in this struct at all —
     // AppState::history_cumulative, which is why nothing here names it.)
     //
     // AND THERE ARE TWO WALKS TO SELECT BETWEEN SINCE 2026-08-07 (architect,
@@ -8097,22 +8034,35 @@ struct AppState {
     // seed is the REOPEN's, and the edge alone is not enough for it: each
     // project's session builds a fresh AppState whose bit is born false while
     // the platform's is already true and fires no edge for a focus that never
-    // changed. The redesigned rows 1 and 2 paint their ground from
-    // it — focused #292c30, unfocused #202326 — so the app's header tracks the
-    // labwc titlebar above it, which darkens the same way. Nothing else in
-    // those rows changes: separators, borders, the accent, labels and icons
-    // all keep their colors, and there is NO fade — a hard swap on the edge.
-    // Row 3's ground is already the unfocused value and does not move.
-    // THE READERS ARE THREE (architect 2026-08-28): those two rows
-    // and THE RENDER PLAYER'S PLAY-SCRUB, whose played groove takes the
-    // focused blue or the shot's dimmed one — the only reader below the
-    // waveform, and the reason the activation hook damages the modal row too
-    // while the player stands (main.cpp, where the pair of rects is stated).
+    // changed. THE READERS (re-grepped 2026-10-01): THE RENDER PLAYER'S
+    // PLAY-SCRUB, whose played groove takes the focused blue or the shot's
+    // dimmed one (architect 2026-08-28), and accent_for_focus
+    // (paint_handler.cpp) — the folder overlay's panel and the modal row's
+    // active-focus outline, which take kRedesignAccentInactive (2026-09-02).
+    // The CHROME'S GROUND READS NOTHING HERE since 2026-10-01: the menu row
+    // takes the content ground, which does not swap. There is NO fade — a
+    // hard swap on the edge; the activation hook (main.cpp) states the
+    // damage.
     // False until the first configure IN THE FIRST SESSION, which is
     // the honest cold answer (the platform's accessor states why that is never
     // visible); every later session starts from the platform's live reading
     // instead.
     bool window_activated = false;
+
+    // THE MENU ROW'S BATTERY + CLOCK LEGEND (architect 2026-10-01): `text` is
+    // what paint_menu_row paints flush right — the composer is
+    // compose_menu_legend (gui_battery.h) — and `minute` and `battery` are the
+    // two inputs it was last composed from. ONE WRITER, main.cpp's tick, which
+    // asks the platform's battery_status and the wall clock on every tick,
+    // recomposes only when the minute or the battery changed, and damages the
+    // menu row only when the TEXT changed. Empty until the session's first
+    // tick (a fresh AppState per project, so the first tick composes it).
+    struct MenuLegend {
+        std::string text;
+        int64_t     minute  = -1;
+        GuiBattery  battery {};
+    };
+    MenuLegend menu_legend;
 
     // THE REMEMBERED POINTER POSITION, from the last on_motion event, and the
     // source every pointer-derived answer re-reads when it has to re-resolve with
@@ -9126,34 +9076,6 @@ inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
     return a.loading || total_frames <= 0;
 }
 
-// IS THE CHROME FOCUSED? THE ONE VERDICT behind the HEADER's own faces —
-// the menu row's ground (redesign_row_ground, paint_handler.cpp, which is also
-// the mix TARGET of that row's disabled label and of its click fill). IT IS
-// THE WINDOW'S ACTIVATION AND NOTHING ELSE.
-//
-// A STANDING FOLDER OVERLAY WAS A SECOND TERM HERE and is not one any more
-// (architect 2026-09-03 evening, the same breath that left the File anchor
-// live under the band: "File, Edit, Iterations, etc. looks odd disabled when
-// the player's on, especially because the title bar is still the regular one —
-// the window has focus"). The title bar the compositor draws says ACTIVATED,
-// so a whole header painted in the focus-loss ground under a modal contradicts
-// it — and with a LIVE ANCHOR standing on that row the header is not an
-// inactive surface at all. It stood for the evening of 2026-09-02, was deleted
-// for the hours of 2026-09-03 the band covered row 1 (no producer), came back
-// with the gap's move above the menu row that evening, and is gone again with
-// this ruling.
-//
-// THE `h` HISTORY VIEW WAS NEVER IN IT: a MODE is not a MODAL. The view keeps
-// the keyboard, its own allowlist including the three view selectors, so its
-// header stays focused.
-//
-// DAMAGE: the activation hook damages the top strip (and the standing modal
-// row and panel) on every focus edge, so the one producer of this verdict
-// repaints the header on both of its edges with no damage call of its own.
-inline bool chrome_focused(const AppState& a) {
-    return a.window_activated;
-}
-
 // THE PLAY/PAUSE BUTTON'S FACE — the word its hint says and the glyph it
 // wears, ONE answer for both (architect 2026-09-01, the truthful-tooltips
 // ruling: a tooltip names the act the press will run in the current state).
@@ -9773,25 +9695,19 @@ GuiRect top_strip_area(const AppState& a);
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge);
 GuiRect top_menu_row_area(const AppState& a);
-GuiRect top_tab_row_area(const AppState& a);
 GuiRect top_icon_row_area(const AppState& a);
-// GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TAB ROW since
-// 2026-09-09 (above the menu row 2026-09-03..09, between the menu row and the
-// tab row from commit B until then; the vertical rule, main.cpp). THREE
-// readers: the wheel-inert band list (the band lies inside top_strip_area,
-// which is a pan surface, so it needs a band of its own to stay inert),
-// paint_tab_row, which fills it in the tab row's own ground so the row reads
-// as one tall lane with its tabs at the foot, and on_redraw's exposure gate
-// for that painter. Gap 2 (above the bottom row) has no accessor by the same
-// reasoning inverted — it lies below every wheel area and is window ground
-// nothing paints over.
+// GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the
+// vertical rule, main.cpp), window ground. ONE reader: the wheel-inert band
+// list (the band lies inside top_strip_area, which is a pan surface, so it
+// needs a band of its own to stay inert). Gap 2 (above the bottom row) has no
+// accessor by the same reasoning inverted — it lies below every wheel area.
 GuiRect top_flex_gap_area(const AppState& a);
 // ROW 5's three lanes (2026-08-01), replacing the legacy
 // chip / marker-text / flag / triangle four.
 GuiRect top_trim_row_area(const AppState& a);
 GuiRect top_ruler_row_area(const AppState& a);
 // THE TWO LANES ARE SEPARATE INPUT SURFACES, and they answer differently: the
-// TRIM BAR carries its own gestures (endcap / bridge drags, the ctrl and
+// TRIM BAR carries its own gestures (handle / bridge drags, the ctrl and
 // ctrl+shift bound-set clicks, the span-framing double-click), while the RULER
 // is a PLACEMENT LANE since 2026-09-25 (point_on_placement_lanes,
 // input_pointer.cpp) — a plain or shift press arms the placement pending
@@ -9855,18 +9771,15 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 }
 
 // THE SLOT'S CEILING, AS A HEIGHT: how far up from the bottom row's top edge a
-// tenant may reach — TO THE ICON ROW'S BORDER-BOTTOM and no further, the whole
-// area below the toolbar (architect 2026-09-09, the top strip relayout that
-// put the icon row under the menu row: the band starts directly under the
-// icon row's line, GAP 1 INCLUDED, and carries no line of its own — the icon
-// row's border stands there; 2026-09-03's ruling had it start at the tab
-// row's first pixel, which was the first lane under the menu row then: "whatever overlays we put could start right at the first pixel of
-// the tab row ... it could also go all the way down to the bottom strip —
-// yes, I think so"). So the panel is EVERY LANE BUT THE TWO TOOLBAR ROWS AND
-// THE BOTTOM ROW: gap 1, the tab row, the trim bar, the
-// ruler, the marker lane, the waveform entire and gap 2 — and THE MENU ROW
-// AND THE ICON ROW STAND ABOVE IT, VISIBLE AND CARRYING THE `h` VIEW'S
-// PARTITION (File live, the other two anchors and every icon
+// tenant may reach — TO THE ICON ROW'S FOOT and no further, the whole area
+// below the toolbar (architect 2026-09-09, the top strip relayout that put the
+// icon row under the menu row: the band starts directly under the icon row,
+// GAP 1 INCLUDED, and carries no line of its own — nor does the icon row since
+// 2026-10-01, so nothing marks the band's top, folder_overlay.h's head). So
+// the panel is EVERY LANE BUT THE TWO TOOLBAR ROWS AND THE BOTTOM ROW: gap 1,
+// the trim bar, the ruler, the marker lane, the waveform entire and gap 2 —
+// and THE MENU ROW AND THE ICON ROW STAND ABOVE IT, VISIBLE AND CARRYING THE
+// `h` VIEW'S PARTITION (File live, the other two anchors and every icon
 // dead: the face is redesign_button_enabled's head over
 // menu_anchor_live, and the press is the veil's with the live anchor
 // exempted — architect 2026-09-03 evening). The height is the bottom row's
@@ -9874,12 +9787,9 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // the CLAMPED window dimensions — the same geometry keyboard_slot_band takes
 // its x and width from, so the two cannot disagree about where the band
 // begins. Zero on a degenerate stack, which every consumer already reads as
-// "no room". ON THE TABLET, where gap 1 is 0, THE BAND LOST ITS TOP 104
-// DEVICE PIXELS to the move: on the 2304x1270 content rect at gui_scale 225
-// the 2026-09-03 ceiling was the tab row's first pixel, y = 70 under a 70px
-// menu lane, and the icon row's foot is y = 174, so the band runs [174, 1164)
-// where it ran [70, 1164) — and its CONTENT lost 102, the band having spent
-// two of those pixels on the border row that retired with the move.
+// "no room". ON THE TABLET (2304x1440 at gui_scale 200, gap 1 zero) the band
+// runs [164, 1346): under the 72 menu and 92 icon rows, down to the 94-tall
+// bottom row.
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
 // (architect 2026-08-28: "from the bottom strip up to the middle of the
@@ -9887,12 +9797,8 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // that ruling settled was that the band does NOT grow and shrink with its
 // listing, and that is unchanged: a short listing leaves ground and a long one
 // scrolls, whatever the ceiling is. Only WHERE the ceiling sits has moved —
-// the waveform's midpoint until 2026-09-02, row 1's foot for that one day, the
-// window's top for the hours of 2026-09-03 the menu row was covered ("remove
-// top row in file picker/media player — kdenlive does not allow ctrl+q during
-// modal so we don't need to either"), the tab row's top from that evening,
-// and the icon row's foot since the 2026-09-09 relayout put the toolbar above
-// the gap.
+// the waveform's midpoint until 2026-09-02, and the icon row's foot since the
+// 2026-09-09 relayout put the toolbar above the gap.
 //
 // ONLY THE OVERLAY IS CAPPED BY IT: the keyboard's height is its four key
 // rows, authored, and it is deliberately not clamped here — a band that
@@ -12659,7 +12565,7 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
 // (GuiInputHandler::cycle_history_diff_flag_focus, input_key_dispatch.cpp),
 // which lands on the answer. The Walk button's face does not ask it: its
 // ctrl form, the tab switch, keeps it lit wherever the roster is
-// (redesign_button_enabled, the tabs' arm).
+// (redesign_button_enabled, the walk's arm).
 //
 // AN EMPTY LIST AND THE NO-WRAP WALLS answer -1: forward from the last flag,
 // back from the first.
@@ -14386,18 +14292,9 @@ inline bool playback_launch_playable(const AppState& a,
 //     derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-//   * Row 1's three anchors and row 3's tabs answer true HERE: row 1 keeps its
-//     two faces by ruling, and a tab has no disabled face of its own. Their
-//     entries exist
-//     so the vector is total over the roster and the comparator needs no
-//     membership test. (The tabs answer true in EVERY state since 2026-08-05,
-//     and the REASON changed on 2026-08-18 while the answer did not: the `h`
-//     view greyed them for one day, then repurposed the row as its walk
-//     selector — and now the walk has its own lamp in row 4, so the tabs
-//     are ordinary A/B tabs in there and their Ctrl+Tab is on the mode's own
-//     ALLOWLIST, which is what makes the derived partition call them LIVE. The
-//     mode line at the top of this body never fires for them either way, and
-//     row 3 has no disabled face at all.)
+//   * Row 1's three anchors answer true HERE: row 1 keeps its two faces by
+//     ruling. Their entries exist so the vector is total over the roster and
+//     the comparator needs no membership test.
 // MODAL gates are deliberately absent WITH ONE RULED EXCEPTION: a prompt or
 // a dialog editor swallows the PRESS at the pointer path's own veil, and a
 // modal that greyed the chrome under it would be a fourth face nobody asked
@@ -14759,17 +14656,7 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
-        // THE TWO TAB BUTTONS MIRROR NOTHING, and they left this arm for one
-        // afternoon on 2026-09-10, when the iteration lock refused Ctrl+Tab
-        // into a LOCKED tab and each button greyed on its own tab's bit. The
-        // piece-wide exclusion ruled that evening deleted the state that
-        // described — no tab can be locked under a lit lamp — so they are back
-        // here with their siblings: their presses dispatch in every state and
-        // the CHORD's own refusals answer, the radio flag making a press on
-        // the lit half a consumed nothing, and the `h` view greys neither
-        // (row 3 is the A/B tabs in every state).
-        //
-        // THE WALK JOINS THEM UNDER THE TWIN RULE (architect 2026-09-26): its
+        // THE WALK, UNDER THE TWIN RULE (architect 2026-09-26): its
         // ctrl-click is Ctrl+Tab, the same tab switch, whose arm
         // (handle_tab_switch_keys) has no refusal in any state the roster is
         // live in — the iteration lock admits it, the `h` view admits it, a
@@ -14781,16 +14668,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // key's silent refusal (cycle_marker_focus, and the `h` view's
         // cycle_history_diff_flag_focus).
         //
-        // SWITCH TAB JOINS THEM (architect 2026-09-29): its plain press IS
+        // SWITCH TAB JOINS IT (architect 2026-09-29): its plain press IS
         // Ctrl+Tab, so it never greys, its shifted press (the march) under a
         // lit grid iterations reaching the key's own card.
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
         case RedesignButton::TransportWalk:
         case RedesignButton::TransportSwitchTab:
-            // Their own return: falling into the zoom group's first arm handed
-            // them Full Zoom Out's fork, and row 3 paints no disabled face, so
-            // a live-looking tab dropped its click (architect 2026-09-24).
             return true;
         // PREVIOUS MARKER (architect 2026-09-29) UNDER THE TWIN RULE: its
         // plain press is Shift+Tab and its ctrl press Ctrl+Shift+Tab, the
@@ -15282,10 +15164,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // The two SKIPS and
         // THE WALK GROUP'S FOUR stay lit, being the mode's own
         // absolute jumps, its diff-flag cycle both ways, its `c` and the
-        // allowlisted Ctrl+Tab (the tab row's shifted press
+        // allowlisted Ctrl+Tab (Switch Tab's shifted press
         // carries the march that composes that cycle with a round trip
-        // through the other tab, the
-        // tabs being never-grey); the architect
+        // through the other tab, Switch Tab being never-grey); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
         // THE VIEW: the four VERBS
@@ -15901,7 +15782,7 @@ inline bool redesign_button_enabled(const AppState& a,
     return true;
 }
 
-// THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 3's tabs and row 4's
+// THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 4's
 // TOGGLES and its view group's three radios — the two VIEW LAMPS and the WALK
 // LAMP, which were three radio PAIRS until the architect collapsed them on
 // 2026-09-04; follow, iteration, the TRIM REGION toggle (a
@@ -15941,12 +15822,6 @@ inline std::string view_pair_label(char audio, char column) {
 }
 
 inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
-    // (ROW 3'S TABS HAD A MODE OVERRIDE HERE from 2026-08-05 to 2026-08-18,
-    // ranked above this switch: while the `h` view stood the row was the WALK
-    // SELECTOR and the lit slot marked the live walk SOURCE rather than the
-    // live tab. The walk has its own radio pair below since 2026-08-18, so the
-    // tabs read app.active_tab_view in every state and the override is gone
-    // with the repurposing.)
     switch (b) {
         // THE VIEW GROUP READS THE LIVE COMBINATION — both axes at once, which is
         // what an ABSOLUTE selector reports — so a button lights however the
@@ -15962,8 +15837,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
                                                 a.active_markers_view == 'W';
         case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
                                                 a.active_markers_view == 'P';
-        case RedesignButton::TabA:       return a.active_tab_view     == 'A';
-        case RedesignButton::TabB:       return a.active_tab_view     == 'B';
         // (THE TWO VIEW LAMPS LIT AWAY FROM HOME here from 2026-09-04 to
         // 2026-09-15 — Source + Warp is view 1 and the home state, so the
         // audio lamp lit in TARGET and the marker lamp in PHASE RESET, each
@@ -16351,24 +16224,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (Play Renders admitted shift from 2026-09-03 to 2026-09-30, its shifted
 // press and its long press opening the AV Sync Stats panel; the admission
 // went with the panel.)
-// (THE TWO TABS JOINED 2026-09-14 with Ctrl+Shift+Tab, the PAIRED MARCH
-// (architect): the chord is Ctrl+Tab's shifted form and Ctrl+Tab's buttons
-// are the tabs, so the rule above put the march on them and deleted the bottom
-// row's separate Walk Both Tabs button, which had stood apart from the button
-// whose chord it shifts. They are the set's FIRST members whose TABLE row
-// carries a modifier of its own — ctrl, not shift — so the lift's chord build
-// ORs the admitted shift into the row's ctrl and dispatches exactly
-// Ctrl+Shift+Tab, the key's own road with no second body: the live march, the
-// `h` view's diff-flag march, and under a lit grid-iterations lamp the key's
-// refusal card, the tab staying lit because its plain Ctrl+Tab is live there
-// (the twin rule). Only the OTHER tab takes the press — the selected one is a
-// radio and its press, shifted or not, is a consumed nothing — and the long
-// press is the tablet's fingertip road to the march (the S Pen's side
-// button held through a long press on the walk is its pen road since
-// 2026-09-26). The march is a round trip since 2026-09-26 and ends on the tab
-// it started from; the other tab's shifted press stays one of its roads by
-// ruling, recorded at the tab row's kToolbarChords entry, input_pointer.cpp,
-// and the walk's ctrl-shift press is the other.)
+// (THE TWO TABS carried the paired march's shifted press from 2026-09-14
+// until the tab row's deletion on 2026-10-01; its roads are Switch Tab's
+// shifted press and the walk's ctrl-shift press.)
 // (FLATTEN JOINED 2026-09-19 with Ctrl+Shift+F: its plain act clears a
 // marker's deviation terms and its shifted twin collapses them to one, the
 // drop's and the copy's rule once more — a shift-enabled gesture whose bare
@@ -16409,8 +16267,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // Shift+End being the whole-piece jump; it returned to Ctrl+Home / Ctrl+End
 // the same day (architect), and they admit ctrl, below.)
 // (SWITCH TAB JOINED 2026-09-29 with Ctrl+Shift+Tab, THE PAIRED MARCH
-// (architect): the tabs' own shape on a bottom-row button whose table row is
-// Ctrl+Tab, the lift ORing the admitted shift into the row's ctrl. The long
+// (architect): a bottom-row button whose table row is Ctrl+Tab, the lift ORing the admitted shift into the row's ctrl. The long
 // press is the fingertip's road to the march from the walk group. A SHIFT-
 // OR CTRL-MODIFIED CHORD MAY ALSO HAVE ITS OWN DEDICATED BUTTON since that
 // day (architect: "an artificial constraint; the tablet is the only real
@@ -16422,8 +16279,6 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
-           b == RedesignButton::TabA ||
-           b == RedesignButton::TabB ||
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
            b == RedesignButton::TransportPlayStop ||
@@ -16735,25 +16590,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // costs).
         case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
                                                  "Press Shift for miscellaneous render."};
-        // THE TABS CARRY NO LOCK ANY MORE (2026-08-14): the padlock is the
-        // icon row's IconReadOnly button, which has its own row in this table
-        // like every other roster member. (While the slot lived in the tab it
-        // deliberately had no hint of its own, and the tab's did not mention
-        // it — planner's call, 2026-08-01.)
-        // THE SHIFT LINE NAMES THE PAIRED MARCH (architect 2026-09-14): the
-        // tabs admit shift since the bottom row's Walk Both Tabs button was
-        // deleted, a shift-click or long press dispatching Ctrl+Shift+Tab —
-        // the march in the standing mode, the diff-flag march in the `h` view,
-        // the iteration lock's card under a lit lamp — where the stateful
-        // overload drops this line (2026-09-29), the march roads' one rule.
-        // Only the OTHER tab ever
-        // shows this, the selected tab having no hover zone (redesign_button_-
-        // hover_zone); the march is a round trip since 2026-09-26 and ends on
-        // the selected tab, which "both tabs" says without naming a tab.
-        case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)",
-                                                 "Press Shift to walk both tabs."};
-        case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)",
-                                                 "Press Shift to walk both tabs."};
         // (THE TWO VIEW LAMPS — Toggle Audio View (T) and Toggle Marker
         // Column (P), one line each, neither with a shifted twin — stood here
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
@@ -17122,7 +16958,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // ctrl+shift Ctrl+Shift+Tab, the paired march. The one second line
         // names all three forms in one sentence, this table's rule for
         // second lines (the act and the modifier, not a key), in Up / Down's
-        // shape; "walk both tabs" is the tabs' own words for the march. The
+        // shape; "walk both tabs" is the march's own words. The
         // stateful overload has no arm for it and the line never drops: the
         // ctrl form switches the tab in every state the button is live in,
         // so a modified press always does something the plain one does not.
@@ -17136,14 +16972,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // PREVIOUS MARKER (architect 2026-09-29): its own chord is Shift+Tab,
         // spelled with its modifier as a chord is ("Redo (Ctrl+Shift+Z)"'s
         // shape), and its one admission is ctrl, the paired march — "walk
-        // both tabs" being the tabs' own words for it. The stateful overload
+        // both tabs" being the march's own words. The stateful overload
         // drops the line under a lit grid iterations, where the march refuses.
         case RedesignButton::TransportWalkPrevious:
             return {"Previous Marker (Shift+Tab)",
                     "Press Ctrl to walk both tabs."};
-        // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the act's name — the
-        // tabs name their own letters, so no existing string named the act —
-        // and its one admission, shift, the paired march in the tabs' own
+        // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the act's name, and
+        // its one admission, shift, the paired march in the march's own
         // words. The overload drops the line under a lit grid iterations.
         case RedesignButton::TransportSwitchTab:
             return {"Switch Tab (Ctrl+Tab)",
@@ -17290,7 +17125,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // every state, so it never drops), and Restrict Undo's stands with an empty
 // redo stack, dropping only where neither step would act (its arm below). A
 // greyed-out half of a sentence has no face to carry it. The single-form
-// march lines (Previous Marker's, Switch Tab's, the tabs') are rule (2)'s
+// march lines (Previous Marker's and Switch Tab's) are rule (2)'s
 // plain case and drop under that lamp.
 //
 // THE REASON-AND-STATE FORKS ARE DELETED WHOLE (the same ruling): the lock's
@@ -17322,19 +17157,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // static_assert below states — the hint exists exactly where a shift press does
 // something — therefore holds on this form too, not only on the constant table
 // it overrides.
-// (ROW 3'S TWO WALK-SELECTOR WORDS ARE DELETED — 2026-08-18, with the
-// repurposing that produced them. From 2026-08-05 the tabs read "Remote" and
-// "Local" while the `h` view stood, one word per GuiHistoryWalkSource, through
-// two label constants and a redesign_button_label override that answered for
-// both slots; the walk is the icon row's own lamp now, so the tabs say
-// "A" and "B" in every state and the painter shapes its own table label. The
-// widths were the one thing that ruling had to check and it is why the tab
-// painter still measures rather than assumes: the two words came out unequal —
-// 76 + 58 px at 100% against "A"/"B" both sitting at the row minimum — which is
-// what a label-sized tab bar does. The row carried the walk-and-reading PRODUCT
-// as four self-labelled tabs, then as two labelled groups, for one day
-// 2026-08-07..08; the READING is row 4's Cumulative toggle,
-// RedesignButton::HistoryCumulative on bare `u`.)
 // THE OVERLOAD TAKES WHAT ITS FORKS READ, AND A PARAMETER LEAVES WITH ITS
 // PRODUCER (2026-09-01, the truthful-tooltips ruling — the survey at
 // tmp/uniformity_survey_tooltips.md is its record — under
@@ -17354,11 +17176,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 inline RedesignTooltipText redesign_button_tooltip(
         const AppState& a, const GuiAudio& audio, int64_t total_frames,
         RedesignButton b) {
-    // (THE TABS' IN-VIEW SILENCE IS DELETED — 2026-08-18. While the `h` view
-    // repurposed row 3 as its walk selector the two slots dropped their hints
-    // entirely: their labels WERE the thing a hint would name, and "Tab A (Ctrl+Tab)" would have been a lie about the act.
-    // Ctrl+Tab switches tabs in the view now, so the ordinary hint is true
-    // there and the tabs carry it in every state.)
     // THE SAVE BUTTON'S ONE OVERRIDE: inside the `h` view the button IS the
     // checkpoint act, so it takes that act's name. It is a one-line form —
     // Save admits no modified press in any state (it is in neither
@@ -17687,17 +17504,14 @@ inline RedesignTooltipText redesign_button_tooltip(
             break;
         }
         // THE MARCH ROADS (architect 2026-09-29): Previous Marker's ctrl
-        // press, Switch Tab's shifted press and the two TABS' shifted press
-        // are all the paired march, which the grid-iterations lock refuses on
-        // its card (iteration_lock_key_blocked's delta (a), asked on the lamp
-        // exactly as authoring_lock_drops_chord asks it), so under a lit lamp
-        // the modified press does nothing the plain one does and the line
-        // drops — on the tabs since the same day's evening, matching the two
-        // dedicated roads. The first line never forks.
+        // press and Switch Tab's shifted press are both the paired march,
+        // which the grid-iterations lock refuses on its card
+        // (iteration_lock_key_blocked's delta (a), asked on the lamp exactly
+        // as authoring_lock_drops_chord asks it), so under a lit lamp the
+        // modified press does nothing the plain one does and the line drops.
+        // The first line never forks.
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportSwitchTab:
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
             if (a.iteration_mode_enabled)
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
@@ -17737,8 +17551,8 @@ inline RedesignTooltipText redesign_button_tooltip(
 // (A BUTTON'S LABEL OVERRIDE — redesign_button_label — IS DELETED PRODUCER-LESS
 // on 2026-08-18. It answered "does this button override its own painted label",
 // and the last thing that did was row 3's tabs under the history view's walk
-// selector; with that gone the function was the identity, so the tab painter
-// reads its own table label directly. The TOOLBAR PAIR's label arms had already
+// selector; with that gone the function was the identity. The TOOLBAR PAIR's
+// label arms had already
 // gone with row 2's labeled painter, 2026-08-12 — Save's and Render's stateful
 // WORDS live on the tooltip overload above and their stateful faces are the
 // GLYPH swaps, redesign_button_icon.)
@@ -17801,53 +17615,31 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // answers at all", which is hoverability WITHOUT the enabled term. It exists
 // because the two things a hover produces stopped agreeing on that one term
 // (architect 2026-08-07): the FACE still refuses on a disabled button, the
-// TOOLTIP no longer does. Everything else the two share — the open dropdown, the
-// selected tab — is stated once, here, so the hint and the pill can differ in
-// exactly the one way that was ruled and in no other.
+// TOOLTIP no longer does. Everything else the two share — the open dropdown —
+// is stated once, here, so the hint and the pill can differ in exactly the one
+// way that was ruled and in no other.
 //
 // AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON HOVERS UNDER IT. A lit
 // button beside an open menu would advertise a click the popup is about to
-// swallow (rows 3 and 4, which it floats over) or a second lit button in a row
+// swallow (the icon row, which it floats over) or a second lit button in a row
 // that shows one at a time (row 1) — and a HINT under an open menu is the
 // two-floating-surfaces rule, which this same term is what makes structural.
 // Row 1 needs no exemption: it holds the anchors alone, and an ANCHOR's pill
 // is the painter's own open condition (paint_menu_row), not this bit.
-//
-// THE TAB CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter: the row is
-// the A/B tabs in every state, the `h` view included, and the lit tab is the
-// one with no hover face. Both slots take it, with no mode term anywhere in the
-// expression. It sits in the ZONE rather than in hoverability alone because
-// the distinction is load-bearing for the hint: the tabs carry a tooltip
-// (their act's name and, since 2026-09-14, the shift line naming the paired
-// march), and the zone is what keeps it — and the press — off the SELECTED
-// tab, so only the other tab, the one a plain press lands on and the march's
-// round trip passes through, ever shows it.
-inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
-    if (a.dropdown.open()) return false;
-    // THE TAB TERM READS THE PAINTED SELECTED BIT (architect 2026-09-24,
-    // strictly as-painted): the zone is a face question, and the tab's press
-    // already claims on RedesignButtonFace::selected, so the pill, the hint and
-    // the press all follow the lit tab the screen shows.
-    if (redesign_button_is_tab(b))
-        return !a.redesign_buttons[static_cast<size_t>(
-                    redesign_button_index(b))].selected;
-    return true;
+inline bool redesign_button_hover_zone(const AppState& a, RedesignButton) {
+    return !a.dropdown.open();
 }
 
 // TWO NOTES THE ZONE KEEPS, both about the term it deliberately does NOT
 // carry — ENABLED, which the hover FACE adds at its one site and the hint does
 // not:
 //
-// ROW 4'S SELECTED BUTTONS DO HOVER, and that asymmetry with the tabs is the
-// crops': row 4 ships a selected-hover state (the accent outline over the
-// selected fill) and row 3 does not. So the zone's carve-out names the tabs
-// alone; the icon row's toggles — the Cumulative one included, back on that
-// row since 2026-08-18 — and its view group's three radios are hoverable in
-// both states, and a radio's already-selected press is refused in the ACTION
-// (the chord table's `radio` flag, whose users are the view group and the
-// tabs), not in its hoverability. (The transport's
-// Play / Stop pair was a fourth such radio for hours on 2026-08-15 and is one
-// button with no lamp since that day's collapse.)
+// SELECTED BUTTONS DO HOVER: row 4 ships a selected-hover state (the accent
+// outline over the selected fill), so the icon row's toggles — the Cumulative
+// one included — and its view group's three radios are hoverable in both
+// states, and a radio's already-selected press is refused in the ACTION (the
+// chord table's `radio` flag, whose users are the view group's three), not in
+// its hoverability.
 //
 // AND redesign_button_hoverable — this zone AND the enabled term, one call —
 // IS DELETED, found caller-less at the 2026-08-13 resolver sweep and dead
@@ -17934,14 +17726,14 @@ enum class TrimHit { None, Begin, End };
 // press, or None. It reads THE PAINTER'S STASH (AppState::trim_bar_hit,
 // architect 2026-09-24 — strictly as-painted): the two caps the live trim pass
 // last DREW, never the store's pair, so a press between a trim write and its
-// repaint grabs the cap on screen. Each bound's mark is one of row 5's
-// trim-bar ENDCAPS (the square b/e chips of the old chip row are gone,
-// 2026-08-01): a trim_endcap_w_px() column run spanning the trim bar lane's
-// full height, EDGE-ANCHORED on the bound's painted column — the begin cap's
-// LEFT edge on it, the end cap's RIGHT edge on it — from trim_endcap_rect, the
-// ONE rect owner render_trim_flags fills through and publishes from. THE HIT
-// RECT IS THAT CAP INFLATED by kTrimEndcapGrabPx per side (a 2px cap is under
-// any pointing tolerance); it is the one place in this lane where the drawn
+// repaint grabs the cap on screen. Each bound's mark is one of the trim bar's
+// two HANDLES (architect 2026-10-01: the centre grip's square filled solid,
+// which replaced the 2px endcaps under the same names): a trim_endcap_w_px()
+// column run spanning the trim bar's full height, EDGE-ANCHORED on the bound's
+// painted column — the begin handle's LEFT edge on it, the end handle's RIGHT
+// edge on it — from trim_endcap_rect, the ONE rect owner render_trim_flags
+// fills through and publishes from. THE HIT RECT IS THAT HANDLE INFLATED by
+// kTrimEndcapGrabPx per side (a 9px handle is under a fingertip); it is the one place in this lane where the drawn
 // and the grabbable rect differ, and it is why two caps at nearby columns can
 // overlap as targets at all (LEFTMOST WINS — the arbitration is at the
 // body). Tests both mouse_x and mouse_y, the y against the lane the caps were

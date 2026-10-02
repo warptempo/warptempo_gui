@@ -24,17 +24,12 @@
 // on 2026-09-30, and an UP row, `..`, was a kind until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
 // row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
-// full window width, standing from DIRECTLY UNDER THE ICON ROW'S BORDER
+// full window width, standing from DIRECTLY UNDER THE ICON ROW
 // down to the bottom row — the whole area below the toolbar, the flexible
 // gap 1 included (architect 2026-09-09, the top strip relayout that put the
-// icon row under the menu row; his 2026-09-03 ruling at his 1080 monitor had
-// it start at the tab row's first pixel, the first lane under the menu row
-// then: "whatever overlays we put could start right at the first pixel of
-// the tab row ... below File, Edit, etc. would be the AV sync stats overlay
-// ... it could also go all the way down to the bottom strip — yes, I think
-// so"; the same day's earlier "remove top row in file picker/media player —
-// kdenlive does not allow ctrl+q during modal so we don't need to either"
-// had run it to the window's top for some hours) — so EVERY LANE BUT THE TWO
+// icon row under the menu row, after his 2026-09-03 ruling that an overlay
+// could start right under the header and "go all the way down to the bottom
+// strip") — so EVERY LANE BUT THE TWO
 // TOOLBAR ROWS AND THE BOTTOM ROW is under it, and THE MENU ROW AND THE ICON
 // ROW STAND ABOVE IT, VISIBLE AND CARRYING THE `h` VIEW'S OWN PARTITION
 // (architect 2026-09-03 evening: "leave File open, because Quit should still
@@ -46,21 +41,16 @@
 // chords) — while Edit and Settings grey through
 // menu_anchor_live and refuse on that painted face, and every icon-row
 // button — the view group's three included — greys through
-// redesign_button_enabled's first arm. The header behind them keeps its
-// FOCUSED ground: the title bar says the window is active, so the row does
-// too. The waveform's own passes paint nothing
+// redesign_button_enabled's first arm. The header behind them keeps its one
+// ground, the content ground, which has no unfocused face. The waveform's own
+// passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces
 // to a zero-height rect) while the lanes it covers paint and are covered.
-// THE BAND CARRIES NO LINE OF ITS OWN: the icon row's border-bottom, painted
-// by that row, is the line it starts under, and the content rect is the
-// surface rect whole. (A line stood here twice before — from 2026-08-29,
-// framing the panel off the waveform ground above, out for the hours of
-// 2026-09-03 the band covered the menu row; and from that evening the tab
-// row's own top border, at the architect's word "let's add the same border
-// that the tab row has up at the top — add that to the overlays", painted
-// inside the band as its first row and taken out of the content's room
-// until the relayout retired the tab row's borders with the band's.)
+// NOTHING MARKS THE BAND'S TOP (architect 2026-10-01): the icon row it
+// starts under has no border-bottom since that day, and the band draws no line
+// of its own — "just nothing at first; we can mock something up if it bothers
+// us". The content rect is the surface rect whole.
 // The architect's ruling (2026-08-28):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
 // replacing the keyboard there" — on glass the keyboard would occupy that
@@ -80,24 +70,21 @@
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
 //     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
 //     keyboard's surface_rect reads too). ITS HEIGHT IS THE CEILING'S WHOLE
-//     EXTENT, every time it stands: from DIRECTLY UNDER THE ICON ROW'S BORDER
+//     EXTENT, every time it stands: from DIRECTLY UNDER THE ICON ROW
 //     (keyboard_slot_max_height_px, the same header — the bottom row's top
 //     less the icon row's foot) down to the bottom row,
 //     whatever the listing's length — architect 2026-08-28: "we should
 //     automatically make the height ... so that it's not a fluid height —
 //     it's always a fixed height", 2026-09-03 for a fixed start under the
-//     header ("start right at the first pixel of the tab row", the first
-//     lane under the menu row then) and 2026-09-09 for the toolbar's foot,
-//     the tab row having moved below the flexible gap. A
+//     header and 2026-09-09 for the toolbar's foot. A
 //     SHORT LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one
 //     scrolls. The fixed height retired the growing half of the day's
 //     earlier ceiling ruling (which read "it grows with its content up to
 //     that cap, then scrolls") the same day, the panel having jumped under
 //     the pointer as the listings changed size; the rest of it stands, and
 //     only WHERE the ceiling sits has moved — the earlier ruling's waveform
-//     midpoint until 2026-09-02, row 1's foot for that one day, the window's
-//     top for some hours of 2026-09-03, the tab row's first pixel from that
-//     evening and the icon row's foot since 2026-09-09. The content's height
+//     midpoint until 2026-09-02 and the icon row's foot since 2026-09-09. The
+//     content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
 //   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON: the same 32px box, the same
 //     2px gap between boxes, the same corner radius, the same 22px glyph
@@ -186,11 +173,8 @@ inline int row_icon_inset_px() {
     return (button_row_height_px() - row_icon_px()) / 2;
 }
 
-// (THE BAND'S OWN TOP BORDER IS RETIRED — architect 2026-09-09, the top strip
-// relayout. border_h_px read tab_row_border_h_px from 2026-09-03, the line
-// the tab row would have drawn on the pixel row the band started at; the
-// band starts under the ICON ROW's border now, which that row paints, and
-// this file owns no line at all — the head prose carries the record.)
+// (THE BAND OWNS NO LINE AT ALL — the head prose carries the 2026-10-01
+// ruling that nothing marks its top.)
 
 // -- Standing ----------------------------------------------------------------
 
@@ -222,7 +206,7 @@ inline int content_height_px(const AppState& a) {
 
 // THE BAND: the slot's band (its x, its width and its bottom edge — one
 // owner, app_state.h) AT THE CEILING'S WHOLE EXTENT, a FIXED height
-// (2026-08-28, the ruling above), from under the icon row's border to the
+// (2026-08-28, the ruling above), from under the icon row to the
 // bottom row. Like the keyboard's own accessor it does not ask whether the
 // panel stands.
 //
@@ -236,8 +220,7 @@ inline int content_height_px(const AppState& a) {
 // the painter grounds, what a damage erases and what the band's OUTER CLAIM
 // contains — the press router asks this rect to decide that the band, not the
 // waveform under it, owns the press. The rows are painted and hit inside the
-// content rect below, which is this band whole since 2026-09-09 (it was the
-// band less its top border row 2026-09-03..09).
+// content rect below, which is this band whole.
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
@@ -248,14 +231,12 @@ inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
 
-// The rows' band: THE SURFACE WHOLE since 2026-09-09, the band's own border
-// row having retired with the tab row's (the head prose). Every geometry
-// below reads this and not the surface — the rows, the scroll ceiling, the
-// keep-visible walk, the painter's row-walk clip and row_at's containment —
-// so the one place a band-less-chrome answer would be spelled is still this
-// one, and a line returning here would be one edit. Until the relayout it
-// was the surface less the top border row, which is what made that line
-// inert by construction rather than by arithmetic.
+// The rows' band: THE SURFACE WHOLE (the band owns no line — the head
+// prose). Every geometry below reads this and not the surface — the rows, the
+// scroll ceiling, the keep-visible walk, the painter's row-walk clip and
+// row_at's containment — so the one place a band-less-chrome answer would be
+// spelled is still this one, and a line arriving here (the architect's "we
+// can mock something up") would be one edit.
 inline GuiRect content_rect(const AppState& a) {
     return surface_rect(a);
 }
@@ -303,13 +284,12 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
 
 // The row under (x, y), or -1 — a point outside the CONTENT rect answers -1
 // whatever row's rect would contain it, so a row scrolled out of the band
-// cannot be pressed through the waveform above or the bottom row below, and a
-// row straddling the band's top cannot be opened through the border line. It
-// is the content rect and not the surface because the surface is the band's
+// cannot be pressed through the waveform above or the bottom row below. It is
+// the content rect and not the surface because the surface is the band's
 // outer CLAIM (the press router's own test, one call up) while the rows live
-// under the line: a press on the border is still the band's, it just names no
-// row. The painter clips its row walk to this same rect, so paint and hit
-// agree on the line as they do on every other pixel of the band.
+// in the content — the same rect while the band owns no line (content_rect).
+// The painter clips its row walk to this same rect, so paint and hit agree on
+// every pixel of the band.
 inline int row_at(const AppState& a, int x, int y) {
     const GuiRect band = content_rect(a);
     if (!rect_contains(band, x, y)) return -1;

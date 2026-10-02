@@ -227,10 +227,9 @@ enum class GuiHistoryCompare {
 
 // WHICH WALK THE VIEW IS READING (architect 2026-08-07). The view grew a SECOND
 // WALK SOURCE beside the committed history: THE SESSION'S OWN UNDO/REDO
-// TIMELINE. Row 3's two tabs select THIS axis and only this one — "Remote" and
-// "Local" (2026-08-08); the OTHER axis, the reading, is row 4's Cumulative
-// toggle. For one day the row carried the product of the two as four tabs, and
-// the architect split them apart again.
+// TIMELINE. The icon row's WALK LAMP on bare `g` selects THIS axis and only
+// this one — "Remote" and "Local" (2026-08-08); the OTHER axis, the reading,
+// is row 4's Cumulative toggle.
 //
 //   COMMIT — the checkpoint walk this mode was built on: the piece's committed
 //   sidecar history, matched by name under `projects/` (the file head owns the

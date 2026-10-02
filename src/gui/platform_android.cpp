@@ -2,7 +2,6 @@
 
 #include "gui_font.h"
 #include "gui_main.h"
-#include "render.h"          // kRedesignContentGround, the band fill
 
 #include <android/asset_manager.h>
 #include <android/configuration.h>
@@ -24,6 +23,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <clocale>
 #include <cstdint>
@@ -41,11 +41,10 @@
 // THE ANDROID BACKEND. What is here is class A of the seam — the mechanics:
 // the glue's lifecycle, the ALooper run loop, the cairo -> ANativeWindow blit,
 // the AMotionEvent decode and this platform's stubs. THE WINDOW IT PRESENTS TO
-// THE GUI IS THE CONTENT RECT, not the surface: the surface is the whole panel
-// on this platform and the band inside the system bars arrives separately, so
-// this file adds the origin at the blit and subtracts it at the touch decode
-// and nothing above the seam knows either exists (the rule is at origin_x_,
-// platform_android.h). The POLICY (the touch
+// THE GUI IS THE WHOLE SURFACE: the activity is full screen with both system
+// bars hidden (MainActivity.java's head, architect 2026-10-01), so a surface
+// pixel, a window pixel and a touch coordinate are one grid (the rule is at
+// width_, platform_android.h). The POLICY (the touch
 // state machine, the key-repeat synthesis, the logical pointer, the notional-x
 // bookkeeping, the containment conversion) is in GuiInputCore and is shared
 // verbatim with the Wayland backend; every input event decoded below is handed
@@ -234,81 +233,6 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
 }
 
 // ---------------------------------------------------------------------------
-// The bands outside the content rect
-// ---------------------------------------------------------------------------
-
-// THE BAND WORDS, in the WINDOW's own byte order. The bands are whatever the
-// surface holds outside the content rect — above it and below it, each existing
-// only insofar as the framework's rect leaves room for it (on the Tab S10 FE's
-// 2026-08-27 measurement the rect started at y=53, under the status bar, and
-// ran to the panel's bottom edge, so only the top one had any rows; the air
-// below widens that top band by kStatusBarAirPx). The rows under a system
-// window are covered by it, so nothing of ours is meant to be seen there — but
-// a translucent bar over a buffer nobody wrote would show a stale frame, so
-// they are filled; the air's own rows are meant to be seen. These pixels never
-// pass through the backbuffer, so they never meet copy_swap_rb's swap either:
-// the word is built R,G,B,A directly, from the palette constants rather than
-// from a second spelling of their hex (render.h is the one color owner; a
-// retune follows).
-constexpr uint32_t window_word(GuiColor c) {
-    const auto ch = [](double v) {
-        return static_cast<uint32_t>(v * 255.0 + 0.5) & 0xFFu;
-    };
-    return 0xFF000000u | (ch(c.b) << 16) | (ch(c.g) << 8) | ch(c.r);
-}
-
-// THREE WORDS, and which one a band row takes is decided at the row
-// (present()). The TOP band is the title strip's ground and it SWAPS ON THE
-// WINDOW'S ACTIVATION exactly as rows 1 and 2 do — top_band_word is the one
-// chooser — because THESE PIXELS ARE THE STATUS BAR'S COLOUR on this platform:
-// the framework draws no background of its own over that strip (the flag that
-// arranges it is set in MainActivity.onCreate, and the reasoning is at
-// kStatusBarAirPx below), so what shows through the bar is this band. Every
-// other band pixel — a bottom band, or a side band beside content rows — is
-// the content's own, and THAT ground has no inactive face: kRedesignContent-
-// Ground is one value focused and unfocused alike (render.h owns the palette,
-// and it is the palette that says so).
-constexpr uint32_t kBandWord            = window_word(kRedesignContentGround);
-constexpr uint32_t kTopBandWordActive   = window_word(kRedesignRowGround);
-constexpr uint32_t kTopBandWordInactive =
-    window_word(kRedesignRowGroundUnfocused);
-
-constexpr uint32_t top_band_word(bool window_activated) {
-    return window_activated ? kTopBandWordActive : kTopBandWordInactive;
-}
-
-void fill_band(uint32_t* dst, int n, uint32_t word) {
-    for (int x = 0; x < n; ++x) dst[x] = word;
-}
-
-// THE AIR UNDER THE STATUS BAR (architect 2026-08-27, on glass, measured on a
-// screencap at his Screen zoom = override density 320): One UI does NOT
-// centre the status bar's content in the inset it reports (inset 60 device
-// px; the tallest element, the clock, occupies rows 23-52 — 23 above it, 7
-// below). It sets the distance from the screen's top edge to the TOPMOST
-// element (the G icon, row 21) and MIRRORS that distance below: the gap from
-// the BOTTOMMOST element's last row (52) to our window's first row equals it
-// too, so `inset + air - 53 = 21` -> air 14 (the 53 being the content rect's
-// own top, before the air is added). The number is density-dependent — a
-// different Screen zoom re-measures it; THE RETUNE KNOB IS THIS NUMBER and
-// nothing else. DEVICE pixels, deliberately: the air pairs with the status
-// bar's own density-scaled geometry, not with anything gui_scale sizes.
-//
-// IT PAINTS THE TOP BAND'S WORD, not the content ground — and so does the
-// status bar's own strip above it, because THOSE PIXELS ARE OURS TOO: the
-// framework paints no bar background over them (FLAG_DRAWS_SYSTEM_BAR_BACK-
-// GROUNDS, set in MainActivity.onCreate, is what leaves the bar's background
-// transparent over this window's surface, and the bar's clock and icons are
-// all the system draws there). The MENU ROW directly beneath the air is the
-// same ground, so a content-ground band between two identical grounds would
-// read as a darker stripe — a defect, not air. Filled with the row ground, the
-// status bar, the air and the menu row read as ONE title strip: the clock at
-// its top, the menus beneath it, which is kdenlive's own arrangement — and all
-// three darken together on the window's activation edge, the strip being one
-// surface with one owner (top_band_word).
-constexpr int kStatusBarAirPx = 14;
-
-// ---------------------------------------------------------------------------
 // The looper identifiers this backend adds
 // ---------------------------------------------------------------------------
 
@@ -474,6 +398,48 @@ Java_com_warptempo_gui_MainActivity_nativeMediaCommand(JNIEnv* /*env*/,
     AndroidCallbacks::media_command(cmd);
 }
 
+// THE HOST'S BATTERY, the sliver's last ACTION_BATTERY_CHANGED broadcast
+// (architect 2026-10-01; the road's reasoning is at battery_status's
+// declaration). ONE ATOMIC WORD, written by the JNI entry below on the UI
+// thread and read by battery_status on the loop's thread, so neither side
+// takes a lock and no wake is owed — the tick reads it on its own cadence.
+// THE PACKING: bit 16 has_battery, bits 8-9 GuiBattery::Plugged's value,
+// bits 0-7 the percentage plus one (0 = the level is unknown). PROCESS-WIDE,
+// unlike the media sink: it is a reading, not a queue, so it outlives every
+// project and a push before init() or after shutdown() is simply the newest
+// reading. The initial word is a battery whose level and plug state are
+// unknown (the declaration's cold answer).
+namespace {
+constexpr uint32_t pack_battery(const GuiBattery& b) {
+    return (b.has_battery ? 1u << 16 : 0u) |
+           (static_cast<uint32_t>(b.plugged) << 8) |
+           static_cast<uint32_t>(b.percent + 1);
+}
+std::atomic<uint32_t> g_battery_word{
+    pack_battery(GuiBattery{true, -1, GuiBattery::Plugged::Unknown})};
+} // namespace
+
+// THE JNI ENTRY for the battery (name-based resolution, as the car's):
+// MainActivity's `private static native void nativeBatteryState(boolean
+// present, int percent, int plugged)`. `percent` is 0..100 or -1 for a level
+// the broadcast did not carry; `plugged` is EXTRA_PLUGGED as the broadcast
+// carried it — 0 unplugged, any positive source plugged (AC, USB, wireless,
+// dock), and -1 for an extra that was missing: the glyph's Unknown.
+extern "C" JNIEXPORT void JNICALL
+Java_com_warptempo_gui_MainActivity_nativeBatteryState(JNIEnv* /*env*/,
+                                                        jclass /*clazz*/,
+                                                        jboolean present,
+                                                        jint percent,
+                                                        jint plugged) {
+    GuiBattery b;
+    b.has_battery = present == JNI_TRUE;
+    b.percent     = percent;
+    b.plugged     = plugged < 0  ? GuiBattery::Plugged::Unknown
+                  : plugged == 0 ? GuiBattery::Plugged::Unplugged
+                                 : GuiBattery::Plugged::Plugged;
+    g_battery_word.store(pack_battery(b), std::memory_order_relaxed);
+}
+
 // ---------------------------------------------------------------------------
 // Construction / destruction
 // ---------------------------------------------------------------------------
@@ -530,8 +496,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale     = 225;
     // The waveform cap's authored 500 px, the laptop template's value (at
-    // 225 % it scales to 1125, above the content rect's 722 px leftover, so
-    // the tablet's waveform stays unclamped exactly as before the key).
+    // 225 % it scales to 1125, above the 1010 px leftover the five top lanes
+    // and the bottom row leave on the full-screen 1440-tall surface, so the
+    // waveform is unclamped at the template's own scale).
     cfg.max_waveform_height = 500;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
@@ -749,10 +716,9 @@ void GuiPlatform::adopt_window(bool fire_resize) {
                      "FIXED_SOURCE) -> %d\n", static_cast<int>(rate_rc));
     }
 
-    // THE SURFACE, which is not the window the GUI sees. On this platform the
-    // app window's frame is the whole display and the band inside the system
-    // bars arrives separately, as the content rect (the rule is at origin_x_,
-    // platform_android.h).
+    // THE SURFACE IS THE WINDOW (the rule is at width_, platform_android.h):
+    // the activity is full screen with both system bars hidden, so the GUI is
+    // told the surface's own size and nothing is measured or subtracted.
     const int surf_w = ANativeWindow_getWidth(window_);
     const int surf_h = ANativeWindow_getHeight(window_);
     if (surf_w <= 0 || surf_h <= 0) {
@@ -763,32 +729,18 @@ void GuiPlatform::adopt_window(bool fire_resize) {
         return;
     }
 
-    // EVERY ADOPTION RE-READS THE RECT, which is what makes one function
-    // answer for all four commands that reach it: INIT_WINDOW, WINDOW_RESIZED,
-    // CONFIG_CHANGED and CONTENT_RECT_CHANGED. A bar coming or going moves the
-    // rect without moving the surface, and a rotation would move both.
-    int ox = 0, oy = 0, cw = surf_w, ch = surf_h;
-    resolve_content_rect(surf_w, surf_h, ox, oy, cw, ch);
-
     // THE GEOMETRY EDGE, which is not the same thing as an adoption: the glue
     // posts INIT_WINDOW, WINDOW_RESIZED and CONFIG_CHANGED for a landscape-ONLY
     // activity — either landscape is admitted, never portrait — whose surface
     // never changes size, the 180° flip included, so most adoptions move
-    // nothing. A moved ORIGIN counts as a move even at an unchanged size:
-    // every pixel the GUI paints lands somewhere else.
-    // Only a real move owes the resize callback (which force-ends every
-    // pointer gesture, closes the dropdown and rebuilds the layout) and the
-    // one startup line.
-    const bool moved = (cw != width_ || ch != height_ ||
-                        ox != origin_x_ || oy != origin_y_ ||
+    // nothing. Only a real move owes the resize callback (which force-ends
+    // every pointer gesture, closes the dropdown and rebuilds the layout) and
+    // the one startup line.
+    const bool moved = (surf_w != width_ || surf_h != height_ ||
                         !has_initial_configure_);
 
-    surface_w_ = surf_w;
-    surface_h_ = surf_h;
-    origin_x_  = ox;
-    origin_y_  = oy;
-    width_     = cw;
-    height_    = ch;
+    width_  = surf_w;
+    height_ = surf_h;
     ensure_backbuffer(width_, height_);
     input_.set_surface_width(width_);
     has_initial_configure_ = true;
@@ -800,71 +752,13 @@ void GuiPlatform::adopt_window(bool fire_resize) {
             initial_resize_owed_ = true;
         }
         std::fprintf(stderr,
-                     "warptempo_gui: window %dx%d at (%d,%d) of surface "
-                     "%dx%d, tick %d ms\n",
-                     width_, height_, origin_x_, origin_y_,
-                     surface_w_, surface_h_, playback_tick_ms_);
+                     "warptempo_gui: window %dx%d, tick %d ms\n",
+                     width_, height_, playback_tick_ms_);
     }
     // FULL DAMAGE ON EVERY ADOPTION, moved or not: the window hands back
     // buffers whose content is a lost frame's, so the first post after any
-    // adoption has to carry the whole picture — and the bands with it, which
-    // is what the owed full-surface post below is for.
-    surface_bands_owed_ = true;
+    // adoption has to carry the whole picture.
     invalidate_region(0, 0, width_, height_);
-}
-
-/*
- * THE CONTENT RECT, resolved against the surface. The glue keeps
- * android_app::contentRect current (it writes it under its own mutex on the UI
- * thread and posts APP_CMD_CONTENT_RECT_CHANGED; reading the latest value here
- * is the documented use) and ZERO-INITIALISES it, so before the first callback
- * there is no rect at all — the fallback is the whole surface, which is
- * exactly what this backend did before the rect was read.
- *
- * EVERY DEGENERATE ANSWER TAKES THE SAME FALLBACK rather than an error arm:
- * an inverted or empty rect, or one that does not intersect the surface, would
- * otherwise hand the GUI a window of nothing. There is no producer for those
- * on this device; the fallback exists because the alternative is a black app,
- * not because a fault is expected.
- *
- * THE ONE THING THIS FUNCTION ADDS TO THE FRAMEWORK'S ANSWER is the air under
- * the status bar (kStatusBarAirPx, at the end of the body), and it is added
- * here so that origin, size, damage and every touch coordinate follow from it
- * for free.
- */
-void GuiPlatform::resolve_content_rect(int surf_w, int surf_h,
-                                       int& ox, int& oy,
-                                       int& cw, int& ch) const {
-    ox = 0;
-    oy = 0;
-    cw = surf_w;
-    ch = surf_h;
-    if (!app_) return;
-
-    const ARect r = app_->contentRect;
-    const int left   = std::max(0, std::min(static_cast<int>(r.left),   surf_w));
-    const int top    = std::max(0, std::min(static_cast<int>(r.top),    surf_h));
-    const int right  = std::max(0, std::min(static_cast<int>(r.right),  surf_w));
-    const int bottom = std::max(0, std::min(static_cast<int>(r.bottom), surf_h));
-    if (right <= left || bottom <= top) return;
-
-    ox = left;
-    oy = top;
-    cw = right - left;
-    ch = bottom - top;
-
-    // THE AIR, ADDED TO THE TOP INSET AND ONLY THERE (kStatusBarAirPx, with the
-    // reasoning and the color at its declaration). A rect that starts at y == 0
-    // has no status bar over it — a fullscreen future — and gets no air: a
-    // blank band at the top of the panel would be nothing but lost picture. The
-    // rows given up become the top band, and because origin, size, damage and
-    // every touch coordinate follow from this one function, nothing else in the
-    // backend knows the air exists. A rect too short to give the air up keeps
-    // its whole height, the same fallback every degenerate answer above takes.
-    if (top > 0 && top + kStatusBarAirPx < bottom) {
-        oy = top + kStatusBarAirPx;
-        ch = bottom - oy;
-    }
 }
 
 /*
@@ -1102,34 +996,12 @@ void GuiPlatform::paint_one_frame() {
 bool GuiPlatform::present(int x, int y, int w, int h) {
     if (!window_ || !back_ || w <= 0 || h <= 0) return false;
 
-    // THE ORIGIN IS ADDED HERE AND NOWHERE ELSE ON THE WAY OUT. Everything
-    // above this line — the damage list, the backbuffer, every rect the GUI
-    // ever named — is in CONTENT coordinates; the window wants SURFACE ones.
-    //
-    // AND THE OWED POST IS THE WHOLE SURFACE, at every adoption AND at every
-    // activation edge — the two writers of surface_bands_owed_ — so the bands
-    // outside the content rect are written with the word they are owed instead
-    // of holding whatever the buffer arrived with, or, at the edge, the word
-    // the other activation state left there. Between those posts they stay
-    // right for free: the window keeps the area OUTSIDE the dirty rect it hands
-    // back (it copies it forward from the last post, or widens the rect and
-    // leaves the row loop below to fill it), the same mechanism the content's
-    // own partial damage already depends on. That is also exactly why a CHANGE
-    // of band word has to buy a post of its own: damage the GUI declares is in
-    // CONTENT coordinates and can never name a band row, so kept pixels would
-    // keep the old word forever.
-    int sx0 = x + origin_x_;
-    int sy0 = y + origin_y_;
-    int sx1 = sx0 + w;
-    int sy1 = sy0 + h;
-    if (surface_bands_owed_) {
-        sx0 = 0;
-        sy0 = 0;
-        sx1 = surface_w_;
-        sy1 = surface_h_;
-    }
-
-    ARect dirty{sx0, sy0, sx1, sy1};
+    // THE GUI'S COORDINATES ARE THE SURFACE'S (the window is the whole
+    // surface, width_'s rule), so the damage rect goes to lock() as it is.
+    // The window keeps the area OUTSIDE the dirty rect it hands back (it
+    // copies it forward from the last post, or widens the rect and leaves the
+    // row loop below to fill it), which is what partial damage depends on.
+    ARect dirty{x, y, x + w, y + h};
     ANativeWindow_Buffer buf;
     const int rc = ANativeWindow_lock(window_, &buf, &dirty);
     if (rc != 0) {
@@ -1165,19 +1037,11 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     // lock() may WIDEN the rect it was asked for (a buffer whose content is
     // older than the last post), and the widened region is what the caller
     // must fill. The backbuffer holds the whole frame, so honoring it is a
-    // straight clamp-and-copy — clamped to the BUFFER alone now, because the
-    // widened rect may reach outside the content rect and those pixels are
-    // this loop's to fill too.
+    // straight clamp-and-copy, clamped to the buffer and the backbuffer both.
     const int cx0 = std::max(0, std::min(dirty.left,   buf.width));
     const int cy0 = std::max(0, std::min(dirty.top,    buf.height));
-    const int cx1 = std::max(cx0, std::min(dirty.right,  buf.width));
-    const int cy1 = std::max(cy0, std::min(dirty.bottom, buf.height));
-
-    // The content's span inside that rect, in SURFACE coordinates: [ix0, ix1)
-    // horizontally, and vertically whichever rows map into the backbuffer.
-    // Everything else is band.
-    const int ix0 = std::max(cx0, origin_x_);
-    const int ix1 = std::min(cx1, origin_x_ + back_w_);
+    const int cx1 = std::max(cx0, std::min({dirty.right,  buf.width,  back_w_}));
+    const int cy1 = std::max(cy0, std::min({dirty.bottom, buf.height, back_h_}));
 
     // Both strides are in PIXELS: cairo's is bytes and is divided here,
     // ANativeWindow_Buffer::stride is documented as pixels already.
@@ -1185,36 +1049,14 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     const auto* src = reinterpret_cast<const uint32_t*>(
         cairo_image_surface_get_data(back_));
     auto* dst = static_cast<uint32_t*>(buf.bits);
-    // THE TOP BAND'S WORD IS THIS FRAME'S ACTIVATION STATE (the words at
-    // kBandWord), read once for the whole blit: window_activated_ is the same
-    // bit rows 1 and 2 paint their ground from, so the bar, the air and the
-    // menu row can never disagree about which of them is focused.
-    const uint32_t top_word = top_band_word(window_activated_);
     if (src && dst && cx1 > cx0) {
         for (int row = cy0; row < cy1; ++row) {
             uint32_t* drow = dst + static_cast<size_t>(row) * buf.stride;
-            const int brow = row - origin_y_;
-            // WHICH GROUND THIS ROW'S BAND TAKES: above the content rect is the
-            // title strip — the status bar's own background and the air under
-            // it, one ground with the menu row below, darkening with the window
-            // — and everything else is the content's own, which has one colour
-            // in both states.
-            const uint32_t band_word = (brow < 0) ? top_word : kBandWord;
-            if (brow < 0 || brow >= back_h_ || ix1 <= ix0) {
-                // A band row (above or below the content rect), or a rect that
-                // misses the content horizontally: all ground.
-                fill_band(drow + cx0, cx1 - cx0, band_word);
-                continue;
-            }
-            if (ix0 > cx0) fill_band(drow + cx0, ix0 - cx0, band_word);
-            if (cx1 > ix1) fill_band(drow + ix1, cx1 - ix1, band_word);
             const uint32_t* srow =
-                src + static_cast<size_t>(brow) * src_stride_px +
-                (ix0 - origin_x_);
+                src + static_cast<size_t>(row) * src_stride_px + cx0;
             // Both accepted formats need the R<->B swap (the gate above is
-            // what makes that unconditional). The band fill above does not:
-            // its word was built in the window's order to begin with.
-            copy_swap_rb(drow + ix0, srow, ix1 - ix0);
+            // what makes that unconditional).
+            copy_swap_rb(drow + cx0, srow, cx1 - cx0);
         }
     }
 
@@ -1225,9 +1067,6 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
                      post_rc);
         return false;
     }
-    // The owed full-surface post is spent only on a post that reached the
-    // window, for the same reason the caller keeps its damage until then.
-    surface_bands_owed_ = false;
     return true;
 }
 
@@ -1510,21 +1349,19 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             window_ = nullptr;
             break;
 
-        case APP_CMD_CONTENT_RECT_CHANGED:
         case APP_CMD_WINDOW_RESIZED:
         case APP_CMD_CONFIG_CHANGED:
             // The activity is landscape-ONLY — either landscape, never
             // portrait — and resizeableActivity="false", so the SURFACE cannot
             // move here: a 180° flip keeps its size and moves nothing but its
-            // transform, which the compositor owns. But the window the GUI sees
-            // is the content rect inside the system bars, and a bar coming or
-            // going moves that without touching the surface. CONTENT_RECT_-
-            // CHANGED is the command that carries it (the glue has already
-            // stored the new rect by the time this runs); the other two adopt
-            // for the same reason they always did. One handler for all three:
-            // adopt_window re-reads the surface AND the rect, and both
-            // ensure_backbuffer and the resize hook are cheap no-ops when
-            // nothing moved.
+            // transform, which the compositor owns. Both adopt anyway, because
+            // the surface is the window (width_'s rule) and a re-read is how a
+            // move would be seen; ensure_backbuffer and the resize hook are
+            // cheap no-ops when nothing moved. APP_CMD_CONTENT_RECT_CHANGED is
+            // NOT among them: nothing on this side reads the content rect any
+            // more (the activity is full screen, architect 2026-10-01), so the
+            // command falls to the switch's silence like every other one this
+            // backend has no use for.
             if (app_->window) adopt_window(/*fire_resize=*/true);
             break;
 
@@ -1537,15 +1374,6 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // this hook is the EDGE, the same shape the Wayland backend's
             // configure-driven one takes for the same reason.
             if (activation_changed_hook_) activation_changed_hook_();
-            // THE STATUS BAR TAKES THIS EDGE TOO, and on this platform the bar
-            // IS the top band (top_band_word): the framework paints no
-            // background over that strip, so darkening it is this backend's own
-            // blit and not a call up to Java. The band is written only by a
-            // post that reaches its rows, and the hook's damage above is the
-            // top STRIP's — content rows, every one of them below the band — so
-            // the new word buys the full-surface post the flag owes it, exactly
-            // as an adoption does.
-            surface_bands_owed_ = true;
             // FOCUS LEAVING PAUSES NOTHING, and that is recorded rather than
             // fixed (2026-09-02): "no background playback" is BUILD scope —
             // no service ships to keep sound alive properly — not behaviour,
@@ -1698,37 +1526,25 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                             AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
     const size_t  count  = AMotionEvent_getPointerCount(event);
 
-    // COORDINATES ARE CONTENT PIXELS AS DOUBLES, unscaled. A surface pixel IS
-    // a panel pixel (setBuffersGeometry(0,0) takes the window's own size), so
-    // there is no factor to apply — but an AMotionEvent is measured from the
-    // WINDOW's own corner, and the window is the whole panel while the GUI's
-    // is the content rect inside the system bars. THE ORIGIN IS SUBTRACTED
-    // HERE AND NOWHERE ELSE ON THE WAY IN: these two lambdas are every
+    // COORDINATES ARE WINDOW PIXELS AS DOUBLES, unscaled. A surface pixel IS
+    // a panel pixel (setBuffersGeometry(0,0) takes the window's own size), and
+    // the window the GUI sees is the whole surface (width_'s rule), so an
+    // AMotionEvent's coordinate — measured from the window's own corner — is
+    // the GUI's with no factor and no offset. These two lambdas are every
     // coordinate this backend hands the core (the key path carries none, the
     // pen's hover actions below take the same two, scrolls are dropped, and
     // the capture doors take GUI coordinates that never reach the window at
     // all), which is what keeps GuiInputCore identical to the Wayland
     // build's.
     //
-    // A TOUCH IN A BAND IS DELIVERED, NOT CLAMPED AND NOT DROPPED: translated,
-    // it is simply outside the window — a negative y above the rect, y >=
-    // height_ below it — which is exactly the shape a Wayland pointer
-    // drag past an edge takes under labwc's implicit grab, and the GUI's own
-    // hit tests are what answer it there (the case is written out at
-    // containing_pixel, input_core.h). Clamping would invent a second policy
-    // for a coordinate the shared core already has one for. There is no
-    // producer either way: the bars' own windows take those touches.
-    //
     // They are handed over FRACTIONAL because that is what the panel reports
     // and what the core's one containment conversion expects
     // (GuiInputCore::containing_pixel).
     auto px = [&](size_t i) {
-        return static_cast<double>(AMotionEvent_getX(event, i)) -
-               static_cast<double>(origin_x_);
+        return static_cast<double>(AMotionEvent_getX(event, i));
     };
     auto py = [&](size_t i) {
-        return static_cast<double>(AMotionEvent_getY(event, i)) -
-               static_cast<double>(origin_y_);
+        return static_cast<double>(AMotionEvent_getY(event, i));
     };
 
     // THE PEN, read per event (the three amendments' platform half; the
@@ -2222,6 +2038,15 @@ void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) 
 // otherwise hold every string until detach. A Java exception out of the call
 // is described, cleared and logged, never propagated: the head unit's display
 // is not worth the process.
+GuiBattery GuiPlatform::battery_status() {
+    const uint32_t w = g_battery_word.load(std::memory_order_relaxed);
+    GuiBattery b;
+    b.has_battery = (w >> 16) & 1u;
+    b.plugged     = static_cast<GuiBattery::Plugged>((w >> 8) & 0x3u);
+    b.percent     = static_cast<int>(w & 0xFFu) - 1;
+    return b;
+}
+
 void GuiPlatform::publish_media_state(const GuiMediaState& state) {
     if (!app_ || !app_->activity || !jni_env_ || !media_state_method_) return;
     JNIEnv* env = jni_env_;

@@ -620,7 +620,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
 }
 
 // -- Trim bound geometry owners -------------------------------------------
-// One column formula, one mapping helper, one endcap rect, one bridge-gap owner.
+// One column formula, one mapping helper, one handle rect, one bridge-gap owner.
 // See render.h for the full rationale (the UNIFIED displayed basis — the
 // painter decides against the committed viewport and the hit sites read what
 // it publishes, the event-sync ruling; the quantized-span denominator; the
@@ -659,9 +659,9 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
                               const TrimBoundColumn& end, int endcap_w,
                               int wave_w) {
-    // Contract (4x2 table) at the declaration. A PAINTED (InView) endcap bounds the
-    // gap at its inner edge (inset by endcap_w — the room the endcap occupies); an
-    // OFFSCREEN bound paints no endcap, so the bar runs FLUSH. The offscreen arms
+    // Contract (4x2 table) at the declaration. A PAINTED (InView) handle bounds the
+    // gap at its inner edge (inset by endcap_w — the room the handle occupies); an
+    // OFFSCREEN bound paints no handle, so the bar runs FLUSH. The offscreen arms
     // key on the bound's SIDE (not col_raw, which cannot tell the side across the
     // rounding seam), and use side-specific SENTINELS so an offscreen edge lands
     // STRICTLY past the visible range — never col 0 / col wave_w-1 — which is what
@@ -701,10 +701,10 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row) {
     const int abs_col = strip_x + col;
     GuiRect r;
     // Begin left-edge-anchored (rect left ON the column); end right-edge-anchored
-    // (rightmost pixel ON the column) — the SAME edge rule the square chips
-    // used, so a bound's mark still stands on the column the bound occupies.
-    // Only the WIDTH changed with row 5: the endcap is 2px where the chip was a
-    // flag-width square. Y-band from the trim lane `row`.
+    // (rightmost pixel ON the column), so a bound's handle stands on the column
+    // the bound occupies, flush with the bar's end. The handle is the grip's
+    // square, trim_endcap_w_px() wide (architect 2026-10-01). Y-band from the
+    // trim lane `row`.
     r.x = is_begin ? abs_col : abs_col - cap_w + 1;
     r.y = row.y;
     r.w = cap_w;
@@ -786,35 +786,61 @@ void render_trim_flags(cairo_t* cr,
         cairo_fill(cr);
     };
 
-    // GROUND everywhere first, then the window's BAR over it, then the endcaps
-    // over that — painting back to front means no run has to know what its
-    // neighbour is, and an inverted or degenerate window simply leaves the
-    // ground showing.
+    // GROUND everywhere first, then the window's BAR over it, then the two
+    // handles over that — painting back to front means no run has to know
+    // what its neighbour is, and an inverted or degenerate window simply
+    // leaves the ground showing. The ground keeps the lane's own two-row bevel.
     surface(lane_x, lane_w, kRedesignContentGround,
             kTrimGroundBevelHi, kTrimGroundBevelLo);
 
+    // THE BAR IS ONE SOLID RAISED OBJECT (architect 2026-10-01): its face
+    // under a 1px relief — the LIGHT edge along its top AND its left, the
+    // DARK edge along its bottom AND its right, the two shared corners (top
+    // right, bottom left) taking the dark, which is the order Windows'
+    // DrawEdge paints a raised edge in: the light pair first, the dark pair
+    // over it. The edges are trim_bar_edge_px() thick, the bar's height the
+    // lane's body (every row above the lane's shared bottom border).
+    //
     // THE BAR SPANS THE WINDOW, and it follows a bound OFFSCREEN rather than
-    // stopping short: an out-of-view bound means the window continues past that
-    // edge, so the bar runs flush to it. The clip above trims the overhang.
-    const int bar_lo = (bc.side == TrimBoundSide::OffLeft)  ? 0 : bc.col;
-    const int bar_hi = (ec.side == TrimBoundSide::OffRight) ? lane_w : ec.col + 1;
-    if (bar_hi > bar_lo) {
-        surface(lane_x + bar_lo, bar_hi - bar_lo, kTrimLaneBar,
-                kTrimBarBevelHi, kTrimBarBevelLo);
+    // stopping short: an out-of-view bound means the window continues past
+    // that edge, so the bar runs flush to it — ONE COLUMN PAST IT, so the side
+    // edge of a bar that continues out of view lands outside the clip above
+    // and the bar reads as running on, not as ending at the window's edge.
+    const int bar_lo = (bc.side == TrimBoundSide::OffLeft)  ? -1 : bc.col;
+    const int bar_hi = (ec.side == TrimBoundSide::OffRight) ? lane_w + 1
+                                                            : ec.col + 1;
+    if (bar_hi > bar_lo && body_h > 0) {
+        const int bx   = lane_x + bar_lo;
+        const int bw   = bar_hi - bar_lo;
+        const int edge = std::min({trim_bar_edge_px(), bw, body_h});
+        const auto fill = [&](GuiColor c, int x, int y, int w, int h) {
+            cairo_set_source_rgb(cr, c.r, c.g, c.b);
+            cairo_rectangle(cr, x, y, w, h);
+            cairo_fill(cr);
+        };
+        fill(kTrimLaneBar,    bx, lane_y, bw, body_h);
+        fill(kTrimBarBevelHi, bx, lane_y, bw, edge);                    // top
+        fill(kTrimBarBevelHi, bx, lane_y, edge, body_h);                // left
+        fill(kTrimBarBevelLo, bx, lane_y + body_h - edge, bw, edge);    // bottom
+        fill(kTrimBarBevelLo, bx + bw - edge, lane_y, edge, body_h);    // right
     }
 
-    // THE ENDCAPS stand ON their bound columns, bodies facing INWARD (the begin
-    // cap starts at its column, the end cap ends on its own), which is the same
-    // edge-anchoring the chips used — so a bound's painted mark still sits on
-    // the column the bound actually occupies. A culled bound paints no cap: it
-    // has no column on screen to stand on, and the bar's flush edge is what says
-    // the window continues past the view.
-    // Both caps come from the ONE rect owner (trim_endcap_rect), and THE
-    // PUBLICATION RIDES THE FILLS (TrimBarHit, render.h): each cap is stashed
-    // from the rect it was just painted with, so the painted cap and the
-    // grabbable cap describe the same edge — the hit side adds only its stated
-    // grab tolerance — and the hit reads the pixels rather than a second
-    // derivation of them.
+    // THE TWO HANDLES ARE THE CENTRE GRIP FILLED SOLID (architect
+    // 2026-10-01): the grip's own drawing — the light face under its two-row
+    // bevel, kTrimLaneEndcap with kTrimCapBevelLo / kTrimCapBevelHi — with no
+    // dark square punched into it, trim_endcap_w_px() wide (the grip's own 9
+    // at 100%) and the bar's full height, one at each end of the bar, flush
+    // with it: the begin handle starts at its bound's column and the end
+    // handle ends on its own, so a bound's handle sits on the column the bound
+    // actually occupies. A culled bound paints no handle: it has no column on
+    // screen to stand on, and the bar's flush edge is what says the window
+    // continues past the view.
+    // Both handles come from the ONE rect owner (trim_endcap_rect), and THE
+    // PUBLICATION RIDES THE FILLS (TrimBarHit, render.h): each handle is
+    // stashed from the rect it was just painted with, so the painted handle
+    // and the grabbable one describe the same edge — the hit side adds only
+    // its stated grab tolerance — and the hit reads the pixels rather than a
+    // second derivation of them.
     if (bc.in_viewport) {
         const GuiRect r = trim_endcap_rect(true, lane_x, bc.col, trim_bar);
         surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
@@ -826,7 +852,7 @@ void render_trim_flags(cairo_t* cr,
         if (out_hit) out_hit->end = {true, lane_x + ec.col, r};
     }
 
-    // THE MIDPOINT MARK IS THE CROP'S STRUCTURE IN THE LANE'S OWN COLOURS
+    // THE MIDPOINT MARK — THE CENTRE GRIP — IS THE CROP'S STRUCTURE IN THE LANE'S OWN COLOURS
     // (architect 2026-08-01, who overlaid row_5_lane_1_trim_middle.png on the
     // running GUI and ruled it implemented exactly; RE-FLIPPED with the rest of
     // the lane on 2026-09-16, to kdenlive's own orientation; the cap and bar
@@ -835,15 +861,16 @@ void render_trim_flags(cairo_t* cr,
     // every surface including this one, never the tile's own) is a LANE-HEIGHT
     // TILE, and every pixel of it is one of this lane's own surfaces:
     //
-    //   row 0      #9ea5ad  kTrimCapBevelLo    the endcap bevel pair, verbatim,
+    //   row 0      #9ea5ad  kTrimCapBevelLo    the handles' bevel pair, verbatim,
     //   row 1      #a7b0b8  kTrimCapBevelHi    now at the tile's TOP
     //   rows 2..8  #a1a9b1  kTrimLaneEndcap    the tile's face
     //   cols 2..6 } #2e3135 kTrimLaneBar       the inner square, inset 2px,
     //   rows 2..6 }                            flush UNDER the bevel
     //
-    // So the tile is EXACTLY AN ENDCAP-COLOURED COLUMN RUN with a bar-coloured
+    // So the tile is EXACTLY A HANDLE-COLOURED COLUMN RUN with a bar-coloured
     // square punched into it, and it paints through the SAME `surface` lambda
-    // the caps do — four constants reused, none invented. On our dark bar it
+    // the handles do — four constants reused, none invented (the handles are
+    // this tile with the square left out, 2026-10-01). On our dark bar it
     // reads as the light square RING with the dark centre the mockup shows
     // (tmp/screenshots/kdenlive/redesign/row_5_lane_1_trim_middle_example.png).
     // The earlier 5x5 single-colour square and its recorded deviation are gone:
@@ -851,7 +878,7 @@ void render_trim_flags(cairo_t* cr,
     // a two-colour crop, and the tile carries both.
     //
     // Painted last, over the bar — and, where the window is narrow enough for
-    // them to meet, it would sit over an endcap's face too, though the clearance
+    // them to meet, it would sit over a handle's face too, though the clearance
     // rule below means that cannot actually happen.
     //
     // INFORMATIONAL ONLY. It publishes no rect, claims no hit area and changes
@@ -870,11 +897,10 @@ void render_trim_flags(cairo_t* cr,
     // IT PAINTS ONLY WHERE IT FITS, a clean binary verdict on integer columns
     // (so it cannot flicker — no hysteresis, none needed) and the ONLY thing
     // that hides it: the TILE's whole extent must sit inside the visible
-    // interior BETWEEN the endcaps (trim_bridge_gap, the shared owner, clamped
-    // to the effective width) with a clearance each side. Recomputed for the
-    // 9px tile, so the interior it needs grew with the mark; the clearance
-    // matters more than it did, the tile's face being the endcaps' own colour
-    // and merging with a cap it touched. Below the threshold it simply does not
+    // interior BETWEEN the handles (trim_bridge_gap, the shared owner, clamped
+    // to the effective width) with a clearance each side. The clearance is
+    // what keeps the tile apart from a handle, the tile's face being the
+    // handles' own colour and merging with one it touched. Below the threshold it simply does not
     // paint: no shrink, no clamp of the TILE. (The INNER SQUARE's height is a
     // separate matter — it IS clamped, to keep the tile's BOTTOM rim (the TOP
     // rim before the 2026-09-16 flip moved the square to hang under the bevel
@@ -904,9 +930,10 @@ void render_trim_flags(cairo_t* cr,
         const int vis_lo = std::max(gap.lo, 0);
         const int vis_hi = std::min(gap.hi, lane_w);
         // THE BRIDGE'S PUBLICATION is this same visible interior — the bar's
-        // stretch between the caps' inner edges, clipped to the lane's painted
-        // width — so the pair drag's handle and the midpoint mark's room are
-        // one interval, and the caps sit outside it by the gap's own inset.
+        // stretch between the handles' inner edges, clipped to the lane's
+        // painted width — so the pair drag's band and the midpoint mark's room
+        // are one interval, and the handles sit outside it by the gap's own
+        // inset.
         if (out_hit) {
             out_hit->published = true;
             out_hit->lane      = GuiRect{lane_x, lane_y, lane_w, lane_h};
@@ -921,7 +948,7 @@ void render_trim_flags(cairo_t* cr,
         const int x_hi = x_lo + tile;          // exclusive
         if (mc.in_viewport && inner_w <= face_h &&
             x_lo >= vis_lo + clear && x_hi <= vis_hi - clear) {
-            // The tile's own column run, bevel included — the endcap surface at
+            // The tile's own column run, bevel included — the handle surface at
             // the midpoint, which is what rows 0..8 of the crop are.
             surface(lane_x + x_lo, tile, kTrimLaneEndcap,
                     kTrimCapBevelHi, kTrimCapBevelLo);
@@ -942,7 +969,7 @@ void render_trim_flags(cairo_t* cr,
             // LANE's arithmetic while inner_h is the TILE's. Nothing holds
             // the two apart: wherever the derived width reaches face_h the
             // difference is 0, the square runs to the face's own bottom row,
-            // and the endcap-coloured rim of the ruled silhouette vanishes
+            // and the handle-coloured rim of the ruled silhouette vanishes
             // with no metric having gone to zero.
             //
             // SO THE HEIGHT GIVES WAY AND THE RIM DOES NOT: inner_h caps the
@@ -988,7 +1015,7 @@ void render_trim_flags(cairo_t* cr,
     // THE SHARED BOTTOM BORDER (architect 2026-09-16, the flip's new crop
     // row_5_lane_1_trim_bottomborder.png): ONE fill across the WHOLE lane
     // width, painted LAST so it sits over every surface above it — the
-    // ground, the bar, the endcaps and the midpoint tile alike, none of which
+    // ground, the bar, the handles and the midpoint tile alike, none of which
     // owns this row on its own. The clip at the top of this function already
     // bounds it to the lane, so the rectangle below can run the full width
     // with no further clamping.

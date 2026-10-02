@@ -1,5 +1,6 @@
 #pragma once
 #include "device_config.h"
+#include "gui_battery.h"
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
@@ -176,8 +177,10 @@ public:
 
     // WINDOW ACTIVATION (keyboard focus), straight off xdg_toplevel.configure's
     // state array: true while the compositor lists XDG_TOPLEVEL_STATE_ACTIVATED.
-    // The redesigned rows 1 and 2 darken their ground when it goes false, so the
-    // header tracks the labwc titlebar above it (which darkens the same way).
+    // The focus accents read it (the play-scrub's played groove, the folder
+    // overlay's panel and the modal row's active-focus outline take their
+    // unfocused face when it goes false — AppState::window_activated); the
+    // chrome's ground does not, having one value either way since 2026-10-01.
     //
     // FALSE UNTIL THE FIRST CONFIGURE, which is the honest cold answer — we have
     // not been told we are active. labwc focuses a newly mapped window, so the
@@ -551,6 +554,28 @@ public:
     // focus (MainActivity.mediaState).
     void publish_media_state(const GuiMediaState& state);
 
+    // -- THE HOST'S BATTERY (architect 2026-10-01) ---------------------------
+    //
+    // What the host knows of its battery NOW, for the menu row's battery +
+    // clock legend (gui_battery.h owns the type and the composer). CALLED ON
+    // EVERY TICK from the loop thread — main.cpp's tick is the legend's one
+    // refresh site, composing only when the minute or this answer changed and
+    // damaging the row only when the composed text did — so each backend
+    // answers cheaply, its own way.
+    //
+    // ON THIS BACKEND IT IS sysfs, READ AT MOST ONCE PER WALL-CLOCK MINUTE —
+    // the laptop's battery refreshes with the legend's clock (architect
+    // 2026-10-01), and the cache answers every tick between. The first BAT*
+    // under /sys/class/power_supply gives the percentage (`capacity`); the
+    // glyph is the AC adapter's `online` flag (AC*: 1 plugged, 0 unplugged)
+    // and, when no AC* node exists, the battery's own `status` (Charging,
+    // Full and Not charging are plugged, Discharging unplugged). Anything
+    // else, or a node that cannot be read, is Unknown — the × the legend
+    // shows, and nothing more (no retry, no log); no BAT* at all is
+    // has_battery false, the clock alone. Android's answer is the sliver's
+    // last ACTION_BATTERY_CHANGED broadcast (its declaration).
+    GuiBattery battery_status();
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -858,6 +883,10 @@ private:
     CloseCallback        on_close_;
     // Stored and never fired on this backend (see set_on_media_command).
     std::function<void(GuiMediaCommand)> on_media_command_;
+    // battery_status's cache: the last sysfs reading and the wall-clock
+    // minute it was taken in (-1 before the first read).
+    GuiBattery battery_        {};
+    int64_t    battery_minute_ = -1;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop

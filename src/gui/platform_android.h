@@ -1,5 +1,6 @@
 #pragma once
 #include "device_config.h"
+#include "gui_battery.h"
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
@@ -16,8 +17,7 @@
 // the glue's thread owns an ALooper, this class adds its own periodic timerfd
 // and the four worker eventfds to it, paints cairo into a persistent ARGB32
 // backbuffer and blits the damaged rectangle into ANativeWindow_lock's buffer
-// AT THE CONTENT RECT'S ORIGIN (the window the GUI sees is the band inside the
-// system bars; the rule and its two translation points are at origin_x_).
+// (the window the GUI sees is the whole surface; the rule is at width_).
 // No Android headers appear here on purpose; member pointer types are spelled
 // `struct foo*` so the compiler treats them as forward declarations and the
 // real interface headers stay private to platform_android.cpp — the same rule
@@ -27,7 +27,7 @@
 // for member and signature for signature, and there is NO ANDROID-ONLY MEMBER:
 // where the two machines differ, both sides declare the member and each
 // answers its own way (the on-screen keyboard's pair, device_config_defaults,
-// the car's pair and the pen's pair are of that shape).
+// the car's pair, the pen's pair and battery_status are of that shape).
 // THE PROOF IS A DIFF, never a carried count: strip `//` comments and blank
 // lines from each header's `public:` section and the two come out line for
 // line equal but for the pen pair's two inline bodies — re-derive it at every
@@ -41,7 +41,9 @@
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
-// LAST GREW ON 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
+// LAST GREW ON 2026-10-01, by battery_status (the menu row's battery + clock
+// legend: sysfs on the laptop, the sliver's broadcast here — gui_battery.h
+// carries the type), and before that on 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
 // the contracts are at platform_wayland.h's two declarations, the JNI road at
 // this backend's definitions and MainActivity.java): set_on_media_command, the
 // hook the loop fires with each head-unit button the Java sliver's
@@ -444,6 +446,23 @@ public:
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
     void publish_media_state(const GuiMediaState& state);
 
+    // THE HOST'S BATTERY (architect 2026-10-01; the seam's contract — called
+    // on every tick, answered cheaply — is at platform_wayland.h's
+    // declaration). ON THIS BACKEND IT IS THE SLIVER'S LAST BROADCAST:
+    // MainActivity registers for the sticky ACTION_BATTERY_CHANGED (no
+    // permission; the registration hands back the sticky intent at once and
+    // the receiver keeps it current) and pushes each one down through
+    // nativeBatteryState — ONE JAVA->NATIVE CALL PER CHANGE, the car's road
+    // (nativeMediaCommand) rather than a native->Java read at each refresh,
+    // because the broadcast IS the change: the legend follows it within a
+    // tick, with no binder call on the loop's thread. The push stores one
+    // atomic word and needs no wake, the tick reading it on its own cadence
+    // (the word and its packing are at g_battery_word, platform_android.cpp).
+    // Before the first push it answers a battery whose level and plug state
+    // are unknown — the honest cold answer, which the receiver's
+    // registration in onCreate replaces at once.
+    GuiBattery battery_status();
+
 private:
     // The glue's callback tables are C function pointers taking `android_app*`,
     // so dispatch lives in file-static functions that cast `app->userData` to
@@ -481,58 +500,15 @@ private:
     int              back_h_ = 0;
 
     // -- Window state --
-    // THE CONTENT RECT IS THE WINDOW, and width_/height_ are ITS size — what
-    // the GUI is told the window is, and what every rect that crosses the seam
-    // is measured in. The SURFACE ANativeWindow hands back is bigger: an app
-    // window's frame is the whole display by construction on modern Android
-    // (its own layout params carry FLAG_LAYOUT_IN_SCREEN | FLAG_LAYOUT_INSET_-
-    // DECOR, and "fitting the system windows" is DecorView PADDING, which a
-    // NativeActivity never sees because it takes the WINDOW's surface), so the
-    // band inside the system bars arrives as the CONTENT RECT instead.
-    //
-    // THE RECT IS THE FRAMEWORK'S, MINUS THE AIR — this backend measures no
-    // inset of its own; the one thing it subtracts is kStatusBarAirPx, the air
-    // it leaves between the status bar and the first row, and that subtraction
-    // lives in resolve_content_rect with its reasoning at the constant
-    // (platform_android.cpp). Measured on an AWAKE Tab S10 FE 2026-08-27
-    // under the architect's own Screen zoom (override density 320): surface
-    // frame [0,0][2304,1440], content 2304x1270 at (0,74) — a 60 px status
-    // bar plus the 14 px of air this side adds above it, and a 96 px taskbar
-    // below. THE FRAMEWORK'S RECT ALREADY EXCLUDES BOTH BARS, so this backend
-    // measures none and needs no arithmetic of its own.
-    //
-    // (History, one line: an earlier reading of 2304x1387 at (0,53) showed the
-    // status bar alone, because the panel was DOZING with the cover shut and
-    // the taskbar reported no visible navigation inset then — dumpsys had it
-    // as a `tappableElement` and as `mAppBounds`, with
-    // `type=navigationBars ... visible=false`. The question that reading left
-    // open — whether the taskbar overlays the bottom row on an awake panel —
-    // is CLOSED by the measurement above: it does not, the rect excludes it.
-    // The next step recorded from the dozing reading, a JNI call handing this
-    // side `WindowInsets.Type.tappableElement()`'s bottom to subtract, is
-    // RETIRED: on an awake panel it would subtract the taskbar twice.)
-    //
-    // ORIGIN IS THIS BACKEND'S ALONE. Nothing above the seam knows it exists:
-    // it is ADDED on the way out (present, the one blit) and SUBTRACTED on the
-    // way in (the AMotionEvent decode's two coordinate lambdas), which is the
-    // whole of the translation and the reason GuiInputCore, main.cpp and every
-    // painter stay identical to the Wayland build's. Before the first
-    // APP_CMD_CONTENT_RECT_CHANGED the rect is the whole surface and every
-    // offset below is 0, which is exactly the pre-2026-08-27 behaviour.
-    int  origin_x_  = 0;
-    int  origin_y_  = 0;
-    int  surface_w_ = 0;
-    int  surface_h_ = 0;
-    // ONE FULL-SURFACE POST IS OWED AFTER EVERY ADOPTION AND AT EVERY
-    // ACTIVATION EDGE — the two writers — so the bands outside the content
-    // rect get the ground they are owed (present picks it per row: the top
-    // band's is the title strip's, which darkens with the window and IS the
-    // status bar's colour on this platform) rather than showing whatever the
-    // buffer held or the word the other activation state left. Between those
-    // posts the window keeps the area outside the dirty rect it hands back,
-    // which is the same mechanism partial damage already relies on and is
-    // exactly why a CHANGED band word needs a post of its own (present).
-    bool surface_bands_owed_ = false;
+    // THE SURFACE IS THE WINDOW (architect 2026-10-01, with full screen):
+    // width_/height_ are the size ANativeWindow reports, what the GUI is told
+    // the window is and what every rect that crosses the seam is measured in.
+    // An app window's frame is the whole display by construction on modern
+    // Android, and with both system bars hidden (MainActivity.java's head)
+    // nothing sits over any of it, so this backend reads no content rect,
+    // subtracts no inset, adds no origin at the blit and none at the touch
+    // decode, and paints no band — the GUI's coordinates are the surface's
+    // and the panel's, the Wayland build's shape exactly.
     int  width_  = 0;
     int  height_ = 0;
     bool should_exit_ = false;
@@ -691,23 +667,17 @@ private:
     PrePaintCallback     on_pre_paint_;
 
     // -- Internal helpers --
-    // Take the glue's current ANativeWindow as ours: the surface geometry AND
-    // the content rect (origin + size, re-read every time), the backbuffer,
-    // the core's surface width, has_initial_configure_, and full damage. `fire_resize` is false for init()'s adoption alone (see
-    // initial_resize_owed_) and true everywhere else.
     // Whether the Java clipboard road exists at all: the glue thread's env
     // and both method ids. False means a failed attach or lookup, and both
     // clipboard members then fall back to clipboard_text_ (their contract).
     bool clipboard_road_open() const;
 
+    // Take the glue's current ANativeWindow as ours: the surface geometry
+    // (re-read every time — it is the window, width_'s rule), the backbuffer,
+    // the core's surface width, has_initial_configure_, and full damage.
+    // `fire_resize` is false for init()'s adoption alone (see
+    // initial_resize_owed_) and true everywhere else.
     void adopt_window(bool fire_resize);
-    // Resolve the glue's current content rect against the surface size: the
-    // origin and the size the GUI will be told, the status-bar air already
-    // taken off the top (kStatusBarAirPx, platform_android.cpp). Falls back to
-    // the whole surface for the zero rect the glue starts with and for anything
-    // empty, inverted or out of bounds — the window is never nothing.
-    void resolve_content_rect(int surf_w, int surf_h,
-                              int& ox, int& oy, int& cw, int& ch) const;
     void ensure_backbuffer(int w, int h);
     void destroy_backbuffer();
     void paint_one_frame();

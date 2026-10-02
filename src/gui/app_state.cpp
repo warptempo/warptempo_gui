@@ -166,8 +166,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
         if (!cap.painted) return;
         // THE DRAWN CAP, INFLATED BY THE GRAB TOLERANCE. The stash carries the
         // rect exactly as painted so the target is centred on it; the widening
-        // is the hit side's own term, because a 2px endcap is below any usable
-        // pointing tolerance (the rationale is at trim_endcap_rect).
+        // is the hit side's own term, because a 9px handle is below a
+        // fingertip (the rationale is at trim_endcap_rect).
         GuiRect r = cap.rect;
         const int grab = trim_endcap_grab_px();
         r.x -= grab;

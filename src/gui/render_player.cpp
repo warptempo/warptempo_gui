@@ -345,6 +345,13 @@ void GuiRenderPlayer::delete_batch_folders(
     // what is left, and the band takes the listing's top (the seat rule's
     // memory-less arm — the folder it stood on is gone).
     enter(Folder::Root, {}, {});
+    // THE LAST FOLDER GONE CLOSES THE PLAYER (architect 2026-10-01): a root
+    // listing with no folder left has nothing to play or open, so the player
+    // takes itself down through its own close act — the Close button's road,
+    // the same unload and the same restore — rather than standing over an
+    // empty band. The root lists folders and nothing else (rebuild_rows), so
+    // an empty row list IS "no folder left".
+    if (app.folder_overlay.rows.empty()) close();
 }
 
 void GuiRenderPlayer::open_row(int index) {

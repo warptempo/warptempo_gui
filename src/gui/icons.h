@@ -362,7 +362,7 @@ enum class Icon {
     // (BOOST, the two-arrow cycle the group's third button wore for walk both
     // tabs, is DELETED with that button on 2026-09-14 — its enumerator, its
     // def and its committed asset — no other button wearing it; the march is
-    // the tab row's shifted press now. It was the file that brought the
+    // Switch Tab's shifted press now. It was the file that brought the
     // interpreter's stroked arm back and the one producer of the per-path line
     // cap, which went with it.)
     // BBOXPREV IS BACK (architect 2026-09-29) with the Previous Marker
@@ -473,7 +473,7 @@ enum class Icon {
     EditCopy,            // Copy resolved value (the icon row, after Redo)
 
     // THE ENABLE TOOLTIPS LAMP'S GLYPH (architect 2026-09-29), the icon
-    // row's render-entry group between the padlock and Settings: Breeze
+    // row's render-entry group, its last, behind Settings: Breeze
     // Dark's actions/22/help-whatsthis — the "What's This?" ring with its
     // pointer arrow, the desktop's own glyph for asking a control its name.
     HelpWhatsthis,       // Toggle Tooltips (bare backslash)
