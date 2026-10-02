@@ -797,9 +797,10 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // THE NOTIFICATION CARDS ARE HIT ABOVE THE VEIL, BY RULING, AND ARE NOT AN
 // EXCEPTION TO IT (architect 2026-08-29): a card is not a reach into the
 // veiled surface — it is the message about the act the veil stands over —
-// so its X must answer under a prompt, the player, the picker and every
-// dialog editor alike. The claim sits at on_button_press's head, ahead of
-// every gate (the rule at notifications.h).
+// so the card (its X until 2026-10-01) must answer under a prompt, the
+// player, the picker and every dialog editor alike. The claim sits at
+// on_button_press's head, ahead of every gate, and its lift at
+// on_button_release's (the rule at notifications.h).
 
 // Is (x, y) inside the PUBLISHED INTERACTION RECT of a redesigned button? The
 // rect is the painter's stash and nothing here re-shapes or re-measures, so the
@@ -1888,9 +1889,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                                    GuiInputState mods) const {
     // THE NOTIFICATION CARDS FIRST (2026-08-29), ahead of every refusal
     // below as their press claim is ahead of every gate: a card is opaque
-    // to the pointer — no zone underneath it can promise anything — and its
-    // own two surfaces, the body and the X, are a consumed press and a
-    // button, which carry no cue anywhere in the product.
+    // to the pointer — no zone underneath it can promise anything — and the
+    // card itself is ONE BUTTON since its X retired (2026-10-01), and a
+    // button carries no cue anywhere in the product.
     if (notification_card_at(app, x, y) != 0) return GuiCursorKind::Arrow;
     if (app.prompt.active) return GuiCursorKind::Arrow;
     // THE RENDER PLAYER IS THE ARROW EVERYWHERE (2026-08-28): its three
@@ -2781,7 +2782,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // 2026-09-25 a pinch begins only from the pan zone's window, which yields
     // under the keyboard, so what this clause answers now is a pinch whose
     // centroid travels over the keys. The pan zone already yields under this same rect
-    // (touch_point_in_pan_zone's second clause) — this is the two-finger half
+    // (touch_point_in_pan_zone's keyboard clause) — this is the two-finger half
     // of that answer, and it asks the same two owners, so the two cannot
     // disagree. A key is not a navigation surface at any finger count.
     if (onscreen_keyboard::stands(app, gui) &&
@@ -3023,9 +3024,9 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 // that ruling this body was a HAND COPY of the press router's derivation (its
 // own inside_waveform spelling plus its own `!waveform_lower_half` term), so
 // the lower half's arrival on the zone did NOT follow for free — it followed
-// once the copy became a call. Surface geometry only; refusals stay downstream
-// (the update body's per-frame wheel_context answer, the region begin's gate
-// list).
+// once the copy became a call. Surface geometry only, save the open menu (the
+// first clause, 2026-10-01); every other refusal stays downstream (the update
+// body's per-frame wheel_context answer, the region begin's gate list).
 //
 // SO THE WHOLE WAVEFORM IS THE PAN ZONE NOW (architect 2026-08-13, embracing
 // the consequence: "currently finger down works in the upper half by waiting
@@ -3044,31 +3045,42 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 // tap places the playhead (a double tap on the empty marker lane creates)
 // and a drag does nothing — the placement pending begins no pan.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
-    // THE ZONE YIELDS UNDER THE OPEN DROPDOWN'S BOX (architect 2026-10-01,
-    // from his glass pass: the Settings menu's device rows lost their pressed
-    // face at the pen's down while every other row took it). A menu hanging
-    // over the waveform puts its lower rows on the pan zone — the Settings
-    // menu's device group does, its sidecar group and the shorter File and
-    // Edit menus stand over the lanes above — and a contact there opened the
-    // zone's window and DELIVERED NO PRESS until the lift: the pen's
-    // HOVER_EXIT before the tip had already dropped the hover face, so the row
-    // painted at rest from the down to the lift, where the tap's burst
-    // delivered press and release together and the act ran. Answering false
-    // resolves the contact to the pointer on contact, so the press reaches
-    // the popup's own claim and arms the row at the down, as a mouse press
-    // does (the laptop's mouse never meets the zone). ONE SPELLING OF "ON THE
-    // BOX": the painted rect the card query yields under too
-    // (notification_card_at).
-    if (app.dropdown.open() && rect_contains(app.dropdown.rect, x, y))
-        return false;
+    // THE ZONE YIELDS WHOLE WHILE A MENU STANDS (architect 2026-10-01, "Good,
+    // I agree"): with a dropdown open, every touch is the pointer on contact,
+    // so the first touch outside the menu is a PRESS AT THE DOWN, reaches the
+    // dropdown's claim, closes the menu and is consumed — exactly the mouse's
+    // press (on_button_press's dropdown claim, "ONE PRESS, ONE ACT"); the drag
+    // that follows starts on a closed menu, one wasted gesture after a menu,
+    // the cost every desktop charges. THE DIVERGENCE IT CLOSES: on the tablet
+    // a tap outside closed the menu at its lift, but a drag or a hold there
+    // opened the zone's window — the pan and the region hold, which the
+    // downstream refusals freeze under an open menu — and the menu stayed,
+    // while the laptop's press-and-drag closes it and does not pan.
+    // THE HISTORY THAT LED HERE: the same day this clause yielded under the
+    // dropdown's BOX alone, from his glass pass (the Settings menu's device
+    // rows lost their pressed face at the pen's down while every other row
+    // took it) — a menu hanging over the waveform puts its lower rows on the
+    // pan zone, and a contact there opened the window and DELIVERED NO PRESS
+    // until the lift, the pen's HOVER_EXIT before the tip having already
+    // dropped the hover face, so the row painted at rest from the down to the
+    // lift. The whole-zone yield keeps that answer (a row's press arms it at
+    // the down, as a mouse press does) and widens it to every point.
+    // THE KINDS STAY DISTINCT: a dropdown is a POPUP — one press, one act, its
+    // claim's rank (2026-09-03) untouched — while a card is a NOTICE that
+    // claims its own rect only and is never a mode, so a drag beside a card
+    // pans (the clause below yields under the card alone).
+    if (app.dropdown.open()) return false;
     // THE ZONE YIELDS UNDER A NOTIFICATION CARD (2026-08-29), for the
     // keyboard clause's reason below: the cards stack over the waveform's
     // upper right, the whole waveform is the pan zone, and a finger landing
-    // on a card's X inside a pan zone would become the phone-model pan and
-    // NEVER DELIVER A PRESS. Answering false lets the finger resolve to the
-    // pointer translation and reach the card's own press claim, where the X
-    // acts. The card is opaque to the pointer everywhere else too (the
-    // cursor map, the hover walk), so the zone agrees with them.
+    // on a card inside a pan zone would become the phone-model pan and
+    // deliver its press only at the lift, if at all. Answering false lets the
+    // finger resolve to the pointer translation ON CONTACT and reach the
+    // card's own press claim at the down — which the card needs since it
+    // became one button acting at the lift (2026-10-01): the long press is
+    // measured from the press, and the held card's clock stops there. The
+    // card is opaque to the pointer everywhere else too (the cursor map, the
+    // hover walk), so the zone agrees with them.
     if (notification_card_at(app, x, y) != 0) return false;
     // (THE ZONE YIELDED INSIDE THE SHOWN TRIM REGION OVERLAY from 2026-08-15,
     // so a finger could reach the overlay's endcap and bridge drags. Both are
@@ -4696,27 +4708,69 @@ void GuiInputHandler::clear_folder_overlay_hover() {
 // -- THE NOTIFICATION CARDS' POINTER HALF (2026-08-29) -------------------------
 //
 // The rule and its reasons are at notifications.h and at the claim's site in
-// on_button_press. The three bodies here are thin: geometry is the painter's
-// publication, the act is GuiNotifications' own.
+// on_button_press. The bodies here are thin: geometry is the painter's
+// publication, the arm is AppState::ChromePress's Card kind, the act is
+// GuiNotifications' own.
 
 bool GuiInputHandler::claim_notification_press(GuiMouseButton button, int x,
-                                               int y) {
+                                               int y, GuiInputState mods) {
     // The hit owner has already asked the LIVE stack (notifications.h): a
-    // published rect whose card has LEFT that stack — by its expiry, by its X
-    // or by the bump — answers 0 here (a live card that is merely clipped is
-    // selected wherever it has a published rect, and past the room's foot it
-    // has none), so this press is claimed by NOTHING and falls through to
-    // the surface underneath — the pixels the user is about to see there at
-    // the next paint, which is the honest place for it to land.
+    // published rect whose card has LEFT that stack — by its expiry, by a
+    // dismissal or by the bump — answers 0 here (a live card that is merely
+    // clipped is selected wherever it has a published rect, and past the
+    // room's foot it has none), so this press is claimed by NOTHING and falls
+    // through to the surface underneath — the pixels the user is about to see
+    // there at the next paint, which is the honest place for it to land.
     const uint64_t id = notification_card_at(app, x, y);
     if (id == 0) return false;
     // Consumed from here, whatever the button: the card is opaque.
     if (button != GuiMouseButton::Left) return true;
-    // THE X, AND ONLY THE X, DISMISSES (architect 2026-08-29); a press on the
-    // body is the consumed nothing above. dismiss re-asks the live stack, so
-    // a stale published rect lands nothing.
-    if (notification_close_at(app, id, x, y)) notifications.dismiss(id);
+    // THE CARD IS ONE BUTTON (architect 2026-10-01, "whole card dismisses, X
+    // gone"): the press ARMS it and dismisses nothing — the act is the lift's
+    // (finish_notification_release), the one stated exception to "every
+    // dismissal stays at the press" (AppState::ChromePress's head). The arm
+    // carries the press-time SHIFT and the press's stamp, the two roads to
+    // the whole-stack dismissal, and nothing else: ctrl and alt bind nothing
+    // on a card. No left arm can be standing here — a left press exists only
+    // after the previous one came up, and every release takes the arm.
+    app.chrome_press = AppState::ChromePress{
+        .kind     = AppState::ChromePress::Kind::Card,
+        .shift    = mods.shift,
+        .press_ms = monotonic_ms(),
+        .card_id  = id};
+    // THE HELD CARD'S CLOCK STOPS AT THE PRESS ("holding turns off the
+    // timer"), whatever the hover walk has or has not said: the pen's
+    // HOVER_EXIT precedes every tip down, and a finger has no hover until the
+    // touch translation's entry motion — which does hover the card just
+    // before this press, so the hold is then the bank's second reason and
+    // the one that survives a slide-away. Nothing paints: the card has no
+    // pressed face.
+    notifications.press_hold_edge(id);
     return true;
+}
+
+// THE CARD'S LIFT — the press claim's other half (architect 2026-10-01),
+// called by on_button_release at the claim's own rank (above the dropdown's
+// release and every veil's) with the arm already taken, so the card's clock
+// has resumed before this runs (take_chrome_press) and a dismissal finds it
+// running or gone. The lift dismisses iff it lands ON THE SAME CARD the
+// press armed — re-hit at the release's own coordinates against the last
+// paint's publication and the live stack (notification_card_at), the derive
+// doctrine: a lift beside the card, on another card, or on a card bumped or
+// cleared under the hold lands nothing (the chrome's slide-away cancel).
+// THE TERM IS THE CHROME SHIFT LONG PRESS'S, read as at the roster's lift:
+// the carried press-time shift ORed with a hold past chrome_shift_hold_ms(),
+// measured here against the arm's stamp — no timer, no tick, no visual
+// announcement — and with it the lift dismisses EVERY card, criticals
+// included; without it, this card alone.
+void GuiInputHandler::finish_notification_release(
+        const AppState::ChromePress& arm, int x, int y) {
+    if (arm.kind != AppState::ChromePress::Kind::Card) return;
+    if (notification_card_at(app, x, y) != arm.card_id) return;
+    const bool all =
+        arm.shift || monotonic_ms() - arm.press_ms >= chrome_shift_hold_ms();
+    if (all) notifications.dismiss_all();
+    else     notifications.dismiss(arm.card_id);
 }
 
 void GuiInputHandler::update_notification_hover(int x, int y) {
@@ -4888,30 +4942,32 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     app.double_click = DoubleClickCandidate{};
 
     // THE NOTIFICATION CARDS, ABOVE EVERY GATE AND EVERY VEIL (architect
-    // 2026-08-29): a press on a published card is consumed whole — arms
-    // nothing, moves nothing, lands no playhead, opens no drag, reaches
-    // nothing underneath — and the LEFT press on the card's X box dismisses
-    // it. THE X, AND ONLY THE X: the router cannot fork on tap versus click
-    // (no origin bit rides a press; GuiInputState carries modifiers alone),
-    // so the rule is one for both hosts, and the X's box is the icon row's
-    // 32 px button box, already the product's glass target, which is why no
-    // finger-fattened body target exists. Any other button over a card is
-    // consumed in the veil's own manner. It ranks above the veils because a
-    // card is the message ABOUT the act a veil stands over, not a reach into
-    // the veiled surface (the record at the retired reach-through's site
-    // above). The act is the PRESS'S — content acts the moment its identity
-    // is certain — so the release owes nothing and no arm is left standing:
-    // this return precedes every arm below, and on_button_release's claims
-    // (the keyboard's key-up, the dropdown's, the chrome arm, the modal's,
-    // the overlay's) each test their own armed state, none of which a card
-    // press set. ON GLASS the pan zone answers false on a card
-    // (touch_point_in_pan_zone), so a finger landing on one resolves to this
-    // press ON CONTACT (the off-zone down, input_core.cpp) rather than to the
-    // phone-model pan, and a second finger beside it is ignored. The geometry read here is the
-    // last paint's publication, and dismiss asks the live stack whether the
-    // id still stands — a card that left between paint and press lands
+    // 2026-08-29): a press on a published card is consumed whole — moves
+    // nothing, lands no playhead, opens no drag, reaches nothing underneath —
+    // and since 2026-10-01 THE CARD IS ONE BUTTON ("whole card dismisses, X
+    // gone"): the LEFT press anywhere on it arms the card's own chrome arm
+    // (AppState::ChromePress's Card kind) and its lift dismisses it, or every
+    // card when shifted or held (the rule at notifications.h's hit section).
+    // The router cannot fork on tap versus click (no origin bit rides a
+    // press; GuiInputState carries modifiers alone), so the rule is one for
+    // both hosts. Any other button over a card is consumed in the veil's own
+    // manner and arms nothing. It ranks above the veils because a card is
+    // the message ABOUT the act a veil stands over, not a reach into the
+    // veiled surface (the record at the retired reach-through's site above),
+    // and ABOVE THE OPEN DROPDOWN'S CLAIM, so a press on a card beside an open
+    // menu arms the card and leaves the menu standing; the lift is taken at
+    // the same rank in on_button_release, above the dropdown's release, which
+    // would otherwise consume it. This return precedes every arm below, so
+    // the card's is the only arm the press leaves. ON GLASS the pan zone
+    // answers false on a card (touch_point_in_pan_zone), so a finger landing
+    // on one resolves to this press ON CONTACT (the off-zone down,
+    // input_core.cpp) rather than to the phone-model pan — which is what
+    // lets the hold be measured from the contact and the clock stop there —
+    // and a second finger beside it is ignored. The geometry read here is
+    // the last paint's publication, and the lift asks the live stack whether
+    // the id still stands — a card that left between paint and lift lands
     // nothing.
-    if (claim_notification_press(button, x, y)) return;
+    if (claim_notification_press(button, x, y, mods)) return;
 
     // THE ON-SCREEN KEYBOARD, ABOVE EVERY GATE (2026-08-27). While it stands
     // its rect belongs to no other surface, so there is nothing below to
@@ -6749,6 +6805,20 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // motion past the slop, never on the release's resting pointer
     // (AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
+    // THE NOTIFICATION CARD'S LIFT (architect 2026-10-01), FIRST — the press
+    // claim's mirror at the press claim's rank: the card's claim outranks
+    // every veil and the open dropdown's claim, so its lift must outrank
+    // their releases too, the dropdown's above all, which consumes every
+    // release while a menu stands (a card pressed beside an open menu would
+    // otherwise never be dismissed). Guarded on the Card arm alone, which
+    // only that claim sets, so it claims nothing that is not its own; the
+    // arm is taken whole here (take_chrome_press, which resumes the card's
+    // clock) and the act is the lift's (finish_notification_release).
+    if (button == GuiMouseButton::Left &&
+        app.chrome_press.kind == AppState::ChromePress::Kind::Card) {
+        finish_notification_release(take_chrome_press(), x, y);
+        return;
+    }
     // THE ON-SCREEN KEYBOARD'S OWED KEY-UP, above every gate and above even the
     // dropdown's release — the press's mirror. It is guarded on the held key
     // index alone, which only that surface's own press ever sets, so it claims
@@ -6757,7 +6827,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // became of the surface (contract at the declaration).
     if (button == GuiMouseButton::Left && finish_onscreen_keyboard_release())
         return;
-    // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
+    // THE DROPDOWN'S RELEASE, above every gate but the card's lift (whose
+    // claim outranks the dropdown's, above): while it is open it owns the
     // pointer, and its items were the redesign's FIRST act-on-release surface
     // (the modal's dialog buttons joined it 2026-08-13, and the whole chrome
     // roster the same day). It
@@ -6769,7 +6840,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         if (finish_dropdown_release(x, y)) return;
     }
     // THE CHROME ARM IS TAKEN WHOLE, above every gate below (2026-08-13, the
-    // act-at-release conversion): the hold ends with this release whatever
+    // act-at-release conversion; a CARD arm was taken at the top of this
+    // body): the hold ends with this release whatever
     // consumes it, so the un-pressed face cannot be stranded by an early
     // return — and whether the act RUNS is decided further down, after the
     // modal gates have had their say, so a prompt raised under the hold
@@ -7241,8 +7313,10 @@ void GuiInputHandler::stamp_redesign_button_hover_fade(RedesignButton id,
 // after the roster's hover recompute, on every tick past the startup load,
 // gestures included: a fade is time, not a pointer fact). ONE BIT WHEN IDLE:
 // with AppState::hover_fades_running false this returns at once, so a settled
-// GUI pays no walk and no repaint. While any fade runs it walks the three
-// fading surfaces, advances each running fade to the tick's clock and damages
+// GUI pays no walk and no repaint. While any fade runs it walks the two
+// fading surfaces — the roster and the modal row (the notification cards'
+// close buttons were the third until their X retired, 2026-10-01) —
+// advances each running fade to the tick's clock and damages
 // THAT FACE'S OWN PAINT — its published rect, which contains everything a
 // tool button paints — and only
 // when its painted level changed: at most kHoverFadeSteps repaints per fade,
@@ -7254,8 +7328,8 @@ void GuiInputHandler::stamp_redesign_button_hover_fade(RedesignButton id,
 // the surfaces' own drops: a roster button that publishes no rect (the bottom
 // row yielded to a modal) is cut; a modal set whose session is not the
 // painted one is dropped whole, and a slot past the painted row's buttons is
-// cut; a close fade whose card is no longer painted is erased. So a tail can
-// never paint on a different button than the one that left it.
+// cut. So a tail can never paint on a different button than the one that
+// left it.
 //
 // A FACE THAT WENT DEAD UNDER ITS TAIL IS CUT, the edges' own rule carried to
 // the frames between them: before a roster or modal fade advances, the walk
@@ -7328,27 +7402,6 @@ void GuiInputHandler::tick_hover_fades() {
                 running = running || ff.running;
             }
         }
-    }
-
-    std::vector<AppState::Notifications::CloseFade>& cf =
-        app.notifications.close_fades;
-    for (size_t i = 0; i < cf.size();) {
-        const AppState::NotificationPainted* shown = nullptr;
-        for (const AppState::NotificationPainted& p : app.notifications.painted)
-            if (p.id == cf[i].id) { shown = &p; break; }
-        if (shown == nullptr) {
-            cf.erase(cf.begin() + static_cast<std::ptrdiff_t>(i));
-            continue;
-        }
-        if (hover_fade_advance(cf[i].fade, now))
-            viewport.invalidate_rect(shown->close);
-        if (!cf[i].fade.running && !cf[i].fade.rising) {
-            // Settled dark: the slot has nothing left to say.
-            cf.erase(cf.begin() + static_cast<std::ptrdiff_t>(i));
-            continue;
-        }
-        running = running || cf[i].fade.running;
-        ++i;
     }
 
     app.hover_fades_running = running;
@@ -7512,26 +7565,21 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // RELEASE re-hits the rect at its own coordinates and never reads this
     // bit. Raw geometry deliberately — no veil, no zone, no enabled term:
     // those gates belong to the arm's creation and to the lift's re-ask, and
-    // the bit answers only where the pointer is.
-    if (app.chrome_press.kind != AppState::ChromePress::Kind::None) {
-        bool inside = false;
-        switch (app.chrome_press.kind) {
-        case AppState::ChromePress::Kind::None:
-            break;
-        case AppState::ChromePress::Kind::Roster:
-            inside = rect_contains(
-                app.redesign_buttons[static_cast<size_t>(
-                                         app.chrome_press.index)].rect,
-                mx, my);
-            break;
-        }
+    // the bit answers only where the pointer is. A CARD ARM IS NOT WALKED
+    // (2026-10-01): the card paints no pressed face, so the paint-only bit
+    // has nothing to serve there, and its slide-away cancel is its lift's
+    // own re-hit (finish_notification_release).
+    if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster) {
+        const bool inside = rect_contains(
+            app.redesign_buttons[static_cast<size_t>(
+                                     app.chrome_press.index)].rect,
+            mx, my);
         if (inside != app.chrome_press.inside) {
             app.chrome_press.inside = inside;
             // Only an arm with a click face paints a pressed interior, and
             // its home strip pays — the row fork the face writers all
             // take.
-            if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster &&
-                roster_index_click_face(app.chrome_press.index)) {
+            if (roster_index_click_face(app.chrome_press.index)) {
                 if (redesign_button_in_transport_row(static_cast<RedesignButton>(
                         app.chrome_press.index)))
                     changed_transport = true;
@@ -7932,10 +7980,17 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
 // THE ARM, TAKEN WHOLE — on_button_release's first act on every left release,
 // armed or not, so a release consumed by any gate below it (the veil, an
 // editor swallow) still ends the hold and un-presses the face. The caller owns
-// what happens next; this owns only the state and the face's damage.
+// what happens next; this owns only the state, the face's damage and — for a
+// CARD arm (2026-10-01) — the held card's clock, which resumes here because
+// the arm that held it is gone (every end of a card's hold comes through
+// this body: its lift, and the button-lost and pointer-leave clears).
 AppState::ChromePress GuiInputHandler::take_chrome_press() {
     const AppState::ChromePress arm = app.chrome_press;
     app.chrome_press = AppState::ChromePress{};
+    if (arm.kind == AppState::ChromePress::Kind::Card) {
+        notifications.press_hold_edge(arm.card_id);
+        return arm;
+    }
     if (arm.kind == AppState::ChromePress::Kind::Roster && arm.inside &&
         roster_index_click_face(arm.index)) {
         // The pressed face is painted; erase it through the row fork.
@@ -8004,6 +8059,11 @@ void GuiInputHandler::finish_chrome_press_release(
         return;
     case AppState::ChromePress::Kind::Roster:
         break;
+    case AppState::ChromePress::Kind::Card:
+        // Never reaches here: the card's lift is taken and dispatched at the
+        // head of on_button_release, at its claim's own rank above every
+        // veil (finish_notification_release).
+        return;
     }
     // A HOLD THAT ALREADY FIRED CONSUMES ITS OWN LIFT (architect 2026-08-16):
     // a tap gives exactly one act, at the lift, and a hold gives the stream

@@ -3802,14 +3802,17 @@ inline int double_click_slack_px() {
 // redesign_button_shift_admits alone, never a count) before its lift
 // dispatches the SHIFTED twin instead of the plain act. It is what gives glass
 // the shift acts: the road rig has no keyboard, so a finger could reach only
-// half of each shifted pair. TWO READ SITES since 2026-08-28, each a
+// half of each shifted pair. THREE READ SITES since 2026-10-01, each a
 // LIFT measuring the hold against its own arm's press stamp: the roster's
 // chord build (finish_chrome_press_release, input_pointer.cpp, against
-// AppState::ChromePress::press_ms) and the RENDER PLAYER'S MODAL ROW
-// (modal_dialog_press_shifted, the same file, against
+// AppState::ChromePress::press_ms), the RENDER PLAYER'S MODAL ROW since
+// 2026-08-28 (modal_dialog_press_shifted, the same file, against
 // AppState::modal_dialog_press_ms) — the player's two skips being the first
-// modal buttons to admit a modified press. Same hold, same term, same reason:
-// glass has no shift key.
+// modal buttons to admit a modified press — and THE NOTIFICATION CARD'S LIFT
+// since 2026-10-01 (finish_notification_release, the same file, against the
+// same ChromePress stamp on its Card arm), where the shifted act is
+// dismissing EVERY card ("shift click or long press dismisses all"). Same
+// hold, same term, same reason: glass has no shift key.
 //
 // IT READS THE HOLD DELAY (kHoldDelayMs, gui_input.h — 300 ms, architect
 // 2026-09-29), the value both deliberate holds in the product cross their
@@ -3835,8 +3838,9 @@ inline int double_click_slack_px() {
 // value nor the beat, and no tooltip rises under a held press at all (Qt's
 // model, AppState::RedesignTooltip); the ruling's home is the read site.
 //
-// A NAMED READER OF THE ONE CONSTANT: the two read sites say which hold they
-// measure while the value itself has one owner (kHoldDelayMs, gui_input.h).
+// A NAMED READER OF THE ONE CONSTANT: the three read sites say which hold
+// they measure while the value itself has one owner (kHoldDelayMs,
+// gui_input.h).
 inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
@@ -5915,8 +5919,9 @@ struct AppState {
 
     // ANY HOVER FADE RUNNING — the tick's one cheap check (tick_hover_fades,
     // input_pointer.cpp). Raised by every edge that starts an animation, on
-    // every surface that fades (the roster, the modal row's buttons and field,
-    // the notification cards' close buttons); lowered by the tick's walk once
+    // every surface that fades (the roster, the modal row's buttons and field;
+    // the notification cards' close buttons were the third until their X
+    // retired, 2026-10-01); lowered by the tick's walk once
     // none is left running. While it is false the tick does nothing more.
     bool hover_fades_running = false;
 
@@ -6717,7 +6722,14 @@ struct AppState {
     // ruling: (1) the dropdown ANCHORS' toggle (below); (2) EVERY DISMISSAL —
     // the open dropdown's press-anywhere close, the flag editor's
     // outside-press close, the veil's consumption —
-    // only ACTS moved to the lift; (3) THE KEYBOARD — a chord dispatches at
+    // only ACTS moved to the lift, WITH ONE STATED EXCEPTION SINCE 2026-10-01:
+    // THE NOTIFICATION CARD (architect: "whole card dismisses, X gone"), whose
+    // dismissal moved to the lift with the X's retirement. A card is an EVENT
+    // the user closes, not a popup the next press dismisses: a popup's
+    // dismissal is the side effect of a press aimed elsewhere, a card's is
+    // the press's own act, and an act lives at the lift — which is also the
+    // only place a long press can be known (the Card kind below);
+    // (3) THE KEYBOARD — a chord dispatches at
     // its key's press (button-is-its-chord names WHAT a button runs, not
     // WHEN), the modal ring's Enter/Space press-and-lift being the one
     // keyboard act-at-release; key commands at the release were tried
@@ -6728,8 +6740,23 @@ struct AppState {
     // translation: a finger or the pen on a chrome button is the pointer on
     // contact, pressing at the down point and releasing at the lift.
     //
-    // `kind` names the TARGET CLASS, and ONE class arms since 2026-08-18:
+    // `kind` names the TARGET CLASS, and TWO classes arm since 2026-10-01:
     //   Roster — a chord-table button; `index` is the roster index.
+    //   Card   — a NOTIFICATION CARD (architect 2026-10-01; the rule is the
+    //            hit section of notifications.h); `card_id` is the card's id
+    //            and `index` stays -1. Armed by claim_notification_press at
+    //            the cards' own rank, above every veil, and taken and
+    //            dispatched by the release at the SAME rank, above the
+    //            dropdown's release and every veil's
+    //            (finish_notification_release): the lift inside the same
+    //            card dismisses it, or the whole stack when the carried
+    //            shift or the hold says so (`press_ms` below). SHIFT IS THE
+    //            ONE MODIFIER IT CARRIES: ctrl and alt bind nothing on a card,
+    //            so a Ctrl+click is its plain click, as the X took every
+    //            press before it, and `ctrl` stays false. It carries no
+    //            face, no burst and no gate; while it stands the card's clock
+    //            is paused (GuiNotifications::press_hold_edge — the hover's
+    //            one bank, a second reason).
     // The enum stays a Kind rather than collapsing into a bool because `None`
     // IS the unarmed state, which is what every reader tests.
     // (TWO OTHER KINDS ARE DELETED PRODUCER-LESS, each with the surface that
@@ -6783,14 +6810,17 @@ struct AppState {
     // waveform's region hold on the roster's surface, and the route by which
     // glass, having no keyboard, reaches the other half of each shifted pair.
     // It is stamped by EVERY arm (a press has a time whatever it landed on) and
-    // read at ONE site, the lift's chord build, where it is ORed into the same
-    // shift term the carried bit feeds — so a physical Shift+click and a long
-    // press are two routes to one dispatch rather than two dispatches. The
+    // read at the lift of each kind — the roster's chord build, and since
+    // 2026-10-01 the card's lift, where a hold reads as the shift that
+    // dismisses every card — ORed into the same shift term the carried bit
+    // feeds, so a physical Shift+click and a long press are two routes to one
+    // dispatch rather than two dispatches. The
     // elapsed span is measured at the RELEASE, so nothing polls and nothing
     // ticks FOR THE HOLD, and nothing on screen marks the crossing: a held
     // press raises no tooltip (Qt's model, architect 2026-09-29 — the rule is
     // at AppState::RedesignTooltip).
-    // The rule is stated at the read site (finish_chrome_press_release).
+    // The rule is stated at the read sites (finish_chrome_press_release,
+    // finish_notification_release).
     //
     // `inside` is THE FEINT'S BIT, the modal arm's `press_inside` on the
     // roster's surface: true from the press (a press is inside what it hit),
@@ -6803,10 +6833,13 @@ struct AppState {
     // reasoning is dead and the face now tracks the pointer exactly as the
     // dialog buttons' does.) The RELEASE does not read this bit — it re-hits
     // the armed target's published rect at its own coordinates, the derive
-    // doctrine; the bit serves the paint alone.
+    // doctrine; the bit serves the paint alone, and so A CARD ARM NEVER
+    // REWRITES IT (2026-10-01): a card paints no pressed face, and its lift
+    // re-hits the card at its own coordinates like every other kind's.
     //
     // Its edges: the band claims' arm route writes it (arm_redesign_press,
-    // input_pointer.cpp), the release takes
+    // input_pointer.cpp) and the card claim its own kind
+    // (claim_notification_press), the release takes
     // it whole at the top of on_button_release (take_chrome_press — armed or
     // not, so an early return cannot strand it), and
     // clear_redesign_button_press drops it on the pointer-leave /
@@ -6886,15 +6919,16 @@ struct AppState {
     //   subject.
     // The firing body is tick_chrome_press_repeat (input_pointer.cpp).
     struct ChromePress {
-        enum class Kind { None, Roster };
-        Kind    kind          = Kind::None;
-        int     index         = -1;
-        bool    shift         = false;
-        bool    ctrl          = false;
-        bool    inside        = true;
-        int64_t press_ms      = 0;
-        int64_t repeat_due_ms = 0;
-        bool    repeat_fired  = false;
+        enum class Kind { None, Roster, Card };
+        Kind     kind          = Kind::None;
+        int      index         = -1;
+        bool     shift         = false;
+        bool     ctrl          = false;
+        bool     inside        = true;
+        int64_t  press_ms      = 0;
+        int64_t  repeat_due_ms = 0;
+        bool     repeat_fired  = false;
+        uint64_t card_id       = 0;   // the Card kind's card; 0 otherwise
     };
     ChromePress chrome_press;
 
@@ -7437,8 +7471,9 @@ struct AppState {
     // GuiHistoryCommitWorker; its three failing verdicts come back as a
     // CRITICAL NOTIFICATION CARD (architect 2026-08-29 — a card that takes no
     // keyboard focus, is never TIMED out and is never BUMPED, and leaves only
-    // by a deliberate dismissal: its X on the pointer, or bare Esc clearing
-    // the whole stack, criticals included — the key took the stack's OLDEST
+    // by a deliberate dismissal: a click or tap on the card (its X until
+    // 2026-10-01), a Shift-click or long press on any card, or bare Esc
+    // clearing the whole stack, criticals included — the key took the stack's OLDEST
     // card of any class from 2026-08-31 and the whole of it since 2026-09-01;
     // it was the tab
     // row's permanent critical chip from 2026-08-09, and before that an
@@ -8362,23 +8397,29 @@ struct AppState {
     //             a clock:
     //               NORMAL   leaves on its own kNotificationMs from its PUSH
     //                        (there is no later surfacing to wait for), or at
-    //                        its X, or at a bump, or at bare Esc;
+    //                        the lift of a press on it, or at a bump, or at
+    //                        the whole stack's dismissal (bare Esc, or a
+    //                        Shift-click or long press on any card);
     //               CRITICAL is never TIMED out and never BUMPED — no clock,
-    //                        ever, and no victimhood at a push — but the
-    //                        keyboard dismisses it deliberately: it leaves at
-    //                        its X, or at bare Esc's clearing of the whole
-    //                        stack (2026-09-01, which reads no class; the arm
-    //                        took the oldest card alone from 2026-08-31). Its
+    //                        ever, and no victimhood at a push — but a
+    //                        deliberate act dismisses it: the lift of a press
+    //                        on it, or the whole stack's dismissal (bare Esc
+    //                        since 2026-09-01, which reads no class — the arm
+    //                        took the oldest card alone from 2026-08-31 — and
+    //                        the shifted or held lift since 2026-10-01). Its
     //                        producers are enumerated at notifications.h.
-    //             `paused` with `remaining_ms` is the HOVER BANK: while the
-    //             pointer rests on a normal card its clock stops, the
-    //             remaining time banked at hover-enter and re-armed at
-    //             hover-leave.
-    //   `hovered_id` / `close_hovered` the card under the pointer and whether
-    //             the pointer is inside its X box — the X wears the icon
-    //             button's hover face; the body wears none.
+    //             `paused` with `remaining_ms` is THE BANK: while a normal
+    //             card has a reason to stand still its clock stops, the
+    //             remaining time banked when the first reason begins and
+    //             re-armed when the last one ends. TWO REASONS since
+    //             2026-10-01: the pointer RESTING on it (`hovered_id`) and a
+    //             press HOLDING it (AppState::chrome_press's Card arm) — one
+    //             bank, never a second mechanism (GuiNotifications::rebank).
+    //   `hovered_id` the card under the pointer — the bank's first reason,
+    //             and nothing paints it: the card wears no hover face (its
+    //             X wore the icon button's until the X retired, 2026-10-01).
     //   `painted` / `painted_rect` THE LAST PAINT'S PUBLICATION: each
-    //             painted card's rect and its X box as drawn, CLIPPED TO THE
+    //             painted card's rect as drawn, CLIPPED TO THE
     //             ROOM, and their union. The
     //             press router, the cursor map and the hover walk read THESE,
     //             never a re-derivation (published geometry may only SELECT;
@@ -8400,29 +8441,17 @@ struct AppState {
         NotificationClass cls          = NotificationClass::Normal;
         std::string       text;
         int64_t           expiry_ms    = 0;      // Normal, visible, running
-        bool              paused       = false;  // the hover bank holds
+        bool              paused       = false;  // the bank holds (hover or hold)
         int64_t           remaining_ms = 0;      // the bank's contents
     };
     struct NotificationPainted {
         uint64_t id = 0;
         GuiRect  rect{0, 0, 0, 0};
-        GuiRect  close{0, 0, 0, 0};
     };
     struct Notifications {
         std::vector<Notification>        cards;   // newest first
         uint64_t                         next_id = 1;
         uint64_t                         hovered_id = 0;
-        bool                             close_hovered = false;
-        // THE CLOSE BUTTONS' HOVER FADES (architect 2026-09-27): Breeze's
-        // flat QToolButton, SnapIn, one per card id whose X has been hovered
-        // and whose tail still runs; stamped by set_hover's edges, advanced
-        // by the tick, and dropped with the card — a dismissed or expired
-        // card's X leaves no tail on the card that takes its place.
-        struct CloseFade {
-            uint64_t  id = 0;
-            HoverFade fade{};
-        };
-        std::vector<CloseFade>           close_fades;
         std::vector<NotificationPainted> painted;
         GuiRect                          painted_rect{0, 0, 0, 0};
         // THE HELD-REPEAT CARVE-OUT'S ONE BIT (architect 2026-09-01, the

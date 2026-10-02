@@ -3410,12 +3410,13 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // IT RAISES A CRITICAL NOTIFICATION CARD (architect 2026-08-29; the tab
 // row's permanent critical chip from 2026-08-09 until then, and an
 // acknowledge modal from 2026-08-07 before that): a failed checkpoint is
-// critical, so its card STANDS UNTIL ITS X IS PRESSED — no clock, and
+// critical, so its card STANDS UNTIL IT IS DISMISSED — no clock, and
 // nothing that comes after takes it down, a later success included. The
 // chip's one clearing route was a later established success, because the
 // chip was a SLOT that held the repository's last answer; a card is an
 // EVENT, and the user closes it once he has read it, whatever the next act
-// answered (the architect: persistent, the X alone). GuiNotifications owns
+// answered (the architect: persistent, dismissed only deliberately — by its
+// X until 2026-10-01, by a press on the card since). GuiNotifications owns
 // the card; this and the pull's late failure (execute_history_pull) are the
 // critical class's two producers.
 //
@@ -8942,12 +8943,15 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // the tail of its own ranking and nowhere else: every one of Esc's
         // other places is EARLIER in on_key, so reaching this arm means
         // nothing modal is standing and no render is in flight, and the last
-        // thing the press can be aimed at is the stack. It is the X's BULK
-        // keyboard twin — the X pressed on every card at once — and it READS
-        // NO CLASS: a critical card goes with the rest, exactly as the X takes
-        // any class (the bump is the act that skips criticals, and it is not
-        // this one), which makes this the one act that reaches a critical card
-        // without a pointer. THE SUCCESSION: the arm was born 2026-08-31
+        // thing the press can be aimed at is the stack. It is the KEYBOARD
+        // TWIN of the shifted or held lift on a card (2026-10-01, the
+        // pointer's whole-stack dismissal; until then it was the card X's
+        // bulk twin, the X pressed on every card at once) and it READS NO
+        // CLASS: a critical card
+        // goes with the rest, exactly as a press on a card takes any class
+        // (the bump is the act that skips criticals, and it is not this one),
+        // which makes this the one act that reaches a critical card without
+        // a pointer. THE SUCCESSION: the arm was born 2026-08-31
         // dismissing the stack's OLDEST card one press at a time, and the
         // whole stack has been its act since 2026-09-01, when the bulk clear
         // it duplicated (Ctrl+Esc, bound at on_key's head for one morning)
@@ -8960,11 +8964,11 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // answer a retraction with a complaint. It is an arm of its own and
         // not the bare default's for exactly that reason.
         //
-        // IT IS RANKED, NOT PRIVILEGED: the X's own claim sits above every
+        // IT IS RANKED, NOT PRIVILEGED: the card's own claim sits above every
         // veil because a card must be dismissable under any modal, while this
         // key sits UNDER all of them — a standing prompt, editor, player or
         // picker takes the press for its own close, and the card waits for
-        // its clock, its X, or an Esc once that surface is down.
+        // its clock, a press on it, or an Esc once that surface is down.
         notifications.dismiss_all();
         break;
     case GuiKeys::Left:

@@ -12,10 +12,10 @@ int notification_card_h_px() {
 
 int notification_pad_px() {
     // THE BOX'S OWN VERTICAL MARGIN, and so the card's every pad (the ruling
-    // and the six distances at the declaration): the height already comes
+    // and the five distances at the declaration): the height already comes
     // from the icon row, and this is that row's own centering of a 32 px box
     // in its 46 px band. An ODD difference floors, putting the extra pixel
-    // below the boxes — the icon row's own arithmetic, not a second rule.
+    // below the box — the icon row's own arithmetic, not a second rule.
     return (notification_card_h_px() - scaled_px(kIconBtnPx)) / 2;
 }
 
@@ -97,13 +97,6 @@ uint64_t notification_card_at(const AppState& a, int x, int y) {
     return 0;
 }
 
-bool notification_close_at(const AppState& a, uint64_t id, int x, int y) {
-    for (const AppState::NotificationPainted& p : a.notifications.painted) {
-        if (p.id == id) return rect_contains(p.close, x, y);
-    }
-    return false;
-}
-
 // -- GuiNotifications ---------------------------------------------------------
 
 AppState::Notification* GuiNotifications::find(uint64_t id) {
@@ -146,8 +139,7 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     if (app.notifications.held_repeat_dispatch) {
         for (size_t i = 0; i < cards.size(); ++i) {
             if (cards[i].cls != cls || cards[i].text != text) continue;
-            if (app.notifications.hovered_id == cards[i].id)
-                set_hover(0, false);
+            if (app.notifications.hovered_id == cards[i].id) set_hover(0);
             cards.erase(cards.begin() + static_cast<std::ptrdiff_t>(i));
             break;
         }
@@ -173,8 +165,9 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     //   - a CRITICAL one, by the ruling: it is never TIMED out and never
     //     BUMPED whatever the count, so the walk skips it and a stack of
     //     criticals alone simply keeps growing (what does take one down is a
-    //     DELIBERATE dismissal — its X on the pointer, or bare Esc clearing
-    //     the whole stack — and neither of those is this walk);
+    //     DELIBERATE dismissal — the lift of a press on it, or the whole
+    //     stack's dismissal by bare Esc or a shifted or held lift — and
+    //     none of those is this walk);
     //   - THE CARD JUST PUSHED, at index 0: it is the answer to the act the
     //     user has this moment performed, and bumping it would make that act
     //     silent — which is reachable, not theoretical (the capacity is 4 at
@@ -204,8 +197,10 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
             }
         }
         if (victim == 0) break;
-        if (app.notifications.hovered_id == cards[victim].id)
-            set_hover(0, false);
+        // A HELD victim is bumped like any other (the hold pauses the clock;
+        // it is not a victimhood exemption): the arm keeps naming a card
+        // that is gone, and its lift asks the live stack and lands nothing.
+        if (app.notifications.hovered_id == cards[victim].id) set_hover(0);
         cards.erase(cards.begin() + static_cast<std::ptrdiff_t>(victim));
     }
     viewport.invalidate_notification_stack();
@@ -214,9 +209,11 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
 void GuiNotifications::dismiss(uint64_t id) {
     // A CARD THAT HAS ALREADY GONE IS NOT DISMISSABLE — the same live test
     // the hit asks (notification_visible), asked here of the act's own
-    // argument. The X that named a card was painted a frame ago; the card may
-    // have expired or been bumped since, and those pixels belong to whatever
-    // took its place, so the act must not reach past the screen.
+    // argument. The rect that named a card was painted a frame ago; the card
+    // may have been bumped since (it cannot expire under a press that banked
+    // its clock, but the lift's re-hit reads a paint-old publication too),
+    // and those pixels belong to whatever took its place, so the act must
+    // not reach past the screen.
     if (!notification_visible(app, id)) return;
     std::vector<AppState::Notification>& cards = app.notifications.cards;
     // The test above already found the card; this walk is here for the
@@ -226,17 +223,18 @@ void GuiNotifications::dismiss(uint64_t id) {
                                return n.id == id;
                            });
     if (it == cards.end()) return;
-    if (app.notifications.hovered_id == id) set_hover(0, false);
+    if (app.notifications.hovered_id == id) set_hover(0);
     cards.erase(it);
     viewport.invalidate_notification_stack();
 }
 
 void GuiNotifications::dismiss_all() {
-    // BARE ESC (architect 2026-09-01, "Esc should clear all notifications"):
-    // the X pressed on every card at once, CRITICALS INCLUDED. It is the one
-    // act that reaches a critical card without a pointer — the clock never
-    // does, and the bump skips them — and that is deliberate: a deliberate
-    // press is a decision, where a timeout would be an accident. THE HOVER
+    // BARE ESC (architect 2026-09-01, "Esc should clear all notifications")
+    // and, since 2026-10-01, THE SHIFTED OR HELD LIFT on any card ("shift
+    // click or long press dismisses all"): every card dismissed at once,
+    // CRITICALS INCLUDED. The clock never reaches a critical card and the
+    // bump skips them, and that is deliberate: a deliberate press is a
+    // decision, where a timeout would be an accident. THE HOVER
     // GOES WITH THEM, because the card it named is gone and a banked life on a
     // vanished card would be a leak. The arm took the OLDEST card alone from
     // 2026-08-31, and Ctrl+Esc carried this bulk act for one morning before
@@ -247,7 +245,7 @@ void GuiNotifications::dismiss_all() {
     // which is the already-at-state silence the strictness ruling leaves
     // standing, and it is the arm's own silence at its dispatch site too.
     if (app.notifications.cards.empty()) return;
-    if (app.notifications.hovered_id != 0) set_hover(0, false);
+    if (app.notifications.hovered_id != 0) set_hover(0);
     app.notifications.cards.clear();
     viewport.invalidate_notification_stack();
 }
@@ -264,7 +262,7 @@ void GuiNotifications::fire_if_due() {
                 n.cls == AppState::NotificationClass::Normal && !n.paused &&
                 n.expiry_ms != 0 && n.expiry_ms <= now;
             if (!due) { ++i; continue; }
-            if (app.notifications.hovered_id == n.id) set_hover(0, false);
+            if (app.notifications.hovered_id == n.id) set_hover(0);
             cards.erase(cards.begin() + static_cast<std::ptrdiff_t>(i));
             changed = true;
         }
@@ -275,97 +273,88 @@ void GuiNotifications::fire_if_due() {
     // waiting for a motion; it reads the last paint's
     // publication, exactly as the motion handler does. Glass never sets the
     // in-window bit at rest (the touch translation's end delivers the leave),
-    // so no finger ever holds a clock.
+    // so no finger RESTS on a card: a finger or the pen holds a card's clock
+    // only while its contact presses that card, the bank's other reason
+    // (rebank), and the contact's lift ends both.
     if (app.pointer_in_window) update_hover(app.last_mouse_x, app.last_mouse_y);
     else                       clear_hover();
 }
 
-void GuiNotifications::set_hover(uint64_t id, bool close) {
+void GuiNotifications::set_hover(uint64_t id) {
     AppState::Notifications& st = app.notifications;
-    if (st.hovered_id == id && st.close_hovered == close) return;
+    if (st.hovered_id == id) return;
+    // THE HOVER IS THE BANK'S FIRST REASON AND PAINTS NOTHING (the card
+    // wears no hover face since its X retired, 2026-10-01), so an edge owes
+    // no damage: it moves the reason and re-answers the two cards it touched,
+    // the one LEFT and the one ENTERED, each through the one bank writer.
+    const uint64_t old = st.hovered_id;
+    st.hovered_id = id;
     const int64_t now = monotonic_ms();
-    // LEAVE the old card: a banked life is re-armed from now.
-    if (st.hovered_id != id) {
-        if (AppState::Notification* old = find(st.hovered_id)) {
-            if (old->paused) {
-                old->paused    = false;
-                old->expiry_ms = now + old->remaining_ms;
-                old->remaining_ms = 0;
-            }
+    rebank(old, now);
+    rebank(id, now);
+}
+
+void GuiNotifications::rebank(uint64_t id, int64_t now) {
+    AppState::Notification* n = find(id);
+    if (n == nullptr) return;
+    // THE TWO REASONS (architect 2026-10-01: "holding turns off the timer,
+    // releasing re-enables"): the pointer resting on the card, and a press
+    // holding it — AppState::chrome_press's Card arm, which is the hold's one
+    // record, read here rather than mirrored into a second field. ONE BANK
+    // FOR BOTH: the card stands still while either holds and its clock
+    // resumes when neither does, so a press on a hovered card (the mouse, and
+    // the touch translation, whose entry motion hovers the card before its
+    // press) banks nothing twice, and a slide-away off a held card leaves the
+    // bank where the hold put it until the lift.
+    const AppState::ChromePress& arm = app.chrome_press;
+    const bool held =
+        arm.kind == AppState::ChromePress::Kind::Card && arm.card_id == id;
+    const bool stands = app.notifications.hovered_id == id || held;
+    if (!stands) {
+        // THE LAST REASON ENDED: a banked life is re-armed from now.
+        if (n->paused) {
+            n->paused       = false;
+            n->expiry_ms    = now + n->remaining_ms;
+            n->remaining_ms = 0;
         }
-        // ENTER the new one: a normal card with a running clock banks what
-        // is left of its life. A critical one has no clock to bank, and a
-        // card the pointer can rest on is on screen by construction (the
-        // hover reads the painter's own publication).
-        //
-        // A CARD ALREADY DUE IS NOT BANKED. The pointer can arrive after the
-        // deadline has passed and before the tick that retires it — the
-        // deadlines are polled, not scheduled — and banking a life of zero
-        // would pause a card that has already earned its exit and hold it
-        // there for as long as the pointer rested. Left running, it leaves
-        // on the next fire_if_due exactly as an unhovered one would: HOVER
-        // PAUSES A CLOCK, it does not resurrect one.
-        if (AppState::Notification* n = find(id)) {
-            if (n->cls == AppState::NotificationClass::Normal &&
-                !n->paused && n->expiry_ms != 0) {
-                const int64_t left = n->expiry_ms - now;
-                if (left > 0) {
-                    n->paused       = true;
-                    n->remaining_ms = left;
-                    n->expiry_ms    = 0;
-                }
-            }
-        }
+        return;
     }
-    // THE X's HOVER FADE (architect 2026-09-27, the Breeze port at render.h's
-    // HoverFade): the X is a flat tool button, so it snaps in and fades out.
-    // The edge is on the X's own bit — this card's id with the close flag —
-    // so moving from the X onto its card's body is an end, and moving between
-    // two cards' X boxes ends one and starts the other. Each tail is keyed to
-    // its card's id and dies with the card (tick_hover_fades erases a slot
-    // whose card is no longer painted).
-    {
-        const uint64_t old_x = st.close_hovered ? st.hovered_id : 0;
-        const uint64_t new_x = close ? id : 0;
-        if (old_x != new_x) {
-            const auto edge = [&](uint64_t x_id, bool hovered) {
-                if (x_id == 0) return;
-                AppState::Notifications::CloseFade* slot = nullptr;
-                for (AppState::Notifications::CloseFade& c : st.close_fades)
-                    if (c.id == x_id) { slot = &c; break; }
-                if (slot == nullptr) {
-                    if (!hovered) return;
-                    st.close_fades.push_back({x_id, HoverFade{}});
-                    slot = &st.close_fades.back();
-                }
-                if (hover_fade_edge(slot->fade, HoverFadeKind::SnapIn,
-                                    hovered, now))
-                    app.hover_fades_running = true;
-            };
-            edge(old_x, false);
-            edge(new_x, true);
-        }
+    // A REASON BEGAN: a normal card with a running clock banks what is left
+    // of its life. A critical one has no clock to bank, a card already banked
+    // stays banked, and a card a reason can name is on screen by construction
+    // (the hover reads the painter's own publication, the press claim the
+    // same).
+    //
+    // A CARD ALREADY DUE IS NOT BANKED. The pointer — or the press — can
+    // arrive after the deadline has passed and before the tick that retires
+    // it (the deadlines are polled, not scheduled), and banking a life of
+    // zero would pause a card that has already earned its exit and hold it
+    // there for as long as the reason stood. Left running, it leaves on the
+    // next fire_if_due exactly as an unheld one would: A PAUSE STOPS A CLOCK,
+    // IT DOES NOT RESURRECT ONE.
+    if (n->cls != AppState::NotificationClass::Normal || n->paused ||
+        n->expiry_ms == 0)
+        return;
+    const int64_t left = n->expiry_ms - now;
+    if (left > 0) {
+        n->paused       = true;
+        n->remaining_ms = left;
+        n->expiry_ms    = 0;
     }
-    // THE X's FACE is the one thing hover paints; the card's body wears
-    // none, so the damage is the two X boxes and nothing wider.
-    for (const AppState::NotificationPainted& p : st.painted) {
-        if (p.id == st.hovered_id || p.id == id) {
-            viewport.invalidate_rect(p.close);
-        }
-    }
-    st.hovered_id    = id;
-    st.close_hovered = close;
+}
+
+void GuiNotifications::press_hold_edge(uint64_t id) {
+    rebank(id, monotonic_ms());
 }
 
 void GuiNotifications::update_hover(int x, int y) {
     // The hit owner has already asked the live stack (a card that has left it
-    // — by its expiry, by its X or by the bump — answers 0 there, while a
-    // live card is selected wherever it has a published rect), so this walk
-    // owes only the X's own box.
-    const uint64_t id = notification_card_at(app, x, y);
-    set_hover(id, id != 0 && notification_close_at(app, id, x, y));
+    // — by its expiry, by a dismissal or by the bump — answers 0 there, while
+    // a live card is selected wherever it has a published rect), so this walk
+    // owes nothing more.
+    set_hover(notification_card_at(app, x, y));
 }
 
 void GuiNotifications::clear_hover() {
-    set_hover(0, false);
+    set_hover(0);
 }

@@ -82,12 +82,14 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // thing before the rest crosses into its held meaning. It is the delay of the
 // TWO HOLDS and of nothing else:
 //   * THE CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at
-//     both of its read sites — the roster lift and the RENDER PLAYER'S MODAL
-//     ROW, which joined 2026-08-28: its two skips admit a modified
-//     press, so their long press reaches the same twin a shift-click does,
-//     one value and one term. It has NO VISUAL ANNOUNCEMENT: the span is
-//     measured at the lift and nothing on screen marks the moment it is
-//     crossed;
+//     all three of its read sites — the roster lift, the RENDER PLAYER'S
+//     MODAL ROW, which joined 2026-08-28 (its skips and Delete admit a
+//     modified press, so their long press reaches the same twin a
+//     shift-click does), and THE NOTIFICATION CARD'S LIFT, which joined
+//     2026-10-01 (a long press on any card dismisses every card, as its
+//     Shift-click does) — one value and one term. It has NO VISUAL
+//     ANNOUNCEMENT: the span is measured at the lift and nothing on screen
+//     marks the moment it is crossed;
 //   * THE TOUCH PAN ZONE'S REGION HOLD (input_core.cpp's pending window,
 //     which sits below the GUI model and reads this constant directly).
 // It was a device config key with a Settings row for its tuning phase, the
@@ -154,7 +156,8 @@ constexpr int kHoldBeatMs = 600;
 
 // THE NOTIFICATION CARD'S LIFE (architect design 2026-08-29): a NORMAL card
 // leaves the stack on its own this long after it became VISIBLE, the pointer
-// resting on it pausing the clock (the model is at GuiNotifications,
+// resting on it, or a press holding it (2026-10-01), pausing the clock (the
+// model is at GuiNotifications,
 // notifications.h; the sampler is its fire_if_due on the run loop's deadline
 // tick, beside the beat's own readers). It is NOT the beat and does not read
 // it: a card's life is neither a hold nor a second tap, it is how long a

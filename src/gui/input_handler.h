@@ -754,8 +754,9 @@ struct GuiInputHandler {
     // THE NOTIFICATION CARDS (2026-08-29). Its readers here: every producer
     // that answers a user's act with a sentence (the load-in-place refusals,
     // the picker's, the checkpoint verdicts, the propagate
-    // pastes' stops, the revert's wall) calls notify; the X's press claim
-    // calls dismiss; the motion handler and the pointer-left hook drive the
+    // pastes' stops, the revert's wall) calls notify; the card's lift calls
+    // dismiss or dismiss_all, and its press arm press_hold_edge at both of
+    // the hold's ends; the motion handler and the pointer-left hook drive the
     // hover; the tick is main.cpp's.
     GuiNotifications&        notifications;
     PhaseResetPropagate&     phase_reset_propagate;
@@ -1260,16 +1261,20 @@ struct GuiInputHandler {
     // until 2026-09-22, when the overlay's endcap and bridge drags were
     // deleted with its resting form — the tablet's pen reaches the trim bar.)
     // THE BODY IS THE
-    // CARVE-OUT'S ONE INVENTORY: the open dropdown's box (architect
-    // 2026-10-01 — a press on a row hanging over the waveform must arm it at
-    // the down; the why is at the clause), the notification cards, the
+    // CARVE-OUT'S ONE INVENTORY: an OPEN DROPDOWN, WHOLE (architect
+    // 2026-10-01 — its box alone at first, so a row hanging over the
+    // waveform armed at the down; the whole zone later that day, so the first
+    // touch outside a menu is the press that closes it, as the mouse's is;
+    // the why is at the clause), the notification cards, the
     // on-screen keyboard's band and the folder overlay's band. (The OPEN
     // MARKER-LANE EDITOR'S BOX had a clause from 2026-09-05 until the marker
     // lane left the zone on 2026-09-25; it paints in that lane, so it is off
     // the zone by the owner and the platform's editor-field query (below)
-    // routes a drag there to the caret drag.) SURFACE GEOMETRY ONLY:
-    // every refusal (modal, prompt, a dropdown outside its box, loading/empty
-    // audio, live
+    // routes a drag there to the caret drag.) SURFACE GEOMETRY ONLY, the
+    // open dropdown excepted (a popup is the one STATE this query answers,
+    // because a menu's press must close it at the down — a refusal
+    // downstream would only freeze the pan under a menu that stays): every
+    // other refusal (modal, prompt, loading/empty audio, live
     // pointer gesture) deliberately stays downstream — at
     // apply_touch_nav_update's per-frame
     // wheel_context answer, so a refused pan FREEZES exactly as a refused
@@ -1675,7 +1680,8 @@ struct GuiInputHandler {
     // menu was deleted 2026-08-15, and one was Iterations until its own
     // deletion on 2026-09-04).
     // take_chrome_press consumes the arm whole (armed or not) at the top of
-    // on_button_release, damaging the un-pressed face.
+    // on_button_release, damaging the un-pressed face — and, for the
+    // notification card's arm (2026-10-01), resuming the held card's clock.
     // finish_chrome_press_release is the release half: re-hit the armed
     // target at the release's own coordinates and re-ask the press-time
     // gates — the modal veil FIRST, for every kind alike, then the roster's own
@@ -1785,14 +1791,22 @@ struct GuiInputHandler {
     // half of the ruling.
     void clear_folder_overlay_hover();
     void clear_player_scrub_drag();
-    // THE NOTIFICATION CARDS' THREE POINTER HALVES (2026-08-29; the rule is
-    // at notifications.h). The CLAIM ranks above every veil in
-    // on_button_press: a press on a published card is consumed whole, and
-    // the LEFT press on its X box dismisses it — the X and only the X, on
-    // both backends (architect 2026-08-29). The HOVER is re-derived on every
-    // motion and cleared on the pointer-left edge, exactly as the folder
-    // overlay's is.
-    bool claim_notification_press(GuiMouseButton button, int x, int y);
+    // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at
+    // notifications.h). The CLAIM ranks above every veil in on_button_press:
+    // a press on a published card is consumed whole, and since 2026-10-01
+    // the card is ONE BUTTON — the LEFT press anywhere on it ARMS the card
+    // (AppState::ChromePress's Card kind, carrying the press-time shift and
+    // the press's stamp) and stops its clock, on both backends. The LIFT is
+    // finish_notification_release, called at the head of on_button_release
+    // with the arm taken: inside the same card it dismisses that card, or
+    // every card when the carried shift or a hold past
+    // chrome_shift_hold_ms() says so; anywhere else it dismisses nothing.
+    // The HOVER is re-derived on every motion and cleared on the
+    // pointer-left edge, exactly as the folder overlay's is.
+    bool claim_notification_press(GuiMouseButton button, int x, int y,
+                                  GuiInputState mods);
+    void finish_notification_release(const AppState::ChromePress& arm,
+                                     int x, int y);
     void update_notification_hover(int x, int y);
     void clear_notification_hover();
     // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt

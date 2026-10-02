@@ -668,9 +668,12 @@ public:
     //     field) the down resolves to the POINTER ON CONTACT — no wait, no
     //     pinch — the touch state block below. SURFACE GEOMETRY ONLY — the
     //     GUI answers the navigation surface (the pan-primary vocabulary's
-    //     one plain-drag surface, the waveform alone) and nothing modal;
-    //     every refusal (prompt, editors, dropdown, loading/empty audio,
-    //     live pointer gesture) stays downstream — at the per-frame
+    //     one plain-drag surface, the waveform alone) less the surfaces
+    //     floating over it, and nothing modal SAVE AN OPEN MENU, which
+    //     yields the whole zone so the first touch outside it is the press
+    //     that closes it (architect 2026-10-01; the carve-outs are the GUI's,
+    //     at touch_point_in_pan_zone); every other refusal (prompt, editors,
+    //     loading/empty audio, live pointer gesture) stays downstream — at the per-frame
     //     wheel-context answer inside the update body for the nav gestures,
     //     in the region begin body for the hold — so a refused pan freezes
     //     and a refused hold is a dead stream rather than a fallback pointer

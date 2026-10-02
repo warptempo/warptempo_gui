@@ -439,7 +439,8 @@ enum class Icon {
     GoParentFolder,      // Up, out of a batch folder (the player's modal row)
     // THE NOTIFICATION CARDS' THREE (2026-08-29, the messaging redesign's
     // card half — notifications.h): the two CLASS glyphs at a card's left and
-    // the X at its right, three fresh verbatim transcriptions from the
+    // the X that stood at its right until 2026-10-01, three fresh verbatim
+    // transcriptions from the
     // architect's own Breeze Dark (status/22/dialog-information,
     // status/22/dialog-error — both symlinks in the theme, onto
     // data-information and data-error, copied resolved — and
@@ -451,15 +452,17 @@ enum class Icon {
     // #fff, so the glyph is what tells the classes apart at a glance and no
     // caller colours it — the roster paints each path in the table's own ink,
     // as it always has. window-close is the ordinary `.ColorScheme-Text` X.
-    // WINDOW-CLOSE HAS A SECOND READER SINCE 2026-09-01 — the render player's
+    // WINDOW-CLOSE TOOK A SECOND READER ON 2026-09-01 — the render player's
     // modal row wears it on CLOSE, the architect having ruled the row's last
     // two word buttons into glyphs ("Close should then get a glyph also, to
     // avoid being the odd one out: window-close.svg") — which needed no new
     // entry and no new transcription: a def is a GLYPH and several buttons are
-    // free to wear one, GoUp's own precedent above. `kIconCount` is unmoved.
+    // free to wear one, GoUp's own precedent above. THAT IS ITS ONE READER
+    // SINCE 2026-10-01, when the card's X retired ("whole card dismisses, X
+    // gone"). `kIconCount` is unmoved.
     DialogInformation,   // a NORMAL card's glyph
     DialogError,         // a CRITICAL card's glyph
-    WindowClose,         // the X: a card's dismiss, and the player's Close
+    WindowClose,         // the X: the render player's Close
 
     // THE COPY VALUE BUTTON'S GLYPH (2026-08-29; the bottom row's verb group
     // until 2026-09-29, the icon row's Undo group since, between Redo and

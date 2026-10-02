@@ -814,7 +814,7 @@ private:
     // row 1, painted after the flag editor's box and before the dropdown —
     // above every lane and the keyboard slot, below the two pointer-transient
     // floaters and the modal row (the order is on_redraw's step 13). It
-    // PUBLISHES each card's rect and X box (AppState::Notifications::painted)
+    // PUBLISHES each card's rect (AppState::Notifications::painted)
     // for the press claim, the cursor map and the hover walk, and runs on
     // every frame for the floating surfaces' own reason: a skipped run would
     // strand a stale publication. Model and ruling at notifications.h.

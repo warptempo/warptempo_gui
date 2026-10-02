@@ -648,10 +648,11 @@ struct Viewport {
     // 2026-08-30, when a card's text began to WRAP: a line count needs a
     // shaped run and no window arithmetic has one, so the damage owner takes
     // the room and the painter clips to it.
-    // ITS CALLERS, re-derived by grep 2026-08-29, are GuiNotifications' three
-    // stack changes and nothing else: notify (a push), dismiss (the X) and
-    // fire_if_due (an expiry). The hover face is narrower and takes
-    // invalidate_rect on the X box alone, and the painter publishes the
+    // ITS CALLERS, re-derived by grep 2026-10-01, are GuiNotifications' four
+    // stack changes and nothing else: notify (a push), dismiss (a card's
+    // lift), dismiss_all (bare Esc, or a shifted or held lift) and
+    // fire_if_due (an expiry). The hover paints nothing since the card's X
+    // retired (2026-10-01) and damages nothing, and the painter publishes the
     // rects it drew rather than damaging anything.
     void invalidate_notification_stack();
 

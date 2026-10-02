@@ -3203,36 +3203,37 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // ground under the popup's 1 px border through the one popup box painter;
 // a row of the icon row's own height, holding — left to right, EVERY
 // DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
-// declaration: the box's own vertical margin, read for all six) — a 32 px
+// declaration: the box's own vertical margin, read for all five) — a 32 px
 // button box with the CLASS GLYPH centred at the box's
 // own inset (dialog-information for a normal card, dialog-error for a
 // critical one, each in its file's own colours: the roster paints every
 // path in the table's ink and colours nothing here — the two files are a
 // blue or red plate under a white glyph, and that plate is what tells the
 // classes apart at a glance), that pad, THE SENTENCE
-// of the one sans in the row's ink, that pad again, and the
-// window-close X in a second button box at that pad from the right edge —
-// the boxes sitting that same pad below the card's top and above its foot.
+// of the one sans in the row's ink, and that pad again to the right edge —
+// the box sitting that same pad below the card's top and above its foot.
+// (A window-close X stood in a second button box at the right from
+// 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
+// when the whole card became the button — "whole card dismisses, X gone" —
+// and the card wears no hover face and no pressed face.)
 // The card's width
 // is its content's, clamped to [kNotificationMinWidthPx,
 // notification_card_max_w_px] — the authored ceiling since 2026-08-31, scaled
-// like every other length, with the window itself as a safety under it. THE X WEARS THE ICON BUTTON'S HOVER FACE while the
-// pointer rests in its box — the 1 px accent outline through the shared face
-// box, nothing else — and the card's body wears none.
+// like every other length, with the window itself as a safety under it.
 //
-// THE TEXT GROWS DOWNWARD UNDER THE TWO ICONS (architect 2026-08-30). The
+// THE TEXT GROWS DOWNWARD UNDER THE GLYPH (architect 2026-08-30). The
 // width rule is unchanged — the WHOLE sentence's shaped width sets it, inside
 // the same clamp — so a sentence that fits its room is one line exactly as it
 // was; a longer one wraps through notification_text_lines above to at most
 // kNotificationMaxLines, the last of which clips at the run's right edge (no
 // ellipsis — the folder overlay rows' precedent). THE CARD GROWS, NOTHING
-// REFLOWS: the glyph box and the X box keep the one-line card's placement,
+// REFLOWS: the glyph box keeps the one-line card's placement,
 // the first line keeps the one-line card's baseline, each further line sits
 // one face line-height lower, and the air under the last line is the first
 // line's own by construction — the one pad still rules every edge. The
 // stack's `y` then advances by each card's OWN height.
 //
-// IT PUBLISHES WHAT IT DREW: each card's rect and X box, and their union,
+// IT PUBLISHES WHAT IT DREW: each card's rect, and their union,
 // into AppState::Notifications (the owner-tag doctrine at
 // ModalDialogGeometry — published geometry may only SELECT; the press claim,
 // the cursor map and the hover walk read this and then ask the live stack).
@@ -3242,7 +3243,7 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // press under it. It runs on every frame, cards or none, for the floating
 // surfaces' reason: a skipped run would strand a stale publication. Its
 // damage is not its own — every stack change damages the stack's ROOM through
-// the viewport owner, and the hover its X box.
+// the viewport owner, and the hover paints nothing to damage.
 void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     AppState::Notifications& st = app.notifications;
     st.painted.clear();
@@ -3278,17 +3279,18 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     // the product to fix a sub-pixel bias at scales the architect does not
     // run.
     const int inset    = (btn - glyph_px) / 2;
-    // ONE NUMBER FOR ALL SIX DISTANCES (architect 2026-08-30): the boxes'
+    // ONE NUMBER FOR ALL FIVE DISTANCES (architect 2026-08-30): the box's
     // vertical margin is the card's every pad, so the horizontal placement
     // cannot disagree with the vertical centering it is taken from.
     const int pad      = notification_pad_px();
-    const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
-    const double radius = std::nearbyint(kIconCornerRadiusPx *
-                                         gui_scale_factor());
     const int right_x = room.x + room.w;
-    // The chrome every card carries besides its text: FOUR pads (the two
-    // edges and the two sides of the text) and two boxes.
-    const int chrome_w = 4 * pad + 2 * btn;
+    // The chrome every card carries besides its text: THREE PADS AND ONE BOX
+    // (2026-10-01, the X's box and its pad gone with the X) — the glyph's box
+    // with a pad on each side of it (the left edge's and the one between it
+    // and the text) and one pad at the text's right, the card's right edge.
+    // Where the X stood the text's right pad and the X's right pad were two;
+    // with nothing between the text and the edge they are the one.
+    const int chrome_w = 3 * pad + btn;
     // WHAT IS PUBLISHED IS WHAT IS VISIBLE: the room clips the paint, so it
     // clips the publication too, or the hit would claim a press on pixels
     // the bottom row owns. An empty answer is hit by nothing (rect_contains).
@@ -3312,7 +3314,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const AppState::Notification& n = st.cards[i];
         // THE WIDTH IS THE WHOLE SENTENCE'S, clamped — the rule the wrap did
         // not change — and the ROOM the wrap breaks against is what that
-        // width leaves between the two boxes.
+        // width leaves between the glyph's box and the right pad.
         //
         // IT CEILS (architect 2026-08-31): a box that must CONTAIN a run is
         // not a point on a grid, so banker's rounding is the wrong class for
@@ -3332,14 +3334,13 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         w = std::clamp(w, min_w, std::max(min_w, max_w));
         const int card_x    = right_x - w;
         const int glyph_x   = card_x + pad;
-        const int close_x   = card_x + w - pad - btn;
         const int text_x    = glyph_x + btn + pad;
-        const int text_room = close_x - pad - text_x;
+        const int text_room = card_x + w - pad - text_x;
         const std::vector<text_shape::ShapedRun> lines =
             notification_text_lines(font, n.text, whole,
                                     static_cast<double>(text_room));
         // THE CARD GROWS DOWNWARD BY WHOLE LINES; its first line is a
-        // one-line card and the boxes and the first baseline sit in it.
+        // one-line card and the glyph's box and the first baseline sit in it.
         const GuiRect card{
             card_x, y, w,
             line1_h + (static_cast<int>(lines.size()) - 1) * line_h};
@@ -3375,31 +3376,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             cairo_restore(cr);
         }
 
-        const GuiRect close{close_x, box_y, btn, btn};
-        // THE X's OUTLINE IS A LEVEL (architect 2026-09-27, render.h's
-        // HoverFade): full while hovered, then its SnapIn tail — Breeze's
-        // flat tool button — dissolving into the card's own ground, read from
-        // the slot keyed to this card's id.
-        int close_hover =
-            (st.hovered_id == n.id && st.close_hovered) ? kHoverFadeSteps : 0;
-        if (close_hover == 0) {
-            for (const AppState::Notifications::CloseFade& c : st.close_fades)
-                if (c.id == n.id) { close_hover = hover_fade_steps(c.fade); break; }
-        }
-        if (close_hover > 0) {
-            const GuiColor line = hover_fade_color(
-                kRedesignAccent, kModalFieldGround, close_hover);
-            redesign_face_box(cr, close.x, close.y, btn, btn, lw, radius,
-                              nullptr, &line);
-        }
-        icons::draw(cr, icons::Icon::WindowClose,
-                    static_cast<double>(close.x + inset),
-                    static_cast<double>(close.y + inset),
-                    static_cast<double>(glyph_px));
-
         const GuiRect shown = in_room(card);
-        st.painted.push_back(
-            AppState::NotificationPainted{n.id, shown, in_room(close)});
+        st.painted.push_back(AppState::NotificationPainted{n.id, shown});
         st.painted_rect = st.painted.size() == 1
                               ? shown : union_rect(st.painted_rect, shown);
         y += card.h + gap;
@@ -6061,8 +6039,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the LOAD wears DIALOG-OK-APPLY — the very checkmark the icon row's
         // button wears for the same act one surface over — and CLOSE wears
         // Breeze's WINDOW-CLOSE X, the roster's existing entry (the
-        // notification cards' dismiss is its other reader; a def is a glyph
-        // and several buttons are free to wear one). The row is SEVEN GLYPH
+        // notification cards' dismiss was its other reader until the card's X
+        // retired, 2026-10-01; a def is a glyph and several buttons are free
+        // to wear one). The row is SEVEN GLYPH
         // BUTTONS and no word button, so its faces take the glyph fork whole.
         // Close stays LAST, the escape sentinel by construction, and both keep
         // their acts, their keys and their hints unchanged.

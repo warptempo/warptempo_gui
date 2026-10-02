@@ -1493,7 +1493,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // platform asks it once at each first finger's down, and the GUI answers
     // the NAVIGATION SURFACE — the whole waveform and nothing else (the ruler
     // and the marker lane left it on both devices 2026-09-25) — surface geometry only
-    // (refusals stay per-frame in the update body and in the region begin);
+    // save an open menu, which yields the whole zone (2026-10-01; the
+    // carve-outs at touch_point_in_pan_zone), every other refusal staying
+    // per-frame in the update body and in the region begin;
     // off it the platform opens no window at all, the down being the pointer
     // on contact, so no nav gesture can begin anywhere else (2026-09-25).
     // The REGION TRIO is the eighth ruling's half: the zone's stretched
@@ -1913,8 +1915,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // ever arrive to say so.
         input_handler.clear_folder_overlay_hover();
         // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), the same hover half:
-        // a pointer that has left rests on no card, so every paused card's
-        // clock is re-armed here and the X's face goes dark.
+        // a pointer that has left rests on no card, so every card the hover
+        // paused has its clock re-armed here (a card a press still holds
+        // keeps its bank until the press's own clear, above).
         input_handler.clear_notification_hover();
         // AND THE MODAL ROW'S HOVER FACES (architect 2026-09-28), the dialog
         // buttons' outline and the field's border, the same hover half: a

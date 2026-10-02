@@ -1275,8 +1275,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       input_key_dispatch.cpp, where the reasoning lives): a press none
     //       of the eight above claims clears every card, whatever its class,
     //       and with no card standing the arm is the ruled silence it has
-    //       always been. It is the X's BULK keyboard twin and it is RANKED
-    //       rather than privileged — the X's own pointer claim sits above
+    //       always been. It is the keyboard twin of the shifted or held lift
+    //       on a card (the card's X until 2026-10-01) and it is RANKED
+    //       rather than privileged — the card's own pointer claim sits above
     //       every veil, this key under all of them.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
     // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road

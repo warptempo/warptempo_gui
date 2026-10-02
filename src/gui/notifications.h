@@ -7,12 +7,15 @@
 // A small dark card stacked top-right under row 1's view radios, newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, a Breeze glyph at the left naming the class
-// (dialog-information / dialog-error), an X at the right, and ONE PAD around
-// all three (notification_pad_px below — the card's chrome reads one number
-// on all six of its distances). A sentence too long for one line WRAPS
-// DOWNWARD UNDER THE TWO ICONS (architect 2026-08-30): the card grows taller,
-// the glyph and the X stay at the first line's height, and nothing reflows
-// beside them. Two classes and nothing else — no remaining-time bar, no
+// (dialog-information / dialog-error), and ONE PAD around both
+// (notification_pad_px below — the card's chrome reads one number on all
+// five of its distances). THE WHOLE CARD IS ONE BUTTON (architect
+// 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
+// from 2026-08-29 is retired, and a click or tap anywhere on the card
+// dismisses it at the lift (the hit section below). A sentence too long for
+// one line WRAPS DOWNWARD UNDER THE GLYPH (architect 2026-08-30): the card
+// grows taller, the glyph stays at the first line's height, and nothing
+// reflows beside it. Two classes and nothing else — no remaining-time bar, no
 // actions, no title/body split, no sound (the architect is "not a big fan of
 // notifications": minimal, and the inventory below is closed).
 //
@@ -39,8 +42,10 @@
 // carries the `warptempo_gui: ` prefix).
 //
 // NORMAL — leaves on its own kNotificationMs after its push (gui_input.h; the
-// pointer resting on it pauses the clock), at its X, at a BUMP, or at a bare
-// Esc that reaches the stack. THE INVENTORY, by family and owner (each
+// pointer resting on it, or a press holding it, pauses the clock), at the
+// lift of a press on it, at a BUMP, or at the whole stack's dismissal (a bare
+// Esc that reaches the stack, or a Shift-click or long press on any card).
+// THE INVENTORY, by family and owner (each
 // family's sentences are literals at their raisers; re-grep `notify(` before
 // restating a count):
 //   * THE GATES' OWN CARDS, the swallowed press answered by the state that
@@ -163,8 +168,9 @@
 //
 // CRITICAL — never TIMED OUT and never BUMPED (architect 2026-08-30:
 // "critical cards keep standing"): no clock, and a later success clears
-// nothing. Down only by a DELIBERATE dismissal, its X or bare Esc's whole-stack
-// clear. THE PRODUCERS, and nothing else (re-greped 2026-09-30): the three
+// nothing. Down only by a DELIBERATE dismissal: a click or tap on it, or the
+// whole stack's dismissal (bare Esc, or a Shift-click or long press on any
+// card). THE PRODUCERS, and nothing else (re-greped 2026-09-30): the three
 // checkpoint failures ("Checkpoint failed: nothing was committed", "Checkpoint
 // failed: files written but not committed", "Checkpoint committed but not
 // pushed") and the three pre-commit refusals ("Checkpoint refused: GitHub has
@@ -320,27 +326,54 @@
 // the wav" card, the blank window's). It reads monotonic_ms() — the one clock every software
 // deadline in the product is stamped on — and nothing here schedules anything.
 //
-// THE HIT (architect 2026-08-29, superseding the design's tap-anywhere):
-// THE X, AND ONLY THE X, DISMISSES A CARD ON THE POINTER — and since
-// 2026-08-31 THAT X HAS A KEYBOARD TWIN, bare Esc at the tail of its own
-// ranking, WHICH CLEARS THE WHOLE STACK, CRITICALS INCLUDED (architect
-// 2026-09-01). The succession is exact and the 2026-08-29 ruling is
-// untouched: it says where a PRESS may land on a card (the X's box and
-// nothing else, one rule for finger and mouse), and the key lands on no card
-// at all. THE TWO DIFFER IN RANK, deliberately: the X's claim sits ABOVE
-// EVERY VEIL because a card must be dismissable under any modal, while Esc
-// sits UNDER all of them — every other Esc place is earlier in the dispatch,
-// so the key reaches the stack only when nothing modal stands and no render
-// is in flight (the EIGHT places are enumerated at on_key,
-// input_handler.cpp; the arm itself is handle_plain_bare_keys').
-// It reads no class — a critical card is dismissed like any other, exactly as
-// the X takes any class — so the key is the one act that reaches a critical
-// card without a pointer, and it therefore clears exactly what the CLOCK
-// never touches (a critical card has none). That asymmetry is deliberate and
-// is the record a reversal would start from: if the criticals should survive
-// the key, dismiss_all is the one line to change.
+// THE HIT (architect 2026-10-01, "whole card dismisses, X gone", reversing
+// the 2026-08-29 rule that the X alone dismissed): THE CARD IS ONE BUTTON,
+// the chrome's own model. A press anywhere on it ARMS it
+// (AppState::ChromePress's Card kind) and dismisses nothing; THE LIFT inside
+// the same card dismisses it; a lift outside the card it pressed dismisses
+// nothing (the chrome's slide-away cancel). A SHIFT-CLICK OR A LONG PRESS
+// DISMISSES EVERY CARD, criticals included — THE CHROME SHIFT LONG PRESS's
+// own pairing, one term at the lift: the press-time shift ORed with a hold
+// past chrome_shift_hold_ms(), with no visual announcement, on both machines
+// (finish_notification_release, input_pointer.cpp). THE REASON IS THE
+// TABLET'S: the laptop has bare Esc to clear every card at once and the
+// tablet has no keyboard, so the pen was ticking the stack down X by X. The
+// X went with the ruling, its hover fade with it, and the card wears no
+// hover face and no pressed face. ONE RULE FOR FINGER AND MOUSE, as before:
+// the router cannot fork on tap versus click (no origin bit rides a press;
+// GuiInputState carries modifiers alone), and the whole card is a larger
+// glass target than the X's 32 px box was.
 //
-// THE ARM'S OWN SUCCESSION, in two rulings a day apart: it was born
+// THE DISMISSAL IS THE LIFT'S — the ONE STATED EXCEPTION to "every dismissal
+// stays at the press" (AppState::ChromePress's head): a card is an EVENT the
+// user closes, not a popup the next press dismisses. A popup's dismissal is
+// the side effect of a press aimed elsewhere, a card's is the press's own
+// act, and an act lives at the lift — the only place a long press can be
+// known. A HELD CARD'S CLOCK IS SUSPENDED (architect 2026-10-01: "holding
+// turns off the timer, releasing re-enables"): from the press to the lift
+// the pressed card's remaining life sits in the HOVER'S ONE BANK, the held
+// press being a second reason the same card stands still and never a second
+// mechanism (GuiNotifications::press_hold_edge); a slide-away lift re-arms
+// it, and a card already due at the press is not banked (the hover's rule:
+// a pause does not resurrect). A held card can still be BUMPED by a push or
+// cleared by Esc; the lift re-asks the live stack and then lands nothing.
+//
+// BARE ESC IS THE KEYBOARD'S WHOLE-STACK DISMISSAL (since 2026-08-31; the
+// whole stack, CRITICALS INCLUDED, since 2026-09-01), at the tail of its own
+// ranking, and it lands on no card at all. THE POINTER AND THE KEY DIFFER IN
+// RANK, deliberately: the card's claim sits ABOVE EVERY VEIL because a card
+// must be dismissable under any modal, while Esc sits UNDER all of them —
+// every other Esc place is earlier in the dispatch, so the key reaches the
+// stack only when nothing modal stands and no render is in flight (the EIGHT
+// places are enumerated at on_key, input_handler.cpp; the arm itself is
+// handle_plain_bare_keys'). Neither road reads a class — a critical card is
+// dismissed like any other — so what takes a critical card down is always a
+// deliberate act, never the CLOCK (a critical card has none). That asymmetry
+// is deliberate and is the record a reversal would start from: if the
+// criticals should survive the whole-stack dismissal, dismiss_all is the one
+// line to change.
+//
+// THE ESC ARM'S OWN SUCCESSION, in two rulings a day apart: it was born
 // 2026-08-31 taking the stack's OLDEST card alone — clearing the top would
 // have let the bottom card stick around preferentially, so the key emptied
 // the stack from the back the way the clock does, one press per card — and a
@@ -353,21 +386,19 @@
 // eight places, under every modal, so a standing surface takes the press for
 // its own close and the stack waits.
 //
-// The pointer's own rule, unchanged: on both backends, a press on the
-// card's BODY is consumed whole — arms nothing, moves nothing, lands no
-// playhead, reaches nothing underneath — and dismisses nothing. The router
-// cannot fork on tap versus click (no origin bit rides a press;
-// GuiInputState carries modifiers alone), so the rule is one for both hosts,
-// and the X's box is the icon row's 32 px button box, already the product's
-// glass target, which is why no finger-fattened body target exists. The
-// claim ranks ABOVE EVERY VEIL (the prompt's, the player's, the picker's, the
-// dialog editors') because a card is not a reach into the veiled surface: it
-// is the message about the act the veil stands over, and it must be
-// dismissable under any of them. The press is the act (content acts the
-// moment its identity is certain); the release owes nothing.
+// THE PRESS IS CONSUMED WHOLE, on both backends and whatever the button: it
+// arms nothing else, moves nothing, lands no playhead and reaches nothing
+// underneath (a non-left press is the consumed nothing it always was, and
+// arms no card). The claim ranks ABOVE EVERY VEIL (the prompt's, the
+// player's, the picker's, the dialog editors') and above the open dropdown's
+// claim, and THE RELEASE IS TAKEN AT THE SAME RANK — above the dropdown's
+// release, which would otherwise consume it, and above every veil's —
+// because a card is not a reach into the veiled surface: it is the message
+// about the act the veil stands over, and it must be dismissable under any
+// of them.
 //
 // THE GEOMETRY A CARD IS HIT BY IS THE GEOMETRY IT WAS PAINTED WITH: the
-// painter publishes each visible card's rect and X box into
+// painter publishes each visible card's rect into
 // AppState::Notifications::painted, and the router, the cursor map and the
 // hover walk read that publication and then ask the live stack whether the
 // id still stands (published geometry may only SELECT; live state decides).
@@ -646,13 +677,19 @@ inline std::string lowercase_initial(std::string_view s) {
 //
 // THE MEASUREMENT, at 100 % in the card's own face (the one sans at
 // redesign_font_size_px, 16 px): "There is nothing to undo" shapes to 172.73 px
-// and "…to redo" to 169.16, and the card adds its chrome — the painter's
-// four pads and two button boxes, 4 x 7 + 2 x 32 = 92 — for 265 px and 262 px.
-// 272 is the next multiple of 8 above the wider of the two, which is the
+// and "…to redo" to 169.16, and the card then added its chrome — four pads
+// and two button boxes, 4 x 7 + 2 x 32 = 92 — for 265 px and 262 px.
+// 272 was the next multiple of 8 above the wider of the two, which is the
 // number this constant is: a clean authored round-up with 7 px of air over the
 // sentence that set it, so a face retune of a pixel or two does not silently
-// put the pair back at two widths. AUTHORED PX, so the relation holds at every
-// gui_scale — the sentence and the floor scale together through scaled_px.
+// put the pair back at two widths. THE X'S RETIREMENT (2026-10-01) SHRANK THE
+// CHROME AND MOVED NOT THE FLOOR: three pads and the glyph's one box,
+// 3 x 7 + 32 = 53, put the pair at 226 px and 223 px, both under 272 by more
+// than before, so the clamp still answers the floor for both and they still
+// paint at one width; the width rule was not part of the ruling and the
+// floor keeps the number it was measured at. AUTHORED PX, so the relation
+// holds at every gui_scale — the sentence and the floor scale together
+// through scaled_px.
 //
 // IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 640 authored px and
 // notification_card_max_w_px already floors its window safety here, so the
@@ -684,27 +721,30 @@ inline constexpr int kNotificationMaxLines = 3;
 
 // A ONE-LINE card's height, and the height every card's FIRST line occupies:
 // the icon row's content height (the 32 px button box plus its 7 px margins,
-// one source) — the glyph and the X sit in that box at the row's own inset,
+// one source) — the glyph sits in that box at the row's own inset,
 // AT THE FIRST LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30:
-// the text grows downward under the two icons, nothing reflows beside them).
+// the text grows downward under the icon, nothing reflows beside it; the X
+// that sat beside the glyph at that height retired 2026-10-01).
 // A card of `lines` lines is this plus (lines - 1) line spacings, which only
 // the painter can know — a line count needs a shaped run, and shaping needs
 // the paint's own font — so no pure function of the window states a card's
 // real height and none is offered here.
 int notification_card_h_px();
 
-// THE CARD'S ONE PAD (architect 2026-08-30): the padding around the glyph,
-// the text and the X is ONE NUMBER, the box's own vertical margin — the
+// THE CARD'S ONE PAD (architect 2026-08-30): the padding around the glyph
+// and the text is ONE NUMBER, the box's own vertical margin — the
 // centering the card's height already derives from the icon row (46 = 32 +
-// 2 x 7). It is read for ALL SIX of the card's distances: left edge -> glyph
-// box, glyph box -> text, text -> X box, X box -> right edge, top -> boxes,
-// boxes -> bottom. Nothing is authored here: the number IS
+// 2 x 7). It is read for ALL FIVE of the card's distances: left edge ->
+// glyph box, glyph box -> text, text -> right edge, top -> box, box ->
+// bottom (six until the X's box retired, 2026-10-01: text -> X box and
+// X box -> right edge became the one text -> right edge). Nothing is
+// authored here: the number IS
 // (notification_card_h_px() - the button box) / 2, so a retune of either
-// moves all six together, and the painter reads no foreign constant (the
+// moves all five together, and the painter reads no foreign constant (the
 // icon row's lane pad and the folder overlay's icon-to-name gap both left it
 // that day — the overlay's rows keep their gap, that being their surface).
 // PARITY: where card_h - btn is odd the integer floor puts the extra pixel
-// BELOW the boxes, exactly as the icon row's own centering does for its
+// BELOW the box, exactly as the icon row's own centering does for its
 // buttons — the same floor, not a second rule.
 int notification_pad_px();
 
@@ -769,10 +809,10 @@ int notification_capacity(const AppState& a);
 
 // Whether `id` names a card that is IN THE LIVE STACK — which is the same as
 // "on screen" since the queue retired (2026-08-30): a push makes a card
-// visible at once and only an expiry, an X or a bump removes it. THE ONE LIVE
+// visible at once and only an expiry, a dismissal or a bump removes it. THE ONE LIVE
 // TEST every act on a published hit asks, and the one dismiss() asks of its
 // argument — the publication is a paint old, and a card can expire or be
-// bumped between that paint and the press.
+// bumped between that paint and the press, or between the press and its lift.
 bool notification_visible(const AppState& a, uint64_t id);
 
 // The card under (x, y), or 0. PUBLISHED GEOMETRY MAY ONLY SELECT, LIVE STATE
@@ -787,7 +827,9 @@ bool notification_visible(const AppState& a, uint64_t id);
 // in one place too.
 //
 // THE READERS ARE THE CARD'S OPACITY, re-greped at this declaration: the
-// press claim (claim_notification_press), the cursor map
+// press claim (claim_notification_press) and its lift
+// (finish_notification_release, which asks it for the SAME card at the
+// release's own coordinates), the cursor map
 // (pointer_cursor_kind), the card hover walk (GuiNotifications::update_hover),
 // the WHEEL's routing predicate (wheel_context, which swallows a detent over
 // a card), the touch pan zone (touch_point_in_pan_zone) and the two hover
@@ -796,9 +838,6 @@ bool notification_visible(const AppState& a, uint64_t id);
 // (update_folder_overlay_hover), each answering "nothing under the pointer"
 // so no surface beneath a card wears a face or promises a press.
 uint64_t notification_card_at(const AppState& a, int x, int y);
-
-// Whether (x, y) lies in the published X box of the card `id`.
-bool notification_close_at(const AppState& a, uint64_t id, int x, int y);
 
 // -- The operations ---------------------------------------------------------
 
@@ -819,17 +858,30 @@ struct GuiNotifications {
     // ruling and its one bit are at the site and at the head of this file.
     void notify(AppState::NotificationClass cls, std::string text);
 
-    // THE X's ACT, and the pointer's alone: remove the named card whatever its
-    // class and state, and drop the hover if it was this card's. The card is
-    // named by the published rect under the pointer, and the live test below
-    // is asked of that argument.
+    // THE CARD'S LIFT (architect 2026-10-01; the X's act until then), and the
+    // pointer's alone: remove the named card whatever its class and state,
+    // and drop the hover if it was this card's. The card is the one the press
+    // armed, re-hit at the lift's coordinates, and the live test below is
+    // asked of that argument.
     void dismiss(uint64_t id);
 
-    // BARE ESC's ACT (2026-09-01, superseding the 2026-08-31 arm that took the
-    // OLDEST card alone): the whole stack, CRITICALS INCLUDED, and the hover
-    // with it. An empty stack is a silent nothing — no damage, no card. The
-    // reasoning and the reversal record are at the hit section above.
+    // THE WHOLE STACK'S DISMISSAL: BARE ESC's act (2026-09-01, superseding the
+    // 2026-08-31 arm that took the OLDEST card alone) and, since 2026-10-01,
+    // the SHIFTED OR HELD LIFT on any card — the whole stack, CRITICALS
+    // INCLUDED, and the hover with it. An empty stack is a silent nothing —
+    // no damage, no card. The reasoning and the reversal record are at the
+    // hit section above.
     void dismiss_all();
+
+    // THE HELD PRESS'S EDGE (architect 2026-10-01, "holding turns off the
+    // timer, releasing re-enables"): AppState::chrome_press's Card arm on
+    // card `id` has just been raised (claim_notification_press) or dropped
+    // (take_chrome_press — the lift, and the button-lost and pointer-leave
+    // clears through it), so re-answer that card's bank. The arm IS the
+    // record of the hold — nothing here keeps a second one — and the bank is
+    // the hover's own: the hold is a second reason the card stands still,
+    // never a second mechanism (rebank). A card already gone answers nothing.
+    void press_hold_edge(uint64_t id);
 
     // THE CLOCK, on the run loop's deadline tick: retire every normal card
     // whose life has elapsed and is not paused, and re-derive the hover from
@@ -838,13 +890,15 @@ struct GuiNotifications {
     void fire_if_due();
 
     // The hover walk, from the motion handler and the tick: which card the
-    // pointer rests on and whether it is inside the X box. Entering a visible
-    // normal card banks its remaining life; leaving re-arms it. A card whose
+    // pointer rests on. Entering a visible normal card banks its remaining
+    // life; leaving re-arms it unless a press still holds it. A card whose
     // deadline has ALREADY passed is not banked — hover pauses a clock, it
     // does not resurrect one — so it retires on the next fire_if_due as an
-    // unhovered one would.
+    // unhovered one would. It paints nothing and damages nothing: the card
+    // wears no hover face since its X retired (2026-10-01).
     void update_hover(int x, int y);
-    // The pointer-left hook's half: no card is hovered, every bank re-armed.
+    // The pointer-left hook's half: no card is hovered, every bank the hover
+    // held re-armed (a card a press still holds keeps its bank).
     void clear_hover();
 
 private:
@@ -852,6 +906,12 @@ private:
     // 2026-08-30: no card waits unseen any more, so the only clock a push
     // starts is its own card's, written where that card is built, and no
     // index is "visible" or not.)
-    void set_hover(uint64_t id, bool close);
+    void set_hover(uint64_t id);
+    // THE ONE BANK'S ONE WRITER: re-answer card `id`'s pause from its two
+    // reasons — the pointer resting on it (`hovered_id`) and a press holding
+    // it (AppState::chrome_press's Card arm). Banks a running normal card's
+    // remaining life when the first reason begins, re-arms it from now when
+    // the last one ends, and banks nothing for a card already due.
+    void rebank(uint64_t id, int64_t now);
     AppState::Notification* find(uint64_t id);
 };
