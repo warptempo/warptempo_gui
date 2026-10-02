@@ -141,11 +141,11 @@ namespace {
 // GAPS center it (the vertical rule below). The TOP strip is FIVE lanes since
 // the tab row's deletion (architect 2026-10-01: "a waste of space") — from the
 // window edge inward: the MENU ROW (menu_row_h_px(), row 1 of the kdenlive
-// redesign, at the window top, 36 with the anchors' cap band seated in its
-// lower 30 — render.h's kMenuRowHeightPx), the ICON ROW (icon_row_h_px(), row
-// 4 of the redesign, directly under the menu row with nothing between and NO
-// BORDER of its own since 2026-10-01 — the trim lane's own top bevel is the
-// boundary), then FLEXIBLE GAP 1, then THE CENTERED BLOCK's three: the TRIM
+// redesign, at the window top, 30 — the anchors' pill whole, flush under the
+// window's top edge — render.h's kMenuRowHeightPx), the ICON ROW
+// (icon_row_h_px(), row 4 of the redesign, directly under the menu row with
+// nothing between and NO BORDER of its own since 2026-10-01 — the trim lane's
+// own top bevel is the boundary), then FLEXIBLE GAP 1, then THE CENTERED BLOCK's three: the TRIM
 // lane (trim_lane_h_px(), the bar and its two handles — the one lane that also
 // rides kTrimBarScalePercent, resting at 100), the RULER lane
 // (ruler_lane_h_px(), timestamps + tick tops + the PLAYHEAD HEAD on the lane's
@@ -207,31 +207,32 @@ namespace {
 // THE STACKS BELOW ARE AT THE DEFAULT max_waveform_height OF 500 (both
 // templates'; a device carrying another value moves only W and the gaps), THE
 // ONE RECORD, re-derived from the lane table 2026-10-01 rather than adjusted.
-// AT 100% the top lanes are 144 = menu 36 + icon 46 + trim 10 + ruler 32 +
-// marker 20, of which 82 is the two toolbar rows above the gap and 62 the
+// AT 100% the top lanes are 138 = menu 30 + icon 46 + trim 10 + ruler 32 +
+// marker 20, of which 76 is the two toolbar rows above the gap and 62 the
 // block above the waveform; the BOTTOM STRIP is 47, the bottom row's 46
-// content and its 1px border-top. (The tab row's 36, the icon row's 1px
-// border and the menu row's 6 extra rows came to 2026-10-01 together: the top
-// lanes went 175 -> 144, NET 31 SHORTER at 100%, and on a window with room
-// every one of those pixels went into GAP 1.)
-//   1920x1080 AT 100%, THE LAPTOP: leftover 889 -> waveform CLAMPED at 500,
-//     gap 1 = 146, gap 2 = 243
-//     — 36 menu / 46 icon / 146 blank / 62 block / 500 waveform / 243 blank
+// content and its 1px border-top. (The tab row's 36 and the icon row's 1px
+// border went on 2026-10-01 — the menu row's 6 rows of air above its pill
+// came and went the same evening: the top lanes went 175 -> 138, NET 37
+// SHORTER at 100%, and on a window with room every one of those pixels went
+// into GAP 1.)
+//   1920x1080 AT 100%, THE LAPTOP: leftover 895 -> waveform CLAMPED at 500,
+//     gap 1 = 152, gap 2 = 243
+//     — 30 menu / 46 icon / 152 blank / 62 block / 500 waveform / 243 blank
 //     / 47 row, the waveform spanning y 290..790 about the window's midline
 //     540 (the clamp fixes its height and the midpoint rule its centre, so
 //     gap 1 absorbs every authored pixel the lanes above it gain or lose).
 //   2304x1440 AT gui_scale 200, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
-//   MainActivity.java's head): the lanes are 72 menu + 92 icon + 20 trim + 64
-//   ruler + 40 marker = 288 above and 94 below (92 + a 2px border), leftover
-//   1058 -> waveform CLAMPED at 1000 (the scaled 500), gap 1 = 0 (the
-//   midpoint rule would want -68), gap 2 = 58
-//     — 72 / 92 / 0 / 124 / 1000 / 58 / 94.
+//   MainActivity.java's head): the lanes are 60 menu + 92 icon + 20 trim + 64
+//   ruler + 40 marker = 276 above and 94 below (92 + a 2px border), leftover
+//   1070 -> waveform CLAMPED at 1000 (the scaled 500), gap 1 = 0 (the
+//   midpoint rule would want -56), gap 2 = 70
+//     — 60 / 92 / 0 / 124 / 1000 / 70 / 94.
 //   1024x600 AT 100%, A SHORT WINDOW (kept as the worked case the floors exist
 //   for; no host runs this geometry):
-//     leftover 409 -> waveform UNCLAMPED at 409, both gaps 0
-//     — 36 / 46 / 0 / 62 / 409 / 0 / 47. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -48), so the waveform keeps everything,
+//     leftover 415 -> waveform UNCLAMPED at 415, both gaps 0
+//     — 30 / 46 / 0 / 62 / 415 / 0 / 47. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -45), so the waveform keeps everything,
 //     which is the rule's own floor rather than a special case.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
@@ -289,8 +290,8 @@ namespace {
 // declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
-// and the lane owns every pixel it paints. The MENU lane is its 36 whole (its
-// labels' 30-row box seated at its foot — render.h's kMenuRowHeightPx), the
+// and the lane owns every pixel it paints. The MENU lane is its 30 whole (the
+// anchors' pill and their labels' box both — render.h's kMenuRowHeightPx), the
 // ICON lane is its 46 content whole (NO border since 2026-10-01 — the trim
 // lane's own top bevel is the boundary under it), and the UNIFIED BOTTOM ROW
 // is its content plus its 1px border-TOP, the waveform side, its only border.

@@ -1486,7 +1486,7 @@ constexpr int kMinWindowHeightPx = 480;
 inline constexpr int kPlayheadUnitPx = 8;
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
-// window edge (the kdenlive menu bar, row 1 of the redesign). 36 AT 100%
+// window edge (the kdenlive menu bar, row 1 of the redesign). 30 AT 100%
 // gui_scale, AND THE LANE IS ITS CONTENT: the row stands at that height with
 // the ICON ROW directly under it and no margin, border or line between the
 // two. kdenlive, QEMU and virt-manager draw no border between the menubar and
@@ -1494,43 +1494,45 @@ inline constexpr int kPlayheadUnitPx = 8;
 // since 2026-10-01, the icon row's own (paint_menu_row) — runs straight on
 // into the icon row's.
 //
-// 36, WITH THE ANCHORS AND THE LEGEND IN THE LOWER 30 — ASYMMETRIC BY
-// CONSTRUCTION (architect 2026-10-01). The row was 30 — the height of File's
-// hover pill in kdenlive (tmp/previous/review_2026-09-09/his_screenshots/
-// kden-hover.png, rows 26-55) — and it grew 6 ABOVE THE BUTTONS: the lower
-// kMenuRowTextBoxPx rows, the TEXT BOX at the row's FOOT, are exactly the
-// 30-row lane as it was. THE ANCHORS' HOVER PILL AND THEIR PUBLISHED HIT
-// RECTS ARE THAT BOX (the pill the 30-row had, its height unchanged — "the
-// buttons would stay the height that they were"), the anchors' labels and
-// the battery + clock legend are cap-centred in it (cap top 15 rows under the
-// row's top edge, 9 rows of pill above the cap band and 9 under it, at
-// 100%), and the TOP 6 ROWS ARE PLAIN CONTENT GROUND with nothing on them —
-// air between the window's top edge and the buttons, never part of a pill.
-// WHY: the tablet's rounded screen corners cramp a flush top row, and the 6
-// are the deleted tab row's margin come back where they help. He looked at
-// the symmetric alternatives — 36 with the text centred, and 42 centred — and
-// chose this one ("definitely"). THE PILL'S FOOT IS THE LANE'S FOOT, which is
-// where the dropdown and its damage band hang (top_menu_row_area —
-// paint_dropdown and toggle_dropdown read the same accessor), so the popup
-// touches the icon row's first pixel, kdenlive's own picture.
+// THE 30 IS THE PILL'S, AND THE PILL IS THE LANE (architect 2026-09-09, on
+// seeing the row at 34 with the dropdown hanging four pixels under the pill:
+// "make the height of the top row based on the thirty pixels of File/Edit ...
+// this way the dropdown will touch the first row, as it does in kdenlive").
+// File's hover pill measures rows 26-55 in
+// tmp/previous/review_2026-09-09/his_screenshots/kden-hover.png — 30 rows —
+// and that number is the lane whole: the anchors' pill fills it top to bottom
+// and IS the anchor's published hit rect, the anchors' labels and the
+// battery + clock legend are cap-centred in it (cap top 9 rows under the
+// lane's top edge and 9 rows of pill under the cap band, at 100%), and the
+// pill's foot is the lane's foot, which is where the dropdown and its damage
+// band hang (top_menu_row_area — paint_dropdown and toggle_dropdown read the
+// same accessor), so the popup touches the icon row's first pixel,
+// kdenlive's own picture.
+//
+// FLUSH UNDER THE WINDOW'S TOP EDGE, WITH NO AIR ABOVE THE PILL (architect
+// 2026-10-01, on the glass: "Let's remove the six pixel padding up at the
+// top. We'll just let the text be pretty close. I think that's going to seem
+// more symmetric — because right now, relative to the curved top, both the
+// clock and the File dropdown look too far down"). For one evening the lane
+// was 36 with the pill and the text in its lower 30 and 6 rows of plain
+// ground above them, on the reasoning that the tablet's rounded screen
+// corners would cramp a flush row; seen on the glass, the air made the
+// anchors and the legend read as sitting low under the curved top rather
+// than clear of it, and the row came back to the pill's 30.
 //
 // The row sizes on gui_scale_factor() like every other lane in the tree,
 // rounded with std::nearbyint through scaled_px and floored like every other
-// lane metric. At the tablet's 200% the lane is 72 and the text box 60. TWO
-// ACCESSORS FOR ONE NUMBER, deliberately: the lane table reads the LANE and
-// the painter the CONTENT, the vocabulary every other row keeps, and this
-// row's lane simply has no other term in it; the text box is the painter's
-// own third reading (menu_row_text_box_h_px), the pill's and the label's box.
-inline constexpr int kMenuRowHeightPx  = 36;
-inline constexpr int kMenuRowTextBoxPx = 30;
+// lane metric. At the tablet's 200% the lane is 60. TWO ACCESSORS FOR ONE
+// NUMBER, deliberately: the lane table reads the LANE and the painter the
+// CONTENT, the vocabulary every other row keeps, and this row's lane simply
+// has no other term in it — the content is the pill's box and the labels'
+// box both, so there is no third reading.
+inline constexpr int kMenuRowHeightPx = 30;
 inline int menu_row_content_h_px() {
     return scaled_px(kMenuRowHeightPx, 5);
 }
 inline int menu_row_h_px() {
     return menu_row_content_h_px();
-}
-inline int menu_row_text_box_h_px() {
-    return scaled_px(kMenuRowTextBoxPx, 5);
 }
 // (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
 // commit: the labeled Save / Undo / Redo / Render lane, row 2 of the redesign
@@ -1801,7 +1803,7 @@ inline int marker_lane_h_px() {
 // other" — his own reasoning, so the centering is within the app surface with
 // no titlebar arithmetic). The stack is MENU ROW / ICON ROW / gap 1 / THE
 // CENTERED BLOCK
-// (tab, trim, ruler, markers, then the WAVEFORM with its
+// (trim, ruler, markers, then the WAVEFORM with its
 // own thick bottom border as the block's bottom edge) / gap 2 / THE UNIFIED
 // BOTTOM ROW at the window foot. (The ruling's first hours put the whole
 // flexible space between the icon row and the trim lane; the row unification
@@ -1812,17 +1814,13 @@ inline int marker_lane_h_px() {
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 175
-// (menu 30 + icon 47 + tab 36 + trim 10 + ruler 32 + marker 20)
-// and the bottom row 47 (the icon row's height since 2026-08-14): the
-// 1920x1080 monitor's leftover is 858, so the
-// waveform CLAMPS at the default 500 and the two gaps take 115 (top) + 243
-// (bottom); a
-// 1024x600 SHORT WINDOW's leftover is 378, UNCLAMPED, and the centering is
-// infeasible there so both gaps floor at 0 and the waveform keeps the whole
-// 378. The full stacks and their derivation are main.cpp's vertical block,
-// the one owner; these figures are its, re-derived 2026-09-23 when the ruler
-// lane grew 28 -> 32 (kRulerLaneHeightPx).
+// produces by construction. At 100% scale the 1920x1080 laptop's leftover
+// is well over the default, so the waveform CLAMPS at 500 and the two gaps
+// take the rest, while a 1024x600 SHORT WINDOW's leftover is under it,
+// UNCLAMPED, the centering infeasible and both gaps floored at 0. The
+// figures — every lane, both gaps, each worked window — are main.cpp's
+// vertical block, the one owner, re-derived there from the lane table and
+// not restated here.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the

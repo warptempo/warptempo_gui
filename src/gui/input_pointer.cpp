@@ -9255,10 +9255,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // band anchored anywhere else would leave a strip of the popup unpainted
     // at one end. It is the LANE and not the anchor's rect because the lane
     // is the one owner of that row: the anchor's published rect is its pill,
-    // which since 2026-10-01 is the lane's lower 30 (render.h's
-    // kMenuRowHeightPx) — its foot the lane's foot, so the two agree on this
-    // row exactly while the anchor's top stands 6 rows (at 100%) under the
-    // lane's. The x is still the anchor's (the
+    // which IS the lane (render.h's kMenuRowHeightPx), so the two agree
+    // exactly. The x is still the anchor's (the
     // dropdown hangs off the thing that opened it, architect 2026-08-02);
     // only this band's y reads the lane, and it damages FULL WIDTH anyway.
     {

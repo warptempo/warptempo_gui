@@ -245,10 +245,9 @@ GuiColor accent_for_focus(const AppState& app) {
 // THE CSS FLOAT MODEL is the ruled layout vocabulary (architect 2026-07-31): a
 // flat button FILLS ITS WHOLE ROW and no margin or inset exists unless the
 // architect states one. The hover pill therefore spans the full height of the
-// button's row — since 2026-10-01 the lower kMenuRowTextBoxPx of the 36-row
-// lane (kMenuRowHeightPx), the 30-row lane as it was, with the 6 rows above
-// it plain ground (render.h carries the ruling) — and the icon row's ground
-// begins on the next pixel row.
+// button's row, which is the whole 30-row lane (kMenuRowHeightPx — render.h
+// carries the ruling), flush under the window's top edge, and the icon row's
+// ground begins on the next pixel row.
 constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
 constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 
@@ -1239,7 +1238,7 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // scales, so `floor((h + cap) / 2)` is arithmetically the same row as the
 // ascent-minus-descent proxy resolved with a half-up tie, for every box height
 // and at every scale. NOT ONE SANS SURFACE MOVES under this rule: every
-// kdenlive crop stays landed (the menu row's 30-row text box at row 21, the 32
+// kdenlive crop stays landed (the menu row's 30-row lane at row 21, the 32
 // box at 22, the 29 dropdown item at 20, the 31 field at 21 —
 // tmp/previous/review_2026-09-09/his_screenshots/kden-hover.png, tmp/previous/review_2026-09-09/his_screenshots/kden-view.png, the PCManFM-Qt tab crops and
 // tmp/keep/screenshots/kdenlive/redesign/), and the answer is independent of
@@ -1252,8 +1251,8 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
 // rule is not asked. TWELVE BOX SEATS (re-grepped 2026-10-01): the menu row's
-// anchors and its battery + clock legend (both in the row's text box at its
-// foot, render.h's kMenuRowHeightPx), the row-8 clock, the notification
+// anchors and its battery + clock legend (both in the row's whole lane,
+// render.h's kMenuRowHeightPx), the row-8 clock, the notification
 // card's first line, the dropdown items, the prompt's message, the render player's
 // clock, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
@@ -1316,8 +1315,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // pill):
     // at rest the label paints bare on the row ground;
     // hovered, a filled accent pill sits under it, FLUSH with the button's
-    // row — the text box at the lane's foot (the css float model — a flat
-    // button fills its whole row, architect 2026-07-31). A PRESS PAINTS
+    // row — the whole lane (the css float model — a flat button fills its
+    // whole row, architect 2026-07-31). A PRESS PAINTS
     // NOTHING NEW — a click keeps the hover face and only pointer-out rests
     // it, the pill held full for 100 ms past the leave since 2026-10-01
     // (below, at the pill). The click and disabled faces belong to rows 2
@@ -1340,18 +1339,13 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 
     // THE LANE IS ITS CONTENT (render.h's menu_row_* pair): the icon row's
     // ground begins on the next pixel row with no margin, border or line
-    // between — kdenlive's own menubar-over-toolbar seam. THE BUTTONS ARE THE
-    // LOWER 30 (architect 2026-10-01, asymmetric by construction — render.h's
-    // kMenuRowHeightPx carries the ruling and its why): the text box at the
-    // lane's FOOT (`text_y` / `text_h`) is each anchor's pill AND its
-    // published hit rect, the 30-row lane's pill exactly, and every label on
-    // this row, the anchors' and the legend's, is cap-centred in it. The top
-    // 6 rows (at 100%) are plain ground with nothing on them, and a press
-    // there hits no anchor (redesign_button_hit reads the published rect).
-    // The pill's foot, the lane's foot and the icon row's first pixel are the
-    // same row — where the dropdown hangs.
-    const int text_h    = menu_row_text_box_h_px();
-    const int text_y    = row.y + row.h - text_h;
+    // between — kdenlive's own menubar-over-toolbar seam. THE LANE IS THE
+    // PILL (architect 2026-10-01 — render.h's kMenuRowHeightPx carries the
+    // ruling and its why): the whole lane (`row`) is each anchor's pill AND
+    // its published hit rect, flush under the window's top edge with no air
+    // above it, and every label on this row, the anchors' and the legend's,
+    // is cap-centred in it. The pill's foot, the lane's foot and the icon
+    // row's first pixel are the same row — where the dropdown hangs.
 
     cairo_save(cr);
 
@@ -1402,7 +1396,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         AppState::RedesignButtonFace& face = publish_button_face(
             cr, app, audio, playback, target_render,
             def.id,
-            GuiRect{x, text_y, btn_w, text_h});
+            GuiRect{x, row.y, btn_w, row.h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
@@ -1474,9 +1468,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         if (pill) {
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                                  kRedesignAccent.b);
-            redesign_rounded_rect_path(cr, x, text_y,
+            redesign_rounded_rect_path(cr, x, row.y,
                                        static_cast<double>(btn_w),
-                                       static_cast<double>(text_h), rad);
+                                       static_cast<double>(row.h), rad);
             cairo_fill(cr);
         }
 
@@ -1490,15 +1484,15 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // it there, since a dead button never wears the pill.
         const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
         cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
-        // THE LABEL CENTERS IN THE TEXT BOX AT THE LANE'S FOOT — the pill's
-        // own 30 rows, the crop's File centred in them, 9 rows of pill above
-        // its cap band and 9 below, which is where cap-centring puts ours
-        // (redesign_baseline); the lane's 6 extra rows (at 100%) are air
-        // above the pill, the asymmetry render.h's block records.
+        // THE LABEL CENTERS IN THE PILL, which IS the lane: the pill is the
+        // button, and Qt's own menu bar centers an item's text in the item
+        // rect — the crop's File sits 9 rows under the pill's top and 9 above
+        // its foot, which is where cap-centring puts ours
+        // (redesign_baseline).
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad),
-            redesign_baseline(font, static_cast<double>(text_y),
-                              static_cast<double>(text_h)));
+            redesign_baseline(font, static_cast<double>(row.y),
+                              static_cast<double>(row.h)));
 
         x += btn_w;
     }
@@ -1513,8 +1507,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // MARGIN — its 8px lead-out, icon_row_pad_x, read rather than restated —
     // so the legend ends where the icon row's content does. The menu's own
     // sans at the redesign size through the shaping
-    // chokepoint, in the label white, on the anchors' baseline (the same text
-    // box). THE RULE FOR A ROW TOO NARROW FOR BOTH: the anchors win and the
+    // chokepoint, in the label white, on the anchors' baseline (the same
+    // lane). THE RULE FOR A ROW TOO NARROW FOR BOTH: the anchors win and the
     // legend is clipped at the right. No supported size comes near it — at
     // 100% the anchors end near x 170 and the legend, some 140 px wide, starts
     // past x 480 even on the 640 px floor; the scale-toward-the-ceiling corner
@@ -1529,8 +1523,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                              kRedesignLabel.b);
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(lx),
-            redesign_baseline(font, static_cast<double>(text_y),
-                              static_cast<double>(text_h)));
+            redesign_baseline(font, static_cast<double>(row.y),
+                              static_cast<double>(row.h)));
     }
 
     cairo_restore(cr);
@@ -3521,10 +3515,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // anchors are flush with the lane's left edge anyway). THE Y IS THE MENU
     // LANE'S FOOT, which since the 2026-09-09 relayout IS the ICON ROW'S
     // FIRST PIXEL, so the box hangs straight onto the toolbar with nothing
-    // between — and the anchor's pill sits at the lane's foot (since
-    // 2026-10-01 the lane's lower 30, render.h's kMenuRowHeightPx), so the
-    // pill's foot is that row too and the dropdown touches the first row as
-    // it does in kdenlive. It is read from
+    // between — and the anchor's pill IS the lane (render.h's
+    // kMenuRowHeightPx), so the pill's foot is that row too and the dropdown
+    // touches the first row as it does in kdenlive. It is read from
     // top_menu_row_area rather than from btn.y + btn.h because the LANE is
     // the owner of that row: for the hours the lane stood at 34 the pill
     // was 4 authored rows short of it, and a dropdown hung from the pill

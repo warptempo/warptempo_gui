@@ -9836,7 +9836,7 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // its x and width from, so the two cannot disagree about where the band
 // begins. Zero on a degenerate stack, which every consumer already reads as
 // "no room". ON THE TABLET (2304x1440 at gui_scale 200, gap 1 zero) the band
-// runs [164, 1346): under the 72 menu and 92 icon rows, down to the 94-tall
+// runs [152, 1346): under the 60 menu and 92 icon rows, down to the 94-tall
 // bottom row.
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
