@@ -1913,23 +1913,26 @@ inline constexpr int kTrimBarScalePercent = 100;
 inline constexpr int kTrimLaneHeightPx   = 10;
 // 29 SINCE 2026-10-02 (architect, judging the Y1 mock on the tablet: "tighten
 // up the timestamp lane"): the labels are anchored to the lane's TOP, their
-// cap top 4 rows under it (paint_ruler_row: line_baseline off lane.y +
-// kRulerLabelPadTopPx), and the rows beneath them are the PLAYHEAD HEAD'S
-// CLEARANCE — the head sits tip-down on the lane's bottom rows and stands ONE
-// PIXEL OF EMPTY GROUND clear of the digits' lowest ink at 100% (architect
-// 2026-09-23, his eyeball of the head's first variant, which overlapped the
-// digits). THE ARITHMETIC AT 100%, measured through the product's own road
-// (cairo-ft on fonts/Roboto-Regular.ttf, SLIGHT, the 16px sans: ascent 15, the
-// digits', colon's and point's ink the 12-row cap band, no descenders — the
-// metrics table at gui_font_bundled.cpp): baseline = 1 + 15 = row 16, so the
+// cap top 4 authored rows under it at every scale (paint_ruler_row:
+// line_baseline off lane.y plus the pad derived at kRulerLabelCapTopPx), and
+// the rows beneath them are the PLAYHEAD HEAD'S CLEARANCE — the head sits
+// tip-down on the lane's bottom rows and stands ONE PIXEL OF EMPTY GROUND
+// clear of the digits' lowest ink at 100% (architect 2026-09-23, his eyeball
+// of the head's first variant, which overlapped the digits). THE ARITHMETIC
+// AT 100%, measured through the product's own road (cairo-ft on
+// fonts/Roboto-Regular.ttf, SLIGHT, the 16px sans: ascent 15, the digits',
+// colon's and point's ink the 12-row cap band, no descenders — the metrics
+// table at gui_font_bundled.cpp): pad 1, baseline = 1 + 15 = row 16, so the
 // labels' ink runs rows 4..15; the head's top row is 29 - 12 = 17; ROW 16 IS
 // THE ONE PIXEL OF EMPTY GROUND between them, the ruling's gap. At 200% (the
-// tablet; lane 58, pad 2, the 32px face's ascent 30 and its 22-row cap) the
-// baseline is 2 + 30 = 32, ink rows 10..31 and a head from 58 - 24 = 34: two
-// rows of ground. At 50% (lane 14 off 14.5's tie to even, pad 0, the 8px
-// face's ascent 8 and 5-row ink) the baseline is 0 + 8 = 8, ink rows 3..7
-// and a head from 14 - 6 = 8: none, touching. The major ticks' rise above
-// the marker lane is unchanged.
+// tablet; lane 58, the 32px face's ascent 30 and its 22-row cap, so pad 0)
+// the baseline is 0 + 30 = 30, ink rows 8..29 and a head from 58 - 24 = 34:
+// FOUR rows of ground, two authored — the cap top held at 4 authored rows
+// (architect 2026-10-02) while the lane kept its 29, so the ground the labels
+// gave up went under them. At 50% (lane 14 off 14.5's tie to even, the 8px
+// face's ascent 8 and 5-row ink, pad 0 by the clamp) the baseline is
+// 0 + 8 = 8, ink rows 3..7 and a head from 14 - 6 = 8: none, touching. The
+// major ticks' rise above the marker lane is unchanged.
 inline constexpr int kRulerLaneHeightPx  = 29;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {

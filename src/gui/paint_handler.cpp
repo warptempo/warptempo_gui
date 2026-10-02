@@ -3827,16 +3827,30 @@ constexpr int  kRulerMinorsPerStep = 8;
 // a rung is admissible while its minors stay at least this far apart, which puts
 // its labels at least 8x that apart.
 constexpr double kRulerMinMinorPitchPx = 12.0;
-// The label line's top pad, the rows between the lane's top and the line's
-// own top (paint_ruler_row's line_baseline): 1, so the digits' CAP TOP lands 4
-// rows under the lane's top at 100% (architect 2026-10-02, judging the Y1 mock
-// on the tablet: "tighten up the timestamp lane"). line_baseline seats the
-// baseline ceil(ascent) under the line's top, and the 16px sans measures
-// ascent 15 and a 12-row cap band through the product's own road (the metrics
-// table at gui_font_bundled.cpp, re-measured on the digits' ink), so the cap
-// top is pad + 15 - 12 = pad + 3, and 4 asks pad 1. The head's clearance
-// beneath the labels is kRulerLaneHeightPx's arithmetic (render.h).
-constexpr double kRulerLabelPadTopPx   = 1.0;
+// THE LABELS' CAP TOP, in authored rows under the lane's top: 4, AT EVERY
+// SCALE (architect 2026-10-02, judging the Y1 mock on the tablet: "tighten up
+// the timestamp lane"; then, on the tablet at 200 %: "reduce the space between
+// the trim bar and the timestamp lane by one authored pixel — two device
+// pixels on the tablet"). THE LINE'S TOP PAD IS DERIVED, never authored: the
+// label is a LINE (line_baseline), whose baseline sits ceil(ascent) under the
+// line's top, so its cap top sits ceil(ascent) - cap under it, and the pad
+// that lands the cap top at this row is
+//
+//     pad = max(0, nearbyint(4 * scale) - (ceil(ascent) - cap))
+//
+// of the label's own face, both metrics read through the product's own road
+// (line_baseline's ascent, cap_height_px's "H"; the measured table at
+// gui_font_bundled.cpp). A pad scaled from one authored value cannot hold the
+// row, because the face's ascent-minus-cap does not scale with the face: it
+// is 3 rows at 100 % and 8 at 200 %. THE THREE SCALES:
+//   100 % (16px sans, ascent 15, cap 12): pad 4 - 3 = 1, cap top row 4.
+//   200 % (32px sans, ascent 30, cap 22): pad 8 - 8 = 0, cap top row 8 —
+//     four authored rows; a scaled pad of 2 had put it at row 10, five.
+//   50 % (8px sans, ascent 8, cap 5): pad 2 - 3 clamps to 0, cap top row 3 —
+//     the line's top at the lane's top is as high as a line seats.
+// The head's clearance beneath the labels is kRulerLaneHeightPx's arithmetic
+// (render.h).
+constexpr double kRulerLabelCapTopPx   = 4.0;
 // How far a MAJOR tick rises above the marker lane. Minors rise none.
 constexpr double kRulerMajorRisePx     = 4.0;
 
@@ -3933,17 +3947,22 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-    // THE LABEL IS A LINE, not a box: the lane gives it one authored pad and
-    // then the face's own band, so the seat is line_baseline's ascent off that
-    // pad. (The band itself is no longer computed here — nothing else in this
-    // painter reads the face's extents.) THE SEAT IS ANCHORED TO THE LANE'S
-    // TOP, never centred in it or hung from its bottom: the lane's height below
-    // the labels is the head's clearance (kRulerLaneHeightPx, render.h, where
-    // the one-pixel gap's arithmetic lives), and growing it moves no digit.
+    // THE LABEL IS A LINE, not a box: the seat is line_baseline's ascent off
+    // a top pad DERIVED so the cap top lands kRulerLabelCapTopPx authored rows
+    // under the lane's top (the rule and its three scales at that constant).
+    // THE SEAT IS ANCHORED TO THE LANE'S TOP, never centred in it or hung from
+    // its bottom: the lane's height below the labels is the head's clearance
+    // (kRulerLaneHeightPx, render.h, where the gap's arithmetic lives), and
+    // growing it moves no digit.
+    cairo_font_extents_t label_fe;
+    cairo_scaled_font_extents(font, &label_fe);
+    const int label_ascent_to_cap =
+        static_cast<int>(std::ceil(label_fe.ascent)) -
+        static_cast<int>(std::nearbyint(cap_height_px(font)));
+    const int label_pad =
+        std::max(0, scaled_px(kRulerLabelCapTopPx) - label_ascent_to_cap);
     const double baseline =
-        line_baseline(font, static_cast<double>(lane.y) +
-                                std::nearbyint(kRulerLabelPadTopPx *
-                                               gui_scale_factor()));
+        line_baseline(font, static_cast<double>(lane.y + label_pad));
 
     // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
