@@ -2081,7 +2081,7 @@ enum class RedesignButton {
     File, Edit, Settings,
     // (THE TAB ROW — row 3, the A / B tabs TabA and TabB — IS DELETED
     // (architect 2026-10-01: "a waste of space"). The active tab's letter is
-    // the bottom row's clock cell ("00:45.115 | A",
+    // the bottom row's clock cell ("A | 00:45.115",
     // paint_bottom_row_buttons_and_clock), and the switch keeps Ctrl+Tab and
     // the bottom row's TransportSwitchTab button; the paired march keeps
     // Ctrl+Shift+Tab, Switch Tab's shifted press and the walk's ctrl-shift
@@ -3313,12 +3313,13 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // Android loop paints after every input drain, so a pill that snapped off at
 // the leave blinked to rest at the first touch and at the lift. The two
 // reports carry one event timestamp; the gap is the loop's handling, one pass
-// at most (11 ms the largest measured, 2026-10-01), so the 25 ms hold absorbs
-// both — he ruled the 100 ms timeout first and the measurement settled the
-// number. It is a hold rather than the icons' fade because a fade-out on a
+// at most (11 ms the largest measured, 2026-10-01), so the hold absorbs
+// both — he ruled the 100 ms timeout first, the measurement brought it to
+// 25 and his glass pass to 20 for feel (the number and its why at the
+// constant). It is a hold rather than the icons' fade because a fade-out on a
 // menu bar read as odd on the glass (a fade lasted one pass the same day):
 // Breeze's QMenuBar registers no engine and snaps its pill off, and this
-// snaps 25 ms late. Paint only, as every fade is: the press, hit
+// snaps kMenuPillHoldMs late. Paint only, as every fade is: the press, hit
 // tests, the cursor and the tooltip keep reading the hover bits. A plain
 // value: no roster button is without a kind, so there is no "none" arm.
 inline constexpr HoverFadeKind
@@ -5911,7 +5912,7 @@ struct AppState {
         // goes dead under it — at the edge, or mid-tail by the tick, which
         // reads `enabled` before each advance, so a re-enable revives no old
         // tail — or stops being painted. Row 1's menu anchors stamp and tick
-        // as the tool buttons do on their own kind, the 25 ms hold
+        // as the tool buttons do on their own kind, the kMenuPillHoldMs hold
         // (architect 2026-10-01), save that a menu's OPEN EDGE cuts every
         // anchor's fade (toggle_dropdown): the open term holds the opened
         // anchor's pill while the menu stands, and no hold paints under it or

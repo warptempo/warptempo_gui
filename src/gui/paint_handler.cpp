@@ -209,8 +209,8 @@ namespace {
 // A ROSTER BUTTON'S PAINTED HOVER, [0, kHoverFadeSteps] (architect
 // 2026-09-27, render.h's HoverFade): full while the pointer is on it, then
 // its tail on the button's own kind (redesign_button_hover_fade_kind) — the
-// icons' SnapIn fade, the menu anchors' 25 ms hold (architect 2026-10-01) —
-// cut on a dead button, as Breeze paints no animation on a disabled one. The
+// icons' SnapIn fade, the menu anchors' kMenuPillHoldMs hold (architect
+// 2026-10-01) — cut on a dead button, as Breeze paints no animation on a disabled one. The
 // icon row, the bottom row and the menu row's anchors read it (paint_menu_row
 // adds its open-menu term above it).
 int redesign_button_hover_steps(const AppState::RedesignButtonFace& face) {
@@ -410,7 +410,8 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // history.)
 
 // A rounded rectangle from four quarter-circle arcs, used FILLED for row 1's
-// hover pill and (through redesign_face_box) for every face-box surface.
+// hover pill, for the notification cards' shadow rings (paint_notifications)
+// and (through redesign_face_box) for every face-box surface.
 // (Row 2's hover outline was its stroked consumer until that row's 2026-08-12
 // deletion.)
 void redesign_rounded_rect_path(cairo_t* cr, double x, double y,
@@ -1318,8 +1319,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // row — the whole lane (the css float model — a flat button fills its
     // whole row, architect 2026-07-31). A PRESS PAINTS
     // NOTHING NEW — a click keeps the hover face and only pointer-out rests
-    // it, the pill held full for 25 ms past the leave since 2026-10-01
-    // (below, at the pill). The click and disabled faces belong to rows 2
+    // it, the pill held full for kMenuPillHoldMs past the leave since
+    // 2026-10-01 (below, at the pill). The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
     // EVERY ACTION ON THE FLOAT IS THE SAME KIND since 2026-08-13: each button
@@ -1455,9 +1456,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // then off at once; nothing on a dead anchor. No blend is painted:
         // the pen's gaps are one loop pass at most and the hold absorbs
         // them, where a fade-out on a menu bar read as odd — Breeze's
-        // QMenuBar snaps, and this snaps 25 ms late. The open menu's anchor never shows a hold —
-        // the open edge cuts every anchor's fade (toggle_dropdown) and the
-        // open term holds it full.
+        // QMenuBar snaps, and this snaps kMenuPillHoldMs late. The open
+        // menu's anchor never shows a hold — the open edge cuts every
+        // anchor's fade (toggle_dropdown) and the open term holds it full.
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
         const bool open_anchor =
             app.dropdown.open() &&
@@ -2584,7 +2585,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // At 100% on the laptop's 1920 it starts at 1920 − 8 − 603 =
     // 1309, the state cell's clip bound one pad short at 1301, and the clock
     // cell — fourteen monospace cells since 2026-10-01, the nine of
-    // `00:00.000`, the dirty mark's reserved one and the tab letter's ` | A`,
+    // `00:00.000`, the tab letter's `A | ` and the dirty mark's reserved one,
     // 8.8px each at 11pt — spans 8..~132, leaving the state cell ~1169px. On
     // the tablet at 200% (2304 device px, 1152 logical) the block starts at
     // logical 1152 − 8 − 603 = 541, the clip bound at 533 and the clock ends
@@ -2654,28 +2655,34 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
         const TransportClockMetrics& clock_metrics =
             clock_cell_metrics(font, size_px);
-        // THE ACTIVE TAB'S LETTER CLOSES THE CELL (architect 2026-10-01, the
-        // tab row deleted as "a waste of space"; "timestamp, space, pipe,
-        // space, tab"): `00:45.115 | A` — the timestamp, the dirty mark glued
-        // to it when the tab is dirty (`00:45.115* | A`, the block below),
-        // then a space, the LITERAL pipe, a space and the letter. The
-        // timestamp leads, so the digits paint from the cell's origin and
-        // never walk. THE RESERVED CELL IS THE DIGITS' SPECIMEN, THE MARK AND
-        // THE SUFFIX TOGETHER — the mark's cell reserved whether or not it is
-        // painted, so the letter lies inside the cell in both states and the
-        // per-tick damage box below repaints it with the digits; the specimen
-        // itself stays the timestamp's alone, which is what the render
-        // player's modal clock reads. Monospace, so the mark is one cell and
-        // the suffix four, the letter one of them; both advances are measured
-        // off the live strings (the letter changes only on a tab switch, whose
-        // clock damage covers the whole cell).
-        const std::string tab_suffix =
-            std::string(" | ") + app.active_tab_view;
+        // THE ACTIVE TAB'S LETTER LEADS THE CELL (architect 2026-10-01, the
+        // tab row deleted as "a waste of space"): `A | 00:45.115` — the
+        // letter, a space, the LITERAL pipe, a space, then the timestamp, the
+        // dirty mark glued to the timestamp's end when the tab is dirty
+        // (`A | 00:45.115*`, the block below). IT LED FROM THE SAME NIGHT'S
+        // GLASS PASS: the first order, "timestamp, space, pipe, space, tab",
+        // put the letter after the mark, so every dirty transition moved the
+        // letter one cell over ("whenever the dirty dot is enabled it moves
+        // the letter one character over. Let's swap them back so the tab name
+        // comes before the timestamp"). THE DIGITS STILL NEVER WALK: their
+        // origin is the cell's x plus the prefix's advance, and the prefix is
+        // fixed per tab — monospace, four cells, the letter one of them — so
+        // within a tab the digits stand where they stood, and only the mark,
+        // at the run's far end, comes and goes. THE RESERVED CELL IS THE
+        // PREFIX, THE DIGITS' SPECIMEN AND THE MARK TOGETHER — the mark's
+        // cell reserved whether or not it is painted, so it closes the cell
+        // in both states and the per-tick damage box below repaints it with
+        // the digits; the specimen itself stays the timestamp's alone, which
+        // is what the render player's modal clock reads. Both advances are
+        // measured off the live strings (the letter changes only on a tab
+        // switch, whose clock damage covers the whole cell).
+        const std::string tab_prefix =
+            std::string(1, app.active_tab_view) + " | ";
         const double mark_w =
             text_shape::shape_text_run(font, "*").width_px;
-        const double suffix_w =
-            text_shape::shape_text_run(font, tab_suffix).width_px;
-        const double cell_w = clock_metrics.cell_w + mark_w + suffix_w;
+        const double prefix_w =
+            text_shape::shape_text_run(font, tab_prefix).width_px;
+        const double cell_w = prefix_w + clock_metrics.cell_w + mark_w;
         // THE CELL STARTS AT THE LANE'S LEFT PAD (architect 2026-09-29, the
         // transport having moved to the row's right end). THE AIR IS A MARGIN
         // MIRROR: the row's last button keeps one lane pad from the lane's
@@ -2734,7 +2741,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
         // THE LOWER LEFT IS ONE MONOSPACE RUN (architect 2026-08-31): the
         // clock, a LITERAL pipe, and the state text — `00:00.100 | Updating...`
-        // is his own example, `00:00.100 | A | Updating...` since the tab
+        // is his own example, `A | 00:00.100 | Updating...` since the tab
         // letter joined the clock's run (2026-10-01) — painted as ONE string
         // in the clock's own face,
         // at the clock's size, on the clock's baseline, from the clock's own
@@ -2780,7 +2787,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //
         // AND THE DIRTY MARK IS THE CLOCK'S SUFFIX (architect 2026-09-09):
         // `*` immediately after the digits while the tab carries unsaved work,
-        // so the row reads `00:00.100* | A | Rendering...`. IT CLOSES UP ON THE
+        // so the row reads `A | 00:00.100* | Rendering...`. IT CLOSES UP ON THE
         // CLOCK (architect 2026-09-10, "remove the space between the timestamp
         // and the dirty dot"): the mark belongs to the timestamp, and a space
         // read as a separator between two things rather than as one thing
@@ -2790,7 +2797,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // row 8; and it rides THE CLOCK'S RUN rather than the state's because
         // it must stand whether or not a state string does. So it joins the
         // UNCLIPPED text, and the state simply begins that much further right:
-        // clock_w below is the pair's advance, not the timestamp's.
+        // clock_w below is the whole run's advance — letter, digits and mark.
         // THE TABLET IS WHY IT MOVED HERE. The mark's only home was the window
         // title, which labwc paints and a fullscreen NativeActivity has none
         // of, so the tablet showed unsaved work nowhere at all. THE TITLE'S
@@ -2804,10 +2811,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // would repaint the row on every keypress for a mark that did not move.
         // The reserved clock CELL holds the mark's one cell whether or not it
         // is painted (the cell's head above), so the per-second tick's damage
-        // box covers the mark and the tab letter after it in both states; the
-        // mark's pixels and the letter's seat move only on a transition, and
-        // that damages the lane whole (clock_invalidate_rect's record,
-        // main.cpp).
+        // box covers the mark in both states; the mark's pixels and the
+        // state's start move only on a transition, and that damages the lane
+        // whole (clock_invalidate_rect's record, main.cpp). The letter leads
+        // the run and never moves with the mark (2026-10-01).
         // THE ROW YIELDS WHOLE TO A MODAL,
         // so this text is hidden while a prompt, a dialog editor, the render
         // player or the picker stands
@@ -2828,12 +2835,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             state = app.queue_progress_text;
         }
         const double x0 = static_cast<double>(cell_x);
-        // THE CLOCK, UNCLIPPED — the digits, the dirty mark glued to them,
-        // then the tab letter's suffix, all one run; the run's advance is
-        // where the state begins.
-        std::string clock = format_timestamp(seconds);
+        // THE CLOCK, UNCLIPPED — the tab letter's prefix, the digits, then
+        // the dirty mark glued to them, all one run, so the digits stand at
+        // the prefix's advance by construction; the run's advance is where
+        // the state begins.
+        std::string clock = tab_prefix + format_timestamp(seconds);
         if (app.dirty) clock += "*";
-        clock += tab_suffix;
         const double clock_w =
             show_row_text(cr, font, x0, baseline, clock, kRedesignLabel);
         if (!state.empty()) {
@@ -3190,7 +3197,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // at kPanelPadPx from the window's edge and the same kPanelPadPx below row 1
 // (the stack's margins are one number, notification_stack_bound), growing
 // DOWN over whatever lies there (the icon row's empty right, the thin lanes,
-// the waveform), the cards kIconBtnGapPx apart.
+// the waveform), the cards kNotificationGapPx apart (the card's own 1 px
+// since 2026-10-01, the icon row's 2 before — the ruling at the constant),
+// each over its drop shadow.
 //
 // THE LOOK (his picked mockup, cards_AB.png — the mockup file is deleted; its
 // look 1; the chrome record at render.h's palette block): the player's dark
@@ -3204,8 +3213,11 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // path in the table's ink and colours nothing here — the two files are a
 // blue or red plate under a white glyph, and that plate is what tells the
 // classes apart at a glance), that pad, THE SENTENCE
-// of the one sans in the row's ink, and that pad again to the right edge —
-// the box sitting that same pad below the card's top and above its foot.
+// of the one sans in the row's ink, and that pad PLUS THE GLYPH'S INSET to
+// the right edge (architect 2026-10-01: the air the eye sees left of the
+// text, from the glyph's ink, repeated after it — the ruling at
+// notification_pad_px) — the box sitting that same pad below the card's top
+// and above its foot.
 // (A window-close X stood in a second button box at the right from
 // 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
 // when the whole card became the button — "whole card dismisses, X gone" —
@@ -3227,24 +3239,42 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // line's own by construction — the one pad still rules every edge. The
 // stack's `y` then advances by each card's OWN height.
 //
+// THE DROP SHADOW (architect 2026-10-01, the S4 mock; the look and its
+// three constants at render.h's kNotificationShadow* block). Cairo has no
+// blur, so the shadow is RINGS: the card's rect offset down, black at the
+// shadow's alpha over it and one device-pixel ring per pixel of the scaled
+// spread outside it, the k-th of n at alpha·(n − k)/n. They are laid as
+// NESTED FILLS, outermost first, each REPLACING (CAIRO_OPERATOR_SOURCE) what
+// the larger one left inside it, in a group composited once per card — so
+// each ring keeps exactly its own alpha and two rings' antialiased corner
+// pixels blend into one coverage rather than compounding into a light seam.
+// THE ORDER IS EVERY SHADOW, THEN EVERY CARD — the mock's look, whose shadow
+// was computed from the union of the cards' rects: each card covers the
+// shadow under it, the 1 px gaps between cards darken (an upper card's
+// shadow and the lower card's both fall there) and no card's face is
+// shadowed. THE SHADOW IS PAINT, NEVER A CLAIM: nothing about it is
+// published.
+//
 // IT PUBLISHES WHAT IT DREW: each card's rect, and their union,
 // into AppState::Notifications (the owner-tag doctrine at
 // ModalDialogGeometry — published geometry may only SELECT; the press claim,
 // the cursor map and the hover walk read this and then ask the live stack).
-// EVERYTHING IS CLIPPED TO THE ROOM and PUBLISHED CLIPPED TO IT: a stack tall
+// THE CARDS ARE CLIPPED TO THE ROOM and PUBLISHED CLIPPED TO IT: a stack tall
 // enough to reach the bottom row is the contrived case nothing caters for,
 // and clipping is what keeps it from painting over that row or claiming a
-// press under it. It runs on every frame, cards or none, for the floating
-// surfaces' reason: a skipped run would strand a stale publication. Its
-// damage is not its own — every stack change damages the stack's ROOM through
-// the viewport owner, and the hover paints nothing to damage.
+// press under it. THE SHADOWS CLIP TO THE ROOM GROWN BY THEIR REACH
+// (notification_shadow_bound), which the damage owner repaints whole. It
+// runs on every frame, cards or none, for the floating surfaces' reason: a
+// skipped run would strand a stale publication. Its damage is not its own —
+// every stack change damages that grown room through the viewport owner,
+// and the hover paints nothing to damage.
 void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     AppState::Notifications& st = app.notifications;
     st.painted.clear();
     st.painted_rect = GuiRect{0, 0, 0, 0};
     if (st.cards.empty()) return;
 
-    // THE ROOM the stack grows into, and the clip for everything below. A
+    // THE ROOM the stack grows into, and the clip for every card below. A
     // window with none of it paints no card at all (notifications.h).
     const GuiRect room = notification_stack_bound(app);
     if (room.w <= 0 || room.h <= 0) return;
@@ -3253,14 +3283,12 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-    cairo_rectangle(cr, room.x, room.y, room.w, room.h);
-    cairo_clip(cr);
 
     const int line1_h  = notification_card_h_px();
     const int line_h   = notification_line_h_px(font);
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
-    const int gap      = scaled_px(kIconBtnGapPx, 1);
+    const int gap      = scaled_px(kNotificationGapPx, 1);
     const int btn      = scaled_px(kIconBtnPx);
     const int glyph_px = scaled_px(kIconGlyphPx);
     // THE GLYPH INSET IS AN INTEGER HALF AND SITS ONE PIXEL LEFT OF CENTRE
@@ -3275,16 +3303,21 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int inset    = (btn - glyph_px) / 2;
     // ONE NUMBER FOR ALL FIVE DISTANCES (architect 2026-08-30): the box's
     // vertical margin is the card's every pad, so the horizontal placement
-    // cannot disagree with the vertical centering it is taken from.
+    // cannot disagree with the vertical centering it is taken from — the
+    // text's right air adding the inset above (2026-10-01, below).
     const int pad      = notification_pad_px();
-    const int right_x = room.x + room.w;
-    // The chrome every card carries besides its text: THREE PADS AND ONE BOX
-    // (2026-10-01, the X's box and its pad gone with the X) — the glyph's box
-    // with a pad on each side of it (the left edge's and the one between it
-    // and the text) and one pad at the text's right, the card's right edge.
-    // Where the X stood the text's right pad and the X's right pad were two;
-    // with nothing between the text and the edge they are the one.
-    const int chrome_w = 3 * pad + btn;
+    const int right_x  = room.x + room.w;
+    // The chrome every card carries besides its text: THREE PADS, THE
+    // GLYPH'S INSET AND ONE BOX (2026-10-01) — the glyph's box with a pad on
+    // each side of it (the left edge's and the one between it and the text),
+    // and at the text's right, the card's right edge, one pad PLUS THE INSET.
+    // THE INSET IS THE TEXT'S RIGHT AIR MATCHING ITS LEFT AS THE EYE SEES IT
+    // (architect 2026-10-01, the ruling at notification_pad_px): the box is
+    // invisible and its glyph's ink stands `inset` inside it, so the text's
+    // left air reads as pad + inset, and the right pad repeats that. (The X's
+    // box and its pad left the sum the same day, with the X.)
+    const int right_pad = pad + inset;
+    const int chrome_w  = 2 * pad + btn + right_pad;
     // WHAT IS PUBLISHED IS WHAT IS VISIBLE: the room clips the paint, so it
     // clips the publication too, or the hit would claim a press on pixels
     // the bottom row owns. An empty answer is hit by nothing (rect_contains).
@@ -3296,6 +3329,18 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         return GuiRect{x0, y0, std::max(0, x1 - x0), std::max(0, y1 - y0)};
     };
 
+    // THE LAYOUT PASS: every card's geometry and lines, before anything is
+    // painted, because the shadows paint first (the order at the head).
+    struct LaidCard {
+        const AppState::Notification*        n = nullptr;
+        GuiRect                              card{0, 0, 0, 0};
+        int                                  glyph_x   = 0;
+        int                                  text_x    = 0;
+        int                                  text_room = 0;
+        std::vector<text_shape::ShapedRun>   lines;
+    };
+    std::vector<LaidCard> laid;
+    laid.reserve(st.cards.size());
     int y = room.y;
     // THE WALK IS THE WHOLE STACK (2026-08-30, the queue's retirement): what
     // ends it is the ROOM, not a count. The bump keeps the stack inside the
@@ -3329,8 +3374,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const int card_x    = right_x - w;
         const int glyph_x   = card_x + pad;
         const int text_x    = glyph_x + btn + pad;
-        const int text_room = card_x + w - pad - text_x;
-        const std::vector<text_shape::ShapedRun> lines =
+        const int text_room = card_x + w - right_pad - text_x;
+        std::vector<text_shape::ShapedRun> lines =
             notification_text_lines(font, n.text, whole,
                                     static_cast<double>(text_room));
         // THE CARD GROWS DOWNWARD BY WHOLE LINES; its first line is a
@@ -3338,6 +3383,68 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const GuiRect card{
             card_x, y, w,
             line1_h + (static_cast<int>(lines.size()) - 1) * line_h};
+        laid.push_back(LaidCard{&n, card, glyph_x, text_x, text_room,
+                                std::move(lines)});
+        y += card.h + gap;
+    }
+
+    // THE SHADOW PASS (the rings and the order at the head), clipped to the
+    // room grown by the shadow's reach — the rect the damage owner repaints.
+    // The rings round on the card's own corner (paint_popup_chrome's outer
+    // radius) grown by each ring's outset, so they stay concentric with it.
+    {
+        const GuiRect shade = notification_shadow_bound(app);
+        const int off    = scaled_px(kNotificationShadowOffsetPx);
+        const int spread = scaled_px(kNotificationShadowSpreadPx, 1);
+        const double rad =
+            std::nearbyint(kPopupCornerRadiusPx * gui_scale_factor());
+        cairo_save(cr);
+        cairo_rectangle(cr, shade.x, shade.y, shade.w, shade.h);
+        cairo_clip(cr);
+        for (const LaidCard& c : laid) {
+            const int sx = c.card.x;
+            const int sy = c.card.y + off;
+            cairo_save(cr);
+            cairo_rectangle(cr, sx - spread, sy - spread,
+                            c.card.w + 2 * spread, c.card.h + 2 * spread);
+            cairo_clip(cr);
+            cairo_push_group(cr);
+            cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+            // Outset j = spread .. 1, outermost first: the ring between
+            // outsets j - 1 and j is the k = j - 1 th, at alpha·(n − k)/n;
+            // the fill at outset 1 (the full alpha) also covers the offset
+            // rect itself, which the card hides but for the offset's strip
+            // under its foot.
+            for (int j = spread; j >= 1; --j) {
+                const double a = kNotificationShadowAlpha *
+                                 static_cast<double>(spread - j + 1) /
+                                 static_cast<double>(spread);
+                redesign_rounded_rect_path(
+                    cr, static_cast<double>(sx - j),
+                    static_cast<double>(sy - j),
+                    static_cast<double>(c.card.w + 2 * j),
+                    static_cast<double>(c.card.h + 2 * j),
+                    rad + static_cast<double>(j));
+                cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, a);
+                cairo_fill(cr);
+            }
+            cairo_pop_group_to_source(cr);
+            cairo_paint(cr);
+            cairo_restore(cr);
+        }
+        cairo_restore(cr);
+    }
+
+    // THE CARD PASS, clipped to the room.
+    cairo_rectangle(cr, room.x, room.y, room.w, room.h);
+    cairo_clip(cr);
+    for (const LaidCard& c : laid) {
+        const AppState::Notification& n = *c.n;
+        const GuiRect& card = c.card;
+        const int glyph_x   = c.glyph_x;
+        const int text_x    = c.text_x;
+        const int text_room = c.text_room;
+        const std::vector<text_shape::ShapedRun>& lines = c.lines;
         paint_popup_chrome(cr, card, kModalFieldGround, kRedesignTabLine);
 
         const int box_y = card.y + pad;
@@ -3374,7 +3481,6 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         st.painted.push_back(AppState::NotificationPainted{n.id, shown});
         st.painted_rect = st.painted.size() == 1
                               ? shown : union_rect(st.painted_rect, shown);
-        y += card.h + gap;
     }
     cairo_restore(cr);
 }
@@ -5388,7 +5494,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // a lit button and its read-only toggle shows the lock, so letters would
     // restate what that row says in its own vocabulary. THE A / B LETTER IS
     // HERE, though, since 2026-10-01: the tab row that showed it is deleted,
-    // and the letter closes the clock cell (paint_bottom_row_buttons_and_clock
+    // and the letter leads the clock cell (paint_bottom_row_buttons_and_clock
     // owns the rule). The dirty mark's SECTION stays gone —
     // it has no cell of its own and reserves no width — but the mark itself is
     // back on this row since 2026-09-09, as the CLOCK'S SUFFIX inside the

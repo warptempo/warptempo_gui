@@ -156,8 +156,8 @@ namespace {
 // them), whose bottom edge is the waveform top. ALL FIVE ride the gui_scale
 // axis. The BOTTOM strip is ONE LANE: THE UNIFIED BOTTOM ROW,
 // bottom_row_h_px() tall (the icon row's content height plus its own 1px
-// border-top) — the monospace clock cell (the timestamp, a pipe and the
-// active tab's letter, "00:45.115 | A") and THE STATE CELL at the left pad and,
+// border-top) — the monospace clock cell (the active tab's letter, a pipe
+// and the timestamp, "A | 00:45.115") and THE STATE CELL at the left pad and,
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the marker walk, the four cardinal arrows and the
 // transport three, divided by three of the ruled separators (architect
@@ -1082,14 +1082,15 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
 // whose rect is the lane WHOLE — see the record just above.
 //
-// THE DIRTY MARK AND THE TAB LETTER ARE INSIDE THIS CELL (architect
-// 2026-10-01): row 8's run is the timestamp, the `*` glued to it while the tab
-// is dirty, then ` | A`, and the reserved cell holds the mark's one cell
-// whether or not it is painted, so the letter lies inside it in both states
-// and a per-second tick repaints mark and letter with the digits. The mark
-// changes only when app.dirty moves, shifting the letter by that one cell,
-// and THAT transition damages the lane whole through
-// Viewport::invalidate_status_cell_area (Undo::recompute_dirty's tail).
+// THE TAB LETTER AND THE DIRTY MARK ARE INSIDE THIS CELL (architect
+// 2026-10-01): row 8's run is `A | `, the timestamp, then the `*` glued to it
+// while the tab is dirty, and the reserved cell holds the mark's one cell
+// whether or not it is painted, so a per-second tick repaints letter, digits
+// and mark together. The mark changes only when app.dirty moves — the letter
+// before the digits never moves with it — and THAT transition damages the
+// lane whole through Viewport::invalidate_status_cell_area
+// (Undo::recompute_dirty's tail), the state cell's start moving by the
+// mark's one cell.
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame

@@ -9,7 +9,10 @@
 // the one sans, a Breeze glyph at the left naming the class
 // (dialog-information / dialog-error), and ONE PAD around both
 // (notification_pad_px below — the card's chrome reads one number on all
-// five of its distances). THE WHOLE CARD IS ONE BUTTON (architect
+// five of its distances, the text's right air adding the glyph's own inset
+// so it matches the air the eye sees left of the text, 2026-10-01). Each
+// card stands over a tight drop shadow (kNotificationShadowAlpha, render.h).
+// THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card
 // dismisses it at the lift (the hit section below). A sentence too long for
@@ -678,16 +681,19 @@ inline std::string lowercase_initial(std::string_view s) {
 // THE MEASUREMENT, at 100 % in the card's own face (the one sans at
 // redesign_font_size_px, 16 px): "There is nothing to undo" shapes to 172.73 px
 // and "…to redo" to 169.16, and the card then added its chrome — four pads
-// and two button boxes, 4 x 7 + 2 x 32 = 92 — for 265 px and 262 px.
+// and two button boxes, 4 x 7 + 2 x 32 = 92 — for 265 px and 262 px (the
+// chrome of the day the floor was measured; today's is below).
 // 272 was the next multiple of 8 above the wider of the two, which is the
 // number this constant is: a clean authored round-up with 7 px of air over the
 // sentence that set it, so a face retune of a pixel or two does not silently
 // put the pair back at two widths. THE X'S RETIREMENT (2026-10-01) SHRANK THE
-// CHROME AND MOVED NOT THE FLOOR: three pads and the glyph's one box,
-// 3 x 7 + 32 = 53, put the pair at 226 px and 223 px, both under 272 by more
-// than before, so the clamp still answers the floor for both and they still
-// paint at one width; the width rule was not part of the ruling and the
-// floor keeps the number it was measured at. AUTHORED PX, so the relation
+// CHROME AND MOVED NOT THE FLOOR, and neither did the text's matched right
+// air the same night: today's chrome is three pads, the glyph's inset and
+// the glyph's one box, 3 x 7 + 5 + 32 = 58 (the derivation at the painter,
+// paint_notifications), which puts the pair at 231 px and 228 px, both under
+// 272, so the clamp still answers the floor for both and they still paint
+// at one width; the width rule was not part of either ruling and the floor
+// keeps the number it was measured at. AUTHORED PX, so the relation
 // holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px.
 //
@@ -709,6 +715,16 @@ inline constexpr double kNotificationMinWidthPx = 272.0;
 // A length, so it scales; the life beside it (kNotificationMs) is a duration
 // and does not.
 inline constexpr double kNotificationMaxWidthPx = 640.0;
+
+// THE GAP BETWEEN TWO CARDS IN THE STACK (architect 2026-10-01, ruled on the
+// S4 mock: "reduce the distance between the cards to one pixel at a hundred
+// percent"). It was the icon row's kIconBtnGapPx (2) read by the card, a
+// borrowing; the card owns its own gap since that night, read by the painter
+// (paint_notifications) and the room's count (notification_capacity) and by
+// nothing else. A length, so it scales, floored at one pixel
+// (scaled_px(x, 1)) so the cards never touch at a small gui_scale. The drop
+// shadow under each card darkens the gap (render.h's shadow block).
+inline constexpr double kNotificationGapPx = 1.0;
 
 // HOW MANY LINES A SENTENCE MAY TAKE (architect 2026-08-30, "a few"): a card
 // whose sentence does not fit its room GROWS DOWNWARD to this many lines and
@@ -737,8 +753,16 @@ int notification_card_h_px();
 // 2 x 7). It is read for ALL FIVE of the card's distances: left edge ->
 // glyph box, glyph box -> text, text -> right edge, top -> box, box ->
 // bottom (six until the X's box retired, 2026-10-01: text -> X box and
-// X box -> right edge became the one text -> right edge). Nothing is
-// authored here: the number IS
+// X box -> right edge became the one text -> right edge). ONE OF THE FIVE
+// ADDS A TERM, and it is text -> right edge (architect 2026-10-01: "to the
+// left of the text has the same spacing as to the right of the text"): the
+// glyph's box is invisible and its drawn glyph sits the box's own inset
+// inside it, so the eye measures the text's LEFT air from the glyph's ink —
+// pad plus that inset — and a bare pad at the text's right read as the text
+// pressed against the edge. The right air is therefore pad + inset, the left
+// air as seen repeated after the text; the inset is the icon box's own
+// (btn - glyph) / 2, read at the painter, never a second constant. Nothing
+// else is authored here: the number IS
 // (notification_card_h_px() - the button box) / 2, so a retune of either
 // moves all five together, and the painter reads no foreign constant (the
 // icon row's lane pad and the folder overlay's icon-to-name gap both left it
@@ -778,13 +802,32 @@ int notification_card_max_w_px(const AppState& a);
 // under that foot is ever claimed by a card. (A stack that tall is the
 // contrived case this design declines to cater for.)
 //
-// Every change to the stack damages this rect
-// (Viewport::invalidate_notification_stack): the painted cards lie inside it
-// by construction, so it erases what stood and admits what comes without
-// shaping a single glyph off the paint clock. A window with no room between
-// row 1 and the bottom row answers a zero height and paints nothing — a
-// window with no waveform at all, in the contrived class.
+// Every change to the stack damages this rect GROWN BY THE CARDS' SHADOW
+// (notification_shadow_bound below, the rect
+// Viewport::invalidate_notification_stack takes): the painted cards lie
+// inside the room by construction and their shadows inside the grown rect,
+// so it erases what stood and admits what comes without shaping a single
+// glyph off the paint clock. A window with no room between row 1 and the
+// bottom row answers a zero height and paints nothing — a window with no
+// waveform at all, in the contrived class.
 GuiRect notification_stack_bound(const AppState& a);
+
+// THE ROOM GROWN BY THE CARDS' DROP SHADOW (architect 2026-10-01, the
+// shadow's look at render.h's kNotificationShadow* block): the rect every
+// stack change damages (Viewport::invalidate_notification_stack) and the clip
+// the painter lays the shadows under. THE SHADOW'S PIXELS BELONG TO THE CARD,
+// so a card leaving must erase its shadow and a card arriving must paint it
+// whole: the room grows by the spread on the left and the right, by the
+// spread less the offset above (the shadow's top ring stands that far over
+// the card's top) and by the offset plus the spread below. IT STAYS BETWEEN
+// THE LANES THE STACK NEVER PAINTS OVER — never above the menu lane's foot,
+// never into the bottom row's lane, never past the window's right edge (where
+// the outermost ring is cut, render.h). The CARDS keep the room itself: their
+// paint clips to it and their publication (AppState::Notifications::painted)
+// stays the card's rect clipped to it — a shadow is paint, never a claim, so
+// the hit, the hover walk, the press claim and the pan zone see only cards.
+// A window with no room answers an empty rect, as the room does.
+GuiRect notification_shadow_bound(const AppState& a);
 
 // HOW MANY CARDS THE ROOM HOLDS, and so what a push bumps past (architect
 // 2026-08-30, the uncapped stack): the number of ONE-LINE cards that fit the
@@ -800,8 +843,8 @@ GuiRect notification_stack_bound(const AppState& a);
 // criticals that will not be bumped.
 //
 // A pure function of the window and the scale, like the room. At a 1080 px
-// window and 100 % it is 20 (a 999 px room over 46 + 2); on the tablet at
-// 200 % it is 13 (1278 over 92 + 4), its window being the whole 1440-tall
+// window and 100 % it is 21 (a 999 px room over 46 + 1, the card's own gap,
+// kNotificationGapPx); on the tablet at 200 % it is 13 (1278 over 92 + 2), its window being the whole 1440-tall
 // panel since the activity went full screen (2026-10-01; the stacks are
 // recorded at main.cpp's vertical-stack owner). Every window this product
 // runs in holds more cards than the architect will ever stack.

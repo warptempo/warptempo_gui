@@ -122,8 +122,14 @@ struct TrimRange {
 // per-key provenance records live in the git history and nothing in the product
 // needs them back.
 //
-// EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all, and
-// the redesign kept the doctrine: a highlight REPLACES the colors it lifts
+// EVERY ENTRY IS OPAQUE — no palette colour carries a compositing alpha, and
+// the product composites exactly TWO alphas, each a ruled exception stated at
+// its own constant: the playhead head's (kPlayheadHeadAlpha, 2026-09-23) and
+// the notification cards' drop shadow (kNotificationShadowAlpha, ruled
+// 2026-10-01 — the second). Both are blended into the opaque backing at paint
+// time and are never a window alpha: the Wayland surface stays opaque and no
+// window is added for either. And the redesign kept the doctrine: a
+// highlight REPLACES the colors it lifts
 // rather than washing over them. The region highlight is opaque colors in
 // two passes — kWaveformRegionCanvas for the ground under the ink, then each
 // opaque plate pixel's own colour lifted by the same doubled Breeze step
@@ -482,7 +488,8 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // painter, paint_ruler_row): the marker classes' ladder DISABLED > RED >
 // default is untouched and the head joins none of it. The held head takes
 // the SAME kPlayheadHeadAlpha — the head stays translucent in both states, so
-// the one alpha exception stays one. The stem, the scanner and the column do
+// the head's alpha stays one (the cards' drop shadow, 2026-10-01, is the
+// product's other alpha, below). The stem, the scanner and the column do
 // not change. Its repaint is the per-tick comparator's (main.cpp), since the
 // bit flips with no damage of its own.
 //
@@ -492,8 +499,9 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // translucent" in his words, so the digits read through it. The same day the
 // ruler lane grew beneath its labels (kRulerLaneHeightPx) and the head no
 // longer reaches the digits, so the alpha now shows through a major tick's
-// rise alone. The value is his to tune by eye; no other colour in the tree
-// carries an alpha. (Until that
+// rise alone. The value is his to tune by eye; the one other alpha in the
+// tree is the cards' drop shadow (kNotificationShadowAlpha, 2026-10-01).
+// (Until that
 // day a tick crossing the head painted the pre-blended #b7b7b7 measured off
 // row_5_lane_3_playhead_tick.png; with real compositing the tick shows through
 // the alpha instead and that constant is deleted.)
@@ -503,6 +511,34 @@ inline constexpr GuiColor kPlayheadStem      = hex(0xFCFCFC);
 // The hold lamp's lit head (above): the stem's white by ruling, one fact, so
 // it is spelled as the stem's constant rather than a second sample.
 inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
+
+// THE NOTIFICATION CARDS' DROP SHADOW (architect 2026-10-01, his pick of the
+// S4 mock: "a light and close-by shadow, a tight, small shadow") — THE
+// PALETTE'S SECOND COMPOSITING ALPHA, after the playhead head's above. The
+// mock, at 200 % on the tablet, was the card's rect offset 2 device px down
+// and blurred by a ~2 px gaussian, black at 80 % at the edge; AUTHORED, at
+// 100 %: the card's rect OFFSET this far down, black at
+// kNotificationShadowAlpha over that offset rect and at its edge, falling
+// linearly to nothing across a SPREAD this wide outward from it — painted as
+// one device-pixel ring per pixel of the scaled spread, the k-th of n at
+// alpha·(n − k)/n (paint_notifications draws it and states the order: every
+// shadow first, then every card, so each card covers the shadow under it,
+// the gaps between cards darken and no card's face is shadowed). The colour
+// is black, a literal at the site: a shadow is the absence of light, not a
+// sampled ink. THE ALPHA IS BLENDED INTO THE OPAQUE BACKING AT PAINT TIME
+// (the palette rule at this file's head); no window alpha, no new surface.
+// THE TWO LENGTHS SCALE (scaled_px) and are homed here with the alpha so the
+// whole look is one block in the palette's owner; the stack's damage and
+// clip read them through notification_shadow_bound (notifications.h).
+// AT THE WINDOW'S RIGHT EDGE THE SHADOW IS CUT: the cards stand flush right
+// at the stack's kPanelPadPx margin (2 px) and the spread is 3, so the
+// outermost ring's last pixel lies past the window — accepted (architect
+// 2026-10-01), the edge the eye reads being the card's. NO SETTINGS KEY: the
+// design is committed on the mock (a temporary key comes only if he asks
+// for a tune).
+inline constexpr double kNotificationShadowOffsetPx = 1.0;
+inline constexpr double kNotificationShadowSpreadPx = 3.0;
+inline constexpr double kNotificationShadowAlpha    = 0.8;
 
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
 // selected,red}.png (56x20, and 56x17 for red). Each class is a FILL plus a
@@ -2443,12 +2479,12 @@ inline int tooltip_hover_slop_px() {
 //   Holding — no Breeze engine; the menu row's pill by his ruling (architect
 //     2026-10-01, the why at redesign_button_hover_fade_kind, app_state.h):
 //     BINARY, full the instant hover begins and full for the whole
-//     kMenuPillHoldMs (25 ms, measured — at the constant) after it ends, then
+//     kMenuPillHoldMs (20 ms, measured — at the constant) after it ends, then
 //     off at once — a timeout on the same edge and the same clock, never a
 //     blend; the kind's span is its own (hover_fade_span), the 100 ms being
 //     the two Breeze kinds'. Its rise has no hidden climb (the edge sets the
 //     animation time to the span's end at once), so every drop holds the
-//     full 25 ms however short the hover was, and a return inside the hold
+//     whole span however short the hover was, and a return inside the hold
 //     is full with no visible event and re-arms the whole hold at the next
 //     drop. Its painted level is only ever 0 or full, so the tick repaints a
 //     held face exactly once, at the hold's end, and the digitized `level`
@@ -2482,7 +2518,7 @@ inline constexpr int64_t kHoverFadeMs    = 100;
 inline constexpr int     kHoverFadeSteps = 10;
 
 // THE MENU PILL'S HOLD (architect 2026-10-01, measured on the glass the same
-// night) — 25 ms: the Holding kind's span, how long the menu anchors' pill
+// night) — 20 ms: the Holding kind's span, how long the menu anchors' pill
 // stays full after its hover drops before it goes off at once. MEASURED: on
 // the tablet's S Pen, twenty taps on the three anchors, the pen's HOVER_EXIT
 // and the tip's DOWN carry the same event timestamp, and so do the UP and the
@@ -2490,13 +2526,17 @@ inline constexpr int     kHoverFadeSteps = 10;
 // HANDLING: the two reports land in the same loop pass (0–2 ms apart on the
 // GUI's clock) or in the next (9–11 ms), 11 ms the largest seen. The span is
 // counted on that handling clock (the edge's monotonic `now`), so it must
-// cover one loop pass plus the tick that retires it; 25 covers the 11 twice
-// over and the tick besides, and sits below anything the eye reads as a
-// tail. A settled number is a constant, never a settings key (the tuning
+// cover one loop pass plus the tick that retires it: the measured 11 plus
+// the 5 ms tick is 16, and 20 covers that with air. THE NUMBER IS HIS PICK
+// FOR FEEL (architect 2026-10-01, from his glass pass of the first 25 ms
+// hold: "pretty sure you could bring that down to 20 … it would feel more
+// responsive, at almost zero cost") — the 25 it replaced covered the 11
+// twice over, and 20 sits further below anything the eye reads as a tail
+// while still covering the pass and the tick. A settled number is a constant, never a settings key (the tuning
 // rule, at gui_input.h's hold-delay block — which this is not one of: that
 // delay is a hand resting until a held meaning, this a paint's tail). It
 // rides NO SCALE: a duration is not a length.
-inline constexpr int64_t kMenuPillHoldMs = 25;
+inline constexpr int64_t kMenuPillHoldMs = 20;
 
 enum class HoverFadeKind : uint8_t { SnapIn, Reversing, Holding };
 

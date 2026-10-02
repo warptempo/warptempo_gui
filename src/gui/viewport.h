@@ -642,9 +642,11 @@ struct Viewport {
     void invalidate_rect(const GuiRect& r);
     // THE NOTIFICATION STACK'S DAMAGE (2026-08-29): the stack's ROOM —
     // notification_stack_bound, notifications.h — the whole space between row
-    // 1 and the bottom row's lane that the cards may grow into, so one call
-    // both erases what stood and admits what comes, and no caller shapes a
-    // glyph to size the damage. It was three one-line cards' worth until
+    // 1 and the bottom row's lane that the cards may grow into, GROWN BY THE
+    // CARDS' DROP SHADOW since 2026-10-01 (notification_shadow_bound, the
+    // shadow's pixels being the card's), so one call both erases what stood,
+    // shadow and all, and admits what comes, and no caller shapes a glyph to
+    // size the damage. It was three one-line cards' worth until
     // 2026-08-30, when a card's text began to WRAP: a line count needs a
     // shaped run and no window arithmetic has one, so the damage owner takes
     // the room and the painter clips to it.
