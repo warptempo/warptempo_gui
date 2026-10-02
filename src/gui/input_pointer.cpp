@@ -9306,11 +9306,11 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // business.
     clear_redesign_button_hover();
     // AND THE OPEN EDGE CUTS EVERY ANCHOR'S FADE (architect 2026-10-01, the
-    // anchors' 100 ms hold — redesign_button_hover_fade_kind): the clear above
+    // anchors' 25 ms hold — redesign_button_hover_fade_kind): the clear above
     // stamps the pressed anchor a hold like any hover end, and a neighbour
     // left a moment before may still be running one, but while a menu stands
     // its anchor's pill is held by the painter's open term and no hold may
-    // paint under it or beside it — a hover switch inside the 100 ms would
+    // paint under it or beside it — a hover switch inside the 25 ms would
     // otherwise leave the old anchor's pill lit next to the new menu's
     // pill. No anchor can start another while the menu is up
     // (redesign_button_hover_zone refuses the roster), so this one cut covers

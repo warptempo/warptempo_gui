@@ -3306,16 +3306,19 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // timeout"). The anchor's pill is BINARY — the accent or nothing: full while
 // the anchor is hovered or its menu is open (paint_menu_row's open term), and
 // when the bit drops with no menu holding it the pill STAYS FULL for
-// kHoverFadeMs, then goes off at once; a return inside the hold keeps it full
-// with no visible event. The hold exists for the S Pen's two gaps: it sends
-// HOVER_EXIT a few ms before every tip-down and its lift precedes the next
-// hover sample by a few ms, each a pointer leave that clears the hover bits,
-// and the Android loop paints after every input drain, so a pill that snapped
-// off at the leave blinked to rest at the first touch and at the lift — the
-// 100 ms hold absorbs both. It is a hold rather than the icons' fade because a
-// fade-out on a menu bar read as odd on the glass (a fade lasted one pass the
-// same day): Breeze's QMenuBar registers no engine and snaps its pill off,
-// and this snaps 100 ms late. Paint only, as every fade is: the press, hit
+// kMenuPillHoldMs (render.h), then goes off at once; a return inside the hold
+// keeps it full with no visible event. The hold exists for the S Pen's two
+// gaps: its HOVER_EXIT comes with every tip-down and its lift precedes the
+// next hover sample, each a pointer leave that clears the hover bits, and the
+// Android loop paints after every input drain, so a pill that snapped off at
+// the leave blinked to rest at the first touch and at the lift. The two
+// reports carry one event timestamp; the gap is the loop's handling, one pass
+// at most (11 ms the largest measured, 2026-10-01), so the 25 ms hold absorbs
+// both — he ruled the 100 ms timeout first and the measurement settled the
+// number. It is a hold rather than the icons' fade because a fade-out on a
+// menu bar read as odd on the glass (a fade lasted one pass the same day):
+// Breeze's QMenuBar registers no engine and snaps its pill off, and this
+// snaps 25 ms late. Paint only, as every fade is: the press, hit
 // tests, the cursor and the tooltip keep reading the hover bits. A plain
 // value: no roster button is without a kind, so there is no "none" arm.
 inline constexpr HoverFadeKind
@@ -5908,7 +5911,7 @@ struct AppState {
         // goes dead under it — at the edge, or mid-tail by the tick, which
         // reads `enabled` before each advance, so a re-enable revives no old
         // tail — or stops being painted. Row 1's menu anchors stamp and tick
-        // as the tool buttons do on their own kind, the 100 ms hold
+        // as the tool buttons do on their own kind, the 25 ms hold
         // (architect 2026-10-01), save that a menu's OPEN EDGE cuts every
         // anchor's fade (toggle_dropdown): the open term holds the opened
         // anchor's pill while the menu stands, and no hold paints under it or

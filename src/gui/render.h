@@ -2442,14 +2442,17 @@ inline int tooltip_hover_slop_px() {
 //     WidgetStateData): both ways, reversing from the current time.
 //   Holding — no Breeze engine; the menu row's pill by his ruling (architect
 //     2026-10-01, the why at redesign_button_hover_fade_kind, app_state.h):
-//     BINARY, full the instant hover begins and full for the whole kHoverFadeMs
-//     after it ends, then off at once — a 100 ms timeout on the same edge and
-//     the same clock, never a blend. Its rise has no hidden climb (the edge
-//     sets the animation time to its end at once), so every drop holds the
-//     full 100 ms however short the hover was, and a return inside the hold
+//     BINARY, full the instant hover begins and full for the whole
+//     kMenuPillHoldMs (25 ms, measured — at the constant) after it ends, then
+//     off at once — a timeout on the same edge and the same clock, never a
+//     blend; the kind's span is its own (hover_fade_span), the 100 ms being
+//     the two Breeze kinds'. Its rise has no hidden climb (the edge sets the
+//     animation time to the span's end at once), so every drop holds the
+//     full 25 ms however short the hover was, and a return inside the hold
 //     is full with no visible event and re-arms the whole hold at the next
 //     drop. Its painted level is only ever 0 or full, so the tick repaints a
-//     held face exactly once, at the hold's end.
+//     held face exactly once, at the hold's end, and the digitized `level`
+//     is never read for it.
 //
 // THE STATE IS AN EDGE, NOT AN ACCUMULATOR: each fade keeps the clock and the
 // animation time at its last hover edge, so the level at any instant is
@@ -2473,32 +2476,57 @@ inline int tooltip_hover_slop_px() {
 // row's pill (QMenuBar); and, by his pick, every keyboard-focus decoration,
 // the tooltip's show and hide, and the window-activation recolour. THE PILL
 // DOES NOT FADE; IT HOLDS (architect 2026-10-01): Breeze snaps it off at the
-// hover's end and this snaps it off kHoverFadeMs late — the Holding kind
+// hover's end and this snaps it off kMenuPillHoldMs late — the Holding kind
 // above, the why at redesign_button_hover_fade_kind, app_state.h.
 inline constexpr int64_t kHoverFadeMs    = 100;
 inline constexpr int     kHoverFadeSteps = 10;
+
+// THE MENU PILL'S HOLD (architect 2026-10-01, measured on the glass the same
+// night) — 25 ms: the Holding kind's span, how long the menu anchors' pill
+// stays full after its hover drops before it goes off at once. MEASURED: on
+// the tablet's S Pen, twenty taps on the three anchors, the pen's HOVER_EXIT
+// and the tip's DOWN carry the same event timestamp, and so do the UP and the
+// HOVER_ENTER after it — the gap is not in the input stream but in the
+// HANDLING: the two reports land in the same loop pass (0–2 ms apart on the
+// GUI's clock) or in the next (9–11 ms), 11 ms the largest seen. The span is
+// counted on that handling clock (the edge's monotonic `now`), so it must
+// cover one loop pass plus the tick that retires it; 25 covers the 11 twice
+// over and the tick besides, and sits below anything the eye reads as a
+// tail. A settled number is a constant, never a settings key (the tuning
+// rule, at gui_input.h's hold-delay block — which this is not one of: that
+// delay is a hand resting until a held meaning, this a paint's tail). It
+// rides NO SCALE: a duration is not a length.
+inline constexpr int64_t kMenuPillHoldMs = 25;
 
 enum class HoverFadeKind : uint8_t { SnapIn, Reversing, Holding };
 
 struct HoverFade {
     int64_t       edge_ms = 0;      // the clock at the last hover edge
-    int64_t       from    = 0;      // animation time at that edge, [0, kHoverFadeMs]
+    int64_t       from    = 0;      // animation time at that edge, [0, the kind's span]
     HoverFadeKind kind    = HoverFadeKind::SnapIn;
     bool          rising  = false;  // the hover bit the last edge set
     bool          running = false;  // Breeze's isRunning: a level still moves
     int           level   = 0;      // the digitized level, [0, kHoverFadeSteps]
 };
 
-// The animation time at `now`, [0, kHoverFadeMs]: linear from the edge in the
-// edge's direction, and the direction's end once the animation has stopped.
-inline int64_t hover_fade_time(const HoverFade& f, int64_t now) {
-    if (!f.running) return f.rising ? kHoverFadeMs : 0;
-    const int64_t el = now > f.edge_ms ? now - f.edge_ms : 0;
-    const int64_t t  = f.rising ? f.from + el : f.from - el;
-    return t < 0 ? 0 : (t > kHoverFadeMs ? kHoverFadeMs : t);
+// A KIND'S SPAN, the length of its animation time: Breeze's kHoverFadeMs for
+// the two Breeze kinds, the measured kMenuPillHoldMs for the Holding kind.
+inline constexpr int64_t hover_fade_span(HoverFadeKind kind) {
+    return kind == HoverFadeKind::Holding ? kMenuPillHoldMs : kHoverFadeMs;
 }
 
-// Breeze's digitize, on whole milliseconds so the floor is exact.
+// The animation time at `now`, [0, the fade's span]: linear from the edge in
+// the edge's direction, and the direction's end once the animation has stopped.
+inline int64_t hover_fade_time(const HoverFade& f, int64_t now) {
+    const int64_t span = hover_fade_span(f.kind);
+    if (!f.running) return f.rising ? span : 0;
+    const int64_t el = now > f.edge_ms ? now - f.edge_ms : 0;
+    const int64_t t  = f.rising ? f.from + el : f.from - el;
+    return t < 0 ? 0 : (t > span ? span : t);
+}
+
+// Breeze's digitize, on whole milliseconds so the floor is exact — over the
+// Breeze span, read only for the two Breeze kinds (hover_fade_steps).
 inline int hover_fade_digitize(int64_t t) {
     return static_cast<int>(t * kHoverFadeSteps / kHoverFadeMs);
 }
@@ -2521,16 +2549,18 @@ inline int hover_fade_steps(const HoverFade& f) {
 inline bool hover_fade_edge(HoverFade& f, HoverFadeKind kind, bool hovered,
                             int64_t now) {
     if (f.rising == hovered && f.kind == kind) return f.running;
+    // The kind is seated first, so the time below is clamped to ITS span.
     // A Holding rise has no hidden climb: the hold's full length is armed at
-    // once, so the drop that follows always holds kHoverFadeMs.
+    // once, so the drop that follows always holds kMenuPillHoldMs.
+    f.kind = kind;
+    const int64_t span = hover_fade_span(kind);
     const int64_t t = kind == HoverFadeKind::Holding && hovered
-                          ? kHoverFadeMs
+                          ? span
                           : hover_fade_time(f, now);
-    f.kind    = kind;
     f.from    = t;
     f.edge_ms = now;
     f.rising  = hovered;
-    f.running = hovered ? f.from < kHoverFadeMs : f.from > 0;
+    f.running = hovered ? f.from < span : f.from > 0;
     f.level   = hover_fade_digitize(f.from);
     return f.running;
 }
@@ -2551,7 +2581,7 @@ inline bool hover_fade_advance(HoverFade& f, int64_t now) {
     const int before = hover_fade_steps(f);
     const int64_t t  = hover_fade_time(f, now);
     f.level   = hover_fade_digitize(t);
-    f.running = f.rising ? t < kHoverFadeMs : t > 0;
+    f.running = f.rising ? t < hover_fade_span(f.kind) : t > 0;
     return hover_fade_steps(f) != before;
 }
 

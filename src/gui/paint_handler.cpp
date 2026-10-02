@@ -209,7 +209,7 @@ namespace {
 // A ROSTER BUTTON'S PAINTED HOVER, [0, kHoverFadeSteps] (architect
 // 2026-09-27, render.h's HoverFade): full while the pointer is on it, then
 // its tail on the button's own kind (redesign_button_hover_fade_kind) — the
-// icons' SnapIn fade, the menu anchors' 100 ms hold (architect 2026-10-01) —
+// icons' SnapIn fade, the menu anchors' 25 ms hold (architect 2026-10-01) —
 // cut on a dead button, as Breeze paints no animation on a disabled one. The
 // icon row, the bottom row and the menu row's anchors read it (paint_menu_row
 // adds its open-menu term above it).
@@ -1318,7 +1318,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // row — the whole lane (the css float model — a flat button fills its
     // whole row, architect 2026-07-31). A PRESS PAINTS
     // NOTHING NEW — a click keeps the hover face and only pointer-out rests
-    // it, the pill held full for 100 ms past the leave since 2026-10-01
+    // it, the pill held full for 25 ms past the leave since 2026-10-01
     // (below, at the pill). The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
@@ -1445,17 +1445,17 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // with no pointer event to refresh it — row 2's outline carries the same
         // guard for the same frame.
         //
-        // THE PILL IS BINARY WITH A 100 MS HOLD (architect 2026-10-01, "still
+        // THE PILL IS BINARY WITH A 25 MS HOLD (architect 2026-10-01, "still
         // binary, but just a 100-millisecond timeout" —
         // redesign_button_hover_fade_kind holds the ruling and its why): the
         // accent or nothing — full while the anchor is hovered or its menu is
-        // open, full for kHoverFadeMs after the hover drops (the Holding
+        // open, full for kMenuPillHoldMs after the hover drops (the Holding
         // kind, read through the icons' own reader,
         // redesign_button_hover_steps, which is only ever 0 or full here),
         // then off at once; nothing on a dead anchor. No blend is painted:
-        // the pen's gaps are a few ms and the hold absorbs them, where a
-        // fade-out on a menu bar read as odd — Breeze's QMenuBar snaps, and
-        // this snaps 100 ms late. The open menu's anchor never shows a hold —
+        // the pen's gaps are one loop pass at most and the hold absorbs
+        // them, where a fade-out on a menu bar read as odd — Breeze's
+        // QMenuBar snaps, and this snaps 25 ms late. The open menu's anchor never shows a hold —
         // the open edge cuts every anchor's fade (toggle_dropdown) and the
         // open term holds it full.
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
