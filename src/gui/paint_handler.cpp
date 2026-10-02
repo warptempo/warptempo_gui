@@ -3848,8 +3848,9 @@ constexpr double kRulerMinMinorPitchPx = 12.0;
 //     four authored rows; a scaled pad of 2 had put it at row 10, five.
 //   50 % (8px sans, ascent 8, cap 5): pad 2 - 3 clamps to 0, cap top row 3 —
 //     the line's top at the lane's top is as high as a line seats.
-// The head's clearance beneath the labels is kRulerLaneHeightPx's arithmetic
-// (render.h).
+// The rule's one implementation is ruler_label_baseline_px below. The lane's
+// height under the labels — the head's clearance and the head — is
+// ruler_lane_h_px's arithmetic (render.h).
 constexpr double kRulerLabelCapTopPx   = 4.0;
 // How far a MAJOR tick rises above the marker lane. Minors rise none.
 constexpr double kRulerMajorRisePx     = 4.0;
@@ -3892,7 +3893,61 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
     return std::string(buf);
 }
 
+// THE LABELS' BASELINE, in device rows under the ruler lane's top: the
+// derived pad of kRulerLabelCapTopPx's rule, then line_baseline's ascent. ONE
+// SEAT FOR ITS TWO READERS, the painter (paint_ruler_row) and the lane's own
+// height (ruler_lane_h_px), each handing in the label face at its painted
+// size, so the digits and the head's clearance beneath them are one
+// measurement and never two.
+int ruler_label_baseline_px(cairo_scaled_font_t* font) {
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(font, &fe);
+    const int ascent_to_cap =
+        static_cast<int>(std::ceil(fe.ascent)) -
+        static_cast<int>(std::nearbyint(cap_height_px(font)));
+    const int pad =
+        std::max(0, scaled_px(kRulerLabelCapTopPx) - ascent_to_cap);
+    return static_cast<int>(line_baseline(font, static_cast<double>(pad)));
+}
+
 } // namespace
+
+// THE RULER LANE'S DERIVED HEIGHT (the rule and its three scales at the
+// declaration, render.h): the labels' baseline, the one authored row of
+// ground (floored at one device row, so 50 % keeps it), and the head. It is
+// read at LAYOUT, outside any paint, so it measures the label face on its own
+// scratch context through the same road the painter takes —
+// gui_select_font_face, then redesign_font_size_px — on an image surface like
+// both backends' paint targets, whose font options (hint metrics on) are what
+// make the painter's extents whole pixels; the painter applies no transform to
+// the text, so the two scaled fonts are one. MEMOIZED ON THE SCALE: the lane
+// table asks this on every geometry query, and the answer moves only with
+// gui_scale (its two application points, set_gui_scale_percent), so the
+// percent is the key and a scale commit re-measures on the next query. The
+// faces are installed at the head of GuiPlatform::init on both backends,
+// before the first layout; the assert is the tripwire for a measurement
+// taken on cairo's default face, which would be cached. GUI thread only, like
+// every lane accessor.
+int ruler_lane_h_px() {
+    static int cached_percent = -1;
+    static int cached_h       = 0;
+    const int percent = gui_scale_percent();
+    if (percent == cached_percent) return cached_h;
+    cairo_surface_t* surface =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* cr = cairo_create(surface);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
+    assert(cairo_font_face_get_type(cairo_get_font_face(cr)) ==
+           CAIRO_FONT_TYPE_FT);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    const int baseline = ruler_label_baseline_px(cairo_get_scaled_font(cr));
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    cached_h = baseline + scaled_px(kRulerHeadGroundPx, 1) +
+               playhead_head_h_px();
+    cached_percent = percent;
+    return cached_h;
+}
 
 void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const GuiRect lane   = top_ruler_row_area(app);
@@ -3949,20 +4004,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
     // THE LABEL IS A LINE, not a box: the seat is line_baseline's ascent off
     // a top pad DERIVED so the cap top lands kRulerLabelCapTopPx authored rows
-    // under the lane's top (the rule and its three scales at that constant).
-    // THE SEAT IS ANCHORED TO THE LANE'S TOP, never centred in it or hung from
-    // its bottom: the lane's height below the labels is the head's clearance
-    // (kRulerLaneHeightPx, render.h, where the gap's arithmetic lives), and
-    // growing it moves no digit.
-    cairo_font_extents_t label_fe;
-    cairo_scaled_font_extents(font, &label_fe);
-    const int label_ascent_to_cap =
-        static_cast<int>(std::ceil(label_fe.ascent)) -
-        static_cast<int>(std::nearbyint(cap_height_px(font)));
-    const int label_pad =
-        std::max(0, scaled_px(kRulerLabelCapTopPx) - label_ascent_to_cap);
+    // under the lane's top (the rule and its three scales at that constant),
+    // through the one seat the lane's height also reads
+    // (ruler_label_baseline_px). THE SEAT IS ANCHORED TO THE LANE'S TOP, never
+    // centred in it or hung from its bottom: the lane's height below the
+    // labels is the head's clearance and the head (ruler_lane_h_px, render.h,
+    // where the gap's arithmetic lives).
     const double baseline =
-        line_baseline(font, static_cast<double>(lane.y + label_pad));
+        static_cast<double>(lane.y + ruler_label_baseline_px(font));
 
     // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
@@ -4066,17 +4115,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // row, so the head's last pixel touches the marker lane's first and head
     // and flags never share a pixel: both stay whole at all times (architect
     // 2026-09-23; it sat on the marker lane's bottom rows from 2026-08-01,
-    // under the flags). THE HEAD CLEARS THE TIMESTAMPS TOO: the ruler lane
-    // keeps rows of ground beneath its top-anchored labels so one pixel of
-    // ground stands between a digit's lowest ink and the head's top row at
-    // 100% (the arithmetic, for 100%, 200% and 50%, at kRulerLaneHeightPx,
-    // render.h).
+    // under the flags). THE HEAD CLEARS THE TIMESTAMPS TOO: the ruler lane's
+    // height is derived so one authored row of ground stands between a
+    // digit's lowest ink and the head's top row at every scale (the
+    // arithmetic, for 100%, 200% and 50%, at ruler_lane_h_px, render.h).
     //
     // SLIGHTLY TRANSLUCENT, THE ONE RULED EXCEPTION TO THE OPAQUE PALETTE
     // (architect 2026-09-23: "the timestamps are just a rough ballpark; the
     // exact time is at the bottom left"). The head composites at
     // kPlayheadHeadAlpha over whatever this painter already laid down in its
-    // band. With the one-pixel gap under the labels (above), the alpha now
+    // band. With the one-row gap under the labels (above), the alpha now
     // shows through a major tick's rise alone. That compositing is also what
     // a tick crossing the head
     // needs, so the crossing has no constant of its own any more: the tick
@@ -4129,16 +4177,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         // centred on the stem's own columns (playhead_head_half_px, render.h).
         const int    t     = waveform_line_px();
         if (col + reach + t - 1 >= 0 && col - reach <= wave_w - 1) {
-            // THE ROW COUNT NEEDS NO FLOOR: 12 authored rows reach 6 at the
-            // schema's own bottom (gui_scale 50), and only a factor below 1/24
-            // could empty the loop — outside the vocabulary entirely. The
-            // per-row HALF-WIDTH is where the floor lives (render.h).
-            const int    rows = static_cast<int>(std::nearbyint(
-                                    kPlayheadHeadHeightPx * s));
+            // THE ROW COUNT is the head's one height accessor, which the
+            // ruler lane's height also reads (playhead_head_h_px, render.h).
+            const int    rows = playhead_head_h_px();
             // THE BAND IS THE RULER LANE'S BOTTOM `rows`, its bottom edge the
             // marker lane's top (the two lanes abut, strip_row_rect): at 100%
-            // the ruler's last 12 of its 29 rows. The ruler is always taller
-            // than the head at every scale, so the band never leaves the lane.
+            // the ruler's last 12 of its 29 rows. The lane's height is derived
+            // with the head as its last term (ruler_lane_h_px), so the band
+            // never leaves the lane.
             const int    head_bottom = marker.y;
             const int    head_top    = head_bottom - rows;
             // THE HOLD LAMP (architect 2026-09-24): the head is white while

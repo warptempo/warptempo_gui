@@ -204,30 +204,38 @@ namespace {
 // rests gap 1 at 0 and puts the remainder in gap 2, top-heavy and harmless (the
 // tablet below exactly).
 //
-// THE STACKS BELOW ARE AT THE DEFAULT max_waveform_height OF 500 (both
-// templates'; a device carrying another value moves only W and the gaps), THE
-// ONE RECORD, re-derived from the lane table 2026-10-02 rather than adjusted.
-// AT 100% the top lanes are 135 = menu 30 + icon 46 + trim 10 + ruler 29 +
-// marker 20, of which 76 is the two toolbar rows above the gap and 59 the
-// block above the waveform; the BOTTOM STRIP is 47, the bottom row's 46
-// content and its 1px border-top. (On a window with room every authored pixel
-// the top lanes gain or lose goes into or out of GAP 1, the waveform's span
-// holding still; on a short window it moves the waveform's height instead.)
-//   1920x1080 AT 100%, THE LAPTOP: leftover 898 -> waveform CLAMPED at 500,
-//     gap 1 = 155, gap 2 = 243
+// THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
+// 2026-10-02 rather than adjusted, at the templates' default
+// max_waveform_height OF 500 and at 0, NO MAXIMUM, which both devices run (a
+// device carrying another value moves only W and the gaps). AT 100% the top
+// lanes are 135 = menu 30 + icon 46 + trim 10 + ruler 29 + marker 20, of which
+// 76 is the two toolbar rows above the gap and 59 the block above the
+// waveform; the BOTTOM STRIP is 47, the bottom row's 46 content and its 1px
+// border-top. (On a window with room every authored pixel the top lanes gain
+// or lose goes into or out of GAP 1, the waveform's span holding still; on a
+// short window, and on every window at no maximum, it moves the waveform's
+// height instead.)
+//   1920x1080 AT 100%, THE LAPTOP: leftover 898.
+//     At 500: waveform CLAMPED at 500, gap 1 = 155, gap 2 = 243
 //     — 30 menu / 46 icon / 155 blank / 59 block / 500 waveform / 243 blank
 //     / 47 row, the waveform spanning y 290..790 about the window's midline
 //     540 (the clamp fixes its height and the midpoint rule its centre, so
 //     gap 1 absorbs every authored pixel the lanes above it gain or lose).
+//     At 0: waveform UNCLAMPED at 898, both gaps 0 (the midpoint rule would
+//     want 540 - 135 - 449 = -44) — 30 / 46 / 0 / 59 / 898 / 0 / 47.
 //   2304x1440 AT gui_scale 200, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
-//   MainActivity.java's head): the lanes are 60 menu + 92 icon + 20 trim + 58
-//   ruler + 40 marker = 270 above and 94 below (92 + a 2px border), leftover
-//   1076 -> waveform CLAMPED at 1000 (the scaled 500), gap 1 = 0 (the
-//   midpoint rule would want 720 - 270 - 500 = -50), gap 2 = 76
-//     — 60 / 92 / 0 / 118 / 1000 / 76 / 94.
+//   MainActivity.java's head): the lanes are 60 menu + 92 icon + 20 trim + 56
+//   ruler + 40 marker = 268 above (the ruler's height derived from its label
+//   face, ruler_lane_h_px at render.h) and 94 below (92 + a 2px border),
+//   leftover 1078.
+//     At 500: waveform CLAMPED at 1000 (the scaled 500), gap 1 = 0 (the
+//     midpoint rule would want 720 - 268 - 500 = -48), gap 2 = 78
+//     — 60 / 92 / 0 / 116 / 1000 / 78 / 94.
+//     At 0: waveform UNCLAMPED at 1078, both gaps 0 (the rule would want
+//     720 - 268 - 539 = -87) — 60 / 92 / 0 / 116 / 1078 / 0 / 94.
 //   1024x600 AT 100%, A SHORT WINDOW (kept as the worked case the floors exist
-//   for; no host runs this geometry):
+//   for; no host runs this geometry), the same at either value:
 //     leftover 418 -> waveform UNCLAMPED at 418, both gaps 0
 //     — 30 / 46 / 0 / 59 / 418 / 0 / 47. Centering is infeasible there (the
 //     midpoint rule would want gap 1 = 300 - 135 - 209 = -44), so the
@@ -283,10 +291,13 @@ static void clamp_dims(int& w, int& h) {
 
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
-// LANE IN BOTH STRIPS is an authored crop-measured constant on the GUI-SCALE
-// axis (menu_row_h_px(), icon_row_h_px(), row 5's trio and bottom_row_h_px());
-// no lane sizes from a font metric. The two-axes ruling is at those accessors'
-// declarations in render.h.
+// LANE IN BOTH STRIPS but one is an authored crop-measured constant on the
+// GUI-SCALE axis (menu_row_h_px(), icon_row_h_px(), the trim and marker lanes
+// and bottom_row_h_px()); THE RULER LANE is the one lane sized from a font
+// metric, its height derived from the label face's seat plus the playhead
+// head's clearance and rows (architect 2026-10-02; ruler_lane_h_px, render.h),
+// a face that itself rides gui_scale. The lanes' rulings are at those
+// accessors' declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The MENU lane is its 30 whole (the
@@ -308,8 +319,9 @@ int top_lane_height(int lane) {
         case 0: return menu_row_h_px();          // menu row (proportional text)
         case 1: return icon_row_h_px();          // icon row (no border)
         // ROW 5's THREE (2026-08-01): the trim BAR, the ruler and ONE marker
-        // lane carrying kdenlive's text-on-flag boxes, each sized on the
-        // gui_scale axis from its own crop-measured constant.
+        // lane carrying kdenlive's text-on-flag boxes — the trim and marker
+        // lanes sized on the gui_scale axis from their own crop-measured
+        // constants, the ruler derived from its label face (render.h).
         case 2: return trim_lane_h_px();         // trim bar + handles
         case 3: return ruler_lane_h_px();        // timestamps / ticks / nav band
         // Flags and the playhead's column run; bottom edge = waveform top.

@@ -586,8 +586,8 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // when the head moved up onto the ruler lane's bottom rows): it composites at
 // kPlayheadHeadAlpha over the ruler's timestamps and ticks, "slightly
 // translucent" in his words, so the digits read through it. The ruler lane
-// keeps one pixel of ground between the labels and the head
-// (kRulerLaneHeightPx), so the head never reaches the digits and the alpha
+// keeps one authored row of ground between the labels and the head at every
+// scale (ruler_lane_h_px), so the head never reaches the digits and the alpha
 // shows through a major tick's rise alone. The value is his to tune by eye;
 // the one other alpha in the tree is the cards' drop shadow
 // (kNotificationShadowAlpha, 2026-10-01).
@@ -1876,10 +1876,11 @@ inline int scrub_handle_box_px() {
 // top, with no gap. These replace the four legacy lanes (trim chip / marker
 // text / flag / triangle) and, like every redesigned row, ride
 // gui_scale_factor() rather than the monospace font's axis. (The trim lane
-// ADDITIONALLY scales by its own factor below, and the ruler lane is
-// kRulerLaneHeightPx's 29 rows against the crop's 28 — the playhead head's
-// clearance beneath the labels, below — so the crop's y-map holds for the
-// marker lane's own 20 rows and not for the lanes' offsets.)
+// ADDITIONALLY scales by its own factor below, and the ruler lane's height is
+// DERIVED from its label face and the playhead head beneath the labels —
+// ruler_lane_h_px, below: 29 rows at 100 % against the crop's 28 — so the
+// crop's y-map holds for the marker lane's own 20 rows and not for the lanes'
+// offsets.)
 //
 // THE TRIM BAR'S OWN SCALE FACTOR — a RULED RETUNABLE, back at 100 (architect
 // 2026-08-12, the seventh glass ruling). The 150 experiment lived one commit,
@@ -1911,37 +1912,49 @@ inline constexpr int kTrimBarScalePercent = 100;
 // alone — so the border row is part of the lane for the pointer exactly as it
 // is for paint, and no second, shorter rect had to be invented for it.
 inline constexpr int kTrimLaneHeightPx   = 10;
-// 29 SINCE 2026-10-02 (architect, judging the Y1 mock on the tablet: "tighten
-// up the timestamp lane"): the labels are anchored to the lane's TOP, their
-// cap top 4 authored rows under it at every scale (paint_ruler_row:
-// line_baseline off lane.y plus the pad derived at kRulerLabelCapTopPx), and
-// the rows beneath them are the PLAYHEAD HEAD'S CLEARANCE — the head sits
-// tip-down on the lane's bottom rows and stands ONE PIXEL OF EMPTY GROUND
-// clear of the digits' lowest ink at 100% (architect 2026-09-23, his eyeball
-// of the head's first variant, which overlapped the digits). THE ARITHMETIC
-// AT 100%, measured through the product's own road (cairo-ft on
-// fonts/Roboto-Regular.ttf, SLIGHT, the 16px sans: ascent 15, the digits',
-// colon's and point's ink the 12-row cap band, no descenders — the metrics
-// table at gui_font_bundled.cpp): pad 1, baseline = 1 + 15 = row 16, so the
-// labels' ink runs rows 4..15; the head's top row is 29 - 12 = 17; ROW 16 IS
-// THE ONE PIXEL OF EMPTY GROUND between them, the ruling's gap. At 200% (the
-// tablet; lane 58, the 32px face's ascent 30 and its 22-row cap, so pad 0)
-// the baseline is 0 + 30 = 30, ink rows 8..29 and a head from 58 - 24 = 34:
-// FOUR rows of ground, two authored — the cap top held at 4 authored rows
-// (architect 2026-10-02) while the lane kept its 29, so the ground the labels
-// gave up went under them. At 50% (lane 14 off 14.5's tie to even, the 8px
-// face's ascent 8 and 5-row ink, pad 0 by the clamp) the baseline is
-// 0 + 8 = 8, ink rows 3..7 and a head from 14 - 6 = 8: none, touching. The
-// major ticks' rise above the marker lane is unchanged.
-inline constexpr int kRulerLaneHeightPx  = 29;
+// THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
+// SCALED (architect 2026-10-02, on the tablet: the gap between the trim bar
+// and the timestamps closes by one authored pixel, two device pixels at 200 %,
+// and that pixel goes to the waveform, the head's clearance holding at every
+// scale). The lane stacks, from its top:
+//
+//     lane = pad + ceil(ascent) + kRulerHeadGroundPx rows + the head's rows
+//
+// — the labels' line seated so their CAP TOP lands 4 authored rows under the
+// lane's top (the pad, kRulerLabelCapTopPx's rule, paint_handler.cpp), the
+// face's ascent to the baseline (line_baseline), ONE AUTHORED ROW OF EMPTY
+// GROUND (kRulerHeadGroundPx below), and the PLAYHEAD HEAD, which sits
+// tip-down on the lane's bottom rows (playhead_head_h_px). THE HEAD STANDS ONE
+// AUTHORED ROW CLEAR OF THE DIGITS' LOWEST INK AT EVERY SCALE (architect
+// 2026-09-23, his eyeball of the head's first variant, which overlapped the
+// digits; held at every scale 2026-10-02). The digits', colon's and point's
+// ink is the face's cap band with no descenders, so the lowest ink row is the
+// baseline's own row minus one and the ground starts at the baseline. ONE
+// HELPER seats the labels for both readers — the painter's baseline and this
+// height (ruler_label_baseline_px, paint_handler.cpp) — so the two cannot
+// disagree, and the face's metrics are read off the product's own road (the
+// Sans face at redesign_font_size_px through gui_select_font_face, the table
+// at gui_font_bundled.cpp's head), the one measurement both sites take.
+// Measured through cairo-ft on fonts/Roboto-Regular.ttf, SLIGHT:
+//   100 % (16px, ascent 15, cap 12): pad 1, baseline row 16, ink rows 4..15,
+//     ground row 16, head from row 17: lane 1 + 15 + 1 + 12 = 29.
+//   200 % (32px, ascent 30, cap 22; the tablet): pad 0, baseline row 30, ink
+//     rows 8..29, ground rows 30..31, head from row 32: lane
+//     0 + 30 + 2 + 24 = 56.
+//   50 % (8px, ascent 8, cap 5): pad 0, baseline row 8, ink rows 3..7, ground
+//     row 8 (the one authored row floored at one device row), head from
+//     row 9: lane 0 + 8 + 1 + 6 = 15.
+// The major ticks' rise above the marker lane is the painter's own and does
+// not enter the lane.
+inline constexpr int kRulerHeadGroundPx  = 1;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
     return scaled_px(
         kTrimLaneHeightPx * (kTrimBarScalePercent / 100.0), 3);
 }
-inline int ruler_lane_h_px() {
-    return scaled_px(kRulerLaneHeightPx, 5);
-}
+// Defined in paint_handler.cpp beside the label seat it reads; the rule is
+// the block above.
+int ruler_lane_h_px();
 inline int marker_lane_h_px() {
     return scaled_px(kMarkerLaneHeightPx, 5);
 }
@@ -2468,6 +2481,16 @@ inline constexpr int kPlayheadHeadHeightPx = 12;
 inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
     9, 8, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1
 };
+// THE HEAD'S HEIGHT IN DEVICE ROWS, the ONE expression of it for its two
+// readers: the painter's row loop (paint_ruler_row) and the ruler lane's
+// derived height, whose bottom rows the head stands on (ruler_lane_h_px).
+// NO FLOOR: 12 authored rows reach 6 at the schema's own bottom (gui_scale
+// 50), and only a factor below 1/24 could empty the painter's loop — outside
+// the vocabulary entirely. The per-row HALF-WIDTH is where the floor lives
+// (playhead_head_half_px below).
+inline int playhead_head_h_px() {
+    return scaled_px(kPlayheadHeadHeightPx);
+}
 // ONE DEVICE ROW'S HALF-WIDTH, the ONE expression the head's painter
 // (paint_ruler_row, its one reader) fills its rows with. A device row picks
 // its SOURCE row by the inverse scale (so the transcribed shape survives
