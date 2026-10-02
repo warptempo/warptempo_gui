@@ -190,8 +190,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     }
 }
 
-// -- The redesigned rows: paint_menu_row / paint_tab_row / paint_icon_row
-// -- (paint_toolbar_row died with row 2 at the 2026-08-12 relayout) ----------
+// -- The redesigned rows: paint_menu_row / paint_icon_row ------------------
 
 namespace {
 
@@ -243,10 +242,11 @@ GuiColor accent_for_focus(const AppState& app) {
 //
 // THE CSS FLOAT MODEL is the ruled layout vocabulary (architect 2026-07-31): a
 // flat button FILLS ITS WHOLE ROW and no margin or inset exists unless the
-// architect states one. The hover pill therefore spans the row's full CONTENT
-// height — kMenuRowHeightPx, 36 since 2026-10-01, the label seated in the
-// lower kMenuRowTextBoxPx (render.h carries the ruling) — and the icon row's
-// ground begins on the next pixel row.
+// architect states one. The hover pill therefore spans the full height of the
+// button's row — since 2026-10-01 the lower kMenuRowTextBoxPx of the 36-row
+// lane (kMenuRowHeightPx), the 30-row lane as it was, with the 6 rows above
+// it plain ground (render.h carries the ruling) — and the icon row's ground
+// begins on the next pixel row.
 constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
 constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 
@@ -1313,9 +1313,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // history_mode_disables_button's and nothing here restates it) (below, at the
     // pill):
     // at rest the label paints bare on the row ground;
-    // hovered, a filled accent pill sits under it, FLUSH with the row's CONTENT
-    // height (the css float model — a flat button fills its whole row, architect
-    // 2026-07-31). A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
+    // hovered, a filled accent pill sits under it, FLUSH with the button's
+    // row — the text box at the lane's foot (the css float model — a flat
+    // button fills its whole row, architect 2026-07-31). A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
     // only pointer-out rests it. The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
@@ -1336,16 +1336,16 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 
     // THE LANE IS ITS CONTENT (render.h's menu_row_* pair): the icon row's
     // ground begins on the next pixel row with no margin, border or line
-    // between — kdenlive's own menubar-over-toolbar seam. THE PILL AND THE
-    // HIT RECT ARE THE WHOLE 36-ROW LANE, so the pill's foot, the lane's foot
-    // and the icon row's first pixel are the same row — where the dropdown
-    // hangs. THE TEXT SITS IN THE LOWER 30 (architect 2026-10-01, asymmetric
-    // by construction — render.h's kMenuRowHeightPx carries the ruling and
-    // its why): every label on this row, the anchors' and the legend's, is
-    // cap-centred in the text box at the lane's FOOT (`text_y` / `text_h`),
-    // so the cap band keeps the seat the 30-row lane gave it and the extra
-    // rows are air above it.
-    const int content_h = row.h;
+    // between — kdenlive's own menubar-over-toolbar seam. THE BUTTONS ARE THE
+    // LOWER 30 (architect 2026-10-01, asymmetric by construction — render.h's
+    // kMenuRowHeightPx carries the ruling and its why): the text box at the
+    // lane's FOOT (`text_y` / `text_h`) is each anchor's pill AND its
+    // published hit rect, the 30-row lane's pill exactly, and every label on
+    // this row, the anchors' and the legend's, is cap-centred in it. The top
+    // 6 rows (at 100%) are plain ground with nothing on them, and a press
+    // there hits no anchor (redesign_button_hit reads the published rect).
+    // The pill's foot, the lane's foot and the icon row's first pixel are the
+    // same row — where the dropdown hangs.
     const int text_h    = menu_row_text_box_h_px();
     const int text_y    = row.y + row.h - text_h;
 
@@ -1398,7 +1398,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         AppState::RedesignButtonFace& face = publish_button_face(
             cr, app, audio, playback, target_render,
             def.id,
-            GuiRect{x, row.y, btn_w, content_h});
+            GuiRect{x, text_y, btn_w, text_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
@@ -1454,9 +1454,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         if (pill) {
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                                  kRedesignAccent.b);
-            redesign_rounded_rect_path(cr, x, row.y,
+            redesign_rounded_rect_path(cr, x, text_y,
                                        static_cast<double>(btn_w),
-                                       static_cast<double>(content_h), rad);
+                                       static_cast<double>(text_h), rad);
             cairo_fill(cr);
         }
 
@@ -1469,11 +1469,11 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // it there, since a dead button never wears the pill.
         const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
         cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
-        // THE LABEL CENTERS IN THE TEXT BOX AT THE LANE'S FOOT — the 30 rows
-        // the crop's File sits centred in, 9 rows of pill above its cap band
-        // and 9 below, which is where cap-centring puts ours
+        // THE LABEL CENTERS IN THE TEXT BOX AT THE LANE'S FOOT — the pill's
+        // own 30 rows, the crop's File centred in them, 9 rows of pill above
+        // its cap band and 9 below, which is where cap-centring puts ours
         // (redesign_baseline); the lane's 6 extra rows (at 100%) are air
-        // above it, the asymmetry render.h's block records.
+        // above the pill, the asymmetry render.h's block records.
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad),
             redesign_baseline(font, static_cast<double>(text_y),
@@ -1486,8 +1486,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // NOT A BUTTON — no rect is published, nothing hovers it, no tooltip
     // names it, and a press on it is the row's consumed nothing. Its text is
     // AppState::menu_legend's, composed by compose_menu_legend (gui_battery.h,
-    // which owns the glyph rule) and refreshed by main.cpp's tick, whose
-    // damage is this row. THE RIGHT EDGE IS THE ICON ROW'S RIGHT CONTENT
+    // which owns the glyph rule), seeded before the session's first paint and
+    // refreshed by main.cpp's tick, whose damage is this row
+    // (refresh_menu_legend). THE RIGHT EDGE IS THE ICON ROW'S RIGHT CONTENT
     // MARGIN — its 8px lead-out, icon_row_pad_x, read rather than restated —
     // so the legend ends where the icon row's content does. The menu's own
     // sans at the redesign size through the shaping
@@ -2567,16 +2568,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // and Copy Value up to the icon row, Jump to Defining Marker in).
     // At 100% on the laptop's 1920 it starts at 1920 − 8 − 603 =
     // 1309, the state cell's clip bound one pad short at 1301, and the clock
-    // cell — thirteen monospace cells since 2026-10-01, the tab letter's
-    // `A | ` and the nine of `00:00.000`, 8.8px each at 11pt — spans
-    // 8..~123, leaving the state cell ~1178px. On the tablet at 200% (2304
-    // device px, 1152 logical) the block starts at logical 1152 − 8 − 603 =
-    // 541, the clip bound at 533 and the clock ends at ~123, leaving ~410
-    // logical px. THE ROW CARRIES NO COLLISION RULE —
+    // cell — fourteen monospace cells since 2026-10-01, the nine of
+    // `00:00.000`, the dirty mark's reserved one and the tab letter's ` | A`,
+    // 8.8px each at 11pt — spans 8..~132, leaving the state cell ~1169px. On
+    // the tablet at 200% (2304 device px, 1152 logical) the block starts at
+    // logical 1152 − 8 − 603 = 541, the clip bound at 533 and the clock ends
+    // at ~132, leaving ~401 logical px. THE ROW CARRIES NO COLLISION RULE —
     // none of the redesign does — and the crop-at-the-floor allowance recorded
     // at kMinWindowWidthPx covers a narrow window or a scale driven toward the
     // 350 ceiling: the block reaches the clock's right edge once the logical
-    // width falls below about 734 (123 + 603 + 8), which is above the 640
+    // width falls below about 743 (132 + 603 + 8), which is above the 640
     // floor — a window narrowed toward that floor paints the block over the
     // clock's cell (the tablet's 200 % leaves 1152, its 245 % icon-row fit
     // ceiling 940). THE STATE CELL CANNOT PUSH ANYTHING: it CLIPS at the
@@ -2638,21 +2639,28 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
         const TransportClockMetrics& clock_metrics =
             clock_cell_metrics(font, size_px);
-        // THE ACTIVE TAB'S LETTER LEADS THE CELL (architect 2026-10-01, the
-        // tab row deleted as "a waste of space"): `A | 00:45.115` — the
-        // letter, a space, the LITERAL pipe, a space, then the timestamp.
-        // Monospace, so the prefix is four cells, the letter one of them, and
-        // its advance is measured off the live prefix (the letter changes only
-        // on a tab switch, whose clock damage covers the whole cell). THE
-        // RESERVED CELL IS THE PREFIX AND THE DIGITS' SPECIMEN TOGETHER, so the
-        // per-tick damage box below repaints the letter with the digits and
-        // the digits never walk; the specimen itself stays the timestamp's
-        // alone, which is what the render player's modal clock reads.
-        const std::string tab_prefix =
-            std::string(1, app.active_tab_view) + " | ";
-        const double prefix_w =
-            text_shape::shape_text_run(font, tab_prefix).width_px;
-        const double cell_w = prefix_w + clock_metrics.cell_w;
+        // THE ACTIVE TAB'S LETTER CLOSES THE CELL (architect 2026-10-01, the
+        // tab row deleted as "a waste of space"; "timestamp, space, pipe,
+        // space, tab"): `00:45.115 | A` — the timestamp, the dirty mark glued
+        // to it when the tab is dirty (`00:45.115* | A`, the block below),
+        // then a space, the LITERAL pipe, a space and the letter. The
+        // timestamp leads, so the digits paint from the cell's origin and
+        // never walk. THE RESERVED CELL IS THE DIGITS' SPECIMEN, THE MARK AND
+        // THE SUFFIX TOGETHER — the mark's cell reserved whether or not it is
+        // painted, so the letter lies inside the cell in both states and the
+        // per-tick damage box below repaints it with the digits; the specimen
+        // itself stays the timestamp's alone, which is what the render
+        // player's modal clock reads. Monospace, so the mark is one cell and
+        // the suffix four, the letter one of them; both advances are measured
+        // off the live strings (the letter changes only on a tab switch, whose
+        // clock damage covers the whole cell).
+        const std::string tab_suffix =
+            std::string(" | ") + app.active_tab_view;
+        const double mark_w =
+            text_shape::shape_text_run(font, "*").width_px;
+        const double suffix_w =
+            text_shape::shape_text_run(font, tab_suffix).width_px;
+        const double cell_w = clock_metrics.cell_w + mark_w + suffix_w;
         // THE CELL STARTS AT THE LANE'S LEFT PAD (architect 2026-09-29, the
         // transport having moved to the row's right end). THE AIR IS A MARGIN
         // MIRROR: the row's last button keeps one lane pad from the lane's
@@ -2711,8 +2719,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
         // THE LOWER LEFT IS ONE MONOSPACE RUN (architect 2026-08-31): the
         // clock, a LITERAL pipe, and the state text — `00:00.100 | Updating...`
-        // is his own example, `A | 00:00.100 | Updating...` since the tab
-        // letter joined the cell's head (2026-10-01) — painted as ONE string
+        // is his own example, `00:00.100 | A | Updating...` since the tab
+        // letter joined the clock's run (2026-10-01) — painted as ONE string
         // in the clock's own face,
         // at the clock's size, on the clock's baseline, from the clock's own
         // origin. There is no second cell and no second face here any more.
@@ -2728,7 +2736,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // IT IS CLIPPED, NEVER ELLIPSISED — a cairo rectangle clip, the folder
         // overlay rows' precedent — at the right block's own left edge less
         // one lane pad, so a long line is cut rather than colliding with the
-        // marker verbs. The tablet's cell (~410 logical px at 200 %, the
+        // marker verbs. The tablet's cell (~400 logical px at 200 %, the
         // numbers above) is narrower than the longest walk line, so the
         // composer puts the segment that must survive the cut ahead of the
         // one that may lose it — the GitHub word before the scale
@@ -2757,7 +2765,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //
         // AND THE DIRTY MARK IS THE CLOCK'S SUFFIX (architect 2026-09-09):
         // `*` immediately after the digits while the tab carries unsaved work,
-        // so the row reads `A | 00:00.100* | Rendering...`. IT CLOSES UP ON THE
+        // so the row reads `00:00.100* | A | Rendering...`. IT CLOSES UP ON THE
         // CLOCK (architect 2026-09-10, "remove the space between the timestamp
         // and the dirty dot"): the mark belongs to the timestamp, and a space
         // read as a separator between two things rather than as one thing
@@ -2779,11 +2787,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // invalidates this lane when and only when app.dirty moves, because
         // that body runs after every command and an unconditional invalidate
         // would repaint the row on every keypress for a mark that did not move.
-        // The reserved clock CELL does not grow for the suffix — it is the
-        // widest-digit specimen's advance and stays the per-second tick's
-        // damage box, which repaints digits the suffix never changes; the
-        // suffix's own pixels move only on a transition, and that damages the
-        // lane whole (clock_invalidate_rect's record, main.cpp).
+        // The reserved clock CELL holds the mark's one cell whether or not it
+        // is painted (the cell's head above), so the per-second tick's damage
+        // box covers the mark and the tab letter after it in both states; the
+        // mark's pixels and the letter's seat move only on a transition, and
+        // that damages the lane whole (clock_invalidate_rect's record,
+        // main.cpp).
         // THE ROW YIELDS WHOLE TO A MODAL,
         // so this text is hidden while a prompt, a dialog editor, the render
         // player or the picker stands
@@ -2804,11 +2813,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             state = app.queue_progress_text;
         }
         const double x0 = static_cast<double>(cell_x);
-        // THE CLOCK, UNCLIPPED — the tab letter's prefix ahead of the digits
-        // and the dirty mark inside its run; the run's advance is where the
-        // state begins.
-        std::string clock = tab_prefix + format_timestamp(seconds);
+        // THE CLOCK, UNCLIPPED — the digits, the dirty mark glued to them,
+        // then the tab letter's suffix, all one run; the run's advance is
+        // where the state begins.
+        std::string clock = format_timestamp(seconds);
         if (app.dirty) clock += "*";
+        clock += tab_suffix;
         const double clock_w =
             show_row_text(cr, font, x0, baseline, clock, kRedesignLabel);
         if (!state.empty()) {
@@ -3512,9 +3522,10 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // anchors are flush with the lane's left edge anyway). THE Y IS THE MENU
     // LANE'S FOOT, which since the 2026-09-09 relayout IS the ICON ROW'S
     // FIRST PIXEL, so the box hangs straight onto the toolbar with nothing
-    // between — and since the same day's last ruling the lane IS the
-    // anchor's pill, so the pill's foot is that row too and the dropdown
-    // touches the first row as it does in kdenlive. It is read from
+    // between — and the anchor's pill sits at the lane's foot (since
+    // 2026-10-01 the lane's lower 30, render.h's kMenuRowHeightPx), so the
+    // pill's foot is that row too and the dropdown touches the first row as
+    // it does in kdenlive. It is read from
     // top_menu_row_area rather than from btn.y + btn.h because the LANE is
     // the owner of that row: for the hours the lane stood at 34 the pill
     // was 4 authored rows short of it, and a dropdown hung from the pill
@@ -5385,7 +5396,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // a lit button and its read-only toggle shows the lock, so letters would
     // restate what that row says in its own vocabulary. THE A / B LETTER IS
     // HERE, though, since 2026-10-01: the tab row that showed it is deleted,
-    // and the letter leads the clock cell (paint_bottom_row_buttons_and_clock
+    // and the letter closes the clock cell (paint_bottom_row_buttons_and_clock
     // owns the rule). The dirty mark's SECTION stays gone —
     // it has no cell of its own and reserves no width — but the mark itself is
     // back on this row since 2026-09-09, as the CLOCK'S SUFFIX inside the

@@ -32,7 +32,7 @@ Phase resets are a separate collection of markers, authored in target view alone
 
 ### Two tabs, three views
 
-The two tabs, A and B, are two viewpoints (viewport, zoom, playhead and trim) over one shared set of markers, so one can sit at a definition while the other sits at its reference. The active tab's letter leads the clock at the bottom left (`A | 00:45.115`), and Switch Tab in the bottom row flips to the other one. The three views are source + warp, where warp markers are placed; target + warp, where tempos are judged; and target + phase reset, where the transients are protected.
+The two tabs, A and B, are two viewpoints (viewport, zoom, playhead and trim) over one shared set of markers, so one can sit at a definition while the other sits at its reference. The active tab's letter follows the clock at the bottom left (`00:45.115 | A`), and Switch Tab in the bottom row flips to the other one. The three views are source + warp, where warp markers are placed; target + warp, where tempos are judged; and target + phase reset, where the transients are protected.
 
 ### History
 

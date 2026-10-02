@@ -156,8 +156,8 @@ namespace {
 // them), whose bottom edge is the waveform top. ALL FIVE ride the gui_scale
 // axis. The BOTTOM strip is ONE LANE: THE UNIFIED BOTTOM ROW,
 // bottom_row_h_px() tall (the icon row's content height plus its own 1px
-// border-top) — the monospace clock cell (the active tab's letter, a pipe and
-// the timestamp, "A | 00:45.115") and THE STATE CELL at the left pad and,
+// border-top) — the monospace clock cell (the timestamp, a pipe and the
+// active tab's letter, "00:45.115 | A") and THE STATE CELL at the left pad and,
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the marker walk, the four cardinal arrows and the
 // transport three, divided by three of the ruled separators (architect
@@ -1081,14 +1081,14 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
 // whose rect is the lane WHOLE — see the record just above.
 //
-// THE DIRTY MARK PAINTS PAST THIS CELL AND THAT IS CORRECT (architect
-// 2026-09-09): row 8's `*` is appended to the timestamp inside the clock's
-// own run, so while the tab is dirty the painted run is wider than the reserved
-// cell this rect covers. The tick does not care — the suffix is not a digit and
-// changes only when app.dirty moves, and THAT transition damages the lane whole
-// through Viewport::invalidate_status_cell_area (Undo::recompute_dirty's tail).
-// A per-second tick therefore erases and repaints the digits alone, leaving the
-// suffix's pixels exactly as the last full-lane paint left them.
+// THE DIRTY MARK AND THE TAB LETTER ARE INSIDE THIS CELL (architect
+// 2026-10-01): row 8's run is the timestamp, the `*` glued to it while the tab
+// is dirty, then ` | A`, and the reserved cell holds the mark's one cell
+// whether or not it is painted, so the letter lies inside it in both states
+// and a per-second tick repaints mark and letter with the digits. The mark
+// changes only when app.dirty moves, shifting the letter by that one cell,
+// and THAT transition damages the lane whole through
+// Viewport::invalidate_status_cell_area (Undo::recompute_dirty's tail).
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame
@@ -1135,6 +1135,31 @@ struct GuiProjectOutcome {
     int         exit_status = 0;
     std::string reopen;
 };
+
+// THE MENU ROW'S LEGEND, REFRESHED (architect 2026-10-01; the composer and the
+// glyph rule are at compose_menu_legend, gui_battery.h): the minute and the
+// platform's answer are read on every call — both cheap by the seam's contract
+// (GuiPlatform::battery_status) — the text is recomposed only when one of them
+// changed, and the answer is whether the TEXT did, so the caller damages the
+// row only then. The minute is time() / 60: every real time zone sits a whole
+// number of minutes off UTC, so it turns over with the local clock. TWO
+// CALLERS: the tick, the refresh owner, and run_project's one seeding call
+// before the initial full-window invalidation, so the session's first
+// committed frame already carries the legend (on Wayland the first
+// configure's paint runs before the first tick).
+bool refresh_menu_legend(AppState& app, GuiPlatform& gui) {
+    const std::time_t now     = std::time(nullptr);
+    const int64_t     minute  = static_cast<int64_t>(now) / 60;
+    const GuiBattery  battery = gui.battery_status();
+    AppState::MenuLegend& legend = app.menu_legend;
+    if (minute == legend.minute && battery == legend.battery) return false;
+    legend.minute  = minute;
+    legend.battery = battery;
+    std::string text = compose_menu_legend(battery, now);
+    if (text == legend.text) return false;
+    legend.text = std::move(text);
+    return true;
+}
 
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
@@ -2109,28 +2134,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE MENU ROW'S LEGEND, THE TICK'S SECOND TENANT and, like the cards,
         // ahead of every early return: the battery and the wall clock move in
         // every mode the window has, a blank window and a standing render
-        // player included (architect 2026-10-01; the composer and the glyph
-        // rule are at compose_menu_legend, gui_battery.h). The minute and the
-        // platform's answer are read every tick — both cheap by the seam's
-        // contract (GuiPlatform::battery_status) — the text is recomposed only
-        // when one of them changed, and the row is damaged only when the TEXT
-        // did. The minute is time() / 60: every real time zone sits a whole
-        // number of minutes off UTC, so it turns over with the local clock.
-        {
-            const std::time_t now     = std::time(nullptr);
-            const int64_t     minute  = static_cast<int64_t>(now) / 60;
-            const GuiBattery  battery = gui.battery_status();
-            AppState::MenuLegend& legend = app.menu_legend;
-            if (minute != legend.minute || !(battery == legend.battery)) {
-                legend.minute  = minute;
-                legend.battery = battery;
-                std::string text = compose_menu_legend(battery, now);
-                if (text != legend.text) {
-                    legend.text = std::move(text);
-                    viewport.invalidate_rect(top_menu_row_area(app));
-                }
-            }
-        }
+        // player included (architect 2026-10-01). The tick is the refresh
+        // owner (refresh_menu_legend, which carries the read-and-recompose
+        // rule); the row is damaged only when the text changed.
+        if (refresh_menu_legend(app, gui))
+            viewport.invalidate_rect(top_menu_row_area(app));
 
         // Startup file load, deferred out of pre-run() so the window maps and
         // paints first (the compositor's initial configure / first frame only
@@ -3131,6 +3139,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
     });
+
+    // THE LEGEND IS SEEDED BEFORE THE FIRST PAINT (architect 2026-10-01): the
+    // session's first frame paints ahead of its first tick on both backends —
+    // Wayland's at the first configure, Android's at the drain below (whose
+    // body is paint_one_frame; android_main has the window before any
+    // session starts) — so without this call the first committed frame would
+    // show the menu row with no legend and the text would arrive a frame
+    // later. One road for both backends; the
+    // whole-window invalidation below is its damage, and the tick refreshes
+    // it from here on (refresh_menu_legend).
+    refresh_menu_legend(app, gui);
 
     // THE GEOMETRY, REDELIVERED: a reopened set's window sends no configure
     // for a size that did not change, so the platform fires on_resize with

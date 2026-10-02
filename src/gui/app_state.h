@@ -2081,7 +2081,7 @@ enum class RedesignButton {
     File, Edit, Settings,
     // (THE TAB ROW — row 3, the A / B tabs TabA and TabB — IS DELETED
     // (architect 2026-10-01: "a waste of space"). The active tab's letter is
-    // the bottom row's clock cell ("A | 00:45.115",
+    // the bottom row's clock cell ("00:45.115 | A",
     // paint_bottom_row_buttons_and_clock), and the switch keeps Ctrl+Tab and
     // the bottom row's TransportSwitchTab button; the paired march keeps
     // Ctrl+Shift+Tab, Switch Tab's shifted press and the walk's ctrl-shift
@@ -8052,11 +8052,13 @@ struct AppState {
     // THE MENU ROW'S BATTERY + CLOCK LEGEND (architect 2026-10-01): `text` is
     // what paint_menu_row paints flush right — the composer is
     // compose_menu_legend (gui_battery.h) — and `minute` and `battery` are the
-    // two inputs it was last composed from. ONE WRITER, main.cpp's tick, which
-    // asks the platform's battery_status and the wall clock on every tick,
-    // recomposes only when the minute or the battery changed, and damages the
-    // menu row only when the TEXT changed. Empty until the session's first
-    // tick (a fresh AppState per project, so the first tick composes it).
+    // two inputs it was last composed from. ONE WRITER, refresh_menu_legend
+    // (main.cpp), which asks the platform's battery_status and the wall clock,
+    // recomposes only when the minute or the battery changed, and reports
+    // whether the TEXT changed. Its callers are run_project's one seeding call
+    // before the session's first paint (a fresh AppState per project, so every
+    // session seeds its own) and the tick, the refresh owner, which damages
+    // the menu row only when the text changed.
     struct MenuLegend {
         std::string text;
         int64_t     minute  = -1;

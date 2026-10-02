@@ -9099,7 +9099,21 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // the menu count.
     const bool same = (app.dropdown.menu == menu);
     close_dropdown();
-    if (same) return;
+    // THE CLOSE HALF RE-DERIVES THE ROSTER'S HOVER IN THE SAME EVENT
+    // (architect 2026-10-01), mirroring the open edge's unhover below in this
+    // same function. While the menu stood every hover bit was false and the
+    // anchor's pill was held by the painter's open-menu term alone; the close
+    // drops that term, and without this recompute the frame painted before the
+    // next tick's recompute_redesign_button_hover would show the anchor at
+    // rest — one frame of blink at the second touch on the tablet, whose loop
+    // paints after every input drain. The pointer is on the anchor by
+    // construction: this line is reached only by a press on the open menu's
+    // own anchor (the hover switch opens, never closes). Scoped to this half
+    // and not to close_dropdown, whose other callers close from elsewhere.
+    if (same) {
+        recompute_redesign_button_hover();
+        return;
+    }
     // OPENING A MENU ENDS AN ACTIVE FLAG EDIT, discarding it — exactly what a
     // press anywhere outside the editor's box already does. It is what keeps "a
     // popup and an editor are never open together" true, and the FLAG editor is
@@ -9165,11 +9179,10 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // band anchored anywhere else would leave a strip of the popup unpainted
     // at one end. It is the LANE and not the anchor's rect because the lane
     // is the one owner of that row: the anchor's published rect is its pill,
-    // which IS the lane since 2026-09-09's last ruling (the two agree
-    // exactly), stood 4 rows short of it for the hours that day the lane was
-    // 34, and differed from it by row 1's 1px margin-bottom
-    // 2026-08-02..09-09, where the architect ruled the box onto the button
-    // and it covered that margin strip. The x is still the anchor's (the
+    // which since 2026-10-01 is the lane's lower 30 (render.h's
+    // kMenuRowHeightPx) — its foot the lane's foot, so the two agree on this
+    // row exactly while the anchor's top stands 6 rows (at 100%) under the
+    // lane's. The x is still the anchor's (the
     // dropdown hangs off the thing that opened it, architect 2026-08-02);
     // only this band's y reads the lane, and it damages FULL WIDTH anyway.
     {

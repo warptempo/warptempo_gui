@@ -8,9 +8,10 @@
 // IT (architect 2026-10-01). The type is the seam's — declared here so the two
 // GuiPlatform headers and the GUI share ONE spelling, gui_media.h's shape — and
 // it is a plain value: GuiPlatform::battery_status fills it from what the host
-// knows (the contracts are at the two declarations), and the GUI's tick
-// composes the legend from it and the wall clock (main.cpp's tick, the
-// legend's one refresh site; paint_menu_row paints the composed text).
+// knows (the contracts are at the two declarations), and the GUI composes the
+// legend from it and the wall clock (refresh_menu_legend, main.cpp: seeded
+// once before a session's first paint, then refreshed by the tick;
+// paint_menu_row paints the composed text).
 
 struct GuiBattery {
     // WHETHER PLUGGED IN — the legend's GLYPH, and THERE IS ALWAYS ONE

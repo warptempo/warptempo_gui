@@ -154,8 +154,9 @@ public class MainActivity extends NativeActivity {
     // THE LIBRARY MUST BE REGISTERED FOR NAME-BASED JNI RESOLUTION: the
     // NativeActivity dlopens libwarptempo_gui.so for android_main, but that
     // load does not make its Java_* exports findable for a `native` method
-    // declared here. This initialiser is what does, and this class's one
-    // native method below is why it exists.
+    // declared here. This initialiser is what does, and this class's two
+    // native methods below (nativeMediaCommand, nativeBatteryState) are why
+    // it exists.
     static {
         System.loadLibrary("warptempo_gui");
     }

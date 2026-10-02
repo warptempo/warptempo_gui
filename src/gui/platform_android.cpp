@@ -1370,7 +1370,9 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             const bool active = (cmd == APP_CMD_GAINED_FOCUS);
             if (active == window_activated_) break;
             window_activated_ = active;
-            // The rows that darken on focus loss are the caller's business;
+            // What takes an unfocused face is the caller's business (main.cpp's
+            // activation hook: the modal row's and the folder overlay panel's
+            // accents go to kRedesignAccentInactive, and the tooltip ends);
             // this hook is the EDGE, the same shape the Wayland backend's
             // configure-driven one takes for the same reason.
             if (activation_changed_hook_) activation_changed_hook_();

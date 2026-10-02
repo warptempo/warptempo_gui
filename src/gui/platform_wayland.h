@@ -558,10 +558,11 @@ public:
     //
     // What the host knows of its battery NOW, for the menu row's battery +
     // clock legend (gui_battery.h owns the type and the composer). CALLED ON
-    // EVERY TICK from the loop thread — main.cpp's tick is the legend's one
-    // refresh site, composing only when the minute or this answer changed and
-    // damaging the row only when the composed text did — so each backend
-    // answers cheaply, its own way.
+    // EVERY TICK from the loop thread — main.cpp's refresh_menu_legend, the
+    // tick's tenant (and once before a session's first paint), composes only
+    // when the minute or this answer changed and the tick damages the row only
+    // when the composed text did — so each backend answers cheaply, its own
+    // way.
     //
     // ON THIS BACKEND IT IS sysfs, READ AT MOST ONCE PER WALL-CLOCK MINUTE —
     // the laptop's battery refreshes with the legend's clock (architect

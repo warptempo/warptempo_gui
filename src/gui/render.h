@@ -1494,24 +1494,25 @@ inline constexpr int kPlayheadUnitPx = 8;
 // since 2026-10-01, the icon row's own (paint_menu_row) — runs straight on
 // into the icon row's.
 //
-// 36, WITH THE LABELS' CAP BAND SEATED IN THE LOWER 30 — ASYMMETRIC BY
+// 36, WITH THE ANCHORS AND THE LEGEND IN THE LOWER 30 — ASYMMETRIC BY
 // CONSTRUCTION (architect 2026-10-01). The row was 30 — the height of File's
 // hover pill in kdenlive (tmp/previous/review_2026-09-09/his_screenshots/
-// kden-hover.png, rows 26-55), "the pill IS the lane" — and it grew 6 ABOVE
-// THE TEXT ONLY: the anchors' labels, and the battery + clock legend on the
-// same row, keep exactly the seat the 30-row gave them, cap-centred in a
-// kMenuRowTextBoxPx box at the row's FOOT (cap top 15 rows under the row's
-// top edge, 9 rows of ground under the cap band, at 100%), so the extra rows
-// are air between the window's top edge and the text. WHY: the tablet's
-// rounded screen corners cramp a flush top row, and the 6 are the deleted tab
-// row's margin come back where they help. He looked at the symmetric
-// alternatives — 36 with the text centred, and 42 centred — and chose this
-// one ("definitely"). THE PILL AND THE HIT RECT ARE THE LANE: an anchor's
-// hover pill fills all 36 rows and is the anchor's published rect, and its
-// foot is the lane's foot, which is where the dropdown and its damage band
-// hang (top_menu_row_area — paint_dropdown and toggle_dropdown read the same
-// accessor), so the popup touches the icon row's first pixel, kdenlive's own
-// picture.
+// kden-hover.png, rows 26-55) — and it grew 6 ABOVE THE BUTTONS: the lower
+// kMenuRowTextBoxPx rows, the TEXT BOX at the row's FOOT, are exactly the
+// 30-row lane as it was. THE ANCHORS' HOVER PILL AND THEIR PUBLISHED HIT
+// RECTS ARE THAT BOX (the pill the 30-row had, its height unchanged — "the
+// buttons would stay the height that they were"), the anchors' labels and
+// the battery + clock legend are cap-centred in it (cap top 15 rows under the
+// row's top edge, 9 rows of pill above the cap band and 9 under it, at
+// 100%), and the TOP 6 ROWS ARE PLAIN CONTENT GROUND with nothing on them —
+// air between the window's top edge and the buttons, never part of a pill.
+// WHY: the tablet's rounded screen corners cramp a flush top row, and the 6
+// are the deleted tab row's margin come back where they help. He looked at
+// the symmetric alternatives — 36 with the text centred, and 42 centred — and
+// chose this one ("definitely"). THE PILL'S FOOT IS THE LANE'S FOOT, which is
+// where the dropdown and its damage band hang (top_menu_row_area —
+// paint_dropdown and toggle_dropdown read the same accessor), so the popup
+// touches the icon row's first pixel, kdenlive's own picture.
 //
 // The row sizes on gui_scale_factor() like every other lane in the tree,
 // rounded with std::nearbyint through scaled_px and floored like every other
@@ -1519,7 +1520,7 @@ inline constexpr int kPlayheadUnitPx = 8;
 // ACCESSORS FOR ONE NUMBER, deliberately: the lane table reads the LANE and
 // the painter the CONTENT, the vocabulary every other row keeps, and this
 // row's lane simply has no other term in it; the text box is the painter's
-// own third reading (menu_row_text_box_h_px).
+// own third reading (menu_row_text_box_h_px), the pill's and the label's box.
 inline constexpr int kMenuRowHeightPx  = 36;
 inline constexpr int kMenuRowTextBoxPx = 30;
 inline int menu_row_content_h_px() {
