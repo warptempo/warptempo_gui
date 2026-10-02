@@ -134,13 +134,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // counting when `;` opened the settings editor never comes due. (The
     // tooltip cannot come BACK under that modal: the roster walk refuses to
     // start a wait while a prompt or a keyboard-modal editor is up — the rule
-    // is at recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
-    // site: THE DIALOG'S VEIL already owns it (recompute_redesign_button_hover,
-    // input_pointer.cpp) — under a PROMPT or an EDITOR dialog alike every
-    // roster face goes dark, one blanket answer since the modal-trap
-    // reach-through's retirement, so a modal opened by this key
-    // cannot leave a lit pill behind it. The pointer-transparent FLAG editor
-    // raises no veil and needs none: its roster presses were never blocked.
+    // is at recompute_redesign_button_hover.)
     hide_shift_tooltip();
     // (THE HELD ARROW BUTTONS' REPEAT BURST is NOT disarmed here, and its
     // key-press disarm deliberately does not live in this body: since the
@@ -3495,20 +3489,11 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // nothing and must not fall through to a bare one — and none of them may
     // reach the surfaces BELOW the veil either, which is why the refusal is a
     // return rather than a fall-through.
-    //
-    // AND THE HOVER IS RE-DERIVED AFTER A SCROLL, at this event's own
-    // coordinates: the rows slide under a stationary pointer, so a stored
-    // hovered_row would light the row that moved INTO that index while the
-    // pointer sits on the row now one place up, and the click would then go to
-    // an unlit row. It is the dropdown hover's problem answered the same way
-    // (main.cpp's loop-settled hook re-derives that one); no second store is
-    // needed here — on_wheel is handed the pointer position.
     if (ctx == 4) {
         if (mods.ctrl || mods.shift || mods.alt) return;
         const int rows = dir == GuiMouseButton::WheelDown ? count : -count;
         if (folder_overlay::scroll_rows(app, rows)) {
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
-            update_folder_overlay_hover(x, y);
         }
         return;
     }

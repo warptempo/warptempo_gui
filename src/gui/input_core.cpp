@@ -642,13 +642,12 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // frame not yet arrived, reaches this flush with NO gesture live — and the
     // delivery lands in on_motion's PROMPT branch after Ctrl+Q or the WM close
     // (both open the close prompt) or in its NO-GESTURE TAIL after a resize.
-    // Both branches recompute the roster's hover from the stale virtual
+    // Both branches run the roster's pointer walk from the stale virtual
     // position.
     // WHAT MAKES THAT SAFE IS THE ORDERING, NOT UNREACHABILITY, and the
     // distinction matters for anyone editing below: THE HOOK RUNS IMMEDIATELY
     // AFTER THIS CALL, and it drops precisely what such a delivery can touch —
-    // the in-window bit, the hover faces, the tooltip's wait, the armed chrome
-    // press and
+    // the in-window bit, the tooltip's wait, the armed chrome press and
     // the popup's pointer state — an invariant restore placed after the last
     // thing that can disturb the invariant. ANY future change that separates the
     // hook from directly-after-this-flush has to re-establish that guarantee.
@@ -656,9 +655,6 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // fires its hook once, ahead of its own hold ends, and records the resulting
     // staleness as an accepted glitch. This edge keeps the ordering because it
     // costs one call site and the pointer here is expected back.)
-    // (A stale hover PILL for the frames until the hook is not a case: the
-    // hook clears the faces it just recomputed, in the same event, and the
-    // no-gesture tail opens no menu on a hover.)
     // NO CALLER OF finalize_active_drags IS ASKED TO CLEAR THE STAGE, and that
     // is a judgement rather than an omission: the post-finalize delivery is
     // harmless on its own terms — it recomputes hover at a point that hit-tests

@@ -151,7 +151,6 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     // key. With the `..` row gone the seat is a batch folder or a wav, and
     // Space at every entry acts on content.
     ov.scroll_px     = 0;
-    ov.hovered_row   = -1;
     ov.press         = AppState::FolderOverlayPress{};
     // (A REBUILT LISTING RENAMES EVERY ROW, which is why this body also
     // cleared the double-click candidate while the rows had one: its target

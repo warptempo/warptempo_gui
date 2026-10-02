@@ -1421,7 +1421,7 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 input_.touch_capability_lost();
                 // AND A HOVERING PEN LEAVES WITH IT: no HOVER_EXIT is owed to
                 // a window that lost focus, so the pointer's leave (the
-                // tooltip's wait, the hover faces — the activation hook above
+                // tooltip's wait, the popup's item face — the activation hook above
                 // has already taken a standing tooltip box down, focus loss
                 // being its hard end) is delivered here, and the pen's Ctrl
                 // bit drops.

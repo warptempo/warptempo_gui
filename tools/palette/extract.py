@@ -629,8 +629,9 @@ json.dump(dict(y0=canvas[0], h=canvas[1] - canvas[0], channel_split=canvas[0] + 
 
 # ------------------------------------------------------------------ write the scene
 enabled = sorted(b['button'] for b in buttons if b['enabled']); disabled = [b['button'] for b in buttons if not b['enabled']]
+# `source` is the capture's BASE NAME alone: where the captures live is the README's (Scenes), not a checkout path.
 scene = dict(
-    tag=TAG, source=os.path.relpath(os.path.abspath(BASE), C.REPO), size=[C.W, C.H], scale=S,
+    tag=TAG, source=os.path.basename(BASE), size=[C.W, C.H], scale=S,
     params=dict(first_label=ARGS.first_label, step_ms=STEP, flags=FLAG_TEXTS, clock=ARGS.clock, legend=ARGS.legend),
     lanes=lanes, table_rows=TABLE, ruler_rule=dict(pad=RULER_PAD, ascent=math.ceil(ASC), ground=scaled_px(RULER_HEAD_GROUND, 1),
                                                    head=scaled_px(HEAD_H), lane=RULER_RULE, baseline_off=RULER_BASELINE_OFF),

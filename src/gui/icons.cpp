@@ -25,15 +25,15 @@ namespace {
 // 2026-09-14) before it; a future stroked file brings it back, its record in
 // git history.
 //
-// THE COLORS ARE HARD-CODED, per the redesign's color ruling (the carve-out is
-// recorded at render.h's palette-block header): they are the SVGs' own values,
-// not palette keys and not tunable. The three edit icons paint
-// fill:currentColor under the file's own `.ColorScheme-Text { color: #fcfcfc }`
-// stylesheet, so #fcfcfc is what they resolve to — the same paper white the
-// redesigned labels carry, spelled out here because it is a sample that happens
-// to coincide, not a reference. media-record carries its OWN literal #da4453,
-// which coincides with the marker-red ring's value by shared Breeze ancestry
-// and by nothing else; it is not a reference to that key either.
+// THE COLORS ARE HARD-CODED, per the redesign's color ruling: each ink is the
+// value its SVG resolves to, in the palette's P3 bytes (the ink block below),
+// and AN INK WHOSE BYTES ARE A PALETTE ROLE'S IS THAT ROLE (architect
+// 2026-10-02, render.h's palette scaffold), so a retune of the role moves the
+// glyphs with it. The three edit icons paint fill:currentColor under the
+// file's own `.ColorScheme-Text { color: #fcfcfc }` stylesheet, the label
+// role (kIconText); media-record's own literal #da4453 is the red role
+// (kIconRecord). The inks that are no role's value stay literals and are on
+// render.h's hand-list.
 //
 // A FILLED ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO
 // winding rule — which is the SVG default too, and what makes document-save's
@@ -87,13 +87,15 @@ struct IconDef {
     int            path_count;
 };
 
-constexpr GuiColor kIconText   = hex(0xFCFCFC);
 // THE ICON INKS ARE THE PALETTE'S P3 BYTES (architect 2026-10-02, render.h's
-// palette head): each Breeze class or literal colour below is that colour
-// taken through the two sRGB -> Display-P3 passes the frozen palette baked in
-// (Breeze's #da4453 -> #bb575a, #d24d57 -> #b65c5d; the white classes are
-// unmoved), and the scheme's accent class is the accent role itself.
-constexpr GuiColor kIconRecord = hex(0xBB575A);
+// palette head): each Breeze class or literal colour in this table is that
+// colour taken through the two sRGB -> Display-P3 passes the frozen palette
+// baked in (Breeze's #da4453 -> #bb575a, #d24d57 -> #b65c5d; the white classes
+// are unmoved). Where those bytes are a role's value the ink REFERENCES the
+// role: the text class is the label, #da4453 the red, the scheme's accent
+// class the accent.
+constexpr GuiColor kIconText   = kRedesignLabel;
+constexpr GuiColor kIconRecord = kMarkerFlagFillRed;
 
 constexpr IconPath kDocumentSavePaths[] = {
     {kIconText,
@@ -132,10 +134,11 @@ constexpr IconPath kMediaRecordPaths[] = {
 // Same rules as the four above: `d` verbatim from the committed file, the fill
 // hard-coded to what that file resolves to. Five of the six are pure
 // `.ColorScheme-Text` = #fcfcfc; preview-render-on is TWO paths, the second
-// carrying its own literal #d24d57 (the "on" pip), which is a third independent
-// red in this tree and deliberately not a reference to media-record's #da4453
-// or to the marker ring.
+// carrying its own literal #d24d57 (the "on" pip), a Breeze red apart from
+// media-record's #da4453 whose P3 bytes are no role's value.
 
+// #d24d57 through tools/palette's two_pass -> #B65C5D, no role's value: a
+// literal on render.h's hand-list.
 constexpr GuiColor kIconPreviewOn = hex(0xB65C5D);
 
 // THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
@@ -236,9 +239,9 @@ constexpr IconPath kGoJumpPaths[] = {
 // leaves both solid.
 //
 // ITS RED IS ITS OWN LITERAL, not a reference to preview-render-on's pip even
-// though both files write #d24d57: the two coincide by shared Breeze ancestry,
-// which is exactly what media-record's #da4453 and the marker ring say about
-// each other at the head of this table.
+// though both files write #d24d57: the two coincide by shared Breeze ancestry
+// and by nothing else. #d24d57 through tools/palette's two_pass -> #B65C5D, no
+// role's value: a literal on render.h's hand-list.
 constexpr GuiColor kIconLiftCross = hex(0xB65C5D);
 
 constexpr IconPath kTimelineLiftPaths[] = {
@@ -838,11 +841,10 @@ constexpr IconPath kZoomOriginalPaths[] = {
 //
 // LIST-REMOVE IS THE SET'S SECOND RESOLVED-COLOR RED: its one path is
 // `.ColorScheme-NegativeText { color: #da4453 }` under fill="currentColor" —
-// kIconNegativeText below is THE VALUE THAT FILE RESOLVES TO, recorded like
-// media-record's own literal #da4453, with which it coincides by shared
-// Breeze ancestry and by nothing else (two constants, deliberately not
-// aliased, exactly as kIconAccent is not kRedesignAccent). Command coverage:
-// absolute M/L with one absolute C (the outline's corner easing) and z.
+// kIconNegativeText below is the value that file resolves to, whose P3 bytes
+// are the red role's, so it IS the red role, as media-record's kIconRecord
+// is. Command coverage: absolute M/L with one absolute C (the outline's
+// corner easing) and z.
 //
 // VIEW-HIDDEN IS TRANSCRIBED VERBATIM, ARTIFACT AND ALL (architect-ruled
 // 2026-08-12, at the pick): the file's last subpath — "M 1 13 C 0.33333333 19
@@ -852,7 +854,7 @@ constexpr IconPath kZoomOriginalPaths[] = {
 // diff-is-a-transcription-bug property. Coverage: absolute M/L/A/C/Z, every
 // family with a committed producer.
 
-constexpr GuiColor kIconNegativeText = hex(0xBB575A);
+constexpr GuiColor kIconNegativeText = kMarkerFlagFillRed;
 
 constexpr IconPath kListAddPaths[] = {
     {kIconText,
@@ -1015,6 +1017,8 @@ constexpr IconPath kSettingsConfigurePaths[] = {
 // rather than edited out — and the second is the X's outline that shows.
 // The cap attribute belongs to stroking, which this table does not do, so
 // it transcribes as nothing.
+// #fff through tools/palette's two_pass -> #FFFFFF (white is unmoved), no
+// role's value: a literal on render.h's hand-list.
 constexpr GuiColor kIconPlainWhite = hex(0xFFFFFF);
 
 constexpr IconPath kDialogInformationPaths[] = {

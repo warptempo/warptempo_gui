@@ -65,9 +65,10 @@ waveform runs, buttons, menu, clock, flags, playhead, ticks), the trim bar recor
 
 `extract.py` takes the base and the texts the pixels cannot name; there are no scene defaults. The tag is the base
 name's suffix (`tablet_base_<tag>.png`), and it writes `scene_<tag>.json`, `waveform_<tag>.json` and `glyphs/<tag>/`
-(PGM masks + `index.json`) into `tools/palette/`, or under `--out-dir`. The scene records the capture's path
-relative to the repository root (`source`), so a byte-identical re-extraction reads the capture from the same path.
-The command lines of the three scenes (the captures at the paths named above):
+(PGM masks + `index.json`) into `tools/palette/`, or under `--out-dir`. The scene records the capture's base name
+alone (`source`, e.g. `tablet_base_1002.png`); where the captures live is stated above, so a byte-identical
+re-extraction reads the capture from there. The command lines of the three scenes (the captures at the paths named
+above):
 
 ```
 python3 tools/palette/extract.py tmp/tablet_base_1002.png  --rev a6f53163 --first-label 0:45.500 \

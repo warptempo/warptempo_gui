@@ -526,12 +526,11 @@ public:
     // authoritative list — this contract deliberately does not keep a second
     // copy — but the shape is: every face and claim derived from where the
     // pointer is, so a pointer that slides out through the window edge cannot
-    // leave a lit pill, a stranded pressed interior, a lit menu item or a
-    // hanging tooltip behind. It USED to clear the
+    // leave a stranded pressed interior, a lit menu item or a hanging tooltip
+    // behind. It USED to clear the
     // marker hover popup as well; that whole surface died with the marker-text
     // lane in row 5. Widened 2026-08-03 to the open dropdown's pointer-derived
-    // state — the roster's button faces are not the only such state this edge
-    // drops any more; full story at clear_dropdown_pointer_state. Null-safe.
+    // state; full story at clear_dropdown_pointer_state. Null-safe.
     void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
 
     // THE KEYBOARD-INTENT CANCELLATION HOOK (2026-08-11): fired

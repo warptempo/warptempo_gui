@@ -127,7 +127,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly
     // as-painted; the contract is at AppState::trim_bar_hit). The caps are the
     // ones GuiPaintHandler::paint_trim last DREW — on the displayed item basis
-    // and the displayed map, through trim_endcap_rect — so a press between a
+    // and the displayed map, through trim_endcap_rect, each published as its
+    // painted columns over the lane's whole height — so a press between a
     // trim write and its repaint grabs the cap still on screen, and a bound
     // the viewport culled, having painted no cap, answers nothing. Nothing
     // here reads app.trim or re-runs the owner chain. Cold (nothing painted)
@@ -164,10 +165,13 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     int n = 0;
     auto add_endcap = [&](const TrimBarHitCap& cap, TrimHit which) {
         if (!cap.painted) return;
-        // THE DRAWN CAP, INFLATED BY THE GRAB TOLERANCE. The stash carries the
-        // rect exactly as painted so the target is centred on it; the widening
-        // is the hit side's own term, because a 9px handle is below a
-        // fingertip (the rationale is at trim_endcap_rect).
+        // THE CAP'S HIT BAND, INFLATED BY THE GRAB TOLERANCE. The stash
+        // carries the cap's painted columns over the lane's whole height (the
+        // square itself is those columns over the trough's interior; the
+        // lane-tall band is deliberate — trim_endcap_rect), so the target is
+        // centred on the painted columns; the widening is the hit side's own
+        // term, because a 9px handle is below a fingertip (the rationale is
+        // at trim_endcap_rect).
         GuiRect r = cap.rect;
         const int grab = trim_endcap_grab_px();
         r.x -= grab;

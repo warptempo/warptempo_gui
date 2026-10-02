@@ -1623,7 +1623,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // SUNKEN on the down face with its glyph one line down and right; a
     // PRESS is sunken on the ground with the same shift, and wins over the
     // lamp while it is held. The pointer's only cue over a button is the
-    // cursor (pointer_cursor_kind); the hover bit still drives the tooltip.
+    // cursor (pointer_cursor_kind); the pointer walk still finds the
+    // tooltip's button (recompute_redesign_button_hover).
     // THE DISABLED FACE IS THE TWO MODES' AND THE TOOLBAR MIGRANTS':
     // the row's own members never grey for a REFUSAL —
     // presses always dispatch and the CHORDS' OWN refusals answer (loading
@@ -2687,8 +2688,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // for a hovered button would be a SECOND membership rule to keep in step
     // with that one — and since 2026-08-07 it could not be the same rule
     // anyway: A DISABLED BUTTON SHOWS ITS HINT (the architect's
-    // kdenlive-parity ruling) while it never sets the hover FACE, so the face's
-    // `hovered` does not name the tooltip's subject.
+    // kdenlive-parity ruling), and the owner is the only record of which
+    // button the wait ripened on — no hover is stored anywhere else.
     const AppState::RedesignTooltip::Owner owner = app.redesign_tooltip.owner;
     if (owner.index < 0) return;
 
@@ -5476,7 +5477,7 @@ constexpr double kModalBtnPadRightPx  = 10.0;
 // its 1, and the 8px inter-button gap absorbs one frame from each neighbour.
 constexpr double kModalFocusFramePx   = 1.0;
 
-// THE MODAL'S FACE STATE, dropped together. The four indices all name slots
+// THE MODAL'S FACE STATE, dropped together. The three indices all name slots
 // in modal_dialog.buttons and the field bit names modal_dialog.field, so they
 // all go stale on exactly the same edges — and this painter owns every one of
 // those edges (the full rule and the edge list are at
@@ -5489,7 +5490,6 @@ constexpr double kModalFocusFramePx   = 1.0;
 // No damage of its own: every caller is mid-frame on the lane it is about to
 // repaint.
 void reset_modal_dialog_face_state(AppState& app) {
-    app.modal_dialog_hovered         = -1;
     app.modal_dialog_pressed         = -1;
     app.modal_dialog_press_inside    = false;
     app.modal_dialog_press_shift     = false;
@@ -6497,7 +6497,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // not yet seen on the glass). The two focus strengths stay in the
         // state (AppState::modal_dialog_focus_active), where the keyboard's
         // walk reads them; the picture no longer tells them apart. NO HOVER
-        // FACE: the hover bit drives the tooltip alone.
+        // FACE: the pointer walk (update_modal_dialog_hover) drives the
+        // tooltip alone.
         // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
         // 2026-08-30) — every other owner's buttons are always live while
         // their dialog stands and publish enabled=true: the glyph retains

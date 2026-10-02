@@ -83,5 +83,5 @@ THE CODEX ROUTINE (all tmp/ paths gitignored): every round is a FRESH codex sess
 | The platform seam, the loop contract, the font owner, the Android sliver, the APK build | `src/gui/platform.h`, `platform_wayland.{h,cpp}`, `platform_android.{h,cpp}`, `src/gui/gui_font.h`, `android/app/build_apk.sh`, `android/NOTES.md` (the build chronology) |
 | Tempo, the home-view binding, propagate paste | `active_column_authoring_allowed`, `warp_tempo_step_move`, `src/gui/phase_reset_propagate.h`, `propagate_blocks.h` |
 | Engine performance (a closed campaign) and the retired waveform antialiasing | `docs/engineering/perf_campaign_2026_07.md`, `docs/engineering/waveform_antialiasing_retired.md`, `docs/engineering/parity_retrospective_2026_07.md` |
-| The mock-up renderer (a theme JSON + a measured scene → the tablet's screen; the frozen theme is the design's record) | `tools/palette/README.md`, `tools/palette/render.py`, `themes/frozen.json` |
+| The mock-up renderer (a theme JSON + a measured scene → the tablet's screen; the frozen theme is the design's record) | `tools/palette/README.md`, `tools/palette/render.py`, `tools/palette/themes/frozen.json` |
 | Everything ever ruled out | `docs/engineering/closed_questions.md` |

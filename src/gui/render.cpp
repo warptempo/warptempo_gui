@@ -762,9 +762,11 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row) {
     GuiRect r;
     // Begin left-edge-anchored (rect left ON the column); end right-edge-anchored
     // (rightmost pixel ON the column), so a bound's handle stands on the column
-    // the bound occupies, flush with the bar's end. The handle is the grip's
-    // square, trim_endcap_w_px() wide (architect 2026-10-01). Y-band from the
-    // trim lane `row`.
+    // the bound occupies, flush with the bar's end. The rect is the handle's
+    // COLUMNS, trim_endcap_w_px() wide (the grip's square's side, architect
+    // 2026-10-01), over the trim lane `row`'s WHOLE height — the hit band, a
+    // deliberately lane-tall grab. It is not the painted square: the painter
+    // fills those columns over the trough's interior rows alone.
     r.x = is_begin ? abs_col : abs_col - cap_w + 1;
     r.y = row.y;
     r.w = cap_w;
@@ -863,10 +865,11 @@ void render_trim_flags(cairo_t* cr,
     // and the bar's flush edge is what says the window continues past the
     // view. Both come from the ONE rect owner (trim_endcap_rect), and THE
     // PUBLICATION RIDES THE FILLS (TrimBarHit, render.h): each handle is
-    // stashed from the rect it was just painted at — its columns, at the
-    // lane's whole height, the band the hit side reads (adding only its
-    // stated grab tolerance) — so the painted handle and the grabbable one
-    // describe the same columns.
+    // stashed from the owner's rect its square was just painted in — the
+    // handle's columns over the lane's whole height, the band the hit side
+    // reads (adding only its stated grab tolerance), while the square fills
+    // those columns over the interior's rows — so the painted handle and the
+    // grabbable one describe the same columns.
     if (bc.in_viewport) {
         const GuiRect r = trim_endcap_rect(true, lane_x, bc.col, trim_bar);
         cap(r.x, r.w);

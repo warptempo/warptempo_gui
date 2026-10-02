@@ -3031,8 +3031,8 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
 // with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
-// 2026-08-29 rather than inherited: the hover clear and the hover recompute
-// (clear_redesign_button_hover / recompute_redesign_button_hover), the click
+// 2026-08-29 rather than inherited: the pointer walk's pressed-face damage
+// (recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
 // per-tick staleness comparator (main.cpp) and the tooltip, which also
 // FLIPS ABOVE the button here (the lane rests on the WINDOW'S FOOT since the
@@ -4122,11 +4122,11 @@ enum class DialogTrigger {
 // save-failed rung, the one such route — leaves rects whose Discard/Cancel
 // keys are still live at coordinates the new (differently laid out) button row
 // no longer uses, so the stale-rect press was answerable and destructive. The
-// button HOVER index is deliberately not gated: a stale index names a button
-// for the tooltip's wait until THE NEXT DELIVERED MOTION, which is what
-// re-runs update_modal_dialog_hover (the modal branches of on_motion are its
-// only callers — it does not ride the per-tick roster recompute), and that is
-// all it can do.
+// dialog's TOOLTIP WAIT is deliberately not gated: a stale hit names a button
+// for the wait until THE NEXT DELIVERED MOTION, which is what re-runs
+// update_modal_dialog_hover (the modal branches of on_motion are its only
+// callers — it does not ride the per-tick roster walk), and the wait's owner
+// carries the stash that armed it (AppState::RedesignTooltip).
 // EDITOR DIALOGS ARE DELIBERATELY NOT GATED: a queued key types into the
 // buffer, which is non-destructive and self-evident the moment the field
 // paints, and the commit is a separate deliberate Enter. The destructive
@@ -5819,17 +5819,16 @@ struct AppState {
     //
     // ONE MECHANISM FOR EVERY REDESIGNED BUTTON (2026-07-31): row 1's single
     // pair of fields folded into this array when row 2 brought four more, so
-    // there is one stash, one hover recompute and one hover clear rather than a
-    // per-row copy of each. Every entry is zero-rect / not-hovered until its
-    // row's first paint, which is the correct pre-display state: an empty rect
-    // contains no point, so neither hover nor press can fire before the button
-    // has been shown.
+    // there is one stash and one pointer walk rather than a per-row copy of
+    // each. Every entry is zero-rect until its row's first paint, which is the
+    // correct pre-display state: an empty rect contains no point, so neither a
+    // tooltip nor a press can fire before the button has been shown.
     //
-    // `hovered` is written only on a TRANSITION (the motion tail's recompute and
-    // the pointer-leave hook), a transition paying one invalidate_top_strip. A
-    // press does not change it — the hover bit survives a click; what a press
-    // writes instead is the armed chrome press (AppState::ChromePress), whose
-    // Roster arm is the pressed face.
+    // NO HOVER IS STORED HERE (architect 2026-10-02: no button wears a hover
+    // face). The pointer walk (recompute_redesign_button_hover) reads `rect`
+    // for the tooltip's owner and the armed press's inside bit; a press writes
+    // the armed chrome press (AppState::ChromePress), whose Roster arm is the
+    // pressed face.
     //
     // `enabled` is the ENABLED VECTOR THE PAINTER LAST PAINTED, stashed beside
     // the rect for one reason: the facts it derives from (the undo/redo stacks,
@@ -5866,7 +5865,6 @@ struct AppState {
     // refused dispatches and its act answers for itself.
     struct RedesignButtonFace {
         GuiRect rect{0, 0, 0, 0};
-        bool    hovered       = false;
         bool    enabled       = true;
         bool    selected      = false;
         // The painted glyph's index (redesign_button_glyph: 0 the table
@@ -6375,15 +6373,6 @@ struct AppState {
     // — and then paints whichever tenant stands, so neither painter can claim
     // pixels the frame did not write.
     bool keyboard_slot_painted_standing = false;
-
-    // The hovered dialog button's index into modal_dialog.buttons, -1 none —
-    // pointer-derived face state in the roster's own model (the hover walk
-    // writes it, the painter reads it, a change damages the box). Cleared by
-    // paint_modal_dialog's no-dialog arm alongside the stash, so a fresh
-    // dialog cannot inherit the previous one's lit face, and on the
-    // pointer-leave hook by clear_modal_dialog_hover, which ends it through
-    // the walk's own fade edge.
-    int modal_dialog_hovered = -1;
 
     // THE ARMED DIALOG BUTTON — the CLICK FACE and, unlike the roster's, THE
     // ACT'S OWN RECORD: these buttons act AT THE RELEASE (architect 2026-08-13,
@@ -8038,10 +8027,10 @@ struct AppState {
     // source every pointer-derived answer re-reads when it has to re-resolve with
     // no motion under it. -1 means "no motion seen yet". Its readers, each with
     // its own cadence and its own reason:
-    //   * the ROSTER's button faces (recompute_redesign_button_hover), repaired
-    //     from the TICK, gated on "no pointer gesture" so the freeze-hover rule
-    //     holds — geometry and enabled-state changes move those faces under a
-    //     stationary cursor;
+    //   * the ROSTER's pointer walk (recompute_redesign_button_hover — the
+    //     tooltip's owner and the armed press's inside bit), repaired from the
+    //     TICK, gated on "no pointer gesture" so the freeze rule holds —
+    //     geometry changes move the rects under a stationary cursor;
     //   * the POINTER CURSOR (refresh_pointer_cursor) and the open dropdown's
     //     ITEM FACES (recompute_dropdown_hover), both repaired from the run
     //     loop's per-iteration SETTLED HOOK, because their inputs — about ten
@@ -8744,12 +8733,6 @@ struct AppState {
     //                 a bare Enter means: on the list, the highlight's OPEN
     //                 act; on a button, that button's press.
     //                 Reset with the modal face state, being part of it;
-    //   `hovered_row` the pointer's row (-1 none; it paints no face since
-    //                 2026-10-02) — written
-    //                 by the motion's own walk, cleared at every listing
-    //                 rebuild and at the pointer-leave edge
-    //                 (clear_folder_overlay_hover), the one end a motion
-    //                 cannot answer for itself;
     //   `press`       THE ROW PRESS ARM (the chrome shape: arm at the press,
     //                 act at the lift): the row, the y and the scroll offset
     //                 at the press for the scroll drag, the feint's inside
@@ -8807,7 +8790,6 @@ struct AppState {
         int                scroll_px     = 0;
         int                highlight_row = -1;
         bool               list_focused  = false;
-        int                hovered_row   = -1;
         FolderOverlayPress press;
     };
     FolderOverlay folder_overlay;
@@ -8997,8 +8979,6 @@ struct AppState {
 //   paint_keyboard_slot — the slot's paint dispatch (::, paint_handler.cpp)
 //   paint_folder_overlay — the panel's painter (::, paint_handler.cpp)
 //   claim_folder_overlay_press — the row press claim (::, input_pointer.cpp)
-//   update_folder_overlay_hover — the hover walk (::, input_pointer.cpp)
-//   clear_folder_overlay_hover — the hover clear's damage (::, input_pointer.cpp)
 //   clear_folder_overlay_press — the press clear's damage (::, input_pointer.cpp)
 //   touch_point_in_pan_zone — the touch pan zone's carve-out (::, input_pointer.cpp)
 //   run_project's activation hook — the window-activation damage (::, main.cpp)
@@ -9609,21 +9589,21 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
     const double t = static_cast<double>(f) / static_cast<double>(frames);
     return x0 + static_cast<int>(std::nearbyint(t * span));
 }
-// THE HANDLE'S GRAB BAND — its own 20 px box, and the ONE test its two
-// readers share (2026-08-28, when the scrub became a Breeze slider): the press
-// router asks it to arm the marker drag, and the painter asks it for the
-// hovered outline, so what looks grabbable and what grabs are one answer.
+// THE HANDLE'S GRAB BAND — its own 20 px box (2026-08-28, when the scrub
+// became a Breeze slider), and its ONE reader is the press router, which asks
+// it to arm the marker drag; the painted thumb is smaller (paint_modal_dialog)
+// and wears no hover face (architect 2026-10-02).
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
 //
-// THE BAND IS THE PAINTED BOX AND NOTHING MORE: a box-sized SQUARE centred on
-// that column at the track's vertical centre, the same centring the groove
-// takes, and HALF-OPEN on both axes like every other pixel-cell test in the
+// THE BAND IS THE HANDLE'S BOX AND NOTHING MORE (render.h's
+// kScrubHandleBoxPx — the grab, not the picture: the 13 x 13 thumb is painted
+// inside it): a box-sized SQUARE centred on that column at the track's
+// vertical centre, the same centring the trough takes, and HALF-OPEN on both axes like every other pixel-cell test in the
 // product (a pixel x covers [x, x+1), containing_pixel's rule). It used to
 // take the track's whole height and both x endpoints inclusive, which armed
 // the drag from an invisible extension above and below the circle — a press
-// meant for the track, whose act is the seek AT THE PRESS — and reported a
-// hover one column past where the press could grab. The track rect stays the
+// meant for the track, whose act is the seek AT THE PRESS. The track rect stays the
 // press router's OUTER gate; this test runs inside it.
 inline bool render_player_scrub_handle_hit(const GuiRect& track, int handle_x,
                                            int x, int y) {
@@ -14261,7 +14241,7 @@ inline bool playback_launch_playable(const AppState& a,
 // MODAL gates are deliberately absent WITH ONE RULED EXCEPTION: a prompt or
 // a dialog editor swallows the PRESS at the pointer path's own veil, and a
 // modal that greyed the chrome under it would be a fourth face nobody asked
-// for (the HOVER faces do go dark under the veil — the hover walk's veil
+// for (no roster hint starts under the veil — the pointer walk's veil
 // term, recompute_redesign_button_hover — but that is the pointer's fact,
 // not a face state this predicate answers). THE FOLDER OVERLAY IS THE
 // EXCEPTION (architect 2026-08-28: "everything else greys as in the `h`
@@ -15002,11 +14982,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // the glyph at kRedesignDisabledMix, as on every dead button of that
         // row (paint_icon_row), the selected view's sunken lamp still saying
         // where you stand; the hint names the act and the grey is the
-        // message. The hover recompute composes this term into
-        // `face.hovered` (recompute_redesign_button_hover, input_pointer.cpp
-        // — the face gets the enabled term and the hint does not). The
-        // repaint is that walk's own per-tick comparator, no damage call
-        // anywhere here.
+        // message. The repaint is the roster's per-tick comparator (main.cpp),
+        // no damage call anywhere here.
         // The selector key's own card is what says it in words and the lit
         // Grid Iterations lamp beside it is what says why.
         //
@@ -17573,30 +17550,24 @@ static_assert(redesign_button_modifier_hint_agrees(),
     "the modifier hint and the modifier binding must name the same buttons");
 
 // THE HOVER ZONE — "the pointer is over this button in a way the surface
-// answers at all", which is hoverability WITHOUT the enabled term. It exists
-// because the two things a hover produces stopped agreeing on that one term
-// (architect 2026-08-07): the FACE still refuses on a disabled button, the
-// TOOLTIP no longer does. Everything else the two share — the open dropdown —
-// is stated once, here, so the hint and the hover bit can differ in exactly
-// the one way that was ruled and in no other.
+// answers at all", which carries NO ENABLED TERM: a disabled button still
+// explains itself through its TOOLTIP (architect 2026-08-07). Its one reader
+// is the roster's pointer walk (recompute_redesign_button_hover), for the
+// tooltip's owner; no button wears a hover face (architect 2026-10-02).
 //
-// AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON HOVERS UNDER IT. A lit
-// button beside an open menu would advertise a click the popup is about to
-// swallow (the icon row, which it floats over) or a second lit button in a row
-// that shows one at a time (row 1) — and a HINT under an open menu is the
-// two-floating-surfaces rule, which this same term is what makes structural.
-// Row 1 needs no exemption: it holds the anchors alone, and an ANCHOR's open
-// frame is the painter's own open condition (paint_menu_row), not this bit.
+// AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON IS IN THE ZONE UNDER
+// IT: a HINT under an open menu would break the two-floating-surfaces rule,
+// which this term is what makes structural. Row 1 needs no exemption: it
+// holds the anchors alone, and an ANCHOR's open frame is the painter's own
+// open condition (paint_menu_row), not this term.
 inline bool redesign_button_hover_zone(const AppState& a, RedesignButton) {
     return !a.dropdown.open();
 }
 
-// TWO NOTES THE ZONE KEEPS, both about the term it deliberately does NOT
-// carry — ENABLED, which the hover FACE adds at its one site and the hint does
-// not:
+// TWO NOTES THE ZONE KEEPS, both about the terms it deliberately does NOT
+// carry:
 //
-// SELECTED BUTTONS DO HOVER (for the tooltip; no hover face is painted since
-// 2026-10-02), so the icon row's toggles — the Cumulative one included — and
+// SELECTED BUTTONS DO HOVER (for the tooltip), so the icon row's toggles — the Cumulative one included — and
 // its view group's three radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION (the
 // chord table's `radio` flag, whose users are the view group's three), not in
 // its hoverability.
@@ -17604,11 +17575,8 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton) {
 // AND redesign_button_hoverable — this zone AND the enabled term, one call —
 // IS DELETED, found caller-less at the 2026-08-13 resolver sweep and dead
 // since the 2026-08-07 tooltips-on-disabled ruling split its two consumers
-// apart. The hover recompute is its only conceivable caller and cannot use it:
-// it needs the zone answer BY ITSELF for the hint and the zone-plus-enabled
-// answer for the face, so it reads this predicate once and adds the enabled
-// term inline. Nothing was rewired; the composition it stood for is spelled at
-// that site.
+// apart; the face it served is gone too (2026-10-02), so the hint's zone
+// answer BY ITSELF is all the walk asks.
 
 // Snapshot the undo-tracked settings from `app` (engine_settings; trim is
 // excluded). Called by Undo's push helpers at push time so every entry
@@ -17693,8 +17661,10 @@ enum class TrimHit { None, Begin, End };
 // painted column — the begin handle's LEFT edge on it, the end handle's RIGHT
 // edge on it — from trim_endcap_rect, the ONE rect owner render_trim_flags
 // fills through and publishes from. THE HIT RECT IS THAT HANDLE INFLATED by
-// kTrimEndcapGrabPx per side (a 9px handle is under a fingertip); it is the one place in this lane where the drawn
-// and the grabbable rect differ, and it is why two caps at nearby columns can
+// kTrimEndcapGrabPx per side (a 9px handle is under a fingertip), over the
+// lane's rows where the painted square takes only the trough's interior; it
+// is the one place in this lane where the drawn and the grabbable rect
+// differ, and it is why two caps at nearby columns can
 // overlap as targets at all (LEFTMOST WINS — the arbitration is at the
 // body). Tests both mouse_x and mouse_y, the y against the lane the caps were
 // painted in. A culled bound painted no cap and answers nothing; cold

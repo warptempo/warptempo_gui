@@ -860,11 +860,9 @@ bool notification_visible(const AppState& a, uint64_t id);
 // release's own coordinates), the cursor map
 // (pointer_cursor_kind), the card hover walk (GuiNotifications::update_hover),
 // the WHEEL's routing predicate (wheel_context, which swallows a detent over
-// a card), the touch pan zone (touch_point_in_pan_zone) and the two hover
-// walks a card can stand over — the roster's
-// (recompute_redesign_button_hover) and the folder overlay band's
-// (update_folder_overlay_hover), each answering "nothing under the pointer"
-// so no surface beneath a card wears a face or promises a press.
+// a card), the touch pan zone (touch_point_in_pan_zone) and the roster's
+// pointer walk (recompute_redesign_button_hover), which answers "nothing
+// under the pointer" so no button beneath a card starts a tooltip.
 uint64_t notification_card_at(const AppState& a, int x, int y);
 
 // -- The operations ---------------------------------------------------------

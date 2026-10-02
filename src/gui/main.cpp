@@ -1805,9 +1805,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
     // modal dialog's armed button, the popup's two
     // item faces plus its press claim, the render player's row press and
-    // scrub drag, the hover faces of the folder overlay's band, the
-    // notification cards and the modal row (its buttons and its field), the
-    // scrub handle's damage, and the roster hover clear. The platform-side
+    // scrub drag, and the notification cards' hover. No roster button, dialog
+    // button, band row or scrub handle wears a hover face (architect
+    // 2026-10-02), so none of them owes this edge a clear. The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h, and the capability-loss fire
     // site in input_core.cpp).
@@ -1825,8 +1825,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // settled cursor from truth (the fork's one statement is at
     // deliver_touch_translation_end, input_core.cpp). On the arm that
     // DOES fire, the body needed no change:
-    // clearing hover faces where a finger last was is precisely what the
-    // no-hover-under-touch consequence asks for. The fire
+    // clearing the pointer's state where a finger last was is precisely what
+    // the no-hover-under-touch consequence asks for. The fire
     // sites are the touch edge inventory's, input_core.h.
     // ONE OF THOSE FIRINGS IS THE TOUCH HARD END (a cancel, capability or
     // focus loss on a live pointer translation, hard_end_touch_stream), whose
@@ -1843,18 +1843,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // position event only WHILE the pointer stays outside: the platform PRESERVES
     // `pointer_left_held_`, a re-entry synthesizes a motion, and a still-held
     // button releases normally afterward. WHAT MAKES EVERY CLEAR HERE SAFE is
-    // that each drops a VISUAL FACE or a press CLAIM, so a later motion or
-    // release lands unowned or as a harmless no-op — never an inability of those
-    // events to arrive.
-    // The hover-driven faces must therefore be cleared here, or a pointer
-    // that slides out of the window over a button leaves its pill / outline lit
-    // for as long as it stays outside. THE MARKER
-    // HOVER USED TO RIDE THIS EDGE TOO and no longer exists (row 5) — the
-    // redesigned rows' button hover is the only ROSTER hover left (an open
-    // dropdown's item hover, the folder overlay's band, the notification
-    // cards and the modal row are the other pointer-position-dependent
-    // surfaces this edge drops, below), and it is separate state with its own
-    // clear.
+    // that each drops a VISUAL FACE, a hover's state or a press CLAIM, so a
+    // later motion or release lands unowned or as a harmless no-op — never an
+    // inability of those events to arrive.
+    // The pointer-position-dependent state must therefore be cleared here, or
+    // a pointer that slides out of the window leaves it standing for as long
+    // as it stays outside: an open dropdown's item face and the notification
+    // cards' hover are the two left (below).
     // THE ARMED CHROME PRESS joins it, and since the act moved to the release
     // (2026-08-13) this is sharper than a face: the arm is a pending ACT, and
     // this is the BUTTON-LOST edge — the hold stops being the pointer's to
@@ -1876,9 +1871,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // refuses outright while the pointer is outside. THE REASON FORKS IT (Qt's
     // model, architect 2026-09-29): the ORDINARY leave and capability loss
     // (both OrdinaryLeave) are HARD ends — the box goes down in this same
-    // event, through the one hide that damages the box's own published rect as well as the strip (the
-    // hover clear below queues strip damage alone, and the box hangs outside
-    // the strip) — while the pen leaving the plane (PenHoverEnd) is SOFT: the
+    // event, through the one hide that damages the box's own published rect
+    // as well as the strip (the box hangs outside the strip) — while the pen leaving the plane (PenHoverEnd) is SOFT: the
     // box keeps its owner and stays painted for the hide grace, so a pen
     // hovering at the plane's edge, or lost by the platform inside it, does not
     // blink the hint; coming back onto the same button within the grace keeps
@@ -1899,7 +1893,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             : reason == GuiPointerLeaveReason::PenHoverEnd
                 ? TooltipHoverEnd::Soft
                 : TooltipHoverEnd::Hard);
-        input_handler.clear_redesign_button_hover();
         // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end:
         // they also die at the BUTTON-LOST edge, an unheld
         // motion while one of them stands — which is what the touch layer's
@@ -1907,8 +1900,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (clear_release_time_press_arms). The calls stay spelled out here
         // rather than routed through that owner because THIS edge asks a
         // different question and clears more with it: a pointer that has left
-        // is on no button AND at no position, so the hover faces and the
-        // tooltip go too, and the popup's HOVERED item goes
+        // is on no button AND at no position, so the tooltip goes too, and the
+        // popup's HOVERED item goes
         // whether or not anything was armed. The narrower owner is a subset of
         // this body, deliberately.
         input_handler.clear_redesign_button_press();
@@ -1923,31 +1916,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // have not happened yet and both dropped uncommitted here exactly as
         // at the button-lost edge (clear_release_time_press_arms).
         input_handler.clear_folder_overlay_press();
-        // AND THE BAND'S HOVER FACE, on the hover half of this hook's own
-        // question: a pointer that has left is on no row, and no motion will
-        // ever arrive to say so.
-        input_handler.clear_folder_overlay_hover();
-        // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), the same hover half:
-        // a pointer that has left rests on no card, so every card the hover
-        // paused has its clock re-armed here (a card a press still holds
+        input_handler.clear_player_scrub_drag();
+        // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), this hook's hover
+        // half: a pointer that has left rests on no card, so every card the
+        // hover paused has its clock re-armed here (a card a press still holds
         // keeps its bank until the press's own clear, above).
         input_handler.clear_notification_hover();
-        // AND THE MODAL ROW'S HOVER FACES (architect 2026-09-28), the dialog
-        // buttons' outline and the field's border, the same hover half: a
-        // pointer that has left is on no button and no field, so each ends
-        // through the walk's own fade edge and takes its tail. Every reason
-        // clears it, the pen's PenHoverEnd included; the focus face stays.
-        input_handler.clear_modal_dialog_hover();
-        input_handler.clear_player_scrub_drag();
-        // AND THE SCRUB HANDLE'S HOVERED OUTLINE, the same hover half of the
-        // question one surface over: the handle's accent is re-answered at
-        // PAINT from the remembered position and the in-window flag (which
-        // this hook has just cleared), so what it owes is the damage — the
-        // cell, while the player owns the row.
-        if (app.render_player.active && app.modal_dialog.valid &&
-            app.modal_dialog.scrub.w > 0 && app.modal_dialog.scrub.h > 0) {
-            viewport.invalidate_rect(app.modal_dialog.scrub);
-        }
     });
 
     // WINDOW-ACTIVATION EDGE -> the one face that takes its unfocused look.
@@ -2653,27 +2627,26 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
 
-        // HOVER IS NO LONGER MOTION-ONLY. It is resolved from the pointer's last
-        // position against the painter's rects and redesign_button_hoverable —
-        // and BOTH of those move without any pointer event: a keyboard Ctrl+Tab
-        // makes the tab under a stationary pointer hoverable (it was the
-        // selected one, which does not hover), an enabled-state change makes a
-        // greyed button hoverable, and a live gui_scale commit relays out every
-        // rect under a pointer that never moved. Each of those left the face
-        // wrong until the next motion.
+        // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
+        // and the armed press's inside bit (recompute_redesign_button_hover;
+        // no button wears a hover face, architect 2026-10-02) from the
+        // pointer's last position against the painter's rects — and those
+        // rects move without any pointer event: a live gui_scale commit
+        // relays out every rect under a pointer that never moved, and a
+        // modal's yield zeroes the bottom row's. Each would leave the hint's
+        // owner wrong until the next motion.
         //
-        // The fix is to run the ONE recompute here as well: it is transition-
-        // gated internally and damages only on a real change, so a per-tick call
-        // is a handful of rect compares and, on the frames that matter, exactly
-        // the same single invalidate a motion would have paid. It runs AFTER the
-        // comparator so it reads the freshest published stash.
+        // The fix is to run the ONE walk here as well: a handful of rect
+        // compares, damaging only when the pressed face's inside bit flips.
+        // It runs AFTER the comparator so it reads the freshest published
+        // stash.
         //
         // GATED ON "no pointer gesture", which preserves the standing rule that
-        // an ACTIVE GESTURE FREEZES HOVER — the motion path enforces that by
+        // an ACTIVE GESTURE FREEZES THE WALK — the motion path enforces that by
         // returning before its tail, and an ungated tick would quietly undo it.
-        // A pointer that has LEFT the window is handled inside the recompute
+        // A pointer that has LEFT the window is handled inside the walk
         // (it returns early on app.pointer_in_window), so the tick cannot
-        // re-light what the leave hook cleared.
+        // start a hint for a pointer the leave hook let go.
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
 
@@ -2686,7 +2659,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // idle; every firing condition (the arm, the schedule, the pointer on
         // the button, the enabled bit, the eligibility) lives in the body.
         // Deliberately NOT gated on any_pointer_gesture_active, unlike the
-        // hover recompute above: the held button IS a live pointer act, and the
+        // roster walk above: the held button IS a live pointer act, and the
         // rows' presses arm no gesture that predicate names.
         input_handler.tick_chrome_press_repeat();
 

@@ -131,11 +131,12 @@ struct TrimRange {
 // THE SCAFFOLD (architect 2026-10-02: "connect all of these design pieces
 // under a few different keys, the Qt style of theming for Windows-type themes
 // … as much derived as possible … accent and ink separate keys, tuned the
-// same"). A HANDFUL OF BASE ROLES ARE THE ONLY COLOUR LITERALS; every other
-// colour is DERIVED from them at this one site by a named rule, and each
-// derived constant is static_assert-ed against its frozen bytes so the
-// compiler, not the eye, checks the derivation. A retune of a role is one
-// literal here and every face built from it follows. THE BASE ROLES:
+// same"). A HANDFUL OF BASE ROLES ARE THE COLOUR LITERALS, WITH ONE NAMED
+// EXCEPTION, THE HAND-LIST (below); every other colour is DERIVED from them at
+// this one site by a named rule, and each derived constant is static_assert-ed
+// against its frozen bytes so the compiler, not the eye, checks the
+// derivation. A retune of a role is one literal here and every derived face
+// built from it follows. THE BASE ROLES:
 //   GROUND  #303030  kRedesignContentGround — ONE ground everywhere: the menu
 //           row, the icon row, the three lanes, the bottom row, the dropdowns,
 //           the cards, the tooltip, the folder overlay and the picker.
@@ -155,12 +156,30 @@ struct TrimRange {
 //     would vanish into the face, which is why the relief is ONE line), the
 //     DOWN face, the TRIM bar and cap, the RULER label, the PLAYHEAD head
 //     and the FLAG border — each a grey channel × a stated ratio;
-//   from the FLAG and the RED — the edge (× 0.555), and the selected pair
-//     where a simple rule reproduces it (two do not, stated at them);
-//   from the INK and the CANVAS — the waveform's outline and the region's
-//     lift;
+//   from the FLAG and the RED — the edges (× 0.555), the selected red's
+//     edge included (it derives from the hand-listed selected red fill);
+//   from the CANVAS — the modal field's ground, and the region's lift
+//     (region_lift, which also lifts every plate pixel the INK paints);
 //   from the LABEL over the GROUND — the disabled, dimmed and hotkey inks
 //     (mix_color at a stated keep).
+// THE HAND-LIST — the colours KEPT LITERAL because no simple rule reproduces
+// their frozen bytes, the rule tried and its miss stated at each constant. A
+// RETUNE OF A BASE ROLE DOES NOT MOVE THEM: they are the retune's hand-list,
+// each re-chosen by hand beside the role it stands next to:
+//   beside the FLAG — kMarkerFlagFillSel and kMarkerFlagEdgeSel, the
+//     selected pair;
+//   beside the RED — kRedSelRgb, the selected red fill;
+//   the `h` view's greens — kHistoryAddedFill, kHistoryAddedEdge,
+//     kHistoryAddedFillSel, kHistoryAddedEdgeSel (this view's alone, beside
+//     the flag and the red they must stay apart from);
+//   beside the INK and the CANVAS — kWaveformForegroundOutline, their
+//     linear-light blend (pow() is not constexpr);
+//   beside the GROUND and the ACCENT — kRedesignAccentInactive, KDE's HCY
+//     tint;
+//   the icon inks that are no role's value (icons.cpp's ink block) —
+//     kIconPreviewOn and kIconLiftCross (Breeze's #d24d57 in P3 bytes) and
+//     kIconPlainWhite (the files' literal #fff). Every other icon ink IS a
+//     role (the label, the red, the accent) and follows a retune.
 // WHAT WAS HERE BEFORE, in one paragraph, because the file's shape is its
 // residue. The palette was 23 mutable globals loaded from
 // ~/.config/warptempo_gui/colors.conf until 2026-08-02; the kdenlive redesign
@@ -304,8 +323,9 @@ inline constexpr GuiColor kRedesignHighlightLabel = hex(0x000000);
 // KColorUtils::tint(ground, accent, 0.4), a contrast-solved HCY tint no
 // mix_color can express, computed against KF6 GuiAddons 6.30 on 2026-10-02
 // (it reproduces Breeze's published #1b4155 and this palette's earlier
-// #2d454f from their own inputs) → #3E4C55. Its text is the label white: a
-// dark ground under black text would not read.
+// #2d454f from their own inputs) → #3E4C55, A LITERAL on the head's
+// hand-list: a retune of the ground or the accent re-runs the tint here. Its
+// text is the label white: a dark ground under black text would not read.
 inline constexpr GuiColor kRedesignAccentInactive = hex(0x3E4C55);
 
 // -- Row 5: the TRIM lane, the RULER lane, the MARKER lane ------------------
@@ -1528,9 +1548,11 @@ inline int tooltip_hover_slop_px() {
 // face. Breeze's hover animation stood here from 2026-09-27 — the HoverFade
 // edge-and-level model, its tick, kHoverFadeMs / kHoverFadeSteps and the
 // menu pill's kMenuPillHoldMs hold — and it drove paint alone, so it went
-// whole with the hover faces it softened. The hover BITS stay: tooltips, the
-// menu row's hover switch and every press keep reading them. The record is
-// in git history.)
+// whole with the hover faces it softened, and the stored hover bits that only
+// those faces read went after them (the roster's, the dialog buttons' and
+// the folder overlay band's). The pointer walks stay for what still reads
+// them: the tooltips, the menu row's hover switch (a rect test of its own)
+// and the armed presses' inside bits. The record is in git history.)
 
 // THE DROPDOWNS' VERTICAL metrics — one set for every menu, out here for the
 // same reason the tooltip's height is: the popup's OPEN EDGE must damage the box
@@ -2257,15 +2279,19 @@ double displayed_trim_ms(int64_t frame,
 //
 // A trim bound is an EDGE, not a point: the begin handle's LEFT edge sits ON
 // the bound column (rect left = strip_x+col), the end handle's RIGHT edge sits
-// on it (rightmost pixel = strip_x+col), each flush with the bar's end. The
-// handle is trim_endcap_w_px() wide — the centre grip's 9 at 100% — and its
-// y-band is the trim lane `row`. Deliberate asymmetry vs centered marker
-// flags: a bound at frame 0 / EOF shows its handle fully onscreen.
+// on it (rightmost pixel = strip_x+col), each flush with the bar's end.
+// Deliberate asymmetry vs centered marker flags: a bound at frame 0 / EOF
+// shows its handle fully onscreen.
 //
-// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side (10, what each
-// retune of it costs the bridge is recorded at the constant). A 9px target is
-// still under a fingertip, so the drawn handle and the grabbable one are
-// deliberately NOT the same rect — the one place in this lane where they
+// THE RECT IS THE HANDLE'S COLUMNS OVER THE WHOLE LANE, NOT THE PAINTED
+// SQUARE: trim_endcap_w_px() wide — the centre grip's 9 at 100% — and the
+// trim lane `row`'s full height, a deliberately lane-tall grab, while the
+// painter fills those same columns over the trough's interior rows alone
+// (the 9 x 9 square inside the 11-row lane). THE HIT TEST ALSO INFLATES ITS
+// COLUMNS by kTrimEndcapGrabPx per side (10, what each retune of it costs the
+// bridge is recorded at the constant): a 9px target is still under a
+// fingertip. So the drawn handle and the grabbable one deliberately share
+// their columns and nothing else — the one place in this lane where they
 // differ, stated here because everywhere else in the redesign they are
 // identical by construction.
 GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
@@ -2328,9 +2354,10 @@ inline int trim_endcap_grab_px() {
 // rather than re-running the painter's owner chain on the live trim — the
 // flag lane's stash doctrine (AppState::flag_hit_rects) carried to the trim
 // lane. Everything is in SCREEN pixels. `lane` is the band the bar was painted
-// in, the y-gate of both hits. Each handle (a TrimBarHitCap) is its DRAWN rect
-// (trim_endcap_rect, uninflated — the hit applies trim_endcap_grab_px itself,
-// the one place the drawn and the grabbable rect differ) plus its bound
+// in, the y-gate of both hits. Each handle (a TrimBarHitCap) is its HIT BAND
+// (trim_endcap_rect, uninflated: the handle's painted columns over the lane's
+// whole height, the square itself being those columns over the trough's
+// interior; the hit applies trim_endcap_grab_px itself) plus its bound
 // column, which is the leftmost-wins sort key, and `painted` is false for a
 // bound the viewport culled, which paints no handle and so answers no hit.
 // The bridge is the half-open interval [bridge_lo, bridge_hi) between the
@@ -2341,7 +2368,7 @@ inline int trim_endcap_grab_px() {
 struct TrimBarHitCap {
     bool    painted = false;
     int     col_x   = 0;        // the bound's screen column
-    GuiRect rect{0, 0, 0, 0};   // the drawn handle
+    GuiRect rect{0, 0, 0, 0};   // the handle's columns x the lane's rows
 };
 struct TrimBarHit {
     bool          published = false;
@@ -2394,8 +2421,9 @@ struct TrimBarHit {
 // has no column on screen to stand on, and the bar's flush edge is what says
 // the window continues past the view.
 // Both handles come from the ONE rect owner (trim_endcap_rect) and are
-// published as filled — their columns at the lane's height — so the painted
-// handle and the grabbable one describe the same edge; the hit side adds only
+// published from it — their columns at the lane's whole height, the square
+// being those columns over the interior — so the painted handle and the
+// grabbable one describe the same edge; the hit side adds only
 // its stated grab tolerance. Column placement is on the displayed viewport
 // basis — `trim.begin` / `trim.end` are already in the displayed domain, so no
 // further translation happens here. A handle has NO editable payload; it is a

@@ -3349,12 +3349,14 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
     return -1;
 }
 
-// The dialog buttons' hover face — the pointer fact, written on every motion
-// under a standing dialog; a change damages the stashed box (the painter
-// reads the index back). The index resets with the stash in
-// paint_modal_dialog's no-dialog arm, so it cannot go stale across dialogs.
+// THE DIALOG BUTTONS' POINTER WALK, run on every motion under a standing
+// dialog. IT STORES NO HOVER: no dialog button wears a hover face (architect
+// 2026-10-02, the frozen design), so the walk answers two readers — the
+// armed button's inside bit with the feint (below), whose pressed face and
+// focus frame are painted and damage the stashed box, and this surface's
+// tooltip wait (the tail).
 //
-// IT ALSO TRACKS AN ARMED BUTTON — THE FEINT (architect 2026-08-13,
+// IT TRACKS AN ARMED BUTTON — THE FEINT (architect 2026-08-13,
 // SUPERSEDING this walk's own "sliding off cancels, and sliding back on does
 // NOT re-arm" rule of hours earlier): "if the user feints — clicks a button
 // and then drags away before the mouse goes up — then that button receives the
@@ -3378,9 +3380,7 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const bool feint = armed >= 0 && !inside &&
                        (app.modal_dialog_focus != armed ||
                         app.modal_dialog_focus_active);
-    if (app.modal_dialog_hovered != hit || feint ||
-        app.modal_dialog_press_inside != inside) {
-        app.modal_dialog_hovered       = hit;
+    if (feint || app.modal_dialog_press_inside != inside) {
         app.modal_dialog_press_inside  = inside;
         if (feint) {
             // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's second
@@ -3407,19 +3407,6 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);
     }
-    // THE PLAY-SCRUB'S HANDLE HAS A HOVERED OUTLINE AND NO BIT (2026-08-28):
-    // the painter re-answers it every frame from the remembered pointer
-    // position against the published item, because the handle MOVES under a
-    // stationary pointer while the transport plays and a stored answer would
-    // be stale in both directions between motions. What this walk owes is the
-    // DAMAGE — one small rect while the player's stash stands, so the frame
-    // that re-answers is drawn — and it is unconditional rather than
-    // change-driven for the same reason there is no bit: this walk cannot know
-    // the answer it would be comparing against without keeping one.
-    if (app.render_player.active && app.modal_dialog.valid &&
-        app.modal_dialog.scrub.w > 0 && app.modal_dialog.scrub.h > 0) {
-        viewport.invalidate_rect(app.modal_dialog.scrub);
-    }
     // AND IT OWNS THIS SURFACE'S TOOLTIP WAIT (2026-08-13, when the modal
     // buttons took hints instead of bracketed accelerators): the same writer
     // and the same tick the roster's walk uses, keyed on the Dialog half of
@@ -3435,30 +3422,10 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
                         app.modal_dialog.owner, app.modal_dialog.session});
 }
 
-// THE HOVER'S LEAVE END — the pointer-leave / capability-loss hook (main.cpp),
-// beside the roster's clear_redesign_button_hover, the folder overlay's and
-// the notification cards' (architect 2026-09-28): a pointer that has left is
-// on no button, and a leave delivers no motion for the walk above to answer,
-// so without this the hover index would name a button until the next motion
-// landed somewhere (the tooltip's subject reads it). It covers every leave reason the hook is handed — the mouse
-// leaving the window, the pen leaving the plane (PenHoverEnd keeps no face),
-// a finger's lift with no mouse resting in the window, capability loss. It is
-// a hover end like any other, with the walk's own damage of the stashed
-// box. The focus face is untouched: focus is not a pointer fact.
-// Transition-gated.
-void GuiInputHandler::clear_modal_dialog_hover() {
-    if (app.modal_dialog_hovered < 0) return;
-    app.modal_dialog_hovered       = -1;
-    if (app.modal_dialog.valid)
-        viewport.invalidate_rect(app.modal_dialog.box);
-}
-
 // THE ARM'S HARD END — the pointer-leave / capability-loss hook (main.cpp),
 // beside the roster's own clear_redesign_button_press and for its reason: a
 // pointer that has left the window is on no button, and an act that has not
 // happened yet must not be left waiting for a release that may never come.
-// The hovered index is its sibling's (clear_modal_dialog_hover, on the same
-// hook): the hover is a face and ends with its tail, the arm a pending act.
 // Transition-gated, damaging the stashed box when it fires.
 void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
@@ -4620,32 +4587,6 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
     return true;
 }
 
-void GuiInputHandler::update_folder_overlay_hover(int x, int y) {
-    if (!folder_overlay::stands(app)) return;
-    // A NOTIFICATION CARD IS OPAQUE TO THE POINTER (notifications.h), the
-    // roster walk's own term one surface over: the stack grows DOWN from row
-    // 1 and the band's ceiling is the icon row's foot, so the two
-    // overlap wherever a card taller than the icon row's lane stands,
-    // and a row under a card must neither light nor promise the press the
-    // card's claim will consume.
-    const int hit = notification_card_at(app, x, y) != 0
-                        ? -1
-                        : folder_overlay::row_at(app, x, y);
-    if (hit == app.folder_overlay.hovered_row) return;
-    const int old = app.folder_overlay.hovered_row;
-    app.folder_overlay.hovered_row = hit;
-    if (old >= 0) viewport.invalidate_rect(folder_overlay::row_rect(app, old));
-    if (hit >= 0) viewport.invalidate_rect(folder_overlay::row_rect(app, hit));
-}
-
-void GuiInputHandler::clear_folder_overlay_hover() {
-    const int old = app.folder_overlay.hovered_row;
-    if (old < 0) return;
-    app.folder_overlay.hovered_row = -1;
-    if (folder_overlay::stands(app))
-        viewport.invalidate_rect(folder_overlay::row_rect(app, old));
-}
-
 // -- THE NOTIFICATION CARDS' POINTER HALF (2026-08-29) -------------------------
 //
 // The rule and its reasons are at notifications.h and at the claim's site in
@@ -4739,10 +4680,10 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // column and a frame is the one the painter's handle uses
 // (render_player_scrub_x_of / _frame_at, app_state.h), which owns the handle
 // box's inset at both ends. A press on the HANDLE'S OWN BOX — its 20 px, the
-// one grab band, through the one test both this router and the painter's
-// hovered outline ask (render_player_scrub_handle_hit; it took over from the
-// trim endcaps' 10 px band on 2026-08-28, when the scrub became a Breeze
-// slider and grew a handle with a size of its own) — arms the marker drag: the
+// one grab band, through the one test (render_player_scrub_handle_hit; it
+// took over from the trim endcaps' 10 px band on 2026-08-28, when the scrub
+// became a Breeze slider and grew a handle with a size of its own) — arms the
+// marker drag: the
 // handle's painted x follows the pointer while the sound continues where it
 // was, and the RELEASE commits the seek, the product's deferred-click shape
 // (the same press could have been a tap on the track under the handle, whose
@@ -7226,145 +7167,88 @@ void GuiInputHandler::finalize_active_drags() {
     app.trim_bar_press = TrimBarPressSeed{};
 }
 
-// THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's three menu anchors, row 4's twenty-six — the toolbar four
-// included since the 2026-08-12
-// relayout, COPY VALUE and ENABLE TOOLTIPS since 2026-09-29, the VIEW GROUP's
-// three since 2026-10-01, the
-// history group's seven since 2026-08-18, the FLATTEN button in
-// the iteration group since 2026-09-19 and the WAVEFORM MAGNIFICATION lamp in
-// the zoom group since 2026-09-22 — and the bottom row's
-// seventeen: the enum's
-// own count at kRedesignButtonCount — the stash is
+// THE ROSTER'S POINTER WALK over the whole roster (row 1's three menu
+// anchors, the icon row's twenty-six and the bottom row's seventeen: the
+// enum's own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
-// with a zero rect now, and it resolves unhovered with no arm here).
-// A face changes only when its boolean does, and a motion that changes ANY of
-// them pays exactly ONE damage call PER STRIP TOUCHED — the strip idiom (no
-// narrow rects; the playhead columns' carve-out stays the sole exception),
-// forked per row-8's home since 2026-08-11: a transport face damages its own
-// bottom-strip lane, every other face the top strip, and the common transition
-// (leaving one button for its neighbour, two booleans flipping) still costs
-// one damage when both live in one strip. The rects are the
-// painter's stashes, so a hovered region is the painted button and nothing is
-// measured here.
-void GuiInputHandler::clear_redesign_button_hover() {
-    // Row 8's pixels live in the bottom strip, so a cleared transport face
-    // damages its own lane where every other face damages the top strip — the
-    // row's standing damage fork, per changed face (each strip pays only when
-    // one of its own faces moved).
-    bool changed_top       = false;
-    bool changed_transport = false;
-    for (int i = 0; i < kRedesignButtonCount; ++i) {
-        AppState::RedesignButtonFace& f = app.redesign_buttons[i];
-        if (!f.hovered) continue;
-        f.hovered = false;
-        if (redesign_button_in_transport_row(static_cast<RedesignButton>(i)))
-            changed_transport = true;
-        else
-            changed_top = true;
-    }
-    if (changed_top)       viewport.invalidate_top_strip();
-    if (changed_transport)
-        viewport.invalidate_rect(bottom_row_area(app));
-}
-
+// with a zero rect now, and it contains no point). IT STORES NO HOVER: no
+// roster button wears a hover face (architect 2026-10-02, the frozen design),
+// so the walk answers exactly two readers from the remembered position — the
+// TOOLTIP's wait (the button a resting pointer's hint names, handed to
+// note_tooltip_hover at the tail) and the ARMED CHROME PRESS's inside bit
+// (the pressed face, which is painted, and so pays its strip's damage). The
+// rects are the painter's stashes, so the button a hint names is the painted
+// button and nothing is measured here.
 void GuiInputHandler::recompute_redesign_button_hover() {
     // IT REFUSES WHILE THE POINTER IS OUTSIDE THE WINDOW — the same first line
     // and the same reason as recompute_dropdown_hover's, the boundary's other
-    // pointer-derived face: the remembered coordinates name a point INSIDE the
+    // pointer-derived walk: the remembered coordinates name a point INSIDE the
     // window even after the pointer has left, so this walk has no honest answer
     // to give while it is out. Its per-TICK caller (main.cpp) keeps running after
-    // a leave, and the refusal is what makes that call inert: it cannot
-    // re-light a face the pointer-leave hook dropped. Nothing else can move a
-    // face out there: the only writer of `hovered = true` is this walk, and the
-    // only other writers of false are the leave hook itself and the dropdown
-    // open edge, which no out-of-window event can reach.
+    // a leave, and the refusal is what makes that call inert: it cannot start a
+    // tooltip wait for a pointer the pointer-leave hook has already let go.
     // THE GUARD LIVES HERE, NOT AT THE WIRING, because this function is the
-    // faces' one derivation — on_motion, the other caller, writes
+    // walk's one body — on_motion, the other caller, writes
     // app.pointer_in_window true at its top and seeds the coordinates in the same
     // breath, so it is unaffected by construction, and a future third caller
     // inherits the rule instead of having to remember it.
     if (!app.pointer_in_window) return;
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
-    // AND IT REFUSES UNDER A NOTIFICATION CARD, for the opacity rule rather
-    // than for honesty: a card is opaque to the pointer (notifications.h), so
-    // no button beneath one may wear a hover face or start a tooltip dwell —
-    // a hover face is a PROMISE OF PRESSABILITY and the card's claim consumes
-    // that press before any roster gate sees it. THE TERM LIVES HERE, at the
-    // faces' one derivation, and not at the motion handler, because this walk
-    // has TWO callers and the other is the TICK: a pointer RESTING on a card
-    // over the icon row is exactly the case the review found, and a
-    // motion-side guard would be undone by the next tick's recompute. It is
-    // folded into `under_pointer` below rather than spelled as an early
-    // return so the walk still writes `hovered = false` on whatever it lit
-    // before the card slid up.
+    // AND NO BUTTON IS UNDER THE POINTER BENEATH A NOTIFICATION CARD: a card is
+    // opaque to the pointer (notifications.h), so no button beneath one may
+    // start a tooltip dwell — the card's claim consumes the press before any
+    // roster gate sees it, and a hint there would name a button the pointer
+    // cannot reach. THE TERM LIVES HERE, at the walk's one body, and not at the
+    // motion handler, because this walk has TWO callers and the other is the
+    // TICK: a pointer RESTING on a card over the icon row would be re-answered
+    // by the next tick's walk, undoing a motion-side guard. It is folded into
+    // `under_pointer` below rather than spelled as an early return so the
+    // walk's tail still runs.
     const bool under_card = notification_card_at(app, mx, my) != 0;
     // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
     // walk because the walk below is what finds the tooltip's button (the only
     // route that starts a roster wait); the rule is stated at the walk's tail.
     const bool modal_owns_the_keyboard = tooltip_dwell_suppressed();
     // THE DIALOG'S VEIL (2026-08-12): under a PROMPT or an EDITOR dialog the
-    // WHOLE roster is refused — nothing behind the modal is pressable, so
-    // nothing hovers. It was two rules until 2026-08-13, the editor half
-    // admitting the reach-through's own buttons; the reach-through is retired
-    // (the record is at its deleted predicate's site near the head of this
-    // file) and the two collapsed into this one. The pointer-transparent FLAG
+    // WHOLE roster is refused — nothing behind the modal is pressable, so no
+    // roster button is under the pointer for a hint either. The tail reads the
+    // same term as the dialog surface's liveness. The pointer-transparent FLAG
     // editor raises no veil: it is not a dialog and its roster presses were
     // never blocked.
     // THE FOLDER OVERLAY'S TWO OWNERS ARE DELIBERATELY NOT TERMS HERE
-    // (2026-09-03 evening, as on 2026-09-02 and for the same reason): the
-    // menu row stands above the band with the FILE ANCHOR LIVE, its press
-    // exempted from both veils, and a blanket term would refuse that one
-    // live button its hover (and so its tooltip) while it is the one thing on
-    // screen the pointer can act on. Nothing else lights: redesign_button_enabled's
-    // first arm greys the whole roster but that anchor, and the `inside` term
-    // below asks it. (They were terms for the hours of 2026-09-03 the anchors
-    // were all dead.)
+    // (2026-09-03 evening): the menu row stands above the band with the FILE
+    // ANCHOR LIVE, its press exempted from both veils; under them the hint is
+    // refused by the no-wait rule (tooltip_dwell_suppressed) alone.
     const bool modal_veil =
         app.prompt.active || modal_dialog_editor_active();
-    bool changed_top       = false;
-    bool changed_transport = false;
     int  hovered_tip = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
-        AppState::RedesignButtonFace& f = app.redesign_buttons[i];
+        const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         const RedesignButton id = static_cast<RedesignButton>(i);
         // A zero-width stash (before that row's first paint) contains no point,
         // and the pre-motion (-1, -1) cursor is outside every rect, so both cold
-        // states resolve to "not hovered" without a special case.
+        // states resolve to "not under the pointer" without a special case.
         //
         // THE ZONE IS THE SECOND TERM (redesign_button_hover_zone, app_state.h):
         // an open dropdown answers nothing to the pointer at all, and the
-        // refusal lives in that one predicate rather than as a condition here
-        // or in the painter. There is no in-window term: the
-        // whole walk refused above.
+        // refusal lives in that one predicate rather than as a condition here.
+        // There is no in-window term: the whole walk refused above. AND NO
+        // ENABLED TERM (architect 2026-08-07): a disabled button still explains
+        // itself, kdenlive's own behaviour.
         const bool under_pointer = !modal_veil && !under_card &&
                                    rect_contains(f.rect, mx, my) &&
                                    redesign_button_hover_zone(app, id);
-        // THE FACE ADDS THE ENABLED TERM AND THE HINT DOES NOT (architect
-        // 2026-08-07): a disabled button keeps its dead face under the pointer
-        // and still explains itself, kdenlive's own behaviour. This is the ONE
-        // place the two consumers of a hover part company, which is why both are
-        // resolved in this single walk. The term is the PAINTED bit
-        // (f.enabled), the one the press claims on (architect 2026-09-24,
-        // strictly as-painted): the hover bit stands exactly where a press
-        // would arm, and the per-tick comparator keeps the bit honest.
-        const bool inside = under_pointer && f.enabled;
-        if (f.hovered != inside) {
-            f.hovered = inside;
-            if (redesign_button_in_transport_row(id))
-                changed_transport = true;
-            else
-                changed_top = true;
-        }
         // MEMBERSHIP IS THE CONSTANT TABLE'S (2026-09-01): this asks only
         // whether the button HAS a tooltip — a null line 1 — and that is the
         // menu-row exclusion the state-free table owns; the stateful overload
         // (whose every arm returns a non-null line 1) is the painter's, which
         // reads the words at paint time.
-        if (hovered_tip < 0 && under_pointer && !modal_owns_the_keyboard &&
-            redesign_button_tooltip(id).line1 != nullptr)
+        if (under_pointer && !modal_owns_the_keyboard &&
+            redesign_button_tooltip(id).line1 != nullptr) {
             hovered_tip = i;
+            break;
+        }
     }
     // THE ARM'S INSIDE BIT — the feint's chrome half (2026-08-13, the modal
     // arm's press_inside on this surface), maintained here because this walk
@@ -7388,22 +7272,18 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         if (inside != app.chrome_press.inside) {
             app.chrome_press.inside = inside;
             // Only an arm with a click face paints a pressed interior, and
-            // its home strip pays — the row fork the face writers all
-            // take.
+            // its home strip pays — row 8's damage fork: a transport face
+            // damages its own bottom-strip lane, every other face the top
+            // strip.
             if (roster_index_click_face(app.chrome_press.index)) {
                 if (redesign_button_in_transport_row(static_cast<RedesignButton>(
                         app.chrome_press.index)))
-                    changed_transport = true;
+                    viewport.invalidate_rect(bottom_row_area(app));
                 else
-                    changed_top = true;
+                    viewport.invalidate_top_strip();
             }
         }
     }
-    // Row 8's damage fork: a transport face damages its own bottom-strip lane,
-    // every other face the top strip — each strip pays only for its own.
-    if (changed_top)       viewport.invalidate_top_strip();
-    if (changed_transport)
-        viewport.invalidate_rect(bottom_row_area(app));
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
     // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip,
@@ -7424,14 +7304,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     //
     // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT, and this refusal
     // is what makes "a tooltip never floats over a modal" hold rather than merely
-    // start out true. The HOVER PILL deliberately stays live under those surfaces
-    // (the standing ruling: button hover is a pointer fact, and a lit pill
-    // advertising a swallowed press is an accepted cost) — and both of the
-    // branches that keep it live call this function, so without this line a
-    // motion under a prompt or an editor would start a wait and the tick
-    // would raise a FLOATING hint over the modal. A hint is not a
-    // face: it is a second surface, it hangs past the strip, and the chord it
-    // names is exactly what the modal gate is swallowing. Forcing "no owner" here
+    // start out true. The modal branches of on_motion still call this walk
+    // (the armed press's inside bit and the dialog owner's liveness below are
+    // pointer facts a modal does not freeze), so without this line a motion
+    // under a prompt or an editor would start a wait and the tick would raise
+    // a FLOATING hint over the modal. A hint is a second surface, it hangs
+    // past the strip, and the chord it names is exactly what the modal gate
+    // is swallowing. Forcing "no owner" here
     // rather than gating the tick keeps the wait's writer in one place; the
     // modal's OPEN edge is a hard end of its own (on_key's or the press's, or
     // the compositor close's), which takes any standing box down at once.
@@ -8986,21 +8865,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // the menu count.
     const bool same = (app.dropdown.menu == menu);
     close_dropdown();
-    // THE CLOSE HALF RE-DERIVES THE ROSTER'S HOVER IN THE SAME EVENT
-    // (architect 2026-10-01), mirroring the open edge's unhover below in this
-    // same function. While the menu stood every hover bit was false and the
-    // anchor's pill was held by the painter's open-menu term alone; the close
-    // drops that term, and without this recompute the frame painted before the
-    // next tick's recompute_redesign_button_hover would show the anchor at
-    // rest — one frame of blink at the second touch on the tablet, whose loop
-    // paints after every input drain. The pointer is on the anchor by
-    // construction: this line is reached only by a press on the open menu's
-    // own anchor (the hover switch opens, never closes). Scoped to this half
-    // and not to close_dropdown, whose other callers close from elsewhere.
-    if (same) {
-        recompute_redesign_button_hover();
-        return;
-    }
+    if (same) return;
     // OPENING A MENU ENDS AN ACTIVE FLAG EDIT, discarding it — exactly what a
     // press anywhere outside the editor's box already does. It is what keeps "a
     // popup and an editor are never open together" true, and the FLAG editor is
@@ -9080,36 +8945,16 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // opening hides the tip at once) — the two floating surfaces cannot
     // coexist (paint_handler.h states the pair), and this is the one line that
     // makes that structural rather than a reachability argument about which
-    // routes reach an open. It is NOT the roster clear's doing:
-    // clear_redesign_button_hover writes the faces' `hovered` bits and nothing
-    // else, the tooltip's wait and box living in their own state
-    // (AppState::redesign_tooltip). The hover recompute alone would find no
-    // owner under the popup and only start the hide grace, and on the NEXT
-    // motion at that — "next motion" is not a property, an open reached with
-    // the pointer standing still has none.
+    // routes reach an open. The roster walk alone would find no owner under
+    // the popup and only start the hide grace, and on the NEXT motion at that
+    // — "next motion" is not a property, an open reached with the pointer
+    // standing still has none.
     hide_shift_tooltip();
-    // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup, and
-    // redesign_button_hover_zone refuses the WHOLE roster while a dropdown is
-    // up.
-    // A press carries no motion of its own and the pointer may then stand still
-    // indefinitely ("next motion" is not a property, as the tooltip hide above
-    // says), so a face lit at the moment of the open
-    // would otherwise stay lit under a surface that has taken the pointer from
-    // it. THE TOOLTIP STAYS DOWN for as long as the popup is up on the same
-    // predicate's OTHER half: redesign_button_hover_zone (the term hoverability
-    // and the hint still share — the enabled term is the one they parted on)
-    // refuses every button while a menu is open, so the roster walk
-    // (recompute_redesign_button_hover) can never start a wait.
-    //
-    // ROW 1 IS CLEARED HERE TOO AND STAYS CLEAR while the menu is up; it
-    // re-resolves at the next motion or the next tick (main.cpp runs the same
-    // recompute per frame, gesture-gated only) once the popup is down. That
-    // costs nothing visible: the only row-1 button the pointer can be on at an
-    // open edge is the one just pressed, and that is the popup's ANCHOR, whose
-    // open frame is the painter's own open condition (paint_menu_row),
-    // regardless of the hover bit. This clear serves the OTHER roster buttons
-    // and the tooltip.
-    clear_redesign_button_hover();
+    // THE TOOLTIP STAYS DOWN for as long as the popup is up:
+    // redesign_button_hover_zone refuses every roster button while a menu is
+    // open, so the roster walk (recompute_redesign_button_hover) can never
+    // start a wait. The anchor's open frame is the painter's own open
+    // condition (paint_menu_row), which the strip's damage repaints.
     viewport.invalidate_top_strip();
 }
 
@@ -9195,8 +9040,8 @@ void GuiInputHandler::hide_shift_tooltip() {
 // button goes and the seen position is forgotten, so the re-entry's first
 // walk is a motion onto whatever it lands on; a hard leave then hides as
 // every hard end does, and the pen's plane exit starts the hide grace instead
-// — the box keeps its owner and stays painted (paint_shift_tooltip reads
-// neither the hover faces nor the in-window bit), a return to the same button
+// — the box keeps its owner and stays painted (paint_shift_tooltip does not
+// read the in-window bit), a return to the same button
 // within the grace cancels it, and the grace running out takes the box down
 // through the tick with the awake window left running (Qt's Leave).
 // A TRANSLATED CONTACT'S LIFT IS NO LEAVE FOR THE TOOLTIP (architect
@@ -9621,14 +9466,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // are hit above every veil, so their hover must be answered under every
     // modal too, and every branch below returns.
     //
-    // THE CARD'S OPACITY IS NOT SPELLED HERE, and deliberately not: the two
-    // hover walks a card can stand over — the roster's
-    // (recompute_redesign_button_hover) and the band's
-    // (update_folder_overlay_hover) — each carry the term themselves, because
-    // the roster's has a SECOND caller, the tick, and a pointer RESTING on a
-    // card is exactly the case that must not light what is under it. An early
-    // return here would be undone by the next tick and would freeze a live
-    // gesture whose pointer merely crossed a card. The cursor map, the press
+    // THE CARD'S OPACITY IS NOT SPELLED HERE, and deliberately not: the
+    // roster walk a card can stand over (recompute_redesign_button_hover)
+    // carries the term itself, because it has a SECOND caller, the tick, and
+    // a pointer RESTING on a card is exactly the case that must not start a
+    // hint for what is under it. An early return here would be undone by the
+    // next tick and would freeze a live gesture whose pointer merely crossed
+    // a card. The cursor map, the press
     // claim and the touch pan zone ask the same one owner
     // (notification_card_at) for the same reason.
     update_notification_hover(mouse_x, mouse_y);
@@ -9638,46 +9482,30 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // has ONE owner now, the run loop's per-iteration tail hook, which runs in
     // the SAME iteration that dispatched this event and reads the two lines
     // above. Recording the position is therefore all a motion owes the cursor.)
-    // THE BUTTON HOVER RECOMPUTE STAYS LIVE UNDER EVERY MODAL SURFACE — the
-    // two MODAL branches that return before the no-gesture tail (the prompt's
-    // and the dialog editors' below) both call it — but WHAT IT DERIVES under
-    // a modal changed with the dialog veil (2026-08-12, revising the
-    // 2026-07-31 "hover follows the pointer everywhere" reading): the walk's
-    // veil term refuses the whole roster under a PROMPT and everything but
-    // the veil-admitted Save under an EDITOR dialog, because a hover
-    // face is a PROMISE OF PRESSABILITY and the veil consumes those presses.
-    // The recompute must still RUN in those branches for the original
-    // ruling's reason inverted: the walk is the only writer of `hovered`
-    // false as well as true, so a modal that skipped it would leave a pill
-    // lit at the open frozen under the veil — the exact stale-pill defect the
-    // 2026-07-31 ruling fixed, now fixed by re-deriving to the veiled answer.
-    // The dialog's own buttons take their hover through
-    // update_modal_dialog_hover in the same branches. What the recompute must
-    // NOT do under a modal is start a TOOLTIP dwell — a floating hint is not
-    // a face, and that refusal lives in the recompute itself.
-    // What DOES still freeze the hover is an active pointer GESTURE — the
-    // branches below all return without this call, exactly as before.
-    //
-    // NO CLOSE-EDGE HOOK EXISTS OR IS NEEDED: with the recompute live through
-    // the whole modal, the veiled faces re-derive on the first motion or tick
-    // after the close (the veil term reads the live editor state), which is
-    // the roster's ordinary staleness window.
+    // THE ROSTER WALK STAYS LIVE UNDER EVERY MODAL SURFACE — the MODAL
+    // branches that return before the no-gesture tail (the prompt's, the
+    // player's, the picker's and the dialog editors' below) all call it —
+    // because what it answers is not frozen by a modal: the armed chrome
+    // press's inside bit, and the tail's hard end of a DIALOG tooltip owner
+    // whose surface has gone. What it must NOT do under a modal is start a
+    // roster TOOLTIP dwell, and that refusal lives in the walk itself (the
+    // veil and the no-wait rule). The dialog's own buttons take their walk
+    // through update_modal_dialog_hover in the same branches. What DOES
+    // freeze the walk is an active pointer GESTURE — the branches below all
+    // return without this call.
     //
     // AN OPEN DROPDOWN REFUSES THE WHOLE ROSTER (redesign_button_hover_zone,
-    // app_state.h), so the recompute in its branch below re-derives all-false
-    // while the menu stays up, which costs a pass of rect compares and no
-    // damage.
-    // The ANCHOR of the open menu lights through the paint condition
-    // (paint_menu_row) rather than through the hover bit — that is what keeps its
-    // pill through the open edge's clear and what makes a switch visible on the
-    // frame it happens.
+    // app_state.h), so the walk in its branch below finds no hint owner while
+    // the menu stays up. The ANCHOR of the open menu wears its open frame
+    // through the paint condition (paint_menu_row), which is what makes a
+    // switch visible on the frame it happens.
     //
     // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
     // so no gesture can be live under it (its own press consumed everything).
     if (app.dropdown.open()) {
-        // The roster's own faces. While a popup is up this re-derives false for
-        // the WHOLE roster (redesign_button_hover_zone refuses every button
-        // then — the pointer belongs to the popup).
+        // The roster walk. While a popup is up it finds no hint owner on the
+        // WHOLE roster (redesign_button_hover_zone refuses every button then —
+        // the pointer belongs to the popup).
         recompute_redesign_button_hover();
         // HOVERING THE OTHER MENU'S BUTTON SWITCHES TO IT (architect
         // 2026-08-03) — the menu bar's standing behaviour: open one menu, slide
@@ -9686,9 +9514,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // CLICK uses, so the close-then-open, the anchor expression and the open
         // edge's damage are one route with nothing restated here; a menu that is
         // not the open one makes that toggle's same-menu test false, which is
-        // exactly the switch. The button it switches ONTO lights through the
-        // painter's own anchor condition (paint_menu_row), not through the hover
-        // bit.
+        // exactly the switch. The button it switches ONTO wears the
+        // painter's own anchor condition (paint_menu_row).
         //
         // The walk covers every menu that HAS an anchor instead of naming
         // them, so the anchor owner stays the one place that knows which button
@@ -9743,11 +9570,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (app.prompt.active) {
-        // THE PROMPT DIALOG'S MOTION: the dialog buttons' hover face, then
-        // the roster recompute — which under a prompt re-derives ALL-FALSE
-        // through that walk's own veil term, so a pill lit at the open goes
-        // out on the next motion or tick. The veil consumes the rest of the
-        // motion — nothing below this branch runs.
+        // THE PROMPT DIALOG'S MOTION: the dialog buttons' walk, then the
+        // roster walk (which under a prompt finds no hint owner through its
+        // own veil term). The veil consumes the rest of the motion — nothing
+        // below this branch runs.
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
@@ -9755,11 +9581,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // THE FOLDER OVERLAY'S MOTION, for EVERY content and at the press
     // claim's own rank: a standing row arm follows the pointer (the feint's
     // inside bit, or the band's scroll drag once the vertical gate is
-    // crossed) and owns the motion whole, and with no arm standing the band
-    // takes its row hover and the motion carries on below — which is what
-    // hands the player's and the picker's own motion branches below their
-    // hover work. A LOST BUTTON is the hard end: the arm drops and nothing
-    // commits, the chrome arm's own rule.
+    // crossed) and owns the motion whole, and with no arm standing the
+    // motion carries on below to the player's and the picker's own motion
+    // branches (the band's rows wear no hover face, architect 2026-10-02). A
+    // LOST BUTTON is the hard end: the arm drops and nothing commits, the
+    // chrome arm's own rule.
     if (app.folder_overlay.press.armed) {
         if (!mods.primary_button_held) {
             clear_folder_overlay_press();
@@ -9768,12 +9594,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         update_folder_overlay_press_motion(mouse_x, mouse_y);
         return;
     }
-    update_folder_overlay_hover(mouse_x, mouse_y);
     // THE RENDER PLAYER'S MOTION (2026-08-28): a standing scrub drag moves
-    // the marker, and otherwise the modal buttons' hover face and the roster
-    // recompute (all-false under the veil term BUT THE LIVE FILE ANCHOR, whose
-    // face the menu row keeps above the band — 2026-09-03 evening) run —
-    // nothing below this branch does.
+    // the marker, and otherwise the modal buttons' walk and the roster walk
+    // run (no roster hint under the player — the no-wait rule — though THE
+    // FILE ANCHOR stays live above the band, 2026-09-03 evening) — nothing
+    // below this branch does.
     if (app.render_player.active) {
         if (app.render_player.scrub.armed) {
             if (!mods.primary_button_held) {
@@ -9787,10 +9612,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         recompute_redesign_button_hover();
         return;
     }
-    // THE PICKER'S MOTION (2026-08-28): the modal buttons' hover face and the
-    // roster recompute (all-false under the veil term but the live File
-    // anchor), nothing else — no
-    // field, no drag, no scrub; the overlay's own arm and hover ran above.
+    // THE PICKER'S MOTION (2026-08-28): the modal buttons' walk and the
+    // roster walk (no roster hint, the no-wait rule), nothing else — no
+    // field, no drag, no scrub; the overlay's own arm ran above.
     if (app.picker.active) {
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
@@ -9849,12 +9673,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // THE EDITOR DIALOG'S MOTION — the three dialog editors in one branch
         // (the BPM bracket included since the dialog arc; it used to fall
         // through to the gesture branches, harmlessly, its presses all
-        // swallowed): the dialog buttons' hover face, then the roster
-        // recompute, whose veil term refuses the whole roster since the
-        // modal-trap reach-through's retirement, so every chrome face goes
-        // dead under the pointer. The rationale for recomputing at all is the
-        // one the old branch carried: hover is a separately maintained
-        // pointer fact, and a modal freezing it left lit pills behind.
+        // swallowed): the dialog buttons' walk, then the roster walk, whose
+        // veil term refuses the whole roster since the modal-trap
+        // reach-through's retirement, so no roster hint starts under the
+        // pointer.
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;

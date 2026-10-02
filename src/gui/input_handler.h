@@ -1462,8 +1462,8 @@ struct GuiInputHandler {
     // that the motion applies in the mode the user is already holding.
     void sync_nav_drag_mode(GuiInputState mods);
 
-    // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's three menu anchors,
+    // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
+    // three menu anchors,
     // row 4's twenty-six (the
     // toolbar four included since the 2026-08-12 relayout, COPY VALUE
     // between Redo and Render since 2026-09-29, Full zoom out
@@ -1489,22 +1489,15 @@ struct GuiInputHandler {
     // narrow for the icon row, where a member the view group's overflow
     // covers whole publishes a zero rect and one it covers in part only its
     // painted columns (paint_icon_row).
-    // recompute_
-    // re-resolves the cursor's last position against the painter's stashed rects
-    // and is called from on_motion's no-gesture tail and from the run loop's
-    // TICK; it REFUSES OUTRIGHT while the pointer is outside the window (its own
-    // first lines), which is what keeps the tick's call inert out there.
-    // clear_ is the pointer-LEAVE
-    // / capability-loss drop, wired in main.cpp on the pointer-leave hook,
-    // because a face is an answer to "where is the pointer" and the pointer is
-    // gone: capability loss ends that stream outright, and an ordinary leave has
-    // no motion only WHILE the pointer stays outside — long enough for a lit
-    // pill to sit there unowned until a re-entry's synthesized motion recomputes
-    // it. Both damage ONLY on a
-    // real transition, and at most one invalidate_top_strip per call however many
-    // faces moved.
+    // It re-resolves the cursor's last position against the painter's stashed
+    // rects for its two readers — the tooltip's wait and the armed chrome
+    // press's inside bit; it stores no hover, no button wearing a hover face
+    // (architect 2026-10-02) — and is called from on_motion's no-gesture tail,
+    // its modal branches and the run loop's TICK; it REFUSES OUTRIGHT while
+    // the pointer is outside the window (its own first lines), which is what
+    // keeps the tick's call inert out there. It damages only when the pressed
+    // face's inside bit flips.
     void recompute_redesign_button_hover();
-    void clear_redesign_button_hover();
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
@@ -1647,7 +1640,7 @@ struct GuiInputHandler {
     void tick_tooltip();
 
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's
-    // ONE expression, asked by the roster's hover walk
+    // ONE expression, asked by the roster's pointer walk
     // (recompute_redesign_button_hover), the only route that starts a roster
     // wait. The full rationale is at the walk's tail; the predicate names
     // the rule's membership in one place.
@@ -1732,7 +1725,7 @@ struct GuiInputHandler {
     bool dropdown_key_blocked(GuiKey key, GuiInputState mods);
 
     // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss
-    // hook's clear, beside clear_redesign_button_hover: a pointer that has
+    // hook's clear: a pointer that has
     // left the window is on no button, and since the act moved to the release
     // (2026-08-13) the arm is a pending ACT, not just a face — it must not be
     // left waiting for a release that may never come. Only capability loss
@@ -1752,11 +1745,6 @@ struct GuiInputHandler {
     // are private, beside the modal's other pointer readers; the contract is at
     // the definition and the full edge list at AppState::modal_dialog_pressed.
     void clear_modal_dialog_press();
-    // THE MODAL ROW'S HOVER FACES (the dialog buttons' and the field's),
-    // dropped on that same edge (architect 2026-09-28) through the hover
-    // walk's own fade edge, so each takes its Breeze tail; the contract is at
-    // the definition.
-    void clear_modal_dialog_hover();
     // THE RENDER PLAYER'S TWO ARMS' HARD ENDS (2026-08-28): the folder
     // overlay's row press and the play-scrub's marker drag, dropped
     // uncommitted on the pointer-leave edge (main.cpp's hook), the
@@ -1766,21 +1754,6 @@ struct GuiInputHandler {
     // gesture-free state) — the contracts are with their press routers, in
     // the player's block below.
     void clear_folder_overlay_press();
-    // THE BAND'S HOVER FACE, dropped on the pointer-leave edge alone (the
-    // roster's own clear_redesign_button_hover beside it): every other end of
-    // a hover is a MOTION, which the hover walk answers by itself. A leave
-    // delivers none, so the lit row would stay lit with the pointer gone.
-    // THIS EDGE IS ALSO A FINGER'S LIFT, which is why the panel needs no
-    // touch term of its own for it (architect 2026-08-29: "hover clears at a
-    // finger's lift", GTK's and Kirigami's habit — no prelight left behind
-    // after a touch): the touch translation's end delivers the button release
-    // and then, with no mouse resting in the window, this very leave
-    // (GuiInputCore::deliver_touch_translation_end), so the row the tap lit is
-    // dark again in the same frame. With a mouse focused the end delivers a
-    // restore MOTION at the mouse's own position instead, and the hover walk
-    // re-answers from there — the mouse's hover, unchanged, which is the other
-    // half of the ruling.
-    void clear_folder_overlay_hover();
     void clear_player_scrub_drag();
     // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at
     // notifications.h). The CLAIM ranks above every veil in on_button_press:
@@ -1869,7 +1842,7 @@ struct GuiInputHandler {
     // point: the edge is the invariant, not the device.
     //
     // WHAT IT IS NOT: an end for anything the pointer's POSITION owns. The
-    // roster's hover faces and the tooltip stay with
+    // tooltip and the notification cards' hover stay with
     // the leave hook, which is a different question ("where is the pointer") —
     // so that hook still calls its own clears plus those, and this is a
     // strict subset of it rather than a replacement.
@@ -3823,7 +3796,7 @@ private:
     // discarded an edit on the way to a command.
     // THREE READERS, re-derived 2026-08-12 (the touch half): the on_key gate
     // (input_handler.cpp), paired with modal_editor_key_blocked, the
-    // roster hover walk's no-dwell term (recompute_redesign_button_hover,
+    // roster pointer walk's no-dwell term (recompute_redesign_button_hover,
     // input_pointer.cpp — no shift-tooltip dwell runs under a surface that
     // owns the keyboard), and the touch region begin's gate
     // (begin_touch_region, input_pointer.cpp — the gesture bypasses the
@@ -3870,7 +3843,7 @@ private:
     //     exactly the ones over which no cursor may promise a gesture;
     //   the dialog button claim's RELEASE MIRROR in on_button_release
     //     (2026-08-13 — the buttons act at the lift) and on_motion's
-    //     dialog-hover branch (2026-08-12) — the modal's own two pointer
+    //     dialog-walk branch (2026-08-12) — the modal's own two pointer
     //     surfaces;
     //   THE VEIL ITSELF, at the tail of on_button_press's modal block: a
     //     press that reached neither the field nor the buttons is swallowed
@@ -3880,8 +3853,9 @@ private:
     //     2026-08-13), which since the reach-through's retirement refuses
     //     every armed kind outright — one term above the kind switch — and
     //     exists for the editor OPENED MID-HOLD;
-    //   the roster hover walk's veil term (recompute_redesign_button_hover —
-    //     under an editor dialog nothing hovers, the prompt's own answer);
+    //   the roster pointer walk's veil term (recompute_redesign_button_hover —
+    //     under an editor dialog no roster hint starts, the prompt's own
+    //     answer);
     //   and on the KEYBOARD side, modal_editor_key_blocked's bare-Tab
     //     admission (2026-08-13: the focus ring's Tab is admitted for exactly
     //     these four, the flag editor publishing no dialog and so having no
@@ -4012,7 +3986,7 @@ private:
     // activates, architect 2026-08-29; a scroll drag ends), the motion
     // (past the drag gate — the sweeps' and pans' Chebyshev crossing, on
     // EITHER axis — the arm is the band's scroll drag; inside
-    // it the feint's inside bit), the hover walk, and the hard end (the
+    // it the feint's inside bit), and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // the arm dropped, nothing committed). The claim is RANKED under the
     // prompt gate and under the OPEN DROPDOWN'S claim (a standing menu owns
@@ -4024,7 +3998,6 @@ private:
                                     GuiInputState mods);
     bool finish_folder_overlay_release(int x, int y);
     void update_folder_overlay_press_motion(int x, int y);
-    void update_folder_overlay_hover(int x, int y);
     // THE TWO HALVES OF THE ROW CLICK, FORKED ON THE OWNER and nowhere else:
     // the highlight (the band moves, under every owner — the picker has
     // no field beside it) and the open act (the player enters a folder, goes
@@ -4137,8 +4110,10 @@ private:
     // THE MODAL DIALOG'S POINTER HALF (2026-08-12; bodies in
     // input_pointer.cpp — the painter's stash is AppState::modal_dialog and
     // the veil contract lives at on_button_press's two dialog gates):
-    // the button hit test over the stash, the hover-face writer the motion
-    // branches call, and the editor dialog's OK/Cancel dispatch — the
+    // the button hit test over the stash, the pointer walk the motion
+    // branches call (the armed button's inside bit, the feint and the
+    // dialog's tooltip wait — no hover face), and the editor dialog's
+    // OK/Cancel dispatch — the
     // session's own Enter/Esc through the per-editor key routes,
     // button-is-its-chord.
     int  modal_dialog_button_hit(int x, int y) const;
