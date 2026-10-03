@@ -86,4 +86,5 @@ THE CODEX ROUTINE (all tmp/ paths gitignored): every round is a FRESH codex sess
 | Tempo, the home-view binding, propagate paste | `active_column_authoring_allowed`, `warp_tempo_step_move`, `src/gui/phase_reset_propagate.h`, `propagate_blocks.h` |
 | Engine performance (a closed campaign) and the retired waveform antialiasing | `docs/engineering/perf_campaign_2026_07.md`, `docs/engineering/waveform_antialiasing_retired.md`, `docs/engineering/parity_retrospective_2026_07.md` |
 | The mock-up renderer (a theme JSON + a measured scene → the tablet's screen; `themes/frozen.json` records the 2026-10-02 morning design, the Windows-95 chrome was judged as set AD2 of that evening — its options are the README's) | `tools/palette/README.md`, `tools/palette/render.py`, `tools/palette/themes/frozen.json` |
+| The few deliberate departures from Windows 95 (the trim scroll bar, the flags, row 8) | `docs/engineering/windows95_deviations.md` |
 | Everything ever ruled out | `docs/engineering/closed_questions.md` |
