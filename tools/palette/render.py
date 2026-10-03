@@ -77,13 +77,14 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                          'style': 'app', 'acid_inset': 1},
                 'lane_order': ['trim', 'ruler', 'marker'],
                 'ruler_layout': None,
-                'menu': {'highlight': None}}
+                'menu': {'highlight': None},
+                'fonts': {'ui_px': None, 'small_px': None}}
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
-TRIM_STYLES = ('app', 'acid')
+TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
-# the options whose values are checked here (separators, bottom_border, ruler_tick_relief; the older options are not)
+# the options whose values are checked here (separators, bottom_border, ruler_tick_relief, clock_panel; the older options are not)
 OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border': ('app', 'line', 'etched', 'raised', 'none'),
-              'ruler_tick_relief': ('none', 'light_right')}
+              'ruler_tick_relief': ('none', 'light_right'), 'clock_panel': ('flat', 'sunken', 'status')}
 FLAG_RELIEF = ('none', 'raised')
 CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
 DISABLED_STYLES = ('mix', 'engraved')
@@ -164,14 +165,19 @@ class Theme:
         if cw is not None and (not isinstance(cw, int) or isinstance(cw, bool) or cw < 1):
             raise SystemExit(f'theme {path}: trim.cap_w is a whole number of logical px >= 1, not {cw!r}')
         lh = self.opt['trim']['lane_h']; mh = (BASE_SCENE['trim']['y1'] - BASE_SCENE['trim']['y0']) // S
-        if lh is not None and (not isinstance(lh, int) or isinstance(lh, bool) or lh < mh):
+        ts = self.opt['trim']['style']
+        if ts not in TRIM_STYLES: raise SystemExit(f'theme {path}: trim.style must be one of {TRIM_STYLES}, not {ts!r}')
+        if ts == 'scrollbar':   # the lane may also shrink: the thumb needs its relief lines top and bottom, nothing else
+            lines = {'flat': 1, 'thin': 1, 'thick': 2}[self.opt['relief']]
+            if lh is not None and (not isinstance(lh, int) or isinstance(lh, bool) or lh < 2 * lines):
+                raise SystemExit(f'theme {path}: trim.lane_h with style "scrollbar" is a whole number of logical rows >= {2 * lines} '
+                                 f'(the thumb\'s {lines}-line relief top and bottom), not {lh!r}')
+        elif lh is not None and (not isinstance(lh, int) or isinstance(lh, bool) or lh < mh):
             raise SystemExit(f'theme {path}: trim.lane_h is a whole number of logical rows >= the scene\'s measured {mh} '
                              f'(the lane only grows: the ruler, marker lane and well top move down, the canvas gives up the rows), not {lh!r}')
         lo = self.opt['lane_order']
         if not isinstance(lo, list) or sorted(lo) != sorted(LANES3):
             raise SystemExit(f'theme {path}: lane_order is a list of the three names {list(LANES3)} in top-to-bottom order, not {lo!r}')
-        ts = self.opt['trim']['style']
-        if ts not in TRIM_STYLES: raise SystemExit(f'theme {path}: trim.style must be one of {TRIM_STYLES}, not {ts!r}')
         ai = self.opt['trim']['acid_inset']
         lane_rows = lh if lh is not None else mh
         if not isinstance(ai, int) or isinstance(ai, bool) or ai < 0 or 2 * ai >= lane_rows:
@@ -200,6 +206,13 @@ class Theme:
         if not isinstance(rp, int) or isinstance(rp, bool) or rp < 0:
             raise SystemExit(f'theme {path}: ruler_pad_top is a whole number of logical rows >= 0 (ground added at the ruler lane\'s top: '
                              f'the labels, ticks, head, marker lane and well top move down, the canvas gives up the rows), not {rp!r}')
+        fo = self.opt['fonts']
+        for k in ('ui_px', 'small_px'):
+            v = fo[k]
+            if v is not None and (not isinstance(v, int) or isinstance(v, bool) or v < 1):
+                raise SystemExit(f'theme {path}: fonts.{k} is null (the app\'s face) or a whole number of logical px > 0, not {v!r}')
+        if fo['small_px'] is not None and 'ruler_label_pt' in t:
+            raise SystemExit(f'theme {path}: fonts.small_px and ruler_label_pt both size the ruler labels; keep one')
         rl = self.opt['ruler_layout']
         if rl is not None:
             if 'ruler_pad_top' in t:
@@ -247,8 +260,64 @@ def lane_shift(th):
     return 0 if lh is None else (lh - (BASE_SCENE['trim']['y1'] - BASE_SCENE['trim']['y0']) // S) * LW
 
 def ruler_label_px(th):
-    """ruler_label_pt -> the timestamps' face in device px: pt x 96 / 72 x S (12 pt = 32 px, the app's)."""
+    """ruler_label_pt -> the timestamps' face in device px: pt x 96 / 72 x S (12 pt = 32 px, the app's); fonts.small_px,
+    when set, replaces it: small_px x S (the theme refuses both)."""
+    sp = th.opt['fonts']['small_px']
+    if sp is not None: return float(sp * S)
     return th.num['ruler_label_pt'] * 96.0 / 72.0 * S
+
+def ui_font_px(th):
+    """fonts.ui_px -> the normal face in device px: ui_px x S, or the app's C.SANS_PX (12 pt x 2 = 32) when null. It
+    drives the menu items and legend (draw_menu), the flag labels (flag_seat, draw_flags) and, by the same ratio, the
+    clock (seat_clock); the --label stamp keeps its 20 px."""
+    up = th.opt['fonts']['ui_px']
+    return C.SANS_PX if up is None else float(up * S)
+
+def flag_seat(th):
+    """fonts.ui_px -> None (null: the scene's flags as measured) or (box_h, lane_h, edge+ascent): the flag box's height,
+    the marker lane's height and the label's baseline offset under the box's top, device rows. THE MEASURED PADS: the
+    app seats a flag label as a text line under the box's dark top band (paint_handler.cpp: baseline = box top + edge_h +
+    ceil(ascent), 228 + 2 + 30 = 260 on 1002) and the box ends at the descent line (2 + 30 + 8 = 40, the lane's 20 logical
+    rows, no ground above or below). At the new face: need = edge_h + ceil(ascent) + ceil(descent). need <= the measured
+    box: the box keeps its measured rows (the whole lane). Otherwise the box grows to need rounded up to whole logical
+    rows, and the marker lane must hold it plus one logical row of ground above and below: lane = max(measured, box +
+    2 x LW), the shortfall opened at the lane's bottom (shift_scene 'marker') and the box centred in the lane."""
+    if th.opt['fonts']['ui_px'] is None: return None
+    F = BASE_SCENE['flags']; px = ui_font_px(th)
+    asc, desc = C.font_extents(C.SANS, px)[:2]
+    off = F['edge_h'] + math.ceil(asc); need = off + math.ceil(desc)
+    box = F['y1'] - F['y0']; lane = BASE_SCENE['lanes']['marker'][1] - BASE_SCENE['lanes']['marker'][0]
+    if need <= box: return box, lane, off
+    box = -(-need // LW) * LW
+    return box, max(lane, box + 2 * LW), off
+
+def marker_shift(th):
+    """flag_seat -> d, the device rows the marker lane grows by (0 when the measured lane holds the box)."""
+    fs = flag_seat(th)
+    return 0 if fs is None else fs[1] - (BASE_SCENE['lanes']['marker'][1] - BASE_SCENE['lanes']['marker'][0])
+
+def seat_flags(sc, th):
+    """The scene with its flag boxes' rows and label baseline set by flag_seat (after the 'marker' shift, before
+    order_scene restacks): the box centred in the marker lane, the baseline edge_h + ceil(ascent) under its top.
+    fonts.ui_px null returns the scene itself."""
+    fs = flag_seat(th)
+    if fs is None: return sc
+    box, lane, off = fs
+    sc = json.loads(json.dumps(sc)); F = sc['flags']; m0, m1 = sc['lanes']['marker']
+    F['y0'] = m0 + (m1 - m0 - box) // 2; F['y1'] = F['y0'] + box; F['baseline'] = F['y0'] + off
+    return sc
+
+def seat_clock(sc, th):
+    """fonts.ui_px -> the clock's Roboto Mono at the scene's measured size_px x ui_px x S / C.SANS_PX (the normal face's
+    ratio), re-seated by the app's rule over the bottom row's content rows (redesign_baseline, as shift_scene 'bottom'
+    re-seats it: the baseline moves by the rule's change). Null returns the scene itself."""
+    if th.opt['fonts']['ui_px'] is None: return sc
+    sc = json.loads(json.dumps(sc)); ck = sc['clock']; bc = sc['bottom_content']
+    px = ck['size_px'] * ui_font_px(th) / C.SANS_PX
+    ck['baseline'] += (C.redesign_baseline(C.MONO, px, bc[0], bc[1] - bc[0])
+                       - C.redesign_baseline(C.MONO, ck['size_px'], bc[0], bc[1] - bc[0]))
+    ck['size_px'] = px
+    return sc
 
 def head_rows_drawn(th):
     """playhead_head_rows -> (first, rows): the drawn head is the LAST rows device rows of the scene's head_half list
@@ -272,12 +341,25 @@ def ruler_layout_rows(th):
                          f'the lane\'s bottom rows')
     return rows
 
+def ruler_shortfall(th):
+    """fonts.small_px on the app's seat rule (no ruler_layout) -> the device rows the ruler lane lacks to seat the
+    labels with the measured pads: the seat (ruler_seat_rows: the cap top kRulerLabelCapTopPx under the lane's top,
+    then ceil(ascent)) + the scene's head ground (kRulerHeadGroundPx x S, ruler_rule 'ground') + the drawn head, less
+    the scene's lane (56 = 30 + 2 + 24 on 1002). 0 when it holds them, with ruler_layout (which sizes the lane from the
+    face itself) and without small_px (ruler_label_pt keeps the lane: see What is approximated)."""
+    if th.opt['fonts']['small_px'] is None or th.opt['ruler_layout'] is not None: return 0
+    lane = BASE_SCENE['lanes']['ruler'][1] - BASE_SCENE['lanes']['ruler'][0]
+    need = ruler_seat_rows(ruler_label_px(th)) + BASE_SCENE['ruler_rule']['ground'] + head_rows_drawn(th)[1]
+    return max(0, need - lane)
+
 def pad_shift(th):
     """ruler_pad_top or ruler_layout -> d, the device rows the ruler lane grows by, opened at its top (0 at the
     default). ruler_layout's d is its lane (above + cap + below) less the scene's measured lane, and may be negative:
-    the lane shrinks and the canvas takes the rows (shift_scene); the labels' seat is then ruler_label_seat's."""
+    the lane shrinks and the canvas takes the rows (shift_scene); the labels' seat is then ruler_label_seat's.
+    ruler_shortfall's rows are added to the pad's (opened at the top too; ruler_label_seat takes them back off the
+    labels' seat, so they land under the digits, above the head)."""
     rows = ruler_layout_rows(th)
-    if rows is None: return th.num['ruler_pad_top'] * LW
+    if rows is None: return th.num['ruler_pad_top'] * LW + ruler_shortfall(th)
     return sum(rows) - (BASE_SCENE['lanes']['ruler'][1] - BASE_SCENE['lanes']['ruler'][0])
 
 def case_delta(th):
@@ -326,10 +408,18 @@ def shift_scene(sc, d, at):
         (redesign_baseline, paint_handler.cpp's clock: box = the content rows' top .. their bottom, the cap band
         centred), which keeps it centred on the buttons as well, their air being equal above and below. The menu and
         everything from the icon row to the well's top stay, so the canvas loses d rows (negative d: gains).
+      at 'marker' (fonts.ui_px, marker_shift): the marker lane d rows taller, opened at its BOTTOM (applied in the
+        default lane order, the marker lane directly over the well, before order_scene): the lane's bottom, the ticks'
+        bottom (every tick runs down the lane), the stems' tops, the well's top and the canvas top move down by d; the
+        flags' rows are seat_flags'.
     d = 0 returns the scene itself."""
     if d == 0: return sc
-    if at not in ('icon', 'trim', 'ruler', 'bottom'): raise ValueError(at)
+    if at not in ('icon', 'trim', 'ruler', 'bottom', 'marker'): raise ValueError(at)
     sc = json.loads(json.dumps(sc)); L = sc['lanes']; R = sc['ruler']
+    if at == 'marker':
+        L['marker'][1] += d; R['tick_bottom'] += d; L['well'][0] += d; sc['canvas'][0] += d
+        sc['flags']['stem_y0'] += d; sc['playhead']['stem_y0'] += d
+        return sc
     if at == 'bottom':
         u = -d; bc = sc['bottom_content']; ck = sc['clock']
         old = C.redesign_baseline(C.MONO, ck['size_px'], bc[0], bc[1] - bc[0])
@@ -441,8 +531,11 @@ def draw_menu(cr, th):
     tall (paint_menu_row: THE LANE IS THE PILL). menu.highlight puts a face on one of them: "fill" = that rectangle,
     square-cornered, in `accent`, the label over it in highlight.label; "sunken" / "raised" = one thin relief line a
     side on it (Shadow then Hilight / the reverse: Windows 98's hot-tracked menu title, sunken when open, raised on
-    hover), the label unchanged. The legend and the other anchors are untouched."""
-    m = SCENE['menu']; x = 0; px = C.SANS_PX; y0, y1 = SCENE['lanes']['menu']
+    hover), the label unchanged. The legend and the other anchors are untouched. fonts.ui_px sets the face (ui_font_px;
+    the anchors' widths follow the shaped text) and re-seats the baseline by the app's rule over the whole menu lane
+    (redesign_baseline: the cap band centred; 41 at 32 px, the measured baseline)."""
+    m = SCENE['menu']; x = 0; px = ui_font_px(th); y0, y1 = SCENE['lanes']['menu']
+    base = m['baseline'] if th.opt['fonts']['ui_px'] is None else C.redesign_baseline(C.SANS, px, y0, y1 - y0)
     hl = th.opt['menu']['highlight']
     for it in m['items']:
         w = C.shape(C.SANS, px, it['text'])[1]; bw = int(np.rint(w)) + 2 * m['pad']
@@ -453,10 +546,10 @@ def draw_menu(cr, th):
             else:
                 s_, h_ = th.get('bevel_shadow'), th.get('bevel_hilight')
                 edge(cr, x, y0, x + bw, y1, [(s_, h_)] if hl['style'] == 'sunken' else [(h_, s_)])
-        show(cr, C.SANS, px, it['text'], x + m['pad'], m['baseline'], col)
+        show(cr, C.SANS, px, it['text'], x + m['pad'], base, col)
         x += bw
     w = C.shape(C.SANS, px, m['legend'])[1]
-    show(cr, C.SANS, px, m['legend'], m['legend_right'] - int(np.rint(w)), m['baseline'], th.get('legend'))
+    show(cr, C.SANS, px, m['legend'], m['legend_right'] - int(np.rint(w)), base, th.get('legend'))
 
 def draw_bars(cr, th):
     L = SCENE['lanes']; bars = th.opt['bars']
@@ -669,6 +762,7 @@ def draw_buttons(cr, th, rows):
 def draw_trim(cr, th):
     T = SCENE['trim']; y0, y1 = T['y0'], T['y1']; o = th.opt['trim']
     if o['style'] == 'acid': return draw_trim_acid(cr, th)
+    if o['style'] == 'scrollbar': return draw_trim_scrollbar(cr, th)
     bb0 = T['bottom_border_rows'][0]
     # the lane ground
     if o['ground'] == 'app':
@@ -734,6 +828,29 @@ def draw_trim_acid(cr, th):
         cr.move_to(ex, ty - 0.5); cr.line_to(ex, by + 0.5); cr.line_to(apex, ty + h / 2); cr.close_path(); cr.fill()
     cr.restore()
 
+def draw_trim_scrollbar(cr, th):
+    """trim.style "scrollbar": the lane as Windows 95's scroll bar, miniaturized. The whole lane is draw_grounds'
+    trim_ground (Windows' scroll bar face is the button face; trim_ground defaults to @ground). THE TRACK: a
+    checkerboard of bevel_hilight over that ground in 1-logical-px cells (LW x LW device px), its phase anchored at the
+    lane's top-left (x 0, the lane's y0), the cell (i, j) = ((x // LW), (y - y0) // LW) lit when i + j is even, so
+    every lane height dithers identically; flush, no frame. THE THUMB, painted over the track: the kept region, from
+    the left cap's outer edge to the right cap's outer edge -- the union of the scene's painted bar extent and its
+    handles (660..1937 on 1002; on 1002a, both bounds off screen and no handles, the bar's -1..2305, so the thumb runs
+    past both edges and only one column of its outer relief line shows at each) -- the lane's full height, filled with
+    trim_ground and edged relief_lines 'panel' (EDGE_RAISED: thick = 3DLight / DkShadow outer, Hilight / Shadow inner;
+    thin = Hilight / Shadow). No grip, no cap squares, no lane bevels, no bottom border: bar / ground / handles / grip
+    are not read, and cap_w is not read either (the caps are the thumb's ends; their hit band is the app's business).
+    A scene with no bar on screen is all track."""
+    T = SCENE['trim']; y0, y1 = T['y0'], T['y1']; g = th.get('trim_ground')
+    C.src(cr, th.get('bevel_hilight'))
+    for j, yy in enumerate(range(y0, y1, LW)):
+        for xx in range((j % 2) * LW, C.W, 2 * LW): cr.rectangle(xx, yy, LW, min(LW, y1 - yy))
+    cr.fill()
+    if T['bar'] is None: return
+    xs = [T['bar']] + [tuple(h) for h in T['handles']]
+    x0, x1 = min(a for a, _ in xs), max(b for _, b in xs)
+    fill(cr, x0, y0, x1, y1, g); edge(cr, x0, y0, x1, y1, relief_lines(th, 'panel'))
+
 def cap_rects(th):
     """[('handles', [(x0, x1), ...]), ('grip', [(x0, x1)] or [])] at trim.cap_w (None = the measured widths). A handle
     grows INWARD, its outer edge (the trimmed point) fixed: the begin handle (left of the bar's middle) keeps x0, the
@@ -760,8 +877,8 @@ def ruler_label_seat(th):
     px = ruler_label_px(th); b = SCENE['ruler']['baseline']
     rows = ruler_layout_rows(th)
     if rows is not None: return px, SCENE['lanes']['ruler'][0] + rows[0] + rows[1]
-    if px == C.SANS_PX: return px, b
-    return px, b - ruler_seat_rows(C.SANS_PX) + ruler_seat_rows(px)
+    if px == C.SANS_PX and th.opt['fonts']['small_px'] is None: return px, b
+    return px, b - ruler_seat_rows(C.SANS_PX) + ruler_seat_rows(px) - ruler_shortfall(th)
 
 def draw_ruler(cr, th):
     R = SCENE['ruler']; P = SCENE['playhead']
@@ -792,9 +909,17 @@ def draw_ruler(cr, th):
         fill(cr, P['col'], SCENE['lanes']['marker'][0], P['col'] + P['w'], SCENE['lanes']['marker'][1], th.get('playhead_stem'))
 
 def draw_flags(cr, th):
-    F = SCENE['flags']
+    """Each flag: border, fill, the dark top band (or flags.relief), border, label. fonts.ui_px: the label at
+    ui_font_px; the box's rows are seat_flags' (the measured rows while the text fits them), and its width is the
+    measured one while the text fits it with the measured side pads (w = pad_l + nearbyint(shaped width) + pad_r, the
+    pads kMarkerFlagPadLeftPx / RightPx x S = 4 + 4, pad_r read off the scene as w - pad_l - nearbyint(width at 32 px)),
+    else the text + those pads."""
+    F = SCENE['flags']; px = ui_font_px(th); grow = th.opt['fonts']['ui_px'] is not None
     for f in F['flags']:
         bx, bw = f['x'], f['w']; sel = '_sel' if f.get('selected') else ''
+        if grow:
+            pr = bw - F['pad_l'] - int(np.rint(C.shape(C.SANS, C.SANS_PX, f['text'])[1]))
+            bw = max(bw, F['pad_l'] + int(np.rint(C.shape(C.SANS, px, f['text'])[1])) + pr)
         fill(cr, bx - F['border_w'], F['y0'], bx, F['y1'], th.get('flag_border'))
         fill(cr, bx, F['y0'], bx + bw, F['y1'], th.get('flag_fill' + sel))
         if th.flag_relief == 'raised':   # inside the border: one LW line of hilight top + left, edge bottom + right (last)
@@ -802,7 +927,7 @@ def draw_flags(cr, th):
         else:                            # the app's dark top band
             fill(cr, bx, F['y0'], bx + bw, F['y0'] + F['edge_h'], th.get('flag_edge' + sel))
         fill(cr, bx + bw, F['y0'], bx + bw + F['border_w'], F['y1'], th.get('flag_border'))
-        show(cr, C.SANS, C.SANS_PX, f['text'], bx + F['pad_l'], F['baseline'], th.get('flag_label'))
+        show(cr, C.SANS, px, f['text'], bx + F['pad_l'], F['baseline'], th.get('flag_label'))
 
 def well_geometry(th):
     """-> (well top, well bottom, canvas top, canvas bottom), device rows, end-exclusive. The well's top is the lane
@@ -879,6 +1004,17 @@ def draw_stems(cr, th):
         fill(cr, f['x'], y0, f['x'] + F['stem_w'], y1, th.get('flag_stem_sel' if f.get('selected') else 'flag_stem'))
     if not P.get('stem_suppressed'): fill(cr, P['col'], y0, P['col'] + P['w'], y1, th.get('playhead_stem'))
 
+def clock_panel_rect(th):
+    """-> (x0, y0, x1, y1) of the painted clock panel (clock_panel "sunken" / "status"), or None ("flat"): the clock
+    cell (prefix + the widest-digit DD:DD.DDD specimen + the dirty mark, at the clock's seated size) with 4 logical px
+    either side, over the bottom buttons' rows (buttons.case's height). draw_bottom paints it; stamp clears it."""
+    if th.opt['clock_panel'] not in ('sunken', 'status'): return None
+    ck = SCENE['clock']
+    dw = max(C.shape(C.MONO, ck['size_px'], d)[1] for d in '0123456789')
+    cell = C.shape(C.MONO, ck['size_px'], 'B | ')[1] + 9 * dw + C.shape(C.MONO, ck['size_px'], '*')[1]
+    bb0 = [b for b in button_geometry(th)[0] if b['row'] == 'bottom'][0]
+    return ck['x'] - 4 * S, bb0['y'], ck['x'] + int(math.ceil(cell)) + 4 * S, bb0['y'] + bb0['h']
+
 def draw_bottom(cr, th):
     bb = SCENE['bottom_border']
     # the bottom row's border-top: "app" takes the `separators` style, whatever it is (line, etched, raised, none);
@@ -892,29 +1028,30 @@ def draw_bottom(cr, th):
         fill(cr, bb['x0'], bb['y'] + LW, bb['x1'], bb['y'] + 2 * LW, th.get(b))
     elif style == 'line':
         fill(cr, bb['x0'], bb['y'], bb['x1'], bb['y'] + bb['h'], th.get('bottom_border'))
-    ck = SCENE['clock']
-    if th.opt['clock_panel'] == 'sunken':
-        # the clock cell (prefix + the widest-digit DD:DD.DDD specimen + the dirty mark), a status-bar panel around it
-        dw = max(C.shape(C.MONO, ck['size_px'], d)[1] for d in '0123456789')
-        cell = C.shape(C.MONO, ck['size_px'], 'B | ')[1] + 9 * dw + C.shape(C.MONO, ck['size_px'], '*')[1]
-        bb0 = [b for b in button_geometry(th)[0] if b['row'] == 'bottom'][0]     # the buttons' rows (buttons.case's height)
-        x0 = ck['x'] - 4 * S; x1 = ck['x'] + int(math.ceil(cell)) + 4 * S
-        edge(cr, x0, bb0['y'], x1, bb0['y'] + bb0['h'], relief_lines(th, 'sunken'))
+    ck = SCENE['clock']; pr = clock_panel_rect(th)
+    if pr is not None:
+        x0, y0, x1, y1 = pr
+        # "status": Windows' status-bar panel, ONE LW line whatever `relief` is (Shadow top and left, Hilight bottom
+        # and right, the BR pair last); "sunken": relief_lines 'sunken' at the theme's relief
+        lines = [(th.get('bevel_shadow'), th.get('bevel_hilight'))] if th.opt['clock_panel'] == 'status' else relief_lines(th, 'sunken')
+        edge(cr, x0, y0, x1, y1, lines)
     show(cr, C.MONO, ck['size_px'], ck['text'], ck['x'], ck['baseline'], th.get('clock'))
 
 def stamp(cr, th, text):
     # the file-name stamp: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the scene's label_box (x 300,
-    # y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's content top)
-    asc = C.font_extents(C.SANS, 20)[0]; lb = SCENE['label_box']
-    show(cr, C.SANS, 20, text, lb['x0'], lb['y0'] + math.ceil(asc), th.get('stamp'))
+    # y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's content top); x clears a
+    # painted clock panel: max(label_box x0, the panel's right edge + 16 device px)
+    asc = C.font_extents(C.SANS, 20)[0]; lb = SCENE['label_box']; pr = clock_panel_rect(th)
+    x = lb['x0'] if pr is None else max(lb['x0'], pr[2] + 16)
+    show(cr, C.SANS, 20, text, x, lb['y0'] + math.ceil(asc), th.get('stamp'))
 
 def render(theme_path, out_path, label=False):
     C.verify_fonts()
     th = Theme(theme_path)
     di, db = case_delta(th)
-    global SCENE; SCENE = order_scene(shift_scene(shift_scene(shift_scene(BASE_SCENE, di, 'icon'), lane_shift(th), 'trim'),
-                                                  pad_shift(th), 'ruler'), th.opt['lane_order'])
-    SCENE = shift_scene(SCENE, db, 'bottom')
+    global SCENE; SCENE = shift_scene(shift_scene(shift_scene(BASE_SCENE, di, 'icon'), lane_shift(th), 'trim'), pad_shift(th), 'ruler')
+    SCENE = order_scene(seat_flags(shift_scene(SCENE, marker_shift(th), 'marker'), th), th.opt['lane_order'])
+    SCENE = seat_clock(shift_scene(SCENE, db, 'bottom'), th)
     surf = cairo.ImageSurface(cairo.FORMAT_RGB24, C.W, C.H); cr = cairo.Context(surf)
     cr.set_antialias(cairo.ANTIALIAS_DEFAULT)
     draw_grounds(cr, th)
