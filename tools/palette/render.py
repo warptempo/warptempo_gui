@@ -278,7 +278,8 @@ class Theme:
             hl.setdefault('style', 'fill')
             if hl['style'] not in MENU_HL_STYLES:
                 raise SystemExit(f'theme {path}: menu.highlight.style must be one of {MENU_HL_STYLES}, not {hl["style"]!r}')
-            # the label over the "fill" face: highlight_text_ink's rule over the accent unless the theme sets it by hand
+            # the label over the "fill" face: by default Theme.highlight_ink's luminance rule over the accent (the
+            # app's rule until 2026-10-03, kept here as a legacy fallback) unless the theme sets it by hand
             self.menu_hl_label = (self.colour(hl['label']) if 'label' in hl
                                   else self.highlight_ink(self.get('accent')))
         st = self.opt['state_text']
@@ -334,11 +335,14 @@ class Theme:
         raise SystemExit(f'no auto rule for {role}')
 
     def highlight_ink(self, fill):
-        """The chrome's text or glyph ink over a fill, the app's highlight_text_ink: black when the fill's luminance
-        exceeds the threshold, else `light_text` -- the app's light ink is its label (the label white), so the role
-        defaults to @label; a theme whose label is dark names its light ink there (win95_standard: Windows'
-        COLOR_HIGHLIGHTTEXT white over COLOR_HIGHLIGHT, its label being COLOR_BTNTEXT black). The flags' black label
-        is their own rule and never this."""
+        """A FALLBACK chrome text/glyph ink over a fill, for a role the theme does not state by hand: the RETAINED
+        LEGACY RULE, the app's own highlight_text_ink until 2026-10-03 -- black when the fill's luminance exceeds the
+        threshold, else `light_text` -- the app's light ink was its label (the label white), so the role defaults to
+        @label; a theme whose label is dark names its light ink there (win95_standard: Windows' COLOR_HIGHLIGHTTEXT
+        white over COLOR_HIGHLIGHT, its label being COLOR_BTNTEXT black). The flags' black label is their own rule
+        and never this. THE APP ITSELF NO LONGER DERIVES THIS WAY: since 2026-10-03 its text over a fill is the
+        theme's own recorded pair (render.h); this renderer keeps the derivation as the fallback a theme's crop can
+        still ask for, or that an old mock set already used."""
         return C.highlight_text_ink(fill, self.get('light_text'))
 
     def quartet_report(self):

@@ -6009,9 +6009,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // LINES OF THE SUNKEN EDGE, all four sides, in the `invalid_face` key,
         // with the whole text selected (text_editor::refuse) — the first
         // keystroke that edits replaces the text and the edge returns. The
-        // face stays the field ground; no card says it, no glyph marks it.
-        // The flag editor's frame is the same rule on its one black line
-        // (render_flag_editor_box).
+        // face stays the field ground and the frame itself carries no glyph;
+        // the red frame says only THAT the value was refused, and the
+        // reason card the refusing commit posts (the owner's own sentence,
+        // GuiFlagEditor::notifications and the settings editor's equivalent)
+        // says why, standing beside it. Whether that card stays is not yet
+        // ruled. The flag editor's frame is the same rule on its one black
+        // line (render_flag_editor_box).
         const bool field_focused = app.modal_dialog_focus < 0;
         paint_cell_rect(cr, field_inner, palette().field_ground);
         if (ed->red) {

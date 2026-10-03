@@ -9,9 +9,13 @@
 # twice, measured patch for patch off the tablet's screencaps (2026-10-02); the matrix reproduces that measurement
 # to the unit except on the colours in MEASURED_TWO_PASS, which hold the measured bytes.
 #
-# highlight_text_ink and relative_luminance are the app's text rule ported (src/gui/render.h's palette block:
-# relative_luminance, kHighlightTextLuminanceThreshold, highlight_text_ink), integer arithmetic for integer
-# arithmetic; the asserts under them are the app's static_asserts, run at import. THE RELIEF IS NEVER DERIVED HERE
+# highlight_text_ink and relative_luminance are a RETAINED LEGACY OPTION, for re-rendering mock sets made before
+# 2026-10-03: they port the app's text-over-a-fill rule as it stood in src/gui/render.h's palette block through that
+# date (relative_luminance, kHighlightTextLuminanceThreshold, highlight_text_ink), integer arithmetic for integer
+# arithmetic, the asserts under them that rule's own static_asserts, run at import. THE APP RETIRED THE RULE
+# 2026-10-03: text over a fill is now the theme's own RECORDED PAIR (render.h, Windows' ButtonFace/ButtonText
+# convention), no luminance derivation — this module keeps the old arithmetic only so scenes built under it still
+# render unchanged; a new scene reads the theme's recorded pair instead (render.py). THE RELIEF IS NEVER DERIVED HERE
 # (architect 2026-10-03, "no derived, imported only"): a theme states its four relief bytes, recorded from its source
 # (tools/theme_catalog/, docs/themes/catalog.json).
 
@@ -67,10 +71,12 @@ def two_pass(rgb):
     return MEASURED_TWO_PASS.get(k) or tuple(srgb_to_p3(srgb_to_p3(k)))
 
 
-# ------------------------------------------------------------------ the app's palette rules (render.h)
+# ------------------------------------------------------------------ the renderer's legacy luminance option (render.h's rule
+# until 2026-10-03; the app now takes text over a fill from the theme's recorded pair instead, never by derivation)
 def srgb_channel_to_linear(c):
-    """render.h srgb_channel_to_linear, step for step (the 2.4 power as x^2 x (x^2)^(1/5), the fifth root by 64
-    Newton steps from above), so the luminance is the app's double bit for bit."""
+    """render.h srgb_channel_to_linear as it stood until 2026-10-03, step for step (the 2.4 power as x^2 x (x^2)^(1/5),
+    the fifth root by 64 Newton steps from above), so the legacy luminance matches that retired rule's double bit for
+    bit."""
     if c <= 0.04045: return c / 12.92
     x2 = ((c + 0.055) / 1.055) * ((c + 0.055) / 1.055)
     y = 1.0
@@ -78,22 +84,26 @@ def srgb_channel_to_linear(c):
     return x2 * y
 
 def relative_luminance(rgb):
-    """render.h relative_luminance: the Rec. 709 weights over the sRGB-linearized channels of the BYTES as given (a
-    theme byte is a P3 byte and the app's constant alike; no conversion), each channel byte / 255."""
+    """render.h relative_luminance as it stood until 2026-10-03: the Rec. 709 weights over the sRGB-linearized
+    channels of the BYTES as given (a theme byte is a P3 byte and the app's constant alike; no conversion), each
+    channel byte / 255."""
     r, g, b = (v / 255.0 for v in rgb)
     return 0.2126 * srgb_channel_to_linear(r) + 0.7152 * srgb_channel_to_linear(g) + 0.0722 * srgb_channel_to_linear(b)
 
-# render.h kHighlightTextLuminanceThreshold: the equal-contrast point, where black and the label white stand at the
-# same contrast ratio over a fill (L = sqrt(1.05 x 0.05) - 0.05).
+# render.h kHighlightTextLuminanceThreshold as it stood until 2026-10-03: the equal-contrast point, where black and
+# the label white stand at the same contrast ratio over a fill (L = sqrt(1.05 x 0.05) - 0.05).
 LUMINANCE_THRESHOLD = 0.17912878474779
 
 def highlight_text_ink(fill, light):
-    """render.h highlight_text_ink: the chrome's text over a fill is black (kRedesignHighlightLabel) when the fill's
-    luminance exceeds the threshold, else the LIGHT ink `light` (the app's kRedesignLabel, the label white). Its
-    domain is the chrome's text and glyphs; the flags' black label is their own rule."""
+    """render.h highlight_text_ink as it stood until 2026-10-03, kept here as the renderer's legacy option for old mock
+    sets: the chrome's text over a fill was black (kRedesignHighlightLabel) when the fill's luminance exceeded the
+    threshold, else the LIGHT ink `light` (the app's kRedesignLabel, the label white). Its domain was the chrome's
+    text and glyphs; the flags' black label was always its own rule. THE APP NO LONGER CALLS THIS: since 2026-10-03
+    its text over a fill is the theme's own recorded pair (render.h)."""
     return (0, 0, 0) if relative_luminance(fill) > LUMINANCE_THRESHOLD else tuple(light)
 
-# THE CHECKS (the app's static_asserts, run at import):
+# THE CHECKS (that retired rule's own static_asserts, kept to verify this legacy arithmetic still matches it; run at
+# import):
 assert highlight_text_ink((0x00, 0x00, 0x80), (252, 252, 252)) == (252, 252, 252)    # Windows' highlight #000080: the label
 assert highlight_text_ink((0xC0, 0xC0, 0xC0), (252, 252, 252)) == (0, 0, 0)          # Windows 95's face #C0C0C0: black
 assert highlight_text_ink((0xFF, 0xFF, 0xE1), (252, 252, 252)) == (0, 0, 0)          # INFO #FFFFE1: black
