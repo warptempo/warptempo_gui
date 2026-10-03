@@ -1264,12 +1264,13 @@ static IterCellLayout measure_iter_cells(cairo_scaled_font_t* font,
 
 // The resolved paint of ONE marker flag box (the palette block's marker-lane
 // paragraph, render.h, owns the look): its face, its label's ink — or the
-// disabled emboss — whether the label is underlined, and the stem.
+// disabled emboss — its outline ring, and the stem.
 struct FlagFace {
     GuiColor face;
     GuiColor label;
     bool     embossed;    // DISABLED: the label in THE DISABLED EMBOSS
-    bool     underline;   // SELECTED: the label underlined
+    bool     selected;    // SELECTED: the ring white (kFlagSelectedOutline)
+    GuiColor outline;     // the ring: DkShadow, or white when selected
     GuiColor stem;
     bool     has_stem;
 };
@@ -1279,15 +1280,17 @@ struct FlagFace {
 // 2026-10-03, the flat flag): DISABLED wins (the theme's ground, the label
 // embossed, no stem), then INVALID (the `invalid_face` key and its recorded
 // label, the stem in the face), then the flag (the `flag_face` key and its
-// recorded label, the stem in the face). SELECTION IS THE UNDERLINE on top of
-// whichever stands, and nothing else moves — not the face, not the stem. ONE
+// recorded label, the stem in the face). SELECTION IS THE WHITE OUTLINE on top
+// of whichever stands (kFlagSelectedOutline in place of the DkShadow ring), and
+// nothing else moves — not the face, not the label, not the stem. ONE
 // FLAG COLOUR FOR EVERY KIND, so the ladder asks no column (the column pairs
 // and their FlagColumnFace argument retired the same day: there is nothing
 // left to pick between the columns).
 FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
     const GuiPalette& p = palette();
     FlagFace f;
-    f.underline = selected;
+    f.selected = selected;
+    f.outline  = selected ? kFlagSelectedOutline : p.dk_shadow;
     if (disabled) {
         f.face     = p.ground;
         f.label    = p.shadow;   // the emboss's word ink; show_embossed_run
@@ -1305,19 +1308,25 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
 }
 
 // THE FLAT BOX'S OUTLINE AND FACE (architect 2026-10-03; the geometry at
-// marker_flag_edge_h_px and marker_flag_border_px, render.h): the outline in
-// `outline` — the left border column OUTSIDE the face at [x - border_w, x),
-// the top and bottom rows INSIDE the band across the face's columns, and the
-// run's closing column at [x + w, x + w + border_w) when `closes` — and the
-// face between them. The box keeps the band's height and its width. Aliased,
-// integer rects, like everything in this lane.
+// marker_flag_edge_h_px and marker_flag_border_px, render.h): the left border
+// column OUTSIDE the face at [x - border_w, x) in `left_outline`, then in
+// `outline` the top and bottom rows INSIDE the band across the face's columns
+// and the run's closing column at [x + w, x + w + border_w) when `closes` —
+// and the face between them. The left column takes its own colour because it
+// is a SEAM a box may share with the box to its left (flag_seam_outline): the
+// one column is white when either box it divides is selected. The box keeps
+// the band's height and its width. Aliased, integer rects, like everything in
+// this lane.
 static void paint_flat_flag_box(cairo_t* cr, const GuiRect& lane, int x, int w,
                                 int border_w, int edge_h, bool closes,
-                                GuiColor outline, GuiColor face) {
+                                GuiColor left_outline, GuiColor outline,
+                                GuiColor face) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    set_palette_source(cr, outline);
+    set_palette_source(cr, left_outline);
     cairo_rectangle(cr, x - border_w, lane.y, border_w, lane.h);
+    cairo_fill(cr);
+    set_palette_source(cr, outline);
     cairo_rectangle(cr, x, lane.y, w, edge_h);
     cairo_rectangle(cr, x, lane.y + lane.h - edge_h, w, edge_h);
     if (closes) cairo_rectangle(cr, x + w, lane.y, border_w, lane.h);
@@ -1326,6 +1335,17 @@ static void paint_flat_flag_box(cairo_t* cr, const GuiRect& lane, int x, int w,
     cairo_rectangle(cr, x, lane.y + edge_h, w, lane.h - 2 * edge_h);
     cairo_fill(cr);
     cairo_restore(cr);
+}
+
+// THE SEAM COLUMN'S OUTLINE (architect 2026-10-03, the white-outlined selected
+// flag): the one column two boxes of a run share — the right box's left
+// border, which is the left box's right side — is WHITE WHEN EITHER BOX IT
+// DIVIDES IS SELECTED, so a selected box's ring is whole on four sides
+// whichever neighbour paints the column (the red frame's rule at the open
+// field's shared column, render_flag_editor_box), and the DkShadow seam
+// otherwise.
+static GuiColor flag_seam_outline(const FlagFace& left, const FlagFace& right) {
+    return left.selected ? left.outline : right.outline;
 }
 
 // THE STEM CROSSES THE BOX'S BOTTOM OUTLINE (architect 2026-10-03): the
@@ -1346,51 +1366,18 @@ static void paint_flag_stem_crossing(cairo_t* cr, const GuiRect& lane, int x,
     cairo_restore(cr);
 }
 
-// THE UNDERLINE'S RECT for `run` at (x, baseline) on `font` (architect
-// 2026-10-03, the selected flag): Roboto's own post-table underline at the
-// label's size (text_shape::face_underline_px), each term rounded at its
-// element — its top row the baseline plus nearbyint(top), nearbyint(thickness)
-// rows (at least one), its columns nearbyint of the run's origin and end (the
-// shaped advance, straight through any descender, no skip-ink: Windows drew
-// it so). tools/palette's flat_underline_rect is the same arithmetic.
-static GuiRect flag_underline_rect(cairo_scaled_font_t* font,
-                                   const text_shape::ShapedRun& run, double x,
-                                   double baseline) {
-    const text_shape::FaceUnderline u = text_shape::face_underline_px(font);
-    const int x0 = static_cast<int>(std::nearbyint(x));
-    const int x1 = static_cast<int>(std::nearbyint(x + run.width_px));
-    const int y0 = static_cast<int>(std::nearbyint(baseline)) +
-                   static_cast<int>(std::nearbyint(u.top_px));
-    const int h = std::max(1, static_cast<int>(std::nearbyint(u.thickness_px)));
-    return GuiRect{x0, y0, x1 - x0, h};
-}
-
 // THE FLAG LABEL — the one body every flag box's text goes through: `run` at
 // (x, baseline) in the face's label ink, or embossed (show_embossed_run) when
-// the face is disabled; underlined when the face is selected, the underline
-// embossed with an embossed label. `cr` carries `font`.
-static void paint_flag_label(cairo_t* cr, cairo_scaled_font_t* font,
-                             const text_shape::ShapedRun& run, double x,
-                             double baseline, const FlagFace& face) {
+// the face is disabled. Selection does not reach the label (the ring is the
+// box's, paint_flat_flag_box). `cr` carries the label's font.
+static void paint_flag_label(cairo_t* cr, const text_shape::ShapedRun& run,
+                             double x, double baseline, const FlagFace& face) {
     if (face.embossed)
         show_embossed_run(cr, run, x, baseline);
     else {
         set_palette_source(cr, face.label);
         text_shape::show_shaped_run(cr, run, x, baseline);
     }
-    if (!face.underline || run.width_px <= 0.0) return;
-    const GuiRect u = flag_underline_rect(font, run, x, baseline);
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (face.embossed) {
-        const int off = relief_line_px();
-        paint_cell_rect(cr, GuiRect{u.x + off, u.y + off, u.w, u.h},
-                        palette().emboss_light);
-        paint_cell_rect(cr, u, palette().shadow);
-    } else {
-        paint_cell_rect(cr, u, face.label);
-    }
-    cairo_restore(cr);
 }
 
 } // namespace
@@ -1438,19 +1425,20 @@ static constexpr int kFlagBoxRankNone = 3;
 // resting cells with it, and the payload editor's own painter re-paints them
 // with it at the unrolled field's right edge (render_flag_editor_box), so a
 // cell cannot read one way at rest and another under the editor. The FACE is
-// the caller's — each cell resolves its own through the one ladder, the
-// underline belonging to the addressed cell alone. A cell carries no stem.
-static void paint_iter_bound_cell(cairo_t* cr, cairo_scaled_font_t* font,
-                                  const GuiRect& lane, int seam_x,
+// the caller's — each cell resolves its own through the one ladder, the white
+// outline belonging to the addressed cell alone — and so is `seam`, the seam
+// column's colour, which the caller answers from both boxes the column divides
+// (flag_seam_outline). A cell carries no stem.
+static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
                                   int fill_w, int border_w, int edge_h,
                                   int pad_l, double baseline,
                                   const text_shape::ShapedRun& run,
-                                  const FlagFace& face, bool closes) {
+                                  const FlagFace& face, GuiColor seam,
+                                  bool closes) {
     paint_flat_flag_box(cr, lane, seam_x + border_w, fill_w, border_w, edge_h,
-                        closes, palette().dk_shadow, face.face);
-    paint_flag_label(cr, font, run,
-                     static_cast<double>(seam_x + border_w + pad_l), baseline,
-                     face);
+                        closes, seam, face.outline, face.face);
+    paint_flag_label(cr, run, static_cast<double>(seam_x + border_w + pad_l),
+                     baseline, face);
 }
 
 // The one body both columns' painters call. `label_of(i)` composes the
@@ -1618,19 +1606,19 @@ void render_flag_boxes_impl(
             const int run_end   = bx + bw + cells_span_w + close_w;
 
             // The three bits the one ladder reads (resolve_flag_face):
-            // disabled WINS over invalid, and selection is the underline on
+            // disabled WINS over invalid, and selection is the white outline on
             // top of either.
             const bool dis = disabled_of(i);
             const bool red = red_set.count(i) > 0;
             const bool sel = selected_set.count(i) > 0;
             // THE SELECTION IS ONE CELL'S (architect 2026-09-05, "light the
-            // colour of only the flag that's clicked"; the underline since
-            // 2026-10-03): a selected marker underlines its ADDRESSED cell's
-            // label and no other. The addressed cell is the payload for every
+            // colour of only the flag that's clicked"; the white outline since
+            // 2026-10-03): a selected marker rings its ADDRESSED cell in white
+            // and no other box. The addressed cell is the payload for every
             // selected marker but the focus, whose addressed cell is the axis
             // — and where the axis names a cell this marker does not paint (a
             // bound cell on an owner disabled after its press), the payload is
-            // underlined, so a selected marker always shows its selection
+            // ringed, so a selected marker always shows its selection
             // somewhere. Disabled and invalid resolve cell by cell through the
             // same ladder; the stem reads the flag box's face.
             MarkerCell bright = i == focus_marker ? focus_cell
@@ -1640,12 +1628,12 @@ void render_flag_boxes_impl(
             // whether THIS pass paints it. A field paints the box it edits and
             // asks this very question of its own cell
             // (render_flag_editor_box), so the marker's selection shows there;
-            // underlining the flag box as well would mark two boxes at once,
+            // ringing the flag box as well would mark two boxes at once,
             // and would mark the flag under every bound field — exactly the
             // odd-one-out the one graphic model retired. What is left for the
             // fallback is a cell that does not exist anywhere: a bound cell on
             // an owner disabled after its press. Then the payload is
-            // underlined, so a selected marker always shows its selection, and
+            // ringed, so a selected marker always shows its selection, and
             // shows it once.
             const bool bright_cell_shown =
                 bright == MarkerCell::Payload ||
@@ -1695,8 +1683,9 @@ void render_flag_boxes_impl(
             // and under a bound field it paints exactly as it does
             // at rest.
             if (pass_paints(MarkerCell::Payload)) {
-                // THE FLAT BOX (paint_flat_flag_box): the outline in the
-                // theme's DkShadow, the face in the ladder's.
+                // THE FLAT BOX (paint_flat_flag_box): the outline the ladder's
+                // ring — the theme's DkShadow, white when this box is the
+                // selected one — and the face the ladder's.
                 //
                 // THE LEFT BORDER IS OUTSIDE THE FACE, one column LEFT of the
                 // frame column (the geometry clause and the clip-at-the-left-
@@ -1717,63 +1706,73 @@ void render_flag_boxes_impl(
                 // the upper cell closes instead (paint_iter_bound_cell's
                 // `closes`), and the flag's right side is the lower cell's
                 // seam column.
+                // THE STEM CROSSES A WHITE BOTTOM ROW AS IT CROSSES A DARK
+                // one: it is painted after the box, so a selected flag's ring
+                // is broken by its own stem column exactly where the DkShadow
+                // ring is.
                 paint_flat_flag_box(cr, lane, bx, bw, border_w, edge_h,
-                                    pass_closes && !paint_lower,
-                                    palette().dk_shadow, face.face);
+                                    pass_closes && !paint_lower, face.outline,
+                                    face.outline, face.face);
                 if (face.has_stem)
                     paint_flag_stem_crossing(cr, lane, bx, edge_h, face.stem);
                 // The label, on the run just measured — same font, same glyphs,
                 // so the box width and the painted text cannot disagree.
-                paint_flag_label(cr, font, run,
-                                 static_cast<double>(bx + pad_l), baseline,
-                                 face);
+                paint_flag_label(cr, run, static_cast<double>(bx + pad_l),
+                                 baseline, face);
             }
 
             // THE BOUND CELLS: the flag CONTINUED rightward, twice, in the
             // flag's OWN state — face, outline and ink all off the same
             // ladder, so a cell reads as another payload of the same flag and
             // not as a second surface. Each cell resolves its own face,
-            // because the underline is the addressed cell's alone (above). The seam is the flag's own
-            // left-border column laid on each cell's left edge. No budget and
-            // no truncation: the token is
+            // because the white outline is the addressed cell's alone
+            // (above). The seam is the flag's own left-border column laid on
+            // each cell's left edge, white when either box it divides is the
+            // selected one (flag_seam_outline): the box to its left is the
+            // flag box for the lower cell — painted here whenever the lower
+            // is, the payload field suppressing both — and the lower cell for
+            // the upper. No budget and no truncation: the token is
             // fixed-width by grammar (kIterCellGlyphs). The lower cell first,
             // then the upper — the bracket's own order. The ANATOMY is the one
             // cell painter's (paint_iter_bound_cell), which the payload
             // editor's re-paint calls with the same faces.
             if (paint_lower) {
-                const auto paint_cell = [&](int seam_x, int fill_w,
-                                            const text_shape::ShapedRun& crun,
-                                            MarkerCell which, bool closes) {
-                    paint_iter_bound_cell(
-                        cr, font, lane, seam_x, fill_w, border_w, edge_h,
-                        pad_l, baseline, crun,
-                        // A TIE FOLLOWER'S CELLS TAKE THE DISABLED FACE
-                        // (architect 2026-09-19): they show the LEADER's
-                        // numbers and are not this marker's to author, which
-                        // is exactly what the disabled face already says —
-                        // the ground and the embossed label, no new colour
-                        // and no second rule. The marker's own `dis` is false
-                        // wherever `follower` is true (a disabled marker is
-                        // no tie member and paints no cells at all); the FLAG
-                        // BOX above is untouched and keeps its live state,
-                        // the disabled face being about the cells alone.
-                        resolve_flag_face(dis || cells.follower, red,
-                                          cell_selected(which)),
-                        closes);
+                const auto cell_face = [&](MarkerCell which) {
+                    // A TIE FOLLOWER'S CELLS TAKE THE DISABLED FACE
+                    // (architect 2026-09-19): they show the LEADER's numbers
+                    // and are not this marker's to author, which is exactly
+                    // what the disabled face already says — the ground and
+                    // the embossed label, no new colour and no second rule.
+                    // The marker's own `dis` is false wherever `follower` is
+                    // true (a disabled marker is no tie member and paints no
+                    // cells at all); the FLAG BOX above is untouched and
+                    // keeps its live state, the disabled face being about the
+                    // cells alone.
+                    return resolve_flag_face(dis || cells.follower, red,
+                                             cell_selected(which));
                 };
+                const FlagFace lower_face = cell_face(MarkerCell::Lower);
                 // The lower cell never closes a run this pass paints: with no
                 // field standing the upper cell follows it, and under the
-                // UPPER field the field abuts it on its own left seam.
-                paint_cell(lower_x, lower_w, cl.lower_run, MarkerCell::Lower,
-                           /*closes=*/false);
+                // UPPER field the field abuts it on its own left seam (the
+                // field's frame, painted over that column).
+                paint_iter_bound_cell(cr, lane, lower_x, lower_w, border_w,
+                                      edge_h, pad_l, baseline, cl.lower_run,
+                                      lower_face,
+                                      flag_seam_outline(face, lower_face),
+                                      /*closes=*/false);
                 // The upper cell is the lower's own right-hand neighbour, so it
                 // paints iff nothing has taken it: the UPPER bound's field is
                 // the one thing that does, and then the run simply ends here.
                 // Painted, it is the run's last box and carries the closing
                 // column (pass_closes is true exactly then).
-                if (paint_upper)
-                    paint_cell(upper_x, upper_w, cl.upper_run,
-                               MarkerCell::Upper, pass_closes);
+                if (paint_upper) {
+                    const FlagFace upper_face = cell_face(MarkerCell::Upper);
+                    paint_iter_bound_cell(
+                        cr, lane, upper_x, upper_w, border_w, edge_h, pad_l,
+                        baseline, cl.upper_run, upper_face,
+                        flag_seam_outline(lower_face, upper_face), pass_closes);
+                }
             }
 
             // THE SUPPRESSED BOX PUBLISHES NO HIT RECT EITHER (2026-08-02,
@@ -2088,10 +2087,11 @@ void render_history_diff_flags(
         [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
             // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
-            // either UNDERLINES the flag, and BOTH HALVES of a changed pair
-            // take it together — a double flag is one item, so it shows as
-            // one. The two are ONE face by ruling (the declaration says why),
-            // so this is an OR rather than a ladder.
+            // either RINGS the flag in white, and BOTH HALVES of a changed
+            // pair take it together, the seam between them white with them —
+            // a double flag is one item, so it shows as one. The two are ONE
+            // face by ruling (the declaration says why), so this is an OR
+            // rather than a ladder.
             const bool focused =
                 (i == focus_index) || (selected.count(i) != 0);
 
@@ -2146,7 +2146,7 @@ void render_history_diff_flags(
             // greens and the removed red retired, red being invalid-only, and
             // a diff line is never the invalid class — the disabled face (the
             // ground, the label embossed) for a half whose own side disables
-            // it, and the focus's underline on both. THE LABEL CARRIES THE
+            // it, and the focus's white outline on both. THE LABEL CARRIES THE
             // SIGN (history_diff_label's bracket, paint_handler.h), which is
             // all that tells an added half from a removed one now.
             const FlagFace removed_face =
@@ -2161,25 +2161,31 @@ void render_history_diff_flags(
             // one rect, one focus, one revert — whose halves meet on a SECOND
             // outline column, THE SEAM (2026-08-20, standing since
             // 2026-09-02, when the halves were two saturated hues; it stays
-            // the anatomy's one seam rule): the added half's own left border.
+            // the anatomy's one seam rule): the added half's own left border,
+            // white with the halves when the flag is focused or selected
+            // (flag_seam_outline).
             if (w_removed > 0)
                 paint_flat_flag_box(cr, lane, bx, w_removed, border_w, edge_h,
                                     /*closes=*/w_added == 0,
-                                    palette().dk_shadow, removed_face.face);
+                                    removed_face.outline, removed_face.outline,
+                                    removed_face.face);
             if (w_added > 0)
-                paint_flat_flag_box(cr, lane, bx + w_removed + seam_w, w_added,
-                                    border_w, edge_h, /*closes=*/true,
-                                    palette().dk_shadow, added_face.face);
+                paint_flat_flag_box(
+                    cr, lane, bx + w_removed + seam_w, w_added, border_w,
+                    edge_h, /*closes=*/true,
+                    w_removed > 0 ? flag_seam_outline(removed_face, added_face)
+                                  : added_face.outline,
+                    added_face.outline, added_face.face);
 
             // THE TWO LABELS, each on its own half through the one label body
-            // (paint_flag_label): its own ink or emboss, its own underline.
+            // (paint_flag_label): its own ink or emboss.
             if (w_removed > 0)
-                paint_flag_label(cr, font, run_removed,
+                paint_flag_label(cr, run_removed,
                                  static_cast<double>(bx + pad_l), baseline,
                                  removed_face);
             if (w_added > 0)
                 paint_flag_label(
-                    cr, font, run_added,
+                    cr, run_added,
                     static_cast<double>(bx + w_removed + seam_w + pad_l),
                     baseline, added_face);
 
@@ -2213,8 +2219,8 @@ void render_history_diff_flags(
             if (stem_column_on_waveform(bx - top_strip_area.x,
                                         waveform_width)) {
                 // THE STEM IS THE ONE FLAG COLOUR (architect 2026-10-03):
-                // selection moves no stem since the underline, and a diff
-                // flag is never the invalid class.
+                // selection moves no stem, and a diff flag is never the
+                // invalid class.
                 //
                 // AND IT READS THE DISABLED AXIS (architect 2026-08-22), on the
                 // SINGLE-half flags alone. A removed-only or added-only flag
@@ -2682,8 +2688,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // render_flags). Every box in the riding run below asks the question of
     // its own cell — which answers no on every one of them, each open having
     // seated the axis on the cell it edits — so the riding cells are never
-    // underlined while the field stands, the field being where the marker's
-    // selection shows.
+    // ringed in white while the field stands, the field being where the
+    // marker's selection shows.
     const bool sel = app.selected_markers.count(idx) > 0;
     const MarkerCell bright = idx == app.last_selected_marker
                                   ? app.addressed_cell : MarkerCell::Payload;
@@ -2721,7 +2727,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    is this same box: an edit field is never embossed.
     const GuiColor frame = ed.red ? palette().invalid_face : kFlagEditorFrame;
     paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
-                        /*closes=*/!ride_cells, frame, palette().field_ground);
+                        /*closes=*/!ride_cells, frame, frame,
+                        palette().field_ground);
     // THE STEM KEEPS THE FLAG'S COLOUR (architect 2026-10-03): the payload
     // field's marker stems as it does at rest, crossing the frame's bottom
     // rows from the box's leftmost face column (paint_flag_stem_crossing);
@@ -2866,7 +2873,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // (paint_iter_bound_cell), and each asks the selected-cell question its
     // resting twin asks — which answers no on every one of them under every
     // kind, each open having seated the axis on the cell it edits, so none is
-    // underlined while the field stands.
+    // ringed in white while the field stands.
     //
     // IT IS PUBLISHED AS A SECOND RECT, NEVER FOLDED INTO `box`, and that rect
     // is a FLAG HIT RECT — the same shape and the same two boundaries the
@@ -2922,13 +2929,17 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // width in the flag's place.
         const int run_x0 = bx + box_w;
         int cursor_x = run_x0;
+        // Each riding cell's SEAM is answered as the flag pass answers it
+        // (flag_seam_outline) where its left neighbour is a riding cell; the
+        // first riding box's seam is the field's own right column, repainted
+        // in the frame's colour below, so it takes the cell's own ring here.
         const int lower_seam = cursor_x;
+        const FlagFace lower_face = resolve_flag_face(
+            cell_dis, red_class, cell_selected(MarkerCell::Lower));
         if (ride_lower) {
             paint_iter_bound_cell(
-                cr, font, lane, cursor_x, cl.lower_w, border_w, edge_h, pad_l,
-                baseline, cl.lower_run,
-                resolve_flag_face(cell_dis, red_class,
-                                  cell_selected(MarkerCell::Lower)),
+                cr, lane, cursor_x, cl.lower_w, border_w, edge_h, pad_l,
+                baseline, cl.lower_run, lower_face, lower_face.outline,
                 // Never the run's last box: the upper cell rides after it on
                 // every kind that carries the lower.
                 /*closes=*/false);
@@ -2936,11 +2947,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         }
         const int upper_seam = cursor_x;
         if (ride_upper) {
+            const FlagFace upper_face = resolve_flag_face(
+                cell_dis, red_class, cell_selected(MarkerCell::Upper));
             paint_iter_bound_cell(
-                cr, font, lane, cursor_x, cl.upper_w, border_w, edge_h, pad_l,
-                baseline, cl.upper_run,
-                resolve_flag_face(cell_dis, red_class,
-                                  cell_selected(MarkerCell::Upper)),
+                cr, lane, cursor_x, cl.upper_w, border_w, edge_h, pad_l,
+                baseline, cl.upper_run, upper_face,
+                ride_lower ? flag_seam_outline(lower_face, upper_face)
+                           : upper_face.outline,
                 // THE RUN'S LAST BOX, so it closes the run (2026-09-25) —
                 // the resting run's own ending, at the field's edge.
                 /*closes=*/true);

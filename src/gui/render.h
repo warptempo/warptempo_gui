@@ -131,7 +131,8 @@ struct TrimRange {
 //                 arrow glyph, the playhead head's outline;
 //   the quartet   every relief line, the families unchanged; Shadow also the
 //                 ruler ticks (the etch's Hilight line beside each), DkShadow
-//                 also the flag outline and the dialog focus frame;
+//                 also the flag outline (white on a selected flag,
+//                 kFlagSelectedOutline) and the dialog focus frame;
 //   emboss_light  the light copy of THE DISABLED EMBOSS (below);
 //   selected pair a dropdown's lit row, the open menu anchor, the folder
 //                 overlay's and the picker's highlighted row (its glyph in
@@ -145,6 +146,10 @@ struct TrimRange {
 //                 dimmed second line: Windows' ink, no dims);
 //   field pair    the modal dialogs' fields and the flag editor, the caret its
 //                 field's text (UNIFIED FIELDS, architect 2026-10-03).
+// THE THREE PAIRS ARE THE TABLE'S ROW like every role: as recorded at LIGHT,
+// and at DIM and DARK each ground darkened in proportion with the face under
+// the level's white text (architect 2026-10-03, mock sets AS and AT; the rule
+// is tools/theme_catalog/levels.py's), so no painter asks the level.
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD AND GLYPH (architect 2026-10-03,
@@ -237,10 +242,23 @@ uint64_t palette_generation();
 // THE IN-PLACE EDITOR'S FRAME — Windows' WindowFrame, BLACK (architect
 // 2026-10-03, on Explorer's F2 rename and Acid Pro's track-name editor): the
 // flag editor's one-Windows-px frame round its flat box (render_flag_editor_box).
-// A LITERAL, the one colour in the chrome that is neither a theme role nor a
-// program key: the ruling names black, as Windows 95 Standard records its
-// WindowFrame, on every theme.
+// A LITERAL, one of the chrome's two colours that are neither a theme role nor
+// a program key (the selected flag's white ring below is the other): the
+// ruling names black, as Windows 95 Standard records its WindowFrame, on every
+// theme.
 inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
+
+// THE SELECTED FLAG'S RING — WHITE (architect 2026-10-03, mock AR02, after a
+// day of the underlined label on the glass): a selected flag, or a selected
+// run's addressed cell, wears its one-Windows-px outline ring in #FFFFFF in
+// place of the theme's DkShadow — face, label, stem and geometry unchanged —
+// the sibling of the editor's red refusal frame (resolve_flag_face,
+// flag_seam_outline, render.cpp). A LITERAL beside the palette, a settled
+// design and no key, judged on the dark level, where it is the level's label
+// white on a dark ground. ON A LIGHT LEVEL IT STANDS ON A LIGHT GROUND
+// (Windows 95 Standard's #C0C0C0 in the lane's air row above the box), so there
+// it stands out less than on the level it was ruled on.
+inline constexpr GuiColor kFlagSelectedOutline = hex(0xFFFFFF);
 
 // -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
 
@@ -278,7 +296,8 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // box retired as "a 3D surface with a cut through it"): a FLAT BOX in the
 // `flag_face` key, its label in the key's RECORDED label colour `flag_label`
 // (a recorded pair, like Windows' — never a luminance verdict), and a
-// ONE-WINDOWS-PX OUTLINE in the theme's DkShadow on all four sides — the box's
+// ONE-WINDOWS-PX OUTLINE in the theme's DkShadow — white when selected (below)
+// — on all four sides — the box's
 // left border column, its top row, its run's closing column and its bottom
 // row, so the box keeps its width and height. THE STEM leaves from the box's
 // LEFTMOST FACE COLUMN (the marker's own frame column) and crosses the bottom
@@ -289,20 +308,23 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then invalid, then the flag):
-//   SELECTED  the label UNDERLINED and nothing else moves — Roboto's own
-//             underline position and thickness at the label's size
-//             (text_shape::face_underline_px, read off the face through the
-//             font owner), across the run's advance and straight through
-//             descenders, as Windows drew it. SELECTION IS ONE CELL'S
-//             (architect 2026-09-05): the ADDRESSED cell is the one underlined
-//             — the payload for every selected marker but the focus, whose
-//             addressed cell is AppState::addressed_cell;
+//   SELECTED  THE OUTLINE RING WHITE (kFlagSelectedOutline, architect
+//             2026-10-03, mock AR02) in place of the DkShadow, all four sides,
+//             and nothing else moves — not the face, the label, the stem or
+//             the geometry; the stem still crosses the white bottom row. A
+//             SEAM COLUMN two boxes share is white when either box it divides
+//             is selected (flag_seam_outline, render.cpp), so the ring is
+//             whole on four sides whichever box paints the column, as the
+//             editor's red frame is. SELECTION IS ONE CELL'S (architect
+//             2026-09-05): the ADDRESSED cell is the one ringed — the payload
+//             for every selected marker but the focus, whose addressed cell
+//             is AppState::addressed_cell;
 //   INVALID   the red-flag class (warp_red_flag_set_cached and its phase-reset
 //             twin): the `invalid_face` key's face and its `invalid_label`,
 //             the stem in that face colour;
 //   DISABLED  the theme's GROUND for the face, the label in THE DISABLED
-//             EMBOSS (above), and NO STEM. A selected disabled flag's
-//             underline is embossed with its label.
+//             EMBOSS (above), and NO STEM. A selected disabled flag wears
+//             the white ring like any other.
 // A FLAG HAS NO HOVER FACE (architect 2026-09-29): the pointer over a flag says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
 //
@@ -339,7 +361,7 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // an added line's payload and `[-]` before a removed one's (architect
 // 2026-08-05; history_diff_label, paint_handler.h, the same sign row 8's walk
 // line spells), each half of a changed pair its own — and the view's focus
-// swap is the underline (render_history_diff_flags).
+// swap is the white ring (render_history_diff_flags).
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
 //
@@ -2406,8 +2428,8 @@ struct FlagLaneRects {
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved face — the flag key or the
-// invalid key (selection moves no stem since the underline, architect
-// 2026-10-03), and the consumer paints it as published: the open editor's
+// invalid key (selection moves no stem: the white ring is the box's alone,
+// architect 2026-10-03), and the consumer paints it as published: the open editor's
 // refusal is its frame alone, never the stem.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
@@ -2508,7 +2530,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //
 // THE STATES, resolved in priority order by the one ladder
 // (resolve_flag_face, render.cpp) — DISABLED WINS, then INVALID, then the flag
-// — and SELECTION IS THE UNDERLINE on top of whichever stands:
+// — and SELECTION IS THE WHITE OUTLINE on top of whichever stands:
 //   Disabled:  the theme's ground for the face, the label in the disabled
 //              emboss, NO STEM. A disabled invalid marker is disabled.
 //   Invalid:   the red set (warp_red_flag_set_cached, or the phase-reset
@@ -2518,9 +2540,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              — ONE FLAG COLOUR ON BOTH COLUMNS AND THEIR CELLS (architect
 //              2026-10-03: "phase resets take whatever warp markers take",
 //              2026-10-01, now one value with nothing to pair).
-//   Selected:  the addressed cell's label UNDERLINED (Roboto's own underline,
-//              text_shape::face_underline_px), in the label's ink — embossed
-//              with an embossed label — and nothing else moves.
+//   Selected:  the addressed cell's outline ring WHITE (kFlagSelectedOutline)
+//              on all four sides, a shared seam column white with it — on a
+//              disabled face too — and nothing else moves.
 //
 // `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; the
 // phase-reset painter below carries the same parameter for its own hop
@@ -2539,15 +2561,15 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // separator opens in one cell to close in the next. The flag's own text is
 // the plain composer's (flag_text) in every state; no bracket paints anywhere.
 //
-// `focus_marker` / `focus_cell` NAME THE UNDERLINED CELL (architect
-// 2026-09-05, the underline since 2026-10-03): a selected marker underlines
-// its ADDRESSED cell's label and no other, and the addressed cell is the
+// `focus_marker` / `focus_cell` NAME THE RINGED CELL (architect 2026-09-05,
+// the white outline since 2026-10-03): a selected marker rings its ADDRESSED
+// cell in white and no other box, and the addressed cell is the
 // payload for every selected marker but the focus, whose addressed cell is
 // `focus_cell` (AppState::addressed_cell — a press's cell, an editor's, or
 // the one a bracket-only undo entry's restore brings back; every other focus
 // route resets it to the payload). Where the focus SHOWS that cell NOWHERE —
 // neither in this pass nor in the open field standing in for it — its payload
-// is underlined instead, so a selected marker always shows its selection, and
+// is ringed instead, so a selected marker always shows its selection, and
 // shows it once: while a field stands, the FIELD is where its own cell's
 // selection lives. The rule is stated once at the palette block's marker-lane
 // paragraph and applies on both columns — a phase reset's bound cells are
@@ -2832,8 +2854,9 @@ void render_phase_reset_flags(cairo_t* cr,
 // architect 2026-09-17). It asks the one ladder (resolve_flag_face,
 // render.cpp) rather than restating it: the `invalid_face` key when `red` (the
 // column's red set, phase_reset_red_flag_set_cached), the `flag_face` key
-// otherwise; selection moves no stem since the underline (architect
-// 2026-10-03), so the ring and its stem stay one object at rest and selected.
+// otherwise; selection moves no stem (architect 2026-10-03: the selected
+// flag's white outline is its box's alone), so the ring and its stem stay one
+// object at rest and selected.
 // No disabled arm, a disabled reset painting neither stem nor ring.
 GuiColor phase_reset_stem_color(bool red);
 
@@ -2954,12 +2977,14 @@ struct HistoryDiffFlag {
 // embossed. IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes its own bit,
 // so a disable TOGGLE paints one disabled half beside one live half and the
 // direction of the toggle is readable off the flag itself. The outline columns
-// are the theme's DkShadow on every half.
+// are the theme's DkShadow on every half, white on both when the flag is
+// focused or selected (below).
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and
 // `selected` its OWN multi-selection (ordinals into the same list, 2026-08-05):
-// EITHER UNDERLINES that flag's labels, both halves of a double flag together
-// (the live lane's selection, architect 2026-10-03). One face for both,
+// EITHER RINGS that flag in white, both halves of a double flag together and
+// the seam between them with them (the live lane's selection, architect
+// 2026-10-03). One face for both,
 // deliberately — the focus is the selection's singleton when the set is empty,
 // and the revert act reads them the same way, so a second face would be a
 // distinction nothing acts on. The STEM is the flag colour (selection moves no
@@ -2972,7 +2997,7 @@ struct HistoryDiffFlag {
 // NO CELLS AND NO ADDRESSED CELL ON THIS LANE: a bracket is session-only and
 // in no commit, so a diff flag carries no bound cells, and the view's focus is
 // its own diff-flag cycle's with nothing for AppState::addressed_cell to
-// address — the focus underlines the whole flag.
+// address — the focus rings the whole flag.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,

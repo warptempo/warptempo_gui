@@ -84,24 +84,6 @@ ShapedRun shape_text_run(cairo_scaled_font_t* font, std::string_view utf8);
 // and current scaled font. Cairo state is not modified.
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 
-// THE FACE'S OWN UNDERLINE at `font`'s size, device px as unrounded doubles
-// (architect 2026-10-03, the selected flag's underline — the one reader is
-// render.cpp's flag_underline_rect, which rounds each term at its element):
-// `top_px` is the underline's TOP measured DOWN from the baseline and
-// `thickness_px` its height — the font file's `post` table underlinePosition
-// and underlineThickness over the `head` table's unitsPerEm, times the font
-// matrix's size (Roboto Regular: -150 and 100 of 2048). The post value is
-// read through FreeType's sfnt table, NOT FT_Face::underline_position, which
-// FreeType moves to the stroke's centre; the OpenType definition is the top,
-// and tools/palette's face_underline reads the same bytes. Same precondition
-// as shape_text_run: an FT-backed scaled font (and a TrueType face, which
-// both product faces are).
-struct FaceUnderline {
-    double top_px       = 0.0;
-    double thickness_px = 0.0;
-};
-FaceUnderline face_underline_px(cairo_scaled_font_t* font);
-
 // (A RUN'S INK EDGES — `InkExtents` / `ink_extents_px`, the run's first and last
 // LIT pixel as against `width_px`'s sum of ADVANCES — stood here from
 // 2026-08-30 to 2026-08-31 for ONE consumer: row 8's sans STATE CELL, which sat

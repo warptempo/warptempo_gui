@@ -139,9 +139,12 @@ FLAG_SELECTIONS = ('outline', 'underline', 'fill', 'outline+fill')
 FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection', 'outline_px')     # the flags section's keys beside its colour aliases
 # trim.held (trim.style "scrollbar" only): one arrow button HELD, as a single-bound drag holds it -- "flat" the app's
 # face (render.cpp paint_trim_arrow_button: Windows' DFCS_PUSHED | DFCS_FLAT, one Shadow line round the face), "sunken"
-# the push button's pressed face (the plain sunken edge); the glyph one line right and down in both (step 11)
+# the push button's pressed face (the plain sunken edge); the glyph one line right and down in both (step 11). Its
+# optional "ring" (step 12, a mock option, read only by the "flat" face): the role the one line round the flat face
+# takes, `bevel_shadow` (the app's) when absent -- set AW's ways to bring the held cap's ring out at the dark level
 TRIM_HELD_CAPS = ('begin', 'end')
 TRIM_HELD_FACES = ('flat', 'sunken')
+TRIM_HELD_RINGS = ('bevel_shadow', 'bevel_dkshadow', 'bevel_hilight', 'emboss_hilight', 'label')
 CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
 # buttons.disabled: a disabled glyph -- "mix" the app's, "engraved" Windows' DrawState DSS_DISABLED (its light copy
 # `emboss_hilight`), "shadowed" that emboss mirrored for a dark face, as menu.disabled "shadowed" mirrors the word
@@ -279,10 +282,13 @@ class Theme:
                              f'row of the lane\'s {lane_rows}, not {ai!r}')
         hd = self.opt['trim']['held']
         if hd is not None:
-            if (not isinstance(hd, dict) or set(hd) != {'cap', 'face'} or hd['cap'] not in TRIM_HELD_CAPS
-                    or hd['face'] not in TRIM_HELD_FACES):
+            if (not isinstance(hd, dict) or not {'cap', 'face'} <= set(hd) <= {'cap', 'face', 'ring'}
+                    or hd['cap'] not in TRIM_HELD_CAPS or hd['face'] not in TRIM_HELD_FACES
+                    or hd.get('ring', 'bevel_shadow') not in TRIM_HELD_RINGS):
                 raise SystemExit(f'theme {path}: trim.held is null or {{"cap": one of {TRIM_HELD_CAPS}, "face": one of '
-                                 f'{TRIM_HELD_FACES}}}, not {hd!r}')
+                                 f'{TRIM_HELD_FACES}, optionally "ring": one of {TRIM_HELD_RINGS}}}, not {hd!r}')
+            if 'ring' in hd and hd['face'] != 'flat':
+                raise SystemExit(f'theme {path}: trim.held.ring is read only by the "flat" face')
             if ts != 'scrollbar': raise SystemExit(f'theme {path}: trim.held is read only by trim.style "scrollbar"')
         dg = self.opt['dialog']
         if dg is not None and (not isinstance(dg, dict) or set(dg) != {'label', 'text'}
@@ -1010,7 +1016,7 @@ def draw_trim_acid(cr, th):
 
 TRIM_ARROW_ROWS = (1, 3, 5, 7)     # render.h kTrimArrowGlyphRows: the scroll arrow's four columns from the tip
 
-def draw_trim_arrow_button(cr, th, x, y0, w, h, points_left, held=None):
+def draw_trim_arrow_button(cr, th, x, y0, w, h, points_left, held=None, ring='bevel_shadow'):
     """ONE ARROW BUTTON, render.cpp's paint_trim_arrow_button: trim_ground under relief_lines 'panel' (the plain raised
     edge), then Windows' scroll arrow as integer rectangles -- four columns 1, 3, 5 and 7 units tall from the tip, each
     centred on the glyph's middle row, a unit LW device px (one logical px: the app's scaled_px(1, 1), the unit the
@@ -1018,11 +1024,12 @@ def draw_trim_arrow_button(cr, th, x, y0, w, h, points_left, held=None):
     top-left -- its tip LEFT on the begin button and RIGHT on the end button, in `trim_arrow` (by default the luminance
     rule's ink over the button's face, Theme.highlight_ink, the app's rule until 2026-10-03; the catalog's crops state
     the theme's label, the app's rule since). HELD (trim.held's face, step 11): "flat" the app's pressed face, the
-    ground under ONE `bevel_shadow` line round it (Windows' DFCS_PUSHED | DFCS_FLAT); "sunken" the push button's
+    ground under ONE line round it (Windows' DFCS_PUSHED | DFCS_FLAT) in `ring`, the role trim.held.ring names
+    (`bevel_shadow`, the app's, when absent; step 12's mock option); "sunken" the push button's
     pressed face, the plain sunken edge (relief_lines 'sunken': Shadow / Hilight outer, DkShadow / 3DLight inner at
     relief "thick"); in both the glyph one LW right and down."""
     g = th.get('trim_ground'); fill(cr, x, y0, x + w, y0 + h, g)
-    if held == 'flat': edge(cr, x, y0, x + w, y0 + h, [(th.get('bevel_shadow'), th.get('bevel_shadow'))])
+    if held == 'flat': edge(cr, x, y0, x + w, y0 + h, [(th.get(ring), th.get(ring))])
     elif held == 'sunken': edge(cr, x, y0, x + w, y0 + h, relief_lines(th, 'sunken'))
     else: edge(cr, x, y0, x + w, y0 + h, relief_lines(th, 'panel'))
     push = LW if held else 0
@@ -1066,8 +1073,10 @@ def draw_trim_scrollbar(cr, th):
     if hi > lo: fill(cr, lo, y0, hi, y1, g); edge(cr, lo, y0, hi, y1, relief_lines(th, 'panel'))
     hd = th.opt['trim']['held']
     face = lambda cap: hd['face'] if hd is not None and hd['cap'] == cap else None
-    if begin: draw_trim_arrow_button(cr, th, begin[0], y0, btn, y1 - y0, True, face('begin'))
-    if end: draw_trim_arrow_button(cr, th, begin[0] + btn if narrow else end[0] - btn, y0, btn, y1 - y0, False, face('end'))
+    ring = hd.get('ring', 'bevel_shadow') if hd is not None else 'bevel_shadow'
+    if begin: draw_trim_arrow_button(cr, th, begin[0], y0, btn, y1 - y0, True, face('begin'), ring)
+    if end: draw_trim_arrow_button(cr, th, begin[0] + btn if narrow else end[0] - btn, y0, btn, y1 - y0, False, face('end'),
+                                   ring)
 
 def cap_rects(th):
     """[('handles', [(x0, x1), ...]), ('grip', [(x0, x1)] or [])] at trim.cap_w (None = the measured widths). A handle

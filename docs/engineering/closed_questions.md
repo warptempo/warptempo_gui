@@ -398,9 +398,10 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **Ctrl+J on a follower's bound cell going to the leader on the same tab** — overruled, 2026-09-19: it goes to the leader on the other tab. Owner: `jump_tie_leader_destination` (app_state.h).
 - **The measure propagate (`Ctrl+/` copy, `Ctrl+Alt+/` paste through the offset modal)** — deleted whole, 2026-09-14 ("a helping tool, not piece-wide"). Owner: `PhaseResetPropagate` (phase_reset_propagate.h), the family that remains.
 - **The bevelled flag (Sonic Foundry's raised box shaded by the theme family's rule)** — retired, architect 2026-10-03: "a 3D surface with a cut through it, and when you press it the cut goes the opposite direction"; the flag is the flat Acid flag, outlined in the theme's DkShadow. Owner: render.h's marker-lane paragraph, `resolve_flag_face` (render.cpp).
-- **The sunken selected flag (the bevel inverted, the label pushed)** — ruled out, architect 2026-10-03: selection is the label underlined and nothing else moves. Owner: render.h's marker-lane paragraph.
-- **The white-outline selected flag** — ruled out, architect 2026-10-03, for the underline. Owner: render.h's marker-lane paragraph.
-- **Inverse video for the selected flag** — ruled out, architect 2026-10-03, for the underline. Owner: render.h's marker-lane paragraph.
+- **The sunken selected flag (the bevel inverted, the label pushed)** — ruled out, architect 2026-10-03: selection is the white outline ring and nothing else moves. Owner: render.h's marker-lane paragraph.
+- **The underlined selected flag (Roboto's own post-table underline under the addressed cell's label, `text_shape::face_underline_px`)** — retired, architect 2026-10-03, after a day on the glass: the selected flag's one-px ring is white in place of the DkShadow (mock AR02). Owner: `kFlagSelectedOutline` (render.h), `resolve_flag_face` (render.cpp).
+- **The navy-filled selected flag, alone or inside the white ring (mocks AR03 / AR04)** — ruled out, architect 2026-10-03: the navy face vanishes on the dark ground. Owner: `kFlagSelectedOutline` (render.h).
+- **Inverse video for the selected flag** — ruled out, architect 2026-10-03, for the underline, and stays out under the white outline. Owner: render.h's marker-lane paragraph.
 - **A bold label for the selected flag** — ruled out, architect 2026-10-03: a width jump moves everything right of it. Owner: render.h's marker-lane paragraph.
 - **An italic label for the selected flag** — ruled out, architect 2026-10-03: a new font, and the product's faces are two. Owner: render.h's marker-lane paragraph, gui_font.h.
 - **A glyph marking an invalid flag (Device Manager's warning sign)** — ruled out, architect 2026-10-03: the invalid face is the cue, and a refused edit is its frame alone. Owner: render.h's marker-lane paragraph.
@@ -740,6 +741,11 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **The playhead stem taking the head's colour over the chrome lanes** — ruled out, architect 2026-10-03: the stem is uniform in its own key from the head to the canvas's foot, its contrast the user's choice. Owner: render.h's playhead paragraph.
 - **A shorter playhead head, or a taller ruler lane for it** — ruled out, architect 2026-10-03: the head keeps its size and touches the ruler's digits. Owner: `kPlayheadHeadHalf`, render.h's playhead paragraph.
 - **The one-line Sound Recorder well** — ruled out, architect 2026-10-03: the well keeps its two-line plain sunken edge top and bottom. Owner: `render_canvas` (render.cpp), render.h's row-6 block.
+- **The field, the card and the selection as recorded on the dim and dark levels (mock AS01: white and pale yellow under black, Windows' navy)** — retired, architect 2026-10-03: on dim and dark the three grounds darken in proportion with the face (AS02), hue and HSV saturation kept, the text the level's white. Owner: tools/theme_catalog/levels.py.
+- **A fixed luminance for the dark level's field and card (AS03 at the ground's own 0.035, AS04 at 0.015) or their RGB inversion (AS05)** — ruled out, architect 2026-10-03, for the proportional rule. Owner: tools/theme_catalog/levels.py.
+- **The dim level's field and card kept light under black text (AT02–AT05, luminance 0.60 down to 0.20)** — ruled out, architect 2026-10-03: dim darkens them in proportion as dark does. Owner: tools/theme_catalog/levels.py.
+- **HLS saturation kept when a pair ground darkens** — ruled out, 2026-10-03 (the AS / AT re-render): it turns #FFFFE1, HLS saturation 1.0, into a saturated olive; the pair grounds keep their HSV saturation. Owner: `pair_ground_at` (tools/theme_catalog/levels.py).
+- **The sunken held trim cap (the push button's pressed face, the plain sunken edge, in place of the flat pushed scroll arrow, mock AV02)** — ruled out, architect 2026-10-03: a button pressed further into the trough it sits in "violates the trough"; the held cap stays flat. Owner: render.h's trim-lane paragraph, `render_trim_flags`.
 
 ## The platform seam: the backends, playback, the Android sliver and the tablet
 

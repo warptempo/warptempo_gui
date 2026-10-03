@@ -4213,12 +4213,12 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
     // annotates. It wears what that stem wears: the `invalid_face` key when
     // the reset is in the column's red set (band.red), the `flag_face` key
-    // otherwise; selection moves neither since the underline (architect
-    // 2026-10-03). phase_reset_stem_color asks the one ladder rather than
-    // restating it, so ring and stem cannot drift. DAMAGE: this pass paints
-    // live in on_redraw from app state, never from a cached surface, and
-    // every change to its colour's inputs misses the flag cache's
-    // fingerprint, whose rebuild damages the waveform with the strip
+    // otherwise; selection moves neither (architect 2026-10-03: the selected
+    // flag's white outline is its box's alone). phase_reset_stem_color asks
+    // the one ladder rather than restating it, so ring and stem cannot drift.
+    // DAMAGE: this pass paints live in on_redraw from app state, never from a
+    // cached surface, and every change to its colour's inputs misses the flag
+    // cache's fingerprint, whose rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
     // repaint; a palette install damages the whole window.
     const GuiColor ring = phase_reset_stem_color(band.red);

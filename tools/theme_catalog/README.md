@@ -27,9 +27,12 @@ HLS lightness scaled by L(new face) / L(base face) (black stays black, a 3DLight
 new face), the label white, the emboss's light copy Windows' own dialog-rule Hilight of the new face
 (`toolkit_rules.windows_dialog`); the selected pair the entry's (a CDE entry's its `title_active` with colour set 1's
 Motif foreground), the info pair the entry's or Windows' #FFFFE1 / #000000 where unrecorded, the field pair the
-entry's, at every level. The ground search is exhaustive by definition (`ground_at_exhaustive`, the lightness at every
-1 / 100000 step); `ground_at` is the same search vectorized with numpy, verified identical on all 97 x 2 cases
-(`levels.py --verify`). The app reads the row the device config names (`theme`, `theme_level`; render.h's palette
+entry's — as recorded at LIGHT, and at DIM / DARK each of the three grounds DARKENED IN PROPORTION with the face
+(architect 2026-10-03, mock sets AS and AT): its recorded luminance x the level's target / L(the recorded ground), its
+hue and HSV saturation kept (`pair_ground_at`), the text on all three the level's white. The searches are exhaustive
+by definition (`ground_at_exhaustive`, the lightness at every 1 / 100000 step; `pair_ground_at_exhaustive`, the HSV
+value likewise); `ground_at` and `pair_ground_at` are the same searches vectorized with numpy, verified identical on
+every case the table reads (`levels.py --verify`). The app reads the row the device config names (`theme`, `theme_level`; render.h's palette
 block maps the roles onto the painters).
 
 ## The contract
