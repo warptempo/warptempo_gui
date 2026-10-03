@@ -1,0 +1,4147 @@
+{
+ "chicago95": {
+  "DocumentSave": {
+   "status": "NATIVE",
+   "name": "document-save",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/document-save.png",
+   "note": ""
+  },
+  "EditUndo": {
+   "status": "NATIVE",
+   "name": "edit-undo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/edit-undo.png",
+   "note": ""
+  },
+  "EditRedo": {
+   "status": "NATIVE",
+   "name": "edit-redo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/edit-redo.png",
+   "note": ""
+  },
+  "MediaRecord": {
+   "status": "NATIVE",
+   "name": "media-record",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-record.png",
+   "note": ""
+  },
+  "VcsCommit": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/mimes/16/text-x-generic.png"
+    ],
+    [
+     "dialog-ok-apply",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/dialog-ok-apply.png"
+    ]
+   ],
+   "note": "the set's document + its check mark (commit = sign off the state)"
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "go-down",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-down.png"
+    ],
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/mimes/16/text-x-generic.png"
+    ]
+   ],
+   "note": "the set's down arrow onto its document (take in what GitHub has)"
+  },
+  "ZoomFitBest": {
+   "status": "NATIVE",
+   "name": "zoom-fit-best",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/zoom-fit-best.png",
+   "note": ""
+  },
+  "ZoomOriginal": {
+   "status": "NATIVE",
+   "name": "zoom-original",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/zoom-original.png",
+   "note": ""
+  },
+  "ZoomInY": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "zoom-in",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/zoom-in.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-up.png"
+    ]
+   ],
+   "note": "the set's magnifier + its up/down arrow pair (vertical)"
+  },
+  "ListAdd": {
+   "status": "NATIVE",
+   "name": "list-add",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/list-add.png",
+   "note": ""
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "list-remove",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/list-remove.png",
+   "note": ""
+  },
+  "ViewHidden": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "image-red-eye",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/image-red-eye.png"
+    ],
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/process-stop.png"
+    ]
+   ],
+   "note": "the red-eye eye + the red cross"
+  },
+  "InsertLink": {
+   "status": "NATIVE",
+   "name": "insert-link",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/insert-link.png",
+   "note": ""
+  },
+  "Merge": {
+   "status": "NATIVE",
+   "name": "object-merge",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/object-merge.png",
+   "note": ""
+  },
+  "BlackSum": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "NATIVE",
+   "name": "go-jump",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-jump.png",
+   "note": ""
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/process-stop.png"
+    ]
+   ],
+   "note": "two bracket strokes around the set's red cross"
+  },
+  "MusicNote16th": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "audio-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/mimes/16/audio-x-generic.png"
+    ]
+   ],
+   "note": "the note cropped/redrawn from the set's audio glyph"
+  },
+  "Mathmode": {
+   "status": "GAP",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "video-display",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/devices/16/video-display.png"
+    ],
+    [
+     "media-record",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-record.png"
+    ]
+   ],
+   "note": "the set's monitor with its red record disc as the 'on' pip"
+  },
+  "DialogOkApply": {
+   "status": "NATIVE",
+   "name": "dialog-ok-apply",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/dialog-ok-apply.png",
+   "note": ""
+  },
+  "VcsDiff": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/edit-copy.png"
+    ],
+    [
+     "list-add",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/list-add.png"
+    ]
+   ],
+   "note": "the set's two sheets + its plus/minus"
+  },
+  "ShallowHistory": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/apps/16/clock.png"
+    ]
+   ],
+   "note": "the Win95 clock face"
+  },
+  "EditSelect": {
+   "status": "NATIVE",
+   "name": "edit-select",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/edit-select.png",
+   "note": "edit-select here is a text I-beam, not a pointer over a marquee"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/apps/16/clock.png"
+    ],
+    [
+     "media-skip-backward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-skip-backward.png"
+    ]
+   ],
+   "note": "clock + transport"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/apps/16/clock.png"
+    ],
+    [
+     "media-skip-forward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-skip-forward.png"
+    ]
+   ],
+   "note": "clock + transport"
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "go-previous",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-previous.png",
+   "note": ""
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "go-next",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-next.png",
+   "note": ""
+  },
+  "DocumentRevert": {
+   "status": "NATIVE",
+   "name": "document-revert",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/document-revert.png",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "media-skip-backward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-skip-backward.png",
+   "note": ""
+  },
+  "MediaPlaybackStart": {
+   "status": "NATIVE",
+   "name": "media-playback-start",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-playback-start.png",
+   "note": ""
+  },
+  "MediaPlaybackStop": {
+   "status": "NATIVE",
+   "name": "media-playback-stop",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-playback-stop.png",
+   "note": ""
+  },
+  "MediaPlaybackPause": {
+   "status": "NATIVE",
+   "name": "media-playback-pause",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-playback-pause.png",
+   "note": ""
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "media-skip-forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/media-skip-forward.png",
+   "note": ""
+  },
+  "DialogCancel": {
+   "status": "NATIVE",
+   "name": "dialog-cancel",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/dialog-cancel.png",
+   "note": ""
+  },
+  "GoDown": {
+   "status": "NATIVE",
+   "name": "go-down",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-down.png",
+   "note": ""
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "go-up",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-up.png",
+   "note": ""
+  },
+  "Lock": {
+   "status": "NATIVE",
+   "name": "lock",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/lock.png",
+   "note": ""
+  },
+  "Unlock": {
+   "status": "NATIVE",
+   "name": "stock_lock-open",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/status/16/stock_lock-open.png",
+   "note": ""
+  },
+  "BboxPrev": {
+   "status": "NATIVE",
+   "name": "go-first",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-first.png",
+   "note": ""
+  },
+  "BboxNext": {
+   "status": "NATIVE",
+   "name": "go-last",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-last.png",
+   "note": ""
+  },
+  "TabDetach": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "tab-new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/tab-new.png"
+    ]
+   ],
+   "note": "the set's new-tab/window glyph with the tab lifted apart"
+  },
+  "SettingsConfigure": {
+   "status": "NATIVE",
+   "name": "preferences-system",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/categories/16/preferences-system.png",
+   "note": ""
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/places/16/folder.png",
+   "note": ""
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "audio-x-wav",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/mimes/16/audio-x-wav.png",
+   "note": ""
+  },
+  "MediaRepeatSingle": {
+   "status": "NATIVE",
+   "name": "media-playlist-repeat",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/status/16/media-playlist-repeat.png",
+   "note": ""
+  },
+  "GoParentFolder": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "folder",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/places/16/folder.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-up.png"
+    ]
+   ],
+   "note": "the set's folder + its up arrow"
+  },
+  "DialogInformation": {
+   "status": "NATIVE",
+   "name": "dialog-information",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/status/16/dialog-information.png",
+   "note": ""
+  },
+  "DialogError": {
+   "status": "NATIVE",
+   "name": "dialog-error",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/status/16/dialog-error.png",
+   "note": ""
+  },
+  "WindowClose": {
+   "status": "NATIVE",
+   "name": "window-close",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/window-close.png",
+   "note": ""
+  },
+  "EditCopy": {
+   "status": "NATIVE",
+   "name": "edit-copy",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/edit-copy.png",
+   "note": ""
+  },
+  "HelpWhatsthis": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "help-contents",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/help-contents.png"
+    ],
+    [
+     "input-mouse",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/devices/16/input-mouse.png"
+    ]
+   ],
+   "note": "the set's help '?' + its pointer arrow"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-flag",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/edit-flag.png"
+    ],
+    [
+     "go-previous",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/go-previous.png"
+    ]
+   ],
+   "note": "the red flag + back arrow"
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "edit-delete",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/chicago95/Icons/Chicago95/actions/16/edit-delete.png",
+   "note": ""
+  }
+ },
+ "se98": {
+  "DocumentSave": {
+   "status": "NATIVE",
+   "name": "document-save",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/document-save.png",
+   "note": ""
+  },
+  "EditUndo": {
+   "status": "NATIVE",
+   "name": "edit-undo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/edit-undo.png",
+   "note": ""
+  },
+  "EditRedo": {
+   "status": "NATIVE",
+   "name": "edit-redo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/edit-redo.png",
+   "note": ""
+  },
+  "MediaRecord": {
+   "status": "NATIVE",
+   "name": "media-record",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-record.png",
+   "note": ""
+  },
+  "VcsCommit": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/mimes/16/text-x-generic.png"
+    ],
+    [
+     "dialog-ok-apply",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/dialog-ok-apply.png"
+    ]
+   ],
+   "note": "the set's document + its check mark (commit = sign off the state)"
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "go-down",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-down.png"
+    ],
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/mimes/16/text-x-generic.png"
+    ]
+   ],
+   "note": "the set's down arrow onto its document (take in what GitHub has)"
+  },
+  "ZoomFitBest": {
+   "status": "NATIVE",
+   "name": "zoom-fit-best",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/zoom-fit-best.png",
+   "note": ""
+  },
+  "ZoomOriginal": {
+   "status": "NATIVE",
+   "name": "zoom-original",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/zoom-original.png",
+   "note": ""
+  },
+  "ZoomInY": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "zoom-in",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/zoom-in.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-up.png"
+    ]
+   ],
+   "note": "the set's magnifier + its up/down arrow pair (vertical)"
+  },
+  "ListAdd": {
+   "status": "NATIVE",
+   "name": "list-add",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/list-add.png",
+   "note": ""
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "list-remove",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/list-remove.png",
+   "note": ""
+  },
+  "ViewHidden": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "mate-eyes-applet",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/apps/16/mate-eyes-applet.png"
+    ],
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/process-stop.png"
+    ]
+   ],
+   "note": "the eyes applet + the red cross"
+  },
+  "InsertLink": {
+   "status": "NATIVE",
+   "name": "link",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/link.png",
+   "note": ""
+  },
+  "Merge": {
+   "status": "NATIVE",
+   "name": "object-merge",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/object-merge.png",
+   "note": ""
+  },
+  "BlackSum": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "NATIVE",
+   "name": "go-jump",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-jump.png",
+   "note": ""
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/process-stop.png"
+    ]
+   ],
+   "note": "two bracket strokes around the set's red cross"
+  },
+  "MusicNote16th": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "audio-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/mimes/16/audio-x-generic.png"
+    ]
+   ],
+   "note": "the note cropped/redrawn from the set's audio glyph"
+  },
+  "Mathmode": {
+   "status": "GAP",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "video-display",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/devices/16/video-display.png"
+    ],
+    [
+     "media-record",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-record.png"
+    ]
+   ],
+   "note": "the set's monitor with its red record disc as the 'on' pip"
+  },
+  "DialogOkApply": {
+   "status": "NATIVE",
+   "name": "dialog-ok-apply",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/dialog-ok-apply.png",
+   "note": ""
+  },
+  "VcsDiff": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/edit-copy.png"
+    ],
+    [
+     "list-add",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/list-add.png"
+    ]
+   ],
+   "note": "the set's two sheets + its plus/minus"
+  },
+  "ShallowHistory": {
+   "status": "NATIVE",
+   "name": "history",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/history.png",
+   "note": ""
+  },
+  "EditSelect": {
+   "status": "NATIVE",
+   "name": "edit-select",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/edit-select.png",
+   "note": "edit-select here is a text I-beam, not a pointer over a marquee"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/apps/16/clock.png"
+    ],
+    [
+     "media-skip-backward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-skip-backward.png"
+    ]
+   ],
+   "note": "clock + transport"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/apps/16/clock.png"
+    ],
+    [
+     "media-skip-forward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-skip-forward.png"
+    ]
+   ],
+   "note": "clock + transport"
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "go-previous",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-previous.png",
+   "note": ""
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "go-next",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-next.png",
+   "note": ""
+  },
+  "DocumentRevert": {
+   "status": "NATIVE",
+   "name": "document-revert",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/document-revert.png",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "media-skip-backward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-skip-backward.png",
+   "note": ""
+  },
+  "MediaPlaybackStart": {
+   "status": "NATIVE",
+   "name": "media-playback-start",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-playback-start.png",
+   "note": ""
+  },
+  "MediaPlaybackStop": {
+   "status": "NATIVE",
+   "name": "media-playback-stop",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-playback-stop.png",
+   "note": ""
+  },
+  "MediaPlaybackPause": {
+   "status": "NATIVE",
+   "name": "media-playback-pause",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-playback-pause.png",
+   "note": ""
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "media-skip-forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/media-skip-forward.png",
+   "note": ""
+  },
+  "DialogCancel": {
+   "status": "NATIVE",
+   "name": "dialog-cancel",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/dialog-cancel.png",
+   "note": ""
+  },
+  "GoDown": {
+   "status": "NATIVE",
+   "name": "go-down",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-down.png",
+   "note": ""
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "go-up",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-up.png",
+   "note": ""
+  },
+  "Lock": {
+   "status": "NATIVE",
+   "name": "lock",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/lock.png",
+   "note": ""
+  },
+  "Unlock": {
+   "status": "NATIVE",
+   "name": "stock_lock-open",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/status/16/stock_lock-open.png",
+   "note": ""
+  },
+  "BboxPrev": {
+   "status": "NATIVE",
+   "name": "go-first",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-first.png",
+   "note": ""
+  },
+  "BboxNext": {
+   "status": "NATIVE",
+   "name": "go-last",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-last.png",
+   "note": ""
+  },
+  "TabDetach": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "tab-new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/tab-new.png"
+    ]
+   ],
+   "note": "the set's new-tab/window glyph with the tab lifted apart"
+  },
+  "SettingsConfigure": {
+   "status": "NATIVE",
+   "name": "configure",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/configure.png",
+   "note": ""
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/places/16/folder.png",
+   "note": ""
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "audio-x-wav",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/mimes/16/audio-x-wav.png",
+   "note": ""
+  },
+  "MediaRepeatSingle": {
+   "status": "NATIVE",
+   "name": "media-playlist-repeat",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/status/16/media-playlist-repeat.png",
+   "note": ""
+  },
+  "GoParentFolder": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "folder",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/places/16/folder.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-up.png"
+    ]
+   ],
+   "note": "the set's folder + its up arrow"
+  },
+  "DialogInformation": {
+   "status": "NATIVE",
+   "name": "dialog-information",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/status/16/dialog-information.png",
+   "note": ""
+  },
+  "DialogError": {
+   "status": "NATIVE",
+   "name": "dialog-error",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/status/16/dialog-error.png",
+   "note": ""
+  },
+  "WindowClose": {
+   "status": "NATIVE",
+   "name": "window-close",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/window-close.png",
+   "note": ""
+  },
+  "EditCopy": {
+   "status": "NATIVE",
+   "name": "edit-copy",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/edit-copy.png",
+   "note": ""
+  },
+  "HelpWhatsthis": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "help-contents",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/apps/16/help-contents.png"
+    ],
+    [
+     "input-mouse",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/status/16/input-mouse.png"
+    ]
+   ],
+   "note": "the set's help '?' + its pointer arrow"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-flag",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/edit-flag.png"
+    ],
+    [
+     "go-previous",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/go-previous.png"
+    ]
+   ],
+   "note": "the red flag + back arrow"
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "edit-delete",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/win98se/SE98/actions/16/edit-delete.png",
+   "note": ""
+  }
+ },
+ "bluecurve": {
+  "DocumentSave": {
+   "status": "NATIVE",
+   "name": "document-save",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-save.svg",
+   "note": ""
+  },
+  "EditUndo": {
+   "status": "NATIVE",
+   "name": "edit-undo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-undo.svg",
+   "note": ""
+  },
+  "EditRedo": {
+   "status": "NATIVE",
+   "name": "edit-redo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-redo.svg",
+   "note": ""
+  },
+  "MediaRecord": {
+   "status": "NATIVE",
+   "name": "media-record",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-rec.svg",
+   "note": ""
+  },
+  "VcsCommit": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/mimetypes/file.svg"
+    ],
+    [
+     "dialog-ok-apply",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-apply.svg"
+    ]
+   ],
+   "note": "the set's document + its check mark (commit = sign off the state)"
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "go-down",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-down.svg"
+    ],
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/mimetypes/file.svg"
+    ]
+   ],
+   "note": "the set's down arrow onto its document (take in what GitHub has)"
+  },
+  "ZoomFitBest": {
+   "status": "NATIVE",
+   "name": "zoom-fit-best",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_zoom-optimal.svg",
+   "note": ""
+  },
+  "ZoomOriginal": {
+   "status": "NATIVE",
+   "name": "zoom-original",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-zoom-100.svg",
+   "note": ""
+  },
+  "ZoomInY": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "zoom-in",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-zoom-in.svg"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-up.svg"
+    ]
+   ],
+   "note": "the set's magnifier + its up/down arrow pair (vertical)"
+  },
+  "ListAdd": {
+   "status": "NATIVE",
+   "name": "list-add",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-add.svg",
+   "note": ""
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "list-remove",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-remove.svg",
+   "note": ""
+  },
+  "ViewHidden": {
+   "status": "GAP",
+   "note": ""
+  },
+  "InsertLink": {
+   "status": "NATIVE",
+   "name": "insert-link",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_insert_url.svg",
+   "note": "stock_insert_url is a globe (insert URL), not a chain"
+  },
+  "Merge": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-copy.svg"
+    ],
+    [
+     "go-next",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-forward.svg"
+    ]
+   ],
+   "note": "the set's two sheets + its arrow converging to one"
+  },
+  "BlackSum": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "NATIVE",
+   "name": "go-jump",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-jump-to.svg",
+   "note": ""
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-stop.svg"
+    ]
+   ],
+   "note": "two bracket strokes around the set's red cross"
+  },
+  "MusicNote16th": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "audio-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/mimetypes/file-audio.svg"
+    ]
+   ],
+   "note": "the note cropped/redrawn from the set's audio glyph"
+  },
+  "Mathmode": {
+   "status": "NATIVE",
+   "name": "mathmode",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_insert-math-object.svg",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "display",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/apps/icon-resize-screen.svg"
+    ],
+    [
+     "media-record",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-rec.svg"
+    ]
+   ],
+   "note": "the set's monitor with its red record disc as the 'on' pip"
+  },
+  "DialogOkApply": {
+   "status": "NATIVE",
+   "name": "dialog-ok-apply",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-apply.svg",
+   "note": ""
+  },
+  "VcsDiff": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-copy.svg"
+    ],
+    [
+     "list-add",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-add.svg"
+    ]
+   ],
+   "note": "the set's two sheets + its plus/minus"
+  },
+  "ShallowHistory": {
+   "status": "NATIVE",
+   "name": "stock-history",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-history.svg",
+   "note": "stock-history"
+  },
+  "EditSelect": {
+   "status": "NATIVE",
+   "name": "stock_draw-selection",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_draw-selection.svg",
+   "note": "the OOo selection pointer (no marquee)"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_form-time-field.svg"
+    ],
+    [
+     "media-playback-start",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-play.svg"
+    ]
+   ],
+   "note": "the set's clock + its transport triangle pointing left"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_form-time-field.svg"
+    ],
+    [
+     "media-playback-start",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-play.svg"
+    ]
+   ],
+   "note": "the set's clock + its transport triangle pointing right"
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "go-previous",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-back.svg",
+   "note": ""
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "go-next",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-forward.svg",
+   "note": ""
+  },
+  "DocumentRevert": {
+   "status": "NATIVE",
+   "name": "document-revert",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-revert-to-saved.svg",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "stock-media-prev",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-prev.svg",
+   "note": ""
+  },
+  "MediaPlaybackStart": {
+   "status": "NATIVE",
+   "name": "media-playback-start",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-play.svg",
+   "note": ""
+  },
+  "MediaPlaybackStop": {
+   "status": "NATIVE",
+   "name": "media-playback-stop",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-stop.svg",
+   "note": ""
+  },
+  "MediaPlaybackPause": {
+   "status": "NATIVE",
+   "name": "media-playback-pause",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-pause.svg",
+   "note": ""
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "stock-media-next",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-media-next.svg",
+   "note": ""
+  },
+  "DialogCancel": {
+   "status": "NATIVE",
+   "name": "dialog-cancel",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-cancel.svg",
+   "note": ""
+  },
+  "GoDown": {
+   "status": "NATIVE",
+   "name": "go-down",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-down.svg",
+   "note": ""
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "go-up",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-up.svg",
+   "note": ""
+  },
+  "Lock": {
+   "status": "NATIVE",
+   "name": "object-locked",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-lockscreen.svg",
+   "note": ""
+  },
+  "Unlock": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "object-locked",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-lockscreen.svg"
+    ]
+   ],
+   "note": "the set's padlock with its shackle opened"
+  },
+  "BboxPrev": {
+   "status": "NATIVE",
+   "name": "go-first",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-goto-first.svg",
+   "note": ""
+  },
+  "BboxNext": {
+   "status": "NATIVE",
+   "name": "go-last",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-goto-last.svg",
+   "note": ""
+  },
+  "TabDetach": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "tab-new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-new-tab.svg"
+    ]
+   ],
+   "note": "the set's new-tab/window glyph with the tab lifted apart"
+  },
+  "SettingsConfigure": {
+   "status": "NATIVE",
+   "name": "settings-configure",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-preferences.svg",
+   "note": ""
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/mimetypes/folder.svg",
+   "note": ""
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "audio-x-wav",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/mimetypes/file-audio-wav.svg",
+   "note": ""
+  },
+  "MediaRepeatSingle": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-redo",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-redo.svg"
+    ]
+   ],
+   "note": "the set's curved arrow closed into a loop + a '1'"
+  },
+  "GoParentFolder": {
+   "status": "NATIVE",
+   "name": "go-parent-folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_up-one-dir.svg",
+   "note": ""
+  },
+  "DialogInformation": {
+   "status": "NATIVE",
+   "name": "dialog-information",
+   "size": 48,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/48x48/status/dialog-info.svg",
+   "note": ""
+  },
+  "DialogError": {
+   "status": "NATIVE",
+   "name": "dialog-error",
+   "size": 48,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/48x48/status/dialog-error.svg",
+   "note": ""
+  },
+  "WindowClose": {
+   "status": "NATIVE",
+   "name": "window-close",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-close.svg",
+   "note": ""
+  },
+  "EditCopy": {
+   "status": "NATIVE",
+   "name": "edit-copy",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-copy.svg",
+   "note": ""
+  },
+  "HelpWhatsthis": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "stock-help",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-help.svg"
+    ],
+    [
+     "stock_draw-selection",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock_draw-selection.svg"
+    ]
+   ],
+   "note": "stock-help is a plain life-ring help; add the selection pointer"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "bookmark-new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-bookmark-page.svg"
+    ],
+    [
+     "go-previous",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-go-back.svg"
+    ]
+   ],
+   "note": "the set's flag + its back arrow"
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "edit-delete",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/bluecurve/icons/icon-set/Bluecurve/16x16/actions/stock-delete.svg",
+   "note": ""
+  }
+ },
+ "crystalsvg": {
+  "DocumentSave": {
+   "status": "NATIVE",
+   "name": "document-save",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-document-save.png",
+   "note": ""
+  },
+  "EditUndo": {
+   "status": "NATIVE",
+   "name": "edit-undo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-edit-undo.png",
+   "note": ""
+  },
+  "EditRedo": {
+   "status": "NATIVE",
+   "name": "edit-redo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-edit-redo.png",
+   "note": ""
+  },
+  "MediaRecord": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "media-playback-start",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-playback-start.png"
+    ]
+   ],
+   "note": "a red disc in the transport style"
+  },
+  "VcsCommit": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-mime-text-x-generic.png"
+    ],
+    [
+     "apply",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-apply.png"
+    ]
+   ],
+   "note": "the set's document + its check mark (commit = sign off the state)"
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "go-down",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-down.png"
+    ],
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-mime-text-x-generic.png"
+    ]
+   ],
+   "note": "the set's down arrow onto its document (take in what GitHub has)"
+  },
+  "ZoomFitBest": {
+   "status": "NATIVE",
+   "name": "zoom-fit-best",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-zoom-fit-best.png",
+   "note": ""
+  },
+  "ZoomOriginal": {
+   "status": "NATIVE",
+   "name": "zoom-original",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-zoom-original.png",
+   "note": ""
+  },
+  "ZoomInY": {
+   "status": "NATIVE",
+   "name": "view_fit_height",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-view_fit_height.png",
+   "note": ""
+  },
+  "ListAdd": {
+   "status": "NATIVE",
+   "name": "list-add",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-list-add.png",
+   "note": ""
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "list-remove",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-list-remove.png",
+   "note": ""
+  },
+  "ViewHidden": {
+   "status": "GAP",
+   "note": ""
+  },
+  "InsertLink": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "link_overlay",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-filesys-link_overlay.png"
+    ]
+   ],
+   "note": "the 8 px link emblem arrow enlarged"
+  },
+  "Merge": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-edit-copy.png"
+    ],
+    [
+     "go-next",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-next.png"
+    ]
+   ],
+   "note": "the set's two sheets + its arrow converging to one"
+  },
+  "BlackSum": {
+   "status": "NATIVE",
+   "name": "math_sum",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-math_sum.png",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "NATIVE",
+   "name": "goto",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-goto.png",
+   "note": ""
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-process-stop.png"
+    ]
+   ],
+   "note": "two bracket strokes around the set's red cross"
+  },
+  "MusicNote16th": {
+   "status": "NATIVE",
+   "name": "music_sixteenthnote",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-music_sixteenthnote.png",
+   "note": ""
+  },
+  "Mathmode": {
+   "status": "NATIVE",
+   "name": "frame_formula",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-frame_formula.png",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "document-print-preview",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-document-print-preview.png"
+    ],
+    [
+     "media-playback-start",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-playback-start.png"
+    ]
+   ],
+   "note": "the preview glyph + a red pip"
+  },
+  "DialogOkApply": {
+   "status": "NATIVE",
+   "name": "apply",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-apply.png",
+   "note": ""
+  },
+  "VcsDiff": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-edit-copy.png"
+    ],
+    [
+     "list-add",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-list-add.png"
+    ]
+   ],
+   "note": "the set's two sheets + its plus/minus"
+  },
+  "ShallowHistory": {
+   "status": "NATIVE",
+   "name": "history",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-history.png",
+   "note": ""
+  },
+  "EditSelect": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "input-mouse",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-device-input-mouse.png"
+    ]
+   ],
+   "note": "the set's pointer over a dotted marquee corner"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "player_time",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-player_time.png"
+    ],
+    [
+     "media-skip-backward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-skip-backward.png"
+    ]
+   ],
+   "note": "the player clock + transport triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "player_time",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-player_time.png"
+    ],
+    [
+     "media-skip-forward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-skip-forward.png"
+    ]
+   ],
+   "note": "the player clock + transport triangle"
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "go-previous",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-previous.png",
+   "note": ""
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "go-next",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-next.png",
+   "note": ""
+  },
+  "DocumentRevert": {
+   "status": "NATIVE",
+   "name": "document-revert",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-document-revert.png",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "media-skip-backward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-skip-backward.png",
+   "note": ""
+  },
+  "MediaPlaybackStart": {
+   "status": "NATIVE",
+   "name": "media-playback-start",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-playback-start.png",
+   "note": ""
+  },
+  "MediaPlaybackStop": {
+   "status": "NATIVE",
+   "name": "media-playback-stop",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-playback-stop.png",
+   "note": ""
+  },
+  "MediaPlaybackPause": {
+   "status": "NATIVE",
+   "name": "media-playback-pause",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-playback-pause.png",
+   "note": ""
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "media-skip-forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-media-skip-forward.png",
+   "note": ""
+  },
+  "DialogCancel": {
+   "status": "NATIVE",
+   "name": "button_cancel",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-button_cancel.png",
+   "note": ""
+  },
+  "GoDown": {
+   "status": "NATIVE",
+   "name": "go-down",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-down.png",
+   "note": ""
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "go-up",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-up.png",
+   "note": ""
+  },
+  "Lock": {
+   "status": "NATIVE",
+   "name": "lock",
+   "size": 999,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/crsc-action-lock.svgz",
+   "note": ""
+  },
+  "Unlock": {
+   "status": "NATIVE",
+   "name": "unlock",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-unlock.png",
+   "note": ""
+  },
+  "BboxPrev": {
+   "status": "NATIVE",
+   "name": "go-first",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-first.png",
+   "note": ""
+  },
+  "BboxNext": {
+   "status": "NATIVE",
+   "name": "go-last",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-last.png",
+   "note": ""
+  },
+  "TabDetach": {
+   "status": "NATIVE",
+   "name": "tab_breakoff",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-tab_breakoff.png",
+   "note": ""
+  },
+  "SettingsConfigure": {
+   "status": "NATIVE",
+   "name": "configure",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-configure.png",
+   "note": ""
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-filesys-folder.png",
+   "note": ""
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "audio-x-generic",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-mime-audio-x-generic.png",
+   "note": ""
+  },
+  "MediaRepeatSingle": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-redo",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-edit-redo.png"
+    ]
+   ],
+   "note": "the set's curved arrow closed into a loop + a '1'"
+  },
+  "GoParentFolder": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "folder",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-filesys-folder.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-up.png"
+    ]
+   ],
+   "note": "the set's folder + its up arrow"
+  },
+  "DialogInformation": {
+   "status": "NATIVE",
+   "name": "messagebox_info",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr32-action-messagebox_info.png",
+   "note": ""
+  },
+  "DialogError": {
+   "status": "NATIVE",
+   "name": "messagebox_critical",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr32-action-messagebox_critical.png",
+   "note": ""
+  },
+  "WindowClose": {
+   "status": "NATIVE",
+   "name": "window-close",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-window-close.png",
+   "note": ""
+  },
+  "EditCopy": {
+   "status": "NATIVE",
+   "name": "edit-copy",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-edit-copy.png",
+   "note": ""
+  },
+  "HelpWhatsthis": {
+   "status": "NATIVE",
+   "name": "contexthelp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-contexthelp.png",
+   "note": ""
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "flag",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-flag.png"
+    ],
+    [
+     "go-previous",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-go-previous.png"
+    ]
+   ],
+   "note": "the set's flag + its back arrow"
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "edit-delete",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdelibs/pics/crystalsvg/cr16-action-edit-delete.png",
+   "note": ""
+  }
+ },
+ "kdeclassic": {
+  "DocumentSave": {
+   "status": "NATIVE",
+   "name": "document-save",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/document-save.png",
+   "note": ""
+  },
+  "EditUndo": {
+   "status": "NATIVE",
+   "name": "edit-undo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/edit-undo.png",
+   "note": ""
+  },
+  "EditRedo": {
+   "status": "NATIVE",
+   "name": "edit-redo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/edit-redo.png",
+   "note": ""
+  },
+  "MediaRecord": {
+   "status": "NATIVE",
+   "name": "krec_record",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/krec_record.png",
+   "note": ""
+  },
+  "VcsCommit": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/mimetypes/text-x-generic.png"
+    ],
+    [
+     "apply",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/apply.png"
+    ]
+   ],
+   "note": "the set's document + its check mark (commit = sign off the state)"
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "go-down",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/go-down.png"
+    ],
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/mimetypes/text-x-generic.png"
+    ]
+   ],
+   "note": "the set's down arrow onto its document (take in what GitHub has)"
+  },
+  "ZoomFitBest": {
+   "status": "NATIVE",
+   "name": "zoom-fit-best",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/zoom-fit-best.png",
+   "note": ""
+  },
+  "ZoomOriginal": {
+   "status": "NATIVE",
+   "name": "zoom-original",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/zoom-original.png",
+   "note": ""
+  },
+  "ZoomInY": {
+   "status": "NATIVE",
+   "name": "view_fit_height",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/view_fit_height.png",
+   "note": "view_fit_height: a window frame, no magnifier"
+  },
+  "ListAdd": {
+   "status": "NATIVE",
+   "name": "edit_add",
+   "size": 22,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/22x22/actions/edit_add.png",
+   "note": ""
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "edit_remove",
+   "size": 22,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/22x22/actions/edit_remove.png",
+   "note": "the partner of edit_add (22 px only); list-remove is an X-box"
+  },
+  "ViewHidden": {
+   "status": "NATIVE",
+   "name": "14_layer_novisible",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/14_layer_novisible.png",
+   "note": ""
+  },
+  "InsertLink": {
+   "status": "GAP",
+   "note": "link.png is a 3 px dot; no chain in the set"
+  },
+  "Merge": {
+   "status": "NATIVE",
+   "name": "mergecell",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/mergecell.png",
+   "note": "mergecell: a spreadsheet merge-cells glyph"
+  },
+  "BlackSum": {
+   "status": "NATIVE",
+   "name": "black_sum",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/black_sum.png",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "NATIVE",
+   "name": "goto",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/goto.png",
+   "note": ""
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/process-stop.png"
+    ]
+   ],
+   "note": "two bracket strokes around the set's red cross"
+  },
+  "MusicNote16th": {
+   "status": "NATIVE",
+   "name": "music_sixteenthnote",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/music_sixteenthnote.png",
+   "note": ""
+  },
+  "Mathmode": {
+   "status": "NATIVE",
+   "name": "funct",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/funct.png",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "pmrenderpreview",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/pmrenderpreview.png"
+    ],
+    [
+     "krec_record",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/krec_record.png"
+    ]
+   ],
+   "note": "KPovModeler's render-preview + the red record disc as the pip"
+  },
+  "DialogOkApply": {
+   "status": "NATIVE",
+   "name": "apply",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/apply.png",
+   "note": ""
+  },
+  "VcsDiff": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/edit-copy.png"
+    ],
+    [
+     "edit_add",
+     22,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/22x22/actions/edit_add.png"
+    ]
+   ],
+   "note": "two sheets + plus/minus"
+  },
+  "ShallowHistory": {
+   "status": "NATIVE",
+   "name": "history",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/history.png",
+   "note": ""
+  },
+  "EditSelect": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "selecttool",
+     22,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/22x22/actions/selecttool.png"
+    ]
+   ],
+   "note": "the black pointer + a dotted marquee corner"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "smallclock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/smallclock.png"
+    ],
+    [
+     "media-skip-backward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/media-skip-backward.png"
+    ]
+   ],
+   "note": "clock + transport triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "smallclock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/smallclock.png"
+    ],
+    [
+     "media-skip-forward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/media-skip-forward.png"
+    ]
+   ],
+   "note": "clock + transport triangle"
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "back",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/back.png",
+   "note": "go-previous here is a text-list glyph; back is the arrow"
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/forward.png",
+   "note": "go-next here is a text-list glyph; forward is the arrow"
+  },
+  "DocumentRevert": {
+   "status": "NATIVE",
+   "name": "document-revert",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/document-revert.png",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "media-skip-backward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/media-skip-backward.png",
+   "note": ""
+  },
+  "MediaPlaybackStart": {
+   "status": "NATIVE",
+   "name": "media-playback-start",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/media-playback-start.png",
+   "note": ""
+  },
+  "MediaPlaybackStop": {
+   "status": "NATIVE",
+   "name": "media-playback-stop",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/media-playback-stop.png",
+   "note": ""
+  },
+  "MediaPlaybackPause": {
+   "status": "NATIVE",
+   "name": "media-playback-pause",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/media-playback-pause.png",
+   "note": ""
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "media-skip-forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/media-skip-forward.png",
+   "note": ""
+  },
+  "DialogCancel": {
+   "status": "NATIVE",
+   "name": "button_cancel",
+   "size": 22,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/22x22/actions/button_cancel.png",
+   "note": ""
+  },
+  "GoDown": {
+   "status": "NATIVE",
+   "name": "go-down",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/go-down.png",
+   "note": ""
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "go-up",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/go-up.png",
+   "note": ""
+  },
+  "Lock": {
+   "status": "NATIVE",
+   "name": "encrypted",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/encrypted.png",
+   "note": ""
+  },
+  "Unlock": {
+   "status": "NATIVE",
+   "name": "unlock",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/unlock.png",
+   "note": ""
+  },
+  "BboxPrev": {
+   "status": "NATIVE",
+   "name": "go-first",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/go-first.png",
+   "note": ""
+  },
+  "BboxNext": {
+   "status": "NATIVE",
+   "name": "go-last",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/go-last.png",
+   "note": ""
+  },
+  "TabDetach": {
+   "status": "NATIVE",
+   "name": "tab_breakoff",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/tab_breakoff.png",
+   "note": ""
+  },
+  "SettingsConfigure": {
+   "status": "NATIVE",
+   "name": "configure",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/configure.png",
+   "note": ""
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/places/folder.png",
+   "note": ""
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "audio-x-generic",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/mimetypes/audio-x-generic.png",
+   "note": ""
+  },
+  "MediaRepeatSingle": {
+   "status": "NATIVE",
+   "name": "noatunloopsong",
+   "size": 22,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/22x22/actions/noatunloopsong.png",
+   "note": ""
+  },
+  "GoParentFolder": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "folder",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/places/folder.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/go-up.png"
+    ]
+   ],
+   "note": "the set's folder + its up arrow"
+  },
+  "DialogInformation": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "help-contents",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/help-contents.png"
+    ]
+   ],
+   "note": "an 'i' in the set's help-balloon style"
+  },
+  "DialogError": {
+   "status": "NATIVE",
+   "name": "error",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/32x32/apps/error.png",
+   "note": ""
+  },
+  "WindowClose": {
+   "status": "NATIVE",
+   "name": "window-close",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/window-close.png",
+   "note": ""
+  },
+  "EditCopy": {
+   "status": "NATIVE",
+   "name": "edit-copy",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/edit-copy.png",
+   "note": ""
+  },
+  "HelpWhatsthis": {
+   "status": "NATIVE",
+   "name": "contexthelp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/contexthelp.png",
+   "note": ""
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "flag",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/flag.png"
+    ],
+    [
+     "back",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/back.png"
+    ]
+   ],
+   "note": "the flag + back arrow"
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "edit-delete",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/kdeclassic/16x16/actions/edit-delete.png",
+   "note": ""
+  }
+ },
+ "locolor": {
+  "DocumentSave": {
+   "status": "NATIVE",
+   "name": "document-save",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/document-save.png",
+   "note": ""
+  },
+  "EditUndo": {
+   "status": "NATIVE",
+   "name": "edit-undo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/edit-undo.png",
+   "note": ""
+  },
+  "EditRedo": {
+   "status": "NATIVE",
+   "name": "edit-redo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/edit-redo.png",
+   "note": ""
+  },
+  "MediaRecord": {
+   "status": "GAP",
+   "note": ""
+  },
+  "VcsCommit": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/mimetypes/text-x-generic.png"
+    ],
+    [
+     "ok",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/ok.png"
+    ]
+   ],
+   "note": "the set's document + its check mark (commit = sign off the state)"
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "go-down",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-down.png"
+    ],
+    [
+     "text-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/mimetypes/text-x-generic.png"
+    ]
+   ],
+   "note": "the set's down arrow onto its document (take in what GitHub has)"
+  },
+  "ZoomFitBest": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "zoom-in",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/zoom-in.png"
+    ]
+   ],
+   "note": "the set's magnifier with a frame/four arrows"
+  },
+  "ZoomOriginal": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "zoom-in",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/zoom-in.png"
+    ]
+   ],
+   "note": "the set's magnifier with '1:1'"
+  },
+  "ZoomInY": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "zoom-in",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/zoom-in.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-up.png"
+    ]
+   ],
+   "note": "the set's magnifier + its up/down arrow pair (vertical)"
+  },
+  "ListAdd": {
+   "status": "GAP",
+   "note": "no plus in locolor's own files (it inherits kdeclassic's edit_add at runtime)"
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "list-remove",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/list-remove.png",
+   "note": ""
+  },
+  "ViewHidden": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "xeyes",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/apps/xeyes.png"
+    ],
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/process-stop.png"
+    ]
+   ],
+   "note": "the set's eye + its red cross / slash"
+  },
+  "InsertLink": {
+   "status": "GAP",
+   "note": "link.png is a 3 px dot"
+  },
+  "Merge": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/edit-copy.png"
+    ],
+    [
+     "go-next",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-next.png"
+    ]
+   ],
+   "note": "the set's two sheets + its arrow converging to one"
+  },
+  "BlackSum": {
+   "status": "NATIVE",
+   "name": "sum",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/sum.png",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "NATIVE",
+   "name": "goto",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/goto.png",
+   "note": ""
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/process-stop.png"
+    ]
+   ],
+   "note": "two bracket strokes around the set's red cross"
+  },
+  "MusicNote16th": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "audio-x-generic",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/mimetypes/audio-x-generic.png"
+    ]
+   ],
+   "note": "the note cropped/redrawn from the set's audio glyph"
+  },
+  "Mathmode": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "frac",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/frac.png"
+    ]
+   ],
+   "note": "an italic f(x) in the set's math-glyph style"
+  },
+  "PreviewRenderOn": {
+   "status": "GAP",
+   "note": ""
+  },
+  "DialogOkApply": {
+   "status": "NATIVE",
+   "name": "ok",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/ok.png",
+   "note": ""
+  },
+  "VcsDiff": {
+   "status": "NATIVE",
+   "name": "kompare",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/apps/kompare.png",
+   "note": ""
+  },
+  "ShallowHistory": {
+   "status": "NATIVE",
+   "name": "history",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/history.png",
+   "note": ""
+  },
+  "EditSelect": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "input-mouse",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/apps/input-mouse.png"
+    ]
+   ],
+   "note": "the set's pointer over a dotted marquee corner"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/apps/clock.png"
+    ],
+    [
+     "media-skip-backward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/media-skip-backward.png"
+    ]
+   ],
+   "note": "clock + transport triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "clock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/apps/clock.png"
+    ],
+    [
+     "media-skip-forward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/media-skip-forward.png"
+    ]
+   ],
+   "note": "clock + transport triangle"
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "back",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/back.png",
+   "note": ""
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/forward.png",
+   "note": ""
+  },
+  "DocumentRevert": {
+   "status": "NATIVE",
+   "name": "document-revert",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/document-revert.png",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "media-skip-backward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/media-skip-backward.png",
+   "note": ""
+  },
+  "MediaPlaybackStart": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "media-skip-forward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/media-skip-forward.png"
+    ]
+   ],
+   "note": "the skip glyph's triangle without its bar"
+  },
+  "MediaPlaybackStop": {
+   "status": "NATIVE",
+   "name": "media-playback-stop",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/media-playback-stop.png",
+   "note": ""
+  },
+  "MediaPlaybackPause": {
+   "status": "NATIVE",
+   "name": "media-playback-pause",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/media-playback-pause.png",
+   "note": ""
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "media-skip-forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/media-skip-forward.png",
+   "note": ""
+  },
+  "DialogCancel": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "process-stop",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/process-stop.png"
+    ]
+   ],
+   "note": "the set's red cross / stop sign"
+  },
+  "GoDown": {
+   "status": "NATIVE",
+   "name": "go-down",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-down.png",
+   "note": ""
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "go-up",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-up.png",
+   "note": ""
+  },
+  "Lock": {
+   "status": "NATIVE",
+   "name": "encrypted",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/encrypted.png",
+   "note": ""
+  },
+  "Unlock": {
+   "status": "NATIVE",
+   "name": "unlock",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/unlock.png",
+   "note": ""
+  },
+  "BboxPrev": {
+   "status": "NATIVE",
+   "name": "go-first",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-first.png",
+   "note": ""
+  },
+  "BboxNext": {
+   "status": "NATIVE",
+   "name": "go-last",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-last.png",
+   "note": ""
+  },
+  "TabDetach": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "window-new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/window-new.png"
+    ]
+   ],
+   "note": "the set's new-tab/window glyph with the tab lifted apart"
+  },
+  "SettingsConfigure": {
+   "status": "NATIVE",
+   "name": "configure",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/configure.png",
+   "note": ""
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/places/folder.png",
+   "note": ""
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "audio-x-generic",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/mimetypes/audio-x-generic.png",
+   "note": ""
+  },
+  "MediaRepeatSingle": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "edit-redo",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/edit-redo.png"
+    ]
+   ],
+   "note": "the set's curved arrow closed into a loop + a '1'"
+  },
+  "GoParentFolder": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "folder",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/places/folder.png"
+    ],
+    [
+     "go-up",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/go-up.png"
+    ]
+   ],
+   "note": "the set's folder + its up arrow"
+  },
+  "DialogInformation": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "help-contents",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/help-contents.png"
+    ]
+   ],
+   "note": "an 'i' in the set's help-balloon style"
+  },
+  "DialogError": {
+   "status": "NATIVE",
+   "name": "error",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/32x32/apps/error.png",
+   "note": ""
+  },
+  "WindowClose": {
+   "status": "NATIVE",
+   "name": "window-close",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/window-close.png",
+   "note": ""
+  },
+  "EditCopy": {
+   "status": "NATIVE",
+   "name": "edit-copy",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/edit-copy.png",
+   "note": ""
+  },
+  "HelpWhatsthis": {
+   "status": "NATIVE",
+   "name": "contexthelp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/contexthelp.png",
+   "note": ""
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "flag",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/flag.png"
+    ],
+    [
+     "back",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/back.png"
+    ]
+   ],
+   "note": "the flag + back arrow"
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "edit-delete",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/tdeartwork/IconThemes/locolor/16x16/actions/edit-delete.png",
+   "note": ""
+  }
+ },
+ "cde": {
+  "DocumentSave": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtdata",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtdata.t.pm"
+    ]
+   ],
+   "note": "a document/disk from the set's document glyph"
+  },
+  "EditUndo": {
+   "status": "GAP",
+   "note": "no curved arrow anywhere in the set"
+  },
+  "EditRedo": {
+   "status": "GAP",
+   "note": ""
+  },
+  "MediaRecord": {
+   "status": "GAP",
+   "note": ""
+  },
+  "VcsCommit": {
+   "status": "GAP",
+   "note": ""
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpdown",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpdown.m.pm"
+    ],
+    [
+     "Dtdata",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtdata.t.pm"
+    ]
+   ],
+   "note": "the set's down arrow onto its document (take in what GitHub has)"
+  },
+  "ZoomFitBest": {
+   "status": "GAP",
+   "note": ""
+  },
+  "ZoomOriginal": {
+   "status": "GAP",
+   "note": ""
+  },
+  "ZoomInY": {
+   "status": "GAP",
+   "note": ""
+  },
+  "ListAdd": {
+   "status": "NATIVE",
+   "name": "Dtplus",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtplus.m.pm",
+   "note": ""
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "Dtminus",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtminus.m.pm",
+   "note": ""
+  },
+  "ViewHidden": {
+   "status": "GAP",
+   "note": ""
+  },
+  "InsertLink": {
+   "status": "NATIVE",
+   "name": "Dtlink",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtlink.t.pm",
+   "note": ""
+  },
+  "Merge": {
+   "status": "GAP",
+   "note": ""
+  },
+  "BlackSum": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "GAP",
+   "note": ""
+  },
+  "TimelineLift": {
+   "status": "GAP",
+   "note": ""
+  },
+  "MusicNote16th": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtaudio",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtaudio.t.pm"
+    ]
+   ],
+   "note": "the note cropped/redrawn from the set's audio glyph"
+  },
+  "Mathmode": {
+   "status": "GAP",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "GAP",
+   "note": ""
+  },
+  "DialogOkApply": {
+   "status": "GAP",
+   "note": ""
+  },
+  "VcsDiff": {
+   "status": "GAP",
+   "note": ""
+  },
+  "ShallowHistory": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtclock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtclock.t.pm"
+    ]
+   ],
+   "note": "Dthist is the help browser's chain-link history; the clock is the picture"
+  },
+  "EditSelect": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "DtMouse",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/DtMouse.pm"
+    ]
+   ],
+   "note": "the set's pointer over a dotted marquee corner"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtclock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtclock.t.pm"
+    ],
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "clock + bevelled triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtclock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtclock.t.pm"
+    ],
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "clock + bevelled triangle"
+  },
+  "GoPrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "the bevelled front-panel triangle turned"
+  },
+  "GoNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "the bevelled front-panel triangle turned"
+  },
+  "DocumentRevert": {
+   "status": "GAP",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "MediaPlaybackStart": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "bevelled triangle turned"
+  },
+  "MediaPlaybackStop": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "a bevelled square"
+  },
+  "MediaPlaybackPause": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "two bevelled bars"
+  },
+  "MediaSkipForward": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "DialogCancel": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpexit",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpexit.t.pm"
+    ]
+   ],
+   "note": "the EXIT plate; no red cross in the set"
+  },
+  "GoDown": {
+   "status": "NATIVE",
+   "name": "Fpdown",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpdown.m.pm",
+   "note": ""
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "Fpup",
+   "size": 32,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm",
+   "note": ""
+  },
+  "Lock": {
+   "status": "NATIVE",
+   "name": "Fplock",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fplock.t.pm",
+   "note": "the front panel padlock"
+  },
+  "Unlock": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fplock",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fplock.t.pm"
+    ]
+   ],
+   "note": "that padlock opened"
+  },
+  "BboxPrev": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "BboxNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Fpup",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Fpup.m.pm"
+    ]
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "TabDetach": {
+   "status": "GAP",
+   "note": ""
+  },
+  "SettingsConfigure": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtstyle",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtstyle.t.pm"
+    ]
+   ],
+   "note": "the set's gear/tool"
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "DtdirB",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/DtdirB.t.pm",
+   "note": ""
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "Dtaudio",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtaudio.t.pm",
+   "note": ""
+  },
+  "MediaRepeatSingle": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoParentFolder": {
+   "status": "NATIVE",
+   "name": "Dtdirup",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtdirup.t.pm",
+   "note": ""
+  },
+  "DialogInformation": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtinfo",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtinfo.t.pm"
+    ]
+   ],
+   "note": "the Info browser's blue 'i'"
+  },
+  "DialogError": {
+   "status": "GAP",
+   "note": ""
+  },
+  "WindowClose": {
+   "status": "GAP",
+   "note": "Motif's close is a window-menu button, not a glyph"
+  },
+  "EditCopy": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dtdata",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dtdata.t.pm"
+    ]
+   ],
+   "note": "two of the set's documents stacked"
+  },
+  "HelpWhatsthis": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Dthelp",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dthelp.t.pm"
+    ],
+    [
+     "DtMouse",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/DtMouse.pm"
+    ]
+   ],
+   "note": "the set's help '?' + its pointer arrow"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "DtFlag",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/DtFlag.t.pm"
+    ],
+    [
+     "Dthistprev",
+     32,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dthistprev.m.pm"
+    ]
+   ],
+   "note": "the set's flag + its back arrow"
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "Dttrsh",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/cde/cde/programs/icons/Dttrsh.t.pm",
+   "note": ""
+  }
+ },
+ "reactos": {
+  "DocumentSave": {
+   "status": "NATIVE",
+   "name": "idb_std_small[8] save",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_save.png"
+  },
+  "EditUndo": {
+   "status": "NATIVE",
+   "name": "idb_std_small[3] undo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_undo.png"
+  },
+  "EditRedo": {
+   "status": "NATIVE",
+   "name": "idb_std_small[4] redo",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_redo.png"
+  },
+  "MediaRecord": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "mplay32 play.bmp",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_play.png"
+    ]
+   ],
+   "note": "a disc in mplay32's grey outline language (sndrec32's but_rec.bmp is a 59x29 bevelled button, not a glyph)"
+  },
+  "VcsCommit": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_new.png"
+    ],
+    [
+     "shell32 253 check",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_253_check.png"
+    ]
+   ],
+   "note": "document + check"
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_new.png"
+    ],
+    [
+     "view parent (up arrow, flipped)",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+    ]
+   ],
+   "note": "down arrow onto document"
+  },
+  "ZoomFitBest": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std find",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_find.png"
+    ]
+   ],
+   "note": "the find magnifier with a frame"
+  },
+  "ZoomOriginal": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std find",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_find.png"
+    ]
+   ],
+   "note": "the find magnifier with 1:1"
+  },
+  "ZoomInY": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std find",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_find.png"
+    ],
+    [
+     "view parent",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+    ]
+   ],
+   "note": "magnifier + vertical arrow"
+  },
+  "ListAdd": {
+   "status": "GAP",
+   "note": "no plus glyph in the set"
+  },
+  "ListRemove": {
+   "status": "GAP",
+   "note": "no minus glyph in the set"
+  },
+  "ViewHidden": {
+   "status": "GAP",
+   "note": "no eye"
+  },
+  "InsertLink": {
+   "status": "GAP",
+   "note": "no chain"
+  },
+  "Merge": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std copy",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_copy.png"
+    ]
+   ],
+   "note": "two sheets converging"
+  },
+  "BlackSum": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std redo",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_redo.png"
+    ]
+   ],
+   "note": "curved arrow onto a dot"
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "shell32 54 red-x doc",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_54_redx_doc.png"
+    ]
+   ],
+   "note": "brackets around the red x"
+  },
+  "MusicNote16th": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "shell32 225 audio",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_225_audio.png"
+    ]
+   ],
+   "note": "the note cropped from the audio file icon"
+  },
+  "Mathmode": {
+   "status": "GAP",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "GAP",
+   "note": ""
+  },
+  "DialogOkApply": {
+   "status": "NATIVE",
+   "name": "shell32 253 check",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_253_check.png"
+  },
+  "VcsDiff": {
+   "status": "GAP",
+   "note": ""
+  },
+  "ShallowHistory": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "view sortdate (clock)",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_sortdate.png"
+    ]
+   ],
+   "note": "the sort-by-date clock"
+  },
+  "EditSelect": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std help (pointer)",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_help.png"
+    ]
+   ],
+   "note": "the pointer from What's This"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "view sortdate",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_sortdate.png"
+    ],
+    [
+     "mplay seekback",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_seekback.png"
+    ]
+   ],
+   "note": "clock + transport triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "view sortdate",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_sortdate.png"
+    ],
+    [
+     "mplay seekforw",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_seekforw.png"
+    ]
+   ],
+   "note": "clock + transport triangle"
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "idb_hist_small[0] back",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/hist_back.png"
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "idb_hist_small[1] forward",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/hist_forward.png"
+  },
+  "DocumentRevert": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "std new",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_new.png"
+    ],
+    [
+     "std undo",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_undo.png"
+    ]
+   ],
+   "note": "document + undo arrow"
+  },
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "mplay32 backward.bmp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_backward.png"
+  },
+  "MediaPlaybackStart": {
+   "status": "NATIVE",
+   "name": "mplay32 play.bmp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_play.png"
+  },
+  "MediaPlaybackStop": {
+   "status": "NATIVE",
+   "name": "mplay32 stop.bmp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_stop.png"
+  },
+  "MediaPlaybackPause": {
+   "status": "NATIVE",
+   "name": "mplay32 pause.bmp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_pause.png"
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "mplay32 forward.bmp",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_forward.png"
+  },
+  "DialogCancel": {
+   "status": "NATIVE",
+   "name": "shell32 200 no-entry",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_200_noentry.png"
+  },
+  "GoDown": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "view parent (flipped)",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+    ]
+   ],
+   "note": "the green up arrow flipped"
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "idb_view_small[8] parent-folder arrow",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+  },
+  "Lock": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "shell32 48 locked monitor",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_48_lockedmonitor.png"
+    ]
+   ],
+   "note": "the padlock cropped from the locked-monitor icon"
+  },
+  "Unlock": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "shell32 48 locked monitor",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_48_lockedmonitor.png"
+    ]
+   ],
+   "note": "that padlock opened"
+  },
+  "BboxPrev": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "mplay backward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_backward.png"
+    ]
+   ],
+   "note": "arrow meeting a bar is the skip glyph's half"
+  },
+  "BboxNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "mplay forward",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_forward.png"
+    ]
+   ],
+   "note": "arrow meeting a bar is the skip glyph's half"
+  },
+  "TabDetach": {
+   "status": "GAP",
+   "note": ""
+  },
+  "SettingsConfigure": {
+   "status": "NATIVE",
+   "name": "idb_std_small[10] properties",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_properties.png"
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "shell32 4 folder",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_4_folder.png"
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "shell32 225 audio file",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_225_audio.png"
+  },
+  "MediaRepeatSingle": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoParentFolder": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "shell32 4 folder",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_4_folder.png"
+    ],
+    [
+     "view parent",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+    ]
+   ],
+   "note": "folder + up arrow"
+  },
+  "DialogInformation": {
+   "status": "NATIVE",
+   "name": "shell32 1001 info",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_1001_info.png"
+  },
+  "DialogError": {
+   "status": "NATIVE",
+   "name": "shell32 200 no-entry",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_200_noentry.png"
+  },
+  "WindowClose": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "shell32 54 red-x doc",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_54_redx_doc.png"
+    ]
+   ],
+   "note": "the x without its sheet"
+  },
+  "EditCopy": {
+   "status": "NATIVE",
+   "name": "idb_std_small[1] copy",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_copy.png"
+  },
+  "HelpWhatsthis": {
+   "status": "NATIVE",
+   "name": "idb_std_small[11] help (arrow + ?)",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_help.png"
+  },
+  "GoJumpDeclaration": {
+   "status": "GAP",
+   "note": ""
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "idb_std_small[5] delete",
+   "size": 16,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_delete.png"
+  }
+ },
+ "nautilus1": {
+  "DocumentSave": {
+   "status": "GAP",
+   "note": ""
+  },
+  "EditUndo": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Refresh.png",
+     20,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Refresh.png"
+    ]
+   ],
+   "note": "one lobe of the refresh arrows"
+  },
+  "EditRedo": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Refresh.png",
+     20,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Refresh.png"
+    ]
+   ],
+   "note": "one lobe of the refresh arrows"
+  },
+  "MediaRecord": {
+   "status": "GAP",
+   "note": ""
+  },
+  "VcsCommit": {
+   "status": "GAP",
+   "note": ""
+  },
+  "VcsPull": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Up.png (flipped)",
+     19,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+    ]
+   ],
+   "note": "the up arrow flipped onto a bar"
+  },
+  "ZoomFitBest": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Search.png",
+     17,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Search.png"
+    ]
+   ],
+   "note": "the search magnifier + frame"
+  },
+  "ZoomOriginal": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Search.png",
+     17,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Search.png"
+    ]
+   ],
+   "note": "the search magnifier + 1:1"
+  },
+  "ZoomInY": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Search.png",
+     17,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Search.png"
+    ],
+    [
+     "uparrow.png",
+     18,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/uparrow.png"
+    ]
+   ],
+   "note": "magnifier + chevron"
+  },
+  "ListAdd": {
+   "status": "NATIVE",
+   "name": "increment.png",
+   "size": 26,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/increment.png"
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "decrement.png",
+   "size": 26,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/decrement.png"
+  },
+  "ViewHidden": {
+   "status": "GAP",
+   "note": ""
+  },
+  "InsertLink": {
+   "status": "GAP",
+   "note": ""
+  },
+  "Merge": {
+   "status": "GAP",
+   "note": ""
+  },
+  "BlackSum": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoJump": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Forward.png",
+     19,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Forward.png"
+    ]
+   ],
+   "note": "the forward arrow onto a dot"
+  },
+  "TimelineLift": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Stop.png",
+     18,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Stop.png"
+    ]
+   ],
+   "note": "brackets around the stop x"
+  },
+  "MusicNote16th": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "i-music-24.png",
+     26,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-music-24.png"
+    ]
+   ],
+   "note": "the note cropped from the music document"
+  },
+  "Mathmode": {
+   "status": "GAP",
+   "note": ""
+  },
+  "PreviewRenderOn": {
+   "status": "GAP",
+   "note": ""
+  },
+  "DialogOkApply": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "emblem-OK.svg",
+     40,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/emblem-OK.svg"
+    ]
+   ],
+   "note": "the OK emblem (40 px) redrawn small"
+  },
+  "VcsDiff": {
+   "status": "GAP",
+   "note": ""
+  },
+  "ShallowHistory": {
+   "status": "GAP",
+   "note": "no clock"
+  },
+  "EditSelect": {
+   "status": "GAP",
+   "note": ""
+  },
+  "KeyframePrevious": {
+   "status": "GAP",
+   "note": ""
+  },
+  "KeyframeNext": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "Back.png",
+   "size": 19,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Back.png"
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "Forward.png",
+   "size": 19,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Forward.png"
+  },
+  "DocumentRevert": {
+   "status": "GAP",
+   "note": ""
+  },
+  "MediaSkipBackward": {
+   "status": "GAP",
+   "note": ""
+  },
+  "MediaPlaybackStart": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "rightarrow.png",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/rightarrow.png"
+    ]
+   ],
+   "note": "chevron filled into a triangle"
+  },
+  "MediaPlaybackStop": {
+   "status": "GAP",
+   "note": ""
+  },
+  "MediaPlaybackPause": {
+   "status": "GAP",
+   "note": ""
+  },
+  "MediaSkipForward": {
+   "status": "GAP",
+   "note": ""
+  },
+  "DialogCancel": {
+   "status": "NATIVE",
+   "name": "Stop.png",
+   "size": 18,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Stop.png"
+  },
+  "GoDown": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Up.png (flipped)",
+     19,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+    ]
+   ],
+   "note": "the up arrow flipped"
+  },
+  "GoUp": {
+   "status": "NATIVE",
+   "name": "Up.png",
+   "size": 19,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+  },
+  "Lock": {
+   "status": "GAP",
+   "note": ""
+  },
+  "Unlock": {
+   "status": "GAP",
+   "note": ""
+  },
+  "BboxPrev": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "leftarrow.png",
+     18,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/leftarrow.png"
+    ]
+   ],
+   "note": "chevron meeting a bar"
+  },
+  "BboxNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "rightarrow.png",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/rightarrow.png"
+    ]
+   ],
+   "note": "chevron meeting a bar"
+  },
+  "TabDetach": {
+   "status": "GAP",
+   "note": ""
+  },
+  "SettingsConfigure": {
+   "status": "GAP",
+   "note": ""
+  },
+  "Folder": {
+   "status": "NATIVE",
+   "name": "i-directory-24.png",
+   "size": 24,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-directory-24.png"
+  },
+  "AudioXWav": {
+   "status": "NATIVE",
+   "name": "i-music-24.png",
+   "size": 24,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-music-24.png"
+  },
+  "MediaRepeatSingle": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Refresh.png",
+     20,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Refresh.png"
+    ]
+   ],
+   "note": "the refresh loop + a '1'"
+  },
+  "GoParentFolder": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "i-directory-24.png",
+     24,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-directory-24.png"
+    ],
+    [
+     "Up.png",
+     19,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+    ]
+   ],
+   "note": "folder + up arrow"
+  },
+  "DialogInformation": {
+   "status": "GAP",
+   "note": ""
+  },
+  "DialogError": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "tiny-alert.png",
+     16,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/tiny-alert.png"
+    ]
+   ],
+   "note": "the alert triangle"
+  },
+  "WindowClose": {
+   "status": "COMPOSABLE",
+   "prims": [
+    [
+     "Stop.png",
+     18,
+     "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Stop.png"
+    ]
+   ],
+   "note": "the stop x without its plate"
+  },
+  "EditCopy": {
+   "status": "GAP",
+   "note": ""
+  },
+  "HelpWhatsthis": {
+   "status": "GAP",
+   "note": ""
+  },
+  "GoJumpDeclaration": {
+   "status": "GAP",
+   "note": ""
+  },
+  "EditDelete": {
+   "status": "NATIVE",
+   "name": "trash-empty.png (58x44)",
+   "size": 44,
+   "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/trash-empty.png"
+  }
+ }
+}

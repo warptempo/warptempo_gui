@@ -1,0 +1,372 @@
+{
+ "DocumentSave": {
+  "status": "GAP",
+  "note": ""
+ },
+ "EditUndo": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Refresh.png",
+    20,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Refresh.png"
+   ]
+  ],
+  "note": "one lobe of the refresh arrows"
+ },
+ "EditRedo": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Refresh.png",
+    20,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Refresh.png"
+   ]
+  ],
+  "note": "one lobe of the refresh arrows"
+ },
+ "MediaRecord": {
+  "status": "GAP",
+  "note": ""
+ },
+ "VcsCommit": {
+  "status": "GAP",
+  "note": ""
+ },
+ "VcsPull": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Up.png (flipped)",
+    19,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+   ]
+  ],
+  "note": "the up arrow flipped onto a bar"
+ },
+ "ZoomFitBest": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Search.png",
+    17,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Search.png"
+   ]
+  ],
+  "note": "the search magnifier + frame"
+ },
+ "ZoomOriginal": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Search.png",
+    17,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Search.png"
+   ]
+  ],
+  "note": "the search magnifier + 1:1"
+ },
+ "ZoomInY": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Search.png",
+    17,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Search.png"
+   ],
+   [
+    "uparrow.png",
+    18,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/uparrow.png"
+   ]
+  ],
+  "note": "magnifier + chevron"
+ },
+ "ListAdd": {
+  "status": "NATIVE",
+  "name": "increment.png",
+  "size": 26,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/increment.png"
+ },
+ "ListRemove": {
+  "status": "NATIVE",
+  "name": "decrement.png",
+  "size": 26,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/decrement.png"
+ },
+ "ViewHidden": {
+  "status": "GAP",
+  "note": ""
+ },
+ "InsertLink": {
+  "status": "GAP",
+  "note": ""
+ },
+ "Merge": {
+  "status": "GAP",
+  "note": ""
+ },
+ "BlackSum": {
+  "status": "GAP",
+  "note": ""
+ },
+ "GoJump": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Forward.png",
+    19,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Forward.png"
+   ]
+  ],
+  "note": "the forward arrow onto a dot"
+ },
+ "TimelineLift": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Stop.png",
+    18,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Stop.png"
+   ]
+  ],
+  "note": "brackets around the stop x"
+ },
+ "MusicNote16th": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "i-music-24.png",
+    26,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-music-24.png"
+   ]
+  ],
+  "note": "the note cropped from the music document"
+ },
+ "Mathmode": {
+  "status": "GAP",
+  "note": ""
+ },
+ "PreviewRenderOn": {
+  "status": "GAP",
+  "note": ""
+ },
+ "DialogOkApply": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "emblem-OK.svg",
+    40,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/emblem-OK.svg"
+   ]
+  ],
+  "note": "the OK emblem (40 px) redrawn small"
+ },
+ "VcsDiff": {
+  "status": "GAP",
+  "note": ""
+ },
+ "ShallowHistory": {
+  "status": "GAP",
+  "note": "no clock"
+ },
+ "EditSelect": {
+  "status": "GAP",
+  "note": ""
+ },
+ "KeyframePrevious": {
+  "status": "GAP",
+  "note": ""
+ },
+ "KeyframeNext": {
+  "status": "GAP",
+  "note": ""
+ },
+ "GoPrevious": {
+  "status": "NATIVE",
+  "name": "Back.png",
+  "size": 19,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Back.png"
+ },
+ "GoNext": {
+  "status": "NATIVE",
+  "name": "Forward.png",
+  "size": 19,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Forward.png"
+ },
+ "DocumentRevert": {
+  "status": "GAP",
+  "note": ""
+ },
+ "MediaSkipBackward": {
+  "status": "GAP",
+  "note": ""
+ },
+ "MediaPlaybackStart": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "rightarrow.png",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/rightarrow.png"
+   ]
+  ],
+  "note": "chevron filled into a triangle"
+ },
+ "MediaPlaybackStop": {
+  "status": "GAP",
+  "note": ""
+ },
+ "MediaPlaybackPause": {
+  "status": "GAP",
+  "note": ""
+ },
+ "MediaSkipForward": {
+  "status": "GAP",
+  "note": ""
+ },
+ "DialogCancel": {
+  "status": "NATIVE",
+  "name": "Stop.png",
+  "size": 18,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Stop.png"
+ },
+ "GoDown": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Up.png (flipped)",
+    19,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+   ]
+  ],
+  "note": "the up arrow flipped"
+ },
+ "GoUp": {
+  "status": "NATIVE",
+  "name": "Up.png",
+  "size": 19,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+ },
+ "Lock": {
+  "status": "GAP",
+  "note": ""
+ },
+ "Unlock": {
+  "status": "GAP",
+  "note": ""
+ },
+ "BboxPrev": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "leftarrow.png",
+    18,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/leftarrow.png"
+   ]
+  ],
+  "note": "chevron meeting a bar"
+ },
+ "BboxNext": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "rightarrow.png",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/rightarrow.png"
+   ]
+  ],
+  "note": "chevron meeting a bar"
+ },
+ "TabDetach": {
+  "status": "GAP",
+  "note": ""
+ },
+ "SettingsConfigure": {
+  "status": "GAP",
+  "note": ""
+ },
+ "Folder": {
+  "status": "NATIVE",
+  "name": "i-directory-24.png",
+  "size": 24,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-directory-24.png"
+ },
+ "AudioXWav": {
+  "status": "NATIVE",
+  "name": "i-music-24.png",
+  "size": 24,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-music-24.png"
+ },
+ "MediaRepeatSingle": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Refresh.png",
+    20,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Refresh.png"
+   ]
+  ],
+  "note": "the refresh loop + a '1'"
+ },
+ "GoParentFolder": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "i-directory-24.png",
+    24,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/i-directory-24.png"
+   ],
+   [
+    "Up.png",
+    19,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Up.png"
+   ]
+  ],
+  "note": "folder + up arrow"
+ },
+ "DialogInformation": {
+  "status": "GAP",
+  "note": ""
+ },
+ "DialogError": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "tiny-alert.png",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/tiny-alert.png"
+   ]
+  ],
+  "note": "the alert triangle"
+ },
+ "WindowClose": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "Stop.png",
+    18,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/Stop.png"
+   ]
+  ],
+  "note": "the stop x without its plate"
+ },
+ "EditCopy": {
+  "status": "GAP",
+  "note": ""
+ },
+ "HelpWhatsthis": {
+  "status": "GAP",
+  "note": ""
+ },
+ "GoJumpDeclaration": {
+  "status": "GAP",
+  "note": ""
+ },
+ "EditDelete": {
+  "status": "NATIVE",
+  "name": "trash-empty.png (58x44)",
+  "size": 44,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/sets/nautilus1/nautilus-1.0.6/icons/trash-empty.png"
+ }
+}

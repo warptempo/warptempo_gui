@@ -1,0 +1,449 @@
+{
+ "DocumentSave": {
+  "status": "NATIVE",
+  "name": "idb_std_small[8] save",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_save.png"
+ },
+ "EditUndo": {
+  "status": "NATIVE",
+  "name": "idb_std_small[3] undo",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_undo.png"
+ },
+ "EditRedo": {
+  "status": "NATIVE",
+  "name": "idb_std_small[4] redo",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_redo.png"
+ },
+ "MediaRecord": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "mplay32 play.bmp",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_play.png"
+   ]
+  ],
+  "note": "a disc in mplay32's grey outline language (sndrec32's but_rec.bmp is a 59x29 bevelled button, not a glyph)"
+ },
+ "VcsCommit": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std new",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_new.png"
+   ],
+   [
+    "shell32 253 check",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_253_check.png"
+   ]
+  ],
+  "note": "document + check"
+ },
+ "VcsPull": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std new",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_new.png"
+   ],
+   [
+    "view parent (up arrow, flipped)",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+   ]
+  ],
+  "note": "down arrow onto document"
+ },
+ "ZoomFitBest": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std find",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_find.png"
+   ]
+  ],
+  "note": "the find magnifier with a frame"
+ },
+ "ZoomOriginal": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std find",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_find.png"
+   ]
+  ],
+  "note": "the find magnifier with 1:1"
+ },
+ "ZoomInY": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std find",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_find.png"
+   ],
+   [
+    "view parent",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+   ]
+  ],
+  "note": "magnifier + vertical arrow"
+ },
+ "ListAdd": {
+  "status": "GAP",
+  "note": "no plus glyph in the set"
+ },
+ "ListRemove": {
+  "status": "GAP",
+  "note": "no minus glyph in the set"
+ },
+ "ViewHidden": {
+  "status": "GAP",
+  "note": "no eye"
+ },
+ "InsertLink": {
+  "status": "GAP",
+  "note": "no chain"
+ },
+ "Merge": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std copy",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_copy.png"
+   ]
+  ],
+  "note": "two sheets converging"
+ },
+ "BlackSum": {
+  "status": "GAP",
+  "note": ""
+ },
+ "GoJump": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std redo",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_redo.png"
+   ]
+  ],
+  "note": "curved arrow onto a dot"
+ },
+ "TimelineLift": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "shell32 54 red-x doc",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_54_redx_doc.png"
+   ]
+  ],
+  "note": "brackets around the red x"
+ },
+ "MusicNote16th": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "shell32 225 audio",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_225_audio.png"
+   ]
+  ],
+  "note": "the note cropped from the audio file icon"
+ },
+ "Mathmode": {
+  "status": "GAP",
+  "note": ""
+ },
+ "PreviewRenderOn": {
+  "status": "GAP",
+  "note": ""
+ },
+ "DialogOkApply": {
+  "status": "NATIVE",
+  "name": "shell32 253 check",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_253_check.png"
+ },
+ "VcsDiff": {
+  "status": "GAP",
+  "note": ""
+ },
+ "ShallowHistory": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "view sortdate (clock)",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_sortdate.png"
+   ]
+  ],
+  "note": "the sort-by-date clock"
+ },
+ "EditSelect": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std help (pointer)",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_help.png"
+   ]
+  ],
+  "note": "the pointer from What's This"
+ },
+ "KeyframePrevious": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "view sortdate",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_sortdate.png"
+   ],
+   [
+    "mplay seekback",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_seekback.png"
+   ]
+  ],
+  "note": "clock + transport triangle"
+ },
+ "KeyframeNext": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "view sortdate",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_sortdate.png"
+   ],
+   [
+    "mplay seekforw",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_seekforw.png"
+   ]
+  ],
+  "note": "clock + transport triangle"
+ },
+ "GoPrevious": {
+  "status": "NATIVE",
+  "name": "idb_hist_small[0] back",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/hist_back.png"
+ },
+ "GoNext": {
+  "status": "NATIVE",
+  "name": "idb_hist_small[1] forward",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/hist_forward.png"
+ },
+ "DocumentRevert": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "std new",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_new.png"
+   ],
+   [
+    "std undo",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_undo.png"
+   ]
+  ],
+  "note": "document + undo arrow"
+ },
+ "MediaSkipBackward": {
+  "status": "NATIVE",
+  "name": "mplay32 backward.bmp",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_backward.png"
+ },
+ "MediaPlaybackStart": {
+  "status": "NATIVE",
+  "name": "mplay32 play.bmp",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_play.png"
+ },
+ "MediaPlaybackStop": {
+  "status": "NATIVE",
+  "name": "mplay32 stop.bmp",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_stop.png"
+ },
+ "MediaPlaybackPause": {
+  "status": "NATIVE",
+  "name": "mplay32 pause.bmp",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_pause.png"
+ },
+ "MediaSkipForward": {
+  "status": "NATIVE",
+  "name": "mplay32 forward.bmp",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_forward.png"
+ },
+ "DialogCancel": {
+  "status": "NATIVE",
+  "name": "shell32 200 no-entry",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_200_noentry.png"
+ },
+ "GoDown": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "view parent (flipped)",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+   ]
+  ],
+  "note": "the green up arrow flipped"
+ },
+ "GoUp": {
+  "status": "NATIVE",
+  "name": "idb_view_small[8] parent-folder arrow",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+ },
+ "Lock": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "shell32 48 locked monitor",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_48_lockedmonitor.png"
+   ]
+  ],
+  "note": "the padlock cropped from the locked-monitor icon"
+ },
+ "Unlock": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "shell32 48 locked monitor",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_48_lockedmonitor.png"
+   ]
+  ],
+  "note": "that padlock opened"
+ },
+ "BboxPrev": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "mplay backward",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_backward.png"
+   ]
+  ],
+  "note": "arrow meeting a bar is the skip glyph's half"
+ },
+ "BboxNext": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "mplay forward",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/mplay_forward.png"
+   ]
+  ],
+  "note": "arrow meeting a bar is the skip glyph's half"
+ },
+ "TabDetach": {
+  "status": "GAP",
+  "note": ""
+ },
+ "SettingsConfigure": {
+  "status": "NATIVE",
+  "name": "idb_std_small[10] properties",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_properties.png"
+ },
+ "Folder": {
+  "status": "NATIVE",
+  "name": "shell32 4 folder",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_4_folder.png"
+ },
+ "AudioXWav": {
+  "status": "NATIVE",
+  "name": "shell32 225 audio file",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_225_audio.png"
+ },
+ "MediaRepeatSingle": {
+  "status": "GAP",
+  "note": ""
+ },
+ "GoParentFolder": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "shell32 4 folder",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_4_folder.png"
+   ],
+   [
+    "view parent",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/view_parent.png"
+   ]
+  ],
+  "note": "folder + up arrow"
+ },
+ "DialogInformation": {
+  "status": "NATIVE",
+  "name": "shell32 1001 info",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_1001_info.png"
+ },
+ "DialogError": {
+  "status": "NATIVE",
+  "name": "shell32 200 no-entry",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_200_noentry.png"
+ },
+ "WindowClose": {
+  "status": "COMPOSABLE",
+  "prims": [
+   [
+    "shell32 54 red-x doc",
+    16,
+    "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/sh_54_redx_doc.png"
+   ]
+  ],
+  "note": "the x without its sheet"
+ },
+ "EditCopy": {
+  "status": "NATIVE",
+  "name": "idb_std_small[1] copy",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_copy.png"
+ },
+ "HelpWhatsthis": {
+  "status": "NATIVE",
+  "name": "idb_std_small[11] help (arrow + ?)",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_help.png"
+ },
+ "GoJumpDeclaration": {
+  "status": "GAP",
+  "note": ""
+ },
+ "EditDelete": {
+  "status": "NATIVE",
+  "name": "idb_std_small[5] delete",
+  "size": 16,
+  "path": "/home/b/.warptempo/warptempo_gui/tmp/icon_survey/work/reactos/crops/std_delete.png"
+ }
+}

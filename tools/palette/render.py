@@ -39,7 +39,7 @@ DEFAULTS = {
     'marker_ground': '@ground', 'bottom_row_ground': '@ground',
     'icon_face': '@icon_row_ground', 'button_face': '@bottom_row_ground', 'down_face': '@selected_fill',
     # text
-    'label': TWO_PASS('kRedesignLabel'), 'legend': '@label', 'menu_disabled': 'auto', 'clock': '@label',
+    'label': TWO_PASS('kRedesignLabel'), 'light_text': '@label', 'legend': '@label', 'menu_disabled': 'auto', 'clock': '@label',
     'ruler_label': TWO_PASS('kRulerLabel'), 'ruler_tick': TWO_PASS('kRulerTick'), 'stamp': [140, 140, 140],
     'ruler_tick_light': 'auto',     # read only by ruler_tick_relief "light_right"
     # lines and fills
@@ -60,13 +60,18 @@ DEFAULTS = {
     'flag_hilight': 'auto', 'flag_hilight_sel': 'auto',     # read only by flags.relief "raised"
     # icon inks (icons.cpp), two_pass of each
     'icon_label': '@label', **{f'icon_{k}': list(C.two_pass(v)) for k, v in INKC.items() if k != 'text'},
-    # the Windows relief set (only read when something is raised or sunken); 'auto' derives from button_face
+    # the Windows relief set (only read when something is raised or sunken); 'auto' derives from the GROUND
+    # (colour.relief_quartet, the app's scaffold; Theme.auto)
     'bevel_hilight': 'auto', 'bevel_light': 'auto', 'bevel_shadow': 'auto', 'bevel_dkshadow': 'auto',
     # the accent (the architect, 2026-10-02: the waveform's ink is the accent); read only by menu.highlight "fill"
     'accent': '@ink',
 }
 NUM_DEFAULTS = {'disabled_mix': SCENE['disabled_mix'], 'playhead_head_alpha': 0.8, 'canvas_delta': 0, 'ruler_pad_top': 0,
                 'ruler_label_pt': 12, 'playhead_head_rows': 12}
+# row 8's state line (draw_bottom), the text a freshly loaded project shows in the scene's view (Target+Warp): the
+# load's eager preview render stamps "Updating..." (GuiTargetRender::stamp_updating, src/gui/target_render.cpp) and it
+# stands until the preview lands; at rest app.queue_progress_text is empty and the line shows nothing (a theme's "")
+STATE_TEXT_DEFAULT = 'Updating...'
 OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'none', 'well': 'bordered', 'bottom_border': 'app', 'clock_panel': 'flat',
                 'icons': 'app',
                 'bars': {'menu': 'flat', 'icon_row': 'flat', 'bottom_row': 'flat'},
@@ -78,7 +83,8 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'lane_order': ['trim', 'ruler', 'marker'],
                 'ruler_layout': None,
                 'menu': {'highlight': None},
-                'fonts': {'ui_px': None, 'small_px': None}}
+                'fonts': {'ui_px': None, 'small_px': None},
+                'state_text': STATE_TEXT_DEFAULT}
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
@@ -92,6 +98,8 @@ COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'o
                    ('flags', {'fill': 'flag_fill', 'edge': 'flag_edge', 'border': 'flag_border', 'label': 'flag_label', 'stem': 'flag_stem',
                               'fill_sel': 'flag_fill_sel', 'edge_sel': 'flag_edge_sel', 'stem_sel': 'flag_stem_sel',
                               'hilight': 'flag_hilight', 'hilight_sel': 'flag_hilight_sel'}))
+
+BEVELS = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')     # relief_quartet's order
 
 class Theme:
     def __init__(self, path):
@@ -198,10 +206,15 @@ class Theme:
             if not isinstance(hl, dict) or set(hl) - {'item', 'style', 'label'} or 'item' not in hl:
                 raise SystemExit(f'theme {path}: menu.highlight is null or {{"item": ..., "style": ..., "label": colour}}, not {hl!r}')
             if hl['item'] not in items: raise SystemExit(f'theme {path}: menu.highlight.item must be one of {items}, not {hl["item"]!r}')
-            hl.setdefault('style', 'fill'); hl.setdefault('label', '@label')
+            hl.setdefault('style', 'fill')
             if hl['style'] not in MENU_HL_STYLES:
                 raise SystemExit(f'theme {path}: menu.highlight.style must be one of {MENU_HL_STYLES}, not {hl["style"]!r}')
-            self.menu_hl_label = self.colour(hl['label'])
+            # the label over the "fill" face: highlight_text_ink's rule over the accent unless the theme sets it by hand
+            self.menu_hl_label = (self.colour(hl['label']) if 'label' in hl
+                                  else self.highlight_ink(self.get('accent')))
+        st = self.opt['state_text']
+        if st is not None and not isinstance(st, str):
+            raise SystemExit(f'theme {path}: state_text is a string (row 8\'s state line) or null (no line), not {st!r}')
         rp = self.num['ruler_pad_top']
         if not isinstance(rp, int) or isinstance(rp, bool) or rp < 0:
             raise SystemExit(f'theme {path}: ruler_pad_top is a whole number of logical rows >= 0 (ground added at the ruler lane\'s top: '
@@ -247,12 +260,27 @@ class Theme:
             return tuple(C.lin_mix(self.get(role.replace('hilight', 'fill'), st), (255, 255, 255), 0.35))
         if role == 'ruler_tick_light':                       # a lighter tick colour, the same rule
             return tuple(C.lin_mix(self.get('ruler_tick', st), (255, 255, 255), 0.35))
-        f = self.get('button_face', st)
-        if role == 'bevel_hilight': return tuple(min(255, round(v * 1.75)) for v in f)      # Redmond97 Dark: #373737 -> #606060
-        if role == 'bevel_light': return f                                                # the Windows 2000 rule: 3DLight = face
-        if role == 'bevel_shadow': return tuple(round(v * 0.69) for v in f)               # #373737 -> #262626
-        if role == 'bevel_dkshadow': return (0, 0, 0)
+        if role in BEVELS:     # the relief set from the GROUND, as the app's scaffold derives it (relief_quartet)
+            return C.relief_quartet(self.get('ground', st))[0][BEVELS.index(role)]
         raise SystemExit(f'no auto rule for {role}')
+
+    def highlight_ink(self, fill):
+        """The chrome's text or glyph ink over a fill, the app's highlight_text_ink: black when the fill's luminance
+        exceeds the threshold, else `light_text` -- the app's light ink is its label (the label white), so the role
+        defaults to @label; a theme whose label is dark names its light ink there (win95_standard: Windows'
+        COLOR_HIGHLIGHTTEXT white over COLOR_HIGHLIGHT, its label being COLOR_BTNTEXT black). The flags' black label
+        is their own rule and never this."""
+        return C.highlight_text_ink(fill, self.get('light_text'))
+
+    def quartet_report(self):
+        """One clause for the render's log line: the relief set as painted, the ground's luminance and branch, and
+        which keys a theme set by hand (a hand value wins over the rule for that key alone)."""
+        g = self.get('ground'); branch = C.relief_quartet(g)[1]
+        parts = []
+        for i, role in enumerate(BEVELS):
+            c = self.get(role); parts.append(C.hexs(c)[1:] + ('' if self.raw[role] == 'auto' else ' (hand)'))
+        return (f'relief from ground {C.hexs(g)} L {C.relative_luminance(g):.4f} {branch} '
+                f'(threshold {C.LUMINANCE_THRESHOLD}): ' + ' / '.join(parts))
 
 def lane_shift(th):
     """trim.lane_h -> d, the device rows the trim lane grows by (0 at the default: the scene's measured height)."""
@@ -274,39 +302,41 @@ def ui_font_px(th):
     return C.SANS_PX if up is None else float(up * S)
 
 def flag_seat(th):
-    """fonts.ui_px -> None (null: the scene's flags as measured) or (box_h, lane_h, edge+ascent): the flag box's height,
-    the marker lane's height and the label's baseline offset under the box's top, device rows. THE MEASURED PADS: the
-    app seats a flag label as a text line under the box's dark top band (paint_handler.cpp: baseline = box top + edge_h +
-    ceil(ascent), 228 + 2 + 30 = 260 on 1002) and the box ends at the descent line (2 + 30 + 8 = 40, the lane's 20 logical
-    rows, no ground above or below). At the new face: need = edge_h + ceil(ascent) + ceil(descent). need = the measured
-    box (the app's face): the box and the lane as measured. Otherwise the box is need rounded up to whole logical rows
-    and the lane follows the text BOTH WAYS, one logical row of ground above and below the box: a larger face grows it,
-    lane = max(measured, box + 2 x LW); a smaller one shrinks it, lane = min(measured, box + 2 x LW) (a box within
-    two logical rows of the measured one keeps the measured lane, the box centred in it). The lane's difference from
-    the measured one is opened (or closed, negative) at its bottom (shift_scene 'marker') and the box centred in it."""
+    """fonts.ui_px -> None (null: the scene's flags as measured, the app of the scenes' commit) or (box_h, lane_h,
+    edge+ascent): the flag box's height, the marker lane's height and the label's baseline offset under the box's top,
+    device rows. THE APP'S RULE (render.h's marker-lane block at kMarkerLaneAirPx, paint_handler.cpp's
+    marker_lane_rows): box = edge_h + ceil(ascent) + ceil(descent) at the normal face, every term a whole device row
+    and nothing rounded further; lane = the air + box, THE AIR ONE PX OF GROUND ABOVE THE BOX AND NONE BELOW IT, so the
+    box's bottom row is the lane's last row and the flag stands on the well (seat_flags; its stem runs on through the
+    well's top lines, draw_stems). The air is the scene's edge_h, the box's top band: the app sizes both as one
+    Windows px (kMarkerLaneAirPx and kMarkerFlagEdgePx, scaled_px(1, 1)), here one logical px. The lane's difference
+    from the measured one is opened (or closed, negative) at its bottom (shift_scene 'marker'): 228 + 2 + 43 = 273 on
+    1002 at ui_px 17 (34 px: ascent 32, descent 9)."""
     if th.opt['fonts']['ui_px'] is None: return None
     F = BASE_SCENE['flags']; px = ui_font_px(th)
     asc, desc = C.font_extents(C.SANS, px)[:2]
-    off = F['edge_h'] + math.ceil(asc); need = off + math.ceil(desc)
-    box = F['y1'] - F['y0']; lane = BASE_SCENE['lanes']['marker'][1] - BASE_SCENE['lanes']['marker'][0]
-    if need == box: return box, lane, off
-    grown = need > box; box = -(-need // LW) * LW
-    return box, (max if grown else min)(lane, box + 2 * LW), off
+    off = F['edge_h'] + math.ceil(asc); box = off + math.ceil(desc)
+    return box, F['edge_h'] + box, off
+
+def flags_on_well(th):
+    """True when the flags stand on the well (flag_seat's rule, fonts.ui_px set): the stems then run from the well's
+    top, through its top lines, as the app's waveform_stem_band does (draw_stems)."""
+    return flag_seat(th) is not None
 
 def marker_shift(th):
-    """flag_seat -> d, the device rows the marker lane grows by (negative: shrinks by; 0 at the app's face)."""
+    """flag_seat -> d, the device rows the marker lane grows by (negative: shrinks by; 0 with fonts.ui_px null)."""
     fs = flag_seat(th)
     return 0 if fs is None else fs[1] - (BASE_SCENE['lanes']['marker'][1] - BASE_SCENE['lanes']['marker'][0])
 
 def seat_flags(sc, th):
     """The scene with its flag boxes' rows and label baseline set by flag_seat (after the 'marker' shift, before
-    order_scene restacks): the box centred in the marker lane, the baseline edge_h + ceil(ascent) under its top.
-    fonts.ui_px null returns the scene itself."""
+    order_scene restacks): the box's bottom the marker lane's last row, its top the air under the lane's top, the
+    baseline edge_h + ceil(ascent) under the box's top. fonts.ui_px null returns the scene itself."""
     fs = flag_seat(th)
     if fs is None: return sc
     box, lane, off = fs
     sc = json.loads(json.dumps(sc)); F = sc['flags']; m0, m1 = sc['lanes']['marker']
-    F['y0'] = m0 + (m1 - m0 - box) // 2; F['y1'] = F['y0'] + box; F['baseline'] = F['y0'] + off
+    F['y1'] = m1; F['y0'] = m1 - box; F['baseline'] = F['y0'] + off
     return sc
 
 def seat_clock(sc, th):
@@ -836,28 +866,57 @@ def draw_trim_acid(cr, th):
         cr.move_to(ex, ty - 0.5); cr.line_to(ex, by + 0.5); cr.line_to(apex, ty + h / 2); cr.close_path(); cr.fill()
     cr.restore()
 
+TRIM_ARROW_ROWS = (1, 3, 5, 7)     # render.h kTrimArrowGlyphRows: the scroll arrow's four columns from the tip
+
+def draw_trim_arrow_button(cr, th, x, y0, w, h, points_left):
+    """ONE ARROW BUTTON, render.cpp's paint_trim_arrow_button: trim_ground under relief_lines 'panel' (the plain raised
+    edge), then Windows' scroll arrow as integer rectangles -- four columns 1, 3, 5 and 7 units tall from the tip, each
+    centred on the glyph's middle row, a unit LW device px (one logical px: the app's scaled_px(1, 1), the unit the
+    relief lines take here), the 4 x 7-unit glyph centred in the button with an odd difference floored toward the
+    top-left -- its tip LEFT on the begin button and RIGHT on the end button, in the luminance rule's ink over the
+    button's face (Theme.highlight_ink; render.h kTrimArrowGlyph: the label white on a dark ground, black on a light
+    one)."""
+    g = th.get('trim_ground'); fill(cr, x, y0, x + w, y0 + h, g); edge(cr, x, y0, x + w, y0 + h, relief_lines(th, 'panel'))
+    u = LW; n = len(TRIM_ARROW_ROWS); gw, gh = n * u, TRIM_ARROW_ROWS[-1] * u
+    gx, gy = x + (w - gw) // 2, y0 + (h - gh) // 2; ink = th.highlight_ink(g)
+    for i, rows in enumerate(TRIM_ARROW_ROWS):        # i = 0 is the tip
+        slot = i if points_left else n - 1 - i; top = (TRIM_ARROW_ROWS[-1] - rows) // 2
+        fill(cr, gx + slot * u, gy + top * u, gx + (slot + 1) * u, gy + (top + rows) * u, ink)
+
 def draw_trim_scrollbar(cr, th):
-    """trim.style "scrollbar": the lane as Windows 95's scroll bar, miniaturized. The whole lane is draw_grounds'
-    trim_ground (Windows' scroll bar face is the button face; trim_ground defaults to @ground). THE TRACK: a
-    checkerboard of bevel_hilight over that ground in 1-logical-px cells (LW x LW device px), its phase anchored at the
-    lane's top-left (x 0, the lane's y0), the cell (i, j) = ((x // LW), (y - y0) // LW) lit when i + j is even, so
-    every lane height dithers identically; flush, no frame. THE THUMB, painted over the track: the kept region, from
-    the left cap's outer edge to the right cap's outer edge -- the union of the scene's painted bar extent and its
-    handles (660..1937 on 1002; on 1002a, both bounds off screen and no handles, the bar's -1..2305, so the thumb runs
-    past both edges and only one column of its outer relief line shows at each) -- the lane's full height, filled with
-    trim_ground and edged relief_lines 'panel' (EDGE_RAISED: thick = 3DLight / DkShadow outer, Hilight / Shadow inner;
-    thin = Hilight / Shadow). No grip, no cap squares, no lane bevels, no bottom border: bar / ground / handles / grip
-    are not read, and cap_w is not read either (the caps are the thumb's ends; their hit band is the app's business).
-    A scene with no bar on screen is all track."""
+    """trim.style "scrollbar": the lane as Windows 95's scroll bar, miniaturized, render.cpp's render_trim_flags back to
+    front. The whole lane is draw_grounds' trim_ground (Windows' scroll bar face is the button face; trim_ground
+    defaults to @ground). THE TRACK: a checkerboard of bevel_hilight over that ground in 1-logical-px cells (LW x LW
+    device px), its phase anchored at the lane's top-left (x 0, the lane's y0), the cell (i, j) = ((x // LW),
+    (y - y0) // LW) lit when i + j is even, so every lane height dithers identically; flush, no frame.
+    THE THUMB is the kept region, the begin bound's column to the end bound's: a scene handle stands at each IN-VIEW
+    bound (the begin's left edge on its column, the end's right edge one past its own; a bound with no handle is off
+    screen, on its own side). THE ARROW BUTTONS (render.h kTrimArrowButtonPx, trim_endcap_rect): at each in-view bound a
+    SQUARE button the lane's height on a side (16 x 16 Windows px on the 16-px lane), the begin's left edge on the
+    begin column pointing left, the end's right edge on the end column pointing right (draw_trim_arrow_button); NARROW
+    (both in view and the kept span under two buttons) the begin keeps its column and the end button stands edge to
+    edge right of it. THE BODY, painted first, runs between the two buttons' inner edges (empty in the narrow case),
+    trim_ground under relief_lines 'panel' (plain raised: thick = 3DLight / DkShadow outer, Hilight / Shadow inner;
+    thin = Hilight / Shadow) the lane's full height, no grip; an OFF-SCREEN side runs past that window edge by its
+    edge's whole thickness, so its side lines fall outside the surface (on 1002a, both bounds off screen, the body
+    spans -run .. W + run and shows no side line). bar / ground / handles / grip / cap_w are not read. A scene with no
+    bar on screen is all track."""
     T = SCENE['trim']; y0, y1 = T['y0'], T['y1']; g = th.get('trim_ground')
     C.src(cr, th.get('bevel_hilight'))
     for j, yy in enumerate(range(y0, y1, LW)):
         for xx in range((j % 2) * LW, C.W, 2 * LW): cr.rectangle(xx, yy, LW, min(LW, y1 - yy))
     cr.fill()
     if T['bar'] is None: return
-    xs = [T['bar']] + [tuple(h) for h in T['handles']]
-    x0, x1 = min(a for a, _ in xs), max(b for _, b in xs)
-    fill(cr, x0, y0, x1, y1, g); edge(cr, x0, y0, x1, y1, relief_lines(th, 'panel'))
+    btn = y1 - y0; run = {'flat': 1, 'thin': 1, 'thick': 2}[th.opt['relief']] * LW
+    mid = (T['bar'][0] + T['bar'][1]) / 2
+    begin = [h[0] for h in T['handles'] if (h[0] + h[1]) / 2 < mid]       # the begin column
+    end = [h[1] for h in T['handles'] if (h[0] + h[1]) / 2 >= mid]        # one past the end column
+    narrow = bool(begin and end) and end[0] - begin[0] < 2 * btn
+    lo = begin[0] + btn if begin else -run
+    hi = end[0] - btn if end else C.W + run
+    if hi > lo: fill(cr, lo, y0, hi, y1, g); edge(cr, lo, y0, hi, y1, relief_lines(th, 'panel'))
+    if begin: draw_trim_arrow_button(cr, th, begin[0], y0, btn, y1 - y0, True)
+    if end: draw_trim_arrow_button(cr, th, begin[0] + btn if narrow else end[0] - btn, y0, btn, y1 - y0, False)
 
 def cap_rects(th):
     """[('handles', [(x0, x1), ...]), ('grip', [(x0, x1)] or [])] at trim.cap_w (None = the measured widths). A handle
@@ -919,7 +978,7 @@ def draw_ruler(cr, th):
 
 def draw_flags(cr, th):
     """Each flag: border, fill, the dark top band (or flags.relief), border, label. fonts.ui_px: the label at
-    ui_font_px; the box's rows are seat_flags' (the measured rows while the text fits them), and its width is the
+    ui_font_px; the box's rows are seat_flags' (the box standing on the well, flag_seat), and its width is the
     measured one while the text fits it with the measured side pads (w = pad_l + nearbyint(shaped width) + pad_r, the
     pads kMarkerFlagPadLeftPx / RightPx x S = 4 + 4, pad_r read off the scene as w - pad_l - nearbyint(width at 32 px)),
     else the text + those pads."""
@@ -1001,28 +1060,61 @@ def draw_waveform(arr, th):
             for i in range(0, len(runs), 2): arr[y0 + runs[i]:y0 + runs[i] + runs[i + 1], x] = c
 
 def draw_stems(cr, th):
-    # the app runs every stem through the well's black border rows; a sunken well's bevels are a frame, so there
-    # the stems stop at the canvas. Z-order (paint_marker_stems, then paint_playheads): the playhead's stem over
-    # every marker stem, except where a marker stands on its column -- there the app suppresses the playhead's
-    # whole stem (playhead_stem_suppressed) and the marker's stem shows.
+    # THE STEMS' ROWS: the app of the scenes' commit runs every stem through the well's black border rows to the
+    # well's bottom ("bordered"); with the other wells ("sunken", the list form) the stems span the derived canvas,
+    # except when the FLAGS STAND ON THE WELL (flags_on_well, fonts.ui_px set): then they run from the well's top
+    # through its top lines to the canvas's foot, the app's waveform_stem_band -- a stem leaves its box's bottom row
+    # (the marker lane's last) straight into the well's first line. Z-order (paint_marker_stems, then
+    # paint_playheads): the playhead's stem over every marker stem, except where a marker stands on its column --
+    # there the app suppresses the playhead's whole stem (playhead_stem_suppressed) and the marker's stem shows.
     F = SCENE['flags']; P = SCENE['playhead']
-    _, wb, c0, c1 = well_geometry(th)
-    # through the border to the well's bottom ("bordered"), else the derived canvas ("sunken", the list form)
-    y0, y1 = (F['stem_y0'], F['stem_y1'] + wb - SCENE['lanes']['well'][1]) if th.opt['well'] == 'bordered' else (c0, c1)
+    wt, wb, c0, c1 = well_geometry(th)
+    if th.opt['well'] == 'bordered': y0, y1 = F['stem_y0'], F['stem_y1'] + wb - SCENE['lanes']['well'][1]
+    else: y0, y1 = (wt if flags_on_well(th) else c0), c1
     for f in F['flags']:
         fill(cr, f['x'], y0, f['x'] + F['stem_w'], y1, th.get('flag_stem_sel' if f.get('selected') else 'flag_stem'))
     if not P.get('stem_suppressed'): fill(cr, P['col'], y0, P['col'] + P['w'], y1, th.get('playhead_stem'))
 
-def clock_panel_rect(th):
-    """-> (x0, y0, x1, y1) of the painted clock panel (clock_panel "sunken" / "status"), or None ("flat"): the clock
-    cell (prefix + the widest-digit DD:DD.DDD specimen + the dirty mark, at the clock's seated size) with 4 logical px
-    either side, over the bottom buttons' rows (buttons.case's height). draw_bottom paints it; stamp clears it."""
-    if th.opt['clock_panel'] not in ('sunken', 'status'): return None
+def clock_cell(th):
+    """-> (cell width, the dirty mark's advance), device px at the clock's seated size: the app's reserved cell
+    (paint_bottom_row_buttons_and_clock) -- the tab prefix ('B | '), the DD:DD.DDD specimen at the widest digit (nine
+    equal monospace advances) and the dirty mark's one cell, reserved whether or not it is painted."""
     ck = SCENE['clock']
     dw = max(C.shape(C.MONO, ck['size_px'], d)[1] for d in '0123456789')
-    cell = C.shape(C.MONO, ck['size_px'], 'B | ')[1] + 9 * dw + C.shape(C.MONO, ck['size_px'], '*')[1]
+    mark = C.shape(C.MONO, ck['size_px'], '*')[1]
+    return C.shape(C.MONO, ck['size_px'], 'B | ')[1] + 9 * dw + mark, mark
+
+def clock_panel_rect(th):
+    """-> (x0, y0, x1, y1) of the painted clock panel (clock_panel "sunken" / "status"), or None ("flat"): the clock
+    cell (clock_cell, its width ceiled) with 4 logical px either side -- the app's kStatusPanelPadPx, 3 Windows px, at
+    the set-AD scale (x 1.375: 4.125 -> 4; it does not follow another scale) -- over the bottom buttons' rows
+    (buttons.case's height), the cell starting at the scene's clock x. draw_bottom paints it; stamp clears it."""
+    if th.opt['clock_panel'] not in ('sunken', 'status'): return None
+    ck = SCENE['clock']; cell = clock_cell(th)[0]
     bb0 = [b for b in button_geometry(th)[0] if b['row'] == 'bottom'][0]
     return ck['x'] - 4 * S, bb0['y'], ck['x'] + int(math.ceil(cell)) + 4 * S, bb0['y'] + bb0['h']
+
+def group_space_px(th):
+    """The bottom row's space between two groups in device px: buttons.group_space x S, or 8 logical px (Windows'
+    eight) when it is null."""
+    gs = th.opt['buttons']['group_space']
+    return (8 if gs is None else gs) * S
+
+def state_line(th):
+    """-> (x, clip right, baseline, px, text) of row 8's STATE LINE, or None (no line). The app's line
+    (paint_bottom_row_buttons_and_clock, architect 2026-10-03): words on the row's ground, no panel, the sans at the
+    normal face (ui_font_px) in `label`, left-aligned one group space (group_space_px) past the status panel's right
+    line, clipped one group space short of the bottom row's button block, on the row's solved baseline over its
+    content rows (redesign_baseline, the clock's band). It stands beside the "status" panel alone (clock_panel
+    "status", today's row 8: ONE status panel and a line); with any other clock_panel, with state_text null or "", or
+    with no span left, there is no line."""
+    text = th.opt['state_text']; pr = clock_panel_rect(th)
+    if th.opt['clock_panel'] != 'status' or not text: return None
+    gs = group_space_px(th); x = pr[2] + gs
+    right = min(b['x'] for b in button_geometry(th)[0] if b['row'] == 'bottom') - gs
+    if right <= x: return None
+    bc = SCENE['bottom_content']; px = ui_font_px(th)
+    return x, right, C.redesign_baseline(C.SANS, px, bc[0], bc[1] - bc[0]), px, text
 
 def draw_bottom(cr, th):
     bb = SCENE['bottom_border']
@@ -1037,21 +1129,32 @@ def draw_bottom(cr, th):
         fill(cr, bb['x0'], bb['y'] + LW, bb['x1'], bb['y'] + 2 * LW, th.get(b))
     elif style == 'line':
         fill(cr, bb['x0'], bb['y'], bb['x1'], bb['y'] + bb['h'], th.get('bottom_border'))
-    ck = SCENE['clock']; pr = clock_panel_rect(th)
+    ck = SCENE['clock']; pr = clock_panel_rect(th); cx = ck['x']
     if pr is not None:
         x0, y0, x1, y1 = pr
         # "status": Windows' status-bar panel, ONE LW line whatever `relief` is (Shadow top and left, Hilight bottom
         # and right, the BR pair last); "sunken": relief_lines 'sunken' at the theme's relief
         lines = [(th.get('bevel_shadow'), th.get('bevel_hilight'))] if th.opt['clock_panel'] == 'status' else relief_lines(th, 'sunken')
         edge(cr, x0, y0, x1, y1, lines)
-    show(cr, C.MONO, ck['size_px'], ck['text'], ck['x'], ck['baseline'], th.get('clock'))
+        # "status": THE RUN IS CENTRED IN THE CELL (the app, architect 2026-10-03): it starts half the dirty mark's
+        # advance past the cell's origin, a fractional x, so the prefix and the digits stand centred in the reserved
+        # cell whether or not the mark is painted
+        if th.opt['clock_panel'] == 'status': cx = ck['x'] + clock_cell(th)[1] / 2
+    show(cr, C.MONO, ck['size_px'], ck['text'], cx, ck['baseline'], th.get('clock'))
+    sl = state_line(th)
+    if sl is not None:      # the state line, clipped (never ellipsised) one group space short of the button block
+        x, right, base, px, text = sl; bc = SCENE['bottom_content']
+        cr.save(); cr.rectangle(x, bc[0], right - x, bc[1] - bc[0]); cr.clip()
+        show(cr, C.SANS, px, text, x, base, th.get('label')); cr.restore()
 
 def stamp(cr, th, text):
     # the file-name stamp: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the scene's label_box (x 300,
-    # y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's content top); x clears a
-    # painted clock panel: max(label_box x0, the panel's right edge + 16 device px)
-    asc = C.font_extents(C.SANS, 20)[0]; lb = SCENE['label_box']; pr = clock_panel_rect(th)
+    # y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's content top); x clears what
+    # row 8 paints left of it: max(label_box x0, the clock panel's right edge + 16, the state line's painted end + 16
+    # device px)
+    asc = C.font_extents(C.SANS, 20)[0]; lb = SCENE['label_box']; pr = clock_panel_rect(th); sl = state_line(th)
     x = lb['x0'] if pr is None else max(lb['x0'], pr[2] + 16)
+    if sl is not None: x = max(x, int(math.ceil(min(sl[0] + C.shape(C.SANS, sl[3], sl[4])[1], sl[1]))) + 16)
     show(cr, C.SANS, 20, text, x, lb['y0'] + math.ceil(asc), th.get('stamp'))
 
 def render(theme_path, out_path, label=False):
@@ -1090,5 +1193,5 @@ if __name__ == '__main__':
         if a.startswith('--') or (i and argv[i - 1] == '--scene'): continue
         args.append(a)
     if len(args) != 2: raise SystemExit('usage: render.py <theme.json> <out.png> [--scene <tag>] [--label]')
-    render(args[0], args[1], '--label' in sys.argv)
-    print('wrote', args[1], f'(scene {SCENE_TAG})')
+    th = render(args[0], args[1], '--label' in sys.argv)
+    print('wrote', args[1], f'(scene {SCENE_TAG}; {th.quartet_report()})')

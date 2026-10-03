@@ -1,0 +1,408 @@
+{
+ "bluecurve": {
+  "MediaSkipBackward": {
+   "status": "NATIVE",
+   "name": "stock-media-prev"
+  },
+  "MediaSkipForward": {
+   "status": "NATIVE",
+   "name": "stock-media-next"
+  },
+  "ShallowHistory": {
+   "status": "NATIVE",
+   "name": "stock-history",
+   "note": "stock-history"
+  },
+  "EditSelect": {
+   "status": "NATIVE",
+   "name": "stock_draw-selection",
+   "note": "the OOo selection pointer (no marquee)"
+  },
+  "HelpWhatsthis": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "stock-help",
+    "stock_draw-selection"
+   ],
+   "note": "stock-help is a plain life-ring help; add the selection pointer"
+  },
+  "InsertLink": {
+   "status": "NATIVE",
+   "note": "stock_insert_url is a globe (insert URL), not a chain"
+  }
+ },
+ "kdeclassic": {
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "back",
+   "note": "go-previous here is a text-list glyph; back is the arrow"
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "forward",
+   "note": "go-next here is a text-list glyph; forward is the arrow"
+  },
+  "InsertLink": {
+   "status": "GAP",
+   "note": "link.png is a 3 px dot; no chain in the set"
+  },
+  "ListRemove": {
+   "status": "NATIVE",
+   "name": "edit_remove",
+   "note": "the partner of edit_add (22 px only); list-remove is an X-box"
+  },
+  "EditSelect": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "selecttool"
+   ],
+   "note": "the black pointer + a dotted marquee corner"
+  },
+  "PreviewRenderOn": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "pmrenderpreview",
+    "krec_record"
+   ],
+   "note": "KPovModeler's render-preview + the red record disc as the pip"
+  },
+  "VcsDiff": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "edit-copy",
+    "edit_add"
+   ],
+   "note": "two sheets + plus/minus"
+  },
+  "ZoomInY": {
+   "status": "NATIVE",
+   "note": "view_fit_height: a window frame, no magnifier"
+  },
+  "Merge": {
+   "status": "NATIVE",
+   "note": "mergecell: a spreadsheet merge-cells glyph"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "smallclock",
+    "media-skip-backward"
+   ],
+   "note": "clock + transport triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "smallclock",
+    "media-skip-forward"
+   ],
+   "note": "clock + transport triangle"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "flag",
+    "back"
+   ],
+   "note": "the flag + back arrow"
+  }
+ },
+ "locolor": {
+  "GoPrevious": {
+   "status": "NATIVE",
+   "name": "back"
+  },
+  "GoNext": {
+   "status": "NATIVE",
+   "name": "forward"
+  },
+  "ListAdd": {
+   "status": "GAP",
+   "note": "no plus in locolor's own files (it inherits kdeclassic's edit_add at runtime)"
+  },
+  "InsertLink": {
+   "status": "GAP",
+   "note": "link.png is a 3 px dot"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "clock",
+    "media-skip-backward"
+   ],
+   "note": "clock + transport triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "clock",
+    "media-skip-forward"
+   ],
+   "note": "clock + transport triangle"
+  },
+  "MediaPlaybackStart": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "media-skip-forward"
+   ],
+   "note": "the skip glyph's triangle without its bar"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "flag",
+    "back"
+   ],
+   "note": "the flag + back arrow"
+  }
+ },
+ "crystalsvg": {
+  "MediaRecord": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "media-playback-start"
+   ],
+   "note": "a red disc in the transport style"
+  },
+  "PreviewRenderOn": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "document-print-preview",
+    "media-playback-start"
+   ],
+   "note": "the preview glyph + a red pip"
+  },
+  "InsertLink": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "link_overlay"
+   ],
+   "note": "the 8 px link emblem arrow enlarged"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "player_time",
+    "media-skip-backward"
+   ],
+   "note": "the player clock + transport triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "player_time",
+    "media-skip-forward"
+   ],
+   "note": "the player clock + transport triangle"
+  }
+ },
+ "chicago95": {
+  "EditSelect": {
+   "status": "NATIVE",
+   "note": "edit-select here is a text I-beam, not a pointer over a marquee"
+  },
+  "ViewHidden": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "image-red-eye",
+    "process-stop"
+   ],
+   "note": "the red-eye eye + the red cross"
+  },
+  "ShallowHistory": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "clock"
+   ],
+   "note": "the Win95 clock face"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "clock",
+    "media-skip-backward"
+   ],
+   "note": "clock + transport"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "clock",
+    "media-skip-forward"
+   ],
+   "note": "clock + transport"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "edit-flag",
+    "go-previous"
+   ],
+   "note": "the red flag + back arrow"
+  }
+ },
+ "se98": {
+  "EditSelect": {
+   "status": "NATIVE",
+   "note": "edit-select here is a text I-beam, not a pointer over a marquee"
+  },
+  "ViewHidden": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "mate-eyes-applet",
+    "process-stop"
+   ],
+   "note": "the eyes applet + the red cross"
+  },
+  "InsertLink": {
+   "status": "NATIVE",
+   "name": "link"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "clock",
+    "media-skip-backward"
+   ],
+   "note": "clock + transport"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "clock",
+    "media-skip-forward"
+   ],
+   "note": "clock + transport"
+  },
+  "GoJumpDeclaration": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "edit-flag",
+    "go-previous"
+   ],
+   "note": "the red flag + back arrow"
+  }
+ },
+ "cde": {
+  "Lock": {
+   "status": "NATIVE",
+   "name": "Fplock",
+   "note": "the front panel padlock"
+  },
+  "Unlock": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fplock"
+   ],
+   "note": "that padlock opened"
+  },
+  "ShallowHistory": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Dtclock"
+   ],
+   "note": "Dthist is the help browser's chain-link history; the clock is the picture"
+  },
+  "EditUndo": {
+   "status": "GAP",
+   "note": "no curved arrow anywhere in the set"
+  },
+  "GoPrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "the bevelled front-panel triangle turned"
+  },
+  "GoNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "the bevelled front-panel triangle turned"
+  },
+  "BboxPrev": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "BboxNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "KeyframePrevious": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Dtclock",
+    "Fpup"
+   ],
+   "note": "clock + bevelled triangle"
+  },
+  "KeyframeNext": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Dtclock",
+    "Fpup"
+   ],
+   "note": "clock + bevelled triangle"
+  },
+  "MediaPlaybackStart": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "bevelled triangle turned"
+  },
+  "MediaPlaybackStop": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "a bevelled square"
+  },
+  "MediaPlaybackPause": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "two bevelled bars"
+  },
+  "MediaSkipBackward": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "MediaSkipForward": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpup"
+   ],
+   "note": "bevelled triangle + bar"
+  },
+  "DialogInformation": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Dtinfo"
+   ],
+   "note": "the Info browser's blue 'i'"
+  },
+  "DialogCancel": {
+   "status": "COMPOSABLE",
+   "prims": [
+    "Fpexit"
+   ],
+   "note": "the EXIT plate; no red cross in the set"
+  },
+  "WindowClose": {
+   "status": "GAP",
+   "note": "Motif's close is a window-menu button, not a glyph"
+  }
+ }
+}

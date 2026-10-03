@@ -1,0 +1,5 @@
+# Research
+
+The architect's own research scripts and their derived tables, committed so the cloud planner can read them (architect 2026-10-03, "agree all"). The material they were run over — the icon-theme sets, their contact sheets, the Windows 95 screenshots — is third-party, about 1.3 GB, and stays out of the public repository on size and licence; it is uploaded to the cloud by hand beside the welcome-back note when an arc needs it.
+
+- `retro_icons/` — the icon survey behind THE ICONS ARC (the cloud's first job after 2026-10-04): `survey.py` indexes candidate retro icon sets against the app's roster and renders contact sheets, `sheets.py` lays the sheets out on two dark grounds, `hand.py` maps the two sets with no freedesktop naming (ReactOS, Nautilus 1.0), `contrast.py` scores each native icon's legibility on a dark ground; `coverage.json`, `contrast.json`, `overrides.json`, `hand_*.json` and `spec_names.json` are their outputs. The scripts expect their `sets/` and `work/` folders beside them; they are a record of how the tables were made, not a tool the build runs.

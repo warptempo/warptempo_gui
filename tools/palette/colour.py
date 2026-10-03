@@ -8,6 +8,11 @@
 # showed an untagged sRGB constant at full screen before the app's window became a Display-P3 layer: the pass applied
 # twice, measured patch for patch off the tablet's screencaps (2026-10-02); the matrix reproduces that measurement
 # to the unit except on the colours in MEASURED_TWO_PASS, which hold the measured bytes.
+#
+# relief_quartet and highlight_text_ink are the app's palette scaffold ported (src/gui/render.h's palette block:
+# scaled_word, geometric_mean_word, relative_luminance, kHighlightTextLuminanceThreshold, highlight_text_ink), integer
+# arithmetic for integer arithmetic, so a theme's "auto" relief lands on the app's bytes; the asserts under them are
+# the app's static_asserts, run at import.
 
 
 def s2l(c):
@@ -59,3 +64,67 @@ def two_pass(rgb):
     srgb_to_p3 twice."""
     k = tuple(int(v) for v in rgb)
     return MEASURED_TWO_PASS.get(k) or tuple(srgb_to_p3(srgb_to_p3(k)))
+
+
+# ------------------------------------------------------------------ the app's palette scaffold (render.h)
+def scaled_word(c, num, den):
+    """render.h scaled_word on one channel: c x num / den, a half rounded up, clamped at 255 (integer arithmetic)."""
+    return min(255, (2 * c * num + den) // (2 * den))
+
+def geometric_mean(a, b):
+    """render.h geometric_mean_word on one channel: round(sqrt(a x b)), the integer root by search and the half
+    decided exactly (rounds up iff a x b >= n^2 + n + 1)."""
+    x = a * b; n = 0
+    while (n + 1) * (n + 1) <= x: n += 1
+    return n + 1 if x >= n * n + n + 1 else n
+
+def srgb_channel_to_linear(c):
+    """render.h srgb_channel_to_linear, step for step (the 2.4 power as x^2 x (x^2)^(1/5), the fifth root by 64
+    Newton steps from above), so the luminance is the app's double bit for bit."""
+    if c <= 0.04045: return c / 12.92
+    x2 = ((c + 0.055) / 1.055) * ((c + 0.055) / 1.055)
+    y = 1.0
+    for _ in range(64): y = (4.0 * y + x2 / (y * y * y * y)) / 5.0
+    return x2 * y
+
+def relative_luminance(rgb):
+    """render.h relative_luminance: the Rec. 709 weights over the sRGB-linearized channels of the BYTES as given (a
+    theme byte is a P3 byte and the app's constant alike; no conversion), each channel byte / 255."""
+    r, g, b = (v / 255.0 for v in rgb)
+    return 0.2126 * srgb_channel_to_linear(r) + 0.7152 * srgb_channel_to_linear(g) + 0.0722 * srgb_channel_to_linear(b)
+
+# render.h kHighlightTextLuminanceThreshold: the equal-contrast point, where black and the label white stand at the
+# same contrast ratio over a fill (L = sqrt(1.05 x 0.05) - 0.05).
+LUMINANCE_THRESHOLD = 0.17912878474779
+
+def highlight_text_ink(fill, light):
+    """render.h highlight_text_ink: the chrome's text over a fill is black (kRedesignHighlightLabel) when the fill's
+    luminance exceeds the threshold, else the LIGHT ink `light` (the app's kRedesignLabel, the label white). Its
+    domain is the chrome's text and glyphs; the flags' black label is their own rule."""
+    return (0, 0, 0) if relative_luminance(fill) > LUMINANCE_THRESHOLD else tuple(light)
+
+def relief_quartet(ground):
+    """-> ((hilight, light3d, shadow, dkshadow), branch): Windows' COLOR_3D* family derived from the GROUND, the branch
+    taken by the ground's relative luminance against LUMINANCE_THRESHOLD (architect 2026-10-03). THE THRESHOLD IS
+    highlight_text_ink's, one number for both rules: a ground the label white reads against is a dark ground, so the
+    ground that takes white text is the ground that takes the dark relief rule.
+      'dark' (luminance at or below the threshold): the app's ratio rule (render.h's RELIEF SET) -- Hilight = ground x
+        196/100, Shadow x 5/8, DkShadow x 21/100 (scaled_word), 3DLight the geometric mean of the ground and that
+        Hilight; #303030 -> 5E5E5E / 434343 / 1E1E1E / 0A0A0A.
+      'light' (above it): Windows' fractions (architect 2026-10-03) -- Hilight white, 3DLight halfway from the ground
+        to white with the half rounded down, Shadow two thirds of the ground rounded to nearest (scaled_word 2/3; a
+        third never lands on a half), DkShadow black; #C0C0C0 -> FFFFFF / DFDFDF / 808080 / 000000, Windows 95
+        Standard."""
+    g = tuple(int(v) for v in ground)
+    if relative_luminance(g) <= LUMINANCE_THRESHOLD:
+        hi = tuple(scaled_word(c, 196, 100) for c in g)
+        return (hi, tuple(geometric_mean(c, h) for c, h in zip(g, hi)), tuple(scaled_word(c, 5, 8) for c in g),
+                tuple(scaled_word(c, 21, 100) for c in g)), 'dark'
+    return ((255, 255, 255), tuple((c + 255) // 2 for c in g), tuple(scaled_word(c, 2, 3) for c in g), (0, 0, 0)), 'light'
+
+# THE CHECKS (the app's static_asserts, run at import), one per scheme:
+assert relief_quartet((0xC0, 0xC0, 0xC0)) == (((255, 255, 255), (223, 223, 223), (128, 128, 128), (0, 0, 0)), 'light')   # Windows 95 Standard
+assert relief_quartet((0x30, 0x30, 0x30)) == (((94, 94, 94), (67, 67, 67), (30, 30, 30), (10, 10, 10)), 'dark')           # the app's dark ground
+assert highlight_text_ink((0x00, 0x00, 0x80), (252, 252, 252)) == (252, 252, 252)    # Windows' highlight #000080: the label
+assert highlight_text_ink((0xC0, 0xC0, 0xC0), (252, 252, 252)) == (0, 0, 0)          # Windows 95's face #C0C0C0: black
+assert highlight_text_ink((0xFF, 0xFF, 0xE1), (252, 252, 252)) == (0, 0, 0)          # INFO #FFFFE1: black

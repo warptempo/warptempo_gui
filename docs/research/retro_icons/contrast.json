@@ -1,0 +1,1257 @@
+{
+ "chicago95": {
+  "measured": 37,
+  "sink_A": [
+   "DocumentSave",
+   "EditUndo",
+   "EditRedo",
+   "ZoomFitBest",
+   "ZoomOriginal",
+   "ListAdd",
+   "ListRemove",
+   "InsertLink",
+   "DialogOkApply",
+   "MediaSkipBackward",
+   "MediaPlaybackStart",
+   "MediaPlaybackStop",
+   "MediaPlaybackPause",
+   "MediaSkipForward",
+   "DialogCancel",
+   "BboxPrev",
+   "BboxNext",
+   "MediaRepeatSingle",
+   "WindowClose",
+   "EditCopy"
+  ],
+  "sink_B": [
+   "EditUndo",
+   "EditRedo",
+   "MediaRepeatSingle"
+  ],
+  "detail": {
+   "DocumentSave": [
+    0.52,
+    0.0
+   ],
+   "EditUndo": [
+    1.0,
+    1.0
+   ],
+   "EditRedo": [
+    1.0,
+    1.0
+   ],
+   "MediaRecord": [
+    0.0,
+    0.0
+   ],
+   "ZoomFitBest": [
+    0.83,
+    0.26
+   ],
+   "ZoomOriginal": [
+    0.83,
+    0.29
+   ],
+   "ListAdd": [
+    1.0,
+    0.0
+   ],
+   "ListRemove": [
+    1.0,
+    0.0
+   ],
+   "InsertLink": [
+    0.69,
+    0.1
+   ],
+   "Merge": [
+    0.46,
+    0.0
+   ],
+   "GoJump": [
+    0.47,
+    0.0
+   ],
+   "DialogOkApply": [
+    1.0,
+    0.0
+   ],
+   "EditSelect": [
+    0.3,
+    0.0
+   ],
+   "GoPrevious": [
+    0.45,
+    0.0
+   ],
+   "GoNext": [
+    0.45,
+    0.0
+   ],
+   "DocumentRevert": [
+    0.39,
+    0.12
+   ],
+   "MediaSkipBackward": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackStart": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackStop": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackPause": [
+    1.0,
+    0.0
+   ],
+   "MediaSkipForward": [
+    1.0,
+    0.0
+   ],
+   "DialogCancel": [
+    1.0,
+    0.0
+   ],
+   "GoDown": [
+    0.45,
+    0.0
+   ],
+   "GoUp": [
+    0.45,
+    0.0
+   ],
+   "Lock": [
+    0.22,
+    0.0
+   ],
+   "Unlock": [
+    0.22,
+    0.0
+   ],
+   "BboxPrev": [
+    0.54,
+    0.0
+   ],
+   "BboxNext": [
+    0.54,
+    0.0
+   ],
+   "SettingsConfigure": [
+    0.29,
+    0.0
+   ],
+   "Folder": [
+    0.12,
+    0.0
+   ],
+   "AudioXWav": [
+    0.22,
+    0.0
+   ],
+   "MediaRepeatSingle": [
+    1.0,
+    1.0
+   ],
+   "DialogInformation": [
+    0.24,
+    0.11
+   ],
+   "DialogError": [
+    0.2,
+    0.2
+   ],
+   "WindowClose": [
+    1.0,
+    0.0
+   ],
+   "EditCopy": [
+    0.56,
+    0.24
+   ],
+   "EditDelete": [
+    0.0,
+    0.0
+   ]
+  }
+ },
+ "se98": {
+  "measured": 38,
+  "sink_A": [
+   "ListAdd",
+   "ListRemove",
+   "DialogOkApply",
+   "MediaSkipBackward",
+   "MediaPlaybackStart",
+   "MediaPlaybackStop",
+   "MediaPlaybackPause",
+   "MediaSkipForward",
+   "DialogCancel",
+   "MediaRepeatSingle",
+   "WindowClose"
+  ],
+  "sink_B": [
+   "MediaRepeatSingle",
+   "DialogError",
+   "EditDelete"
+  ],
+  "detail": {
+   "DocumentSave": [
+    0.29,
+    0.32
+   ],
+   "EditUndo": [
+    0.36,
+    0.0
+   ],
+   "EditRedo": [
+    0.31,
+    0.0
+   ],
+   "MediaRecord": [
+    0.0,
+    0.0
+   ],
+   "ZoomFitBest": [
+    0.26,
+    0.26
+   ],
+   "ZoomOriginal": [
+    0.29,
+    0.29
+   ],
+   "ListAdd": [
+    1.0,
+    0.0
+   ],
+   "ListRemove": [
+    1.0,
+    0.0
+   ],
+   "InsertLink": [
+    0.24,
+    0.0
+   ],
+   "Merge": [
+    0.46,
+    0.0
+   ],
+   "GoJump": [
+    0.36,
+    0.0
+   ],
+   "DialogOkApply": [
+    1.0,
+    0.0
+   ],
+   "ShallowHistory": [
+    0.23,
+    0.23
+   ],
+   "EditSelect": [
+    0.3,
+    0.0
+   ],
+   "GoPrevious": [
+    0.38,
+    0.0
+   ],
+   "GoNext": [
+    0.33,
+    0.0
+   ],
+   "DocumentRevert": [
+    0.39,
+    0.12
+   ],
+   "MediaSkipBackward": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackStart": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackStop": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackPause": [
+    1.0,
+    0.0
+   ],
+   "MediaSkipForward": [
+    1.0,
+    0.0
+   ],
+   "DialogCancel": [
+    1.0,
+    0.0
+   ],
+   "GoDown": [
+    0.33,
+    0.0
+   ],
+   "GoUp": [
+    0.38,
+    0.0
+   ],
+   "Lock": [
+    0.22,
+    0.0
+   ],
+   "Unlock": [
+    0.22,
+    0.0
+   ],
+   "BboxPrev": [
+    0.35,
+    0.0
+   ],
+   "BboxNext": [
+    0.31,
+    0.0
+   ],
+   "SettingsConfigure": [
+    0.29,
+    0.0
+   ],
+   "Folder": [
+    0.14,
+    0.0
+   ],
+   "AudioXWav": [
+    0.1,
+    0.14
+   ],
+   "MediaRepeatSingle": [
+    1.0,
+    1.0
+   ],
+   "DialogInformation": [
+    0.24,
+    0.1
+   ],
+   "DialogError": [
+    0.49,
+    0.73
+   ],
+   "WindowClose": [
+    1.0,
+    0.0
+   ],
+   "EditCopy": [
+    0.33,
+    0.14
+   ],
+   "EditDelete": [
+    0.31,
+    0.57
+   ]
+  }
+ },
+ "bluecurve": {
+  "measured": 37,
+  "sink_A": [
+   "MediaRecord",
+   "ZoomFitBest",
+   "ListAdd",
+   "ListRemove",
+   "Mathmode",
+   "DialogOkApply",
+   "MediaSkipBackward",
+   "MediaPlaybackStart",
+   "MediaPlaybackStop",
+   "MediaPlaybackPause",
+   "MediaSkipForward",
+   "DialogCancel",
+   "GoDown",
+   "GoUp",
+   "BboxPrev",
+   "BboxNext",
+   "SettingsConfigure",
+   "AudioXWav",
+   "WindowClose"
+  ],
+  "sink_B": [
+   "ListAdd",
+   "ListRemove",
+   "MediaSkipBackward",
+   "MediaPlaybackStart",
+   "MediaPlaybackStop",
+   "MediaPlaybackPause",
+   "MediaSkipForward",
+   "AudioXWav",
+   "DialogError"
+  ],
+  "detail": {
+   "DocumentSave": [
+    0.32,
+    0.15
+   ],
+   "EditUndo": [
+    0.48,
+    0.38
+   ],
+   "EditRedo": [
+    0.5,
+    0.45
+   ],
+   "MediaRecord": [
+    0.6,
+    0.37
+   ],
+   "ZoomFitBest": [
+    0.51,
+    0.49
+   ],
+   "ZoomOriginal": [
+    0.38,
+    0.2
+   ],
+   "ListAdd": [
+    0.56,
+    0.66
+   ],
+   "ListRemove": [
+    0.6,
+    0.6
+   ],
+   "InsertLink": [
+    0.39,
+    0.29
+   ],
+   "GoJump": [
+    0.42,
+    0.44
+   ],
+   "Mathmode": [
+    1.0,
+    0.0
+   ],
+   "DialogOkApply": [
+    0.52,
+    0.29
+   ],
+   "ShallowHistory": [
+    0.36,
+    0.24
+   ],
+   "EditSelect": [
+    0.23,
+    0.26
+   ],
+   "GoPrevious": [
+    0.45,
+    0.23
+   ],
+   "GoNext": [
+    0.45,
+    0.28
+   ],
+   "DocumentRevert": [
+    0.43,
+    0.29
+   ],
+   "MediaSkipBackward": [
+    1.0,
+    1.0
+   ],
+   "MediaPlaybackStart": [
+    1.0,
+    1.0
+   ],
+   "MediaPlaybackStop": [
+    1.0,
+    1.0
+   ],
+   "MediaPlaybackPause": [
+    1.0,
+    1.0
+   ],
+   "MediaSkipForward": [
+    1.0,
+    1.0
+   ],
+   "DialogCancel": [
+    0.57,
+    0.48
+   ],
+   "GoDown": [
+    0.51,
+    0.19
+   ],
+   "GoUp": [
+    0.51,
+    0.18
+   ],
+   "Lock": [
+    0.38,
+    0.3
+   ],
+   "BboxPrev": [
+    0.57,
+    0.2
+   ],
+   "BboxNext": [
+    0.57,
+    0.27
+   ],
+   "SettingsConfigure": [
+    0.57,
+    0.35
+   ],
+   "Folder": [
+    0.27,
+    0.14
+   ],
+   "AudioXWav": [
+    0.59,
+    0.55
+   ],
+   "GoParentFolder": [
+    0.3,
+    0.13
+   ],
+   "DialogInformation": [
+    0.15,
+    0.26
+   ],
+   "DialogError": [
+    0.38,
+    0.62
+   ],
+   "WindowClose": [
+    1.0,
+    0.0
+   ],
+   "EditCopy": [
+    0.32,
+    0.08
+   ],
+   "EditDelete": [
+    0.31,
+    0.26
+   ]
+  }
+ },
+ "crystalsvg": {
+  "measured": 39,
+  "sink_A": [
+   "BlackSum",
+   "GoJump",
+   "MusicNote16th"
+  ],
+  "sink_B": [
+   "BlackSum",
+   "MediaSkipBackward",
+   "MediaPlaybackStart",
+   "MediaPlaybackStop",
+   "MediaPlaybackPause",
+   "MediaSkipForward",
+   "GoDown",
+   "GoUp",
+   "BboxNext"
+  ],
+  "detail": {
+   "DocumentSave": [
+    0.22,
+    0.29
+   ],
+   "EditUndo": [
+    0.0,
+    0.41
+   ],
+   "EditRedo": [
+    0.0,
+    0.28
+   ],
+   "ZoomFitBest": [
+    0.0,
+    0.06
+   ],
+   "ZoomOriginal": [
+    0.0,
+    0.06
+   ],
+   "ZoomInY": [
+    0.05,
+    0.13
+   ],
+   "ListAdd": [
+    0.0,
+    0.0
+   ],
+   "ListRemove": [
+    0.17,
+    0.41
+   ],
+   "BlackSum": [
+    1.0,
+    1.0
+   ],
+   "GoJump": [
+    1.0,
+    0.4
+   ],
+   "MusicNote16th": [
+    1.0,
+    0.0
+   ],
+   "Mathmode": [
+    0.34,
+    0.07
+   ],
+   "DialogOkApply": [
+    0.03,
+    0.44
+   ],
+   "ShallowHistory": [
+    0.19,
+    0.27
+   ],
+   "GoPrevious": [
+    0.14,
+    0.23
+   ],
+   "GoNext": [
+    0.14,
+    0.24
+   ],
+   "DocumentRevert": [
+    0.04,
+    0.09
+   ],
+   "MediaSkipBackward": [
+    0.33,
+    0.74
+   ],
+   "MediaPlaybackStart": [
+    0.29,
+    0.65
+   ],
+   "MediaPlaybackStop": [
+    0.28,
+    0.64
+   ],
+   "MediaPlaybackPause": [
+    0.28,
+    0.6
+   ],
+   "MediaSkipForward": [
+    0.14,
+    0.59
+   ],
+   "DialogCancel": [
+    0.0,
+    0.05
+   ],
+   "GoDown": [
+    0.39,
+    0.63
+   ],
+   "GoUp": [
+    0.3,
+    0.55
+   ],
+   "Lock": [
+    0.06,
+    0.11
+   ],
+   "Unlock": [
+    0.06,
+    0.19
+   ],
+   "BboxPrev": [
+    0.25,
+    0.49
+   ],
+   "BboxNext": [
+    0.45,
+    0.69
+   ],
+   "TabDetach": [
+    0.0,
+    0.19
+   ],
+   "SettingsConfigure": [
+    0.02,
+    0.06
+   ],
+   "Folder": [
+    0.12,
+    0.24
+   ],
+   "AudioXWav": [
+    0.0,
+    0.01
+   ],
+   "DialogInformation": [
+    0.01,
+    0.19
+   ],
+   "DialogError": [
+    0.1,
+    0.24
+   ],
+   "WindowClose": [
+    0.39,
+    0.49
+   ],
+   "EditCopy": [
+    0.0,
+    0.0
+   ],
+   "HelpWhatsthis": [
+    0.05,
+    0.1
+   ],
+   "EditDelete": [
+    0.0,
+    0.0
+   ]
+  }
+ },
+ "kdeclassic": {
+  "measured": 42,
+  "sink_A": [
+   "EditUndo",
+   "EditRedo",
+   "BlackSum",
+   "GoJump",
+   "MusicNote16th",
+   "Mathmode",
+   "DocumentRevert",
+   "MediaSkipBackward",
+   "MediaPlaybackStart",
+   "MediaPlaybackStop",
+   "MediaPlaybackPause",
+   "MediaSkipForward",
+   "BboxPrev",
+   "MediaRepeatSingle",
+   "HelpWhatsthis"
+  ],
+  "sink_B": [
+   "DocumentSave",
+   "MediaRecord",
+   "ViewHidden"
+  ],
+  "detail": {
+   "DocumentSave": [
+    0.46,
+    0.57
+   ],
+   "EditUndo": [
+    0.57,
+    0.49
+   ],
+   "EditRedo": [
+    0.57,
+    0.49
+   ],
+   "MediaRecord": [
+    0.33,
+    0.61
+   ],
+   "ZoomFitBest": [
+    0.31,
+    0.34
+   ],
+   "ZoomOriginal": [
+    0.31,
+    0.34
+   ],
+   "ZoomInY": [
+    0.28,
+    0.38
+   ],
+   "ListAdd": [
+    0.25,
+    0.35
+   ],
+   "ListRemove": [
+    0.28,
+    0.45
+   ],
+   "ViewHidden": [
+    0.0,
+    0.51
+   ],
+   "Merge": [
+    0.43,
+    0.0
+   ],
+   "BlackSum": [
+    1.0,
+    0.0
+   ],
+   "GoJump": [
+    0.8,
+    0.32
+   ],
+   "MusicNote16th": [
+    1.0,
+    0.0
+   ],
+   "Mathmode": [
+    1.0,
+    0.0
+   ],
+   "DialogOkApply": [
+    0.39,
+    0.25
+   ],
+   "ShallowHistory": [
+    0.39,
+    0.25
+   ],
+   "GoPrevious": [
+    0.48,
+    0.38
+   ],
+   "GoNext": [
+    0.48,
+    0.48
+   ],
+   "DocumentRevert": [
+    0.54,
+    0.44
+   ],
+   "MediaSkipBackward": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackStart": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackStop": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackPause": [
+    1.0,
+    0.0
+   ],
+   "MediaSkipForward": [
+    1.0,
+    0.0
+   ],
+   "DialogCancel": [
+    0.36,
+    0.43
+   ],
+   "GoDown": [
+    0.48,
+    0.48
+   ],
+   "GoUp": [
+    0.48,
+    0.38
+   ],
+   "Lock": [
+    0.21,
+    0.45
+   ],
+   "Unlock": [
+    0.21,
+    0.46
+   ],
+   "BboxPrev": [
+    0.51,
+    0.34
+   ],
+   "BboxNext": [
+    0.48,
+    0.43
+   ],
+   "TabDetach": [
+    0.45,
+    0.23
+   ],
+   "SettingsConfigure": [
+    0.38,
+    0.49
+   ],
+   "Folder": [
+    0.28,
+    0.35
+   ],
+   "AudioXWav": [
+    0.19,
+    0.35
+   ],
+   "MediaRepeatSingle": [
+    0.6,
+    0.0
+   ],
+   "DialogError": [
+    0.0,
+    0.0
+   ],
+   "WindowClose": [
+    0.19,
+    0.3
+   ],
+   "EditCopy": [
+    0.2,
+    0.17
+   ],
+   "HelpWhatsthis": [
+    1.0,
+    0.33
+   ],
+   "EditDelete": [
+    0.17,
+    0.32
+   ]
+  }
+ },
+ "locolor": {
+  "measured": 30,
+  "sink_A": [
+   "DocumentSave",
+   "EditUndo",
+   "EditRedo",
+   "BlackSum",
+   "GoJump",
+   "VcsDiff",
+   "DocumentRevert",
+   "MediaSkipBackward",
+   "MediaPlaybackStop",
+   "MediaPlaybackPause",
+   "MediaSkipForward",
+   "BboxPrev",
+   "BboxNext",
+   "WindowClose",
+   "EditCopy",
+   "HelpWhatsthis"
+  ],
+  "sink_B": [
+   "ListRemove",
+   "BlackSum"
+  ],
+  "detail": {
+   "DocumentSave": [
+    0.71,
+    0.32
+   ],
+   "EditUndo": [
+    0.6,
+    0.03
+   ],
+   "EditRedo": [
+    0.59,
+    0.02
+   ],
+   "ListRemove": [
+    0.2,
+    0.66
+   ],
+   "BlackSum": [
+    1.0,
+    1.0
+   ],
+   "GoJump": [
+    1.0,
+    0.4
+   ],
+   "DialogOkApply": [
+    0.39,
+    0.25
+   ],
+   "VcsDiff": [
+    0.58,
+    0.05
+   ],
+   "ShallowHistory": [
+    0.33,
+    0.23
+   ],
+   "GoPrevious": [
+    0.4,
+    0.05
+   ],
+   "GoNext": [
+    0.41,
+    0.06
+   ],
+   "DocumentRevert": [
+    0.53,
+    0.12
+   ],
+   "MediaSkipBackward": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackStop": [
+    1.0,
+    0.0
+   ],
+   "MediaPlaybackPause": [
+    1.0,
+    0.0
+   ],
+   "MediaSkipForward": [
+    1.0,
+    0.0
+   ],
+   "GoDown": [
+    0.41,
+    0.06
+   ],
+   "GoUp": [
+    0.41,
+    0.06
+   ],
+   "Lock": [
+    0.28,
+    0.35
+   ],
+   "Unlock": [
+    0.28,
+    0.36
+   ],
+   "BboxPrev": [
+    0.51,
+    0.04
+   ],
+   "BboxNext": [
+    0.52,
+    0.05
+   ],
+   "SettingsConfigure": [
+    0.3,
+    0.15
+   ],
+   "Folder": [
+    0.34,
+    0.46
+   ],
+   "AudioXWav": [
+    0.28,
+    0.14
+   ],
+   "DialogError": [
+    0.0,
+    0.0
+   ],
+   "WindowClose": [
+    0.76,
+    0.0
+   ],
+   "EditCopy": [
+    0.52,
+    0.12
+   ],
+   "HelpWhatsthis": [
+    1.0,
+    0.33
+   ],
+   "EditDelete": [
+    0.33,
+    0.12
+   ]
+  }
+ },
+ "cde": {
+  "measured": 10,
+  "sink_A": [],
+  "sink_B": [],
+  "detail": {
+   "ListAdd": [
+    0.0,
+    0.0
+   ],
+   "ListRemove": [
+    0.0,
+    0.0
+   ],
+   "InsertLink": [
+    0.12,
+    0.25
+   ],
+   "GoDown": [
+    0.0,
+    0.06
+   ],
+   "GoUp": [
+    0.0,
+    0.02
+   ],
+   "Lock": [
+    0.19,
+    0.34
+   ],
+   "Folder": [
+    0.22,
+    0.22
+   ],
+   "AudioXWav": [
+    0.2,
+    0.08
+   ],
+   "GoParentFolder": [
+    0.34,
+    0.3
+   ],
+   "EditDelete": [
+    0.14,
+    0.14
+   ]
+  }
+ },
+ "reactos": {
+  "measured": 21,
+  "sink_A": [
+   "DialogCancel",
+   "DialogError"
+  ],
+  "sink_B": [
+   "DialogCancel",
+   "DialogError",
+   "HelpWhatsthis"
+  ],
+  "detail": {
+   "DocumentSave": [
+    0.0,
+    0.11
+   ],
+   "EditUndo": [
+    0.0,
+    0.0
+   ],
+   "EditRedo": [
+    0.0,
+    0.0
+   ],
+   "DialogOkApply": [
+    0.0,
+    0.0
+   ],
+   "GoPrevious": [
+    0.0,
+    0.29
+   ],
+   "GoNext": [
+    0.0,
+    0.29
+   ],
+   "MediaSkipBackward": [
+    0.11,
+    0.23
+   ],
+   "MediaPlaybackStart": [
+    0.07,
+    0.19
+   ],
+   "MediaPlaybackStop": [
+    0.0,
+    0.31
+   ],
+   "MediaPlaybackPause": [
+    0.0,
+    0.35
+   ],
+   "MediaSkipForward": [
+    0.12,
+    0.24
+   ],
+   "DialogCancel": [
+    0.53,
+    0.91
+   ],
+   "GoUp": [
+    0.0,
+    0.29
+   ],
+   "SettingsConfigure": [
+    0.0,
+    0.13
+   ],
+   "Folder": [
+    0.0,
+    0.29
+   ],
+   "AudioXWav": [
+    0.0,
+    0.48
+   ],
+   "DialogInformation": [
+    0.19,
+    0.16
+   ],
+   "DialogError": [
+    0.53,
+    0.91
+   ],
+   "EditCopy": [
+    0.0,
+    0.0
+   ],
+   "HelpWhatsthis": [
+    0.28,
+    0.55
+   ],
+   "EditDelete": [
+    0.19,
+    0.21
+   ]
+  }
+ },
+ "nautilus1": {
+  "measured": 9,
+  "sink_A": [
+   "GoPrevious",
+   "GoNext",
+   "GoUp"
+  ],
+  "sink_B": [
+   "GoPrevious",
+   "GoNext",
+   "GoUp"
+  ],
+  "detail": {
+   "ListAdd": [
+    0.17,
+    0.17
+   ],
+   "ListRemove": [
+    0.23,
+    0.23
+   ],
+   "GoPrevious": [
+    1.0,
+    1.0
+   ],
+   "GoNext": [
+    1.0,
+    1.0
+   ],
+   "DialogCancel": [
+    0.0,
+    0.14
+   ],
+   "GoUp": [
+    1.0,
+    1.0
+   ],
+   "Folder": [
+    0.2,
+    0.0
+   ],
+   "AudioXWav": [
+    0.15,
+    0.25
+   ],
+   "EditDelete": [
+    0.34,
+    0.46
+   ]
+  }
+ }
+}
