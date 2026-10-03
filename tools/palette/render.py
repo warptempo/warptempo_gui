@@ -278,21 +278,23 @@ def flag_seat(th):
     the marker lane's height and the label's baseline offset under the box's top, device rows. THE MEASURED PADS: the
     app seats a flag label as a text line under the box's dark top band (paint_handler.cpp: baseline = box top + edge_h +
     ceil(ascent), 228 + 2 + 30 = 260 on 1002) and the box ends at the descent line (2 + 30 + 8 = 40, the lane's 20 logical
-    rows, no ground above or below). At the new face: need = edge_h + ceil(ascent) + ceil(descent). need <= the measured
-    box: the box keeps its measured rows (the whole lane). Otherwise the box grows to need rounded up to whole logical
-    rows, and the marker lane must hold it plus one logical row of ground above and below: lane = max(measured, box +
-    2 x LW), the shortfall opened at the lane's bottom (shift_scene 'marker') and the box centred in the lane."""
+    rows, no ground above or below). At the new face: need = edge_h + ceil(ascent) + ceil(descent). need = the measured
+    box (the app's face): the box and the lane as measured. Otherwise the box is need rounded up to whole logical rows
+    and the lane follows the text BOTH WAYS, one logical row of ground above and below the box: a larger face grows it,
+    lane = max(measured, box + 2 x LW); a smaller one shrinks it, lane = min(measured, box + 2 x LW) (a box within
+    two logical rows of the measured one keeps the measured lane, the box centred in it). The lane's difference from
+    the measured one is opened (or closed, negative) at its bottom (shift_scene 'marker') and the box centred in it."""
     if th.opt['fonts']['ui_px'] is None: return None
     F = BASE_SCENE['flags']; px = ui_font_px(th)
     asc, desc = C.font_extents(C.SANS, px)[:2]
     off = F['edge_h'] + math.ceil(asc); need = off + math.ceil(desc)
     box = F['y1'] - F['y0']; lane = BASE_SCENE['lanes']['marker'][1] - BASE_SCENE['lanes']['marker'][0]
-    if need <= box: return box, lane, off
-    box = -(-need // LW) * LW
-    return box, max(lane, box + 2 * LW), off
+    if need == box: return box, lane, off
+    grown = need > box; box = -(-need // LW) * LW
+    return box, (max if grown else min)(lane, box + 2 * LW), off
 
 def marker_shift(th):
-    """flag_seat -> d, the device rows the marker lane grows by (0 when the measured lane holds the box)."""
+    """flag_seat -> d, the device rows the marker lane grows by (negative: shrinks by; 0 at the app's face)."""
     fs = flag_seat(th)
     return 0 if fs is None else fs[1] - (BASE_SCENE['lanes']['marker'][1] - BASE_SCENE['lanes']['marker'][0])
 
@@ -342,22 +344,26 @@ def ruler_layout_rows(th):
     return rows
 
 def ruler_shortfall(th):
-    """fonts.small_px on the app's seat rule (no ruler_layout) -> the device rows the ruler lane lacks to seat the
-    labels with the measured pads: the seat (ruler_seat_rows: the cap top kRulerLabelCapTopPx under the lane's top,
-    then ceil(ascent)) + the scene's head ground (kRulerHeadGroundPx x S, ruler_rule 'ground') + the drawn head, less
-    the scene's lane (56 = 30 + 2 + 24 on 1002). 0 when it holds them, with ruler_layout (which sizes the lane from the
-    face itself) and without small_px (ruler_label_pt keeps the lane: see What is approximated)."""
+    """fonts.small_px on the app's seat rule (no ruler_layout) -> the device rows the ruler lane changes by to seat the
+    labels with the measured pads, following the text BOTH WAYS. It grows by what it lacks: the seat (ruler_seat_rows:
+    the cap top kRulerLabelCapTopPx under the lane's top, then ceil(ascent)) + the scene's head ground
+    (kRulerHeadGroundPx x S, ruler_rule 'ground') + the drawn head, less the scene's lane (56 = 30 + 2 + 24 on 1002).
+    When that holds them it shrinks (negative) by the seat rows a face smaller than the app's saves, ruler_seat_rows(px)
+    - ruler_seat_rows(32) (the head's measured rows and its ground kept under the labels; 0 at the app's face and
+    above it). 0 with ruler_layout (which sizes the lane from the face itself, both ways) and without small_px
+    (ruler_label_pt keeps the lane: see What is approximated)."""
     if th.opt['fonts']['small_px'] is None or th.opt['ruler_layout'] is not None: return 0
     lane = BASE_SCENE['lanes']['ruler'][1] - BASE_SCENE['lanes']['ruler'][0]
-    need = ruler_seat_rows(ruler_label_px(th)) + BASE_SCENE['ruler_rule']['ground'] + head_rows_drawn(th)[1]
-    return max(0, need - lane)
+    seat = ruler_seat_rows(ruler_label_px(th))
+    need = seat + BASE_SCENE['ruler_rule']['ground'] + head_rows_drawn(th)[1]
+    return need - lane if need > lane else min(0, seat - ruler_seat_rows(C.SANS_PX))
 
 def pad_shift(th):
     """ruler_pad_top or ruler_layout -> d, the device rows the ruler lane grows by, opened at its top (0 at the
     default). ruler_layout's d is its lane (above + cap + below) less the scene's measured lane, and may be negative:
     the lane shrinks and the canvas takes the rows (shift_scene); the labels' seat is then ruler_label_seat's.
-    ruler_shortfall's rows are added to the pad's (opened at the top too; ruler_label_seat takes them back off the
-    labels' seat, so they land under the digits, above the head)."""
+    ruler_shortfall's rows are added to the pad's (opened at the top too, or closed there when negative;
+    ruler_label_seat takes them back off the labels' seat, so they land under the digits, above the head)."""
     rows = ruler_layout_rows(th)
     if rows is None: return th.num['ruler_pad_top'] * LW + ruler_shortfall(th)
     return sum(rows) - (BASE_SCENE['lanes']['ruler'][1] - BASE_SCENE['lanes']['ruler'][0])
@@ -398,9 +404,10 @@ def shift_scene(sc, d, at):
       at 'trim' (trim.lane_h): the trim lane d rows taller. Its bottom (its bottom border, the bar's lower bevel) moves
         down by d, its top rows (the ground's and the caps' bevels, the bar's upper bevel, the app grip's square
         hollow) stay; the ruler lane keeps its height and moves down whole.
-      at 'ruler' (ruler_pad_top, ruler_layout): d rows of ruler ground inserted at the ruler lane's top. The trim lane
-        and the ruler lane's top stay; the ruler lane is d rows taller. ruler_layout's d may be negative (the lane
-        shorter, everything below it moved up, the canvas taller); its label baseline is re-seated by ruler_label_seat.
+      at 'ruler' (ruler_pad_top, ruler_layout, fonts.small_px): d rows of ruler ground inserted at the ruler lane's
+        top. The trim lane and the ruler lane's top stay; the ruler lane is d rows taller. ruler_layout's d and
+        ruler_shortfall's may be negative (the lane shorter, everything below it moved up, the canvas taller); the label
+        baseline is re-seated by ruler_label_seat.
       at 'bottom' (buttons.case, case_delta's bottom d): the OTHER direction -- the bottom row d rows taller, opened
         at its top: the row's top (its border-top, the content rows' top) moves UP by d, and with it the well's bottom,
         the measured canvas bottom, the stems' bottoms, the row's buttons and separators (their air above kept), and
@@ -411,7 +418,8 @@ def shift_scene(sc, d, at):
       at 'marker' (fonts.ui_px, marker_shift): the marker lane d rows taller, opened at its BOTTOM (applied in the
         default lane order, the marker lane directly over the well, before order_scene): the lane's bottom, the ticks'
         bottom (every tick runs down the lane), the stems' tops, the well's top and the canvas top move down by d; the
-        flags' rows are seat_flags'.
+        flags' rows are seat_flags'. d may be negative (a smaller face: the lane shorter, the well's top and the canvas
+        top moved up, the canvas taller).
     d = 0 returns the scene itself."""
     if d == 0: return sc
     if at not in ('icon', 'trim', 'ruler', 'bottom', 'marker'): raise ValueError(at)
@@ -873,7 +881,8 @@ def ruler_label_seat(th):
     """-> (label px, baseline row) at ruler_label_pt: px = pt x 96 / 72 x S (12 pt = 32 px, the app's). With
     ruler_layout the baseline is the lane's top (after every shift and restack) + above + cap. Otherwise it is the
     scene's (lane top + ruler_pad_top + the seat at 32 px, after every shift and restack) re-seated by the app's
-    rule at the new size: the cap top stays kRulerLabelCapTopPx rows under the lane's top. The lane keeps its height."""
+    rule at the new size: the cap top stays kRulerLabelCapTopPx rows under the lane's top, ruler_shortfall's rows
+    (opened or closed at the lane's top) taken back off. Without fonts.small_px the lane keeps its height."""
     px = ruler_label_px(th); b = SCENE['ruler']['baseline']
     rows = ruler_layout_rows(th)
     if rows is not None: return px, SCENE['lanes']['ruler'][0] + rows[0] + rows[1]
@@ -931,7 +940,7 @@ def draw_flags(cr, th):
 
 def well_geometry(th):
     """-> (well top, well bottom, canvas top, canvas bottom), device rows, end-exclusive. The well's top is the lane
-    stack's bottom (moved only by trim.lane_h and ruler_pad_top / ruler_layout, shift_scene; lane_order never moves it); its bottom is the scene's well bottom moved by canvas_delta logical rows, the bottom row's
+    stack's bottom (moved only by buttons.case, trim.lane_h, ruler_pad_top / ruler_layout and the fonts lanes, both ways, shift_scene; lane_order never moves it); its bottom is the scene's well bottom moved by canvas_delta logical rows, the bottom row's
     border-top fixed (a positive delta needs a ground strip under the well: the scenes have none, gap 2 = 0). The
     list-form well's canvas is what its lines leave; "bordered" / "sunken" keep their measured seam rows."""
     L = SCENE['lanes']; wt, wb = L['well']; cv = SCENE['canvas']; d = th.num['canvas_delta'] * LW
