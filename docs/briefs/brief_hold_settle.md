@@ -1,0 +1,18 @@
+# BRIEF: the menu anchors' pill hold is 25 ms, measured — the twelve temporary logcat lines come out of the pen road and the Holding kind reads its own constant beside kHoverFadeMs (architect 2026-10-01, the hold measurement pass)
+
+Model: Opus, effort high. You are THE CODER: edit source only, build (`cmake --build build -j$(nproc)`) to self-check, read-only git only, no commits, no GUI launch, no scripts/. Read CLAUDE.md's COMMENTS rule. Retell at the owner with the date; no process citations.
+
+## 1. REMOVE the instrumentation
+`grep -n "TEMP HOLD MEASUREMENT" src/gui/platform_android.cpp` finds twelve lines (a lambda before the switch and four call sites). Delete every one, whole lines, nothing else in that file. `platform_android.cpp` is otherwise untouched — confirm with `git diff --stat`.
+
+## 2. THE MEASUREMENT (record it at the owner, render.h's HoverFade block, in the Holding paragraph and at the constant)
+On the tablet (Galaxy Tab S10 FE, the S Pen, 2026-10-01 23:33, twenty taps on the three anchors), the pen's HOVER_EXIT and the tip's DOWN carry THE SAME EVENT TIMESTAMP, and so do the UP and the HOVER_ENTER that follows: the gap is not in the input stream but in the HANDLING — the two reports land in the same loop pass (0–2 ms apart on the GUI's clock) or in the next one (9–11 ms apart), largest seen 11 ms. The hold's span is measured on the handling clock (monotonic_ms at the edge), so the hold must cover one loop pass plus the tick that retires it (the 5 ms repair tick). 25 ms covers the 11 twice over and the tick besides, and is below anything the eye reads as a tail. He suspected single-digit ms would do; the data says the gap is one frame.
+
+## 3. HARD-CODE the hold
+- A new constant beside `kHoverFadeMs` in render.h: `inline constexpr int64_t kMenuPillHoldMs = 25;` with its comment: what it is (the Holding kind's span — the pill stays full this long after the hover drops, then off at once), the measurement above in two or three sentences, and the rule it follows (a settled number is a constant, no settings key: the tuning rule at gui_input.h's hold-delay block). It rides no scale: a duration is not a length.
+- The Holding kind reads it: today a Holding rise sets `from = kHoverFadeMs` and the drop runs while `from - elapsed > 0`, so the hold IS kHoverFadeMs. Give the kind its own span — the cleanest shape is yours (a `hover_fade_span(kind)` the rise and `hover_fade_time`'s clamp read, or the Holding rise seating `from` at kMenuPillHoldMs with `hover_fade_time`'s clamp at the kind's span). Whatever you choose: a SnapIn / Reversing fade is byte-identical to today (100 ms, ten steps); a Holding face is full from the rise, full for exactly kMenuPillHoldMs after the drop on the handling clock, then off at the first tick after; a return inside the hold re-arms the whole hold at the next drop, as today. `hover_fade_digitize` and `level` are not read for a Holding face (hover_fade_steps) — keep that true.
+- Retell every comment that says the pill holds "100 ms" / "kHoverFadeMs": render.h's Holding paragraph and the "THE PILL DOES NOT FADE; IT HOLDS" paragraph, `hover_fade_edge`'s Holding comment, `redesign_button_hover_fade_kind` (app_state.h ~3321, the why lives there — read it and retell its number), and grep the tree for "100 ms" near "pill" / "hold" / "Holding" (paint_handler.cpp's menu-row block, input_pointer.cpp, docs/engineering/closed_questions.md line ~672 "the menu pill does not fade but holds 100 ms" → "holds 25 ms, measured 2026-10-01").
+- `-Wall -Wextra` clean.
+
+## REPORT
+Files touched, the shape you chose for the span, the build's last lines verbatim, and `git diff --stat`.

@@ -1,0 +1,3 @@
+# Coder briefs
+
+Every brief the planner hands a coder lives here, one Markdown file each, committed with the arc it produced (architect 2026-10-03: the cloud planner and the local session share the repository's history as their channel; what the cloud must read is committed, and the welcome-back note alone stays private). The briefs up to 2026-10-03 were moved in from the session scratch as they were written; from then on a brief is written here first and lands with the coder's work. A brief is a record, not a rule: the rules live in the code comments at their owners, and `docs/engineering/closed_questions.md` lists what is closed.
