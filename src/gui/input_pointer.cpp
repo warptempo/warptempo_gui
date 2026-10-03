@@ -3367,47 +3367,19 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // passive focus as well." So THE ARM STAYS LIVE FOR THE WHOLE HOLD and this
 // walk only answers whether the pointer is inside it, which is what makes
 // sliding back on restore the pressed face and its release commit — nothing
-// was cancelled, so nothing has to be re-armed. Leaving the button is what
-// assigns the PASSIVE FOCUS the ruling gives the feint, and the face that
-// results (the focus frame) is the painter's own composition rather than a
-// case (paint_modal_dialog). The whole rule and
-// the pair's read-as-one-fact contract are at AppState::modal_dialog_pressed.
+// was cancelled, so nothing has to be re-armed. THE FOCUS IS NOT THIS
+// WALK'S: the press already moved it onto the armed button (architect
+// 2026-10-03, Windows' rule; arm_modal_dialog_press), so leaving the button
+// leaves the focus where it is and the held-away face (the focus frame) is
+// the painter's own composition rather than a case (paint_modal_dialog). The
+// whole rule and the pair's read-as-one-fact contract are at
+// AppState::modal_dialog_pressed.
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const int hit = modal_dialog_button_hit(x, y);
     const int  armed  = app.modal_dialog_pressed;
     const bool inside = armed >= 0 && armed == hit;
-    // THE FEINT'S ASSIGNMENT, on the leave edge alone: the pointer has left the
-    // button it armed while still holding it. It REPLACES whatever focus the
-    // dialog had, of either strength, and it is PASSIVE — the user pointed at
-    // this button, which is not the deliberate keyboard walk that earns the
-    // active face.
-    const bool feint = armed >= 0 && !inside &&
-                       (app.modal_dialog_focus != armed ||
-                        app.modal_dialog_focus_active);
-    if (feint || app.modal_dialog_press_inside != inside) {
+    if (app.modal_dialog_press_inside != inside) {
         app.modal_dialog_press_inside  = inside;
-        if (feint) {
-            // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's second
-            // site (AppState::modal_dialog_key_pressed): the two arms can
-            // stand together — a feint held with the mouse while the keyboard
-            // presses the focused button — and this assignment takes the focus
-            // off whatever the keyboard was holding, so that hold's release
-            // must commit nothing.
-            clear_modal_dialog_key_press();
-            app.modal_dialog_focus        = armed;
-            app.modal_dialog_focus_active = false;
-            // AND THE LIST'S RING BIT GOES WITH IT (2026-08-29): on the two
-            // list-bearing owners the ring's stops are [list, buttons…], and
-            // a feint REPLACES whatever focus the dialog had, of EITHER
-            // STRENGTH — the ruling's own words. Without this the band kept
-            // its focus frame beside the button's new one, so the ring looked
-            // like it was in two places at once. Paint-only, but the frame is
-            // the ring's whole cue.
-            if (app.folder_overlay.list_focused) {
-                app.folder_overlay.list_focused = false;
-                viewport.invalidate_rect(folder_overlay::surface_rect(app));
-            }
-        }
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);
     }
@@ -3498,6 +3470,38 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
         app.modal_dialog_press_inside = true;
         viewport.invalidate_rect(app.modal_dialog.box);
     }
+    // THE PRESS TAKES THE KEYBOARD FOCUS (architect 2026-10-03, "as few
+    // exceptions as possible to the Windows 95 rule"): Windows moves the
+    // focus to the button the mouse presses, AT THE PRESS. It REPLACES
+    // whatever focus the dialog had, of either strength, and it is PASSIVE —
+    // the user pointed at this button, which is not the deliberate keyboard
+    // walk that earns the active strength. Every dialog's buttons arm here —
+    // the prompt's, the editors' OK / Cancel, the player's and the picker's
+    // Cancel — so this is the rule's one site. A refused press (the disabled
+    // player button and the unadmitted shift above) arms nothing and moves
+    // nothing. A slide off the held button leaves the focus here and fires
+    // nothing; a release away leaves the button passively focused.
+    if (app.modal_dialog_focus != hit || app.modal_dialog_focus_active) {
+        // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's second site
+        // (AppState::modal_dialog_key_pressed): the two arms can stand
+        // together — a pointer hold while the keyboard presses the focused
+        // button — and this assignment takes the focus off whatever the
+        // keyboard was holding, so that hold's release must commit nothing.
+        clear_modal_dialog_key_press();
+        app.modal_dialog_focus        = hit;
+        app.modal_dialog_focus_active = false;
+        // AND THE LIST'S RING BIT GOES WITH IT (2026-08-29): on the two
+        // list-bearing owners the ring's stops are [list, buttons…], and the
+        // press REPLACES whatever focus the dialog had. Without this the band
+        // kept its focus frame beside the button's new one, so the ring
+        // looked like it was in two places at once. Paint-only, but the frame
+        // is the ring's whole cue.
+        if (app.folder_overlay.list_focused) {
+            app.folder_overlay.list_focused = false;
+            viewport.invalidate_rect(folder_overlay::surface_rect(app));
+        }
+        viewport.invalidate_rect(app.modal_dialog.box);
+    }
     app.modal_dialog_press_shift = shift;
     app.modal_dialog_press_ms    = monotonic_ms();
     return true;
@@ -3527,7 +3531,7 @@ bool GuiInputHandler::modal_dialog_press_shifted() const {
 // dispatch, because a prompt's buttons and an editor's mean different things.
 // The arm is consumed either way: a release ends the hold whatever it lands
 // on, and a release AWAY from the armed button leaves it passively focused,
-// which the walk already assigned when the pointer left it.
+// which the press already assigned (arm_modal_dialog_press).
 int GuiInputHandler::take_modal_dialog_release(int x, int y) {
     const int armed = app.modal_dialog_pressed;
     if (armed < 0) return -1;
@@ -3758,10 +3762,10 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
 // THE FOCUS GOES BACK TO THE FIELD (the declaration names the three roads).
 // A PRESS ON THE FIELD TAKES THE FOCUS BACK (architect 2026-10-02, fix 3):
 // Windows moves the focus to what is pressed, and the field is pressed — so a
-// button that took the focus by a feint (the slide-away cancel: press Cancel,
-// slide off, lift — update_modal_dialog_hover's leave edge) gives it back the
-// moment the field is pressed or a finger drags in it, the caret returning
-// with it. Until that day the press seated the caret's byte but left the
+// button that took the focus by a press (arm_modal_dialog_press, at the
+// press since 2026-10-03; it keeps it through the slide-away cancel: press
+// Cancel, slide off, lift) gives it back the moment the field is pressed or a
+// finger drags in it, the caret returning with it. Until that day the press seated the caret's byte but left the
 // focus on the button, so the caret, which paints only while the field has
 // the focus (paint_modal_dialog), never came back — a double tap highlighted
 // a word with no caret beside it. THE FOCUS IS PASSIVE AFTERWARDS: -1 carries
@@ -6778,9 +6782,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (button == GuiMouseButton::Left) chrome = take_chrome_press();
     // THE PROMPT DIALOG'S ACT, the press claim's other half (2026-08-13): the
     // lift on the button the press armed activates that response. A lift
-    // ANYWHERE ELSE consumes the arm and dispatches nothing — which, since the
-    // FEINT, is what leaves that button passively focused instead of simply
-    // cancelling. The gates the act re-asks (the painted bit, the stash's
+    // ANYWHERE ELSE consumes the arm and dispatches nothing, leaving that
+    // button passively focused — the focus the press gave it (2026-10-03,
+    // arm_modal_dialog_press) — instead of simply cancelling. The gates the act re-asks (the painted bit, the stash's
     // identity, and the live response set) all live in the one shared dispatch
     // body, which the keyboard's own release shares; the painter drops the arm
     // on those same edges, so the body is the second wall rather than the only

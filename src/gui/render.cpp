@@ -819,21 +819,61 @@ double displayed_trim_ms(int64_t frame,
     return ms;
 }
 
-GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row) {
-    const int cap_w = trim_endcap_w_px();
-    const int abs_col = strip_x + col;
+GuiRect trim_endcap_rect(bool is_begin, int strip_x,
+                         const TrimBoundColumn& begin,
+                         const TrimBoundColumn& end, GuiRect row) {
+    const int btn_w = trim_arrow_button_w_px();
     GuiRect r;
-    // Begin left-edge-anchored (rect left ON the column); end right-edge-anchored
-    // (rightmost pixel ON the column), so a bound's band stands on the column
-    // the bound occupies, the thumb's own end. The rect is the end's COLUMNS,
-    // trim_endcap_w_px() wide (architect 2026-10-02), over the trim lane
-    // `row`'s WHOLE height — the hit band, the thumb's own height.
-    r.x = is_begin ? abs_col : abs_col - cap_w + 1;
+    // Begin left-edge-anchored (rect left ON the begin column); end
+    // right-edge-anchored (rightmost pixel ON the end column), so each bound's
+    // button stands on the column the bound occupies — UNLESS BOTH ARE IN
+    // VIEW AND THE DRAWN WIDTH IS UNDER TWO BUTTONS (architect 2026-10-03):
+    // then the begin keeps its column and the end button stands edge to edge
+    // right of it, the right arrow alone overrunning its column by
+    // 2 x btn_w − span. The rect is the BUTTON over the trim lane `row`'s
+    // whole height — the painted face and the hit band at once.
+    const int span = end.col - begin.col + 1;
+    const bool narrow = begin.in_viewport && end.in_viewport &&
+                        span < 2 * btn_w;
+    if (is_begin)
+        r.x = strip_x + begin.col;
+    else
+        r.x = narrow ? strip_x + begin.col + btn_w
+                     : strip_x + end.col - btn_w + 1;
     r.y = row.y;
-    r.w = cap_w;
+    r.w = btn_w;
     r.h = row.h;
     return r;
 }
+
+namespace {
+
+// ONE ARROW BUTTON (the rule at kTrimArrowButtonPx and kTrimArrowGlyphRows,
+// render.h): the ground under the plain raised edge, then the scroll arrow's
+// four columns as integer rectangles in kTrimArrowGlyph, centred in device px
+// (an odd difference flooring toward the top-left), its tip LEFT on the begin
+// button and RIGHT on the end button. The caller's clip (the lane's) cuts a
+// button that overruns the lane.
+void paint_trim_arrow_button(cairo_t* cr, const GuiRect& b, bool points_left) {
+    paint_cell_rect(cr, b, kRedesignContentGround);
+    paint_relief_plain_raised(cr, b);
+    const int u = scaled_px(1, 1);
+    const int glyph_w = kTrimArrowGlyphCols * u;
+    const int glyph_h = kTrimArrowGlyphRows[kTrimArrowGlyphCols - 1] * u;
+    const int gx = b.x + (b.w - glyph_w) / 2;
+    const int gy = b.y + (b.h - glyph_h) / 2;
+    for (int i = 0; i < kTrimArrowGlyphCols; ++i) {   // i = 0 is the tip
+        const int rows = kTrimArrowGlyphRows[i];
+        const int slot = points_left ? i : kTrimArrowGlyphCols - 1 - i;
+        const int top_rows =
+            (kTrimArrowGlyphRows[kTrimArrowGlyphCols - 1] - rows) / 2;
+        paint_cell_rect(cr, GuiRect{gx + slot * u, gy + top_rows * u, u,
+                                    rows * u},
+                        kTrimArrowGlyph);
+    }
+}
+
+} // namespace
 
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
@@ -879,44 +919,60 @@ void render_trim_flags(cairo_t* cr,
     paint_cell_rect(cr, lane, kRedesignContentGround);
     paint_checker_rect(cr, lane, lane_x, lane_y, kReliefHilight);
 
-    // THE THUMB — the kept region, the ground under a PLAIN RAISED edge, the
-    // lane's full height (architect 2026-10-02: Windows' scroll-bar thumb; no
-    // grip, no cap squares). It spans the window bound column to bound column
-    // and FOLLOWS A BOUND OFFSCREEN past that edge by its whole edge's
-    // thickness, so the side edge of a thumb that continues out of view lands
-    // outside the clip above and the thumb reads as running on.
+    // THE BODY — the thumb between its two arrow buttons, the ground under a
+    // PLAIN RAISED edge, the lane's full height (Windows' scroll-bar thumb;
+    // no grip). An IN-VIEW side stops at its button's inner edge, the
+    // bridge's own interval (trim_bridge_gap, the one owner, so the painted
+    // body and the published bridge are one number) — empty in the narrow
+    // case (architect 2026-10-03). An OFFSCREEN side FOLLOWS ITS BOUND past
+    // that window edge by its whole edge's thickness, so the body's side edge
+    // lands outside the clip above and it reads as running on; the clamped
+    // column stands for the far bound of a window wholly off one side, as it
+    // did for the thumb before the buttons.
+    const int btn_w = trim_arrow_button_w_px();
+    const TrimBridgeGap gap = trim_bridge_gap(bc, ec, btn_w, lane_w);
     const int run = 2 * relief_line_px();
-    const int thumb_lo = (bc.side == TrimBoundSide::OffLeft) ? -run : bc.col;
-    const int thumb_hi = (ec.side == TrimBoundSide::OffRight) ? lane_w + run
-                                                              : ec.col + 1;
-    if (thumb_hi > thumb_lo) {
-        const GuiRect thumb{lane_x + thumb_lo, lane_y, thumb_hi - thumb_lo,
-                            lane_h};
-        paint_cell_rect(cr, thumb, kRedesignContentGround);
-        paint_relief_plain_raised(cr, thumb);
+    const int body_lo = bc.side == TrimBoundSide::OffLeft ? -run
+                      : bc.side == TrimBoundSide::InView  ? gap.lo
+                                                          : bc.col;
+    const int body_hi = ec.side == TrimBoundSide::OffRight ? lane_w + run
+                      : ec.side == TrimBoundSide::InView   ? gap.hi
+                                                           : ec.col + 1;
+    if (body_hi > body_lo) {
+        const GuiRect body{lane_x + body_lo, lane_y, body_hi - body_lo,
+                           lane_h};
+        paint_cell_rect(cr, body, kRedesignContentGround);
+        paint_relief_plain_raised(cr, body);
     }
 
-    // THE TWO ENDS' BANDS, published from the ONE rect owner
-    // (trim_endcap_rect) — the thumb's end columns over the lane's height,
-    // the band the hit side reads (adding only its stated grab tolerance) —
-    // and painted as nothing but the thumb itself: the thumb's end IS the cap.
-    // A culled bound publishes no band: its end is off screen.
-    if (out_hit && bc.in_viewport) {
-        const GuiRect r = trim_endcap_rect(true, lane_x, bc.col, trim_bar);
-        out_hit->begin = {true, lane_x + bc.col, r};
+    // THE TWO ARROW BUTTONS, from the ONE rect owner (trim_endcap_rect: the
+    // edge anchoring and the narrow rule), painted over the body and
+    // published for the hit as painted — each cut to the lane's painted
+    // width, the clip the pixels take, so a button overrunning the lane
+    // claims its visible columns alone and the inert gutter claims nothing.
+    // A culled bound paints and publishes no button: it is off screen.
+    const auto lane_cut = [&](GuiRect r) {
+        const int lo = std::max(r.x, lane_x);
+        const int hi = std::min(r.x + r.w, lane_x + lane_w);
+        r.x = lo;
+        r.w = std::max(0, hi - lo);
+        return r;
+    };
+    if (bc.in_viewport) {
+        const GuiRect r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
+        paint_trim_arrow_button(cr, r, /*points_left=*/true);
+        if (out_hit) out_hit->begin = {true, lane_cut(r)};
     }
-    if (out_hit && ec.in_viewport) {
-        const GuiRect r = trim_endcap_rect(false, lane_x, ec.col, trim_bar);
-        out_hit->end = {true, lane_x + ec.col, r};
+    if (ec.in_viewport) {
+        const GuiRect r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
+        paint_trim_arrow_button(cr, r, /*points_left=*/false);
+        if (out_hit) out_hit->end = {true, lane_cut(r)};
     }
 
-    // THE BRIDGE'S PUBLICATION is the thumb's body between the two bands'
-    // inner edges, clipped to the lane's painted width (trim_bridge_gap, the
-    // shared owner), so the pair drag's band and the ends sit outside each
-    // other by the gap's own inset.
+    // THE BRIDGE'S PUBLICATION is the body between the two buttons' inner
+    // edges, clipped to the lane's painted width (trim_bridge_gap, the
+    // shared owner), so the pair drag's band and the buttons never overlap.
     if (out_hit) {
-        const TrimBridgeGap gap =
-            trim_bridge_gap(bc, ec, trim_endcap_w_px(), lane_w);
         out_hit->published = true;
         out_hit->lane      = lane;
         out_hit->bridge_lo = lane_x + std::max(gap.lo, 0);
@@ -1508,13 +1564,12 @@ void render_flag_boxes_impl(
 
     // THE BOX'S BAND, NOT THE LANE (architect 2026-10-02): every box, label
     // and hit rect below stands on the flag box's rows, one Windows px of
-    // ground above and below it (marker_flag_box_band); the stem's stub
-    // crosses the air under the box to the lane's foot.
-    const GuiRect lane_full = lanes.marker_lane;
-    const GuiRect lane = marker_flag_box_band(lane_full);
+    // ground above it and its bottom the lane's bottom (marker_flag_box_band,
+    // architect 2026-10-03), so the box stands on the well's top line and
+    // the stem paint_marker_stems draws from the waveform area's first row
+    // (waveform_stem_band) continues it with no row between.
+    const GuiRect lane = marker_flag_box_band(lanes.marker_lane);
     if (lane.h <= 0) return;
-    const int stub_y0 = lane.y + lane.h;
-    const int stub_y1 = lane_full.y + lane_full.h;
 
     cairo_save(cr);
     // THE PASS PAINTS INSIDE THE WAVEFORM'S COLUMNS (clip_to_waveform_columns
@@ -1925,19 +1980,6 @@ void render_flag_boxes_impl(
                 if (out_stems)
                     out_stems->push_back(
                         MarkerStem{i, static_cast<double>(bx), face.stem});
-                // THE STEM'S STUB (architect 2026-10-02, the stems run
-                // continuous): the air under the box, in the stem's own
-                // colour and on its own columns, so the stem runs unbroken
-                // from the box into the well (paint_marker_stems takes it on
-                // from the area's top, waveform_stem_band). It paints whether
-                // or not this pass paints the box, as the stem does, and over
-                // the ruler's ticks, which descend through the lane under the
-                // flag blit.
-                set_palette_source(cr, face.stem);
-                fill_waveform_line(cr, top_strip_area.x, waveform_width,
-                                   bx - top_strip_area.x,
-                                   static_cast<double>(stub_y0),
-                                   static_cast<double>(stub_y1));
             }
         });
 
@@ -2084,12 +2126,10 @@ void render_history_diff_flags(
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
 
-    // The box's band and the stem's stub under it, the live lane's rule.
-    const GuiRect lane_full = lanes.marker_lane;
-    const GuiRect lane = marker_flag_box_band(lane_full);
+    // The box's band, the live lane's rule: the box stands on the well and
+    // the stem continues from the waveform area's first row.
+    const GuiRect lane = marker_flag_box_band(lanes.marker_lane);
     if (lane.h <= 0) return;
-    const int stub_y0 = lane.y + lane.h;
-    const int stub_y1 = lane_full.y + lane_full.h;
 
     cairo_save(cr);
     // The waveform's columns are this pass's clip too, the live lane's rule
@@ -2434,12 +2474,6 @@ void render_history_diff_flags(
                     if (out_stems)
                         out_stems->push_back(
                             MarkerStem{i, static_cast<double>(bx), stem_c});
-                    // The stem's stub under the box, the live lane's rule.
-                    set_palette_source(cr, stem_c);
-                    fill_waveform_line(cr, top_strip_area.x, waveform_width,
-                                       bx - top_strip_area.x,
-                                       static_cast<double>(stub_y0),
-                                       static_cast<double>(stub_y1));
                 }
             }
         });
@@ -2586,8 +2620,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE BOX'S BAND, the flag pass's own (marker_flag_box_band): the field
     // stands exactly where the resting box does.
-    const GuiRect lane_full = top_marker_row_area(app);
-    const GuiRect lane = marker_flag_box_band(lane_full);
+    const GuiRect lane = marker_flag_box_band(top_marker_row_area(app));
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
@@ -2671,21 +2704,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // It holds for everything this painter draws — the box, its text, the
     // caret and the riding cells — until the closing restore.
     const int clip_w = basis.area_w > 0 ? basis.area_w : area.w;
-    // THE FLASH REACHES THE STEM'S STUB (architect 2026-08-01's rule that a
-    // flashing flag and its stem read as one object; the stub under the box
-    // since 2026-10-02): the cached flag pass painted the stub in the class's
-    // colour, so while the payload field flashes this paints it in the
-    // flash's stem colour, kMarkerStemRed — the waveform half's own override
-    // (paint_marker_stems) — on the marker's own column, before the box's
-    // clip below (the stub is under the box, outside its band). A disabled
-    // marker has no stem and so no stub.
-    if (ed.red && ed.kind == text_editor::Kind::FlagPayload && !phase &&
-        !effective_disabled(mv, idx)) {
-        set_palette_source(cr, kMarkerStemRed);
-        fill_waveform_line(cr, area.x, clip_w, col,
-                           static_cast<double>(lane.y + lane.h),
-                           static_cast<double>(lane_full.y + lane_full.h));
-    }
+    // (A flashing flag and its stem read as one object, architect
+    // 2026-08-01: the stem is all in the well since the box stands on it,
+    // architect 2026-10-03, and its flash colour is paint_marker_stems'
+    // kMarkerStemRed override, so nothing of the stem is this painter's.)
     clip_to_waveform_columns(cr, area.x, clip_w, lane.y, lane.h);
 
     // ITERATION MODE ADDS THE TWO BOUND CELLS TO THE COMMITTED FLAG, so the

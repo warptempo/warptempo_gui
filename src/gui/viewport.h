@@ -435,10 +435,11 @@ struct Viewport {
     // same day — notifications.h; the stack has its own owner below.)
     //
     // THE RECT IS THE BOTTOM ROW'S LANE WHOLE, not a span of it, and
-    // deliberately: the cell is the row's second STATUS PANEL since
-    // 2026-10-02 (paint_bottom_row_buttons_and_clock), whose box only the
-    // painter knows — it starts after the clock's panel and ends one group
-    // space short of the right block, both measured at paint — so a shorter
+    // deliberately: the cell is the row's STATE LINE on the ground since
+    // 2026-10-03 (paint_bottom_row_buttons_and_clock), whose span only the
+    // painter knows — it starts a group space after the clock's panel and is
+    // clipped one group space short of the right block, both measured at
+    // paint — so a shorter
     // new string must erase a longer old one and there is no published box to
     // erase inside. The lane is the bottom row's band across the window,
     // cheaper than the arithmetic a fitted rect would need, and neither string

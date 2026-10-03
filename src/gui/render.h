@@ -172,9 +172,11 @@ struct TrimRange {
 //           COLOR_INFOBK and COLOR_INFOTEXT, the tooltip's and the cards'
 //           face and words (architect 2026-10-02): a SIBLING PAIR, two
 //           literals declared together, the one role whose text is its own.
-// BLACK is no role: the absence of light, the text ink on the flags and on
-// a light highlight (kMarkerFlagLabel, kRedesignHighlightLabel; which text a
-// highlight takes is highlight_text_ink's luminance rule, below).
+// BLACK is no role: the absence of light, the text ink on the flags (their
+// own rule, kMarkerFlagLabel) and on a light highlight
+// (kRedesignHighlightLabel; which text a highlight takes is
+// highlight_text_ink's luminance rule, below, whose domain is the chrome's
+// text alone).
 // THE DERIVED, by rule (each rule at its constant below):
 //   from the GROUND — the RELIEF SET (Windows' COLOR_3D* family: Hilight,
 //     Shadow, DkShadow, and 3DLight between the ground and the Hilight), the
@@ -372,7 +374,11 @@ inline constexpr GuiColor kRedesignPopupHotkey =
 // THE HIGHLIGHT'S TEXT, ONE RULE (architect 2026-10-02): the ink over any
 // highlight fill — a dropdown's lit row, the open menu anchor, the folder
 // overlay's and the picker's highlighted row in both of its faces — is chosen
-// by THE FILL'S RELATIVE LUMINANCE, never by the site:
+// by THE FILL'S RELATIVE LUMINANCE, never by the site. ITS DOMAIN IS CHROME
+// TEXT AND CHROME GLYPHS ONLY (architect 2026-10-03) — text on the chrome
+// ground, in a sunken field, under a highlight fill — and THE FLAGS ARE
+// OUTSIDE IT: their black label is their own rule (kMarkerFlagLabel). The
+// rule:
 //
 //     L = 0.2126 R + 0.7152 G + 0.0722 B   over sRGB channels linearized
 //         (c ≤ 0.04045 → c / 12.92, else ((c + 0.055) / 1.055)^2.4)
@@ -438,12 +444,18 @@ static_assert(same_color(highlight_text_ink(kRedesignAccentInactive),
 
 // THE TRIM LANE IS A MINIATURIZED SCROLL BAR (architect 2026-10-02; the
 // geometry at kTrimLaneHeightPx and render_trim_flags) and takes no colour
-// of its own: its track is the CHECKED dither (Hilight over the ground) and
-// its thumb a plain raised box on the ground. (The trim lane's retired bar
+// of its own: its track is the CHECKED dither (Hilight over the ground), its
+// thumb's body and its two arrow buttons plain raised boxes on the ground,
+// and THE ARROW GLYPH the luminance rule's ink over that ground (architect
+// 2026-10-03: a chrome glyph on a chrome face, inside highlight_text_ink's
+// domain) — the label white on today's dark ground, black on a light one.
+// (The trim lane's retired bar
 // and cap faces, ground × 4/3 → #404040 and ground × 3.5 → #A8A8A8, lived on
 // in the render player's scrub until it became Sound Recorder's slider the
 // same night, architect 2026-10-02: the scrub too is relief lines on the
 // ground and nothing else.)
+inline constexpr GuiColor kTrimArrowGlyph =
+    highlight_text_ink(kRedesignContentGround);
 
 // THE RULER LANE's inks: the timestamps, every label one colour (architect
 // 2026-10-02, "give the same colour to all the numbers"), ground × 4.04 →
@@ -563,7 +575,11 @@ inline constexpr GuiColor kPhaseResetFlagFillSel = kMarkerFlagFillSel;
 inline constexpr GuiColor kPhaseResetFlagEdgeSel = kMarkerFlagEdgeSel;
 
 // THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
-// (architect 2026-08-20, a measurement of kdenlive's own flag text): the warp
+// (architect 2026-08-20, a measurement of kdenlive's own flag text), AS THE
+// FLAGS' OWN RULE AND NOT THE LUMINANCE RULE'S (architect 2026-10-03): a flag
+// is a special non-Windows icon — the Sonic Foundry programs' flags — not
+// chrome, so highlight_text_ink (above) does not govern it, whatever its
+// fill. The warp
 // and phase-reset flag labels, the bound cells' text, the `h` view's diff-flag
 // labels and the flag editor's unrolled text and caret. THE ONE EXCEPTION IS
 // THE FLAG EDITOR'S SELECTED SUBSTRING, the selection pairing below. A
@@ -704,7 +720,9 @@ inline constexpr GuiColor kWaveformRegionCanvas = hex(region_lift(kWaveformCanva
 // line, top to bottom, the canvas between. THE STEMS CROSS THE TOP LINES
 // (architect 2026-10-02): a marker's stem, the playhead's and the zoom
 // anchor's run continuous from the lane above into the canvas
-// (waveform_stem_band), and stop at the canvas's foot.
+// (waveform_stem_band), and stop at the canvas's foot; a flag box stands on
+// the top lines (architect 2026-10-03, marker_flag_box_band), so a marker's
+// stem leaves its box's bottom row straight into them.
 //
 // TAKEN FROM THE AREA, NOT ADDED TO IT: waveform_content_rect is the content
 // and it shrinks by these rows, while waveform_area itself does not move, so
@@ -796,7 +814,7 @@ inline int scaled_px(double authored) {
 // border, edge, pad and separator in the tree reaches its floor and paints as
 // the one pixel that keeps the surface visible. A metric whose authored value
 // may legitimately vanish floors at 0 and says so at its own accessor
-// (trim_middle_inset_px / trim_middle_clear_px, the two grab tolerances).
+// (popup_sep_margin_y_px).
 inline int scaled_px(double authored, int floor_px) {
     const int v = scaled_px(authored);
     return v < floor_px ? floor_px : v;
@@ -1053,12 +1071,15 @@ inline int scrub_handle_box_px() {
 // the TRACK, the trimmed-off stretches either side of the kept region out to
 // the window's edges, is the CHECKED dither (Hilight over the ground in one
 // Windows px cells, phase anchored at the lane's top-left); the THUMB is the
-// kept region, a PLAIN RAISED box on the ground the lane's full height, no
-// grip and no cap squares — the thumb's own two ends are the caps (the
-// painter is render_trim_flags). The lane is ONE RECT for paint and for every
-// hit reader — the endcap rects (trim_endcap_rect takes the lane rect's y/h),
-// the bridge's y-gate and the framing double-click band — so paint and hit
-// move together by construction. 44 device rows at 275 %, 22 at 138 %.
+// kept region: a 16 x 16 Windows-px ARROW BUTTON at each bound — Windows'
+// scroll-bar arrow buttons, the begin's pointing left and the end's right
+// (architect 2026-10-03, the rule at kTrimArrowButtonPx) — and between their
+// inner edges THE BODY, a PLAIN RAISED box on the ground the lane's full
+// height with no grip (the painter is render_trim_flags). The lane is ONE
+// RECT for paint and for every hit reader — the arrow buttons
+// (trim_endcap_rect takes the lane rect's y/h), the bridge's y-gate and the
+// framing double-click band — so paint and hit move together by
+// construction. 44 device rows at 275 %, 22 at 138 %.
 inline constexpr int kTrimLaneHeightPx   = 16;
 // THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
 // SCALED (architect 2026-10-02). The lane stacks, from its top:
@@ -1108,18 +1129,29 @@ int ruler_lane_h_px();
 // face's ascent and its descent, every term a whole device row —
 //
 //     box  = edge + ceil(ascent) + ceil(descent)
-//     lane = scaled_px(kMarkerLaneAirPx) + box + scaled_px(kMarkerLaneAirPx)
+//     lane = scaled_px(kMarkerLaneAirPx) + box
 //
-// — ONE WINDOWS PX OF GROUND ABOVE AND BELOW the box, the box's label seated
-// as a LINE under its edge band (baseline = box top + edge + ceil(ascent)).
-// The face is the redesign's 13 Windows px (redesign_font_size_px), read off
-// the product's own road like the ruler's: 275 % (35.75 px, ascent 34,
-// descent 9) box 3 + 34 + 9 = 46, lane 52; 138 % (17.94 px, 17 and 5) box
-// 1 + 17 + 5 = 23, lane 25; 50 % (6.5 px, 7 and 2) box 1 + 7 + 2 = 10, lane
-// 12 (the air floored at one row). Every box painter and every flag hit rect
-// takes the BOX's rows (marker_flag_box_band), never the lane's: the box is
-// what is painted and so what is pressed. THE THREE ARE DEFINED IN
-// paint_handler.cpp beside the ruler's, memoized on the scale the same way.
+// — ONE WINDOWS PX OF GROUND ABOVE THE BOX AND NONE BELOW IT (architect
+// 2026-10-03): the box's bottom row is the lane's last row, so the flag
+// stands ON the well, touching its upper border line (the waveform area's
+// first row, the next lane down) and never overlapping it, and the marker's
+// stem runs on from the box's bottom straight through the well's top lines
+// (waveform_stem_band). THE AIR ABOVE IS THE MINOR TICKS' (architect
+// 2026-10-03): the ruler's minor ticks start at the marker lane's top
+// (paint_ruler_row's minor_top), so that one px is where the comb stays
+// visible over a run of flags — "the minor ticks visible above the flags are
+// helpful" — which is why the air above is kept while the air below went.
+// The box's label is seated as a LINE under its edge band (baseline = box
+// top + edge + ceil(ascent)). The face is the redesign's 13 Windows px
+// (redesign_font_size_px), read off the product's own road like the
+// ruler's: 275 % (35.75 px, ascent 34, descent 9) box 3 + 34 + 9 = 46, lane
+// 3 + 46 = 49; 138 % (17.94 px, 17 and 5) box 1 + 17 + 5 = 23, lane 24; 50 %
+// (6.5 px, 7 and 2) box 1 + 7 + 2 = 10, lane 11 (the air floored at one
+// row). Every box painter and every flag hit rect takes the BOX's rows
+// (marker_flag_box_band), never the lane's: the box is what is painted and
+// so what is pressed, and with no air under it there is no strip below a box
+// to press. THE THREE ARE DEFINED IN paint_handler.cpp beside the ruler's,
+// memoized on the scale the same way.
 inline constexpr int kMarkerLaneAirPx = 1;
 inline int marker_lane_air_px() {
     return scaled_px(kMarkerLaneAirPx, 1);
@@ -1127,7 +1159,7 @@ inline int marker_lane_air_px() {
 int marker_flag_box_h_px();
 int marker_lane_h_px();
 // The box's band inside a marker lane rect `lane`: the lane less its air
-// above and below.
+// above, the box's bottom the lane's bottom.
 inline GuiRect marker_flag_box_band(GuiRect lane) {
     const int air = marker_lane_air_px();
     return GuiRect{lane.x, lane.y + air, lane.w, marker_flag_box_h_px()};
@@ -1156,12 +1188,12 @@ inline GuiRect marker_flag_box_band(GuiRect lane) {
 // later that day moved it to the window's foot, under the bottom row, and
 // commit B split it in two around the block.)
 //
-// THE VALUE IS 550 -> 500 AT COMMIT B (the same dictation). The architect's
+// THE DEFAULT IS 364 WINDOWS PX (550 -> 500 laptop px at commit B, the same
+// dictation; re-authored in the Windows unit 2026-10-02). The architect's
 // standing bracket: "bigger than the height on the Pi, smaller than the
-// waveform height on my external monitor"; his own scaling example at the
-// revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale the 1920x1080 laptop's leftover
-// is well over the default, so the waveform CLAMPS at 500 and the two gaps
+// waveform height on my external monitor"; the accessor scales the value
+// with gui_scale by construction. On the 1920x1080 laptop the leftover
+// is well over the default, so the waveform CLAMPS at it and the two gaps
 // take the rest, while a 1024x600 SHORT WINDOW's leftover is under it,
 // UNCLAMPED, the centering infeasible and both gaps floored at 0. The
 // figures — every lane, both gaps, each worked window — are main.cpp's
@@ -1186,8 +1218,9 @@ int  waveform_max_h_px();
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
-// strip's ONLY lane since the relayout's commit B): the monospace clock and
-// the state cell at the left pad, two status panels (architect 2026-10-02),
+// strip's ONLY lane since the relayout's commit B): the monospace clock in
+// its status panel and the state line on the ground beside it at the left
+// pad (architect 2026-10-02 / 2026-10-03),
 // and the MARKER-VERB GROUP, the marker walk, the four cardinal arrows and
 // the transport three flush right, eight Windows px of bare ground between
 // groups (architect 2026-09-29; kMarkerVerbGroup in
@@ -1586,20 +1619,45 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     return flag + 2.0 * cell;
 }
 
-// THE TRIM CAPS ARE THE THUMB'S OWN ENDS (architect 2026-10-02, the AC set:
-// the scroll bar's thumb has no grip and no cap squares) and PAINT NOTHING OF
-// THEIR OWN; what survives of them is each end's GRAB BAND — the thumb's end
-// columns, 7 Windows px wide, over the lane's whole height. It is what
-// trim_endcap_rect sizes an end's band by and trim_bridge_gap insets the body
-// drag's interval by; the hit side adds its grab tolerance
-// (kTrimEndcapGrabPx) on top. THE 7 is the painted handle square's former
-// 9 laptop px re-authored at the unit's change (19 device px at 275 %, 10 at
-// 138 %; 18 and 9 before). (The centre grip — a third square at the window's
-// midpoint, informational only — retired with the squares.)
-inline constexpr int kTrimEndBandPx = 7;
-inline int trim_endcap_w_px() {
-    return scaled_px(kTrimEndBandPx, 1);
+// THE TRIM CAPS ARE WINDOWS' SCROLL-BAR ARROW BUTTONS (architect 2026-10-03:
+// "the arrows are truthful: the left arrow is the begin, the right one the
+// end"): a 16 x 16 Windows-px PLAIN RAISED button at each end of the thumb —
+// 16 wide here, the one owner of the width, and the trim lane's full height
+// (kTrimLaneHeightPx, the same 16) — the ground under the plain raised edge
+// and an arrow glyph in kTrimArrowGlyph, no pressed face and no hover face.
+// THE BEGIN BUTTON'S LEFT EDGE STANDS ON THE BEGIN COLUMN and its arrow
+// points LEFT; THE END BUTTON'S RIGHT EDGE STANDS ON THE END COLUMN and its
+// arrow points RIGHT; the thumb's BODY runs between the two buttons' inner
+// edges. NARROW: when both bounds are in view and the window's drawn width
+// (end column − begin column + 1) is under two buttons, the BEGIN BUTTON
+// STAYS ANCHORED on its column and the END BUTTON STANDS IMMEDIATELY RIGHT OF
+// IT, edge to edge (architect 2026-10-03), so the right arrow alone overruns
+// its column — by 2 x 16 Windows px − the width, in device px 2 x the button
+// − the width — and the body is empty; from two buttons' width up each
+// button sits on its own column (the rect owner is trim_endcap_rect). OFF
+// SCREEN: a bound out of view paints no button and the body runs past that
+// window edge by its edge's thickness — a cap off screen is simply off
+// screen. THE BUTTON IS THE TARGET: its painted rect is the hit band, with no
+// tolerance added. 44 x 44 device px at 275 %, 22 x 22 at 138 %, 8 x 8 at
+// 50 %, floored at 3 as the lane is so the two stay square.
+inline constexpr int kTrimArrowButtonPx = 16;
+inline int trim_arrow_button_w_px() {
+    return scaled_px(kTrimArrowButtonPx, 3);
 }
+// THE ARROW GLYPH, Windows' scroll arrow: FOUR COLUMNS whose heights, from
+// the tip, are 1, 3, 5 and 7 Windows rows, each centred on the glyph's middle
+// row — a 4 x 7 triangle. Painted as INTEGER RECTANGLES, one per column
+// (aliased by construction, the playhead head's precedent at
+// kPlayheadHeadHalf: never a rescaled icon, never a path fill), each column
+// one unit u = scaled_px(1, 1) wide and its rows u tall apiece — a composite
+// of rounded parts — so the glyph is 4u x 7u device px; it is CENTRED IN THE
+// BUTTON in device px, an odd difference flooring toward the top-left (the
+// extra pixel right of or below the glyph). At 275 % (u 3): 12 x 21 in the
+// 44 x 44 case, at (+16, +11), the columns 3 x 3, 3 x 9, 3 x 15 and 3 x 21
+// with tops +20, +17, +14 and +11; at 138 % (u 1): 4 x 7 in 22 x 22 at
+// (+9, +7).
+inline constexpr int kTrimArrowGlyphCols = 4;
+inline constexpr int kTrimArrowGlyphRows[kTrimArrowGlyphCols] = {1, 3, 5, 7};
 
 // THE PLAYHEAD HEAD, ALIASED: 8 WINDOWS PX TALL, 13 WIDE (architect
 // 2026-10-02, the unit's change; the planner's lean taken: 8 rows paint 22
@@ -2460,36 +2518,39 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // half-open, EMPTY when hi <= lo), the ONE owner of the bridge, run by the
 // painter (render_trim_flags) alone: the clipped interval is what the painter
 // PUBLISHES as the pair drag's handle (TrimBarHit::bridge_lo / bridge_hi,
-// read by point_in_trim_bridge_span) — the thumb's body between its two end
-// bands. The thumb itself does not come from here — it spans the WINDOW,
-// bound column to bound column, and its end bands are its own ends. Both
-// bounds must be set (callers gate). The
+// read by point_in_trim_bridge_span) — and the painter's BODY wherever a
+// bound is in view: the thumb's body between its two arrow buttons' inner
+// edges (an offscreen side of the body runs past the window edge as the
+// painter states). Both bounds must be set (callers gate). The
 // offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
 // verdict) — NOT col_raw, which cannot tell the side across the rounding seam
 // (a barely-off-left bound rounds to col_raw == 0). The 4x2 semantics:
-//   BEGIN — the gap's LEFT edge, a left-edge-anchored endcap:
-//     InView (endcap painted) -> lo = col + endcap_w         (the drawn endcap's
-//        inner RIGHT edge; the gap starts just past the endcap).
-//     OffLeft (no endcap)   -> lo = min(col_raw, -1)        (a STRICTLY NEGATIVE
+//   BEGIN — the gap's LEFT edge, a left-edge-anchored button:
+//     InView (button painted) -> lo = col + endcap_w         (the drawn button's
+//        inner RIGHT edge; the gap starts just past the button).
+//     OffLeft (no button)   -> lo = min(col_raw, -1)        (a STRICTLY NEGATIVE
 //        flush sentinel: the fill clips flush to column 0 AND the left ring border
 //        lands offscreen — true only via the sentinel; raw col_raw == 0 would
 //        float the border at the edge).
-//     OffRight (no endcap)  -> lo = max(col_raw, wave_w)     (>= wave_w: nothing
+//     OffRight (no button)  -> lo = max(col_raw, wave_w)     (>= wave_w: nothing
 //        paints in the visible [0, wave_w) and the router's [0, wave_w) gate can
 //        never arm — an empty gap in the visible area).
-//   END — the gap's RIGHT edge, a right-edge-anchored endcap:
-//     InView (endcap painted) -> hi = col - endcap_w + 1      (the drawn endcap's
-//        inner LEFT edge, exclusive).
-//     OffRight (no endcap)  -> hi = max(col_raw + 1, wave_w + 1)  (a PAST-THE-EDGE
+//   END — the gap's RIGHT edge, a right-edge-anchored button:
+//     InView (button painted) -> hi = col - endcap_w + 1      (the drawn button's
+//        inner LEFT edge, exclusive; in the NARROW case, where the painter
+//        stands the end button right of the begin's instead, this is under
+//        lo whenever the begin is in view too, so the gap is empty, as the
+//        body is).
+//     OffRight (no button)  -> hi = max(col_raw + 1, wave_w + 1)  (a PAST-THE-EDGE
 //        flush sentinel: the fill clips flush to the right edge AND the right ring
 //        border lands offscreen).
-//     OffLeft (no endcap)   -> hi = min(col_raw + 1, 0)      (<= 0: empty against
+//     OffLeft (no button)   -> hi = min(col_raw + 1, 0)      (<= 0: empty against
 //        any lo >= 0 — closes the one-pixel bridge a raw col_raw == 0 left, which
 //        gave hi = 1 and painted/accepted a column-0 sliver for a window wholly
 //        left of the viewport).
-// The +endcap_w inset is the ROOM an on-screen end's band —
-// trim_endcap_w_px() wide — occupies; an offscreen bound has no band on
-// screen, so the inset is dropped and the body runs FLUSH. This interval
+// The +endcap_w inset is the ROOM an on-screen bound's arrow button —
+// trim_arrow_button_w_px() wide — occupies; an offscreen bound has no button
+// on screen, so the inset is dropped and the body runs FLUSH. This interval
 // is returned UNCLAMPED (raw sentinels included) — its role is to carry the
 // offscreen-flush and empty semantics past the visible edge; it is NOT a drawn
 // interval. The painter clamps it to the visible range ONCE: it intersects it
@@ -2521,74 +2582,33 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 
-// The ONE trim END-BAND screen-rect owner (named for the endcaps the thumb's
-// ends still are): the begin/end edge-anchoring rule lives here, run by the
-// painter (render_trim_flags), which publishes each end's band for the hit
-// test (hit_test_trim_endcap reads TrimBarHit, below), so paint and hit are
-// one rect.
+// The ONE trim ARROW-BUTTON screen-rect owner (named for the endcaps the
+// buttons are): the edge-anchoring rule lives here, run by the painter
+// (render_trim_flags), which paints each in-view bound's button on this rect
+// and publishes it for the hit test (hit_test_trim_endcap reads TrimBarHit,
+// below), so paint and hit are one rect.
 //
-// A trim bound is an EDGE, not a point: the begin band's LEFT edge sits ON
-// the bound column (rect left = strip_x+col), the end band's RIGHT edge sits
-// on it (rightmost pixel = strip_x+col) — each the thumb's own end. Deliberate
-// asymmetry vs centered marker flags: a bound at frame 0 / EOF has its end
-// fully onscreen.
+// A trim bound is an EDGE, not a point: the begin button's LEFT edge sits ON
+// the begin column (rect left = strip_x + begin.col), the end button's RIGHT
+// edge sits on the end column (rightmost pixel = strip_x + end.col).
+// Deliberate asymmetry vs centered marker flags: a bound at frame 0 / EOF has
+// its button fully onscreen. THE NARROW CASE (architect 2026-10-03): when
+// BOTH bounds are in view and the drawn width end.col − begin.col + 1 is
+// under two buttons, the begin button keeps its column and the END button is
+// placed IMMEDIATELY RIGHT OF IT, edge to edge (rect left = strip_x +
+// begin.col + the button's width), so the right arrow alone overruns its
+// column, by 2 x the button − the width. The two rects therefore never
+// overlap: at two buttons' width and above each stands on its own column
+// with the body (possibly empty) between them.
 //
-// THE RECT IS THE THUMB'S END COLUMNS OVER THE WHOLE LANE: trim_endcap_w_px()
-// wide (7 Windows px) and the trim lane `row`'s full height, which is the
-// thumb's own height. Nothing marks it — the thumb's end IS the cap
-// (architect 2026-10-02) — and THE HIT TEST INFLATES ITS COLUMNS by
-// kTrimEndcapGrabPx per side (7 Windows px, what each retune of it costs the
-// body drag is recorded at the constant): a 19-px band is still under a
-// fingertip.
-GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
-
-// Grab tolerance added to EACH SIDE of a thumb end's band for hit-testing.
-// 7 WINDOWS PX since the unit's change (architect 2026-10-02): the laptop
-// pixel's 10 re-authored, so the target is 7 + 2·7 = 21 Windows px — 19 + 2·19
-// = 57 device px at 275 % (18 + 2·20 = 58 at 200 % before, a hair narrower)
-// and 10 + 2·10 = 30 at 138 % (9 + 2·10 = 29 at 100 % before). ONE CONSUMER
-// reads it (re-grepped 2026-10-01): the TRIM BAR's ends
-// (hit_test_trim_endcap).
-// The WAVEFORM OVERLAY's two bounds read it too from 2026-08-18 until the
-// resting overlay and its drags were deleted on 2026-09-22 (the tablet's pen
-// reaches the trim bar).
-//
-// 10 LAPTOP PX SINCE 2026-08-19, AND SETTLED THERE (architect). THE OVERLAY WAS THE
-// REASON IT CAME BACK UP: the waveform overlay's bound bands existed precisely
-// because the 10 px trim bar is unusable with a fingertip, so 5 per side
-// reproduced ON THE FINGER'S OWN SURFACE the very problem that surface was
-// built to solve — while 15 was more than the THIN trim lane wants. The walk: 4 from row 5's landing, chosen to
-// reproduce the retired square chip's width; 10 on 2026-08-14 (architect:
-// "endcaps are very useful and currently too small", leaning 6 to 10 and ruling
-// 10 — THE TOUCH PANEL IS THE REASON, a fingertip being nothing like a 10px
-// target); 15 on 2026-08-15, once both lanes had been driven on glass; 5 on
-// 2026-08-18, narrowing that after driving the unified region/trim.
-//
-// WHAT THE BAND'S WIDTH DECIDES, checked against every neighbour the endcap
-// claim can overlap, because that claim OUTRANKS everything else in the lane
-// (the per-grab figures are re-derived from the rules below, not carried):
-//   * THE TRIM BRIDGE (the thumb's body drag) is reachable only where the gap
-//     survives both inflated end bands: the window's drawn width (end column
-//     − begin column + 1) must exceed 2·band + 2·grab, so the narrowest
-//     window that still has a bridge is 77 device columns at 275 % and 41 at
-//     138 % (re-derived 2026-10-02 for the 7-px bands). What the bridge
-//     loses is zoom-recoverable
-//     rather than a lost capability (the window's drawn width is a zoom state,
-//     both bounds stay independently draggable at every zoom, and the band's
-//     framing double-click is tested ABOVE the router so it is untouched).
-//   * THE TWO TRIM CAPS AGAINST EACH OTHER are unaffected in KIND at any width:
-//     the sort's
-//     leftmost-wins/Begin-first arbitration makes End's exclusive reach
-//     (end_col − begin_col − 1 columns to the right of Begin's band, or one
-//     column to its left when the bounds coincide) a function of the BOUNDS
-//     alone — the grab cancels out of both sides — so every verdict a
-//     coincident or near-coincident pair gives is the same at any grab, just
-//     nearer the column. A pair exactly one column apart is the one
-//     unreachable End, and it is unreachable at every grab.
-inline constexpr int kTrimEndcapGrabPx = 7;
-inline int trim_endcap_grab_px() {
-    return scaled_px(kTrimEndcapGrabPx, 0);
-}
+// THE RECT IS THE BUTTON, trim_arrow_button_w_px() wide (16 Windows px) over
+// the trim lane `row`'s whole height (the same 16), and it is THE HIT BAND
+// AS IT IS — no tolerance inflates it (architect 2026-10-03: the button is
+// the target). `is_begin` picks which bound's button; only an in-view
+// bound's is ever asked for.
+GuiRect trim_endcap_rect(bool is_begin, int strip_x,
+                         const TrimBoundColumn& begin,
+                         const TrimBoundColumn& end, GuiRect row);
 
 // (render_trim_stems IS DELETED, architect 2026-08-01. It drew the WAVEFORM-AREA
 // portion of the trim bounds — a 1px grey vertical at each bound's column,
@@ -2600,24 +2620,25 @@ inline int trim_endcap_grab_px() {
 // a day and died with the whole tunable palette on 2026-08-02.)
 
 // THE TRIM BAR'S HIT STASH (architect 2026-09-24, strictly as-painted): what
-// render_trim_flags last PAINTED as the thumb's two ends, published by that
+// render_trim_flags last PAINTED as the thumb's two arrow buttons and its
+// body, published by that
 // painter into AppState::trim_bar_hit so the trim hits read the pixels rather
 // than re-running the painter's owner chain on the live trim — the flag
 // lane's stash doctrine (AppState::flag_hit_rects) carried to the trim lane.
 // Everything is in SCREEN pixels. `lane` is the band the thumb was painted
-// in, the y-gate of both hits. Each end (a TrimBarHitCap) is its HIT BAND
-// (trim_endcap_rect, uninflated: the thumb's end columns over the lane's
-// whole height; the hit applies trim_endcap_grab_px itself) plus its bound
-// column, which is the leftmost-wins sort key, and `painted` is false for a
-// bound the viewport culled, whose end is off screen and so answers no hit.
-// The bridge is the half-open interval [bridge_lo, bridge_hi) between the
-// two bands' inner edges — the thumb's body —
-// already clipped to the lane's painted width (trim_bridge_gap); empty when
-// lo >= hi. `published` false is COLD — nothing painted, nothing grabbable.
+// in, the y-gate of both hits. Each end (a TrimBarHitCap) is its arrow
+// button's rect (trim_endcap_rect: the button over the lane's whole height,
+// clipped to the lane's painted width, and the hit band as it is — no
+// tolerance), and `painted` is false for a bound the viewport culled, whose
+// button is off screen and so answers no hit. The two rects never overlap
+// (trim_endcap_rect's narrow rule), so nothing arbitrates between them. The
+// bridge is the half-open interval [bridge_lo, bridge_hi) between the two
+// buttons' inner edges — the thumb's body — already clipped to the lane's
+// painted width (trim_bridge_gap); empty when lo >= hi, as in the narrow
+// case. `published` false is COLD — nothing painted, nothing grabbable.
 struct TrimBarHitCap {
     bool    painted = false;
-    int     col_x   = 0;        // the bound's screen column
-    GuiRect rect{0, 0, 0, 0};   // the end band's columns x the lane's rows
+    GuiRect rect{0, 0, 0, 0};   // the arrow button, clipped to the lane
 };
 struct TrimBarHit {
     bool          published = false;
@@ -2643,29 +2664,32 @@ struct TrimBarHit {
 //
 // PAINT ORDER IS BACK TO FRONT: THE TRACK across the whole lane — the ground,
 // then the checked dither (paint_checker_rect, its phase at the lane's
-// top-left) — then THE THUMB over the kept region, the ground under a PLAIN
-// RAISED edge, the lane's full height, with no grip and no cap squares. An
+// top-left) — then THE THUMB'S BODY, the ground under a PLAIN RAISED edge,
+// the lane's full height, with no grip, then THE ARROW BUTTONS over it. An
 // inverted or degenerate window leaves the track showing.
-// THE THUMB SPANS THE WINDOW ITSELF, bound column to bound column, and
-// FOLLOWS AN OFFSCREEN BOUND rather than stopping short — an out-of-view bound
-// means the window continues past that edge, so the thumb runs on past it by
-// its whole edge's thickness (two relief lines), its side edge landing
-// outside the clip, and reads as running on rather than ending at the window.
-// It is the one "this is the trim window" signal and the grab of the pair
-// (bridge) drag.
-// THE TWO ENDS ARE THE CAPS: each bound's end band (trim_endcap_rect, the
-// thumb's end columns over the lane's height) is published for the hit and
-// painted as nothing but the thumb. A culled bound publishes no band: its end
-// is off screen. EDGE-ANCHORED on the bound columns: the begin end's LEFT
-// edge on its column, the end end's RIGHT edge on its own. A bound is an
-// EDGE, not a point — the deliberate asymmetry vs centered marker flags — so
-// a bound at frame 0 / EOF shows its end fully onscreen. Column placement is
-// on the displayed viewport basis — `trim.begin` / `trim.end` are already in
-// the displayed domain, so no further translation happens here. An end has NO
-// editable payload; it is a plain-press grab target only (trim is outside the
-// selection system).
+// THE THUMB SPANS THE WINDOW ITSELF and FOLLOWS AN OFFSCREEN BOUND rather
+// than stopping short — an out-of-view bound means the window continues past
+// that edge, so the body runs on past it by its whole edge's thickness (two
+// relief lines), its side edge landing outside the clip, and reads as
+// running on rather than ending at the window. It is the one "this is the
+// trim window" signal and its body the grab of the pair (bridge) drag.
+// THE TWO ARROW BUTTONS ARE THE CAPS (architect 2026-10-03; the rule at
+// kTrimArrowButtonPx): each in-view bound's button, on the rect
+// trim_endcap_rect places — EDGE-ANCHORED on the bound columns, the begin's
+// LEFT edge on its column, the end's RIGHT edge on its own, and in the
+// NARROW case the end's standing right of the begin's — the ground under a
+// plain raised edge with the arrow glyph (kTrimArrowGlyphRows) centred in
+// it, the begin's pointing left and the end's right. THE BODY runs between
+// the buttons' inner edges (trim_bridge_gap's interval for an in-view side),
+// empty in the narrow case. A culled bound paints and publishes no button:
+// it is off screen. A bound is an EDGE, not a point — the deliberate
+// asymmetry vs centered marker flags — so a bound at frame 0 / EOF shows its
+// button fully onscreen. Column placement is on the displayed viewport basis
+// — `trim.begin` / `trim.end` are already in the displayed domain, so no
+// further translation happens here. A button has NO editable payload; it is
+// a plain-press grab target only (trim is outside the selection system).
 // PUBLISHES WHAT IT PAINTS into `out_hit` when non-null (TrimBarHit above):
-// the lane, both end bands and the bridge interval, from the very columns this
+// the lane, both buttons and the bridge interval, from the very columns this
 // pass fills — and a cold record on every early return, since a lane that
 // painted no thumb has nothing to grab. The CALLER decides whether this frame
 // may publish at all (GuiPaintHandler::paint_trim passes null unless the

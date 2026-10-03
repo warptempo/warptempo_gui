@@ -27,10 +27,11 @@
 // THE SPLIT, STATE AND EVENTS (2026-08-29), which decides the surface: STATE
 // is what is true right now, replaced as it changes, never timed out and
 // never cleared by a key press — the render's progress line and the `h`
-// walk's line, which live in ROW 8'S STATE CELL, the status panel right of
-// the clock's (architect 2026-10-02, Windows' status bar: the small face,
-// left-aligned, clipped inside the panel;
-// paint_bottom_row_buttons_and_clock, paint_handler.cpp, owns that cell); an
+// walk's line, which live in ROW 8'S STATE LINE, on the row's ground right of
+// the clock's status panel (architect 2026-10-03: the normal face,
+// left-aligned a group space past the panel, clipped a group space short of
+// the right block; paint_bottom_row_buttons_and_clock, paint_handler.cpp,
+// owns that line); an
 // EVENT is an act answered with a sentence, or a background act that
 // finished badly — a CARD. The state surface has NO TIMEOUTS because nothing
 // in it is a claim about a past moment, so nothing there can go stale.

@@ -70,8 +70,8 @@
 //     is unchanged and only its timing moved;
 //   * the ENDCAP / BRIDGE drag, AT ITS RELEASE ONLY (commit_trim_drag): the
 //     motion arm deliberately parks nothing, a per-frame playhead chase being
-//     a cursor fighting the gesture that is moving it. The 10 px bar's endcaps
-//     and bridge are its one surface (the waveform overlay armed it too from
+//     a cursor fighting the gesture that is moving it. The trim bar's arrow
+//     buttons and bridge are its one surface (the waveform overlay armed it too from
 //     2026-08-18 until its resting form was deleted on 2026-09-22);
 //   * THE SWEEP (write_trim_from_sweep, below — the shift+drag former and the
 //     touch region hold), which writes per motion event and commits at its
@@ -1241,8 +1241,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // CROSSING above (a PRESS until 2026-08-15, when the set moved to the lift),
 // which arms the same single-bound pending on the bound it has just written.
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
-// a bound is grabbed ONLY by its top-strip ENDCAP or by the bar's inter-cap
-// bridge span (the bound's own mark was already the unambiguous handle),
+// a bound is grabbed ONLY by its top-strip ENDCAP — the trim lane's arrow
+// button at that end of the thumb (architect 2026-10-03) — or by the bar's
+// inter-cap bridge span (the bound's own mark was already the unambiguous handle),
 // leaving the waveform purely
 // region/playhead. Arms a PendingTrimDrag rather than beginning the drag
 // outright — the pending+threshold pattern the marker flag uses: the press
@@ -1265,8 +1266,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // internal returns this function once carried had already been deleted in
 // 2026-08-02 as unreachable; nothing replaced them, and nothing should.
 // The two arms:
-//   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, itself y-gated to the trim
-//     bar lane) arms that bound's single drag.
+//   CAP HIT: a press on a painted arrow button, the button's own rect and no
+//     tolerance (hit_test_trim_endcap, itself y-gated to the trim bar lane),
+//     arms that bound's single drag.
 //   BRIDGE: else, a press on the bar's inter-cap span (point_in_trim_bridge_span,
 //     app_state.h — the shared owner, which reads the painted lane's y-gate and
 //     the painted bridge interval, already clipped to the painter's

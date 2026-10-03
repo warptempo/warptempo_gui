@@ -84,10 +84,10 @@ namespace {
 // kFlagBottomLiftPx (see the geometry helpers below); nothing is
 // window-proportional, and since row 7 nothing is font-proportional either.
 
-// The one pointer grab tolerance lives beside the surface it belongs to —
-// kTrimEndcapGrabPx in render.h (the marker stems' grab constant died with
-// their pointer surface, 2026-08-12) — so nothing of that family is
-// file-local here.
+// No pointer grab tolerance survives (the marker stems' grab constant died
+// with their pointer surface, 2026-08-12, and the trim endcaps' when the caps
+// became their painted arrow buttons, 2026-10-03, kTrimArrowButtonPx in
+// render.h), so nothing of that family is file-local here.
 
 // Samples-per-pixel is a continuous function of the zoom level (a real-valued
 // exponent): spp(level) = column × 2^(level − 2), the column this device's
@@ -159,8 +159,8 @@ namespace {
 // bottom_row_h_px() tall (the icon row's content height plus a 1px row of
 // ground on top, where its border-top stood) — the monospace clock cell in
 // its status panel (the active tab's letter, a pipe
-// and the timestamp, "A | 00:45.115") and THE STATE CELL in a second status
-// panel beside it (2026-10-02, Windows' status bar) at the left pad and,
+// and the timestamp, "A | 00:45.115") and THE STATE LINE on the ground
+// beside it (2026-10-03) at the left pad and,
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the marker walk, the four cardinal arrows and the
 // transport three, eight Windows px of ground between two groups (architect
@@ -209,40 +209,41 @@ namespace {
 // tablet below exactly).
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-02 (the Windows pixel: every lane in Windows px, the ruler and the
-// marker lane derived from their faces) rather than adjusted, at the
+// 2026-10-03 (the Windows pixel: every lane in Windows px, the ruler and the
+// marker lane derived from their faces, the marker lane's air above the box
+// alone since that day) rather than adjusted, at the
 // templates' default max_waveform_height OF 364 (the laptop pixel's 500
 // re-authored) and at 0, NO MAXIMUM, which both devices run (a device
 // carrying another value moves only W and the gaps). Every lane is its own
 // composite of rounded parts (scaled_px's rule), so the device rows below are
 // read off the lane accessors, never off a Windows total times the factor.
 //   1920x1080 AT 138 %, THE LAPTOP: the lanes are 26 menu + 44 icon + 22 trim
-//   + 27 ruler + 25 marker = 144 above, of which 70 is the two toolbar rows
-//   above the gap and 74 the block above the waveform, and 45 below (the
-//   bottom row's 44 content and its 1-px top row); leftover 891.
-//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 145, gap 2 =
-//     244 — 26 menu / 44 icon / 145 blank / 74 block / 502 waveform / 244
+//   + 27 ruler + 24 marker = 143 above, of which 70 is the two toolbar rows
+//   above the gap and 73 the block above the waveform, and 45 below (the
+//   bottom row's 44 content and its 1-px top row); leftover 892.
+//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 146, gap 2 =
+//     244 — 26 menu / 44 icon / 146 blank / 73 block / 502 waveform / 244
 //     blank / 45 row, the waveform spanning y 289..791 about the window's
 //     midline 540 (the clamp fixes its height and the midpoint rule its
 //     centre, so gap 1 absorbs every row the lanes above it gain or lose).
-//     At 0: waveform UNCLAMPED at 891, both gaps 0 (the midpoint rule would
-//     want 540 - 144 - 445 = -49) — 26 / 44 / 0 / 74 / 891 / 0 / 45.
+//     At 0: waveform UNCLAMPED at 892, both gaps 0 (the midpoint rule would
+//     want 540 - 143 - 446 = -49) — 26 / 44 / 0 / 73 / 892 / 0 / 45.
 //   2304x1440 AT gui_scale 275, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head): the lanes are 52 menu + 88 icon + 44 trim + 50
-//   ruler + 52 marker = 286 above (the ruler's and the marker lane's heights
+//   ruler + 49 marker = 283 above (the ruler's and the marker lane's heights
 //   derived from their faces, ruler_lane_h_px and marker_lane_h_px at
-//   render.h) and 91 below (88 + its 3-row top row), leftover 1063.
+//   render.h) and 91 below (88 + its 3-row top row), leftover 1066.
 //     At 364: waveform CLAMPED at 1001 (the scaled 364), gap 1 = 0 (the
-//     midpoint rule would want 720 - 286 - 500 = -66), gap 2 = 62
-//     — 52 / 88 / 0 / 146 / 1001 / 62 / 91.
-//     At 0: waveform UNCLAMPED at 1063, both gaps 0 (the rule would want
-//     720 - 286 - 531 = -97) — 52 / 88 / 0 / 146 / 1063 / 0 / 91.
+//     midpoint rule would want 720 - 283 - 500 = -63), gap 2 = 65
+//     — 52 / 88 / 0 / 143 / 1001 / 65 / 91.
+//     At 0: waveform UNCLAMPED at 1066, both gaps 0 (the rule would want
+//     720 - 283 - 533 = -96) — 52 / 88 / 0 / 143 / 1066 / 0 / 91.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
 //   exist for; no host runs this geometry), the same at either value:
-//     leftover 411 -> waveform UNCLAMPED at 411, both gaps 0
-//     — 26 / 44 / 0 / 74 / 411 / 0 / 45. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = 300 - 144 - 205 = -49), so the
+//     leftover 412 -> waveform UNCLAMPED at 412, both gaps 0
+//     — 26 / 44 / 0 / 73 / 412 / 0 / 45. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = 300 - 143 - 206 = -49), so the
 //     waveform keeps everything, which is the rule's own floor rather than a
 //     special case.
 //
@@ -376,7 +377,7 @@ int centered_leftover_h(int win_h) {
 }
 // THE WAVEFORM'S HEIGHT: the leftover, CLAMPED at the maximum (the seventh
 // glass ruling's clamp, the device config's `max_waveform_height` through
-// waveform_max_h_px at render.h — default 500, and 0 answering INT_MAX so the
+// waveform_max_h_px at render.h — default 364 Windows px, and 0 answering INT_MAX so the
 // leftover always wins). The floor at 0 is
 // what keeps a degenerate window's negative leftover out of the gap arithmetic
 // below; waveform_area's own guard answers the rect.
@@ -480,15 +481,15 @@ GuiRect waveform_area(const AppState& a) {
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and at today's ceiling
-    // it fits: gui_scale's 350 takes the six lanes — 139 Windows px at 100 %,
-    // the top strip's 106 plus the bottom row's 33 (re-derived 2026-10-02,
-    // the Windows pixel) — to 480 device px on a supported 1080-tall window
-    // (lane by lane through scaled_px and each lane from its rounded parts,
-    // which is not one multiply of the sum: 66 menu + 112 icon + 56 trim + 63
-    // ruler + 67 marker = 364 above, and 116 row), leaving 600 for the
-    // waveform and its gaps. (No host runs anything near it: the laptop is
-    // 138 % on 1080, where the six lanes take 189, and the tablet 275 % on its
-    // 1440-tall surface, where they take 377.) The guard
+    // it fits: gui_scale's 350 takes the six lanes — 138 Windows px at 100 %,
+    // the top strip's 105 plus the bottom row's 33 (re-derived 2026-10-03,
+    // the marker lane's air above its box alone) — to 476 device px on a
+    // supported 1080-tall window (lane by lane through scaled_px and each
+    // lane from its rounded parts, which is not one multiply of the sum: 66
+    // menu + 112 icon + 56 trim + 63 ruler + 63 marker = 360 above, and 116
+    // row), leaving 604 for the waveform and its gaps. (No host runs anything
+    // near it: the laptop is 138 % on 1080, where the six lanes take 188, and
+    // the tablet 275 % on its 1440-tall surface, where they take 374.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved three times — and the lane set is one
     // the redesign keeps adding to and taking from. If
@@ -629,8 +630,8 @@ GuiRect top_marker_row_area(const AppState& a) {
 // and 9 merged; the succession is at the bottom row's geometry block,
 // render.h), with GAP 2's blank window ground between it
 // and the waveform: the monospace clock at the left pad in a status panel
-// with THE STATE CELL in a second panel right of it (architect 2026-10-02,
-// Windows' status bar), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
+// (architect 2026-10-02, Windows' status bar) with THE STATE LINE on the
+// ground right of it (architect 2026-10-03), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
 // walk, the four cardinal arrows and the transport three, at the icon row's
 // boxes, eight Windows px of bare ground between two groups (architect
@@ -1095,7 +1096,8 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // painter last drew it, at the lane's left pad (AppState::clock_cell_rect,
 // whose stash contract is at the field). Narrow by construction: on_redraw
 // clips to the damage region, so paint_bottom_strip runs but its buttons, the
-// clock panel's two vertical lines and the whole state panel fall outside the
+// clock panel's two vertical lines and the whole state line — a group space
+// right of the panel — fall outside the
 // clip and cost nothing (the clock panel's top and bottom lines cross the box
 // and are repainted identically under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. The
@@ -1111,9 +1113,10 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // and mark together. The mark changes only when app.dirty moves — the letter
 // before the digits never moves with it — and THAT transition damages the
 // lane whole through Viewport::invalidate_status_cell_area
-// (Undo::recompute_dirty's tail) — a superset since the state cell took its
-// own status panel (2026-10-02), the mark's one cell being inside this
-// cell's reserved width and nothing beside it moving.
+// (Undo::recompute_dirty's tail) — a superset, the mark's one cell being
+// inside this cell's reserved width, the run's origin independent of it
+// (centred by half the mark's advance, 2026-10-03) and nothing beside it
+// moving.
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame

@@ -43,10 +43,9 @@ struct GuiTargetRender;
 
 // -- Constants used by paint code ----------------------------------------
 //
-// Declared here so paint_handler.cpp can reach them. The one pointer-side grab
-// tolerance is paint-handler-independent and lives with the surface it
-// belongs to (kTrimEndcapGrabPx in render.h; the marker stems' died with
-// their pointer surface, 2026-08-12);
+// Declared here so paint_handler.cpp can reach them. No pointer-side grab
+// tolerance survives (the marker stems' died with their pointer surface,
+// 2026-08-12, the trim endcaps' with the arrow buttons, 2026-10-03);
 // playhead_half_px() lives in render.h. redesign_font_size_px() — the product's
 // ONE text size since row 7 — lives in render.h so render.cpp can reach it
 // without pulling paint_handler.h into the lower-layer include graph.
@@ -771,10 +770,10 @@ private:
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29): the monospace clock at
-    // the lane's left pad in a status panel with THE STATE CELL in a second
-    // (architect 2026-10-02, Windows' status bar: the `h` walk line or the
-    // render's progress line at the small face, clipped inside its panel,
-    // which ends one group space short of the right block), then the right
+    // the lane's left pad in a status panel with THE STATE LINE on the ground
+    // beside it (architect 2026-10-03: the `h` walk line or the render's
+    // progress line at the normal face, clipped one group space short of the
+    // right block), then the right
     // margin's block — the MARKER-VERB GROUP (its membership is
     // kMarkerVerbGroup's, in the .cpp), the marker walk, the arrow four and
     // the transport three, eight Windows px of bare ground between groups —

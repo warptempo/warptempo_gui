@@ -22,10 +22,11 @@ int notification_pad_px() {
 
 int notification_card_max_w_px(const AppState& a) {
     // THE CEILING IS AUTHORED AND SCALED, NOT A FRACTION OF THE WINDOW
-    // (architect 2026-08-31, the reasoning at the declaration): 640 authored
-    // px is what `a.width / 3` gave on the 1920 px laptop, so the card the
-    // laptop already had is now the card every device gets, in millimetres
-    // rather than in device pixels.
+    // (architect 2026-08-31, the reasoning and the number at the declaration,
+    // kNotificationMaxWidthPx in notifications.h): the ceiling is what
+    // `a.width / 3` gave on the 1920 px laptop, so the card the laptop already
+    // had is now the card every device gets, in millimetres rather than in
+    // device pixels.
     const int floor_w   = scaled_px(kNotificationMinWidthPx);
     const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
     // THE WINDOW IS A SAFETY BELOW THE CEILING AND NOTHING ABOVE THE FLOOR:

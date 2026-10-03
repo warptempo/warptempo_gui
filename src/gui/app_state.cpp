@@ -69,10 +69,10 @@ void remap_marker_indices_after_reorder(AppState& app,
 }
 
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
-// references are now explicit arguments. The one surviving grab tolerance is
-// the trim endcaps' (kTrimEndcapGrabPx, render.h) — there is no shared hit
-// half-width any more, and the marker surfaces (the flag boxes) hit on their
-// painted rects with no halo. Both families read a PAINTER'S STASH: the flag
+// references are now explicit arguments. There is no grab tolerance left:
+// the trim caps are their painted arrow buttons since 2026-10-03 and the
+// marker surfaces (the flag boxes) hit on their painted rects, neither with a
+// halo. Both families read a PAINTER'S STASH: the flag
 // lane's (AppState::flag_hit_rects) and, since 2026-09-24, the trim lane's
 // (AppState::trim_bar_hit).
 
@@ -126,84 +126,41 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly
     // as-painted; the contract is at AppState::trim_bar_hit). The caps are the
-    // ones GuiPaintHandler::paint_trim last DREW — on the displayed item basis
-    // and the displayed map, through trim_endcap_rect, each published as its
-    // painted columns over the lane's whole height — so a press between a
-    // trim write and its repaint grabs the cap still on screen, and a bound
-    // the viewport culled, having painted no cap, answers nothing. Nothing
-    // here reads app.trim or re-runs the owner chain. Cold (nothing painted)
-    // nothing is grabbable.
+    // arrow buttons GuiPaintHandler::paint_trim last DREW — on the displayed
+    // item basis and the displayed map, through trim_endcap_rect, each
+    // published as its painted rect over the lane's whole height — so a press
+    // between a trim write and its repaint grabs the button still on screen,
+    // and a bound the viewport culled, having painted no button, answers
+    // nothing. Nothing here reads app.trim or re-runs the owner chain. Cold
+    // (nothing painted) nothing is grabbable.
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return TrimHit::None;
 
-    // The caps span the trim bar LANE the painter drew them in (row 5's
-    // endcaps, 2026-08-01 — the square b/e chips and their strip-crossing
-    // stems are gone), so a press outside that band is not on an endcap. (The
-    // y-gate spanned the merged trim-bar + ruler band for the trim surface
-    // arc's one day, 2026-08-11..12, and came back to the lane with the arc's
-    // revert; the ruler is the REGION FORMER's band since 2026-08-12.)
+    // The buttons span the trim bar LANE the painter drew them in, so a press
+    // outside that band is not on one. (The y-gate spanned the merged
+    // trim-bar + ruler band for the trim surface arc's one day, 2026-08-11..12,
+    // and came back to the lane with the arc's revert; the ruler is the
+    // REGION FORMER's band since 2026-08-12.)
     if (mouse_y < h.lane.y || mouse_y >= h.lane.y + h.lane.h)
         return TrimHit::None;
 
-    // OVERLAP ARBITRATION IS THIS HIT TEST'S OWN POLICY, not a mirror of
-    // painter z-order: render_trim_flags lays the begin cap down and then the
-    // end cap, with no sort and no reverse pass, so there is no
-    // "topmost-painted" cap to defer to and the caps carry identical colours
-    // anyway — the pixels give no cue either verdict could contradict. The rule
-    // here is LEFTMOST WINS, with Begin ahead of End at an equal column (the
-    // tie-break below): deterministic and stable, and it names the bound a user
-    // aiming at the left of an overlapping pair means. Overlap is mostly the
-    // GRAB TOLERANCE's doing — the inflated rects reach far past the caps they
-    // came from, while the drawn caps themselves can share at most a cap width
-    // (see the tie-break).
-    struct TrimEndcapHit {
-        int     col_x;
-        GuiRect rect;
-        TrimHit which;
+    // THE BUTTON IS THE TARGET (architect 2026-10-03): each published rect is
+    // tested as it is, with no tolerance. The two rects never overlap — the
+    // painter stands the end button edge to edge right of the begin's in the
+    // narrow case (trim_endcap_rect) — so the order of the two tests decides
+    // nothing.
+    const auto on = [&](const TrimBarHitCap& cap) {
+        return cap.painted && mouse_x >= cap.rect.x &&
+               mouse_x < cap.rect.x + cap.rect.w;
     };
-    TrimEndcapHit endcaps[2];
-    int n = 0;
-    auto add_endcap = [&](const TrimBarHitCap& cap, TrimHit which) {
-        if (!cap.painted) return;
-        // THE CAP'S HIT BAND, INFLATED BY THE GRAB TOLERANCE. The stash
-        // carries the thumb end's columns over the lane's whole height
-        // (trim_endcap_rect), so the target is centred on them; the widening
-        // is the hit side's own term, because a 7-Windows-px band is below a
-        // fingertip (the rationale is at trim_endcap_rect).
-        GuiRect r = cap.rect;
-        const int grab = trim_endcap_grab_px();
-        r.x -= grab;
-        r.w += 2 * grab;
-        endcaps[n++] = {cap.col_x, r, which};
-    };
-    add_endcap(h.begin, TrimHit::Begin);
-    add_endcap(h.end,   TrimHit::End);
-    // At most two candidates, so the order is one compare and one swap.
-    // Ascending column; at an equal column Begin first, so the forward walk
-    // below returns it (Begin is added first, so an equal pair is already in
-    // order). The two DRAWN caps are NOT the same rect there —
-    // trim_endcap_rect anchors them in opposite directions (begin's left edge
-    // on the column, end's right edge on it), so they mirror about the column
-    // and share only it — but they are the same colour, so nothing painted
-    // distinguishes them. The tie-break fixes which bound a click in the
-    // inflated overlap grabs, and nothing else.
-    if (n == 2 && endcaps[1].col_x < endcaps[0].col_x)
-        std::swap(endcaps[0], endcaps[1]);
-
-    // Forward walk = ascending-x = LEFTMOST FIRST, the policy stated above. The
-    // first cap whose inflated [rect.x, rect.x + w) contains mouse_x wins.
-    for (int i = 0; i < n; ++i) {
-        if (mouse_x >= endcaps[i].rect.x &&
-            mouse_x < endcaps[i].rect.x + endcaps[i].rect.w) {
-            return endcaps[i].which;
-        }
-    }
+    if (on(h.begin)) return TrimHit::Begin;
+    if (on(h.end))   return TrimHit::End;
     return TrimHit::None;
 }
 
 bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
     // THE PAINTER'S STASH, the endcap test's twin (AppState::trim_bar_hit):
-    // the interval is the bar's stretch between the two caps' inner edges as
+    // the interval is the body between the two arrow buttons' inner edges as
     // render_trim_flags last DREW it — trim_bridge_gap over the painted
     // columns, already clipped to the lane's painted width, so the inert
     // non-multiple-of-16 right gutter answers false exactly as it paints no

@@ -1864,7 +1864,7 @@ struct GuiInputHandler {
     // keyboard-capability loss, a Super-swallowed press), wired in main.cpp,
     // which is why this one is public. Same reasoning as its pointer twin,
     // over the stream that owes the release. It is ALSO the owner of the
-    // focus-move cancel since 2026-08-14 (the ring's walk, the pointer feint's
+    // focus-move cancel since 2026-08-14 (the ring's walk, the pointer press's
     // passive assignment, the editor act's return of the focus to the field —
     // three internal callers, each the site of a focus move): the contract is
     // at the definition and the full edge list at
@@ -4113,7 +4113,7 @@ private:
     // input_pointer.cpp — the painter's stash is AppState::modal_dialog and
     // the veil contract lives at on_button_press's two dialog gates):
     // the button hit test over the stash, the pointer walk the motion
-    // branches call (the armed button's inside bit, the feint and the
+    // branches call (the armed button's inside bit — the feint — and the
     // dialog's tooltip wait — no hover face), and the editor dialog's
     // OK/Cancel dispatch — the
     // session's own Enter/Esc through the per-editor key routes,
@@ -4165,7 +4165,9 @@ private:
     // arm, its hard end, and the lift's verdict. The arm itself is
     // AppState::modal_dialog_pressed, whose declaration carries the whole edge
     // list and the reason it is not the roster's own arm (AppState::ChromePress).
-    //   arm_modal_dialog_press    — press: arm the hit button and paint it,
+    //   arm_modal_dialog_press    — press: arm the hit button, give it the
+    //                               passive keyboard focus (architect
+    //                               2026-10-03, Windows' rule) and paint it,
     //                               dispatching nothing. True iff one was hit
     //                               (or a shift press was consumed on a button
     //                               with no shifted twin). `shift` is the

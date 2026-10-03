@@ -184,11 +184,12 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // 2026-08-02 with its last reader long behind it. It was the single
 // clicking/hovering tolerance shared by stems, flags and trim bounds; the
 // redesign gave each surface its own authored, gui_scale-aware grab constant
-// instead, of which the trim endcaps' — kTrimEndcapGrabPx /
-// trim_endcap_grab_px() in render.h — is the one survivor: the flags are hit
-// on their painted boxes with no halo at all, and the marker stems' grab
-// constant died with their pointer surface (stems pointer-inert, 2026-08-12 —
-// the record is at the retired hit_test_marker_stem's site below).
+// instead, and none survives: the flags are hit on their painted boxes with
+// no halo at all, the marker stems' grab constant died with their pointer
+// surface (stems pointer-inert, 2026-08-12 — the record is at the retired
+// hit_test_marker_stem's site below), and the trim endcaps' went when the
+// caps became their painted arrow buttons (architect 2026-10-03,
+// kTrimArrowButtonPx in render.h).
 // The rule it carried outlives it and belongs to nothing in particular: a grab
 // tolerance is NOT a spacing gap. Markers may sit arbitrarily close, overlap
 // exactly, and cross during gestures; ordering degeneracy collapses at the
@@ -6431,23 +6432,29 @@ struct AppState {
     // button is being held, but away from the button's hit area, the button
     // looks like a hover — a passive focus with the hover. And then when they
     // release it, it goes into being a passive focus."
+    // THE FOCUS MOVES AT THE PRESS (architect 2026-10-03, "as few exceptions
+    // as possible to the Windows 95 rule; mostly cosmetic since I don't press
+    // Tab and Space"): a press on a dialog button gives it the PASSIVE focus
+    // there and then, as Windows does, rather than at the leave edge as the
+    // feint first had it (arm_modal_dialog_press, the one site).
     // So the arm is one index for the life of the hold and
     // `modal_dialog_press_inside` below is the pointer's answer about it:
-    //   pointer ON the armed button   -> the PRESSED face; the release COMMITS
+    //   pointer ON the armed button   -> the PRESSED face with its focus
+    //                                    frame; the release COMMITS
     //   pointer OFF it                -> the button rests (its focus frame,
-    //                                    the passive focus); the release
-    //                                    commits NOTHING and leaves the
-    //                                    button PASSIVELY FOCUSED
+    //                                    the passive focus the press gave
+    //                                    it); the release commits NOTHING and
+    //                                    leaves the button PASSIVELY FOCUSED
     // Sliding back on restores the pressed face and a release there DOES
     // commit — the arm never died, so there is nothing to re-arm. The reason
     // is in the ruling itself: a button that keeps a lit face while held away
     // is still engaged, and a dead arm could not light anything.
     //
-    // Its edges: the press claims write it (on_button_press's two dialog
-    // gates, input_pointer.cpp), the release claims read and clear it, the
-    // hover walk keeps it and rewrites `press_inside` instead
-    // (update_modal_dialog_hover, which is also where the feint's passive
-    // focus is assigned, on the leave edge), clear_modal_dialog_press drops it
+    // Its edges: the press claims write it through arm_modal_dialog_press
+    // (on_button_press's two dialog gates and the player's and the picker's
+    // veils, input_pointer.cpp), which also assigns the focus; the release
+    // claims read and clear it, the hover walk keeps it and rewrites
+    // `press_inside` instead (update_modal_dialog_hover), clear_modal_dialog_press drops it
     // on the pointer-leave / capability-loss edge (main.cpp's hook, beside the
     // roster's own clear), and paint_modal_dialog drops it with the stash
     // whenever the dialog closes or CHANGES. Every write damages the box.
@@ -6524,7 +6531,7 @@ struct AppState {
     // press on the field, a finger's caret drag in it and the editor act's
     // own dispatch each return it to -1 through the one owner,
     // GuiInputHandler::return_modal_focus_to_field (input_pointer.cpp), so a
-    // button that took it by a feint gives it back with the caret.
+    // button that took it by a press gives it back with the caret.
     //
     // AND THE INDEX IS ONLY MEANINGFUL WHILE THE STASH IS CURRENT, because it
     // names a slot in the painter's published button list. Between a raise and
@@ -6549,9 +6556,9 @@ struct AppState {
     //   four confirmation raises: the load's two, the revert's and, since
     //   2026-09-16, the phase reset paste's; PromptState's
     //   PromptInitialFocus owns the choice and why each is safe) and a
-    //   FEINT (a press that armed a button, then dragged off it —
-    //   update_modal_dialog_hover's leave edge; the rule is at
-    //   modal_dialog_pressed). A feint's assignment REPLACES whatever focus
+    //   POINTER PRESS on a button (architect 2026-10-03, Windows' rule:
+    //   arm_modal_dialog_press, at the press; the rule is at
+    //   modal_dialog_pressed). A press's assignment REPLACES whatever focus
     //   the dialog had, of either strength.
     //   ACTIVE is reached only by a DELIBERATE KEYBOARD WALK — Tab, its two
     //   reverse spellings, Left, Right — so its one producer is
@@ -6568,7 +6575,7 @@ struct AppState {
     // automatically commit the action... we move the playhead when the user
     // lifts up the mouse key, so we should do that here as well"). It is the
     // POINTER ARM'S TWIN and deliberately a separate index: the two can stand
-    // together (a feint held with the mouse while the keyboard presses the
+    // together (a pointer hold while the keyboard presses the
     // focused button), they die on different edges, and one field would have
     // to encode both.
     //
@@ -6595,9 +6602,10 @@ struct AppState {
     // invariant every reader may lean on: the pressed face and the focus ring
     // can never point at different buttons, and the release cannot commit a
     // button that is no longer focused. Its three cancel sites are the three
-    // routes that move the focus at all — the ring's walk, the pointer FEINT's
-    // passive assignment, and the editor act's return of the focus to the
-    // field — each calling the one owner, clear_modal_dialog_key_press.
+    // routes that move the focus at all — the ring's walk, the pointer
+    // PRESS's passive assignment (arm_modal_dialog_press, 2026-10-03), and
+    // the editor act's return of the focus to the field — each calling the
+    // one owner, clear_modal_dialog_key_press.
     // IT IS THE POINTER ARM'S RULE IN THE KEYBOARD'S OWN TERMS rather than a
     // copy of it, and the difference is the two inputs' own: the pointer can
     // paint a HELD-AWAY face and slide back onto the button, so its arm
@@ -17695,19 +17703,18 @@ enum class TrimHit { None, Begin, End };
 // press, or None. It reads THE PAINTER'S STASH (AppState::trim_bar_hit,
 // architect 2026-09-24 — strictly as-painted): the two caps the live trim pass
 // last DREW, never the store's pair, so a press between a trim write and its
-// repaint grabs the cap on screen. Each bound's cap is one END OF THE TRIM
-// LANE'S SCROLL-BAR THUMB (architect 2026-10-02, the AC set; it was a painted
-// handle square until then): a trim_endcap_w_px() column run, published at
-// the lane's full height, EDGE-ANCHORED on the bound's painted column — the
-// begin end's LEFT edge on it, the end end's RIGHT edge on it — from
-// trim_endcap_rect, the ONE rect owner render_trim_flags publishes from. THE
-// HIT RECT IS THAT BAND INFLATED by kTrimEndcapGrabPx per side (a 19-px band
-// is under a fingertip), which is why two caps at nearby columns can overlap
-// as targets at all (LEFTMOST WINS — the arbitration is at the body). Tests
-// both mouse_x and mouse_y, the y against the lane the thumb was painted in.
-// A culled bound published no band and answers nothing; cold (nothing
-// painted) answers None. The two ends and the thumb's body between them (the
-// bridge span) are the ONLY trim grab handles (the waveform stem grab
+// repaint grabs the cap on screen. Each bound's cap is its SCROLL-BAR ARROW
+// BUTTON at that end of the trim lane's thumb (architect 2026-10-03; the rule
+// at kTrimArrowButtonPx, render.h): a trim_arrow_button_w_px() square at the
+// lane's full height, EDGE-ANCHORED on the bound's painted column — the begin
+// button's LEFT edge on it, the end button's RIGHT edge on it, or in the
+// narrow case edge to edge right of the begin's — from trim_endcap_rect, the
+// ONE rect owner render_trim_flags paints and publishes from. THE HIT RECT IS
+// THE BUTTON, with no tolerance, and the two never overlap. Tests both
+// mouse_x and mouse_y, the y against the lane the thumb was painted in. A
+// culled bound published no button and answers nothing; cold (nothing
+// painted) answers None. The two buttons and the thumb's body between them
+// (the bridge span) are the ONLY trim grab handles (the waveform stem grab
 // retired).
 TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 
@@ -17731,9 +17738,9 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 // paints the bar nor answers true here. Nothing is re-derived on the store's
 // pair.
 //
-// THE ENDCAPS ARE NOT IN IT: trim_bridge_gap insets each end by a painted cap's
-// width, so the cap rects sit outside the interval and this needs no reliance on
-// a caller testing the caps first. Both bounds are always set (the trim window
+// THE ARROW BUTTONS ARE NOT IN IT: trim_bridge_gap insets each in-view end by
+// a painted button's width, so the button rects sit outside the interval and
+// this needs no reliance on a caller testing the buttons first. Both bounds are always set (the trim window
 // always rests), so there is no pair gate.
 bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 
