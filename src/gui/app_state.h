@@ -221,7 +221,8 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // derivation with the overshoot taken off, not a new one.
 //
 // WHAT IT COSTS, AND WHY THAT IS AFFORDABLE: the whole [effective floor, effective
-// ceiling] span is roughly 3200 authored px of travel — over a screen and a
+// ceiling] span is roughly 2300 Windows px of travel (the laptop pixel's
+// 3200 re-authored at the unit's change, 2026-10-02) — over a screen and a
 // half at the deployment size — and that is fine BECAUSE OF THE CAPTURE. The
 // notional-x freeze (its record is at GuiPlatform::set_notional_x_frozen) is
 // what makes the zoom phase's sideways travel unlimited: the pointer's
@@ -233,8 +234,10 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // nav_zoom_px_per_level() below and the one reader divides by that accessor,
 // never by this constant. The scaling rule and its rationale are stated there.
 //
-// Architect-tunable on the rig, exactly as the vertical one is.
-constexpr double kNavZoomPxPerLevel = 200.0;
+// Architect-tunable on the rig, exactly as the vertical one is. 145 WINDOWS
+// PX since the unit's change (architect 2026-10-02): the laptop pixel's 200
+// re-authored to the rate that keeps its device travel on the tablet.
+constexpr double kNavZoomPxPerLevel = 145.0;
 
 // The rate in DEVICE pixels per zoom level at the live gui_scale — the ONE
 // READER's divisor (apply_nav_zoom_at, input_pointer.cpp).
@@ -246,8 +249,9 @@ constexpr double kNavZoomPxPerLevel = 200.0;
 // the panel on every host, not the same count of device pixels: 200 device px
 // is ~43 mm on the retired road rig and only ~20 mm on the tablet's 249 PPI
 // panel, which is exactly the "too fast" the architect drove. At the tablet's
-// own 225 % a level costs 450 device px — ~46 mm on that panel, back on the
-// rig's ~43 mm order of hand travel instead of half it. Durations never scale;
+// own 275 % a level costs 399 device px (145 Windows px, kNavZoomPxPerLevel's
+// unit since 2026-10-02) — ~41 mm on that panel, back on the rig's ~43 mm
+// order of hand travel instead of half it. Durations never scale;
 // lengths do — the same split the
 // press road's four pixel thresholds take (drag_moved_threshold_px,
 // grab_moved_threshold_px, double_click_slack_px,
@@ -264,11 +268,12 @@ constexpr double kNavZoomPxPerLevel = 200.0;
 // IT DOES NOT COME THROUGH scaled_px: this is a DOUBLE-domain quantity, a
 // divisor rather than a painted dimension, and rounding it to an int would
 // quantize the feel for no gain (render.h's conversion pair states that the
-// double-domain readers deliberately stay out of it). The multiply is exact
-// at gui_scale 100, so the laptop's default is the authored 200 byte for byte.
+// double-domain readers deliberately stay out of it). At gui_scale 100 the
+// rate is the authored 145 Windows px exactly; the laptop's 138 % gives
+// 200.1 device px, the laptop pixel's 200 it had before the unit's change.
 // The floor keeps the divisor away from zero at any factor the schema could
 // ever admit; inside the live [50, 350] bracket the value rests in
-// [100, 800] and the floor cannot fire.
+// [72.5, 507.5] and the floor cannot fire.
 inline double nav_zoom_px_per_level() {
     const double rate = kNavZoomPxPerLevel * gui_scale_factor();
     return rate < 1.0 ? 1.0 : rate;
@@ -681,9 +686,9 @@ struct ValueDragState {
 // number, and a retune is this line (architect 2026-09-10). It is a LENGTH and
 // so it SCALES: the drag reads it through scaled_px, exactly as every other
 // authored press-road distance does (the drag gate, the double-click slack,
-// the touch slop), because a hand's eight pixels at 225% is not the same
-// gesture as a hand's eight pixels at 100%. Durations never scale; this is not
-// one. The same eight pixels buy a cent, a bound cent and a hop alike — the
+// the touch slop), because a hand's six Windows px at 275 % is not the same
+// gesture as at 138 %. Durations never scale; this is not one. The same
+// travel buys a cent, a bound cent and a hop alike — the
 // step is one step whatever the cell's domain is, which is what makes the
 // gesture read the same on every cell of every flag.
 //
@@ -694,8 +699,10 @@ struct ValueDragState {
 // shapes the first step: the travel is counted from the CROSSING (2026-09-29,
 // ValueDragState::origin_y), so the gate's own travel buys nothing and the
 // first step always lands one full step past it, where a press-measured
-// count would have landed the grab gate's two steps at once.
-inline constexpr double kValueDragPxPerStep = 8.0;
+// count would have landed the grab gate's two steps at once. 6 WINDOWS PX
+// since the unit's change (architect 2026-10-02), the laptop pixel's 8
+// re-authored to the travel it had on the tablet, as the drag gate was.
+inline constexpr double kValueDragPxPerStep = 6.0;
 
 // Drag-time position overlay. Paint sites consult this when a marker
 // index appears in `indices` to read the proposed new time from
@@ -2089,7 +2096,7 @@ enum class RedesignButton {
     // Row 4, the icon row, in painted order: the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
-    // machinery, the FACE now a glyph in the 32px box and the old labels
+    // machinery, the FACE now a glyph in the toolbar case and the old labels
     // living on as the tooltips; COPY VALUE between Redo and Render since
     // 2026-09-29), THE VIEWPORT-CLASS GROUP — the Show trim
     // region button leading the zoom buttons (2026-08-12, the architect's live
@@ -3093,11 +3100,13 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // walks its own table, and the bottom row's walks its two.)
 
 // THE ICON ROW'S GROUP BOUNDARIES — true for the button that OPENS each
-// separator-led group, which is this row's whole grouping vocabulary (4px, a
-// 1px line, 4px; everything else in a group is 2px from its neighbour). The
-// row's first group opens on Save and draws no line, the painter's walk
-// suppressing the separator ahead of its first member rather than this
-// predicate carrying a third state.
+// group, which is this row's whole grouping vocabulary: eight Windows px of
+// bare ground ahead of a leader, the members of a group touching (architect
+// 2026-10-02, the Windows case; the etched separator that stood in that gap
+// retired the same day — the groups' history below still says
+// "separator" for the gap of its day). The row's first group opens on Save
+// and takes no gap, the painter's walk suppressing the gap ahead of its
+// first member rather than this predicate carrying a third state.
 //
 // IT LIVES HERE, BESIDE THE ROSTER, rather than as a column in the painter's
 // table: it was hoisted for the collapse rule (which asked whole groups) and
@@ -3702,11 +3711,10 @@ inline int dropdown_h_px(DropdownMenu m) {
     int separators = 0;
     for (int i = 0; i < count; ++i)
         if (dropdown_row(m, i).separator_before) ++separators;
-    const int border = popup_border_px();
     return count * popup_item_h_px() +
-           separators * (2 * popup_sep_margin_y_px() + border) +
+           separators * popup_sep_block_px() +
            2 * popup_item_margin_y_px() +
-           2 * border;
+           2 * popup_border_px();
 }
 
 // Double-click window and positional slack (architect-tunable). Two motionless
@@ -3745,7 +3753,9 @@ inline int dropdown_h_px(DropdownMenu m) {
 // not a number per surface. The beat's declaration lists the two of them
 // apart from the holds, neither being one, and both stay on the constant.
 constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
-constexpr int     kDoubleClickSlackPx = 8;
+// 6 WINDOWS PX (8 laptop px until the unit's change, architect 2026-10-02:
+// 16 device px at the tablet's 275 % as at its 200 % before).
+constexpr int     kDoubleClickSlackPx = 6;
 
 // The slack in DEVICE pixels at the live gui_scale — the five compare sites'
 // one reader (input_pointer.cpp, all of them `<=` against a Chebyshev distance
@@ -3757,7 +3767,7 @@ constexpr int     kDoubleClickSlackPx = 8;
 // drag" and "never left the slack" one answer on the SWEEP AND PAN surfaces.
 // ON THE TWO GRAB SURFACES THEY ARE TWO ANSWERS since 2026-09-29: a flag and
 // the trim bar become drags at grab_moved_threshold_px(), twice this, so a
-// press there can leave the slack at 8 authored px and still be a click at
+// press there can leave the slack at 6 Windows px and still be a click at
 // its release. That is fine because the seed is the motionless release's
 // alone and a release between the two distances IS a click, not a drag: the
 // flag's seed is written by any release whose pending never crossed (at the
@@ -3899,8 +3909,10 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // roll crossed the smaller one during a relaxed double tap (the flag drag that
 // ate the second tap). The RESOLVED value is drag_moved_threshold_px() below;
 // every gate reads that accessor and never this constant, and at gui_scale 100
-// it is this number exactly.
-constexpr int     kDragMovedThresholdPx = 8;
+// it is this number exactly. 6 WINDOWS PX since the unit's change (architect
+// 2026-10-02): the laptop pixel's 8 re-authored to the device length it had
+// on the tablet, 16 px — 8dp — at 275 % as at 200 % before.
+constexpr int     kDragMovedThresholdPx = 6;
 
 // The gate in DEVICE pixels at the live gui_scale — THE ONE READER FOR EVERY
 // SURFACE in the list above (three compares in input_pointer.cpp: the nav
@@ -3913,8 +3925,9 @@ inline int drag_moved_threshold_px() {
 
 // THE GRAB GATE (architect 2026-09-29): the Chebyshev distance a press that
 // GRABS A THING must travel before it becomes that thing's drag — TWICE the
-// drag gate above, derived from it so the two stay one authored number (16
-// authored px; 32 device px at 200 %). A grab is a press on an object whose
+// drag gate above, derived from it so the two stay one authored number (12
+// Windows px; twice the drag gate's rounded 16 device px, 32, at 275 %). A
+// grab is a press on an object whose
 // drag MOVES it — a click that rolls a few pixels on a flag or a trim endcap
 // must stay the click it meant to be, because the drag it would otherwise
 // become rewrites authored content or the trim, where a sweep or a pan that
@@ -3944,11 +3957,15 @@ inline int drag_moved_threshold_px() {
 // slack before it becomes a drag; that is harmless because a seed is the
 // motionless release's alone — a release between the two distances is a
 // click, never a drag, whichever the seed then does with it.
-// Floor 1 through scaled_px, as the drag gate's.
+// TWICE THE ROUNDED DRAG GATE, NOT THE ROUNDED DOUBLE (architect 2026-10-02,
+// scaled_px's composite rule): the grab gate is built from its rounded part,
+// 2 × drag_moved_threshold_px() — 16 device px at 138 % and 32 at 275 %,
+// the 16 and 32 it was before the unit's change — where scaled_px(12) would
+// round once to 17 and 33.
 constexpr int     kGrabMovedThresholdPx = 2 * kDragMovedThresholdPx;
 
 inline int grab_moved_threshold_px() {
-    return scaled_px(kGrabMovedThresholdPx, 1);
+    return 2 * drag_moved_threshold_px();
 }
 
 // THE HOVER POPUP STATE IS DELETED (row 5, 2026-08-01). HoverPopupState cached
@@ -5019,8 +5036,8 @@ struct AppState {
     // compressor) — is two flat bars per column, in both audio views: the
     // levelled, expanded OUTER and the compressed, expanded INNER over it,
     // both in the plate's ink, the inner outlined in an erosion at distance
-    // t = waveform_line_px() of its own (1 px at 100%, 2 on the tablet at
-    // 225%; t snapshotted on the plate job and in its fingerprint, render.h
+    // t = waveform_line_px() of its own (1 px on the laptop at 138 %, 3 on
+    // the tablet at 275 %; t snapshotted on the plate job and in its fingerprint, render.h
     // and waveform_cache.cpp) (architect 2026-09-25/27, the inks render.h's
     // row-6 constants — the rule is at render_waveform's declaration); DARK,
     // the raw picture alone. THE BIT IS THE ANSWER, read by waveform_magnified
@@ -5128,8 +5145,9 @@ struct AppState {
     //
     // IT IS A PER-DEVICE PREFERENCE, NOT A PROPERTY OF THE PIECE (architect
     // 2026-08-27): it left the `.settings` sidecar that day for the device
-    // config, because the same project wants 100 on the laptop and 225 on the
-    // tablet and the sidecar travels between them. Ctrl+S does not carry it and
+    // config, because the same project wants 138 on the laptop and 275 on the
+    // tablet (100 and 225 in that day's laptop-pixel unit) and the sidecar
+    // travels between them. Ctrl+S does not carry it and
     // no load writes it — gui_main reads the config ONCE at startup, before the
     // window exists, and the editor commit rewrites the file at the moment it
     // changes. The member initializer below is construction state for the
@@ -9597,7 +9615,7 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // the drag's carried one while a drag stands.
 //
 // THE BAND IS THE HANDLE'S BOX AND NOTHING MORE (render.h's
-// kScrubHandleBoxPx — the grab, not the picture: the 13 x 13 thumb is painted
+// kScrubHandleBoxPx — the grab, not the picture: the thumb is painted
 // inside it): a box-sized SQUARE centred on that column at the track's
 // vertical centre, the same centring the trough takes, and HALF-OPEN on both axes like every other pixel-cell test in the
 // product (a pixel x covers [x, x+1), containing_pixel's rule). It used to
@@ -9730,8 +9748,8 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // the CLAMPED window dimensions — the same geometry keyboard_slot_band takes
 // its x and width from, so the two cannot disagree about where the band
 // begins. Zero on a degenerate stack, which every consumer already reads as
-// "no room". ON THE TABLET (2304x1440 at gui_scale 200, gap 1 zero) the band
-// runs [152, 1346): under the 60 menu and 92 icon rows, down to the 94-tall
+// "no room". ON THE TABLET (2304x1440 at gui_scale 275, gap 1 zero) the band
+// runs [140, 1349): under the 52 menu and 88 icon rows, down to the 91-tall
 // bottom row.
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
@@ -12100,9 +12118,9 @@ inline bool any_tab_read_only(const AppState& a) {
 //   * THE VIEW GROUP'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10
 //     (architect, that morning, while they were the row-1 view bar): bare
 //     1/2/3 are refused under the lamp, so the three wear the icon row's own
-//     disabled face (2026-10-01) — the glyph and any lit selected fill at
-//     kRedesignDisabledMix, the selected view's dimmed lamp still saying
-//     where you stand — and the KEY's card carries the sentence.
+//     disabled face (2026-10-01) — the glyph engraved, the selected view's
+//     checked face still saying where you stand — and the KEY's card
+//     carries the sentence.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
@@ -14979,8 +14997,8 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
         // three having come down from row 1 to the icon row's view group):
-        // the glyph at kRedesignDisabledMix, as on every dead button of that
-        // row (paint_icon_row), the selected view's sunken lamp still saying
+        // the glyph engraved, as on every dead button of that row
+        // (paint_icon_row), the selected view's checked face still saying
         // where you stand; the hint names the act and the grey is the
         // message. The repaint is the roster's per-tick comparator (main.cpp),
         // no damage call anywhere here.
@@ -17654,22 +17672,20 @@ enum class TrimHit { None, Begin, End };
 // press, or None. It reads THE PAINTER'S STASH (AppState::trim_bar_hit,
 // architect 2026-09-24 — strictly as-painted): the two caps the live trim pass
 // last DREW, never the store's pair, so a press between a trim write and its
-// repaint grabs the cap on screen. Each bound's mark is one of the trim bar's
-// two HANDLES (architect 2026-10-01, which replaced the 2px endcaps under the
-// same names; a solid raised square since 2026-10-02): a trim_endcap_w_px()
-// column run, published at the lane's full height, EDGE-ANCHORED on the bound's
-// painted column — the begin handle's LEFT edge on it, the end handle's RIGHT
-// edge on it — from trim_endcap_rect, the ONE rect owner render_trim_flags
-// fills through and publishes from. THE HIT RECT IS THAT HANDLE INFLATED by
-// kTrimEndcapGrabPx per side (a 9px handle is under a fingertip), over the
-// lane's rows where the painted square takes only the trough's interior; it
-// is the one place in this lane where the drawn and the grabbable rect
-// differ, and it is why two caps at nearby columns can
-// overlap as targets at all (LEFTMOST WINS — the arbitration is at the
-// body). Tests both mouse_x and mouse_y, the y against the lane the caps were
-// painted in. A culled bound painted no cap and answers nothing; cold
-// (nothing painted) answers None. The endcaps and the bar's inter-cap bridge
-// span are the ONLY trim grab handles (the waveform stem grab retired).
+// repaint grabs the cap on screen. Each bound's cap is one END OF THE TRIM
+// LANE'S SCROLL-BAR THUMB (architect 2026-10-02, the AC set; it was a painted
+// handle square until then): a trim_endcap_w_px() column run, published at
+// the lane's full height, EDGE-ANCHORED on the bound's painted column — the
+// begin end's LEFT edge on it, the end end's RIGHT edge on it — from
+// trim_endcap_rect, the ONE rect owner render_trim_flags publishes from. THE
+// HIT RECT IS THAT BAND INFLATED by kTrimEndcapGrabPx per side (a 19-px band
+// is under a fingertip), which is why two caps at nearby columns can overlap
+// as targets at all (LEFTMOST WINS — the arbitration is at the body). Tests
+// both mouse_x and mouse_y, the y against the lane the thumb was painted in.
+// A culled bound published no band and answers nothing; cold (nothing
+// painted) answers None. The two ends and the thumb's body between them (the
+// bridge span) are the ONLY trim grab handles (the waveform stem grab
+// retired).
 TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 
 // point_in_trim_bridge_span: is (mouse_x, mouse_y) on the trim bar's INTER-CAP

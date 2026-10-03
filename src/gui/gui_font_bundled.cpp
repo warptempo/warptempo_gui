@@ -40,12 +40,25 @@
 //     mono 14.67px (11pt @100%)    10.43       11       11         16 / 4
 //     mono 29.33px (11pt @200%)    20.85       21       21         31 / 8
 //
+// THAT TABLE IS THE REFERENCE THE HINTER WAS CHOSEN ON, at the faces of its
+// day (12 / 10 / 11 pt of the laptop-pixel unit). The product's faces are the
+// Windows pixel's since 2026-10-02 (render.h: 13 / 10 / 12 Windows px, the
+// tooltip hint 11) and measure, under SLIGHT through the same road, cap and
+// ascent / descent:
+//
+//     sans  17.94px (13 @138%)   cap 13   17 / 5      35.75px (13 @275%)   cap 25   34 / 9
+//     sans  13.8px  (10 @138%)   cap 11   13 / 4      27.5px  (10 @275%)   cap 20   26 / 7
+//     mono  16.56px (12 @138%)   cap 12   18 / 5      33px    (12 @275%)   cap 24   35 / 9
+//
+// (the native hinter's caps at these sizes are unmeasured: the choice of
+// SLIGHT rests on the reasons above, not on a size).
+//
 // Ascent and descent are the SAME under both hinters at every size, which is
 // why only the cap-centred seats ever fork. NO WIDTH MOVES EITHER, for the
-// two reasons above. Under SLIGHT the tablet's seats keep the laptop's
-// symmetry: "File" sits 19 rows above its cap band and 19 below in the
-// tablet's 60-row menu lane, as it sits 9/9 in the laptop's 30; the native
-// hinter's 23-row cap would seat it 18/19 there.
+// two reasons above. Under SLIGHT the tablet's seats kept the laptop's
+// symmetry at the reference sizes: "File" sat 19 rows above its cap band and
+// 19 below in the tablet's 60-row menu lane, as it sat 9/9 in the laptop's
+// 30; the native hinter's 23-row cap would have seated it 18/19 there.
 //
 // ANTIALIASING AND SUBPIXEL ORDER STAY AT CAIRO'S DEFAULTS, on both devices:
 // GRAY antialiasing, no subpixel order. A tablet ROTATES, so a subpixel order

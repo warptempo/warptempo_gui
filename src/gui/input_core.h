@@ -198,9 +198,10 @@ inline int containing_pixel(double v) {
 
 // THE TOUCH SLOP AT gui_scale 100, in device pixels — the value a freshly
 // built core carries until the GUI pushes its own (set_touch_slop_px). It is
-// the AUTHORED length; this layer never resolves it, because this layer never
+// the AUTHORED length (6 Windows px, the drag gate's, kDragMovedThresholdPx
+// in app_state.h); this layer never resolves it, because this layer never
 // learns the scale.
-inline constexpr double kDefaultTouchSlopPx = 8.0;
+inline constexpr double kDefaultTouchSlopPx = 6.0;
 
 // THE MONOTONIC CLOCK EVERY DEADLINE IN THIS LAYER IS MEASURED AGAINST, in
 // microseconds. One owner for the whole GUI: the key-repeat deadline, the touch
@@ -784,7 +785,8 @@ public:
     // live pointer translation is ignored whatever the first has done.)
     //
     // IT IS A LENGTH, SO IT RIDES gui_scale — AND THE CORE NEVER LEARNS THE
-    // SCALE. The authored 8 is 1.7 mm on the retired road rig's 1024x600 panel
+    // SCALE. The authored length (8 laptop px then, 6 Windows px since
+    // 2026-10-02) was 1.7 mm on the retired road rig's 1024x600 panel at 100 %
     // and 0.8 mm on the tablet's 249 PPI one, which a fingertip's roll crosses
     // during a relaxed double tap; the GUI resolves it and pushes it here,
     // so this layer keeps measuring raw device pixels and knows nothing about

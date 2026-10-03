@@ -85,13 +85,13 @@ The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/war
 
 | Key | What it is |
 |---|---|
-| `gui_scale=` | the interface's scale, an integer percent in [50, 350] |
-| `max_waveform_height=` | the waveform's cap in unscaled pixels, [0, 9999]; `0` removes it |
+| `gui_scale=` | the interface's scale, an integer percent in [50, 350]: device pixels per Windows 95 pixel (100 is Windows' own size; the laptop runs 138, the tablet 275) |
+| `max_waveform_height=` | the waveform's cap in unscaled (Windows 95) pixels, [0, 9999]; `0` removes it |
 | `projects_repo=` | the projects repository the history view commits to |
 | `projects_path=` | the absolute folder whose subfolders are the projects |
 | `last_project=` | the folder name opened last, written by the program at every open |
 
-The first run writes it: on the laptop `gui_scale=100`, `max_waveform_height=500`, `projects_repo=github.com/warptempo/warptempo_projects`, `projects_path=$HOME/.warptempo/warptempo_projects/projects` (spelled out as an absolute path), `last_project=` blank. That `projects_path` is the example layout this file assumes: the projects clone at `~/.warptempo/warptempo_projects`, beside this repository. The clone is wherever `projects_path` says, one folder up. Change the first four keys in the app (the Settings menu). A hand edit is for when the program is not running (it rewrites the whole file at every commit), and a line that breaks the grammar stops the program at startup, naming the line.
+The first run writes it: on the laptop `gui_scale=138`, `max_waveform_height=364`, `projects_repo=github.com/warptempo/warptempo_projects`, `projects_path=$HOME/.warptempo/warptempo_projects/projects` (spelled out as an absolute path), `last_project=` blank. That `projects_path` is the example layout this file assumes: the projects clone at `~/.warptempo/warptempo_projects`, beside this repository. The clone is wherever `projects_path` says, one folder up. Change the first four keys in the app (the Settings menu). A hand edit is for when the program is not running (it rewrites the whole file at every commit), and a line that breaks the grammar stops the program at startup, naming the line.
 
 On a new laptop, make the projects clone where `projects_path` points. It is public, so the clone needs no key; the program's own fetches then go over SSH on port 443 with the laptop's deploy key (Trouble, "the laptop has no deploy key"):
 
@@ -245,8 +245,8 @@ adb logcat -d -s warptempo:I | grep -E 'working_column|GitHub'
 # a line with working_column= (a piece opened), and none with "GitHub refused" or "GitHub offline"
 adb shell run-as com.warptempo.gui cat /data/user/0/com.warptempo.gui/files/warptempo_gui/config
 # five lines:
-#   gui_scale=225                 (the tablet's first-run value; change it in the app)
-#   max_waveform_height=500
+#   gui_scale=275                 (the tablet's first-run value; change it in the app)
+#   max_waveform_height=364
 #   projects_repo=github.com/warptempo/warptempo_projects
 #   projects_path=/storage/emulated/0/Android/data/com.warptempo.gui/files/projects
 #   last_project=<the piece open>
@@ -401,4 +401,4 @@ A folder from before the project model (a bare `.warpmarkers` / `.phaseresetmark
 4. Do not bring the old `.settings` across. Move the two converted files aside, open the project with the wav alone (the first open writes all three templates), quit, and copy the two back over their templates. Re-enter `title`, `notes`, `url` and `cover` by hand.
 5. Rename `renders/` to `tmp/`, and move the current `title`'s `<title>.wav` and `.fingerprint` from the root into `render/` (anything else there is deleted at the next publish).
 
-An unknown key is fatal, with no migration: the fix is deleting the line by hand, with the program not running. A `.settings` still carrying `gui_scale`, `audio_player`, `projects_repo`, `playback_speed`, `follow`, `centered`, `center_on_next_marker`, `waveform_magnification_level`, `font_size`, `libm_hash`, `libmvec_hash`, `fftw3_hash` or `fftw3_threads_hash` refuses to load. A device config carrying any of these stops the program at startup: `audio_player=`, `sync_path=`, `hold_delay_ms=`; any `waveform_gain_…=` or `waveform_expander_…=`; `waveform_ink=`, `waveform_magnified_ink=`, `waveform_ghost_ink=`; `waveform_magnified_gain=`, `waveform_ghost_reduction=`, `waveform_magnified_gain_db=`, `waveform_ghost_gain_db=`, `waveform_magnification_foreground_db=`, `waveform_magnification_background_db=`; `waveform_compressor_threshold_db=`, `waveform_compressor_ratio=`, `waveform_foreground_gain_db=`; `fg_color=`, `bg_color=`, `fg_border_color=`, `bg_border_color=`, `fg_blend_loud=`, `fg_blend_quiet=`, `waveform_widening=`; `pen_plane_distance=`, `pen_plane_enter=`, `pen_plane_exit=`; `palette_passes=`, `waveform_passes=`. A config missing one of its five lines stops it the same way; for a missing `max_waveform_height=`, add `max_waveform_height=500`.
+An unknown key is fatal, with no migration: the fix is deleting the line by hand, with the program not running. A `.settings` still carrying `gui_scale`, `audio_player`, `projects_repo`, `playback_speed`, `follow`, `centered`, `center_on_next_marker`, `waveform_magnification_level`, `font_size`, `libm_hash`, `libmvec_hash`, `fftw3_hash` or `fftw3_threads_hash` refuses to load. A device config carrying any of these stops the program at startup: `audio_player=`, `sync_path=`, `hold_delay_ms=`; any `waveform_gain_…=` or `waveform_expander_…=`; `waveform_ink=`, `waveform_magnified_ink=`, `waveform_ghost_ink=`; `waveform_magnified_gain=`, `waveform_ghost_reduction=`, `waveform_magnified_gain_db=`, `waveform_ghost_gain_db=`, `waveform_magnification_foreground_db=`, `waveform_magnification_background_db=`; `waveform_compressor_threshold_db=`, `waveform_compressor_ratio=`, `waveform_foreground_gain_db=`; `fg_color=`, `bg_color=`, `fg_border_color=`, `bg_border_color=`, `fg_blend_loud=`, `fg_blend_quiet=`, `waveform_widening=`; `pen_plane_distance=`, `pen_plane_enter=`, `pen_plane_exit=`; `palette_passes=`, `waveform_passes=`. A config missing one of its five lines stops it the same way; for a missing `max_waveform_height=`, add `max_waveform_height=364`.

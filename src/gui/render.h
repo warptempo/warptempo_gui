@@ -111,22 +111,38 @@ struct TrimRange {
 // for debug testing). No colour is converted anywhere between a constant and
 // cairo.
 //
-// THE DESIGN IS WINDOWS 95's, ON A NEUTRAL DARK GROUND, WITH ONE-LINE RELIEF
-// (architect 2026-10-02, the frozen design). The chrome is flat ground and
-// square raised or sunken boxes drawn with ONE logical line a side
-// (relief_line_px, below): RAISED is a Hilight line along the top and the
-// left and a Shadow line along the bottom and the right, SUNKEN the reverse,
-// and the second pair is painted last so it owns the top-right and
-// bottom-left corner pixels (Windows' DrawEdge order); an ETCHED separator is
-// a Shadow line with a Hilight line immediately beside it. No gradients, no
-// rounded corners, no hover faces, and no compositing alpha anywhere: THE
+// THE DESIGN IS WINDOWS 95's, ON A NEUTRAL DARK GROUND, AT THE WINDOWS PIXEL
+// (architect 2026-10-02, the rulings of 13:20–22:30). The chrome is flat
+// ground and square boxes drawn with Windows' own DrawEdge grammar: every
+// raised or sunken edge is TWO lines a side, each one Windows px
+// (relief_line_px, below), the outer pair first and the inner pair inset one
+// line, and in each pair the top-left line first and the bottom-right line
+// last so it owns the top-right and bottom-left corner pixels. THE FAMILIES
+// (the painters are the relief helper family, paint_relief_soft_raised and
+// its siblings, below), lines given outer then inner, top-left / bottom-right:
+//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a toolbar button
+//                 (EDGE_RAISED | BF_SOFT);
+//   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a toolbar button
+//                 checked or pressed;
+//   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow — a push button, the
+//                 scroll-bar thumb, a menu's and a dropdown's frame
+//                 (EDGE_RAISED);
+//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field, the well
+//                 (EDGE_SUNKEN);
+//   STATUS SUNKEN ONE line, Shadow / Hilight — a status-bar panel;
+//   ETCHED        a Shadow line with a Hilight line immediately beside it —
+//                 the ruler's ticks, a menu separator.
+// The CHECKED face is Windows' dither: a checkerboard of Hilight over the
+// ground in one-Windows-px cells (paint_checker_rect, below). No gradients,
+// no rounded corners, no hover faces, and no compositing alpha anywhere: THE
 // PALETTE COMPOSITES NOTHING. Every colour is opaque and is painted as an
-// integer rect of cells. The painters are the relief helper family
-// (paint_relief_raised and its siblings, below).
+// integer rect of cells.
 // THE LINEAGE, one line, the mock-up sets he judged on the tablet: J4 classic
 // neutral greys → K4 thin relief → L2/M1 well lines → N2 etched ticks → O2
-// trim lane → P6/T4/U4 ruler ground → R3 menu → S4 8 pt → V3 head (set Q —
-// the lane order and the Acid flat trim — ruled out, 2026-10-02).
+// trim lane → P6/T4/U4 ruler ground → R3 menu → S4 8 pt → V3 head → set AB
+// the Windows button case and the engraved glyph → set AC the trim scroll
+// bar and the status panel → set AD the scale series (set Q — the lane order
+// and the Acid flat trim — ruled out, 2026-10-02).
 //
 // THE SCAFFOLD (architect 2026-10-02: "connect all of these design pieces
 // under a few different keys, the Qt style of theming for Windows-type themes
@@ -149,13 +165,14 @@ struct TrimRange {
 //   FLAG    #8A5EAC  kMarkerFlagFill — the marker and phase-reset flags.
 //   RED     #BB575A  kMarkerFlagFillRed — the one error colour.
 // BLACK is no role: the absence of light, the text ink on the flags and on
-// the accent (kMarkerFlagLabel, kRedesignHighlightLabel).
+// a light highlight (kMarkerFlagLabel, kRedesignHighlightLabel; which text a
+// highlight takes is highlight_text_ink's luminance rule, below).
 // THE DERIVED, by rule (each rule at its constant below):
 //   from the GROUND — the RELIEF SET (Windows' COLOR_3D* family: Hilight,
-//     Shadow, DkShadow; 3DLight is the ground itself, so a thick inner line
-//     would vanish into the face, which is why the relief is ONE line), the
-//     DOWN face, the TRIM bar and cap, the RULER label, the PLAYHEAD head
-//     and the FLAG border — each a grey channel × a stated ratio;
+//     Shadow, DkShadow, and 3DLight between the ground and the Hilight), the
+//     scrub's bar and thumb, the RULER label, the PLAYHEAD head and the FLAG
+//     border — each a grey channel × a stated ratio, 3DLight a geometric
+//     mean;
 //   from the FLAG and the RED — the edges (× 0.555), the selected red's
 //     edge included (it derives from the hand-listed selected red fill);
 //   from the CANVAS — the modal field's ground, and the region's lift
@@ -258,43 +275,61 @@ inline constexpr GuiColor kMarkerFlagFillRed = hex(kRedRgb);
 //
 // Windows' COLOR_3D* family on this ground (the edge grammar at the head):
 //   HILIGHT  = ground × 1.96  → #5E5E5E (94 = 48 × 1.96, 94.08)
+//   3DLIGHT  = √(ground × Hilight), per channel, rounded → #434343
+//     (√(48 × 94) = 67.17 → 67; architect 2026-10-02, the AB / AC / AD sets:
+//     Windows' 3DLight stands between the face and the Hilight, and on a
+//     dark ground the geometric mean is the step the eye reads as halfway) —
+//     the soft raised edge's inner top-left, the plain raised edge's outer
+//     top-left and the plain sunken edge's inner bottom-right;
 //   SHADOW   = ground × 5/8   → #1E1E1E (30 = 48 × 0.625 exactly)
-//   DKSHADOW = ground × 0.21  → #0A0A0A (10 = 48 × 0.21, 10.08) — the well's
-//     inner line, the tooltip's border and the dialog focus frame; NOT black
-//     (architect 2026-10-02).
-// 3DLIGHT is the ground itself, which is why the relief is one line (the
-// head). A RAISED box is Hilight top/left and Shadow bottom/right; a SUNKEN
-// one the reverse.
+//   DKSHADOW = ground × 0.21  → #0A0A0A (10 = 48 × 0.21, 10.08) — every
+//     edge's outer dark line, the tooltip's border and the dialog focus
+//     frame; NOT black (architect 2026-10-02).
+// Which line takes which colour is the family's (the head's table).
 inline constexpr uint32_t kReliefHilightRgb  = scaled_word(kGroundRgb, 196, 100);
 inline constexpr uint32_t kReliefShadowRgb   = scaled_word(kGroundRgb, 5, 8);
 inline constexpr uint32_t kReliefDkShadowRgb = scaled_word(kGroundRgb, 21, 100);
 static_assert(kReliefHilightRgb  == 0x5E5E5E);
 static_assert(kReliefShadowRgb   == 0x1E1E1E);
 static_assert(kReliefDkShadowRgb == 0x0A0A0A);
+
+// THE GEOMETRIC MEAN RULE, per channel: round(√(a × b)), the integer root by
+// search and the half decided exactly (√x rounds up iff x ≥ n² + n + 1, the
+// square of n + ½ being n² + n + ¼), so it stays constexpr and exact.
+inline constexpr uint32_t geometric_mean_word(uint32_t a, uint32_t b) {
+    const auto channel = [&](int shift) {
+        const uint32_t x = ((a >> shift) & 0xFFu) * ((b >> shift) & 0xFFu);
+        uint32_t n = 0;
+        while ((n + 1) * (n + 1) <= x) ++n;
+        if (x >= n * n + n + 1) ++n;
+        return n << shift;
+    };
+    return channel(16) | channel(8) | channel(0);
+}
+inline constexpr uint32_t kRelief3DLightRgb =
+    geometric_mean_word(kGroundRgb, kReliefHilightRgb);
+static_assert(kRelief3DLightRgb == 0x434343);
 inline constexpr GuiColor kReliefHilight  = hex(kReliefHilightRgb);
+inline constexpr GuiColor kRelief3DLight  = hex(kRelief3DLightRgb);
 inline constexpr GuiColor kReliefShadow   = hex(kReliefShadowRgb);
 inline constexpr GuiColor kReliefDkShadow = hex(kReliefDkShadowRgb);
 
-// THE DOWN FACE — a toggled-on button's face (a lamp: the view group's lit
-// view, the iteration lamps, Add to Selection, the player's Repeat One, the
-// keyboard's armed Shift), painted SUNKEN with its glyph one logical px down
-// and right: ground × 1.21 → #3A3A3A (58 = 48 × 1.21, 58.08). A PRESSED
-// button is sunken on the ground itself (Windows: the push button's pressed
-// face keeps the button face).
-inline constexpr uint32_t kRedesignDownFaceRgb = scaled_word(kGroundRgb, 121, 100);
-static_assert(kRedesignDownFaceRgb == 0x3A3A3A);
-inline constexpr GuiColor kRedesignDownFace = hex(kRedesignDownFaceRgb);
+// (THE DOWN FACE IS RETIRED — architect 2026-10-02: a checked button is
+// Windows' dither of Hilight over the ground under a soft sunken edge, and a
+// pressed one is soft sunken on the ground itself, so no button face is
+// another grey. It was ground × 1.21 → #3A3A3A, a lamp's sunken face.)
 
 // THE GREY LADDER'S DIMMED INKS, from the label over the ground through the
 // one mix owner (mix_color, above):
 //
-// THE DISABLED FACE (kRedesignDisabledMix): every ink a disabled control
-// paints — a glyph's paths in their own colours, a menu word, a dropdown
-// item's label — RETAINS this fraction of itself over the ground under it,
-// so a dead control dims as one object without rotating its hue. MEASURED off
-// kdenlive's row-2 crop (2026-07-31: (109-41)/(252-41) = 0.3223 and its two
-// sibling channels) and kept as the ratio. A DISABLED BUTTON KEEPS ITS RAISED
-// EDGE (architect 2026-10-02): only its glyph or label dims.
+// THE DISABLED TEXT (kRedesignDisabledMix): every word a disabled control
+// paints — a menu word, a dropdown item's label, a dialog word button's
+// label — RETAINS this fraction of itself over the ground under it, so a
+// dead word dims without rotating its hue. MEASURED off kdenlive's row-2
+// crop (2026-07-31: (109-41)/(252-41) = 0.3223 and its two sibling channels)
+// and kept as the ratio. A DISABLED GLYPH IS ENGRAVED instead (architect
+// 2026-10-02, Windows' DSS_DISABLED: icons::draw_engraved — the glyph mix
+// retired with the AB set), and a disabled button keeps its raised edge.
 inline constexpr double kRedesignDisabledMix = 0.322;
 // THE DIMMED SECOND LINE of a two-line tooltip retains this much of the label
 // over the ground (kdenlive's hint line, 0.52, measured the same way).
@@ -309,13 +344,55 @@ inline constexpr double   kPopupHotkeyMix      = 178.0 / 255.0;
 inline constexpr GuiColor kRedesignPopupHotkey =
     mix_color(kRedesignLabel, kRedesignContentGround, kPopupHotkeyMix);
 
-// THE HIGHLIGHT'S TEXT IS BLACK (architect 2026-10-02, the Windows highlight:
-// a dropdown's hovered or keyboard-selected row and the folder overlay's
-// highlighted row are a FLAT ACCENT FILL under black text and a black
-// accelerator). ASSUMED BY THE PLANNER, judged by him on the glass: the
-// alternative is the selected grey — ground × 1.54 → #4A4A4A (74 = 48 ×
-// 1.54, 73.92) — under the label white.
+// THE HIGHLIGHT'S TEXT, ONE RULE (architect 2026-10-02): the ink over any
+// highlight fill — a dropdown's lit row, the open menu anchor, the folder
+// overlay's and the picker's highlighted row in both of its faces — is chosen
+// by THE FILL'S RELATIVE LUMINANCE, never by the site:
+//
+//     L = 0.2126 R + 0.7152 G + 0.0722 B   over sRGB channels linearized
+//         (c ≤ 0.04045 → c / 12.92, else ((c + 0.055) / 1.055)^2.4)
+//
+// and the DARK text (kRedesignHighlightLabel, black) when L exceeds THE
+// EQUAL-CONTRAST POINT, the luminance at which black and the label white
+// stand at the same contrast ratio over the fill — (L + 0.05) / 0.05 =
+// 1.05 / (L + 0.05), so L = √(1.05 × 0.05) − 0.05 = 0.17913 — else the
+// LIGHT text (kRedesignLabel). The two worked examples: the ACCENT #96BFDA
+// is L 0.488 → dark text (10.8 : 1 against white's 2.0 : 1), and Windows'
+// own highlight #000080 is L 0.016 → light text (16.0 : 1). The inactive
+// accent #3E4C55 is L 0.069 → light. constexpr from the byte triple: the
+// 2.4 power is x² × (x²)^⅕, the fifth root by Newton's iteration from above,
+// so nothing here needs a runtime pow.
 inline constexpr GuiColor kRedesignHighlightLabel = hex(0x000000);
+inline constexpr double srgb_channel_to_linear(double c) {
+    if (c <= 0.04045) return c / 12.92;
+    const double x2 = ((c + 0.055) / 1.055) * ((c + 0.055) / 1.055);
+    double y = 1.0;   // the fifth root of x2 in (0, 1], approached from above
+    for (int i = 0; i < 64; ++i) y = (4.0 * y + x2 / (y * y * y * y)) / 5.0;
+    return x2 * y;
+}
+inline constexpr double relative_luminance(GuiColor c) {
+    return 0.2126 * srgb_channel_to_linear(c.r) +
+           0.7152 * srgb_channel_to_linear(c.g) +
+           0.0722 * srgb_channel_to_linear(c.b);
+}
+inline constexpr double kHighlightTextLuminanceThreshold = 0.17912878474779;
+static_assert((kHighlightTextLuminanceThreshold + 0.05) *
+                      (kHighlightTextLuminanceThreshold + 0.05) -
+                  1.05 * 0.05 < 1e-12 &&
+              1.05 * 0.05 -
+                  (kHighlightTextLuminanceThreshold + 0.05) *
+                      (kHighlightTextLuminanceThreshold + 0.05) < 1e-12);
+inline constexpr GuiColor highlight_text_ink(GuiColor fill) {
+    return relative_luminance(fill) > kHighlightTextLuminanceThreshold
+               ? kRedesignHighlightLabel
+               : kRedesignLabel;
+}
+inline constexpr bool same_color(GuiColor a, GuiColor b) {
+    return a.r == b.r && a.g == b.g && a.b == b.b;
+}
+static_assert(same_color(highlight_text_ink(kRedesignAccent),
+                         kRedesignHighlightLabel));
+static_assert(same_color(highlight_text_ink(hex(0x000080)), kRedesignLabel));
 
 // THE ACCENT'S UNFOCUSED FACE — the folder overlay's highlighted row while the
 // window is not activated (architect 2026-09-02: a selection in an unfocused
@@ -325,18 +402,21 @@ inline constexpr GuiColor kRedesignHighlightLabel = hex(0x000000);
 // (it reproduces Breeze's published #1b4155 and this palette's earlier
 // #2d454f from their own inputs) → #3E4C55, A LITERAL on the head's
 // hand-list: a retune of the ground or the accent re-runs the tint here. Its
-// text is the label white: a dark ground under black text would not read.
+// text is the luminance rule's (highlight_text_ink, above): the label white.
 inline constexpr GuiColor kRedesignAccentInactive = hex(0x3E4C55);
+static_assert(same_color(highlight_text_ink(kRedesignAccentInactive),
+                         kRedesignLabel));
 
 // -- Row 5: the TRIM lane, the RULER lane, the MARKER lane ------------------
 
-// THE TRIM LANE (architect 2026-10-02; the geometry at kTrimLaneHeightPx and
-// render_trim_flags): a SUNKEN trough the lane's full width, its ground the
-// ground; the BAR inside it RAISED on this face, ground × 4/3 → #404040
-// (64 = 48 × 4/3 exactly); the two end handles and the centre grip SOLID
-// RAISED SQUARES on this face, ground × 3.5 → #A8A8A8 (168 = 48 × 3.5
-// exactly). The render player's scrub is this lane's trough, bar and cap
-// (paint_modal_dialog).
+// THE TRIM LANE IS A MINIATURIZED SCROLL BAR (architect 2026-10-02; the
+// geometry at kTrimLaneHeightPx and render_trim_flags) and takes no colour
+// of its own: its track is the CHECKED dither (Hilight over the ground) and
+// its thumb a plain raised box on the ground. THE TWO FACES BELOW ARE THE
+// RENDER PLAYER'S SCRUB'S ALONE (paint_modal_dialog's player branch), which
+// still paints the trim lane's retired bar and cap: the played BAR, ground ×
+// 4/3 → #404040 (64 = 48 × 4/3 exactly), and the THUMB, ground × 3.5 →
+// #A8A8A8 (168 = 48 × 3.5 exactly).
 inline constexpr uint32_t kTrimLaneBarRgb = scaled_word(kGroundRgb, 4, 3);
 inline constexpr uint32_t kTrimLaneCapRgb = scaled_word(kGroundRgb, 7, 2);
 static_assert(kTrimLaneBarRgb == 0x404040);
@@ -544,7 +624,8 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 // alone in kWaveformInk, with no outline; lit, the plate is two bars (the
 // rule is at render_waveform's declaration), BOTH FILLED IN kWaveformInk, the
 // inner distinguished only by its OUTLINE, its true contour, an erosion at
-// distance waveform_line_px() (1 px at 100 %, 2 on the tablet), in
+// distance waveform_line_px() (1 px on the laptop at 138 %, 3 on the tablet
+// at 275 %), in
 // kWaveformForegroundOutline.
 
 // THE LIT INNER BAR'S OUTLINE (architect 2026-09-27, the rule picked by eye
@@ -595,12 +676,14 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 inline constexpr GuiColor kWaveformRegionCanvas = hex(region_lift(kWaveformCanvasRgb));
 
 // THE WELL — the waveform area's two-line border, taken FROM the area at its
-// top and its bottom, full window width (architect 2026-10-02; the geometry
-// at waveform_border_px): the TOP is a Hilight line then a DkShadow line,
-// the BOTTOM a DkShadow line then a Hilight line, the canvas between (the
-// relief set above; DkShadow, not black — his ruling). Nothing crosses the
-// well's lines: the stems, the playhead and the scanner stop at the canvas
-// (waveform_content_rect).
+// top and its bottom, full window width (the geometry at
+// waveform_border_px): a PLAIN SUNKEN edge, Windows' client-area frame
+// (architect 2026-10-02 ~21:20, "as few exceptions as possible") — the TOP a
+// Shadow line then a DkShadow line, the BOTTOM a 3DLight line then a Hilight
+// line, top to bottom, the canvas between. THE STEMS CROSS THE TOP LINES
+// (architect 2026-10-02): a marker's stem, the playhead's and the zoom
+// anchor's run continuous from the lane above into the canvas
+// (waveform_stem_band), and stop at the canvas's foot.
 //
 // TAKEN FROM THE AREA, NOT ADDED TO IT: waveform_content_rect is the content
 // and it shrinks by these rows, while waveform_area itself does not move, so
@@ -635,8 +718,15 @@ inline constexpr GuiColor kModalFieldGround = kWaveformCanvas;
 // `'` load-in-place left the list
 // 2026-08-24, the act no longer applying a file's session prefs at all).
 //
-// EVERY PAINTED DIMENSION IN THE TREE RIDES IT: crop-measured 100% values are
-// the authored constants, and every conversion rounds with std::nearbyint.
+// THE UNIT IS THE WINDOWS-95 PIXEL (architect 2026-10-02): every authored
+// chrome length is the number Windows 95 drew at 96 dpi (or, where Windows
+// has no such element, the length that kept its device size on the tablet
+// when the unit changed), and gui_scale is the number of DEVICE px per
+// Windows px, in percent — the tablet 275 (a 16-px glyph = 44 device px),
+// the laptop 138 (22). EVERY PAINTED DIMENSION IN THE TREE RIDES IT through
+// scaled_px, below, where the rounding rule is stated. (The unit before it
+// was the laptop's own pixel at 100 %, the kdenlive crops' measure; the
+// constants were re-authored from it the same day.)
 void   set_gui_scale_percent(int percent);
 
 // THE LIVE PERCENT ITSELF, for the one thing a factor cannot serve: a CACHE
@@ -648,18 +738,29 @@ void   set_gui_scale_percent(int percent);
 // dimension goes on reading gui_scale_factor / scaled_px.
 int    gui_scale_percent();
 
-// Scale factor s = gui_scale / 100. Exactly 1.0 at the default, and as low as
-// 0.5 since the setting's grammar floor came down to 50 (architect 2026-08-10).
+// Scale factor s = gui_scale / 100, device px per Windows px: as low as 0.5
+// since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();
 
-// One authored 100%-scale length -> device pixels, the ONE conversion every
-// scaled dimension in the tree takes: std::nearbyint like every other
-// integer-domain conversion. Every scaled accessor below (and the painters'
-// own lengths in paint_handler.cpp / render.cpp) spells its conversion through
-// this pair rather than open-coding the multiply; the DOUBLE-domain readers —
-// redesign_font_size_px and the ruler's unrounded pitch
-// compare — are a different concept (they never round to int, or round to a
-// double on purpose) and deliberately do not come through here.
+// One authored length in WINDOWS PX -> device pixels, the ONE conversion every
+// scaled dimension in the tree takes: device = std::nearbyint(windows_px ×
+// percent / 100), like every other integer-domain conversion.
+//
+// ROUNDED AT THE ELEMENT, NEVER AT THE SCALE, AND A COMPOSITE IS BUILT FROM
+// ITS ROUNDED PARTS (architect 2026-10-02): a length that is the sum of
+// Windows elements — a button case, a lane band, a row's walk — is the sum of
+// each element's own scaled_px, never one scaled_px of the sum (a toolbar
+// case is rounded offset + rounded glyph + rounded offset), so every element
+// paints at the size it paints alone and the composite is exactly its parts.
+// Stated here and nowhere else; every composite in the tree follows it.
+//
+// Every scaled accessor below (and the painters' own lengths in
+// paint_handler.cpp / render.cpp) spells its conversion through this pair
+// rather than open-coding the multiply; the DOUBLE-domain readers — the
+// font sizes (redesign_font_size_px and its siblings: a font size is not a
+// grid point and cairo takes a double) and the ruler's unrounded pitch
+// compare — are a different concept and deliberately do not come through
+// here.
 inline int scaled_px(double authored) {
     return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
 }
@@ -745,25 +846,30 @@ constexpr int kMinWindowHeightPx = 480;
 // now — neither reads the other and neither derives from the other — so the
 // two are equal at 100% by inheritance rather than by any requirement, and a
 // retune of one is a local edit that authors its own constant when it happens.
-inline constexpr int kPlayheadUnitPx = 8;
+// 6 WINDOWS PX (architect 2026-10-02, the unit's change): the laptop pixel's
+// 8 re-authored to the length that keeps its tablet size (16 device px then,
+// 6 × 2.75 = 16.5 → 16 now).
+inline constexpr int kPlayheadUnitPx = 6;
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
-// window edge (the kdenlive menu bar, row 1 of the redesign). 30 AT 100%
-// gui_scale, AND THE LANE IS ITS CONTENT: the row stands at that height with
+// window edge (the kdenlive menu bar, row 1 of the redesign). 19 WINDOWS PX,
+// Windows' SM_CYMENU (architect 2026-10-02; it was the kdenlive File item's
+// 30 laptop px until the unit's change), AND THE LANE IS ITS CONTENT: the
+// row stands at that height with
 // the ICON ROW directly under it and no margin, border or line between the
 // two. kdenlive, QEMU and virt-manager draw no border between the menubar and
 // the toolbar, and neither does this row: its ground — the content ground
 // since 2026-10-01, the icon row's own (paint_menu_row) — runs straight on
 // into the icon row's.
 //
-// THE 30 IS THE ANCHOR'S, AND THE ANCHOR IS THE LANE (architect 2026-09-09:
-// "make the height of the top row based on the thirty pixels of File/Edit ...
-// this way the dropdown will touch the first row, as it does in kdenlive").
-// kdenlive's File item measured 30 rows, and that number is the lane whole:
-// each anchor's rectangle fills it top to bottom and IS the anchor's
-// published hit rect and the open anchor's sunken frame (paint_menu_row), the
-// anchors' labels and the battery + clock legend are cap-centred in it (cap
-// top 9 rows under the lane's top edge at 100%), and the anchor's foot is the
+// THE HEIGHT IS THE ANCHOR'S, AND THE ANCHOR IS THE LANE (architect
+// 2026-09-09: "make the height of the top row based on the thirty pixels of
+// File/Edit ... this way the dropdown will touch the first row, as it does
+// in kdenlive"; the number Windows' menu bar's since 2026-10-02): each
+// anchor's rectangle fills it top to bottom and IS the anchor's published hit
+// rect and the open anchor's highlight (paint_menu_row), the anchors' labels
+// and the battery + clock legend are cap-centred in it, and the anchor's foot
+// is the
 // lane's foot, which is where the dropdown and its damage band hang
 // (top_menu_row_area — paint_dropdown and toggle_dropdown read the same
 // accessor), so the popup touches the icon row's first pixel.
@@ -776,12 +882,13 @@ inline constexpr int kPlayheadUnitPx = 8;
 //
 // The row sizes on gui_scale_factor() like every other lane in the tree,
 // rounded with std::nearbyint through scaled_px and floored like every other
-// lane metric. At the tablet's 200% the lane is 60. TWO ACCESSORS FOR ONE
+// lane metric: 52 device rows at the tablet's 275 %, 26 at the laptop's
+// 138 %. TWO ACCESSORS FOR ONE
 // NUMBER, deliberately: the lane table reads the LANE and the painter the
 // CONTENT, the vocabulary every other row keeps, and this row's lane simply
 // has no other term in it — the content is the anchors' box and the labels'
 // box both, so there is no third reading.
-inline constexpr int kMenuRowHeightPx = 30;
+inline constexpr int kMenuRowHeightPx = 19;
 inline int menu_row_content_h_px() {
     return scaled_px(kMenuRowHeightPx, 5);
 }
@@ -793,8 +900,9 @@ inline int menu_row_h_px() {
 // since 2026-07-31, dissolved into the ICON ROW as its first group of four
 // glyph buttons, so the top strip lost the lane's 44 content + 1px border.
 // kToolbarRowHeightPx / kToolbarBorderPx and their accessors went with it;
-// the row's 32px button box and 9/10 label pads survive as the MODAL DIALOG
-// BUTTONS' own constants — kModalBtnBoxPx and friends, paint_handler.cpp —
+// the row's button box and label pads survive as the MODAL DIALOG BUTTONS'
+// own constants — kModalBtnBoxPx and friends, paint_handler.cpp, 23 and 7 / 7
+// Windows px since 2026-10-02 (32 and 9 / 10 laptop px before) —
 // which used to read row 2's. The row's crop record is git history.)
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 1, directly
@@ -803,81 +911,105 @@ inline int menu_row_h_px() {
 // are the count's one authority, and ALL of them paint on every frame;
 // icons::kIconCount is a different number, the GLYPH set, which the row does
 // not exhaust). THIS BLOCK IS ALSO THE BOTTOM ROW'S CONTENT: that lane
-// delegates its content height to icon_row_content_h_px below. Measured at
-// 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
-// .png (32x32) and row_4_separator.png (1x34).
+// delegates its content height to icon_row_content_h_px below.
 //
-// THE LANE IS ITS 46 CONTENT, NO BORDER (architect 2026-10-01): the trim
-// lane sits directly under it where gap 1 is zero, and its own sunken top line is
-// the boundary — a 1px border-bottom here as well read as "a double border".
-// Where gap 1 opens (the laptop), the row's content ground meets the gap's
-// window ground of the same value. THE ROW IS MODELLED ON KDENLIVE'S SECOND
-// TOOLBAR, the one under its timeline; the first, sharing the menubar's
-// ground, was left out for space (architect 2026-09-09), so nothing sits
-// between the menu row and this one.
+// THE BUTTON IS WINDOWS 95's TOOLBAR BUTTON, AT THE WINDOWS PIXEL (architect
+// 2026-10-02, the AB / AD sets): a CASE 23 wide and 22 tall with the 16 x 16
+// glyph at (3, 3) — three px of case left of and above the glyph, three
+// below it and FOUR right of it, the extra column being Windows' own on the
+// right-hand side. THE CASE IS A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's
+// rule): its width is scaled_px(3) + scaled_px(16) + scaled_px(4) and its
+// height scaled_px(3) + scaled_px(16) + scaled_px(3) — 63 x 60 device px at
+// the tablet's 275 % and 32 x 30 at the laptop's 138 %, the glyph 44 and 22,
+// today's glyph sizes on both devices. THE GLYPH RASTERIZES AT scaled_px(16)
+// (icons::draw, at the case's (3, 3) offset; the press face's shift is one
+// Windows px further right and down).
 //
-// 46, AND THE ARITHMETIC CLOSES EXACTLY (architect 2026-07-31): the separator
-// crop is 34 tall with 6px margins, and 6 + 34 + 6 = 46 — the 34px separator
-// sits at +6 and the 32px buttons at +7, both placed by the standing
-// vertical-centering rule ((46-34)/2 == 6 and (46-32)/2 == 7).
-inline constexpr int kIconRowHeightPx = 46;
+// THE ROW IS THE CASE WITH FIVE WINDOWS PX OF GROUND ABOVE AND BELOW IT
+// (architect 2026-10-02, the judged picture's 14 device rows at 275 %:
+// 5 × 2.75 = 13.75 → 14): 22 + 2 · 5 = 32 Windows px authored, and in device
+// rows 2 · scaled_px(5) + the case's height — 88 at 275 %, 44 at 138 %. THE
+// LANE IS ITS CONTENT, NO BORDER (architect 2026-10-01): the trim lane sits
+// directly under it and its own first row is the boundary. THE ROW IS
+// MODELLED ON KDENLIVE'S SECOND TOOLBAR, the one under its timeline; the
+// first, sharing the menubar's ground, was left out for space (architect
+// 2026-09-09), so nothing sits between the menu row and this one.
+//
+// THE BUTTONS TOUCH WITHIN A GROUP and EIGHT WINDOWS PX OF BARE GROUND stand
+// between two groups, with NO SEPARATOR anywhere (architect 2026-10-02, the
+// Y / Z / AB sets: "the buttons touch", the separators gone): the group
+// boundaries are still redesign_button_opens_icon_group's, which now places
+// the gap alone. The walk is paint_icon_row's (paint_handler.cpp).
+//
+// THESE NUMBERS LIVE HERE rather than beside the row's walk because a second
+// file reads them: the notification card's glyph box is the toolbar case
+// (notifications.cpp), so each number has one definition.
+inline constexpr int kIconGlyphPx        = 16;   // the glyph, both axes
+inline constexpr int kIconCaseLeadPx     = 3;    // case left of and above the glyph
+inline constexpr int kIconCaseTrailXPx   = 4;    // case right of the glyph
+inline constexpr int kIconCaseTrailYPx   = 3;    // case below the glyph
+inline constexpr int kIconRowAirPx       = 5;    // ground above and below the case
+inline constexpr int kIconGroupSpacePx   = 8;    // bare ground between two groups
+inline constexpr int kIconCaseWidthPx  =
+    kIconCaseLeadPx + kIconGlyphPx + kIconCaseTrailXPx;
+inline constexpr int kIconCaseHeightPx =
+    kIconCaseLeadPx + kIconGlyphPx + kIconCaseTrailYPx;
+inline constexpr int kIconRowHeightPx = kIconCaseHeightPx + 2 * kIconRowAirPx;
+static_assert(kIconCaseWidthPx == 23 && kIconCaseHeightPx == 22 &&
+              kIconRowHeightPx == 32);
+inline int icon_glyph_px()        { return scaled_px(kIconGlyphPx); }
+inline int icon_case_lead_px()    { return scaled_px(kIconCaseLeadPx); }
+inline int icon_case_w_px() {
+    return scaled_px(kIconCaseLeadPx) + scaled_px(kIconGlyphPx) +
+           scaled_px(kIconCaseTrailXPx);
+}
+inline int icon_case_h_px() {
+    return scaled_px(kIconCaseLeadPx) + scaled_px(kIconGlyphPx) +
+           scaled_px(kIconCaseTrailYPx);
+}
+inline int icon_group_space_px()  { return scaled_px(kIconGroupSpacePx); }
 inline int icon_row_content_h_px() {
-    return scaled_px(kIconRowHeightPx, 5);
+    return 2 * scaled_px(kIconRowAirPx) + icon_case_h_px();
 }
 inline int icon_row_h_px() {
     return icon_row_content_h_px();
 }
 
-// THE ICON BUTTON'S OWN BOX, measured at 100% off the same five 32x32 state
-// crops as the lane above (row_4_button_{rest,hover,click,selected,
-// selectedhover}.png). These three lived as file-local constants in
-// paint_handler.cpp beside the row's walk until 2026-08-28, when THE FOLDER
-// OVERLAY'S ROWS BECAME BUTTONS (architect: "we've gone for the button
-// analogy", "the buttons are good enough size for my finger") and a second
-// file needed them — so the numbers moved up here beside the lane metrics they
-// were always measured with, ONE DEFINITION EACH, and both painters and
-// folder_overlay.h read them from here. The row's OTHER metrics — the
-// separator's width, height and side gaps, and the 1px outline stroke — are
-// the ROW's chrome rather than the BUTTON's box and stay where the row's walk
-// is.
-//
-// THE GLYPH IS CENTRED IN THE BOX, which is the whole of the button's inner
-// geometry: (32 - 22) / 2 = 5 authored px on every side. The overlay's rows
-// take that same derivation for the LEFT pad of their icon (a row is a wide
-// button, so the pad is the box's own inset), never a second number — the
-// modal WORD buttons' 9px text pad is a different surface's.
-inline constexpr double kIconBtnPx    = 32.0;   // the button box, both axes
-inline constexpr double kIconBtnGapPx = 2.0;    // between adjacent buttons
-inline constexpr double kIconGlyphPx  = 22.0;   // the icon box inside the button
-
-// A BUTTON IS SQUARE (architect 2026-10-02, the Windows-95 design): its box
-// is the raised or sunken relief at relief_line_px, below, and no corner in
-// the chrome is rounded.
+// A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
+// its box is the relief at relief_line_px, below, and no corner in the
+// chrome is rounded.
 
 // -- THE PLAY-SCRUB: A TROUGH WITH A THUMB (architect 2026-10-02) -------------
 //
 // The render player's modal row carries the transport's scrub, and its look is
-// the trim lane's (his words: "a trough like the trim with a larger dot for the
-// current position indicator"; the dot SQUARE — a round one would be the one
-// circle in the chrome): a SUNKEN trough the trim lane's height
-// (trim_lane_h_px) across the slider's track, centred in the button box's
-// band; a RAISED bar in the trim bar's face (kTrimLaneBar) inside it from the
-// track's start to the position, the played extent, the trough's ground
-// beyond; and a RAISED SQUARE THUMB in the trim cap's face (kTrimLaneCap)
-// centred on the position, the trough's height plus one relief line above and
-// below — 13 x 13 logical, overhanging the trough by a row each way, the
-// Windows slider thumb's overhang — the dark pair painted last. The painter is
-// paint_modal_dialog's player branch. It reads no window focus: the bar
-// carries no accent to dim.
+// the trim lane's as it stood before the lane became a scroll bar (his words:
+// "a trough like the trim with a larger dot for the current position
+// indicator"; the dot SQUARE — a round one would be the one circle in the
+// chrome): a PLAIN SUNKEN trough kScrubTroughHeightPx tall across the
+// slider's track, centred in the button box's band; a PLAIN RAISED bar in
+// kTrimLaneBar inside it from the track's start to the position, the played
+// extent, the trough's ground beyond; and a PLAIN RAISED SQUARE THUMB in
+// kTrimLaneCap centred on the position, the trough's height plus one relief
+// line above and below, overhanging the trough by a row each way, the
+// Windows slider thumb's overhang. The painter is paint_modal_dialog's player
+// branch. It reads no window focus: the bar carries no accent to dim.
+// THE TROUGH'S 8 WINDOWS PX is the trim lane's former 11 laptop px
+// re-authored at the unit's change (architect 2026-10-02), the trough's own
+// number since the trim lane grew to 16.
+inline constexpr int kScrubTroughHeightPx = 8;
+inline int scrub_trough_h_px() {
+    return scaled_px(kScrubTroughHeightPx, 3);
+}
 //
-// THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: a 20 px box, the ONE owner of
+// THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: a 14 Windows px box (the
+// laptop pixel's 20 re-authored, architect 2026-10-02), the ONE owner of
 // that length for its readers — the MAPPING insets the track by half of it at
 // each end (the thumb's centre is the frame's position;
 // render_player_scrub_x_of, app_state.h) and the press router takes it as THE
 // HANDLE'S GRAB BAND. The painted thumb is the square above, inside it.
 // Floored at 2 so the half-box inset is never zero and the band never
 // degenerates.
-inline constexpr double kScrubHandleBoxPx = 20.0;
+inline constexpr double kScrubHandleBoxPx = 14.0;
 inline int scrub_handle_box_px() {
     return scaled_px(kScrubHandleBoxPx, 2);
 }
@@ -888,66 +1020,97 @@ inline int scrub_handle_box_px() {
 // three ride the gui_scale axis; the ruler's height is DERIVED from its label
 // face (ruler_lane_h_px, below).
 //
-// THE TRIM LANE IS 11 AUTHORED ROWS (architect 2026-10-02, the frozen
-// design): a SUNKEN trough one relief line a side (relief_line_px) with a
-// 9-row interior, the bar RAISED inside it and the two handles and the centre
-// grip SOLID RAISED SQUARES of the interior's height, 9 x 9 at 100 % — so the
-// interior's 11 - 2 and the caps' width (trim_endcap_w_px) are the one square
-// (the painter is render_trim_flags). The lane is ONE RECT for paint and for
-// every hit reader — the endcap rects (trim_endcap_rect takes the lane rect's
-// y/h), the bridge's y-gate and the framing double-click band — so paint and
-// hit move together by construction. NO RETUNE FACTOR scales it: the trough,
-// the bar and the square caps are one geometry, and a factor on the lane
-// alone would break the squares.
-inline constexpr int kTrimLaneHeightPx   = 11;
+// THE TRIM LANE IS A MINIATURIZED WINDOWS-95 SCROLL BAR, 16 WINDOWS PX TALL —
+// Windows' own scroll bar width (architect 2026-10-02 ~21:20, the AC set: "a
+// very miniaturized scroll bar"): FLUSH on the lane, no trough and no border;
+// the TRACK, the trimmed-off stretches either side of the kept region out to
+// the window's edges, is the CHECKED dither (Hilight over the ground in one
+// Windows px cells, phase anchored at the lane's top-left); the THUMB is the
+// kept region, a PLAIN RAISED box on the ground the lane's full height, no
+// grip and no cap squares — the thumb's own two ends are the caps (the
+// painter is render_trim_flags). The lane is ONE RECT for paint and for every
+// hit reader — the endcap rects (trim_endcap_rect takes the lane rect's y/h),
+// the bridge's y-gate and the framing double-click band — so paint and hit
+// move together by construction. 44 device rows at 275 %, 22 at 138 %.
+inline constexpr int kTrimLaneHeightPx   = 16;
 // THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
 // SCALED (architect 2026-10-02). The lane stacks, from its top:
 //
-//     lane = pad + ceil(ascent) + kRulerBaselineToMarkerPx rows
+//     lane = pad + ceil(ascent) + scaled_px(kRulerBaselineToMarkerPx)
 //
-// — the labels' line seated so their CAP TOP lands kRulerLabelCapTopPx (6)
-// authored rows under the lane's top (the pad, derived from the face's own
+// — the labels' line seated so their CAP TOP lands kRulerLabelCapTopPx (4)
+// Windows px under the lane's top (the pad, derived from the face's own
 // ascent and cap height; paint_handler.cpp owns the rule), the face's ascent
-// to the baseline (line_baseline), then TEN AUTHORED ROWS from the baseline to
+// to the baseline (line_baseline), then SEVEN WINDOWS PX from the baseline to
 // the marker lane's top (below). ONE HELPER seats the labels for both
 // readers — the painter's baseline and this height (ruler_label_baseline_px,
 // paint_handler.cpp) — so the two cannot disagree, and the face's metrics
 // are read off the product's own road: the Sans face at
-// ruler_label_font_size_px (8 pt) through gui_select_font_face, measured
-// through cairo-ft on fonts/Roboto-Regular.ttf, SLIGHT, hint metrics on:
-//   100 % (10.67 px, ascent 10, cap 8): pad 6 - 2 = 4, baseline row 14, cap
-//     ink rows 6..13: lane 14 + 10 = 24.
-//   200 % (21.33 px, ascent 20, cap 16; the tablet): pad 12 - 4 = 8, baseline
-//     row 28, ink rows 12..27: lane 28 + 20 = 48.
-//   50 % (5.33 px, ascent 5, cap 4): pad 3 - 1 = 2, baseline row 7, ink rows
-//     3..6: lane 7 + 5 = 12.
+// ruler_label_font_size_px (10 Windows px) through gui_select_font_face,
+// measured through cairo-ft on fonts/Roboto-Regular.ttf, SLIGHT, hint
+// metrics on:
+//   275 % (27.5 px, ascent 26, cap 20; the tablet): pad 11 - 6 = 5, baseline
+//     row 31, cap ink rows 11..30: lane 31 + 19 = 50.
+//   138 % (13.8 px, ascent 13, cap 11; the laptop): pad 6 - 2 = 4, baseline
+//     row 17, ink rows 6..16: lane 17 + 10 = 27.
+//   50 % (5 px, ascent 5, cap 4): pad 2 - 1 = 1, baseline row 6, ink rows
+//     2..5: lane 6 + 4 = 10.
 // The major ticks' rise above the marker lane is the painter's own and does
 // not enter the lane.
 //
-// THE BASELINE → MARKER LANE DISTANCE, TEN AUTHORED ROWS (architect
-// 2026-10-02, the U4 mock: "above 6, below 10"), AND IT OWNS THE OVERLAP: the
-// playhead head is 11 authored rows seated tip-down on the marker lane's top
-// (kPlayheadHeadHeightPx), one row taller than this distance, so its widest
-// row OVERLAPS the digits' lowest ink row at the playhead's column — allowed
-// (his ruling, "a little overlap is fine"), the head painting over the
-// labels. At 50 % the head's 6 rows meet a 5-row distance and overlap one
-// device row the same way. The head's rows do not enter the lane's height.
-inline constexpr int kRulerBaselineToMarkerPx = 10;
-inline constexpr int kMarkerLaneHeightPx = 20;
+// THE BASELINE → MARKER LANE DISTANCE, SEVEN WINDOWS PX (architect
+// 2026-10-02, the U4 mock's "above 6, below 10" laptop rows re-authored at
+// the unit's change as 4 and 7), AND IT OWNS THE OVERLAP: the playhead head
+// is 8 Windows px seated tip-down on the marker lane's top
+// (kPlayheadHeadHeightPx), one taller than this distance, so its widest rows
+// OVERLAP the digits' lowest ink rows at the playhead's column — allowed (his
+// ruling, "a little overlap is fine"), the head painting over the labels:
+// 3 device rows at 275 % (22 against 19), 1 at 138 % (11 against 10), none
+// at 50 % (4 against 4). The head's rows do not enter the lane's height.
+inline constexpr int kRulerBaselineToMarkerPx = 7;
 inline int trim_lane_h_px() {
     return scaled_px(kTrimLaneHeightPx, 3);
 }
 // Defined in paint_handler.cpp beside the label seat it reads; the rule is
 // the block above.
 int ruler_lane_h_px();
-inline int marker_lane_h_px() {
-    return scaled_px(kMarkerLaneHeightPx, 5);
+
+// THE MARKER LANE'S HEIGHT IS DERIVED FROM THE FLAG BOX, NOT AUTHORED
+// (architect 2026-10-02, the AC / AD sets' rule, tools/palette's flag_seat):
+// the flag box is its top edge band (marker_flag_edge_h_px), the normal
+// face's ascent and its descent, every term a whole device row —
+//
+//     box  = edge + ceil(ascent) + ceil(descent)
+//     lane = scaled_px(kMarkerLaneAirPx) + box + scaled_px(kMarkerLaneAirPx)
+//
+// — ONE WINDOWS PX OF GROUND ABOVE AND BELOW the box, the box's label seated
+// as a LINE under its edge band (baseline = box top + edge + ceil(ascent)).
+// The face is the redesign's 13 Windows px (redesign_font_size_px), read off
+// the product's own road like the ruler's: 275 % (35.75 px, ascent 34,
+// descent 9) box 3 + 34 + 9 = 46, lane 52; 138 % (17.94 px, 17 and 5) box
+// 1 + 17 + 5 = 23, lane 25; 50 % (6.5 px, 7 and 2) box 1 + 7 + 2 = 10, lane
+// 12 (the air floored at one row). Every box painter and every flag hit rect
+// takes the BOX's rows (marker_flag_box_band), never the lane's: the box is
+// what is painted and so what is pressed. THE THREE ARE DEFINED IN
+// paint_handler.cpp beside the ruler's, memoized on the scale the same way.
+inline constexpr int kMarkerLaneAirPx = 1;
+inline int marker_lane_air_px() {
+    return scaled_px(kMarkerLaneAirPx, 1);
+}
+int marker_flag_box_h_px();
+int marker_lane_h_px();
+// The box's band inside a marker lane rect `lane`: the lane less its air
+// above and below.
+inline GuiRect marker_flag_box_band(GuiRect lane) {
+    const int air = marker_lane_air_px();
+    return GuiRect{lane.x, lane.y + air, lane.w, marker_flag_box_h_px()};
 }
 
 // THE WAVEFORM'S MAXIMUM HEIGHT — THE DEVICE CONFIG'S `max_waveform_height`
-// since 2026-09-13 (architect: a per-device key in AUTHORED px, default 500 on
-// both templates, 0 meaning no maximum; the range owner is
-// is_max_waveform_height, device_config.h). Until that day it was this file's
+// since 2026-09-13 (architect: a per-device key in AUTHORED px — Windows px
+// since 2026-10-02, the templates' 500 laptop px re-authored as 364 — 0
+// meaning no maximum; the range owner is is_max_waveform_height,
+// device_config.h). Until that day it was this file's
 // constant kWaveformMaxHeightPx = 500, a RULED RETUNABLE (architect 2026-08-12,
 // the seventh glass ruling): on tall monitors the natural (leftover) waveform is so
 // tall that reaching the ruler and the flag lane "feels cumbersome", so the
@@ -1025,19 +1188,15 @@ int  waveform_max_h_px();
 // restating its number — one source, so a retune of the icon row carries down
 // here by construction. Its border is its own (below).
 //
-// WHAT THAT SUPERSEDES: kBottomRowHeightPx = 50, itself DERIVED at the
-// unification as the icon row's 32px button box (kIconBtnPx) plus twice the
-// 9px margin row 8's ruled geometry centred at ((44 - 26) / 2 = 9) — a lane
-// shrink-to-fit around the same box at row 8's own breathing room. The box is
-// unchanged; the MARGIN is the icon row's 7 now ((46 - 32) / 2), which is the
-// whole of the 51 -> 47 lane change. (Row 8's sampled kdenlive transport
-// metrics — 26px boxes / 16px glyphs off transport.png — and its ruled 44
-// content were superseded by the icon-row boxes at the unification; row 9's
-// measured 31 died with that lane.)
+// So the content is the icon row's rule — the toolbar case with five Windows
+// px of ground above and below it, 32 Windows px (architect 2026-10-02). (Its
+// earlier boxes — row 8's kdenlive 26 px transport boxes, then the icon row's
+// 32-laptop-px square — are git history.)
 //
-// THE CSS BOX MODEL, ONE TOP ROW: the content is the icon row's 46 and a 1px
-// row of ground sits OUTSIDE it on top (a 47px lane at 100%), on the WAVEFORM
-// side — where row 8's border-top stood. NO LINE IS DRAWN THERE since
+// THE CSS BOX MODEL, ONE TOP ROW: the content is the icon row's 32 and a
+// one-Windows-px row of ground sits OUTSIDE it on top (91 device rows at
+// 275 %, 45 at 138 %), on the WAVEFORM side — where row 8's border-top
+// stood. NO LINE IS DRAWN THERE since
 // 2026-10-02 (architect: nothing between the well and this row, the well's
 // own bottom line being the seam), and the row is kept so nothing on the row
 // moved. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx).
@@ -1065,61 +1224,58 @@ inline int bottom_row_h_px() {
 
 // THE REDESIGN'S SHARED TEXT SIZE, in device pixels — every text's size but
 // the three named exceptions (the clock's, the ruler timestamps' and the
-// tooltip's second line, each beside its painter's owner). Every row's text is 12pt through the existing
-// points*4/3 convention = 16px at 100%, scaled on gui_scale_factor(). It lives
+// tooltip's second line, each beside its painter's owner). AN EM OF 13
+// WINDOWS PX (architect 2026-10-02): MS Sans Serif 8 pt's 13-px cell, whose
+// capitals are 9 px tall — Roboto's cap of 0.711 em gives 9.2 at 13 px, and
+// the hinted face measures 9 at 100 % — so the product's text stands at
+// Windows' own proportion to its 16-px glyphs. 35.75 device px at 275 %
+// (cap 25), 17.94 at 138 % (cap 13). A FONT SIZE IS NOT A GRID POINT: it is
+// 13 × percent / 100 UNROUNDED, a double cairo takes as it is (scaled_px's
+// rounding rule is for lengths). It lives
 // here rather than in a painter's anonymous namespace because row 5's marker
 // flags shape their labels inside render.cpp while the button rows shape
 // theirs in paint_handler.cpp, and one design size cannot have two definitions.
 //
-// ROW 7 CONFIRMED IT INDEPENDENTLY, off row_7_text.png, which is worth recording
-// because that row was the last one still carrying a differently-sized face:
-//   * the crop's capital band is rows 10..21 and its baseline row 22, i.e. CAP
-//     HEIGHT 12 and X-HEIGHT 9 (rows 13..21), with no partial rows on either
-//     edge (the source is hinted, so the measurement is exact);
-//   * our sans face at 16px reported cap 12 / x-height 9 — the crop's
-//     numbers, not near them — in Liberation Sans, the face fontconfig
-//     answered then, and Roboto, the product's own face since 2026-10-02,
-//     reports the same two;
-//   * a full offscreen re-render of the crop's own string at 16px, pen x=13,
-//     baseline 22 fits the crop better than every neighbouring size, baseline
-//     and pen tried (15 / 15.5 / 16 / 16.5 / 17 x 21/22/23 x 12..14).
+// (It was 12 pt — 16 laptop px, measured off kdenlive's row-7 crop — until
+// the unit's change; that measurement is git history.)
 //
 // THE TEXT IS NOT FLOORED (architect 2026-08-10, with the gui_scale floor's
-// move to 50): it scales straight to 6pt at 50 %, while the structural
+// move to 50): it scales straight to 6.5 px at 50 %, while the structural
 // lengths keep scaled_px's per-metric floors so no 1 px line rounds to 0.
-inline constexpr double kRedesignFontSizePt = 12.0;   // -> 16.0 px at 100%
+inline constexpr double kRedesignFontSizePx = 13.0;   // Windows px
 inline double redesign_font_size_px() {
-    return kRedesignFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+    return kRedesignFontSizePx * gui_scale_factor();
 }
 
 // THE CLOCK'S SIZE — AN EXCEPTION to the shared size above (the ruler's
 // timestamps, below, are the other)
 // (architect 2026-08-14, at his live test: the bottom row's timestamp drops to
-// 11pt). It stays MONOSPACE, which is the cell's own ruled face and unchanged
-// (kClockShape, paint_handler.cpp, carries that ruling); only the size moved,
-// and it rides gui_scale_factor() through the same points*4/3 convention as
-// every other string. A RETUNABLE like the 12 above — neither is sampled from
-// a crop.
+// 11 pt against the shared 12; since 2026-10-02 12 Windows px against the
+// shared 13, the same 11/12). It stays MONOSPACE, which is the cell's own
+// ruled face and unchanged (kClockShape, paint_handler.cpp, carries that
+// ruling); only the size moved, and it rides gui_scale_factor() unrounded,
+// as every font size does. 33 device px at 275 %, 16.56 at 138 %.
 //
 // THE NO-WIGGLE CELL RE-MEASURES ITSELF: the cell is a shaped widest-digit
 // specimen and its memo keys on the SIZE it was measured at
 // (clock_cell_width_px), so this smaller size simply produces a smaller cell,
 // which the painter then re-centres in the lane. Nothing about the cell is
 // authored in pixels, which is why the change is one constant.
-inline constexpr double kClockFontSizePt = 11.0;   // -> ~14.67 px at 100%
+inline constexpr double kClockFontSizePx = 12.0;   // Windows px
 inline double clock_font_size_px() {
-    return kClockFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+    return kClockFontSizePx * gui_scale_factor();
 }
 
 // THE RULER TIMESTAMPS' SIZE — the product's second exception to the shared
 // size, the clock's precedent (architect 2026-10-02, the S4 mock judged on
-// the tablet): 8 pt Roboto through the same points*4/3 convention and the
-// one face owner (gui_select_font_face, GuiFontFamily::Sans), on the ruler
-// lane only. The lane's height is derived from this face (ruler_lane_h_px),
-// so the size is the one constant to move.
-inline constexpr double kRulerLabelFontSizePt = 8.0;   // -> ~10.67 px at 100%
+// the tablet; 8 pt until the unit's change): THE SMALL FACE, 10 WINDOWS PX
+// of Roboto through the one face owner (gui_select_font_face,
+// GuiFontFamily::Sans), on the ruler lane only — 27.5 device px at 275 %,
+// 13.8 at 138 %. The lane's height is derived from this face
+// (ruler_lane_h_px), so the size is the one constant to move.
+inline constexpr double kRulerLabelFontSizePx = 10.0;   // Windows px
 inline double ruler_label_font_size_px() {
-    return kRulerLabelFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+    return kRulerLabelFontSizePx * gui_scale_factor();
 }
 
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
@@ -1150,6 +1306,10 @@ inline double ruler_label_font_size_px() {
 // than as padding — so the box goes symmetric at 2 and comes out 54 wide where
 // kdenlive's is 55. A measured pixel deliberately given up, recorded here so
 // the next reader does not "fix" it back.
+// TWO WINDOWS PX EACH SINCE THE UNIT'S CHANGE (architect 2026-10-02): the
+// laptop pixel's 2 converts to 1.45, and the nearer 1 would have halved the
+// laptop's pad to one device px against the box's edge; 2 is 6 device px at
+// 275 % (4 before) and 3 at 138 % (2 before).
 inline constexpr int kMarkerFlagPadRightPx = 2;
 inline constexpr int kMarkerFlagPadLeftPx  = 2;
 inline int marker_flag_pad_left_px() {
@@ -1190,7 +1350,8 @@ inline int marker_flag_edge_h_px() {
 // the flag iterator admits a flag whose box, THIS BORDER INCLUDED, reaches
 // into those columns. So a marker at grid point w (one past the last column)
 // paints this border ALONE on the last column(s), [w - border, w): one column
-// at gui_scale 100, two at 225. No fill, no text and no stem (the stem is
+// at the laptop's 138 %, three at the tablet's 275 %. No fill, no text and
+// no stem (the stem is
 // gated to [0, w)); its hit rect is that strip, so the border is clickable
 // as painted; and its open editor paints the very same columns, the field's
 // border standing where the resting flag's does.
@@ -1210,38 +1371,37 @@ inline constexpr int kMarkerFlagBorderPx = 1;
 inline int marker_flag_border_px() {
     return scaled_px(kMarkerFlagBorderPx, 1);
 }
-// The label BASELINE, measured from the box's top edge. The crop's cap ink runs
-// rows 4..15 of the 20 — a 12-row cap height, which is what the product's sans
-// produces at 16px (Liberation then, Roboto since 2026-10-02, both 12) — so
-// the baseline is row 16 and the remaining 4 rows are the descender band. Authored as a length rather than solved from font extents
-// because the box height (kMarkerLaneHeightPx) is authored too: both come off
-// the same crop and must agree with it, not with a font's internal leading.
-inline constexpr int kMarkerFlagBaselinePx = 16;
-inline int marker_flag_baseline_px() {
-    return scaled_px(kMarkerFlagBaselinePx, 1);
-}
-// THE RELIEF LINE — ONE AUTHORED PX, the width of every raised, sunken and
-// etched line in the chrome (architect 2026-10-02: the relief is thin, one
-// logical line a side; the grammar is at the palette head): 1 device px at
-// 100 %, 2 on the tablet, floored at 1 so it never vanishes at 50 %. The relief
-// helpers (paint_relief_raised and its siblings) paint every line at it.
+// The label BASELINE, in device rows under the BOX's top (marker_flag_box_band,
+// never the lane's): the box's edge band, then the face's ceiled ascent — the
+// label is a LINE under the band (architect 2026-10-02, the AC / AD sets'
+// flag_seat; it was the kdenlive crop's authored row 16 until the box became
+// the face's own). Defined in paint_handler.cpp with the box's height (the
+// rule at marker_lane_h_px's block above).
+int marker_flag_baseline_px();
+// THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
+// sunken, status or etched edge in the chrome, and of one cell of the checked
+// dither (architect 2026-10-02: Windows' DrawEdge draws one-pixel lines, two
+// to an edge; the grammar is at the palette head): 3 device px at the
+// tablet's 275 %, 1 at the laptop's 138 %, floored at 1 so it never vanishes
+// at 50 %. The relief helpers (paint_relief_soft_raised and its siblings)
+// paint every line at it.
 inline constexpr int kReliefLinePx = 1;
 inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);
 }
 // THE WELL'S BORDER, taken FROM the waveform area at its top and its bottom:
-// TWO relief lines a side (the colours and the order at the row-6 palette
-// block — Hilight over DkShadow on top, DkShadow over Hilight below), so 2
-// authored rows at 100 % and 4 device rows on the tablet, and still two
-// lines at 50 %.
+// the PLAIN SUNKEN edge's TWO relief lines a side (the colours and the order
+// at the row-6 palette block), so 6 device rows on the tablet, 2 on the
+// laptop, and still two lines at 50 %.
 inline int waveform_border_px() {
     return 2 * relief_line_px();
 }
 // THE WAVEFORM'S LINE WIDTH (architect 2026-09-27, "scale all, including the
 // ruler ticks and the playhead head"): every vertical LINE on the waveform and
-// the ruler scales with gui_scale — 1 up to 149 % (the floor holding 50 %), 2
-// from 150 % through 250 % (the tablet's 225 % included; banker's rounding
-// takes 2.5 to 2), 3 above that and 4 at the 350 % ceiling.
+// the ruler scales with gui_scale — one Windows px: 1 up to 149 % (the floor
+// holding 50 %; the laptop's 138 %), 2 from 150 % through 250 % (banker's
+// rounding takes 2.5 to 2), 3 above that (the tablet's 275 %) and 4 at the
+// 350 % ceiling.
 // ITS READERS, grepped at the ruling — the one inventory of the class, each
 // an ALIASED INTEGER RECT [col, col + t) whose left edge is the item's own
 // column and which is clipped to the waveform's columns [0, w): the marker
@@ -1387,47 +1547,45 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     return flag + 2.0 * cell;
 }
 
-// THE TRIM LANE'S CAPS — the two end handles and the centre grip, each a
-// SOLID RAISED SQUARE (architect 2026-10-02; the grip's old hollow is gone,
-// CONFIRMED that day): 9 authored columns wide, the lane's interior height
-// (kTrimLaneHeightPx's 11 less the trough's two relief lines), so 9 x 9 at
-// 100 %, 18 x 18 on the tablet and 4 x 4 at 50 % (where the interior is 6 - 2
-// rows). The grip paints only where it fits whole between the handles'
-// inner edges (render_trim_flags), so it never covers a handle.
-inline constexpr int kTrimMiddleSizePx  = 9;
-inline int trim_middle_size_px() {
-    return scaled_px(kTrimMiddleSizePx, 1);
-}
-// THE HANDLE'S WIDTH IS THE GRIP'S (architect 2026-10-01): one square, read
-// again rather than a second number. The name is the endcap's — the handles
-// cap the bar's two ends — and it is what trim_endcap_rect sizes a handle by
-// and trim_bridge_gap insets the bar's interior by.
+// THE TRIM CAPS ARE THE THUMB'S OWN ENDS (architect 2026-10-02, the AC set:
+// the scroll bar's thumb has no grip and no cap squares) and PAINT NOTHING OF
+// THEIR OWN; what survives of them is each end's GRAB BAND — the thumb's end
+// columns, 7 Windows px wide, over the lane's whole height. It is what
+// trim_endcap_rect sizes an end's band by and trim_bridge_gap insets the body
+// drag's interval by; the hit side adds its grab tolerance
+// (kTrimEndcapGrabPx) on top. THE 7 is the painted handle square's former
+// 9 laptop px re-authored at the unit's change (19 device px at 275 %, 10 at
+// 138 %; 18 and 9 before). (The centre grip — a third square at the window's
+// midpoint, informational only — retired with the squares.)
+inline constexpr int kTrimEndBandPx = 7;
 inline int trim_endcap_w_px() {
-    return trim_middle_size_px();
+    return scaled_px(kTrimEndBandPx, 1);
 }
 
-// THE PLAYHEAD HEAD, ALIASED: 17 x 11 at 100 % (architect 2026-10-02 — the
-// kdenlive crop's 19 x 12 head, row_5_lane_3_playhead.png, with its WIDEST
-// row dropped, so the head is one row shorter and seated on the marker lane's
-// top as before, its top row overlapping the digits' lowest ink row at the
-// playhead's column; the overlap rule is kRulerBaselineToMarkerPx's). Its
-// silhouette is a per-row HALF-WIDTH table, not a formula — the shape has
-// doubled rows (y2/y3, y5/y6, y9/y10) that no linear ramp produces, so the
-// pixels are transcribed and the table IS the drawing. Painting it as
-// integer rectangles keeps it hard-edged at every scale, which a path fill
-// would not. The painted width at any scale is the table's own arithmetic
-// through playhead_head_half_px below (2 x 8 + the stem's width: 17 at
-// 100 %, 34 on the tablet).
-inline constexpr int kPlayheadHeadHeightPx = 11;
+// THE PLAYHEAD HEAD, ALIASED: 8 WINDOWS PX TALL, 13 WIDE (architect
+// 2026-10-02, the unit's change; the planner's lean taken: 8 rows paint 22
+// device rows at 275 % — the judged picture's head — and 11 at 138 %, the
+// laptop's head before the change). Its silhouette is a per-row HALF-WIDTH
+// table, not a formula, seated tip-down on the marker lane's top, its top
+// rows overlapping the digits' lowest ink rows at the playhead's column (the
+// overlap rule is kRulerBaselineToMarkerPx's). THE 8-ROW TABLE IS THE
+// 11-ROW kdenlive head (row_5_lane_3_playhead.png's 19 x 12 with its widest
+// row dropped: halves 8 7 6 6 5 4 4 3 2 1 1 laptop px) RE-SAMPLED at the
+// tablet: each Windows row takes the mean half of the device rows it covers
+// at 275 %, re-authored in Windows px — 6 5 4 3 3 2 1 1, keeping the
+// original's doubled rows as steps. Painting it as integer rectangles keeps it
+// hard-edged at every scale, which a path fill would not. The painted width at
+// any scale is the table's own arithmetic through playhead_head_half_px below
+// (2 x 16 + the stem's 3: 35 at 275 %; 2 x 8 + 1: 17 at 138 %).
+inline constexpr int kPlayheadHeadHeightPx = 8;
 inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
-    8, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1
+    6, 5, 4, 3, 3, 2, 1, 1
 };
 // THE HEAD'S HEIGHT IN DEVICE ROWS, the ONE expression of it for the
-// painter's row loop (paint_ruler_row). NO FLOOR: 11 authored rows reach 6 at
-// the schema's own bottom (gui_scale 50, banker's rounding taking 5.5 to 6),
-// and only a factor below 1/22 could empty the loop — outside the vocabulary
-// entirely. The per-row HALF-WIDTH is where the floor lives
-// (playhead_head_half_px below).
+// painter's row loop (paint_ruler_row). NO FLOOR: 8 Windows rows reach 4 at
+// the schema's own bottom (gui_scale 50), and only a factor below 1/16 could
+// empty the loop — outside the vocabulary entirely. The per-row HALF-WIDTH is
+// where the floor lives (playhead_head_half_px below).
 inline int playhead_head_h_px() {
     return scaled_px(kPlayheadHeadHeightPx);
 }
@@ -1440,7 +1598,7 @@ inline int playhead_head_h_px() {
 // it, the width itself going through scaled_px like every other length.
 //
 // THE FLOOR OF 1 (architect 2026-08-10, with the gui_scale floor 100->50): the
-// table's last two rows are 1 authored px, which rounds to 0 at s = 0.5, and a
+// table's last two rows are 1 Windows px, which rounds to 0 at s = 0.5, and a
 // half of 0 is a 1px row — the head's tip would collapse onto the stem and
 // stop reading as a tip at all. Floored, the bottom row is 3 px wide there. A
 // FLOOR, NOT A PIN: at 100% and above every scaled half is already >= 1, so
@@ -1449,7 +1607,7 @@ inline int playhead_head_h_px() {
 // THE HEAD IS CENTRED ON THE STEM AT EVERY SCALE (architect 2026-09-27): the
 // stem is waveform_line_px() = t columns wide, [col, col + t), so each row
 // takes the stem's parity, [col − half, col + half + t − 1], 2·half + t wide
-// — odd at t = 1 as before, even at the tablet's t = 2 — integer and aliased,
+// — odd at the laptop's t = 1 and the tablet's t = 3 — integer and aliased,
 // with the same `half` on each side of the stem's own columns.
 //
 // THE ROW INVERSE TRUNCATES, deliberately — the one conversion here off the
@@ -1478,12 +1636,13 @@ inline int playhead_head_half_px(int device_row, double s) {
 // writer (note_tooltip_hover) reads the slop and the two wake-up delays.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
-// from the FACE'S OWN EXTENTS at both type sizes (one line, or 12pt over 10pt),
-// so the box follows the font instead of a literal that could drift from it;
-// the run loop only needs to know it can never exceed this. 60 clears the
-// two-line form (52 at 100% in Roboto, 2026-10-02) with room for a font whose
-// metrics run larger.
-inline constexpr int     kTooltipDamageHeightPx = 60;
+// from the FACE'S OWN EXTENTS at both type sizes (one line, or 13 over 11
+// Windows px), so the box follows the font instead of a literal that could
+// drift from it; the run loop only needs to know it can never exceed this.
+// 44 Windows px (the laptop pixel's 60 re-authored, architect 2026-10-02)
+// clears the two-line form — 42 at 100 % and 110 device rows against 121 at
+// 275 % in Roboto — with room for a font whose metrics run larger.
+inline constexpr int     kTooltipDamageHeightPx = 44;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
@@ -1533,12 +1692,13 @@ inline constexpr int64_t kTooltipExpireMs = 10000;
 // (View.TooltipInfo.updateAnchorPos, "filters out the jitter which is
 // typical for such input sources as stylus"), and that slop is
 // `config_viewConfigurationHoverSlop` = 4dp (core/res/values/config.xml),
-// half the platform's 8dp touch slop. It is taken as 4 AUTHORED px through
-// scaled_px, the authored px being to gui_scale what the dp is to density:
-// exactly 4dp on the tablet at its 200 % under the 320 density it runs at,
-// and half the drag gate (kDragMovedThresholdPx 8, app_state.h) as Android's
-// is half its touch slop. Floor 1, so a small scale never zeroes it.
-inline constexpr int kTooltipHoverSlopPx = 4;
+// half the platform's 8dp touch slop. It is taken as 3 WINDOWS PX through
+// scaled_px (4 laptop px until the unit's change, architect 2026-10-02):
+// 8 device px, exactly 4dp, on the tablet at its 275 % under the 320 density
+// it runs at, and half the drag gate (kDragMovedThresholdPx 6, app_state.h)
+// as Android's is half its touch slop. Floor 1, so a small scale never
+// zeroes it.
+inline constexpr int kTooltipHoverSlopPx = 3;
 inline int tooltip_hover_slop_px() {
     return scaled_px(kTooltipHoverSlopPx, 1);
 }
@@ -1562,17 +1722,23 @@ inline int tooltip_hover_slop_px() {
 // label — so the horizontal terms stay with the painter and the open edge
 // damages full-width instead. dropdown_h_px (app_state.h) does the sum, where
 // the item tables are visible.
-inline constexpr int kPopupItemHeightPx = 29;  // measured off dropdown_full
-inline constexpr int kPopupSepMarginYPx = 2;   // above and below the separator
-// The item block's own margin inside the border, top AND bottom. The full crop
-// puts the first item 3px below the container top; the bottom mirrors it, which
-// the crop's own trailing space agrees with.
-inline constexpr int kPopupItemMarginYPx = 3;
-// THE DROPDOWN'S FRAME IS ONE RELIEF LINE a side (architect 2026-10-02: a
-// menu is a RAISED panel), so its thickness is relief_line_px's — read, not
-// a second number.
+//
+// THE DROPDOWN IS WINDOWS 95's POPUP MENU, AT THE WINDOWS PIXEL (architect
+// 2026-10-02): a PLAIN RAISED two-line frame, then ONE Windows px of ground
+// margin on every side, then the items, 17 Windows px each and touching; the
+// highlight fills an item inside the margin, its full width. A SEPARATOR is
+// an etched pair (two lines) with 3 Windows px of ground above and below it —
+// 8 in all, Windows' separator item (the planner's reading of the Windows
+// shots; the laptop pixel's 2 would have been 1).
+inline constexpr int kPopupItemHeightPx = 17;
+inline constexpr int kPopupSepMarginYPx = 3;   // above and below the separator
+// The item block's own margin inside the frame, top AND bottom (the
+// horizontal one is the painter's kPopupItemInsetPx, the same one px).
+inline constexpr int kPopupItemMarginYPx = 1;
+// THE FRAME IS THE PLAIN RAISED EDGE, two relief lines a side, so its
+// thickness is relief_line_px's twice — read, not a second number.
 inline int popup_border_px() {
-    return relief_line_px();
+    return 2 * relief_line_px();
 }
 inline int popup_item_h_px() {
     return scaled_px(kPopupItemHeightPx, 5);
@@ -1580,8 +1746,12 @@ inline int popup_item_h_px() {
 inline int popup_sep_margin_y_px() {
     return scaled_px(kPopupSepMarginYPx, 0);
 }
+// A separator's whole block: its margin, the etched pair, its margin.
+inline int popup_sep_block_px() {
+    return 2 * popup_sep_margin_y_px() + 2 * relief_line_px();
+}
 inline int popup_item_margin_y_px() {
-    return scaled_px(kPopupItemMarginYPx, 0);
+    return scaled_px(kPopupItemMarginYPx, 1);
 }
 
 
@@ -1594,11 +1764,12 @@ inline int popup_item_margin_y_px() {
 // PROVENANCE (2026-08-02): this used to BE the tip-down triangle's mask height,
 // returned through playhead_triangle_h_px(), which is deleted with the
 // silhouette — so the inset owns its derivation outright now, and THE VALUE IS
-// KEPT EXACT: the same authored unit, the same std::nearbyint, the same floor,
-// so every pixel is identical at every gui_scale. 8 at 100%. The floor of 2 was
+// KEPT EXACT: the same authored unit, the same std::nearbyint, the same floor
+// — the unit re-authored as 6 Windows px since 2026-10-02, 16 device px at
+// 275 % (16 at the tablet's 200 % before) and 8 at 138 %. The floor of 2 was
 // the triangle's own ("always a tip row below a top row") and survives only to
-// hold the value byte-for-byte; it cannot fire while gui_scale rests in
-// [50, 350] (8 px reaches 2 only below 19%).
+// hold the value; it cannot fire while gui_scale rests in [50, 350] (6 px
+// reaches 2 only below 25 %).
 inline int waveform_inset_px() {
     return scaled_px(kPlayheadUnitPx, 2);
 }
@@ -1623,9 +1794,10 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // Half-width (px) of the playhead COLUMN's reach: a playhead at column c owns
 // [c - playhead_half_px(), c + playhead_half_px()]. Bounds the playhead's
 // off-screen cull and its narrow invalidation strip — the single definition
-// shared by render.cpp (cull) and main.cpp (invalidation). 7 at 100%. It
-// covers the scanner's waveform_line_px()-wide line [c, c + t) at every
-// gui_scale: t − 1 is 0 to 3 across [50, 350] % while this reach is 3 to 27.
+// shared by render.cpp (cull) and main.cpp (invalidation). 15 at 275 %, 7 at
+// 138 %. It covers the scanner's waveform_line_px()-wide line [c, c + t) at
+// every gui_scale: t − 1 is 0 to 3 across [50, 350] % while this reach is 2
+// to 20.
 //
 // PROVENANCE (2026-08-02): it was the horizontal footprint of the tip-down
 // triangle (the mask was 2H-1 wide and centered, so H-1 either side), read
@@ -1639,9 +1811,9 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD on the
 // ruler lane's bottom rows is WIDER than this reach at every scale. The head's
 // widest row is 2 * playhead_head_half_px(0, s) + waveform_line_px() off
-// kPlayheadHeadHalf[0] = 8 (2026-10-02) — 17px at 100%, 9 at 50%, 26 at 150%,
-// 34 at 200% and 60 at the 350% ceiling — against this +/- 7-at-100% reach,
-// which rides a
+// kPlayheadHeadHalf[0] = 6 (2026-10-02) — 13 px at 100 %, 7 at 50 %, 17 at
+// 138 %, 35 at 275 % and 46 at the 350 % ceiling — against this ± 15-at-275 %
+// reach, which rides a
 // different authored unit. Both scale, and neither is a function of the
 // other, so the gap is a fact at every scale rather than a 100%-only
 // observation. It is harmless as
@@ -1737,54 +1909,86 @@ void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
 // THE RELIEF HELPERS — the chrome's one painter family for the Windows-95
-// edge grammar (architect 2026-10-02; the grammar at the palette head). Every
-// line is relief_line_px() wide and is an integer rect of cells, never a
-// stroke. A FRAME is drawn ON the rect's outermost ring: its top and left in
-// `top_left`, then its bottom and right in `bottom_right`, the second pair
-// painted last so it owns the top-right and bottom-left corner pixels.
-//   paint_relief_frame  — the general frame, any two colours (the one owner
-//                         the three below call).
-//   paint_relief_raised — Hilight top/left, Shadow bottom/right: a button, a
-//                         panel, the trim bar and its caps, a card, a menu.
-//   paint_relief_sunken — Shadow top/left, Hilight bottom/right: a pressed or
-//                         toggled button, the clock panel, a text field, the
-//                         trim trough, the open menu anchor.
+// edge grammar (architect 2026-10-02; the grammar and the family table at the
+// palette head). Every line is relief_line_px() wide and is an integer rect
+// of cells, never a stroke. A RING is drawn ON the rect's outermost cells:
+// its top and left in `top_left`, then its bottom and right in
+// `bottom_right`, the second pair painted last so it owns the top-right and
+// bottom-left corner pixels; a TWO-LINE EDGE is its outer ring on the rect
+// and its inner ring on the rect inset one line (Windows' DrawEdge).
+//   paint_relief_frame  — one ring, any two colours (the one owner every
+//                         helper below calls).
+//   paint_relief_soft_raised  — SOFT RAISED: a toolbar button at rest.
+//   paint_relief_soft_sunken  — SOFT SUNKEN: a toolbar button checked or
+//                         pressed.
+//   paint_relief_plain_raised — PLAIN RAISED: a push button, the scroll-bar
+//                         thumb (the trim lane's), the scrub's thumb, a
+//                         menu's and a dropdown's frame, a raised panel.
+//   paint_relief_plain_sunken — PLAIN SUNKEN: a field, the scrub's channel
+//                         (the well is render_canvas's own fill of the same
+//                         lines, full width).
+//   paint_relief_status_sunken — STATUS SUNKEN, ONE ring: a status-bar panel.
 //   paint_relief_line_frame — one colour all round: the tooltip's DkShadow
 //                         border and the dialog's default-button frame.
-//   paint_relief_etched_vline — an ETCHED separator: a Shadow line ending at
+//   paint_relief_etched_vline — an ETCHED line: a Shadow line ending at
 //                         column x (its columns [x - lw, x)) and a Hilight
 //                         line at [x, x + lw), rows [y, y + h).
 //   paint_relief_etched_hline — the same on its side: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
 //                         [x, x + w) (the dropdown's separator).
+// (paint_relief_raised / paint_relief_sunken, the one-line pair of the thin
+// design, are retired, architect 2026-10-02: every caller names its family.)
 // None of them fills the face: a caller fills first and frames after.
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right);
-void paint_relief_raised(cairo_t* cr, const GuiRect& r);
-void paint_relief_sunken(cairo_t* cr, const GuiRect& r);
+void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r);
+void paint_relief_soft_sunken(cairo_t* cr, const GuiRect& r);
+void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r);
+void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
+void paint_relief_status_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
 void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h);
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
 // One flat cell rect in `c` — the face fill every relief caller lays first.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
+// THE CHECKED DITHER (architect 2026-10-02, Windows' checked toolbar button
+// and its scroll-bar track): the cells of `r` lit in `lit` over whatever the
+// caller filled first, in square cells relief_line_px() on a side, the cell
+// at (phase_x, phase_y) lit and its neighbours alternating — a cell is lit
+// when its column index plus its row index, counted from the phase, is even —
+// so two surfaces sharing a phase dither alike. Only the cells inside the
+// current clip are emitted (a dither is thousands of cells), each an integer
+// rect through the palette's chokepoint.
+void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
+                        int phase_y, GuiColor lit);
 
 
 // The waveform area's CONTENT band — THE CANVAS: the area minus the well's two
 // lines at its top and its bottom (waveform_border_px). Every pass that fills
 // a BAND inside the area clips to this — the plate blit and the region
-// highlight's two halves, ground and ink — and EVERY VERTICAL that crosses the
-// waveform stops at it (architect 2026-10-02: the stems no longer run through
-// the well's lines): the marker stems in both columns and the `h` diff lane,
-// the playhead's waveform segment and the scanner (render_playhead), and the
-// strip-drag anchor stem (render_strip_anchor_stem). THE PHASE-RESET OVERLAY
-// RING alone reads the full area: its horizontals ride the area's OUTERMOST
-// rows deliberately (the ruling is at paint_phase_reset_overlay_ring).
-// Degenerate areas (too short to carry both borders) pass through unshrunk
-// rather than inverting.
+// highlight's two halves, ground and ink — and the SCANNER, the moving
+// playback line, which belongs to the picture alone, spans it (render_playhead).
+// THE PHASE-RESET OVERLAY RING alone reads the full area: its horizontals ride
+// the area's OUTERMOST rows deliberately (the ruling is at
+// paint_phase_reset_overlay_ring). Degenerate areas (too short to carry both
+// borders) pass through unshrunk rather than inverting.
 inline GuiRect waveform_content_rect(GuiRect area) {
     const int b = waveform_border_px();
     if (area.h <= 2 * b) return area;
     return GuiRect{area.x, area.y + b, area.w, area.h - 2 * b};
+}
+// THE STEMS' BAND (architect 2026-10-02, the stems run continuous): the area
+// from its TOP — through the well's top lines — to the canvas's foot. A
+// stem crosses the top lines because it continues from the lane above, flag
+// to canvas, and stops at the bottom lines, where nothing below continues it.
+// Its readers: the marker stems in both columns and the `h` diff lane
+// (paint_marker_stems), the playhead's waveform segment (render_playhead) and
+// the strip-drag anchor stem (render_strip_anchor_stem). Degenerate areas pass
+// through whole, as the canvas's do.
+inline GuiRect waveform_stem_band(GuiRect area) {
+    const int b = waveform_border_px();
+    if (area.h <= 2 * b) return area;
+    return GuiRect{area.x, area.y, area.w, area.h - b};
 }
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
@@ -1957,7 +2161,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 //
 // THE LIT OUTLINE (architect 2026-09-27) — THE INNER BAR'S TRUE CONTOUR,
 // `outline_px` THICK, ALIASED. `outline_px` is t = waveform_line_px() (render.h,
-// the job's snapshot): 1 at 100 %, 2 on the tablet — the outline is a LINE
+// the job's snapshot): 1 on the laptop at 138 %, 3 on the tablet at 275 % —
+// the outline is a LINE
 // and scales with gui_scale like the stems, while the plate column stays one
 // device pixel. A pixel of the inner's shape (the inner bars of all columns)
 // is a BORDER pixel iff any pixel within t of it straight left, right, up or
@@ -2090,10 +2295,13 @@ void render_waveform(cairo_surface_t* dest,
                      int outline_px,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
-// Draws a waveform_line_px()-wide vertical LINE down the canvas of `area`
-// (waveform_content_rect: it stops at the well's lines, architect 2026-10-02)
-// at the column nearest `playhead_pixel_x` (offset from area.x), [col, col +
-// t), in one solid
+// Draws a waveform_line_px()-wide vertical LINE down `area` at the column
+// nearest `playhead_pixel_x` (offset from area.x), [col, col + t), over the
+// rows `band` picks (architect 2026-10-02): the CURSOR's stem is a stem and
+// runs continuous from the marker lane's run into the canvas
+// (PlayheadRows::Stem, waveform_stem_band), the SCANNER is the picture's own
+// line and spans the canvas alone (PlayheadRows::Canvas,
+// waveform_content_rect); in one solid
 // `color` end to end, painted straight over whatever it crosses — waveform
 // ink included. No-op if outside; the line is gated on its own column and
 // clipped at the right edge (fill_waveform_line), so it never leaks into an
@@ -2116,14 +2324,16 @@ void render_waveform(cairo_surface_t* dest,
 // crossed an opaque sample) is retired too: architect 2026-07-26, the notch
 // retired with the polarity inversion — the contrast problem it patched is
 // solved by the scheme, so that parameter went with it.
+enum class PlayheadRows { Stem, Canvas };
 void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
-                     GuiColor color);
+                     GuiColor color,
+                     PlayheadRows band);
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the canvas like a marker stem (waveform_content_rect), in
+// spanning the stems' band like a marker stem (waveform_stem_band), in
 // kPlayheadStem since 2026-08-01 — the product's one position-line white
 // (the ruling is at the paint site).
 // The anchor is
@@ -2206,14 +2416,14 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
                                   int wave_w);
 
-// The BETWEEN-THE-ENDCAPS column interval [lo, hi) (waveform-relative,
+// The BETWEEN-THE-ENDS column interval [lo, hi) (waveform-relative,
 // half-open, EMPTY when hi <= lo), the ONE owner of the bridge, run by the
-// painter (render_trim_flags) alone: its midpoint-mark fit test reads it, and
-// the same clipped interval is what the painter PUBLISHES as the pair drag's
-// handle (TrimBarHit::bridge_lo / bridge_hi, read by point_in_trim_bridge_span),
-// so the bridge's clickable band and the mark's clearance are one interval. The bar itself no longer
-// comes from here — it spans the WINDOW, bound column to bound column, and the
-// endcaps paint over its ends. Both bounds must be set (callers gate). The
+// painter (render_trim_flags) alone: the clipped interval is what the painter
+// PUBLISHES as the pair drag's handle (TrimBarHit::bridge_lo / bridge_hi,
+// read by point_in_trim_bridge_span) — the thumb's body between its two end
+// bands. The thumb itself does not come from here — it spans the WINDOW,
+// bound column to bound column, and its end bands are its own ends. Both
+// bounds must be set (callers gate). The
 // offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
 // verdict) — NOT col_raw, which cannot tell the side across the rounding seam
 // (a barely-off-left bound rounds to col_raw == 0). The 4x2 semantics:
@@ -2237,14 +2447,14 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 //        any lo >= 0 — closes the one-pixel bridge a raw col_raw == 0 left, which
 //        gave hi = 1 and painted/accepted a column-0 sliver for a window wholly
 //        left of the viewport).
-// The +endcap_w inset is the ROOM a PAINTED endcap — a handle since 2026-10-01,
-// trim_endcap_w_px() wide — occupies; an offscreen bound
-// paints no endcap, so the inset is dropped and the bar fills FLUSH. This interval
+// The +endcap_w inset is the ROOM an on-screen end's band —
+// trim_endcap_w_px() wide — occupies; an offscreen bound has no band on
+// screen, so the inset is dropped and the body runs FLUSH. This interval
 // is returned UNCLAMPED (raw sentinels included) — its role is to carry the
 // offscreen-flush and empty semantics past the visible edge; it is NOT a drawn
 // interval. The painter clamps it to the visible range ONCE: it intersects it
-// with the effective width [0, wave_w) before asking whether the midpoint tile
-// fits, and publishes that same clipped interval as the bridge's hit span. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
+// with the effective width [0, wave_w) and publishes that clipped interval as
+// the bridge's hit span. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
 // paints nor hits. The sentinels earn their strictness here: an offscreen edge
 // lands STRICTLY past the visible range (never at col 0 or col wave_w-1), so a
 // window running off the view yields a flush interior rather than a spurious
@@ -2271,39 +2481,39 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 
-// The ONE trim HANDLE screen-rect owner (named for the endcaps the handles
-// replaced on 2026-10-01 — they still cap the bar's two ends): the begin/end
-// edge-anchoring rule lives here, run by the painter (render_trim_flags),
-// which publishes each handle it fills for the hit test (hit_test_trim_endcap
-// reads TrimBarHit, below), so paint and hit are one rect.
+// The ONE trim END-BAND screen-rect owner (named for the endcaps the thumb's
+// ends still are): the begin/end edge-anchoring rule lives here, run by the
+// painter (render_trim_flags), which publishes each end's band for the hit
+// test (hit_test_trim_endcap reads TrimBarHit, below), so paint and hit are
+// one rect.
 //
-// A trim bound is an EDGE, not a point: the begin handle's LEFT edge sits ON
-// the bound column (rect left = strip_x+col), the end handle's RIGHT edge sits
-// on it (rightmost pixel = strip_x+col), each flush with the bar's end.
-// Deliberate asymmetry vs centered marker flags: a bound at frame 0 / EOF
-// shows its handle fully onscreen.
+// A trim bound is an EDGE, not a point: the begin band's LEFT edge sits ON
+// the bound column (rect left = strip_x+col), the end band's RIGHT edge sits
+// on it (rightmost pixel = strip_x+col) — each the thumb's own end. Deliberate
+// asymmetry vs centered marker flags: a bound at frame 0 / EOF has its end
+// fully onscreen.
 //
-// THE RECT IS THE HANDLE'S COLUMNS OVER THE WHOLE LANE, NOT THE PAINTED
-// SQUARE: trim_endcap_w_px() wide — the centre grip's 9 at 100% — and the
-// trim lane `row`'s full height, a deliberately lane-tall grab, while the
-// painter fills those same columns over the trough's interior rows alone
-// (the 9 x 9 square inside the 11-row lane). THE HIT TEST ALSO INFLATES ITS
-// COLUMNS by kTrimEndcapGrabPx per side (10, what each retune of it costs the
-// bridge is recorded at the constant): a 9px target is still under a
-// fingertip. So the drawn handle and the grabbable one deliberately share
-// their columns and nothing else — the one place in this lane where they
-// differ, stated here because everywhere else in the redesign they are
-// identical by construction.
+// THE RECT IS THE THUMB'S END COLUMNS OVER THE WHOLE LANE: trim_endcap_w_px()
+// wide (7 Windows px) and the trim lane `row`'s full height, which is the
+// thumb's own height. Nothing marks it — the thumb's end IS the cap
+// (architect 2026-10-02) — and THE HIT TEST INFLATES ITS COLUMNS by
+// kTrimEndcapGrabPx per side (7 Windows px, what each retune of it costs the
+// body drag is recorded at the constant): a 19-px band is still under a
+// fingertip.
 GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
-// Grab tolerance added to EACH SIDE of the drawn handle for hit-testing. The
-// handles are 9px (2026-10-01), so this makes the target 9 + 2*10 = 29px. ONE CONSUMER reads it (re-grepped 2026-10-01): the TRIM BAR's handles
+// Grab tolerance added to EACH SIDE of a thumb end's band for hit-testing.
+// 7 WINDOWS PX since the unit's change (architect 2026-10-02): the laptop
+// pixel's 10 re-authored, so the target is 7 + 2·7 = 21 Windows px — 19 + 2·19
+// = 57 device px at 275 % (18 + 2·20 = 58 at 200 % before, a hair narrower)
+// and 10 + 2·10 = 30 at 138 % (9 + 2·10 = 29 at 100 % before). ONE CONSUMER
+// reads it (re-grepped 2026-10-01): the TRIM BAR's ends
 // (hit_test_trim_endcap).
 // The WAVEFORM OVERLAY's two bounds read it too from 2026-08-18 until the
 // resting overlay and its drags were deleted on 2026-09-22 (the tablet's pen
 // reaches the trim bar).
 //
-// 10 SINCE 2026-08-19, AND SETTLED THERE (architect). THE OVERLAY WAS THE
+// 10 LAPTOP PX SINCE 2026-08-19, AND SETTLED THERE (architect). THE OVERLAY WAS THE
 // REASON IT CAME BACK UP: the waveform overlay's bound bands existed precisely
 // because the 10 px trim bar is unusable with a fingertip, so 5 per side
 // reproduced ON THE FINGER'S OWN SURFACE the very problem that surface was
@@ -2317,11 +2527,12 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 // WHAT THE BAND'S WIDTH DECIDES, checked against every neighbour the endcap
 // claim can overlap, because that claim OUTRANKS everything else in the lane
 // (the per-grab figures are re-derived from the rules below, not carried):
-//   * THE TRIM BRIDGE is reachable only where the gap survives both inflated
-//     handles: the window's drawn width (end column − begin column + 1) must
-//     exceed 2·9 + 2·grab, so the narrowest window that still has a bridge is
-//     39 columns at 10 (re-derived 2026-10-01 for the 9px handles). What the
-//     bridge loses is zoom-recoverable
+//   * THE TRIM BRIDGE (the thumb's body drag) is reachable only where the gap
+//     survives both inflated end bands: the window's drawn width (end column
+//     − begin column + 1) must exceed 2·band + 2·grab, so the narrowest
+//     window that still has a bridge is 77 device columns at 275 % and 41 at
+//     138 % (re-derived 2026-10-02 for the 7-px bands). What the bridge
+//     loses is zoom-recoverable
 //     rather than a lost capability (the window's drawn width is a zoom state,
 //     both bounds stay independently draggable at every zoom, and the band's
 //     framing double-click is tested ABOVE the router so it is untouched).
@@ -2331,10 +2542,10 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 //     (end_col − begin_col − 1 columns to the right of Begin's band, or one
 //     column to its left when the bounds coincide) a function of the BOUNDS
 //     alone — the grab cancels out of both sides — so every verdict a
-//     coincident or near-coincident pair gives is the same at 10 as at 5 or 15,
-//     just nearer the column. A pair exactly one column apart is the one
+//     coincident or near-coincident pair gives is the same at any grab, just
+//     nearer the column. A pair exactly one column apart is the one
 //     unreachable End, and it is unreachable at every grab.
-inline constexpr int kTrimEndcapGrabPx = 10;
+inline constexpr int kTrimEndcapGrabPx = 7;
 inline int trim_endcap_grab_px() {
     return scaled_px(kTrimEndcapGrabPx, 0);
 }
@@ -2349,26 +2560,24 @@ inline int trim_endcap_grab_px() {
 // a day and died with the whole tunable palette on 2026-08-02.)
 
 // THE TRIM BAR'S HIT STASH (architect 2026-09-24, strictly as-painted): what
-// render_trim_flags last PAINTED as the bar's two handles, published by
-// that painter into AppState::trim_bar_hit so the trim hits read the pixels
-// rather than re-running the painter's owner chain on the live trim — the
-// flag lane's stash doctrine (AppState::flag_hit_rects) carried to the trim
-// lane. Everything is in SCREEN pixels. `lane` is the band the bar was painted
-// in, the y-gate of both hits. Each handle (a TrimBarHitCap) is its HIT BAND
-// (trim_endcap_rect, uninflated: the handle's painted columns over the lane's
-// whole height, the square itself being those columns over the trough's
-// interior; the hit applies trim_endcap_grab_px itself) plus its bound
+// render_trim_flags last PAINTED as the thumb's two ends, published by that
+// painter into AppState::trim_bar_hit so the trim hits read the pixels rather
+// than re-running the painter's owner chain on the live trim — the flag
+// lane's stash doctrine (AppState::flag_hit_rects) carried to the trim lane.
+// Everything is in SCREEN pixels. `lane` is the band the thumb was painted
+// in, the y-gate of both hits. Each end (a TrimBarHitCap) is its HIT BAND
+// (trim_endcap_rect, uninflated: the thumb's end columns over the lane's
+// whole height; the hit applies trim_endcap_grab_px itself) plus its bound
 // column, which is the leftmost-wins sort key, and `painted` is false for a
-// bound the viewport culled, which paints no handle and so answers no hit.
+// bound the viewport culled, whose end is off screen and so answers no hit.
 // The bridge is the half-open interval [bridge_lo, bridge_hi) between the
-// handles' inner edges,
-// already clipped to the lane's painted width (trim_bridge_gap, the owner the
-// midpoint mark fits against); empty when lo >= hi. `published` false is
-// COLD — nothing painted, nothing grabbable.
+// two bands' inner edges — the thumb's body —
+// already clipped to the lane's painted width (trim_bridge_gap); empty when
+// lo >= hi. `published` false is COLD — nothing painted, nothing grabbable.
 struct TrimBarHitCap {
     bool    painted = false;
     int     col_x   = 0;        // the bound's screen column
-    GuiRect rect{0, 0, 0, 0};   // the handle's columns x the lane's rows
+    GuiRect rect{0, 0, 0, 0};   // the end band's columns x the lane's rows
 };
 struct TrimBarHit {
     bool          published = false;
@@ -2379,68 +2588,46 @@ struct TrimBarHit {
     int           bridge_hi = 0;   // screen x, exclusive
 };
 
-// Draws the WHOLE TRIM BAR LANE (architect 2026-10-02, the Windows-95 design;
-// the geometry at kTrimLaneHeightPx, the colours at the palette's row 5): a
-// SUNKEN trough, the window's RAISED bar inside it, the two handles over the
-// bar's ends and the centre grip last. All pixel-bound integer fills through
-// the relief helpers, no stroke and no antialiasing anywhere in this lane.
-// The lane band is the `trim_bar` PARAMETER — the caller passes
+// Draws the WHOLE TRIM LANE (architect 2026-10-02, the AC set; the geometry
+// at kTrimLaneHeightPx): Windows 95's scroll bar, miniaturized. All
+// pixel-bound integer fills, no stroke and no antialiasing anywhere in this
+// lane. The lane band is the `trim_bar` PARAMETER — the caller passes
 // top_trim_row_area(app) (top-strip lane 2), and the band painted in is
 // published as TrimBarHit::lane, the y-gate both trim hits read, so paint and
 // hit take the band as one value and cannot drift; nothing in here re-derives
-// the lane's y from the row heights above it. `trim_bar` gives the
-// lane's x/y/h; `waveform_area` is read for its `.w` ALONE — both the
-// column-mapping denominator and the lane's effective width, so the inert
-// non-multiple-of-16 gutter is outside the clip and never paints.
-// `top_strip_area` is now a validity guard only: nothing in this lane measures
-// from the strip's own bottom any more.
+// the lane's y from the row heights above it. `trim_bar` gives the lane's
+// x/y/h; `waveform_area` is read for its `.w` ALONE — both the column-mapping
+// denominator and the lane's effective width, so the inert non-multiple-of-16
+// gutter is outside the clip and never paints. `top_strip_area` is a
+// validity guard only.
 //
-// PAINT ORDER IS BACK TO FRONT, which is what lets each run ignore its
-// neighbours: the TROUGH across the whole lane (the ground, then its sunken
-// frame — a Shadow line along the top row and a Hilight line along the bottom
-// row, its side lines laid outside the window so it runs past both edges),
-// then the BAR spanning the window over the trough's interior rows — ONE
-// SOLID RAISED OBJECT, kTrimLaneBar under a one-line relief, light along its
-// top and left, dark along its bottom and right, the shared corners dark
-// (DrawEdge's order) — then the two handles over the bar's ends. An inverted
-// or degenerate window simply leaves the trough showing.
-// THE BAR SPANS THE WINDOW ITSELF, bound column to bound column, and FOLLOWS AN
-// OFFSCREEN BOUND rather than stopping short — an out-of-view bound means the
-// window continues past that edge, so the bar runs flush to it, its side edge
-// one column past the lane where the clip trims it. It is the one "this is
-// the trim window" signal and the visual affordance of the pair (bridge)
-// drag's grab band.
-// THE TWO HANDLES AND THE GRIP ARE SOLID RAISED SQUARES in kTrimLaneCap, the
-// interior's height and trim_endcap_w_px wide. The handles always paint unless
-// the viewport culls them (the window is always set since 2026-07-30),
-// EDGE-ANCHORED on their bound columns with their bodies facing inward, flush
-// with the bar's ends: the begin handle's LEFT edge on its column, the end
-// handle's RIGHT edge on its own. A bound is an EDGE, not a point — the
-// deliberate asymmetry vs centered marker flags — so a bound at frame 0 / EOF
-// shows its handle fully onscreen. A culled bound paints no handle at all: it
-// has no column on screen to stand on, and the bar's flush edge is what says
-// the window continues past the view.
-// Both handles come from the ONE rect owner (trim_endcap_rect) and are
-// published from it — their columns at the lane's whole height, the square
-// being those columns over the interior — so the painted handle and the
-// grabbable one describe the same edge; the hit side adds only
-// its stated grab tolerance. Column placement is on the displayed viewport
-// basis — `trim.begin` / `trim.end` are already in the displayed domain, so no
-// further translation happens here. A handle has NO editable payload; it is a
-// plain-press grab target only (trim is outside the selection system).
-// THE CENTRE GRIP paints last, on the bar at the WINDOW's midpoint column —
-// through the same trim_bound_column owner the bounds use, so it scrolls off
-// the view with the window instead of sliding to the middle of whatever is on
-// screen. Its ONLY hide rule is TOO NARROW TO FIT: the whole square must sit
-// inside the visible interior BETWEEN the handles (trim_bridge_gap, clamped
-// to the effective width) — a binary verdict on integer columns, so it cannot
-// flicker, and below the threshold it simply does not paint (no shrink, no
-// clamp). It is otherwise INFORMATIONAL: no hit rect, no gesture, no routing
-// change anywhere. Its width is trim_middle_size_px.
+// PAINT ORDER IS BACK TO FRONT: THE TRACK across the whole lane — the ground,
+// then the checked dither (paint_checker_rect, its phase at the lane's
+// top-left) — then THE THUMB over the kept region, the ground under a PLAIN
+// RAISED edge, the lane's full height, with no grip and no cap squares. An
+// inverted or degenerate window leaves the track showing.
+// THE THUMB SPANS THE WINDOW ITSELF, bound column to bound column, and
+// FOLLOWS AN OFFSCREEN BOUND rather than stopping short — an out-of-view bound
+// means the window continues past that edge, so the thumb runs on past it by
+// its whole edge's thickness (two relief lines), its side edge landing
+// outside the clip, and reads as running on rather than ending at the window.
+// It is the one "this is the trim window" signal and the grab of the pair
+// (bridge) drag.
+// THE TWO ENDS ARE THE CAPS: each bound's end band (trim_endcap_rect, the
+// thumb's end columns over the lane's height) is published for the hit and
+// painted as nothing but the thumb. A culled bound publishes no band: its end
+// is off screen. EDGE-ANCHORED on the bound columns: the begin end's LEFT
+// edge on its column, the end end's RIGHT edge on its own. A bound is an
+// EDGE, not a point — the deliberate asymmetry vs centered marker flags — so
+// a bound at frame 0 / EOF shows its end fully onscreen. Column placement is
+// on the displayed viewport basis — `trim.begin` / `trim.end` are already in
+// the displayed domain, so no further translation happens here. An end has NO
+// editable payload; it is a plain-press grab target only (trim is outside the
+// selection system).
 // PUBLISHES WHAT IT PAINTS into `out_hit` when non-null (TrimBarHit above):
-// the lane, both handles and the bridge interval, from the very columns this
+// the lane, both end bands and the bridge interval, from the very columns this
 // pass fills — and a cold record on every early return, since a lane that
-// painted no bar has nothing to grab. The CALLER decides whether this frame
+// painted no thumb has nothing to grab. The CALLER decides whether this frame
 // may publish at all (GuiPaintHandler::paint_trim passes null unless the
 // damage clip covers the whole lane), so a narrow repaint cannot stamp the
 // stash over pixels it did not redraw.

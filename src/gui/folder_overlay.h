@@ -86,22 +86,23 @@
 //     midpoint until 2026-09-02 and the icon row's foot since 2026-09-09. The
 //     content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
-//   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON BOX: the same 32px box, the
-//     same 2px gap between boxes, the same 22px glyph
-//     centred at the box's own (32-22)/2 inset, every number read from
-//     render.h's icon-button block where it is measured ("we've gone for the
-//     button analogy"; "the buttons are good enough size for my finger"). A
+//   * THE ROW IS THE ICON ROW'S BUTTON: the toolbar case's height and its
+//     16-px glyph centred at the case's own (22-16)/2 inset, read from
+//     render.h's icon-row block ("we've gone for the button analogy"; "the
+//     buttons are good enough size for my finger"), one Windows px between
+//     rows (the roster's own buttons touch since 2026-10-02). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
 //     ("project and file names will be short"), the painter clipping it to
 //     the row. (The AV Sync Stats panel's text rows stood at a monospace
 //     line's pitch, the row geometry's one fork, from 2026-09-03 until the
 //     panel's deletion on 2026-09-30.)
-// The panel's ONE authored number of its own is the outer inset below.
+// The panel's own authored numbers are the three below.
 //
 // THE FACES ARE WINDOWS' LIST (architect 2026-10-02, the ladder at the
-// painter): the band is the ground inside a thin raised frame (content_rect
-// below spends the frame), a resting row paints no fill at all, and the
-// highlighted row is a flat accent fill under black text. No hover face and
+// painter): the band is the ground inside the plain raised edge
+// (content_rect below spends the frame), a resting row paints no fill at all,
+// and the highlighted row is a flat accent fill under the luminance rule's
+// text (highlight_text_ink, render.h). No hover face and
 // NO ALTERNATING ROWS.
 //
 // THE ROWS ARE CHROME (the timing doctrine at GuiInputHandler::on_key): a
@@ -137,35 +138,40 @@ namespace folder_overlay {
 
 // -- The geometry ------------------------------------------------------------
 //
-// THE ROW IS THE ICON ROW'S BUTTON (the ruling above): every number below is
-// that button's own, read from render.h where it is measured, so a retune of
-// the roster carries down here by construction and this file spells no
-// literal of its own but the two it owns.
+// THE ROW IS THE ICON ROW'S BUTTON (the ruling above): its height and its
+// glyph are the toolbar case's own, read from render.h where they are
+// authored, so a retune of the roster carries down here by construction; the
+// panel owns its pad, its row gap and its icon-to-name gap.
 
-// THE PANEL'S OUTER INSET, its ONE authored number — the margin between the
+// THE PANEL'S OUTER INSET, its ONE authored margin — the margin between the
 // band's edge and the rows, at the top, the bottom and both sides.
 // pcmanfm-qt's compact view keeps 1 px between an item and the frame and the
-// architect's ruling lets it "grow proportionally with the taller rows"; 2
-// authored px is that margin at this row height, and it scales like every
-// other authored length.
-inline constexpr double kPanelPadPx = 2.0;
-// The gap between a row's icon and its name, authored, the row's own.
-inline constexpr double kRowIconGapPx = 8.0;
+// architect's ruling lets it "grow proportionally with the taller rows"; 1
+// Windows px since the unit's change (the laptop pixel's 2 re-authored,
+// architect 2026-10-02), and it scales like every other authored length.
+inline constexpr double kPanelPadPx = 1.0;
+// The gap between a row's icon and its name, authored, the row's own: 6
+// Windows px (the laptop pixel's 8 re-authored, architect 2026-10-02).
+inline constexpr double kRowIconGapPx = 6.0;
+// The gap between two rows, the panel's own since the roster's buttons began
+// to touch (architect 2026-10-02): 1 Windows px, the laptop pixel's 2-px
+// button gap re-authored.
+inline constexpr double kRowGapPx = 1.0;
 
-// THE ROW BOX: the button's box, the button's between-boxes gap, the button's
+// THE ROW BOX: the toolbar case's height, the panel's row gap, the case's
 // glyph. A folder row wears icons::Icon::Folder and a wav row
 // icons::Icon::AudioXWav. (The glyph-less TEXT kind went with the AV Sync
 // Stats panel on 2026-09-30, and the UP kind, which wore the folder glyph
 // because it named a folder, with the player's move inside `tmp/` on
 // 2026-09-01.) A row IS the button's box, a wide button.
-inline int button_row_height_px() { return scaled_px(kIconBtnPx, 1); }
-inline int button_row_gap_px()    { return scaled_px(kIconBtnGapPx, 1); }
-inline int pad_px()               { return scaled_px(kPanelPadPx); }
-inline int row_icon_px()          { return scaled_px(kIconGlyphPx, 1); }
+inline int button_row_height_px() { return icon_case_h_px(); }
+inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
+inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
+inline int row_icon_px()          { return icon_glyph_px(); }
 inline int row_icon_gap_px()      { return scaled_px(kRowIconGapPx); }
-// THE GLYPH'S INSET INSIDE THE ROW, on every side: the button's own centring
-// of its glyph in its box, (32 - 22) / 2 at 100%, taken from the two scaled
-// numbers so it cannot disagree with either. It is the LEFT PAD of the icon in
+// THE GLYPH'S INSET INSIDE THE ROW, on every side: the case's own centring
+// of its glyph in its height, (22 - 16) / 2 Windows px, taken from the two
+// scaled numbers so it cannot disagree with either. It is the LEFT PAD of the icon in
 // the row as well — a row is a wide button — and not the modal word buttons'
 // text pad, which belongs to a different surface.
 inline int row_icon_inset_px() {
@@ -231,14 +237,14 @@ inline GuiRect surface_rect(const AppState& a) {
 }
 
 // The rows' band: THE SURFACE INSIDE ITS RAISED FRAME (architect 2026-10-02:
-// the panel is the ground inside a thin raised frame, one relief line a side,
-// relief_line_px). Every geometry below reads this and not the surface — the
+// the panel is the ground inside the PLAIN RAISED edge, two relief lines a
+// side, relief_line_px each). Every geometry below reads this and not the surface — the
 // rows, the scroll ceiling, the keep-visible walk, the painter's row-walk clip
 // and row_at's containment — so the frame is spelled here once and a row can
 // never paint over it or be pressed through it.
 inline GuiRect content_rect(const AppState& a) {
     const GuiRect s  = surface_rect(a);
-    const int     lw = relief_line_px();
+    const int     lw = 2 * relief_line_px();
     if (s.w <= 2 * lw || s.h <= 2 * lw) return GuiRect{s.x, s.y, 0, 0};
     return GuiRect{s.x + lw, s.y + lw, s.w - 2 * lw, s.h - 2 * lw};
 }

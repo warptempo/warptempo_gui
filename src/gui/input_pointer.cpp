@@ -4522,7 +4522,7 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
         // THE DRAG GATE, the sweeps' and pans' crossing threshold (a flag and
         // the trim bar, the grab surfaces, read twice it), spelled here as at
         // every other pending press: CHEBYSHEV from the press
-        // (max(|dx|,|dy|)) against drag_moved_threshold_px() — 8 authored px
+        // (max(|dx|,|dy|)) against drag_moved_threshold_px() — 6 Windows px
         // through scaled_px, the touch slop's own number — and the crossing is
         // `>=`, not `>`, because the core resolves a touch into a drag at `>=`
         // its slop and the two gates must not disagree by one pixel (the

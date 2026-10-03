@@ -17,7 +17,8 @@
 // SLIGHT on both devices (gui_font_bundled.cpp's head, with its table).
 //
 // The two families are the product's whole face inventory: the proportional
-// sans every row shapes and paints on (12pt x gui_scale, the text_shape
+// sans every row shapes and paints on (13 Windows px x gui_scale since
+// 2026-10-02, redesign_font_size_px; the text_shape
 // chokepoint's subject) and the monospace — ONE FACE, TWO CELLS (since
 // 2026-08-28): the row-8 clock and the render player's `<position> /
 // <length>` on the modal row, which takes the row-8 cell's size and metrics.

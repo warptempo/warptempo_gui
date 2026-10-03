@@ -626,8 +626,11 @@ GuiPlatform::~GuiPlatform() {
 // init()
 // ---------------------------------------------------------------------------
 
-// The laptop's device-config template (contract at the declaration): the
-// design baseline scale (until 2026-08-28 also audacious as the `l` command's
+// The laptop's device-config template (contract at the declaration): THE
+// LAPTOP'S SCALE, 138 — at the Windows pixel (architect 2026-10-02) the
+// percent at which every element rounds as 137.5 would, a 16-px glyph
+// painting 22 device px, the laptop's glyph before the unit's change (until
+// 2026-08-28 also audacious as the `l` command's
 // player, the value the `.settings` first-open template had stamped until the
 // key moved here 2026-08-27; the key retired whole with the in-app render
 // player) and THE PROJECTS CLONE'S `projects/` as the projects path
@@ -641,11 +644,13 @@ GuiPlatform::~GuiPlatform() {
 // a machine with no home directory — no guessed path is right there.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
-    cfg.gui_scale    = 100;
-    // The waveform cap's authored 500 px — the value kWaveformMaxHeightPx
-    // carried until the key replaced it (is_max_waveform_height,
-    // device_config.h); the same on both templates, gui_scale doing the rest.
-    cfg.max_waveform_height = 500;
+    cfg.gui_scale    = 138;
+    // The waveform cap's authored 364 Windows px — kWaveformMaxHeightPx's 500
+    // laptop px, the value the key replaced (is_max_waveform_height,
+    // device_config.h), re-authored at the unit's change (architect
+    // 2026-10-02: 502 device px at 138 %); the same on both templates,
+    // gui_scale doing the rest.
+    cfg.max_waveform_height = 364;
     if (const char* home = std::getenv("HOME"); home && home[0]) {
         cfg.projects_path =
             std::string(home) + "/.warptempo/warptempo_projects/projects";

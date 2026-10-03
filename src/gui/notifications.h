@@ -11,7 +11,7 @@
 // (notification_pad_px below — the card's chrome reads one number on all
 // five of its distances, the text's right air adding the glyph's own inset
 // so it matches the air the eye sees left of the text, 2026-10-01), on the
-// ground inside a thin raised frame, square, with no drop shadow (architect
+// ground inside the plain raised edge, square, with no drop shadow (architect
 // 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card
@@ -697,37 +697,45 @@ inline std::string lowercase_initial(std::string_view s) {
 // keeps the number it was measured at. NOR DID THE FACE'S CHANGE (Roboto,
 // 2026-10-02): the pair shapes to 172.41 and 168.50 px, the card's ceiled
 // text plus that chrome putting them at 231 px and 227 px, the floor still
-// answering for both. AUTHORED PX, so the relation
+// answering for both. AUTHORED (WINDOWS) PX, so the relation
 // holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px.
 //
-// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 640 authored px and
+// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 465 Windows px and
 // notification_card_max_w_px already floors its window safety here, so the
 // clamp's own precondition (floor <= ceiling) is untouched by the rise and a
 // window too narrow for the floor keeps overhanging exactly as before.
-inline constexpr double kNotificationMinWidthPx = 272.0;
+// 198 WINDOWS PX SINCE THE UNIT'S CHANGE (architect 2026-10-02): the laptop
+// pixel's 272 re-authored to the width it had on the tablet; the figures
+// above are that unit's. At the Windows pixel the pair shapes to about 140
+// and 137 px at the 13-px face, and the chrome — three 5-px pads, the 3-px
+// inset and the 22-px box — puts them near 180, the floor still answering
+// for both.
+inline constexpr double kNotificationMinWidthPx = 198.0;
 
 // THE CARD'S CEILING IS THE LAPTOP'S OWN WIDTH, AUTHORED AND SCALED (architect
 // 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
 // 1920 px laptop, so this constant is that width made CANONICAL — the same
 // card at every window and, through `scaled_px`, the same card in millimetres
 // at every gui_scale. The window fraction was DEVICE PIXELS and so starved the
-// tablet: at 225 % its 1440 px panel gave a 480 px card for text shaped half
-// again as large, three words to a line. IT MAY NOW COVER BUTTONS ON THE
+// tablet: at its 225 % of that day its 1440 px panel gave a 480 px card for
+// text shaped half again as large, three words to a line. (465 Windows px
+// since the unit's change, 2026-10-02.) IT MAY NOW COVER BUTTONS ON THE
 // TABLET and that is accepted in his own words — "it's okay if it covers up
 // some buttons": a card is a sentence to read and it leaves on its own.
 // A length, so it scales; the life beside it (kNotificationMs) is a duration
-// and does not.
-inline constexpr double kNotificationMaxWidthPx = 640.0;
+// and does not. 465 WINDOWS PX since the unit's change (architect
+// 2026-10-02), the laptop pixel's 640 re-authored.
+inline constexpr double kNotificationMaxWidthPx = 465.0;
 
 // THE GAP BETWEEN TWO CARDS IN THE STACK (architect 2026-10-01, ruled on the
 // S4 mock: "reduce the distance between the cards to one pixel at a hundred
-// percent"). It was the icon row's kIconBtnGapPx (2) read by the card, a
-// borrowing; the card owns its own gap since that night, read by the painter
+// percent"; one Windows px since 2026-10-02). It was the icon row's
+// button gap (2) read by the card, a borrowing; the card owns its own gap
+// since that night, read by the painter
 // (paint_notifications) and the room's count (notification_capacity) and by
 // nothing else. A length, so it scales, floored at one pixel
-// (scaled_px(x, 1)) so the cards never touch at a small gui_scale. The drop
-// shadow under each card darkens the gap (render.h's shadow block).
+// (scaled_px(x, 1)) so the cards never touch at a small gui_scale.
 inline constexpr double kNotificationGapPx = 1.0;
 
 // HOW MANY LINES A SENTENCE MAY TAKE (architect 2026-08-30, "a few"): a card
@@ -740,8 +748,9 @@ inline constexpr int kNotificationMaxLines = 3;
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
 // A ONE-LINE card's height, and the height every card's FIRST line occupies:
-// the icon row's content height (the 32 px button box plus its 7 px margins,
-// one source) — the glyph sits in that box at the row's own inset,
+// the icon row's content height (the toolbar case plus its five-Windows-px
+// air, one source) — the glyph sits in a box the case's height at the row's
+// own inset,
 // AT THE FIRST LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30:
 // the text grows downward under the icon, nothing reflows beside it; the X
 // that sat beside the glyph at that height retired 2026-10-01).
@@ -753,8 +762,8 @@ int notification_card_h_px();
 
 // THE CARD'S ONE PAD (architect 2026-08-30): the padding around the glyph
 // and the text is ONE NUMBER, the box's own vertical margin — the
-// centering the card's height already derives from the icon row (46 = 32 +
-// 2 x 7). It is read for ALL FIVE of the card's distances: left edge ->
+// centering the card's height already derives from the icon row (32 = 22 +
+// 2 x 5 Windows px). It is read for ALL FIVE of the card's distances: left edge ->
 // glyph box, glyph box -> text, text -> right edge, top -> box, box ->
 // bottom (six until the X's box retired, 2026-10-01: text -> X box and
 // X box -> right edge became the one text -> right edge). ONE OF THE FIVE
@@ -827,9 +836,10 @@ GuiRect notification_stack_bound(const AppState& a);
 // painter's clip is what answers that, exactly as it answers a stack of
 // criticals that will not be bumped.
 //
-// A pure function of the window and the scale, like the room. At a 1080 px
-// window and 100 % it is 21 (a 999 px room over 46 + 1, the card's own gap,
-// kNotificationGapPx); on the tablet at 200 % it is 13 (1278 over 92 + 2), its window being the whole 1440-tall
+// A pure function of the window and the scale, like the room. At the
+// laptop's 1080 px window and 138 % it is 22 (a 1007 px room over 44 + 1, the
+// card's own gap, kNotificationGapPx); on the tablet at 275 % it is 14 (1291
+// over 88 + 3), its window being the whole 1440-tall
 // panel since the activity went full screen (2026-10-01; the stacks are
 // recorded at main.cpp's vertical-stack owner). Every window this product
 // runs in holds more cards than the architect will ever stack.

@@ -13,10 +13,11 @@ int notification_card_h_px() {
 int notification_pad_px() {
     // THE BOX'S OWN VERTICAL MARGIN, and so the card's every pad (the ruling
     // and the five distances at the declaration): the height already comes
-    // from the icon row, and this is that row's own centering of a 32 px box
-    // in its 46 px band. An ODD difference floors, putting the extra pixel
-    // below the box — the icon row's own arithmetic, not a second rule.
-    return (notification_card_h_px() - scaled_px(kIconBtnPx)) / 2;
+    // from the icon row, and this is that row's own air around its case —
+    // the toolbar case's height (icon_case_h_px, 22 Windows px since
+    // 2026-10-02) in its 32-px band, five Windows px a side. An ODD
+    // difference floors, putting the extra pixel below the box.
+    return (notification_card_h_px() - icon_case_h_px()) / 2;
 }
 
 int notification_card_max_w_px(const AppState& a) {

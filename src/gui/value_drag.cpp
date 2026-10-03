@@ -99,10 +99,10 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int origin_y) {
 
 void ValueDragOps::apply_motion(int mouse_y) {
     if (!app.value_drag.active) return;
-    // ONE STEP PER kValueDragPxPerStep AUTHORED PIXELS, through the product's
+    // ONE STEP PER kValueDragPxPerStep WINDOWS PX, through the product's
     // one scale conversion — a press-road LENGTH scales, exactly as the drag
     // gate, the double-click slack and the touch slop do, so the gesture asks
-    // the hand for the same travel at 100% and at 225%. Floored at 1: a
+    // the hand for the same travel on the laptop and on the tablet. Floored at 1: a
     // degenerate factor must never make the step zero pixels wide.
     const int per_step = scaled_px(kValueDragPxPerStep, 1);
     // TRAVEL IS MEASURED FROM THE ORIGIN AND UP IS POSITIVE: the origin is

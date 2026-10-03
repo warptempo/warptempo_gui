@@ -30,7 +30,8 @@
 //
 // WHY IT EXISTS. `gui_scale` was a `.settings` key until 2026-08-27, which
 // made it a fact about the PIECE: the same project opened on the laptop and
-// on the tablet wants 100 and 225. Carrying it in the sidecar meant every
+// on the tablet wants 138 and 275 (100 and 225 in the laptop-pixel unit of
+// that day). Carrying it in the sidecar meant every
 // sync of a project between the two devices had to rewrite it on the way over
 // and put it back on the way home. It is the panel's business, so it
 // follows the panel. (`audio_player`, the `l` command's external player, made
@@ -188,8 +189,8 @@
 //
 // The members are in the writer's order.
 struct DeviceConfig {
-    int         gui_scale = 100;
-    int         max_waveform_height = 500;
+    int         gui_scale = 138;
+    int         max_waveform_height = 364;
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
@@ -215,39 +216,31 @@ inline constexpr const char* kDefaultProjectsRepo =
 // editor's `gui_scale=` red-flash ("loadable iff it commits", the standing
 // rule).
 //
-// 100 is the design baseline (1920x1080, the supported laptop resolution); 200
-// is the 4K case; 350 is the fine-panel ceiling — a 280 dpi tablet panel, where
-// matching a coarser display's apparent size lands above 200 (225 % gives the
-// 1024 logical width of the retired rig, ~305 % matches an 82 PPI external);
-// 50 is the half-size floor, which is where every structural dimension in
-// render.h's scaled_px accessors still has a floor holding it above zero.
+// THE PERCENT IS DEVICE PX PER WINDOWS-95 PX since 2026-10-02 (architect; the
+// unit's statement is at render.h's scaled_px): the laptop runs 138 (a
+// 16-px glyph at 22 device px) and the tablet 275 (44); 100 is Windows' own
+// 96-dpi size; 350 is the fine-panel ceiling; 50 is the half-size floor,
+// which is where every structural dimension in render.h's scaled_px
+// accessors still has a floor holding it above zero.
 //
 // THE CEILING IS 350 (architect 2026-08-29, taking it down from the 400 that
-// stood from 2026-08-26): 400 was never needed on either host, and 350 is
-// where the EIGHT-LANE stack still fits a 1080-tall window — the top strip's
-// 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
-// the laptop's own screen keeps 240 px of waveform and gaps under the
-// tallest scale the vocabulary admits. The tablet's scale and its icon-row
-// fit ceiling (245 since 2026-10-01 — the walk's own paragraph
-// below) are untouched by the move.
+// stood from 2026-08-26): 400 was never needed on either host. At the Windows
+// pixel the six lanes paint 364 device rows above the waveform and 116 below
+// at 350 %, 480 in all, so a 1080-tall window keeps 600 px of waveform and
+// gaps under the tallest scale the vocabulary admits.
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 940 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-six buttons in seven groups no longer fit, and its flush-right view
-// group covers the groups to its left (the overflow rule at
-// kIconRowViewGroup, paint_handler.cpp) — the tablet's 200 clears it by 212
-// (2304/2 = 1152 logical px), a 225 by 84 (1024 logical px), and 245 is the
-// fit ceiling on that panel since 2026-10-01, inside the [50, 350]
-// vocabulary, so a
-// scale above it covers (the
-// arithmetic is at paint_icon_row, paint_handler.cpp; the ceiling's succession
-// is in git history; 250 was tried as the TEMPLATE for an afternoon on
-// 2026-08-27 and stepped back the same evening for the ~3 authored px it
-// shaved off the rightmost history icon at the walk of that day) — and the
-// redesign carries no collision rule anywhere — the crop-at-the-floor allowance recorded
-// at kMinWindowWidthPx (render.h) is the standing answer. A scale is a
-// VOCABULARY; which of its values lays out well is the architect's call on his
-// own panel, not a validator's.
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 662
+// Windows px of window at 100 % the icon row's twenty-six buttons in seven
+// groups no longer fit, and its flush-right view group covers the groups to
+// its left (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The
+// tablet's 2304-px panel holds the row at EVERY scale of the vocabulary —
+// 1814 device px at 275 %, exactly 2304 at 348 % to 350 % (the arithmetic is
+// at paint_icon_row, paint_handler.cpp; the laptop-pixel unit's 245 % fit
+// ceiling and its succession are git history) — and the redesign carries no
+// collision rule anywhere: the crop-at-the-floor allowance recorded at
+// kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A
+// scale is a VOCABULARY; which of its values lays out well is the
+// architect's call on his own panel, not a validator's.
 inline constexpr bool is_gui_scale_percent(int64_t v) {
     return v >= 50 && v <= 350;
 }
@@ -480,10 +473,10 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
-// a GUI one: the laptop wants 100 % and the projects clone's `projects/`
+// a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
-// 225 % and its external files dir's `projects/`;
-// both stamp a max_waveform_height of 500, kDefaultProjectsRepo and a blank
+// 275 % and its external files dir's `projects/`;
+// both stamp a max_waveform_height of 364, kDefaultProjectsRepo and a blank
 // last_project),
 // so a first run on either device lands a
 // file that is

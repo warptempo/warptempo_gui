@@ -368,7 +368,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // product's one text size, shaped through the one chokepoint like every other
 // label. The function keys wore Breeze glyphs for a day and read OVERSIZED
 // beside the letter caps — a 22-unit icon scaled to the key's own height next
-// to a 12pt letter — and there is plenty of horizontal room on a full-width
+// to a letter at the one text size — and there is plenty of horizontal room on a full-width
 // row, so they wear words.
 //
 // AND THE WORD A FUNCTION KEY WEARS IS THE KEY'S NAME (planner 2026-09-01,
@@ -399,8 +399,8 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // did.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
-// what says the arm is the key's ARMED FACE — sunken on the down face, the
-// roster's own lamp face (paint_button_box), which this key and the
+// what says the arm is the key's ARMED FACE — the roster's own CHECKED face,
+// soft sunken over the Hilight dither (paint_button_box), which this key and the
 // symbol-mode key (while a symbol page stands) wear off their lamps — and
 // the letter caps themselves, every one of which turns capital while the arm
 // stands. The page key wears no lamp: its cap already says the page.
@@ -437,9 +437,11 @@ inline constexpr Page page_after(Role role, Page page) {
 // like every other redesigned dimension; the key PITCH is the window's (see
 // kUnitsPerRow). The proportions are the reference photograph's: a key about
 // two and a half times wider than tall, gaps a tenth of the key's height.
-inline constexpr double kKeyHeightPx = 40.0;   // one row's key box
-inline constexpr double kKeyGapPx    = 4.0;    // between adjacent keys, both axes
-inline constexpr double kPadPx       = 4.0;    // the surface's own outer margin
+// IN WINDOWS PX since the unit's change (architect 2026-10-02): the laptop
+// pixel's 40 / 4 / 4 re-authored to the device sizes they had on the tablet.
+inline constexpr double kKeyHeightPx = 29.0;   // one row's key box
+inline constexpr double kKeyGapPx    = 3.0;    // between adjacent keys, both axes
+inline constexpr double kPadPx       = 3.0;    // the surface's own outer margin
 
 inline int key_height_px()  { return scaled_px(kKeyHeightPx, 1); }
 inline int key_gap_px()     { return scaled_px(kKeyGapPx, 1); }

@@ -466,25 +466,15 @@ GuiPlatform::~GuiPlatform() {
 // ---------------------------------------------------------------------------
 
 // The tablet's device-config template (contract at the declaration, rationale
-// at this backend's own). 225 % IS THE ARCHITECT'S OWN ANSWER, settled on the
-// glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
-// logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
-// the whole redesign was drawn against — every icon in the row fits, where the
-// fit ceiling is 245 % (the icon row holds every group in 940 authored px
-// since 2026-10-01; the arithmetic is at paint_icon_row, paint_handler.cpp,
-// and its succession in git history) and anything past it has the flush-right
-// view group cover the groups to its left (the overflow rule at
-// kIconRowViewGroup). 225 CLEARS IT BY 84 LOGICAL PX (the tablet's own config
-// stands at 200 since 2026-09-29, clearing it by 212).
-// 250 was tried as the TEMPLATE for one afternoon on 2026-08-27 for the
-// finger's sake — a
-// marker flag has to be tappable without the second tap of a double-tap landing
-// on the waveform instead — and stepped back that evening: it was one step too
-// far for a ~3 authored px crop, and with the press-road thresholds now scaling
-// with gui_scale (and the double-click window on the product's one beat, same
-// evening) the double-tap holds together at 225 anyway. The row has since
-// narrowed past where that scale would have fitted, but 225 is
-// what the template stamps and the architect's own answer on the glass.
+// at this backend's own). 275 % AT THE WINDOWS PIXEL (architect 2026-10-02):
+// 2.75 device px per Windows px, so the toolbar's 16-px glyph paints 44
+// device px — the tablet's glyph at its 200 % before the unit's change, the
+// size the architect settled on the glass (2026-09-29; the template's 225 of
+// the laptop-pixel unit before that, 2026-08-27, and the afternoon's 250
+// stepped back that evening are git history and a closed question). The
+// icon row fits this panel whole at every scale the vocabulary admits (the
+// arithmetic is at paint_icon_row, paint_handler.cpp), clearing it by 490
+// device px at 275.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -505,12 +495,13 @@ GuiPlatform::~GuiPlatform() {
 // this device, so a template pointing anywhere else could never be right.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
-    cfg.gui_scale     = 225;
-    // The waveform cap's authored 500 px, the laptop template's value (at
-    // 225 % it scales to 1125, above the 1030 px leftover the five top lanes
-    // and the bottom row leave on the full-screen 1440-tall surface, so the
-    // waveform is unclamped at the template's own scale).
-    cfg.max_waveform_height = 500;
+    cfg.gui_scale     = 275;
+    // The waveform cap's authored 364 Windows px, the laptop template's value
+    // (at 275 % it scales to 1001, under the 1063 px leftover the five top
+    // lanes and the bottom row leave on the full-screen 1440-tall surface, so
+    // the waveform clamps there with 62 rows of gap 2; the tablet's own config
+    // runs 0, no maximum — main.cpp's record).
+    cfg.max_waveform_height = 364;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;

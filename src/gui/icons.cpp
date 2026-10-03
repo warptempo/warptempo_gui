@@ -1546,69 +1546,66 @@ bool append_path(cairo_t* cr, const char* d) {
     return true;
 }
 
-} // namespace
-
-void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
-          double keep_own, GuiColor mixed_with) {
-    if (size_px <= 0.0) return;
-    const IconDef& def = icon_def(icon);
-    if (def.view_box <= 0.0) return;
-
-    // ONE STDERR, DRAW NOTHING — and both halves are now literally true.
-    //
-    // VALIDATE EVERY PATH BEFORE FILLING ANY. The old loop parsed and filled
-    // path by path, so a malformed LATER path of a multi-path icon left the
-    // EARLIER ones already on the surface: a partial glyph, which is exactly
-    // the "placeholder that lets the typo ship" the contract refuses. The
-    // dry-run below parses each `d` into a scratch context and bails as a whole
-    // before a single pixel is committed.
-    //
-    // AND SAY IT ONCE. `reported` latches per icon, so a transcription error is
-    // one line at the first paint rather than one line per repaint forever —
-    // a tripwire that floods is a tripwire nobody reads. Function-local static:
-    // the GUI is single-threaded at every draw site.
-    //
-    // AND PROVE IT ONCE. The `d` strings are in-tree constexpr data, so the
-    // verdict cannot change between calls — `validated` latches a PASSED probe
-    // per icon, and later draws of that icon skip the scratch surface and the
-    // dry-run parse entirely (the fill loop below re-walks the same constant
-    // strings, which is the byte-identity the two-walk contract rests on). A
-    // FAILED probe deliberately does not latch anything but its one stderr
-    // line: the icon re-probes, re-fails and draws nothing on every call,
-    // exactly as before. An out-of-range idx (a kIconCount mismatch) never
-    // latches either — that icon simply pays the probe per draw, the same
-    // "costs that icon its latch" degradation the header records for
-    // `reported`.
-    {
-        static bool validated[kIconCount] = {};
-        const int idx = static_cast<int>(icon);
-        const bool latch_ok =
-            idx >= 0 && idx < static_cast<int>(std::size(validated));
-        if (!(latch_ok && validated[idx])) {
-            cairo_surface_t* probe_surf =
-                cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
-            cairo_t* probe = cairo_create(probe_surf);
-            bool ok = true;
-            for (int i = 0; i < def.path_count && ok; ++i) {
-                cairo_new_path(probe);
-                ok = append_path(probe, def.paths[i].d);
-            }
-            cairo_destroy(probe);
-            cairo_surface_destroy(probe_surf);
-            if (!ok) {
-                static bool reported[kIconCount] = {};
-                if (latch_ok && !reported[idx]) {
-                    reported[idx] = true;
-                    std::fprintf(stderr,
-                                 "icons: Malformed path data, icon %d not drawn\n",
-                                 idx);
-                }
-                return;
-            }
-            if (latch_ok) validated[idx] = true;
-        }
+// ONE STDERR, DRAW NOTHING — and both halves are now literally true.
+//
+// VALIDATE EVERY PATH BEFORE FILLING ANY. The old loop parsed and filled
+// path by path, so a malformed LATER path of a multi-path icon left the
+// EARLIER ones already on the surface: a partial glyph, which is exactly
+// the "placeholder that lets the typo ship" the contract refuses. The
+// dry-run below parses each `d` into a scratch context and bails as a whole
+// before a single pixel is committed.
+//
+// AND SAY IT ONCE. `reported` latches per icon, so a transcription error is
+// one line at the first paint rather than one line per repaint forever —
+// a tripwire that floods is a tripwire nobody reads. Function-local static:
+// the GUI is single-threaded at every draw site.
+//
+// AND PROVE IT ONCE. The `d` strings are in-tree constexpr data, so the
+// verdict cannot change between calls — `validated` latches a PASSED probe
+// per icon, and later draws of that icon skip the scratch surface and the
+// dry-run parse entirely (the fill loop below re-walks the same constant
+// strings, which is the byte-identity the two-walk contract rests on). A
+// FAILED probe deliberately does not latch anything but its one stderr
+// line: the icon re-probes, re-fails and draws nothing on every call,
+// exactly as before. An out-of-range idx (a kIconCount mismatch) never
+// latches either — that icon simply pays the probe per draw, the same
+// "costs that icon its latch" degradation the header records for
+// `reported`. Both draws (draw and draw_engraved) ask it first.
+bool icon_paths_valid(Icon icon, const IconDef& def) {
+    static bool validated[kIconCount] = {};
+    const int idx = static_cast<int>(icon);
+    const bool latch_ok =
+        idx >= 0 && idx < static_cast<int>(std::size(validated));
+    if (latch_ok && validated[idx]) return true;
+    cairo_surface_t* probe_surf =
+        cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
+    cairo_t* probe = cairo_create(probe_surf);
+    bool ok = true;
+    for (int i = 0; i < def.path_count && ok; ++i) {
+        cairo_new_path(probe);
+        ok = append_path(probe, def.paths[i].d);
     }
+    cairo_destroy(probe);
+    cairo_surface_destroy(probe_surf);
+    if (!ok) {
+        static bool reported[kIconCount] = {};
+        if (latch_ok && !reported[idx]) {
+            reported[idx] = true;
+            std::fprintf(stderr,
+                         "icons: Malformed path data, icon %d not drawn\n",
+                         idx);
+        }
+        return false;
+    }
+    if (latch_ok) validated[idx] = true;
+    return true;
+}
 
+// THE ONE FILL WALK both draws share: the viewBox mapped onto the square
+// (x, y, size_px, size_px), each path filled in `color_of(path)`.
+template <typename ColorOf>
+void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
+                     double size_px, ColorOf color_of) {
     cairo_save(cr);
     cairo_translate(cr, x, y);
     cairo_scale(cr, size_px / def.view_box, size_px / def.view_box);
@@ -1634,16 +1631,41 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         // and the strings are compile-time constants that cannot change between
         // the walks.
         append_path(cr, p.d);
-        // The path's own color, retained by keep_own and made up with
-        // mixed_with — the disabled face. keep_own == 1 (the default every
-        // enabled caller takes) returns the table's color bit-identically, so
-        // the enabled path is unchanged by the existence of this one.
-        const GuiColor c = mix_color(p.ink, mixed_with, keep_own);
-        set_palette_source(cr, c);
+        set_palette_source(cr, color_of(p));
         cairo_fill(cr);
         cairo_restore(cr);
     }
     cairo_restore(cr);
+}
+
+} // namespace
+
+void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
+          double keep_own, GuiColor mixed_with) {
+    if (size_px <= 0.0) return;
+    const IconDef& def = icon_def(icon);
+    if (def.view_box <= 0.0) return;
+    if (!icon_paths_valid(icon, def)) return;
+    // The path's own color, retained by keep_own and made up with
+    // mixed_with. keep_own == 1 (the default every plain caller takes)
+    // returns the table's color bit-identically.
+    fill_icon_paths(cr, def, x, y, size_px, [&](const IconPath& p) {
+        return mix_color(p.ink, mixed_with, keep_own);
+    });
+}
+
+void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
+                   double offset_px) {
+    if (size_px <= 0.0) return;
+    const IconDef& def = icon_def(icon);
+    if (def.view_box <= 0.0) return;
+    if (!icon_paths_valid(icon, def)) return;
+    // The whole shape twice, every path in one ink: Hilight one offset right
+    // and down beneath, then Shadow at the glyph's own place.
+    fill_icon_paths(cr, def, x + offset_px, y + offset_px, size_px,
+                    [](const IconPath&) { return kReliefHilight; });
+    fill_icon_paths(cr, def, x, y, size_px,
+                    [](const IconPath&) { return kReliefShadow; });
 }
 
 } // namespace icons

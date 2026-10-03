@@ -166,12 +166,10 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     auto add_endcap = [&](const TrimBarHitCap& cap, TrimHit which) {
         if (!cap.painted) return;
         // THE CAP'S HIT BAND, INFLATED BY THE GRAB TOLERANCE. The stash
-        // carries the cap's painted columns over the lane's whole height (the
-        // square itself is those columns over the trough's interior; the
-        // lane-tall band is deliberate — trim_endcap_rect), so the target is
-        // centred on the painted columns; the widening is the hit side's own
-        // term, because a 9px handle is below a fingertip (the rationale is
-        // at trim_endcap_rect).
+        // carries the thumb end's columns over the lane's whole height
+        // (trim_endcap_rect), so the target is centred on them; the widening
+        // is the hit side's own term, because a 7-Windows-px band is below a
+        // fingertip (the rationale is at trim_endcap_rect).
         GuiRect r = cap.rect;
         const int grab = trim_endcap_grab_px();
         r.x -= grab;

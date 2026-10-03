@@ -510,15 +510,16 @@ inline constexpr int kIconCount = 57;
 // (viewBox 0 0 22 22). Cairo state is saved and restored; the caller's source,
 // path and matrix survive untouched.
 //
-// THE DISABLED FACE'S DIMMING rides the last two arguments, through the shared
-// mix_color owner (render.h): each path's own color is RETAINED by `keep_own`
-// and made up with `mixed_with`, so a greyed-out button's icon keeps its shape
-// and loses its life. It is a MIX, not an alpha — the redesign composites
-// nothing and every color that reaches cairo is opaque — and it is per-path,
-// which is what lets a multi-colored icon (media-record's red beside a white
-// glyph) dim as one object without either part being special-cased.
-// keep_own == 1 (the default, which every enabled caller takes) leaves the
-// table's colors bit-identical.
+// A RECOLOURING rides the last two arguments, through the shared mix_color
+// owner (render.h): each path's own color is RETAINED by `keep_own` and made
+// up with `mixed_with` — a MIX, not an alpha (the redesign composites
+// nothing and every color that reaches cairo is opaque), per path, so a
+// multi-colored icon moves as one object. Its one recolouring caller is the
+// folder overlay's highlighted row, which inks a white glyph black (keep 0)
+// on a light highlight; every dead glyph — the roster's and the dialog's
+// glyph buttons alike — is draw_engraved's, below. keep_own == 1 (the
+// default, which every plain caller takes) leaves the table's colors
+// bit-identical.
 //
 // A malformed `d` string is a PROGRAMMING ERROR, not a runtime state — the
 // strings are in-tree constants — so a parse failure emits one stderr line and
@@ -527,5 +528,15 @@ inline constexpr int kIconCount = 57;
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
           double keep_own = 1.0,
           GuiColor mixed_with = GuiColor{0.0, 0.0, 0.0});
+
+// THE ENGRAVED GLYPH — a disabled toolbar button's face (architect
+// 2026-10-02, the AB set; Windows' DrawState DSS_DISABLED): the glyph's whole
+// shape, every path in one ink, painted TWICE — first in kReliefHilight
+// `offset_px` right and down (the caller passes one Windows px,
+// relief_line_px), then in kReliefShadow at (x, y) — so the dead glyph reads
+// as cut into the face. It replaces the roster's disabled mix. Same square,
+// same validation and the same one-stderr rule as draw above.
+void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
+                   double offset_px);
 
 } // namespace icons

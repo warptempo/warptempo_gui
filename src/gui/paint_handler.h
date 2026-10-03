@@ -70,7 +70,9 @@ struct GuiTargetRender;
 // size put the pen at x = 13), went on 2026-08-29 with the chain it aligned:
 // the row that took the chain's surviving strings — row 8, through its own
 // state cell — reads this 8 like every other redesigned row, so the product
-// has one lane pad and no second number.
+// has one lane pad and no second number. EIGHT WINDOWS PX since the unit's
+// change (architect 2026-10-02: the laptop pixel's 8 kept as the Windows
+// number, 22 device px at 275 % and 11 at 138 %).
 inline int icon_row_pad_x() {
     return scaled_px(8.0);
 }
@@ -806,9 +808,9 @@ private:
     // surface a modal does coexist with.
     void paint_shift_tooltip(cairo_t* cr);
     void paint_dropdown(cairo_t* cr);
-    // The shared box every floating surface draws, on the one ground: a thin
-    // RAISED frame (`raised`: the dropdown, the notification cards) or the
-    // tooltip's one DkShadow line all round.
+    // The shared box every floating surface draws, on the one ground: the
+    // PLAIN RAISED edge (`raised`: the dropdown, the notification cards) or
+    // the tooltip's one DkShadow line all round.
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r, bool raised);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box and before the dropdown —

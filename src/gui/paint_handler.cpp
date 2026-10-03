@@ -194,7 +194,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 namespace {
 
-// THE KDENLIVE REDESIGN'S SHARED TEXT FACE. The SIZE (kRedesignFontSizePt /
+// THE KDENLIVE REDESIGN'S SHARED TEXT FACE. The SIZE (kRedesignFontSizePx /
 // redesign_font_size_px) moved to render.h when row 5's marker flags began
 // shaping their own labels inside render.cpp — one design size cannot have two
 // definitions. THE FACE is the one face owner's sans (gui_font.h): Roboto on
@@ -224,8 +224,10 @@ GuiColor accent_for_focus(const AppState& app) {
 // architect states one. An anchor's rectangle therefore spans the full height
 // of the button's row, the whole lane (kMenuRowHeightPx — render.h carries the
 // ruling), flush under the window's top edge, its label padded this much
-// each side, and the icon row's ground begins on the next pixel row.
-constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
+// each side, and the icon row's ground begins on the next pixel row. 7
+// WINDOWS PX A SIDE (architect 2026-10-02, the unit's change: the laptop
+// pixel's 10 re-authored to the device width it had on the tablet).
+constexpr double kMenuLabelPadPx   = 7.0;   // per side, sets the button width
 
 // THE MENU ROW'S BUTTONS, in painted order — flush from the row's left edge and
 // ADJACENT WITH NO GAP, the css float model's default (the architect states a
@@ -376,7 +378,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // (ROW 2 — THE TOOLBAR — IS DELETED: 2026-08-12, the grand relayout's roster
 // commit. The labeled Save / Undo / Redo / Render lane of 2026-07-31
 // dissolved into the ICON ROW's first group of four glyph buttons
-// (kIconRowButtons below), same chords and face machinery under 32px boxes,
+// (kIconRowButtons below), same chords and face machinery in the row's boxes,
 // the old labels living on as their tooltips. Its painter, its layout
 // constants, ToolbarButtonDef and kToolbarButtons went producer-less with
 // it; what SURVIVES of row 2's measured anatomy is the MODAL DIALOG BUTTONS'
@@ -386,31 +388,45 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // history.)
 
 // A BUTTON'S BOX — THE ONE PAINTER of the chrome's button faces (architect
-// 2026-10-02, the Windows-95 design): the face filled, then its one-line
-// relief, and the answer is what the glyph or label must sit on and how far it
-// shifts. Three faces and no hover:
+// 2026-10-02, the Windows-95 design at the Windows pixel): the face filled,
+// then its two-line edge, and the answer is what the glyph or label must sit
+// on and how far it shifts. TWO FAMILIES (the edge grammar at render.h's
+// palette head): a TOOLBAR button — the two roster rows and the on-screen
+// keyboard's keys — wears the SOFT edges (DrawEdge's BF_SOFT, Windows'
+// toolbar), a PUSH button — the dialogs' — the PLAIN ones. Three faces and
+// no hover:
 //   REST     — RAISED on the ground, glyph unshifted. EVERY button rests
 //              raised, enabled or disabled: a disabled button keeps its edge
-//              and dims only its glyph or label (kRedesignDisabledMix).
-//   LAMP     — a toggled-on button (the roster's `selected`, the player's
-//              Repeat One, the keyboard's armed keys): SUNKEN on the down face
-//              (kRedesignDownFace), the glyph one relief line down and right.
+//              and changes only its glyph (engraved on a toolbar button,
+//              icons::draw_engraved) or its label.
+//   CHECKED  — a toggled-on button (the roster's `selected`, the player's
+//              Repeat One, the keyboard's armed keys): SUNKEN over Windows'
+//              checked face — the ground dithered with Hilight in one Windows
+//              px cells (paint_checker_rect), its phase at the button's
+//              top-left so two checked neighbours tile alike — the glyph one
+//              Windows px down and right.
 //   PRESSED  — a live press (AppState::ChromePress's face, the modal arm, a
-//              held key): SUNKEN on the ground, the glyph shifted the same —
-//              Windows' pushed button. It wins over the lamp while it is held.
+//              held key): SUNKEN on the plain ground, the glyph shifted the
+//              same — Windows' pushed button. It wins over the checked face
+//              while it is held.
+enum class ButtonFamily { Toolbar, Push };
 struct ButtonBoxFace {
-    GuiColor under;   // the face the glyph's dim mixes toward
+    GuiColor under;   // the face under the glyph: the ground, every face
     int      shift;   // the glyph's down-and-right offset, device px
 };
 ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
-                               bool pressed) {
+                               bool pressed, ButtonFamily family) {
     const bool down = lamp || pressed;
-    const GuiColor face =
-        (lamp && !pressed) ? kRedesignDownFace : kRedesignContentGround;
-    paint_cell_rect(cr, r, face);
-    if (down) paint_relief_sunken(cr, r);
-    else      paint_relief_raised(cr, r);
-    return ButtonBoxFace{face, down ? relief_line_px() : 0};
+    paint_cell_rect(cr, r, kRedesignContentGround);
+    if (lamp && !pressed) paint_checker_rect(cr, r, r.x, r.y, kReliefHilight);
+    if (family == ButtonFamily::Toolbar) {
+        if (down) paint_relief_soft_sunken(cr, r);
+        else      paint_relief_soft_raised(cr, r);
+    } else {
+        if (down) paint_relief_plain_sunken(cr, r);
+        else      paint_relief_plain_raised(cr, r);
+    }
+    return ButtonBoxFace{kRedesignContentGround, down ? relief_line_px() : 0};
 }
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
@@ -532,42 +548,26 @@ AppState::RedesignButtonFace& publish_button_face(
     return face;
 }
 
-// ROW 4 — THE ICON ROW, measured at 100% off the five 32x32 state crops
-// (row_4_button_{rest,hover,click,selected,selectedhover}.png),
-// row_4_separator.png (1x34) and row_4_bottom_border.png. The lane metrics
-// (46 content + 1 border, so a 47px lane at 100%) live in render.h with
-// rows 1-3's, and so does the BUTTON's own box since 2026-08-28 (the block
-// below says why).
+// ROW 4 — THE ICON ROW: Windows 95's toolbar at the Windows pixel (architect
+// 2026-10-02). Its metrics — the 23 x 22 case with the 16-px glyph at (3, 3),
+// the five px of ground above and below, the eight px between groups — live
+// in render.h's icon-row block, where the lane table and the notification
+// card read them too; this row spells none of them.
 //
-// THE VERTICAL STORY IS PURE CENTERING (and it is what resolves the architect's
-// 48-vs-6+34+6 discrepancy, recorded at kIconRowHeightPx): the 32px buttons
-// land at +7 and the 34px separators at +6, each centered in the 46px content
-// band by its own arithmetic rather than by a stated margin — which is exactly
-// what the stated margins were, so the centering reproduces them.
+// THE VERTICAL STORY: the case stands on the row's five-px air
+// (icon_row_content_h_px is the air, the case, the air), so its top is the
+// lane's top plus scaled_px(5).
 //
-// THE HORIZONTAL WALK uses TWO different gaps, which is this row's own rule and
-// not row 2's: 2px between ADJACENT buttons, and 4px on each side of a
-// SEPARATOR'S 1px slot (row 2 used 5). The row opens with 8px of padding —
-// icon_row_pad_x (paint_handler.h), which lives in the header because the
-// BOTTOM ROW reads it too since 2026-08-14.
-//
-// THE SEPARATOR IS ETCHED (architect 2026-10-02): its slot's column carries
-// the Hilight line and the column before it, the last of the left gap, the
-// Shadow line (paint_relief_etched_vline), so the light side is right — the
-// N2 picture, the line where the flat separator stood.
-//
-// THE BUTTON'S OWN BOX — kIconBtnPx, kIconBtnGapPx and kIconGlyphPx — LIVES
-// in render.h's icon-row block, where its measurements are recorded beside
-// the lane metrics they were taken with: the folder overlay's rows are
-// buttons (folder_overlay.h) and a second file reads them, so each number has
-// one definition and this row spells none of them. What stays here is the
-// ROW's own chrome, which nothing outside this file paints.
-constexpr double kIconSepGapPx        = 4.0;    // each side of a separator
-constexpr double kIconSepWidthPx      = 1.0;
-constexpr double kIconSepHeightPx     = 34.0;
+// THE HORIZONTAL WALK: the buttons of a group TOUCH, and between two groups
+// stand eight Windows px of bare ground with NO SEPARATOR (architect
+// 2026-10-02, the Y / Z / AB sets: the etched separators retired with the
+// gaps). The row opens with its 8-px pad — icon_row_pad_x
+// (paint_handler.h), which lives in the header because the BOTTOM ROW reads
+// it too since 2026-08-14.
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id and its content,
-// a 22px breeze ICON. The press claim's chord table (input_pointer.cpp) is the
+// a breeze ICON (the 22-px source files, rasterized at the case's 16 Windows
+// px). The press claim's chord table (input_pointer.cpp) is the
 // other half; both key off the same ids.
 //
 // WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
@@ -594,7 +594,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // to represent all those various meanings"): Save, Undo, Redo and Render at
     // the row's left, the SAME chords, gates, disabled derivations and
     // stateful faces the labeled buttons carried — only the FACE is a glyph
-    // in the 32px box now (Save's VcsCommit swap and Render's DialogCancel
+    // in the toolbar case now (Save's VcsCommit swap and Render's DialogCancel
     // swap ride redesign_button_icon below; media-record serves BOTH plain
     // render and the iteration sweep by the architect's same-day ruling, the
     // tooltip alone forking). The old labels are the tooltips. SINCE
@@ -850,25 +850,26 @@ constexpr IconRowDef kIconRowButtons[] = {
 // switcher — the blue "Logging | Editing | Audio | Effects | Color" bar at the
 // far right of its menu row — reborn as the selectors; the bar's three
 // labelled buttons are gone and the acts wear the architect's 2026-08-11
-// glyphs (icons.h). THE ROW'S OWN METRICS, NONE NEW: the 32px button box with
-// its 22px glyph (render.h's icon-row block), 2px between members, the 1x34
-// separator with its 4px gaps on the group's LEFT (its leader is Source+Warp
-// at redesign_button_opens_icon_group), and the row's 8px pad as the lead-out
-// from the lane's right edge. THE ROW'S FIVE FACES, and a RADIO OF THREE: the
+// glyphs (icons.h). THE ROW'S OWN METRICS, NONE NEW: the toolbar case
+// (render.h's icon-row block), the members touching, the eight-px group gap
+// on the group's LEFT (its leader is Source+Warp at
+// redesign_button_opens_icon_group), and the row's 8px pad as the lead-out
+// from the lane's right edge. THE ROW'S FACES, and a RADIO OF THREE: the
 // lit button is the current view (redesign_button_selected reads the live
 // combination) and a press on it is the consumed nothing (the `radio` column,
 // kToolbarChords).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW GROUP WINS. It paints LAST, whole, at its
-// flush-right place; the groups to its left yield, clipped at the column of
-// the view group's separator, and each yielding member PUBLISHES ONLY WHAT IT
+// flush-right place; the groups to its left yield, clipped where the view
+// group's eight-px gap begins, and each yielding member PUBLISHES ONLY WHAT IT
 // PAINTED — its box cut at that column, or an empty rect when the view group
 // covers it whole — so a press, a hover and a tooltip land on exactly the
 // pixels on screen (on screen is as painted; paint_icon_row's two walks).
-// The row fits whole down to 940 authored px of window at 100% (the width
+// The row fits whole down to 662 Windows px of window at 100 % (the width
 // math at paint_icon_row), so neither host reaches the rule: the laptop's
-// 1920 and the tablet's 1152 logical px both clear it.
+// 1920 and the tablet's 2304 device px clear it at their scales, and the
+// tablet at every scale the vocabulary admits.
 constexpr IconRowDef kIconRowViewGroup[] = {
     {RedesignButton::ViewSW, icons::Icon::DocumentExport},
     {RedesignButton::ViewTW, icons::Icon::DocumentImport},
@@ -942,9 +943,11 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // in render.h.
 //
 // THE TOOLTIP'S TYPE AND SPACING. Two sizes now: the NAME line stays at the
-// redesign's 12pt, and the SHIFT line drops to 10pt (architect 2026-07-31 — the
-// hint is subordinate text and should read as such). Both go through the one
-// shaping chokepoint, which takes whatever size the context carries.
+// redesign's 13 Windows px, and the SHIFT line drops to 11 (architect
+// 2026-07-31 — the hint is subordinate text and should read as such; 12 pt
+// and 10 pt until the unit's change, the same 10/12, architect 2026-10-02).
+// Both go through the one shaping chokepoint, which takes whatever size the
+// context carries.
 //
 // THE VERTICAL LAYOUT IS DERIVED, NOT AUTHORED, and it is SYMMETRIC BY
 // CONSTRUCTION: each line occupies its own face's (ascent + descent) band, the
@@ -952,15 +955,17 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // above the first band and below the last. So the box height falls out as
 //     pad + band1 [+ gap + band2] + pad
 // and the top and bottom air are equal by the arithmetic rather than by a
-// measured pair that could drift. At 100% on the product's face (Roboto,
-// 2026-10-02: the 12pt band 15 + 4, the 10pt band 13 + 4) that is 6 + 19 + 6
-// = 31 for one line and 6 + 19 + 4 + 17 + 6 = 52 for two — replacing the old
-// 41px two-line box, which the architect read as too tight between the lines and
-// bottom-heavy. render.h carries only a BOUND on this for the damage band.
-constexpr double kTooltipShiftFontSizePt = 10.0;
-constexpr double kTooltipPadYPx          = 6.0;   // top AND bottom, equal
-constexpr double kTooltipLineGapPx       = 4.0;   // between the two bands
-constexpr double kTooltipPadXPx      = 5.0;
+// measured pair that could drift. At the tablet's 275 % on the product's face
+// (Roboto: the 13-px band 34 + 9, the 11-px band 29 + 8) that is 11 + 43 + 11
+// = 65 for one line and 11 + 43 + 8 + 37 + 11 = 110 for two (the old 41px
+// two-line box was read as too tight between the lines and bottom-heavy).
+// The pads and the gap are the laptop pixel's 6, 4 and 5 re-authored at the
+// unit's change (architect 2026-10-02). render.h carries only a BOUND on this
+// for the damage band.
+constexpr double kTooltipShiftFontSizePx = 11.0;   // Windows px
+constexpr double kTooltipPadYPx          = 4.0;   // top AND bottom, equal
+constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
+constexpr double kTooltipPadXPx      = 4.0;
 // (The damage BOUND on the height and the timing constants live in render.h —
 // the tooltip's clock reads them, for the deadlines and for the band beside
 // the strip.)
@@ -979,160 +984,64 @@ constexpr double kTooltipPadXPx      = 5.0;
 // (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
 // beside the roster, because the pointer side reads the same table.)
 
-// THE DROPDOWN, in the architect's CSS terms. The item height is AUTHORED, not
-// derived: 29 at 100%, measured off dropdown_full.png, and it lives with
-// dropdown_h_px's other ingredients in render.h (see kPopupItemHeightPx there,
-// which owns that measurement).
+// THE DROPDOWN, Windows 95's popup menu at the Windows pixel (architect
+// 2026-10-02). Its vertical terms — the 17-px item, the frame, the one-px
+// margin, the separator's block — live with dropdown_h_px's other
+// ingredients in render.h (the popup's OPEN EDGE must size the box before it
+// is painted); only the HORIZONTAL terms, which depend on the widest shaped
+// label, are the painter's alone, and every menu shares every one of them.
 //
-// IT IS NOT THE TOOLTIP'S INTERIOR, though it was once written that way — as
-// "26 total less its two 1px borders = 24", from an era when the tooltip box was
-// an authored 26. Neither number survives: the tooltip's box is not authored at
-// all now, its height falling out of pad + band [+ gap + band] + pad on the
-// face's own extents (31 for one line at 100%, the record at
-// kTooltipShiftFontSizePt). The floating surfaces share their CHROME — one
-// box painter on one ground (paint_popup_chrome) — and not their heights. Do not re-derive
-// one from the other: that 31 - 2 == 29 is an arithmetic coincidence between a
-// font-driven quantity and a crop-measured one, and tying them together would
-// make the menu's row height move whenever the face's metrics did.
+// IT IS NOT THE TOOLTIP'S INTERIOR: the floating surfaces share their CHROME —
+// one box painter on one ground (paint_popup_chrome) — and not their heights.
+// The tooltip's box is not authored at all, its height falling out of pad +
+// band [+ gap + band] + pad on the face's own extents (the record at
+// kTooltipShiftFontSizePx); do not re-derive one from the other.
 //
-// The width derives rather than being authored: the widest shaped label, plus
-// the redesign's standing 10px label padding per side (rows 1 and 3's), plus the
-// 3px item inset per side, plus the two 1px borders. The architect pixel-tweaks
-// at 100% by moving these terms.
-// (The item height, its block margin, the separator's vertical margin and the
-// border live in render.h with dropdown_h_px's other ingredients — the
-// popup's OPEN EDGE must size the box before it is painted. Only the HORIZONTAL
-// terms, which depend on the widest shaped label, are the painter's alone.)
-// (EVERY MENU SHARES EVERY NUMBER IN THIS BLOCK — chrome, item height, insets,
-// separator, faces — and since 2026-08-03 the horizontal terms below as well.)
-constexpr double kPopupItemInsetPx   = 3.0;   // the highlight box, per side
-constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
+// THE ITEM'S INSET: the highlight box stands one Windows px inside the frame
+// on every side — the margin Windows leaves between a popup's edge and its
+// lit row — so the published item rect is the frame's interior less that px.
+// THE SEPARATOR'S INSET: its etched pair runs 5 Windows px in from the popup's
+// edge each side (the laptop pixel's 7 re-authored at the unit's change).
+constexpr double kPopupItemInsetPx   = 1.0;   // the highlight box, per side
+constexpr double kPopupSepInsetPx    = 5.0;   // the separator, per side
 
 // THE MINIMUM ITEM WIDTH — the tab-min-width pattern, and the reason a menu of
-// short labels still reads as a menu. THE VALUE IS AUTHORED, NOT DERIVED: 242
-// is the architect's knob turned at the live look (2026-08-03, a flat +42px on
-// the number below), which is what this constant has always been for. Nothing
-// re-derives it and nothing should try.
-//
-// ITS PREDECESSOR WAS a derivation, and the distinction is the point: 200 came
-// off the crop, whose items are 401px for labels of ~150px ink with roughly
-// half that width going to an accelerator and submenu column — taking the text
-// half alone and scaling to THE LABEL SET OF THAT DAY (widest "Playback speed"
-// at 113px — a row that left with its key when playback_speed retired whole,
-// 2026-08-27) landed there. That measurement is the record of where 200 came
-// from and nothing more: it is neither what sets the floor now nor a current
-// roster figure.
-//
-// WHICH MENUS IT BINDS ON, measured against the width rule this file paints by
-// (content = 57 indent + widest label + [13 gap + widest accelerator] + 30
-// right margin − 8 chrome, at 100%):
-//
-//   File       "Open Project" | "Ctrl+Alt+O"                  -> estimate FLOOR
-//   Settings   "Projects Repository" (no column)              -> estimate FLOOR
-//   Edit       "Paste Phase Reset State" | "Ctrl+Alt+Shift+P"  -> content
-//              (374 at 100%, past the floor; the widest row since the
-//              magnification level rows' deletion, architect 2026-09-23)
-//   (Help      "AV Sync Stats" | "Shift+L"                    -> FLOOR, 2026-09-03..09)
-//
-// EVERY FIGURE HERE WAS MEASURED ON THE SENTENCE-CASE SPELLING these labels
-// carried until 2026-09-03, when the dropdown items took Title Case (the one
-// declared exception, stated at this file's capitalization block). A capital
-// for a lowercase letter is a few px per word, so each row's ink moved by
-// single digits and NO VERDICT MOVED: the painter takes the larger of floor
-// and content at every paint, so the columns above say which TERM wins, and
-// re-measuring an ink width that was never the deciding quantity would buy
-// nothing.
-//
-// THE SETTINGS MENU LEFT THE FLOOR ON 2026-08-26, when "Waveform magnification
-// level" joined its roster and took the widest-label slot at 209px (the item's
-// own note is at kSettingsPopupItems, app_state.h — the box "simply grows",
-// and this is what it grew into): its content asked 288 at 100%, past the
-// 242, so that popup DERIVED at every scale — 296px wide with its chrome —
-// and the +42 did not land on it. THAT ROW LEFT 2026-09-02 and three
-// device-key rows joined, the widest label now "Projects Repository" (tied
-// since 2026-09-13 by "Max Waveform Height", the same 19 characters)
-// — some 19 characters against the 28 that asked 209, so by the same
-// advance-width method the content sits under the 242 and the FLOOR is the
-// width again; unmeasured, and it does not have to be: the painter takes the
-// larger of the two terms at every paint, so which wins is never in doubt,
-// only which term it is.
-//
-// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENUS, FILE and SETTINGS, whose
-// content asks stay under the 242 by the advance-width estimate (the table
-// above; EDIT's content wins, and HELP was a third short menu 2026-09-03..09)
-// — which is what gives a short menu a box that reads as a menu at all, and is
-// the whole of what this constant is for. Neither figure is stated: the
-// painter takes the LARGER at every paint, so which term wins is all it says.
-//
-// THE ITERATIONS MENU HELD THE FLOOR UP FROM 2026-08-27 UNTIL ITS DELETION ON
-// 2026-09-04 and is worth one line as the measurement that showed the floor
-// doing its work: two rows of "BPM Iterations"/"Grid Iterations" beside single
-// letters, the widest label 104px by the advance-width method this file's
-// collision note uses, for a content ask of 209 — the pre-rebrand pair, "BPM"
-// and "Iterations", asked 171. Both were under 242, so the floor was that
-// box's width in either spelling; the 2026-08-31 rebrand's one owed check
-// was never in doubt, only which term won.
-//
-// FILE: one row of "Quit" beside "Ctrl+Q" when the table above was written,
-// asking 168; it carries THREE rows now — "Open Project" | "Ctrl+O",
-// "Revert" | "Ctrl+Alt+O" (2026-09-13) and "Quit" | "Ctrl+Q" — whose widest
-// label and widest accelerator put the content ask near the 242, by the
-// advance-width estimate; unmeasured, and it does not have to be: the
-// painter takes the larger of the two terms at every paint. NO NUMBER IS
-// STATED FOR IT HERE: the ink is the shaper's and the rows are app_state.h's
-// (kFilePopupItems), so a figure written down here would go stale the next
-// time either moves, and which TERM WINS is the only thing this table has to
-// say. (The deleted NAVIGATION menu was the
-// one that never reached it: its accelerator column put content at 57 + 117
-// ("Previous marker") + 13 + 101 ("Ctrl+Shift+Tab") + 30 − 8 = 310, already
-// past both floors, so its box stayed 318px wide. That measurement is kept
-// because it is what shows the floor and the derived column composing — the
-// shape the Edit and Settings menus now stand in.)
-//
-// What the 2026-08-03 harmonization did to the SETTINGS box is separate and
-// still true: the labels now start on the shared 57px indent rather than a 12px
-// item pad, so the generous-right-side reading the original derivation leaned on
-// is retired. The floor survives as what it does now — a width the shortest
-// menus cannot fall below.
-constexpr double kPopupItemMinWidthPx = 242.0;
+// short labels still reads as a menu. THE VALUE IS AUTHORED, NOT DERIVED: the
+// architect's knob turned at the live look (2026-08-03, 242 laptop px, a flat
+// +42 on the crop's derivation), 176 Windows px since the unit's change
+// (architect 2026-10-02, the same device width on the tablet). Nothing
+// re-derives it and nothing should try. The painter takes the LARGER of this
+// floor and a menu's content ask at every paint, so which term wins is all it
+// says: the short menus, FILE and SETTINGS, sit on the floor by the
+// advance-width estimate, and EDIT's widest row ("Paste Phase Reset State" |
+// "Ctrl+Alt+Shift+P") asks past it. No content figure is stated here: the
+// ink is the shaper's and the rows are app_state.h's (kFilePopupItems and its
+// siblings), so a number written down would go stale the next time either
+// moves. (The floor's measured history — the crop's 200, the deleted menus
+// it bound on — is git history.)
+constexpr double kPopupItemMinWidthPx = 176.0;
 
-// THE DROPDOWN'S HORIZONTAL TERMS, measured off the two-column crop
-// (dropdown_full_hotkeys.png, 403x579, the popup box including its 1px borders)
-// and authored in POPUP-BOX coordinates, which is how the crop reads: a menu
-// with an accelerator column is easier to state — and to check against the crop
-// — from the box's own edges than from the item box's.
+// THE DROPDOWN'S HORIZONTAL PADS, authored in POPUP-BOX coordinates — from
+// the box's own outer edges, which is how a menu with an accelerator column is
+// easiest to state. EVERY MENU TAKES THEM (architect 2026-08-03): the menus
+// differ in one derived term (whether an accelerator column exists) rather
+// than in their padding.
 //
-// EVERY MENU TAKES THEM (architect 2026-08-03): the settings menu's own 12px
-// item-box label pad is retired and its labels start on this same indent, so
-// the menus differ in one derived term (whether an accelerator column
-// exists) rather than in their padding.
-//
-//  - THE LABEL INDENT is 57px from the popup's left edge to the label's pen
-//    origin (ink starts at 57 or 58 depending on the glyph — "Switch Monitor"
-//    and "Go To" at 57, "Focus Timecode" and "Monitor Config" at 58 — and the
-//    same 57 holds on the rows that carry an icon at 39, so the column is real
-//    and not a per-row accident). kdenlive reserves a CHECKBOX plus an ICON
-//    gutter in there; we have neither and reproduce the RESULTING INDENT as
-//    plain padding, by ruling.
-//  - THE COLUMN GAP is the crop's GUARANTEED minimum separation: the widest
-//    label ink ends at x=239 ("Switch Monitor Fullscreen") and the leftmost
-//    accelerator ink starts at x=252 ("Ctrl+Shift+Space"), so 13px is what the
-//    design promises when both columns are at their widest. (Per-row gaps are
-//    all larger — 100px on the widest label's own row — because those two rows
-//    are different rows; 13 is the number the min-width rule is built on.)
-//  - THE RIGHT MARGIN is 30px from the popup's right edge to the accelerator's
-//    last ink column, uniform across every hotkey row (all end at x=372). In
-//    the source that margin also holds the submenu-arrow column (the arrows run
-//    out to 388); we have no submenus and keep the margin, which is what makes
-//    the accelerators sit off the edge rather than against it.
-// The three reproduce the crop's own width to a pixel: 57 + 183 (widest label
-// ink) + 13 + 121 (widest hotkey ink) + 30 = 404 against the measured 403.
-// (They lost their `Nav` prefix with the harmonization — the indent and the
-// margin are now every menu's, and the gap is a term of the ONE width rule
-// below, present exactly when the optional accelerator column is.)
-constexpr double kPopupLabelIndentPx  = 57.0;
-constexpr double kPopupHotkeyGapPx    = 13.0;
-constexpr double kPopupPadRightPx     = 30.0;
+//  - THE LABEL PAD AND THE RIGHT PAD ARE ONE NUMBER, 22 WINDOWS PX (architect
+//    2026-10-02, the mirror rule): from the popup's left edge to the label's
+//    pen, and from the popup's right edge to the accelerator's last ink
+//    column (or, on a menu without one, the widest label's) — Windows' popup
+//    reserves its check-mark column on the left and its submenu-arrow column
+//    on the right, the same width, and this product has neither and keeps
+//    their space as plain padding. It is the right margin the kdenlive crop
+//    measured (30 laptop px, re-authored at the unit's change); the crop's
+//    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
+//    mirror.
+//  - THE COLUMN GAP is the guaranteed minimum separation between the widest
+//    label and the widest accelerator, the kdenlive crop's 13 laptop px
+//    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).
+constexpr double kPopupPadXPx         = 22.0;
+constexpr double kPopupHotkeyGapPx    = 9.0;
 
 // THE FACE'S CAP HEIGHT AT ITS CURRENT SIZE — the ink height of a capital,
 // asked of the "H", which has no overshoot on either of the product's two
@@ -1165,29 +1074,26 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // THE MEASURED FACES (the product's own, through the one face owner's road —
 // Roboto, 2026-10-02 — hint metrics on, so every extent is a whole pixel):
 //
-//     face / size          ascent  descent  asc-desc  cap "H"  asc+desc
-//     sans 16px  (100%)      15       4        11       12        19
-//     sans 32px  (200%)      30       8        22       22        38
-//     mono 14.67px (100%)    16       4        12       11        20
-//     mono 29.33px (200%)    31       8        23       21        39
+//     face / size              ascent  descent  cap "H"  asc+desc
+//     sans 17.94px  (138%)       17       5        13        22
+//     sans 35.75px  (275%)       34       9        25        43
+//     mono 16.56px  (138%)       18       5        12        23
+//     mono 33px     (275%)       35       9        24        44
+//
+// (the normal face at 13 Windows px and the clock's mono at 12, architect
+// 2026-10-02; the small face, the ruler's, is at render.h's ruler block).
 //
 // THE TABLE HOLDS ON BOTH DEVICES BY CONSTRUCTION: one implementation builds
 // both faces from the same bytes under the same hint style
 // (gui_font_bundled.cpp, whose head owns that ruling and carries the full
 // measurement), so every seat below is one answer rather than two.
 //
-// THE KDENLIVE CROPS STAY LANDED AT 100 %: the sans cap is 12 rows there —
-// Liberation's when the rule landed, Roboto's since 2026-10-02 — so the menu
-// row's 30-row lane seats at row 21, the 32 box at 22, the 29 dropdown item
-// at 20 and the 31 field at 21 (tmp/previous/review_2026-09-09/his_screenshots/kden-hover.png,
-// tmp/previous/review_2026-09-09/his_screenshots/kden-view.png, the
-// PCManFM-Qt tab crops and tmp/keep/screenshots/kdenlive/redesign/), and the
-// answer is independent of the box's y by construction rather than by a tie
-// rule. When the rule landed, cap = (ascent - descent) + 1 held for the sans
-// at both scales then run, so it moved no sans surface off the
-// ascent-minus-descent proxy it replaced; the rule never needed that
-// identity, and in Roboto it holds at 100 % and not at 200 % (cap 22 against
-// a 22-row difference), which costs nothing for the same reason.
+// THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row lane seats at row
+// floor((52 + 25) / 2) = 38, the dropdown's 47-row item at 36; the answer is
+// independent of the box's y by construction rather than by a tie rule. (The
+// kdenlive crops the rule landed on — the 12-row cap at 100 % in a 30-row
+// lane, a 32 box, a 29 item — are git history with the unit they were
+// measured in.)
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
@@ -1198,32 +1104,29 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // card's first line, the dropdown items, the prompt's message, the render player's
 // clock, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
-// keyboard's caps, and the folder overlay's rows. THREE LINE SEATS: the
-// tooltip's two lines and the ruler's labels. (The folder overlay's TEXT rows
+// keyboard's caps, and the folder overlay's rows. FOUR LINE SEATS: the
+// tooltip's two lines, the ruler's labels and, since 2026-10-02, the marker
+// lane's flag labels (below). (The folder overlay's TEXT rows
 // were a fourth, and the one site that forked between the two seats, until
 // they went with the AV Sync Stats panel on 2026-09-30.)
 //
-// THE MARKER LANE IS THE NAMED EXCEPTION and stays out of the solver: the live
-// flag pass, the history-diff flag pass and the marker-lane editor each seat
-// their label at `lane.y + marker_flag_baseline_px()` (render.cpp; the owner
-// and its reasoning at render.h's kMarkerFlagBaselinePx), a length AUTHORED
-// off the same kdenlive crop the lane's own height comes off, which is why it
-// must agree with the crop and not with a face's metric. The two rules meet at
-// 100% — the crop's 12-row cap centred in the 20-tall lane seats row 16 either
-// way — and part at 200%, where the authored baseline scales to row 32 while
-// cap-centring Roboto's 22-row cap in the 40-tall lane would seat row 31
-// (2026-10-02). That divergence is the crop's answer winning, not drift.
+// THE MARKER LANE IS A LINE SEAT TOO, and stays out of the box solver: the
+// live flag pass, the history-diff flag pass and the marker-lane editor each
+// seat their label at the flag box's top plus marker_flag_baseline_px() — its
+// edge band, then the face's ceiled ascent (architect 2026-10-02, the AC /
+// AD sets' flag_seat; the box is exactly edge + ascent + descent, so there is
+// no margin to centre in). The owner and the arithmetic are at render.h's
+// marker_lane_h_px block.
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
-// row's content band is 46 at 100% and 104 at 225%, and cap-centring the
-// monospace digits gives row 28 and row 63 — exactly where the old proxy plus
+// row's content band was 46 at 100% and 104 at 225%, and cap-centring the
+// monospace digits gave row 28 and row 63 — exactly where the old proxy plus
 // the architect's authored drop put them, at both scales. His measured pixel
-// WAS cap-centring (46 - 10 = 36 rows of margin, eighteen above the digits'
-// cap band and eighteen below), so the offset is gone and neither clock moved.
-// In Roboto Mono (2026-10-02) the digits' cap is 11 rows: the same row 28 at
-// 100% (seventeen rows above the band, eighteen below, the floor taking the
-// half) and row 56 in the 92-row band at 200%.
+// WAS cap-centring, so the offset is gone. At the Windows pixel (2026-10-02)
+// the 88-row band at 275 % seats Roboto Mono's 24-row cap at row 56
+// (thirty-two rows above it, thirty-two below) and the 44-row band at 138 %
+// its 12-row cap at row 28.
 // AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop, which is what levels it with OK
 // and Cancel at every scale (the reasoning is at the modal's own site).
@@ -1254,13 +1157,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     //
     // THE LEFT FLOAT'S FACES (architect 2026-10-02, the Windows-95 menu bar):
     // COLD, nothing is drawn — the label bare on the ground; OPEN, the anchor
-    // whose menu is down wears a thin SUNKEN frame on its rectangle, no fill;
+    // whose menu is down is Windows 95's open menu title — its rectangle
+    // filled with the HIGHLIGHT (the accent, the dropdown's lit row's own
+    // fill) under the luminance rule's text (highlight_text_ink, render.h);
     // DEAD (the history view greys every anchor but File, the partition being
     // history_mode_disables_button's), the label alone dims. NO HOVER FACE
     // (architect 2026-10-02: "hover is awkward with pen and sometimes
     // flickers"; Windows 98's hot-tracked raised title is not adopted) and no
-    // press face: a press opens the menu, whose frame is the cue. The accent
-    // is not used on this row.
+    // press face: a press opens the menu, whose highlight is the cue.
     //
     // EVERY ACTION ON THE FLOAT IS THE SAME KIND since 2026-08-13: each button
     // TOGGLES A DROPDOWN — the roster's three non-chord actions, since no
@@ -1337,22 +1241,23 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             def.id,
             GuiRect{x, row.y, btn_w, row.h});
 
-        // THE OPEN ANCHOR WEARS A SUNKEN FRAME WHILE ITS DROPDOWN IS UP
-        // (architect 2026-10-02, the R3 mock; the anchor stays marked while
-        // its menu is open, kdenlive's behaviour since 2026-08-02): a thin
-        // SUNKEN frame on the anchor's rectangle — the whole lane tall, the
-        // label's width plus its pads — and no fill, whichever of the three
-        // anchors emitted the open popup, through the one anchor owner. A
-        // PAINT CONDITION, NOT A `selected` BIT: no menu button has a chord
+        // THE OPEN ANCHOR WEARS THE HIGHLIGHT WHILE ITS DROPDOWN IS UP
+        // (architect 2026-10-02, Windows 95's open menu title; the anchor
+        // stays marked while its menu is open, kdenlive's behaviour since
+        // 2026-08-02): the anchor's rectangle — the whole lane tall, the
+        // label's width plus its pads — filled with the accent, the label in
+        // the luminance rule's ink over it, whichever of the three anchors
+        // emitted the open popup, through the one anchor owner. A PAINT
+        // CONDITION, NOT A `selected` BIT: no menu button has a chord
         // (redesign_button_selected is the live fact a chord flips), and the
         // popup's two writers, toggle_dropdown and the one close owner
         // close_dropdown, already invalidate the top strip on both edges. A
         // dead anchor has no open menu (toggle_dropdown refuses it), so the
-        // frame needs no enabled term.
+        // highlight needs no enabled term.
         //
         // DEAD, THE LABEL IS THE ONE THING THAT DIMS: it retains
-        // kRedesignDisabledMix of itself over the ground, the product's one
-        // disabled blend (the partition and its derivation are at
+        // kRedesignDisabledMix of itself over the ground, the product's
+        // disabled text (the partition and its derivation are at
         // history_mode_disables_button, input_pointer.cpp; this reads only the
         // published bit).
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
@@ -1360,8 +1265,11 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             app.dropdown.open() &&
             def.id == dropdown_anchor_button(app.dropdown.menu);
         if (open_anchor)
-            paint_relief_sunken(cr, GuiRect{x, row.y, btn_w, row.h});
-        const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
+            paint_cell_rect(cr, GuiRect{x, row.y, btn_w, row.h},
+                            kRedesignAccent);
+        const GuiColor label_c =
+            open_anchor ? highlight_text_ink(kRedesignAccent)
+                        : mix_color(kRedesignLabel, ground, keep);
         set_palette_source(cr, label_c);
         // THE LABEL CENTERS IN THE ANCHOR, which IS the lane: Qt's own menu
         // bar centers an item's text in the item rect, which is where
@@ -1581,50 +1489,47 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // inside the `h` view (the arm and its succession are at
     // redesign_button_enabled, app_state.h).
     //
-    // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
-    // pad + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
-    // separators is groups minus one — the view group's own included — and
-    // the count of gaps is buttons minus groups): TWENTY-SIX MEMBERS IN SEVEN
-    // GROUPS since 2026-10-01, the LEFT WALK twenty-three in six from the
-    // left pad,
-    //   8 + 23·32 + (23−6)·2 + (6−1)·9 = 8 + 736 + 34 + 45 = 823px,
-    // and the VIEW GROUP's span from the right edge — its separator slot,
-    // three boxes, two gaps and the 8px lead-out —
-    //   9 + 3·32 + 2·2 + 8 = 117px,
-    // so the row holds every group, with the separator's full gap on both of
-    // its sides, in any window at least 823 + 117 = 940px wide, IN EVERY
-    // STATE. The laptop clears it outright at 940 of 1920.
+    // THE WIDTH MATH, RE-DERIVED from the roster after each move (architect
+    // 2026-10-02, the Windows case): in Windows px, the 8-px pad + 23-px
+    // cases touching + an 8-px gap between groups (groups minus one of them —
+    // the view group's own included). TWENTY-SIX MEMBERS IN SEVEN GROUPS
+    // since 2026-10-01, the LEFT WALK twenty-three in six from the left pad,
+    //   8 + 23·23 + (6−1)·8 = 8 + 529 + 40 = 577,
+    // and the VIEW GROUP's span from the right edge — its gap, three cases
+    // and the 8-px lead-out —
+    //   8 + 3·23 + 8 = 85,
+    // so the row holds every group, with the full gap on both sides of the
+    // view group's, in any window at least 577 + 85 = 662 Windows px wide, IN
+    // EVERY STATE.
     //
-    // THE TABLET FIT CEILING IS 245 (re-derived 2026-10-01), and it is taken
-    // off THE PAINTED WALKS, not off 940·factor: every element is its own
-    // scaled_px, rounded on its own, so the device width is
-    // 2·[8s] + 26·[32s] + 19·[2s] + 6·(2·[4s] + [1s]) with each bracket a
-    // banker's rounding. At 245 that is 2009 for the left walk and 286 for the
-    // view group's span, 2295 of 2304, and at 246 it is 2032 + 289 = 2321 (the
-    // box rounds up to 79). The tablet's 200 % paints the two 1646 + 234 =
-    // 1880 device px wide, clearing the panel by 424; a 225 would paint
-    // 1842 + 262 = 2104, clearing it by 200. The row's width succession is in
-    // git history; a roster move restates these numbers.
+    // THE DEVICE WIDTHS are taken off THE PAINTED WALKS, not off 662·factor:
+    // every element is its own scaled_px (render.h's composite rule), so the
+    // device width is 2·[8s] + 26·([3s] + [16s] + [4s]) + 6·[8s] with each
+    // bracket a banker's rounding. The laptop's 138 % paints 802 + 118 = 920
+    // of its 1920; the tablet's 275 % paints 1581 + 233 = 1814 of its 2304,
+    // clearing it by 490, and the tablet fits the row at EVERY scale the
+    // vocabulary admits — 2304 of 2304 at 348 % to 350 %, the ceiling. The
+    // row's width succession is in git history; a roster move restates these
+    // numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
-    // 34px and a NEW GROUP costs 41, which at the tablet's 200% paint as 68
-    // and 82 device px — room for SIX more members at 200% (1880 + 6·68 =
-    // 2288 of 2304), a seventh cropping under the view group (2356); at 225%
-    // (76 and 92: the box's 72 and the gap's 4.5 rounding to 4) room for TWO
-    // (2104 + 2·76 = 2256), a third cropping (2332).
+    // a 23-px case and a NEW GROUP a further 8 — at the tablet's 275 % 63 and
+    // 22 device px, room for SEVEN more members (1814 + 7·63 = 2255 of 2304),
+    // an eighth cropping under the view group (2318).
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
     //
     // THREE FACES AND NO HOVER (architect 2026-10-02, the Windows-95 design;
-    // the one painter is paint_button_box, above): every button REST is a
-    // RAISED square on the ground; a LAMP — the live fact its chord flips
-    // (redesign_button_selected), the view group's lit view among them — is
-    // SUNKEN on the down face with its glyph one line down and right; a
-    // PRESS is sunken on the ground with the same shift, and wins over the
-    // lamp while it is held. The pointer's only cue over a button is the
-    // cursor (pointer_cursor_kind); the pointer walk still finds the
-    // tooltip's button (recompute_redesign_button_hover).
+    // the one painter is paint_button_box, above, in its TOOLBAR family):
+    // every button REST is a SOFT RAISED case on the ground; a CHECKED button
+    // — the live fact its chord flips (redesign_button_selected), the view
+    // group's lit view among them — is SOFT SUNKEN over the Hilight dither
+    // with its glyph one Windows px down and right; a PRESS is soft sunken on
+    // the plain ground with the same shift, and wins over the checked face
+    // while it is held. The pointer's only cue over a button is the cursor
+    // (pointer_cursor_kind); the pointer walk still finds the tooltip's
+    // button (recompute_redesign_button_hover).
     // THE DISABLED FACE IS THE TWO MODES' AND THE TOOLBAR MIGRANTS':
     // the row's own members never grey for a REFUSAL —
     // presses always dispatch and the CHORDS' OWN refusals answer (loading
@@ -1634,7 +1539,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // BROUGHT their real disabled derivations with them at the 2026-08-12
     // relayout (Undo/Redo's locked-tab and empty-stack terms, Save's
     // in-flight lockout, Render's source path — redesign_button_enabled's
-    // own arms, painted by this body's generic keep-mix with nothing added
+    // own arms, painted by this body's generic engraved face with nothing added
     // here). THE TWO RULED EXCEPTIONS ARE BOTH MODES rather than refusals,
     // which is what the per-press refusals above cannot express: the `h`
     // HISTORY VIEW greys every button in this row whose act it consumes
@@ -1659,8 +1564,6 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE IS ITS CONTENT (render.h's icon_row_* pair): no border row.
-    const int content_h = lane.h;
-
     cairo_save(cr);
 
     set_palette_source(cr, kRedesignContentGround);
@@ -1671,45 +1574,30 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-08-11: this lane paints geometry and icons only. The sans face and
     // its scaled font were set for the four view radios' shaped LETTER faces,
     // which the architect replaced with real Breeze glyphs that day.)
-    const int btn      = scaled_px(kIconBtnPx);
-    const int btn_gap  = scaled_px(kIconBtnGapPx);
-    const int sep_gap  = scaled_px(kIconSepGapPx);
-    // Floored at 1 for the reason row 2's separator is (a line that rounds to 0
-    // at gui_scale 50 takes the five groups' dividers with it).
-    const int sep_w    = scaled_px(kIconSepWidthPx, 1);
-    // AUTHORED, NOT DERIVED — deliberately unlike row 2's separator, and
-    // measured before deciding (2026-08-10). Row 2 places its
-    // line from a rounded TOP MARGIN, so a third rounding put the whole error
-    // under the line and it sat off-centre; this row places EVERYTHING by the
-    // centering rule below, which splits the remainder itself. The residual is
-    // the integer-centering remainder alone — at most 1px, at 168 of the 351
-    // legal scales — and
-    // the row's own 32px BUTTONS carry exactly the same residual at 172 scales
-    // by the same expression. Deriving this one height would make the
-    // separator the only element in the row not placed by the shared rule, so
-    // the crop's 34 stays authored.
-    const int sep_h    = scaled_px(kIconSepHeightPx);
-    const int glyph_px = scaled_px(kIconGlyphPx);
+    // THE CASE AND ITS GLYPH, each a composite of its rounded parts
+    // (render.h's icon-row block): the glyph at the case's (3, 3).
+    const int btn_w     = icon_case_w_px();
+    const int btn_h     = icon_case_h_px();
+    const int glyph_px  = icon_glyph_px();
+    const int glyph_off = icon_case_lead_px();
+    const int group_gap = icon_group_space_px();
 
-    // EVERYTHING CENTERS IN THE CONTENT BAND — see the constants block: this is
-    // the whole vertical layout, and it is what absorbs the 46/48 discrepancy.
-    const int btn_y = lane.y + (content_h - btn)   / 2;
-    const int sep_y = lane.y + (content_h - sep_h) / 2;
+    // THE CASE STANDS ON THE ROW'S AIR: five Windows px under the lane's top,
+    // and the lane is the air, the case and the air (icon_row_content_h_px).
+    const int btn_y = lane.y + scaled_px(kIconRowAirPx);
 
     // THE VIEW GROUP'S PLACE IS RESOLVED FIRST, because it decides where
     // every group to its left may paint (the overflow rule at kIconRowViewGroup):
     // its last button's right edge sits one row pad (icon_row_pad_x, the row's
     // own 8px lead-in, read as the lead-out) in from the lane's right edge, its
-    // members 2px apart, and its separator — the row's 4px / 1px line / 4px —
-    // on its left. THE LEFT GROUPS' LIMIT IS THAT SEPARATOR'S COLUMN: they
-    // paint under a clip ending there and publish only the columns they
-    // painted, so a window too narrow for the row covers them and never the
-    // view group.
+    // members touching, and its eight-px group gap on its left. THE LEFT
+    // GROUPS' LIMIT IS WHERE THAT GAP BEGINS: they paint under a clip ending
+    // there and publish only the columns they painted, so a window too narrow
+    // for the row covers them and never the view group.
     const int view_n = static_cast<int>(std::size(kIconRowViewGroup));
-    const int view_w = view_n * btn + (view_n - 1) * btn_gap;
+    const int view_w = view_n * btn_w;
     const int view_x0 = lane.x + lane.w - icon_row_pad_x() - view_w;
-    const int view_sep_x = view_x0 - sep_gap - sep_w;
-    const int left_limit = view_sep_x;
+    const int left_limit = view_x0 - group_gap;
 
     // ONE MEMBER'S PAINT, shared by both walks: publish what is painted, then
     // the face and the glyph at the member's full box — the clip, when
@@ -1770,28 +1658,25 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // derived, for reasons recorded there. This painter decides none of
         // the three.
         //
-        // THE FACE IS THE GLYPH'S ALONE AT kRedesignDisabledMix — the
-        // product's one disabled blend: the glyph retains that fraction of
-        // itself over the face under it, and the box keeps its relief whole
-        // (architect 2026-10-02: a disabled button keeps its raised edge). A
-        // dead LAMP (the cumulative reading, say) stays sunken: the mode
-        // cannot change that state, so hiding it would be a lie, and the dim
-        // glyph says "true, but not yours right now". Colour only — gui_scale
-        // moves geometry, so the face is identical at 100% and 200%.
-        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
+        // THE FACE IS THE GLYPH'S ALONE, ENGRAVED (architect 2026-10-02, the
+        // AB set; Windows' DSS_DISABLED, icons::draw_engraved): the glyph's
+        // whole shape in Hilight one Windows px right and down, then in
+        // Shadow at its place, and the box keeps its edge whole (a disabled
+        // button keeps its raised edge). A dead CHECKED button (the
+        // cumulative reading, say) stays checked: the mode cannot change that
+        // state, so hiding it would be a lie, and the engraved glyph says
+        // "true, but not yours right now".
         // The press face is gated on the live bit rather than trusted: the
         // claim never records a press on a disabled button, but a button can
         // go dead UNDER a held press with no pointer event to refresh it.
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const ButtonBoxFace box = paint_button_box(
-            cr, GuiRect{bx, btn_y, btn, btn}, face.selected, pressed);
-        const GuiColor under = box.under;
+            cr, GuiRect{bx, btn_y, btn_w, btn_h}, face.selected, pressed,
+            ButtonFamily::Toolbar);
 
-        // THE 22px ICON BOX centered in the 32px button (+5 at 100%), each path
-        // in its own color from the icon table. The dimming term is the
-        // mode-scoped dead face's and is inert (keep == 1, the table's colors
-        // bit-identical) in every other state.
+        // THE 16-px GLYPH at the case's (3, 3), each path in its own color
+        // from the icon table — or, dead, engraved.
         //
         // EVERY BUTTON TAKES THIS ARM since 2026-08-11 — the four view radios'
         // shaped LETTER faces were the only other kind, and they took real
@@ -1814,18 +1699,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // pair being TWO buttons over one chord rather than one button with
         // two faces", and the architect made it one button with two faces
         // that day.)
-        icons::draw(cr, redesign_button_icon(app, def.id, def.icon),
-                    static_cast<double>(bx + (btn - glyph_px) / 2 + box.shift),
-                    static_cast<double>(btn_y + (btn - glyph_px) / 2 +
-                                        box.shift),
-                    static_cast<double>(glyph_px), keep, under);
+        const icons::Icon glyph = redesign_button_icon(app, def.id, def.icon);
+        const double gx = static_cast<double>(bx + glyph_off + box.shift);
+        const double gy = static_cast<double>(btn_y + glyph_off + box.shift);
+        if (face.enabled)
+            icons::draw(cr, glyph, gx, gy, static_cast<double>(glyph_px));
+        else
+            icons::draw_engraved(cr, glyph, gx, gy,
+                                 static_cast<double>(glyph_px),
+                                 static_cast<double>(relief_line_px()));
     };
 
     // THE LEFT GROUPS' WALK: one left-to-right accumulation, every member
     // placed. A group LEADER (redesign_button_opens_icon_group, app_state.h —
-    // the roster's own divider owner) draws the 4px / 1px line / 4px separator
-    // ahead of itself and everything else takes the 2px gap; the ROW'S FIRST
-    // member needs no special case, `first` swallowing the separator its own
+    // the roster's own divider owner) takes the eight-px group gap ahead of
+    // itself and everything else touches its neighbour; the ROW'S FIRST
+    // member needs no special case, `first` swallowing the gap its own
     // leader would owe. (The collapse state machine that skipped members and
     // carried an OWED separator across them is deleted, 2026-08-14 — this row
     // hides nothing at any width it fits.) Everything here paints under the
@@ -1842,32 +1731,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     int x = lane.x + icon_row_pad_x();
     bool first = true;
     for (const IconRowDef& def : kIconRowButtons) {
-        if (!first) {
-            if (redesign_button_opens_icon_group(def.id)) {
-                x += sep_gap;
-                paint_relief_etched_vline(cr, x, sep_y, sep_h);
-                x += sep_w + sep_gap;
-            } else {
-                x += btn_gap;
-            }
-        }
+        if (!first && redesign_button_opens_icon_group(def.id)) x += group_gap;
         first = false;
-        const int shown_w = std::clamp(left_limit - x, 0, btn);
-        paint_member(def, x, GuiRect{x, btn_y, shown_w, btn});
-        x += btn;
+        const int shown_w = std::clamp(left_limit - x, 0, btn_w);
+        paint_member(def, x, GuiRect{x, btn_y, shown_w, btn_h});
+        x += btn_w;
     }
     cairo_restore(cr);
 
-    // THE VIEW GROUP'S WALK, PAINTED LAST AND WHOLE: its leader's separator
-    // (redesign_button_opens_icon_group — the same divider owner, which names
-    // Source+Warp) at the column the left groups stop at, then its three
-    // members, each publishing the full box it paints.
+    // THE VIEW GROUP'S WALK, PAINTED LAST AND WHOLE: its three members from
+    // view_x0 (its leader Source+Warp's gap is the one left of view_x0 the
+    // left groups stop at), each publishing the full case it paints.
     int vx = view_x0;
     for (const IconRowDef& def : kIconRowViewGroup) {
-        if (redesign_button_opens_icon_group(def.id))
-            paint_relief_etched_vline(cr, view_sep_x, sep_y, sep_h);
-        paint_member(def, vx, GuiRect{vx, btn_y, btn, btn});
-        vx += btn + btn_gap;
+        paint_member(def, vx, GuiRect{vx, btn_y, btn_w, btn_h});
+        vx += btn_w;
     }
 
     cairo_restore(cr);
@@ -1884,8 +1762,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   STATE CELL behind it in the clock's own run (`00:00.100 | Updating...`),
 //   clipped one pad short of the right block;
 //
-//   and, FLUSH AT THE RIGHT MARGIN, four groups divided by three of the ruled
-//   row-8 separators:
+//   and, FLUSH AT THE RIGHT MARGIN, four groups, eight Windows px of bare
+//   ground between two of them (architect 2026-10-02: no separators):
 //   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
 //   disable (Ctrl+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
 //   since 2026-09-29) and ADD TO SELECTION (bare `k`, the sticky ctrl, the
@@ -1921,39 +1799,24 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // with that cross out"; the mid-render CANCEL lives on the RENDER button now,
 // and bare Esc is keyboard-only.)
 //
-// THE BUTTONS ARE THE ICON ROW'S BOXES (the unification's point — "the same
-// size as the other icon buttons", bigger finger targets without stealing
-// waveform height): 32px boxes with 22px glyphs, read from the icon row's own
-// kIconBtnPx / kIconGlyphPx so the two rows cannot drift apart. ROW 8's
-// SAMPLED KDENLIVE TRANSPORT METRICS ARE SUPERSEDED — the 26px button box
-// measured off transport.png's Project Monitor cluster ((1569,367)-(1594,392))
-// and the 16px glyph box derived from its inks via the viewBox (the ruled
-// 26/16 pair of the 2026-08-11 tune-up) served the two-lane bottom strip and
-// died with it. SINCE 2026-08-14 EVERY METRIC ON THIS ROW IS THE ICON ROW'S,
-// read from its accessors and constants rather than authored here (architect:
-// "make sure bottom row is same height and metrics (padding, etc.) as main
-// icon row") — the 32px box, the 22px glyph, the 2px inter-button gap
-// (kIconBtnGapPx; row 8's own ruled 2 from the 2026-08-11 tune-up happened to
-// equal it and is retired as a separate constant), the 8px pad at both ends
-// (icon_row_pad_x, paint_handler.h) and the lane's 46px content height
-// (bottom_row_content_h_px delegating to icon_row_content_h_px, render.h). One
-// source, so a retune of the icon row carries here by construction.
+// THE BUTTONS ARE THE ICON ROW'S (the unification's point — "the same size as
+// the other icon buttons", bigger finger targets without stealing waveform
+// height): Windows 95's toolbar case, 23 x 22 Windows px with its 16-px glyph
+// at (3, 3), read from the icon row's own accessors (render.h) so the two rows
+// cannot drift apart. SINCE 2026-08-14 EVERY METRIC ON THIS ROW IS THE ICON
+// ROW'S, read from its accessors and constants rather than authored here
+// (architect: "make sure bottom row is same height and metrics (padding,
+// etc.) as main icon row") — the case and its glyph, the buttons touching
+// within a group, the eight-px gap between groups (icon_group_space_px), the
+// 8px pad at both ends (icon_row_pad_x, paint_handler.h) and the lane's
+// 32-px content height (bottom_row_content_h_px delegating to
+// icon_row_content_h_px, render.h). One source, so a retune of the icon row
+// carries here by construction. (Row 8's kdenlive transport metrics, its
+// 26-px boxes and its own ruled separators — the etched slot between the
+// groups, 2026-08-11 to 2026-10-02 — are git history.)
 //
-// THE ROW PAINTS THREE SEPARATORS, all on one spec, one at each boundary of
-// the right block's four groups (verbs | walk | arrows | transport); the gap
-// between the clock's run and the block needs none, anchoring being the
-// boundary there. The spec's own ruled numbers (architect 2026-08-11, off
-// kdenlive's row-8 crop): a 1px, 32-tall slot centred in the content band,
-// with FIVE pixels from button to separator on each side (the ruled metric,
-// against the icon row's 4), the line ETCHED since 2026-10-02 as the icon
-// row's is (paint_relief_etched_vline). THE TRIO GAINED
-// CONSUMERS AND NOT NUMBERS: all three lines read kTransportSepGapPx /
-// kTransportSepWidthPx / kTransportSepHeightPx, and each takes the same
-// `+= sep_gap - btn_gap` step so its own gap REPLACES the trailing button gap
-// rather than adding to it.
-//
-// EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the relief, the centering
-// rule): same ground, same three faces, same one disabled blend. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-29 evening — EIGHT
+// EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the relief, the case on the
+// row's air): same ground, same three faces, same engraved dead glyph. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-29 evening — EIGHT
 // of the seventeen in the `h` view, where it used to be one: there
 // the derived partition greys the PLAY/STOP button (Space is consumed there),
 // UP and DOWN (bare
@@ -2012,27 +1875,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // row is kept so nothing on the row moved (the lane's chrome is
 // paint_bottom_strip's, which calls the body below onto its content band).
 
-// THE ROW AUTHORS NO METRIC OF ITS OWN BUT ITS SEPARATOR'S (the block above):
-// the boxes, glyphs, gap, pads, relief and content height are all the icon
-// row's, read from its constants and accessors. The kTransportSep* trio
-// IS LIVE since 2026-08-15, when the MARKER-WALK GROUP became the divider's
-// third consumer — it was the unification's adjacent left cluster for one day
-// in 2026-08-12, forward spec again when the arrows moved flush right, and
-// forward spec is exactly what that arrival cashed in: the numbers are the
-// ruled ones off row_8_separator.png rather than a re-derivation, which is
-// what a spec kept without a consumer is for. IT HAS THREE DRAWING SITES since
-// 2026-08-18 and still one set of numbers, which is the point of authoring
-// them once.
+// THE ROW AUTHORS NO METRIC OF ITS OWN (the block above): the cases, glyphs,
+// gaps, pads, relief and content height are all the icon row's.
 //
-// THEY ARE THE ICON ROW'S SEPARATOR AT ROW 8'S OWN METRICS, deliberately not
-// the icon row's constants: the same etched 1px slot, but 32 tall
-// against row 4's 34 and a 5px gap per side against row 4's 4, both sampled
-// from this row's own crop. (The rest of the row reads row 4's constants; a
-// sampled number of this row's own does not become a shared one because its
-// neighbours are.)
-constexpr double kTransportSepGapPx    = 5.0;
+// THE SEPARATOR TRIO IS THE RENDER PLAYER'S ALONE since 2026-10-02, when
+// this row's three separators retired with the roster's: the modal row that
+// stands in this lane while the player is up keeps its two etched lines
+// (paint_modal_dialog's player branch), on the spec row 8 sampled off
+// kdenlive's crop (architect 2026-08-11) — a 1-px slot the button box's
+// height with air either side — re-authored in Windows px at the unit's
+// change: the laptop pixel's 5-px gap as 4, the 32-px slot as 23.
+constexpr double kTransportSepGapPx    = 4.0;
 constexpr double kTransportSepWidthPx  = 1.0;
-constexpr double kTransportSepHeightPx = 32.0;
+constexpr double kTransportSepHeightPx = 23.0;
 
 // The painter's half of the row's roster: four groups, all in the right
 // block and painted left to right in the order the body lays them (verbs,
@@ -2170,7 +2025,8 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // and face alike and the memoised metrics key on size, so the cell measures
 // whatever face it is handed and neither change needed a second edit. THE SIZE IS
 // 11pt SINCE 2026-08-14 (clock_font_size_px, render.h — the architect's live
-// call, and the product's one departure from the redesign's shared 12pt); it
+// call, and the product's one departure from the redesign's shared 12pt; 12
+// against 13 Windows px since 2026-10-02); it
 // rides gui_scale like every other string, and it is a RETUNABLE rather than
 // a sampled number, unlike this row's geometry. The cell re-measures itself
 // at whatever size this returns — the memo keys on it — so the smaller face
@@ -2202,8 +2058,9 @@ constexpr const char* kClockShape = "DD:DD.DDD";
 // authored length here. The row-8 clock sits at the lane's bare left pad since
 // 2026-09-29 and reads no offset (the pad is the mirror there); this constant
 // survives as the second addend of the distance below, which the render
-// player's modal row spends around its scrub.
-constexpr double kClockCellOffsetXPx = 4.0;
+// player's modal row spends around its scrub — 3 Windows px since the unit's
+// change (architect 2026-10-02), the laptop pixel's 4 re-authored.
+constexpr double kClockCellOffsetXPx = 3.0;
 
 // THE SEPARATOR → TIMESTAMP DISTANCE, the ONE OWNER of that distance
 // (architect 2026-08-29): the whole air between a divider's line and the first
@@ -2216,12 +2073,13 @@ constexpr double kClockCellOffsetXPx = 4.0;
 constexpr double kTransportSepToClockPx =
     kTransportSepGapPx + kClockCellOffsetXPx;
 
-// THE CLOCK PANEL'S AIR — 4 authored px between the sunken panel's frame and
+// THE CLOCK PANEL'S AIR — 3 Windows px between the status panel's line and
 // the reserved clock cell on each side (architect 2026-10-02, the status-bar
-// panel round the clock; the painter is paint_bottom_row_buttons_and_clock).
-// With the cell at the lane's 8 px pad, the panel's left line stands 4 px in
-// from the window's edge.
-constexpr double kClockPanelAirPx = 4.0;
+// panel round the clock; the painter is paint_bottom_row_buttons_and_clock;
+// the laptop pixel's 4 re-authored at the unit's change). With the cell at
+// the lane's 8 px pad, the panel's left line stands 5 px in from the
+// window's edge.
+constexpr double kClockPanelAirPx = 3.0;
 
 // The clock's cell, MEMOISED ON THE FONT SIZE — eleven tiny shaping
 // passes (ten digits plus the specimen) that answer the same thing on every
@@ -2272,32 +2130,34 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     cairo_save(cr);
 
-    const int btn      = scaled_px(kIconBtnPx);
-    const int btn_gap  = scaled_px(kIconBtnGapPx);
-    const int pad      = icon_row_pad_x();
-    const int glyph_px = scaled_px(kIconGlyphPx);
-    // The 32px box centred in the row's 46px content band, which is the icon
-    // row's own arithmetic on the icon row's own height ((46-32)/2 = 7).
-    const int btn_y = content_y + (content_h - btn) / 2;
+    const int btn_w     = icon_case_w_px();
+    const int btn_h     = icon_case_h_px();
+    const int pad       = icon_row_pad_x();
+    const int glyph_px  = icon_glyph_px();
+    const int glyph_off = icon_case_lead_px();
+    const int group_gap = icon_group_space_px();
+    // The case on the row's five-px air, the icon row's own arithmetic on the
+    // icon row's own height (render.h's icon-row block).
+    const int btn_y = content_y + scaled_px(kIconRowAirPx);
 
-    // One button, the icon row's face logic verbatim (paint_button_box, its
-    // three faces). THE LAMP'S SUBJECT ON THIS ROW IS ADD TO SELECTION
-    // (2026-08-18), the sticky-ctrl mode that closes the marker-verb group: it
-    // wears the sunken down face while the mode stands, which is the roster's
-    // standing rule for a mode. A lit button a mode greys keeps its sunken
-    // face and dims its glyph, the icon row's own composition.
+    // One button, the icon row's face logic verbatim (paint_button_box's
+    // toolbar family, its three faces). THE CHECKED FACE'S SUBJECT ON THIS
+    // ROW IS ADD TO SELECTION (2026-08-18), the sticky-ctrl mode that closes
+    // the marker-verb group: it wears the checked face while the mode stands,
+    // which is the roster's standing rule for a mode. A checked button a mode
+    // greys keeps its checked face and engraves its glyph, the icon row's own
+    // composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
             cr, app, audio, playback, target_render,
             def.id,
-            GuiRect{x, btn_y, btn, btn});
+            GuiRect{x, btn_y, btn_w, btn_h});
 
-        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const ButtonBoxFace box = paint_button_box(
-            cr, GuiRect{x, btn_y, btn, btn}, face.selected, pressed);
-        const GuiColor under = box.under;
+            cr, GuiRect{x, btn_y, btn_w, btn_h}, face.selected, pressed,
+            ButtonFamily::Toolbar);
         // THE GLYPH IS THE STATE RESOLVER'S since 2026-08-15, as the icon
         // row's already was: this row hosts a stateful face now — the
         // collapsed PLAY/STOP button, which wears media-playback-stop while an
@@ -2310,40 +2170,25 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // stateful face... the play/stop pair being TWO buttons over one chord
         // rather than one button with two faces", which was exactly true until
         // the architect made it one button with two faces.)
-        icons::draw(cr, redesign_button_icon(app, def.id, def.icon),
-                    static_cast<double>(x + (btn - glyph_px) / 2 + box.shift),
-                    static_cast<double>(btn_y + (btn - glyph_px) / 2 +
-                                        box.shift),
-                    static_cast<double>(glyph_px), keep, under);
-    };
-
-    // THE ROW'S SEPARATOR, AUTHORED ONCE AND DRAWN THREE TIMES (2026-08-18;
-    // the ruled numbers and their crop are at the kTransportSep* block above).
-    // Every site takes the same step, which is the whole idiom: the pen arrives
-    // holding the TRAILING BUTTON GAP the group's loop left behind, and the
-    // separator's own 5px gap REPLACES it rather than adding to it — that is
-    // what the spec's "five pixels from button to separator" means. The lambda
-    // returns the pen the next tenant starts at.
-    const int sep_gap = scaled_px(kTransportSepGapPx);
-    // Floored at 1 for the reason the icon row's separator is: a line that
-    // rounds to 0 at gui_scale 50 is a divider that is simply not there.
-    const int sep_w   = scaled_px(kTransportSepWidthPx, 1);
-    const int sep_h   = scaled_px(kTransportSepHeightPx);
-    const int sep_y   = content_y + (content_h - sep_h) / 2;
-    const auto paint_separator = [&](int pen) {
-        pen += sep_gap - btn_gap;
-        paint_relief_etched_vline(cr, pen, sep_y, sep_h);
-        return pen + sep_w + sep_gap;
+        const icons::Icon glyph = redesign_button_icon(app, def.id, def.icon);
+        const double gx = static_cast<double>(x + glyph_off + box.shift);
+        const double gy = static_cast<double>(btn_y + glyph_off + box.shift);
+        if (face.enabled)
+            icons::draw(cr, glyph, gx, gy, static_cast<double>(glyph_px));
+        else
+            icons::draw_engraved(cr, glyph, gx, gy,
+                                 static_cast<double>(glyph_px),
+                                 static_cast<double>(relief_line_px()));
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
     // layout: the most-used buttons at the bottom right): the CLOCK at the
     // lane's left pad with THE STATE CELL behind it, then THE RIGHT BLOCK,
     // anchored at the right margin — the MARKER-VERB GROUP (its six counted
-    // off kMarkerVerbGroup), a separator, the MARKER-WALK GROUP (Previous
-    // Marker, Next Marker, Center and Switch Tab, kTransportWalkGroup), a
-    // separator, the four CARDINAL ARROWS (↓ ↑ ← →,
-    // kTransportArrowGroup), a separator and the TRANSPORT THREE
+    // off kMarkerVerbGroup), the group gap, the MARKER-WALK GROUP (Previous
+    // Marker, Next Marker, Center and Switch Tab, kTransportWalkGroup), the
+    // gap, the four CARDINAL ARROWS (↓ ↑ ← →, kTransportArrowGroup), the gap
+    // and the TRANSPORT THREE
     // (kTransportGroup), whose last button's right edge is one pad in from
     // the lane's right edge. The whole block is measured first and laid left
     // to right from there, so one expression owns the anchor and no group
@@ -2351,67 +2196,58 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // a real rect on every frame, except under a modal, where the row yields
     // whole (paint_bottom_strip).
     //
-    // THE NUMBERS, re-derived whenever a group gains or loses a box (each box
-    // moves the block by a 32px box and its 2px gap): each group is
-    // n × 32 + (n − 1) × 2 and each separator span 5 + 1 + 5, so the block is
-    // 202 verbs + 11 + 134 walk + 11 + 134 arrows + 11 + 100 transport = 603
-    // authored px (2026-09-29 evening, the verb group seven → six: Edit Flag
-    // and Copy Value up to the icon row, Jump to Defining Marker in).
-    // At 100% on the laptop's 1920 it starts at 1920 − 8 − 603 =
-    // 1309, the state cell's clip bound one pad short at 1301, and the clock
-    // cell — fourteen monospace cells since 2026-10-01, the nine of
-    // `00:00.000`, the tab letter's `A | ` and the dirty mark's reserved one,
-    // 8.8px each at 11pt — spans 8..~132, leaving the state cell ~1169px. On
-    // the tablet at 200% (2304 device px, 1152 logical) the block starts at
-    // logical 1152 − 8 − 603 = 541, the clip bound at 533 and the clock ends
-    // at ~132, leaving ~401 logical px. THE ROW CARRIES NO COLLISION RULE —
-    // none of the redesign does — and the crop-at-the-floor allowance recorded
-    // at kMinWindowWidthPx covers a narrow window or a scale driven toward the
-    // 350 ceiling: the block reaches the clock's right edge once the logical
-    // width falls below about 743 (132 + 603 + 8), which is above the 640
-    // floor — a window narrowed toward that floor paints the block over the
-    // clock's cell (the tablet's 200 % leaves 1152, its 245 % icon-row fit
-    // ceiling 940). THE STATE CELL CANNOT PUSH ANYTHING: it CLIPS at the
-    // block's left edge less one pad, so a long line is cut rather than
-    // colliding.
+    // THE NUMBERS, re-derived whenever a group gains or loses a box (each case
+    // moves the block by 23 Windows px): the cases touch within a group and
+    // eight px stand between two groups, so the block is 6 verbs + 4 walk +
+    // 4 arrows + 3 transport = 17 cases and three gaps, 17·23 + 3·8 = 415
+    // Windows px (2026-10-02, the Windows case; the verb group six since
+    // 2026-09-29 evening). In device px, off the painted walk: 17·32 + 3·11 =
+    // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, the state
+    // cell's clip bound one pad short at 1321, and the clock cell — fourteen
+    // monospace cells since 2026-10-01, the nine of `00:00.000`, the tab
+    // letter's `A | ` and the dirty mark's reserved one, ~9.9 px each at
+    // 16.56 px — spanning 11..~150, leaving the state cell ~1170 px; at the
+    // tablet's 275 % 17·63 + 3·22 = 1137, starting at 2304 − 22 − 1137 =
+    // 1145, the clip bound at 1123 and the clock (~19.8 px cells) ending at
+    // ~300, leaving ~820 device px. THE ROW CARRIES NO COLLISION RULE — none
+    // of the redesign does — and the crop-at-the-floor allowance recorded at
+    // kMinWindowWidthPx covers a narrow window or a scale driven toward the
+    // 350 ceiling: the block reaches the clock's right edge once the window
+    // falls below about 532 Windows px (8 + ~101 + 415 + 8). THE STATE CELL
+    // CANNOT PUSH ANYTHING: it CLIPS at the block's left edge less one pad, so
+    // a long line is cut rather than colliding.
     int right_block_x = lane.x + lane.w - pad;
     {
         // Each group's count read off its own table, so a box joining or
         // leaving moves this width with no second edit.
-        const auto group_w = [&](int n) { return n * btn + (n - 1) * btn_gap; };
-        const int verbs_w  =
-            group_w(static_cast<int>(std::size(kMarkerVerbGroup)));
-        const int walk_w   =
-            group_w(static_cast<int>(std::size(kTransportWalkGroup)));
-        const int arrows_w =
-            group_w(static_cast<int>(std::size(kTransportArrowGroup)));
-        const int transport_w =
-            group_w(static_cast<int>(std::size(kTransportGroup)));
-        const int sep_span = sep_gap + sep_w + sep_gap;
-        const int block_w  = verbs_w + sep_span + walk_w + sep_span +
-                             arrows_w + sep_span + transport_w;
+        const int verbs_n  = static_cast<int>(std::size(kMarkerVerbGroup));
+        const int walk_n   = static_cast<int>(std::size(kTransportWalkGroup));
+        const int arrows_n = static_cast<int>(std::size(kTransportArrowGroup));
+        const int trans_n  = static_cast<int>(std::size(kTransportGroup));
+        const int block_w  =
+            (verbs_n + walk_n + arrows_n + trans_n) * btn_w + 3 * group_gap;
         int ax = lane.x + lane.w - pad - block_w;
         // THE STATE CELL'S CLIP BOUND (below) is this block's own left edge,
         // published out of the scope so the cell cannot guess it.
         right_block_x = ax;
         for (const TransportRowDef& def : kMarkerVerbGroup) {
             paint_button(def, ax);
-            ax += btn + btn_gap;
+            ax += btn_w;
         }
-        ax = paint_separator(ax);
+        ax += group_gap;
         for (const TransportRowDef& def : kTransportWalkGroup) {
             paint_button(def, ax);
-            ax += btn + btn_gap;
+            ax += btn_w;
         }
-        ax = paint_separator(ax);
+        ax += group_gap;
         for (const TransportRowDef& def : kTransportArrowGroup) {
             paint_button(def, ax);
-            ax += btn + btn_gap;
+            ax += btn_w;
         }
-        ax = paint_separator(ax);
+        ax += group_gap;
         for (const TransportRowDef& def : kTransportGroup) {
             paint_button(def, ax);
-            ax += btn + btn_gap;
+            ax += btn_w;
         }
     }
 
@@ -2468,21 +2304,22 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // prompt message starts. The cell is a reserved WIDTH — measured from
         // the widest digit's specimen, so the glyphs never walk inside it.
         const int cell_x = lane.x + pad;
-        // THE CLOCK STANDS IN A SUNKEN PANEL (architect 2026-10-02, the
-        // Windows status-bar panel): a thin sunken frame from 4 authored px
-        // left of the reserved cell to 4 past its end (the cell's width
-        // ceiled, as its damage box is), over the buttons' own rows — the
-        // same btn_y and btn the right block's boxes stand in. No fill: the
-        // panel's face is the row's ground. The state text after the clock's
-        // run (below) stands outside it. The frame lies outside the clock's
-        // per-tick damage box, so a tick never repaints it; the transitions
-        // that move the cell's width damage the lane whole.
+        // THE CLOCK STANDS IN A STATUS PANEL (architect 2026-10-02, the
+        // Windows status-bar panel, STATUS SUNKEN — one line): from
+        // kClockPanelAirPx left of the reserved cell to as far past its end
+        // (the cell's width ceiled, as its damage box is), over the buttons'
+        // own rows — the same btn_y and btn_h the right block's cases stand
+        // in. No fill: the panel's face is the row's ground. The state text
+        // after the clock's run (below) stands outside it. The frame lies
+        // outside the clock's per-tick damage box, so a tick never repaints
+        // it; the transitions that move the cell's width damage the lane
+        // whole.
         {
             const int air = scaled_px(kClockPanelAirPx);
-            paint_relief_sunken(
+            paint_relief_status_sunken(
                 cr, GuiRect{cell_x - air, btn_y,
                             static_cast<int>(std::ceil(cell_w)) + 2 * air,
-                            btn});
+                            btn_h});
         }
         // THE BASELINE IS THE BAND'S SOLVED ONE AND NOTHING ELSE: the solver
         // centres the face's cap band, which is where the architect measured
@@ -2549,7 +2386,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // IT IS CLIPPED, NEVER ELLIPSISED — a cairo rectangle clip, the folder
         // overlay rows' precedent — at the right block's own left edge less
         // one lane pad, so a long line is cut rather than colliding with the
-        // marker verbs. The tablet's cell (~400 logical px at 200 %, the
+        // marker verbs. The tablet's cell (~820 device px at 275 %, the
         // numbers above) is narrower than the longest walk line, so the
         // composer puts the segment that must survive the cut ahead of the
         // one that may lose it — the GitHub word before the scale
@@ -2662,11 +2499,12 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
                                          bool raised) {
     // ONE BOX FOR EVERY FLOATING SURFACE, ON THE ONE GROUND (architect
     // 2026-10-02, the Windows-95 chrome): the ground filled square, then its
-    // frame — a thin RAISED frame for a dropdown and a notification card
-    // (Windows drew menus as raised panels on the button face), or the
-    // tooltip's one DkShadow line all round (Windows' flat tooltip box).
+    // frame — the PLAIN RAISED two-line edge for a dropdown and a
+    // notification card (Windows drew menus as raised panels, EDGE_RAISED),
+    // or the tooltip's one DkShadow line all round (Windows' flat tooltip
+    // box).
     paint_cell_rect(cr, r, kRedesignContentGround);
-    if (raised) paint_relief_raised(cr, r);
+    if (raised) paint_relief_plain_raised(cr, r);
     else        paint_relief_line_frame(cr, r, kReliefDkShadow);
 }
 
@@ -2771,7 +2609,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // show_shaped_run must run with THE SAME scaled font set on `cr` that shaped
     // the run (text_shape.h). Shaping both lines up front and then painting both
     // would leave the SECOND size on the context while the FIRST line's glyphs
-    // were emitted — its 12pt-shaped positions rendered at 10pt, which is a
+    // were emitted — its 13-px-shaped positions rendered at 11, which is a
     // wrong-size line with mis-spaced glyphs, exactly the mismatch signature the
     // contract warns about. So each line's size is (re-)set immediately before
     // its own paint, below.
@@ -2782,7 +2620,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // ours to use. Each phase re-fetches; only plain doubles cross.
     const double size1 = redesign_font_size_px();
     const double size2 =
-        kTooltipShiftFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+        kTooltipShiftFontSizePx * gui_scale_factor();
     const bool two_line = (line2 != nullptr);
 
     cairo_set_font_size(cr, size1);
@@ -2989,13 +2827,13 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // the waveform), the cards kNotificationGapPx apart (the card's own 1 px
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
-// THE LOOK (architect 2026-10-02, the Windows-95 chrome): the ground inside a
-// thin RAISED frame, square, NO DROP SHADOW, through the one popup box
+// THE LOOK (architect 2026-10-02, the Windows-95 chrome): the ground inside
+// the PLAIN RAISED edge, square, NO DROP SHADOW, through the one popup box
 // painter (paint_popup_chrome);
 // a row of the icon row's own height, holding — left to right, EVERY
 // DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
-// declaration: the box's own vertical margin, read for all five) — a 32 px
-// button box with the CLASS GLYPH centred at the box's
+// declaration: the box's own vertical margin, read for all five) — a square
+// box the toolbar case's height with the CLASS GLYPH centred at the box's
 // own inset (dialog-information for a normal card, dialog-error for a
 // critical one, each in its file's own colours: the roster paints every
 // path in the table's ink and colours nothing here — the two files are a
@@ -3059,17 +2897,16 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = scaled_px(kNotificationGapPx, 1);
-    const int btn      = scaled_px(kIconBtnPx);
-    const int glyph_px = scaled_px(kIconGlyphPx);
+    // THE CARD'S GLYPH BOX IS THE TOOLBAR CASE'S HEIGHT, SQUARE, its glyph
+    // the case's 16 Windows px (render.h's icon-row block; the 32-laptop-px
+    // square before 2026-10-02).
+    const int btn      = icon_case_h_px();
+    const int glyph_px = icon_glyph_px();
     // THE GLYPH INSET IS AN INTEGER HALF AND SITS ONE PIXEL LEFT OF CENTRE
     // WHERE THE DIFFERENCE IS ODD (recorded 2026-09-02): both terms are
-    // already scaled, so `btn - glyph_px` is even at 100 % and at the tablet's
-    // 225 % (the two scales anyone runs) and odd at some others — 150 % and
-    // 350 % among them — where this truncating division loses the half pixel
-    // to the left and the top. It is the same recipe every icon box uses in
-    // this file, deliberately shared; a rounded half would move every glyph in
-    // the product to fix a sub-pixel bias at scales the architect does not
-    // run.
+    // already scaled, so `btn - glyph_px` is even at the tablet's 275 % and
+    // the laptop's 138 % (16 and 8) and odd at some others, where this
+    // truncating division loses the half pixel to the left and the top.
     const int inset    = (btn - glyph_px) / 2;
     // ONE NUMBER FOR ALL FIVE DISTANCES (architect 2026-08-30): the box's
     // vertical margin is the card's every pad, so the horizontal placement
@@ -3218,9 +3055,11 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // rect and every item rect, so the press claim hit-tests exactly what was
     // painted and never re-shapes a label.
     //
-    // ITS CHROME (architect 2026-10-02, the Windows-95 menu): the ONE ground
-    // inside a thin RAISED frame, square (paint_popup_chrome), its separators
-    // ETCHED; the highlighted row a FLAT ACCENT FILL under black text.
+    // ITS CHROME (architect 2026-10-02, the Windows-95 popup menu): the ONE
+    // ground inside the PLAIN RAISED two-line frame, square
+    // (paint_popup_chrome), one Windows px of ground margin inside it, its
+    // separators ETCHED; the highlighted row a FLAT ACCENT FILL under the
+    // luminance rule's text (highlight_text_ink, render.h).
     //
     // NO ICONS, NO CHECKBOXES, NO SUBMENU ARROWS, by ruling — the crops reserve
     // all three columns and this product has none of them, exactly as the tabs
@@ -3280,10 +3119,10 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     const int border    = popup_border_px();
     const int item_h    = popup_item_h_px();
     const int block_mar = popup_item_margin_y_px();
-    const int inset     = scaled_px(kPopupItemInsetPx);
+    const int inset     = scaled_px(kPopupItemInsetPx, 1);
     const int sep_inset = scaled_px(kPopupSepInsetPx);
     const int sep_mar   = popup_sep_margin_y_px();
-    const int sep_block = 2 * sep_mar + border;   // margin, line, margin
+    const int sep_block = popup_sep_block_px();   // margin, etched pair, margin
 
     // WIDTH FROM THE WIDEST SHAPED RUN(S) behind the authored minimum — every
     // run is shaped once here and reused for the paint below, so the box and the
@@ -3303,9 +3142,10 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         }
     }
     // ONE WIDTH RULE WITH AN OPTIONAL COLUMN, authored on the POPUP box: the
-    // label indent, the widest label, then — only where an accelerator column
+    // label pad, the widest label, then — only where an accelerator column
     // exists — the guaranteed column gap and the widest accelerator, then the
-    // right margin, less the chrome the item box adds back below.
+    // right pad (the same number, the mirror rule), less the chrome the item
+    // box adds back below.
     //
     // THE OPTIONAL TERM IS DRIVEN OFF THE ITEM TABLE, not off the menu
     // enumerator: an accelerator column is a property of the rows (a menu whose
@@ -3320,9 +3160,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // floor and the shaped run simply trading which one wins. (The deleted NAVIGATION
     // menu's long labels never reached the floor either, which is how the two
     // were shown to compose.)
-    const int pad_l    = scaled_px(kPopupLabelIndentPx);
+    const int pad_l    = scaled_px(kPopupPadXPx);
     const int gap      = scaled_px(kPopupHotkeyGapPx);
-    const int pad_r    = scaled_px(kPopupPadRightPx);
+    const int pad_r    = pad_l;
     const int chrome_w = 2 * inset + 2 * border;
     const int content_w =
         pad_l + static_cast<int>(std::nearbyint(widest)) +
@@ -3378,33 +3218,36 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             app.dropdown.item_enabled[static_cast<size_t>(i)] = enabled[i];
     }
 
-    // The item block opens BELOW the border by its own margin, and closes with
-    // the same margin above the bottom border — the crop's 3px, mirrored.
+    // The item block opens BELOW the frame by its own one-px margin, and
+    // closes with the same margin above the bottom frame.
     int iy = y + border + block_mar;
     for (int i = 0; i < count; ++i) {
         const DropdownRow row = dropdown_row(menu, i);
         if (row.separator_before) {
             // THE SEPARATOR IS ETCHED (architect 2026-10-02, Windows' menu
-            // separator), inset horizontally: its Shadow line on the block's
-            // line row, with its own vertical margin above, and its Hilight
-            // line on the first row of the margin below — the block's height
-            // unchanged (dropdown_h_px's sum), the second line spending one
-            // row of the lower margin.
+            // separator), inset horizontally: its Shadow line and its Hilight
+            // line under it, with the block's own vertical margin above and
+            // below the pair (popup_sep_block_px, dropdown_h_px's sum).
             paint_relief_etched_hline(cr, x + sep_inset, iy + sep_mar,
                                       w - 2 * sep_inset);
             iy += sep_block;
         }
         // ITEMS TOUCH — zero vertical gap between adjacent ones — and each
-        // one's box insets horizontally from the border. The published rect is
-        // that box, so the clickable area is exactly the area that lights.
-        const GuiRect item{x + inset, iy, item_w, item_h};
+        // one's box insets horizontally from the frame by the one-px margin —
+        // inside the frame's two lines, then the margin, on both sides (the
+        // width chrome_w budgets is 2·inset + 2·border). The published rect is
+        // that box, so the clickable area is exactly the area that lights; the
+        // press claim reads it (dropdown.item_rects), and the label and the
+        // accelerator are placed from the popup's own edges, not from it.
+        const GuiRect item{x + border + inset, iy, item_w, item_h};
         app.dropdown.item_rects[static_cast<size_t>(i)] = item;
 
         // THE HIGHLIGHTED ROW (architect 2026-10-02, the Windows highlight):
         // the row the pointer is over, or the press is armed on, is a FLAT
-        // FILL IN THE ACCENT over the whole item box — square, no outline —
-        // under BLACK text and a black accelerator (kRedesignHighlightLabel;
-        // ASSUMED, the alternative recorded there). It is a SELECTION FACE,
+        // FILL IN THE ACCENT over the whole item box — square, no outline,
+        // inside the frame's one-px margin — under the luminance rule's text
+        // and accelerator (highlight_text_ink: black over the light accent).
+        // It is a SELECTION FACE,
         // NOT A HOVER: the hovered-item tracking is what a press resolves
         // against, and the row it lights is the row a press arms (ON SCREEN
         // IS AS PAINTED). EXACTLY ONE ITEM IS EVER LIT: the arm follows the
@@ -3426,15 +3269,16 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
-        // THE INKS: black on the highlight; the label white on a live row; a
-        // DISABLED row's label the roster's own disabled face over the ground
-        // (the label at kRedesignDisabledMix — one disabled rule for the menu
-        // anchors and the menus, architect 2026-10-02: one ground).
+        // THE INKS: the luminance rule's on the highlight; the label white on
+        // a live row; a DISABLED row's label the label at
+        // kRedesignDisabledMix over the ground — one disabled rule for the
+        // menu anchors and the menus, architect 2026-10-02: one ground.
+        const GuiColor lit_ink = highlight_text_ink(kRedesignAccent);
         const GuiColor disabled_label =
             mix_color(kRedesignLabel, kRedesignContentGround,
                       kRedesignDisabledMix);
         const GuiColor label_ink =
-            lit          ? kRedesignHighlightLabel
+            lit          ? lit_ink
             : enabled[i] ? kRedesignLabel
                          : disabled_label;
         set_palette_source(cr, label_ink);
@@ -3445,7 +3289,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // margin, not to the item box's: the margin is a fact about the box,
         // and aligning to it keeps every hotkey's last ink column on one line
         // whatever the item inset is. Its ink is the dimmer
-        // kRedesignPopupHotkey on a live row, black on the highlight, and on a
+        // kRedesignPopupHotkey on a live row, the highlight's text on it, and on a
         // disabled row the disabled label taken at the hotkey's own keep — the
         // row dims once and its accelerator twice (the rule at
         // kRedesignPopupHotkey). The column exists wherever a menu's rows
@@ -3455,7 +3299,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
             const GuiColor hot_ink =
-                lit          ? kRedesignHighlightLabel
+                lit          ? lit_ink
                 : enabled[i] ? kRedesignPopupHotkey
                              : mix_color(disabled_label,
                                          kRedesignContentGround,
@@ -3474,9 +3318,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes KDENLIVE'S LOOK and
 // REAPER'S GEOMETRY MODEL (architect 2026-08-01).
 //   LOOK, from row_5_full.png (its colours and the label size the 2026-10-02
-//     design's: ETCHED ticks, kRulerLabel at 8 pt): the two tick lengths
+//     design's: ETCHED ticks, kRulerLabel at the small face): the two tick lengths
 //     differing at their TOP
-//     — majors rise 4px above the marker lane, minors start at it, and BOTH run
+//     — majors rise kRulerMajorRisePx above the marker lane, minors start at it, and BOTH run
 //     down to the marker lane's bottom (the waveform top). That shared bottom is
 //     what makes "the majors peek above the flags" the whole mechanism; the
 //     brief's "minors end where the marker band begins" was superseded by the
@@ -3504,29 +3348,32 @@ constexpr int64_t kRulerLadderMs[] = {
 constexpr int  kRulerMinorsPerStep = 8;
 // The pitch rule, stated on the MINOR because that is the crowding that matters:
 // a rung is admissible while its minors stay at least this far apart, which puts
-// its labels at least 8x that apart.
-constexpr double kRulerMinMinorPitchPx = 12.0;
-// THE LABELS' CAP TOP, in authored rows under the lane's top: 6, AT EVERY
-// SCALE (architect 2026-10-02, the U4 mock: "above 6, below 10", the labels
-// at 8 pt). THE LINE'S TOP PAD IS DERIVED, never authored: the label is a
-// LINE (line_baseline), whose baseline sits ceil(ascent) under the line's
-// top, so its cap top sits ceil(ascent) - cap under it, and the pad that
-// lands the cap top at this row is
+// its labels at least 8x that apart. 9 Windows px (the laptop pixel's 12
+// re-authored at the unit's change, architect 2026-10-02).
+constexpr double kRulerMinMinorPitchPx = 9.0;
+// THE LABELS' CAP TOP, in Windows px under the lane's top: 4, AT EVERY SCALE
+// (architect 2026-10-02, the U4 mock's "above 6, below 10" laptop rows,
+// re-authored as 4 and 7 at the unit's change, the labels at the small
+// face). THE LINE'S TOP PAD IS DERIVED, never authored: the label is a LINE
+// (line_baseline), whose baseline sits ceil(ascent) under the line's top, so
+// its cap top sits ceil(ascent) - cap under it, and the pad that lands the
+// cap top at this row is
 //
-//     pad = max(0, nearbyint(6 * scale) - (ceil(ascent) - cap))
+//     pad = max(0, scaled_px(4) - (ceil(ascent) - cap))
 //
-// of the label's own face (ruler_label_font_size_px, 8 pt), both metrics
-// read through the product's own road (line_baseline's ascent,
+// of the label's own face (ruler_label_font_size_px, 10 Windows px), both
+// metrics read through the product's own road (line_baseline's ascent,
 // cap_height_px's "H"). A pad scaled from one authored value cannot hold the
 // row, because the face's ascent-minus-cap does not scale with the face. THE
 // THREE SCALES (the measurements at render.h's kRulerBaselineToMarkerPx
-// block): 100 % pad 4, cap top row 6; 200 % pad 8, cap top row 12; 50 % pad
-// 2, cap top row 3. The rule's one implementation is ruler_label_baseline_px
+// block): 275 % pad 5, cap top row 11; 138 % pad 4, cap top row 6; 50 % pad
+// 1, cap top row 2. The rule's one implementation is ruler_label_baseline_px
 // below; the lane's height under the labels is ruler_lane_h_px's arithmetic
 // (render.h).
-constexpr double kRulerLabelCapTopPx   = 6.0;
-// How far a MAJOR tick rises above the marker lane. Minors rise none.
-constexpr double kRulerMajorRisePx     = 4.0;
+constexpr double kRulerLabelCapTopPx   = 4.0;
+// How far a MAJOR tick rises above the marker lane. Minors rise none. 3
+// Windows px (the laptop pixel's 4 re-authored, architect 2026-10-02).
+constexpr double kRulerMajorRisePx     = 3.0;
 
 // The smallest ladder rung whose minors clear the minimum pitch. Falls back to
 // the coarsest rung when even that crowds (an absurd zoom-out), which is the
@@ -3620,6 +3467,50 @@ int ruler_lane_h_px() {
     return cached_h;
 }
 
+// THE MARKER LANE'S DERIVED ROWS (the rule and its three scales at
+// render.h's marker_lane_h_px block): the flag box is its edge band, the
+// normal face's ceiled ascent and its ceiled descent; the label's baseline is
+// the band plus the ascent under the box's top; the lane is the box with one
+// Windows px of air above and below. Read at LAYOUT like the ruler's height,
+// on a scratch context through the painter's own road (gui_select_font_face,
+// then redesign_font_size_px), and MEMOIZED ON THE SCALE the same way.
+namespace {
+struct MarkerLaneRows {
+    int percent  = -1;
+    int box_h    = 0;
+    int baseline = 0;   // under the box's top
+    int lane_h   = 0;
+};
+const MarkerLaneRows& marker_lane_rows() {
+    static MarkerLaneRows rows;
+    const int percent = gui_scale_percent();
+    if (percent == rows.percent) return rows;
+    cairo_surface_t* surface =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* cr = cairo_create(surface);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
+    assert(cairo_font_face_get_type(cairo_get_font_face(cr)) ==
+           CAIRO_FONT_TYPE_FT);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(cairo_get_scaled_font(cr), &fe);
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    const int ascent  = static_cast<int>(std::ceil(fe.ascent));
+    const int descent = static_cast<int>(std::ceil(fe.descent));
+    const int edge    = marker_flag_edge_h_px();
+    rows.box_h    = edge + ascent + descent;
+    rows.baseline = edge + ascent;
+    rows.lane_h   = rows.box_h + 2 * marker_lane_air_px();
+    rows.percent  = percent;
+    return rows;
+}
+} // namespace
+
+int marker_flag_box_h_px()    { return marker_lane_rows().box_h; }
+int marker_flag_baseline_px() { return marker_lane_rows().baseline; }
+int marker_lane_h_px()        { return marker_lane_rows().lane_h; }
+
 void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const GuiRect lane   = top_ruler_row_area(app);
     const GuiRect marker = top_marker_row_area(app);
@@ -3711,7 +3602,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // up to ONE PIXEL off its exact time position — half from its major's own
     // anchor rounding and half from the distribution's — measured at 1.000px
     // worst case over a swept zoom/rung/phase range, on segments the ladder
-    // keeps at least 96px wide. It NEVER ACCUMULATES: every segment re-anchors
+    // keeps at least eight minimum minor pitches wide (72 Windows px). It NEVER ACCUMULATES: every segment re-anchors
     // on its own major, so the error is bounded inside one segment rather than
     // walking across the ruler. One pixel on a countable informative line, in
     // exchange for a comb that stops breathing under every pan.
@@ -3752,7 +3643,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             fill_waveform_line(cr, lane.x, wave_w, col + waveform_line_px(),
                                tick_top, tick_bottom);
             if (!major) continue;
-            // The label starts past its major tick's own width plus a scaled 2 px gap.
+            // The label starts past its major tick's own width plus 2 Windows
+            // px — the etched Hilight line beside the tick and one px of air
+            // (architect 2026-10-02: kept at 2 through the unit's change, the
+            // conversion's 1 leaving the label touching the etched line).
             // The label's TIME is still the exact step time — only tick
             // PLACEMENT is distributed, and a major is at its own exact time
             // anyway. Its x rides `col`, which for a major IS the rounded major,
@@ -3792,9 +3686,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // TIP-DOWN ON THE RULER LANE'S BOTTOM ROWS, its tip row the ruler's last
     // row, so the head's last pixel touches the marker lane's first and head
     // and flags never share a pixel: both stay whole at all times (architect
-    // 2026-09-23). ITS TOP ROW OVERLAPS THE DIGITS' LOWEST INK ROW at the
+    // 2026-09-23). ITS TOP ROWS OVERLAP THE DIGITS' LOWEST INK ROWS at the
     // playhead's column (architect 2026-10-02, "a little overlap is fine"):
-    // the head is one authored row taller than the baseline's distance to the
+    // the head is one Windows px taller than the baseline's distance to the
     // marker lane (the rule at kRulerBaselineToMarkerPx, render.h).
     //
     // OPAQUE (architect 2026-10-02: "the classic Windows way"): the head
@@ -3804,10 +3698,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
     // waveform_line_px()-wide kPlayheadStem run (the waveform segment's own
     // columns) from the marker lane's top to the waveform top,
-    // where render_playhead's waveform segment (paint_playheads) begins, so
-    // head, column and stem read as one unbroken object. It paints HERE, before
-    // the flag blit that follows this pass, so a flag standing in the column
-    // covers it — the hidden-by-marker model. It obeys the waveform segment's
+    // where render_playhead's waveform segment (paint_playheads) begins and
+    // crosses the well's top lines, so head, column and stem read as one
+    // unbroken object. It paints HERE, before the flag blit that follows this
+    // pass, so a flag box standing in the column covers it over the box's
+    // rows — the hidden-by-marker model — and the run shows in the lane's
+    // air above and below the boxes. It obeys the waveform segment's
     // own suppression (playhead_stem_suppressed): where a marker's stem stands
     // on the playhead's frame the whole stem yields to that marker, whose flag
     // then fills the lane at that column, and the HEAD alone still paints, as
@@ -3850,10 +3746,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // (playhead_head_h_px, render.h).
             const int    rows = playhead_head_h_px();
             // THE BAND IS THE RULER LANE'S BOTTOM `rows`, its bottom edge the
-            // marker lane's top (the two lanes abut, strip_row_rect): at 100%
-            // the ruler's last 11 of its 24 rows. The lane is taller than the
-            // head at every scale (24 / 11, 48 / 22, 12 / 6), so the band never
-            // leaves the lane.
+            // marker lane's top (the two lanes abut, strip_row_rect): at the
+            // tablet's 275 % the ruler's last 22 of its 50 rows. The lane is
+            // taller than the head at every scale (50 / 22 at 275 %, 27 / 11
+            // at 138 %, 10 / 4 at 50 %), so the band never leaves the lane.
             const int    head_bottom = marker.y;
             const int    head_top    = head_bottom - rows;
             // THE HOLD LAMP (architect 2026-09-24): the head is white while
@@ -4694,9 +4590,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // exactly once, in the painter, and a stem can never land a pixel away from its
 // own flag. Disabled markers are simply absent from the stash.
 //
-// The stem spans THE CANVAS top to bottom (architect 2026-10-02): it stops at
-// the well's two lines (waveform_content_rect), as the playhead's stem does —
-// the flag sits on the well's top edge and its stem resumes under it.
+// The stem RUNS CONTINUOUS (architect 2026-10-02): from the waveform area's
+// top — through the well's top lines, continuing the stub the flag pass
+// paints under the box — to the canvas's foot, where it stops at the well's
+// bottom lines (waveform_stem_band), as the playhead's stem does.
 //
 // Z-ORDER (architect 2026-09-23): the stems paint UNDER the playhead's stem,
 // which follows this pass, and under the flag boxes, so a dense run of stems at
@@ -4741,9 +4638,9 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             : -1;
 
     cairo_save(cr);
-    const GuiRect canvas = waveform_content_rect(area);
-    const double y0 = static_cast<double>(canvas.y);
-    const double y1 = static_cast<double>(canvas.y + canvas.h);
+    const GuiRect band = waveform_stem_band(area);
+    const double y0 = static_cast<double>(band.y);
+    const double y1 = static_cast<double>(band.y + band.h);
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
@@ -4870,7 +4767,7 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // 19 at 100%, 68 at the 350% ceiling, so it is at least nine columns wide
 // anywhere in the schema and the ±1 never approaches half of it. That is
 // exactly what a stem beside another stem is not, at any scale: a stem is
-// waveform_line_px() wide (render.h; 1 column at 100 %, 2 on the tablet —
+// waveform_line_px() wide (render.h; 1 column on the laptop, 3 on the tablet —
 // the line scales with gui_scale since 2026-09-27), so there the same ±1 is
 // half the object or more, and a t-wide playhead one column left of a
 // marker, painting over the stems, covers t − 1 of that stem's t columns).
@@ -5089,11 +4986,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // to the marker's (playhead_stem_suppressed), the ruling's other half. The
     // flag half is the HIDDEN-BY-MARKER model translated — a flag sharing the
     // cursor's column hides it, exactly as flags painted over the old triangle.
-    // The stem is drawn to run OVER the waveform's own borders: it is a
-    // boundary line like the marker stems beside it, not a thing the borders
-    // clip.
+    // The stem runs OVER the well's top lines and stops at its bottom ones
+    // (PlayheadRows::Stem, waveform_stem_band, architect 2026-10-02): it is a
+    // boundary line continuing from the lane above, like the marker stems
+    // beside it.
     if (!playhead_stem_suppressed()) {
-        render_playhead(cr, area, px_x, kPlayheadStem);
+        render_playhead(cr, area, px_x, kPlayheadStem, PlayheadRows::Stem);
     }
 }
 
@@ -5125,7 +5023,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-    render_playhead(cr, area, scan_px, kPlayheadScanner);
+    render_playhead(cr, area, scan_px, kPlayheadScanner, PlayheadRows::Canvas);
 }
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
@@ -5381,13 +5279,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // (update_modal_dialog_hover), and as everywhere no wait starts under a held
 // press (the model is at AppState::RedesignTooltip).
 //
-// THE BUTTONS ARE THE ROSTER'S RAISED SQUARES (architect 2026-10-02, the
-// Windows-95 design): the deleted toolbar row's box (row 2's 32px height and
-// its own label pads — these buttons carry words or glyphs) painted by the one
-// button painter the roster uses (paint_button_box): RAISED at rest, a lamp
-// SUNKEN on the down face, a live press SUNKEN on the ground with its glyph
-// or label one line down and right, and the keyboard's FOCUS the Windows
-// default-button frame — one DkShadow line outside the box. No hover face.
+// THE BUTTONS ARE PUSH BUTTONS (architect 2026-10-02, the Windows-95 design):
+// the deleted toolbar row's box (row 2's height and its own label pads, in
+// Windows px — these buttons carry words or glyphs) painted by the one button
+// painter the roster uses (paint_button_box) in its PUSH family: PLAIN RAISED
+// at rest, a checked button PLAIN SUNKEN over the dither, a live press PLAIN
+// SUNKEN on the ground with its glyph or label one Windows px down and right,
+// and the keyboard's FOCUS the Windows default-button frame — one DkShadow
+// line outside the box. No hover face.
 //
 // AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
 // lift"), which is what makes the click face real: a press ARMS the button
@@ -5447,10 +5346,16 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 
 namespace {
 
-constexpr double kModalButtonGapPx    = 8.0;
-constexpr double kModalFieldHeightPx  = 31.0;   // includes its sunken frame
-constexpr double kModalFieldPadXPx    = 7.0;
-constexpr double kModalFieldWidthPx   = 520.0;  // authored; see the block above
+// IN WINDOWS PX since the unit's change (architect 2026-10-02): every number
+// in this block re-authored from the laptop pixel to the device size it had
+// on the tablet — the gap 8 as 6, the field 31 as 23, its pad 7 as 5, its
+// width 520 as 378 and its 40-px floor as 29, the button box 32 as 23, its
+// pads 9 and 10 as 7 and 7.
+constexpr double kModalButtonGapPx    = 6.0;
+constexpr double kModalFieldHeightPx  = 23.0;   // includes its sunken edge
+constexpr double kModalFieldPadXPx    = 5.0;
+constexpr double kModalFieldWidthPx   = 378.0;  // authored; see the block above
+constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
 // THE DIALOG BUTTONS' BOX — the deleted toolbar row's own anatomy, OWNED here
 // since the 2026-08-12 relayout dissolved that row (these buttons read row
 // 2's constants until then; the architect's original mix — "the size should
@@ -5459,13 +5364,11 @@ constexpr double kModalFieldWidthPx   = 520.0;  // authored; see the block above
 // 32 IS row 2's derivation frozen: its 44px content minus its two 6px
 // vertical button margins, the box the crop's own buttons measure exactly;
 // the 9/10 pads are its label paddings (the row-2 crop provenance is git
-// history). It fits the bottom row's 46px content band
-// with 7px of margin either side — the same box, in the same band, that the
-// row's own buttons wear, which is why the band's 2026-08-14 shrink cost the
-// dialog nothing.
-constexpr double kModalBtnBoxPx       = 32.0;
-constexpr double kModalBtnPadLeftPx   = 9.0;
-constexpr double kModalBtnPadRightPx  = 10.0;
+// history). It fits the bottom row's 32-Windows-px content band with room
+// either side.
+constexpr double kModalBtnBoxPx       = 23.0;
+constexpr double kModalBtnPadLeftPx   = 7.0;
+constexpr double kModalBtnPadRightPx  = 7.0;
 // THE FOCUS FRAME'S WIDTH — the keyboard-focused button's frame, ONE
 // DkShadow line OUTSIDE its raised box (architect 2026-10-02, the planner's
 // reading of the Windows default-button frame; the face at the button walk
@@ -5473,9 +5376,14 @@ constexpr double kModalBtnPadRightPx  = 10.0;
 // moving the focus reflow nothing: the cluster's right anchor and the
 // content's right bound both spend it, and the buttons themselves never move.
 // One relief line (relief_line_px), so it fits at every scale by
-// construction: the vertical margin is (46 - 32)/2 = 7 authored px against
-// its 1, and the 8px inter-button gap absorbs one frame from each neighbour.
+// construction: the vertical margin is (32 - 23)/2 Windows px against its 1,
+// and the 6-px inter-button gap absorbs one frame from each neighbour.
 constexpr double kModalFocusFramePx   = 1.0;
+// THE PLAYER ROW'S GLYPH GAP — between two of the render player's glyph
+// boxes, the player's own since the roster's buttons began to touch
+// (architect 2026-10-02): 1 Windows px, the laptop pixel's 2-px button gap
+// re-authored.
+constexpr double kPlayerGlyphGapPx    = 1.0;
 
 // THE MODAL'S FACE STATE, dropped together. The three indices all name slots
 // in modal_dialog.buttons and the field bit names modal_dialog.field, so they
@@ -6029,12 +5937,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner  = AppState::ModalDialogOwner::Player;
         buttons_x0 = cx0;   // unread on this branch; the plan carries the x's
 
-        // THE SEPARATOR IS THE BOTTOM ROW'S OWN (kTransportSep*, above): an
-        // ETCHED 1px slot the height of the button box, with 5px of air each
-        // side — the modal row stands in row 8's lane, in place of exactly
-        // those buttons, so it takes row 8's separator rather than authoring
-        // a second spec for the same line in the same place.
-        const int ggap     = scaled_px(kIconBtnGapPx);
+        // THE SEPARATOR IS ROW 8'S FORMER ONE (kTransportSep*, above, the
+        // player's alone since the roster's separators retired): an ETCHED
+        // 1px slot the height of the button box, with its air each side.
+        // THE GLYPH GAP between two of the row's boxes is kPlayerGlyphGapPx,
+        // the player's own since the roster's buttons began to touch.
+        const int ggap     = scaled_px(kPlayerGlyphGapPx, 1);
         const int sep_gap  = scaled_px(kTransportSepGapPx);
         // THE AIR AROUND THE SCRUB, all three of it, is THE SEPARATOR →
         // TIMESTAMP DISTANCE (architect 2026-08-29; the owner and its
@@ -6093,14 +6001,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // spacing winning over the icon gap between clusters, where the layout
         // had spent the reserved ring plus a pad) — and with the words gone
         // there is no word-button gap left on this row to win: every gap on it
-        // is the transport triple's own 2 px, so the run reads as one glyph
+        // is the row's one glyph gap (kPlayerGlyphGapPx), so the run reads as one glyph
         // row split by its two separators.
         const int after_scrub =
             sep_pad + clock_w + sep_pad + sep_w + sep_gap +
             btn_h + ggap + btn_h + ggap;
         // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
-        // at each end is not a track, and it is the same 40 authored px the
-        // scrub floored at before the slider gave the number a derivation.
+        // at each end is not a track (28 Windows px since the unit's change).
         int scrub_w = words_x0 - after_scrub - scrub_x0;
         if (scrub_w < 2 * scrub_handle_box_px()) scrub_w = 0;
 
@@ -6127,13 +6034,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         if (scrub_w > 0) {
             const GuiRect track{scrub_x0, btn_y, scrub_w, btn_h};
             dlg.scrub = track;
-            // THE TROUGH: the trim lane's height, centred in the track's band,
-            // sunken, its ground the row's.
-            const int lw = relief_line_px();
-            const int th = trim_lane_h_px();
+            // THE TROUGH: kScrubTroughHeightPx tall (render.h's scrub
+            // block), centred in the track's band, PLAIN SUNKEN (the scrub's
+            // channel, EDGE_SUNKEN), its ground the row's.
+            const int lw = 2 * relief_line_px();
+            const int th = scrub_trough_h_px();
             const GuiRect trough{track.x, track.y + (track.h - th) / 2,
                                  track.w, th};
-            paint_relief_sunken(cr, trough);
+            paint_relief_plain_sunken(cr, trough);
             if (rp.frames > 0) {
                 // THE THUMB'S COLUMN: the drag's carried x while the marker is
                 // being dragged (the sound continues where it was and the
@@ -6142,24 +6050,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 const int hx = rp.scrub.armed
                                    ? rp.scrub.marker_x
                                    : render_player_scrub_x_of(app, pos);
-                // THE PLAYED BAR — RAISED in the trim bar's face inside the
-                // trough's interior rows, from the trough's left line to the
+                // THE PLAYED BAR — PLAIN RAISED in kTrimLaneBar inside the
+                // trough's interior rows, from the trough's left edge to the
                 // position; the trough's ground beyond it.
                 const GuiRect played{trough.x + lw, trough.y + lw,
                                      hx - (trough.x + lw), trough.h - 2 * lw};
                 if (played.w > 2 * lw && played.h > 0) {
                     paint_cell_rect(cr, played, kTrimLaneBar);
-                    paint_relief_raised(cr, played);
+                    paint_relief_plain_raised(cr, played);
                 }
-                // THE THUMB — a RAISED SQUARE in the trim cap's face, the
-                // trough's height plus one line above and below (13 x 13 at
-                // 100 %), centred on the position, the dark pair last. No
-                // hover face: the grab band (scrub_handle_box_px) is the
-                // press's business and the cursor its cue.
-                const int side = th + 2 * lw;
-                const GuiRect thumb{hx - side / 2, trough.y - lw, side, side};
+                // THE THUMB — a PLAIN RAISED SQUARE in kTrimLaneCap, the
+                // trough's height plus one relief line above and below,
+                // centred on the position. No hover face: the grab band
+                // (scrub_handle_box_px) is the press's business and the cursor
+                // its cue.
+                const int side = th + 2 * relief_line_px();
+                const GuiRect thumb{hx - side / 2, trough.y - relief_line_px(),
+                                    side, side};
                 paint_cell_rect(cr, thumb, kTrimLaneCap);
-                paint_relief_raised(cr, thumb);
+                paint_relief_plain_raised(cr, thumb);
             }
         }
 
@@ -6240,8 +6149,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // field can never start inside the label's last column.
         const int label_w = static_cast<int>(
             std::ceil(text_shape::shape_text_run(font, prefix.c_str()).width_px));
-        // The field's frame is one relief line (the chrome below).
-        const int fbord = relief_line_px();
+        // The field's frame is the PLAIN SUNKEN edge, two relief lines (the
+        // chrome below).
+        const int fbord = 2 * relief_line_px();
         // THE LABEL → FIELD GAP IS THE ROW'S OWN PAD (architect 2026-08-29):
         // the air between the window edge and the label, and the air between
         // the label and the field, are ONE number read twice — the separately
@@ -6254,8 +6164,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int field_room = (buttons_x_max - ring - pad) - fx;
         const int field_w = std::max(std::min(scaled_px(kModalFieldWidthPx),
                                               field_room),
-                                     scaled_px(40.0, 1));
-        // The 40px floor is the ONE thing that can push past the cap (a window
+                                     scaled_px(kModalFieldMinWidthPx, 1));
+        // The width floor is the ONE thing that can push past the cap (a window
         // too narrow for label + field + buttons), and the cap is what stops
         // it there — the buttons stay whole and the field is the surface that
         // has already given everything it can.
@@ -6271,10 +6181,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // so). THE LABEL TAKES THE BUTTONS' OWN SEAT — the same `btn_y` and
         // `btn_h` the button loop and the scrub read — because what the label
         // must read level with is the row's words, "Setting:" beside OK and
-        // Cancel, and the two boxes are different heights centred in one band:
-        // the field's 31 and the buttons' 32 land a row apart at 100% by their
-        // own parity and two rows apart at 225%, where the label sat visibly
-        // under the buttons until this. Reading the buttons' box makes the two
+        // Cancel, and the two boxes are different heights centred in one band,
+        // which land a row or two apart by their own parity at some scales
+        // (the laptop-pixel field's 31 against the buttons' 32 put the label
+        // visibly under the buttons at 225 % until this; both are 23 Windows
+        // px since 2026-10-02, the field's edge two lines). Reading the
+        // buttons' box makes the two
         // level at every scale by construction rather than by an authored
         // correction, which is why the label's own 1px drop is gone.
         const double baseline =
@@ -6287,8 +6199,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                       prefix.c_str(), kRedesignLabel);
 
         // THE FIELD CHROME (architect 2026-10-02, the Windows text field): a
-        // SUNKEN panel, its frame one relief line, on the CANVAS's ground
-        // (kModalFieldGround), square. No outline says hover or focus: a
+        // PLAIN SUNKEN edge (EDGE_SUNKEN, two relief lines) on the CANVAS's
+        // ground (kModalFieldGround), square. No outline says hover or focus: a
         // FOCUSED FIELD SHOWS ITS CARET and nothing else, the caret painting
         // only while the ring has not stepped onto a button (below).
         //
@@ -6307,7 +6219,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const GuiColor field_ground =
             ed->red ? kMarkerFlagFillRedSel : kModalFieldGround;
         paint_cell_rect(cr, field_inner, field_ground);
-        paint_relief_sunken(cr, field_outer);
+        paint_relief_plain_sunken(cr, field_outer);
         if (ed->red) {
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -6483,12 +6395,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     for (size_t i = 0; i < plan.size(); ++i) {
         const int x = plan[i].x;
         const GuiRect r{x, btn_y, plan[i].w, btn_h};
-        // THE FACE IS THE ROSTER'S (architect 2026-10-02; the one painter is
-        // paint_button_box): a RAISED square at rest, word button and glyph
-        // button alike; the row's one lamp (Repeat One, `lit`) SUNKEN on the
-        // down face; a LIVE PRESS — armed with the pointer inside it, or armed
-        // from the keyboard — SUNKEN on the ground with the glyph or label one
-        // line down and right, winning over the lamp while held. THE FOCUS IS
+        // THE FACE IS THE ROSTER'S PAINTER IN ITS PUSH-BUTTON FAMILY (architect
+        // 2026-10-02; the one painter is paint_button_box): a PLAIN RAISED box
+        // at rest, word button and glyph button alike; the row's one checked
+        // button (Repeat One, `lit`) PLAIN SUNKEN over the Hilight dither; a
+        // LIVE PRESS — armed with the pointer inside it, or armed from the
+        // keyboard — PLAIN SUNKEN on the ground with the glyph or label one
+        // Windows px down and right, winning over the checked face while
+        // held. THE FOCUS IS
         // THE WINDOWS DEFAULT-BUTTON FRAME: one DkShadow line round the
         // OUTSIDE of the box, in the reserved band (kModalFocusFramePx), worn
         // by the ACTIVELY focused button and by the PASSIVELY focused one —
@@ -6501,9 +6415,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // tooltip alone.
         // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
         // 2026-08-30) — every other owner's buttons are always live while
-        // their dialog stands and publish enabled=true: the glyph retains
-        // kRedesignDisabledMix of itself over the face under it, the box
-        // keeping its relief, the roster's rule. The press face is gated on
+        // their dialog stands and publish enabled=true, and the player's are
+        // all glyph buttons: the glyph ENGRAVED (icons::draw_engraved), the
+        // box keeping its edge, the roster's rule (architect 2026-10-02:
+        // Windows' DSS_DISABLED replaced the disabled mix). The press face is gated on
         // the bit rather than trusted — a button can go dead UNDER a hold —
         // while the focus frame is not: a stale focus must stay visible where
         // the keyboard is.
@@ -6514,27 +6429,29 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             ((armed && app.modal_dialog_press_inside) ||
              static_cast<int>(i) == app.modal_dialog_key_pressed);
         const bool focused = static_cast<int>(i) == app.modal_dialog_focus;
-        const double keep = enabled ? 1.0 : kRedesignDisabledMix;
         if (focused)
             paint_relief_line_frame(
                 cr, GuiRect{r.x - ring, r.y - ring, r.w + 2 * ring,
                             r.h + 2 * ring},
                 kReliefDkShadow);
-        const ButtonBoxFace box =
-            paint_button_box(cr, r, plan[i].lit, pressed);
+        const ButtonBoxFace box = paint_button_box(
+            cr, r, plan[i].lit, pressed, ButtonFamily::Push);
         if (plan[i].glyph) {
-            // THE GLYPH, the icon row's own draw: the roster's 22 px icon box
-            // centred in the 32 px button, each path in its own colour,
-            // dimmed by the same `keep` toward the face under it when the
-            // button is disabled.
-            const int glyph_px = scaled_px(kIconGlyphPx);
-            icons::draw(cr, plan[i].icon,
-                        static_cast<double>(r.x + (r.w - glyph_px) / 2 +
-                                            box.shift),
-                        static_cast<double>(r.y + (r.h - glyph_px) / 2 +
-                                            box.shift),
-                        static_cast<double>(glyph_px),
-                        keep, box.under);
+            // THE GLYPH, the icon row's own draw: the roster's 16-px glyph
+            // centred in the button's box, each path in its own colour, or
+            // engraved when the button is disabled.
+            const int glyph_px = icon_glyph_px();
+            const double gx =
+                static_cast<double>(r.x + (r.w - glyph_px) / 2 + box.shift);
+            const double gy =
+                static_cast<double>(r.y + (r.h - glyph_px) / 2 + box.shift);
+            if (enabled)
+                icons::draw(cr, plan[i].icon, gx, gy,
+                            static_cast<double>(glyph_px));
+            else
+                icons::draw_engraved(cr, plan[i].icon, gx, gy,
+                                     static_cast<double>(glyph_px),
+                                     static_cast<double>(relief_line_px()));
         } else {
             show_row_text(cr, font,
                           static_cast<double>(r.x + btn_pad_l + box.shift),
@@ -6542,7 +6459,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                             static_cast<double>(r.h)) +
                               static_cast<double>(box.shift),
                           plan[i].label,
-                          mix_color(kRedesignLabel, box.under, keep));
+                          enabled ? kRedesignLabel
+                                  : mix_color(kRedesignLabel, box.under,
+                                              kRedesignDisabledMix));
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
@@ -6606,18 +6525,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // onscreen_keyboard.h, which this body reads and never restates.
 //
 // THE KEYS ARE THE ROSTER'S BUTTONS (architect 2026-10-02, the Windows-95
-// design; the one painter is paint_button_box): each key a RAISED square on
-// the ground with its cap in the label white, the band's ground between and
-// around them the bottom row's — so the keyboard and the row it sits on read
-// as one block, which is why the band paints NO LINE at its own top edge
-// (architect 2026-08-27, on glass). THE OTHER TWO FACES:
-//   ARMED     — the LAMP face: SUNKEN on the down face, the cap one line down
-//               and right. Worn by SHIFT while it is armed and by the
+// design; the one painter is paint_button_box in its TOOLBAR family): each
+// key a SOFT RAISED box on the ground with its cap in the label white, the
+// band's ground between and around them the bottom row's — so the keyboard
+// and the row it sits on read as one block, which is why the band paints NO
+// LINE at its own top edge (architect 2026-08-27, on glass). THE OTHER TWO
+// FACES:
+//   ARMED     — the CHECKED face: SOFT SUNKEN over the Hilight dither, the cap
+//               one Windows px down and right. Worn by SHIFT while it is armed and by the
 //               SYMBOL-MODE key while a symbol page stands — the two lamps.
 //               IT IS ALL SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap
 //               is the word "Shift" in both states — that, and the letter
 //               caps, every one of which turns capital while the arm stands.
-//   PRESSED   — SUNKEN on the ground with the same shift, the roster's pressed
+//   PRESSED   — SOFT SUNKEN on the ground with the same shift, the roster's pressed
 //               face, AND IT WINS OVER ARMED while the finger is down, the
 //               roster's own rule for the same collision.
 // NO HOVER FACE AND NO TOOLTIP: this surface exists on a platform with no
@@ -6702,7 +6622,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
             // The three faces (the block above), through the roster's one
             // button painter.
-            const ButtonBoxFace box = paint_button_box(cr, r, armed, pressed);
+            const ButtonBoxFace box = paint_button_box(
+                cr, r, armed, pressed, ButtonFamily::Toolbar);
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
             // the function keys, Space and the page keys), or, where it
@@ -6795,16 +6716,16 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // 2026-09-03 to 2026-09-30 and went with the panel.)
 //
 // THE BAND IS A RAISED PANEL AND ITS ROWS ARE THE ICON ROW'S BUTTON BOX
-// (architect 2026-10-02, the Windows-95 list): the ground inside a thin RAISED
-// frame round the band, each row the icon row's box, gap and glyph inset
+// (architect 2026-10-02, the Windows-95 list): the ground inside the PLAIN
+// RAISED edge round the band, each row the toolbar case's height and glyph
 // (folder_overlay.h reads them from render.h), and the faces Windows' list:
 //   a RESTING row         -> NO FILL AT ALL: the ground shows through
-//   the HIGHLIGHT         -> a FLAT ACCENT FILL under BLACK text
-//                            (kRedesignHighlightLabel — the dropdown's rule),
+//   the HIGHLIGHT         -> a FLAT ACCENT FILL under the luminance rule's
+//                            text (highlight_text_ink — black on the accent),
 //                            the selection, which is also the list's keyboard
 //                            focus; on an unfocused window the accent's
 //                            inactive face (kRedesignAccentInactive) under the
-//                            label white
+//                            same rule's text (the label white there)
 //   PRESSED               -> the highlight's own face: a row press is an arm
 //                            whose act is the lift, and the highlight is what
 //                            it promises
@@ -6834,12 +6755,12 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     const AppState::RenderPlayer&  rp = app.render_player;
 
     cairo_save(cr);
-    // The band's ground and its RAISED frame; then EVERYTHING ELSE UNDER THE
-    // CONTENT RECT'S CLIP, because a scrolled listing's first and last rows
-    // straddle the content's edges and must not paint into the waveform
+    // The band's ground and its PLAIN RAISED edge; then EVERYTHING ELSE UNDER
+    // THE CONTENT RECT'S CLIP, because a scrolled listing's first and last
+    // rows straddle the content's edges and must not paint into the waveform
     // above, the bottom row below, or the band's own frame.
     paint_cell_rect(cr, surf, kRedesignContentGround);
-    paint_relief_raised(cr, surf);
+    paint_relief_plain_raised(cr, surf);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
     // SAME RECT (folder_overlay.h) — the surface inside its frame — so paint
     // and hit agree about every pixel at any scroll offset. The surface stays
@@ -6868,11 +6789,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     const int    inset  = folder_overlay::row_icon_inset_px();
     // THE HIGHLIGHT TAKES THE WINDOW'S FOCUS (architect 2026-09-02), through
     // the one fork accent_for_focus above: a selection in an unfocused window
-    // wears the inactive accent, and its text then the label white (the
-    // value's rule at kRedesignAccentInactive).
+    // wears the inactive accent, and its text is the one luminance rule's
+    // over whichever fill stands (highlight_text_ink, architect 2026-10-02).
     const GuiColor accent = accent_for_focus(app);
-    const GuiColor lit_ink = app.window_activated ? kRedesignHighlightLabel
-                                                  : kRedesignLabel;
+    const GuiColor lit_ink = highlight_text_ink(accent);
 
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
@@ -6894,7 +6814,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             if (lit) paint_cell_rect(cr, r, accent);
             // THE LIST'S FOCUS: the focus frame one line outside the
             // highlighted row while the modal ring stands on the list (the
-            // block above); the rows' 2px gap and pad hold it.
+            // block above); the rows' one-Windows-px gap and pad hold it.
             if (highlighted && ov.list_focused) {
                 const int fl = relief_line_px();
                 paint_relief_line_frame(
@@ -6917,16 +6837,18 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                            : icons::Icon::AudioXWav;
             }
             const int gy = r.y + (r.h - glyph) / 2;
-            // ON THE LIT ACCENT THE GLYPH TAKES THE HIGHLIGHT'S INK, every path
-            // black (keep 0 toward kRedesignHighlightLabel), as the name does:
-            // the wav glyph's own blue is the accent's value and would vanish
-            // on it (planner-assumed 2026-10-02, judged on the glass). On the
-            // inactive band and on a resting row it keeps its own inks.
-            const bool ink_glyph = lit && app.window_activated;
+            // ON A LIGHT HIGHLIGHT THE GLYPH TAKES THE HIGHLIGHT'S DARK INK,
+            // every path (keep 0 toward it), as the name does: the wav glyph's
+            // own blue is the accent's value and would vanish on it
+            // (planner-assumed 2026-10-02, judged on the glass). Under a
+            // light ink — the inactive band — and on a resting row it keeps
+            // its own inks.
+            const bool ink_glyph =
+                lit && same_color(lit_ink, kRedesignHighlightLabel);
             icons::draw(cr, icon, static_cast<double>(gx),
                         static_cast<double>(gy),
                         static_cast<double>(glyph),
-                        ink_glyph ? 0.0 : 1.0, kRedesignHighlightLabel);
+                        ink_glyph ? 0.0 : 1.0, lit_ink);
             const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
@@ -7257,8 +7179,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      below them paints on).
         //   4. region ground -> waveform plate -> region ink -> phase-reset
         //      overlay ring.
-        //   5. LIVE TRIM, one pass, entirely inside the trim lane: the sunken
-        //      trough, the window's bar, its two handles and the centre grip.
+        //   5. LIVE TRIM, one pass, entirely inside the trim lane: the
+        //      dithered track and the window's thumb.
         //   6. the MARKER STEMS (waveform).
         //   7. the CURSOR's WAVEFORM stem segment (paint_playheads — the head
         //      and the marker-lane run are the ruler pass's, step 9), over
