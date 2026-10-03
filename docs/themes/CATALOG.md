@@ -1,6 +1,6 @@
 # The theme catalog
 
-Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, imported only"): its colours are the bytes its source records, each with its provenance in [catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the relief at run time (KDE 3, CDE / Motif), that toolkit's rule ran once at import and is named. The KEY is what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette on ad2.json's geometry, cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the bottom row. The ruler label, the playhead head, the flag border and the checked face are drawn by the app's current rules over the theme's ground, and the waveform and the flags keep the app's colours; how those follow a theme is still to be decided. Built by `tools/theme_catalog/` (fetch.py, build.py, crops.py).
+Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, imported only"): its colours are the bytes its source records, each with its provenance in [catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the relief at run time (KDE 3, CDE / Motif), that toolkit's rule ran once at import and is named. The KEY is what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette on ad2.json's geometry, cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the bottom row, transparent between them. The chrome is the theme's; the waveform pane and the flags are the program's own elements, their colours the app's and their shading the theme's (architect 2026-10-03, late): the well is Sound Recorder's waveform box (the theme's Shadow above, its Hilight below), the flags the bevelled box of Sonic Foundry's editors shaded by the theme family's own rule (the entry's flag rule), shown left to right unselected, selected, invalid and disabled; the ruler label is the theme's label, the ruler ticks and the playhead head its Shadow, the flag outline its DkShadow. Not imported: catalog.json's `not_imported`. Built by `tools/theme_catalog/` (fetch.py, build.py, crops.py).
 
 ## Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes saved as .theme files; Windows 95 Standard hand-recorded)
 
@@ -220,73 +220,15 @@ Every entry below is a desktop theme of the era IMPORTED, not designed (architec
 
 ![plus-sports](crops/plus-sports.png)
 
-## ReactOS: schemes no second source corroborates as Windows'
-
-7 entries, darkest ground first.
-
-### `reactos-high-contrast-1`
-
-**High Contrast 1** · ground #000000 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf`
-
-![reactos-high-contrast-1](crops/reactos-high-contrast-1.png)
-
-### `reactos-high-contrast-2`
-
-**High Contrast 2** · ground #000000 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf`
-
-![reactos-high-contrast-2](crops/reactos-high-contrast-2.png)
-
-### `reactos-high-contrast-black`
-
-**High Contrast Black** · ground #000000 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf`
-
-![reactos-high-contrast-black](crops/reactos-high-contrast-black.png)
-
-### `reactos-green-olive`
-
-**Green Olive** · ground #A2C8A9 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf`
-
-![reactos-green-olive](crops/reactos-green-olive.png)
-
-### `reactos-sand`
-
-**Sand** · ground #D5CCBB · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf`
-
-![reactos-sand](crops/reactos-sand.png)
-
-### `reactos-sky`
-
-**Sky** · ground #ECE9D8 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf`
-
-![reactos-sky](crops/reactos-sky.png)
-
-### `reactos-high-contrast-white`
-
-**High Contrast White** · ground #FFFFFF · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf`
-
-![reactos-high-contrast-white](crops/reactos-high-contrast-white.png)
-
 ## KDE 3 / Trinity colour schemes (relief by KDE 3's own rule at each scheme's contrast)
 
-55 entries, darkest ground first.
-
-### `kde3-high-contrast-white-text`
-
-**High Contrast White Text** · ground #000000 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/WhiteOnBlack.kcsrc`; kde3 rule at contrast 7
-
-![kde3-high-contrast-white-text](crops/kde3-high-contrast-white-text.png)
+51 entries, darkest ground first.
 
 ### `kde3-wedgieweb`
 
 **WedgieWeb** · ground #414473 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/WedgieWeb.kcsrc`; kde3 rule at contrast 0
 
 ![kde3-wedgieweb](crops/kde3-wedgieweb.png)
-
-### `kde3-high-contrast-yellow-on-blue`
-
-**High Contrast Yellow on Blue** · ground #0000FF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/YellowOnBlue.kcsrc`; kde3 rule at contrast 7
-
-![kde3-high-contrast-yellow-on-blue](crops/kde3-high-contrast-yellow-on-blue.png)
 
 ### `kde3-dark-blue`
 
@@ -468,12 +410,6 @@ Every entry below is a desktop theme of the era IMPORTED, not designed (architec
 
 ![kde3-keramik-white](crops/kde3-keramik-white.png)
 
-### `kde3-q4os-default`
-
-**Q4OS Default** · ground #E9E9E9 · q4os-6.9-x64-tde.r1.iso `live/filesystem.squashfs:/opt/trinity/share/apps/tdedisplay/color-schemes/Q4OSDefault.kcsrc`; kde3 rule at contrast 7
-
-![kde3-q4os-default](crops/kde3-q4os-default.png)
-
 ### `kde3-keramik`
 
 **Keramik** · ground #EAE9E8 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Keramik.kcsrc`; kde3 rule at contrast 7
@@ -594,15 +530,9 @@ Every entry below is a desktop theme of the era IMPORTED, not designed (architec
 
 ![kde3-jewels-citrin](crops/kde3-jewels-citrin.png)
 
-### `kde3-high-contrast-black-text`
-
-**High Contrast Black Text** · ground #FFFFFF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/BlackOnWhite.kcsrc`; kde3 rule at contrast 7
-
-![kde3-high-contrast-black-text](crops/kde3-high-contrast-black-text.png)
-
 ## CDE palettes (colour set 5 the ground; foreground and shadows by Motif's own rule)
 
-37 entries, darkest ground first.
+36 entries, darkest ground first.
 
 ### `cde-northern-sky`
 
@@ -765,12 +695,6 @@ Every entry below is a desktop theme of the era IMPORTED, not designed (architec
 **Desert** · ground #9FAEB5 · ThomasAdam/cdesktopenv@9b1f60a7 `cde/programs/palettes/Desert.dp`; motif rule
 
 ![cde-desert](crops/cde-desert.png)
-
-### `cde-broica`
-
-**Broica** · ground #C6B2A8 · ThomasAdam/cdesktopenv@9b1f60a7 `cde/programs/palettes/Broica.dp`; motif rule
-
-![cde-broica](crops/cde-broica.png)
 
 ### `cde-default`
 

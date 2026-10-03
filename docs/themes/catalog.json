@@ -18,6 +18,18 @@
   "title_inactive"
  ],
  "rules": {
+  "windows-dialog": {
+   "name": "Windows' Appearance dialog on a 3D face, in shlwapi's 240-scale integer HLS: Hilight = the lightness halfway to white (the half rounded up), Shadow = two thirds of it (floored), hue and saturation kept, 3DLight the face, DkShadow black; read by the flags' one-line bevel (Hilight top and left, Shadow bottom and right) of the windows, windows-plus and warptempo families (tools/theme_catalog/toolkit_rules.py windows_dialog, flag_bevel)",
+   "sources": [
+    {
+     "project": "Wine (wine-mirror), shlwapi: ColorRGBToHLS / ColorHLSToRGB, Windows' 240-scale integer HLS (the flags' windows-dialog rule)",
+     "file": "dlls/shlwapi/ordinal.c",
+     "repository": "wine-mirror/wine",
+     "commit": "b073859675060c9211fcbccfd90e4e87520dc2c2",
+     "url": "https://raw.githubusercontent.com/wine-mirror/wine/b073859675060c9211fcbccfd90e4e87520dc2c2/dlls/shlwapi/ordinal.c"
+    }
+   ]
+  },
   "kde3": {
    "name": "KDE 3 createApplicationPalette over Qt 3's integer HSV at the scheme's contrast (default 7): light = background.light(100 + (2c + 4) x 16 / 10), midlight = background.light(110), dark = background.dark(100 + (2c + 4) x 10), mid = background.dark(120), shadow black; the disabled foreground; the Windows quartet (light, midlight, dark, shadow) as Qt's Windows bevel draws it (tools/theme_catalog/toolkit_rules.py kde3_palette)",
    "sources": [
@@ -119,13 +131,42 @@
   }
  },
  "not_imported": {
-  "cde_monochrome": [
-   "Black.dp",
-   "BlackWhite.dp",
-   "White.dp",
-   "WhiteBlack.dp"
-  ],
-  "reason": "X colour names for monochrome displays; dtsession refuses them on a colour display (SrvFile_io.c ParsePaletteInfo)"
+  "cde_monochrome": {
+   "files": [
+    "Black.dp",
+    "BlackWhite.dp",
+    "White.dp",
+    "WhiteBlack.dp"
+   ],
+   "reason": "X colour names for monochrome displays; dtsession refuses them on a colour display (SrvFile_io.c ParsePaletteInfo)"
+  },
+  "reactos": {
+   "schemes": {
+    "Green Olive": "role-identical to Windows Spruce under another name",
+    "High Contrast 1": "a usability scheme",
+    "High Contrast 2": "a usability scheme",
+    "High Contrast Black": "a usability scheme",
+    "High Contrast White": "a usability scheme",
+    "Sand": "role-identical to Windows Desert under another name",
+    "Sky": "a ReactOS scheme; no independent source records it as Windows'"
+   },
+   "reason": "ReactOS hivedef.inf schemes no independent source records as Windows' (architect 2026-10-03, late: the whole family is dropped)"
+  },
+  "kde3_usability": {
+   "schemes": [
+    "High Contrast Black Text",
+    "High Contrast White Text",
+    "High Contrast Yellow on Blue"
+   ],
+   "reason": "usability schemes (architect 2026-10-03, late)"
+  },
+  "duplicates": {
+   "keys": {
+    "cde-broica": "cde-default",
+    "kde3-q4os-default": "kde3-keramik-white"
+   },
+   "reason": "role-identical to the named entry, which is kept (architect 2026-10-03, late; kde3-q4os-default differs from Keramik White only on the window-frame keys frame, handle, inactiveFrame and inactiveHandle, which no role reads)"
+  }
  },
  "entries": [
   {
@@ -207,6 +248,9 @@
     "disabled_text": "#8D8961",
     "title_active": "#800000",
     "title_inactive": "#8D8961"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_zkedem brick.theme (\"Brick\") differs on MenuHilight #8D8961 (here #008080)",
@@ -293,6 +337,9 @@
     "title_active": "#588078",
     "title_inactive": "#90B0A8"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/eggplant_classic8.theme (\"Eggplant\") differs on MenuHilight #000000 (here #588078)"
    ]
@@ -376,6 +423,9 @@
     "disabled_text": "#5A4EB1",
     "title_active": "#5A4EB1",
     "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/lilac_classic8.theme (\"Lilac\") differs on MenuHilight #000000 (here #5A4EB1)"
@@ -461,6 +511,9 @@
     "title_active": "#800000",
     "title_inactive": "#C6A646"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/maple_classic8.theme (\"Maple\") differs on MenuHilight #000000 (here #C6A646)"
    ]
@@ -544,6 +597,9 @@
     "disabled_text": "#489088",
     "title_active": "#000080",
     "title_inactive": "#489088"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_zkedem marine.theme names it \"Marine (high color)\"",
@@ -630,6 +686,9 @@
     "title_active": "#484060",
     "title_inactive": "#786058"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_zkedem plum.theme names it \"Plum (high color)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/plum_classic8.theme (\"Plum\") differs on MenuHilight #000000 (here #008080)"
@@ -715,6 +774,9 @@
     "title_active": "#D7A52F",
     "title_inactive": "#A0A0A4"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/pumpkin_classic8.theme (\"Pumpkin\") differs on MenuHilight #000000 (here #800080)"
    ]
@@ -798,6 +860,9 @@
     "disabled_text": "#4F657D",
     "title_active": "#4F657D",
     "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/rainyday_classic8.theme (\"Rainy Day\") differs on MenuHilight #000000 (here #4F657D)"
@@ -883,6 +948,9 @@
     "title_active": "#9F6070",
     "title_inactive": "#A0A0A4"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/rose_classic8.theme (\"Rose\") differs on MenuHilight #000000 (here #9F6070)"
    ]
@@ -966,6 +1034,9 @@
     "disabled_text": "#558097",
     "title_active": "#558097",
     "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/slate_classic8.theme (\"Slate\") differs on MenuHilight #000000 (here #558097)"
@@ -1051,6 +1122,9 @@
     "title_active": "#800080",
     "title_inactive": "#808080"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/storm_classic8.theme (\"Storm\") differs on MenuHilight #000000 (here #800080)"
    ]
@@ -1134,6 +1208,9 @@
     "disabled_text": "#808080",
     "title_active": "#008080",
     "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_zkedem teal.theme names it \"Teal (VGA)\"",
@@ -1220,6 +1297,9 @@
     "title_active": "#808000",
     "title_inactive": "#BCBC41"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/wheat_classic8.theme (\"Wheat\") differs on MenuHilight #000000 (here #808000)"
    ]
@@ -1304,6 +1384,9 @@
     "title_active": "#800000",
     "title_inactive": "#808080"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_zkedem redwhiteblue.theme names it \"Red, White, and Blue (VGA)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/redbluewhite_classic8.theme (\"Red, Blue & White\") differs on MenuHilight #000000 (here #800000)",
@@ -1382,6 +1465,9 @@
     "title_active": "#008080",
     "title_inactive": "#A28D68"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/desert_classic8.theme (\"Desert\") differs on MenuHilight #000000 (here #008080)"
    ]
@@ -1457,6 +1543,9 @@
     "disabled_text": "#599764",
     "title_active": "#599764",
     "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/spruce_classic8.theme (\"Spruce\") differs on MenuHilight #000000 (here #599764)"
@@ -1541,6 +1630,9 @@
     "disabled_text": "#808080",
     "title_active": "#000080",
     "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "xp_classic_zkedem classic.theme carries DisplayName \"Windows Classic\" over these bytes (its two labels swapped against XP's dialog); the entry is named by its bytes",
@@ -1628,6 +1720,9 @@
     "title_active": "#0A246A",
     "title_inactive": "#808080"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "xp_classic_zkedem standard.theme carries DisplayName \"Windows Standard\" over these bytes (its two labels swapped against XP's dialog); the entry is named by its bytes",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/winxp_classic8.theme names it \"Windows XP Classic\"",
@@ -1705,6 +1800,9 @@
     "title_active": "#000080",
     "title_inactive": "#808080"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": [
     "the sources disagree on ButtonLight (COLOR_3DLIGHT): the Windows 95 retail captures show DFDFDF; Windows 98's Windows Default.theme and the Windows 2000 / XP \"Windows Standard\" record C0C0C0 (the face), and the early Windows 95 beta captures draw no 3DLight line. The entry is the retail Windows 95 picture."
    ]
@@ -1768,6 +1866,9 @@
     "title_active": "#FF0000",
     "title_inactive": "#A07038"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -1828,6 +1929,9 @@
     "disabled_text": "#484848",
     "title_active": "#008080",
     "title_inactive": "#484848"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "1j01/98 also carries \"Copy of Dangerous Creatures (256 color).theme\", byte-identical; not a second entry"
@@ -1892,6 +1996,9 @@
     "title_active": "#E00000",
     "title_inactive": "#60A880"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -1952,6 +2059,9 @@
     "disabled_text": "#807040",
     "title_active": "#000000",
     "title_inactive": "#807040"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": []
   },
@@ -2014,6 +2124,9 @@
     "title_active": "#800000",
     "title_inactive": "#8B655C"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -2074,6 +2187,9 @@
     "disabled_text": "#606870",
     "title_active": "#000000",
     "title_inactive": "#606870"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": []
   },
@@ -2136,6 +2252,9 @@
     "title_active": "#503840",
     "title_inactive": "#485048"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -2196,6 +2315,9 @@
     "disabled_text": "#B08848",
     "title_active": "#004848",
     "title_inactive": "#685038"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": []
   },
@@ -2258,6 +2380,9 @@
     "title_active": "#008080",
     "title_inactive": "#A0A0A4"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -2318,6 +2443,9 @@
     "disabled_text": "#506068",
     "title_active": "#000000",
     "title_inactive": "#506068"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": []
   },
@@ -2380,6 +2508,9 @@
     "title_active": "#008080",
     "title_inactive": "#008000"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -2440,6 +2571,9 @@
     "disabled_text": "#A030A8",
     "title_active": "#000080",
     "title_inactive": "#A030A8"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": []
   },
@@ -2502,6 +2636,9 @@
     "title_active": "#D87060",
     "title_inactive": "#708F70"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -2562,6 +2699,9 @@
     "disabled_text": "#605848",
     "title_active": "#404878",
     "title_inactive": "#605848"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": []
   },
@@ -2624,6 +2764,9 @@
     "title_active": "#000030",
     "title_inactive": "#284880"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
   },
   {
@@ -2685,497 +2828,10 @@
     "title_active": "#008080",
     "title_inactive": "#587AB1"
    },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
    "notes": []
-  },
-  {
-   "key": "reactos-green-olive",
-   "name": "Green Olive",
-   "family": "reactos",
-   "provenance": {
-    "sources": [
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "Green Olive"
-     }
-    ]
-   },
-   "raw": {
-    "Scrollbar": "#D0E3D3",
-    "Background": "#213F21",
-    "ActiveTitle": "#599764",
-    "InactiveTitle": "#808080",
-    "Menu": "#A2C8A9",
-    "Window": "#FFFFFF",
-    "WindowFrame": "#000000",
-    "MenuText": "#000000",
-    "WindowText": "#000000",
-    "TitleText": "#FFFFFF",
-    "ActiveBorder": "#A2C8A9",
-    "InactiveBorder": "#A2C8A9",
-    "AppWorkspace": "#D0E3D3",
-    "Hilight": "#599764",
-    "HilightText": "#FFFFFF",
-    "ButtonFace": "#A2C8A9",
-    "ButtonShadow": "#599764",
-    "GrayText": "#599764",
-    "ButtonText": "#000000",
-    "InactiveTitleText": "#D0E3D3",
-    "ButtonHilight": "#D0E3D3",
-    "ButtonDkShadow": "#000000",
-    "ButtonLight": "#A2C8A9",
-    "InfoText": "#000000",
-    "InfoWindow": "#FFFFFF",
-    "ButtonAlternateFace": "#C0C0C0",
-    "HotTrackingColor": "#599764",
-    "GradientActiveTitle": "#98C8E8",
-    "GradientInactiveTitle": "#A8CCB0",
-    "MenuHilight": "#599764",
-    "MenuBar": "#A2C8A9"
-   },
-   "roles": {
-    "ground": "#A2C8A9",
-    "label": "#000000",
-    "bevel_hilight": "#D0E3D3",
-    "bevel_light": "#A2C8A9",
-    "bevel_shadow": "#599764",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#599764",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#FFFFFF",
-    "info_text": "#000000",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#599764",
-    "title_active": "#599764",
-    "title_inactive": "#808080"
-   },
-   "notes": [
-    "no second source records this scheme (a ReactOS scheme; no Windows release ships it)"
-   ]
-  },
-  {
-   "key": "reactos-high-contrast-1",
-   "name": "High Contrast 1",
-   "family": "reactos",
-   "provenance": {
-    "sources": [
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "High Contrast 1"
-     }
-    ]
-   },
-   "raw": {
-    "Scrollbar": "#000000",
-    "Background": "#000000",
-    "ActiveTitle": "#0000FF",
-    "InactiveTitle": "#00FFFF",
-    "Menu": "#000000",
-    "Window": "#000000",
-    "WindowFrame": "#FFFFFF",
-    "MenuText": "#FFFFFF",
-    "WindowText": "#FFFF00",
-    "TitleText": "#FFFFFF",
-    "ActiveBorder": "#0000FF",
-    "InactiveBorder": "#00FFFF",
-    "AppWorkspace": "#000000",
-    "Hilight": "#008000",
-    "HilightText": "#FFFFFF",
-    "ButtonFace": "#000000",
-    "ButtonShadow": "#808080",
-    "GrayText": "#00FF00",
-    "ButtonText": "#FFFFFF",
-    "InactiveTitleText": "#000000",
-    "ButtonHilight": "#C0C0C0",
-    "ButtonDkShadow": "#FFFFFF",
-    "ButtonLight": "#FFFFFF",
-    "InfoText": "#FFFF00",
-    "InfoWindow": "#000000",
-    "ButtonAlternateFace": "#C0C0C0",
-    "HotTrackingColor": "#800080",
-    "GradientActiveTitle": "#0000FF",
-    "GradientInactiveTitle": "#00FFFF",
-    "MenuHilight": "#008000",
-    "MenuBar": "#000000"
-   },
-   "roles": {
-    "ground": "#000000",
-    "label": "#FFFFFF",
-    "bevel_hilight": "#C0C0C0",
-    "bevel_light": "#FFFFFF",
-    "bevel_shadow": "#808080",
-    "bevel_dkshadow": "#FFFFFF",
-    "selected_fill": "#008000",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#000000",
-    "info_text": "#FFFF00",
-    "field_ground": "#000000",
-    "field_text": "#FFFF00",
-    "disabled_text": "#00FF00",
-    "title_active": "#0000FF",
-    "title_inactive": "#00FFFF"
-   },
-   "notes": [
-    "no second source records this scheme (Windows 2000 / XP ship High Contrast schemes of these names; no independent record of their bytes was found)"
-   ]
-  },
-  {
-   "key": "reactos-high-contrast-2",
-   "name": "High Contrast 2",
-   "family": "reactos",
-   "provenance": {
-    "sources": [
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "High Contrast 2"
-     }
-    ]
-   },
-   "raw": {
-    "Scrollbar": "#000000",
-    "Background": "#000000",
-    "ActiveTitle": "#00FFFF",
-    "InactiveTitle": "#0000FF",
-    "Menu": "#000000",
-    "Window": "#000000",
-    "WindowFrame": "#FFFFFF",
-    "MenuText": "#00FF00",
-    "WindowText": "#00FF00",
-    "TitleText": "#000000",
-    "ActiveBorder": "#00FFFF",
-    "InactiveBorder": "#0000FF",
-    "AppWorkspace": "#FFFFFF",
-    "Hilight": "#0000FF",
-    "HilightText": "#FFFFFF",
-    "ButtonFace": "#000000",
-    "ButtonShadow": "#808080",
-    "GrayText": "#00FF00",
-    "ButtonText": "#00FF00",
-    "InactiveTitleText": "#FFFFFF",
-    "ButtonHilight": "#C0C0C0",
-    "ButtonDkShadow": "#FFFFFF",
-    "ButtonLight": "#FFFFFF",
-    "InfoText": "#000000",
-    "InfoWindow": "#FFFF00",
-    "ButtonAlternateFace": "#C0C0C0",
-    "HotTrackingColor": "#800080",
-    "GradientActiveTitle": "#00FFFF",
-    "GradientInactiveTitle": "#0000FF",
-    "MenuHilight": "#0000FF",
-    "MenuBar": "#000000"
-   },
-   "roles": {
-    "ground": "#000000",
-    "label": "#00FF00",
-    "bevel_hilight": "#C0C0C0",
-    "bevel_light": "#FFFFFF",
-    "bevel_shadow": "#808080",
-    "bevel_dkshadow": "#FFFFFF",
-    "selected_fill": "#0000FF",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#FFFF00",
-    "info_text": "#000000",
-    "field_ground": "#000000",
-    "field_text": "#00FF00",
-    "disabled_text": "#00FF00",
-    "title_active": "#00FFFF",
-    "title_inactive": "#0000FF"
-   },
-   "notes": [
-    "no second source records this scheme (Windows 2000 / XP ship High Contrast schemes of these names; no independent record of their bytes was found)"
-   ]
-  },
-  {
-   "key": "reactos-high-contrast-black",
-   "name": "High Contrast Black",
-   "family": "reactos",
-   "provenance": {
-    "sources": [
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "High Contrast Black"
-     }
-    ]
-   },
-   "raw": {
-    "Scrollbar": "#000000",
-    "Background": "#000000",
-    "ActiveTitle": "#800080",
-    "InactiveTitle": "#008000",
-    "Menu": "#000000",
-    "Window": "#000000",
-    "WindowFrame": "#FFFFFF",
-    "MenuText": "#FFFFFF",
-    "WindowText": "#FFFFFF",
-    "TitleText": "#FFFFFF",
-    "ActiveBorder": "#FFFF00",
-    "InactiveBorder": "#008000",
-    "AppWorkspace": "#000000",
-    "Hilight": "#800080",
-    "HilightText": "#FFFFFF",
-    "ButtonFace": "#000000",
-    "ButtonShadow": "#808080",
-    "GrayText": "#00FF00",
-    "ButtonText": "#FFFFFF",
-    "InactiveTitleText": "#FFFFFF",
-    "ButtonHilight": "#C0C0C0",
-    "ButtonDkShadow": "#FFFFFF",
-    "ButtonLight": "#FFFFFF",
-    "InfoText": "#FFFFFF",
-    "InfoWindow": "#000000",
-    "ButtonAlternateFace": "#C0C0C0",
-    "HotTrackingColor": "#800080",
-    "GradientActiveTitle": "#800080",
-    "GradientInactiveTitle": "#008000",
-    "MenuHilight": "#800080",
-    "MenuBar": "#000000"
-   },
-   "roles": {
-    "ground": "#000000",
-    "label": "#FFFFFF",
-    "bevel_hilight": "#C0C0C0",
-    "bevel_light": "#FFFFFF",
-    "bevel_shadow": "#808080",
-    "bevel_dkshadow": "#FFFFFF",
-    "selected_fill": "#800080",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#000000",
-    "info_text": "#FFFFFF",
-    "field_ground": "#000000",
-    "field_text": "#FFFFFF",
-    "disabled_text": "#00FF00",
-    "title_active": "#800080",
-    "title_inactive": "#008000"
-   },
-   "notes": [
-    "no second source records this scheme (Windows 2000 / XP ship High Contrast schemes of these names; no independent record of their bytes was found)"
-   ]
-  },
-  {
-   "key": "reactos-high-contrast-white",
-   "name": "High Contrast White",
-   "family": "reactos",
-   "provenance": {
-    "sources": [
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "High Contrast White"
-     }
-    ]
-   },
-   "raw": {
-    "Scrollbar": "#FFFFFF",
-    "Background": "#FFFFFF",
-    "ActiveTitle": "#000000",
-    "InactiveTitle": "#FFFFFF",
-    "Menu": "#FFFFFF",
-    "Window": "#FFFFFF",
-    "WindowFrame": "#000000",
-    "MenuText": "#000000",
-    "WindowText": "#000000",
-    "TitleText": "#FFFFFF",
-    "ActiveBorder": "#808080",
-    "InactiveBorder": "#C0C0C0",
-    "AppWorkspace": "#808080",
-    "Hilight": "#000000",
-    "HilightText": "#FFFFFF",
-    "ButtonFace": "#FFFFFF",
-    "ButtonShadow": "#808080",
-    "GrayText": "#00FF00",
-    "ButtonText": "#000000",
-    "InactiveTitleText": "#000000",
-    "ButtonHilight": "#C0C0C0",
-    "ButtonDkShadow": "#000000",
-    "ButtonLight": "#C0C0C0",
-    "InfoText": "#000000",
-    "InfoWindow": "#FFFFFF",
-    "ButtonAlternateFace": "#C0C0C0",
-    "HotTrackingColor": "#000000",
-    "GradientActiveTitle": "#000000",
-    "GradientInactiveTitle": "#FFFFFF",
-    "MenuHilight": "#000000",
-    "MenuBar": "#FFFFFF"
-   },
-   "roles": {
-    "ground": "#FFFFFF",
-    "label": "#000000",
-    "bevel_hilight": "#C0C0C0",
-    "bevel_light": "#C0C0C0",
-    "bevel_shadow": "#808080",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#000000",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#FFFFFF",
-    "info_text": "#000000",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#00FF00",
-    "title_active": "#000000",
-    "title_inactive": "#FFFFFF"
-   },
-   "notes": [
-    "no second source records this scheme (Windows 2000 / XP ship High Contrast schemes of these names; no independent record of their bytes was found)"
-   ]
-  },
-  {
-   "key": "reactos-sand",
-   "name": "Sand",
-   "family": "reactos",
-   "provenance": {
-    "sources": [
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "Sand"
-     }
-    ]
-   },
-   "raw": {
-    "Scrollbar": "#EAE6DD",
-    "Background": "#A28D68",
-    "ActiveTitle": "#008080",
-    "InactiveTitle": "#A28D68",
-    "Menu": "#D5CCBB",
-    "Window": "#FFFFFF",
-    "WindowFrame": "#000000",
-    "MenuText": "#000000",
-    "WindowText": "#000000",
-    "TitleText": "#FFFFFF",
-    "ActiveBorder": "#D5CCBB",
-    "InactiveBorder": "#D5CCBB",
-    "AppWorkspace": "#A28D68",
-    "Hilight": "#008080",
-    "HilightText": "#FFFFFF",
-    "ButtonFace": "#D5CCBB",
-    "ButtonShadow": "#A28D68",
-    "GrayText": "#A28D68",
-    "ButtonText": "#000000",
-    "InactiveTitleText": "#FFFFFF",
-    "ButtonHilight": "#EAE6DD",
-    "ButtonDkShadow": "#000000",
-    "ButtonLight": "#D5CCBB",
-    "InfoText": "#000000",
-    "InfoWindow": "#FFFFFF",
-    "ButtonAlternateFace": "#C0C0C0",
-    "HotTrackingColor": "#008080",
-    "GradientActiveTitle": "#84BDAA",
-    "GradientInactiveTitle": "#E8D080",
-    "MenuHilight": "#008080",
-    "MenuBar": "#D5CCBB"
-   },
-   "roles": {
-    "ground": "#D5CCBB",
-    "label": "#000000",
-    "bevel_hilight": "#EAE6DD",
-    "bevel_light": "#D5CCBB",
-    "bevel_shadow": "#A28D68",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#008080",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#FFFFFF",
-    "info_text": "#000000",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#A28D68",
-    "title_active": "#008080",
-    "title_inactive": "#A28D68"
-   },
-   "notes": [
-    "no second source records this scheme (a ReactOS scheme; no Windows release ships it)"
-   ]
-  },
-  {
-   "key": "reactos-sky",
-   "name": "Sky",
-   "family": "reactos",
-   "provenance": {
-    "sources": [
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "Sky"
-     }
-    ]
-   },
-   "raw": {
-    "Scrollbar": "#D4D0C8",
-    "Background": "#004E98",
-    "ActiveTitle": "#0054E3",
-    "InactiveTitle": "#7A96DF",
-    "Menu": "#FFFFFF",
-    "Window": "#FFFFFF",
-    "WindowFrame": "#000000",
-    "MenuText": "#000000",
-    "WindowText": "#000000",
-    "TitleText": "#FFFFFF",
-    "ActiveBorder": "#D4D0C8",
-    "InactiveBorder": "#D4D0C8",
-    "AppWorkspace": "#808080",
-    "Hilight": "#316AC5",
-    "HilightText": "#FFFFFF",
-    "ButtonFace": "#ECE9D8",
-    "ButtonShadow": "#ACA899",
-    "GrayText": "#ACA899",
-    "ButtonText": "#000000",
-    "InactiveTitleText": "#D8E4F8",
-    "ButtonHilight": "#FFFFFF",
-    "ButtonDkShadow": "#716F64",
-    "ButtonLight": "#F1EFE2",
-    "InfoText": "#000000",
-    "InfoWindow": "#FFFFE1",
-    "ButtonAlternateFace": "#B5B5B5",
-    "HotTrackingColor": "#000080",
-    "GradientActiveTitle": "#3D95FF",
-    "GradientInactiveTitle": "#9DB9EB",
-    "MenuHilight": "#316AC5",
-    "MenuBar": "#ECE9D8"
-   },
-   "roles": {
-    "ground": "#ECE9D8",
-    "label": "#000000",
-    "bevel_hilight": "#FFFFFF",
-    "bevel_light": "#F1EFE2",
-    "bevel_shadow": "#ACA899",
-    "bevel_dkshadow": "#716F64",
-    "selected_fill": "#316AC5",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#FFFFE1",
-    "info_text": "#000000",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#ACA899",
-    "title_active": "#0054E3",
-    "title_inactive": "#7A96DF"
-   },
-   "notes": [
-    "no second source records this scheme (a ReactOS scheme; no Windows release ships it)"
-   ]
   },
   {
    "key": "kde3-atlas-green",
@@ -3236,6 +2892,10 @@
     "disabled_text": "#808080",
     "title_active": "#6F7A63",
     "title_inactive": "#000000"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -3300,75 +2960,9 @@
     "title_active": "#FFD700",
     "title_inactive": "#EDEDED"
    },
-   "notes": []
-  },
-  {
-   "key": "kde3-high-contrast-black-text",
-   "name": "High Contrast Black Text",
-   "family": "kde3",
-   "provenance": {
-    "sources": [
-     {
-      "project": "Trinity Desktop (TDE) tdebase, the KDE 3 colour schemes",
-      "file": "kcontrol/krdb/kcs/BlackOnWhite.kcsrc",
-      "repository": "TDE/tdebase",
-      "commit": "d66254bc297b4df34480e6e6cfc7da4bda9e8518",
-      "url": "https://mirror.git.trinitydesktop.org/gitea/TDE/tdebase/raw/commit/d66254bc297b4df34480e6e6cfc7da4bda9e8518/kcontrol/krdb/kcs/BlackOnWhite.kcsrc",
-      "contrast": 7
-     }
-    ],
-    "rule": {
-     "id": "kde3",
-     "contrast": 7,
-     "computed": {
-      "kde3:light": "#FFFFFF",
-      "kde3:midlight": "#FFFFFF",
-      "kde3:dark": "#5B5B5B",
-      "kde3:mid": "#D4D4D4",
-      "kde3:shadow": "#000000",
-      "kde3:disabled_foreground": "#808080"
-     }
-    }
-   },
-   "raw": {
-    "activeBackground": "#A5A5FF",
-    "activeBlend": "#A5A5FF",
-    "activeForeground": "#000000",
-    "activeTitleBtnBg": "#000000",
-    "alternateBackground": "#D7D7FF",
-    "background": "#FFFFFF",
-    "buttonBackground": "#FFFFFF",
-    "buttonForeground": "#000000",
-    "foreground": "#000000",
-    "frame": "#7A7AFF",
-    "handle": "#7A7AFF",
-    "inactiveBackground": "#E1E1E1",
-    "inactiveBlend": "#E1E1E1",
-    "inactiveForeground": "#808080",
-    "inactiveFrame": "#E1E1E1",
-    "inactiveHandle": "#E1E1E1",
-    "inactiveTitleBtnBg": "#555555",
-    "linkColor": "#000000",
-    "selectBackground": "#A5A5FF",
-    "selectForeground": "#000000",
-    "visitedLinkColor": "#000000",
-    "windowBackground": "#FFFFFF",
-    "windowForeground": "#000000"
-   },
-   "roles": {
-    "ground": "#FFFFFF",
-    "label": "#000000",
-    "bevel_hilight": "#FFFFFF",
-    "bevel_light": "#FFFFFF",
-    "bevel_shadow": "#5B5B5B",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#A5A5FF",
-    "selected_text": "#000000",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#808080",
-    "title_active": "#A5A5FF",
-    "title_inactive": "#E1E1E1"
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -3430,6 +3024,10 @@
     "disabled_text": "#808080",
     "title_active": "#558097",
     "title_inactive": "#9C9C9C"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -3495,6 +3093,10 @@
     "disabled_text": "#5B5B5B",
     "title_active": "#326284",
     "title_inactive": "#818181"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -3565,6 +3167,10 @@
     "title_active": "#416594",
     "title_inactive": "#426794"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 8
+   },
    "notes": []
   },
   {
@@ -3626,6 +3232,10 @@
     "disabled_text": "#808080",
     "title_active": "#800000",
     "title_inactive": "#000000"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 3
    },
    "notes": []
   },
@@ -3693,6 +3303,10 @@
     "title_active": "#B24D7A",
     "title_inactive": "#AEB2C3"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -3758,6 +3372,10 @@
     "title_active": "#A47591",
     "title_inactive": "#4B7B82"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -3822,6 +3440,10 @@
     "disabled_text": "#808080",
     "title_active": "#E9E9E9",
     "title_inactive": "#96A7CA"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -3893,6 +3515,10 @@
     "title_active": "#CC863E",
     "title_inactive": "#EBE7E3"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -3962,6 +3588,10 @@
     "disabled_text": "#808080",
     "title_active": "#9966CC",
     "title_inactive": "#FFA4FF"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -4033,6 +3663,10 @@
     "title_active": "#7FFFD4",
     "title_inactive": "#9FFFFF"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
+   },
    "notes": []
   },
   {
@@ -4102,6 +3736,10 @@
     "disabled_text": "#808080",
     "title_active": "#130E0A",
     "title_inactive": "#211C18"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -4173,6 +3811,10 @@
     "title_active": "#E4D00A",
     "title_inactive": "#FFFE90"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
+   },
    "notes": []
   },
   {
@@ -4242,6 +3884,10 @@
     "disabled_text": "#808080",
     "title_active": "#50C878",
     "title_inactive": "#98FF9F"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -4313,6 +3959,10 @@
     "title_active": "#E0115F",
     "title_inactive": "#FF9F98"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
+   },
    "notes": []
   },
   {
@@ -4382,6 +4032,10 @@
     "disabled_text": "#808080",
     "title_active": "#0131B4",
     "title_inactive": "#989FFF"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -4453,6 +4107,10 @@
     "title_active": "#934108",
     "title_inactive": "#FFDDA0"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
+   },
    "notes": []
   },
   {
@@ -4518,6 +4176,10 @@
     "title_active": "#000080",
     "title_inactive": "#808080"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -4581,6 +4243,10 @@
     "disabled_text": "#808080",
     "title_active": "#0A5F89",
     "title_inactive": "#DCDCDC"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -4648,6 +4314,10 @@
     "title_active": "#3E91EB",
     "title_inactive": "#AFD6FF"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -4714,6 +4384,10 @@
     "title_active": "#D5A637",
     "title_inactive": "#C1C5AB"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -4779,6 +4453,10 @@
     "disabled_text": "#808080",
     "title_active": "#97ADC3",
     "title_inactive": "#D2D2D2"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -4850,6 +4528,10 @@
     "title_active": "#D20039",
     "title_inactive": "#91998E"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -4919,6 +4601,10 @@
     "disabled_text": "#808080",
     "title_active": "#46357C",
     "title_inactive": "#A0A0D0"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -4990,6 +4676,10 @@
     "title_active": "#82D122",
     "title_inactive": "#AAD17A"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -5054,6 +4744,10 @@
     "disabled_text": "#808080",
     "title_active": "#441F9C",
     "title_inactive": "#004646"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 3
    },
    "notes": []
   },
@@ -5124,6 +4818,10 @@
     "title_active": "#000000",
     "title_inactive": "#A8A8A8"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 10
+   },
    "notes": []
   },
   {
@@ -5185,6 +4883,10 @@
     "disabled_text": "#808080",
     "title_active": "#000000",
     "title_inactive": "#A0A0A0"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 3
    },
    "notes": []
   },
@@ -5256,6 +4958,10 @@
     "title_active": "#FF86D1",
     "title_inactive": "#854372"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 1
+   },
    "notes": []
   },
   {
@@ -5321,6 +5027,10 @@
     "disabled_text": "#808080",
     "title_active": "#418EDC",
     "title_inactive": "#9DAABA"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -5393,6 +5103,10 @@
     "title_active": "#D4D4D4",
     "title_inactive": "#888888"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -5459,6 +5173,10 @@
     "title_active": "#417F4B",
     "title_inactive": "#748473"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 0
+   },
    "notes": []
   },
   {
@@ -5520,6 +5238,10 @@
     "disabled_text": "#808080",
     "title_active": "#CD853F",
     "title_inactive": "#A0A0A0"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 3
    },
    "notes": []
   },
@@ -5591,6 +5313,10 @@
     "title_active": "#AF5F37",
     "title_inactive": "#EBCD7D"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
+   },
    "notes": []
   },
   {
@@ -5660,6 +5386,10 @@
     "disabled_text": "#808080",
     "title_active": "#5AB43C",
     "title_inactive": "#CDEBAF"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -5731,6 +5461,10 @@
     "title_active": "#009BFF",
     "title_inactive": "#A5E1FF"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
+   },
    "notes": []
   },
   {
@@ -5800,6 +5534,10 @@
     "disabled_text": "#646464",
     "title_active": "#C1CAD8",
     "title_inactive": "#D8DDE4"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -5871,6 +5609,10 @@
     "title_active": "#D18822",
     "title_inactive": "#D1AD7A"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -5937,6 +5679,10 @@
     "title_active": "#B24D7A",
     "title_inactive": "#AEB2C3"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 3
+   },
    "notes": []
   },
   {
@@ -5998,6 +5744,10 @@
     "disabled_text": "#808080",
     "title_active": "#8B008B",
     "title_inactive": "#787878"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -6067,6 +5817,10 @@
     "title_active": "#C0C0C0",
     "title_inactive": "#C0C0C0"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 2
+   },
    "notes": []
   },
   {
@@ -6133,75 +5887,9 @@
     "title_active": "#444477",
     "title_inactive": "#444477"
    },
-   "notes": []
-  },
-  {
-   "key": "kde3-high-contrast-white-text",
-   "name": "High Contrast White Text",
-   "family": "kde3",
-   "provenance": {
-    "sources": [
-     {
-      "project": "Trinity Desktop (TDE) tdebase, the KDE 3 colour schemes",
-      "file": "kcontrol/krdb/kcs/WhiteOnBlack.kcsrc",
-      "repository": "TDE/tdebase",
-      "commit": "d66254bc297b4df34480e6e6cfc7da4bda9e8518",
-      "url": "https://mirror.git.trinitydesktop.org/gitea/TDE/tdebase/raw/commit/d66254bc297b4df34480e6e6cfc7da4bda9e8518/kcontrol/krdb/kcs/WhiteOnBlack.kcsrc",
-      "contrast": 7
-     }
-    ],
-    "rule": {
-     "id": "kde3",
-     "contrast": 7,
-     "computed": {
-      "kde3:light": "#000000",
-      "kde3:midlight": "#000000",
-      "kde3:dark": "#000000",
-      "kde3:mid": "#000000",
-      "kde3:shadow": "#000000",
-      "kde3:disabled_foreground": "#5B5B5B"
-     }
-    }
-   },
-   "raw": {
-    "activeBackground": "#00005A",
-    "activeBlend": "#00005A",
-    "activeForeground": "#FFFFFF",
-    "activeTitleBtnBg": "#FFFFFF",
-    "alternateBackground": "#000028",
-    "background": "#000000",
-    "buttonBackground": "#000000",
-    "buttonForeground": "#FFFFFF",
-    "foreground": "#FFFFFF",
-    "frame": "#000085",
-    "handle": "#000085",
-    "inactiveBackground": "#1E1E1E",
-    "inactiveBlend": "#1E1E1E",
-    "inactiveForeground": "#808080",
-    "inactiveFrame": "#1E1E1E",
-    "inactiveHandle": "#1E1E1E",
-    "inactiveTitleBtnBg": "#AAAAAA",
-    "linkColor": "#FFFFFF",
-    "selectBackground": "#00005A",
-    "selectForeground": "#FFFFFF",
-    "visitedLinkColor": "#FFFFFF",
-    "windowBackground": "#000000",
-    "windowForeground": "#FFFFFF"
-   },
-   "roles": {
-    "ground": "#000000",
-    "label": "#FFFFFF",
-    "bevel_hilight": "#000000",
-    "bevel_light": "#000000",
-    "bevel_shadow": "#000000",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#00005A",
-    "selected_text": "#FFFFFF",
-    "field_ground": "#000000",
-    "field_text": "#FFFFFF",
-    "disabled_text": "#5B5B5B",
-    "title_active": "#00005A",
-    "title_inactive": "#1E1E1E"
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 0
    },
    "notes": []
   },
@@ -6270,6 +5958,10 @@
     "title_active": "#002468",
     "title_inactive": "#DCDCDC"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -6331,6 +6023,10 @@
     "disabled_text": "#808080",
     "title_active": "#000080",
     "title_inactive": "#9C9C9C"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -6399,75 +6095,9 @@
     "title_active": "#2F67FF",
     "title_inactive": "#DCDCDC"
    },
-   "notes": []
-  },
-  {
-   "key": "kde3-high-contrast-yellow-on-blue",
-   "name": "High Contrast Yellow on Blue",
-   "family": "kde3",
-   "provenance": {
-    "sources": [
-     {
-      "project": "Trinity Desktop (TDE) tdebase, the KDE 3 colour schemes",
-      "file": "kcontrol/krdb/kcs/YellowOnBlue.kcsrc",
-      "repository": "TDE/tdebase",
-      "commit": "d66254bc297b4df34480e6e6cfc7da4bda9e8518",
-      "url": "https://mirror.git.trinitydesktop.org/gitea/TDE/tdebase/raw/commit/d66254bc297b4df34480e6e6cfc7da4bda9e8518/kcontrol/krdb/kcs/YellowOnBlue.kcsrc",
-      "contrast": 7
-     }
-    ],
-    "rule": {
-     "id": "kde3",
-     "contrast": 7,
-     "computed": {
-      "kde3:light": "#4747FF",
-      "kde3:midlight": "#1919FF",
-      "kde3:dark": "#00005B",
-      "kde3:mid": "#0000D4",
-      "kde3:shadow": "#000000",
-      "kde3:disabled_foreground": "#5B5B00"
-     }
-    }
-   },
-   "raw": {
-    "activeBackground": "#0000B4",
-    "activeBlend": "#0000B4",
-    "activeForeground": "#FFFF00",
-    "activeTitleBtnBg": "#FFFF00",
-    "alternateBackground": "#0000D7",
-    "background": "#0000FF",
-    "buttonBackground": "#0000FF",
-    "buttonForeground": "#FFFF00",
-    "foreground": "#FFFF00",
-    "frame": "#00007A",
-    "handle": "#00007A",
-    "inactiveBackground": "#1E1EE1",
-    "inactiveBlend": "#1E1EE1",
-    "inactiveForeground": "#808080",
-    "inactiveFrame": "#1E1EE1",
-    "inactiveHandle": "#1E1EE1",
-    "inactiveTitleBtnBg": "#AAAA55",
-    "linkColor": "#FFFF00",
-    "selectBackground": "#0000B4",
-    "selectForeground": "#FFFF00",
-    "visitedLinkColor": "#FFFF00",
-    "windowBackground": "#0000FF",
-    "windowForeground": "#FFFF00"
-   },
-   "roles": {
-    "ground": "#0000FF",
-    "label": "#FFFF00",
-    "bevel_hilight": "#4747FF",
-    "bevel_light": "#1919FF",
-    "bevel_shadow": "#00005B",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#0000B4",
-    "selected_text": "#FFFF00",
-    "field_ground": "#0000FF",
-    "field_text": "#FFFF00",
-    "disabled_text": "#5B5B00",
-    "title_active": "#0000B4",
-    "title_inactive": "#1E1EE1"
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -6537,73 +6167,9 @@
     "title_active": "#4B555C",
     "title_inactive": "#F0F0F0"
    },
-   "notes": []
-  },
-  {
-   "key": "kde3-q4os-default",
-   "name": "Q4OS Default",
-   "family": "kde3",
-   "provenance": {
-    "sources": [
-     {
-      "project": "Q4OS 6.9 TDE live image",
-      "file": "live/filesystem.squashfs:/opt/trinity/share/apps/tdedisplay/color-schemes/Q4OSDefault.kcsrc",
-      "image": "q4os-6.9-x64-tde.r1.iso",
-      "contrast": 7
-     }
-    ],
-    "rule": {
-     "id": "kde3",
-     "contrast": 7,
-     "computed": {
-      "kde3:light": "#FFFFFF",
-      "kde3:midlight": "#FFFFFF",
-      "kde3:dark": "#535353",
-      "kde3:mid": "#C2C2C2",
-      "kde3:shadow": "#000000",
-      "kde3:disabled_foreground": "#808080"
-     }
-    }
-   },
-   "raw": {
-    "activeBackground": "#97ADC3",
-    "activeBlend": "#97ADC3",
-    "activeForeground": "#FFFFFF",
-    "activeTitleBtnBg": "#DCDCDC",
-    "alternateBackground": "#EEF6FF",
-    "background": "#E9E9E9",
-    "buttonBackground": "#F6F6F6",
-    "buttonForeground": "#000000",
-    "foreground": "#000000",
-    "frame": "#E9E9E9",
-    "handle": "#E9E9E9",
-    "inactiveBackground": "#D2D2D2",
-    "inactiveBlend": "#D7D7D7",
-    "inactiveForeground": "#FFFFFF",
-    "inactiveFrame": "#E9E9E9",
-    "inactiveHandle": "#E9E9E9",
-    "inactiveTitleBtnBg": "#DCDCDC",
-    "linkColor": "#0000C0",
-    "selectBackground": "#FFDD76",
-    "selectForeground": "#030303",
-    "visitedLinkColor": "#800080",
-    "windowBackground": "#FFFFFF",
-    "windowForeground": "#000000"
-   },
-   "roles": {
-    "ground": "#E9E9E9",
-    "label": "#000000",
-    "bevel_hilight": "#FFFFFF",
-    "bevel_light": "#FFFFFF",
-    "bevel_shadow": "#535353",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#FFDD76",
-    "selected_text": "#030303",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#808080",
-    "title_active": "#97ADC3",
-    "title_inactive": "#D2D2D2"
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -6673,6 +6239,10 @@
     "title_active": "#4A79CD",
     "title_inactive": "#EBE9E9"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
+   },
    "notes": []
   },
   {
@@ -6740,6 +6310,10 @@
     "disabled_text": "#808080",
     "title_active": "#5C8FFD",
     "title_inactive": "#8F9FB4"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 5
    },
    "notes": []
   },
@@ -6809,6 +6383,10 @@
     "title_active": "#3A80EA",
     "title_inactive": "#EEEFF2"
    },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
+   },
    "notes": []
   },
   {
@@ -6876,6 +6454,10 @@
     "disabled_text": "#808080",
     "title_active": "#A9C3E4",
     "title_inactive": "#F4F4F4"
+   },
+   "flag_rule": {
+    "id": "kde3",
+    "contrast": 7
    },
    "notes": []
   },
@@ -6973,6 +6555,9 @@
     "title_active": "#AFBFFB",
     "title_inactive": "#78AAB8"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -7068,6 +6653,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#FFAB78",
     "title_inactive": "#A86B79"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -7165,101 +6753,8 @@
     "title_active": "#618888",
     "title_inactive": "#D1C0AE"
    },
-   "notes": []
-  },
-  {
-   "key": "cde-broica",
-   "name": "Broica",
-   "family": "cde",
-   "provenance": {
-    "sources": [
-     {
-      "project": "CDE (cdesktopenv, Thomas Adam's mirror), the dtstyle palettes",
-      "file": "cde/programs/palettes/Broica.dp",
-      "repository": "ThomasAdam/cdesktopenv",
-      "commit": "9b1f60a7135fbe0d549d49735a91d2d9d35707b9",
-      "url": "https://raw.githubusercontent.com/ThomasAdam/cdesktopenv/9b1f60a7135fbe0d549d49735a91d2d9d35707b9/cde/programs/palettes/Broica.dp",
-      "recorded": [
-       "#ed00a8007000",
-       "#9900991b99fe",
-       "#89559808aa00",
-       "#68006f008200",
-       "#c600b2d2a87e",
-       "#49009200a700",
-       "#b70087008d00",
-       "#938eab73bf00"
-      ]
-     }
-    ],
-    "rule": {
-     "id": "motif",
-     "branches": [
-      "medium",
-      "medium",
-      "medium",
-      "medium",
-      "medium",
-      "medium",
-      "medium",
-      "medium"
-     ],
-     "computed": {
-      "motif:set1.fg": "#FFFFFF",
-      "motif:set1.sel": "#C98E5F",
-      "motif:set1.ts": "#F7D9C0",
-      "motif:set1.bs": "#7D593B",
-      "motif:set2.fg": "#FFFFFF",
-      "motif:set2.sel": "#828282",
-      "motif:set2.ts": "#D1D1D2",
-      "motif:set2.bs": "#4E4E4E",
-      "motif:set3.fg": "#FFFFFF",
-      "motif:set3.sel": "#748190",
-      "motif:set3.ts": "#CAD1D9",
-      "motif:set3.bs": "#464D56",
-      "motif:set4.fg": "#FFFFFF",
-      "motif:set4.sel": "#585E6E",
-      "motif:set4.ts": "#BABDC6",
-      "motif:set4.bs": "#31353E",
-      "motif:set5.fg": "#000000",
-      "motif:set5.sel": "#A8988F",
-      "motif:set5.ts": "#E7DEDA",
-      "motif:set5.bs": "#6A605A",
-      "motif:set6.fg": "#FFFFFF",
-      "motif:set6.sel": "#3E7C8D",
-      "motif:set6.ts": "#ADCED7",
-      "motif:set6.bs": "#244953",
-      "motif:set7.fg": "#FFFFFF",
-      "motif:set7.sel": "#9B7277",
-      "motif:set7.ts": "#DFC9CC",
-      "motif:set7.bs": "#5D4447",
-      "motif:set8.fg": "#FFFFFF",
-      "motif:set8.sel": "#7D91A2",
-      "motif:set8.ts": "#D0DAE3",
-      "motif:set8.bs": "#4E5A65"
-     }
-    }
-   },
-   "raw": {
-    "set1": "#EDA870",
-    "set2": "#999999",
-    "set3": "#8998AA",
-    "set4": "#686F82",
-    "set5": "#C6B2A8",
-    "set6": "#4992A7",
-    "set7": "#B7878D",
-    "set8": "#93ABBF"
-   },
-   "roles": {
-    "ground": "#C6B2A8",
-    "label": "#000000",
-    "bevel_hilight": "#E7DEDA",
-    "bevel_light": "#E7DEDA",
-    "bevel_shadow": "#6A605A",
-    "bevel_dkshadow": "#6A605A",
-    "field_ground": "#686F82",
-    "field_text": "#FFFFFF",
-    "title_active": "#EDA870",
-    "title_inactive": "#999999"
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -7357,6 +6852,9 @@
     "title_active": "#D88775",
     "title_inactive": "#638A7A"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -7452,6 +6950,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#ACBEB4",
     "title_inactive": "#6E7D76"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -7549,6 +7050,9 @@
     "title_active": "#87B4B0",
     "title_inactive": "#767279"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -7644,6 +7148,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#A9A9FF",
     "title_inactive": "#708C8D"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -7741,6 +7248,9 @@
     "title_active": "#B14B50",
     "title_inactive": "#926866"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -7836,6 +7346,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#FFAAAA",
     "title_inactive": "#968282"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -7933,6 +7446,9 @@
     "title_active": "#B24D7A",
     "title_inactive": "#AEB2C3"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -8028,6 +7544,9 @@
     "field_text": "#000000",
     "title_active": "#B89663",
     "title_inactive": "#7A7C7F"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -8125,6 +7644,9 @@
     "title_active": "#EDA870",
     "title_inactive": "#999999"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -8220,6 +7742,9 @@
     "field_text": "#000000",
     "title_active": "#85C4ED",
     "title_inactive": "#C8C8C8"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -8317,6 +7842,9 @@
     "title_active": "#E5B793",
     "title_inactive": "#C2BBA7"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -8412,6 +7940,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#FAAD49",
     "title_inactive": "#4D648D"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -8509,6 +8040,9 @@
     "title_active": "#D4C77D",
     "title_inactive": "#BEC6B7"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -8604,6 +8138,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#C3C3C3",
     "title_inactive": "#787777"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -8701,6 +8238,9 @@
     "title_active": "#D3D178",
     "title_inactive": "#A5A5AC"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -8796,6 +8336,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#D5802E",
     "title_inactive": "#B75F5F"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -8893,6 +8436,9 @@
     "title_active": "#A2E5C6",
     "title_inactive": "#3F938D"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -8988,6 +8534,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#A47591",
     "title_inactive": "#1B5D6C"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -9085,6 +8634,9 @@
     "title_active": "#CEC2BB",
     "title_inactive": "#256593"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -9180,6 +8732,9 @@
     "field_text": "#000000",
     "title_active": "#83835A",
     "title_inactive": "#C3C3B9"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -9277,6 +8832,9 @@
     "title_active": "#B9B9FF",
     "title_inactive": "#9B9BB9"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -9372,6 +8930,9 @@
     "field_text": "#000000",
     "title_active": "#B65C61",
     "title_inactive": "#D9C1B2"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -9469,6 +9030,9 @@
     "title_active": "#EABE93",
     "title_inactive": "#C7AFAF"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -9564,6 +9128,9 @@
     "field_text": "#000000",
     "title_active": "#EF9D9D",
     "title_inactive": "#7EABAB"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -9661,6 +9228,9 @@
     "title_active": "#DA9A68",
     "title_inactive": "#B4AA94"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -9756,6 +9326,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#AACBDB",
     "title_inactive": "#A7A8A7"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -9853,6 +9426,9 @@
     "title_active": "#CC686F",
     "title_inactive": "#AFC0C2"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -9948,6 +9524,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#7FA9EB",
     "title_inactive": "#76A99C"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -10045,6 +9624,9 @@
     "title_active": "#FF7D79",
     "title_inactive": "#A97561"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -10140,6 +9722,9 @@
     "field_text": "#000000",
     "title_active": "#FF5664",
     "title_inactive": "#FFD690"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -10237,6 +9822,9 @@
     "title_active": "#F1BC7F",
     "title_inactive": "#A59680"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -10332,6 +9920,9 @@
     "field_text": "#FFFFFF",
     "title_active": "#D5A591",
     "title_inactive": "#0F7C7A"
+   },
+   "flag_rule": {
+    "id": "motif"
    },
    "notes": []
   },
@@ -10429,6 +10020,9 @@
     "title_active": "#D1A57A",
     "title_inactive": "#DBC291"
    },
+   "flag_rule": {
+    "id": "motif"
+   },
    "notes": []
   },
   {
@@ -10486,6 +10080,9 @@
     "info_text": "#000000",
     "field_ground": "#141618",
     "field_text": "#FCFCFC"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
    },
    "notes": [
     "the look the app paints on 2026-10-03, its relief derived from the ground by the app's ratio rule at that commit; recorded here so it stays selectable as bytes"

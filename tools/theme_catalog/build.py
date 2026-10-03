@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/build.py — the fetched sources (fetch.py) -> docs/themes/catalog.json: every entry's recorded
 # bytes with their provenance, the values its own toolkit computed at import (toolkit_rules.py, the rule named), and
-# its catalog roles (roles.py). THE APP CARRIES IMPORTED THEMES ONLY, NO DERIVATION (architect 2026-10-03): nothing
-# here invents a colour; a role a source has no word for stays absent. The checks of the brief run before the write;
-# the last lines report each family: entries, corroborated, sources.
+# its catalog roles (roles.py) and the family rule its flags take (flag_rule). THE APP CARRIES IMPORTED THEMES ONLY,
+# NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
+# NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
+# schemes no independent source records as Windows', the usability schemes, and the role-identical duplicates. The
+# checks run before the write; the last lines report each family: entries, corroborated, sources.
 #
 #   python3 tools/theme_catalog/build.py
 import json, os, re, subprocess, sys
@@ -17,9 +19,26 @@ import toolkit_rules as T
 from roles import ROLES, MAPPING, map_roles
 
 OUT = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
-FAMILIES = ('windows', 'windows-plus', 'reactos', 'kde3', 'cde', 'warptempo')
-KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'reactos': 'reactos', 'kde3': 'kde3', 'cde': 'cde',
-              'warptempo': 'warptempo'}
+FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'warptempo')
+KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde', 'warptempo': 'warptempo'}
+# THE FLAGS' RULE per family (architect 2026-10-03, late: a flag's one-line bevel is its theme family's own rule on the
+# flag's face, toolkit_rules.flag_bevel): Windows' Appearance dialog for the Windows families and the app's own look
+# ("take Windows' rule"), KDE 3's at the scheme's contrast, Motif's for CDE.
+FLAG_RULE = {'windows': 'windows-dialog', 'windows-plus': 'windows-dialog', 'warptempo': 'windows-dialog',
+             'kde3': 'kde3', 'cde': 'motif'}
+
+# NOT IMPORTED (architect 2026-10-03, late), each group with its reason; build.py asserts every named scheme exists in
+# its source and, for a duplicate, that its roles equal its twin's, so a re-pinned source cannot change the list
+# silently. ReactOS's own schemes are every hivedef.inf scheme no second source corroborates (windows_entries).
+REACTOS_ONLY = {
+    'Green Olive': ('windows-spruce', 'role-identical to Windows Spruce under another name'),
+    'Sand': ('windows-desert', 'role-identical to Windows Desert under another name'),
+    'Sky': (None, 'a ReactOS scheme; no independent source records it as Windows\''),
+    'High Contrast 1': (None, 'a usability scheme'), 'High Contrast 2': (None, 'a usability scheme'),
+    'High Contrast Black': (None, 'a usability scheme'), 'High Contrast White': (None, 'a usability scheme'),
+}
+KDE_USABILITY = ('High Contrast Black Text', 'High Contrast White Text', 'High Contrast Yellow on Blue')
+DUPLICATES = {'cde-broica': 'cde-default', 'kde3-q4os-default': 'kde3-keramik-white'}   # key: the twin it repeats
 
 
 def hx(c): return '#%02X%02X%02X' % tuple(c)
@@ -43,7 +62,7 @@ def camel_words(stem):
     return re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', stem)
 
 
-def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitates=None, rule=None):
+def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitates=None, rule=None, flag_rule=None):
     pre, words = KEY_PREFIX[family], slug(key_words)
     if words.startswith(pre + '-'): words = words[len(pre) + 1:]     # 'Windows Classic' -> windows-classic
     key = f'{pre}-{words}'
@@ -57,11 +76,12 @@ def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitate
         e['provenance']['rule']['computed'] = {k: hx(v) for k, v in computed.items()}
     e['raw'] = raw_hex
     e['roles'] = map_roles(family, values)
+    e['flag_rule'] = flag_rule or {'id': FLAG_RULE[family]}
     e['notes'] = notes or []
     return e
 
 
-# ------------------------------------------------------------------ Windows (windows, reactos), windows-plus
+# ------------------------------------------------------------------ Windows (windows), windows-plus
 def xp_name(n):
     """An XP .theme DisplayName as ReactOS spells the scheme: the (VGA) / (high color) tags dropped, classicthemes8's
     'Red, Blue & White' as Windows' 'Red, White, and Blue'."""
@@ -105,19 +125,19 @@ def windows_entries():
 
     # ReactOS's 23 schemes. Its "ReactOS Standard" and "ReactOS Classic" are Windows Classic and Windows Standard
     # under ReactOS names (byte-equal on every role key below); they are folded into those two entries, not doubled.
+    # A scheme no second source corroborates is NOT IMPORTED (REACTOS_ONLY names each and why).
     folded = {'ReactOS Standard': 'Windows Classic', 'ReactOS Classic': 'Windows Standard'}
+    ros_only = {}
     for name, cols in ros.items():
         if name in folded: continue
         notes = []
         cands = by_name.get(name, [])
         provs, n_ok = corroborate(name, cols, cands, notes)
-        fam = 'windows' if n_ok else 'reactos'
-        if fam == 'reactos':
-            notes.append('no second source records this scheme' + (
-                ' (Windows 2000 / XP ship High Contrast schemes of these names; no independent record of their bytes was '
-                'found)' if name.startswith('High Contrast') else ' (a ReactOS scheme; no Windows release ships it)'))
-        out.append(entry(fam, name, name, [provenance('reactos', hv) | {'scheme': name}] + provs, cols, notes=notes))
+        if not n_ok: ros_only[name] = cols; continue
+        out.append(entry('windows', name, name, [provenance('reactos', hv) | {'scheme': name}] + provs, cols, notes=notes))
         out[-1]['corroborated'] = n_ok
+    if set(ros_only) != set(REACTOS_ONLY):
+        raise SystemExit(f'build: the uncorroborated ReactOS schemes are {sorted(ros_only)}, not REACTOS_ONLY\'s {sorted(REACTOS_ONLY)}')
 
     # Windows schemes ReactOS lacks, from the two XP records (each corroborating the other).
     zk = {xp_name(dn): (f, dn, cols) for src, f, dn, cols in seconds if src == 'xp_classic_zkedem'}
@@ -151,6 +171,10 @@ def windows_entries():
                 f'{k} {hx(c98[k])} (here {hx(cols[k])})' for k in d)))
         out.append(entry('windows', name, name, [provenance('xp_classic_zkedem', f)] + provs, cols, notes=notes))
         out[-1]['corroborated'] = n_ok
+    by_key = {e['key']: e for e in out}
+    for name, (twin, _) in REACTOS_ONLY.items():     # "role-identical": the roles the twin entry maps, byte for byte
+        if twin and map_roles('windows', {k: hx(v) for k, v in ros_only[name].items()}) != by_key[twin]['roles']:
+            raise SystemExit(f'build: ReactOS {name} is not role-identical to {twin}')
 
     # WINDOWS 95 STANDARD, hand-recorded: the retail picture.
     f98, c98 = w98['Windows Default']
@@ -180,7 +204,7 @@ def windows_entries():
         words = re.sub(r' \((256|high) color\)$', '', stem)
         out.append(entry('windows-plus', words, stem, provenance('win98_themes', f), cols, notes=notes))
         out[-1]['corroborated'] = 0
-    return out
+    return out, sorted(ros_only)
 
 
 # ------------------------------------------------------------------ KDE 3
@@ -192,18 +216,22 @@ KDE_RULE_SOURCES = [provenance('tde_rules', 'tdecore/tdeapplication.cpp'), prove
 
 
 def kde_entries():
-    out = []
+    out, usability = [], []
     for src in ('tde_kcs', 'q4os_kcs'):
         for f in manifest(src):
             name, cols, contrast = parse_kcsrc(local_path(src, f))
+            if name in KDE_USABILITY: usability.append(name); continue     # not imported: usability schemes
             c = T.KDE3_DEFAULT_CONTRAST if contrast is None else contrast
             p = T.kde3_palette(cols['background'], cols['foreground'], c)
             computed = {f'kde3:{k}': v for k, v in p.items()}
             prov = provenance(src, f)
             if contrast is not None: prov['contrast'] = contrast
             rule = {'id': 'kde3', 'contrast': c}
-            out.append(entry('kde3', name, name, prov, cols, computed, imitates=KDE_IMITATES.get(name), rule=rule))
+            out.append(entry('kde3', name, name, prov, cols, computed, imitates=KDE_IMITATES.get(name), rule=rule,
+                             flag_rule={'id': 'kde3', 'contrast': c}))
             out[-1]['corroborated'] = 0
+    if sorted(usability) != sorted(KDE_USABILITY):
+        raise SystemExit(f'build: the KDE usability schemes found are {sorted(usability)}, not {sorted(KDE_USABILITY)}')
     return out
 
 
@@ -216,6 +244,12 @@ CDE_SETS = ('1 active window frame', '2 inactive window frame', '3 workspace bac
             '5 primary (application background)', '6 secondary (menus, dialogs)', '7 workspace backdrop / switch',
             '8 front panel')
 RULES = {
+    'windows-dialog': {'name': 'Windows\' Appearance dialog on a 3D face, in shlwapi\'s 240-scale integer HLS: Hilight = the '
+                               'lightness halfway to white (the half rounded up), Shadow = two thirds of it (floored), hue and '
+                               'saturation kept, 3DLight the face, DkShadow black; read by the flags\' one-line bevel '
+                               '(Hilight top and left, Shadow bottom and right) of the windows, windows-plus and warptempo '
+                               'families (tools/theme_catalog/toolkit_rules.py windows_dialog, flag_bevel)',
+                       'sources': [provenance('wine_rules', 'dlls/shlwapi/ordinal.c')]},
     'kde3': {'name': 'KDE 3 createApplicationPalette over Qt 3\'s integer HSV at the scheme\'s contrast (default 7): '
                      'light = background.light(100 + (2c + 4) x 16 / 10), midlight = background.light(110), dark = '
                      'background.dark(100 + (2c + 4) x 10), mid = background.dark(120), shadow black; the disabled '
@@ -314,6 +348,13 @@ def checks(entries, k):
     assert T.kde3_quartet((0x30,) * 3, 7) == ((0x3D,) * 3, (0x34,) * 3, (0x11,) * 3, (0, 0, 0))
     assert T.motif_pair_8bit((0x30,) * 3) == ((0x98,) * 3, (0x6E,) * 3, 'dark')
     assert T.motif_pair_8bit((0x41, 0x52, 0x5C)) == ((0xA6, 0xAE, 0xB3), (0x1E, 0x25, 0x2A), 'medium')
+    for e in entries:      # every entry names its flags' rule, its family's, and the rule runs
+        assert e['flag_rule']['id'] == FLAG_RULE[e['family']], e['key']
+        if e['family'] == 'kde3': assert e['flag_rule']['contrast'] == e['provenance']['rule']['contrast'], e['key']
+        T.flag_bevel(e['flag_rule'], (0x8A, 0x5E, 0xAC))
+    assert T.windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)
+    assert T.windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))
+    for d in DUPLICATES: assert d not in by, d
     app = by['warptempo-2026-10-03']
     for n, v in app['raw'].items(): assert v == hx(k[n]), n
     assert [app['roles'][x] for x in ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',
@@ -321,10 +362,21 @@ def checks(entries, k):
         ['#303030', '#FCFCFC', '#5E5E5E', '#434343', '#1E1E1E', '#0A0A0A', '#96BFDA', '#000000', '#FFFFE1', '#000000', '#141618']
 
 
+def drop_duplicates(entries):
+    """DUPLICATES out of the entries, each after asserting its roles equal its twin's -> (entries, {key: twin})."""
+    by = {e['key']: e for e in entries}
+    for key, twin in DUPLICATES.items():
+        if key not in by or twin not in by: raise SystemExit(f'build: duplicate {key} or its twin {twin} is not in the sources')
+        if by[key]['roles'] != by[twin]['roles']: raise SystemExit(f'build: {key} is not role-identical to {twin}')
+    return [e for e in entries if e['key'] not in DUPLICATES], dict(DUPLICATES)
+
+
 def main():
-    entries = windows_entries() + kde_entries()
+    win, ros_only = windows_entries()
+    entries = win + kde_entries()
     cde, mono = cde_entries(); entries += cde
     app, k = app_entry(); entries.append(app)
+    entries, dups = drop_duplicates(entries)
     entries.sort(key=lambda e: FAMILIES.index(e['family']))
     checks(entries, k)
     doc = {
@@ -337,9 +389,19 @@ def main():
                 'source records them (the renderer takes a theme byte as a Display-P3 byte as-is).',
         'roles': list(ROLES),
         'rules': RULES,
-        'not_imported': {'cde_monochrome': [f'{m}.dp' for m in mono],
-                         'reason': 'X colour names for monochrome displays; dtsession refuses them on a colour display '
-                                   '(SrvFile_io.c ParsePaletteInfo)'},
+        'not_imported': {
+            'cde_monochrome': {'files': [f'{m}.dp' for m in mono],
+                               'reason': 'X colour names for monochrome displays; dtsession refuses them on a colour display '
+                                         '(SrvFile_io.c ParsePaletteInfo)'},
+            'reactos': {'schemes': {n: REACTOS_ONLY[n][1] for n in ros_only},
+                        'reason': 'ReactOS hivedef.inf schemes no independent source records as Windows\' (architect '
+                                  '2026-10-03, late: the whole family is dropped)'},
+            'kde3_usability': {'schemes': list(KDE_USABILITY),
+                               'reason': 'usability schemes (architect 2026-10-03, late)'},
+            'duplicates': {'keys': dups,
+                           'reason': 'role-identical to the named entry, which is kept (architect 2026-10-03, late; '
+                                     'kde3-q4os-default differs from Keramik White only on the window-frame keys '
+                                     'frame, handle, inactiveFrame and inactiveHandle, which no role reads)'}},
         'entries': [{x: v for x, v in e.items() if x != 'corroborated'} for e in entries],
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
@@ -354,6 +416,8 @@ def main():
         print(f'{fam:13s} entries {len(es):3d}  corroborated {sum(1 for e in es if e["corroborated"]):3d}  '
               f'sources {len(srcs)}: ' + ', '.join(sorted(s.split("@")[0] for s in srcs)))
     if mono: print(f'not imported: {", ".join(m + ".dp" for m in mono)} (monochrome palettes, refused on a colour display)')
+    print(f'not imported: ReactOS {", ".join(ros_only)} (no independent source); KDE 3 {", ".join(KDE_USABILITY)} '
+          f'(usability); {", ".join(f"{a} (= {b})" for a, b in dups.items())} (role-identical)')
 
 
 if __name__ == '__main__':

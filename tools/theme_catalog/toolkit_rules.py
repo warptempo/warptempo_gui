@@ -2,10 +2,15 @@
 # tools/theme_catalog/toolkit_rules.py — THE TOOLKITS' OWN RULES, run once at import (architect 2026-10-03: a theme
 # is drawn as its own desktop drew it; where the source records only base colours and its toolkit computed the
 # rest at run time, the extractor runs THAT toolkit's rule and the catalog stores the bytes, the rule named in the
-# entry's provenance — part of the import, not a derivation of ours). Two toolkits, each ported integer for integer
-# from the pinned source named at its function (sources.py: motif_rules, tde_rules, tqt_rules):
-#   motif_colors  — Motif's CalculateColorsRGB (CDE's foreground, select colour and shadows);
-#   kde3_palette  — KDE 3's createApplicationPalette over Qt 3's integer HSV (TDE's KDE 3 schemes).
+# entry's provenance — part of the import, not a derivation of ours). Three toolkits, each ported integer for integer
+# from the pinned source named at its function (sources.py: motif_rules, tde_rules, tqt_rules, wine_rules):
+#   motif_colors   — Motif's CalculateColorsRGB (CDE's foreground, select colour and shadows);
+#   kde3_palette   — KDE 3's createApplicationPalette over Qt 3's integer HSV (TDE's KDE 3 schemes);
+#   windows_dialog — Windows' Appearance dialog over shlwapi's 240-scale integer HLS.
+# THE FLAGS' BEVEL (architect 2026-10-03, late): the waveform pane and the flags are the program's own elements, their
+# base colours the program's and their SHADING the theme's, so a flag's one-line bevel is its theme family's own rule
+# applied to the flag's face, as that desktop would have shaded a 3D face of that colour (flag_bevel; the catalog
+# names each entry's rule in its `flag_rule`). These rules also run at render time on the app's face colours.
 # The asserts at the bottom are the research's checked values (tmp/win_derivation/FINDINGS.md), run at import.
 
 
@@ -152,6 +157,76 @@ def kde3_quartet(background, contrast=KDE3_DEFAULT_CONTRAST):
     return p['light'], p['midlight'], p['dark'], p['shadow']
 
 
+# ------------------------------------------------------------------ Windows (Wine dlls/shlwapi/ordinal.c)
+def win_rgb_to_hls(c):
+    """ordinal.c ColorRGBToHLS: 8-bit RGB -> (hue, lightness, saturation) on Windows' 240 scale, integer for integer
+    (its divisions are on non-negative values, so Python's floor is C's); an achromatic colour's hue is 160, as
+    native returns."""
+    r, g, b = c
+    mx, mn = max(r, g, b), min(r, g, b)
+    L = ((mx + mn) * 240 + 255) // 510
+    if mx == mn: return 160, L, 0
+    d = mx - mn
+    S = ((mx + mn) // 2 + d * 240) // (mx + mn) if L <= 120 else ((510 - mx - mn) // 2 + d * 240) // (510 - mx - mn)
+    rn = (d // 2 + mx * 40 - r * 40) // d; gn = (d // 2 + mx * 40 - g * 40) // d; bn = (d // 2 + mx * 40 - b * 40) // d
+    H = bn - gn if r == mx else (80 + rn - bn if g == mx else 160 + gn - rn)
+    if H < 0: H += 240
+    elif H > 240: H -= 240
+    return H, L, S
+
+
+def _win_convert_hue(h, m1, m2):
+    """ordinal.c ConvertHue."""
+    h = h - 240 if h > 240 else (h + 240 if h < 0 else h)
+    if h > 160: return m1
+    elif h > 120: h = 160 - h
+    elif h > 40: return m2
+    return (h * (m2 - m1) + 20) // 40 + m1
+
+
+def win_hls_to_rgb(H, L, S):
+    """ordinal.c ColorHLSToRGB (with its GET_RGB scaling, (v x 255 + 120) / 240)."""
+    if S:
+        m2 = S + L - (S * L + 120) // 240 if L > 120 else ((S + 240) * L + 120) // 240
+        m1 = L * 2 - m2
+        f = lambda h: (_win_convert_hue(h, m1, m2) * 255 + 120) // 240
+        return f(H + 80), f(H), f(H - 80)
+    v = L * 255 // 240
+    return v, v, v
+
+
+def windows_dialog(face):
+    """Windows' Appearance dialog on a picked 3D face -> the quartet (Hilight, 3DLight, Shadow, DkShadow), 8-bit
+    triples: in HLS on the 240 scale, Hilight = the lightness halfway to white with the half rounded up, Shadow = two
+    thirds of the lightness floored, hue and saturation kept; 3DLight = the face; DkShadow black. THE RULE is the
+    dialog's behaviour as measured (the research of 2026-10-03): byte-exact on the stock schemes Brick, Green Olive,
+    Lilac, Maple, Pumpkin, Rainy Day, Rose and Sand and on the XP / 7 dialog's measured D4D0C8 -> EAE8E3 (VirtualDub's
+    note); THE ARITHMETIC is shlwapi's ColorRGBToHLS / ColorHLSToRGB as Wine implements them (sources.py wine_rules:
+    dlls/shlwapi/ordinal.c at wine-10.0), the conversions the dialog runs through."""
+    H, L, S = win_rgb_to_hls(face)
+    return win_hls_to_rgb(H, L + (240 - L + 1) // 2, S), tuple(face), win_hls_to_rgb(H, (2 * L) // 3, S), (0, 0, 0)
+
+
+# ------------------------------------------------------------------ the flags' bevel
+FLAG_RULES = ('windows-dialog', 'kde3', 'motif')
+
+
+def flag_bevel(rule, face):
+    """A flag's ONE-LINE BEVEL (architect 2026-10-03, late): (light, dark) for a 3D face of colour `face` (8-bit) by
+    its theme family's own rule, `rule` being a catalog entry's flag_rule — {"id": "windows-dialog"} (the families
+    windows, windows-plus and warptempo: windows_dialog's Hilight and Shadow, Windows' BDR_RAISEDINNER pair),
+    {"id": "kde3", "contrast": c} (kde3_palette's light and dark at the scheme's contrast), {"id": "motif"} (Motif's
+    top and bottom shadow, motif_pair_8bit). A malformed rule is a one-line fail."""
+    rid = rule.get('id') if isinstance(rule, dict) else None
+    if rid == 'windows-dialog' and set(rule) == {'id'}:
+        q = windows_dialog(face); return q[0], q[2]
+    if rid == 'kde3' and set(rule) == {'id', 'contrast'} and isinstance(rule['contrast'], int):
+        p = kde3_palette(face, QT_BLACK, rule['contrast']); return p['light'], p['dark']
+    if rid == 'motif' and set(rule) == {'id'}:
+        ts, bs, _ = motif_pair_8bit(face); return ts, bs
+    raise SystemExit(f'flag rule {rule!r}: one of {{"id": "windows-dialog"}}, {{"id": "kde3", "contrast": c}}, {{"id": "motif"}}')
+
+
 def motif_pair_8bit(bg8):
     """Motif's (ts, bs) for an 8-bit colour given as X would parse #rrggbb (each byte replicated: v x 257)."""
     m, branch = motif_colors(tuple(v * 257 for v in bg8))
@@ -162,3 +237,5 @@ def motif_pair_8bit(bg8):
 assert kde3_quartet((0x30, 0x30, 0x30)) == ((0x3D,) * 3, (0x34,) * 3, (0x11,) * 3, (0, 0, 0))   # KDE 3 at 7 on 303030
 assert motif_pair_8bit((0x30, 0x30, 0x30)) == ((0x98,) * 3, (0x6E,) * 3, 'dark')             # Motif, dark branch
 assert motif_pair_8bit((0x41, 0x52, 0x5C)) == ((0xA6, 0xAE, 0xB3), (0x1E, 0x25, 0x2A), 'medium')   # Northern Sky's ground
+assert windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)          # the XP / 7 dialog's measured Hilight
+assert windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))   # Rainy Day

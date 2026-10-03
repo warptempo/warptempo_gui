@@ -13,8 +13,7 @@
 # relative_luminance, kHighlightTextLuminanceThreshold, highlight_text_ink), integer arithmetic for integer
 # arithmetic; the asserts under them are the app's static_asserts, run at import. THE RELIEF IS NEVER DERIVED HERE
 # (architect 2026-10-03, "no derived, imported only"): a theme states its four relief bytes, recorded from its source
-# (tools/theme_catalog/, docs/themes/catalog.json). scaled_word is render.h's integer channel scaling, for the app's
-# ground-derived chrome roles (its docstring).
+# (tools/theme_catalog/, docs/themes/catalog.json).
 
 
 def s2l(c):
@@ -69,12 +68,6 @@ def two_pass(rgb):
 
 
 # ------------------------------------------------------------------ the app's palette rules (render.h)
-def scaled_word(c, num, den):
-    """render.h scaled_word on one channel: c x num / den, a half rounded up, clamped at 255 (integer arithmetic). Its
-    reader is tools/theme_catalog/crops.py, which draws the app-specific roles the app derives from its ground (the
-    ruler label x 404/100, the playhead head x 29/10, the flag border x 7/16) over each catalog theme's ground."""
-    return min(255, (2 * c * num + den) // (2 * den))
-
 def srgb_channel_to_linear(c):
     """render.h srgb_channel_to_linear, step for step (the 2.4 power as x^2 x (x^2)^(1/5), the fifth root by 64
     Newton steps from above), so the luminance is the app's double bit for bit."""

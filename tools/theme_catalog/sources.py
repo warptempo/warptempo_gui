@@ -52,6 +52,9 @@ SOURCES = {
     'tde_rules': dict(host=TDE, project='Trinity Desktop (TDE) tdelibs', repo='TDE/tdelibs',
                       commit='46c1092abfc1264b3df9fb51fe166dfd70cc420f',
                       files=['tdecore/tdeapplication.cpp', 'tdecore/tdeglobalsettings.cpp']),
+    'wine_rules': dict(host=GH, project='Wine (wine-mirror), shlwapi: ColorRGBToHLS / ColorHLSToRGB, Windows\' '
+                       '240-scale integer HLS (the flags\' windows-dialog rule)', repo='wine-mirror/wine',
+                       commit='b073859675060c9211fcbccfd90e4e87520dc2c2', files=['dlls/shlwapi/ordinal.c']),   # the wine-10.0 tag
     'tqt_rules': dict(host=TDE, project='Trinity Qt 3 (TQt)', repo='TDE/tqt',
                       commit='029f5d5058ffe10de206047602d91b1dbba4cf50',
                       files=['src/kernel/tqcolor.cpp', 'src/kernel/tqpalette.cpp']),

@@ -3,9 +3,9 @@
 # which value the source's own toolkit computed at import, toolkit_rules.py) fills each catalog role, per family.
 # A role a family has no word for is ABSENT from its row and from every entry of it: the app's own value applies,
 # never a guess. The flags, the red, the waveform ink and canvas are not catalog roles (a theme owns the chrome).
-# The app-specific roles the app derives from its ground today (the ruler label, the playhead head, the flag border,
-# the checked face) are not mapped in this step either: crops.py draws them by the app's current rules over each
-# theme's ground, and their mapping is the architect's decision once he has seen the crops.
+# The app-specific roles are drawn from these catalog roles, not stored (architect 2026-10-03, late; crops.py
+# theme_for): the ruler label <- label, the ruler ticks and the playhead head <- bevel_shadow, the flag outline <-
+# bevel_dkshadow; the flags' shading is the entry's flag_rule (build.py FLAG_RULE).
 #
 # A value names a key of the entry's VALUES: its raw keys as the source spells them, or a computed key
 # "<rule>:<name>" (kde3:light, motif:set5.ts, ...), the rule named in the entry's provenance.
@@ -29,7 +29,6 @@ _WINDOWS = {
 MAPPING = {
     'windows': _WINDOWS,
     'windows-plus': _WINDOWS,
-    'reactos': _WINDOWS,
     # KDE 3 (createApplicationPalette, toolkit_rules.kde3_palette): the ground is the scheme's `background`, which the
     # relief is computed from (the button face, `buttonBackground`, is recorded raw but no catalog role: the app has
     # one ground); the disabled text is the toolkit's disabled foreground. kcsrc records no tooltip colours.
