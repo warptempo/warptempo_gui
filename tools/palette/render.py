@@ -65,6 +65,11 @@ DEFAULTS = {
     # Stop icon's white X on VGA bright red), the face #FF0000 and its RECORDED label #FFFFFF (Windows recorded a text
     # colour beside every face; the luminance rule is WCAG's, not Windows')
     'flag_fill_red': '#FF0000', 'flag_label_red': '#FFFFFF',
+    # read only by flags.style "flat" (draw_flags_flat): a SELECTED flag's outline, white (architect 2026-10-03, late),
+    # and the EDITING flag's -- the in-place editor's box -- outline black (Windows' WindowFrame), its face the field
+    # ground (Windows' Window) and its selected text's glyphs `selected_text` (HilightText) over `selected_fill`
+    # (Hilight; flat_edit_colours, which falls back to Windows' #000080 when the theme does not state it)
+    'flag_border_sel': '#FFFFFF', 'flag_border_edit': '#000000', 'field_ground': '#FFFFFF', 'selected_text': '#FFFFFF',
     # icon inks (icons.cpp), two_pass of each
     'icon_label': '@label', **{f'icon_{k}': list(C.two_pass(v)) for k, v in INKC.items() if k != 'text'},
     # the Windows relief set (only read when something is raised or sunken): NO DEFAULT AND NO RULE (architect
@@ -102,8 +107,8 @@ OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border
               'ruler_tick_relief': ('none', 'light_right'), 'clock_panel': ('flat', 'sunken', 'status'),
               'playhead_lane_stem': ('stem', 'head')}
 FLAG_RELIEF = ('none', 'raised')
-FLAG_STYLES = ('app', 'bevelled')
-FLAG_STATES = ('selected', 'invalid', 'disabled')
+FLAG_STYLES = ('app', 'bevelled', 'flat')
+FLAG_STATES = ('selected', 'invalid', 'disabled', 'editing')
 FLAG_OPTIONS = ('relief', 'style', 'rule', 'states')     # the flags section's keys beside its colour aliases
 CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
 DISABLED_STYLES = ('mix', 'engraved')
@@ -111,7 +116,7 @@ COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'o
                    ('flags', {'fill': 'flag_fill', 'edge': 'flag_edge', 'border': 'flag_border', 'label': 'flag_label', 'stem': 'flag_stem',
                               'fill_sel': 'flag_fill_sel', 'edge_sel': 'flag_edge_sel', 'stem_sel': 'flag_stem_sel',
                               'hilight': 'flag_hilight', 'hilight_sel': 'flag_hilight_sel', 'fill_red': 'flag_fill_red',
-                              'label_red': 'flag_label_red'}))
+                              'label_red': 'flag_label_red', 'border_sel': 'flag_border_sel', 'border_edit': 'flag_border_edit'}))
 
 BEVELS = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')     # Windows' COLOR_3D* order
 
@@ -134,13 +139,21 @@ class Theme:
         if self.flag_style == 'bevelled':
             if 'relief' in fl: raise SystemExit(f'theme {path}: flags.relief is the "app" style\'s; "bevelled" draws its own bevel')
             toolkit_rules.flag_bevel(self.flag_rule, (0, 0, 0))    # a missing or malformed flags.rule fails here, in one line
+            if fl.get('states', {}).get('editing'):
+                raise SystemExit(f'theme {path}: flags.states "editing" is read only by flags.style "flat"')
+        elif self.flag_style == 'flat':
+            if 'relief' in fl or 'rule' in fl:
+                raise SystemExit(f'theme {path}: flags.relief and flags.rule are not read by flags.style "flat" (no bevel)')
         elif 'rule' in fl or 'states' in fl:
-            raise SystemExit(f'theme {path}: flags.rule and flags.states are read only by flags.style "bevelled"')
+            raise SystemExit(f'theme {path}: flags.rule and flags.states are read only by flags.style "bevelled" / "flat"')
         unknown = set(raw) - set(DEFAULTS)
         if unknown: raise SystemExit(f'theme {path}: unknown colour roles {sorted(unknown)}')
         for role in BEVELS:
             if raw[role] == 'auto': raise SystemExit(f'theme {path}: {role} "auto" is retired; state the relief byte (architect 2026-10-03)')
         self.raw = raw; self.c = {}
+        # the colour roles the theme file itself states (its colours and the colour sections' aliases): flat_edit_colours
+        # reads `selected_fill` only when stated, its default being the app's constant, not Windows' Hilight
+        self.stated = set(t.get('colours', {})) | {role for sec, keys in COLOUR_SECTIONS for k, role in keys.items() if k in t.get(sec, {})}
         self.num = dict(NUM_DEFAULTS); self.num.update({k: t[k] for k in NUM_DEFAULTS if k in t})
         self.opt = json.loads(json.dumps(OPT_DEFAULTS))
         for k, v in t.items():
@@ -303,22 +316,25 @@ class Theme:
         return 'relief ' + ' / '.join(C.hexs(self.get(r))[1:] for r in BEVELS)
 
 def flag_states(path, fl):
-    """flags.states -> one (selected, invalid, disabled) per scene flag, left to right: {"selected": [i, ...],
-    "invalid": [...], "disabled": [...]}, each a list of the scene's flag indices (0 = the leftmost); a flag the lists
-    do not name is unselected, valid and enabled, a scene flag measured selected stays selected. Selected and invalid
-    combine (a red sunken flag); disabled stands alone (a disabled button is neither pushed nor red). Read only by
-    flags.style "bevelled" (draw_flags), so one mock shows every state."""
+    """flags.states -> one (selected, invalid, disabled, editing) per scene flag, left to right: {"selected": [i, ...],
+    "invalid": [...], "disabled": [...], "editing": [...]}, each a list of the scene's flag indices (0 = the leftmost);
+    a flag the lists do not name is unselected, valid and enabled, a scene flag measured selected stays selected.
+    Selected and invalid combine (a red sunken flag); disabled stands alone (a disabled button is neither pushed nor
+    red); editing stands alone too (the in-place editor's box replaces every other face; flags.style "flat" only). Read
+    by flags.style "bevelled" and "flat" (draw_flags), so one mock shows every state."""
     n = len(BASE_SCENE['flags']['flags']); st = fl.get('states', {})
     if (not isinstance(st, dict) or set(st) - set(FLAG_STATES)
             or not all(isinstance(v, list) and len(set(v)) == len(v)
                        and all(isinstance(i, int) and not isinstance(i, bool) and 0 <= i < n for i in v) for v in st.values())):
         raise SystemExit(f'theme {path}: flags.states is {{"selected": [i, ...], "invalid": [...], "disabled": [...]}}, the scene\'s '
                          f'flag indices 0..{n - 1} left to right, each at most once per list, not {st!r}')
-    dis = set(st.get('disabled', []))
+    dis = set(st.get('disabled', [])); ed = set(st.get('editing', []))
     if dis & (set(st.get('selected', [])) | set(st.get('invalid', []))):
         raise SystemExit(f'theme {path}: flags.states: a disabled flag is neither selected nor invalid ({sorted(dis)})')
-    return [(i in st.get('selected', []) or BASE_SCENE['flags']['flags'][i].get('selected', False),
-             i in st.get('invalid', []), i in dis) for i in range(n)]
+    if ed & (set(st.get('selected', [])) | set(st.get('invalid', [])) | dis):
+        raise SystemExit(f'theme {path}: flags.states: an editing flag is in no other list ({sorted(ed)})')
+    return [(i not in ed and (i in st.get('selected', []) or BASE_SCENE['flags']['flags'][i].get('selected', False)),
+             i in st.get('invalid', []), i in dis, i in ed) for i in range(n)]
 
 def lane_shift(th):
     """trim.lane_h -> d, the device rows the trim lane grows by (0 at the default: the scene's measured height)."""
@@ -1024,6 +1040,7 @@ def draw_flags(cr, th):
     pads kMarkerFlagPadLeftPx / RightPx x S = 4 + 4, pad_r read off the scene as w - pad_l - nearbyint(width at 32 px)),
     else the text + those pads."""
     if th.flag_style == 'bevelled': return draw_flags_bevelled(cr, th)
+    if th.flag_style == 'flat': return draw_flags_flat(cr, th)
     F = SCENE['flags']; px = ui_font_px(th)
     for f in F['flags']:
         bx, bw = f['x'], flag_fill_w(th, f); sel = '_sel' if f.get('selected') else ''
@@ -1048,7 +1065,7 @@ def flag_face(th, i):
     """flags.style "bevelled": scene flag i's face colour and state -> (face, selected, disabled): the flag's face
     (`flag_fill`), an invalid flag's Windows' error red (`flag_fill_red`), a disabled flag's the theme's `ground`.
     The stem takes the face (draw_stems)."""
-    sel, red, dis = th.flag_states[i]
+    sel, red, dis, _ = th.flag_states[i]
     return th.get('ground' if dis else 'flag_fill_red' if red else 'flag_fill'), sel, dis
 
 def flag_label_ink(th, i):
@@ -1107,6 +1124,71 @@ def draw_flags_bevelled(cr, th):
             show(cr, C.SANS, px, f['text'], lx, ly, th.get('bevel_shadow'))
         else:
             show(cr, C.SANS, px, f['text'], lx, ly, flag_label_ink(th, i))
+
+def flat_flag_box(th, f):
+    """flags.style "flat": a flag's box (x0, y0, x1, y1), device px end-exclusive: THE APP STYLE'S BOX (its two
+    border columns and the fill between, the scene's rows), so the stem's column (the scene's flag x) is the box's
+    FIRST FACE COLUMN, the first column of fill colour, as the app's flags sit today; the one-LW outline takes the
+    border columns (border_w = LW on every scene)."""
+    F = SCENE['flags']; assert F['border_w'] == LW, F['border_w']
+    x0 = f['x'] - LW
+    return x0, F['y0'], x0 + 2 * LW + flag_fill_w(th, f), F['y1']
+
+def flat_edit_colours(th):
+    """flags.style "flat": the EDITING flag's (face, selection fill, selected text): the theme's `field_ground`
+    (Windows' Window), `selected_fill` (Hilight) and `selected_text` (HilightText), each as the theme states it, else
+    Windows' defaults #FFFFFF, #000080, #FFFFFF. `selected_fill` is read only when the theme states it (Theme.stated):
+    its renderer default is the app's constant, kept for down_face, not Windows' Hilight."""
+    sf = th.get('selected_fill') if 'selected_fill' in th.stated else C.parse_colour('#000080')
+    return th.get('field_ground'), sf, th.get('selected_text')
+
+def flat_stem_colour(th, i):
+    """flags.style "flat": scene flag i's stem colour, or None (no stem): the face's (`flag_fill`, `flag_fill_red`
+    when invalid; selection keeps the face), the EDITING flag's the marker's own `flag_fill` (its face is the editor's
+    field, and the marker it edits keeps its stem, as the app's editor box does), a disabled flag none."""
+    sel, red, dis, ed = th.flag_states[i]
+    return None if dis else th.get('flag_fill_red' if red and not ed else 'flag_fill')
+
+def draw_flags_flat(cr, th):
+    """flags.style "flat": THE ACID FLAG (architect 2026-10-03, late, the bevelled flag retired as the candidate: "a
+    3D surface with a cut through it, and when you press it the cut goes the opposite direction"). The box is the
+    app style's (flat_flag_box): a ONE-LW OUTLINE on all four sides, `flag_border` (the catalog themes alias it to
+    `@bevel_dkshadow`, the theme's dark colour), the face inside it filled flat, no bevel, the label at the app
+    style's seat (x border_w + pad_l past the box's left, the scene's baseline). THE STEM leaves from the box's FIRST
+    FACE COLUMN and runs down CROSSING THE BOTTOM OUTLINE, drawn over it here (one LW wide, FLAG_STEM_W), then on
+    through the well's top lines into the canvas (draw_stems), so the face, the outline's crossing and the stem are
+    one same-colour column. THE STATES (flags.states): unselected = the face `flag_fill`, the label `flag_label`;
+    SELECTED = the outline `flag_border_sel` (white), the face, label and stem unchanged, no nudge; INVALID = the face
+    `flag_fill_red`, the label `flag_label_red` (with selected: the white outline over it); EDITING = the in-place
+    editor as it opens with its whole text selected: the face the field ground, the outline `flag_border_edit`
+    (black, the window frame), the label drawn as SELECTED TEXT -- the selection fill behind it over the face's rows
+    inside the outline and across the run's columns (the app's band, render_flag_editor_box: its columns the
+    nearbyint of the run's origin and end), the glyphs in the selected text colour clipped to that band
+    (flat_edit_colours) -- the box keeping its width (architect: "the extending part is not necessary"), the stem the
+    marker's `flag_fill` (flat_stem_colour); DISABLED = the face `ground`, the outline `flag_border`, the label
+    ENGRAVED (in `bevel_hilight` one LW right and down, then in `bevel_shadow` at its place), no stem."""
+    F = SCENE['flags']; px = ui_font_px(th)
+    for i, f in enumerate(F['flags']):
+        x0, y0, x1, y1 = flat_flag_box(th, f); sel, red, dis, ed = th.flag_states[i]
+        if ed: face, sel_fill, sel_text = flat_edit_colours(th)
+        else: face = th.get('ground' if dis else 'flag_fill_red' if red else 'flag_fill')
+        border = th.get('flag_border_edit' if ed else 'flag_border_sel' if sel else 'flag_border')
+        fill(cr, x0, y0, x1, y1, border)                                   # the outline (the face covers its inside)
+        fill(cr, x0 + LW, y0 + LW, x1 - LW, y1 - LW, face)
+        sc = flat_stem_colour(th, i)
+        if sc is not None: fill(cr, f['x'], y1 - LW, f['x'] + FLAG_STEM_W, y1, sc)   # the stem over the bottom outline
+        lx, ly = x0 + F['border_w'] + F['pad_l'], F['baseline']
+        if dis:
+            show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('bevel_hilight'))
+            show(cr, C.SANS, px, f['text'], lx, ly, th.get('bevel_shadow'))
+        elif ed:
+            ix0 = int(np.rint(lx)); ix1 = int(np.rint(lx + C.shape(C.SANS, px, f['text'])[1]))
+            bx0, bx1 = max(ix0, x0 + LW), min(max(ix1, ix0 + 1), x1 - LW)
+            fill(cr, bx0, y0 + LW, bx1, y1 - LW, sel_fill)
+            cr.save(); cr.rectangle(bx0, y0 + LW, bx1 - bx0, y1 - y0 - 2 * LW); cr.clip()
+            show(cr, C.SANS, px, f['text'], lx, ly, sel_text); cr.restore()
+        else:
+            show(cr, C.SANS, px, f['text'], lx, ly, th.get('flag_label_red' if red else 'flag_label'))
 
 def well_geometry(th):
     """-> (well top, well bottom, canvas top, canvas bottom), device rows, end-exclusive. The well's top is the lane
@@ -1186,6 +1268,10 @@ def draw_stems(cr, th):
         if th.flag_style == 'bevelled':     # the stem takes the flag's face in every state; a disabled flag has none
             face, _, dis = flag_face(th, i)
             if not dis: fill(cr, f['x'], y0, f['x'] + FLAG_STEM_W, y1, face)
+            continue
+        if th.flag_style == 'flat':         # flat_stem_colour: the face's, the editing flag's flag_fill; a disabled flag has none
+            sc = flat_stem_colour(th, i)
+            if sc is not None: fill(cr, f['x'], y0, f['x'] + FLAG_STEM_W, y1, sc)
             continue
         fill(cr, f['x'], y0, f['x'] + F['stem_w'], y1, th.get('flag_stem_sel' if f.get('selected') else 'flag_stem'))
     if not P.get('stem_suppressed'): fill(cr, P['col'], y0, P['col'] + P['w'], y1, th.get('playhead_stem'))
