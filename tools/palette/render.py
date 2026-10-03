@@ -106,8 +106,9 @@ LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order rest
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
 # menu.disabled: the disabled menu word -- "colour" in `menu_disabled`, "engraved" Windows' embossed DrawState form
-# (architect 2026-10-03, late: the dark variations' disabled text; draw_menu)
-MENU_DISABLED_STYLES = ('colour', 'engraved')
+# (architect 2026-10-03, late: the dark variations' disabled text; draw_menu), "shadowed" that emboss mirrored for a
+# dark face: the word in `menu_disabled` over its echo in `bevel_shadow` (architect 2026-10-03, late)
+MENU_DISABLED_STYLES = ('colour', 'engraved', 'shadowed')
 # the options whose values are checked here (separators, bottom_border, ruler_tick_relief, clock_panel; the older options are not)
 OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border': ('app', 'line', 'etched', 'raised', 'none'),
               'ruler_tick_relief': ('none', 'light_right'), 'clock_panel': ('flat', 'sunken', 'status'),
@@ -644,7 +645,10 @@ def draw_menu(cr, th):
     (redesign_baseline: the cap band centred; 41 at 32 px, the measured baseline). A disabled word is `menu_disabled`
     (menu.disabled "colour"), or with menu.disabled "engraved" Windows 95's greyed menu item, DrawState DSS_DISABLED
     as for the glyphs (draw_app_glyph): the word in bevel_hilight one logical px right and down, then in bevel_shadow
-    at its place over it; a disabled anchor under the "fill" highlight keeps the highlight's label."""
+    at its place over it; or with menu.disabled "shadowed" that emboss mirrored for a dark face (architect 2026-10-03,
+    late: the disabled word of the dark variations LIGHTER than the face): the echo in bevel_shadow one logical px
+    right and down first, then the word in `menu_disabled` at its place over it. A disabled anchor under the "fill"
+    highlight keeps the highlight's label, neither engraved nor shadowed."""
     m = SCENE['menu']; x = 0; px = ui_font_px(th); y0, y1 = SCENE['lanes']['menu']
     base = m['baseline'] if th.opt['fonts']['ui_px'] is None else C.redesign_baseline(C.SANS, px, y0, y1 - y0)
     hl = th.opt['menu']['highlight']
@@ -652,15 +656,18 @@ def draw_menu(cr, th):
         w = C.shape(C.SANS, px, it['text'])[1]; bw = int(np.rint(w)) + 2 * m['pad']
         col = th.get('label') if it['enabled'] else th.get('menu_disabled')
         engrave = not it['enabled'] and th.opt['menu']['disabled'] == 'engraved'
+        shadow = not it['enabled'] and th.opt['menu']['disabled'] == 'shadowed'
         if hl is not None and hl['item'] == it['text']:
             if hl['style'] == 'fill':
-                fill(cr, x, y0, x + bw, y1, th.get('accent')); col = th.menu_hl_label; engrave = False
+                fill(cr, x, y0, x + bw, y1, th.get('accent')); col = th.menu_hl_label; engrave = shadow = False
             else:
                 s_, h_ = th.get('bevel_shadow'), th.get('bevel_hilight')
                 edge(cr, x, y0, x + bw, y1, [(s_, h_)] if hl['style'] == 'sunken' else [(h_, s_)])
         if engrave:
             show(cr, C.SANS, px, it['text'], x + m['pad'] + LW, base + LW, th.get('bevel_hilight'))
             col = th.get('bevel_shadow')
+        if shadow:
+            show(cr, C.SANS, px, it['text'], x + m['pad'] + LW, base + LW, th.get('bevel_shadow'))
         show(cr, C.SANS, px, it['text'], x + m['pad'], base, col)
         x += bw
     w = C.shape(C.SANS, px, m['legend'])[1]
