@@ -121,7 +121,9 @@ FLAG_STATES = ('selected', 'invalid', 'disabled', 'editing')
 FLAG_SELECTIONS = ('outline', 'underline')
 FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection')     # the flags section's keys beside its colour aliases
 CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
-DISABLED_STYLES = ('mix', 'engraved')
+# buttons.disabled: a disabled glyph -- "mix" the app's, "engraved" Windows' DrawState DSS_DISABLED, "shadowed" that
+# emboss mirrored for a dark face, as menu.disabled "shadowed" mirrors the word (architect 2026-10-03, late; draw_app_glyph)
+DISABLED_STYLES = ('mix', 'engraved', 'shadowed')
 COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'outline'}),
                    ('flags', {'fill': 'flag_fill', 'edge': 'flag_edge', 'border': 'flag_border', 'label': 'flag_label', 'stem': 'flag_stem',
                               'fill_sel': 'flag_fill_sel', 'edge_sel': 'flag_edge_sel', 'stem_sel': 'flag_stem_sel',
@@ -831,11 +833,17 @@ def draw_app_glyph(cr, th, g, x, y, under, enabled, px):
     """The app's glyph at (x, y), px device px square (paint_mask). Enabled, or disabled with buttons.disabled "mix":
     each ink in order in mix(ink, under, keep), keep = 1 / disabled_mix. Disabled with "engraved" (Windows' DrawState
     DSS_DISABLED): the union of the ink masks (the per-pixel max of the per-ink coverages), painted twice -- first in
-    bevel_hilight one logical px right and down (beneath), then in bevel_shadow at (x, y)."""
-    if not enabled and th.opt['buttons']['disabled'] == 'engraved':
+    bevel_hilight one logical px right and down (beneath), then in bevel_shadow at (x, y). Disabled with "shadowed"
+    (architect 2026-10-03, late: the disabled icons of a dark variation, the word's inversion carried to the glyphs):
+    that emboss mirrored for a dark face, as menu.disabled "shadowed" draws the word -- the same union mask, first in
+    bevel_shadow one logical px right and down (the echo), then in `menu_disabled` (the disabled word's colour,
+    lighter than the face) at (x, y)."""
+    mode = th.opt['buttons']['disabled']
+    if not enabled and mode in ('engraved', 'shadowed'):
         m = np.maximum.reduce([pgm(g['files'][ink]) for ink in g['inks']])
-        C.src(cr, th.get('bevel_hilight')); paint_mask(cr, m, x + LW, y + LW, px)
-        C.src(cr, th.get('bevel_shadow')); paint_mask(cr, m, x, y, px)
+        echo, top = (('bevel_hilight', 'bevel_shadow') if mode == 'engraved' else ('bevel_shadow', 'menu_disabled'))
+        C.src(cr, th.get(echo)); paint_mask(cr, m, x + LW, y + LW, px)
+        C.src(cr, th.get(top)); paint_mask(cr, m, x, y, px)
         return
     keep = 1.0 if enabled else th.num['disabled_mix']
     for ink in g['inks']:
