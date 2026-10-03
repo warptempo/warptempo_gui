@@ -4,7 +4,7 @@
 # Prints the mismatch overall and per lane (menu, icon row, trim, ruler, flags, well, bottom row): the share of
 # pixels whose bytes differ at all, the share differing by more than 8 in some channel, and the max difference.
 # The lanes are the scene's (scene_<tag>.json, default 1002: compare a render against the capture of the scene it
-# was drawn on). The label box (render.py --label's file-name stamp, the scene's label_box) is excluded from every
+# was drawn on; `--scene tablet` takes the tablet geometry's derived lanes, tablet.py). The label box (render.py --label's file-name stamp, the scene's label_box) is excluded from every
 # count, in both pictures. Writes diff_<render name>.png beside the render (or --diff): render | reference, side by
 # side at 50 %, over a third panel's worth of difference map (red = differs by > 8, amber = 1..8) under them.
 import os, sys, json
@@ -17,7 +17,9 @@ def main():
     args = [a for i, a in enumerate(argv) if not a.startswith('--') and not (i and argv[i - 1] in ('--scene', '--diff'))]
     ren, ref = args[0], args[1]
     tag = next((argv[i + 1] for i, x in enumerate(argv) if x == '--scene'), '1002')
-    sc = json.load(open(os.path.join(C.HERE, f'scene_{tag}.json')))
+    if tag == 'tablet':     # the tablet geometry's derived lanes (tablet.py), for two renders of that geometry
+        import tablet; sc = tablet.SCENE
+    else: sc = json.load(open(os.path.join(C.HERE, f'scene_{tag}.json')))
     a = C.read_rgb(ren).astype(np.int64); b = C.read_rgb(ref).astype(np.int64)
     assert a.shape == b.shape, (a.shape, b.shape)
     lb = sc['label_box']; excl = np.zeros(a.shape[:2], bool); excl[lb['y0']:lb['y1'], lb['x0']:lb['x1']] = True

@@ -2,33 +2,33 @@
 # tools/theme_catalog/crops.py — docs/themes/catalog.json -> one cropped render of the app per entry
 # (docs/themes/crops/<key>.png) and docs/themes/CATALOG.md, how the architect chooses (architect 2026-10-03).
 #
-# Each entry becomes a theme over tools/palette/themes/ad2.json's geometry and options (scratch:
-# tmp/theme_catalog/themes/<key>.json), rendered by tools/palette/render.py on the default scene
+# Each entry becomes a theme over tools/palette/themes/tablet.json, THE TABLET GEOMETRY (architect 2026-10-03, step 13:
+# the app at gui_scale 275, every length derived from the app's own constants, tools/palette/tablet.py; scratch:
+# tmp/theme_catalog/themes/<key>.json), rendered by tools/palette/render.py in scene 1002's state
 # (tmp/theme_catalog/full/<key>.png, never committed), then CROPPED, NEVER SCALED (scaling blurs the pixel picture
 # he judges). THE CROP IS THE APP'S FINAL DESIGN AT THE LIGHT LEVEL (architect 2026-10-03; theme_for): the entry's
 # LIGHT row as the app's generated table carries it (levels.level_roles: the ground, the label, the relief quartet,
 # the emboss's light copy, the selected pair, the field ground), so the crop and the app read one module. THE
-# APP-SPECIFIC ROLES BY THE ROLE MAPPING (architect 2026-10-03): the ruler label the theme's label, the ruler ticks its
-# Shadow, the flag OUTLINE its DkShadow, the trim lane's arrow glyph its label (render.cpp paint_trim_arrow_button);
-# the checked face the ground under the Hilight dither (ad2's). THE WELL KEEPS THE APP'S TWO-LINE EDGE: the PLAIN
-# SUNKEN field edge render.h draws round the waveform, top and bottom only, no sides, full width -- bevel_shadow then
-# bevel_dkshadow inward on top, bevel_light inward then bevel_hilight outward at the bottom (WELL). THE FLAGS are the
-# flat Acid flag (render.py flags.style "flat", flags.selection "underline"): the face the program's flag colour, a
-# one-px outline in the theme's DkShadow, the stem leaving the box's first face column across the bottom outline; the
-# scene's flags left to right EDITING (the in-place editor: a black frame on the field ground, its whole text in the
-# selected pair), SELECTED (the label underlined), INVALID, DISABLED (the ground, the label embossed, no stem) and
-# unselected (FLAG_STATES). THE DISABLED WORD AND GLYPH ARE ENGRAVED (Windows' DSS_DISABLED: the emboss's light copy
-# one px right and down, then the word or glyph in Shadow) on the menu and the buttons; the playhead's head carries
-# its one-px outline in the theme's label. THE PROGRAM'S OWN COLOURS (APP_KEEP, the device config's defaults): the
-# waveform's ink, canvas and outline, the flag's face and its RECORDED label, the invalid face and its label, the
-# playhead's head and stem.
+# APP-SPECIFIC ROLES BY THE ROLE MAPPING (architect 2026-10-03; tablet.json states them): the ruler label the theme's
+# label, the ruler ticks its Shadow, the flag OUTLINE its DkShadow, the trim lane's arrow glyph its label (render.cpp
+# paint_trim_arrow_button); the checked face the ground under the Hilight dither. EVERY OPTION IS THE APP'S (the tablet
+# geometry fixes them, render.py TABLET_FIXED): the well's two-line PLAIN SUNKEN edge (Shadow then DkShadow inward on
+# top, 3DLight inward then Hilight outward at the bottom), the flat flag with its one-px DkShadow outline and the stem
+# leaving the box's first face column across the bottom outline, the SELECTED flag's WHITE OUTLINE (architect
+# 2026-10-03, step 12: the ring whole on four sides, the underline retired), the engraved disabled word and glyph
+# (Windows' DSS_DISABLED: the emboss's light copy one px right and down, then the word or glyph in Shadow), the
+# playhead's head outlined in the theme's label. The scene's flags show left to right EDITING (the in-place editor: a
+# black frame on the field ground, its whole text in the selected pair), SELECTED, INVALID, DISABLED (the ground, the
+# label embossed, no stem) and unselected (FLAG_STATES). THE PROGRAM'S OWN COLOURS (APP_KEEP, the device config's
+# defaults): the waveform's ink, canvas and outline, the flag's face and its RECORDED label, the invalid face and its
+# label, the playhead's head and stem; the icons' fixed inks are icons.cpp's (tablet.json).
 #
 # THE CROP: four regions of the 2304 x 1440 render stacked top to bottom, 1152 px wide, a 4-row FULLY TRANSPARENT gap
 # between them (alpha 0 there, 255 everywhere else, so no join reads as chrome): the top strip's left half (menu, the
 # icon row with its disabled icons, the trim lane and its begin arrow, the ruler and playhead, the first two flags,
-# the well's top line and a few canvas rows), its right half over the same rows (the checked View button, the end
-# arrow, the other flags), and the bottom row's left (the status panel, the clock, the state line) beside its button
-# block. Written as an RGBA PNG (an indexed one with a tRNS chunk when the crop has at most 256 colours), each with
+# the well's top lines and a few canvas rows), its right half over the same rows (the checked View button, the end
+# arrow, the other flags), and the well's bottom lines over the bottom row, its left (the status panel, the clock, the
+# state line) beside its last two button groups. THE WINDOWS FOLLOW THE TABLET GEOMETRY (tablet.SCENE; regions()). Written as an RGBA PNG (an indexed one with a tRNS chunk when the crop has at most 256 colours), each with
 # the renderer's Display-P3 iCCP chunk (the bytes are what the glass shows).
 #
 #   python3 tools/theme_catalog/crops.py [key ...]      (no keys: every entry)
@@ -44,6 +44,7 @@ import pngrw                            # noqa: E402
 from colour import relative_luminance   # noqa: E402
 sys.path.insert(0, HERE)
 import levels                           # noqa: E402
+import tablet                           # noqa: E402  (tools/palette: the geometry the crop windows follow)
 
 CATALOG = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
 CROPS = os.path.join(REPO, 'docs', 'themes', 'crops')
@@ -58,21 +59,32 @@ ICCP = open(os.path.join(PALETTE, 'display_p3.iccp'), 'rb').read()
 APP_KEEP = {'canvas': '#141618', 'ink': '#96BFDA', 'outline': '#6E8DA1', 'flag_fill': '#8A5EAC', 'flag_label': '#000000',
             'flag_fill_red': '#BB575A', 'flag_label_red': '#000000', 'playhead_head': '#8B8B8B',
             'playhead_stem': '#FCFCFC'}
-# the well's lines in screen order (render.py's list form): render.h's PLAIN SUNKEN edge, top and bottom only
-WELL = {'top': ['@bevel_shadow', '@bevel_dkshadow'], 'bottom': ['@bevel_light', '@bevel_hilight']}
 # the scene's flags (1002: five, left to right) in every state, so each crop shows each one
 FLAG_STATES = {'editing': [0], 'selected': [1], 'invalid': [2], 'disabled': [3]}
-# the level roles the renderer draws (levels.ROLES' names are the renderer's own; the info pair and the field text
-# have no surface on the scene)
+# the level roles (levels.ROLES' names are the renderer's own; the field text and the info pair have no surface on the
+# crop's scene and ride along for the mocks that switch the dialog or the card on)
 LEVEL_TO_RENDERER = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',
-                     'emboss_hilight', 'selected_fill', 'selected_text', 'field_ground')
-TOP = (0, 300)          # device rows: the menu down to 7 canvas rows under the well's two top lines (ad2: 289..293)
-TOP_RIGHT = TOP         # the right half over the same rows: its flags are the scene's third to fifth (x 1343, 1816, 2289)
-BOTTOM = (1346, 1440)   # the bottom row
-# the bottom row's right piece starts mid-gap before its last two groups (ad2 on 1002: the groups 1168..1540,
-# 1562..1810, 1832..2080, 2102..2288), so the left piece 0..669 keeps the status panel (8..286) and the state line
-BOTTOM_RIGHT_X = 1821
+                     'emboss_hilight', 'selected_fill', 'selected_text', 'field_ground', 'field_text', 'info_ground',
+                     'info_text')
 GAP, WIDTH = 4, 1152
+
+
+def regions():
+    """The crop's windows on the tablet geometry (tablet.SCENE), device rows and columns end-exclusive -> (TOP,
+    BOTTOM, BOTTOM_RIGHT_X): the top strip from the menu down to 7 canvas rows under the well's two top lines (0..296:
+    the canvas from 289), both halves over those rows (the right half's flags the scene's third to fifth, x 1343, 1816,
+    2289); the well's two bottom lines and the bottom row (1343..1440); the bottom row's right piece from the middle of
+    the group space before its last two groups (the arrows from 1819: x 1808), so the left piece 0..656 keeps the status
+    panel (14..308) and the state line (from 330)."""
+    S = tablet.SCENE; gs = S['group_space']
+    top = (0, S['canvas'][0] + 7)
+    bottom = (S['canvas'][1], S['lanes']['bottom'][1])
+    right_x = S['bottom_groups'][-2] - gs // 2
+    return top, bottom, right_x
+
+
+TOP, BOTTOM, BOTTOM_RIGHT_X = regions()
+TOP_RIGHT = TOP
 
 
 def unhex(s): return tuple(int(s[i:i + 2], 16) for i in (1, 3, 5))
@@ -80,23 +92,18 @@ def hx(c): return '#%02X%02X%02X' % tuple(c)
 
 
 def theme_for(e, level='light'):
-    """Entry e at `level` (levels.LEVELS) as a render.py theme over ad2.json: the app's final design."""
-    t = json.load(open(os.path.join(PALETTE, 'themes', 'ad2.json')))
+    """Entry e at `level` (levels.LEVELS) as a render.py theme over tablet.json: the app on the tablet, its level row
+    (levels.level_roles) over the role mapping and the program's colours, every option the app's."""
+    t = json.load(open(os.path.join(PALETTE, 'themes', 'tablet.json')))
     t['name'] = e['key']
-    t['description'] = (f'{e["name"]} ({e["family"]}) at its {level} level from docs/themes/catalog.json over ad2.json\'s '
-                        f'geometry, the app\'s final design (tools/theme_catalog/crops.py)')
-    col = {k: v for k, v in t['colours'].items() if k not in ('ruler_label', 'flag_border', 'playhead_head', 'down_face')}
-    r = levels.level_roles(e, level)
+    t['description'] = (f'{e["name"]} ({e["family"]}) at its {level} level from docs/themes/catalog.json over tablet.json, '
+                        f'the app on the tablet (tools/theme_catalog/crops.py)')
+    col = t['colours']; r = levels.level_roles(e, level)
     for role in LEVEL_TO_RENDERER: col[role] = r[role]
     col.update({'ruler_label': '@label', 'ruler_tick': '@bevel_shadow', 'flag_border': '@bevel_dkshadow',
                 'ruler_tick_light': '@bevel_hilight', 'down_face': '@ground', 'trim_arrow': '@label'})
     col.update(APP_KEEP)
-    t['colours'] = col
-    t['well'] = {k: list(v) for k, v in WELL.items()}
-    t['flags'] = {'style': 'flat', 'selection': 'underline', 'states': FLAG_STATES}
-    t['playhead_head_outline'] = 'outline'
-    t.setdefault('menu', {})['disabled'] = 'engraved'
-    t['buttons']['disabled'] = 'engraved'
+    t['flags'] = {'style': 'flat', 'states': FLAG_STATES}
     return t
 
 
@@ -176,16 +183,17 @@ def write_md(cat, sizes):
          'imported only"): its colours are the bytes its source records, each with its provenance in '
          '[catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the '
          'relief at run time (KDE 3, CDE / Motif), that toolkit\'s rule ran once at import and is named. The KEY is '
-         'what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette on ad2.json\'s '
-         'geometry, cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the bottom '
-         'row, transparent between them, at the theme\'s LIGHT level (the app\'s `theme_level`; dim and dark are the '
+         'what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet '
+         'geometry: the tablet\'s 2304 x 1440 at gui_scale 275, every length derived from the app\'s own constants; '
+         'cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well\'s bottom '
+         'lines and the bottom row, transparent between them, at the theme\'s LIGHT level (the app\'s `theme_level`; dim and dark are the '
          'generated table\'s, tools/theme_catalog/levels.py). The chrome is the theme\'s; the waveform pane, the flags '
          'and the playhead are the program\'s own elements in the app\'s default colours (architect 2026-10-03): the '
          'well keeps the app\'s two-line sunken edge (the theme\'s Shadow and DkShadow above, its 3DLight and Hilight '
          'below); the flags are the flat Acid flag, the face the app\'s purple with its recorded black label and a '
          'one-px outline in the theme\'s DkShadow, the stem leaving the face across the bottom outline, shown left to '
          'right editing (the in-place editor on the theme\'s field ground, its text in the selected pair), selected '
-         '(the label underlined), invalid (#BB575A, black label), disabled (the ground, the label embossed) and '
+         '(a white outline round the box), invalid (#BB575A, black label), disabled (the ground, the label embossed) and '
          'unselected; the playhead\'s #8B8B8B head carries a one-px outline in the theme\'s label over its #FCFCFC '
          'stem; disabled words and glyphs are Windows\' emboss; the ruler label and the trim arrow are the theme\'s '
          'label, the ruler ticks its Shadow. The DISPLAY TIER is the smallest period colour set holding '

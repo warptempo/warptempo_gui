@@ -8,6 +8,13 @@ end of the mock-up lineage J4 → K4 → L2/M1 → N2 → O2 → P6/T4/U4 → R3
 standalone utility with no link path from any product target and no CMake. Every path resolves from the scripts'
 own location, so the commands run from the repository root (as written here) or from `tools/palette/` alike.
 
+TWO GEOMETRIES (a theme's `geometry`): `"scene"`, the default, is the measured scene at the 200 % geometry it was
+captured in, shifted and re-packed by the theme's options, which every mock set up to step 12 was drawn in and which
+re-renders byte for byte; `"tablet"` (step 13, architect 2026-10-03) is THE APP AT THE TABLET'S gui_scale 275, every
+length derived from the app's own constants (`tablet.py`; THE TABLET GEOMETRY below). `themes/tablet.json` is the
+app's default look in it, and THE BASE OF EVERY WINDOWS-95-STANDARD MOCK FROM STEP 13 ON, the catalog's crops
+included.
+
 ```
 python3 tools/palette/render.py  tools/palette/themes/<theme>.json <out.png> [--scene <tag>] [--label]
 python3 tools/palette/compare.py <render.png> <reference.png>      [--scene <tag>] [--diff out.png]
@@ -150,6 +157,8 @@ The only conversion is the one a theme asks for: a colour written `"srgb:#303030
 | `pngrw.py` | PNG read (pure Python: zlib + the five filters) and write (IHDR, the extra chunks, IDAT, IEND) |
 | `display_p3.iccp` | the Display-P3 iCCP chunk every written PNG carries (above) |
 | `extract.py` | measures a capture `tablet_base_<tag>.png` into `scene_<tag>.json`, `waveform_<tag>.json`, `glyphs/<tag>/` and cross-checks every measurement against the source (at `--rev`) and the capture |
+| `tablet.py` | THE TABLET GEOMETRY: the app at 275 % derived from the app's constants, read at their owners in `src/gui` on every load, in scene 1002's state; run alone it prints the derivation table and exits 1 when a derived length disagrees with the 275 % figure its owner's comment records |
+| `themes/tablet.json` | the app on the tablet in its default look (Windows 95 Standard at its dark level, the generated table's row; the program's colours; icons.cpp's fixed inks), `"geometry": "tablet"` |
 | `render.py` | the renderer (theme schema below); `flags.style` "bevelled" (the bevelled flag, retired as the candidate on 2026-10-03, kept for the record) reads the toolkits' rules from `../theme_catalog/toolkit_rules.py` (`flag_bevel`) |
 | `compare.py` | per-lane parity numbers (the scene's lanes) and a side-by-side `diff_<name>.png` |
 | `scene_<tag>.json` | `tag`, `source`, the extraction `params`; lanes, the ruler rule's terms, button boxes (+ enabled / selected state), separators, the trim lane's rects, ruler ticks + labels, flags (+ selected / clipped), the playhead (+ stem_suppressed), clock, the app constants, the icon inks, the `glyphs` directory, the recorded `mismatches` (notes) |
@@ -218,7 +227,8 @@ newer options (`separators`, `bottom_border`, `well`, `canvas_delta`, `trim.cap_
 `flags.rule`, `flags.states`, `flags.selection`, `flags.outline_px`, `playhead_lane_stem`, `playhead_head_outline`, `menu.disabled`,
 `trim.held`, `dialog`, `card`) refuse an unknown value.
 
-Top level: `name`, `description` (free text), `colours` {role: colour}, `waveform` {`ink`, `canvas`, `outline`},
+Top level: `name`, `description` (free text), `geometry` (`"scene"`, the default, or `"tablet"`: THE TABLET
+GEOMETRY below, which fixes or refuses every option but the colours and the states), `colours` {role: colour}, `waveform` {`ink`, `canvas`, `outline`},
 `flags` {`fill`, `edge`, `border`, `label`, `stem`, `fill_sel`, `edge_sel`, `stem_sel`, `hilight`, `hilight_sel`,
 `fill_red`, `label_red`, `border_sel`, `border_edit`} (aliases of the roles `ink`, `canvas`, `outline`, `flag_*`) plus `flags.relief`, `flags.style`,
 `flags.rule`, `flags.states`, `flags.selection` and `flags.outline_px` (below), the numbers and the options below.
@@ -386,6 +396,70 @@ the plain hex. Example — Redmond97 Dark's face as sRGB, thick relief:
  "bevel_shadow": "srgb:#262626", "bevel_dkshadow": "#000000"}, "relief": "thick", "buttons": {"raised": true}, "separators": "etched",
  "well": "sunken", "clock_panel": "sunken", "trim": {"bar": "raised", "ground": "sunken", "handles": "raised", "grip": "raised"}}
 ```
+
+## The tablet geometry (step 13, architect 2026-10-03)
+
+"Bring the mock tool into greater accuracy ... we're just targeting the tablet"; "derive that from the code".
+`"geometry": "tablet"` draws the tablet's 2304 x 1440 at gui_scale 275 as the app lays it out: `tablet.py` reads
+every authored number it needs from the source as it stands (render.h, paint_handler.cpp, paint_handler.h,
+app_state.h, notifications.h, folder_overlay.h: the lane, case, pad, gap, edge, border, pad and font constants, the
+playhead head's table, the ruler's ladder, the rosters in walk order and the icon row's group leaders) and converts
+them the app's way: `scaled_px` = nearbyint(Windows px x 2.75) AT THE ELEMENT, a composite the sum of its rounded
+parts, a font size the unrounded 13 / 12 / 10 x 2.75 = 35.75 / 33 / 27.5, every seat `redesign_baseline` or
+`line_baseline` on the face's own metrics (verified at load against the app's measured table: sans 35.75 ascent 34
+descent 9 cap 25, mono 33 35 / 9 / 24, the small face 27.5 ascent 26 cap 20). A relief line, a dither cell, an
+emboss offset and an outline are `relief_line_px` (3 device px); a tick, a stem and the playhead's column
+`waveform_line_px` (3). `python3 tools/palette/tablet.py` prints the whole derivation (each length's Windows px, its
+device px, its owner and the 275 % figure the owner's own comment records; 63 rows, every recorded figure agreeing).
+The rows (end-exclusive): menu 0..52, icon 52..140 (cases 63 x 60 at y 66, the glyph 44 at the case's (8, 8)),
+trim 140..184 (the arrow buttons 44 x 44), ruler 184..234 (baseline 215, the head 212..234), marker 234..283 (the
+box 237..283, baseline 274), the waveform area 283..1349 (max_waveform_height 0, both gaps 0: its lines 283..289
+and 1343..1349, the canvas 289..1343, the drawing band 299..1333 split at 816), the bottom row 1349..1440 (its
+content 1352..1440, the cases at y 1366, the right block from x 1145, the clock's panel 14..308, the state line
+330..1123, both baselines 1408).
+
+THE STATE IS SCENE 1002's (the tablet geometry refuses another `--scene`): its view in device px (the ruler's ms per
+px and start, so the comb, the labels, the markers, the playhead and the trim bounds stand at the columns they stood
+at; the step stays 125 ms, the app's ladder at 275 %), its texts, its enabled set, its toggled View button and its
+glyph masks (44 device px at 200 % and at 275 %, so drawn at their own size). THE APP'S DESIGN IS FIXED: the options
+in render.py's `TABLET_FIXED` take the app's values (the relief thick, the buttons raised and checked over the dither,
+no separators, the well's plain sunken edge, the status panel, the scroll-bar trim lane, the etched ticks, the opaque
+outlined head, the engraved disabled word and glyph, the flat flag with the selected flag's white ring); a theme may
+state one only as the app has it, and every geometry option (`buttons.case`, `fonts`, `ruler_layout`, `trim.lane_h`,
+`playhead_head_rows` and their kin) is refused. A tablet theme states its colours, the scene's states (`buttons.down`,
+`trim.held`, `flags.states`) and the optional surfaces (`state_text`, `dialog`, `card`, whose step-11 layout is the
+app's at 275 % already and now takes the 3-px line and the 35.75-px face). `compare.py --scene tablet` counts by the
+tablet geometry's lanes. The scene geometry is untouched: ad2, win95_standard and frozen (and set AV01's theme)
+render `cmp`-identical before and after the change, on 1002, 1002a and s4.
+
+THE RESIDUALS, what is not the app's own pixels:
+- THE WAVEFORM is the 200 % capture's columns replayed, not the app's plate recomputed: per channel, the capture's
+  drawing band (284..807 and 807..1330, 523 rows each, a6f53163's inset 16) maps onto the 275 % band's (299..816 and
+  816..1333, 517 rows) through the nearest-neighbour vertical map (`tablet.waveform_columns`), so each channel keeps its
+  centre and its peaks scale with its height; the columns are exact (the view is kept in device px), a run's end can
+  differ from the app's by about a row, and a few source rows drop (6 of 523 per channel). Under the old 2-px stems
+  the scene repeated two neighbour columns; the 3-px stems cover them.
+- A DISABLED GLYPH's emboss is one union mask painted twice; the app fills each path in each copy, so pixels where a
+  glyph's sub-paths overlap can differ by a few levels, inside the 44-px glyph boxes only (the 78 px the capture's
+  recovery reconstructs 1 byte off stand as before). Enabled glyphs are the app's coverage exactly: the icon paths
+  are unchanged since a6f53163 (only their inks moved, which tablet.json states).
+- TEXT: HarfBuzz's own OpenType shaper at scale size x 64 where the app's hb-ft takes the scale from FreeType's
+  16.16 x_scale; both are the unhinted advances, and at 35.75 / 33 / 27.5 px the scale is a whole 26.6 number
+  (2288 / 2112 / 1760), so the advances agree to 1/64 px and no pen lands on another pixel: 0 px expected. The glyphs
+  rasterise through the app's road (cairo-ft, SLIGHT, grey antialiasing, hint metrics on), byte-exact against the
+  200 % captures; at 275 % unverified until a capture.
+- THE STATE is the scene's, not one the app at 275 % would land on: its zoom is the 200 % scene's ms per device px,
+  which the app's device-relative zoom map need not offer at 275 %. A choice of state, not a geometry difference.
+- THE --label stamp sits past the state line (x about 520), partly outside the scene's label box that `compare.py`
+  excludes; parity renders are made without `--label`.
+
+THE CAPTURE DIFF IS DEFERRED to a glass session (the tablet's cover shut, 2026-10-03): a screencap of the app at 275
+with the same project and view, extracted for its texts, then `compare.py --scene tablet`. The regions to diff first:
+the bottom row (the clock panel 14..308, the state line from 330, the right block from 1145: the most derived
+arithmetic), the ruler and the marker lane (the label seat 215, the head 212..234 and its outline, the flag boxes
+237..283 and their 250 / 82-px widths), the icon row's walk (the 26 case x's, the view group from 2093), the trim
+lane (the dither phase, the buttons and their glyphs at (+16, +11)); the waveform last, where the replay is expected to
+differ.
 
 ## Renderer notes for the scene's states
 

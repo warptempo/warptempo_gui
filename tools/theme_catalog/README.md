@@ -162,20 +162,23 @@ tiers' counts and the schemes not imported.
 
 ## The crops
 
-`crops.py` writes a theme per entry over `tools/palette/themes/ad2.json`'s geometry (scratch:
-`tmp/theme_catalog/themes/`), renders it on the default scene (`tmp/theme_catalog/full/`, never committed) and CROPS,
-never scales: the top strip's left half and its right half over the same rows (the menu down to a few canvas rows,
-so all four flag states show), and the bottom row's status panel beside its last button groups, stacked 1152 x 702
-px with a 4-row FULLY TRANSPARENT gap between them (alpha 0 there, 255 everywhere else, so no join reads as chrome),
-written as RGBA (indexed with tRNS when a crop has at most 256 colours; none has: the antialiased text exceeds it),
-each with the Display-P3 iCCP chunk. On each: the role mapping above, the well with the app's two-line PLAIN SUNKEN
-edge, top and bottom only, full width (architect 2026-10-03, late: `bevel_shadow` then `bevel_dkshadow` inward on top,
-`bevel_light` inward then `bevel_hilight` outward at the bottom; crops.py `WELL`), THE APP'S FINAL DESIGN AT THE LIGHT
-LEVEL (architect 2026-10-03; `levels.level_roles`, the generated table's own row): the flat flags (render.py
-`flags.style` "flat", `flags.selection` "underline") left to right EDITING (the in-place editor's black frame on the
-field ground, its text in the selected pair), SELECTED (the label underlined), INVALID, DISABLED (the ground, the label
-embossed, no stem) and unselected; the playhead head outlined in the label (`playhead_head_outline` "outline"); the
-disabled menu word and buttons engraved (`menu.disabled` / `buttons.disabled` "engraved" over `emboss_hilight`); the
-trim arrow in the label (`trim_arrow`). The waveform, the flags' face and label, the invalid pair and the playhead are
-the program's colours (above). The icons are the app's, unchanged. 97 crops, 5.36 MB. Its head states which roles come
-from the entry and which are the program's.
+`crops.py` writes a theme per entry over `tools/palette/themes/tablet.json`, THE TABLET GEOMETRY (architect
+2026-10-03, step 13: the app at the tablet's gui_scale 275, every length derived from the app's own constants,
+`tools/palette/tablet.py`; scratch: `tmp/theme_catalog/themes/`), renders it in scene 1002's state
+(`tmp/theme_catalog/full/`, never committed) and CROPS, never scales: the top strip's left half and its right half
+over the same rows (the menu down to 7 canvas rows under the well's top lines, rows 0..296, so all four flag states
+show), and the well's two bottom lines over the bottom row (rows 1343..1440), its status panel and state line (columns
+0..656) beside its last two button groups (from x 1808, the middle of the group space before the arrows); the windows
+follow the geometry (`crops.regions()`, from `tablet.SCENE`). Stacked 1152 x 697 px with a 4-row FULLY TRANSPARENT gap
+between them (alpha 0 there, 255 everywhere else, so no join reads as chrome), written as RGBA (indexed with tRNS
+when a crop has at most 256 colours; none has: the antialiased text exceeds it), each with the Display-P3 iCCP chunk.
+On each: THE APP'S FINAL DESIGN AT THE LIGHT LEVEL (architect 2026-10-03; `levels.level_roles`, the generated table's
+own row) with the role mapping above, every option the app's (the tablet geometry fixes them, render.py
+`TABLET_FIXED`): the well's two-line PLAIN SUNKEN edge, top and bottom only, full width (`bevel_shadow` then
+`bevel_dkshadow` inward on top, `bevel_light` inward then `bevel_hilight` outward at the bottom); the flat flags left
+to right EDITING (the in-place editor's black frame on the field ground, its text in the selected pair), SELECTED (the
+app's WHITE OUTLINE round the box, architect 2026-10-03, step 12; the underline retired), INVALID, DISABLED (the
+ground, the label embossed, no stem) and unselected; the playhead head outlined in the label; the disabled menu word
+and buttons engraved over `emboss_hilight`; the trim arrow in the label (`trim_arrow`). The waveform, the flags' face
+and label, the invalid pair and the playhead are the program's colours (above), the icons' fixed inks icons.cpp's.
+97 crops, 5.42 MB. Its head states which roles come from the entry and which are the program's.

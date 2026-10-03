@@ -158,9 +158,79 @@ COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'o
 
 BEVELS = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')     # Windows' COLOR_3D* order
 
+# ------------------------------------------------------------------ THE TABLET GEOMETRY (step 13, architect 2026-10-03)
+# A theme's `geometry`: "scene" (the default: the measured scene at its 200 % geometry, shifted and re-packed by the
+# options above -- every earlier mock set) or "tablet" (tools/palette/tablet.py: the app at gui_scale 275, every length
+# derived from the app's own constants, in scene 1002's state). The tablet geometry PAINTS THE APP'S DESIGN: the options
+# in TABLET_FIXED stand at the app's values (a theme may state one only as the app has it), every other option is
+# refused (the app owns every length), and a theme varies only what TABLET_FREE names: its colours and the states a mock
+# shows. A relief line, a dither cell and an emboss offset are then relief_line_px (3 device px), a stem and a tick
+# waveform_line_px (3), the faces 35.75 / 33 / 27.5 px (README.md, the tablet geometry).
+GEOMETRIES = ('scene', 'tablet')
+TABLET = False                  # set by use_tablet (Theme), with SCENE / BASE_SCENE / LW / FLAG_STEM_W rebound
+APP_WELL = {'top': ['@bevel_shadow', '@bevel_dkshadow'], 'bottom': ['@bevel_light', '@bevel_hilight']}   # render_canvas
+TABLET_FIXED = {
+    'relief': 'thick', 'separators': 'none', 'well': APP_WELL, 'clock_panel': 'status', 'bottom_border': 'none',
+    'ruler_tick_relief': 'light_right', 'icons': 'app', 'playhead_head_outline': 'outline', 'playhead_lane_stem': 'stem',
+    'lane_order': ['trim', 'ruler', 'marker'], 'bars': {'menu': 'flat', 'icon_row': 'flat', 'bottom_row': 'flat'},
+    'ruler_layout': None, 'fonts': {'ui_px': None, 'small_px': None},
+    'playhead_head_alpha': 1.0, 'canvas_delta': 0, 'ruler_pad_top': 0, 'ruler_label_pt': 12,
+    'buttons': {'raised': True, 'rows': ['icon', 'bottom'], 'down_shift': True, 'toggled': 'sunken', 'down_dither': True,
+                'disabled': 'engraved', 'gap': None, 'sep_gap': None, 'group_space': None, 'case': None},
+    'trim': {'style': 'scrollbar', 'bar': 'app', 'ground': 'app', 'handles': 'app', 'grip': 'app', 'cap_w': None,
+             'lane_h': None, 'acid_inset': 1},
+    'menu': {'highlight': None, 'disabled': 'engraved'},
+}
+# what a tablet theme states freely: its colours, the scene's states (the toggled buttons, the held trim cap, the flags'
+# states) and the optional surfaces (the state line, the dialog, the card)
+TABLET_FREE = ('name', 'description', 'geometry', 'colours', 'waveform', 'flags', 'state_text', 'dialog', 'card')
+TABLET_FREE_SUB = {'buttons': ('down',), 'trim': ('held',)}
+
+def use_tablet(path, t):
+    """A theme stating "geometry": "tablet" -> the theme with the app's fixed options in place, after refusing any
+    option the tablet geometry owns; rebinds the module's scene (tablet.SCENE), its line width (LW, relief_line_px) and
+    the stem's width (FLAG_STEM_W, waveform_line_px). Scene 1002 only: the geometry is drawn in its state."""
+    global TABLET, SCENE, BASE_SCENE, LW, FLAG_STEM_W
+    import tablet as TB
+    if SCENE_TAG != TB.SCENE_TAG:
+        raise SystemExit(f'theme {path}: the tablet geometry is drawn in scene {TB.SCENE_TAG}\'s state, not --scene {SCENE_TAG}')
+    t = json.loads(json.dumps(t))
+    for k, v in list(t.items()):
+        if k in TABLET_FREE: continue
+        if k not in TABLET_FIXED:
+            raise SystemExit(f'theme {path}: {k!r} is not read by the tablet geometry (the app owns every length; '
+                             f'README.md, the tablet geometry)')
+        fx = TABLET_FIXED[k]
+        if isinstance(fx, dict) and k != 'well':
+            if not isinstance(v, dict): raise SystemExit(f'theme {path}: {k} is an object, not {v!r}')
+            for sk, sv in v.items():
+                if sk in TABLET_FREE_SUB.get(k, ()): continue
+                if sk not in fx or fx[sk] != sv:
+                    raise SystemExit(f'theme {path}: the tablet geometry paints the app\'s {k}.{sk} '
+                                     f'({fx.get(sk, "not an option")!r}), not {sv!r}')
+        elif v != fx:
+            raise SystemExit(f'theme {path}: the tablet geometry paints the app\'s {k} ({fx!r}), not {v!r}')
+    fl = t.setdefault('flags', {})
+    for k in ('relief', 'rule', 'outline_px'):
+        if k in fl: raise SystemExit(f'theme {path}: flags.{k} is not read by the tablet geometry (the app\'s flat flag)')
+    if fl.get('style', 'flat') != 'flat' or fl.get('selection', 'outline') != 'outline':
+        raise SystemExit(f'theme {path}: the tablet geometry paints the app\'s flag (flags.style "flat", flags.selection '
+                         f'"outline": the white ring), not {fl.get("style")!r} / {fl.get("selection")!r}')
+    fl['style'] = 'flat'
+    for k, fx in TABLET_FIXED.items():
+        if isinstance(fx, dict) and k != 'well': t.setdefault(k, {}).update(fx)
+        else: t[k] = json.loads(json.dumps(fx))
+    TABLET = True; BASE_SCENE = SCENE = TB.SCENE
+    LW = TB.SCENE['flags']['border_w']; FLAG_STEM_W = TB.SCENE['flags']['stem_w']
+    return t
+
 class Theme:
     def __init__(self, path):
         t = json.load(open(path)) if path else {}
+        self.geometry = t.get('geometry', 'scene')
+        if self.geometry not in GEOMETRIES:
+            raise SystemExit(f'theme {path}: geometry must be one of {GEOMETRIES}, not {self.geometry!r}')
+        if self.geometry == 'tablet': t = use_tablet(path, t)
         self.name = t.get('name', os.path.splitext(os.path.basename(path))[0] if path else 'default')
         raw = dict(DEFAULTS); raw.update(t.get('colours', {}))
         for sec, keys in COLOUR_SECTIONS:
@@ -207,7 +277,7 @@ class Theme:
         self.num = dict(NUM_DEFAULTS); self.num.update({k: t[k] for k in NUM_DEFAULTS if k in t})
         self.opt = json.loads(json.dumps(OPT_DEFAULTS))
         for k, v in t.items():
-            if k in ('colours', 'waveform', 'flags', 'name', 'description') or k in NUM_DEFAULTS: continue
+            if k in ('colours', 'waveform', 'flags', 'name', 'description', 'geometry') or k in NUM_DEFAULTS: continue
             if k not in OPT_DEFAULTS: raise SystemExit(f'theme {path}: unknown key {k!r}')
             if isinstance(OPT_DEFAULTS[k], dict):
                 bad = set(v) - set(OPT_DEFAULTS[k])
@@ -304,7 +374,7 @@ class Theme:
         if not isinstance(lp, (int, float)) or isinstance(lp, bool) or not lp > 0:
             raise SystemExit(f'theme {path}: ruler_label_pt is a point size > 0 (the timestamps\' face, 12 = the app\'s), not {lp!r}')
         hr = self.num['playhead_head_rows']; hmax = BASE_SCENE['playhead']['head_rows'] // S
-        if not isinstance(hr, int) or isinstance(hr, bool) or not 1 <= hr <= hmax:
+        if not TABLET and (not isinstance(hr, int) or isinstance(hr, bool) or not 1 <= hr <= hmax):
             raise SystemExit(f'theme {path}: playhead_head_rows is a whole number of logical rows 1..{hmax} (the head kept on the '
                              f'lane\'s bottom, its widest top rows dropped; {hmax} = the app\'s), not {hr!r}')
         if self.opt['menu']['disabled'] not in MENU_DISABLED_STYLES:
@@ -427,6 +497,7 @@ def ui_font_px(th):
     """fonts.ui_px -> the normal face in device px: ui_px x S, or the app's C.SANS_PX (12 pt x 2 = 32) when null. It
     drives the menu items and legend (draw_menu), the flag labels (flag_seat, draw_flags) and, by the same ratio, the
     clock (seat_clock); the --label stamp keeps its 20 px."""
+    if TABLET: return SCENE['ui_px']        # the tablet geometry: 13 Windows px x 2.75 = 35.75
     up = th.opt['fonts']['ui_px']
     return C.SANS_PX if up is None else float(up * S)
 
@@ -449,8 +520,9 @@ def flag_seat(th):
 
 def flags_on_well(th):
     """True when the flags stand on the well (flag_seat's rule, fonts.ui_px set): the stems then run from the well's
-    top, through its top lines, as the app's waveform_stem_band does (draw_stems)."""
-    return flag_seat(th) is not None
+    top, through its top lines, as the app's waveform_stem_band does (draw_stems). The tablet geometry's flags always
+    do (the app's marker lane, render.h)."""
+    return TABLET or flag_seat(th) is not None
 
 def marker_shift(th):
     """flag_seat -> d, the device rows the marker lane grows by (negative: shrinks by; 0 with fonts.ui_px null)."""
@@ -483,6 +555,7 @@ def seat_clock(sc, th):
 def head_rows_drawn(th):
     """playhead_head_rows -> (first, rows): the drawn head is the LAST rows device rows of the scene's head_half list
     (its tip's rows unchanged, the head still seated on the lane's bottom), the widest top (12 - N) x S rows dropped."""
+    if TABLET: return 0, BASE_SCENE['playhead']['head_rows']      # the app's whole head (playhead_head_h_px)
     rows = th.num['playhead_head_rows'] * S
     return BASE_SCENE['playhead']['head_rows'] - rows, rows
 
@@ -653,9 +726,10 @@ def fill(cr, x0, y0, x1, y1, c):
     if x1 <= x0 or y1 <= y0: return
     C.src(cr, c); cr.rectangle(x0, y0, x1 - x0, y1 - y0); cr.fill()
 
-def edge(cr, x0, y0, x1, y1, lines, sides='ltrb', lw=LW):
-    """DrawEdge: lines = [(outer TL, outer BR), (inner TL, inner BR)], each lw device px, TL first and BR last
-    (BR owns the top-right and bottom-left corners), each pair inset one line."""
+def edge(cr, x0, y0, x1, y1, lines, sides='ltrb', lw=None):
+    """DrawEdge: lines = [(outer TL, outer BR), (inner TL, inner BR)], each lw device px (LW, the renderer's line, when
+    None), TL first and BR last (BR owns the top-right and bottom-left corners), each pair inset one line."""
+    if lw is None: lw = LW
     for i, (tl, br) in enumerate(lines):
         a, b, c, d = x0 + i * lw, y0 + i * lw, x1 - i * lw, y1 - i * lw
         if tl is not None:
@@ -941,7 +1015,8 @@ def draw_buttons(cr, th, rows):
         elif styled:
             fill(cr, x, y, x + w, y + h, face); edge(cr, x, y, x + w, y + h, relief_lines(th, 'button')); under = face
         # the glyph: the app's own, recovered per ink from the capture (a disabled glyph mixed toward what is under it)
-        if cs is None: gx, gy, gp = x + (w - SCENE['glyph_px']) // 2, y + (h - SCENE['glyph_px']) // 2, SCENE['glyph_px']
+        if TABLET: gx, gy, gp = x + SCENE['glyph_off'], y + SCENE['glyph_off'], SCENE['glyph_px']   # the case's (3, 3)
+        elif cs is None: gx, gy, gp = x + (w - SCENE['glyph_px']) // 2, y + (h - SCENE['glyph_px']) // 2, SCENE['glyph_px']
         else: gx, gy, gp = x + cs['pad_x'] * S, y + cs['pad_y'] * S, cs['glyph'] * S
         draw_app_glyph(cr, th, g, gx + shift, gy + shift, under, enabled, gp)
 
@@ -1102,6 +1177,7 @@ def ruler_label_seat(th):
     scene's (lane top + ruler_pad_top + the seat at 32 px, after every shift and restack) re-seated by the app's
     rule at the new size: the cap top stays kRulerLabelCapTopPx rows under the lane's top, ruler_shortfall's rows
     (opened or closed at the lane's top) taken back off. Without fonts.small_px the lane keeps its height."""
+    if TABLET: return SCENE['small_px'], SCENE['ruler']['baseline']    # 27.5 px, the app's seat (tablet.py)
     px = ruler_label_px(th); b = SCENE['ruler']['baseline']
     rows = ruler_layout_rows(th)
     if rows is not None: return px, SCENE['lanes']['ruler'][0] + rows[0] + rows[1]
@@ -1421,6 +1497,9 @@ def waveform_runs(th):
     """-> (canvas top, {'ink': cols, 'outline': cols}, channel split row): the capture's runs, rescaled when the derived
     canvas height differs from the measured one. The split row is the first destination row whose source row is at or
     below the measured split: canvas top + ceil(split_rel * new_h / old_h)."""
+    if TABLET:      # window rows: the capture's band mapped channel by channel (tablet.waveform_columns)
+        import tablet as TB
+        return 0, TB.waveform_columns(WAVE), SCENE['waveform_map']['new_band'][1]
     _, _, c0, c1 = well_geometry(th); old_h, new_h = WAVE['h'], c1 - c0
     cols = {cls: [rescale_runs(r, old_h, new_h) for r in WAVE[cls]] for cls in ('ink', 'outline')}
     rel = WAVE['channel_split'] - WAVE['y0']
@@ -1473,11 +1552,13 @@ def clock_panel_rect(th):
     if th.opt['clock_panel'] not in ('sunken', 'status'): return None
     ck = SCENE['clock']; cell = clock_cell(th)[0]
     bb0 = [b for b in button_geometry(th)[0] if b['row'] == 'bottom'][0]
-    return ck['x'] - 4 * S, bb0['y'], ck['x'] + int(math.ceil(cell)) + 4 * S, bb0['y'] + bb0['h']
+    pp = SCENE['panel_pad'] if TABLET else 4 * S        # the tablet geometry: scaled_px(kStatusPanelPadPx 3) = 8
+    return ck['x'] - pp, bb0['y'], ck['x'] + int(math.ceil(cell)) + pp, bb0['y'] + bb0['h']
 
 def group_space_px(th):
     """The bottom row's space between two groups in device px: buttons.group_space x S, or 8 logical px (Windows'
     eight) when it is null."""
+    if TABLET: return SCENE['group_space']      # scaled_px(kIconGroupSpacePx 8) = 22
     gs = th.opt['buttons']['group_space']
     return (8 if gs is None else gs) * S
 
