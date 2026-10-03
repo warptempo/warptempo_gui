@@ -61,11 +61,11 @@ APP_KEEP = {'canvas': '#141618', 'ink': '#96BFDA', 'outline': '#6E8DA1', 'flag_f
             'playhead_stem': '#FCFCFC'}
 # the scene's flags (1002: five, left to right) in every state, so each crop shows each one
 FLAG_STATES = {'editing': [0], 'selected': [1], 'invalid': [2], 'disabled': [3]}
-# the level roles (levels.ROLES' names are the renderer's own; the field text and the info pair have no surface on the
-# crop's scene and ride along for the mocks that switch the dialog or the card on)
+# the level roles (levels.ROLES' names are the renderer's own; the field text has no surface on the crop's scene and
+# rides along for the mocks that switch the dialog on; the card, likewise off on the crop's scene, is the ground under
+# the label and reads no role of its own)
 LEVEL_TO_RENDERER = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',
-                     'emboss_hilight', 'selected_fill', 'selected_text', 'field_ground', 'field_text', 'info_ground',
-                     'info_text')
+                     'emboss_hilight', 'selected_fill', 'selected_text', 'field_ground', 'field_text')
 GAP, WIDTH = 4, 1152
 
 

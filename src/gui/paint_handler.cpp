@@ -2498,22 +2498,24 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
                                          PopupFace face) {
     // ONE BOX PAINTER FOR EVERY FLOATING SURFACE, TWO FACES (architect
-    // 2026-10-02, the Windows-95 chrome), each a square fill then its frame:
-    //   MENU — the ground inside the PLAIN RAISED two-line edge: a dropdown
-    //          (Windows drew menus as raised panels, EDGE_RAISED);
-    //   INFO — Windows' tooltip: the theme's info ground (COLOR_INFOBK)
-    //          inside ONE line a side, 3DLight top and left, DkShadow bottom
-    //          and right (measured on the Windows ToolTip: light top-left,
-    //          black bottom-right), and no relief lines on the face: the
-    //          tooltip and every notification card, whose frame this
-    //          hard-codes for good.
-    if (face == PopupFace::Menu) {
-        paint_cell_rect(cr, r, palette().ground);
+    // 2026-10-02, the Windows-95 chrome), each a square fill of the ground
+    // then its frame — the faces differ by the frame alone:
+    //   MENU — the PLAIN RAISED two-line edge: a dropdown (Windows drew
+    //          menus as raised panels, EDGE_RAISED);
+    //   INFO — Windows' tooltip frame, ONE line a side, 3DLight top and left,
+    //          DkShadow bottom and right (measured on the Windows ToolTip:
+    //          light top-left, black bottom-right), and no relief lines on
+    //          the face: the tooltip and every notification card, whose frame
+    //          this hard-codes for good. ITS FACE IS THE GROUND, ITS WORDS
+    //          THE LABEL, ON BOTH LEVELS (architect 2026-10-03, "the card
+    //          should just become ground"; Windows' COLOR_INFOBK yellow
+    //          retired — the rule is render.h's palette block, THE INFO
+    //          FACE): the one-line frame is what tells it from the chrome.
+    paint_cell_rect(cr, r, palette().ground);
+    if (face == PopupFace::Menu)
         paint_relief_plain_raised(cr, r);
-    } else {
-        paint_cell_rect(cr, r, palette().info_ground);
+    else
         paint_relief_frame(cr, r, palette().light_3d, palette().dk_shadow);
-    }
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
@@ -2715,17 +2717,18 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // laid end to end with the authored gap between them, which is what makes
     // the symmetry above true of the ink and not merely of the arithmetic.
     cairo_set_font_size(cr, size1);
-    set_palette_source(cr, palette().info_text);
+    set_palette_source(cr, palette().label);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
         line_baseline(cairo_get_scaled_font(cr),
                       static_cast<double>(y + pad_y)));
     if (two_line) {
         cairo_set_font_size(cr, size2);
-        // The hint line takes THE INFO TEXT like the first (architect
+        // The hint line takes THE LABEL like the first (architect
         // 2026-10-03, Windows' ink, no dims: the kdenlive design's dimmed hint
-        // line retired with the luminance rule).
-        set_palette_source(cr, palette().info_text);
+        // line retired with the luminance rule; the Info face's words are the
+        // label, render.h's palette block).
+        set_palette_source(cr, palette().label);
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
             line_baseline(cairo_get_scaled_font(cr),
@@ -2835,10 +2838,10 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // the waveform), the cards kNotificationGapPx apart (the card's own 1 px
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
-// THE LOOK (architect 2026-10-02, the Windows-95 chrome): Windows' tooltip
-// face, the theme's INFO pair — its info ground inside the one-line info
-// frame, its words the info text — square, NO DROP SHADOW, through the one
-// popup box painter
+// THE LOOK (architect 2026-10-02, the Windows-95 chrome; its colours
+// 2026-10-03): the INFO FACE — the level's ground inside Windows' one-line
+// tooltip frame, its words the level's label (render.h's palette block) —
+// square, NO DROP SHADOW, through the one popup box painter
 // (paint_popup_chrome's Info face, the tooltip's own);
 // a row of the icon row's own height, holding — left to right, EVERY
 // DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
@@ -3030,7 +3033,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
-            set_palette_source(cr, palette().info_text);
+            set_palette_source(cr, palette().label);
             // The FIRST line's baseline is the one-line card's, solved over
             // the first line's own band; each further line is one face
             // line-height lower.

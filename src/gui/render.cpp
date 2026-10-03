@@ -2333,8 +2333,6 @@ void install_palette(const DeviceConfig& cfg) {
     p.emboss_light  = hex(w.emboss_light);
     p.selected_fill = hex(w.selected_fill);
     p.selected_text = hex(w.selected_text);
-    p.info_ground   = hex(w.info_ground);
-    p.info_text     = hex(w.info_text);
     p.field_ground  = hex(w.field_ground);
     p.field_text    = hex(w.field_text);
     p.waveform_ink     = hex(key(&DeviceConfig::waveform_ink));

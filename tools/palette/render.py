@@ -77,11 +77,11 @@ DEFAULTS = {
     # ground (Windows' Window) and its selected text's glyphs `selected_text` (HilightText) over `selected_fill`
     # (Hilight; flat_edit_colours, which falls back to Windows' #000080 when the theme does not state it)
     'flag_border_sel': '#FFFFFF', 'flag_border_edit': '#000000', 'field_ground': '#FFFFFF', 'selected_text': '#FFFFFF',
-    # THE FIELD'S TEXT AND THE INFO PAIR (2026-10-03, step 11), read only by the two optional surfaces `dialog` and
-    # `card` (draw_dialog, draw_card): Windows' WindowText, and its InfoBk / InfoText, the app's own pair where a
-    # source records none (tools/theme_catalog/levels.py APP_INFO). `field_ground` above is the dialog field's ground
-    # too, so the EDITING flag and the dialog's field read one role, as the app's two fields do
-    'field_text': '#000000', 'info_ground': '#FFFFE1', 'info_text': '#000000',
+    # THE FIELD'S TEXT (2026-10-03, step 11), read only by the optional surface `dialog` (draw_dialog): Windows'
+    # WindowText. `field_ground` above is the dialog field's ground too, so the EDITING flag and the dialog's field
+    # read one role, as the app's two fields do. The `card` has no role of its own: it is the ground under the label
+    # (architect 2026-10-03, step 15: the app's INFO FACE, render.h's palette block; the info pair retired)
+    'field_text': '#000000',
     # icon inks (icons.cpp), two_pass of each
     'icon_label': '@label', **{f'icon_{k}': list(C.two_pass(v)) for k, v in INKC.items() if k != 'text'},
     # the Windows relief set (only read when something is raised or sunken): NO DEFAULT AND NO RULE (architect
@@ -1729,17 +1729,18 @@ def card_rect(th):
             (x0 + pad + case + pad, C.redesign_baseline(C.SANS, px, y0, card_h)))
 
 def draw_card(cr, th):
-    """`card`: ONE NOTIFICATION CARD, the app's Info face (paint_popup_chrome): `info_ground` inside one line a side,
+    """`card`: ONE NOTIFICATION CARD, the app's Info face (paint_popup_chrome): the `ground` inside one line a side,
     `bevel_light` (3DLight) top and left, `bevel_dkshadow` bottom and right (the dark pair last), square, no shadow;
-    the normal class's glyph (draw_info_glyph) and the sentence in `info_text` (card_rect's geometry). Painted over
+    the normal class's glyph (draw_info_glyph) and the sentence in the `label` (card_rect's geometry; architect
+    2026-10-03, step 15: "the card should just become ground", on both levels). Painted over
     everything under it, as the stack is the app's top layer."""
     cr_ = card_rect(th)
     if cr_ is None: return
     (x0, y0, x1, y1), (gx, gy, gs), (tx, base) = cr_
-    fill(cr, x0, y0, x1, y1, th.get('info_ground'))
+    fill(cr, x0, y0, x1, y1, th.get('ground'))
     edge(cr, x0, y0, x1, y1, [(th.get('bevel_light'), th.get('bevel_dkshadow'))])
     draw_info_glyph(cr, gx, gy, gs)
-    show(cr, C.SANS, ui_font_px(th), th.opt['card']['text'], tx, base, th.get('info_text'))
+    show(cr, C.SANS, ui_font_px(th), th.opt['card']['text'], tx, base, th.get('label'))
 
 def stamp(cr, th, text):
     # the file-name stamp: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the scene's label_box (x 300,

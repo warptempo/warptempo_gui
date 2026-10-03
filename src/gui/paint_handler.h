@@ -800,10 +800,11 @@ private:
     // surface a modal does coexist with.
     void paint_shift_tooltip(cairo_t* cr);
     void paint_dropdown(cairo_t* cr);
-    // The shared box every floating surface draws, in one of TWO FACES
-    // (architect 2026-10-02): MENU — the ground inside the PLAIN RAISED edge
-    // (the dropdown) — or INFO — Windows' tooltip face, the info ground inside the
-    // one-line INFO FRAME (the tooltip and the notification cards).
+    // The shared box every floating surface draws, the ground in one of TWO
+    // FRAMES (architect 2026-10-02): MENU — the PLAIN RAISED edge (the
+    // dropdown) — or INFO — Windows' one-line tooltip frame, the INFO FRAME
+    // (the tooltip and the notification cards; their face the ground under
+    // the label on both levels, architect 2026-10-03).
     enum class PopupFace { Menu, Info };
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r, PopupFace face);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under

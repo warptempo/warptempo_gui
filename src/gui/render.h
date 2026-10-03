@@ -84,7 +84,7 @@ struct TrimRange {
 // in-place editor's frame, kFlagEditorFrame below, and icons.cpp's hand-listed
 // inks). TEXT OVER A FILL IS THE FILL'S RECORDED PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
-// InfoWindow / InfoText, Window / WindowText) — never a luminance verdict.
+// Window / WindowText) — never a luminance verdict.
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
 // HOVER FACES: every colour is a solid fill of integer cells.
 //
@@ -117,8 +117,9 @@ struct TrimRange {
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
 //                 the ruler's ticks, a menu separator;
 //   INFO FRAME    ONE line, 3DLight top-left / DkShadow bottom-right — the
-//                 tooltip and the notification cards, on the info pair
-//                 (measured on Windows' ToolTip, a light top-left and a black
+//                 tooltip and the notification cards, on the ground under
+//                 the label (THE INFO FACE, below; the frame measured on
+//                 Windows' ToolTip, a light top-left and a black
 //                 bottom-right, architect 2026-10-02).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
 // ground in one-Windows-px cells (paint_checker_rect, below).
@@ -126,9 +127,11 @@ struct TrimRange {
 // THE MAPPING (architect 2026-10-03), role -> what it paints:
 //   ground        every chrome surface: the five lanes, the bottom row, the
 //                 dropdowns, the folder overlay and the picker, the on-screen
-//                 keyboard, every button face, a DISABLED flag's face;
+//                 keyboard, every button face, a DISABLED flag's face, the
+//                 tooltip and every notification card (THE INFO FACE);
 //   label         chrome text and glyphs, the ruler labels, the trim lane's
-//                 arrow glyph, the playhead head's outline;
+//                 arrow glyph, the playhead head's outline, the tooltip's
+//                 two lines and every card's words;
 //   the quartet   every relief line, the families unchanged; Shadow also the
 //                 ruler ticks (the etch's Hilight line beside each), DkShadow
 //                 also the flag outline (white on a selected flag,
@@ -142,14 +145,26 @@ struct TrimRange {
 //                 inactive selection face retired, architect 2026-10-03, on
 //                 Windows 95's Network Neighborhood, where a selection keeps
 //                 Hilight / HilightText in a window that has lost the focus);
-//   info pair     the tooltip and every card, both of a tooltip's lines (no
-//                 dimmed second line: Windows' ink, no dims);
 //   field pair    the modal dialogs' fields and the flag editor, the caret its
 //                 field's text (UNIFIED FIELDS, architect 2026-10-03).
-// THE THREE PAIRS ARE THE TABLE'S ROW like every role: as recorded at LIGHT,
+// THE TWO PAIRS ARE THE TABLE'S ROW like every role: as recorded at LIGHT,
 // and at DARK each ground darkened in proportion with the face under the
 // level's white text (architect 2026-10-03, mock sets AS and AT; the rule
 // is tools/theme_catalog/levels.py's), so no painter asks the level.
+// THE INFO FACE IS THE LEVEL'S GROUND UNDER THE LEVEL'S LABEL, ON BOTH LEVELS
+// (architect 2026-10-03, on mock set AY: "the card should just become
+// ground"): the tooltip, both of its lines (no dimmed second line: Windows'
+// ink, no dims), and every notification card, framed by the one-line INFO
+// FRAME, which is what tells a card from the chrome (paint_popup_chrome's
+// Info face). Windows' COLOR_INFOBK yellow and a theme's recorded
+// InfoWindow / InfoText are not carried: at dark the proportional info ground
+// read as "a dingy beige", and a recorded pair, picked for contrast on its
+// own light ground, does not translate — one rule for both levels and no
+// recorded exceptions, so the light level loses the yellow too. THIS
+// PARAGRAPH IS THE RULE'S ONE STATEMENT: a later ruling that restores the
+// LIGHT level's recorded pair amends it here, and the pair rides the table
+// again (tools/theme_catalog/levels.py; catalog.json still records every
+// entry's).
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD AND GLYPH (architect 2026-10-03,
@@ -198,8 +213,6 @@ struct GuiPalette {
     GuiColor emboss_light;    // the disabled emboss's light copy (levels.py)
     GuiColor selected_fill;   // COLOR_HIGHLIGHT
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
-    GuiColor info_ground;     // COLOR_INFOBK
-    GuiColor info_text;       // COLOR_INFOTEXT
     GuiColor field_ground;    // COLOR_WINDOW
     GuiColor field_text;      // COLOR_WINDOWTEXT
     // THE PROGRAM'S OWN COLOURS, the device config's open keys (the record of

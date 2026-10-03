@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/gen_theme_table.py — docs/themes/catalog.json -> src/gui/theme_table.h, THE APP'S THEME TABLE
 # (architect 2026-10-03): every catalog entry at the two levels (levels.py, the one module of the level
-# arithmetic), thirteen roles a level, so the app reads recorded bytes and computes no colour. The header is
+# arithmetic), eleven roles a level, so the app reads recorded bytes and computes no colour. The header is
 # GENERATED AND COMMITTED: a catalog change is this script run again and its output committed beside it; the app's
 # build needs no Python. The output is byte-stable — the catalog's order, fixed formatting, no timestamp — so two
 # runs write identical bytes (run it twice and cmp).
@@ -14,7 +14,7 @@ import levels                                                          # noqa: E
 
 OUT = os.path.join(levels.REPO, 'src', 'gui', 'theme_table.h')
 FIELDS = ('ground', 'label', 'hilight', 'light_3d', 'shadow', 'dk_shadow', 'emboss_light',
-          'selected_fill', 'selected_text', 'info_ground', 'info_text', 'field_ground', 'field_text')
+          'selected_fill', 'selected_text', 'field_ground', 'field_text')
 assert len(FIELDS) == len(levels.ROLES)
 
 
@@ -42,7 +42,7 @@ def main():
          '#include <cstdint>',
          '',
          '// One level of one theme, in levels.py\'s role order: the ground, the label, Windows\' relief quartet',
-         '// (Hilight, 3DLight, Shadow, DkShadow), the emboss\'s light copy, then the selected, info and field pairs.',
+         '// (Hilight, 3DLight, Shadow, DkShadow), the emboss\'s light copy, then the selected and field pairs.',
          'struct GuiThemeLevelWords {',
          '    uint32_t ' + ', '.join(FIELDS[:7]) + ';',
          '    uint32_t ' + ', '.join(FIELDS[7:]) + ';',
