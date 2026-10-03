@@ -1,8 +1,12 @@
 #include "text_shape.h"
 
+#include <cassert>
+
 #include <cairo/cairo-ft.h>
 #include <hb-ft.h>
 #include <hb.h>
+
+#include FT_TRUETYPE_TABLES_H
 
 namespace text_shape {
 
@@ -173,6 +177,24 @@ std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {
     // first glyph's cluster is 0) keep their zero initialisation, the correct
     // answer for a boundary at the run's origin.
     return out;
+}
+
+FaceUnderline face_underline_px(cairo_scaled_font_t* font) {
+    cairo_matrix_t m;
+    cairo_scaled_font_get_font_matrix(font, &m);
+    const double size_px = m.yy;
+    const ScaledFontFace locked(font);
+    const FT_Face face = locked.face();
+    const auto* post = static_cast<const TT_Postscript*>(
+        FT_Get_Sfnt_Table(face, FT_SFNT_POST));
+    // Both faces are the repository's own TrueType files, so a missing table
+    // is a build defect, not a state (gui_font.h's install observes them).
+    assert(post && face->units_per_EM > 0);
+    FaceUnderline u;
+    const double upem = static_cast<double>(face->units_per_EM);
+    u.top_px       = -static_cast<double>(post->underlinePosition) * size_px / upem;
+    u.thickness_px =  static_cast<double>(post->underlineThickness) * size_px / upem;
+    return u;
 }
 
 } // namespace text_shape

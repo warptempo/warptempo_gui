@@ -503,39 +503,39 @@ enum class Icon {
 inline constexpr int kIconCount = 57;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
-// filling each of its paths in that path's OWN color (the colors are the SVGs'
-// and are hard-coded per the redesign color ruling — see the table).
+// filling each of its paths in that path's OWN color (the table's: a path the
+// SVG inks in the scheme's text class takes the theme's LABEL, every other
+// path its hard-coded ink — the ink block at icons.cpp).
 //
 // Uniform scale, no aspect fitting: every icon here is square by construction
 // (viewBox 0 0 22 22). Cairo state is saved and restored; the caller's source,
 // path and matrix survive untouched.
 //
-// A RECOLOURING rides the last two arguments, through the shared mix_color
-// owner (render.h): each path's own color is RETAINED by `keep_own` and made
-// up with `mixed_with` — a MIX, not an alpha (the redesign composites
-// nothing and every color that reaches cairo is opaque), per path, so a
-// multi-colored icon moves as one object. Its one recolouring caller is the
-// folder overlay's highlighted row, which inks a white glyph black (keep 0)
-// on a light highlight; every dead glyph — the roster's and the dialog's
-// glyph buttons alike — is draw_engraved's, below. keep_own == 1 (the
-// default, which every plain caller takes) leaves the table's colors
-// bit-identical.
 //
 // A malformed `d` string is a PROGRAMMING ERROR, not a runtime state — the
 // strings are in-tree constants — so a parse failure emits one stderr line and
 // draws nothing. That is deliberately all the machinery there is: a silent
 // fallback would hide a transcription typo forever.
-void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
-          double keep_own = 1.0,
-          GuiColor mixed_with = GuiColor{0.0, 0.0, 0.0});
+void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
+
+// THE GLYPH IN ONE INK — every path of `icon` in `ink`, the same square,
+// validation and stderr rule as draw. Its one caller is the folder overlay's
+// lit row, which inks its glyph in the theme's selected text as it inks the
+// row's name (architect 2026-10-03: text over a fill is the fill's recorded
+// pair). (It replaced draw's mix_color recolouring the same day, the mix
+// retired with the luminance rule.)
+void draw_in_ink(cairo_t* cr, Icon icon, double x, double y, double size_px,
+                 GuiColor ink);
 
 // THE ENGRAVED GLYPH — a disabled toolbar button's face (architect
 // 2026-10-02, the AB set; Windows' DrawState DSS_DISABLED): the glyph's whole
-// shape, every path in one ink, painted TWICE — first in kReliefHilight
-// `offset_px` right and down (the caller passes one Windows px,
-// relief_line_px), then in kReliefShadow at (x, y) — so the dead glyph reads
-// as cut into the face. It replaces the roster's disabled mix. Same square,
-// same validation and the same one-stderr rule as draw above.
+// shape, every path in one ink, painted TWICE — first in the theme's EMBOSS
+// LIGHT COPY `offset_px` right and down (the caller passes one Windows px,
+// relief_line_px), then in its Shadow at (x, y) — so the dead glyph reads
+// as cut into the face. THE GLYPH HALF OF THE DISABLED EMBOSS (architect
+// 2026-10-03; the word half is show_embossed_run, render.h, the rule at the
+// palette block). Same square, same validation and the same one-stderr rule
+// as draw above.
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
                    double offset_px);
 

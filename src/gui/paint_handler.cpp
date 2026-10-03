@@ -50,7 +50,7 @@
 //
 // EVERY STRING THE STATE LINE CARRIES — the queue/render status and the
 // history walk line — IS THE SANS AT THE NORMAL FACE (redesign_font_size_px,
-// 13 Windows px) in kRedesignLabel, on the row's ground a group space right
+// 13 Windows px) in the theme's label, on the row's ground a group space right
 // of the clock's panel (architect 2026-10-03; the block at the line's painter
 // below and notifications.h are the live record), so the line is no
 // monospace cell. For 2026-10-02 it stood in a second status panel at the
@@ -98,6 +98,15 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
     const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
     set_palette_source(cr, color);
     text_shape::show_shaped_run(cr, run, x, baseline);
+}
+
+// The same run in THE DISABLED EMBOSS (show_embossed_run, render.h) — the
+// row tier's dead word.
+static void show_row_text_embossed(cairo_t* cr, cairo_scaled_font_t* font,
+                                   double x, double baseline,
+                                   std::string_view text) {
+    if (text.empty()) return;
+    show_embossed_run(cr, text_shape::shape_text_run(font, text), x, baseline);
 }
 
 // THE STATE TEXT IS ROW 8'S LINE ON THE GROUND (architect 2026-08-29, folding
@@ -205,15 +214,9 @@ namespace {
 // (The authored-length -> device-pixels conversion every dimension below takes
 // is scaled_px, render.h — the ONE conversion the whole scale axis shares.)
 
-// THE ACCENT'S FOCUS FORK — ONE OWNER for "which accent does a face that says
-// SELECTED wear right now" (architect 2026-09-02: a selection in an unfocused
-// window takes the inactive selection). Its one reader (re-grepped
-// 2026-10-02) is the folder overlay's highlighted row; the value and its rule
-// are at kRedesignAccentInactive (render.h). A FORK ON THE FLAG AND NOTHING
-// ELSE — no owner term, no surface term.
-GuiColor accent_for_focus(const AppState& app) {
-    return app.window_activated ? kRedesignAccent : kRedesignAccentInactive;
-}
+// (THE ACCENT'S FOCUS FORK — accent_for_focus — retired 2026-10-03 with the
+// inactive selection face: ONE SELECTED PAIR, FOCUSED OR NOT, the record at
+// render.h's palette block.)
 
 // ROW 1. The row height itself lives in render.h as kMenuRowHeightPx,
 // because main.cpp's lane table needs it.
@@ -397,7 +400,8 @@ constexpr MenuButtonDef kMenuButtons[] = {
 //   REST     — RAISED on the ground, glyph unshifted. EVERY button rests
 //              raised, enabled or disabled: a disabled button keeps its edge
 //              and changes only its glyph (engraved on a toolbar button,
-//              icons::draw_engraved) or its label.
+//              icons::draw_engraved, or its label embossed,
+//              show_embossed_run — Windows' DSS_DISABLED for both).
 //   CHECKED  — a toggled-on button (the roster's `selected`, the player's
 //              Repeat One, the keyboard's armed keys): SUNKEN over Windows'
 //              checked face — the ground dithered with Hilight in one Windows
@@ -410,14 +414,13 @@ constexpr MenuButtonDef kMenuButtons[] = {
 //              while it is held.
 enum class ButtonFamily { Toolbar, Push };
 struct ButtonBoxFace {
-    GuiColor under;   // the face under the glyph: the ground, every face
     int      shift;   // the glyph's down-and-right offset, device px
 };
 ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
                                bool pressed, ButtonFamily family) {
     const bool down = lamp || pressed;
-    paint_cell_rect(cr, r, kRedesignContentGround);
-    if (lamp && !pressed) paint_checker_rect(cr, r, r.x, r.y, kReliefHilight);
+    paint_cell_rect(cr, r, palette().ground);
+    if (lamp && !pressed) paint_checker_rect(cr, r, r.x, r.y, palette().hilight);
     if (family == ButtonFamily::Toolbar) {
         if (down) paint_relief_soft_sunken(cr, r);
         else      paint_relief_soft_raised(cr, r);
@@ -425,7 +428,7 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
         if (down) paint_relief_plain_sunken(cr, r);
         else      paint_relief_plain_raised(cr, r);
     }
-    return ButtonBoxFace{kRedesignContentGround, down ? relief_line_px() : 0};
+    return ButtonBoxFace{down ? relief_line_px() : 0};
 }
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
@@ -1157,10 +1160,11 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE LEFT FLOAT'S FACES (architect 2026-10-02, the Windows-95 menu bar):
     // COLD, nothing is drawn — the label bare on the ground; OPEN, the anchor
     // whose menu is down is Windows 95's open menu title — its rectangle
-    // filled with the HIGHLIGHT (the accent, the dropdown's lit row's own
-    // fill) under the luminance rule's text (highlight_text_ink, render.h);
+    // filled with the theme's SELECTED fill (the dropdown's lit row's own)
+    // under its selected text, the recorded pair (render.h's palette block);
     // DEAD (the history view greys every anchor but File, the partition being
-    // history_mode_disables_button's), the label alone dims. NO HOVER FACE
+    // history_mode_disables_button's), the label alone takes THE DISABLED
+    // EMBOSS (show_embossed_run). NO HOVER FACE
     // (architect 2026-10-02: "hover is awkward with pen and sometimes
     // flickers"; Windows 98's hot-tracked raised title is not adopted) and no
     // press face: a press opens the menu, whose highlight is the cue.
@@ -1196,7 +1200,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // 2026-10-01: the menu row takes the icon row's ground), one fill over
     // the whole lane. It has one value focused and unfocused, so this row no
     // longer darkens on the window's focus loss.
-    const GuiColor ground = kRedesignContentGround;
+    const GuiColor ground = palette().ground;
     set_palette_source(cr, ground);
     cairo_rectangle(cr, row.x, row.y, row.w, row.h);
     cairo_fill(cr);
@@ -1244,8 +1248,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (architect 2026-10-02, Windows 95's open menu title; the anchor
         // stays marked while its menu is open, kdenlive's behaviour since
         // 2026-08-02): the anchor's rectangle — the whole lane tall, the
-        // label's width plus its pads — filled with the accent, the label in
-        // the luminance rule's ink over it, whichever of the three anchors
+        // label's width plus its pads — filled with the selected fill, the
+        // label in the selected text over it, whichever of the three anchors
         // emitted the open popup, through the one anchor owner. A PAINT
         // CONDITION, NOT A `selected` BIT: no menu button has a chord
         // (redesign_button_selected is the live fact a chord flips), and the
@@ -1254,29 +1258,30 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // dead anchor has no open menu (toggle_dropdown refuses it), so the
         // highlight needs no enabled term.
         //
-        // DEAD, THE LABEL IS THE ONE THING THAT DIMS: it retains
-        // kRedesignDisabledMix of itself over the ground, the product's
-        // disabled text (the partition and its derivation are at
-        // history_mode_disables_button, input_pointer.cpp; this reads only the
-        // published bit).
-        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
+        // DEAD, THE LABEL IS THE ONE THING THAT CHANGES: it takes THE
+        // DISABLED EMBOSS, the product's one disabled word (the partition and
+        // its derivation are at history_mode_disables_button,
+        // input_pointer.cpp; this reads only the published bit).
         const bool open_anchor =
             app.dropdown.open() &&
             def.id == dropdown_anchor_button(app.dropdown.menu);
         if (open_anchor)
             paint_cell_rect(cr, GuiRect{x, row.y, btn_w, row.h},
-                            kRedesignAccent);
-        const GuiColor label_c =
-            open_anchor ? highlight_text_ink(kRedesignAccent)
-                        : mix_color(kRedesignLabel, ground, keep);
-        set_palette_source(cr, label_c);
+                            palette().selected_fill);
         // THE LABEL CENTERS IN THE ANCHOR, which IS the lane: Qt's own menu
         // bar centers an item's text in the item rect, which is where
         // cap-centring puts ours (redesign_baseline).
-        text_shape::show_shaped_run(
-            cr, run, static_cast<double>(x + pad),
+        const double label_x = static_cast<double>(x + pad);
+        const double label_y =
             redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(row.h)));
+                              static_cast<double>(row.h));
+        if (!face.enabled && !open_anchor) {
+            show_embossed_run(cr, run, label_x, label_y);
+        } else {
+            set_palette_source(cr, open_anchor ? palette().selected_text
+                                               : palette().label);
+            text_shape::show_shaped_run(cr, run, label_x, label_y);
+        }
 
         x += btn_w;
     }
@@ -1291,7 +1296,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // MARGIN — its 8px lead-out, icon_row_pad_x, read rather than restated —
     // so the legend ends where the icon row's content does. The menu's own
     // sans at the redesign size through the shaping
-    // chokepoint, in the label white, on the anchors' baseline (the same
+    // chokepoint, in the theme's label, on the anchors' baseline (the same
     // lane). THE RULE FOR A ROW TOO NARROW FOR BOTH: the anchors win and the
     // legend is clipped at the right. No supported size comes near it — at
     // 100% the anchors end near x 170 and the legend, some 140 px wide, starts
@@ -1303,7 +1308,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             text_shape::shape_text_run(font, app.menu_legend.text);
         const int right = row.x + row.w - icon_row_pad_x();
         const int lx = right - static_cast<int>(std::nearbyint(run.width_px));
-        set_palette_source(cr, kRedesignLabel);
+        set_palette_source(cr, palette().label);
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(lx),
             redesign_baseline(font, static_cast<double>(row.y),
@@ -1567,7 +1572,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE LANE IS ITS CONTENT (render.h's icon_row_* pair): no border row.
     cairo_save(cr);
 
-    set_palette_source(cr, kRedesignContentGround);
+    set_palette_source(cr, palette().ground);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
 
@@ -2396,7 +2401,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     narrow window where the right block has already walked over this
         //     ground.
         //   * THE STATE — the sans at THE NORMAL FACE (redesign_font_size_px,
-        //     13 Windows px) in kRedesignLabel, painted straight on the row's
+        //     13 Windows px) in the theme's label, painted straight on the row's
         //     ground as the menu row's words are, LEFT-ALIGNED a group space
         //     past the clock's panel, on the row's solved baseline over the
         //     content band (redesign_baseline, the clock's own band). The
@@ -2466,7 +2471,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         std::string clock = tab_prefix + format_timestamp(seconds);
         if (app.dirty) clock += "*";
         show_row_text(cr, font, static_cast<double>(cell_x) + mark_w / 2.0,
-                      baseline, clock, kRedesignLabel);
+                      baseline, clock, palette().label);
         if (state_w > 0 && !state.empty()) {
             // The normal face, selected on the context after the clock's run
             // has been shown (the borrowed `font` above is not read again).
@@ -2480,7 +2485,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             cairo_rectangle(cr, state_x, lane.y, state_w, lane.h);
             cairo_clip(cr);
             show_row_text(cr, state_font, static_cast<double>(state_x),
-                          state_baseline, state, kRedesignLabel);
+                          state_baseline, state, palette().label);
             cairo_restore(cr);
         }
     }
@@ -2496,17 +2501,18 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     // 2026-10-02, the Windows-95 chrome), each a square fill then its frame:
     //   MENU — the ground inside the PLAIN RAISED two-line edge: a dropdown
     //          (Windows drew menus as raised panels, EDGE_RAISED);
-    //   INFO — Windows' tooltip: kInfoGround (COLOR_INFOBK) inside ONE line a
-    //          side, 3DLight top and left, DkShadow bottom and right (measured
-    //          on the Windows ToolTip: light top-left, black bottom-right),
-    //          and no relief lines on the yellow face: the tooltip and every
-    //          notification card, whose frame this hard-codes for good.
+    //   INFO — Windows' tooltip: the theme's info ground (COLOR_INFOBK)
+    //          inside ONE line a side, 3DLight top and left, DkShadow bottom
+    //          and right (measured on the Windows ToolTip: light top-left,
+    //          black bottom-right), and no relief lines on the face: the
+    //          tooltip and every notification card, whose frame this
+    //          hard-codes for good.
     if (face == PopupFace::Menu) {
-        paint_cell_rect(cr, r, kRedesignContentGround);
+        paint_cell_rect(cr, r, palette().ground);
         paint_relief_plain_raised(cr, r);
     } else {
-        paint_cell_rect(cr, r, kInfoGround);
-        paint_relief_frame(cr, r, kRelief3DLight, kReliefDkShadow);
+        paint_cell_rect(cr, r, palette().info_ground);
+        paint_relief_frame(cr, r, palette().light_3d, palette().dk_shadow);
     }
 }
 
@@ -2709,16 +2715,17 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // laid end to end with the authored gap between them, which is what makes
     // the symmetry above true of the ink and not merely of the arithmetic.
     cairo_set_font_size(cr, size1);
-    set_palette_source(cr, kInfoText);
+    set_palette_source(cr, palette().info_text);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
         line_baseline(cairo_get_scaled_font(cr),
                       static_cast<double>(y + pad_y)));
     if (two_line) {
         cairo_set_font_size(cr, size2);
-        // The hint line is DIMMED by the one measured factor, uniformly: the
-        // info text over the info face (kTooltipDimText, render.h).
-        set_palette_source(cr, kTooltipDimText);
+        // The hint line takes THE INFO TEXT like the first (architect
+        // 2026-10-03, Windows' ink, no dims: the kdenlive design's dimmed hint
+        // line retired with the luminance rule).
+        set_palette_source(cr, palette().info_text);
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
             line_baseline(cairo_get_scaled_font(cr),
@@ -2829,8 +2836,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
 // THE LOOK (architect 2026-10-02, the Windows-95 chrome): Windows' tooltip
-// face, the INFO pair — kInfoGround inside the one-line info frame, its words
-// kInfoText — square, NO DROP SHADOW, through the one popup box painter
+// face, the theme's INFO pair — its info ground inside the one-line info
+// frame, its words the info text — square, NO DROP SHADOW, through the one
+// popup box painter
 // (paint_popup_chrome's Info face, the tooltip's own);
 // a row of the icon row's own height, holding — left to right, EVERY
 // DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
@@ -3022,7 +3030,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
-            set_palette_source(cr, kInfoText);
+            set_palette_source(cr, palette().info_text);
             // The FIRST line's baseline is the one-line card's, solved over
             // the first line's own band; each further line is one face
             // line-height lower.
@@ -3060,8 +3068,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // ITS CHROME (architect 2026-10-02, the Windows-95 popup menu): the ONE
     // ground inside the PLAIN RAISED two-line frame, square
     // (paint_popup_chrome), one Windows px of ground margin inside it, its
-    // separators ETCHED; the highlighted row a FLAT ACCENT FILL under the
-    // luminance rule's text (highlight_text_ink, render.h).
+    // separators ETCHED; the highlighted row a FLAT FILL in the theme's
+    // selected pair (render.h's palette block).
     //
     // NO ICONS, NO CHECKBOXES, NO SUBMENU ARROWS, by ruling — the crops reserve
     // all three columns and this product has none of them, exactly as the tabs
@@ -3246,9 +3254,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
 
         // THE HIGHLIGHTED ROW (architect 2026-10-02, the Windows highlight):
         // the row the pointer is over, or the press is armed on, is a FLAT
-        // FILL IN THE ACCENT over the whole item box — square, no outline,
-        // inside the frame's one-px margin — under the luminance rule's text
-        // and accelerator (highlight_text_ink: black over the light accent).
+        // FILL IN THE SELECTED FILL over the whole item box — square, no
+        // outline, inside the frame's one-px margin — under the selected text,
+        // label and accelerator alike (the theme's recorded pair).
         // It is a SELECTION FACE,
         // NOT A HOVER: the hovered-item tracking is what a press resolves
         // against, and the row it lights is the row a press arms (ON SCREEN
@@ -3261,7 +3269,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // in ink alone.
         const bool lit = enabled[i] && (app.dropdown.pressed_item == i ||
                                         app.dropdown.hovered_item == i);
-        if (lit) paint_cell_rect(cr, item, kRedesignAccent);
+        if (lit) paint_cell_rect(cr, item, palette().selected_fill);
 
         // LEFT-ALIGNED AT THE ONE INDENT, measured from the POPUP box's own left
         // edge in every menu, and vertically centred by the shared solver. On
@@ -3271,43 +3279,37 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
-        // THE INKS: the luminance rule's on the highlight; the label white on
-        // a live row; a DISABLED row's label the label at
-        // kRedesignDisabledMix over the ground — one disabled rule for the
-        // menu anchors and the menus, architect 2026-10-02: one ground.
-        const GuiColor lit_ink = highlight_text_ink(kRedesignAccent);
-        const GuiColor disabled_label =
-            mix_color(kRedesignLabel, kRedesignContentGround,
-                      kRedesignDisabledMix);
-        const GuiColor label_ink =
-            lit          ? lit_ink
-            : enabled[i] ? kRedesignLabel
-                         : disabled_label;
-        set_palette_source(cr, label_ink);
-        text_shape::show_shaped_run(cr, runs[i],
-                                    static_cast<double>(x + pad_l), base);
+        // THE INKS: the selected text on the highlight; the theme's label on
+        // a live row; a DISABLED row's label THE DISABLED EMBOSS
+        // (show_embossed_run) — one disabled rule for the menu anchors and
+        // the menus (architect 2026-10-03, Windows' DSS_DISABLED). A disabled
+        // row is never lit (the gate above).
+        const auto show_row_run = [&](const text_shape::ShapedRun& r,
+                                      double rx) {
+            if (!enabled[i]) {
+                show_embossed_run(cr, r, rx, base);
+                return;
+            }
+            set_palette_source(cr, lit ? palette().selected_text
+                                       : palette().label);
+            text_shape::show_shaped_run(cr, r, rx, base);
+        };
+        show_row_run(runs[i], static_cast<double>(x + pad_l));
 
         // THE ACCELERATOR COLUMN is RIGHT-ALIGNED to the popup's own right
         // margin, not to the item box's: the margin is a fact about the box,
         // and aligning to it keeps every hotkey's last ink column on one line
-        // whatever the item inset is. Its ink is the dimmer
-        // kRedesignPopupHotkey on a live row, the highlight's text on it, and on a
-        // disabled row the disabled label taken at the hotkey's own keep — the
-        // row dims once and its accelerator twice (the rule at
-        // kRedesignPopupHotkey). The column exists wherever a menu's rows
-        // carry a hotkey string (the optional width term above).
+        // whatever the item inset is. ITS INK IS ITS ITEM'S OWN (architect
+        // 2026-10-03, Windows' ink, no dims: the kdenlive design's dimmer
+        // accelerator column retired with the luminance rule) — the label on
+        // a live row, the selected text on the lit one, the emboss on a
+        // disabled one. The column exists wherever a menu's rows carry a
+        // hotkey string (the optional width term above).
         if (row.hotkey != nullptr) {
             const double hot_x =
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
-            const GuiColor hot_ink =
-                lit          ? lit_ink
-                : enabled[i] ? kRedesignPopupHotkey
-                             : mix_color(disabled_label,
-                                         kRedesignContentGround,
-                                         kPopupHotkeyMix);
-            set_palette_source(cr, hot_ink);
-            text_shape::show_shaped_run(cr, hot_runs[i], hot_x, base);
+            show_row_run(hot_runs[i], hot_x);
         }
         iy += item_h;
     }
@@ -3320,7 +3322,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes KDENLIVE'S LOOK and
 // REAPER'S GEOMETRY MODEL (architect 2026-08-01).
 //   LOOK, from row_5_full.png (its colours and the label size the 2026-10-02
-//     design's: ETCHED ticks, kRulerLabel at the small face): the two tick lengths
+//     design's: ETCHED ticks, the theme's label at the small face): the two tick lengths
 //     differing at their TOP
 //     — majors rise kRulerMajorRisePx above the marker lane, minors start at it, and BOTH run
 //     down to the marker lane's bottom (the waveform top). That shared bottom is
@@ -3520,7 +3522,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    set_palette_source(cr, kRedesignContentGround);
+    set_palette_source(cr, palette().ground);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
 
@@ -3635,14 +3637,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // waveform_line_px() wide (render.h, the class's one inventory),
             // left edge on the tick's own column, clipped at the right edge.
             // EVERY TICK IS ETCHED (architect 2026-10-02, the Sonic Foundry
-            // etching): the tick in the Shadow (kRulerTick), then one line of
+            // etching): the tick in the theme's Shadow, then one line of
             // Hilight immediately to its RIGHT over exactly the tick's own
             // rows, drawn right after it, so the labels, the head, the flags
             // and the stems cover the pair wherever they cover the tick.
             const int tick_top = major ? major_top : minor_top;
-            set_palette_source(cr, kRulerTick);
+            set_palette_source(cr, palette().shadow);
             fill_waveform_line(cr, lane.x, wave_w, col, tick_top, tick_bottom);
-            set_palette_source(cr, kReliefHilight);
+            set_palette_source(cr, palette().hilight);
             fill_waveform_line(cr, lane.x, wave_w, col + waveform_line_px(),
                                tick_top, tick_bottom);
             if (!major) continue;
@@ -3666,9 +3668,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 ruler_label_text(label_ms, step);
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, txt.c_str());
-            // EVERY LABEL IS ONE COLOUR, kRulerLabel (architect 2026-10-02,
-            // on the Y1 mock: "give the same colour to all the numbers").
-            set_palette_source(cr, kRulerLabel);
+            // EVERY LABEL IS ONE COLOUR (architect 2026-10-02, on the Y1
+            // mock: "give the same colour to all the numbers"), THE THEME'S
+            // LABEL (architect 2026-10-03).
+            set_palette_source(cr, palette().label);
             text_shape::show_shaped_run(cr, run,
                                         static_cast<double>(lane.x + col +
                                                             waveform_line_px() +
@@ -3696,10 +3699,18 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // OPAQUE (architect 2026-10-02: "the classic Windows way"): the head
     // paints over whatever this painter already laid down in its band — the
-    // labels and the ticks' rise — painted after them.
+    // labels and the ticks' rise — painted after them, in the `playhead_head`
+    // key, WITH A ONE-WINDOWS-PX OUTLINE IN THE THEME'S LABEL (architect
+    // 2026-10-03, the Windows 95 arrow cursor's edge): the head's own
+    // boundary pixels — every head pixel with a pixel outside the head within
+    // one Windows px of it straight up, down, left or right — so the head
+    // keeps its size and a one-row stair of its sides is a one-line
+    // staircase; its top row and its tip row are outline across their width.
+    // tools/palette's head_outline_runs is the same rule.
     //
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
-    // waveform_line_px()-wide kPlayheadStem run (the waveform segment's own
+    // waveform_line_px()-wide run in the `playhead_stem` key (the waveform
+    // segment's own
     // columns) from the marker lane's top to the waveform top,
     // where render_playhead's waveform segment (paint_playheads) begins and
     // crosses the well's top lines, so head, column and stem read as one
@@ -3756,12 +3767,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // at 138 %, 10 / 4 at 50 %), so the band never leaves the lane.
             const int    head_bottom = marker.y;
             const int    head_top    = head_bottom - rows;
-            // THE HOLD LAMP (architect 2026-09-24): the head is white while
-            // the hold posture stands and grey when it does not
-            // (kPlayheadHeadHeld, render.h). Repainted on the bit's flip by
-            // the per-tick comparator (main.cpp).
-            const GuiColor head = app.camera_hold ? kPlayheadHeadHeld
-                                                  : kPlayheadHead;
+            // THE HOLD LAMP (architect 2026-09-24): the head takes the STEM'S
+            // key while the hold posture stands and its own when it does not,
+            // the outline kept (render.h's playhead paragraph). Repainted on
+            // the bit's flip by the per-tick comparator (main.cpp).
+            const GuiColor head = app.camera_hold ? palette().playhead_stem
+                                                  : palette().playhead_head;
             // THE CLIP to the waveform's columns (the half-head rule above),
             // over the head's band alone and released before the stem.
             cairo_save(cr);
@@ -3778,10 +3789,46 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             }
             // ONE FILL over the disjoint rows.
             cairo_fill(cr);
+            // THE OUTLINE (the block above): row r's span is
+            // [col - half(r), col + half(r) + t), one run a row, so a pixel is
+            // INNER iff it stands at least one Windows px inside its own row's
+            // two ends and inside the spans of the rows one Windows px above
+            // and below it — a row off the head counting as empty.
+            const int lw = relief_line_px();
+            const auto span_lo = [&](int r) {
+                return col - playhead_head_half_px(r, s);
+            };
+            const auto span_hi = [&](int r) {
+                return col + playhead_head_half_px(r, s) + t;
+            };
+            const auto inside = [&](int r, int x) {
+                return r >= 0 && r < rows && x >= span_lo(r) &&
+                       x < span_hi(r);
+            };
+            set_palette_source(cr, palette().label);
+            for (int r = 0; r < rows; ++r) {
+                int run_x0 = 0;
+                bool in_run = false;
+                for (int x = span_lo(r); x <= span_hi(r); ++x) {
+                    bool edge = false;
+                    if (x < span_hi(r)) {
+                        edge = x - span_lo(r) < lw || span_hi(r) - 1 - x < lw;
+                        for (int k = 1; k <= lw && !edge; ++k)
+                            edge = !inside(r - k, x) || !inside(r + k, x);
+                    }
+                    if (edge && !in_run) { run_x0 = x; in_run = true; }
+                    if (!edge && in_run) {
+                        cairo_rectangle(cr, lane.x + run_x0, head_top + r,
+                                        x - run_x0, 1);
+                        in_run = false;
+                    }
+                }
+            }
+            cairo_fill(cr);
             cairo_restore(cr);
 
             if (!playhead_stem_suppressed()) {
-                set_palette_source(cr, kPlayheadStem);
+                set_palette_source(cr, palette().playhead_stem);
                 fill_waveform_line(cr, lane.x, wave_w, col, marker.y,
                                    marker.y + marker.h);
             }
@@ -3829,7 +3876,7 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     //
     // BLIT-ONLY HERE, AND NOTHING RECOLORS IT AFTER: this call writes the
     // plate's pixels as the renderer wrote them, composited once over the
-    // plain kWaveformCanvas ground render_canvas laid — the plate's
+    // plain `waveform_canvas` ground render_canvas laid — the plate's
     // transparent gaps show that ground, the canvas having that one painter —
     // and the blitted pixels are final. No pass recolours the waveform: the
     // out-of-trim dim retired 2026-07-26 and the sweep's region highlight
@@ -4015,21 +4062,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // this reset's stem — at rest and through a drag alike, the drag writing
     // only its proposal, so the ring and the stem share one class throughout.
     bool red_class = false;
-    // THE RESET'S SELECTION BIT, for the ring's colour (architect 2026-09-23:
-    // the ring and the stem are one object and brighten together). It is the
-    // bit the flag pass hands this reset's PAYLOAD face, whose stem the ring
-    // mirrors (render_flag_boxes_impl, render.cpp), re-spelled across the
-    // pass's parameter boundary from the same state its fingerprint carries
-    // (the selection hash, the addressed cell, the mode verdict): selected iff
-    // the reset is a member (app.selected_markers, the pass's own membership
-    // set) and its bright cell is the payload. This reset IS the focus, so its
-    // bright cell is app.addressed_cell — falling back to the payload where
-    // that bound cell is painted nowhere, which is the pass's rule and
-    // marker_paints_iter_cells' question (a bound field stands only on a
-    // painted cell, so the pass's suppression arm adds nothing here). A
-    // selected reset whose addressed cell is a bound cell keeps its rest stem,
-    // so its ring keeps the rest colour too.
-    bool selected_face = false;
     {
         assert(app.active_audio_view == 'T');   // P stands in target alone
 
@@ -4042,10 +4074,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // label cascade).
         if (marker.disabled) return out;
         red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
-        selected_face =
-            app.selected_markers.count(idx) > 0 &&
-            (app.addressed_cell == MarkerCell::Payload ||
-             !marker_paints_iter_cells(app, 'P', idx));
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
         // — the SAME map the flags, stems, drag overlay and riding playhead read,
@@ -4146,7 +4174,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     out.x0    = x0;
     out.x1    = x1;
     out.red   = red_class;
-    out.selected = selected_face;
     return out;
 }
 
@@ -4183,21 +4210,18 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE RING IS THE STEM'S COLOUR (architect 2026-08-01; the class rule
-    // 2026-09-17; the selection 2026-09-23) — "they're one unit", the ring and
-    // the stem of the reset it annotates. It wears what that stem wears: the
-    // stem red when the reset is in the column's red set (band.red), the
-    // column's calm fill kPhaseResetFlagFill otherwise, and the bright fill of
-    // either (the Sel face's stem) when the stem brightens with a selected
-    // flag (band.selected). The ring once kept the rest colour as "not a
-    // selection cue"; the architect reversed that 2026-09-23 — the ring and the
-    // stem are one object and brighten together. phase_reset_stem_color asks
-    // the one class ladder rather than restating it, so ring and stem cannot
-    // drift. DAMAGE: this pass paints live in on_redraw from app state, never
-    // from a cached surface, and every change to its colour's inputs (the
-    // selection, the focus, the addressed cell, the mode) misses the flag
-    // cache's fingerprint, whose rebuild damages the waveform with the strip
-    // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own repaint.
-    const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
+    // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
+    // annotates. It wears what that stem wears: the `invalid_face` key when
+    // the reset is in the column's red set (band.red), the `flag_face` key
+    // otherwise; selection moves neither since the underline (architect
+    // 2026-10-03). phase_reset_stem_color asks the one ladder rather than
+    // restating it, so ring and stem cannot drift. DAMAGE: this pass paints
+    // live in on_redraw from app state, never from a cached surface, and
+    // every change to its colour's inputs misses the flag cache's
+    // fingerprint, whose rebuild damages the waveform with the strip
+    // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
+    // repaint; a palette install damages the whole window.
+    const GuiColor ring = phase_reset_stem_color(band.red);
     set_palette_source(cr, ring);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
@@ -4343,8 +4367,17 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // vertical down the waveform at each bound; the redesigned lane says the
     // window where the window is, and a pair of full-height lines competing with
     // the marker stems said it a second time in the same pixels.
+    // THE HELD CAP (architect 2026-10-03, render_trim_flags' `pressed`): a
+    // live single-bound drag presses its bound's button; the pair drag and a
+    // press still under the gate's threshold press none.
+    const TrimPressedCap pressed =
+        app.trim_drag.active && !app.trim_drag.both
+            ? (app.trim_drag.is_begin ? TrimPressedCap::Begin
+                                      : TrimPressedCap::End)
+            : TrimPressedCap::None;
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
-                      basis.vp_start_frame, basis.vp_end_frame, trim, out_hit);
+                      basis.vp_start_frame, basis.vp_end_frame, trim, pressed,
+                      out_hit);
 }
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
@@ -4378,38 +4411,10 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     if (app.marker_stems.empty()) return;
 
-    // THE INVALID-COMMIT RED FLASH REACHES THE STEM (architect 2026-08-01): a
-    // flashing flag and its stem read as one object, exactly as a coincident
-    // marker's red class already does — the flash borrows that class's stem,
-    // kMarkerStemRed, it does not invent a colour, so the red rest fill either
-    // way. The
-    // flash stem stays the red class's REST stem although the flag's flash
-    // took the class's BRIGHT pair on 2026-09-16 and a selected red stem now
-    // takes the bright fill (architect 2026-09-23): the flash override is its
-    // own ruling and was left as it stood.
-    //
-    // IT IS A PAINT-TIME OVERRIDE, mirroring how the flash face itself is stored
-    // and painted: render_flag_editor_box resolves the marker's ordinary face
-    // through the one class ladder and then overrides the pair when `ed.red` is
-    // set, per frame, out of any cache. This is that override on the stem's own
-    // live pass — the stash keeps publishing the marker's real class, so nothing
-    // has to be un-published when the flash clears and the flag cache needs no
-    // fingerprint for a transient. A DISABLED marker has no stash entry and
-    // therefore no flashing stem, which is the same absence its flag's missing
-    // stem always was.
-    //
-    // The 'W' test is the guard the index needs, not decoration: the flag editor
-    // is a warp-column surface by its open gates, and stash indices belong to
-    // whichever column is active, so without it a P-view stash row could match a
-    // warp target's index and redden an unrelated phase reset.
-    const text_editor::State& ed = app.top_flag_editor;
-    const int flash_idx =
-        (text_editor::is_active(ed) &&
-         ed.kind == text_editor::Kind::FlagPayload && ed.red &&
-         app.active_markers_view == 'W')
-            ? ed.target
-            : -1;
-
+    // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
+    // refused commit is its frame alone (render_flag_editor_box), never the
+    // stem, so no paint-time override stands here — the stash's colour is the
+    // marker's resolved face, the whole answer.
     cairo_save(cr);
     const GuiRect band = waveform_stem_band(area);
     const double y0 = static_cast<double>(band.y);
@@ -4423,9 +4428,7 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
         // waveform_line_px() width at the right edge.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
-                                                            : stem.color;
-        set_palette_source(cr, c);
+        set_palette_source(cr, stem.color);
         fill_waveform_line(cr, area.x, area.w, col, y0, y1);
     }
     cairo_restore(cr);
@@ -4744,9 +4747,11 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // head on the ruler's bottom rows and the column's run through the marker
     // lane down to the waveform top, where this segment begins, and the three
     // make one unbroken object.
-    // THE STEM IS kPlayheadStem NOW (#fcfcfc), superseding the old cursor line's
-    // color at this surface: the head above it is the playhead's identity, and
-    // the stem is that head's line continued down through the waveform.
+    // THE STEM IS THE `playhead_stem` KEY, UNIFORM FROM THE HEAD TO THE
+    // CANVAS'S FOOT (architect 2026-10-03; its contrast over the chrome and the
+    // canvas is the user's choice): the head above it is the playhead's
+    // identity, and the stem is that head's line continued down through the
+    // waveform.
     //
     // Z-INTENT (architect 2026-09-23): this segment goes down OVER the marker
     // stems painted before it and UNDER the flag boxes blitted after it, and the
@@ -4760,7 +4765,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // boundary line continuing from the lane above, like the marker stems
     // beside it.
     if (!playhead_stem_suppressed()) {
-        render_playhead(cr, area, px_x, kPlayheadStem, PlayheadRows::Stem);
+        render_playhead(cr, area, px_x, palette().playhead_stem,
+                        PlayheadRows::Stem);
     }
 }
 
@@ -4779,6 +4785,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // stems, over the cursor where they overlap, over the plate. Everything it
 // covers is a per-frame repaint anyway.
 //
+// THE SCANNER IS THE MOVING STEM (architect 2026-10-03) and takes the stem's
+// key, `playhead_stem`.
+//
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (the ruling is at paint_ruler_row's head block — render_playhead is shared
 // with the cursor and, since 2026-08-02, cannot reach a strip lane at all: it
@@ -4792,7 +4801,8 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-    render_playhead(cr, area, scan_px, kPlayheadScanner, PlayheadRows::Canvas);
+    render_playhead(cr, area, scan_px, palette().playhead_stem,
+                    PlayheadRows::Canvas);
 }
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
@@ -4910,7 +4920,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        paint_cell_rect(cr, lane, kRedesignContentGround);
+        paint_cell_rect(cr, lane, palette().ground);
         cairo_restore(cr);
     }
 
@@ -5034,12 +5044,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   assignment site is a few dozen lines into the body below and the whole
 //   supersession is at PromptState.
 //   AN EDITOR — its prefix as the LABEL at the left pad, then the pending
-//   buffer in a SUNKEN FIELD on the canvas's ground, then OK and Cancel. The
-//   field is the existing text_editor machinery — selection, caret,
-//   click-to-caret, byte-identical editing — and the red flash RECOLORS THE
-//   FIELD in the marker-flag red class's BRIGHT pair (the one invalid red,
-//   which IS the bright red since that class gained a rest pair 2026-09-16 —
-//   called not copied).
+//   buffer in a SUNKEN FIELD on the theme's field pair, then OK and Cancel.
+//   The field is the existing text_editor machinery — selection, caret,
+//   click-to-caret, byte-identical editing — and a refused Enter turns BOTH
+//   LINES OF THE FIELD'S SUNKEN EDGE the `invalid_face` key with the whole
+//   text selected (architect 2026-10-03; the field paint below).
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
@@ -5693,7 +5702,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         cairo_save(cr);
         cairo_rectangle(cr, cx0, content.y, msg_clip, content.h);
         cairo_clip(cr);
-        set_palette_source(cr, kRedesignLabel);
+        set_palette_source(cr, palette().label);
         text_shape::show_shaped_run(
             cr, msg, static_cast<double>(cx0),
             redesign_baseline(font, static_cast<double>(content.y),
@@ -5839,7 +5848,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 const int thumb_w = scrub_thumb_w_px();
                 const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
                                     thumb_h};
-                paint_cell_rect(cr, thumb, kRedesignContentGround);
+                paint_cell_rect(cr, thumb, palette().ground);
                 paint_relief_plain_raised(cr, thumb);
                 // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
                 // AppState::ModalDialogGeometry::scrub_thumb_x): a clip that
@@ -5883,7 +5892,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                             content.h);
             cairo_clip(cr);
             show_row_text(cr, cfont, static_cast<double>(clock_x0), cbase,
-                          clock_text, kRedesignLabel);
+                          clock_text, palette().label);
             cairo_restore(cr);
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
                                 clock_right - clock_x0 + 2, content.h};
@@ -5982,11 +5991,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         show_row_text(cr, font, static_cast<double>(cx0),
                       redesign_baseline(font, static_cast<double>(btn_y),
                                         static_cast<double>(btn_h)),
-                      prefix.c_str(), kRedesignLabel);
+                      prefix.c_str(), palette().label);
 
         // THE FIELD CHROME (architect 2026-10-02, the Windows text field): a
-        // PLAIN SUNKEN edge (EDGE_SUNKEN, two relief lines) on the CANVAS's
-        // ground (kModalFieldGround), square. No outline says hover or focus: a
+        // PLAIN SUNKEN edge (EDGE_SUNKEN, two relief lines) on the theme's
+        // FIELD ground (architect 2026-10-03, unified fields: the flag editor
+        // takes the same pair), square. No outline says hover or focus: a
         // FOCUSED FIELD SHOWS ITS CARET and nothing else, the caret painting
         // only while the ring has not stepped onto a button (below).
         //
@@ -5995,26 +6005,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (AppState::modal_dialog_focus), which includes the open, where the
         // user is there to type.
         //
-        // THE RED FLASH STILL RECOLORS THE FIELD — the editors' one invalid
-        // state paints the interior in the red class's BRIGHT pair (fill
-        // under its 1px top edge, the flag anatomy's own order), so there is
-        // ONE invalid red in the product and no second box: the invalid red IS
-        // the bright red, called not copied, so the two cannot drift. The
-        // sunken frame stays round it.
+        // A REFUSED ENTER TURNS THE FRAME RED (architect 2026-10-03): BOTH
+        // LINES OF THE SUNKEN EDGE, all four sides, in the `invalid_face` key,
+        // with the whole text selected (text_editor::refuse) — the first
+        // keystroke that edits replaces the text and the edge returns. The
+        // face stays the field ground; no card says it, no glyph marks it.
+        // The flag editor's frame is the same rule on its one black line
+        // (render_flag_editor_box).
         const bool field_focused = app.modal_dialog_focus < 0;
-        const GuiColor field_ground =
-            ed->red ? kMarkerFlagFillRedSel : kModalFieldGround;
-        paint_cell_rect(cr, field_inner, field_ground);
-        paint_relief_plain_sunken(cr, field_outer);
+        paint_cell_rect(cr, field_inner, palette().field_ground);
         if (ed->red) {
-            cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            paint_cell_rect(cr, GuiRect{field_inner.x, field_inner.y,
-                                        field_inner.w,
-                                        std::min(marker_flag_edge_h_px(),
-                                                 field_inner.h)},
-                            kMarkerFlagEdgeRedSel);
-            cairo_restore(cr);
+            const int lw = relief_line_px();
+            paint_relief_line_frame(cr, field_outer, palette().invalid_face);
+            paint_relief_line_frame(
+                cr, GuiRect{field_outer.x + lw, field_outer.y + lw,
+                            field_outer.w - 2 * lw, field_outer.h - 2 * lw},
+                palette().invalid_face);
+        } else {
+            paint_relief_plain_sunken(cr, field_outer);
         }
 
         const text_shape::ShapedRun run =
@@ -6111,31 +6119,51 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const bool   has_sel = text_editor::has_selection(*ed);
         const size_t s0 = static_cast<size_t>(text_editor::selection_start(*ed));
         const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
-        // THE SELECTION BAND IS THE ACCENT (architect 2026-08-28, the palette
-        // block beside kMarkerFlagLabel): kRedesignAccent behind the selected
-        // substring, kRedesignLabel for its glyphs (held white over the light
-        // ink by his eye 2026-10-01, the one text colour over the chrome) —
-        // the product's one selection pairing, which the flag editor's
-        // marker-lane box paints too. Here it costs no pass: the run is the
-        // label white on both sides of the band, so the band paints first and
-        // the run shows ONCE over it, every antialiased edge blending against
-        // whichever ground it sits on with one ink. The red-flash ground
-        // never reaches the selected glyphs — a selection standing through an
-        // invalid flash reads accent-on-red, the same selection it read before
-        // the flash.
+        // THE SELECTION IS THE THEME'S SELECTED PAIR OVER THE FIELD PAIR
+        // (architect 2026-10-03, unified fields; render.h's palette block) —
+        // the selected fill behind the selected substring, the selected text
+        // for its glyphs, the field text for the rest: the flag editor's
+        // marker-lane box paints the same four. ONE INK PER PIXEL, the flag
+        // editor's rule (render_flag_editor_box): with a selection standing,
+        // the field-text run is clipped to the band's complement and the
+        // selected run to the band, two disjoint regions, so every
+        // antialiased edge blends against exactly the ground it sits on.
         if (has_sel) {
             const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
             const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
+            const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            set_palette_source(cr, kRedesignAccent);
-            cairo_rectangle(cr, hx0, band_y,
-                            (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
+            set_palette_source(cr, palette().selected_fill);
+            cairo_rectangle(cr, hx0, band_y, hw, band_h);
             cairo_fill(cr);
             cairo_restore(cr);
+            // The complement: the columns left and right of the band, and the
+            // rows above and below it (the band is the face's line, not the
+            // field's interior), as one clip path.
+            cairo_save(cr);
+            const double fy0 = static_cast<double>(field_inner.y);
+            const double fy1 = static_cast<double>(field_inner.y + field_inner.h);
+            cairo_rectangle(cr, view_x0, fy0, hx0 - view_x0, fy1 - fy0);
+            cairo_rectangle(cr, hx0 + hw, fy0,
+                            (view_x0 + view_w) - (hx0 + hw), fy1 - fy0);
+            cairo_rectangle(cr, hx0, fy0, hw, band_y - fy0);
+            cairo_rectangle(cr, hx0, band_y + band_h, hw,
+                            fy1 - (band_y + band_h));
+            cairo_clip(cr);
+            set_palette_source(cr, palette().field_text);
+            text_shape::show_shaped_run(cr, run, tx, baseline);
+            cairo_restore(cr);
+            cairo_save(cr);
+            cairo_rectangle(cr, hx0, band_y, hw, band_h);
+            cairo_clip(cr);
+            set_palette_source(cr, palette().selected_text);
+            text_shape::show_shaped_run(cr, run, tx, baseline);
+            cairo_restore(cr);
+        } else {
+            set_palette_source(cr, palette().field_text);
+            text_shape::show_shaped_run(cr, run, tx, baseline);
         }
-        set_palette_source(cr, kRedesignLabel);
-        text_shape::show_shaped_run(cr, run, tx, baseline);
         // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
         // IT (architect 2026-08-13, at his live test: "the blinking caret, the
         // I-beam, continues to blink in the text field even though it has lost
@@ -6154,7 +6182,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const double caret_x = tx + caret_off;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            set_palette_source(cr, kRedesignLabel);
+            // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03).
+            set_palette_source(cr, palette().field_text);
             cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
                             band_y, caret_px, band_h);
             cairo_fill(cr);
@@ -6223,7 +6252,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             paint_relief_line_frame(
                 cr, GuiRect{r.x - ring, r.y - ring, r.w + 2 * ring,
                             r.h + 2 * ring},
-                kReliefDkShadow);
+                palette().dk_shadow);
         const ButtonBoxFace box = paint_button_box(
             cr, r, plan[i].lit, pressed, ButtonFamily::Push);
         if (plan[i].glyph) {
@@ -6244,18 +6273,20 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                      static_cast<double>(relief_line_px()));
         } else {
             // CENTRED, Windows' push-button text (kModalBtnMinWidthPx); a
-            // label that set its button's width lands on its left pad.
-            show_row_text(cr, font,
-                          static_cast<double>(r.x +
-                                              (r.w - plan[i].label_w) / 2 +
-                                              box.shift),
-                          redesign_baseline(font, static_cast<double>(r.y),
-                                            static_cast<double>(r.h)) +
-                              static_cast<double>(box.shift),
-                          plan[i].label,
-                          enabled ? kRedesignLabel
-                                  : mix_color(kRedesignLabel, box.under,
-                                              kRedesignDisabledMix));
+            // label that set its button's width lands on its left pad. A
+            // DISABLED label is THE DISABLED EMBOSS (architect 2026-10-03,
+            // Windows' DSS_DISABLED), the glyph's rule for the word.
+            const double lx = static_cast<double>(
+                r.x + (r.w - plan[i].label_w) / 2 + box.shift);
+            const double ly =
+                redesign_baseline(font, static_cast<double>(r.y),
+                                  static_cast<double>(r.h)) +
+                static_cast<double>(box.shift);
+            if (enabled)
+                show_row_text(cr, font, lx, ly, plan[i].label,
+                              palette().label);
+            else
+                show_row_text_embossed(cr, font, lx, ly, plan[i].label);
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
@@ -6320,7 +6351,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //
 // THE KEYS ARE THE ROSTER'S BUTTONS (architect 2026-10-02, the Windows-95
 // design; the one painter is paint_button_box in its TOOLBAR family): each
-// key a SOFT RAISED box on the ground with its cap in the label white, the
+// key a SOFT RAISED box on the ground with its cap in the theme's label, the
 // band's ground between and around them the bottom row's — so the keyboard
 // and the row it sits on read as one block, which is why the band paints NO
 // LINE at its own top edge (architect 2026-08-27, on glass). THE OTHER TWO
@@ -6379,7 +6410,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // EDGE: the band's ground is the bottom row's ground, so the two lanes read
     // as one block and a seam between them would draw a border through the
     // middle of it.
-    set_palette_source(cr, kRedesignContentGround);
+    set_palette_source(cr, palette().ground);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
 
@@ -6439,7 +6470,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h)) +
                 box.shift;
-            set_palette_source(cr, kRedesignLabel);
+            set_palette_source(cr, palette().label);
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
         });
 
@@ -6514,12 +6545,11 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // round the band, each row 17 Windows px with the roster's 16-px glyph
 // (folder_overlay.h's row box), and the faces Windows' list:
 //   a RESTING row         -> NO FILL AT ALL: the ground shows through
-//   the HIGHLIGHT         -> a FLAT ACCENT FILL under the luminance rule's
-//                            text (highlight_text_ink — black on the accent),
-//                            the selection, which is also the list's keyboard
-//                            focus; on an unfocused window the accent's
-//                            inactive face (kRedesignAccentInactive) under the
-//                            same rule's text (the label white there)
+//   the HIGHLIGHT         -> a FLAT FILL in the theme's SELECTED PAIR, the
+//                            selection, which is also the list's keyboard
+//                            focus — ONE PAIR FOCUSED OR NOT (architect
+//                            2026-10-03, render.h's palette block: the
+//                            2026-09-02 inactive face retired)
 //   PRESSED               -> the highlight's own face: a row press is an arm
 //                            whose act is the lift, and the highlight is what
 //                            it promises
@@ -6537,7 +6567,7 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // live or paused.
 //
 // STATE-AXIS: the face is decided ONCE per row from the highlight, the press
-// arm, the ring and the window's focus, and the glyph from the row's kind and the
+// arm and the ring, and the glyph from the row's kind and the
 // item's path; there is no second list of what a row looks like anywhere.
 void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
     if (!folder_overlay::stands(app)) return;
@@ -6553,7 +6583,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // THE CONTENT RECT'S CLIP, because a scrolled listing's first and last
     // rows straddle the content's edges and must not paint into the waveform
     // above, the bottom row below, or the band's own frame.
-    paint_cell_rect(cr, surf, kRedesignContentGround);
+    paint_cell_rect(cr, surf, palette().ground);
     paint_relief_plain_raised(cr, surf);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
     // SAME RECT (folder_overlay.h) — the surface inside its frame — so paint
@@ -6581,12 +6611,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     const int    glyph  = folder_overlay::row_icon_px();
     const int    gap    = folder_overlay::row_icon_gap_px();
     const int    inset  = folder_overlay::row_icon_inset_px();
-    // THE HIGHLIGHT TAKES THE WINDOW'S FOCUS (architect 2026-09-02), through
-    // the one fork accent_for_focus above: a selection in an unfocused window
-    // wears the inactive accent, and its text is the one luminance rule's
-    // over whichever fill stands (highlight_text_ink, architect 2026-10-02).
-    const GuiColor accent = accent_for_focus(app);
-    const GuiColor lit_ink = highlight_text_ink(accent);
+    // THE HIGHLIGHT IS THE THEME'S SELECTED PAIR, focused or not (the block
+    // above).
+    const GuiPalette& pal = palette();
 
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
@@ -6602,10 +6629,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                                      ov.press.row == index &&
                                      ov.press.inside && !ov.press.scrolling;
             // THE FACE (the block above): LIT — the highlight, or a live
-            // press arm promising it — is the flat accent fill; a row that is
-            // neither takes NO FILL and the band's ground shows through it.
+            // press arm promising it — is the flat selected fill; a row that
+            // is neither takes NO FILL and the band's ground shows through it.
             const bool lit = pressed || highlighted;
-            if (lit) paint_cell_rect(cr, r, accent);
+            if (lit) paint_cell_rect(cr, r, pal.selected_fill);
             // THE LIST'S FOCUS: the focus frame one line outside the
             // highlighted row while the modal ring stands on the list (the
             // block above); the rows' one-Windows-px gap and pad hold it.
@@ -6613,7 +6640,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 const int fl = relief_line_px();
                 paint_relief_line_frame(
                     cr, GuiRect{r.x - fl, r.y - fl, r.w + 2 * fl, r.h + 2 * fl},
-                    kReliefDkShadow);
+                    palette().dk_shadow);
             }
 
             // THE GLYPH: the folder for folder rows, the wav for wav rows —
@@ -6630,23 +6657,26 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                            : icons::Icon::AudioXWav;
             }
             const int gy = r.y + (r.h - glyph) / 2;
-            // ON A LIGHT HIGHLIGHT THE GLYPH TAKES THE HIGHLIGHT'S DARK INK,
-            // every path (keep 0 toward it), as the name does: the wav glyph's
-            // own blue is the accent's value and would vanish on it
-            // (planner-assumed 2026-10-02, judged on the glass). Under a
-            // light ink — the inactive band — and on a resting row it keeps
-            // its own inks.
-            const bool ink_glyph =
-                lit && same_color(lit_ink, kRedesignHighlightLabel);
-            icons::draw(cr, icon, static_cast<double>(gx),
-                        static_cast<double>(gy),
-                        static_cast<double>(glyph),
-                        ink_glyph ? 0.0 : 1.0, lit_ink);
+            // ON A LIT ROW THE GLYPH TAKES THE SELECTED TEXT, every path, as
+            // the name does (architect 2026-10-03: text over a fill is the
+            // fill's recorded pair, and a glyph inked in the label is chrome
+            // text's sibling — the label-inked folder would vanish on a dark
+            // selected fill as the name would). On a resting row it keeps its
+            // own inks.
+            if (lit)
+                icons::draw_in_ink(cr, icon, static_cast<double>(gx),
+                                   static_cast<double>(gy),
+                                   static_cast<double>(glyph),
+                                   pal.selected_text);
+            else
+                icons::draw(cr, icon, static_cast<double>(gx),
+                            static_cast<double>(gy),
+                            static_cast<double>(glyph));
             const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
-            // the label white on a resting row and the highlight's own ink
-            // on a lit one (black on the accent, the dropdown's rule).
+            // the theme's label on a resting row and the selected text on a
+            // lit one (the dropdown's rule).
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
             // THE SEAT: a row is a box, so its label takes the box solver's
@@ -6662,7 +6692,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            set_palette_source(cr, lit ? lit_ink : kRedesignLabel);
+            set_palette_source(cr, lit ? pal.selected_text : pal.label);
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);
@@ -6835,7 +6865,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     render_background(cr, x, y, w, h);
     // THE GROUND SPLIT: the chrome erase above covers the whole exposed rect;
-    // the waveform area then takes its own kWaveformCanvas ground. Unconditional and
+    // the waveform area then takes its own `waveform_canvas` ground.
+    // Unconditional and
     // ahead of every content branch, so a cold frame (loading, no audio, or a
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already

@@ -25,7 +25,7 @@ struct GuiFlagEditor {
     Selection&            selection;
     Undo&                 undo;
     GuiTargetRender&   target_render;
-    // THE RED FLASH'S SECOND READER (architect 2026-08-30, the strictness
+    // THE RED FRAME'S SECOND READER (architect 2026-08-30, the strictness
     // ruling): every commit refusal in this cluster composes ONE sentence and
     // feeds it to the stderr line AND to a normal card, because a field that
     // turns red says only THAT it refused. The reference sits here rather than

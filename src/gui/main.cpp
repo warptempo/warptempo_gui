@@ -1939,41 +1939,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.clear_notification_hover();
     });
 
-    // WINDOW-ACTIVATION EDGE -> the one face that takes its unfocused look.
-    // The hook fires only when the window's activation actually flips (the
-    // platform owns the edge test), so this is a mirror-and-damage pair with no
-    // comparison of its own. It takes the pointer-leave hook's shape for the
-    // pointer-leave hook's reason: a protocol edge that changes what should be
-    // on screen and carries no other event to repaint it.
-    // THE DAMAGE IS ONE RECT, re-grepped at this line rather than inherited
-    // (2026-10-02): THE FOLDER OVERLAY'S PANEL WHILE IT STANDS (2026-09-02:
-    // its highlighted row takes kRedesignAccentInactive). Nothing else reads
-    // the bit — the modal row's focus is the DkShadow frame and the player's
-    // scrub carries no accent since 2026-10-02, and the top strip's ground
-    // does not swap.
-    // THE MIRROR IS SEEDED HERE AND KEPT BY THE HOOK, and the seed is what a
-    // REOPEN needs (2026-08-28): the loop builds a FRESH AppState per project
-    // (gui_main's contract, platform.h) whose window_activated is born false,
-    // while the platform's own bit is already true and fires NO edge for a
-    // focus that never changed — so without this line the reopened session
-    // painted its highlight unfocused until the next real focus flip. It is one
-    // site for both backends, beside the hook rather than inside it, and it
-    // needs no damage of its own: the whole window is invalidated below,
-    // before run(). In the FIRST session it reads the cold false and changes
-    // nothing. The GEOMETRY takes the same shape one hook further down, where
-    // redeliver_geometry() re-fires on_resize for a size that did not change.
-    app.window_activated = gui.window_activated();
-    // THE TOOLTIP'S HARD END rides this edge too, either way (Qt's model,
+    // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (Qt's model,
     // architect 2026-09-29: QTipLabel hides at once on WindowActivate and
     // WindowDeactivate, and QApplication puts the wake-up to sleep on
     // ActivationChange): focus leaving or arriving is the user acting
     // elsewhere, not a pointer grazing a gap. hide_shift_tooltip carries its
-    // own damage.
+    // own damage. The hook fires only when the window's activation actually
+    // flips (the platform owns the edge test). NOTHING ELSE TAKES AN
+    // UNFOCUSED LOOK (architect 2026-10-03: one selected pair, focused or not,
+    // render.h's palette block — the folder overlay's inactive highlight, the
+    // edge's other reader from 2026-09-02, retired with it).
     gui.set_activation_changed_hook([&] {
         input_handler.hide_shift_tooltip();
-        app.window_activated = gui.window_activated();
-        if (folder_overlay::stands(app))
-            viewport.invalidate_rect(folder_overlay::surface_rect(app));
     });
 
     // THE PLATFORM'S CONSUMED KEYBOARD EDGES (2026-08-11):
@@ -3295,6 +3272,12 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
+    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme at its
+    // level and the nine program keys, installed before the first paint, and
+    // again at the settings editor's commit of any colour key
+    // (commit_device_setting). Every painter reads it through palette()
+    // (render.h's palette block).
+    install_palette(device_config);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

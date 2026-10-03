@@ -477,7 +477,8 @@ struct DragState {
     // apply_drag_motion's header (identity orig + delta in source view);
     // consumed by paint via DragOverlay so the live marker store stays untouched
     // until commit. Seeded from original_times at begin_drag. This is a
-    // MOTION/PAINT value: at commit it converts back to an authored frame through
+    // MOTION/PAINT value: at commit it converts back to an authored frame
+    // through
     // the pixel-anchoring column snap (commit_drag).
     std::vector<double> moveable_times;
     // Press position in ACTIVE-domain frame doubles; the motion delta
@@ -3272,8 +3273,8 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // one — an item is a control's name; the capitalization block,
 // paint_handler.cpp; "GUI Scale" and "URL" keep their acronym caps under it)
 // with the SETTINGS KEY the click prefills into the editor, and
-// `separator_before` marks the one place the two categories part: the four
-// SIDECAR keys a hand edits (the metadata), then the four editable DEVICE CONFIG keys
+// `separator_before` marks where a group parts: the four SIDECAR keys a hand
+// edits (the metadata), then the editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
 // `last_project` is the program's own and has no row).
 //
@@ -3310,7 +3311,7 @@ struct SettingsPopupItem {
 // 2026-09-14), the picture's gain varying over source time since (the
 // continuous curve derived from the source since 2026-09-23).
 //
-// THE DEVICE HALF IS FOUR: `GUI Scale`, then `Max Waveform Height` right
+// THE DEVICE HALF OPENS WITH FOUR: `GUI Scale`, then `Max Waveform Height` right
 // after it in kDeviceConfigKeys' order (architect 2026-09-13; it commits
 // through commit_device_setting and relays out live; `Hold Delay` stood
 // right after it for the hold delay's one-day tuning phase, 2026-09-29, and
@@ -3322,9 +3323,16 @@ struct SettingsPopupItem {
 // config's writer under the key's own grammar (commit_device_setting,
 // settings_editor.cpp). The Projects Path row is the one whose Tab completion
 // is the FILESYSTEM's rather than a recall (complete_path_value). The two
-// halves are ordered SIDECAR THEN DEVICE, the one separator between them —
+// halves are ordered SIDECAR THEN DEVICE, a separator between them —
 // which moved `GUI Scale` from the first row to the device group's head, the
 // group keeping kDeviceConfigKeys' own order.
+//
+// THE ELEVEN COLOUR KEYS JOINED 2026-10-03 (architect: the theme, its level
+// and the program's colours are device keys with Settings rows), after
+// `Projects Path` in kDeviceConfigKeys' order, behind A SECOND SEPARATOR: a
+// Windows menu groups related items between separators, and the colour rows
+// are one group of eleven, longer than the rest of the device half together.
+// Each row's label is its key's name in Title Case.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Title",               "title",         false},
     {"Notes",               "notes",         false},
@@ -3334,6 +3342,17 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Max Waveform Height", "max_waveform_height", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
+    {"Theme",               "theme",            true},
+    {"Theme Level",         "theme_level",      false},
+    {"Waveform Ink",        "waveform_ink",     false},
+    {"Waveform Canvas",     "waveform_canvas",  false},
+    {"Waveform Outline",    "waveform_outline", false},
+    {"Flag Face",           "flag_face",        false},
+    {"Flag Label",          "flag_label",       false},
+    {"Invalid Face",        "invalid_face",     false},
+    {"Invalid Label",       "invalid_label",    false},
+    {"Playhead Head",       "playhead_head",    false},
+    {"Playhead Stem",       "playhead_stem",    false},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
@@ -4702,9 +4721,10 @@ struct AppState {
     // declaration below): per project, DARK AT EVERY PROJECT OPEN
     // (run_project constructs this AppState fresh), outside undo, not carried
     // by `'`, in no sidecar and no settings vocabulary. THE HOLD'S LAMP IS
-    // THE PLAYHEAD HEAD (architect 2026-09-24): the head paints white
-    // (kPlayheadHeadHeld, render.h) while the bit stands and its grey
-    // (kPlayheadHead) when it does not, repainted by the per-tick face
+    // THE PLAYHEAD HEAD (architect 2026-09-24): the head paints in the
+    // `playhead_stem` key while the bit stands and in its own `playhead_head`
+    // key when it does not (render.h's playhead paragraph, 2026-10-03),
+    // repainted by the per-tick face
     // comparator (main.cpp) — no icon, no card when it is armed or cleared;
     // follow wears its icon-row lamp.
     //
@@ -5891,7 +5911,7 @@ struct AppState {
     // per diff flag, that lane's classes all stemming. Since the stems-inert
     // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its two
     // readers are the per-frame stem painter (GuiPaintHandler::
-    // paint_marker_stems) and the playhead's white-stem suppression decider
+    // paint_marker_stems) and the playhead's stem suppression decider
     // (GuiPaintHandler::playhead_stem_suppressed — a paint decision, not a
     // surface), the pointer never reads it (hit_test_marker_stem is deleted —
     // the record is at its retired site far below), and only `flag_hit_rects`
@@ -7975,24 +7995,11 @@ struct AppState {
                                   : GuiHistoryCompare::Iterative;
     }
 
-    // WINDOW ACTIVATION (keyboard focus), SEEDED from the platform when the
-    // session's hooks are installed and kept by the platform's activation EDGE
-    // after that (main.cpp's one site, beside the pointer-leave hook). The
-    // seed is the REOPEN's, and the edge alone is not enough for it: each
-    // project's session builds a fresh AppState whose bit is born false while
-    // the platform's is already true and fires no edge for a focus that never
-    // changed. THE READERS (re-grepped 2026-10-02): accent_for_focus
-    // (paint_handler.cpp), whose one reader is the folder overlay's
-    // highlighted row, taking kRedesignAccentInactive (2026-09-02), and that
-    // painter's choice of the row's ink beside it. The render player's scrub
-    // and the modal row's focus read nothing here since 2026-10-02 (neither
-    // carries an accent). A hard swap on the edge; the activation hook
-    // (main.cpp) states the damage.
-    // False until the first configure IN THE FIRST SESSION, which is
-    // the honest cold answer (the platform's accessor states why that is never
-    // visible); every later session starts from the platform's live reading
-    // instead.
-    bool window_activated = false;
+    // (WINDOW ACTIVATION'S MIRROR, `window_activated`, retired 2026-10-03:
+    // its one reader was the folder overlay's highlighted row, whose inactive
+    // face retired with ONE SELECTED PAIR, FOCUSED OR NOT — render.h's
+    // palette block. The platform's activation edge still ends the tooltip,
+    // main.cpp's hook.)
 
     // THE MENU ROW'S BATTERY + CLOCK LEGEND (architect 2026-10-01): `text` is
     // what paint_menu_row paints flush right — the composer is
@@ -8167,7 +8174,7 @@ struct AppState {
     // "shall I?" and the question "under what message?" are the same pause, and
     // only the second one carries information — a bare Enter is the old `y`.
     // Esc abandons with nothing written, and an empty or whitespace-only buffer
-    // red-flashes rather than committing an unnamed checkpoint.
+    // refuses with the red frame rather than committing an unnamed checkpoint.
     // A dialog modal like the two above, with its own State so the paint
     // regions stay independent; it can only be open while the history mode
     // stands, which is what keeps it out of every other surface's way.
@@ -8361,7 +8368,7 @@ struct AppState {
         // returns, so no card raised by a worker, a pointer gesture or a paint
         // can ever read a stale true. It lives here rather than being threaded
         // through the raise sites because the raises are everywhere — the
-        // gates, the ops' returned refusals, the red flashes — and one bit set
+        // gates, the ops' returned refusals, the red frames — and one bit set
         // where the event arrives cannot drift from the event the way a
         // parameter copied down a dozen call chains would.
         bool                             held_repeat_dispatch = false;

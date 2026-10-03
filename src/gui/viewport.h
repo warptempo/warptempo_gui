@@ -491,7 +491,7 @@ struct Viewport {
     //   * THE CARET BLINK — main.cpp's per-tick blink transitions, one per
     //     dialog editor (the flag editor's BPM arm among them, its other two
     //     kinds damaging the top strip instead).
-    //   * THE RED FLASH — every red-flash refusal in settings_editor,
+    //   * THE RED FRAME — every red-frame refusal in settings_editor,
     //     flag_editor's BPM commit and the commit-title editor's blank
     //     refusal.
     //   * THE CLOSERS — every commit / abandon that deactivates a dialog
@@ -502,12 +502,12 @@ struct Viewport {
     //     (click-to-caret, the double-click word select, the drag's motion
     //     and its release).
     //   * THE RENDER PLAYER'S ROW (2026-08-28), which paints into the same
-    //     lane and damages it through the same owner — THREE sites:
+    //     lane and damages it through the same owner — TWO sites:
     //     GuiRenderPlayer::damage_row for every transport, highlight and
-    //     clock/scrub change (render_player.cpp), the one stop body's player
-    //     fork for the play/pause face (playback_lifecycle.cpp), and the
-    //     WINDOW-ACTIVATION hook (main.cpp), the scrub's played part and
-    //     the active-focus outline reading AppState::window_activated.
+    //     clock/scrub change (render_player.cpp), and the one stop body's
+    //     player fork for the play/pause face (playback_lifecycle.cpp). (The
+    //     window-activation hook was a third until nothing on the row read
+    //     the window's focus any more, 2026-10-02..03.)
     //   * THE PER-TICK COMPARATORS (main.cpp): the player row's enabled-face
     //     drift, and a standing dialog hint whose words the row's paint has
     //     recomposed past the ones the box last drew (2026-09-29, below).

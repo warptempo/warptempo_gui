@@ -146,8 +146,8 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, inset_px, line_px, the GAIN field, target,
-    // and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
+    // vp_start, vp_end, area_w, area_h, inset_px, line_px, the plate's two
+    // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
     // on, and each is keyed BY FIELD rather than through whatever else happens
     // to move with it.
     int64_t   fp_vp_start    = 0;
@@ -171,6 +171,12 @@ struct WaveformCache {
     // gui_scale change that moves it re-renders the plate BY FIELD, keyed
     // directly like the inset.
     int       fp_line_px = -1;
+    // THE TWO BAKED INKS the live pixels were written in (the `waveform_ink`
+    // and `waveform_outline` keys, waveform_plate_inks, render.h): the plate
+    // writes their words, so a commit of either key re-renders it BY FIELD,
+    // keyed directly like the line width (architect 2026-10-03: the program's
+    // colours are open keys).
+    WaveformPlateInks fp_inks{};
     // THE GAIN FIELD the live pixels were rendered under — the derived
     // curve's version where the picture is magnified, 0 where the gate answers
     // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
@@ -214,6 +220,7 @@ struct WaveformCache {
     int       pending_fp_area_h      = 0;
     int       pending_fp_inset_px = -1;
     int       pending_fp_line_px = -1;
+    WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
@@ -237,6 +244,7 @@ struct WaveformCache {
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured waveform inset
     int       supersede_line_px     = 0;   // GUI-captured waveform line width
+    WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
@@ -327,6 +335,12 @@ struct FlagCache {
     // geometry where the strip height sat on a floor would leave the whole
     // fingerprint unchanged across a scale commit and blit the old flags.)
     int       fp_gui_scale_percent   = -1;
+    // THE PALETTE THESE PIXELS WERE PAINTED IN (palette_generation(),
+    // render.h — architect 2026-10-03, the theme and the program's colours
+    // are device keys): every flag pixel is a palette colour (the flag face,
+    // its label, the outline, the ground of a disabled box), so a commit of
+    // any colour key re-renders the surface BY FIELD, the scale's shape.
+    uint64_t  fp_palette_generation  = 0;
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -665,6 +679,10 @@ private:
         // and for the same reason: the lit inner bar's outline erodes at that
         // distance, so it is both a render input and a fingerprint field.
         int      line_px       = 0;
+        // The plate's two INKS (waveform_plate_inks), captured the same way
+        // and for the same reason: the plate bakes their words, so they are
+        // both render inputs and a fingerprint field.
+        WaveformPlateInks inks{};
         // The waveform PICTURE's gain field (waveform_gain_fingerprint): nonzero
         // means apply the audio's derived curve. It is both the render input
         // and the fingerprint field, exactly like inset_px above: it feeds the
@@ -706,7 +724,6 @@ private:
         double x0    = 0.0;   // left screen x, clipped to the area
         double x1    = 0.0;   // right screen x, exclusive, clipped
         bool   red   = false; // the reset is in the column's red set (the ring's colour)
-        bool   selected = false; // its stem wears the bright fill (the ring's colour)
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
 
@@ -785,7 +802,7 @@ private:
     void paint_dropdown(cairo_t* cr);
     // The shared box every floating surface draws, in one of TWO FACES
     // (architect 2026-10-02): MENU — the ground inside the PLAIN RAISED edge
-    // (the dropdown) — or INFO — Windows' tooltip face, kInfoGround inside the
+    // (the dropdown) — or INFO — Windows' tooltip face, the info ground inside the
     // one-line INFO FRAME (the tooltip and the notification cards).
     enum class PopupFace { Menu, Info };
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r, PopupFace face);
@@ -840,12 +857,10 @@ private:
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
-    // ONE PAINT-TIME COLOUR OVERRIDE, and one only (2026-08-01): the open flag
-    // editor's invalid-commit RED FLASH reaches its marker's stem, so a flashing
-    // flag and its stem agree. It is applied here rather than published into the
-    // stash because that is how the flash face itself works — an override over
-    // the resolved class, per frame, out of any cache (the definition carries
-    // the reasoning and the damage story).
+    // NO PAINT-TIME COLOUR OVERRIDE (architect 2026-10-03): the stem paints
+    // the stash's colour, the marker's resolved face. The open flag editor's
+    // refusal is its red FRAME alone and reaches no stem (the override that
+    // reddened the stem from 2026-08-01 retired with the red frame).
     //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag

@@ -177,10 +177,9 @@ public:
 
     // WINDOW ACTIVATION (keyboard focus), straight off xdg_toplevel.configure's
     // state array: true while the compositor lists XDG_TOPLEVEL_STATE_ACTIVATED.
-    // The focus accents read it (the play-scrub's played groove, the folder
-    // overlay's panel and the modal row's active-focus outline take their
-    // unfocused face when it goes false — AppState::window_activated); the
-    // chrome's ground does not, having one value either way since 2026-10-01.
+    // Its one consumer is the activation EDGE below (the tooltip's hard end,
+    // main.cpp): NO FACE TAKES AN UNFOCUSED LOOK since 2026-10-03 (one
+    // selected pair, focused or not — render.h's palette block).
     //
     // FALSE UNTIL THE FIRST CONFIGURE, which is the honest cold answer — we have
     // not been told we are active. labwc focuses a newly mapped window, so the
@@ -213,15 +212,10 @@ public:
     // Fired ONLY on a CHANGE of window_activated(), from the xdg_toplevel
     // configure handler. The compositor re-sends the full state array on every
     // configure (resize, maximize, focus), so the edge test lives in the
-    // platform and this hook is the edge itself — main.cpp wires it to mirror
-    // the flag into AppState and damage the top strip, the same shape the
-    // pointer-leave hook takes for the same reason (a protocol edge with no
-    // other event to carry its repaint). Null-safe.
-    // THE HOOK IS THE EDGE AND NOTHING ELSE, so main.cpp SEEDS its mirror from
-    // window_activated() at the install: a reopened project's fresh AppState
-    // would otherwise start unfocused under an already-activated window that
-    // has no edge left to fire (the reason is at that site and at
-    // AppState::window_activated).
+    // platform and this hook is the edge itself — main.cpp wires it to end
+    // the tooltip, the same shape the pointer-leave hook takes for the same
+    // reason (a protocol edge with no other event to carry its effect).
+    // Null-safe.
     void set_activation_changed_hook(std::function<void()> cb);
 
     // Contract at GuiInputCore::set_keyboard_intent_cancel_hook, input_core.h.

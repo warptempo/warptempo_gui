@@ -81,7 +81,7 @@ The program always has a project open. With no argument it opens the one it had 
 
 A project is a folder directly under `projects_path`, named by its folder. It either carries the three sidecars `<stem>.warpmarkers`, `<stem>.phaseresetmarkers` and `<stem>.settings` beside `<stem>.wav`, or carries none and holds exactly one `.wav`, which makes it a new project whose first open writes the three. A folder with some sidecars must have all three; any other shape refuses to open with the reason stated. The sidecars are program-written and strictly validated: a hand edit that breaks one fails the load, with the first error on stderr. A name that is `.` or `..`, begins or ends with whitespace, or holds a line break is not a project. The source is stereo WAV, 16- or 24-bit PCM, 44100 Hz or above; convert anything else once with an external tool (ffmpeg). The program writes into two folders beside the source: `render/` holds the deliverable, `<title>.wav` and its `.fingerprint`, and nothing else (other pairs there are deleted at the next publish); `tmp/` holds the batch renders the render player walks.
 
-The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/warptempo_gui/config` when that is unset): exactly five lines, in this order.
+The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/warptempo_gui/config` when that is unset): exactly sixteen lines, in this order.
 
 | Key | What it is |
 |---|---|
@@ -90,8 +90,16 @@ The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/war
 | `projects_repo=` | the projects repository the history view commits to |
 | `projects_path=` | the absolute folder whose subfolders are the projects |
 | `last_project=` | the folder name opened last, written by the program at every open |
+| `theme=` | the chrome's theme, a key from `docs/themes/CATALOG.md` (`windows-95-standard` by default) |
+| `theme_level=` | `light`, `dim` or `dark`: the theme as recorded, or darkened (`dark` by default) |
+| `waveform_ink=`, `waveform_canvas=`, `waveform_outline=` | the waveform's ink, its ground, and the outline of the magnified inner bar |
+| `flag_face=`, `flag_label=` | the markers' flag colour and its label |
+| `invalid_face=`, `invalid_label=` | an invalid marker's flag and its label |
+| `playhead_head=`, `playhead_stem=` | the playhead's head and its line |
 
-The first run writes it: on the laptop `gui_scale=138`, `max_waveform_height=364`, `projects_repo=github.com/warptempo/warptempo_projects`, `projects_path=$HOME/.warptempo/warptempo_projects/projects` (spelled out as an absolute path), `last_project=` blank. That `projects_path` is the example layout this file assumes: the projects clone at `~/.warptempo/warptempo_projects`, beside this repository. The clone is wherever `projects_path` says, one folder up. Change the first four keys in the app (the Settings menu). A hand edit is for when the program is not running (it rewrites the whole file at every commit), and a line that breaks the grammar stops the program at startup, naming the line.
+Each of the nine colours is `#rrggbb` or one of Windows' twenty always-solid colours by name: `black`, `maroon`, `green`, `olive`, `navy`, `purple`, `teal`, `silver`, `gray`, `red`, `lime`, `yellow`, `blue`, `fuchsia`, `aqua`, `white`, `moneygreen`, `skyblue`, `cream`, `medgray`. The defaults: `#96BFDA`, `#141618`, `#6E8DA1`, `#8A5EAC`, `#000000`, `#BB575A`, `#000000`, `#8B8B8B`, `#FCFCFC`.
+
+The first run writes it: on the laptop `gui_scale=138`, `max_waveform_height=364`, `projects_repo=github.com/warptempo/warptempo_projects`, `projects_path=$HOME/.warptempo/warptempo_projects/projects` (spelled out as an absolute path), `last_project=` blank, then the theme and the colours at their defaults. That `projects_path` is the example layout this file assumes: the projects clone at `~/.warptempo/warptempo_projects`, beside this repository. The clone is wherever `projects_path` says, one folder up. Change every key but `last_project` in the app (the Settings menu); a colour or the theme repaints at once. A hand edit is for when the program is not running (it rewrites the whole file at every commit), and a line that breaks the grammar stops the program at startup, naming the line.
 
 On a new laptop, make the projects clone where `projects_path` points. It is public, so the clone needs no key; the program's own fetches then go over SSH on port 443 with the laptop's deploy key (Trouble, "the laptop has no deploy key"):
 
@@ -117,8 +125,8 @@ After an OS reinstall, install the packages (above), then restore these from you
 ```bash
 ls -l ~/.android/debug.keystore ~/.android/adbkey ~/.config/warptempo_gui/deploy_key "$WARPTEMPO_TABLET_DEPLOY_KEY"
 cat ~/.config/warptempo_gui/config
-# five lines, the five keys above in that order. A sixth line (sync_path, or any retired
-# key: Migrating) stops the program at startup: delete it with the program not running.
+# sixteen lines, the sixteen keys above in that order. Any other line (sync_path, or any
+# retired key: Migrating) stops the program at startup: delete it with the program not running.
 ```
 
 ```bash
@@ -244,12 +252,13 @@ Then check. On the tablet, tap Toggle History View in the icon row (hold the S P
 adb logcat -d -s warptempo:I | grep -E 'working_column|GitHub'
 # a line with working_column= (a piece opened), and none with "GitHub refused" or "GitHub offline"
 adb shell run-as com.warptempo.gui cat /data/user/0/com.warptempo.gui/files/warptempo_gui/config
-# five lines:
+# sixteen lines:
 #   gui_scale=275                 (the tablet's first-run value; change it in the app)
 #   max_waveform_height=364
 #   projects_repo=github.com/warptempo/warptempo_projects
 #   projects_path=/storage/emulated/0/Android/data/com.warptempo.gui/files/projects
 #   last_project=<the piece open>
+#   theme=windows-95-standard, theme_level=dark and the nine colours (the laptop's defaults)
 # /storage/emulated/0 and /sdcard are one folder; the tablet's clone is its files/ folder.
 ```
 
@@ -401,4 +410,18 @@ A folder from before the project model (a bare `.warpmarkers` / `.phaseresetmark
 4. Do not bring the old `.settings` across. Move the two converted files aside, open the project with the wav alone (the first open writes all three templates), quit, and copy the two back over their templates. Re-enter `title`, `notes`, `url` and `cover` by hand.
 5. Rename `renders/` to `tmp/`, and move the current `title`'s `<title>.wav` and `.fingerprint` from the root into `render/` (anything else there is deleted at the next publish).
 
-An unknown key is fatal, with no migration: the fix is deleting the line by hand, with the program not running. A `.settings` still carrying `gui_scale`, `audio_player`, `projects_repo`, `playback_speed`, `follow`, `centered`, `center_on_next_marker`, `waveform_magnification_level`, `font_size`, `libm_hash`, `libmvec_hash`, `fftw3_hash` or `fftw3_threads_hash` refuses to load. A device config carrying any of these stops the program at startup: `audio_player=`, `sync_path=`, `hold_delay_ms=`; any `waveform_gain_…=` or `waveform_expander_…=`; `waveform_ink=`, `waveform_magnified_ink=`, `waveform_ghost_ink=`; `waveform_magnified_gain=`, `waveform_ghost_reduction=`, `waveform_magnified_gain_db=`, `waveform_ghost_gain_db=`, `waveform_magnification_foreground_db=`, `waveform_magnification_background_db=`; `waveform_compressor_threshold_db=`, `waveform_compressor_ratio=`, `waveform_foreground_gain_db=`; `fg_color=`, `bg_color=`, `fg_border_color=`, `bg_border_color=`, `fg_blend_loud=`, `fg_blend_quiet=`, `waveform_widening=`; `pen_plane_distance=`, `pen_plane_enter=`, `pen_plane_exit=`; `palette_passes=`, `waveform_passes=`. A config missing one of its five lines stops it the same way; for a missing `max_waveform_height=`, add `max_waveform_height=364`.
+An unknown key is fatal, with no migration: the fix is deleting the line by hand, with the program not running. A `.settings` still carrying `gui_scale`, `audio_player`, `projects_repo`, `playback_speed`, `follow`, `centered`, `center_on_next_marker`, `waveform_magnification_level`, `font_size`, `libm_hash`, `libmvec_hash`, `fftw3_hash` or `fftw3_threads_hash` refuses to load. A device config carrying any of these stops the program at startup: `audio_player=`, `sync_path=`, `hold_delay_ms=`; any `waveform_gain_…=` or `waveform_expander_…=`; `waveform_magnified_ink=`, `waveform_ghost_ink=`; `waveform_magnified_gain=`, `waveform_ghost_reduction=`, `waveform_magnified_gain_db=`, `waveform_ghost_gain_db=`, `waveform_magnification_foreground_db=`, `waveform_magnification_background_db=`; `waveform_compressor_threshold_db=`, `waveform_compressor_ratio=`, `waveform_foreground_gain_db=`; `fg_color=`, `bg_color=`, `fg_border_color=`, `bg_border_color=`, `fg_blend_loud=`, `fg_blend_quiet=`, `waveform_widening=`; `pen_plane_distance=`, `pen_plane_enter=`, `pen_plane_exit=`; `palette_passes=`, `waveform_passes=`. A config missing one of its sixteen lines stops it the same way; for a missing `max_waveform_height=`, add `max_waveform_height=364`, and for a config from before the colour keys (2026-10-03), append the eleven lines with their defaults:
+
+```
+theme=windows-95-standard
+theme_level=dark
+waveform_ink=#96BFDA
+waveform_canvas=#141618
+waveform_outline=#6E8DA1
+flag_face=#8A5EAC
+flag_label=#000000
+invalid_face=#BB575A
+invalid_label=#000000
+playhead_head=#8B8B8B
+playhead_stem=#FCFCFC
+```

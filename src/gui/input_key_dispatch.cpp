@@ -3142,7 +3142,7 @@ void GuiInputHandler::commit_title_editor_exit_no_commit() {
 
 // Enter: run the act under the typed title.
 //
-// A BLANK BUFFER IS A RED FLASH, not a commit: git would take an empty message
+// A BLANK BUFFER IS A RED FRAME, not a commit: git would take an empty message
 // only under --allow-empty-message, and a checkpoint nobody can name is not a
 // thing this product writes. Whitespace-only counts as blank (ASCII whitespace
 // in the "C"
@@ -3167,7 +3167,7 @@ void GuiInputHandler::commit_title_editor_commit() {
     const bool blank = title.find_first_not_of(" \t\r\n\f\v") ==
                        std::string::npos;
     if (blank) {
-        app.commit_title_editor.red = true;
+        text_editor::refuse(app.commit_title_editor);
         viewport.invalidate_modal_dialog_area();
         // THE CARD IS THE WHOLE MESSAGE HERE (architect 2026-08-30): this
         // refusal never had a stderr line and gains none — the red field says
@@ -6751,8 +6751,8 @@ bool GuiInputHandler::route_modal_editor_key(
 // player's own close's argument exactly.
 //
 // EACH EDITOR IS ABANDONED THROUGH ITS OWN EXIT BODY, never through a second
-// spelling of what abandoning means: those bodies own their damage (the flag
-// editor's red-flash waveform arm among it) and their is_active guards, so the
+// spelling of what abandoning means: those bodies own their damage and their
+// is_active guards, so the
 // chain is a no-op when nothing stands. THE PICKER IS NOT AN EDITOR and is
 // not here: the close road takes it down through close_picker beside the
 // player's line, one close body each.
@@ -9111,7 +9111,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 } else if (!text_editor::is_active(app.top_flag_editor)) {
                     // commit_bpm_edit closed the editor without committing
                     // (the invalid-target backstop): take the mode down with
-                    // it. A red-flash refusal leaves the editor open and
+                    // it. A red-frame refusal leaves the editor open and
                     // deliberately does not land here.
                     flag_editor.exit_bpm_mode();
                 }
@@ -9124,11 +9124,9 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             [this] { viewport.invalidate_modal_dialog_area(); });
     }
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
-        // The ITERATION BOUND editor: the payload editor's route less its
-        // waveform edge — the same modal route, the same top-strip repaint, and no waveform
-        // edge, its red reaching no stem (the flash is gated on
-        // Kind::FlagPayload at paint_marker_stems) and its whole surface
-        // being the cell in the strip.
+        // The ITERATION BOUND editor: the payload editor's route — the same
+        // modal route, the same top-strip repaint, its whole surface (the
+        // red frame of a refusal included) being the field in the strip.
         return route_modal_editor_key(
             app.top_flag_editor, key, mods,
             /*autocomplete=*/nullptr,
@@ -9136,28 +9134,16 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             [this] { flag_editor.exit_top_flag_edit_no_commit(); },
             [this] { viewport.invalidate_top_strip(); });
     }
-    // FlagPayload: the same modal route, top-strip repaint — plus the WAVEFORM
-    // on a red-flash EDGE. The invalid-commit flash reaches the marker's STEM
-    // now (GuiPaintHandler::paint_marker_stems), and a stem is a waveform pixel
-    // while the box the flash was designed for is a strip one, so the route's
-    // top-strip repaint no longer covers the whole flash. Compared as an EDGE
-    // rather than damaged unconditionally: typing inside the editor is a
-    // key-repeat-cadence event and the flash flips at most once per commit
-    // attempt. ONE site covers every keyboard flip in both directions — the
-    // commit's own refusals and the pending-cap refusal SET it (both inside the
-    // route), the next mutating keystroke CLEARS it, and Esc / Ctrl+Q / a
-    // successful commit clear it through deactivate. The POINTER close is the
-    // one flip that does not pass here; it pays the same damage at its own
-    // chokepoint (exit_top_flag_edit_no_commit).
-    const bool was_red = app.top_flag_editor.red;
-    const bool consumed = route_modal_editor_key(
+    // FlagPayload: the same modal route, the same top-strip repaint. A
+    // refusal's RED FRAME is the field's own (render_flag_editor_box) and
+    // reaches no stem (architect 2026-10-03), so the strip is the whole
+    // damage of its every flip.
+    return route_modal_editor_key(
         app.top_flag_editor, key, mods,
         /*autocomplete=*/nullptr,
         [this] { flag_editor.commit_top_flag_edit(); },
         [this] { flag_editor.exit_top_flag_edit_no_commit(); },
         [this] { viewport.invalidate_top_strip(); });
-    if (app.top_flag_editor.red != was_red) viewport.invalidate_waveform_area();
-    return consumed;
 }
 
 // Settings-prompt editor key routing, through the shared modal route.

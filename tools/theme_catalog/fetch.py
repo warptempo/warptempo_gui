@@ -5,9 +5,9 @@
 # again. Any failure is one line naming the file and exit 1: the inputs are pinned third-party files, no recovery.
 #
 #   python3 tools/theme_catalog/fetch.py [--refresh]
-import json, os, shutil, subprocess, sys, urllib.request
+import json, os, sys, urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sources import SOURCES, SOURCES_DIR, REPO, GH, TDE, SF, IMAGE, file_url, local_path
+from sources import SOURCES, SOURCES_DIR, GH, TDE, file_url, local_path
 
 
 def die(msg):
@@ -40,41 +40,20 @@ def listing(src):
     return sorted(os.path.join(s['dir'], n) if s['dir'] else n for n in names)
 
 
-def fetch_image(src, files, refresh):
-    """unsquashfs -e each file out of the image's squashfs (unpacked from the ISO with bsdtar when missing)."""
-    s = SOURCES[src]
-    sq = os.path.join(REPO, s['unpacked'])
-    if not os.path.exists(sq):
-        iso = os.path.join(REPO, s['image'])
-        if not os.path.exists(iso): die(f"{iso}: the image is missing")
-        os.makedirs(os.path.dirname(sq), exist_ok=True)
-        subprocess.run(['bsdtar', '-xf', iso, '-C', os.path.dirname(os.path.dirname(sq)), s['squashfs']], check=True)
-    out = os.path.join(SOURCES_DIR, src)
-    for f in files:
-        dst = local_path(src, f)
-        if os.path.exists(dst) and not refresh: continue
-        r = subprocess.run(['unsquashfs', '-q', '-n', '-f', '-d', out, sq, '-e', f"{s['dir']}/{f}"],
-                           capture_output=True, text=True)
-        if r.returncode or not os.path.exists(dst): die(f"{sq}:/{s['dir']}/{f}: unsquashfs failed {r.stderr.strip()}")
-
-
 def main():
     refresh = '--refresh' in sys.argv
     for src, s in SOURCES.items():
         d = os.path.join(SOURCES_DIR, src); os.makedirs(d, exist_ok=True)
         files = listing(src)
-        if s['host'] == IMAGE:
-            fetch_image(src, files, refresh)
-        else:
-            for f in files:
-                dst = local_path(src, f)
-                if os.path.exists(dst) and not refresh: continue
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                data = get(file_url(src, f))
-                open(dst, 'wb').write(data)
-        json.dump({'source': src, 'commit': s.get('commit'), 'image': s.get('image'), 'files': files},
+        for f in files:
+            dst = local_path(src, f)
+            if os.path.exists(dst) and not refresh: continue
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            data = get(file_url(src, f))
+            open(dst, 'wb').write(data)
+        json.dump({'source': src, 'commit': s['commit'], 'files': files},
                   open(os.path.join(d, 'MANIFEST.json'), 'w'), indent=1)
-        print(f'{src:18s} {len(files):3d} files  {s.get("commit") or s.get("image")}')
+        print(f'{src:18s} {len(files):3d} files  {s["commit"]}')
 
 
 if __name__ == '__main__':

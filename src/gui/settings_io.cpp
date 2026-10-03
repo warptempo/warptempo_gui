@@ -364,7 +364,7 @@ bool write_settings_file(
 
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key) {
-    // THE DEVICE CONFIG'S FOUR EDITABLE KEYS, ahead of the `.settings` walk
+    // THE DEVICE CONFIG'S EDITABLE KEYS, ahead of the `.settings` walk
     // because they are not in it (2026-08-27; the path key 2026-09-02;
     // max_waveform_height 2026-09-13)
     // and the settings editor edits them — the whole rationale is at the
@@ -382,6 +382,14 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
+    // THE ELEVEN COLOUR KEYS (2026-10-03), verbatim — the struct holds each
+    // as typed and the file writes it so.
+    if (app.device_config != nullptr) {
+        if (key == "theme")       return app.device_config->theme;
+        if (key == "theme_level") return app.device_config->theme_level;
+        if (const ProgramColourKey* pk = find_program_colour_key(key))
+            return app.device_config->*(pk->member);
+    }
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -16,7 +16,7 @@
 // keep it inline on AppState. Validation, commit semantics, and visual
 // rendering are the caller's concerns; this module only handles the
 // keyboard-driven mutation of `pending` + cursor state and exposes hooks
-// for blink and the parse-failure red flash.
+// for blink and the parse-failure red frame.
 //
 // Reuse: the several editor surfaces supply different
 // validators and writers but reuse this state shape and keystroke routing.
@@ -352,8 +352,12 @@ struct State {
     // backspace, and by enter/deactivate.
     int selection_anchor = -1;
 
-    // True after a failed commit. Cleared by any keystroke that mutates
-    // `pending`.
+    // THE RED STATE: true after a refused commit (refuse, below) or a growth
+    // the field's cap refused (replace_selection). Cleared by any keystroke
+    // that mutates `pending`, and by enter/deactivate. Its picture is the
+    // field's FRAME in the `invalid_face` key (architect 2026-10-03: the flag
+    // editor's one black line, the dialog field's both sunken lines), never
+    // its face.
     bool red = false;
 
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
@@ -422,6 +426,14 @@ inline int selection_end(const State& s) {
 
 // Reset `s` so `is_active` returns false.
 void deactivate(State& s);
+
+// A REFUSED ENTER (architect 2026-10-03, Windows' in-place edit): the red
+// state, and THE WHOLE TEXT SELECTED in the selected pair, the caret at its
+// end — so the first keystroke replaces it (replace_selection, which clears
+// the red) and the frame returns. Every commit refusal of every editor calls
+// this; the cap's refusal (replace_selection) sets the red alone, being no
+// Enter.
+void refuse(State& s);
 
 // Begin editing `target` with the given seed pending.
 // Cursor lands at end of pending. `kind` selects the vocabulary the

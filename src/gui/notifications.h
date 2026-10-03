@@ -137,7 +137,7 @@
 //     refusal and kCheckpointPublishing, every Ctrl+S road inheriting them);
 //     the device config's write failure (write_device_config, device_config.h)
 //     and kProjectsPathAppliesCard below on a successful persist.
-//   * EVERY RED FLASH'S REASON (2026-08-30): the flag-editor cluster's
+//   * EVERY RED FRAME'S REASON (2026-08-30): the flag-editor cluster's
 //     "Edit rejected: …", "Range bound rejected: …" and the BPM editor's
 //     three "BPM edit rejected: …" (flag_editor.cpp); the settings editor's
 //     five "Settings edit rejected: …" (settings_editor.cpp); the commit

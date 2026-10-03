@@ -212,21 +212,15 @@
     "Seasons - Summer": "tdebase commit 69ac490a9e43b46efbc7fbf3ce32e96365f5805d (2025-01-24, \"Add 15 color schemes taken from https://www.opendesktop.org.\"): added by Trinity, not shipped by KDE 3.5",
     "Seasons - Winter": "tdebase commit 69ac490a9e43b46efbc7fbf3ce32e96365f5805d (2025-01-24, \"Add 15 color schemes taken from https://www.opendesktop.org.\"): added by Trinity, not shipped by KDE 3.5",
     "Sienna": "tdebase commit 688aa0fc28d3de8665b7b151eba65fe49e02187f (2023-10-18, \"Add six new color schemes taken from https://www.opendesktop.org.\"): added by Trinity, not shipped by KDE 3.5",
-    "WedgieWeb": "tdebase commit 688aa0fc28d3de8665b7b151eba65fe49e02187f (2023-10-18, \"Add six new color schemes taken from https://www.opendesktop.org.\"): added by Trinity, not shipped by KDE 3.5",
-    "Debonaire": "the Q4OS 6.9 image: added by Q4OS, not shipped by KDE 3.5",
-    "Q4os_tstyle02 Noble": "the Q4OS 6.9 image: added by Q4OS, not shipped by KDE 3.5",
-    "Q4os_tstyle02 Standard": "the Q4OS 6.9 image: added by Q4OS, not shipped by KDE 3.5",
-    "Q4os_tstyle02 White": "the Q4OS 6.9 image: added by Q4OS, not shipped by KDE 3.5",
-    "QtCurve": "the Q4OS 6.9 image: added by Q4OS, not shipped by KDE 3.5"
+    "WedgieWeb": "tdebase commit 688aa0fc28d3de8665b7b151eba65fe49e02187f (2023-10-18, \"Add six new color schemes taken from https://www.opendesktop.org.\"): added by Trinity, not shipped by KDE 3.5"
    },
-   "reason": "KDE colour schemes KDE 3.5 did not ship, added later by Trinity or Q4OS; the catalog keeps what KDE 3.5 shipped (architect 2026-10-03, late)"
+   "reason": "KDE colour schemes KDE 3.5 did not ship, added later by Trinity; the catalog keeps what KDE 3.5 shipped (architect 2026-10-03, late)"
   },
   "duplicates": {
    "keys": {
-    "cde-broica": "cde-default",
-    "kde3-q4os-default": "kde3-keramik-white"
+    "cde-broica": "cde-default"
    },
-   "reason": "role-identical to the named entry, which is kept (architect 2026-10-03, late; kde3-q4os-default differs from Keramik White only on the window-frame keys frame, handle, inactiveFrame and inactiveHandle, which no role reads)"
+   "reason": "role-identical to the named entry, which is kept (architect 2026-10-03, late)"
   }
  },
  "entries": [

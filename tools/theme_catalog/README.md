@@ -9,9 +9,28 @@ link path from any product target, no CMake, Python 3 + numpy (and `tools/palett
 ```
 python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/theme_sources/ (git-ignored)
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
+python3 tools/theme_catalog/gen_theme_table.py     # -> src/gui/theme_table.h, the app's generated table (committed)
+python3 tools/theme_catalog/levels.py --verify     # the vectorized ground search against its exhaustive definition
 python3 tools/theme_catalog/crops.py [key ...]     # -> docs/themes/crops/<key>.png, docs/themes/CATALOG.md
 python3 tools/theme_catalog/crops.py --md          # renders nothing: CATALOG.md from catalog.json, stale crops deleted
 ```
+
+## The app's table and the three levels (architect 2026-10-03)
+
+The app carries the catalog as ONE GENERATED, COMMITTED HEADER, `src/gui/theme_table.h` (`gen_theme_table.py`; its
+head says "do not edit"): every entry at THREE LEVELS, LIGHT / DIM / DARK, thirteen roles a level, so the app does no
+colour arithmetic. A catalog change is `build.py`, then `gen_theme_table.py` and `crops.py`, the outputs committed
+together; the output is byte-stable (the catalog's order, fixed formatting, no timestamp). THE LEVEL ARITHMETIC is one
+module, `levels.py`, read by the generator and by `crops.py` (its head states the rule): LIGHT the entry as
+recorded; DIM / DARK the ground's HLS hue and saturation at relative luminance 0.080 / 0.035, all four relief lines'
+HLS lightness scaled by L(new face) / L(base face) (black stays black, a 3DLight equal to the base face becomes the
+new face), the label white, the emboss's light copy Windows' own dialog-rule Hilight of the new face
+(`toolkit_rules.windows_dialog`); the selected pair the entry's (a CDE entry's its `title_active` with colour set 1's
+Motif foreground), the info pair the entry's or Windows' #FFFFE1 / #000000 where unrecorded, the field pair the
+entry's, at every level. The ground search is exhaustive by definition (`ground_at_exhaustive`, the lightness at every
+1 / 100000 step); `ground_at` is the same search vectorized with numpy, verified identical on all 97 x 2 cases
+(`levels.py --verify`). The app reads the row the device config names (`theme`, `theme_level`; render.h's palette
+block maps the roles onto the painters).
 
 ## The contract
 
@@ -22,12 +41,13 @@ python3 tools/theme_catalog/crops.py --md          # renders nothing: CATALOG.md
   each ported from the pinned source cited at its function) and the catalog stores the resulting bytes, the rule
   named in the entry's provenance and described once in the catalog's `rules`. That is part of the import, not a
   derivation of ours.
-- THE CHROME IS THE THEME'S; THE WAVEFORM PANE AND THE FLAGS ARE THE PROGRAM'S OWN ELEMENTS (architect 2026-10-03,
-  late), drawn the way a custom control in a Windows-95-era program would be: their base colours are the program's,
-  their SHADING the theme's. So each entry names the rule its family's desktop shaded a 3D face with (`flag_rule`),
-  and the flags' one-line bevel is that rule run on the flag's face colour (`toolkit_rules.flag_bevel`): Windows'
-  Appearance dialog (`windows_dialog`, over shlwapi's 240-scale integer HLS as Wine implements it), KDE 3's, Motif's.
-  These are the only rules in the tool.
+- THE CHROME IS THE THEME'S; THE WAVEFORM PANE, THE FLAGS AND THE PLAYHEAD ARE THE PROGRAM'S OWN ELEMENTS (architect
+  2026-10-03), their colours the app's device keys. The flags are the FLAT Acid flag, outlined in the theme's DkShadow
+  and shaded by nothing. Each entry still names the rule its family's desktop shaded a 3D face with (`flag_rule`:
+  Windows' Appearance dialog, `windows_dialog`, over shlwapi's 240-scale integer HLS as Wine implements it; KDE 3's;
+  Motif's — `toolkit_rules.flag_bevel`), KEPT for tools/palette's "bevelled" flag style, the record of the design the
+  flat flag replaced; the app and the crops read it nowhere. `windows_dialog` is also the levels' emboss copy rule
+  (`levels.py`). These are the only rules in the tool.
 - EVERY SOURCE IS PINNED (`sources.py`): a repository at a commit, or a fixed local image, and every entry's
   provenance names the project, the file, the URL and the commit (or the image). Fetched files live in
   `tmp/theme_sources/` and are never committed; only the bytes and their provenance are.
@@ -42,7 +62,8 @@ python3 tools/theme_catalog/crops.py --md          # renders nothing: CATALOG.md
 `cde-`, `warptempo-` — what is typed in Settings), `name` (the source's display name verbatim; a Windows 98
 theme's file name, a CDE palette's file stem), `family`, `imitates` (optional: a KDE scheme whose name says it imitates
 another desktop), `provenance` (`sources`: one record per source file; `rule`: the toolkit rule's id, its parameters
-and every value it computed), `raw`, `roles`, `flag_rule` (the rule the flags' bevel takes: `{"id":
+and every value it computed), `raw`, `roles`, `flag_rule` (the rule the bevelled flag style takes — kept, read by
+tools/palette's "bevelled" style alone since the flat flag, 2026-10-03: `{"id":
 "windows-dialog"}` for the families `windows`, `windows-plus` and `warptempo` — the architect: "take Windows' rule" —,
 `{"id": "kde3", "contrast": c}` at the scheme's own contrast, `{"id": "motif"}` for `cde`; described in the catalog's
 `rules`), `display_tier` (below), `notes` (every disagreement between sources, every relabelling).
@@ -68,7 +89,7 @@ Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts 
 |---|---|---|
 | `windows` | ReactOS `boot/bootdata/hivedef.inf` ("New Schemes", COLOR_* indices, 0x00BBGGRR, English names from the first [Strings] block), corroborated by the Windows XP classic schemes saved as .theme files (zkedem/windows10-classic-themes; 1j01/98 `desktop/Themes/classicthemes8`) and Windows 98's `Windows Default.theme`; Windows 95 Standard hand-recorded | a hivedef.inf scheme is imported only when a second, independent source records it with equal bytes on every role key (the rest: Not imported, below); Desert and Spruce (absent from ReactOS) come from the two XP records; ReactOS's "ReactOS Standard" and "ReactOS Classic" are Windows Classic and Windows Standard under ReactOS names and are folded into those entries |
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
-| `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49) + the six the Q4OS 6.9 TDE image adds, less the 30 not imported: KDE 3.5's three usability schemes, the 21 Trinity added later, the Q4OS image's six (one a duplicate) — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25) | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
+| `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
 | `warptempo` | `src/gui/render.h` at da0b1051 (git show) | the app's own look on 2026-10-03, so it stays selectable as bytes |
 
@@ -83,8 +104,6 @@ Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, 
 | `cde-broica` | role-identical to `cde-default` (byte-identical on every raw value too) |
 | KDE Human, Last.fm, Lizard, Platinum, Sienna, WedgieWeb (6) | not shipped by KDE 3.5: Trinity added them to tdebase in commit 688aa0fc28d3de8665b7b151eba65fe49e02187f (2023-10-18, "Add six new color schemes taken from https://www.opendesktop.org.") |
 | KDE Different, Jewels - Amethyst, - Aquamarine, - Carbon, - Citrin, - Emerald, - Ruby, - Sapphire, - Topaz, Lila, Pinkie, Seasons - Autumn, - Spring, - Summer, - Winter (15) | not shipped by KDE 3.5: Trinity added them to tdebase in commit 69ac490a9e43b46efbc7fbf3ce32e96365f5805d (2025-01-24, "Add 15 color schemes taken from https://www.opendesktop.org.") |
-| KDE Debonaire, Q4os_tstyle02 Noble, Q4os_tstyle02 Standard, Q4os_tstyle02 White, QtCurve (5) | not shipped by KDE 3.5: the Q4OS 6.9 image adds them (its sixth, Q4OS Default, is the duplicate below) |
-| `kde3-q4os-default` | role-identical to `kde3-keramik-white` (it differs only on the window-frame keys frame, handle, inactiveFrame, inactiveHandle, which no role reads) |
 | CDE Black, White, BlackWhite, WhiteBlack (.dp) | X colour names for monochrome displays, refused by dtsession on a colour display |
 
 ## The role mapping (`roles.py`, the one table)
@@ -115,14 +134,15 @@ and lists, 5 THE PRIMARY (an application's background; dtsession's high-colour `
 dialogs), 8 the front panel; Motif paints two shadows, so its quartet is (ts, ts, bs, bs); it has no selection
 highlight (text selection is inverse video), no tooltip pair and no disabled colour (insensitive text is stippled).
 
-THE APP-SPECIFIC ROLES (architect 2026-10-03, late), drawn from the catalog roles above rather than stored: the ruler
-label <- `label`; the ruler ticks <- `bevel_shadow`; the flag OUTLINE <- `bevel_dkshadow` (round the flag, keeping
-overlapping flags apart; the stem is not the outline). THE PROGRAM'S OWN COLOURS, not catalog roles: the waveform ink
-and canvas; the flag's face and its label, a RECORDED colour beside the face as Windows 95 recorded a text colour
-beside every face (the luminance rule is WCAG 2.0's contrast math, not Windows', and no program element reads it):
-black on the app's purple, and the invalid flag as Windows' error-icon pair, the face #FF0000 and the label #FFFFFF
-(the Stop icon's white X); the playhead's head and stem (the app's #8B8B8B / #FCFCFC). Only the flags' shading is the
-theme's, the entry's `flag_rule`.
+THE APP-SPECIFIC ROLES (architect 2026-10-03), drawn from the catalog roles above rather than stored: the ruler label
+and the trim lane's arrow glyph <- `label`; the ruler ticks <- `bevel_shadow`; the flag OUTLINE <- `bevel_dkshadow`
+(round the flag, keeping overlapping flags apart; the stem crosses its bottom line); the playhead head's outline <-
+`label`; THE DISABLED EMBOSS's light copy <- `bevel_hilight` on the light level (`levels.py`). THE PROGRAM'S OWN
+COLOURS, not catalog roles, the app's open device keys (src/gui/device_config.h): the waveform ink, canvas and lit
+outline; the flag's face and its label, a RECORDED colour beside the face as Windows 95 recorded a text colour beside
+every face (no luminance rule anywhere: that is WCAG 2.0's contrast math, not Windows'): black on the app's purple;
+the invalid face and its label, #BB575A and black (Windows' error-icon pair #FF0000 / #FFFFFF was struck,
+architect 2026-10-03); the playhead's head and stem (#8B8B8B / #FCFCFC).
 
 ## The checks (build.py, before the write)
 
@@ -147,7 +167,12 @@ px with a 4-row FULLY TRANSPARENT gap between them (alpha 0 there, 255 everywher
 written as RGBA (indexed with tRNS when a crop has at most 256 colours; none has: the antialiased text exceeds it),
 each with the Display-P3 iCCP chunk. On each: the role mapping above, the well with the app's two-line PLAIN SUNKEN
 edge, top and bottom only, full width (architect 2026-10-03, late: `bevel_shadow` then `bevel_dkshadow` inward on top,
-`bevel_light` inward then `bevel_hilight` outward at the bottom; crops.py `WELL`), and the Sonic Foundry flags shaded by
-the entry's `flag_rule`, the stem leaving the box's first face column through a gap in its bottom lines, the scene's
-flags left to right unselected, SELECTED, INVALID, DISABLED and unselected (render.py's `flags.style` "bevelled"); the waveform, the flags' face and label, the invalid flag's pair and the
-playhead are the program's colours (above). The icons are the app's, unchanged. 97 crops, 5.24 MB. Its head states which roles come from the entry and which are the program's.
+`bevel_light` inward then `bevel_hilight` outward at the bottom; crops.py `WELL`), THE APP'S FINAL DESIGN AT THE LIGHT
+LEVEL (architect 2026-10-03; `levels.level_roles`, the generated table's own row): the flat flags (render.py
+`flags.style` "flat", `flags.selection` "underline") left to right EDITING (the in-place editor's black frame on the
+field ground, its text in the selected pair), SELECTED (the label underlined), INVALID, DISABLED (the ground, the label
+embossed, no stem) and unselected; the playhead head outlined in the label (`playhead_head_outline` "outline"); the
+disabled menu word and buttons engraved (`menu.disabled` / `buttons.disabled` "engraved" over `emboss_hilight`); the
+trim arrow in the label (`trim_arrow`). The waveform, the flags' face and label, the invalid pair and the playhead are
+the program's colours (above). The icons are the app's, unchanged. 97 crops, 5.36 MB. Its head states which roles come
+from the entry and which are the program's.

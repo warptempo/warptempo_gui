@@ -42,6 +42,7 @@ void render_waveform_to_cache_surface(
     int area_h,
     int inset_px,
     int line_px,
+    WaveformPlateInks inks,
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,
@@ -49,7 +50,7 @@ void render_waveform_to_cache_surface(
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
-    // Clear to transparent — the kWaveformCanvas ground render_canvas lays under
+    // Clear to transparent — the canvas ground render_canvas lays under
     // the plate shows through wherever the waveform samples don't paint. No
     // ground color is ever baked into the plate: its alpha is exactly what
     // composites the ink over that ground through its gaps (binary alpha since
@@ -104,14 +105,13 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the plate's inks are constexpr (kWaveformInk and
-    // kWaveformForegroundOutline, render.h), read by render_waveform itself,
-    // so they need no fingerprint term: a retune is a recompile. The lamp
-    // dark, the raw bar alone in the plate's ink; lit, each column paints its
-    // OUTER bar (the levelled, expanded one) and its INNER bar (the
-    // compressed, expanded one) over it, both in the plate's ink, the inner
-    // outlined in kWaveformForegroundOutline, line_px thick — the rule is at
-    // render_waveform's declaration. Every scale the lit plate reads is on
+    // ROW 6: the plate's inks are the `waveform_ink` and `waveform_outline`
+    // keys (architect 2026-10-03), passed in as the job's snapshot `inks` and
+    // keyed in the fingerprint like the line width. The lamp dark, the raw
+    // bar alone in the plate's ink; lit, each column paints its OUTER bar (the
+    // levelled, expanded one) and its INNER bar (the compressed, expanded one)
+    // over it, both in the ink, the inner outlined in the outline, line_px
+    // thick — the rule is at render_waveform's declaration. Every scale the lit plate reads is on
     // the curve itself, so nothing else is read here.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
@@ -126,9 +126,9 @@ void render_waveform_to_cache_surface(
     // distance (render_waveform), so it is a render input and a fingerprint
     // field like the inset.
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, gain, line_px, warp_frame_map_or_null);
+                    basis, gain, line_px, inks, warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, gain, line_px, warp_frame_map_or_null);
+                    basis, gain, line_px, inks, warp_frame_map_or_null);
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------
@@ -180,6 +180,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
     in.line_px       = waveform_line_px();
+    in.inks          = waveform_plate_inks();
     // The waveform PICTURE's gain field — the gate's whole answer off the
     // magnification lamp (waveform_gain_fingerprint,
     // which owns the rule; the `h` view's plate included, it being the live
@@ -262,6 +263,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         int     fp_aw,   int     fp_ah,
         int     fp_inset,
         int     fp_line,
+        WaveformPlateInks fp_ink,
         uint64_t fp_gain,
         bool    fp_t,
         uint64_t fp_h) -> bool {
@@ -271,6 +273,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_ah   != in.area_h)          return true;
         if (fp_inset != in.inset_px)       return true;
         if (fp_line  != in.line_px)        return true;
+        if (fp_ink   != in.inks)           return true;
         if (fp_gain != in.gain_hash) return true;
         if (fp_t    != in.is_target)       return true;
         if (fp_h    != in.warp_frame_map_hash) return true;
@@ -284,6 +287,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_inset_px,
         wf_cache.pending_fp_line_px,
+        wf_cache.pending_fp_inks,
         wf_cache.pending_fp_gain_hash,
         wf_cache.pending_fp_target,
         wf_cache.pending_fp_warp_frame_map_hash);
@@ -303,6 +307,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_inset_px    = in.inset_px;
         wf_cache.supersede_line_px     = in.line_px;
+        wf_cache.supersede_inks        = in.inks;
         wf_cache.supersede_gain_hash = in.gain_hash;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -333,6 +338,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.area_h         = in.area_h;
     job.inset_px       = in.inset_px;
     job.line_px        = in.line_px;
+    job.inks           = in.inks;
     job.gain_hash = in.gain_hash;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
@@ -352,6 +358,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_inset_px = in.inset_px;
     wf_cache.pending_fp_line_px  = in.line_px;
+    wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -412,6 +419,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
         wf_cache.pending_fp_inset_px            = wf_cache.fp_inset_px;
         wf_cache.pending_fp_line_px             = wf_cache.fp_line_px;
+        wf_cache.pending_fp_inks                = wf_cache.fp_inks;
         wf_cache.pending_fp_gain_hash   = wf_cache.fp_gain_hash;
         wf_cache.pending_fp_target              = wf_cache.fp_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
@@ -469,6 +477,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_h         = sh;
         job.inset_px       = wf_cache.supersede_inset_px;
         job.line_px        = wf_cache.supersede_line_px;
+        job.inks           = wf_cache.supersede_inks;
         job.gain_hash = wf_cache.supersede_gain_hash;
         job.target         = wf_cache.supersede_target;
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
@@ -489,6 +498,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_h      = sh;
         wf_cache.pending_fp_inset_px = wf_cache.supersede_inset_px;
         wf_cache.pending_fp_line_px  = wf_cache.supersede_line_px;
+        wf_cache.pending_fp_inks     = wf_cache.supersede_inks;
         wf_cache.pending_fp_gain_hash = wf_cache.supersede_gain_hash;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.supersede_warp_frame_map_hash;
@@ -516,6 +526,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
     wf_cache.fp_inset_px = wf_cache.pending_fp_inset_px;
     wf_cache.fp_line_px  = wf_cache.pending_fp_line_px;
+    wf_cache.fp_inks     = wf_cache.pending_fp_inks;
     wf_cache.fp_gain_hash = wf_cache.pending_fp_gain_hash;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
@@ -708,7 +719,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // in.audio is the source audio.
     render_waveform_to_cache_surface(
         wf_cache.surface,
-        in.area_w, in.area_h, in.inset_px, in.line_px,
+        in.area_w, in.area_h, in.inset_px, in.line_px, in.inks,
         *in.audio,
         in.vp_start, in.painter_spp, in.gain_hash != 0,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
@@ -723,6 +734,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_area_h       = in.area_h;
     wf_cache.fp_inset_px = in.inset_px;
     wf_cache.fp_line_px  = in.line_px;
+    wf_cache.fp_inks     = in.inks;
     wf_cache.fp_gain_hash = in.gain_hash;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = in.is_target;
@@ -734,6 +746,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_area_h       = in.area_h;
     wf_cache.pending_fp_inset_px = in.inset_px;
     wf_cache.pending_fp_line_px  = in.line_px;
+    wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -1069,6 +1082,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THE SCALE THE FLAG PIXELS ARE LAID OUT AT, keyed by field (contract at
     // FlagCache::fp_gui_scale_percent).
     const int gui_scale = gui_scale_percent();
+    // THE PALETTE THEY ARE PAINTED IN, keyed by field (contract at
+    // FlagCache::fp_palette_generation).
+    const uint64_t pal_gen = palette_generation();
 
     // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
     // positioned at marker times only.
@@ -1157,6 +1173,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_gui_scale_percent       == gui_scale &&
+        flag_cache.fp_palette_generation      == pal_gen &&
         flag_cache.fp_target                  == is_target &&
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
         flag_cache.fp_warp_generation   == warp_gen &&
@@ -1257,14 +1274,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback OR that share their frame with another row of their own store,
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
-    // the hard-coded red class: kMarkerFlagFillRed/kMarkerFlagEdgeRed at rest
-    // and their Sel pair on a selected marker's addressed cell (architect
-    // 2026-09-16 — red takes the selection swap like every other class, the
-    // cue being the hue), with the kMarkerStemRed stem at rest and the bright
-    // fill selected, following the flag like every other stem (architect
-    // 2026-09-23; resolve_flag_face — a
-    // disabled red marker blends whichever of the two pairs it would have worn
-    // toward the lane ground and stays recognisably red).
+    // the INVALID face — the `invalid_face` key, its recorded label and a stem
+    // in the face (resolve_flag_face, render.cpp; architect 2026-10-03), the
+    // underline marking a selected one; DISABLED wins over it, a disabled
+    // invalid marker painting the disabled face.
     // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag
@@ -1366,6 +1379,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_gui_scale_percent       = gui_scale;
+    flag_cache.fp_palette_generation      = pal_gen;
     flag_cache.fp_target                  = is_target;
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
     flag_cache.fp_warp_generation   = warp_gen;

@@ -3719,7 +3719,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
 // An editor dialog's OK / Cancel press, dispatched as the session's own
 // Enter / Esc through the SAME per-editor key route the keyboard takes
 // (handle_*_editor_key -> route_modal_editor_key) — button-is-its-chord, so
-// the commit bodies, the red-flash refusals, the BPM sweep and the teardowns
+// the commit bodies, the red-frame refusals, the BPM sweep and the teardowns
 // are all the keyboard's own, byte-identical. Bare mods: the session keys are
 // bare-exact by the strict-modifier rule, and the only gesture that reaches
 // here is a plain press's own lift (the press claim refuses every modifier and
@@ -3739,7 +3739,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
 // path reaches here with the focus in the field, but the keyboard's Enter on an
 // editor dialog's OK button had no other end. Found and closed 2026-08-13 with
 // the act-at-release ruling.) Setting the field is also the right RESTING state
-// for the one act that does not close the dialog — a red-flash refusal leaves
+// for the one act that does not close the dialog — a red-frame refusal leaves
 // the user where the fix is typed — so this is the act's own semantics rather
 // than a workaround for the ordering.
 void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
@@ -5209,7 +5209,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // that same button runs the editor's own Enter or Esc through the one
     // modal key route (dispatch_modal_dialog_editor_act, from
     // on_button_release's mirror of this gate) — button-is-its-chord, so a
-    // red-flash refusal, the BPM commit's render sweep and every teardown are
+    // red-frame refusal, the BPM commit's render sweep and every teardown are
     // the keyboard's own bodies. A PROMPT's buttons are claimed in the prompt
     // gate above, not here.
     // THE STASH'S IDENTITY IS THIS CLAIM'S GATE (2026-08-13, exact since

@@ -25,15 +25,12 @@ namespace {
 // 2026-09-14) before it; a future stroked file brings it back, its record in
 // git history.
 //
-// THE COLORS ARE HARD-CODED, per the redesign's color ruling: each ink is the
-// value its SVG resolves to, in the palette's P3 bytes (the ink block below),
-// and AN INK WHOSE BYTES ARE A PALETTE ROLE'S IS THAT ROLE (architect
-// 2026-10-02, render.h's palette scaffold), so a retune of the role moves the
-// glyphs with it. The three edit icons paint fill:currentColor under the
-// file's own `.ColorScheme-Text { color: #fcfcfc }` stylesheet, the label
-// role (kIconText); media-record's own literal #da4453 is the red role
-// (kIconRecord). The inks that are no role's value stay literals and are on
-// render.h's hand-list.
+// THE INKS (the ink block below, architect 2026-10-03): a path the SVG inks
+// in the scheme's text class — fill:currentColor under the file's own
+// `.ColorScheme-Text { color: #fcfcfc }` stylesheet, as the three edit icons
+// paint — takes THE THEME'S LABEL (kIconText); every other ink is the value
+// its SVG resolves to in P3 bytes, a hand-listed literal (media-record's own
+// #da4453 is kIconRecord).
 //
 // A FILLED ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO
 // winding rule — which is the SVG default too, and what makes document-save's
@@ -75,8 +72,21 @@ constexpr IconTransform icon_translate(double tx, double ty) {
     return IconTransform{1.0, 0.0, 0.0, 1.0, tx, ty};
 }
 
+// A PATH'S INK: THE THEME'S LABEL — a path the SVG inks in the scheme's text
+// class, a chrome glyph like the chrome's words (architect 2026-10-03: the
+// glyphs inked in the label follow the theme's label) — or a FIXED byte
+// triple, the hand-listed inks below. A GuiColor converts to a fixed ink, so a
+// row names either kind the same way.
+struct IconInk {
+    bool     is_label = false;
+    GuiColor fixed{};
+    constexpr IconInk(GuiColor c) : is_label(false), fixed(c) {}
+    constexpr explicit IconInk(bool label) : is_label(label), fixed{} {}
+    GuiColor resolve() const { return is_label ? palette().label : fixed; }
+};
+
 struct IconPath {
-    GuiColor      ink;      // fill source
+    IconInk       ink;      // fill source
     const char*   d;
     IconTransform xform{};  // identity unless the row carries a transform
 };
@@ -87,15 +97,21 @@ struct IconDef {
     int            path_count;
 };
 
-// THE ICON INKS ARE THE PALETTE'S P3 BYTES (architect 2026-10-02, render.h's
-// palette head): each Breeze class or literal colour in this table is that
-// colour taken through the two sRGB -> Display-P3 passes the frozen palette
-// baked in (Breeze's #da4453 -> #bb575a, #d24d57 -> #b65c5d; the white classes
-// are unmoved). Where those bytes are a role's value the ink REFERENCES the
-// role: the text class is the label, #da4453 the red, the scheme's accent
-// class the accent.
-constexpr GuiColor kIconText   = kRedesignLabel;
-constexpr GuiColor kIconRecord = kMarkerFlagFillRed;
+// THE ICON INKS (architect 2026-10-03): the scheme's TEXT CLASS is the
+// theme's LABEL, so a toolbar glyph reads as its row's words do on every
+// theme; EVERY OTHER INK IS A HAND-LISTED P3 BYTE TRIPLE, kept as it stood on
+// 2026-10-03 for the icons arc that follows — each Breeze class or literal
+// colour taken through the two sRGB -> Display-P3 passes the 2026-10-02
+// palette baked in (Breeze's #da4453 -> #BB575A, #d24d57 -> #B65C5D; the white
+// classes are unmoved; the leftover Breeze blues -> #96BFDA, architect
+// 2026-10-01). The hand-list: kIconRecord and kIconNegativeText #BB575A,
+// kIconPreviewOn and kIconLiftCross #B65C5D, kIconAccent and kIconWav
+// #96BFDA, kIconPlainWhite #FFFFFF. (Until 2026-10-03 the red, the accent and
+// the text inks referenced the palette's hard-coded roles; those roles
+// retired with the theme catalog, and the red and blue glyphs are the icons
+// arc's to recolour.)
+constexpr IconInk  kIconText{true};
+constexpr GuiColor kIconRecord = hex(0xBB575A);
 
 constexpr IconPath kDocumentSavePaths[] = {
     {kIconText,
@@ -137,8 +153,8 @@ constexpr IconPath kMediaRecordPaths[] = {
 // carrying its own literal #d24d57 (the "on" pip), a Breeze red apart from
 // media-record's #da4453 whose P3 bytes are no role's value.
 
-// #d24d57 through tools/palette's two_pass -> #B65C5D, no role's value: a
-// literal on render.h's hand-list.
+// #d24d57 through tools/palette's two_pass -> #B65C5D: a literal on the
+// hand-list (the ink block above).
 constexpr GuiColor kIconPreviewOn = hex(0xB65C5D);
 
 // THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
@@ -146,11 +162,10 @@ constexpr GuiColor kIconPreviewOn = hex(0xB65C5D);
 // carrying it resolves to the SCHEME'S ACCENT — #3daee9 under stock Breeze —
 // deep-history's curl-back arrow was this tree's first user (2026-08-09) and
 // dialog-information's plate is the one standing since that glyph left with
-// the 2026-09-04 collapse. THE SCHEME'S ACCENT IS THE ACCENT ROLE
-// (kRedesignAccent, render.h — architect 2026-10-01: the leftover Breeze blues
-// convert to the ink, the accent's twin; derived since 2026-10-02, the
-// palette's scaffold, so a retune of the role moves the class with it).
-constexpr GuiColor kIconAccent    = kRedesignAccent;
+// the 2026-09-04 collapse. THE SCHEME'S ACCENT IS #96BFDA (architect
+// 2026-10-01: the leftover Breeze blues convert to the waveform ink's value),
+// a literal on the hand-list since the accent role retired (2026-10-03).
+constexpr GuiColor kIconAccent    = hex(0x96BFDA);
 
 
 // THE BPM OPENER'S ICON, 2026-08-01 to 2026-08-27 and again since 2026-09-04
@@ -240,8 +255,8 @@ constexpr IconPath kGoJumpPaths[] = {
 //
 // ITS RED IS ITS OWN LITERAL, not a reference to preview-render-on's pip even
 // though both files write #d24d57: the two coincide by shared Breeze ancestry
-// and by nothing else. #d24d57 through tools/palette's two_pass -> #B65C5D, no
-// role's value: a literal on render.h's hand-list.
+// and by nothing else. #d24d57 through tools/palette's two_pass -> #B65C5D: a
+// literal on the hand-list (the ink block above).
 constexpr GuiColor kIconLiftCross = hex(0xB65C5D);
 
 constexpr IconPath kTimelineLiftPaths[] = {
@@ -581,9 +596,9 @@ constexpr IconPath kEditSelectPaths[] = {
 // audio-mimetype blue. kIconWav below is NOT that literal: the file's blue
 // records no relationship to Breeze's #3daee9 beyond being Breeze's blue, so
 // it converts to the ink with every other leftover Breeze blue (architect
-// 2026-10-01) — the accent role, the ink's twin, read since 2026-10-02 (the
-// palette's scaffold). Absolute `M` / `L` and the ARC `A` (the four
-// note-head circles as eight elliptical arcs), the interpreter's existing arm
+// 2026-10-01) — #96BFDA, kIconAccent's literal, on the hand-list. Absolute
+// `M` / `L` and the ARC `A` (the four note-head circles as eight elliptical
+// arcs), the interpreter's existing arm
 // (media-record's precedent, and the retired speedometer's). THE ONE THING WORTH READING
 // TWICE: the file wraps the path in a layer group carrying
 // `transform="matrix(1 0 0 1 -326 -534.3622)"` and the path itself carries
@@ -593,7 +608,7 @@ constexpr IconPath kEditSelectPaths[] = {
 // numbers in the `d` are already viewBox coordinates (every one lands in
 // [3, 19]). A reader comparing this row against the file should expect no
 // transform here and find those two in the file.
-constexpr GuiColor kIconWav = kRedesignAccent;
+constexpr GuiColor kIconWav = kIconAccent;
 
 constexpr IconPath kFolderPaths[] = {
     {kIconText,
@@ -841,9 +856,8 @@ constexpr IconPath kZoomOriginalPaths[] = {
 //
 // LIST-REMOVE IS THE SET'S SECOND RESOLVED-COLOR RED: its one path is
 // `.ColorScheme-NegativeText { color: #da4453 }` under fill="currentColor" —
-// kIconNegativeText below is the value that file resolves to, whose P3 bytes
-// are the red role's, so it IS the red role, as media-record's kIconRecord
-// is. Command coverage: absolute M/L with one absolute C (the outline's
+// kIconNegativeText below is the value that file resolves to, #BB575A in P3
+// bytes, media-record's kIconRecord literal (the hand-list). Command coverage: absolute M/L with one absolute C (the outline's
 // corner easing) and z.
 //
 // VIEW-HIDDEN IS TRANSCRIBED VERBATIM, ARTIFACT AND ALL (architect-ruled
@@ -854,7 +868,7 @@ constexpr IconPath kZoomOriginalPaths[] = {
 // diff-is-a-transcription-bug property. Coverage: absolute M/L/A/C/Z, every
 // family with a committed producer.
 
-constexpr GuiColor kIconNegativeText = kMarkerFlagFillRed;
+constexpr GuiColor kIconNegativeText = kIconRecord;
 
 constexpr IconPath kListAddPaths[] = {
     {kIconText,
@@ -999,9 +1013,9 @@ constexpr IconPath kSettingsConfigurePaths[] = {
 // first `<rect>` file, deleted 2026-09-22: there is no `d` to copy), spelled as the
 // rounded rectangle SVG defines for rx = ry = 2 — four straight edges and
 // four quarter arcs, `a2 2 0 0 1` — so the plate's pixels are the file's; the
-// GLYPH's `d` is copied verbatim. #fff is NOT kIconText's #fcfcfc: the file
-// says #fff, so the table says #fff (the numerically-close-is-not-the-same
-// rule the palette keeps everywhere), and it gets its own ink below.
+// GLYPH's `d` is copied verbatim. #fff is NOT the text class: the file says
+// #fff, so the table says #fff — a fixed white that stays white on a dark
+// label theme and a light one alike — and it gets its own ink below.
 //
 // dialog-information's plate is `.ColorScheme-Accent` (kIconAccent, the
 // value the file resolves to, recorded at that constant) and
@@ -1017,8 +1031,8 @@ constexpr IconPath kSettingsConfigurePaths[] = {
 // rather than edited out — and the second is the X's outline that shows.
 // The cap attribute belongs to stroking, which this table does not do, so
 // it transcribes as nothing.
-// #fff through tools/palette's two_pass -> #FFFFFF (white is unmoved), no
-// role's value: a literal on render.h's hand-list.
+// #fff through tools/palette's two_pass -> #FFFFFF (white is unmoved): a
+// literal on the hand-list (the ink block above).
 constexpr GuiColor kIconPlainWhite = hex(0xFFFFFF);
 
 constexpr IconPath kDialogInformationPaths[] = {
@@ -1640,18 +1654,24 @@ void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
 
 } // namespace
 
-void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
-          double keep_own, GuiColor mixed_with) {
+void draw(cairo_t* cr, Icon icon, double x, double y, double size_px) {
     if (size_px <= 0.0) return;
     const IconDef& def = icon_def(icon);
     if (def.view_box <= 0.0) return;
     if (!icon_paths_valid(icon, def)) return;
-    // The path's own color, retained by keep_own and made up with
-    // mixed_with. keep_own == 1 (the default every plain caller takes)
-    // returns the table's color bit-identically.
-    fill_icon_paths(cr, def, x, y, size_px, [&](const IconPath& p) {
-        return mix_color(p.ink, mixed_with, keep_own);
-    });
+    // The path's own ink: the theme's label or its fixed byte triple.
+    fill_icon_paths(cr, def, x, y, size_px,
+                    [](const IconPath& p) { return p.ink.resolve(); });
+}
+
+void draw_in_ink(cairo_t* cr, Icon icon, double x, double y, double size_px,
+                 GuiColor ink) {
+    if (size_px <= 0.0) return;
+    const IconDef& def = icon_def(icon);
+    if (def.view_box <= 0.0) return;
+    if (!icon_paths_valid(icon, def)) return;
+    fill_icon_paths(cr, def, x, y, size_px,
+                    [&](const IconPath&) { return ink; });
 }
 
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
@@ -1660,12 +1680,12 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
     const IconDef& def = icon_def(icon);
     if (def.view_box <= 0.0) return;
     if (!icon_paths_valid(icon, def)) return;
-    // The whole shape twice, every path in one ink: Hilight one offset right
-    // and down beneath, then Shadow at the glyph's own place.
+    // The whole shape twice, every path in one ink: the emboss's light copy
+    // one offset right and down beneath, then Shadow at the glyph's own place.
     fill_icon_paths(cr, def, x + offset_px, y + offset_px, size_px,
-                    [](const IconPath&) { return kReliefHilight; });
+                    [](const IconPath&) { return palette().emboss_light; });
     fill_icon_paths(cr, def, x, y, size_px,
-                    [](const IconPath&) { return kReliefShadow; });
+                    [](const IconPath&) { return palette().shadow; });
 }
 
 } // namespace icons

@@ -1117,7 +1117,7 @@ void Viewport::follow_scroll_if_needed() {
 // reach the middle; `c` then nudging means "I'm looking for a place to drop a
 // marker" and wants the hold, `c` then panning means "I want the working zoom
 // but my own viewport" and the pan clears it — and the playhead head's lamp
-// (kPlayheadHeadHeld, render.h) now shows which posture stands. (A tab
+// (the stem's key on the head, render.h) now shows which posture stands. (A tab
 // switch is the one arrival that derives it, being a discrete arrival at a
 // tab the user last left, not a run of nudges; architect 2026-09-29,
 // hold_derived_on_arrival.) A walk's page-in passes the chokepoint, which

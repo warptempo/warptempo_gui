@@ -130,7 +130,8 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // remain"). render_bpm_sweep calls it once per cell; commit_bpm_edit calls it
 // at the bracket's two ends — the derivation is monotone in bpm, so the ends
 // bound every cell's rescaled values exactly as they bound the derived base
-// tempo, and the editor red-flashes what the sweep would otherwise have to
+// tempo, and the editor refuses (the red frame) what the sweep would otherwise
+// have to
 // reject cell by cell.
 //
 // A DISABLED MARKER IS INVISIBLE TO THIS ACT, IN THE SPAN AND OUT OF IT
@@ -2718,7 +2719,7 @@ private:
     //       then the STRICT SIDECAR DRY-RUN (source_load_dry_run,
     //       file_loader.h) — the load's own failure arms run before anything
     //       is torn down. Either refusal says its reason on a notification
-    //       card and the picker STAYS OPEN (there is no field to red-flash).
+    //       card and the picker STAYS OPEN (there is no field to red-frame).
     //       Only a
     //       project that passes both reaches the reopen: the picker closes,
     //       the name is seated in app.reopen_project and the close request
@@ -2827,7 +2828,8 @@ private:
     // dialog pattern for the history view's OTHER act. Ctrl+S while the view
     // stands opens it prefilled with `Update <id>`; Enter runs the
     // Save-and-Commit act under whatever the buffer holds; Esc abandons with
-    // nothing written; an empty or whitespace-only buffer red-flashes and stays
+    // nothing written; an empty or whitespace-only buffer refuses with the red
+    // frame and stays
     // open, since a checkpoint with no message is not a thing to write.
     // It REPLACED the act's confirmation prompt, and a bare Enter over the
     // prefill is that prompt's `y` — the pause is the same, and the editor uses

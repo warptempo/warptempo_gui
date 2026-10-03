@@ -344,6 +344,13 @@ bool replace_selection(State& s, const std::string& raw) {
     return true;
 }
 
+void refuse(State& s) {
+    s.red              = true;
+    s.selection_anchor = 0;
+    s.cursor_pos       = static_cast<int>(s.pending.size());
+    touch_blink(s);
+}
+
 void deactivate(State& s) {
     s.target            = -1;
     s.kind              = Kind::FlagPayload;
@@ -668,7 +675,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // compose or dead-key sequence arrives here whole and is UTF-8 encoded
     // below, landing as one insertion of one to four bytes. Characters that are
     // invalid for this field are NOT filtered here — the commit-time validator
-    // rejects the value (red flash) when Enter is pressed. This replaces the
+    // rejects the value (red frame) when Enter is pressed. This replaces the
     // per-Kind keysym_to_char vocabulary entirely.
     //
     // THE CAP AND ITS GROWTH RULE HAVE ONE OWNER AND THE TYPED PATH WRAPS IT:

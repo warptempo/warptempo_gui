@@ -90,20 +90,9 @@ bool parse_signed_hops(const std::string& v, int& out) {
 
 void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
-    // A close while the editor is RED un-flashes the marker's STEM, and a stem
-    // is a waveform pixel (the flash reaches it since 2026-08-01 —
-    // GuiPaintHandler::paint_marker_stems), so the strip repaint below is not
-    // the whole damage. Gated on the flash rather than paid on every close: the
-    // ordinary close changes no waveform pixel at all. This is the chokepoint
-    // the POINTER close comes through (any left press with the editor open
-    // closes it, input_pointer.cpp) — the keyboard flips are edge-damaged at
-    // handle_top_flag_editor_key, and the two overlap harmlessly on Esc/Ctrl+Q.
-    // (Kind-exact: this teardown serves the BPM bracket session too, and that
-    // editor's flash recolors the modal dialog's FIELD, with no stem behind it.)
-    if (app.top_flag_editor.red &&
-        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
-        viewport.invalidate_waveform_area();
-    }
+    // The strip repaint below is the whole damage of a close, a refused
+    // field's red frame included: the frame is the field's own and reaches
+    // no stem (architect 2026-10-03).
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
 }
@@ -337,7 +326,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     const GuiWarpMarker& live = mv_const[static_cast<size_t>(idx)];
 
     auto refuse = [&](const std::string& why) {
-        app.top_flag_editor.red = true;
+        text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_top_strip();
         // ONE COMPOSER, TWO READERS: the stderr line keeps the offending
         // token after the sentence; the card does not, that text standing in
@@ -455,7 +444,7 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     // carrying the sentence alone (that text standing in the red field the
     // refusal leaves), and the session left open for correction.
     auto refuse = [&](const std::string& why) {
-        app.top_flag_editor.red = true;
+        text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_top_strip();
         const std::string refusal = "Range bound rejected: " + why;
         std::fprintf(stderr, "warptempo_gui: %s: %s\n",
@@ -557,7 +546,7 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
 // name. Pushes one undo entry covering all touched markers.
 //
 // On failure: sets `red`, leaves pending/cursor intact, leaves the
-// editor active. The red flash CALLS the loader's own line predicate, no
+// editor active. The red frame CALLS the loader's own line predicate, no
 // second grammar, so a payload loads iff it commits; the load's face of the
 // same function is load-fatal.
 void GuiFlagEditor::commit_top_flag_edit() {
@@ -614,7 +603,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // render/preview time (one stderr line per timestamp). No editor-side
     // gate; the rename cascade below stays, scoped to non-empty new names.
     if (!ok) {
-        app.top_flag_editor.red = true;
+        text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_top_strip();
         const std::string refusal = "Edit rejected: " + err;
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
@@ -970,7 +959,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     int    beats = 0;
     double lo = 0.0, hi = 0.0;
     if (!parse_bpm_bracket(s, beats, lo, hi)) {
-        app.top_flag_editor.red = true;
+        text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_modal_dialog_area();
         const std::string refusal = "BPM edit rejected: invalid syntax";
         std::fprintf(stderr, "warptempo_gui: %s: %s\n",
@@ -989,7 +978,8 @@ bool GuiFlagEditor::commit_bpm_edit() {
     // every cell: if either endpoint bpm refuses — the derived base tempo
     // lands outside [kTempoMinCents, kTempoMaxCents], the derived scale
     // outside [kScaleMin, kScaleMax], or any rescaled marker outside the
-    // tempo bracket — the commit red-flashes like any invalid editor value. Never clamp: a clamped
+    // tempo bracket — the commit refuses with the red frame like any invalid
+    // editor value. Never clamp: a clamped
     // derivation would silently mistune the span. Gated on a well-formed
     // span (owner before endpoint, positive duration); without one,
     // render_bpm_sweep early-bails and derives nothing. The bpm editor is
@@ -1018,7 +1008,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
                 const auto at_hi =
                     compute_base_tempo_scale(duration_seconds, beats, hi);
                 if (!at_lo || !at_hi) {
-                    app.top_flag_editor.red = true;
+                    text_editor::refuse(app.top_flag_editor);
                     viewport.invalidate_modal_dialog_area();
                     const std::string refusal =
                         "BPM edit rejected: derived tempo or scale outside "
@@ -1047,7 +1037,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
                                            at_lo->base_tempo_cents) ||
                     !bpm_cell_warp_markers(mv_const, idx, endpoint_idx,
                                            at_hi->base_tempo_cents)) {
-                    app.top_flag_editor.red = true;
+                    text_editor::refuse(app.top_flag_editor);
                     viewport.invalidate_modal_dialog_area();
                     const std::string refusal =
                         "BPM edit rejected: a marker outside the span would "

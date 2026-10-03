@@ -104,8 +104,8 @@
 // THE FACES ARE WINDOWS' LIST (architect 2026-10-02, the ladder at the
 // painter): the band is the ground inside the plain raised edge
 // (content_rect below spends the frame), a resting row paints no fill at all,
-// and the highlighted row is a flat accent fill under the luminance rule's
-// text (highlight_text_ink, render.h). No hover face and
+// and the highlighted row is a flat fill in the theme's selected pair
+// (render.h's palette block), focused or not. No hover face and
 // NO ALTERNATING ROWS.
 //
 // THE ROWS ARE CHROME (the timing doctrine at GuiInputHandler::on_key): a

@@ -619,6 +619,11 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     // 2026-07-30), and the deselect then rests (nothing restores it — pointer
     // gestures have no cancel). A press that never moves commits no bound change
     // and is a consumed nothing.
+    // THE HELD CAP PAINTS PRESSED from here to the release (architect
+    // 2026-10-03, render_trim_flags' `pressed`), so its lane is damaged at both
+    // edges of the drag — here and at commit_trim_drag's reset — whether or
+    // not a motion moved the bound.
+    if (!both) viewport.invalidate_rect(top_trim_row_area(app));
 }
 
 void GuiInputHandler::update_trim_drag(int mouse_x) {
@@ -1022,6 +1027,8 @@ void GuiInputHandler::commit_trim_drag() {
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }
+    // The held cap rises (begin_trim_drag's damage, the other edge).
+    if (!app.trim_drag.both) viewport.invalidate_rect(top_trim_row_area(app));
     app.trim_drag = TrimDragState{};
 }
 

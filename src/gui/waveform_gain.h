@@ -48,13 +48,15 @@
 //   THE PAINTER multiplies each plate column's raw min/max by its gain and
 //   the expander's multiplier and clamps the pair to [-1, 1]
 //   (render_waveform): THE OUTER BAR, the levelled, expanded one, painted
-//   first in the plate's own ink, kWaveformInk. Over it the lit lamp paints
+//   first in the plate's own ink (the `waveform_ink` key). Over it the lit
+//   lamp paints
 //   THE INNER BAR, the source's own bar through the same expander, THE
 //   COMPRESSOR and THE FOREGROUND GAIN below instead of the gain, raw x c x
 //   1/2 x E, in the same ink with a one-pixel
-//   outline in kWaveformForegroundOutline — both bars from ONE peak read
+//   outline in the `waveform_outline` key — both bars from ONE peak read
 //   (architect 2026-09-25), the inks render.h's row-6 block's (settled by
-//   eye 2026-09-27). The gain decides the outer's height and
+//   eye 2026-09-27, open device keys since 2026-10-03). The gain decides
+//   the outer's height and
 //   never a colour.
 //   The clamp is a sample-peak clip, which is right for a
 //   picture: a transient-rich window whose peaks overshoot the edge paints

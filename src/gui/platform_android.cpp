@@ -696,10 +696,11 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // is at this file's head). The app's bytes are handed over untouched
     // under the DISPLAY_P3 tag (the manifest's colorMode makes the compositor
     // honour it), so the panel receives them as it receives a gallery
-    // viewer's P3-tagged image — and the palette's constants are authored as
-    // Display-P3 bytes (render.h's palette head, 2026-10-02): a hex there is
-    // what this panel shows. A REFUSAL IS REPORTED AND NOT FATAL,
-    // as the geometry's is: the layer then stays sRGB and the colours read a
+    // viewer's P3-tagged image — and every colour is taken as Display-P3
+    // bytes (render.h's palette head, 2026-10-02): a theme's recorded byte,
+    // or a program key's, is what this panel shows. A REFUSAL IS REPORTED
+    // AND NOT FATAL, as the geometry's is: the layer then stays sRGB and the
+    // colours read a
     // little differently, as they do on the laptop, whose Wayland surface
     // stays untagged sRGB. API 28; minSdk is 30.
     const int32_t space_rc =
@@ -1390,11 +1391,10 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             const bool active = (cmd == APP_CMD_GAINED_FOCUS);
             if (active == window_activated_) break;
             window_activated_ = active;
-            // What takes an unfocused face is the caller's business (main.cpp's
-            // activation hook: the folder overlay panel's highlight goes to
-            // kRedesignAccentInactive, and the tooltip ends);
-            // this hook is the EDGE, the same shape the Wayland backend's
-            // configure-driven one takes for the same reason.
+            // What the edge does is the caller's business (main.cpp's
+            // activation hook: the tooltip ends); this hook is the EDGE, the
+            // same shape the Wayland backend's configure-driven one takes for
+            // the same reason.
             if (activation_changed_hook_) activation_changed_hook_();
             // FOCUS LEAVING PAUSES NOTHING, and that is recorded rather than
             // fixed (2026-09-02): "no background playback" is BUILD scope —

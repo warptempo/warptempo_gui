@@ -10,7 +10,7 @@ The interface documents itself. With the tooltip lamp lit (Toggle Tooltips, the 
 
 ## How the program says no
 
-When a key or a click refuses, the program says why in a card at the top right of the window. Silence means the press was unbound, or a command that acts in one place was already at its state there. So this guide lists no refusals: the program tells you at the moment it matters.
+When a key or a click refuses, the program says why in a card at the top right of the window. Silence means the press was unbound, or a command that acts in one place was already at its state there. So this guide lists no refusals: the program tells you at the moment it matters. A field that refuses what was entered also turns its frame red with its whole text selected, so the next keystroke replaces it and the frame returns.
 
 A card leaves on its own after a few seconds, waiting while the pointer rests on it or a press holds it; a few failures, such as a checkpoint that did not reach GitHub, stay until dismissed. A click or tap anywhere on a card dismisses it, and a Shift-click or a long press on any card dismisses them all, as Esc does on the keyboard.
 

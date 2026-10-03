@@ -53,6 +53,10 @@ DEFAULTS = {
     'trim_ground_bevel_hi': TWO_PASS('kTrimGroundBevelHi'), 'trim_ground_bevel_lo': TWO_PASS('kTrimGroundBevelLo'),
     'trim_cap': TWO_PASS('kTrimLaneEndcap'), 'trim_cap_bevel_hi': TWO_PASS('kTrimCapBevelHi'), 'trim_cap_bevel_lo': TWO_PASS('kTrimCapBevelLo'),
     'trim_bottom_border': TWO_PASS('kTrimLaneBottomBorder'),
+    # the scroll arrow's glyph (draw_trim_arrow_button): "auto" the luminance rule's ink over the button's face (the
+    # app until 2026-10-03), a colour by hand otherwise -- the theme catalog's crops state '@label', the app's rule since
+    # that day (render.cpp paint_trim_arrow_button: a chrome glyph on a chrome face is the theme's label)
+    'trim_arrow': 'auto',
     # the well and the waveform
     'well_border': TWO_PASS('kWaveformBorder'), 'canvas': TWO_PASS('kWaveformCanvas'), 'ink': TWO_PASS('kWaveformInk'), 'outline': 'auto',
     # playhead and flags
@@ -326,6 +330,7 @@ class Theme:
             return tuple(C.lin_mix(self.get(role.replace('hilight', 'fill'), st), (255, 255, 255), 0.35))
         if role == 'ruler_tick_light':                       # a lighter tick colour, the same rule
             return tuple(C.lin_mix(self.get('ruler_tick', st), (255, 255, 255), 0.35))
+        if role == 'trim_arrow': return self.highlight_ink(self.get('trim_ground', st))
         raise SystemExit(f'no auto rule for {role}')
 
     def highlight_ink(self, fill):
@@ -972,12 +977,12 @@ def draw_trim_arrow_button(cr, th, x, y0, w, h, points_left):
     edge), then Windows' scroll arrow as integer rectangles -- four columns 1, 3, 5 and 7 units tall from the tip, each
     centred on the glyph's middle row, a unit LW device px (one logical px: the app's scaled_px(1, 1), the unit the
     relief lines take here), the 4 x 7-unit glyph centred in the button with an odd difference floored toward the
-    top-left -- its tip LEFT on the begin button and RIGHT on the end button, in the luminance rule's ink over the
-    button's face (Theme.highlight_ink; render.h kTrimArrowGlyph: the label white on a dark ground, black on a light
-    one)."""
+    top-left -- its tip LEFT on the begin button and RIGHT on the end button, in `trim_arrow` (by default the luminance
+    rule's ink over the button's face, Theme.highlight_ink, the app's rule until 2026-10-03; the catalog's crops state
+    the theme's label, the app's rule since)."""
     g = th.get('trim_ground'); fill(cr, x, y0, x + w, y0 + h, g); edge(cr, x, y0, x + w, y0 + h, relief_lines(th, 'panel'))
     u = LW; n = len(TRIM_ARROW_ROWS); gw, gh = n * u, TRIM_ARROW_ROWS[-1] * u
-    gx, gy = x + (w - gw) // 2, y0 + (h - gh) // 2; ink = th.highlight_ink(g)
+    gx, gy = x + (w - gw) // 2, y0 + (h - gh) // 2; ink = th.get('trim_arrow')
     for i, rows in enumerate(TRIM_ARROW_ROWS):        # i = 0 is the tip
         slot = i if points_left else n - 1 - i; top = (TRIM_ARROW_ROWS[-1] - rows) // 2
         fill(cr, gx + slot * u, gy + top * u, gx + (slot + 1) * u, gy + (top + rows) * u, ink)
