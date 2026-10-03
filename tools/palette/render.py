@@ -71,7 +71,8 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'icons': 'app',
                 'bars': {'menu': 'flat', 'icon_row': 'flat', 'bottom_row': 'flat'},
                 'buttons': {'raised': False, 'rows': ['icon', 'bottom'], 'down': ['ViewTW'], 'down_shift': True,
-                            'toggled': None, 'down_dither': False, 'gap': None, 'sep_gap': None, 'group_space': None},
+                            'toggled': None, 'down_dither': False, 'gap': None, 'sep_gap': None, 'group_space': None,
+                            'case': None, 'disabled': 'mix'},
                 'trim': {'bar': 'app', 'ground': 'app', 'handles': 'app', 'grip': 'app', 'cap_w': None, 'lane_h': None,
                          'style': 'app', 'acid_inset': 1},
                 'lane_order': ['trim', 'ruler', 'marker'],
@@ -84,6 +85,8 @@ MENU_HL_STYLES = ('fill', 'sunken', 'raised')
 OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border': ('app', 'line', 'etched', 'raised', 'none'),
               'ruler_tick_relief': ('none', 'light_right')}
 FLAG_RELIEF = ('none', 'raised')
+CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
+DISABLED_STYLES = ('mix', 'engraved')
 COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'outline'}),
                    ('flags', {'fill': 'flag_fill', 'edge': 'flag_edge', 'border': 'flag_border', 'label': 'flag_label', 'stem': 'flag_stem',
                               'fill_sel': 'flag_fill_sel', 'edge_sel': 'flag_edge_sel', 'stem_sel': 'flag_stem_sel',
@@ -135,6 +138,16 @@ class Theme:
         if gs is not None and self.opt['separators'] != 'none':
             raise SystemExit(f'theme {path}: buttons.group_space needs separators "none" (no separator stands between the groups), '
                              f'not {self.opt["separators"]!r}')
+        cs = b['case']
+        if cs is not None:
+            if (not isinstance(cs, dict) or set(cs) != set(CASE_KEYS)
+                    or not all(isinstance(cs[k], int) and not isinstance(cs[k], bool) for k in CASE_KEYS)
+                    or min(cs['h'], cs['w'], cs['glyph']) < 1 or min(cs['pad_x'], cs['pad_y']) < 0
+                    or cs['glyph'] + cs['pad_x'] > cs['w'] or cs['glyph'] + cs['pad_y'] > cs['h']):
+                raise SystemExit(f'theme {path}: buttons.case is null or {{"h": H, "w": W, "glyph": G, "pad_x": PX, "pad_y": PY}}, '
+                                 f'whole logical px (H, W, G >= 1, PX, PY >= 0, G + PX <= W, G + PY <= H), not {cs!r}')
+        if b['disabled'] not in DISABLED_STYLES:
+            raise SystemExit(f'theme {path}: buttons.disabled must be one of {DISABLED_STYLES}, not {b["disabled"]!r}')
         self.button_geometry = None     # button_geometry's memo: (buttons, separators), computed at the first painter's call
         for k, vals in OPT_VALUES.items():
             if self.opt[k] not in vals: raise SystemExit(f'theme {path}: {k} must be one of {vals}, not {self.opt[k]!r}')
@@ -267,21 +280,74 @@ def pad_shift(th):
     if rows is None: return th.num['ruler_pad_top'] * LW
     return sum(rows) - (BASE_SCENE['lanes']['ruler'][1] - BASE_SCENE['lanes']['ruler'][0])
 
+def case_delta(th):
+    """buttons.case -> (icon d, bottom d), the device rows each button row grows by: H x S less the row's measured
+    button height (64 on every scene), so the row keeps its measured air above and below its buttons (14 device rows
+    each on every scene: the icon row's buttons 74..138 in 60..152, the bottom row's 1362..1426 in its content rows
+    1348..1440) and its lane is H x S + that air. (0, 0) at the default."""
+    cs = th.opt['buttons']['case']
+    if cs is None: return 0, 0
+    out = []
+    for row in ('icon', 'bottom'):
+        hs = {b['h'] for b in BASE_SCENE['buttons'] if b['row'] == row}
+        if len(hs) != 1: raise SystemExit(f'scene {SCENE_TAG}: the {row} row\'s buttons have heights {sorted(hs)}; buttons.case needs one')
+        out.append(cs['h'] * S - hs.pop())
+    return tuple(out)
+
+TRIM_ROW_KEYS = ('bar_bevel_hi_rows', 'bar_bevel_lo_rows', 'cap_bevel_lo_rows', 'cap_bevel_hi_rows', 'ground_bevel_lo_rows',
+                 'ground_bevel_hi_rows', 'bottom_border_rows')
+
+def move_trim(L, T, d):
+    """The trim lane moved whole by d device rows: its rows and every recorded row inside it (order_scene, shift_scene 'icon')."""
+    L['trim'] = [v + d for v in L['trim']]; T['y0'] += d; T['y1'] += d
+    for k in TRIM_ROW_KEYS:
+        if k in T: T[k] = [r + d for r in T[k]]
+    if T.get('grip_hollow'): T['grip_hollow']['y0'] += d; T['grip_hollow']['y1'] += d
+
 def shift_scene(sc, d, at):
     """The scene with d device rows opened at `at`, everything below the opening moved down by d. The menu, the icon
     row, the bottom row and the well's bottom stay; the ruler lane's contents (ticks, labels, head), the marker lane,
     its flags, the playhead's marker-lane run and the stems' tops move down by d; the well's top and the measured
     canvas top follow, so the canvas loses d rows (the waveform replays through rescale_runs).
+      at 'icon' (buttons.case, case_delta's icon d): the icon row d rows taller, opened at its bottom (its top and its
+        buttons' y stay, so the air above the buttons is kept and the air below follows the taller box); the trim
+        lane moves down whole, every recorded row inside it with it (move_trim), and the ruler lane whole. d may be
+        negative (the row shorter, everything below it moved up, the canvas taller).
       at 'trim' (trim.lane_h): the trim lane d rows taller. Its bottom (its bottom border, the bar's lower bevel) moves
         down by d, its top rows (the ground's and the caps' bevels, the bar's upper bevel, the app grip's square
         hollow) stay; the ruler lane keeps its height and moves down whole.
       at 'ruler' (ruler_pad_top, ruler_layout): d rows of ruler ground inserted at the ruler lane's top. The trim lane
         and the ruler lane's top stay; the ruler lane is d rows taller. ruler_layout's d may be negative (the lane
         shorter, everything below it moved up, the canvas taller); its label baseline is re-seated by ruler_label_seat.
+      at 'bottom' (buttons.case, case_delta's bottom d): the OTHER direction -- the bottom row d rows taller, opened
+        at its top: the row's top (its border-top, the content rows' top) moves UP by d, and with it the well's bottom,
+        the measured canvas bottom, the stems' bottoms, the row's buttons and separators (their air above kept), and
+        the --label stamp's box; the clock's baseline is re-seated by the app's rule over the new content rows
+        (redesign_baseline, paint_handler.cpp's clock: box = the content rows' top .. their bottom, the cap band
+        centred), which keeps it centred on the buttons as well, their air being equal above and below. The menu and
+        everything from the icon row to the well's top stay, so the canvas loses d rows (negative d: gains).
     d = 0 returns the scene itself."""
     if d == 0: return sc
-    if at not in ('trim', 'ruler'): raise ValueError(at)
+    if at not in ('icon', 'trim', 'ruler', 'bottom'): raise ValueError(at)
     sc = json.loads(json.dumps(sc)); L = sc['lanes']; R = sc['ruler']
+    if at == 'bottom':
+        u = -d; bc = sc['bottom_content']; ck = sc['clock']
+        old = C.redesign_baseline(C.MONO, ck['size_px'], bc[0], bc[1] - bc[0])
+        new = C.redesign_baseline(C.MONO, ck['size_px'], bc[0] + u, bc[1] - bc[0] - u)
+        ck['baseline'] += new - old
+        bc[0] += u; L['bottom'][0] += u; sc['bottom_border']['y'] += u
+        L['well'][1] += u; sc['canvas'][1] += u
+        sc['flags']['stem_y1'] += u; sc['playhead']['stem_y1'] += u
+        for b in sc['buttons']:
+            if b['row'] == 'bottom': b['y'] += u; b['glyph_y'] += u
+        for s_ in sc['separators']:
+            if s_['row'] == 'bottom': s_['y'] += u
+        sc['label_box']['y0'] += u; sc['label_box']['y1'] += u
+        return sc
+    if at == 'icon':
+        L['icon'][1] += d
+        move_trim(L, sc['trim'], d)
+        L['ruler'][0] += d; R['y0'] += d
     if at == 'trim':
         T = sc['trim']
         L['trim'][1] += d
@@ -316,12 +382,7 @@ def order_scene(sc, order):
     y = L['trim'][0]; dd = {}
     for n in order: dd[n] = y - L[n][0]; y += L[n][1] - L[n][0]
     if dd['ruler'] != dd['marker']: R['rise'] = [R['major_top'] + dd['ruler'], R['minor_top'] + dd['ruler']]
-    d = dd['trim']                       # the trim lane: its rows and every recorded row inside it
-    L['trim'] = [v + d for v in L['trim']]; T['y0'] += d; T['y1'] += d
-    for k in ('bar_bevel_hi_rows', 'bar_bevel_lo_rows', 'cap_bevel_lo_rows', 'cap_bevel_hi_rows', 'ground_bevel_lo_rows',
-              'ground_bevel_hi_rows', 'bottom_border_rows'):
-        if k in T: T[k] = [r + d for r in T[k]]
-    if T.get('grip_hollow'): T['grip_hollow']['y0'] += d; T['grip_hollow']['y1'] += d
+    move_trim(L, T, dd['trim'])          # the trim lane: its rows and every recorded row inside it
     d = dd['ruler']                      # the ruler lane: labels, the majors' rise, the head
     L['ruler'] = [v + d for v in L['ruler']]; R['y0'] += d; R['y1'] += d; R['baseline'] += d; R['major_top'] += d
     P['head_top'] += d
@@ -404,9 +465,9 @@ def draw_bars(cr, th):
 
 def button_geometry(th):
     """-> (buttons, separators), the boxes draw_buttons and draw_separators paint, computed once per theme (memoized on
-    it, after render() has rebound SCENE; the lane shifts and the restack never touch these boxes). buttons.gap,
-    buttons.sep_gap and buttons.group_space all null = the scene's own lists, its measured x. Any one an integer
-    re-packs both rows as the app walks them (paint_handler.cpp: the icon row's left groups walk right from the left
+    it, after render() has rebound SCENE; the lane shifts and the restack never touch these boxes, except buttons.case's
+    'bottom' shift, which moves the bottom row's y with its top). buttons.gap, buttons.sep_gap, buttons.group_space and
+    buttons.case all null = the scene's own lists, its measured x. Any one set re-packs both rows as the app walks them (paint_handler.cpp: the icon row's left groups walk right from the left
     pad, its view group and all of the bottom row sit flush at the right margin), each button moved in x only (y, w, h
     and every other field as measured):
       GROUPS: a row's buttons in x order, a separator of the row lying between two of them closing a group.
@@ -420,6 +481,12 @@ def button_geometry(th):
       PACK: within a group the buttons stand at a pitch of w + gap x S device px; between groups the measured gaps
         are kept, each widened by sep_gap (gap, separator, gap) and the separator's x moves with the pack.
     gap 2 reproduces the scenes' measured pitch (64 + 4 = 68), so it re-derives every measured x.
+    buttons.case {"h": H, "w": W, ...} (Windows 95's toolbar button, the case 23 wide x 22 tall, read at another size)
+    makes every box W x S wide and H x S tall (y as measured, or as the 'bottom' shift moved it: the restack is
+    shift_scene's) and every separator H x S - the measured button height taller (its overhang kept). It re-packs like
+    gap: the groups, chains and anchors are found on the MEASURED boxes, the within-group step is gap x S or, gap null,
+    each pair's measured gap, and the packed boxes take the case's width; the overlap refusal below catches a case
+    wide enough to push the icon row's left chain into its view group.
     buttons.sep_gap null keeps the measured separator gaps (8 device px either side on the icon row, 10 on the bottom
     row on 1002). An integer is EXTRA logical px added to every gap the pack lays down beside a separator, both sides of
     every separator in both rows (sep_gap x S device px): an inner separator's two gaps, and a break separator's one
@@ -434,10 +501,12 @@ def button_geometry(th):
     Two packed boxes of one row overlapping (a large gap pushing a left chain into a right one) is refused."""
     if th.button_geometry is not None: return th.button_geometry
     gap = th.opt['buttons']['gap']; sep = th.opt['buttons']['sep_gap']; gsp = th.opt['buttons']['group_space']
-    if gap is None and sep is None and gsp is None:
+    cs = th.opt['buttons']['case']
+    if gap is None and sep is None and gsp is None and cs is None:
         th.button_geometry = (SCENE['buttons'], SCENE['separators']); return th.button_geometry
     extra = (sep or 0) * S
-    what = ', '.join(f'buttons.{k} {v}' for k, v in (('gap', gap), ('sep_gap', sep), ('group_space', gsp)) if v is not None)
+    what = ', '.join(f'buttons.{k} {v}' for k, v in (('gap', gap), ('sep_gap', sep), ('group_space', gsp), ('case', cs))
+                     if v is not None)
     btns = [dict(b) for b in SCENE['buttons']]; seps = [dict(s) for s in SCENE['separators']]
     margin = C.W - min(b['x'] for b in btns if b['row'] == 'icon')
     for row in sorted({b['row'] for b in btns}):
@@ -471,10 +540,17 @@ def button_geometry(th):
         # button before it, read here before the pack moves anything
         steps = {id(g[bi]): gap * S if gap is not None else g[bi]['x'] - (g[bi - 1]['x'] + g[bi - 1]['w'])
                  for g in groups for bi in range(1, len(g))}
+        for ch in chains:                       # the anchor, on the measured boxes
+            ch['right'] = ch['groups'][-1][-1]['x'] + ch['groups'][-1][-1]['w'] == margin
+        if cs is not None:                      # the case's boxes, the separators' overhang kept
+            hs = {b['h'] for b in bs}
+            if len(hs) != 1: raise SystemExit(f'scene {SCENE_TAG}: the {row} row\'s buttons have heights {sorted(hs)}; {what} needs one')
+            dh = cs['h'] * S - hs.pop()
+            for b in bs: b['w'], b['h'] = cs['w'] * S, cs['h'] * S
+            for s in ss: s['h'] += dh
         for ch in chains:
             G, inner = ch['groups'], ch['inner']
-            last = G[-1][-1]
-            if last['x'] + last['w'] == margin:     # right-anchored: walk left from the margin
+            if ch['right']:                         # right-anchored: walk left from the margin
                 x = margin
                 for gi in range(len(G) - 1, -1, -1):
                     for bi in range(len(G[gi]) - 1, -1, -1):
@@ -526,14 +602,36 @@ def pgm(fn):
 def ink_colour(th, ink):
     return th.get('icon_label') if ink == 'text' else th.get('icon_' + ink)
 
-def draw_app_glyph(cr, th, g, x, y, under, enabled):
+def paint_mask(cr, m, x, y, px):
+    """One coverage mask m (the capture's glyph_px square) through the current source with its top-left at (x, y),
+    px device px square: at its own size cairo.mask_surface as measured; at another size a cairo.SurfacePattern over
+    the A8 surface, scaled by its matrix (pattern = (user - origin) x glyph_px / px), FILTER_BILINEAR, EXTEND_NONE."""
+    ms = a8_surface(m)
+    if px == m.shape[0] == m.shape[1]: cr.mask_surface(ms, x, y); return
+    kx, ky = m.shape[1] / px, m.shape[0] / px
+    p = cairo.SurfacePattern(ms); p.set_filter(cairo.FILTER_BILINEAR)
+    p.set_matrix(cairo.Matrix(kx, 0, 0, ky, -x * kx, -y * ky)); cr.mask(p)
+
+def draw_app_glyph(cr, th, g, x, y, under, enabled, px):
+    """The app's glyph at (x, y), px device px square (paint_mask). Enabled, or disabled with buttons.disabled "mix":
+    each ink in order in mix(ink, under, keep), keep = 1 / disabled_mix. Disabled with "engraved" (Windows' DrawState
+    DSS_DISABLED): the union of the ink masks (the per-pixel max of the per-ink coverages), painted twice -- first in
+    bevel_hilight one logical px right and down (beneath), then in bevel_shadow at (x, y)."""
+    if not enabled and th.opt['buttons']['disabled'] == 'engraved':
+        m = np.maximum.reduce([pgm(g['files'][ink]) for ink in g['inks']])
+        C.src(cr, th.get('bevel_hilight')); paint_mask(cr, m, x + LW, y + LW, px)
+        C.src(cr, th.get('bevel_shadow')); paint_mask(cr, m, x, y, px)
+        return
     keep = 1.0 if enabled else th.num['disabled_mix']
     for ink in g['inks']:
-        C.src(cr, C.mix(ink_colour(th, ink), under, keep)); cr.mask_surface(a8_surface(pgm(g['files'][ink])), x, y)
+        C.src(cr, C.mix(ink_colour(th, ink), under, keep)); paint_mask(cr, pgm(g['files'][ink]), x, y, px)
 
 def draw_buttons(cr, th, rows):
-    """Faces and the app's glyphs through cairo, each box at button_geometry's x (measured, or re-packed by buttons.gap / sep_gap / group_space)."""
-    bo = th.opt['buttons']; raised = bo['raised']
+    """Faces and the app's glyphs through cairo, each box at button_geometry's x (measured, or re-packed by buttons.gap /
+    sep_gap / group_space / case). The glyph: centred in the box at the capture's glyph_px, or with buttons.case
+    glyph x S device px square at the box's top-left + (pad_x, pad_y) x S (Windows' offset; the right and bottom air
+    is what the case leaves), the capture's mask scaled to it (paint_mask)."""
+    bo = th.opt['buttons']; raised = bo['raised']; cs = bo['case']
     for b in button_geometry(th)[0]:
         if b['row'] not in rows: continue
         key = f"{b['row']}_{b['button']}"; g = GIDX[key]; enabled = g['enabled']
@@ -564,7 +662,9 @@ def draw_buttons(cr, th, rows):
         elif styled:
             fill(cr, x, y, x + w, y + h, face); edge(cr, x, y, x + w, y + h, relief_lines(th, 'button')); under = face
         # the glyph: the app's own, recovered per ink from the capture (a disabled glyph mixed toward what is under it)
-        draw_app_glyph(cr, th, g, x + (w - SCENE['glyph_px']) // 2 + shift, y + (h - SCENE['glyph_px']) // 2 + shift, under, enabled)
+        if cs is None: gx, gy, gp = x + (w - SCENE['glyph_px']) // 2, y + (h - SCENE['glyph_px']) // 2, SCENE['glyph_px']
+        else: gx, gy, gp = x + cs['pad_x'] * S, y + cs['pad_y'] * S, cs['glyph'] * S
+        draw_app_glyph(cr, th, g, gx + shift, gy + shift, under, enabled, gp)
 
 def draw_trim(cr, th):
     T = SCENE['trim']; y0, y1 = T['y0'], T['y1']; o = th.opt['trim']
@@ -797,21 +897,24 @@ def draw_bottom(cr, th):
         # the clock cell (prefix + the widest-digit DD:DD.DDD specimen + the dirty mark), a status-bar panel around it
         dw = max(C.shape(C.MONO, ck['size_px'], d)[1] for d in '0123456789')
         cell = C.shape(C.MONO, ck['size_px'], 'B | ')[1] + 9 * dw + C.shape(C.MONO, ck['size_px'], '*')[1]
-        by = [b for b in SCENE['buttons'] if b['row'] == 'bottom'][0]['y']
+        bb0 = [b for b in button_geometry(th)[0] if b['row'] == 'bottom'][0]     # the buttons' rows (buttons.case's height)
         x0 = ck['x'] - 4 * S; x1 = ck['x'] + int(math.ceil(cell)) + 4 * S
-        edge(cr, x0, by, x1, by + 32 * S, relief_lines(th, 'sunken'))
+        edge(cr, x0, bb0['y'], x1, bb0['y'] + bb0['h'], relief_lines(th, 'sunken'))
     show(cr, C.MONO, ck['size_px'], ck['text'], ck['x'], ck['baseline'], th.get('clock'))
 
 def stamp(cr, th, text):
-    # the file-name stamp: Roboto 20 px, `stamp` (140,140,140), its box's top-left at x 300, y 1382 (the scene's label_box)
-    asc = C.font_extents(C.SANS, 20)[0]
-    show(cr, C.SANS, 20, text, 300, 1382 + math.ceil(asc), th.get('stamp'))
+    # the file-name stamp: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the scene's label_box (x 300,
+    # y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's content top)
+    asc = C.font_extents(C.SANS, 20)[0]; lb = SCENE['label_box']
+    show(cr, C.SANS, 20, text, lb['x0'], lb['y0'] + math.ceil(asc), th.get('stamp'))
 
 def render(theme_path, out_path, label=False):
     C.verify_fonts()
     th = Theme(theme_path)
-    global SCENE; SCENE = order_scene(shift_scene(shift_scene(BASE_SCENE, lane_shift(th), 'trim'), pad_shift(th), 'ruler'),
-                                      th.opt['lane_order'])
+    di, db = case_delta(th)
+    global SCENE; SCENE = order_scene(shift_scene(shift_scene(shift_scene(BASE_SCENE, di, 'icon'), lane_shift(th), 'trim'),
+                                                  pad_shift(th), 'ruler'), th.opt['lane_order'])
+    SCENE = shift_scene(SCENE, db, 'bottom')
     surf = cairo.ImageSurface(cairo.FORMAT_RGB24, C.W, C.H); cr = cairo.Context(surf)
     cr.set_antialias(cairo.ANTIALIAS_DEFAULT)
     draw_grounds(cr, th)
