@@ -6249,7 +6249,7 @@ struct AppState {
         // other owner: the PLAY-SCRUB — THE WHOLE SLIDER ITEM, the button
         // box's own band, so a press anywhere on it is on the slider and the
         // per-position damage covers the handle's whole travel; the press
-        // router seeks and arms the handle drag against it — published
+        // router arms the thumb drag against it — published
         // geometry may only SELECT, the seek's frame is decided against the
         // live item length — and the
         // CLOCK cell (the tick's per-position damage while the player's
@@ -6258,6 +6258,13 @@ struct AppState {
         // player session.
         GuiRect                        scrub{0, 0, 0, 0};
         GuiRect                        clock{0, 0, 0, 0};
+        // THE SCRUB THUMB'S CENTRE COLUMN AS PAINTED (architect 2026-10-02,
+        // ON SCREEN IS AS PAINTED), -1 when no thumb stands: the column whose
+        // pixels are on screen, which the press router resolves the thumb
+        // against (claim_player_scrub_press) rather than the live position a
+        // tick ahead. A frame whose clip does not cover the track carries
+        // the last painted column (paint_modal_dialog's player branch).
+        int                            scrub_thumb_x = -1;
         std::vector<ModalDialogButton> buttons;
     };
     ModalDialogGeometry modal_dialog;
@@ -6512,6 +6519,12 @@ struct AppState {
     // FOCUS IS ASSIGNED ON THAT SAME RESET, in the painter's prompt branch
     // once the buttons exist: reset then assign, one edge, so there is no
     // frame in which a standing prompt has no focus.
+    //
+    // ON AN EDITOR DIALOG THE FIELD TAKES IT BACK (architect 2026-10-02): a
+    // press on the field, a finger's caret drag in it and the editor act's
+    // own dispatch each return it to -1 through the one owner,
+    // GuiInputHandler::return_modal_focus_to_field (input_pointer.cpp), so a
+    // button that took it by a feint gives it back with the caret.
     //
     // AND THE INDEX IS ONLY MEANINGFUL WHILE THE STASH IS CURRENT, because it
     // names a slot in the painter's published button list. Between a raise and
@@ -8900,13 +8913,17 @@ struct AppState {
     //              (render_player_button_enabled);
     //   `painted_cursor` the item position the last tick damaged for, the
     //              change-detection anchor of the clock/scrub damage;
-    //   `scrub`    the play-scrub HANDLE DRAG's arm: armed by a press on the
-    //              HANDLE'S OWN BOX (its 20 px, the one grab band since the
-    //              scrub became a Breeze slider), the handle's painted x
-    //              following the pointer — clamped onto the handle's own
-    //              travel, never the item's ends — while playback continues
-    //              where it was, the seek committing at the release (the
-    //              product's deferred-click shape); each of the three hard
+    //   `scrub`    the play-scrub THUMB DRAG's arm: armed by EVERY press on
+    //              the slider's item (architect 2026-10-02, Windows'
+    //              trackbar) — on the thumb's grab band the thumb is taken
+    //              where it stands, its grab offset kept (`grab_dx`), and
+    //              anywhere else on the band it jumps to the press — its
+    //              painted x following the pointer — clamped onto the
+    //              thumb's own travel, never the item's ends — while playback
+    //              continues where it was, the seek committing at the release
+    //              (the product's deferred-click shape; a motionless tap on
+    //              the thumb, `on_thumb` and not `moved`, seeks nothing); each
+    //              of the three hard
     //              ends — the pointer-leave hook, the button-lost edge and
     //              the force-end finalizer, through clear_player_scrub_drag —
     //              drops it and seeks nowhere. THE SCRUB RESTS WHILE THE
@@ -8970,7 +8987,10 @@ struct AppState {
         int64_t                    painted_cursor = -1;
         struct ScrubDrag {
             bool armed    = false;
-            int  marker_x = 0;
+            int  marker_x = 0;      // the thumb's carried centre
+            bool on_thumb = false;  // armed on the grab band, not the track
+            int  grab_dx  = 0;      // press x − thumb centre; 0 off the thumb
+            bool moved    = false;  // the carried centre has moved
         };
         ScrubDrag                  scrub;
         std::optional<RenderEntry> pending_load;
@@ -9586,12 +9606,12 @@ inline int64_t render_player_position(const AppState& a,
 // and the pixel the handle paints at answer the same frame. Banker's rounding
 // onto the cells, like every grid conversion.
 //
-// IT OWNS THE INSET, and the inset is the HANDLE'S OWN BOX (2026-08-28, when
-// the scrub became a Breeze slider — the metric block is at
-// scrub_handle_box_px, render.h): Breeze travels the 20 px control's LEFT edge
-// across `width - 20`, so the handle's CENTRE — which is what names the frame
-// — runs from half a box in to half a box short of the end, never off either
-// end of its own track. The USABLE SPAN is the item less that box; an item too
+// IT OWNS THE INSET, and the inset is the THUMB'S GRAB BOX (the 14 Windows px
+// kScrubHandleBoxPx, render.h's scrub block): the thumb's CENTRE — which is
+// what names the frame — runs from half a box in to half a box short of the
+// end, so Sound Recorder's 11-px thumb (architect 2026-10-02), narrower than
+// the box, never hangs off either end of its channel. The USABLE SPAN is the
+// item less that box; an item too
 // narrow to hold one seats the centre at the left inset and answers frame 0,
 // the same cold answer a zero item gives.
 inline int render_player_scrub_usable_span(const GuiRect& track) {
@@ -9607,29 +9627,32 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
     const double t = static_cast<double>(f) / static_cast<double>(frames);
     return x0 + static_cast<int>(std::nearbyint(t * span));
 }
-// THE HANDLE'S GRAB BAND — its own 20 px box (2026-08-28, when the scrub
-// became a Breeze slider), and its ONE reader is the press router, which asks
-// it to arm the marker drag; the painted thumb is smaller (paint_modal_dialog)
-// and wears no hover face (architect 2026-10-02).
+// THE THUMB'S GRAB BAND — its own 14 Windows px box (2026-08-28, when the
+// scrub became a Breeze slider), and its ONE reader is the press router,
+// which asks it whether a press TAKES the thumb where it stands (the band) or
+// makes it JUMP to the press (the rest of the item, architect 2026-10-02);
+// the painted thumb is narrower (11 Windows px, paint_modal_dialog) and wears
+// no hover face.
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
 //
-// THE BAND IS THE HANDLE'S BOX AND NOTHING MORE (render.h's
-// kScrubHandleBoxPx — the grab, not the picture: the thumb is painted
-// inside it): a box-sized SQUARE centred on that column at the track's
-// vertical centre, the same centring the trough takes, and HALF-OPEN on both axes like every other pixel-cell test in the
-// product (a pixel x covers [x, x+1), containing_pixel's rule). It used to
-// take the track's whole height and both x endpoints inclusive, which armed
-// the drag from an invisible extension above and below the circle — a press
-// meant for the track, whose act is the seek AT THE PRESS. The track rect stays the
-// press router's OUTER gate; this test runs inside it.
+// THE BAND IS THE THUMB'S BOX WIDENED TO THE HANDLE'S (architect
+// 2026-10-02): the painted thumb's own rows (scrub_thumb_h_px, centred in the
+// track's band exactly as the painter centres it) by kScrubHandleBoxPx's
+// columns centred on that column (render.h — the grab, not the picture: the
+// 11-px thumb is painted inside it), HALF-OPEN on both axes like every other
+// pixel-cell test in the product (a pixel x covers [x, x+1), containing_pixel's
+// rule). A press outside it but on the item makes the thumb JUMP there
+// (claim_player_scrub_press); the track rect stays the press router's OUTER
+// gate and this test runs inside it.
 inline bool render_player_scrub_handle_hit(const GuiRect& track, int handle_x,
                                            int x, int y) {
     if (track.w <= 0 || track.h <= 0) return false;
     const int box = scrub_handle_box_px();
+    const int th  = scrub_thumb_h_px();
     const int bx  = handle_x - box / 2;
-    const int by  = track.y + (track.h - box) / 2;
-    return x >= bx && x < bx + box && y >= by && y < by + box;
+    const int by  = track.y + (track.h - th) / 2;
+    return x >= bx && x < bx + box && y >= by && y < by + th;
 }
 inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
     const GuiRect track = a.modal_dialog.scrub;

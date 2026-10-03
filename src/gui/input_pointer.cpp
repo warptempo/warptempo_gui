@@ -3256,6 +3256,10 @@ void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
     const ActiveEditorText g = active_editor_text(app, audio);
     if (!g.valid) return;
     app.touch_caret_session = g.ed->session;
+    // A FINGER IN THE FIELD TAKES THE FOCUS BACK, the press's own rule on the
+    // glass's road (return_modal_focus_to_field); the seat below restarts the
+    // blink.
+    if (g.dialog) return_modal_focus_to_field();
     // A caret drag is motion between two taps, so the seed the last tap
     // left cannot become a double-click across it (the C8 rule the nav
     // frames apply); the stream's own end seeds nothing.
@@ -3740,20 +3744,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
 void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
     const GuiKey        key = ok ? GuiKeys::Return : GuiKeys::Escape;
     const GuiInputState mods{};
-    if (app.modal_dialog_focus >= 0) {
-        // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's third site
-        // (AppState::modal_dialog_key_pressed): the arm names the button the
-        // focus was on, and the focus is going back to the field. The
-        // keyboard's own release has already consumed its arm before reaching
-        // here, so this is the POINTER path's due — a click on OK while Enter
-        // is held down on a focused button must not leave that Enter able to
-        // fire a second act at its release.
-        clear_modal_dialog_key_press();
-        app.modal_dialog_focus        = -1;
-        app.modal_dialog_focus_active = false;
-        if (app.modal_dialog.valid)
-            viewport.invalidate_rect(app.modal_dialog.box);
-    }
+    return_modal_focus_to_field();
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         handle_top_flag_editor_key(key, mods);
@@ -3762,6 +3753,34 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
     } else if (text_editor::is_active(app.commit_title_editor)) {
         handle_commit_title_editor_key(key, mods);
     }
+}
+
+// THE FOCUS GOES BACK TO THE FIELD (the declaration names the three roads).
+// A PRESS ON THE FIELD TAKES THE FOCUS BACK (architect 2026-10-02, fix 3):
+// Windows moves the focus to what is pressed, and the field is pressed — so a
+// button that took the focus by a feint (the slide-away cancel: press Cancel,
+// slide off, lift — update_modal_dialog_hover's leave edge) gives it back the
+// moment the field is pressed or a finger drags in it, the caret returning
+// with it. Until that day the press seated the caret's byte but left the
+// focus on the button, so the caret, which paints only while the field has
+// the focus (paint_modal_dialog), never came back — a double tap highlighted
+// a word with no caret beside it. THE FOCUS IS PASSIVE AFTERWARDS: -1 carries
+// no strength on an editor dialog (AppState::modal_dialog_focus_active).
+// MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's third site
+// (AppState::modal_dialog_key_pressed): the arm names the button the focus
+// was on, and the focus is going back to the field. On the editor act's road
+// the keyboard's own release has already consumed its arm before reaching
+// here, so this is the POINTER path's due — a click on OK while Enter is held
+// down on a focused button must not leave that Enter able to fire a second
+// act at its release. A prompt has no field and never calls this.
+bool GuiInputHandler::return_modal_focus_to_field() {
+    if (app.modal_dialog_focus < 0) return false;
+    clear_modal_dialog_key_press();
+    app.modal_dialog_focus        = -1;
+    app.modal_dialog_focus_active = false;
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
+    return true;
 }
 
 // THE TRIM BAR'S DOUBLE-CLICK TEST, hoisted for its SECOND consumer: the live
@@ -4679,17 +4698,20 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // through a stash that names the live player session). The mapping between a
 // column and a frame is the one the painter's handle uses
 // (render_player_scrub_x_of / _frame_at, app_state.h), which owns the handle
-// box's inset at both ends. A press on the HANDLE'S OWN BOX — its 20 px, the
-// one grab band, through the one test (render_player_scrub_handle_hit; it
-// took over from the trim endcaps' 10 px band on 2026-08-28, when the scrub
-// became a Breeze slider and grew a handle with a size of its own) — arms the
-// marker drag: the
-// handle's painted x follows the pointer while the sound continues where it
-// was, and the RELEASE commits the seek, the product's deferred-click shape
-// (the same press could have been a tap on the track under the handle, whose
-// meaning is the seek at the press; on the handle the identity is not certain
-// until the lift). A press on the track ELSEWHERE seeks at the press — its
-// identity is certain — and arms nothing.
+// box's inset at both ends. THE THUMB DRAGS, WINDOWS' TRACKBAR (architect
+// 2026-10-02 — the fix for "the thumb doesn't drag"; the drag itself stood
+// since the player's birth, but only from the handle's own box, and a press
+// on the track elsewhere seeked at the press and armed nothing): EVERY PRESS
+// ON THE ITEM ARMS THE THUMB DRAG. On THE THUMB'S GRAB BAND — the painted
+// thumb widened to its 14 Windows px box, through the one test
+// (render_player_scrub_handle_hit) — the thumb is TAKEN WHERE IT IS, the grab
+// offset kept so it does not jump under the pointer; ANYWHERE ELSE on the
+// item's band the thumb JUMPS to the press's column and the same press
+// continues as the drag. Either way the thumb's painted x follows the
+// pointer while the sound continues where it was, and the RELEASE commits
+// the seek to the thumb's carried column, the product's deferred-click shape
+// — so a tap on the track seeks at the lift, and a motionless tap on the
+// thumb itself seeks nothing (Windows: clicking the thumb moves nothing).
 
 // THE DRAG'S CARRIED COLUMN, clamped onto the HANDLE'S TRAVEL — the one
 // expression its two writers (the press's arm, the motion) share, so the
@@ -4718,7 +4740,7 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     if (mods.ctrl || mods.shift || mods.alt) return true;
     // THE TWO STATE REFUSALS ARE SILENT (architect 2026-08-31): they are
     // the seek's own two, met here instead of at seek_to because the press
-    // must not ARM the handle drag either, and they went silent with seek_to's
+    // must not ARM the thumb drag either, and they went silent with seek_to's
     // — a slider resting at the left end under a zeroed clock IS the state
     // both name, so a sentence only repeated what the press was already
     // looking at (the retirement record is at render_player.h, where the two
@@ -4727,25 +4749,36 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
         return true;
     // THE SCRUB RESTS WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
     // Audacious's own slider — dead while stopped): the press seeks nothing
-    // and arms no handle drag, and the painter keeps drawing the handle at
-    // the resting point. LIVE and PAUSED are unchanged.
+    // and arms no thumb drag, and the painter keeps drawing the thumb at the
+    // resting point. LIVE and PAUSED are unchanged.
     if (app.render_player.transport ==
         AppState::RenderPlayer::Transport::Idle)
         return true;
-    const int marker_x =
-        render_player_scrub_x_of(app, render_player_position(app, playback));
-    if (render_player_scrub_handle_hit(track, marker_x, x, y)) {
-        app.render_player.scrub.armed    = true;
-        // THE CARRIED x IS A HANDLE CENTRE, so it is clamped onto the handle's
-        // OWN TRAVEL and not onto the item — the painter draws the circle at
-        // it, and a centre past either inset would hang the handle off its
-        // track (the travel is the mapping's, one owner:
-        // render_player_scrub_usable_span).
-        app.render_player.scrub.marker_x = clamp_player_scrub_marker_x(x);
-        viewport.invalidate_rect(track);
-        return true;
-    }
-    render_player.seek_to(render_player_scrub_frame_at(app, x));
+    // THE THUMB IS RESOLVED WHERE IT IS PAINTED (ON SCREEN IS AS PAINTED,
+    // the displayed-not-live rule displayed_or_live_target_map states,
+    // app_state.h): the painter's published column, never the live position,
+    // which under a LIVE transport runs a tick ahead of the pixels. The live
+    // read was older than the jump, but since every off-thumb press makes the
+    // thumb JUMP (2026-10-02) a wrong verdict would move it. A stash with no
+    // thumb (-1) has none to take, so the press jumps.
+    const int marker_x = app.modal_dialog.scrub_thumb_x;
+    // THE ARM, ON THE THUMB OR OFF IT (the block above): the grab offset is
+    // the press's distance from the thumb's centre on the grab band and zero
+    // elsewhere, so the thumb jumps to an off-thumb press and keeps its seat
+    // under an on-thumb one.
+    AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
+    const bool on_thumb =
+        marker_x >= 0 && render_player_scrub_handle_hit(track, marker_x, x, y);
+    drag          = AppState::RenderPlayer::ScrubDrag{};
+    drag.armed    = true;
+    drag.on_thumb = on_thumb;
+    drag.grab_dx  = on_thumb ? x - marker_x : 0;
+    // THE CARRIED x IS A THUMB CENTRE, so it is clamped onto the thumb's OWN
+    // TRAVEL and not onto the item — the painter draws the thumb at it, and a
+    // centre past either inset would hang the thumb off its channel (the
+    // travel is the mapping's, one owner: render_player_scrub_usable_span).
+    drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
+    viewport.invalidate_rect(track);
     return true;
 }
 
@@ -4754,9 +4787,10 @@ void GuiInputHandler::update_player_scrub_motion(int x) {
     if (!drag.armed) return;
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w <= 0) return;
-    const int mx = clamp_player_scrub_marker_x(x);
+    const int mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (mx == drag.marker_x) return;
     drag.marker_x = mx;
+    drag.moved    = true;
     viewport.invalidate_rect(track);
 }
 
@@ -4764,12 +4798,18 @@ bool GuiInputHandler::finish_player_scrub_release(int x, int y) {
     (void)y;
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     if (!drag.armed) return false;
+    const AppState::RenderPlayer::ScrubDrag ended = drag;
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
-    // THE COMMIT: the seek to the column the lift is at (clamped onto the
-    // track by the mapping), whatever the drag's own last x said.
-    render_player.seek_to(render_player_scrub_frame_at(app, x));
+    // A MOTIONLESS TAP ON THE THUMB SEEKS NOTHING: the thumb was taken where
+    // it stood and never moved, and re-seeking its own column would round the
+    // position to that column's frame.
+    if (ended.on_thumb && !ended.moved) return true;
+    // THE COMMIT: the seek to the thumb's column at the lift — the lift's x
+    // less the grab offset, clamped onto the travel by the mapping, which is
+    // the column the motion last painted the thumb at.
+    render_player.seek_to(render_player_scrub_frame_at(app, x - ended.grab_dx));
     return true;
 }
 
@@ -5100,8 +5140,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything
     // else: while the mode stands the pointer has FOUR targets, the folder
-    // overlay's rows (claimed above), the play-scrub (a seek at the press
-    // on the track, the marker drag on its band), the modal row's buttons
+    // overlay's rows (claimed above), the play-scrub (every press on it arms
+    // the thumb drag, the seek at the lift), the modal row's buttons
     // (the arm every dialog button takes) and, since 2026-09-03 evening, the
     // FILE ANCHOR above the band (the exemption above), and EVERY OTHER PRESS
     // IS CONSUMED — the flags, the waveform, the two dead anchors,
@@ -5209,6 +5249,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // closes the flag editor below and then routes normally (the
             // guard-free lifecycle) or is consumed by the dialog's veil.
             if (rect_contains(g.field, x, y)) {
+                // THE FIELD TAKES THE FOCUS BACK AT THE PRESS (architect
+                // 2026-10-02; the rule at return_modal_focus_to_field), ahead
+                // of all three arms below, the caret's blink restarted so it
+                // is lit at once.
+                if (g.dialog && return_modal_focus_to_field())
+                    text_editor::touch_blink(*g.ed);
                 // SHIFT+CLICK EXTENDS THE SELECTION (architect 2026-08-30) —
                 // the pointer's FIRST shift binding on an editor field, and
                 // exactly what Shift+Left/Right and Ctrl+Shift+Left/Right do

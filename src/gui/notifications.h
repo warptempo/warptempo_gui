@@ -4,14 +4,16 @@
 // RULING WHOLE — the split, the two classes, the inventory of what is and is
 // not notified, and the words on a card). The product's surface for EVENTS:
 // something happened that answers an act, or that the user was not watching.
-// A small dark card stacked top-right under row 1's view radios, newest on
+// A small card stacked top-right under row 1's view radios, newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, a Breeze glyph at the left naming the class
 // (dialog-information / dialog-error), and ONE PAD around both
 // (notification_pad_px below — the card's chrome reads one number on all
 // five of its distances, the text's right air adding the glyph's own inset
-// so it matches the air the eye sees left of the text, 2026-10-01), on the
-// ground inside the plain raised edge, square, with no drop shadow (architect
+// so it matches the air the eye sees left of the text, 2026-10-01), on
+// Windows' tooltip face — the INFO pair, black words on #FFFFE1 inside a
+// one-line frame, 3DLight top-left and DkShadow bottom-right, the tooltip's
+// own box (paint_popup_chrome) — square, with no drop shadow (architect
 // 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card
@@ -25,8 +27,10 @@
 // THE SPLIT, STATE AND EVENTS (2026-08-29), which decides the surface: STATE
 // is what is true right now, replaced as it changes, never timed out and
 // never cleared by a key press — the render's progress line and the `h`
-// walk's line, which live in ROW 8'S STATE CELL right of the clock
-// (paint_bottom_row_buttons_and_clock, paint_handler.cpp, owns that cell); an
+// walk's line, which live in ROW 8'S STATE CELL, the status panel right of
+// the clock's (architect 2026-10-02, Windows' status bar: the small face,
+// left-aligned, clipped inside the panel;
+// paint_bottom_row_buttons_and_clock, paint_handler.cpp, owns that cell); an
 // EVENT is an act answered with a sentence, or a background act that
 // finished badly — a CARD. The state surface has NO TIMEOUTS because nothing
 // in it is a claim about a past moment, so nothing there can go stale.

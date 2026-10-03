@@ -435,14 +435,16 @@ struct Viewport {
     // same day — notifications.h; the stack has its own owner below.)
     //
     // THE RECT IS THE BOTTOM ROW'S LANE WHOLE, not a span of it, and
-    // deliberately: the cell RESERVES NO WIDTH — it starts at the clock's own
-    // right edge and clips at the right block, so a shorter new string must
-    // erase a longer old one and there is no measured box to erase inside. The
-    // lane is 47 px tall at 100% across the window, cheaper than the
-    // arithmetic a fitted rect would need, and neither string changes at the
-    // scanner's per-frame cadence (the product's per-frame changer, the clock,
-    // is this row's too, with its own cell owner below — and this rect covers
-    // that one as a superset).
+    // deliberately: the cell is the row's second STATUS PANEL since
+    // 2026-10-02 (paint_bottom_row_buttons_and_clock), whose box only the
+    // painter knows — it starts after the clock's panel and ends one group
+    // space short of the right block, both measured at paint — so a shorter
+    // new string must erase a longer old one and there is no published box to
+    // erase inside. The lane is the bottom row's band across the window,
+    // cheaper than the arithmetic a fitted rect would need, and neither string
+    // changes at the scanner's per-frame cadence (the product's per-frame
+    // changer, the clock, is this row's too, with its own cell owner below —
+    // and this rect covers that one as a superset).
     //
     // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-27 —
     // membership is "this route changes what the LANE shows", which is the
@@ -457,7 +459,9 @@ struct Viewport {
     //     the T->S exit — the render-done failure clear and the completion
     //     tail's guarded one);
     //   * undo's ONE, Undo::recompute_dirty's tail — THE DIRTY MARK (architect
-    //     2026-09-09), row 8's `*` on the clock's own run. It is the one
+    //     2026-09-09), row 8's `*` on the clock's own run, inside the clock
+    //     cell's reserved width — so since the state took its own panel
+    //     (2026-10-02) the lane is a superset of what it moves. It is the one
     //     member that is not a cell string at all: the painter reads app.dirty
     //     directly, so the derive-owner owes the damage, and it owes it ONLY
     //     WHERE THE FLAG MOVED — that body runs after every command, and an

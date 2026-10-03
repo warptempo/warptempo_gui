@@ -771,12 +771,14 @@ private:
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29): the monospace clock at
-    // the lane's left pad with THE STATE CELL in its own run (the `h` walk
-    // line or the render's progress line, clipped where the right block
-    // begins), then the right margin's block — the MARKER-VERB GROUP (its
-    // membership is kMarkerVerbGroup's, in the .cpp) + separator + marker
-    // walk + separator + arrow four + separator + transport three — at the
-    // icon row's boxes, painted onto the lane paint_bottom_strip has
+    // the lane's left pad in a status panel with THE STATE CELL in a second
+    // (architect 2026-10-02, Windows' status bar: the `h` walk line or the
+    // render's progress line at the small face, clipped inside its panel,
+    // which ends one group space short of the right block), then the right
+    // margin's block — the MARKER-VERB GROUP (its membership is
+    // kMarkerVerbGroup's, in the .cpp), the marker walk, the arrow four and
+    // the transport three, eight Windows px of bare ground between groups —
+    // at the icon row's boxes, painted onto the lane paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row
     // painter separate only because the button cluster's tables and the
@@ -808,10 +810,12 @@ private:
     // surface a modal does coexist with.
     void paint_shift_tooltip(cairo_t* cr);
     void paint_dropdown(cairo_t* cr);
-    // The shared box every floating surface draws, on the one ground: the
-    // PLAIN RAISED edge (`raised`: the dropdown, the notification cards) or
-    // the tooltip's one DkShadow line all round.
-    void paint_popup_chrome(cairo_t* cr, const GuiRect& r, bool raised);
+    // The shared box every floating surface draws, in one of TWO FACES
+    // (architect 2026-10-02): MENU — the ground inside the PLAIN RAISED edge
+    // (the dropdown) — or INFO — Windows' tooltip face, kInfoGround inside the
+    // one-line INFO FRAME (the tooltip and the notification cards).
+    enum class PopupFace { Menu, Info };
+    void paint_popup_chrome(cairo_t* cr, const GuiRect& r, PopupFace face);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box and before the dropdown —
     // above every lane and the keyboard slot, below the two pointer-transient

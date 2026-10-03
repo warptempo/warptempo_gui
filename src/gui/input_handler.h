@@ -4010,19 +4010,21 @@ private:
 
     // THE PLAY-SCRUB'S POINTER HALF (bodies in input_pointer.cpp), over the
     // painter's published slider item (AppState::ModalDialogGeometry::scrub):
-    // a press ON THE HANDLE'S OWN BOX (its 20 px, through the one test
-    // render_player_scrub_handle_hit — the trim endcaps' 10 px band until
-    // 2026-08-28, when the scrub became a Breeze slider and the handle got a
-    // size) arms the handle drag — its painted x follows the pointer while
-    // playback continues where it was, and the RELEASE commits the seek (the
-    // product's deferred-click shape); a press on the track elsewhere SEEKS AT
-    // THE PRESS (identity certain) and arms nothing. The hard end — the
-    // pointer-leave hook, the button-lost edge and the force-end finalizer —
-    // drops the arm and commits nothing.
+    // EVERY PRESS ON THE ITEM ARMS THE THUMB DRAG (architect 2026-10-02,
+    // Windows' trackbar) — on the thumb's grab band (the one test,
+    // render_player_scrub_handle_hit) the thumb is taken where it stands, and
+    // anywhere else on the band it JUMPS to the press and the same press
+    // drags it on — its painted x follows the pointer while playback
+    // continues where it was, and the RELEASE commits the seek to the thumb's
+    // column (the product's deferred-click shape; a motionless tap on the
+    // thumb seeks nothing). Until that day a press off the handle's box
+    // seeked at the press and armed nothing. The hard end — the pointer-leave
+    // hook, the button-lost edge and the force-end finalizer — drops the arm
+    // and commits nothing.
     bool claim_player_scrub_press(int x, int y, GuiInputState mods);
     bool finish_player_scrub_release(int x, int y);
     void update_player_scrub_motion(int x);
-    // The drag's carried column clamped onto the handle's TRAVEL, the two
+    // The drag's carried column clamped onto the thumb's TRAVEL, the two
     // writers' one expression (the body says why).
     int  clamp_player_scrub_marker_x(int x) const;
     // (clear_player_scrub_drag is public, beside clear_modal_dialog_press,
@@ -4119,6 +4121,13 @@ private:
     int  modal_dialog_button_hit(int x, int y) const;
     void update_modal_dialog_hover(int x, int y);
     void dispatch_modal_dialog_editor_act(bool ok);
+    // THE FOCUS GOES BACK TO THE FIELD — the ONE OWNER of that write on an
+    // editor dialog (architect 2026-10-02; the rule at the body): true when a
+    // button held the focus and the field now has it, false when the field
+    // had it already. Its callers are the three roads into the field — the
+    // editor act's dispatch, a press on the field (the pointer road, the pen's
+    // and a tap's) and a finger's caret drag.
+    bool return_modal_focus_to_field();
 
     // -- THE ON-SCREEN KEYBOARD'S POINTER HALF (2026-08-27) ----------------
     //

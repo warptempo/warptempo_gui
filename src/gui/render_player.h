@@ -657,7 +657,7 @@ struct GuiRenderPlayer {
     // ("Keys are ignored during a drag", on_key's player block) belongs to the
     // KEY road, and a direct act never enters it. Nothing here is unsafe under
     // one — the band's row press arms nothing a walk can break, and the
-    // scrub's handle drag commits its seek against the LIVE item at the
+    // scrub's thumb drag commits its seek against the LIVE item at the
     // release (clamped into it by the mapping), so the one visible
     // consequence is that a toggle which started another wav mid-drag has that
     // release land inside the wav it started.

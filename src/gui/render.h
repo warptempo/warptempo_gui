@@ -131,7 +131,11 @@ struct TrimRange {
 //                 (EDGE_SUNKEN);
 //   STATUS SUNKEN ONE line, Shadow / Hilight — a status-bar panel;
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
-//                 the ruler's ticks, a menu separator.
+//                 the ruler's ticks, a menu separator;
+//   INFO FRAME    ONE line, 3DLight top-left / DkShadow bottom-right — the
+//                 tooltip and the notification cards, on the INFO face (the
+//                 base roles, below; measured on Windows' ToolTip, a light
+//                 top-left and a black bottom-right, architect 2026-10-02).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
 // ground in one-Windows-px cells (paint_checker_rect, below). No gradients,
 // no rounded corners, no hover faces, and no compositing alpha anywhere: THE
@@ -155,7 +159,7 @@ struct TrimRange {
 // built from it follows. THE BASE ROLES:
 //   GROUND  #303030  kRedesignContentGround — ONE ground everywhere: the menu
 //           row, the icon row, the three lanes, the bottom row, the dropdowns,
-//           the cards, the tooltip, the folder overlay and the picker.
+//           the folder overlay and the picker.
 //   LABEL   #FCFCFC  kRedesignLabel — the text and glyph white.
 //   ACCENT  #96BFDA  kRedesignAccent — a highlighted row, a selection band.
 //   INK     #96BFDA  kWaveformInk — the waveform's ink. ACCENT AND INK ARE TWO
@@ -164,6 +168,10 @@ struct TrimRange {
 //           field's.
 //   FLAG    #8A5EAC  kMarkerFlagFill — the marker and phase-reset flags.
 //   RED     #BB575A  kMarkerFlagFillRed — the one error colour.
+//   INFO    #FFFFE1 / #000000  kInfoGround / kInfoText — Windows'
+//           COLOR_INFOBK and COLOR_INFOTEXT, the tooltip's and the cards'
+//           face and words (architect 2026-10-02): a SIBLING PAIR, two
+//           literals declared together, the one role whose text is its own.
 // BLACK is no role: the absence of light, the text ink on the flags and on
 // a light highlight (kMarkerFlagLabel, kRedesignHighlightLabel; which text a
 // highlight takes is highlight_text_ink's luminance rule, below).
@@ -177,8 +185,10 @@ struct TrimRange {
 //     edge included (it derives from the hand-listed selected red fill);
 //   from the CANVAS — the modal field's ground, and the region's lift
 //     (region_lift, which also lifts every plate pixel the INK paints);
-//   from the LABEL over the GROUND — the disabled, dimmed and hotkey inks
-//     (mix_color at a stated keep).
+//   from the LABEL over the GROUND — the disabled and hotkey inks (mix_color
+//     at a stated keep);
+//   from the INFO TEXT over the INFO GROUND — the tooltip's dimmed second
+//     line (the same keep).
 // THE HAND-LIST — the colours KEPT LITERAL because no simple rule reproduces
 // their frozen bytes, the rule tried and its miss stated at each constant. A
 // RETUNE OF A BASE ROLE DOES NOT MOVE THEM: they are the retune's hand-list,
@@ -271,6 +281,16 @@ inline constexpr uint32_t kRedRgb  = 0xBB575A;   // (187, 87, 90)
 inline constexpr GuiColor kMarkerFlagFill    = hex(kFlagRgb);
 inline constexpr GuiColor kMarkerFlagFillRed = hex(kRedRgb);
 
+// INFO — Windows' tooltip pair (architect 2026-10-02, replacing the tooltip
+// and the cards on the GROUND): COLOR_INFOBK #FFFFE1, the pale yellow face,
+// and COLOR_INFOTEXT black, its words. Two literals, one role: the face
+// is the role's ground and the text its ink, retuned together. The surfaces
+// are paint_popup_chrome's Info face (the tooltip and every notification
+// card), framed by the INFO FRAME (the head's table); nothing else stands on
+// it.
+inline constexpr GuiColor kInfoGround = hex(0xFFFFE1);
+inline constexpr GuiColor kInfoText   = hex(0x000000);
+
 // -- THE RELIEF SET, from the ground ------------------------------------------
 //
 // Windows' COLOR_3D* family on this ground (the edge grammar at the head):
@@ -283,8 +303,8 @@ inline constexpr GuiColor kMarkerFlagFillRed = hex(kRedRgb);
 //     top-left and the plain sunken edge's inner bottom-right;
 //   SHADOW   = ground × 5/8   → #1E1E1E (30 = 48 × 0.625 exactly)
 //   DKSHADOW = ground × 0.21  → #0A0A0A (10 = 48 × 0.21, 10.08) — every
-//     edge's outer dark line, the tooltip's border and the dialog focus
-//     frame; NOT black (architect 2026-10-02).
+//     edge's outer dark line, the info frame's bottom-right and the dialog
+//     focus frame; NOT black (architect 2026-10-02).
 // Which line takes which colour is the family's (the head's table).
 inline constexpr uint32_t kReliefHilightRgb  = scaled_word(kGroundRgb, 196, 100);
 inline constexpr uint32_t kReliefShadowRgb   = scaled_word(kGroundRgb, 5, 8);
@@ -331,9 +351,14 @@ inline constexpr GuiColor kReliefDkShadow = hex(kReliefDkShadowRgb);
 // 2026-10-02, Windows' DSS_DISABLED: icons::draw_engraved — the glyph mix
 // retired with the AB set), and a disabled button keeps its raised edge.
 inline constexpr double kRedesignDisabledMix = 0.322;
-// THE DIMMED SECOND LINE of a two-line tooltip retains this much of the label
-// over the ground (kdenlive's hint line, 0.52, measured the same way).
+// THE DIMMED SECOND LINE of a two-line tooltip retains this much of its text
+// over its face (kdenlive's hint line, 0.52, measured the same way): the INFO
+// text over the INFO ground since the tooltip took Windows' face (architect
+// 2026-10-02) — 255 × 0.48 = 122.4 and 225 × 0.48 = 108, #7A7A6C — the
+// label over the ground before.
 inline constexpr double kRedesignDimMix = 0.52;
+inline constexpr GuiColor kTooltipDimText =
+    mix_color(kInfoText, kInfoGround, kRedesignDimMix);
 // THE DROPDOWN'S ACCELERATOR COLUMN is the label at Qt's own 178/255 over the
 // ground — the ratio kdenlive's crop measured, its accelerators drawn at ~70 %
 // opacity, re-run on this ground (architect 2026-10-02: one ground): 48 +
@@ -393,6 +418,8 @@ inline constexpr bool same_color(GuiColor a, GuiColor b) {
 static_assert(same_color(highlight_text_ink(kRedesignAccent),
                          kRedesignHighlightLabel));
 static_assert(same_color(highlight_text_ink(hex(0x000080)), kRedesignLabel));
+// The INFO pair agrees with the rule: the yellow face (L 0.98) takes black.
+static_assert(same_color(highlight_text_ink(kInfoGround), kInfoText));
 
 // THE ACCENT'S UNFOCUSED FACE — the folder overlay's highlighted row while the
 // window is not activated (architect 2026-09-02: a selection in an unfocused
@@ -412,17 +439,11 @@ static_assert(same_color(highlight_text_ink(kRedesignAccentInactive),
 // THE TRIM LANE IS A MINIATURIZED SCROLL BAR (architect 2026-10-02; the
 // geometry at kTrimLaneHeightPx and render_trim_flags) and takes no colour
 // of its own: its track is the CHECKED dither (Hilight over the ground) and
-// its thumb a plain raised box on the ground. THE TWO FACES BELOW ARE THE
-// RENDER PLAYER'S SCRUB'S ALONE (paint_modal_dialog's player branch), which
-// still paints the trim lane's retired bar and cap: the played BAR, ground ×
-// 4/3 → #404040 (64 = 48 × 4/3 exactly), and the THUMB, ground × 3.5 →
-// #A8A8A8 (168 = 48 × 3.5 exactly).
-inline constexpr uint32_t kTrimLaneBarRgb = scaled_word(kGroundRgb, 4, 3);
-inline constexpr uint32_t kTrimLaneCapRgb = scaled_word(kGroundRgb, 7, 2);
-static_assert(kTrimLaneBarRgb == 0x404040);
-static_assert(kTrimLaneCapRgb == 0xA8A8A8);
-inline constexpr GuiColor kTrimLaneBar = hex(kTrimLaneBarRgb);
-inline constexpr GuiColor kTrimLaneCap = hex(kTrimLaneCapRgb);
+// its thumb a plain raised box on the ground. (The trim lane's retired bar
+// and cap faces, ground × 4/3 → #404040 and ground × 3.5 → #A8A8A8, lived on
+// in the render player's scrub until it became Sound Recorder's slider the
+// same night, architect 2026-10-02: the scrub too is relief lines on the
+// ground and nothing else.)
 
 // THE RULER LANE's inks: the timestamps, every label one colour (architect
 // 2026-10-02, "give the same colour to all the numbers"), ground × 4.04 →
@@ -979,36 +1000,42 @@ inline int icon_row_h_px() {
 // its box is the relief at relief_line_px, below, and no corner in the
 // chrome is rounded.
 
-// -- THE PLAY-SCRUB: A TROUGH WITH A THUMB (architect 2026-10-02) -------------
+// -- THE PLAY-SCRUB: SOUND RECORDER'S SLIDER (architect 2026-10-02) ----------
 //
 // The render player's modal row carries the transport's scrub, and its look is
-// the trim lane's as it stood before the lane became a scroll bar (his words:
-// "a trough like the trim with a larger dot for the current position
-// indicator"; the dot SQUARE — a round one would be the one circle in the
-// chrome): a PLAIN SUNKEN trough kScrubTroughHeightPx tall across the
-// slider's track, centred in the button box's band; a PLAIN RAISED bar in
-// kTrimLaneBar inside it from the track's start to the position, the played
-// extent, the trough's ground beyond; and a PLAIN RAISED SQUARE THUMB in
-// kTrimLaneCap centred on the position, the trough's height plus one relief
-// line above and below, overhanging the trough by a row each way, the
-// Windows slider thumb's overhang. The painter is paint_modal_dialog's player
-// branch. It reads no window focus: the bar carries no accent to dim.
-// THE TROUGH'S 8 WINDOWS PX is the trim lane's former 11 laptop px
-// re-authored at the unit's change (architect 2026-10-02), the trough's own
-// number since the trim lane grew to 16.
-inline constexpr int kScrubTroughHeightPx = 8;
-inline int scrub_trough_h_px() {
-    return scaled_px(kScrubTroughHeightPx, 3);
-}
+// Windows 95 Sound Recorder's trackbar, nothing filled ("Sound Recorder
+// doesn't fill it"):
+//   THE CHANNEL — the PLAIN SUNKEN edge collapsed to its lines, NO INTERIOR:
+//     kScrubChannelLines relief lines tall, top to bottom Shadow, DkShadow,
+//     3DLight, Hilight (the edge's two rings on a rect four lines tall, its
+//     end columns the same rings' sides), spanning the slider's track and
+//     centred in the button box's band. Its height is the sum of its rounded
+//     lines, 4 × relief_line_px (12 device rows at 275 %, 4 at 138 %).
+//   THE THUMB — kScrubThumbWidthPx wide, PLAIN RAISED with the ground for its
+//     face, centred on the position and standing on the channel with
+//     kScrubThumbAbovePx rows above it and kScrubThumbBelowPx below — 8 + 4 +
+//     9 = 21 Windows px, Sound Recorder's 11 × 21, the height the sum of its
+//     rounded parts (59 device rows at 275 %, 27 at 138 %).
+// NO PLAYED EXTENT AND NOTHING THAT READS THE WINDOW'S FOCUS: the channel is
+// lines on the ground, the position is the thumb. The painter is
+// paint_modal_dialog's player branch; the press is claim_player_scrub_press.
+inline constexpr int    kScrubChannelLines = 4;
+inline constexpr double kScrubThumbWidthPx = 11.0;
+inline constexpr double kScrubThumbAbovePx = 8.0;
+inline constexpr double kScrubThumbBelowPx = 9.0;
+// The thumb's width floors at five device px — its two relief rings a side
+// and one column of face — and its two overhangs at one row each.
+inline int scrub_thumb_w_px()     { return scaled_px(kScrubThumbWidthPx, 5); }
+inline int scrub_thumb_above_px() { return scaled_px(kScrubThumbAbovePx, 1); }
+inline int scrub_thumb_below_px() { return scaled_px(kScrubThumbBelowPx, 1); }
 //
 // THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: a 14 Windows px box (the
 // laptop pixel's 20 re-authored, architect 2026-10-02), the ONE owner of
 // that length for its readers — the MAPPING insets the track by half of it at
 // each end (the thumb's centre is the frame's position;
 // render_player_scrub_x_of, app_state.h) and the press router takes it as THE
-// HANDLE'S GRAB BAND. The painted thumb is the square above, inside it.
-// Floored at 2 so the half-box inset is never zero and the band never
-// degenerates.
+// THUMB'S GRAB BAND, the painted thumb's 11 widened to it. Floored at 2 so
+// the half-box inset is never zero and the band never degenerates.
 inline constexpr double kScrubHandleBoxPx = 14.0;
 inline int scrub_handle_box_px() {
     return scaled_px(kScrubHandleBoxPx, 2);
@@ -1160,9 +1187,10 @@ int  waveform_max_h_px();
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
 // strip's ONLY lane since the relayout's commit B): the monospace clock and
-// the state cell at the left pad, and the MARKER-VERB GROUP + separator +
-// marker walk + separator + four cardinal arrows + separator + transport
-// three flush right (architect 2026-09-29; kMarkerVerbGroup in
+// the state cell at the left pad, two status panels (architect 2026-10-02),
+// and the MARKER-VERB GROUP, the marker walk, the four cardinal arrows and
+// the transport three flush right, eight Windows px of bare ground between
+// groups (architect 2026-09-29; kMarkerVerbGroup in
 // paint_handler.cpp owns that group's membership, which does not bear
 // restating here), all one line ON THE WINDOW'S FOOT — which it holds again
 // since
@@ -1388,6 +1416,17 @@ int marker_flag_baseline_px();
 inline constexpr int kReliefLinePx = 1;
 inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);
+}
+// THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because they count relief
+// lines (the slider's block, with its constants, is above): the channel its
+// four lines, the thumb its rows above the channel, the channel and its rows
+// below — each part rounded on its own.
+inline int scrub_channel_h_px() {
+    return kScrubChannelLines * relief_line_px();
+}
+inline int scrub_thumb_h_px() {
+    return scrub_thumb_above_px() + scrub_channel_h_px() +
+           scrub_thumb_below_px();
 }
 // THE WELL'S BORDER, taken FROM the waveform area at its top and its bottom:
 // the PLAIN SUNKEN edge's TWO relief lines a side (the colours and the order
@@ -1928,14 +1967,16 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         (the well is render_canvas's own fill of the same
 //                         lines, full width).
 //   paint_relief_status_sunken — STATUS SUNKEN, ONE ring: a status-bar panel.
-//   paint_relief_line_frame — one colour all round: the tooltip's DkShadow
-//                         border and the dialog's default-button frame.
-//   paint_relief_etched_vline — an ETCHED line: a Shadow line ending at
-//                         column x (its columns [x - lw, x)) and a Hilight
-//                         line at [x, x + lw), rows [y, y + h).
-//   paint_relief_etched_hline — the same on its side: a Shadow line on rows
+//   paint_relief_line_frame — one colour all round: the dialog's
+//                         default-button frame and the list's focus frame.
+//   (The INFO FRAME — the tooltip's and the cards' — is paint_relief_frame
+//   itself, 3DLight / DkShadow, at paint_popup_chrome.)
+//   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
-//                         [x, x + w) (the dropdown's separator).
+//                         [x, x + w) (the dropdown's separator). (Its
+//                         vertical twin retired 2026-10-02 with the render
+//                         player's separators, its last callers; the ruler's
+//                         etched ticks are painted in place, paint_ruler_row.)
 // (paint_relief_raised / paint_relief_sunken, the one-line pair of the thin
 // design, are retired, architect 2026-10-02: every caller names its family.)
 // None of them fills the face: a caller fills first and frames after.
@@ -1947,7 +1988,6 @@ void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_status_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
-void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h);
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
 // One flat cell rect in `c` — the face fill every relief caller lays first.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);

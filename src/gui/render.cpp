@@ -284,15 +284,6 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
     paint_relief_frame(cr, r, c, c);
 }
 
-void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h) {
-    const int lw = relief_line_px();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{x - lw, y, lw, h}, kReliefShadow);
-    paint_cell_rect(cr, GuiRect{x, y, lw, h}, kReliefHilight);
-    cairo_restore(cr);
-}
-
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
     const int lw = relief_line_px();
     cairo_save(cr);

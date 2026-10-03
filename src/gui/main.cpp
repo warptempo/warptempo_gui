@@ -159,7 +159,8 @@ namespace {
 // bottom_row_h_px() tall (the icon row's content height plus a 1px row of
 // ground on top, where its border-top stood) — the monospace clock cell in
 // its status panel (the active tab's letter, a pipe
-// and the timestamp, "A | 00:45.115") and THE STATE CELL at the left pad and,
+// and the timestamp, "A | 00:45.115") and THE STATE CELL in a second status
+// panel beside it (2026-10-02, Windows' status bar) at the left pad and,
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the marker walk, the four cardinal arrows and the
 // transport three, eight Windows px of ground between two groups (architect
@@ -627,12 +628,13 @@ GuiRect top_marker_row_area(const AppState& a) {
 // 2026-08-12, rows 8
 // and 9 merged; the succession is at the bottom row's geometry block,
 // render.h), with GAP 2's blank window ground between it
-// and the waveform: the monospace clock at the left pad with THE STATE CELL
-// right of it, and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
+// and the waveform: the monospace clock at the left pad in a status panel
+// with THE STATE CELL in a second panel right of it (architect 2026-10-02,
+// Windows' status bar), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
 // walk, the four cardinal arrows and the transport three, at the icon row's
-// boxes and divided by three of the ruled separators (architect
-// 2026-09-29).
+// boxes, eight Windows px of bare ground between two groups (architect
+// 2026-09-29; the separators retired 2026-10-02).
 // THE DIRTY MARK
 // IS A TENANT HERE, AND IT IS THE ONLY ONE: the clock wears the `*` suffix
 // while app.dirty stands (paint_bottom_row_buttons_and_clock appends it; the
@@ -1092,11 +1094,13 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // THE CLOCK'S RECT — the unified bottom row's reserved cell as the
 // painter last drew it, at the lane's left pad (AppState::clock_cell_rect,
 // whose stash contract is at the field). Narrow by construction: on_redraw
-// clips to the damage region, so paint_bottom_strip runs but its buttons and
-// its three separators fall outside the clip and cost nothing, which is what
-// makes this affordable at the pre-paint hook's per-frame cadence. The cell's
-// width is the shaped specimen and only the painter knows its origin, so a
-// move of the cell moves nothing here. What stands beside the clock is THE
+// clips to the damage region, so paint_bottom_strip runs but its buttons, the
+// clock panel's two vertical lines and the whole state panel fall outside the
+// clip and cost nothing (the clock panel's top and bottom lines cross the box
+// and are repainted identically under it), which is what makes this
+// affordable at the pre-paint hook's per-frame cadence. The
+// cell's width is the shaped specimen and only the painter knows its origin,
+// so a move of the cell moves nothing here. What stands beside the clock is THE
 // STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
 // whose rect is the lane WHOLE — see the record just above.
 //
@@ -1107,8 +1111,9 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // and mark together. The mark changes only when app.dirty moves — the letter
 // before the digits never moves with it — and THAT transition damages the
 // lane whole through Viewport::invalidate_status_cell_area
-// (Undo::recompute_dirty's tail), the state cell's start moving by the
-// mark's one cell.
+// (Undo::recompute_dirty's tail) — a superset since the state cell took its
+// own status panel (2026-10-02), the mark's one cell being inside this
+// cell's reserved width and nothing beside it moving.
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame

@@ -64,8 +64,9 @@
 // row visible. No header row, no columns, no scrollbar: the offset is the
 // whole scroll state, and an over-long listing simply scrolls.
 //
-// THE BAND IS THE SLOT'S AND THE ROW IS THE BUTTON'S (architect 2026-08-28;
-// before that day both were the keyboard's). Two owners, neither
+// THE BAND IS THE SLOT'S AND THE ROW IS THE LIST'S (architect 2026-08-28,
+// the row then the icon row's button; Windows' list row since 2026-10-02;
+// before 2026-08-28 both were the keyboard's). Two owners, neither
 // restated here:
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
 //     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
@@ -86,17 +87,19 @@
 //     midpoint until 2026-09-02 and the icon row's foot since 2026-09-09. The
 //     content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
-//   * THE ROW IS THE ICON ROW'S BUTTON: the toolbar case's height and its
-//     16-px glyph centred at the case's own (22-16)/2 inset, read from
-//     render.h's icon-row block ("we've gone for the button analogy"; "the
-//     buttons are good enough size for my finger"), one Windows px between
-//     rows (the roster's own buttons touch since 2026-10-02). A
+//   * THE ROW IS WINDOWS' LIST ROW (architect 2026-10-02): 17 Windows px
+//     tall at the normal face, as Windows' list boxes with 16-px icons, the
+//     roster's 16-px glyph seated at the toolbar case's 3-px lead and centred
+//     in the row's height, one Windows px between rows (the list's focus
+//     frame stands in it). It was the icon row's BUTTON, the toolbar case's
+//     height, from 2026-08-28 ("we've gone for the button analogy"; "the
+//     buttons are good enough size for my finger"). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
 //     ("project and file names will be short"), the painter clipping it to
 //     the row. (The AV Sync Stats panel's text rows stood at a monospace
 //     line's pitch, the row geometry's one fork, from 2026-09-03 until the
 //     panel's deletion on 2026-09-30.)
-// The panel's own authored numbers are the three below.
+// The panel's own authored numbers are the four below.
 //
 // THE FACES ARE WINDOWS' LIST (architect 2026-10-02, the ladder at the
 // painter): the band is the ground inside the plain raised edge
@@ -138,10 +141,10 @@ namespace folder_overlay {
 
 // -- The geometry ------------------------------------------------------------
 //
-// THE ROW IS THE ICON ROW'S BUTTON (the ruling above): its height and its
-// glyph are the toolbar case's own, read from render.h where they are
-// authored, so a retune of the roster carries down here by construction; the
-// panel owns its pad, its row gap and its icon-to-name gap.
+// THE ROW IS WINDOWS' LIST ROW (the ruling above): the panel owns its row
+// height, its pad, its row gap and its icon-to-name gap; the glyph and its
+// lead are the toolbar case's own, read from render.h where they are
+// authored.
 
 // THE PANEL'S OUTER INSET, its ONE authored margin — the margin between the
 // band's edge and the rows, at the top, the bottom and both sides.
@@ -158,24 +161,28 @@ inline constexpr double kRowIconGapPx = 6.0;
 // button gap re-authored.
 inline constexpr double kRowGapPx = 1.0;
 
-// THE ROW BOX: the toolbar case's height, the panel's row gap, the case's
-// glyph. A folder row wears icons::Icon::Folder and a wav row
-// icons::Icon::AudioXWav. (The glyph-less TEXT kind went with the AV Sync
-// Stats panel on 2026-09-30, and the UP kind, which wore the folder glyph
-// because it named a folder, with the player's move inside `tmp/` on
-// 2026-09-01.) A row IS the button's box, a wide button.
-inline int button_row_height_px() { return icon_case_h_px(); }
+// THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
+// button box until 2026-10-02, then the 22-px toolbar case for that day's
+// first hours), the panel's row gap, the case's glyph. A folder row wears
+// icons::Icon::Folder and a wav row icons::Icon::AudioXWav. (The glyph-less
+// TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
+// which wore the folder glyph because it named a folder, with the player's
+// move inside `tmp/` on 2026-09-01.) The accessor keeps the name it had while
+// a row was a wide button.
+inline constexpr double kRowHeightPx = 17.0;
+inline int button_row_height_px() { return scaled_px(kRowHeightPx, 1); }
 inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
 inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
 inline int row_icon_px()          { return icon_glyph_px(); }
 inline int row_icon_gap_px()      { return scaled_px(kRowIconGapPx); }
-// THE GLYPH'S INSET INSIDE THE ROW, on every side: the case's own centring
-// of its glyph in its height, (22 - 16) / 2 Windows px, taken from the two
-// scaled numbers so it cannot disagree with either. It is the LEFT PAD of the icon in
-// the row as well — a row is a wide button — and not the modal word buttons'
-// text pad, which belongs to a different surface.
+// THE GLYPH'S LEFT PAD INSIDE THE ROW: the toolbar case's 3-px lead
+// (icon_case_lead_px — the glyph at (3, 3) in Windows' case), read rather
+// than restated (architect 2026-10-02: until then the case's (22 − 16) / 2
+// centring inset, which the 17-px row would have shrunk to nothing). The
+// glyph is CENTRED in the row's height (the painter), and this is not the
+// modal word buttons' text pad, which belongs to a different surface.
 inline int row_icon_inset_px() {
-    return (button_row_height_px() - row_icon_px()) / 2;
+    return icon_case_lead_px();
 }
 
 // (THE BAND OWNS NO LINE AT ALL — the head prose carries the 2026-10-01

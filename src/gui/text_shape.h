@@ -89,9 +89,11 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // 2026-08-30 to 2026-08-31 for ONE consumer: row 8's sans STATE CELL, which sat
 // a measured gap right of the monospace clock and read about two pixels wider
 // than the separator-to-clock gap beside it, the two runs' side bearings both
-// falling inside the air. It retired with that cell, the state text having
-// become part of the clock's OWN run — one face, one string, no butted runs and
-// so no bearings to correct (paint_bottom_row_buttons_and_clock). Nothing else
+// falling inside the air. It retired with that cell when the state text joined
+// the clock's own run (2026-08-31); since 2026-10-02 the state stands in a
+// status panel of its own, placed at the panel's pad rather than against the
+// clock's ink, so still no bearings to correct
+// (paint_bottom_row_buttons_and_clock). Nothing else
 // ever asked for ink: every other layout here wants a reserved CELL, which is
 // `width_px`'s job. A layout that needs equal air again reinstates this from
 // git — the walk was show_shaped_run's glyph array at pen origin 0 through
