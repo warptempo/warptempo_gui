@@ -79,6 +79,11 @@ DEFAULTS = {
     # 2026-10-03, "no derived, imported only") -- a theme that draws relief states its four recorded bytes
     # (tools/theme_catalog/); Theme.get refuses an unstated one where it is read, Theme refuses "auto" at load
     'bevel_hilight': None, 'bevel_light': None, 'bevel_shadow': None, 'bevel_dkshadow': None,
+    # THE EMBOSS'S LIGHT COPY (architect 2026-10-03, late: Windows' normal DSS_DISABLED on every variation): the colour
+    # every engraved path (the menu word, the glyph, a disabled flag's label) paints one logical px right and down
+    # beneath the Shadow word -- the theme's own Hilight, or on a dim or dark variation the base's RECORDED Hilight,
+    # not darkened with the face (the Shadow word darkens like every other line)
+    'emboss_hilight': '@bevel_hilight',
     # the accent (the architect, 2026-10-02: the waveform's ink is the accent); read only by menu.highlight "fill"
     'accent': '@ink',
 }
@@ -105,9 +110,10 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
-# menu.disabled: the disabled menu word -- "colour" in `menu_disabled`, "engraved" Windows' embossed DrawState form
-# (architect 2026-10-03, late: the dark variations' disabled text; draw_menu), "shadowed" that emboss mirrored for a
-# dark face: the word in `menu_disabled` over its echo in `bevel_shadow` (architect 2026-10-03, late)
+# menu.disabled: the disabled menu word -- "colour" in `menu_disabled`, "engraved" Windows' embossed DrawState form,
+# its light copy `emboss_hilight` (architect 2026-10-03, late: every variation's disabled text; draw_menu), "shadowed"
+# that emboss mirrored for a dark face: the word in `menu_disabled` over its echo in `bevel_shadow` (architect
+# 2026-10-03, late; not used since set AP, kept for the record)
 MENU_DISABLED_STYLES = ('colour', 'engraved', 'shadowed')
 # the options whose values are checked here (separators, bottom_border, ruler_tick_relief, clock_panel; the older options are not)
 OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border': ('app', 'line', 'etched', 'raised', 'none'),
@@ -121,8 +127,9 @@ FLAG_STATES = ('selected', 'invalid', 'disabled', 'editing')
 FLAG_SELECTIONS = ('outline', 'underline')
 FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection')     # the flags section's keys beside its colour aliases
 CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
-# buttons.disabled: a disabled glyph -- "mix" the app's, "engraved" Windows' DrawState DSS_DISABLED, "shadowed" that
-# emboss mirrored for a dark face, as menu.disabled "shadowed" mirrors the word (architect 2026-10-03, late; draw_app_glyph)
+# buttons.disabled: a disabled glyph -- "mix" the app's, "engraved" Windows' DrawState DSS_DISABLED (its light copy
+# `emboss_hilight`), "shadowed" that emboss mirrored for a dark face, as menu.disabled "shadowed" mirrors the word
+# (architect 2026-10-03, late; not used since set AP, the normal emboss ruled for every variation; draw_app_glyph)
 DISABLED_STYLES = ('mix', 'engraved', 'shadowed')
 COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'outline'}),
                    ('flags', {'fill': 'flag_fill', 'edge': 'flag_edge', 'border': 'flag_border', 'label': 'flag_label', 'stem': 'flag_stem',
@@ -646,8 +653,8 @@ def draw_menu(cr, th):
     the anchors' widths follow the shaped text) and re-seats the baseline by the app's rule over the whole menu lane
     (redesign_baseline: the cap band centred; 41 at 32 px, the measured baseline). A disabled word is `menu_disabled`
     (menu.disabled "colour"), or with menu.disabled "engraved" Windows 95's greyed menu item, DrawState DSS_DISABLED
-    as for the glyphs (draw_app_glyph): the word in bevel_hilight one logical px right and down, then in bevel_shadow
-    at its place over it; or with menu.disabled "shadowed" that emboss mirrored for a dark face (architect 2026-10-03,
+    as for the glyphs (draw_app_glyph): the word in `emboss_hilight` (default bevel_hilight) one logical px right and
+    down, then in bevel_shadow at its place over it; or with menu.disabled "shadowed" that emboss mirrored for a dark face (architect 2026-10-03,
     late: the disabled word of the dark variations LIGHTER than the face): the echo in bevel_shadow one logical px
     right and down first, then the word in `menu_disabled` at its place over it. A disabled anchor under the "fill"
     highlight keeps the highlight's label, neither engraved nor shadowed."""
@@ -666,7 +673,7 @@ def draw_menu(cr, th):
                 s_, h_ = th.get('bevel_shadow'), th.get('bevel_hilight')
                 edge(cr, x, y0, x + bw, y1, [(s_, h_)] if hl['style'] == 'sunken' else [(h_, s_)])
         if engrave:
-            show(cr, C.SANS, px, it['text'], x + m['pad'] + LW, base + LW, th.get('bevel_hilight'))
+            show(cr, C.SANS, px, it['text'], x + m['pad'] + LW, base + LW, th.get('emboss_hilight'))
             col = th.get('bevel_shadow')
         if shadow:
             show(cr, C.SANS, px, it['text'], x + m['pad'] + LW, base + LW, th.get('bevel_shadow'))
@@ -833,15 +840,15 @@ def draw_app_glyph(cr, th, g, x, y, under, enabled, px):
     """The app's glyph at (x, y), px device px square (paint_mask). Enabled, or disabled with buttons.disabled "mix":
     each ink in order in mix(ink, under, keep), keep = 1 / disabled_mix. Disabled with "engraved" (Windows' DrawState
     DSS_DISABLED): the union of the ink masks (the per-pixel max of the per-ink coverages), painted twice -- first in
-    bevel_hilight one logical px right and down (beneath), then in bevel_shadow at (x, y). Disabled with "shadowed"
-    (architect 2026-10-03, late: the disabled icons of a dark variation, the word's inversion carried to the glyphs):
-    that emboss mirrored for a dark face, as menu.disabled "shadowed" draws the word -- the same union mask, first in
-    bevel_shadow one logical px right and down (the echo), then in `menu_disabled` (the disabled word's colour,
-    lighter than the face) at (x, y)."""
+    `emboss_hilight` (default bevel_hilight) one logical px right and down (beneath), then in bevel_shadow at (x, y).
+    Disabled with "shadowed" (architect 2026-10-03, late: the disabled icons of a dark variation, the word's inversion
+    carried to the glyphs; not used since set AP, kept for the record): that emboss mirrored for a dark face, as
+    menu.disabled "shadowed" draws the word -- the same union mask, first in bevel_shadow one logical px right and down
+    (the echo), then in `menu_disabled` (the disabled word's colour, lighter than the face) at (x, y)."""
     mode = th.opt['buttons']['disabled']
     if not enabled and mode in ('engraved', 'shadowed'):
         m = np.maximum.reduce([pgm(g['files'][ink]) for ink in g['inks']])
-        echo, top = (('bevel_hilight', 'bevel_shadow') if mode == 'engraved' else ('bevel_shadow', 'menu_disabled'))
+        echo, top = (('emboss_hilight', 'bevel_shadow') if mode == 'engraved' else ('bevel_shadow', 'menu_disabled'))
         C.src(cr, th.get(echo)); paint_mask(cr, m, x + LW, y + LW, px)
         C.src(cr, th.get(top)); paint_mask(cr, m, x, y, px)
         return
@@ -1171,7 +1178,7 @@ def draw_flags_bevelled(cr, th):
     (dark top and left, light bottom and right) with the label one logical px right and down, a pushed button's face;
     invalid = the face `flag_fill_red` (Windows' error red), its bevel by the same rule; disabled = a disabled button: the face `ground`,
     the theme's own bevel_hilight / bevel_shadow, the label ENGRAVED (Windows' disabled text: the label in
-    bevel_hilight one logical px right and down, then in bevel_shadow at its place) and no stem (draw_stems). THE STEM'S
+    `emboss_hilight` one logical px right and down, then in bevel_shadow at its place) and no stem (draw_stems). THE STEM'S
     GAP (architect 2026-10-03, late): in every state with a stem (all but disabled) the bottom outline line and the
     bottom bevel line are broken at the stem's columns (the box's first face column, flag_box; FLAG_STEM_W wide) and
     the face runs through, so the face and the stem below it are one unbroken same-colour region (a non-antialiased
@@ -1188,7 +1195,7 @@ def draw_flags_bevelled(cr, th):
         if not dis: fill(cr, f['x'], y1 - 2 * LW, f['x'] + FLAG_STEM_W, y1, face)   # the stem's gap
         lx, ly = x0 + F['border_w'] + F['pad_l'] + (LW if sel else 0), F['baseline'] + (LW if sel else 0)
         if dis:
-            show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('bevel_hilight'))
+            show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('emboss_hilight'))
             show(cr, C.SANS, px, f['text'], lx, ly, th.get('bevel_shadow'))
         else:
             show(cr, C.SANS, px, f['text'], lx, ly, flag_label_ink(th, i))
@@ -1265,7 +1272,7 @@ def draw_flags_flat(cr, th):
     nearbyint of the run's origin and end), the glyphs in the selected text colour clipped to that band
     (flat_edit_colours) -- the box keeping its width (architect: "the extending part is not necessary"), the stem the
     marker's `flag_fill` (flat_stem_colour); DISABLED = the face `ground`, the outline `flag_border`, the label
-    ENGRAVED (in `bevel_hilight` one LW right and down, then in `bevel_shadow` at its place), no stem."""
+    ENGRAVED (in `emboss_hilight` one LW right and down, then in `bevel_shadow` at its place), no stem."""
     F = SCENE['flags']; px = ui_font_px(th)
     for i, f in enumerate(F['flags']):
         x0, y0, x1, y1 = flat_flag_box(th, f); sel, red, dis, ed = th.flag_states[i]
@@ -1279,7 +1286,7 @@ def draw_flags_flat(cr, th):
         if sc is not None: fill(cr, f['x'], y1 - LW, f['x'] + FLAG_STEM_W, y1, sc)   # the stem over the bottom outline
         lx, ly = x0 + F['border_w'] + F['pad_l'], F['baseline']
         if dis:
-            show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('bevel_hilight'))
+            show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('emboss_hilight'))
             show(cr, C.SANS, px, f['text'], lx, ly, th.get('bevel_shadow'))
         elif ed:
             ix0 = int(np.rint(lx)); ix1 = int(np.rint(lx + C.shape(C.SANS, px, f['text'])[1]))
