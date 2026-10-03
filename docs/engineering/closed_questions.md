@@ -445,6 +445,7 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **One composed string for the stderr line and the card (full paths on a card)** — replaced, 2026-09-02 ("option 1, applied universally"): two clauses composed at the failure point. Owner: `GuiFailure` (failure.h).
 - **Parsing a path back out of composed English** — ruled out, 2026-09-02: the frozen loaders publish their path-free words beside the sentence. Owner: the basename rule (failure.h), `path_free_reason`.
 - **A card from the editors' own Ctrl+C or Ctrl+V** — ruled out, 2026-09-03: an editor is its own world; only a refused Ctrl+X cut cards. Owner: `card_clipboard_refusal` (input_key_dispatch.cpp).
+- **Removing the refusal reason cards beside the red frame** — ruled out, 2026-10-03: the frame says that a value was refused, the card says why. Owner: the field chrome in `paint_modal_dialog` (paint_handler.cpp), `GuiFlagEditor::notifications` (flag_editor.h).
 
 ## The GitHub recheck: the `h` view, git, the checkpoint and the pull
 

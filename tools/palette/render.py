@@ -77,6 +77,11 @@ DEFAULTS = {
     # ground (Windows' Window) and its selected text's glyphs `selected_text` (HilightText) over `selected_fill`
     # (Hilight; flat_edit_colours, which falls back to Windows' #000080 when the theme does not state it)
     'flag_border_sel': '#FFFFFF', 'flag_border_edit': '#000000', 'field_ground': '#FFFFFF', 'selected_text': '#FFFFFF',
+    # THE FIELD'S TEXT AND THE INFO PAIR (2026-10-03, step 11), read only by the two optional surfaces `dialog` and
+    # `card` (draw_dialog, draw_card): Windows' WindowText, and its InfoBk / InfoText, the app's own pair where a
+    # source records none (tools/theme_catalog/levels.py APP_INFO). `field_ground` above is the dialog field's ground
+    # too, so the EDITING flag and the dialog's field read one role, as the app's two fields do
+    'field_text': '#000000', 'info_ground': '#FFFFE1', 'info_text': '#000000',
     # icon inks (icons.cpp), two_pass of each
     'icon_label': '@label', **{f'icon_{k}': list(C.two_pass(v)) for k, v in INKC.items() if k != 'text'},
     # the Windows relief set (only read when something is raised or sunken): NO DEFAULT AND NO RULE (architect
@@ -104,13 +109,14 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                             'toggled': None, 'down_dither': False, 'gap': None, 'sep_gap': None, 'group_space': None,
                             'case': None, 'disabled': 'mix'},
                 'trim': {'bar': 'app', 'ground': 'app', 'handles': 'app', 'grip': 'app', 'cap_w': None, 'lane_h': None,
-                         'style': 'app', 'acid_inset': 1},
+                         'style': 'app', 'acid_inset': 1, 'held': None},
                 'lane_order': ['trim', 'ruler', 'marker'],
                 'ruler_layout': None,
                 'menu': {'highlight': None, 'disabled': 'colour'},
                 'fonts': {'ui_px': None, 'small_px': None},
                 'state_text': STATE_TEXT_DEFAULT,
-                'playhead_lane_stem': 'stem', 'playhead_head_outline': 'none'}
+                'playhead_lane_stem': 'stem', 'playhead_head_outline': 'none',
+                'dialog': None, 'card': None}
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
@@ -127,9 +133,15 @@ FLAG_RELIEF = ('none', 'raised')
 FLAG_STYLES = ('app', 'bevelled', 'flat')
 FLAG_STATES = ('selected', 'invalid', 'disabled', 'editing')
 # flags.selection, read only by flags.style "flat": how a SELECTED flag shows -- "outline" the white outline (step 5's,
-# kept for the record), "underline" the label underlined (architect 2026-10-03, late; draw_flags_flat)
-FLAG_SELECTIONS = ('outline', 'underline')
-FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection')     # the flags section's keys beside its colour aliases
+# its width flags.outline_px), "underline" the label underlined (architect 2026-10-03, late), "fill" the face in the
+# selected pair, "outline+fill" both (step 11, mock options; draw_flags_flat)
+FLAG_SELECTIONS = ('outline', 'underline', 'fill', 'outline+fill')
+FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection', 'outline_px')     # the flags section's keys beside its colour aliases
+# trim.held (trim.style "scrollbar" only): one arrow button HELD, as a single-bound drag holds it -- "flat" the app's
+# face (render.cpp paint_trim_arrow_button: Windows' DFCS_PUSHED | DFCS_FLAT, one Shadow line round the face), "sunken"
+# the push button's pressed face (the plain sunken edge); the glyph one line right and down in both (step 11)
+TRIM_HELD_CAPS = ('begin', 'end')
+TRIM_HELD_FACES = ('flat', 'sunken')
 CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
 # buttons.disabled: a disabled glyph -- "mix" the app's, "engraved" Windows' DrawState DSS_DISABLED (its light copy
 # `emboss_hilight`), "shadowed" that emboss mirrored for a dark face, as menu.disabled "shadowed" mirrors the word
@@ -164,6 +176,13 @@ class Theme:
             raise SystemExit(f'theme {path}: flags.selection is read only by flags.style "flat"')
         if self.flag_selection not in FLAG_SELECTIONS:
             raise SystemExit(f'theme {path}: flags.selection must be one of {FLAG_SELECTIONS}, not {self.flag_selection!r}')
+        self.flag_outline_px = fl.get('outline_px', LW)
+        if 'outline_px' in fl:
+            op = fl['outline_px']; bh = BASE_SCENE['flags']['y1'] - BASE_SCENE['flags']['y0']
+            if self.flag_style != 'flat' or self.flag_selection not in ('outline', 'outline+fill'):
+                raise SystemExit(f'theme {path}: flags.outline_px is read only by flags.style "flat" with selection "outline" / "outline+fill"')
+            if not isinstance(op, int) or isinstance(op, bool) or not 1 <= op < bh // 2:
+                raise SystemExit(f'theme {path}: flags.outline_px is a whole number of device px 1..{bh // 2 - 1}, not {op!r}')
         if self.flag_style == 'bevelled':
             if 'relief' in fl: raise SystemExit(f'theme {path}: flags.relief is the "app" style\'s; "bevelled" draws its own bevel')
             toolkit_rules.flag_bevel(self.flag_rule, (0, 0, 0))    # a missing or malformed flags.rule fails here, in one line
@@ -258,6 +277,21 @@ class Theme:
         if not isinstance(ai, int) or isinstance(ai, bool) or ai < 0 or 2 * ai >= lane_rows:
             raise SystemExit(f'theme {path}: trim.acid_inset is a whole number of logical rows >= 0 leaving the bar at least one '
                              f'row of the lane\'s {lane_rows}, not {ai!r}')
+        hd = self.opt['trim']['held']
+        if hd is not None:
+            if (not isinstance(hd, dict) or set(hd) != {'cap', 'face'} or hd['cap'] not in TRIM_HELD_CAPS
+                    or hd['face'] not in TRIM_HELD_FACES):
+                raise SystemExit(f'theme {path}: trim.held is null or {{"cap": one of {TRIM_HELD_CAPS}, "face": one of '
+                                 f'{TRIM_HELD_FACES}}}, not {hd!r}')
+            if ts != 'scrollbar': raise SystemExit(f'theme {path}: trim.held is read only by trim.style "scrollbar"')
+        dg = self.opt['dialog']
+        if dg is not None and (not isinstance(dg, dict) or set(dg) != {'label', 'text'}
+                               or not all(isinstance(v, str) and v for v in dg.values())):
+            raise SystemExit(f'theme {path}: dialog is null or {{"label": "...", "text": "..."}} (the editor dialog\'s '
+                             f'label and its field\'s text, both non-empty), not {dg!r}')
+        cd = self.opt['card']
+        if cd is not None and (not isinstance(cd, dict) or set(cd) != {'text'} or not isinstance(cd['text'], str) or not cd['text']):
+            raise SystemExit(f'theme {path}: card is null or {{"text": "..."}} (one notification card\'s sentence), not {cd!r}')
         d = self.num['canvas_delta']
         if not isinstance(d, int) or isinstance(d, bool): raise SystemExit(f'theme {path}: canvas_delta is a whole number of logical rows, not {d!r}')
         lp = self.num['ruler_label_pt']
@@ -976,17 +1010,24 @@ def draw_trim_acid(cr, th):
 
 TRIM_ARROW_ROWS = (1, 3, 5, 7)     # render.h kTrimArrowGlyphRows: the scroll arrow's four columns from the tip
 
-def draw_trim_arrow_button(cr, th, x, y0, w, h, points_left):
+def draw_trim_arrow_button(cr, th, x, y0, w, h, points_left, held=None):
     """ONE ARROW BUTTON, render.cpp's paint_trim_arrow_button: trim_ground under relief_lines 'panel' (the plain raised
     edge), then Windows' scroll arrow as integer rectangles -- four columns 1, 3, 5 and 7 units tall from the tip, each
     centred on the glyph's middle row, a unit LW device px (one logical px: the app's scaled_px(1, 1), the unit the
     relief lines take here), the 4 x 7-unit glyph centred in the button with an odd difference floored toward the
     top-left -- its tip LEFT on the begin button and RIGHT on the end button, in `trim_arrow` (by default the luminance
     rule's ink over the button's face, Theme.highlight_ink, the app's rule until 2026-10-03; the catalog's crops state
-    the theme's label, the app's rule since)."""
-    g = th.get('trim_ground'); fill(cr, x, y0, x + w, y0 + h, g); edge(cr, x, y0, x + w, y0 + h, relief_lines(th, 'panel'))
+    the theme's label, the app's rule since). HELD (trim.held's face, step 11): "flat" the app's pressed face, the
+    ground under ONE `bevel_shadow` line round it (Windows' DFCS_PUSHED | DFCS_FLAT); "sunken" the push button's
+    pressed face, the plain sunken edge (relief_lines 'sunken': Shadow / Hilight outer, DkShadow / 3DLight inner at
+    relief "thick"); in both the glyph one LW right and down."""
+    g = th.get('trim_ground'); fill(cr, x, y0, x + w, y0 + h, g)
+    if held == 'flat': edge(cr, x, y0, x + w, y0 + h, [(th.get('bevel_shadow'), th.get('bevel_shadow'))])
+    elif held == 'sunken': edge(cr, x, y0, x + w, y0 + h, relief_lines(th, 'sunken'))
+    else: edge(cr, x, y0, x + w, y0 + h, relief_lines(th, 'panel'))
+    push = LW if held else 0
     u = LW; n = len(TRIM_ARROW_ROWS); gw, gh = n * u, TRIM_ARROW_ROWS[-1] * u
-    gx, gy = x + (w - gw) // 2, y0 + (h - gh) // 2; ink = th.get('trim_arrow')
+    gx, gy = x + (w - gw) // 2 + push, y0 + (h - gh) // 2 + push; ink = th.get('trim_arrow')
     for i, rows in enumerate(TRIM_ARROW_ROWS):        # i = 0 is the tip
         slot = i if points_left else n - 1 - i; top = (TRIM_ARROW_ROWS[-1] - rows) // 2
         fill(cr, gx + slot * u, gy + top * u, gx + (slot + 1) * u, gy + (top + rows) * u, ink)
@@ -1023,8 +1064,10 @@ def draw_trim_scrollbar(cr, th):
     lo = begin[0] + btn if begin else -run
     hi = end[0] - btn if end else C.W + run
     if hi > lo: fill(cr, lo, y0, hi, y1, g); edge(cr, lo, y0, hi, y1, relief_lines(th, 'panel'))
-    if begin: draw_trim_arrow_button(cr, th, begin[0], y0, btn, y1 - y0, True)
-    if end: draw_trim_arrow_button(cr, th, begin[0] + btn if narrow else end[0] - btn, y0, btn, y1 - y0, False)
+    hd = th.opt['trim']['held']
+    face = lambda cap: hd['face'] if hd is not None and hd['cap'] == cap else None
+    if begin: draw_trim_arrow_button(cr, th, begin[0], y0, btn, y1 - y0, True, face('begin'))
+    if end: draw_trim_arrow_button(cr, th, begin[0] + btn if narrow else end[0] - btn, y0, btn, y1 - y0, False, face('end'))
 
 def cap_rects(th):
     """[('handles', [(x0, x1), ...]), ('grip', [(x0, x1)] or [])] at trim.cap_w (None = the measured widths). A handle
@@ -1281,18 +1324,28 @@ def draw_flags_flat(cr, th):
     nearbyint of the run's origin and end), the glyphs in the selected text colour clipped to that band
     (flat_edit_colours) -- the box keeping its width (architect: "the extending part is not necessary"), the stem the
     marker's `flag_fill` (flat_stem_colour); DISABLED = the face `ground`, the outline `flag_border`, the label
-    ENGRAVED (in `emboss_hilight` one LW right and down, then in `bevel_shadow` at its place), no stem."""
+    ENGRAVED (in `emboss_hilight` one LW right and down, then in `bevel_shadow` at its place), no stem.
+    THE SELECTION'S OTHER FORMS (step 11, 2026-10-03, mock options): "outline" paints the white ring
+    flags.outline_px device px wide (default LW, step 5's; the app's one Windows px is 3 at 275 %) INWARD from the
+    box's outer edge, the box's size unchanged, the face inside it, the stem crossing the ring's bottom rows; "fill"
+    the face in the selected pair -- `selected_fill` behind (flat_edit_colours' fill, Windows' #000080 where the
+    theme states none), the label in `selected_text` -- the outline `flag_border`, the stem the marker's own
+    (flat_stem_colour, as the editing flag keeps it); "outline+fill" both: the white ring round the selected face."""
     F = SCENE['flags']; px = ui_font_px(th)
     for i, f in enumerate(F['flags']):
         x0, y0, x1, y1 = flat_flag_box(th, f); sel, red, dis, ed = th.flag_states[i]
         if ed: face, sel_fill, sel_text = flat_edit_colours(th)
         else: face = th.get('ground' if dis else 'flag_fill_red' if red else 'flag_fill')
         ul = sel and th.flag_selection == 'underline'
-        border = th.get('flag_border_edit' if ed else 'flag_border_sel' if sel and not ul else 'flag_border')
+        ol = sel and th.flag_selection in ('outline', 'outline+fill')
+        sf = sel and th.flag_selection in ('fill', 'outline+fill')
+        if sf: face = flat_edit_colours(th)[1]
+        ring = th.flag_outline_px if ol else LW
+        border = th.get('flag_border_edit' if ed else 'flag_border_sel' if ol else 'flag_border')
         fill(cr, x0, y0, x1, y1, border)                                   # the outline (the face covers its inside)
-        fill(cr, x0 + LW, y0 + LW, x1 - LW, y1 - LW, face)
+        fill(cr, x0 + ring, y0 + ring, x1 - ring, y1 - ring, face)
         sc = flat_stem_colour(th, i)
-        if sc is not None: fill(cr, f['x'], y1 - LW, f['x'] + FLAG_STEM_W, y1, sc)   # the stem over the bottom outline
+        if sc is not None: fill(cr, f['x'], y1 - ring, f['x'] + FLAG_STEM_W, y1, sc)   # the stem over the bottom outline
         lx, ly = x0 + F['border_w'] + F['pad_l'], F['baseline']
         if dis:
             show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('emboss_hilight'))
@@ -1304,7 +1357,7 @@ def draw_flags_flat(cr, th):
             cr.save(); cr.rectangle(bx0, y0 + LW, bx1 - bx0, y1 - y0 - 2 * LW); cr.clip()
             show(cr, C.SANS, px, f['text'], lx, ly, sel_text); cr.restore()
         else:
-            ink = th.get('flag_label_red' if red else 'flag_label')
+            ink = th.get('selected_text' if sf else 'flag_label_red' if red else 'flag_label')
             show(cr, C.SANS, px, f['text'], lx, ly, ink)
             if ul: fill(cr, *flat_underline_rect(th, f), ink)
 
@@ -1435,7 +1488,7 @@ def state_line(th):
     bc = SCENE['bottom_content']; px = ui_font_px(th)
     return x, right, C.redesign_baseline(C.SANS, px, bc[0], bc[1] - bc[0]), px, text
 
-def draw_bottom(cr, th):
+def draw_bottom_border(cr, th):
     bb = SCENE['bottom_border']
     # the bottom row's border-top: "app" takes the `separators` style, whatever it is (line, etched, raised, none);
     # etched / raised are two LW lines from the border's top row, the second on the bottom row's first content rows;
@@ -1448,6 +1501,9 @@ def draw_bottom(cr, th):
         fill(cr, bb['x0'], bb['y'] + LW, bb['x1'], bb['y'] + 2 * LW, th.get(b))
     elif style == 'line':
         fill(cr, bb['x0'], bb['y'], bb['x1'], bb['y'] + bb['h'], th.get('bottom_border'))
+
+def draw_bottom(cr, th):
+    draw_bottom_border(cr, th)
     ck = SCENE['clock']; pr = clock_panel_rect(th); cx = ck['x']
     if pr is not None:
         x0, y0, x1, y1 = pr
@@ -1466,6 +1522,135 @@ def draw_bottom(cr, th):
         cr.save(); cr.rectangle(x, bc[0], right - x, bc[1] - bc[0]); cr.clip()
         show(cr, C.SANS, px, text, x, base, th.get('label')); cr.restore()
 
+# ------------------------------------------------------------------ the two optional surfaces (step 11, 2026-10-03)
+# The modal dialog and the notification card have no measured scene: their LENGTHS are the app's own at the tablet's
+# 275 % (APP_SCALE), each Windows-px constant converted at its element with nearbyint (render.h scaled_px; Python's
+# round-half-even is std::nearbyint's default mode), read off the painters named below. THEIR LINES AND THEIR TEXT
+# ARE THIS RENDERER'S, as every other element of a mock: a relief line is LW (the scene's logical px) and the words
+# are the normal face at ui_font_px, so the two surfaces stand beside the scene's own buttons and flags in one
+# grammar. Both are painted only when a theme switches them on (the `dialog` and `card` keys, default null).
+APP_SCALE = 2.75
+
+def app_px(windows_px, floor=None):
+    """render.h scaled_px at the tablet's 275 %: nearbyint(windows_px x 2.75), floored where the app floors."""
+    v = int(round(windows_px * APP_SCALE))
+    return v if floor is None else max(floor, v)
+
+def dialog_layout(th):
+    """`dialog` -> the editor dialog's geometry on the bottom row's content band (paint_modal_dialog's editor branch,
+    paint_handler.cpp: the label at the row's pad, the field, one pad, OK and Cancel), device px, or None when off:
+    {'label': (x, baseline), 'field': (x0, y0, x1, y1) outer, 'inner': (x0, y0, x1, y1), 'baseline', 'text_x',
+     'caret': (x, y0, x1, y1), 'buttons': [(x0, y0, x1, y1, word, label_w)], 'right'}.
+    The app's constants: the row pad icon_row_pad_x 8, the button gap kModalButtonGapPx 6, the push button
+    kModalBtnBoxPx 23 tall and kModalBtnMinWidthPx 75 wide at least (pads 7 + 7 round the ceiled run), the reserved
+    focus ring kModalFocusFramePx 1, the field kModalFieldHeightPx 23 tall and kModalFieldWidthPx 378 wide (the room
+    left by the label and the buttons caps it), its ink kModalFieldPadXPx 5 inside its two-line sunken edge, the
+    caret one Windows px wide over the face's line band (nearbyint(baseline - ascent), nearbyint(ascent + descent)),
+    standing after the text (the field focused, no selection). The field and the buttons are centred in the band
+    ((band - box) // 2); the field's text sits on the field's own band, the label on the buttons' (redesign_baseline)."""
+    dg = th.opt['dialog']
+    if dg is None: return None
+    px = ui_font_px(th); y0, y1 = SCENE['bottom_content']; ch = y1 - y0
+    pad = app_px(8); bgap = app_px(6); btn_h = app_px(23); ring = app_px(1, 1)
+    words = []
+    for word in ('OK', 'Cancel'):
+        lw = int(math.ceil(C.shape(C.SANS, px, word)[1]))
+        words.append((word, lw, max(app_px(75), app_px(7) + lw + app_px(7))))
+    buttons_w = sum(w for _, _, w in words) + bgap * (len(words) - 1)
+    cx0, cx1 = pad, C.W - pad
+    buttons_x_max = max(cx0, cx1 - ring - buttons_w)
+    btn_y = y0 + (ch - btn_h) // 2
+    label_w = int(math.ceil(C.shape(C.SANS, px, dg['label'])[1]))
+    fx = cx0 + label_w + pad
+    field_w = max(min(app_px(378), (buttons_x_max - ring - pad) - fx), app_px(29, 1))
+    bx = min(fx + field_w + pad + ring, buttons_x_max)
+    fh = app_px(23); fy = y0 + (ch - fh) // 2; fb = 2 * LW
+    inner = (fx + fb, fy + fb, fx + field_w - fb, fy + fh - fb)
+    base = C.redesign_baseline(C.SANS, px, fy, fh)
+    tx = inner[0] + app_px(5)
+    asc, desc = C.font_extents(C.SANS, px)[:2]
+    cx = int(round(tx + C.shape(C.SANS, px, dg['text'])[1]))
+    caret = (cx, int(round(base - asc)), cx + app_px(1, 1), int(round(base - asc)) + int(round(asc + desc)))
+    buttons = []
+    for word, lw, w in words:
+        buttons.append((bx, btn_y, bx + w, btn_y + btn_h, word, lw)); bx += w + bgap
+    return {'label': (cx0, C.redesign_baseline(C.SANS, px, btn_y, btn_h)), 'field': (fx, fy, fx + field_w, fy + fh),
+            'inner': inner, 'baseline': base, 'text_x': tx, 'caret': caret, 'buttons': buttons, 'right': buttons[-1][2]}
+
+def draw_dialog(cr, th):
+    """`dialog`: the EDITOR DIALOG on the bottom row (dialog_layout), which the row's tenants -- the clock panel, the
+    state line and the button block -- yield to whole (paint_modal_dialog; render() skips them): the label in
+    `label`; the field's face `field_ground` under the PLAIN SUNKEN two-line edge (Shadow / Hilight outer, DkShadow /
+    3DLight inner), its text in `field_text`, clipped to the band between the ink pads, and the caret in `field_text`
+    (the field focused, the caret only, no selection); OK and Cancel as push buttons at rest (paint_button_box's PUSH
+    family: `button_face` under the PLAIN RAISED edge, 3DLight / DkShadow outer, Hilight / Shadow inner), each label
+    centred ((w - ceiled run) // 2) in `label`, no focus frame (an editor opens with the focus in its field)."""
+    L = dialog_layout(th)
+    if L is None: return
+    px = ui_font_px(th); dg = th.opt['dialog']
+    h, l, s_, d = (th.get(r) for r in BEVELS)
+    show(cr, C.SANS, px, dg['label'], *L['label'], th.get('label'))
+    x0, y0, x1, y1 = L['field']; ix0, iy0, ix1, iy1 = L['inner']
+    fill(cr, ix0, iy0, ix1, iy1, th.get('field_ground'))
+    edge(cr, x0, y0, x1, y1, [(s_, h), (d, l)])
+    pad = app_px(5)
+    cr.save(); cr.rectangle(ix0 + pad, iy0, ix1 - ix0 - 2 * pad, iy1 - iy0); cr.clip()
+    show(cr, C.SANS, px, dg['text'], L['text_x'], L['baseline'], th.get('field_text'))
+    fill(cr, *L['caret'], th.get('field_text'))
+    cr.restore()
+    for bx0, by0, bx1, by1, word, lw in L['buttons']:
+        fill(cr, bx0, by0, bx1, by1, th.get('button_face'))
+        edge(cr, bx0, by0, bx1, by1, [(l, d), (h, s_)])
+        show(cr, C.SANS, px, word, bx0 + (bx1 - bx0 - lw) // 2, C.redesign_baseline(C.SANS, px, by0, by1 - by0), th.get('label'))
+
+def draw_info_glyph(cr, x, y, size):
+    """Breeze's dialog-information (icons.cpp kDialogInformationPaths, the 22-unit view box) at (x, y), size device px
+    square: the rounded plate (3, 3)..(19, 19), corner radius 2, in kIconAccent #96BFDA, and the white 'i' -- the dot
+    (10, 6)..(12, 8) and the stem (10, 10)..(12, 16) -- cairo's default antialiasing, as the app fills its paths."""
+    k = size / 22.0
+    cr.save(); cr.translate(x, y); cr.scale(k, k)
+    r = 2.0; cr.new_sub_path()
+    cr.arc(17, 5, r, -math.pi / 2, 0); cr.arc(17, 17, r, 0, math.pi / 2)
+    cr.arc(5, 17, r, math.pi / 2, math.pi); cr.arc(5, 5, r, math.pi, 1.5 * math.pi); cr.close_path()
+    C.src(cr, C.parse_colour('#96BFDA')); cr.fill()
+    cr.rectangle(10, 6, 2, 2); cr.rectangle(10, 10, 2, 6)
+    C.src(cr, (255, 255, 255)); cr.fill()
+    cr.restore()
+
+def card_rect(th):
+    """`card` -> the one card's (x0, y0, x1, y1), its glyph's (x, y, size) and its text's (x, baseline), or None: the
+    app's paint_notifications at 275 %, one line. The card is the icon row's content height (icon_row_content_h_px:
+    the 22-px toolbar case -- 3 + 16 + 3, each rounded -- and 5 px of air a side), its ONE PAD the case's vertical
+    margin ((card - case) // 2), the glyph 16 px square at the case's inset ((case - glyph) // 2) inside a case-square
+    box one pad in from the left edge, the text one pad past that box, and the text's right air pad + inset; its width
+    that chrome + the ceiled run, clamped to [kNotificationMinWidthPx 198, kNotificationMaxWidthPx 465]; flush right at
+    kPanelPadPx 1 from the window's right edge and 1 under the menu row (notification_stack_bound). The baseline is
+    redesign_baseline over the card's one-line band."""
+    cd = th.opt['card']
+    if cd is None: return None
+    px = ui_font_px(th)
+    case = app_px(3) + app_px(16) + app_px(3); card_h = 2 * app_px(5) + case
+    pad = (card_h - case) // 2; glyph = app_px(16); inset = (case - glyph) // 2
+    chrome = 2 * pad + case + pad + inset
+    w = chrome + int(math.ceil(C.shape(C.SANS, px, cd['text'])[1]))
+    w = min(max(w, app_px(198)), max(app_px(198), app_px(465)))
+    panel = app_px(1, 1); x1 = C.W - panel; x0 = x1 - w; y0 = SCENE['lanes']['menu'][1] + panel
+    return ((x0, y0, x1, y0 + card_h), (x0 + pad + inset, y0 + pad + inset, glyph),
+            (x0 + pad + case + pad, C.redesign_baseline(C.SANS, px, y0, card_h)))
+
+def draw_card(cr, th):
+    """`card`: ONE NOTIFICATION CARD, the app's Info face (paint_popup_chrome): `info_ground` inside one line a side,
+    `bevel_light` (3DLight) top and left, `bevel_dkshadow` bottom and right (the dark pair last), square, no shadow;
+    the normal class's glyph (draw_info_glyph) and the sentence in `info_text` (card_rect's geometry). Painted over
+    everything under it, as the stack is the app's top layer."""
+    cr_ = card_rect(th)
+    if cr_ is None: return
+    (x0, y0, x1, y1), (gx, gy, gs), (tx, base) = cr_
+    fill(cr, x0, y0, x1, y1, th.get('info_ground'))
+    edge(cr, x0, y0, x1, y1, [(th.get('bevel_light'), th.get('bevel_dkshadow'))])
+    draw_info_glyph(cr, gx, gy, gs)
+    show(cr, C.SANS, ui_font_px(th), th.opt['card']['text'], tx, base, th.get('info_text'))
+
 def stamp(cr, th, text):
     # the file-name stamp: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the scene's label_box (x 300,
     # y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's content top); x clears what
@@ -1474,6 +1659,8 @@ def stamp(cr, th, text):
     asc = C.font_extents(C.SANS, 20)[0]; lb = SCENE['label_box']; pr = clock_panel_rect(th); sl = state_line(th)
     x = lb['x0'] if pr is None else max(lb['x0'], pr[2] + 16)
     if sl is not None: x = max(x, int(math.ceil(min(sl[0] + C.shape(C.SANS, sl[3], sl[4])[1], sl[1]))) + 16)
+    dl = dialog_layout(th)
+    if dl is not None: x = max(lb['x0'], dl['right'] + 16)     # the dialog stands in the row's tenants' place
     show(cr, C.SANS, 20, text, x, lb['y0'] + math.ceil(asc), th.get('stamp'))
 
 def render(theme_path, out_path, label=False):
@@ -1500,8 +1687,13 @@ def render(theme_path, out_path, label=False):
     rgb = C.surface_to_rgb(surf); draw_waveform(rgb, th)
     mem[..., 0] = rgb[..., 2]; mem[..., 1] = rgb[..., 1]; mem[..., 2] = rgb[..., 0]; surf.mark_dirty()
     draw_stems(cr, th)
-    draw_bottom(cr, th)
-    draw_buttons(cr, th, ('bottom',))
+    if th.opt['dialog'] is None:
+        draw_bottom(cr, th)
+        draw_buttons(cr, th, ('bottom',))
+    else:       # the row's tenants yield to the modal whole; its border-top is the lane's chrome and stays
+        draw_bottom_border(cr, th)
+        draw_dialog(cr, th)
+    draw_card(cr, th)
     if label: stamp(cr, th, os.path.splitext(os.path.basename(out_path))[0])
     C.save_png(out_path, C.surface_to_rgb(surf))
     return th

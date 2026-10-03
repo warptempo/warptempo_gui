@@ -6013,8 +6013,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the red frame says only THAT the value was refused, and the
         // reason card the refusing commit posts (the owner's own sentence,
         // GuiFlagEditor::notifications and the settings editor's equivalent)
-        // says why, standing beside it. Whether that card stays is not yet
-        // ruled. The flag editor's frame is the same rule on its one black
+        // says why, standing beside it — THE CARD STAYS (architect
+        // 2026-10-03: the frame says that a value was refused, the card says
+        // why). The flag editor's frame is the same rule on its one black
         // line (render_flag_editor_box).
         const bool field_focused = app.modal_dialog_focus < 0;
         paint_cell_rect(cr, field_inner, palette().field_ground);
