@@ -57,6 +57,9 @@ DEFAULTS = {
     'well_border': TWO_PASS('kWaveformBorder'), 'canvas': TWO_PASS('kWaveformCanvas'), 'ink': TWO_PASS('kWaveformInk'), 'outline': 'auto',
     # playhead and flags
     'playhead_head': TWO_PASS('kPlayheadHead'), 'playhead_stem': TWO_PASS('kPlayheadStem'),
+    # read only by playhead_head_outline "outline": the head's one-LW outline, the theme's label (architect 2026-10-03,
+    # late: the chrome's text colour, black on light chrome, white on dark)
+    'playhead_head_border': '@label',
     'flag_fill': TWO_PASS('kMarkerFlagFill'), 'flag_edge': TWO_PASS('kMarkerFlagEdge'), 'flag_border': TWO_PASS('kMarkerFlagBorder'),
     'flag_label': TWO_PASS('kMarkerFlagLabel'), 'flag_stem': '@flag_fill',
     'flag_fill_sel': TWO_PASS('kMarkerFlagFillSel'), 'flag_edge_sel': TWO_PASS('kMarkerFlagEdgeSel'), 'flag_stem_sel': '@flag_fill_sel',
@@ -98,18 +101,21 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'menu': {'highlight': None},
                 'fonts': {'ui_px': None, 'small_px': None},
                 'state_text': STATE_TEXT_DEFAULT,
-                'playhead_lane_stem': 'stem'}
+                'playhead_lane_stem': 'stem', 'playhead_head_outline': 'none'}
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
 # the options whose values are checked here (separators, bottom_border, ruler_tick_relief, clock_panel; the older options are not)
 OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border': ('app', 'line', 'etched', 'raised', 'none'),
               'ruler_tick_relief': ('none', 'light_right'), 'clock_panel': ('flat', 'sunken', 'status'),
-              'playhead_lane_stem': ('stem', 'head')}
+              'playhead_lane_stem': ('stem', 'head'), 'playhead_head_outline': ('none', 'outline')}
 FLAG_RELIEF = ('none', 'raised')
 FLAG_STYLES = ('app', 'bevelled', 'flat')
 FLAG_STATES = ('selected', 'invalid', 'disabled', 'editing')
-FLAG_OPTIONS = ('relief', 'style', 'rule', 'states')     # the flags section's keys beside its colour aliases
+# flags.selection, read only by flags.style "flat": how a SELECTED flag shows -- "outline" the white outline (step 5's,
+# kept for the record), "underline" the label underlined (architect 2026-10-03, late; draw_flags_flat)
+FLAG_SELECTIONS = ('outline', 'underline')
+FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection')     # the flags section's keys beside its colour aliases
 CASE_KEYS = ('h', 'w', 'glyph', 'pad_x', 'pad_y')
 DISABLED_STYLES = ('mix', 'engraved')
 COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'outline'}),
@@ -136,6 +142,11 @@ class Theme:
         self.flag_style = fl.get('style', 'app')
         if self.flag_style not in FLAG_STYLES: raise SystemExit(f'theme {path}: flags.style must be one of {FLAG_STYLES}')
         self.flag_rule = fl.get('rule'); self.flag_states = flag_states(path, fl)
+        self.flag_selection = fl.get('selection', 'outline')
+        if 'selection' in fl and self.flag_style != 'flat':
+            raise SystemExit(f'theme {path}: flags.selection is read only by flags.style "flat"')
+        if self.flag_selection not in FLAG_SELECTIONS:
+            raise SystemExit(f'theme {path}: flags.selection must be one of {FLAG_SELECTIONS}, not {self.flag_selection!r}')
         if self.flag_style == 'bevelled':
             if 'relief' in fl: raise SystemExit(f'theme {path}: flags.relief is the "app" style\'s; "bevelled" draws its own bevel')
             toolkit_rules.flag_bevel(self.flag_rule, (0, 0, 0))    # a missing or malformed flags.rule fails here, in one line
@@ -1027,11 +1038,41 @@ def draw_ruler(cr, th):
     for r in range(h0, P['head_rows']):
         hw = P['head_half'][r]; cr.rectangle(P['col'] - hw, P['head_top'] + r, 2 * hw + P['w'], 1)
     cr.fill(); cr.restore()
+    if th.opt['playhead_head_outline'] == 'outline': draw_head_outline(cr, th, h0)
     # playhead_lane_stem "head" (architect 2026-10-03, late, a mock option): this run over the chrome lanes takes the
     # head's colour, opaque; in the well (its lines and the canvas, draw_stems) the stem keeps playhead_stem
     if not P.get('stem_suppressed'):   # playhead_stem_suppressed: a coincident marker's stem wins the whole column
         fill(cr, P['col'], SCENE['lanes']['marker'][0], P['col'] + P['w'], SCENE['lanes']['marker'][1],
              th.get('playhead_head' if th.opt['playhead_lane_stem'] == 'head' else 'playhead_stem'))
+
+def head_outline_runs(h0):
+    """playhead_head_outline "outline": the drawn head's ONE-LW OUTLINE -> [(row, x0, x1)], device px end-exclusive:
+    the head's own pixels (the drawn rows h0.. of head_half, each row col - hw .. col + hw + w) that have a pixel
+    outside the head within LW of them straight up, down, left or right -- the inner boundary, so the head keeps its
+    size and the outline takes its outermost LW (as the flat flag's outline takes the box's border columns). Taken in
+    the four directions only, a one-step stair of the head's sides is a one-LW staircase, each step's corner
+    touching the next diagonally (the Windows 95 arrow cursor's black edge); the top row and the tip's bottom row are
+    outline across their width (nothing of the head above or below them; the stem starts below the head and is
+    not part of it)."""
+    P = SCENE['playhead']; rows = P['head_rows'] - h0
+    x_lo = P['col'] - max(P['head_half']) - LW; wd = 2 * (max(P['head_half']) + LW) + P['w']
+    m = np.zeros((rows + 2 * LW, wd + 2 * LW), bool)
+    for r in range(h0, P['head_rows']):
+        hw = P['head_half'][r]; a = P['col'] - hw - x_lo + LW
+        m[r - h0 + LW, a:a + 2 * hw + P['w']] = True
+    inner = m.copy()
+    for k in range(1, LW + 1):
+        inner[k:, :] &= m[:-k, :]; inner[:-k, :] &= m[k:, :]; inner[:, k:] &= m[:, :-k]; inner[:, :-k] &= m[:, k:]
+    out = []
+    for y, row in enumerate(m & ~inner):
+        e = np.flatnonzero(np.diff(np.concatenate(([0], row.astype(np.int8), [0]))))
+        out += [(P['head_top'] + h0 + y - LW, x_lo - LW + a, x_lo - LW + b) for a, b in zip(e[::2], e[1::2])]
+    return out
+
+def draw_head_outline(cr, th, h0):
+    """playhead_head_outline "outline" (architect 2026-10-03, late): the head's one-LW outline (head_outline_runs) in
+    `playhead_head_border` (the theme's `label`), opaque, over the head's fill (`playhead_head`, unchanged)."""
+    for y, a, b in head_outline_runs(h0): fill(cr, a, y, b, y + 1, th.get('playhead_head_border'))
 
 def draw_flags(cr, th):
     """Each flag: border, fill, the dark top band (or flags.relief), border, label. fonts.ui_px: the label at
@@ -1149,6 +1190,32 @@ def flat_stem_colour(th, i):
     sel, red, dis, ed = th.flag_states[i]
     return None if dis else th.get('flag_fill_red' if red and not ed else 'flag_fill')
 
+def face_underline(family, size_px):
+    """The face's OWN UNDERLINE at size_px -> (top, thickness), device px as unrounded doubles, the top measured DOWN
+    from the baseline: the font file's `post` table underlinePosition and underlineThickness over its `head` table's
+    unitsPerEm (Roboto Regular: -150 and 100 of 2048, so 2.490 and 1.660 at 34 px). underlinePosition is the distance
+    of the underline's TOP from the baseline, negative below it (the OpenType definition; FreeType's
+    FT_Face.underline_position moves it to the stroke's centre, this does not)."""
+    import struct
+    d = open(C.SANS_FILE if family == C.SANS else C.MONO_FILE, 'rb').read()
+    n = struct.unpack('>H', d[4:6])[0]
+    tab = {d[12 + 16 * i:16 + 16 * i]: struct.unpack('>I', d[20 + 16 * i:24 + 16 * i])[0] for i in range(n)}
+    pos, thick = struct.unpack('>hh', d[tab[b'post'] + 8:tab[b'post'] + 12])
+    upem = struct.unpack('>H', d[tab[b'head'] + 18:tab[b'head'] + 20])[0]
+    return -pos * size_px / upem, thick * size_px / upem
+
+def flat_underline_rect(th, f):
+    """flags.style "flat" with flags.selection "underline": scene flag f's underline (x0, y0, x1, y1), device px
+    end-exclusive: Roboto's own underline at the label's size (face_underline), each term rounded at its element
+    (std::nearbyint, the app's rule): its top row the baseline + nearbyint(top), its rows nearbyint(thickness) (at
+    least one), its columns nearbyint of the shaped run's origin and end (the advance, as the editing band's)."""
+    F = SCENE['flags']; px = ui_font_px(th)
+    x0 = flat_flag_box(th, f)[0]
+    lx = x0 + F['border_w'] + F['pad_l']
+    top, thick = face_underline(C.SANS, px)
+    y0 = F['baseline'] + int(np.rint(top))
+    return (int(np.rint(lx)), y0, int(np.rint(lx + C.shape(C.SANS, px, f['text'])[1])), y0 + max(1, int(np.rint(thick))))
+
 def draw_flags_flat(cr, th):
     """flags.style "flat": THE ACID FLAG (architect 2026-10-03, late, the bevelled flag retired as the candidate: "a
     3D surface with a cut through it, and when you press it the cut goes the opposite direction"). The box is the
@@ -1159,7 +1226,12 @@ def draw_flags_flat(cr, th):
     through the well's top lines into the canvas (draw_stems), so the face, the outline's crossing and the stem are
     one same-colour column. THE STATES (flags.states): unselected = the face `flag_fill`, the label `flag_label`;
     SELECTED = the outline `flag_border_sel` (white), the face, label and stem unchanged, no nudge; INVALID = the face
-    `flag_fill_red`, the label `flag_label_red` (with selected: the white outline over it); EDITING = the in-place
+    `flag_fill_red`, the label `flag_label_red` (with selected: the white outline over it). flags.selection
+    "underline" (architect 2026-10-03, late; Windows 95 underlined every menu and button accelerator letter) changes
+    SELECTED alone: the label's text UNDERLINED and nothing else -- the outline stays `flag_border`, no nudge, no
+    width or height change -- at Roboto's own underline position and thickness at the label's size
+    (flat_underline_rect), in the label's colour, straight through any descender (no skip-ink, as Windows drew it),
+    across the shaped run's advance; EDITING = the in-place
     editor as it opens with its whole text selected: the face the field ground, the outline `flag_border_edit`
     (black, the window frame), the label drawn as SELECTED TEXT -- the selection fill behind it over the face's rows
     inside the outline and across the run's columns (the app's band, render_flag_editor_box: its columns the
@@ -1172,7 +1244,8 @@ def draw_flags_flat(cr, th):
         x0, y0, x1, y1 = flat_flag_box(th, f); sel, red, dis, ed = th.flag_states[i]
         if ed: face, sel_fill, sel_text = flat_edit_colours(th)
         else: face = th.get('ground' if dis else 'flag_fill_red' if red else 'flag_fill')
-        border = th.get('flag_border_edit' if ed else 'flag_border_sel' if sel else 'flag_border')
+        ul = sel and th.flag_selection == 'underline'
+        border = th.get('flag_border_edit' if ed else 'flag_border_sel' if sel and not ul else 'flag_border')
         fill(cr, x0, y0, x1, y1, border)                                   # the outline (the face covers its inside)
         fill(cr, x0 + LW, y0 + LW, x1 - LW, y1 - LW, face)
         sc = flat_stem_colour(th, i)
@@ -1188,7 +1261,9 @@ def draw_flags_flat(cr, th):
             cr.save(); cr.rectangle(bx0, y0 + LW, bx1 - bx0, y1 - y0 - 2 * LW); cr.clip()
             show(cr, C.SANS, px, f['text'], lx, ly, sel_text); cr.restore()
         else:
-            show(cr, C.SANS, px, f['text'], lx, ly, th.get('flag_label_red' if red else 'flag_label'))
+            ink = th.get('flag_label_red' if red else 'flag_label')
+            show(cr, C.SANS, px, f['text'], lx, ly, ink)
+            if ul: fill(cr, *flat_underline_rect(th, f), ink)
 
 def well_geometry(th):
     """-> (well top, well bottom, canvas top, canvas bottom), device rows, end-exclusive. The well's top is the lane
