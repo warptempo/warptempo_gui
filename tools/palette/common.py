@@ -32,7 +32,7 @@ import numpy as np              # noqa: E402
 
 if HERE not in sys.path: sys.path.insert(0, HERE)
 from pngrw import read_rgb, write_png                     # noqa: E402
-from colour import srgb_to_p3, lin_mix, two_pass, relief_quartet, relative_luminance, highlight_text_ink, LUMINANCE_THRESHOLD  # noqa: E402
+from colour import srgb_to_p3, lin_mix, two_pass, relative_luminance, highlight_text_ink, LUMINANCE_THRESHOLD  # noqa: E402
 
 # display_p3.iccp: the raw iCCP chunk data (299 bytes, the 'Skia' Display-P3 profile) of a Samsung Gallery screenshot
 ICCP = open(os.path.join(HERE, 'display_p3.iccp'), 'rb').read()

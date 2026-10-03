@@ -146,7 +146,7 @@ The only conversion is the one a theme asks for: a colour written `"srgb:#303030
 | file | what |
 |---|---|
 | `common.py` | paths (all from the file's own location); the font road (writes `fonts.conf`, sets `FONTCONFIG_FILE` before cairo loads, `verify_fonts()`); HarfBuzz shaping through ctypes; `redesign_baseline` / `line_baseline`; colour parsing; `save_png` |
-| `colour.py` | the one colour owner: `s2l` / `l2s`, `srgb_to_p3` (one sRGB -> Display-P3 pass in linear light), `lin_mix` (the linear-light blend), `two_pass` (the default look's rule, with the measured exceptions); and the app's palette scaffold ported from render.h, integer arithmetic for integer arithmetic: `scaled_word`, `geometric_mean`, `relative_luminance` (render.h's sRGB linearization and Rec. 709 weights over the bytes as given, step for step), `LUMINANCE_THRESHOLD` (0.17912878474779, the equal-contrast point), `highlight_text_ink` and `relief_quartet` (below, the `bevel_*` row), with the app's static_asserts as module-level asserts run at import (Windows 95 Standard's quartet from #C0C0C0, the app's from #303030, the highlight ink on #000080, #C0C0C0 and the INFO #FFFFE1) |
+| `colour.py` | the one colour owner: `s2l` / `l2s`, `srgb_to_p3` (one sRGB -> Display-P3 pass in linear light), `lin_mix` (the linear-light blend), `two_pass` (the default look's rule, with the measured exceptions); and the app's text rule ported from render.h, integer arithmetic for integer arithmetic: `relative_luminance` (render.h's sRGB linearization and Rec. 709 weights over the bytes as given, step for step), `LUMINANCE_THRESHOLD` (0.17912878474779, the equal-contrast point) and `highlight_text_ink`, with the app's static_asserts as module-level asserts run at import (the highlight ink on #000080, #C0C0C0 and the INFO #FFFFE1); `scaled_word`, render.h's integer channel scaling, for the app's ground-derived chrome roles (its reader is `tools/theme_catalog/crops.py`). NO RELIEF RULE (architect 2026-10-03, "no derived, imported only"): a theme states its four relief bytes (the `bevel_*` row) |
 | `pngrw.py` | PNG read (pure Python: zlib + the five filters) and write (IHDR, the extra chunks, IDAT, IEND) |
 | `display_p3.iccp` | the Display-P3 iCCP chunk every written PNG carries (above) |
 | `extract.py` | measures a capture `tablet_base_<tag>.png` into `scene_<tag>.json`, `waveform_<tag>.json`, `glyphs/<tag>/` and cross-checks every measurement against the source (at `--rev`) and the capture |
@@ -156,9 +156,10 @@ The only conversion is the one a theme asks for: a colour written `"srgb:#303030
 | `waveform_<tag>.json` | per canvas column, the vertical runs `[y, len, y, len, ...]` (relative to the canvas top) of ink and of outline pixels |
 | `glyphs/<tag>/` | `<row>_<Button>__<ink>.pgm`: each app glyph's 8-bit rasteriser coverage per ink (44x44 device px), `index.json` (icon, enabled, inks, files, under) |
 | `themes/frozen.json` | THE theme: the design the app paints since 2026-10-02 |
-| `themes/ad2.json` | the set-AD2 geometry the architect picked on 2026-10-02 (the Windows-95 chrome scaled x 1.375 from the scene's logical px, the laptop's gui_scale 138 drawn at the tablet's 2 device px per logical px), reconciled with this renderer on 2026-10-03: the colour keys nothing here paints under its options dropped (the old trim lane's bar, cap, ground-bevel and bottom-border colours, `row_ground`, `popup`, `tab_line`, `line`, `selected_fill`), `down_face` kept (the toggled sunken face still reads it), the relief quartet `"auto"` (it derives the committed 5E5E5E / 434343 / 1E1E1E / 0A0A0A from the ground, byte for byte: Parity below). The dark design the colour loop starts from |
-| `themes/win95_standard.json` | Windows 95's Standard scheme from the face alone (#C0C0C0, the quartet `"auto"`) and the few roles Windows names, on ad2.json's geometry and options; each role Windows has no word for takes the nearest system colour or the app's own value, the choice stated in its `description`. THE ACCURACY CHECK, NOT A DESIGN |
+| `themes/ad2.json` | the set-AD2 geometry the architect picked on 2026-10-02 (the Windows-95 chrome scaled x 1.375 from the scene's logical px, the laptop's gui_scale 138 drawn at the tablet's 2 device px per logical px), reconciled with this renderer on 2026-10-03: the colour keys nothing here paints under its options dropped (the old trim lane's bar, cap, ground-bevel and bottom-border colours, `row_ground`, `popup`, `tab_line`, `line`, `selected_fill`), `down_face` kept (the toggled sunken face still reads it), the relief quartet the recorded bytes of the catalog's Warptempo entry (`warptempo-2026-10-03`: 5E5E5E / 434343 / 1E1E1E / 0A0A0A, render.h's constants; Parity below). The dark design the colour loop starts from |
+| `themes/win95_standard.json` | Windows 95's Standard scheme: the face #C0C0C0 and the quartet FFFFFF / DFDFDF / 808080 / 000000 as the catalog's `windows-95-standard` entry records them, and the few roles Windows names, on ad2.json's geometry and options; each role Windows has no word for takes the nearest system colour or the app's own value, the choice stated in its `description`. THE ACCURACY CHECK, NOT A DESIGN |
 | `out/` | renders and compare diffs (generated, git-ignored) |
+| `../theme_catalog/`, `docs/themes/` | the imported themes: `tools/theme_catalog/` builds `docs/themes/catalog.json` (every colour a recorded byte with its provenance, KDE 3's and Motif's own relief rules run at import) and renders the app in each entry through this renderer, cropped (`docs/themes/crops/`, `docs/themes/CATALOG.md`); its README holds the role mapping |
 | `fonts.conf`, `fccache/` | the tool's private fontconfig, listing ONLY the repository's `fonts/` (generated, git-ignored) |
 
 ## Text: the app's own road
@@ -209,7 +210,7 @@ A theme is a JSON object; every key is optional and its default is THE DEFAULT L
 Samsung Gallery showed it, every role the scene's app constant through `colour.two_pass` (the platform's
 sRGB -> Display-P3 pass twice, the measured bytes where the measurement and the matrix differ). Colour values:
 `"#rrggbb"` (P3 bytes as-is), `"srgb:#rrggbb"` (one sRGB->P3 pass), `[r, g, b]`, `"@role"` (another role's
-resolved colour) or `"auto"` (the rule given). Unknown keys are refused, inside `waveform` and `flags` too; the
+resolved colour) or `"auto"` (the rule given; never for the four `bevel_*` keys, which have no rule). Unknown keys are refused, inside `waveform` and `flags` too; the
 newer options (`separators`, `bottom_border`, `well`, `canvas_delta`, `trim.cap_w`, `trim.lane_h`, `flags.relief`,
 `ruler_tick_relief`, `ruler_pad_top`, `ruler_layout`, `lane_order`, `trim.style`, `trim.acid_inset`,
 `menu.highlight`, `ruler_label_pt`, `playhead_head_rows`, `icons`, `buttons.gap`, `buttons.sep_gap`,
@@ -257,7 +258,7 @@ the numbers and the options below.
 | `flag_hilight`, `flag_hilight_sel` | `auto` = colour.lin_mix(flag_fill, [255,255,255], 0.35), likewise from `flag_fill_sel` (35 % toward white in linear light; (190,174,206) and (210,184,235) from the default fills) | the light lines of `flags.relief` `"raised"`; not painted otherwise |
 | `icon_label` | `@label` | the app glyphs' text ink |
 | `icon_record`, `icon_negative`, `icon_preview_on`, `icon_lift_cross`, `icon_accent`, `icon_plain_white`, `icon_wav` | two_pass of icons.cpp's kIcon* | the coloured app-glyph paths |
-| `bevel_hilight`, `bevel_light`, `bevel_shadow`, `bevel_dkshadow` | `auto` = `colour.relief_quartet(ground)`, the app's scaffold (render.h's RELIEF SET: the relief set derives from the GROUND), its branch by the ground's relative luminance against the one threshold `highlight_text_ink` uses (architect 2026-10-03: a ground the label white reads against is a dark ground). DARK (at or below 0.17912878474779): the app's ratio rule in its integer arithmetic — Hilight = ground x 196/100, Shadow x 5/8, DkShadow x 21/100 (`scaled_word`: a half rounds up, clamped at 255), 3DLight the per-channel geometric mean of the ground and that Hilight (`geometric_mean`); #303030 -> 5E5E5E / 434343 / 1E1E1E / 0A0A0A. LIGHT: Windows' fractions — Hilight white, 3DLight halfway to white with the half rounded down, Shadow two thirds of the ground, DkShadow black; #C0C0C0 -> FFFFFF / DFDFDF / 808080 / 000000. A hand value wins over the rule for its key alone (an `auto` 3DLight still takes the rule's Hilight). The render's log line names the quartet, the ground's luminance, the branch and the keys set by hand | the Windows relief set |
+| `bevel_hilight`, `bevel_light`, `bevel_shadow`, `bevel_dkshadow` | none: RECORDED BYTES, NO DERIVATION (architect 2026-10-03, "no derived, imported only") — a theme that draws any relief (a raised or sunken edge, the status panel, the scroll-bar track, the engraved glyph, the checked dither, a well line naming them) states all four, recorded from its source: `docs/themes/catalog.json`'s roles of the same names (`tools/theme_catalog/`). `"auto"` is refused at load in one line naming the key; an unstated one is refused where a painter reads it (the default look reads none). The render's log line names the quartet | the Windows relief set (Windows' COLOR_3DHILIGHT, 3DLIGHT, 3DSHADOW, 3DDKSHADOW) |
 | `accent` | `@ink` (the architect, 2026-10-02: the waveform's ink is the accent) | the `menu.highlight` `"fill"` face; nothing else reads it |
 | `stamp` | (140,140,140) | the `--label` text |
 
@@ -355,8 +356,8 @@ an sRGB source (a theme file, a scheme table) takes the `srgb:` prefix; a colour
 the plain hex. Example — Redmond97 Dark's face as sRGB, thick relief:
 
 ```json
-{"name": "r97", "colours": {"ground": "srgb:#373737", "bevel_hilight": "srgb:#606060", "bevel_shadow": "srgb:#262626",
- "bevel_dkshadow": "#000000"}, "relief": "thick", "buttons": {"raised": true}, "separators": "etched",
+{"name": "r97", "colours": {"ground": "srgb:#373737", "bevel_hilight": "srgb:#606060", "bevel_light": "@ground",
+ "bevel_shadow": "srgb:#262626", "bevel_dkshadow": "#000000"}, "relief": "thick", "buttons": {"raised": true}, "separators": "etched",
  "well": "sunken", "clock_panel": "sunken", "trim": {"bar": "raised", "ground": "sunken", "handles": "raised", "grip": "raised"}}
 ```
 
@@ -435,7 +436,7 @@ the geometry check:
 `themes/frozen.json` on 1002 renders byte for byte the last mock-up of the lineage, the picture judged on the tablet
 (0 differing pixels; on 1002a likewise identical to that mock-up's theme rendered on 1002a).
 
-`themes/ad2.json` on 1002 (2026-10-03, its quartet `"auto"`) against set AD2's judged mock
+`themes/ad2.json` on 1002 (2026-10-03) against set AD2's judged mock
 (`tmp/palette/set_ad_scale/mock_AD2_scale138.png`): 33,687 of 3,311,000 pixels differ, every one where today's chrome
 moved them and nowhere else (every row above the trim lane, the ruler lane and the well's bottom lines: 0; compare.py
 counts by the scene's measured lanes, so its "icon row" 32 and "ruler" 308 are ad2's taller-cased trim lane). THE TRIM LANE (rows 148..191, 752
@@ -447,8 +448,10 @@ box is 43 rows standing on the well instead of 44 centred in a 48-row lane, so t
 is 3 rows taller (293..1346, 1053 rows against 1050) and its waveform replays through the nearest-neighbour map, which
 moves scattered rows of it (13,762 px), and the stems cross the well's top lines. THE BOTTOM ROW (rows 1383..1414,
 columns 18..629): the clock's run 9.35 px right (centred in its cell), the state line `Updating...` from x 308, and the
-`--label` stamp moved past it. The same theme with the committed hand quartet (a scratch copy) renders byte-identical
-to the `"auto"` render (`cmp`; compare.py 0 differing pixels in every lane), relief_quartet's check on a whole picture.
+`--label` stamp moved past it. The theme as it stands, its quartet the catalog's recorded bytes, renders byte-identical to
+its earlier render with the quartet derived from the ground (`cmp`; compare.py 0 differing pixels in every lane), and so
+does `themes/win95_standard.json` (FFFFFF / DFDFDF / 808080 / 000000 recorded against derived), so the derivation's
+retirement moved no pixel.
 
 ## Recorded notes (each scene's `mismatches`; none unexplained)
 

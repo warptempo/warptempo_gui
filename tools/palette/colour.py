@@ -9,10 +9,12 @@
 # twice, measured patch for patch off the tablet's screencaps (2026-10-02); the matrix reproduces that measurement
 # to the unit except on the colours in MEASURED_TWO_PASS, which hold the measured bytes.
 #
-# relief_quartet and highlight_text_ink are the app's palette scaffold ported (src/gui/render.h's palette block:
-# scaled_word, geometric_mean_word, relative_luminance, kHighlightTextLuminanceThreshold, highlight_text_ink), integer
-# arithmetic for integer arithmetic, so a theme's "auto" relief lands on the app's bytes; the asserts under them are
-# the app's static_asserts, run at import.
+# highlight_text_ink and relative_luminance are the app's text rule ported (src/gui/render.h's palette block:
+# relative_luminance, kHighlightTextLuminanceThreshold, highlight_text_ink), integer arithmetic for integer
+# arithmetic; the asserts under them are the app's static_asserts, run at import. THE RELIEF IS NEVER DERIVED HERE
+# (architect 2026-10-03, "no derived, imported only"): a theme states its four relief bytes, recorded from its source
+# (tools/theme_catalog/, docs/themes/catalog.json). scaled_word is render.h's integer channel scaling, for the app's
+# ground-derived chrome roles (its docstring).
 
 
 def s2l(c):
@@ -66,17 +68,12 @@ def two_pass(rgb):
     return MEASURED_TWO_PASS.get(k) or tuple(srgb_to_p3(srgb_to_p3(k)))
 
 
-# ------------------------------------------------------------------ the app's palette scaffold (render.h)
+# ------------------------------------------------------------------ the app's palette rules (render.h)
 def scaled_word(c, num, den):
-    """render.h scaled_word on one channel: c x num / den, a half rounded up, clamped at 255 (integer arithmetic)."""
+    """render.h scaled_word on one channel: c x num / den, a half rounded up, clamped at 255 (integer arithmetic). Its
+    reader is tools/theme_catalog/crops.py, which draws the app-specific roles the app derives from its ground (the
+    ruler label x 404/100, the playhead head x 29/10, the flag border x 7/16) over each catalog theme's ground."""
     return min(255, (2 * c * num + den) // (2 * den))
-
-def geometric_mean(a, b):
-    """render.h geometric_mean_word on one channel: round(sqrt(a x b)), the integer root by search and the half
-    decided exactly (rounds up iff a x b >= n^2 + n + 1)."""
-    x = a * b; n = 0
-    while (n + 1) * (n + 1) <= x: n += 1
-    return n + 1 if x >= n * n + n + 1 else n
 
 def srgb_channel_to_linear(c):
     """render.h srgb_channel_to_linear, step for step (the 2.4 power as x^2 x (x^2)^(1/5), the fifth root by 64
@@ -103,28 +100,7 @@ def highlight_text_ink(fill, light):
     domain is the chrome's text and glyphs; the flags' black label is their own rule."""
     return (0, 0, 0) if relative_luminance(fill) > LUMINANCE_THRESHOLD else tuple(light)
 
-def relief_quartet(ground):
-    """-> ((hilight, light3d, shadow, dkshadow), branch): Windows' COLOR_3D* family derived from the GROUND, the branch
-    taken by the ground's relative luminance against LUMINANCE_THRESHOLD (architect 2026-10-03). THE THRESHOLD IS
-    highlight_text_ink's, one number for both rules: a ground the label white reads against is a dark ground, so the
-    ground that takes white text is the ground that takes the dark relief rule.
-      'dark' (luminance at or below the threshold): the app's ratio rule (render.h's RELIEF SET) -- Hilight = ground x
-        196/100, Shadow x 5/8, DkShadow x 21/100 (scaled_word), 3DLight the geometric mean of the ground and that
-        Hilight; #303030 -> 5E5E5E / 434343 / 1E1E1E / 0A0A0A.
-      'light' (above it): Windows' fractions (architect 2026-10-03) -- Hilight white, 3DLight halfway from the ground
-        to white with the half rounded down, Shadow two thirds of the ground rounded to nearest (scaled_word 2/3; a
-        third never lands on a half), DkShadow black; #C0C0C0 -> FFFFFF / DFDFDF / 808080 / 000000, Windows 95
-        Standard."""
-    g = tuple(int(v) for v in ground)
-    if relative_luminance(g) <= LUMINANCE_THRESHOLD:
-        hi = tuple(scaled_word(c, 196, 100) for c in g)
-        return (hi, tuple(geometric_mean(c, h) for c, h in zip(g, hi)), tuple(scaled_word(c, 5, 8) for c in g),
-                tuple(scaled_word(c, 21, 100) for c in g)), 'dark'
-    return ((255, 255, 255), tuple((c + 255) // 2 for c in g), tuple(scaled_word(c, 2, 3) for c in g), (0, 0, 0)), 'light'
-
-# THE CHECKS (the app's static_asserts, run at import), one per scheme:
-assert relief_quartet((0xC0, 0xC0, 0xC0)) == (((255, 255, 255), (223, 223, 223), (128, 128, 128), (0, 0, 0)), 'light')   # Windows 95 Standard
-assert relief_quartet((0x30, 0x30, 0x30)) == (((94, 94, 94), (67, 67, 67), (30, 30, 30), (10, 10, 10)), 'dark')           # the app's dark ground
+# THE CHECKS (the app's static_asserts, run at import):
 assert highlight_text_ink((0x00, 0x00, 0x80), (252, 252, 252)) == (252, 252, 252)    # Windows' highlight #000080: the label
 assert highlight_text_ink((0xC0, 0xC0, 0xC0), (252, 252, 252)) == (0, 0, 0)          # Windows 95's face #C0C0C0: black
 assert highlight_text_ink((0xFF, 0xFF, 0xE1), (252, 252, 252)) == (0, 0, 0)          # INFO #FFFFE1: black

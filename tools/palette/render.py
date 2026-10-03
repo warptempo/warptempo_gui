@@ -60,9 +60,10 @@ DEFAULTS = {
     'flag_hilight': 'auto', 'flag_hilight_sel': 'auto',     # read only by flags.relief "raised"
     # icon inks (icons.cpp), two_pass of each
     'icon_label': '@label', **{f'icon_{k}': list(C.two_pass(v)) for k, v in INKC.items() if k != 'text'},
-    # the Windows relief set (only read when something is raised or sunken); 'auto' derives from the GROUND
-    # (colour.relief_quartet, the app's scaffold; Theme.auto)
-    'bevel_hilight': 'auto', 'bevel_light': 'auto', 'bevel_shadow': 'auto', 'bevel_dkshadow': 'auto',
+    # the Windows relief set (only read when something is raised or sunken): NO DEFAULT AND NO RULE (architect
+    # 2026-10-03, "no derived, imported only") -- a theme that draws relief states its four recorded bytes
+    # (tools/theme_catalog/); Theme.get refuses an unstated one where it is read, Theme refuses "auto" at load
+    'bevel_hilight': None, 'bevel_light': None, 'bevel_shadow': None, 'bevel_dkshadow': None,
     # the accent (the architect, 2026-10-02: the waveform's ink is the accent); read only by menu.highlight "fill"
     'accent': '@ink',
 }
@@ -99,7 +100,7 @@ COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'o
                               'fill_sel': 'flag_fill_sel', 'edge_sel': 'flag_edge_sel', 'stem_sel': 'flag_stem_sel',
                               'hilight': 'flag_hilight', 'hilight_sel': 'flag_hilight_sel'}))
 
-BEVELS = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')     # relief_quartet's order
+BEVELS = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')     # Windows' COLOR_3D* order
 
 class Theme:
     def __init__(self, path):
@@ -115,6 +116,8 @@ class Theme:
         if self.flag_relief not in FLAG_RELIEF: raise SystemExit(f'theme {path}: flags.relief must be one of {FLAG_RELIEF}')
         unknown = set(raw) - set(DEFAULTS)
         if unknown: raise SystemExit(f'theme {path}: unknown colour roles {sorted(unknown)}')
+        for role in BEVELS:
+            if raw[role] == 'auto': raise SystemExit(f'theme {path}: {role} "auto" is retired; state the relief byte (architect 2026-10-03)')
         self.raw = raw; self.c = {}
         self.num = dict(NUM_DEFAULTS); self.num.update({k: t[k] for k in NUM_DEFAULTS if k in t})
         self.opt = json.loads(json.dumps(OPT_DEFAULTS))
@@ -160,7 +163,8 @@ class Theme:
         self.button_geometry = None     # button_geometry's memo: (buttons, separators), computed at the first painter's call
         for k, vals in OPT_VALUES.items():
             if self.opt[k] not in vals: raise SystemExit(f'theme {path}: {k} must be one of {vals}, not {self.opt[k]!r}')
-        for r in DEFAULTS: self.get(r)
+        for r in DEFAULTS:     # every role resolved at load, an unstated relief byte only where a painter reads it
+            if self.raw[r] is not None: self.get(r)
         # the well: "bordered" | "sunken" | {"top": [line, ...], "bottom": [line, ...]} (one LW line each, top to bottom)
         w = self.opt['well']
         if isinstance(w, dict):
@@ -248,6 +252,7 @@ class Theme:
         if role in self.c: return self.c[role]
         if role in _stack: raise SystemExit(f'colour reference loop at {role}')
         v = self.raw[role]
+        if v is None: raise SystemExit(f'theme {self.name}: {role} is not stated (a theme that draws relief states its four relief bytes)')
         if isinstance(v, str) and v.startswith('@'): c = self.get(v[1:], _stack + (role,))
         elif v == 'auto': c = self.auto(role, _stack + (role,))
         else: c = C.parse_colour(v)
@@ -260,8 +265,6 @@ class Theme:
             return tuple(C.lin_mix(self.get(role.replace('hilight', 'fill'), st), (255, 255, 255), 0.35))
         if role == 'ruler_tick_light':                       # a lighter tick colour, the same rule
             return tuple(C.lin_mix(self.get('ruler_tick', st), (255, 255, 255), 0.35))
-        if role in BEVELS:     # the relief set from the GROUND, as the app's scaffold derives it (relief_quartet)
-            return C.relief_quartet(self.get('ground', st))[0][BEVELS.index(role)]
         raise SystemExit(f'no auto rule for {role}')
 
     def highlight_ink(self, fill):
@@ -273,14 +276,9 @@ class Theme:
         return C.highlight_text_ink(fill, self.get('light_text'))
 
     def quartet_report(self):
-        """One clause for the render's log line: the relief set as painted, the ground's luminance and branch, and
-        which keys a theme set by hand (a hand value wins over the rule for that key alone)."""
-        g = self.get('ground'); branch = C.relief_quartet(g)[1]
-        parts = []
-        for i, role in enumerate(BEVELS):
-            c = self.get(role); parts.append(C.hexs(c)[1:] + ('' if self.raw[role] == 'auto' else ' (hand)'))
-        return (f'relief from ground {C.hexs(g)} L {C.relative_luminance(g):.4f} {branch} '
-                f'(threshold {C.LUMINANCE_THRESHOLD}): ' + ' / '.join(parts))
+        """One clause for the render's log line: the relief set as stated, or that the theme draws none."""
+        if any(self.raw[r] is None for r in BEVELS): return 'no relief set stated'
+        return 'relief ' + ' / '.join(C.hexs(self.get(r))[1:] for r in BEVELS)
 
 def lane_shift(th):
     """trim.lane_h -> d, the device rows the trim lane grows by (0 at the default: the scene's measured height)."""

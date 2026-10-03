@@ -1,12 +1,12 @@
 {
  "name": "win95_standard",
- "description": "Windows 95's Standard scheme, the accuracy check and not a design (architect 2026-10-03, 'the colour accurate to the original Win95 theme'), on ad2.json's geometry: the ground #C0C0C0 is COLOR_3DFACE and the four relief lines are 'auto' (colour.relief_quartet's light branch, FFFFFF / DFDFDF / 808080 / 000000, so the status panel, the well's lines, the etched ticks and the checked dither all come from it); the label, legend and clock are COLOR_BTNTEXT #000000; the accent and selected_fill are COLOR_HIGHLIGHT #000080, the highlight's text the luminance rule's light ink, light_text = COLOR_HIGHLIGHTTEXT #FFFFFF (the app's light ink being its white label), though no highlight is painted on this scene; the canvas is COLOR_WINDOW #FFFFFF; the waveform ink is #000080, the app's ink and accent being two roles of one value; the icon inks the app takes from the accent take #000080 the same way; the ruler labels are COLOR_BTNTEXT #000000 and the ticks the Shadow #808080; the playhead head is the Shadow #808080 and its stem the label, the app's stem being the label's colour; the flags keep the app's own fill, edge and selected pair (#8A5EAC, #4D345F, #B37BE0, #63447B) with their black label, their border and the well's black line the DkShadow #000000; the red (#BB575A) is the app's own and paints only the record glyph here; the checked button's face is the ground under the Hilight dither as Windows draws it; the renderer paints no INFO face (#FFFFE1 on black), so this theme has none.",
+ "description": "Windows 95's Standard scheme, the accuracy check and not a design (architect 2026-10-03, 'the colour accurate to the original Win95 theme'), on ad2.json's geometry: the ground #C0C0C0 is COLOR_3DFACE and the four relief lines are the recorded bytes of the catalog's Windows 95 Standard entry (docs/themes/catalog.json, windows-95-standard: FFFFFF / DFDFDF / 808080 / 000000, so the status panel, the well's lines, the etched ticks and the checked dither all come from them); the label, legend and clock are COLOR_BTNTEXT #000000; the accent and selected_fill are COLOR_HIGHLIGHT #000080, the highlight's text the luminance rule's light ink, light_text = COLOR_HIGHLIGHTTEXT #FFFFFF (the app's light ink being its white label), though no highlight is painted on this scene; the canvas is COLOR_WINDOW #FFFFFF; the waveform ink is #000080, the app's ink and accent being two roles of one value; the icon inks the app takes from the accent take #000080 the same way; the ruler labels are COLOR_BTNTEXT #000000 and the ticks the Shadow #808080; the playhead head is the Shadow #808080 and its stem the label, the app's stem being the label's colour; the flags keep the app's own fill, edge and selected pair (#8A5EAC, #4D345F, #B37BE0, #63447B) with their black label, their border and the well's black line the DkShadow #000000; the red (#BB575A) is the app's own and paints only the record glyph here; the checked button's face is the ground under the Hilight dither as Windows draws it; the renderer paints no INFO face (#FFFFE1 on black), so this theme has none.",
  "colours": {
   "ground": "#C0C0C0",
-  "bevel_hilight": "auto",
-  "bevel_light": "auto",
-  "bevel_shadow": "auto",
-  "bevel_dkshadow": "auto",
+  "bevel_hilight": "#FFFFFF",
+  "bevel_light": "#DFDFDF",
+  "bevel_shadow": "#808080",
+  "bevel_dkshadow": "#000000",
   "label": "#000000",
   "light_text": "#FFFFFF",
   "accent": "#000080",
