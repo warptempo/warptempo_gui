@@ -29,6 +29,8 @@
 # the renderer's Display-P3 iCCP chunk (the bytes are what the glass shows).
 #
 #   python3 tools/theme_catalog/crops.py [key ...]      (no keys: every entry)
+#   python3 tools/theme_catalog/crops.py --md           (renders nothing: CATALOG.md rewritten from catalog.json and the
+#                                                        crops of keys no longer in it deleted, the others untouched)
 import json, os, struct, subprocess, sys, zlib
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -143,7 +145,7 @@ FAMILY_HEAD = {
     'windows': 'Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes '
                'saved as .theme files; Windows 95 Standard hand-recorded)',
     'windows-plus': 'Windows 98 / Plus! desktop themes (the shipped .theme files)',
-    'kde3': 'KDE 3 / Trinity colour schemes (relief by KDE 3\'s own rule at each scheme\'s contrast)',
+    'kde3': 'KDE 3.5 colour schemes, as Trinity\'s tdebase carries them (relief by KDE 3\'s own rule at each scheme\'s contrast)',
     'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',
     'warptempo': 'Warptempo: the app\'s own look as it stands on 2026-10-03',
 }
@@ -194,6 +196,13 @@ def write_md(cat, sizes):
 
 def main():
     cat = json.load(open(CATALOG))
+    if sys.argv[1:] == ['--md']:
+        stale = sorted(set(os.listdir(CROPS)) - {e['key'] + '.png' for e in cat['entries']})
+        for s in stale: os.remove(os.path.join(CROPS, s))
+        write_md(cat, {})
+        print(f'wrote {os.path.relpath(MD, REPO)} ({len(cat["entries"])} entries); deleted {len(stale)} stale crops: '
+              + ', '.join(stale))
+        return
     want = set(sys.argv[1:])
     os.makedirs(CROPS, exist_ok=True)
     for d in ('themes', 'full'): os.makedirs(os.path.join(SCRATCH, d), exist_ok=True)

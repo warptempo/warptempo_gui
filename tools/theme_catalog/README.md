@@ -10,6 +10,7 @@ link path from any product target, no CMake, Python 3 + numpy (and `tools/palett
 python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/theme_sources/ (git-ignored)
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
 python3 tools/theme_catalog/crops.py [key ...]     # -> docs/themes/crops/<key>.png, docs/themes/CATALOG.md
+python3 tools/theme_catalog/crops.py --md          # renders nothing: CATALOG.md from catalog.json, stale crops deleted
 ```
 
 ## The contract
@@ -58,7 +59,7 @@ the sets are also catalog.json's `display_tiers`, and each entry's CATALOG.md bl
 | `high-colour` | anything else |
 
 Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts the list), `windows-20` 0,
-`high-colour` 120. Windows Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and its
+`high-colour` 94. Windows Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and its
 3DLight DFDFDF (asserted for Windows Standard).
 
 ## Families and sources
@@ -67,11 +68,11 @@ Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts 
 |---|---|---|
 | `windows` | ReactOS `boot/bootdata/hivedef.inf` ("New Schemes", COLOR_* indices, 0x00BBGGRR, English names from the first [Strings] block), corroborated by the Windows XP classic schemes saved as .theme files (zkedem/windows10-classic-themes; 1j01/98 `desktop/Themes/classicthemes8`) and Windows 98's `Windows Default.theme`; Windows 95 Standard hand-recorded | a hivedef.inf scheme is imported only when a second, independent source records it with equal bytes on every role key (the rest: Not imported, below); Desert and Spruce (absent from ReactOS) come from the two XP records; ReactOS's "ReactOS Standard" and "ReactOS Classic" are Windows Classic and Windows Standard under ReactOS names and are folded into those entries |
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
-| `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49) + the six the Q4OS 6.9 TDE image adds, less the four not imported (51) | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
+| `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49) + the six the Q4OS 6.9 TDE image adds, less the 30 not imported: KDE 3.5's three usability schemes, the 21 Trinity added later, the Q4OS image's six (one a duplicate) — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25) | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
 | `warptempo` | `src/gui/render.h` at da0b1051 (git show) | the app's own look on 2026-10-03, so it stays selectable as bytes |
 
-Every family's line in the build: windows 19, windows-plus 16, kde3 51, cde 36, warptempo 1 — 123 entries.
+Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 1 — 97 entries.
 
 ## Not imported (architect 2026-10-03, late; catalog.json's `not_imported`, asserted by build.py)
 
@@ -80,6 +81,9 @@ Every family's line in the build: windows 19, windows-plus 16, kde3 51, cde 36, 
 | ReactOS's own schemes (7): Green Olive, Sand, Sky, High Contrast 1, High Contrast 2, High Contrast Black, High Contrast White | no independent source records them as Windows'; Sand and Green Olive are role-identical to Windows Desert and Spruce under other names (build.py asserts it); the four High Contrast schemes are usability schemes |
 | KDE 3 High Contrast Black Text, High Contrast White Text, High Contrast Yellow on Blue | usability schemes |
 | `cde-broica` | role-identical to `cde-default` (byte-identical on every raw value too) |
+| KDE Human, Last.fm, Lizard, Platinum, Sienna, WedgieWeb (6) | not shipped by KDE 3.5: Trinity added them to tdebase in commit 688aa0fc28d3de8665b7b151eba65fe49e02187f (2023-10-18, "Add six new color schemes taken from https://www.opendesktop.org.") |
+| KDE Different, Jewels - Amethyst, - Aquamarine, - Carbon, - Citrin, - Emerald, - Ruby, - Sapphire, - Topaz, Lila, Pinkie, Seasons - Autumn, - Spring, - Summer, - Winter (15) | not shipped by KDE 3.5: Trinity added them to tdebase in commit 69ac490a9e43b46efbc7fbf3ce32e96365f5805d (2025-01-24, "Add 15 color schemes taken from https://www.opendesktop.org.") |
+| KDE Debonaire, Q4os_tstyle02 Noble, Q4os_tstyle02 Standard, Q4os_tstyle02 White, QtCurve (5) | not shipped by KDE 3.5: the Q4OS 6.9 image adds them (its sixth, Q4OS Default, is the duplicate below) |
 | `kde3-q4os-default` | role-identical to `kde3-keramik-white` (it differs only on the window-frame keys frame, handle, inactiveFrame, inactiveHandle, which no role reads) |
 | CDE Black, White, BlackWhite, WhiteBlack (.dp) | X colour names for monochrome displays, refused by dtsession on a colour display |
 
@@ -127,7 +131,7 @@ Windows 95 Standard's quartet is FFFFFF / DFDFDF / 808080 / 000000 on C0C0C0; KD
 3D3D3D / 343434 / 111111 / 000000; Motif on 303030 gives 989898 / 6E6E6E (the dark branch) and on 41525C A6AEB3 /
 1E252A (both from an 8-bit colour as X parses `#rrggbb`, each byte replicated; `toolkit_rules.py` asserts the same at
 import); Windows' dialog rule gives D4D0C8 -> Hilight EAE8E3 and Rainy Day 8399B1 -> C1CCD9 / 4F657D; every entry's
-`flag_rule` is its family's and runs; the not-imported lists are exactly the schemes found (a re-pinned source cannot
+`flag_rule` is its family's and runs; kde3 has 25 entries; the not-imported lists are exactly the schemes found (a re-pinned source cannot
 change them silently) and each duplicate is role-identical to its twin; the Warptempo entry equals render.h's
 constants; the `vga` entries are exactly Windows Storm, Teal and Red, White, and Blue, none is `windows-20`;
 every key is unique and ASCII. The last lines print each family (entries, corroborated, sources), the display
@@ -146,4 +150,4 @@ edge, top and bottom only, full width (architect 2026-10-03, late: `bevel_shadow
 `bevel_light` inward then `bevel_hilight` outward at the bottom; crops.py `WELL`), and the Sonic Foundry flags shaded by
 the entry's `flag_rule`, the stem leaving the box's first face column through a gap in its bottom lines, the scene's
 flags left to right unselected, SELECTED, INVALID, DISABLED and unselected (render.py's `flags.style` "bevelled"); the waveform, the flags' face and label, the invalid flag's pair and the
-playhead are the program's colours (above). The icons are the app's, unchanged. 123 crops, 6.66 MB. Its head states which roles come from the entry and which are the program's.
+playhead are the program's colours (above). The icons are the app's, unchanged. 97 crops, 5.24 MB. Its head states which roles come from the entry and which are the program's.

@@ -4,7 +4,8 @@
 # its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
 # NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
-# schemes no independent source records as Windows', the usability schemes, and the role-identical duplicates. The
+# schemes no independent source records as Windows', the usability schemes, the KDE schemes KDE 3.5 did not ship, and
+# the role-identical duplicates. The
 # checks run before the write; the last lines report each family: entries, corroborated, sources.
 #
 #   python3 tools/theme_catalog/build.py
@@ -38,6 +39,25 @@ REACTOS_ONLY = {
     'High Contrast Black': (None, 'a usability scheme'), 'High Contrast White': (None, 'a usability scheme'),
 }
 KDE_USABILITY = ('High Contrast Black Text', 'High Contrast White Text', 'High Contrast Yellow on Blue')
+# THE KDE CATALOG IS WHAT KDE 3.5 SHIPPED (architect 2026-10-03, late): the 26 schemes added later are not imported --
+# the six and the fifteen Trinity took from opendesktop.org into tdebase (the commits found through the Trinity gitea
+# API, repos/TDE/tdebase/commits?path=kcontrol/krdb/kcs/<file>) and the five the Q4OS image adds (its sixth,
+# Q4OSDefault, is a DUPLICATES entry). Keyed by source and manifest file; build.py asserts each is found.
+TDE_2023 = ('tdebase commit 688aa0fc28d3de8665b7b151eba65fe49e02187f (2023-10-18, "Add six new color schemes taken from '
+            'https://www.opendesktop.org."): added by Trinity, not shipped by KDE 3.5')
+TDE_2025 = ('tdebase commit 69ac490a9e43b46efbc7fbf3ce32e96365f5805d (2025-01-24, "Add 15 color schemes taken from '
+            'https://www.opendesktop.org."): added by Trinity, not shipped by KDE 3.5')
+Q4OS_ADDS = 'the Q4OS 6.9 image: added by Q4OS, not shipped by KDE 3.5'
+KDE_NOT_35 = {
+    'tde_kcs': {f'kcontrol/krdb/kcs/{n}.kcsrc': TDE_2023 for n in ('Human', 'Last.fm', 'Lizard', 'Platinum', 'Sienna', 'WedgieWeb')}
+               | {f'kcontrol/krdb/kcs/{n}.kcsrc': TDE_2025 for n in (
+                   'Different', 'Jewels-Amethyst', 'Jewels-Aquamarine', 'Jewels-Carbon', 'Jewels-Citrin', 'Jewels-Emerald',
+                   'Jewels-Ruby', 'Jewels-Sapphire', 'Jewels-Topaz', 'Lila', 'Pinkie', 'Seasons-Autumn', 'Seasons-Spring',
+                   'Seasons-Summer', 'Seasons-Winter')},
+    'q4os_kcs': {f'{n}.kcsrc': Q4OS_ADDS for n in ('Debonaire', 'q4os_tstyle02noble', 'q4os_tstyle02standard',
+                                                    'q4os_tstyle02white', 'QtCurve')},
+}
+KDE3_ENTRIES = 25       # KDE 3.5's own schemes, less its three usability schemes
 DUPLICATES = {'cde-broica': 'cde-default', 'kde3-q4os-default': 'kde3-keramik-white'}   # key: the twin it repeats
 
 # THE DISPLAY TIER (architect 2026-10-03, late): each entry is tagged by the smallest period colour set holding every
@@ -225,18 +245,19 @@ def windows_entries():
 
 # ------------------------------------------------------------------ KDE 3
 KDE_IMITATES = {'Redmond 95': 'Windows 95', 'Redmond 2000': 'Windows 2000', 'Redmond XP': 'Windows XP', 'CDE': 'CDE',
-                'Digital CDE': 'CDE (Digital UNIX)', 'Solaris': 'CDE (Solaris)', 'BeOS': 'BeOS', 'Next': 'NeXTSTEP',
-                'Platinum': 'Mac OS 8 (Platinum)'}
+                'Digital CDE': 'CDE (Digital UNIX)', 'Solaris': 'CDE (Solaris)', 'BeOS': 'BeOS', 'Next': 'NeXTSTEP'}
 KDE_RULE_SOURCES = [provenance('tde_rules', 'tdecore/tdeapplication.cpp'), provenance('tqt_rules', 'src/kernel/tqcolor.cpp'),
                     provenance('tqt_rules', 'src/kernel/tqpalette.cpp')]
 
 
 def kde_entries():
-    out, usability = [], []
+    """-> (entries, {scheme name: reason} of the schemes KDE 3.5 did not ship, KDE_NOT_35)."""
+    out, usability, later = [], [], {}
     for src in ('tde_kcs', 'q4os_kcs'):
         for f in manifest(src):
             name, cols, contrast = parse_kcsrc(local_path(src, f))
             if name in KDE_USABILITY: usability.append(name); continue     # not imported: usability schemes
+            if f in KDE_NOT_35[src]: later[(src, f)] = name; continue      # not imported: not shipped by KDE 3.5
             c = T.KDE3_DEFAULT_CONTRAST if contrast is None else contrast
             p = T.kde3_palette(cols['background'], cols['foreground'], c)
             computed = {f'kde3:{k}': v for k, v in p.items()}
@@ -248,7 +269,11 @@ def kde_entries():
             out[-1]['corroborated'] = 0
     if sorted(usability) != sorted(KDE_USABILITY):
         raise SystemExit(f'build: the KDE usability schemes found are {sorted(usability)}, not {sorted(KDE_USABILITY)}')
-    return out
+    want = {(src, f) for src, fs in KDE_NOT_35.items() for f in fs}
+    if set(later) != want:
+        raise SystemExit(f'build: the KDE schemes not shipped by KDE 3.5 found differ from KDE_NOT_35: missing '
+                         f'{sorted(want - set(later))}')
+    return out, {later[(src, f)]: KDE_NOT_35[src][f] for src, f in sorted(later, key=lambda k: (k[0] != 'tde_kcs', k[1].lower()))}
 
 
 # ------------------------------------------------------------------ CDE
@@ -371,6 +396,8 @@ def checks(entries, k):
     assert T.windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)
     assert T.windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))
     for d in DUPLICATES: assert d not in by, d
+    assert sum(1 for e in entries if e['family'] == 'kde3') == KDE3_ENTRIES
+    assert len(KDE_NOT_35['tde_kcs']) == 21 and len(KDE_NOT_35['q4os_kcs']) == 5
     # the display tiers: Windows Storm, Teal and Red, White, and Blue are the only `vga` entries, none `windows-20`
     # (Windows Standard misses `vga` only by its tooltip ground #FFFFE1, Windows 95 Standard by that and its 3DLight #DFDFDF)
     assert sorted(e['key'] for e in entries if e['display_tier'] == 'vga') == \
@@ -396,7 +423,8 @@ def drop_duplicates(entries):
 
 def main():
     win, ros_only = windows_entries()
-    entries = win + kde_entries()
+    kde, kde_later = kde_entries()
+    entries = win + kde
     cde, mono = cde_entries(); entries += cde
     app, k = app_entry(); entries.append(app)
     entries, dups = drop_duplicates(entries)
@@ -427,6 +455,9 @@ def main():
                                   '2026-10-03, late: the whole family is dropped)'},
             'kde3_usability': {'schemes': list(KDE_USABILITY),
                                'reason': 'usability schemes (architect 2026-10-03, late)'},
+            'kde3_not_kde35': {'schemes': kde_later,
+                               'reason': 'KDE colour schemes KDE 3.5 did not ship, added later by Trinity or Q4OS; the '
+                                         'catalog keeps what KDE 3.5 shipped (architect 2026-10-03, late)'},
             'duplicates': {'keys': dups,
                            'reason': 'role-identical to the named entry, which is kept (architect 2026-10-03, late; '
                                      'kde3-q4os-default differs from Keramik White only on the window-frame keys '
@@ -448,6 +479,9 @@ def main():
     if mono: print(f'not imported: {", ".join(m + ".dp" for m in mono)} (monochrome palettes, refused on a colour display)')
     print(f'not imported: ReactOS {", ".join(ros_only)} (no independent source); KDE 3 {", ".join(KDE_USABILITY)} '
           f'(usability); {", ".join(f"{a} (= {b})" for a, b in dups.items())} (role-identical)')
+    for why in (TDE_2023, TDE_2025, Q4OS_ADDS):
+        ns = [n for n, r in kde_later.items() if r == why]
+        print(f'not imported: KDE {len(ns)}, {", ".join(ns)} ({why.split(": added")[0]})')
 
 
 if __name__ == '__main__':

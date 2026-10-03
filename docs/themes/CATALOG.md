@@ -290,17 +290,9 @@ Display tier: high-colour
 
 ![plus-sports](crops/plus-sports.png)
 
-## KDE 3 / Trinity colour schemes (relief by KDE 3's own rule at each scheme's contrast)
+## KDE 3.5 colour schemes, as Trinity's tdebase carries them (relief by KDE 3's own rule at each scheme's contrast)
 
-51 entries, darkest ground first.
-
-### `kde3-wedgieweb`
-
-**WedgieWeb** · ground #414473 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/WedgieWeb.kcsrc`; kde3 rule at contrast 0
-
-Display tier: high-colour
-
-![kde3-wedgieweb](crops/kde3-wedgieweb.png)
+25 entries, darkest ground first.
 
 ### `kde3-dark-blue`
 
@@ -333,14 +325,6 @@ Display tier: high-colour
 Display tier: high-colour
 
 ![kde3-next](crops/kde3-next.png)
-
-### `kde3-different`
-
-**Different** · ground #07BFED · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Different.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-different](crops/kde3-different.png)
 
 ### `kde3-atlas-green`
 
@@ -446,14 +430,6 @@ Display tier: high-colour
 
 ![kde3-pumpkin](crops/kde3-pumpkin.png)
 
-### `kde3-jewels-sapphire`
-
-**Jewels - Sapphire** · ground #D8D8FF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Sapphire.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-sapphire](crops/kde3-jewels-sapphire.png)
-
 ### `kde3-kde-2`
 
 **KDE 2** · ground #DCDCDC · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/KDETwo.kcsrc`; kde3 rule at contrast 7
@@ -478,62 +454,6 @@ Display tier: high-colour
 
 ![kde3-evex](crops/kde3-evex.png)
 
-### `kde3-jewels-ruby`
-
-**Jewels - Ruby** · ground #FFD8D8 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Ruby.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-ruby](crops/kde3-jewels-ruby.png)
-
-### `kde3-jewels-amethyst`
-
-**Jewels - Amethyst** · ground #F7D8FF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Amethyst.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-amethyst](crops/kde3-jewels-amethyst.png)
-
-### `kde3-last-fm`
-
-**Last.fm** · ground #E3E6D8 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Last.fm.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-last-fm](crops/kde3-last-fm.png)
-
-### `kde3-seasons-autumn`
-
-**Seasons - Autumn** · ground #F0E6D2 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Seasons-Autumn.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-seasons-autumn](crops/kde3-seasons-autumn.png)
-
-### `kde3-lila`
-
-**Lila** · ground #ECE6EE · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Lila.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-lila](crops/kde3-lila.png)
-
-### `kde3-seasons-spring`
-
-**Seasons - Spring** · ground #E1EBE1 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Seasons-Spring.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-seasons-spring](crops/kde3-seasons-spring.png)
-
-### `kde3-pinkie`
-
-**Pinkie** · ground #FEE0FA · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Pinkie.kcsrc`; kde3 rule at contrast 1
-
-Display tier: high-colour
-
-![kde3-pinkie](crops/kde3-pinkie.png)
-
 ### `kde3-keramik-white`
 
 **Keramik White** · ground #E9E9E9 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/KeramikWhite.kcsrc`; kde3 rule at contrast 7
@@ -549,38 +469,6 @@ Display tier: high-colour
 Display tier: high-colour
 
 ![kde3-keramik](crops/kde3-keramik.png)
-
-### `kde3-q4os-tstyle02-noble`
-
-**Q4os_tstyle02 Noble** · ground #EBE9E9 · q4os-6.9-x64-tde.r1.iso `live/filesystem.squashfs:/opt/trinity/share/apps/tdedisplay/color-schemes/q4os_tstyle02noble.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-q4os-tstyle02-noble](crops/kde3-q4os-tstyle02-noble.png)
-
-### `kde3-human`
-
-**Human** · ground #EFEBE7 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Human.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-human](crops/kde3-human.png)
-
-### `kde3-jewels-carbon`
-
-**Jewels - Carbon** · ground #ECECEC · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Carbon.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-carbon](crops/kde3-jewels-carbon.png)
-
-### `kde3-qtcurve`
-
-**QtCurve** · ground #EFECE7 · q4os-6.9-x64-tde.r1.iso `live/filesystem.squashfs:/opt/trinity/share/apps/tdedisplay/color-schemes/QtCurve.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-qtcurve](crops/kde3-qtcurve.png)
 
 ### `kde3-keramik-emerald`
 
@@ -598,22 +486,6 @@ Display tier: high-colour
 
 ![kde3-redmond-xp](crops/kde3-redmond-xp.png)
 
-### `kde3-q4os-tstyle02-standard`
-
-**Q4os_tstyle02 Standard** · ground #EEEEE6 · q4os-6.9-x64-tde.r1.iso `live/filesystem.squashfs:/opt/trinity/share/apps/tdedisplay/color-schemes/q4os_tstyle02standard.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-q4os-tstyle02-standard](crops/kde3-q4os-tstyle02-standard.png)
-
-### `kde3-lizard`
-
-**Lizard** · ground #EFEFEF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Lizard.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-lizard](crops/kde3-lizard.png)
-
 ### `kde3-plastik`
 
 **Plastik** · ground #EFEFEF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Plastik.kcsrc`; kde3 rule at contrast 7
@@ -621,86 +493,6 @@ Display tier: high-colour
 Display tier: high-colour
 
 ![kde3-plastik](crops/kde3-plastik.png)
-
-### `kde3-sienna`
-
-**Sienna** · ground #EFEFEF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Sienna.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-sienna](crops/kde3-sienna.png)
-
-### `kde3-q4os-tstyle02-white`
-
-**Q4os_tstyle02 White** · ground #EEEFF2 · q4os-6.9-x64-tde.r1.iso `live/filesystem.squashfs:/opt/trinity/share/apps/tdedisplay/color-schemes/q4os_tstyle02white.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-q4os-tstyle02-white](crops/kde3-q4os-tstyle02-white.png)
-
-### `kde3-debonaire`
-
-**Debonaire** · ground #F0F0F0 · q4os-6.9-x64-tde.r1.iso `live/filesystem.squashfs:/opt/trinity/share/apps/tdedisplay/color-schemes/Debonaire.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-debonaire](crops/kde3-debonaire.png)
-
-### `kde3-platinum`
-
-**Platinum** — imitates Mac OS 8 (Platinum) · ground #F1F1F1 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Platinum.kcsrc`; kde3 rule at contrast 7
-
-Display tier: high-colour
-
-![kde3-platinum](crops/kde3-platinum.png)
-
-### `kde3-jewels-topaz`
-
-**Jewels - Topaz** · ground #FFF1D8 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Topaz.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-topaz](crops/kde3-jewels-topaz.png)
-
-### `kde3-seasons-winter`
-
-**Seasons - Winter** · ground #F4F3F2 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Seasons-Winter.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-seasons-winter](crops/kde3-seasons-winter.png)
-
-### `kde3-seasons-summer`
-
-**Seasons - Summer** · ground #EBF5FF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Seasons-Summer.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-seasons-summer](crops/kde3-seasons-summer.png)
-
-### `kde3-jewels-emerald`
-
-**Jewels - Emerald** · ground #D8FFD8 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Emerald.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-emerald](crops/kde3-jewels-emerald.png)
-
-### `kde3-jewels-aquamarine`
-
-**Jewels - Aquamarine** · ground #D8FFFF · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Aquamarine.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-aquamarine](crops/kde3-jewels-aquamarine.png)
-
-### `kde3-jewels-citrin`
-
-**Jewels - Citrin** · ground #FFFFD8 · TDE/tdebase@d66254bc `kcontrol/krdb/kcs/Jewels-Citrin.kcsrc`; kde3 rule at contrast 5
-
-Display tier: high-colour
-
-![kde3-jewels-citrin](crops/kde3-jewels-citrin.png)
 
 ## CDE palettes (colour set 5 the ground; foreground and shadows by Motif's own rule)
 
