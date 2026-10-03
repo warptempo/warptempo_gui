@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/build.py — the fetched sources (fetch.py) -> docs/themes/catalog.json: every entry's recorded
 # bytes with their provenance, the values its own toolkit computed at import (toolkit_rules.py, the rule named), and
-# its catalog roles (roles.py) and the family rule its flags take (flag_rule). THE APP CARRIES IMPORTED THEMES ONLY,
+# its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
 # NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
 # schemes no independent source records as Windows', the usability schemes, and the role-identical duplicates. The
@@ -40,6 +40,15 @@ REACTOS_ONLY = {
 KDE_USABILITY = ('High Contrast Black Text', 'High Contrast White Text', 'High Contrast Yellow on Blue')
 DUPLICATES = {'cde-broica': 'cde-default', 'kde3-q4os-default': 'kde3-keramik-white'}   # key: the twin it repeats
 
+# THE DISPLAY TIER (architect 2026-10-03, late): each entry is tagged by the smallest period colour set holding every
+# colour its roles use (display_tier). `vga`: the 16 colours of the VGA / Windows 16-colour palette. `windows-20`: those
+# plus the four static colours Windows reserves beside them in the system palette of a 256-colour display (money green,
+# sky blue, cream, medium grey), so always solid there, never dithered. Else `high-colour`. In list order, the tiers.
+VGA16 = ('#000000', '#800000', '#008000', '#808000', '#000080', '#800080', '#008080', '#C0C0C0',
+         '#808080', '#FF0000', '#00FF00', '#FFFF00', '#0000FF', '#FF00FF', '#00FFFF', '#FFFFFF')
+WINDOWS_STATIC_EXTRAS = ('#C0DCC0', '#A6CAF0', '#FFFBF0', '#A0A0A4')
+DISPLAY_TIERS = (('vga', frozenset(VGA16)), ('windows-20', frozenset(VGA16 + WINDOWS_STATIC_EXTRAS)), ('high-colour', None))
+
 
 def hx(c): return '#%02X%02X%02X' % tuple(c)
 def unhex(s): return tuple(int(s[i:i + 2], 16) for i in (1, 3, 5))
@@ -62,6 +71,12 @@ def camel_words(stem):
     return re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', stem)
 
 
+def display_tier(roles):
+    """An entry's roles -> its display tier, the first of DISPLAY_TIERS whose set holds every role's colour."""
+    used = set(roles.values())
+    return next(t for t, cs in DISPLAY_TIERS if cs is None or used <= cs)
+
+
 def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitates=None, rule=None, flag_rule=None):
     pre, words = KEY_PREFIX[family], slug(key_words)
     if words.startswith(pre + '-'): words = words[len(pre) + 1:]     # 'Windows Classic' -> windows-classic
@@ -77,6 +92,7 @@ def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitate
     e['raw'] = raw_hex
     e['roles'] = map_roles(family, values)
     e['flag_rule'] = flag_rule or {'id': FLAG_RULE[family]}
+    e['display_tier'] = display_tier(e['roles'])
     e['notes'] = notes or []
     return e
 
@@ -355,6 +371,13 @@ def checks(entries, k):
     assert T.windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)
     assert T.windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))
     for d in DUPLICATES: assert d not in by, d
+    # the display tiers: Windows Storm, Teal and Red, White, and Blue are the only `vga` entries, none `windows-20`
+    # (Windows Standard misses `vga` only by its tooltip ground #FFFFE1, Windows 95 Standard by that and its 3DLight #DFDFDF)
+    assert sorted(e['key'] for e in entries if e['display_tier'] == 'vga') == \
+        ['windows-red-white-and-blue', 'windows-storm', 'windows-teal']
+    assert not [e['key'] for e in entries if e['display_tier'] == 'windows-20']
+    assert display_tier(by['windows-standard']['roles']) == 'high-colour' and \
+        display_tier({r: v for r, v in by['windows-standard']['roles'].items() if r != 'info_ground'}) == 'vga'
     app = by['warptempo-2026-10-03']
     for n, v in app['raw'].items(): assert v == hx(k[n]), n
     assert [app['roles'][x] for x in ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',
@@ -389,6 +412,12 @@ def main():
                 'source records them (the renderer takes a theme byte as a Display-P3 byte as-is).',
         'roles': list(ROLES),
         'rules': RULES,
+        'display_tiers': {'what': 'each entry\'s display_tier: the smallest of these period colour sets holding every '
+                                  'colour its roles use, else high-colour (architect 2026-10-03, late)',
+                          'vga': list(VGA16),
+                          'windows-20': {'adds': list(WINDOWS_STATIC_EXTRAS),
+                                         'what': 'the VGA 16 plus the four static colours Windows reserves in a '
+                                                 '256-colour display\'s system palette, always solid there'}},
         'not_imported': {
             'cde_monochrome': {'files': [f'{m}.dp' for m in mono],
                                'reason': 'X colour names for monochrome displays; dtsession refuses them on a colour display '
@@ -415,6 +444,7 @@ def main():
                 srcs.add(q.get('repository', q.get('image', q.get('project'))) + '@' + str(q.get('commit', '')))
         print(f'{fam:13s} entries {len(es):3d}  corroborated {sum(1 for e in es if e["corroborated"]):3d}  '
               f'sources {len(srcs)}: ' + ', '.join(sorted(s.split("@")[0] for s in srcs)))
+    print('display tiers: ' + ', '.join(f'{t} {sum(1 for e in entries if e["display_tier"] == t)}' for t, _ in DISPLAY_TIERS))
     if mono: print(f'not imported: {", ".join(m + ".dp" for m in mono)} (monochrome palettes, refused on a colour display)')
     print(f'not imported: ReactOS {", ".join(ros_only)} (no independent source); KDE 3 {", ".join(KDE_USABILITY)} '
           f'(usability); {", ".join(f"{a} (= {b})" for a, b in dups.items())} (role-identical)')

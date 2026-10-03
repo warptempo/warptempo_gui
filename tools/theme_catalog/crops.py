@@ -7,15 +7,16 @@
 # (tmp/theme_catalog/full/<key>.png, never committed), then CROPPED, NEVER SCALED (scaling blurs the pixel picture
 # he judges). THE THEME (theme_for): the entry's catalog roles where the renderer has the role (ground, label, the four
 # relief bytes; menu_disabled from disabled_text); every role the entry lacks keeps the app's value. THE APP-SPECIFIC
-# ROLES BY THE ROLE MAPPING (architect 2026-10-03, late): the ruler label the theme's label, the ruler ticks and the
-# playhead head its bevel_shadow, the flag OUTLINE its bevel_dkshadow; the playhead stem the label, the checked face
-# the ground under the Hilight dither (ad2's), the trim arrow glyph highlight_text_ink(ground) over the app's light
-# ink #FCFCFC. THE WELL IS SOUND RECORDER'S WAVEFORM BOX (architect 2026-10-03, late): one bevel_shadow line on top and
+# ROLES BY THE ROLE MAPPING (architect 2026-10-03, late): the ruler label the theme's label, the ruler ticks its
+# bevel_shadow, the flag OUTLINE its bevel_dkshadow; the checked face the ground under the Hilight dither (ad2's), the
+# trim arrow glyph highlight_text_ink(ground) over the app's light ink #FCFCFC. THE WELL IS SOUND RECORDER'S WAVEFORM BOX (architect 2026-10-03, late): one bevel_shadow line on top and
 # one bevel_hilight line at the bottom, full width, no sides (Windows' one-line static edge). THE FLAGS are the
 # Sonic Foundry flag (render.py flags.style "bevelled"), the entry's flag_rule shading them, the scene's flags left to
-# right unselected, SELECTED, INVALID, DISABLED and unselected (FLAG_STATES). The waveform's ink and canvas and the
-# flag's face and red keep the app's colours (APP_KEEP): the chrome is the theme's, the pane and the flags the
-# program's own elements, shaded by the theme.
+# right unselected, SELECTED, INVALID, DISABLED and unselected (FLAG_STATES). THE PROGRAM'S OWN COLOURS (APP_KEEP):
+# the chrome is the theme's; the waveform pane, the flags and the playhead are the program's own elements, their
+# colours the program's and only the flags' shading the theme's (architect 2026-10-03, late): the waveform's ink and
+# canvas, the flag's face and its RECORDED label (black), the invalid flag as Windows' error-icon pair (#FF0000, the
+# label white), the playhead's head and stem (the app's #8B8B8B / #FCFCFC).
 #
 # THE CROP: four regions of the 2304 x 1440 render stacked top to bottom, 1152 px wide, a 4-row FULLY TRANSPARENT gap
 # between them (alpha 0 there, 255 everywhere else, so no join reads as chrome): the top strip's left half (menu, the
@@ -41,9 +42,12 @@ MD = os.path.join(REPO, 'docs', 'themes', 'CATALOG.md')
 SCRATCH = os.path.join(REPO, 'tmp', 'theme_catalog')
 ICCP = open(os.path.join(PALETTE, 'display_p3.iccp'), 'rb').read()
 
-# the program's own elements (render.h at the catalog's app commit), P3 bytes as-is: the waveform's ink and canvas,
-# the flag's face and the stock red (kFlagRgb, kRedRgb), and the app's light ink (the trim arrow's rule)
-APP_KEEP = {'canvas': '#141618', 'ink': '#96BFDA', 'flag_fill': '#8A5EAC', 'flag_fill_red': '#BB575A',
+# the program's own elements, P3 bytes as-is (architect 2026-10-03, late): the waveform's ink and canvas, the flag's
+# face and its recorded label (render.h at the catalog's app commit: kFlagRgb, kMarkerFlagLabel), the invalid flag as
+# Windows' error-icon pair (the Stop icon's white X on VGA bright red), the playhead's head and stem (kPlayheadHead,
+# kPlayheadStem: program colours like the flags, not theme roles), and the app's light ink (the trim arrow's rule)
+APP_KEEP = {'canvas': '#141618', 'ink': '#96BFDA', 'flag_fill': '#8A5EAC', 'flag_label': '#000000',
+            'flag_fill_red': '#FF0000', 'flag_label_red': '#FFFFFF', 'playhead_head': '#8B8B8B', 'playhead_stem': '#FCFCFC',
             'light_text': '#FCFCFC'}
 # the scene's flags (1002: five, left to right) in the four states, so each crop and mock shows every one
 FLAG_STATES = {'selected': [1], 'invalid': [2], 'disabled': [3]}
@@ -72,9 +76,8 @@ def theme_for(e):
     for role, v in APP_ROLES.items(): col[role] = v
     for role, rr in ROLE_TO_RENDERER.items():
         if role in e['roles']: col[rr] = e['roles'][role]
-    col.update({'ruler_label': '@label', 'ruler_tick': '@bevel_shadow', 'playhead_head': '@bevel_shadow',
-                'flag_border': '@bevel_dkshadow', 'ruler_tick_light': '@bevel_hilight', 'down_face': '@ground',
-                'playhead_stem': '@label'})
+    col.update({'ruler_label': '@label', 'ruler_tick': '@bevel_shadow', 'flag_border': '@bevel_dkshadow',
+                'ruler_tick_light': '@bevel_hilight', 'down_face': '@ground'})
     col.update(APP_KEEP)
     t['colours'] = col
     t['well'] = {'top': ['@bevel_shadow'], 'bottom': ['@bevel_hilight']}
@@ -164,8 +167,12 @@ def write_md(cat, sizes):
          'own elements, their colours the app\'s and their shading the theme\'s (architect 2026-10-03, late): the well is '
          'Sound Recorder\'s waveform box (the theme\'s Shadow above, its Hilight below), the flags the bevelled box of '
          'Sonic Foundry\'s editors shaded by the theme family\'s own rule (the entry\'s flag rule), shown left to right '
-         'unselected, selected, invalid and disabled; the ruler label is the theme\'s label, the ruler ticks and the '
-         'playhead head its Shadow, the flag outline its DkShadow. Not imported: '
+         'unselected, selected, invalid and disabled, each label the colour recorded beside its face (black on the '
+         'app\'s purple; the invalid flag is Windows\' error-icon pair, white on #FF0000); the playhead is the '
+         'program\'s too (the app\'s #8B8B8B head, #FCFCFC stem); the ruler label is the theme\'s label, the ruler '
+         'ticks its Shadow, the flag outline its DkShadow. The DISPLAY TIER is the smallest period colour set holding '
+         'every colour the entry\'s roles use: vga (the 16 VGA colours), windows-20 (those and Windows\' four static '
+         'extras #C0DCC0, #A6CAF0, #FFFBF0, #A0A0A4, always solid on a 256-colour display), else high-colour. Not imported: '
          'catalog.json\'s `not_imported`. Built by `tools/theme_catalog/` (fetch.py, build.py, crops.py).', '']
     fams = []
     for e in cat['entries']:
@@ -176,7 +183,7 @@ def write_md(cat, sizes):
         for e in es:
             imit = f" — imitates {e['imitates']}" if e.get('imitates') else ''
             L += [f"### `{e['key']}`", '', f"**{e['name']}**{imit} · ground {e['roles']['ground']} · {prov_line(e)}", '',
-                  f"![{e['key']}](crops/{e['key']}.png)", '']
+                  f"Display tier: {e['display_tier']}", '', f"![{e['key']}](crops/{e['key']}.png)", '']
     open(MD, 'w').write('\n'.join(L) + '\n')
 
 

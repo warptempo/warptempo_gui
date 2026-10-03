@@ -44,7 +44,22 @@ another desktop), `provenance` (`sources`: one record per source file; `rule`: t
 and every value it computed), `raw`, `roles`, `flag_rule` (the rule the flags' bevel takes: `{"id":
 "windows-dialog"}` for the families `windows`, `windows-plus` and `warptempo` — the architect: "take Windows' rule" —,
 `{"id": "kde3", "contrast": c}` at the scheme's own contrast, `{"id": "motif"}` for `cde`; described in the catalog's
-`rules`), `notes` (every disagreement between sources, every relabelling).
+`rules`), `display_tier` (below), `notes` (every disagreement between sources, every relabelling).
+
+## The display tier (`display_tier`; architect 2026-10-03, late)
+
+Each entry is tagged by the smallest period colour set holding every colour its roles use (build.py `display_tier`;
+the sets are also catalog.json's `display_tiers`, and each entry's CATALOG.md block names its tier):
+
+| tier | the set |
+|---|---|
+| `vga` | the 16 VGA colours: 000000 800000 008000 808000 000080 800080 008080 C0C0C0 808080 FF0000 00FF00 FFFF00 0000FF FF00FF 00FFFF FFFFFF |
+| `windows-20` | those and Windows' four static extras C0DCC0 A6CAF0 FFFBF0 A0A0A4 (reserved in a 256-colour display's system palette, so always solid there) |
+| `high-colour` | anything else |
+
+Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts the list), `windows-20` 0,
+`high-colour` 120. Windows Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and its
+3DLight DFDFDF (asserted for Windows Standard).
 
 ## Families and sources
 
@@ -97,9 +112,13 @@ dialogs), 8 the front panel; Motif paints two shadows, so its quartet is (ts, ts
 highlight (text selection is inverse video), no tooltip pair and no disabled colour (insensitive text is stippled).
 
 THE APP-SPECIFIC ROLES (architect 2026-10-03, late), drawn from the catalog roles above rather than stored: the ruler
-label <- `label`; the ruler ticks and the playhead head <- `bevel_shadow`; the flag OUTLINE <- `bevel_dkshadow` (round
-the flag, keeping overlapping flags apart; the stem is not the outline). The flags' face, the red, the waveform ink
-and canvas are the program's own colours, not catalog roles; the flags' shading is the entry's `flag_rule`.
+label <- `label`; the ruler ticks <- `bevel_shadow`; the flag OUTLINE <- `bevel_dkshadow` (round the flag, keeping
+overlapping flags apart; the stem is not the outline). THE PROGRAM'S OWN COLOURS, not catalog roles: the waveform ink
+and canvas; the flag's face and its label, a RECORDED colour beside the face as Windows 95 recorded a text colour
+beside every face (the luminance rule is WCAG 2.0's contrast math, not Windows', and no program element reads it):
+black on the app's purple, and the invalid flag as Windows' error-icon pair, the face #FF0000 and the label #FFFFFF
+(the Stop icon's white X); the playhead's head and stem (the app's #8B8B8B / #FCFCFC). Only the flags' shading is the
+theme's, the entry's `flag_rule`.
 
 ## The checks (build.py, before the write)
 
@@ -110,8 +129,9 @@ Windows 95 Standard's quartet is FFFFFF / DFDFDF / 808080 / 000000 on C0C0C0; KD
 import); Windows' dialog rule gives D4D0C8 -> Hilight EAE8E3 and Rainy Day 8399B1 -> C1CCD9 / 4F657D; every entry's
 `flag_rule` is its family's and runs; the not-imported lists are exactly the schemes found (a re-pinned source cannot
 change them silently) and each duplicate is role-identical to its twin; the Warptempo entry equals render.h's
-constants; every key is unique and ASCII. The last lines print each family (entries, corroborated, sources) and the
-schemes not imported.
+constants; the `vga` entries are exactly Windows Storm, Teal and Red, White, and Blue, none is `windows-20`;
+every key is unique and ASCII. The last lines print each family (entries, corroborated, sources), the display
+tiers' counts and the schemes not imported.
 
 ## The crops
 
@@ -124,5 +144,5 @@ written as RGBA (indexed with tRNS when a crop has at most 256 colours; none has
 each with the Display-P3 iCCP chunk. On each: the role mapping above, the well as Sound Recorder's waveform box (one
 `bevel_shadow` line on top, one `bevel_hilight` line at the bottom, full width), and the Sonic Foundry flags shaded by
 the entry's `flag_rule`, the scene's flags left to right unselected, SELECTED, INVALID, DISABLED and unselected
-(render.py's `flags.style` "bevelled"); the waveform and the flags' face and red keep the app's colours. The icons are
-the app's, unchanged. 123 crops, 6.66 MB. Its head states which roles come from the entry and which are the program's.
+(render.py's `flags.style` "bevelled"); the waveform, the flags' face and label, the invalid flag's pair and the
+playhead are the program's colours (above). The icons are the app's, unchanged. 123 crops, 6.65 MB. Its head states which roles come from the entry and which are the program's.

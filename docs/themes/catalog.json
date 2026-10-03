@@ -130,6 +130,36 @@
    ]
   }
  },
+ "display_tiers": {
+  "what": "each entry's display_tier: the smallest of these period colour sets holding every colour its roles use, else high-colour (architect 2026-10-03, late)",
+  "vga": [
+   "#000000",
+   "#800000",
+   "#008000",
+   "#808000",
+   "#000080",
+   "#800080",
+   "#008080",
+   "#C0C0C0",
+   "#808080",
+   "#FF0000",
+   "#00FF00",
+   "#FFFF00",
+   "#0000FF",
+   "#FF00FF",
+   "#00FFFF",
+   "#FFFFFF"
+  ],
+  "windows-20": {
+   "adds": [
+    "#C0DCC0",
+    "#A6CAF0",
+    "#FFFBF0",
+    "#A0A0A4"
+   ],
+   "what": "the VGA 16 plus the four static colours Windows reserves in a 256-colour display's system palette, always solid there"
+  }
+ },
  "not_imported": {
   "cde_monochrome": {
    "files": [
@@ -252,6 +282,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_zkedem brick.theme (\"Brick\") differs on MenuHilight #8D8961 (here #008080)",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/Brick_classic8.theme (\"Brick\") differs on MenuHilight #000000 (here #008080)"
@@ -340,6 +371,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/eggplant_classic8.theme (\"Eggplant\") differs on MenuHilight #000000 (here #588078)"
    ]
@@ -427,6 +459,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/lilac_classic8.theme (\"Lilac\") differs on MenuHilight #000000 (here #5A4EB1)"
    ]
@@ -514,6 +547,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/maple_classic8.theme (\"Maple\") differs on MenuHilight #000000 (here #C6A646)"
    ]
@@ -601,6 +635,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_zkedem marine.theme names it \"Marine (high color)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/marine_classic8.theme (\"Marine\") differs on MenuHilight #000000 (here #000080)"
@@ -689,6 +724,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_zkedem plum.theme names it \"Plum (high color)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/plum_classic8.theme (\"Plum\") differs on MenuHilight #000000 (here #008080)"
@@ -777,6 +813,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/pumpkin_classic8.theme (\"Pumpkin\") differs on MenuHilight #000000 (here #800080)"
    ]
@@ -864,6 +901,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/rainyday_classic8.theme (\"Rainy Day\") differs on MenuHilight #000000 (here #4F657D)"
    ]
@@ -951,6 +989,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/rose_classic8.theme (\"Rose\") differs on MenuHilight #000000 (here #9F6070)"
    ]
@@ -1038,6 +1077,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/slate_classic8.theme (\"Slate\") differs on MenuHilight #000000 (here #558097)"
    ]
@@ -1125,6 +1165,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "vga",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/storm_classic8.theme (\"Storm\") differs on MenuHilight #000000 (here #800080)"
    ]
@@ -1212,6 +1253,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "vga",
    "notes": [
     "xp_classic_zkedem teal.theme names it \"Teal (VGA)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/teal_classic8.theme (\"Teal\") differs on MenuHilight #000000 (here #008080)"
@@ -1300,6 +1342,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/wheat_classic8.theme (\"Wheat\") differs on MenuHilight #000000 (here #808000)"
    ]
@@ -1387,6 +1430,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "vga",
    "notes": [
     "xp_classic_zkedem redwhiteblue.theme names it \"Red, White, and Blue (VGA)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/redbluewhite_classic8.theme (\"Red, Blue & White\") differs on MenuHilight #000000 (here #800000)",
@@ -1468,6 +1512,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/desert_classic8.theme (\"Desert\") differs on MenuHilight #000000 (here #008080)"
    ]
@@ -1547,6 +1592,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/spruce_classic8.theme (\"Spruce\") differs on MenuHilight #000000 (here #599764)"
    ]
@@ -1634,6 +1680,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_zkedem classic.theme carries DisplayName \"Windows Classic\" over these bytes (its two labels swapped against XP's dialog); the entry is named by its bytes",
     "ReactOS records it as \"ReactOS Classic\"",
@@ -1723,6 +1770,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "xp_classic_zkedem standard.theme carries DisplayName \"Windows Standard\" over these bytes (its two labels swapped against XP's dialog); the entry is named by its bytes",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/winxp_classic8.theme names it \"Windows XP Classic\"",
@@ -1803,6 +1851,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "the sources disagree on ButtonLight (COLOR_3DLIGHT): the Windows 95 retail captures show DFDFDF; Windows 98's Windows Default.theme and the Windows 2000 / XP \"Windows Standard\" record C0C0C0 (the face), and the early Windows 95 beta captures draw no 3DLight line. The entry is the retail Windows 95 picture."
    ]
@@ -1869,6 +1918,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -1933,6 +1983,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "1j01/98 also carries \"Copy of Dangerous Creatures (256 color).theme\", byte-identical; not a second entry"
    ]
@@ -1999,6 +2050,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2063,6 +2115,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2127,6 +2180,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2191,6 +2245,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2255,6 +2310,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2319,6 +2375,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2383,6 +2440,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2447,6 +2505,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2511,6 +2570,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2575,6 +2635,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2639,6 +2700,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2703,6 +2765,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2767,6 +2830,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2831,6 +2895,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2897,6 +2962,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -2964,6 +3030,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3029,6 +3096,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3098,6 +3166,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3171,6 +3240,7 @@
     "id": "kde3",
     "contrast": 8
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3237,6 +3307,7 @@
     "id": "kde3",
     "contrast": 3
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3307,6 +3378,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3376,6 +3448,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3445,6 +3518,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3519,6 +3593,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3593,6 +3668,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3667,6 +3743,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3741,6 +3818,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3815,6 +3893,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3889,6 +3968,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -3963,6 +4043,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4037,6 +4118,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4111,6 +4193,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4180,6 +4263,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4248,6 +4332,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4318,6 +4403,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4388,6 +4474,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4458,6 +4545,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4532,6 +4620,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4606,6 +4695,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4680,6 +4770,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4749,6 +4840,7 @@
     "id": "kde3",
     "contrast": 3
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4822,6 +4914,7 @@
     "id": "kde3",
     "contrast": 10
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4888,6 +4981,7 @@
     "id": "kde3",
     "contrast": 3
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -4962,6 +5056,7 @@
     "id": "kde3",
     "contrast": 1
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5032,6 +5127,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5107,6 +5203,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5177,6 +5274,7 @@
     "id": "kde3",
     "contrast": 0
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5243,6 +5341,7 @@
     "id": "kde3",
     "contrast": 3
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5317,6 +5416,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5391,6 +5491,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5465,6 +5566,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5539,6 +5641,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5613,6 +5716,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5683,6 +5787,7 @@
     "id": "kde3",
     "contrast": 3
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5749,6 +5854,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5821,6 +5927,7 @@
     "id": "kde3",
     "contrast": 2
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5891,6 +5998,7 @@
     "id": "kde3",
     "contrast": 0
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -5962,6 +6070,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6028,6 +6137,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6099,6 +6209,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6171,6 +6282,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6243,6 +6355,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6315,6 +6428,7 @@
     "id": "kde3",
     "contrast": 5
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6387,6 +6501,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6459,6 +6574,7 @@
     "id": "kde3",
     "contrast": 7
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6558,6 +6674,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6657,6 +6774,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6756,6 +6874,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6855,6 +6974,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -6954,6 +7074,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7053,6 +7174,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7152,6 +7274,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7251,6 +7374,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7350,6 +7474,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7449,6 +7574,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7548,6 +7674,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7647,6 +7774,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7746,6 +7874,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7845,6 +7974,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -7944,6 +8074,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8043,6 +8174,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8142,6 +8274,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8241,6 +8374,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8340,6 +8474,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8439,6 +8574,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8538,6 +8674,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8637,6 +8774,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8736,6 +8874,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8835,6 +8974,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -8934,6 +9074,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9033,6 +9174,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9132,6 +9274,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9231,6 +9374,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9330,6 +9474,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9429,6 +9574,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9528,6 +9674,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9627,6 +9774,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9726,6 +9874,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9825,6 +9974,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -9924,6 +10074,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -10023,6 +10174,7 @@
    "flag_rule": {
     "id": "motif"
    },
+   "display_tier": "high-colour",
    "notes": []
   },
   {
@@ -10084,6 +10236,7 @@
    "flag_rule": {
     "id": "windows-dialog"
    },
+   "display_tier": "high-colour",
    "notes": [
     "the look the app paints on 2026-10-03, its relief derived from the ground by the app's ratio rule at that commit; recorded here so it stays selectable as bytes"
    ]

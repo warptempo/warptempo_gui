@@ -61,7 +61,10 @@ DEFAULTS = {
     'flag_label': TWO_PASS('kMarkerFlagLabel'), 'flag_stem': '@flag_fill',
     'flag_fill_sel': TWO_PASS('kMarkerFlagFillSel'), 'flag_edge_sel': TWO_PASS('kMarkerFlagEdgeSel'), 'flag_stem_sel': '@flag_fill_sel',
     'flag_hilight': 'auto', 'flag_hilight_sel': 'auto',     # read only by flags.relief "raised"
-    'flag_fill_red': TWO_PASS('kMarkerFlagFillRed'),         # read only by flags.style "bevelled" (an invalid flag's face)
+    # an invalid flag, read only by flags.style "bevelled": WINDOWS' ERROR-ICON PAIR (architect 2026-10-03, late: the
+    # Stop icon's white X on VGA bright red), the face #FF0000 and its RECORDED label #FFFFFF (Windows recorded a text
+    # colour beside every face; the luminance rule is WCAG's, not Windows')
+    'flag_fill_red': '#FF0000', 'flag_label_red': '#FFFFFF',
     # icon inks (icons.cpp), two_pass of each
     'icon_label': '@label', **{f'icon_{k}': list(C.two_pass(v)) for k, v in INKC.items() if k != 'text'},
     # the Windows relief set (only read when something is raised or sunken): NO DEFAULT AND NO RULE (architect
@@ -105,7 +108,8 @@ DISABLED_STYLES = ('mix', 'engraved')
 COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'outline'}),
                    ('flags', {'fill': 'flag_fill', 'edge': 'flag_edge', 'border': 'flag_border', 'label': 'flag_label', 'stem': 'flag_stem',
                               'fill_sel': 'flag_fill_sel', 'edge_sel': 'flag_edge_sel', 'stem_sel': 'flag_stem_sel',
-                              'hilight': 'flag_hilight', 'hilight_sel': 'flag_hilight_sel', 'fill_red': 'flag_fill_red'}))
+                              'hilight': 'flag_hilight', 'hilight_sel': 'flag_hilight_sel', 'fill_red': 'flag_fill_red',
+                              'label_red': 'flag_label_red'}))
 
 BEVELS = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')     # Windows' COLOR_3D* order
 
@@ -1037,10 +1041,18 @@ def flag_fill_w(th, f):
 
 def flag_face(th, i):
     """flags.style "bevelled": scene flag i's face colour and state -> (face, selected, disabled): the flag's face
-    (`flag_fill`), an invalid flag's the app's stock red (`flag_fill_red`), a disabled flag's the theme's `ground`.
+    (`flag_fill`), an invalid flag's Windows' error red (`flag_fill_red`), a disabled flag's the theme's `ground`.
     The stem takes the face (draw_stems)."""
     sel, red, dis = th.flag_states[i]
     return th.get('ground' if dis else 'flag_fill_red' if red else 'flag_fill'), sel, dis
+
+def flag_label_ink(th, i):
+    """flags.style "bevelled": scene flag i's label ink, a RECORDED colour beside its face (architect 2026-10-03,
+    late: Windows 95 recorded a text colour beside every face -- ButtonFace / ButtonText, Hilight / HilightText --
+    and the luminance rule is WCAG 2.0's contrast math, not Windows', so no program element reads it): `flag_label`
+    on a normal face (the app's black, kMarkerFlagLabel), `flag_label_red` on an invalid one (#FFFFFF, the Stop icon's
+    white X). Selection keeps the face and so its label; a disabled flag's label is engraved (draw_flags_bevelled)."""
+    return th.get('flag_label_red' if th.flag_states[i][1] else 'flag_label')
 
 def flag_box(th, f):
     """flags.style "bevelled": a flag's box (x0, y0, x1, y1), device px end-exclusive: the app style's box (its two
@@ -1058,10 +1070,10 @@ def draw_flags_bevelled(cr, th):
     dark bottom and right, the dark pair last; Motif's top and bottom shadow), the face. The bevel is the theme family's
     own rule on the face (flags.rule, a catalog entry's flag_rule; toolkit_rules.flag_bevel), as that desktop shaded a
     3D face of that colour. The label at the app style's seat in the box (its x border_w + pad_l past the box's left,
-    its baseline the scene's), black or white by the face's luminance (colour.highlight_text_ink over white; the
-    purple #8A5EAC, L 0.164, takes white). THE STATES (flags.states, flag_states): selected = the same bevel SUNKEN
+    its baseline the scene's), in the colour recorded beside its face (flag_label_ink: `flag_label`, or
+    `flag_label_red` on an invalid face; architect 2026-10-03, late). THE STATES (flags.states, flag_states): selected = the same bevel SUNKEN
     (dark top and left, light bottom and right) with the label one logical px right and down, a pushed button's face;
-    invalid = the face `flag_fill_red`, its bevel by the same rule; disabled = a disabled button: the face `ground`,
+    invalid = the face `flag_fill_red` (Windows' error red), its bevel by the same rule; disabled = a disabled button: the face `ground`,
     the theme's own bevel_hilight / bevel_shadow, the label ENGRAVED (Windows' disabled text: the label in
     bevel_hilight one logical px right and down, then in bevel_shadow at its place) and no stem (draw_stems). Every
     line is one logical px (LW, 2 device px), the renderer's unit for one Windows px."""
@@ -1078,7 +1090,7 @@ def draw_flags_bevelled(cr, th):
             show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('bevel_hilight'))
             show(cr, C.SANS, px, f['text'], lx, ly, th.get('bevel_shadow'))
         else:
-            show(cr, C.SANS, px, f['text'], lx, ly, C.highlight_text_ink(face, (255, 255, 255)))
+            show(cr, C.SANS, px, f['text'], lx, ly, flag_label_ink(th, i))
 
 def well_geometry(th):
     """-> (well top, well bottom, canvas top, canvas bottom), device rows, end-exclusive. The well's top is the lane
