@@ -23,7 +23,7 @@
 //                            successful open; blank until the first
 //   theme=<key>              THE CHROME'S THEME, a catalog key of the
 //                            generated table (theme_table.h)
-//   theme_level=<level>      light | dim | dark, the theme's level
+//   theme_level=<level>      light | dark, the theme's level
 //   waveform_ink=<colour>    THE PROGRAM'S OWN COLOURS, nine keys, each a
 //   waveform_canvas=         program colour (is_program_colour below): the
 //   waveform_outline=        waveform's ink, canvas and lit inner-bar
@@ -434,13 +434,14 @@ inline bool is_theme_key(const std::string& v) {
     return find_theme(v) != nullptr;
 }
 
-// THE theme_level GRAMMAR — the ONE owner: `light`, `dim` or `dark`, exactly
-// (architect 2026-10-03; the three levels are the generated table's, their
-// arithmetic tools/theme_catalog/levels.py's).
-enum class GuiThemeLevel { Light, Dim, Dark };
+// THE theme_level GRAMMAR — the ONE owner: `light` or `dark`, exactly
+// (architect 2026-10-03; the two levels are the generated table's, their
+// arithmetic tools/theme_catalog/levels.py's, which says why there is no
+// level between them). Any other word, `dim` included, is the settings
+// editor's refused commit and a hand-edited config's first-error hard fail.
+enum class GuiThemeLevel { Light, Dark };
 inline std::optional<GuiThemeLevel> parse_theme_level(std::string_view v) {
     if (v == "light") return GuiThemeLevel::Light;
-    if (v == "dim")   return GuiThemeLevel::Dim;
     if (v == "dark")  return GuiThemeLevel::Dark;
     return std::nullopt;
 }
@@ -501,7 +502,7 @@ inline bool is_program_colour(const std::string& v) {
 inline constexpr const char* kThemeGrammarReason =
     "must be a theme key of the catalog (docs/themes/CATALOG.md)";
 inline constexpr const char* kThemeLevelGrammarReason =
-    "must be light, dim or dark";
+    "must be light or dark";
 inline constexpr const char* kProgramColourGrammarReason =
     "must be #rrggbb or one of the twenty Windows colour names";
 

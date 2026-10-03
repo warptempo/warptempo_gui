@@ -1,38 +1,36 @@
 #!/usr/bin/env python3
-# tools/theme_catalog/levels.py — THE THREE LEVELS, the one module of the level arithmetic (architect 2026-10-03,
-# settled on the mock set AQ): every catalog entry at LIGHT, DIM and DARK, so the app does no colour arithmetic and
-# carries imported themes only. Read by gen_theme_table.py (the app's generated table, src/gui/theme_table.h) and by
-# crops.py (the catalog's crops, the LIGHT level).
+# tools/theme_catalog/levels.py — THE TWO LEVELS, the one module of the level arithmetic (architect 2026-10-03,
+# settled on the mock set AQ; no level between them, "we don't want to be making even more rules" — a middle level's
+# proportional field, card and selection fall into a grey zone): every catalog entry at LIGHT and DARK,
+# so the app does no colour arithmetic and carries imported themes only. Read by gen_theme_table.py (the app's
+# generated table, src/gui/theme_table.h) and by crops.py (the catalog's crops, the LIGHT level).
 #
 #   LIGHT  the entry as recorded: its ground, label and relief quartet.
-#   DIM    the ground keeps its HLS hue and saturation at relative luminance 0.080 (ground_at);
-#   DARK   the same at 0.035. On both, ALL FOUR RELIEF LINES (Hilight, 3DLight, Shadow, DkShadow) keep their hue and
-#          saturation with their HLS lightness x L(new face) / L(base face) — black stays black, and a 3DLight equal
-#          to the base face becomes the new face exactly — and the label is #FFFFFF.
+#   DARK   the ground keeps its HLS hue and saturation at relative luminance 0.035 (ground_at); ALL FOUR RELIEF
+#          LINES (Hilight, 3DLight, Shadow, DkShadow) keep their hue and saturation with their HLS lightness
+#          x L(new face) / L(base face) — black stays black, and a 3DLight equal to the base face becomes the new
+#          face exactly — and the label is #FFFFFF.
 #   THE EMBOSS LIGHT COPY (the disabled word's and glyph's light layer, Windows' DSS_DISABLED): LIGHT the recorded
-#          Hilight; DIM / DARK Windows' own dialog-rule Hilight of the new face (toolkit_rules.windows_dialog: the
-#          HLS lightness halfway to white, hue and saturation kept) — the recorded Hilight there would read as an
+#          Hilight; DARK Windows' own dialog-rule Hilight of the new face (toolkit_rules.windows_dialog: the HLS
+#          lightness halfway to white, hue and saturation kept) — the recorded Hilight there would read as an
 #          enabled word.
-#   THE THREE PAIRS — selected, info, field — and where each comes from (every level):
+#   THE THREE PAIRS — selected, info, field — and where each comes from (both levels):
 #     SELECTED the entry's selected_fill / selected_text; a CDE entry, which records none (Motif selects by inverse
 #              video), takes its title_active with colour set 1's own Motif foreground as the text;
 #     INFO     the entry's info_ground / info_text; where its source records none (KDE 3.5's kcsrc, CDE) the app's own
 #              #FFFFE1 / #000000 (Windows' COLOR_INFOBK / COLOR_INFOTEXT);
 #     FIELD    the entry's field_ground / field_text, recorded on every entry.
-#   LIGHT carries the three as recorded. ON DIM AND DARK THE THREE GROUNDS DARKEN IN PROPORTION (architect 2026-10-03,
-#   mock sets AS and AT: AS02 picked for dark, "darkened in proportion" for dim as well, and the selection
-#   "proportionally darken"): each ground — the field's, the info's (the card and the tooltip) and the selected fill,
-#   the CDE pair's title_active included — moves to relative luminance = its recorded luminance x TARGET[level] /
-#   L(the entry's recorded ground), the ground's own ratio, with its HUE AND HSV SATURATION KEPT (pair_ground_at: the
-#   HLS rule the ground itself keeps turned #FFFFE1, HLS saturation 1.0, into a saturated olive; its HSV saturation is
-#   0.118). The ratio's numerator is the level's ruled luminance TARGET, not the luminance the searched ground lands
-#   on: that is AS02's own arithmetic, and the landed one (#353535 for #C0C0C0 at dark) would put the card one blue
-#   step off AS02's #494940. An entry whose recorded ground is darker than the level's target (the warptempo entry at
-#   both levels, cde-northern-sky at dim) has a ratio above 1, so its three grounds LIGHTEN with its face — the rule
-#   as ruled, which the search caps at the brightest colour of the hue and saturation. THE TEXT ON EACH OF THE THREE
-#   IS THE LEVEL'S LABEL #FFFFFF on both levels, mock AS02's rule for dark, taken for dim by symmetry (the planner's
-#   call: the dim mocks showed black text on a light field, which no longer stands once the field darkens with the
-#   face — the architect may overrule it on the glass).
+#   LIGHT carries the three as recorded. ON DARK THE THREE GROUNDS DARKEN IN PROPORTION (architect 2026-10-03, mock
+#   sets AS and AT: AS02 picked, and the selection "proportionally darken"): each ground — the field's, the info's
+#   (the card and the tooltip) and the selected fill, the CDE pair's title_active included — moves to relative
+#   luminance = its recorded luminance x TARGET[level] / L(the entry's recorded ground), the ground's own ratio, with
+#   its HUE AND HSV SATURATION KEPT (pair_ground_at: the HLS rule the ground itself keeps turned #FFFFE1, HLS
+#   saturation 1.0, into a saturated olive; its HSV saturation is 0.118). The ratio's numerator is the level's ruled
+#   luminance TARGET, not the luminance the searched ground lands on: that is AS02's own arithmetic, and the landed
+#   one (#353535 for #C0C0C0) would put the card one blue step off AS02's #494940. An entry whose recorded ground is
+#   darker than the target (the warptempo entry) has a ratio above 1, so its three grounds LIGHTEN with its face —
+#   the rule as ruled, which the search caps at the brightest colour of the hue and saturation. THE TEXT ON EACH OF
+#   THE THREE IS THE LEVEL'S LABEL #FFFFFF, mock AS02's rule.
 # The entry's disabled_text is NOT carried: every disabled word and glyph in the app is the emboss (render.h's
 # palette block), so no site reads it.
 #
@@ -52,11 +50,11 @@ import toolkit_rules                                                   # noqa: E
 from colour import relative_luminance, srgb_channel_to_linear         # noqa: E402
 
 CATALOG = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
-LEVELS = ('light', 'dim', 'dark')
-TARGET = {'dim': 0.080, 'dark': 0.035}
+LEVELS = ('light', 'dark')
+TARGET = {'dark': 0.035}
 QUARTET = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')
 APP_INFO = ('#FFFFE1', '#000000')     # the app's info pair where a source records none
-DIM_LABEL = '#FFFFFF'
+DARK_LABEL = '#FFFFFF'
 # the roles one level carries, in the generated table's field order
 ROLES = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow', 'emboss_hilight',
          'selected_fill', 'selected_text', 'info_ground', 'info_text', 'field_ground', 'field_text')
@@ -162,18 +160,20 @@ def info_pair(e):
 PAIRS = (('selected_fill', 'selected_text'), ('info_ground', 'info_text'), ('field_ground', 'field_text'))
 
 
-def pair_targets(e, level):
-    """The three pair grounds' recorded colours and their DIM / DARK luminance targets (the module head's rule):
-    [(role, recorded 8-bit colour, target)]."""
+def pair_targets(e, level, target=None):
+    """The three pair grounds' recorded colours and their DARK luminance targets (the module head's rule):
+    [(role, recorded 8-bit colour, target)]. `target` stands in for TARGET[level] (level_roles')."""
     r = e['roles']
-    ratio = TARGET[level] / relative_luminance(unhex(r['ground']))
+    ratio = (TARGET[level] if target is None else target) / relative_luminance(unhex(r['ground']))
     rec = dict(zip(('selected_fill', 'info_ground', 'field_ground'),
                    (selected_pair(e)[0], info_pair(e)[0], r['field_ground'])))
     return [(role, unhex(rec[role]), relative_luminance(unhex(rec[role])) * ratio) for role in rec]
 
 
-def level_roles(e, level, ground_search=ground_at, pair_search=pair_ground_at):
-    """One catalog entry at one level -> {role: '#RRGGBB'} over ROLES (the module head is the rule)."""
+def level_roles(e, level, ground_search=ground_at, pair_search=pair_ground_at, target=None):
+    """One catalog entry at one level -> {role: '#RRGGBB'} over ROLES (the module head is the rule). `target`, for
+    a mock only (the table never passes it), puts the DARK recipe at another ground luminance than TARGET[level]."""
+    if target is None and level != 'light': target = TARGET[level]
     r = e['roles']
     base_face = unhex(r['ground'])
     out = {}
@@ -182,9 +182,9 @@ def level_roles(e, level, ground_search=ground_at, pair_search=pair_ground_at):
         for role in QUARTET: out[role] = r[role]
         out['emboss_hilight'] = r['bevel_hilight']
     else:
-        g = ground_search(base_face, TARGET[level])
+        g = ground_search(base_face, target)
         k = hls(g)[1] / hls(base_face)[1]
-        out['ground'] = hx(g); out['label'] = DIM_LABEL
+        out['ground'] = hx(g); out['label'] = DARK_LABEL
         for role in QUARTET:
             c = unhex(r[role])
             if role == 'bevel_light' and c == base_face: out[role] = hx(g); continue
@@ -195,8 +195,8 @@ def level_roles(e, level, ground_search=ground_at, pair_search=pair_ground_at):
     out['info_ground'], out['info_text'] = info_pair(e)
     out['field_ground'], out['field_text'] = r['field_ground'], r['field_text']
     if level != 'light':
-        for role, c, target in pair_targets(e, level): out[role] = hx(pair_search(c, target))
-        for _, text in PAIRS: out[text] = DIM_LABEL
+        for role, c, t in pair_targets(e, level, target): out[role] = hx(pair_search(c, t))
+        for _, text in PAIRS: out[text] = DARK_LABEL
     assert tuple(out) == ROLES, tuple(out)
     return out
 
@@ -207,18 +207,18 @@ def entries():
 
 def verify():
     """ground_at and pair_ground_at against their definitions on every case the table reads (every entry's ground,
-    and its three pair grounds, at DIM and DARK; a repeated colour and target searched once); one line per mismatch,
+    and its three pair grounds, at DARK; a repeated colour and target searched once); one line per mismatch,
     exit 1 on any."""
     bad = n = 0
     for e in entries():
         g = unhex(e['roles']['ground'])
-        for lvl in ('dim', 'dark'):
+        for lvl in TARGET:
             a, b = ground_at(g, TARGET[lvl]), ground_at_exhaustive(g, TARGET[lvl]); n += 1
             if a != b: bad += 1; print(f'{e["key"]} {lvl}: ground_at {hx(a)} != exhaustive {hx(b)}')
     print(f'ground_at: {n - bad} of {n} cases identical to the exhaustive search')
     cases = {}
     for e in entries():
-        for lvl in ('dim', 'dark'):
+        for lvl in TARGET:
             for role, c, target in pair_targets(e, lvl): cases.setdefault((c, target), f'{e["key"]} {lvl} {role}')
     pbad = 0
     for (c, target), where in cases.items():

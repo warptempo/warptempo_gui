@@ -1013,9 +1013,9 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // THE ELEVEN COLOUR KEYS (architect 2026-10-03; the record at
     // device_config.h's head): the theme, its level and the nine program
     // colours, each under its one grammar owner in device_config.h — a theme
-    // key the generated table does not hold, a level outside light | dim |
-    // dark, a colour that is neither `#rrggbb` nor one of the twenty names is
-    // the refusal (the red frame and the card, this body's shape). The value
+    // key the generated table does not hold, a level outside light | dark, a
+    // colour that is neither `#rrggbb` nor one of the twenty names is the
+    // refusal (the red frame and the card, this body's shape). The value
     // is kept AS TYPED. The commit RE-PAINTS AT ONCE: the palette is
     // installed from the live struct (install_palette, render.h) and the
     // whole window damaged; the flag cache keys the palette's generation and

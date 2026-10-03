@@ -3172,6 +3172,9 @@ private:
     // on 2026-09-22).
     void arm_pending_trim_drag(bool is_begin, bool both, int press_x,
                                int press_y);
+    // The pending's end without a crossing (lift, lost button, force-end):
+    // disarm, raising a held cap (input_trim.cpp).
+    void disarm_pending_trim_drag();
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
     // mouse_x → source-domain frame double, the single conversion both the

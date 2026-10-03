@@ -147,8 +147,8 @@ struct TrimRange {
 //   field pair    the modal dialogs' fields and the flag editor, the caret its
 //                 field's text (UNIFIED FIELDS, architect 2026-10-03).
 // THE THREE PAIRS ARE THE TABLE'S ROW like every role: as recorded at LIGHT,
-// and at DIM and DARK each ground darkened in proportion with the face under
-// the level's white text (architect 2026-10-03, mock sets AS and AT; the rule
+// and at DARK each ground darkened in proportion with the face under the
+// level's white text (architect 2026-10-03, mock sets AS and AT; the rule
 // is tools/theme_catalog/levels.py's), so no painter asks the level.
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
@@ -267,7 +267,8 @@ inline constexpr GuiColor kFlagSelectedOutline = hex(0xFFFFFF);
 // its own: its track is the CHECKED dither (Hilight over the ground), its
 // thumb's body and its two arrow buttons plain raised boxes on the ground, and
 // THE ARROW GLYPH THE LABEL (architect 2026-10-03: a chrome glyph on a chrome
-// face). A DRAGGED END CAP IS THE PRESSED SCROLL ARROW (architect 2026-10-03):
+// face). A HELD END CAP IS THE PRESSED SCROLL ARROW (architect 2026-10-03),
+// from the press on it to the gesture's end, a motionless press included:
 // Windows draws a held scroll arrow DFCS_PUSHED | DFCS_FLAT — one Shadow line
 // round the face, the glyph one Windows px right and down (render_trim_flags).
 
@@ -1299,9 +1300,9 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // end"): a 16 x 16 Windows-px PLAIN RAISED button at each end of the thumb —
 // 16 wide here, the one owner of the width, and the trim lane's full height
 // (kTrimLaneHeightPx, the same 16) — the ground under the plain raised edge
-// and an arrow glyph in the label, no hover face, and while its drag stands
-// the PRESSED scroll arrow (render_trim_flags; the palette block's trim
-// paragraph).
+// and an arrow glyph in the label, no hover face, and from the press on it to
+// the gesture's end the PRESSED scroll arrow (render_trim_flags; the palette
+// block's trim paragraph).
 // THE BEGIN BUTTON'S LEFT EDGE STANDS ON THE BEGIN COLUMN and its arrow
 // points LEFT; THE END BUTTON'S RIGHT EDGE STANDS ON THE END COLUMN and its
 // arrow points RIGHT; the thumb's BODY runs between the two buttons' inner
@@ -2380,14 +2381,15 @@ struct TrimBarHit {
 // may publish at all (GuiPaintHandler::paint_trim passes null unless the
 // damage clip covers the whole lane), so a narrow repaint cannot stamp the
 // stash over pixels it did not redraw.
-// `pressed` NAMES THE CAP A SINGLE-BOUND DRAG HOLDS (architect 2026-10-03):
-// that button paints PRESSED, as Windows draws a held scroll arrow —
+// `pressed` NAMES THE CAP A SINGLE-BOUND GRAB HOLDS, from its press to the
+// gesture's end (architect 2026-10-03; the derivation is paint_trim's): that
+// button paints PRESSED, as Windows draws a held scroll arrow —
 // DrawFrameControl's DFCS_PUSHED | DFCS_FLAT (Wine, dlls/user32/scroll.c →
 // uitools.c UITOOLS95_DFC_ButtonPush: EDGE_SUNKEN under BF_FLAT, one Shadow
 // line round the face, its inner line the face itself, and the arrow drawn
 // one px right and down of its resting place) — here the ground under one
 // Shadow line ring (paint_relief_line_frame) and the glyph one Windows px
-// right and down. The pair (bridge) drag presses no cap: its grab is the
+// right and down. The pair (bridge) grab presses no cap: its grab is the
 // thumb, which Windows leaves raised under the drag.
 enum class TrimPressedCap { None, Begin, End };
 void render_trim_flags(cairo_t* cr,

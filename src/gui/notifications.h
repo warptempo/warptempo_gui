@@ -12,8 +12,8 @@
 // five of its distances, the text's right air adding the glyph's own inset
 // so it matches the air the eye sees left of the text, 2026-10-01), on
 // Windows' tooltip face — the INFO pair (Windows 95 Standard's black words on
-// #FFFFE1 at the light level; on dim and dark that ground darkened with the
-// face under white words, render.h's palette block) inside a one-line frame,
+// #FFFFE1 at the light level; on dark that ground darkened with the face
+// under white words, render.h's palette block) inside a one-line frame,
 // 3DLight top-left and DkShadow bottom-right, the tooltip's own box
 // (paint_popup_chrome) — square, with no drop shadow (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right

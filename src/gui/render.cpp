@@ -855,7 +855,7 @@ namespace {
 // four columns as integer rectangles in the theme's LABEL (a chrome glyph on a
 // chrome face, architect 2026-10-03), centred in device px (an odd difference
 // flooring toward the top-left), its tip LEFT on the begin button and RIGHT on
-// the end button. PRESSED (a single-bound drag holds it, render_trim_flags'
+// the end button. PRESSED (a single-bound grab holds it, render_trim_flags'
 // declaration): the ground under one Shadow ring instead of the raised edge,
 // the glyph one Windows px right and down. The caller's clip (the lane's) cuts
 // a button that overruns the lane.
@@ -2316,9 +2316,8 @@ void install_palette(const DeviceConfig& cfg) {
     const std::optional<GuiThemeLevel> level =
         parse_theme_level(cfg.theme_level);
     assert(theme && level);
-    const GuiThemeLevelWords& w = *level == GuiThemeLevel::Light ? theme->light
-                                : *level == GuiThemeLevel::Dim   ? theme->dim
-                                                                 : theme->dark;
+    const GuiThemeLevelWords& w =
+        *level == GuiThemeLevel::Light ? theme->light : theme->dark;
     const auto key = [&](std::string DeviceConfig::* m) {
         const std::optional<uint32_t> word = program_colour_word(cfg.*m);
         assert(word);

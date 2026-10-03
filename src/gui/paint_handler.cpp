@@ -4368,12 +4368,22 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // window where the window is, and a pair of full-height lines competing with
     // the marker stems said it a second time in the same pixels.
     // THE HELD CAP (architect 2026-10-03, render_trim_flags' `pressed`): a
-    // live single-bound drag presses its bound's button; the pair drag and a
-    // press still under the gate's threshold press none.
+    // cap is pressed FROM ITS PRESS TO THE GESTURE'S END, as a push button
+    // shows its pressed face from its press ("looks odd" when it waited for
+    // the drag to start moving) — the single-bound pending (a press on the
+    // cap still under the grab gate, PendingTrimDrag) and the single-bound
+    // drag it becomes both press their bound's button, so a press that never
+    // moves wears it until the lift. The pair (bridge) arm and drag press
+    // none. The damage at both edges is input_trim.cpp's
+    // (arm_pending_trim_drag, disarm_pending_trim_drag, commit_trim_drag).
+    const bool single_drag = app.trim_drag.active && !app.trim_drag.both;
+    const bool single_pending =
+        app.pending_trim_drag.active && !app.pending_trim_drag.both;
+    const bool held_is_begin = single_drag ? app.trim_drag.is_begin
+                                           : app.pending_trim_drag.is_begin;
     const TrimPressedCap pressed =
-        app.trim_drag.active && !app.trim_drag.both
-            ? (app.trim_drag.is_begin ? TrimPressedCap::Begin
-                                      : TrimPressedCap::End)
+        single_drag || single_pending
+            ? (held_is_begin ? TrimPressedCap::Begin : TrimPressedCap::End)
             : TrimPressedCap::None;
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame, trim, pressed,

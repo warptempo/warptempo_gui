@@ -186,7 +186,7 @@ def write_md(cat, sizes):
          'what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet '
          'geometry: the tablet\'s 2304 x 1440 at gui_scale 275, every length derived from the app\'s own constants; '
          'cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well\'s bottom '
-         'lines and the bottom row, transparent between them, at the theme\'s LIGHT level (the app\'s `theme_level`; dim and dark are the '
+         'lines and the bottom row, transparent between them, at the theme\'s LIGHT level (the app\'s `theme_level`; dark is the '
          'generated table\'s, tools/theme_catalog/levels.py). The chrome is the theme\'s; the waveform pane, the flags '
          'and the playhead are the program\'s own elements in the app\'s default colours (architect 2026-10-03): the '
          'well keeps the app\'s two-line sunken edge (the theme\'s Shadow and DkShadow above, its 3DLight and Hilight '

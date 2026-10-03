@@ -15,24 +15,25 @@ python3 tools/theme_catalog/crops.py [key ...]     # -> docs/themes/crops/<key>.
 python3 tools/theme_catalog/crops.py --md          # renders nothing: CATALOG.md from catalog.json, stale crops deleted
 ```
 
-## The app's table and the three levels (architect 2026-10-03)
+## The app's table and the two levels (architect 2026-10-03)
 
 The app carries the catalog as ONE GENERATED, COMMITTED HEADER, `src/gui/theme_table.h` (`gen_theme_table.py`; its
-head says "do not edit"): every entry at THREE LEVELS, LIGHT / DIM / DARK, thirteen roles a level, so the app does no
+head says "do not edit"): every entry at TWO LEVELS, LIGHT / DARK, thirteen roles a level, so the app does no
 colour arithmetic. A catalog change is `build.py`, then `gen_theme_table.py` and `crops.py`, the outputs committed
 together; the output is byte-stable (the catalog's order, fixed formatting, no timestamp). THE LEVEL ARITHMETIC is one
 module, `levels.py`, read by the generator and by `crops.py` (its head states the rule): LIGHT the entry as
-recorded; DIM / DARK the ground's HLS hue and saturation at relative luminance 0.080 / 0.035, all four relief lines'
+recorded; DARK the ground's HLS hue and saturation at relative luminance 0.035, all four relief lines'
 HLS lightness scaled by L(new face) / L(base face) (black stays black, a 3DLight equal to the base face becomes the
 new face), the label white, the emboss's light copy Windows' own dialog-rule Hilight of the new face
 (`toolkit_rules.windows_dialog`); the selected pair the entry's (a CDE entry's its `title_active` with colour set 1's
 Motif foreground), the info pair the entry's or Windows' #FFFFE1 / #000000 where unrecorded, the field pair the
-entry's — as recorded at LIGHT, and at DIM / DARK each of the three grounds DARKENED IN PROPORTION with the face
+entry's — as recorded at LIGHT, and at DARK each of the three grounds DARKENED IN PROPORTION with the face
 (architect 2026-10-03, mock sets AS and AT): its recorded luminance x the level's target / L(the recorded ground), its
 hue and HSV saturation kept (`pair_ground_at`), the text on all three the level's white. The searches are exhaustive
 by definition (`ground_at_exhaustive`, the lightness at every 1 / 100000 step; `pair_ground_at_exhaustive`, the HSV
 value likewise); `ground_at` and `pair_ground_at` are the same searches vectorized with numpy, verified identical on
-every case the table reads (`levels.py --verify`). The app reads the row the device config names (`theme`, `theme_level`; render.h's palette
+every case the table reads (`levels.py --verify`). No level stands between the two (architect 2026-10-03: a middle
+level's proportional field, card and selection fall into a grey zone, and fixing that would need another rule). The app reads the row the device config names (`theme`, `theme_level`; render.h's palette
 block maps the roles onto the painters).
 
 ## The contract

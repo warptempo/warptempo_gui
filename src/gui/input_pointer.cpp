@@ -6952,7 +6952,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // click that commits nothing. (A crossed pending became app.trim_drag
         // and commits through the branch above, where the setter's deselect and
         // the trim-mutation stop live.)
-        app.pending_trim_drag = PendingTrimDrag{};
+        disarm_pending_trim_drag();
         return;
     }
     if (app.pending_click.active()) {
@@ -7126,7 +7126,7 @@ void GuiInputHandler::finalize_active_drags() {
     // history-less; there is simply nothing to be history-less about on this
     // path.
     app.pending_marker_press = PendingMarkerPress{};
-    app.pending_trim_drag    = PendingTrimDrag{};
+    disarm_pending_trim_drag();
     app.pending_click        = PendingClickAct{};
     // THE RENDER PLAYER'S TWO ARMS END HERE TOO, through the same clears the
     // pointer-leave hook and the button-lost edge call — the row press with NO
@@ -9839,7 +9839,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // The motionless endcap/bridge press commits NOTHING (architect
             // 2026-07-30): its highlight publish is retired, so a press that
             // never travelled leaves the trim exactly as it found it.
-            app.pending_trim_drag = PendingTrimDrag{};
+            disarm_pending_trim_drag();
             // THE TRIM-BAR SEED DIES WITH IT. A button lost mid-press is not a
             // clean click sequence, so it may not leave a seed behind for an
             // unrelated later release to consume into a TrimBar double-click

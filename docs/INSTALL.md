@@ -91,7 +91,7 @@ The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/war
 | `projects_path=` | the absolute folder whose subfolders are the projects |
 | `last_project=` | the folder name opened last, written by the program at every open |
 | `theme=` | the chrome's theme, a key from `docs/themes/CATALOG.md` (`windows-95-standard` by default) |
-| `theme_level=` | `light`, `dim` or `dark`: the theme as recorded, or darkened (`dark` by default) |
+| `theme_level=` | `light` or `dark`: the theme as recorded, or darkened (`dark` by default) |
 | `waveform_ink=`, `waveform_canvas=`, `waveform_outline=` | the waveform's ink, its ground, and the outline of the magnified inner bar |
 | `flag_face=`, `flag_label=` | the markers' flag colour and its label |
 | `invalid_face=`, `invalid_label=` | an invalid marker's flag and its label |

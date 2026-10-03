@@ -90,7 +90,7 @@ DEFAULTS = {
     'bevel_hilight': None, 'bevel_light': None, 'bevel_shadow': None, 'bevel_dkshadow': None,
     # THE EMBOSS'S LIGHT COPY (architect 2026-10-03, late: Windows' normal DSS_DISABLED on every variation): the colour
     # every engraved path (the menu word, the glyph, a disabled flag's label) paints one logical px right and down
-    # beneath the Shadow word -- the theme's own Hilight, or on a dim or dark variation the base's RECORDED Hilight,
+    # beneath the Shadow word -- the theme's own Hilight, or on a dark variation the base's RECORDED Hilight,
     # not darkened with the face (the Shadow word darkens like every other line)
     'emboss_hilight': '@bevel_hilight',
     # the accent (the architect, 2026-10-02: the waveform's ink is the accent); read only by menu.highlight "fill"
