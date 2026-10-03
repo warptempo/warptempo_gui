@@ -394,7 +394,7 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 
 // THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain:
 // nearbyint((displayed - vp_start) / spp), rounded once to the integer column.
-// One owner for the one rounding — the trim-bound column, the region span, the
+// One owner for the one rounding — the trim-bound column, the
 // phase-reset overlay's left edge, the strip-drag anchor stem, the undo
 // restore's held column (the singleton under the hold, undo.cpp; the
 // restore's visibility test is displayed_frame_on_screen, inside
@@ -403,7 +403,7 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // >= w) and
 // painted_column_of_source_frame_on_basis's tail
 // all place through this exact expression, and used to spell it independently,
-// tied together only by "matching region_columns"-style prose. PURE ARITHMETIC,
+// tied together only by "matching"-style prose. PURE ARITHMETIC,
 // NO BASIS CHOICE INSIDE: the caller supplies its own vp_start/spp (plate
 // basis, item basis, or live values — the two-epochs split at
 // plate_viewport_basis / item_viewport_basis is the caller's to name, at the

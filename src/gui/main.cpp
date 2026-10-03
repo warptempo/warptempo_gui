@@ -116,7 +116,7 @@ namespace {
 // and the function became the value pair's composer — the pasteable payload
 // and the source marker's index, no display string at all.)
 
-// UndoEntry, DragState, UndoHistory, RegionState, RegionDragState,
+// UndoEntry, DragState, UndoHistory, RegionDragState,
 // DialogTrigger, PromptState, ViewState,
 // AppState live in app_state.h, alongside the Viewport struct.
 

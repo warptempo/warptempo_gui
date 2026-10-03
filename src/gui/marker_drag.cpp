@@ -368,8 +368,8 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
     viewport.translate_playhead_to(sample);
-    // NO REGION WORK OWED HERE: the trim overlay stands only while a sweep
-    // draws it, and no sweep runs beside a marker drag. The group live-track
+    // NO REGION WORK OWED HERE: the region is the trim, which a marker drag
+    // never writes. The group live-track
     // that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
     // never moved; the doctrine is at the head of position_nudge.h).
@@ -544,8 +544,8 @@ void MarkerDragOps::commit_drag() {
     // invalidate_waveform_area above: the drag shifts its frame, so its
     // always-on stem repaints at the committed column (every enabled marker
     // stems since row 5 — nothing here keys on selection).
-    // NO REGION WORK OWED HERE: the trim overlay stands only while a sweep
-    // draws it, and no sweep runs beside a marker drag.
+    // NO REGION WORK OWED HERE: the region is the trim, which a marker drag
+    // never writes.
     // The extent re-derive that used to snap a live-tracked group span back to its
     // resting extent here died with the group drag (architect 2026-07-29 — groups
     // are never moved; the doctrine is at the head of position_nudge.h).

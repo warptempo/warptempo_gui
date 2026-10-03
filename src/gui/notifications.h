@@ -556,8 +556,8 @@ inline constexpr const char* kProjectsPathAppliesCard =
 // THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02) — a
 // proper sub-window whose TARGET span rounds below one output sample, which
 // plan_trim refuses and every orchestrator answers by rendering the FULL,
-// untrimmed piece (the window's purpose is at TrimState, app_state.h). The trim bar and the
-// waveform overlay go on painting the hairline window the user drew, so the
+// untrimmed piece (the window's purpose is at TrimState, app_state.h). The trim bar
+// goes on painting the hairline window the user drew, so the
 // screen says "this span" while the audio is the whole movement — the shape
 // the strictness ruling's "what shows would mislead" test cards. A MINIMUM
 // TRIM SIZE WAS THE ALTERNATIVE AND IS REJECTED (2026-08-19,

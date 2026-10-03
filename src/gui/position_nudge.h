@@ -43,8 +43,7 @@ struct GuiTargetRender;
 //     zoom framing, and the undo/redo + paste
 //     restores (which DEFINE a group selection). (The trim region toggle READ
 //     a span until 2026-08-18 — the trim-scratch region's — and the toggle
-//     itself is deleted since 2026-09-22, the record being at RegionState,
-//     app_state.h. Space left this list on 2026-07-30, its
+//     itself is deleted since 2026-09-22. Space left this list on 2026-07-30, its
 //     left-bound region launch dropped for an unconditional
 //     play-from-the-playhead;)
 //   * FOCUS-COLLAPSE where the members are COUPLED to one another or the act is

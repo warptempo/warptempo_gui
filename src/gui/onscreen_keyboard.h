@@ -603,7 +603,7 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // them (the authoritative paint order, paint_handler.cpp),
 // so a waveform pixel under the band is work whose result is thrown away in
 // the same frame: a narrow scanner damage column crossing the band would
-// otherwise pay the plate blit, the region ink and every vertical over the
+// otherwise pay the plate blit and every vertical over the
 // band's whole height, at the panel's own tick rate. ONE GATE, ONE CLIP for
 // both tenants.
 //

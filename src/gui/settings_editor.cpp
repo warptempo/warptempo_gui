@@ -614,10 +614,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // coalesces by containment, so the identical rect is dropped.
             // THE TAIL ALSO PARKS THE PLAYHEAD at the committed trim start
             // (architect 2026-08-05 — every trim write does, the membership
-            // stated at the head of input_trim.cpp). IT DOES NOT HIDE THE TRIM
-            // REGION OVERLAY: the trim writes are that inventory's one excluded
-            // class since 2026-08-18, the region being the trim itself. It
-            // moves the cursor from inside a modal editor, which is accepted
+            // stated at the head of input_trim.cpp). It moves the cursor from inside a modal editor, which is accepted
             // for uniformity: a typed commit is a commit, and the editor lives
             // on the bottom row while the move is out on the waveform. The
             // INACTIVE-band arm below stays out of the rule — it writes a
@@ -832,16 +829,10 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
-    // (THE ENGINE COMMIT'S WHOLESALE OVERLAY HIDE IS DELETED, 2026-08-19, with
-    // the call-site inventory it belonged to; the resting overlay itself went
-    // on 2026-09-22. It stood here from 2026-07-29 on the argument that the
-    // scale is a warp-map input, so the commit rebuilds the target map
-    // underneath a span measured against the OLD map; that argument died on
-    // 2026-08-18 when the region became the trim, the span being DERIVED from
-    // source-domain trim bounds every frame, so the re-warp below simply
-    // re-derives the overlay's columns in the new domain with nothing to
-    // maintain and nothing stale to put away. The trim WINDOW itself was never
-    // touched either way — the trim bar and its endcaps go on showing it.)
+    // (THE ENGINE COMMIT'S WHOLESALE OVERLAY HIDE IS DELETED, 2026-08-19: the
+    // region is the trim, whose source-domain bounds the re-warp below leaves
+    // untouched — the trim bar and its endcaps go on showing it in the new
+    // domain, with nothing stale to put away.)
     // THE SELECTION STILL GOES (architect 2026-07-29): an engine
     // commit rebuilds the map under every marker INDEX and IMAGE at once, so no
     // marker keeps the identity a focus named — the same
@@ -852,9 +843,8 @@ void GuiSettingsEditor::commit() {
     // history-less, so no other settings entry kind exists to cover. Together they
     // are what let the never-span-less ENFORCEMENT be deleted: this site was one of
     // its two remaining producers, and closing it here means no collapse protocol
-    // is needed rather than a collapse being owed. It touches no region: a
-    // selection mutator writes no region state at all, and the overlay's
-    // visibility is not a selection concern.
+    // is needed rather than a collapse being owed. It touches no trim: a
+    // selection mutator writes no trim state at all.
     selection.clear_selection();
     // Full-area damage for the teardown, and it is the site's own: clear_selection
     // damages only on a stem/overlay SUBJECT CHANGE, so an already-empty selection

@@ -588,8 +588,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     revert anything, and the gesture continues under the pointer exactly as
     //     if no key had been pressed;
     //   * RELEASE ENDS THE GESTURE AND WHAT STANDS STANDS — the release body
-    //     commits: the proposed marker position, the live trim bounds, the region as
-    //     extended (the tempo drag's already-written cents left this list when
+    //     commits: the proposed marker position, the live trim bounds, the trim as
+    //     swept (the tempo drag's already-written cents left this list when
     //     the whole tempo drag was deleted);
     //   * BUTTON-LOST ENDS IT THE SAME WAY (the !primary_button_held arms in
     //     on_motion all route to the release bodies);
@@ -1190,13 +1190,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE TRIM REGION OVERLAY'S ESC HIDE STOOD HERE AND IS RETIRED (joined
-    // 2026-07-30 as a clear, a hide from 2026-08-18, retired 2026-08-21, bare
-    // `[` then being the one manual road onto and off the overlay). Since
-    // 2026-09-22 the overlay has no resting form at all — it stands only while
-    // a sweep draws it and the sweep's end takes it down — so there is nothing
-    // for any key to hide. The hide ranked ABOVE the render cancel below, so a
-    // shown overlay used to absorb the press; a cancel takes ONE press.
+    // THE TRIM REGION OVERLAY'S ESC HIDE STOOD HERE AND IS RETIRED (2026-08-21);
+    // the overlay itself retired whole on 2026-10-03 (architect, "the trim bar
+    // is enough"), so there is nothing for any key to hide. A cancel takes ONE
+    // press.
 
     // Bare Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key, mods)) return;
@@ -1274,9 +1271,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       rather than privileged — the card's own pointer claim sits above
     //       every veil, this key under all of them.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
-    // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road
-    // onto and off the overlay; the retirement is argued at the site it stood at,
-    // just above the cancel).
+    // (joined 2026-07-30, retired 2026-08-21; the overlay itself retired
+    // 2026-10-03 — the record is at the site it stood at, just above the
+    // cancel).
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
     // MOVE: its allowlist stopped dropping the key, which lets (d) — and,
     // since 2026-08-31, (e), the mode's own cards being ordinary cards — run
@@ -1297,9 +1294,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // left exactly as found. Leaving the MARKER LANE is
     // not an Esc act either: it is any DESELECTING route (Home/End, a
     // waveform click, the trim setters, an undo restore that clears — see
-    // playhead_in_marker_lane). NOR IS THE TRIM REGION OVERLAY AN ESC ACT ANY
-    // MORE (2026-08-21): it is the sweep's live picture since 2026-09-22 and
-    // goes down with the sweep's end alone.
+    // playhead_in_marker_lane).
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is place (e) — the stack's clear, and an explicit no-op with no card
     // standing (handle_plain_bare_keys) — the one place the press ends.
@@ -1500,13 +1495,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // click scrub region to preview"). The region arm that stood here — a
         // left-bound launch through scrub_launch_at whenever a span rested — is
         // DELETED with the SPAN FORM: the region IS THE TRIM (the model is at
-        // RegionState, app_state.h), not a launch
+        // RegionDragState, app_state.h), not a launch
         // point, and the SCRUB is the gesture for previewing it — the waveform
         // lower half's plain click, its one entry (the act runs at the
         // motionless release since 2026-08-13): click inside
-        // the overlay and it auditions from there, the overlay left standing.
-        // Space now touches no region at all, in either
-        // direction: it neither reads the overlay nor hides it.
+        // the trim window and it auditions from there.
+        // Space reads no trim bound to launch from.
         playback_lifecycle.toggle_playback(launch_offset);
         return;
     }
@@ -2132,8 +2126,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // SHIFT+0 RESETS THE TRIM to the whole song (architect 2026-09-22) — the
     // maximizer, the RECOVERY route trim's absence from undo requires. It sat
     // on Shift+[ beside the trim region toggle on bare `[` until the architect
-    // deleted that toggle the same day (the tablet's pen reaches the trim bar,
-    // so the waveform overlay stands only while a sweep draws it) and gave the
+    // deleted that toggle the same day (the tablet's pen reaches the trim bar)
+    // and gave the
     // bracket to the Waveform Magnification lamp; `0` already means
     // "the whole song" to the camera, so its shifted form says it to the
     // trim. The one predicate is is_trim_maximize_key (gui_input.h). It
@@ -2227,14 +2221,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the waveform lane and this branch does not match: the press falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
     // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is NOT
-    // one — it touches no selection, and since 2026-08-21 it touches the trim
-    // region overlay no more either),
+    // one — it touches no selection),
     // and there is no fallback, so an
     // off-home marker-lane press is a consumed no-op, never a
     // waveform-lane step. (The AUDITION SCRUB is a different gesture entirely — the waveform
     // lower-half one-shot press — and no arrow key reaches it.)
     // ROUTE BEFORE THE STOP: this branch must decide the route ahead of the
-    // waveform-lane body's stop / selection-clear / region-hide, because the two
+    // waveform-lane body's stop / selection-clear, because the two
     // lanes carry DIFFERENT playback regimes — the position nudges stop in
     // position_nudge_prologue even when they later refuse, while the
     // W+target refusal below stops nothing at all (a refused press leaves a
@@ -2733,17 +2726,6 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     if (step.cell != MarkerCell::Payload) write_addressed_cell(step.cell);
 }
 
-void show_trim_region_overlay(AppState& app, Viewport& viewport) {
-    // The raise, with the `h` carve-out and the framing omission the
-    // declaration argues; its one hide is commit_region_sweep's. Guarded twice so a call on the already-shown path
-    // costs nothing and damages nothing — which is what lets its one caller sit
-    // on the sweep's per-motion path and re-ask on every accepted trim write.
-    if (app.history_mode.active) return;
-    if (app.region.shown) return;
-    app.region.shown = true;
-    viewport.invalidate_waveform_area();
-}
-
 bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) {
     // The walk is markers-only (trim is not a cycle stop). The playhead lands on
     // the focused marker unconditionally, and the camera below does whatever
@@ -3204,8 +3186,7 @@ void GuiInputHandler::run_span_framing_command() {
     // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
     // SUB-WINDOW, else the whole song (full zoom-out — which is also where the
     // FULL trim window lands, it being the whole song). The region arm above
-    // them died with the separate region state, the overlay and the trim window
-    // being one span now. The framing is idempotent — a second double-click with
+    // them died with the separate region state. The framing is idempotent — a second double-click with
     // the viewport unchanged is a no-op (apply_zoom_to_start's current-vs-target
     // compare), while any pan/zoom between clicks re-frames.
     if (audio.total_frames() <= 0) return;
@@ -3224,9 +3205,8 @@ void GuiInputHandler::run_span_framing_command() {
     bool    margin = false;
     // (THE REGION ARM IS GONE, 2026-08-18, and with it the span priority this
     // body used to carry: a live region won over the trim, which was a real
-    // choice while the two were separate states. The region IS the trim now, so
-    // the overlay and the trim window frame identically and one arm answers
-    // both.)
+    // choice while the two were separate states. The region IS the trim now,
+    // so one arm answers.)
     if (!trim_is_full_window(app.trim, audio.total_frames())) {
         // A proper SUB-WINDOW frames itself. A FULL window is the old unset
         // state — nothing to frame beyond the whole song — so it falls through
@@ -3236,8 +3216,8 @@ void GuiInputHandler::run_span_framing_command() {
         // owns the range in source frames. Express both bounds in the ACTIVE
         // domain: source view
         // uses the source frames directly; target view maps each through
-        // displayed_or_live_target_map — the same basis the flags, endcaps and
-        // region paint at — which is identity on the empty source-view map, so
+        // displayed_or_live_target_map — the same basis the flags and endcaps
+        // paint at — which is identity on the empty source-view map, so
         // one call covers both views.
         const std::pair<long long, long long> trim_src =
             compute_trim_samples(app, audio.total_frames());
@@ -3853,15 +3833,10 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     app.staged_displayed_valid = false;
 
     // (THE S/T SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
-    // A/B tab switch's twin. It was an IN-PLACE reset here. THE OVERLAY'S
-    // VISIBILITY IS NOT A
-    // PLAYHEAD, SELECTION OR MUTATION CONCERN — it is a view preference about
-    // whether the user is looking at the trim, and the trim is the same
-    // per-tab pair in both audio views, the overlay simply deriving its
-    // columns in the new domain. So a domain flip has nothing to put away.)
-    // THE SEATED PINCH'S ANCHOR IS CLEARED HERE, and it survived the overlay
-    // hide's deletion above because it answers a different question — a stale
-    // song frame, not a view preference: TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
+    // A/B tab switch's twin: the trim is the same per-tab pair in both audio
+    // views, so a domain flip has nothing to put away.)
+    // THE SEATED PINCH'S ANCHOR IS CLEARED HERE, a flip making it a stale
+    // song frame: TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
     // song frame, and nothing about two fingers resting on the glass stops a
     // keyboard `t` or a mouse click on the audio-view lamp from reaching here — so a
     // pinch held across this flip would go on zooming about a SOURCE frame read
@@ -3884,9 +3859,9 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // SPAN FORM retired there is no such state to avoid: the group's cue is its
     // members' brightened flags plus the always-visible cursor, and the
     // selection-gated land below re-expresses the focus EXACTLY, which is what
-    // seats that cursor where the readout says it is. The overlay is DERIVED
-    // from the trim every frame, through trim_overlay_span, which re-crosses
-    // the bounds into whichever domain is live, so the flip owes it nothing.
+    // seats that cursor where the readout says it is. The trim bar paints
+    // from the trim's source-frame bounds every frame, crossing them into
+    // whichever domain is live, so the flip owes it nothing.
     // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-09-23: the three
     // absolute view selectors on bare 1/2/3 (and the icon row's view group,
     // which synthesizes them),

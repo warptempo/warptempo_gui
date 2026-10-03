@@ -317,8 +317,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // authoritative enumeration is at its dispatch point in on_key,
     // input_handler.cpp; no count belongs here), and dropping Esc at this gate
     // would break it. (THE REGION HIDE WAS THE OTHER ADMISSION UNTIL
-    // 2026-08-21; the resting trim overlay it hid is itself deleted since
-    // 2026-09-22.)
+    // 2026-08-21.)
     const bool is_esc =
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
@@ -950,12 +949,8 @@ void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
     // (THE EXIT'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
     // walk step's and the reading switch's — THE MODE'S THREE OWN EDGES as one
-    // class. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR MUTATION
-    // CONCERN: it is a view preference about whether the user is looking at the
-    // trim, and this view neither touches the trim nor offers a way to raise or
-    // lower the overlay. The 2026-08-05 view-local reading it inherited died
-    // with the view-local span itself on 2026-08-18, and the resting overlay
-    // itself on 2026-09-22 — it stands only while a sweep draws it.)
+    // class: this view never touches the trim, so its edges have nothing of
+    // the trim's to put away.)
     // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
     // counts VISITS rather than describing one: letting it fall back to zero
     // would let a close-then-open pair reissue a number the flag cache has
@@ -1584,11 +1579,6 @@ void GuiInputHandler::on_history_prefetch_ready() {
 //     REPUBLISHED IN THIS SAME PRESS (2026-08-07, republish_history_lane_now):
 //     the arriving reading's list, rects and stems are standing before the press
 //     returns, so the swap is atomic and shows no blank frame;
-//   * THE TRIM REGION OVERLAY HIDES (2026-08-05, the view-local rule —
-//     planner-included on the step's own edge argument, the architect having
-//     named the exit and the step): the arriving reading is a different delta
-//     from the one the reader was reading, which is the turn-to-other-work
-//     every hide answers to. It discards nothing — this view writes no trim;
 //   * THE VIEWPORT IS NOT TOUCHED — the step's own rule since 2026-08-08, and
 //     it applies here for the step's own reason: the window is the USER'S while
 //     the view stands, so every walk and reading shares one viewport and a
@@ -1660,8 +1650,7 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
     // (NO OVERLAY HIDE, architect 2026-08-19: a walk-or-reading switch is one of
-    // THE MODE'S THREE OWN EDGES, and none of them hides any more — the
-    // argument is at close_history_mode, the mode's exit.)
+    // THE MODE'S THREE OWN EDGES — the record is at close_history_mode.)
     republish_history_lane_now();
     viewport.invalidate_all();
 }
@@ -2133,11 +2122,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // so the emptied state lives only across the handful of lines between.
         drop_lane_stash_across_history_edge();
         // (NO OVERLAY HIDE, architect 2026-08-19: a `,` / `.` step is one of THE
-        // MODE'S THREE OWN EDGES and none of them hides any more — a step
-        // changes which checkpoint is being read and touches neither playhead
-        // nor selection nor trim, so it has no business putting away a view
-        // preference the mode itself offers no way to restore. The argument is
-        // at close_history_mode, the mode's exit.)
+        // MODE'S THREE OWN EDGES — the record is at close_history_mode.)
         // THE VIEWPORT IS THE USER'S ACROSS A STEP (architect 2026-08-08,
         // SUPERSEDING the 2026-08-05 per-edge reset to full zoom out): he pans
         // and zooms once and reads the SAME WINDOW through every step of the

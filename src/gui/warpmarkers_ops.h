@@ -141,8 +141,7 @@ struct GuiWarpMarkersOps {
     // with no inheritance walk in the act — so there is no collapse to the
     // focus and no playhead land. ONE undo entry per press, from the
     // pre-state, and NOTHING MOVES: the act lands no marker and moves no
-    // cursor, so it calls neither movement owner and the trim region overlay
-    // stands.
+    // cursor, so it calls neither movement owner.
     void flatten_tempo_deviations(TempoFlattenKind kind);
     // Steps the focused marker's tempo by `delta_cents` integer cents, signed
     // by direction of travel — ONE cent per bare keypress, THREE under ctrl

@@ -36,16 +36,10 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // seam are at reset_displayed_target_basis (app_state.h); the ruling is at
     // the selector.
     reset_displayed_target_basis(app);
-    // THE LOAD PATH RESETS THE TRIM REGION OVERLAY'S BIT, so a new piece starts
-    // clean (the overlay is DERIVED from the trim and stands only while a sweep
-    // draws it — RegionState, app_state.h — and the load runs from the startup
-    // tick, before any input exists, so this is a belt over a bit that is
-    // down by construction). THE SOURCE LOAD IS ITS WHOLE POPULATION since
-    // 2026-08-24: the `'` load-in-place stopped sharing this routine when it
-    // stopped writing anything a source load writes beyond the engine block.
-    app.region = RegionState{};
-    // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
-    // same line of argument the region reset above makes: the
+    // THE SEATED PINCH'S ANCHOR IS CLEARED HERE. THE SOURCE LOAD IS THIS
+    // ROUTINE'S WHOLE POPULATION since 2026-08-24 (the `'` load-in-place
+    // stopped sharing it when it stopped writing anything a source load writes
+    // beyond the engine block), and the
     // three assignments below REPLACE the active view state wholesale, and this
     // routine is where that write lives — so the clear lives here rather than at
     // the caller. THE VALUES-ONLY CONTRACT STILL HOLDS otherwise: this is a
@@ -448,9 +442,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // the act class at selection_consumed — and a project reopen builds a new
     // AppState rather than loading into this one; the contract is at
     // AppState::add_to_selection.
-    // (The displayed hit map AND the trim region overlay's visibility are reset in
-    // apply_settings_engine_and_prefs, this load's own view-establishment
-    // routine, not here.)
+    // (The displayed hit map is reset in apply_settings_engine_and_prefs, this
+    // load's own view-establishment routine, not here.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). SEED IT TO THE FULL WINDOW explicitly before
     // the initial-playhead read: the window is always set (2026-07-30), so

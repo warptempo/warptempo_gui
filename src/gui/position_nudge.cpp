@@ -102,7 +102,6 @@ PositionNudgePrologue position_nudge_prologue(
     // Ctrl+N shape, the land sitting at the CALLER of collapse_to_focused because
     // the site that hands the marker lane a focus is the site that owes it a land.
     // The step every caller runs after this is therefore always the singleton op.
-    // The tail's unconditional hide takes the trim region overlay with it.
     // THE PRESS'S STOP — the collapse-to-point class of the keyboard stop rule
     // (architect 2026-07-30, stated at stop_playback_if_playing's declaration,
     // playback_lifecycle.h), placed by that rule's refusal gating: past

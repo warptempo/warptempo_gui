@@ -49,13 +49,14 @@ void render_waveform_to_cache_surface(
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
-    // Clear to transparent — whatever ground the paint pass laid under the plate
-    // (kWaveformCanvas, or a kWaveformRegionCanvas recolor) shows through
-    // wherever the waveform samples don't paint. No ground color is ever baked
-    // into the plate: its alpha is exactly what composites the ink over that
-    // ground through its gaps (binary alpha since the aliasing deletion), which
-    // is why a highlighted
-    // span needs no plate of its own.
+    // Clear to transparent — the kWaveformCanvas ground render_canvas lays under
+    // the plate shows through wherever the waveform samples don't paint. No
+    // ground color is ever baked into the plate: its alpha is exactly what
+    // composites the ink over that ground through its gaps (binary alpha since
+    // the aliasing deletion), so the canvas has one painter. Nothing recolours
+    // that ground under the plate since the sweep's region highlight retired
+    // (2026-10-03); the remaining reason is that one-painter rule, and the
+    // plate stays as it is (the record is at render_waveform, render.h).
     // This is the LAST cairo drawing on the surface: render_waveform writes the
     // pixel words directly, so the context is destroyed before those CPU writes
     // begin (render_waveform still flushes defensively, per its contract).

@@ -355,7 +355,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // demotion that used to drop a 2+ delete down to a span over the deleted
     // positions is gone with the SPAN FORM, and there is no span state left for
     // one to write into — the region IS the trim. The delete leaves the trim
-    // and the overlay's visibility exactly as it found them.
+    // exactly as it found it.
     selection.clear_selection();
     // THE IDENTITY HINT, AND A DELETE OWES ONE (the contract and the producer
     // enumeration are at restore_touched_indices, app_state.h). live_idx names
@@ -516,7 +516,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // so in W+target the plate re-warps and the FOCUS re-lands on its
     // post-toggle image. The focus survives by construction — the collapse
     // above made it the whole selection — and the pre-mutation land it already
-    // took (land_playhead_on_marker, which HIDES the overlay) is a different
+    // took (land_playhead_on_marker) is a different
     // act from this one: that one moved the cursor onto the focus, this one
     // follows the focus's image as the domain re-derives under it.
     if (app.active_audio_view == 'T') {
@@ -699,11 +699,9 @@ void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
 // it already holds. SOURCE VIEW NEEDS NOTHING — identity domain, the frame
 // never moved — which is the same split every member of the family takes.
 //
-// NO REGION WORK AT ALL, and none is owed: the overlay is DERIVED from the
-// trim every frame (trim_overlay_span, app_state.h) and stands only while a
-// sweep draws it. (The group arm's own extent re-derive died with the SPAN
-// FORM on 2026-07-30; the #16 trim-highlight re-sync went with the highlight
-// itself.)
+// NO REGION WORK AT ALL, and none is owed: the region is the trim, whose
+// bar paints from its source-frame bounds every frame. (The group arm's own
+// extent re-derive died with the SPAN FORM on 2026-07-30.)
 //
 // NO SELECTION-DRIVEN STEM WORK EITHER: stems are class-coloured and always
 // on, so no selection change moves one, and the kick below repaints the moved

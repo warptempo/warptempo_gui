@@ -98,8 +98,7 @@
 // (Viewport::move_playhead_to and the marker land), writing
 // app.playhead_cursor_sample direct, and the sweep's per-motion carry is direct
 // for the same reason: a keep-visible edge-align would scroll the viewport out
-// from under a live gesture. (Until 2026-09-22 that also kept the trim's own
-// surfaces from hiding the resting trim overlay; the resting form is deleted.)
+// from under a live gesture.
 // (THE SET-FROM-REGION ACT was this list's PRECEDENT and is no longer a member:
 // setting the region IS setting the trim, so that act no longer exists. The
 // maximizer is unchanged and is the recovery route, trim having no undo.)
@@ -197,8 +196,8 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // refusing). The bar's endcaps visibly JUMP TO THE SONG EDGES, and that is the
 // whole signal — it used to be the old chips vanishing; with the window always
 // set there is nothing to vanish into. A card said it too for one day
-// (2026-08-30 to 2026-08-31, on the argument that a collapsed sweep takes its
-// overlay down with it and the jump is easy to miss); the architect retired it
+// (2026-08-30 to 2026-08-31, on the argument that the jump is easy to miss);
+// the architect retired it
 // under the arc's success rule, the endcaps at the extremes being the visible
 // cue on every road and the full window having zero impact on the render. The
 // check is the exact integer
@@ -272,9 +271,7 @@ void GuiInputHandler::park_playhead_at_trim_start() {
     viewport.invalidate_clock_area();
     // THE DIRECT CURSOR WRITE ABOVE reaches neither playhead movement owner,
     // so the park is no movement in the music (the rule at
-    // Viewport::move_playhead_to, viewport.cpp). A standing sweep's overlay
-    // derives from the pair this function has just read, so the repaint the
-    // caller already owes shows the new span with no state to update.
+    // Viewport::move_playhead_to, viewport.cpp).
 }
 
 // The shared trim commit tail — contract, the four callers and the one
@@ -335,7 +332,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // straight from the pair (architect 2026-08-18, the region IS the trim). Its
 // two entries are the shift+drag former on the navigation surface and the touch
 // region hold, and both write here per motion event, so a stroke sets the trim
-// in one gesture, the overlay being its own live picture. THE SET-FROM-REGION
+// in one gesture, the trim bar being its live picture (architect 2026-10-03,
+// "the trim bar is enough": the bar is drawn at the view's scale, and this
+// write's own repaint covers it on every accepted event). THE SET-FROM-REGION
 // ACT was the old two-step's commit half — sweep a free span, then commit it —
 // and the step it named is gone. The maximizer is unchanged and is the
 // recovery route, trim having no undo.
@@ -488,9 +487,8 @@ int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
 // (the waveform's) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
 // rule does not reach it, and the gated region re-sync it used to carry died
-// with the trim-window highlight itself (architect 2026-07-30). It writes NO
-// VISIBILITY BIT either, and needs none: the overlay stands only while a sweep
-// draws it, and the trim bar shows the whole-song window on the next frame.
+// with the trim-window highlight itself (architect 2026-07-30). The trim bar
+// shows the whole-song window on the next frame.
 void GuiInputHandler::handle_trim_maximize() {
     handle_trim_clear_both();
 }
@@ -498,8 +496,7 @@ void GuiInputHandler::handle_trim_maximize() {
 // (BARE `[`, THE TRIM REGION TOGGLE — handle_toggle_trim_region and the icon
 // row's Show trim region button — showed and hid the waveform overlay at rest
 // from 2026-08-16 until the architect deleted it whole on 2026-09-22: he uses
-// the tablet's pen, which reaches the trim bar, so the overlay built for
-// fingers stands only while a sweep draws it. The bracket carries the
+// the tablet's pen, which reaches the trim bar. The bracket carries the
 // Waveform Magnification lamp since, and the maximizer above moved to
 // Shift+0.)
 
@@ -1020,13 +1017,8 @@ void GuiInputHandler::commit_trim_drag() {
         // then in the moved case that reaches here — each is stated at every
         // accepted mutation rather than inferred from gesture order). There is
         // nothing to restore from in any case — the drag carries no snapshot at
-        // all since 2026-07-29. THE OVERLAY IS NOT HIDDEN by this release, and
-        // has not been since 2026-08-18: the trim writes are the hide
-        // inventory's one EXCLUDED class (the park's own declaration and the
-        // membership at the head of this file), because the region IS the trim
-        // and a drag of its own bound must not put its surface away. The
-        // release still publishes no highlight of its own either, that coupling
-        // having retired 2026-07-30.
+        // all since 2026-07-29. The release publishes no highlight of its own,
+        // that coupling having retired 2026-07-30.
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }

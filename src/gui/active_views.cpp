@@ -128,16 +128,11 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // the window from y=0 through the waveform's bottom, top strip included,
     // which is a superset of the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
-    // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19. It was
-    // an IN-PLACE reset here. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
-    // MUTATION CONCERN — it is a view preference about whether the user is
-    // looking at the trim, and the ENTERING tab has a trim of its own for the
-    // overlay to derive from, so a switch has nothing to put away. Hiding
-    // discarded nothing either way, which is exactly why it bought nothing.)
+    // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19: the
+    // ENTERING tab has a trim of its own, so a switch has nothing to put away.)
     // The SEATED PINCH's anchor IS cleared here, this function being the A/B
-    // WRITER and so a member of that rule in its own right — and it outlived
-    // the deleted overlay hide because it answers a different question, a stale
-    // song frame rather than a view preference (moved onto the
+    // WRITER and so a member of that rule in its own right — a stale song
+    // frame across the switch (moved onto the
     // writers; the argument, the whole membership and the
     // do-not-do-this note are at clear_touch_zoom_seat's declaration,
     // input_handler.h): the entering tab restores another band entirely, so a
@@ -157,8 +152,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // basis — the basis of the pixels it erases. It also subsumes the
     // shift-range anchor clear this site used to spell out by hand (every
     // Selection mutator dissolves the anchor; the authoritative clear list is at
-    // the field, app_state.h). It touches no region: the overlay's visibility is
-    // not a selection concern and no selection mutator writes it.
+    // the field, app_state.h).
     selection.clear_selection();
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;

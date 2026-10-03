@@ -596,7 +596,8 @@ struct GuiPaintHandler {
     // registered with the cached pixels instead of the not-yet-painted live
     // viewport. This is the ONE authoritative enumeration of the
     // PLATE-REGISTERED overlays (re-derived by grep over this accessor's
-    // callers, 2026-08-02): the region ground, the phase-reset ring (through
+    // callers, 2026-08-02; the region ground and ink left 2026-10-03): the
+    // phase-reset ring (through
     // phase_reset_overlay_band), the playhead head and the cursor's
     // marker-lane run (both painted in the ruler pass), the cursor
     // playhead, the scanner — plus its two per-frame narrow damage sites in
@@ -634,25 +635,6 @@ struct GuiPaintHandler {
         double spp      = 0.0;
     };
     PlateViewportBasis plate_viewport_basis() const;
-
-    // The trim region overlay's on-screen column pair under a given displayed
-    // basis. THE SPAN IS DERIVED FROM THE TRIM every call (trim_overlay_span,
-    // app_state.h — the region IS the trim since 2026-08-18): that owner crosses
-    // both resting trim bounds into the ACTIVE display domain and returns them
-    // ALREADY ORDERED, so this maps them to columns with the plain viewport
-    // transform and walks no warp map. NOTHING IS STORED and there is no
-    // endpoint pair to normalize — do not reintroduce either; the overlay cannot
-    // drift from the 10 px bar because both read the one trim.
-    // TWO consumers: paint_region_ground and paint_region_ink draw the
-    // overlay's two halves from it, so the ground and the ink cannot disagree
-    // about where it is. (A third, the overlay's hit test, left with the
-    // overlay's resting drags on 2026-09-22.) It stays a named helper because
-    // the column pair is a rule, not an inline expression.
-    struct RegionColumns {
-        int lo_col = 0;
-        int hi_col = 0;
-    };
-    RegionColumns region_columns(const PlateViewportBasis& basis) const;
 
 private:
     // Waveform fingerprint inputs derived from current app state. This is
@@ -708,15 +690,7 @@ private:
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
     // recolor model, architect 2026-07-26: TRIM recolors no blitted pixel, the
     // trim bar spanning the window being the whole inside-the-window signal.
-    // Neither helper had any other consumer, so both went with the pass. The
-    // dim's second-pass MECHANISM came back for the region's ink half in
-    // 2026-08-18 — paint_region_ink — over the region's span alone, each
-    // opaque plate pixel lifted from its own colour since 2026-09-24.)
-
-    // (The region-select span's column pair, RegionColumns / region_columns,
-    // moved up into the PUBLIC block beside plate_viewport_basis on 2026-08-15,
-    // when the region gained its own edit drag and the hit test needed the
-    // painter's own answer rather than a second derivation of it.)
+    // Neither helper had any other consumer, so both went with the pass.)
 
     // The phase-reset overlay band's clipped screen-x span for this frame, or
     // valid == false when no band shows (wrong view, no eligible focused reset,
@@ -831,17 +805,6 @@ private:
     // free function directly, in the floating-surfaces slot and for their
     // reason: it publishes geometry the pointer path reads.)
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
-    // THE REGION HIGHLIGHT, ONE HIGHLIGHT IN TWO OPAQUE HALVES STRADDLING THE
-    // PLATE BLIT (the Ableton model, extended to the ink 2026-08-18). The GROUND
-    // half paints after render_canvas and BEFORE the blit; the INK half
-    // rewrites each opaque blitted plate pixel as its own colour lifted by the
-    // region's step (region_lift, keyed by the alpha alone)
-    // immediately AFTER it, over the identical span. Neither half is a wash, and the two share the
-    // basis and column owners so they cannot disagree. The region is the only
-    // recolor there is: the phase-reset overlay recolors nothing (architect
-    // 2026-07-27).
-    void paint_region_ground(cairo_t* cr, const GuiRect& area);
-    void paint_region_ink(cairo_t* cr, const GuiRect& area);
     // The overlay band's 1px ring — the phase-reset overlay's whole visual —
     // painted AFTER the plate, a boundary line like the playheads, so it
     // crosses the ink deliberately.

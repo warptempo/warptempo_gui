@@ -112,8 +112,7 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
 // arm's diff-flag pair through history_mode_revert_subject_standing — the
 // same two fields clear_history_mode_focus tests), and the landing compare
 // against the resting cursor. (A shown trim overlay was a fourth term until
-// 2026-09-22, when the movement owner stopped hiding it: the overlay stands
-// only while a sweep draws it.)
+// 2026-09-22, when the movement owner stopped hiding it.)
 bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
                                   bool forward, bool whole_piece) {
     if (transport_session_live(app)) return true;
@@ -475,13 +474,10 @@ void Viewport::clamp_display_state_to_live_domain() {
 
     // (THE REGION'S OWN RECLAMP STOOD HERE until 2026-08-18 and is DELETED with
     // the state it validated: a region held two ACTIVE-domain endpoints of its
-    // own, which a shrinking domain could strand outside [0, live_total - 1],
-    // and the answer was to clear the highlight. The region IS the trim now —
-    // the overlay is DERIVED from the trim bounds every frame, through
-    // trim_overlay_span, which crosses them into the live domain and clamps
-    // there — so there is no stored endpoint left to validate and nothing this
-    // pass could correct. The TRIM's own bounds are SOURCE frames, walled at
-    // load and at every gesture, and are not this function's subject.)
+    // own, which a shrinking domain could strand outside [0, live_total - 1].
+    // The region IS the trim now, so there is no stored endpoint left to
+    // validate. The TRIM's own bounds are SOURCE frames, walled at load and at
+    // every gesture, and are not this function's subject.)
 }
 
 // WHERE ONE PIXEL STEP WOULD LAND — the contract is at the declaration

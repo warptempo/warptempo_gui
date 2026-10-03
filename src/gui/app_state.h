@@ -441,48 +441,6 @@ struct UndoEntry {
     // never rode an undo entry after 2026-09-10.)
 };
 
-// THE REGION IS THE TRIM (architect 2026-08-18, uniting two loose ends into one
-// state), AND THE OVERLAY IS THE SWEEP'S LIVE PICTURE (architect 2026-09-22).
-// There is no "set trim from region", because SETTING THE REGION IS SETTING
-// THE TRIM. One state, two painted surfaces: the 10 px trim bar that is always
-// there, and the waveform overlay, which stands exactly while a SWEEP — the
-// shift+drag former or the touch region hold — is drawing a window.
-//
-// DERIVE, DO NOT STORE, and everything else follows from it: the overlay is
-// painted FROM THE TRIM every frame, exactly as the bar already is, and no span
-// rests anywhere. The sweep writes the moving pair straight into the trim per
-// motion event (write_trim_from_sweep, input_trim.cpp), ordered lo/hi, holding
-// its ANCHOR alone (RegionDragState::anchor_source_frame), so even mid-gesture
-// the overlay derives from the trim like everything else and tracks the stroke
-// live. SO THIS STRUCT IS ONE VISIBILITY BIT AND NOTHING ELSE; the span's owner
-// is trim_overlay_span (below), which converts the trim bounds into the
-// ACTIVE-domain frames the painter wants. (The a_frame / b_frame pair this
-// carried until 2026-08-18 — a free scratch span the SET-FROM-REGION act
-// committed to trim — is deleted with the model that needed it.)
-//
-// THE BIT HAS ONE RAISE AND ONE HIDE: RAISED at the sweep's FIRST ACCEPTED
-// TRIM WRITE through show_trim_region_overlay (input_handler.h — its one
-// caller, the `h` carve-out and the no-framing rule are stated there), and
-// HIDDEN by the sweep's end owner, commit_region_sweep (input_pointer.cpp),
-// unconditionally at every end path. The FILE LOAD resets it in place besides,
-// so a new piece starts clean.
-//
-// WHAT WENT ON 2026-09-22 (architect — he uses the tablet's pen, which reaches
-// the trim bar, so the overlay's finger accommodations are no longer wanted):
-// the RESTING overlay and everything that existed for it — bare `[` and the
-// icon row's Show trim region button (the show/hide toggle, 2026-08-16),
-// region_manipulation_hit with the overlay's own endcap and BRIDGE drags on
-// the waveform (2026-08-15/18), their cursor cues and their touch pan-zone
-// clause, and THE HIDE RULE (clear_region_highlight, 2026-08-19), which put a
-// resting overlay away when the playhead moved in the music or a marker was
-// touched. The trim's writing surfaces are the trim bar and the sweep.
-//
-// READ-ONLY-LEGAL, exactly as the trim bar's own gestures are: trim is BAND,
-// not authored content (the ruling at read_only_key_blocked).
-struct RegionState {
-    bool shown = false;   // a sweep is drawing — the whole of the state
-};
-
 // Marker reposition drag state (begun by a plain flag drag past the shared
 // threshold). ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
 // HORIZONTAL MOVEMENT IS A FOCUS ACT; the doctrine and the dead rigid-group
@@ -853,8 +811,18 @@ struct UndoHistory {
     }
 };
 
-// State for THE SWEEP — the region former, which since 2026-08-18 IS A DIRECT
-// TRIM WRITE (the region is the trim; the model is at RegionState). Two
+// State for THE SWEEP — the region former — AND THE OWNER OF ITS PICTURE.
+// THE REGION IS THE TRIM (architect 2026-08-18): there is no "set trim from
+// region", because SETTING THE REGION IS SETTING THE TRIM, so the sweep is a
+// DIRECT TRIM WRITE and no span rests anywhere but in the trim. THE TRIM BAR
+// IS THE SWEEP'S PICTURE (architect 2026-10-03, "the trim bar is enough",
+// retiring the waveform highlight that stood exactly while a sweep drew): the
+// bar is drawn at the view's own scale, in the columns the stroke is drawn
+// in, and the sweep writes the moving pair straight into the trim per motion
+// event (write_trim_from_sweep, input_trim.cpp, whose write repaints the bar),
+// so the bar tracks the stroke live and nothing is raised, hidden or stored
+// for it. Read-only-legal, exactly as the trim bar's own gestures are: trim
+// is BAND, not authored content (the ruling at read_only_key_blocked). Two
 // entries, shift+drag on the desk and the hold-beat region hold on glass
 // (architect 2026-08-12, the eighth glass ruling, PAN-PRIMARY: the plain drag
 // is the grab-pan, so the sweep is the deliberate act and takes the secondary
@@ -874,23 +842,12 @@ struct UndoHistory {
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
 // input_trim.cpp — which enforces no width, only the song walls). THE PRESS ITSELF
 // WRITES NO TRIM: a motionless shift click is the placement and nothing else.
-// THE STROKE'S FIRST ACCEPTED TRIM WRITE SHOWS THE OVERLAY (architect
-// 2026-08-19 for the raise, moved off the press 2026-08-21) through the one
-// raise owner, at every entry but the `h` view's, which writes no trim: the
-// surface being drawn on is visible while it is drawn, and since the overlay
-// derives from the trim the sweep writes per motion event it tracks the rest of
-// the stroke live. RAISING AT THE PRESS SHOWED THE WRONG REGION — the resting
-// one the stroke was about to replace — which is why the raise sits at the
-// write. THE SHOW IS BRACKETED BY THE STROKE (architect 2026-08-20):
-// commit_region_sweep collapses it again at every end path, so a motionless
-// shift click shows nothing at all and a stroke that draws a window leaves that
-// window on the bar alone.
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
 // there is no span field to extend: this holds the press column's authored
 // source frame (the field's own comment carries the two-domain rule), the trim
-// holds the pair, and the overlay derives from the trim on every frame
-// including the ones this gesture writes.
+// holds the pair, and the bar paints from the trim on every frame including
+// the ones this gesture writes.
 //
 // Under SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23) the drag does NOT
 // select the span's markers — the selection stays EMPTY from the press's
@@ -914,9 +871,8 @@ struct UndoHistory {
 //
 // THE RELEASE-TIME SLIVER DISSOLVE IS RETIRED with the free span it protected
 // (2026-08-18): a jitter drag that crosses the gate and rests a two-pixel span
-// no longer leaves a sliver highlight — it COMMITS a two-pixel trim, exactly as
-// drawn. The minimum width floor that briefly widened such a stroke is retired
-// too (architect 2026-08-19: the enforced minimum was distracting and too short
+// COMMITS a two-pixel trim, exactly as drawn. The minimum width floor that
+// briefly widened such a stroke is retired too (architect 2026-08-19: the enforced minimum was distracting and too short
 // to be worth its machinery), so the sweep has no width rule of any kind left —
 // a stroke that collapses onto its own anchor clears the trim to the whole song
 // at the release, and Shift+0 is the way back from anything else.
@@ -1314,7 +1270,7 @@ struct TrimDragState {
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
 //     what suspends a following play's paging (the camera chokepoint's
 //     compare, at AppState::camera_hold and AppState::follow_suspended). A PAN IS A PURE VIEWPORT MOVE: it moves
-//     NO playhead, hides NO overlay and clears NO selection, seeds nothing.
+//     NO playhead and clears NO selection, seeds nothing.
 // THE ZOOM MODIFIER IS CTRL, LIVE MID-GESTURE (architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
 // IT AT ANY TIME — ctrl playing the second finger's part). THE TWO SURFACES
@@ -1785,7 +1741,7 @@ struct TouchNavZoomState {
 // click pays AT MOST one stop-quiescence fence (a stopped session's launch
 // pays none), so the per-column fence cadence is structurally gone). The
 // gesture drives the SCANNER only, never
-// the cursor: selection, region, cursor, follow, and double-click seeding are
+// the cursor: selection, trim, cursor, follow, and double-click seeding are
 // all untouched, the pure audition gesture. NOT the retired plain-drag scrub
 // (61126db) — that one MOVED the cursor playhead per column.)
 
@@ -2205,7 +2161,7 @@ enum class RedesignButton {
     // until the architect deleted it whole on 2026-09-22 with its bare `[`
     // chord: the tablet's pen reaches the trim bar, so the waveform overlay
     // that the toggle showed at rest was a finger's accommodation no longer
-    // wanted, and the overlay stands only while a sweep draws it. Its shift
+    // wanted. Its shift
     // admission was Reset Trim's pointer road, which is Full zoom out's
     // shift press now. FULL ZOOM OUT led the zoom group from then until ZOOM IN came back in
     // front of it the same evening.)
@@ -5766,13 +5722,6 @@ struct AppState {
     // on file load.
     PendingClickAct pending_click;
 
-    // THE TRIM REGION OVERLAY'S VISIBILITY — the whole of the region state,
-    // the span itself being DERIVED from the trim every frame (the model is at
-    // RegionState). Up exactly while a sweep draws: raised at its first
-    // accepted trim write, taken down by commit_region_sweep, and reset in
-    // place by the file load.
-    RegionState region;
-
     // Live trim boundary drag (endcap / inter-endcap bridge). Cleared on button
     // release / lost button, by the force-end finalizer (both COMMIT its live
     // bounds), and on file load.
@@ -8169,9 +8118,8 @@ struct AppState {
     // backing store lives in ViewState::trim. Excluded from undo/redo.
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
-    // Trim is a band authored purely by the ENDCAP / BRIDGE pointer drags — on
-    // the 10 px bar and, since 2026-08-18, on the waveform OVERLAY that is this
-    // same window painted a second time — the ctrl / ctrl+shift bound-set
+    // Trim is a band authored purely by the ENDCAP / BRIDGE pointer drags on
+    // the trim bar, the ctrl / ctrl+shift bound-set
     // clicks, the SWEEP (shift+drag or the touch region hold, which writes the
     // pair in one stroke under no width rule at all; it replaced the
     // set-from-region arm when the region became the trim), the
@@ -10030,7 +9978,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // for it, one shape for all four: when app.active_audio_view == 'T' the tail
 // re-warps the plate synchronously (kick_waveform_sync) and RE-LANDS the
 // playhead as a TRANSLATION through Viewport::reseat_playhead_to, never
-// through a movement owner, so the trim region overlay stands. The three that
+// through a movement owner. The three that
 // keep a focus re-land on its post-change image; the DELETE keeps none and
 // re-lands the playhead's own musical instant, inverted to a source frame
 // before the write through active_domain_to_source_frame. The contract is
@@ -11747,43 +11695,6 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
     if (frame < 0) return 0;
     if (frame >= total) return total - 1;
     return frame;
-}
-
-// THE TRIM REGION OVERLAY'S SPAN, DERIVED AND NEVER STORED — the one owner of
-// "where the overlay is", read fresh by everyone who needs it and kept by
-// nobody (architect 2026-08-18: the region IS the trim; the model is at
-// RegionState). It answers whatever the trim bounds say THIS FRAME, so a tempo
-// change in target view, an undo that restores a map, a pan or a zoom all
-// re-derive it with nothing to invalidate, and the overlay and the 10 px bar
-// cannot drift because they are the same two numbers.
-//
-// THE BOUNDS ARE SOURCE FRAMES AND THE OVERLAY IS PAINTED IN THE ACTIVE DISPLAY
-// DOMAIN, so each crosses through source_frame_to_active_domain (the identity
-// in source view, the display map's forward hop in target) — the same one-way
-// conversion every other source->display read takes — and then through the
-// live-domain clamp, which is what keeps a bound at the domain's own wall
-// rather than one past it at a fractional flush-right zoom.
-//
-// ORDERED ON THE WAY OUT. A resting trim pair is ordered by construction (a
-// crossed or coincident one resets to the full window at every commit) and the
-// display map is monotone, so the min/max only ever states that fact (a live
-// sweep writes its pair ordered too); the consumer — the painter's column
-// projection — wants lo/hi and must not have to ask.
-struct TrimOverlaySpan {
-    int64_t lo = 0;   // active-domain frame of the trim BEGIN
-    int64_t hi = 0;   // active-domain frame of the trim END
-};
-
-inline TrimOverlaySpan trim_overlay_span(const AppState& a,
-                                         const GuiAudio& audio) {
-    const int64_t b = clamp_playhead_to_live_domain(
-        source_frame_to_active_domain(a, audio, a.trim.begin_frame), a, audio);
-    const int64_t e = clamp_playhead_to_live_domain(
-        source_frame_to_active_domain(a, audio, a.trim.end_frame), a, audio);
-    TrimOverlaySpan s;
-    s.lo = b < e ? b : e;
-    s.hi = b < e ? e : b;
-    return s;
 }
 
 // WHERE Home / End WOULD LAND THE CURSOR — the two skip commands' one
@@ -14215,9 +14126,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     answer never moved either time, only whether a face existed to wear it.) The mirror is a membership, never an equivalence, in both
 //     directions.
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
-//     the TRIM REGION toggle (2026-08-16 —
-//     it writes no trim at all, only the overlay's visibility bit and then the
-//     viewport), the VIEW GROUP'S THREE
+//     the VIEW GROUP'S THREE
 //     (bare 1/2/3), Full zoom out and Center, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
@@ -15772,8 +15681,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 4's
 // TOGGLES and its view group's three radios — the two VIEW LAMPS and the WALK
 // LAMP, which were three radio PAIRS until the architect collapsed them on
-// 2026-09-04; follow, iteration, the TRIM REGION toggle (a
-// toggle again since 2026-08-18, its lamp reading the overlay's visibility),
+// 2026-09-04; follow, iteration,
 // read-only, history, and the CUMULATIVE reading, which came back to this row
 // with the history group on 2026-08-18. THE
 // BOTTOM ROW HAS EXACTLY ONE SUBJECT — ADD TO SELECTION, which landed there

@@ -185,8 +185,7 @@ struct TrimRange {
 //     mean;
 //   from the FLAG and the RED — the edges (× 0.555), the selected red's
 //     edge included (it derives from the hand-listed selected red fill);
-//   from the CANVAS — the modal field's ground, and the region's lift
-//     (region_lift, which also lifts every plate pixel the INK paints);
+//   from the CANVAS — the modal field's ground;
 //   from the LABEL over the GROUND — the disabled and hotkey inks (mix_color
 //     at a stated keep);
 //   from the INFO TEXT over the INFO GROUND — the tooltip's dimmed second
@@ -242,8 +241,8 @@ inline constexpr uint32_t scaled_word(uint32_t word, uint32_t num,
 // EVERY COLOUR THIS PRODUCT HANDS CAIRO GOES THROUGH ONE OF THESE TWO, and no
 // site calls cairo_set_source_rgb itself (re-grepped 2026-10-02: none outside
 // render.cpp's two bodies): set_palette_source for the chrome and
-// set_waveform_source for the waveform's two cairo fills, the canvas
-// (render_canvas) and the region's ground (paint_region_ground). Each is a
+// set_waveform_source for the waveform's one cairo fill, the canvas
+// (render_canvas). Each is a
 // plain hand-over today; the seam is kept because it is where a later
 // per-device palette plugs in, at one site. The plate's own pixels are
 // written as words (argb32_opaque_word), not through cairo.
@@ -272,8 +271,7 @@ inline constexpr uint32_t kWaveformInkRgb = 0x96BFDA;
 inline constexpr GuiColor kWaveformInk    = hex(kWaveformInkRgb);
 
 // CANVAS — the waveform's ground, and the modal text field's
-// (kModalFieldGround derives below). Spelled as a word because
-// kWaveformRegionCanvas lifts the word.
+// (kModalFieldGround takes it below).
 inline constexpr uint32_t kWaveformCanvasRgb = 0x141618;   // (20, 22, 24)
 inline constexpr GuiColor kWaveformCanvas    = hex(kWaveformCanvasRgb);
 
@@ -674,43 +672,6 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 // constexpr, and mix_color blends in byte space ((85, 106.5, 121), darker).
 // A retune of the ink or the canvas re-runs this arithmetic here.
 inline constexpr GuiColor kWaveformForegroundOutline = hex(0x6E8DA1);
-
-// THE REGION'S STEP — THE ONE REGION RULE (architect 2026-09-24): each of the
-// R, G and B bytes of an ARGB32 word raised by +18 / +18 / +20, saturating at
-// 255, the alpha byte kept. DERIVED, NOT SAMPLED: Breeze's own View ->
-// ViewAlternate lift, +9/+9/+10 per channel, TAKEN TWICE (architect
-// 2026-08-01: "the waveform highlight should be brighter"). ONE OWNER OF THE
-// STEP for both halves of the highlight: kWaveformRegionCanvas below is this
-// step applied to the canvas
-// word at compile time, and paint_region_ink applies it to every opaque plate
-// pixel inside the region, each from its OWN colour, whatever ink the palette
-// holds — no ink is keyed and no lifted constant is pinned, so a change to
-// any ink's or the canvas's constexpr carries its lift with it; at full alpha
-// the premultiplied word (argb32_opaque_word, below) is the colour itself,
-// so lifting the bytes lifts the colour. The ink's lift is (150, 191, 218) +
-// (18, 18, 20) = (168, 209, 238) = #a8d1ee.
-inline constexpr uint32_t region_lift(uint32_t word) {
-    const auto lift = [](uint32_t byte, uint32_t step) {
-        return byte + step > 255u ? 255u : byte + step;
-    };
-    return (word & UINT32_C(0xFF000000)) |
-           (lift((word >> 16) & 0xFFu, 18) << 16) |
-           (lift((word >>  8) & 0xFFu, 18) <<  8) |
-            lift( word        & 0xFFu, 20);
-}
-
-// THE REGION HIGHLIGHT'S GROUND — the canvas lifted by the region's step:
-//     kWaveformCanvas (20, 22, 24) + (18, 18, 20) = (38, 40, 44) = #26282c
-// AN OPAQUE GROUND RECOLOUR, NOT A BLEND (paint_region_ground, painted BEFORE
-// the plate blit): the span's canvas is REPLACED by this colour and the ink
-// composites over it exactly as over the plain canvas. The plate's alpha is
-// BINARY, so an ink pixel is fully opaque and a gap fully transparent. THE
-// OTHER HALF lifts the ink the same way (architect 2026-08-18): paint_region_ink,
-// a second pass AFTER the blit, writes every opaque plate pixel inside the
-// span as its own colour lifted by region_lift, every gap left showing this
-// ground. region_lift's step is the one thing to move if the highlight wants
-// to be stronger or weaker — both halves follow it.
-inline constexpr GuiColor kWaveformRegionCanvas = hex(region_lift(kWaveformCanvasRgb));
 
 // THE WELL — the waveform area's two-line border, taken FROM the area at its
 // top and its bottom, full window width (the geometry at
@@ -2063,8 +2024,7 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 
 // The waveform area's CONTENT band — THE CANVAS: the area minus the well's two
 // lines at its top and its bottom (waveform_border_px). Every pass that fills
-// a BAND inside the area clips to this — the plate blit and the region
-// highlight's two halves, ground and ink — and the SCANNER, the moving
+// a BAND inside the area clips to this — the plate blit — and the SCANNER, the moving
 // playback line, which belongs to the picture alone, spans it (render_playhead).
 // THE PHASE-RESET OVERLAY RING alone reads the full area: its horizontals ride
 // the area's OUTERMOST rows deliberately (the ruling is at
@@ -2133,9 +2093,7 @@ struct WaveformBasis {
 // PREMULTIPLIED, as ARGB32 requires; at full alpha that is the colour itself.
 // The channel bytes round with std::nearbyint, the project's rule — vacuous for
 // the exact n/255 hex palette, decisive only if a mixed colour ever ties. The
-// one word owner for the plate's writer (render_waveform) and the region's
-// recolor (paint_region_ink), so the word the recolor keys on is bit for bit
-// the word the writer stored.
+// one word owner for the plate's writer (render_waveform).
 inline uint32_t argb32_opaque_word(GuiColor c) {
     return (UINT32_C(255) << 24) |
            (static_cast<uint32_t>(std::nearbyint(c.r * 255.0)) << 16) |
@@ -2217,11 +2175,13 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
 // is BINARY: opaque bars and transparent gaps, with no fractional edges left.
-// The gaps are what let a recolored GROUND (kWaveformRegionCanvas, painted
-// before the blit) show through, and the SET pixels are what the one
-// remaining after-the-fact recolor reads: paint_region_ink rewrites each
-// opaque plate pixel inside the region's column span as its own colour lifted
-// by the region's step (region_lift), leaving the plate itself untouched.
+// THE GAPS SHOW THE GROUND render_canvas lays under the blit: the plate bakes
+// no ground colour, so the canvas has that one painter and the cold frame
+// before the first plate shows the same ground. Nothing recolours a plate
+// pixel after the blit (the sweep's region highlight, which lifted the ground
+// in the gaps and the set pixels over its span, retired 2026-10-03, architect:
+// "the trim bar is enough"); no reason left needs the gaps over an opaque
+// canvas-coloured plate, and the plate stays as it is.
 //
 // THE VISUAL MAGNIFICATION is `gain_or_null`, and the lit plate is TWO BARS
 // per column from ONE peak read, both through the expander, the outer
@@ -2287,9 +2247,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // bar's rows above and below that interior (the whole bar when the interior
 // is empty).
 // The outline recolours pixels of the bar's own shape and adds none, each
-// written once with the fill's word or the outline's. paint_region_ink lifts
-// outline pixels as it lifts every opaque plate pixel, from the pixel's own
-// colour. Nothing else in this painter moves
+// written once with the fill's word or the outline's. Nothing else in this
+// painter moves
 // (the column grid, the >=1px floor, the carried-endpoint chain and the
 // aliased-only writer are untouched). A loud passage's outer clips flat at
 // the lane's edges while the inner still shows its compressed height inside

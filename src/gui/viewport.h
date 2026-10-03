@@ -409,8 +409,7 @@ struct Viewport {
     // total-changing warp-map edit; the full grep-derived caller inventory lives
     // at kick_waveform_sync above).
     // Clamps the resting cursor playhead back into [0, live_total - 1] through
-    // the shared clamp_playhead_to_live_domain chokepoint, and CLEARS a live
-    // region whose either bound left that domain. Called from kick_waveform_sync
+    // the shared clamp_playhead_to_live_domain chokepoint. Called from kick_waveform_sync
     // (the one chokepoint every total-changing sync tail funnels through) and
     // mirrored in main.cpp's tick backstop; idempotent and cheap, which is why a
     // held cent step pays nothing when nothing is out of domain. A structural
@@ -586,9 +585,8 @@ struct Viewport {
     //   * input_pointer's two direct cursor writes:
     //     seat_playhead_on_source_frame — the write every marker land, Tab/`c`
     //     jump and history diff-flag click rides, whether it arrives through
-    //     land_playhead_on_marker / land_playhead_on_source_frame (which hide
-    //     the trim region overlay) or through reseat_playhead_on_marker (which
-    //     does not) — and the region
+    //     land_playhead_on_marker / land_playhead_on_source_frame or through
+    //     reseat_playhead_on_marker — and the region
     //     sweep's own per-motion cursor write (apply_region_drag_motion, the
     //     drag carrying the playhead on its moving end).
     //
