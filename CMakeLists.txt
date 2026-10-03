@@ -9,9 +9,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Wayland/Cairo/JACK toolchain is optional, so a headless host with none of the
 # GUI platform packages can still configure and build warptempo_cli. Turning
 # WARPTEMPO_BUILD_GUI OFF skips all GUI dependency discovery and the
-# warptempo_gui executable.
+# warptempo_gui executable. WARPTEMPO_GUI_GIT OFF builds the GUI without
+# libgit2, for a build host that cannot provide it and does graphical work
+# only: the history view's git road is then a stub whose every act reports no
+# repository (git_repo_stub.cpp owns the rule), and libgit2 is neither
+# discovered nor linked. The two devices build with it ON (architect
+# 2026-10-02).
 option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
 option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
+option(WARPTEMPO_GUI_GIT "Link libgit2 for the history view's git road (OFF builds a stub: every git act reports no repository)" ON)
 
 # --- FFTW: needed by the engine sources, so required unconditionally. The GUI
 # default compiles the engine sources, and a headless WARPTEMPO_BUILD_CLI build
@@ -84,6 +90,17 @@ set(WARPTEMPO_PREPOST_SOURCES
     src/prepost/trimmer.cpp
     src/prepost/peak_limiter.cpp
 )
+
+# THE GIT ROAD'S ONE FILE, chosen here and nowhere else (architect
+# 2026-10-02): git_repo.cpp, the libgit2 implementation of git_repo.h, or with
+# WARPTEMPO_GUI_GIT OFF git_repo_stub.cpp, which answers every question as
+# "could not ask" and needs no libgit2. Each platform branch below discovers
+# and links libgit2 only when the switch is ON.
+if(WARPTEMPO_GUI_GIT)
+    set(WARPTEMPO_GIT_SOURCE src/gui/git_repo.cpp)
+else()
+    set(WARPTEMPO_GIT_SOURCE src/gui/git_repo_stub.cpp)
+endif()
 
 # ============================================================
 #  THE GUI'S SOURCE LIST, less the four per-directory lists and less the
@@ -176,7 +193,8 @@ set(WARPTEMPO_GUI_SOURCES
     # deploy key and host-key pin. The one file that includes <git2.h>, so the one file that
     # needs libgit2 — found in each platform branch below: the system's on
     # Linux, the cross-built static one (android/deps/80_libgit2.sh) on Android.
-    src/gui/git_repo.cpp
+    # WARPTEMPO_GIT_SOURCE above names it, or the stub in its place.
+    ${WARPTEMPO_GIT_SOURCE}
     # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
     # runs that file's network git routes (the checkpoint act, the GitHub
     # check) off the GUI thread. warptempo_cli reads no history of any kind.
@@ -245,8 +263,17 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # names libssh2, whose own .pc names libcrypto, so --static (the
     # STATIC_LDFLAGS below) carries the whole chain -lgit2 -lssh2 -lcrypto -ldl.
     # zlib is libgit2's bundled copy, so the chain adds nothing to DT_NEEDED
-    # (android/deps/80_libgit2.sh owns the build's choices).
-    pkg_check_modules(WT_ANDROID_GIT REQUIRED libgit2)
+    # (android/deps/80_libgit2.sh owns the build's choices). Skipped with
+    # WARPTEMPO_GUI_GIT OFF, which is allowed here but not exercised:
+    # android/app/build_apk.sh passes nothing for it, so the APK always
+    # carries the real road.
+    set(WARPTEMPO_GIT_INCLUDE_DIRS "")
+    set(WARPTEMPO_GIT_LIBRARIES "")
+    if(WARPTEMPO_GUI_GIT)
+        pkg_check_modules(WT_ANDROID_GIT REQUIRED libgit2)
+        set(WARPTEMPO_GIT_INCLUDE_DIRS ${WT_ANDROID_GIT_INCLUDE_DIRS})
+        set(WARPTEMPO_GIT_LIBRARIES ${WT_ANDROID_GIT_STATIC_LDFLAGS})
+    endif()
 
     # The NDK's stock android_native_app_glue. It is COMPILED IN PLACE from
     # the NDK rather than vendored: r29's process_input already drains its
@@ -285,7 +312,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         ${WARPTEMPO_GLUE_DIR}
         ${FFTW3_INCLUDE_DIRS}
         ${WT_ANDROID_GFX_INCLUDE_DIRS}
-        ${WT_ANDROID_GIT_INCLUDE_DIRS}
+        ${WARPTEMPO_GIT_INCLUDE_DIRS}
     )
     # -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ IS LOAD-BEARING and is
     # mentioned in no NDK document: without it bionic marks every symbol newer
@@ -307,7 +334,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         -Wl,--no-undefined
         -Wl,--start-group
         ${WT_ANDROID_GFX_STATIC_LDFLAGS}
-        ${WT_ANDROID_GIT_STATIC_LDFLAGS}
+        ${WARPTEMPO_GIT_LIBRARIES}
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}
         -Wl,--end-group
@@ -387,8 +414,17 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # PipeWire this is satisfied by pipewire-jack.
     pkg_check_modules(JACK REQUIRED jack)
     # The history view's git (src/gui/git_repo.cpp): libgit2, in process, with
-    # its SSH transport (libssh2) for the checkpoint push.
-    pkg_check_modules(LIBGIT2 REQUIRED libgit2)
+    # its SSH transport (libssh2) for the checkpoint push. Skipped with
+    # WARPTEMPO_GUI_GIT OFF (the stub needs no library). Carried through plain
+    # variables rather than pkg-config's own, which persist in the cache, so a
+    # build directory switched OFF links no libgit2 left over from an ON run.
+    set(WARPTEMPO_GIT_INCLUDE_DIRS "")
+    set(WARPTEMPO_GIT_LIBRARIES "")
+    if(WARPTEMPO_GUI_GIT)
+        pkg_check_modules(LIBGIT2 REQUIRED libgit2)
+        set(WARPTEMPO_GIT_INCLUDE_DIRS ${LIBGIT2_INCLUDE_DIRS})
+        set(WARPTEMPO_GIT_LIBRARIES ${LIBGIT2_LIBRARIES})
+    endif()
 
     # THE PRODUCT'S TWO FONT FILES, COMPILED IN (architect 2026-10-02; the
     # rule and the mechanism's reasons at gui_font_embedded.cpp's head). Each
@@ -445,7 +481,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${HARFBUZZ_INCLUDE_DIRS}
         ${CAIRO_FT_INCLUDE_DIRS}
         ${JACK_INCLUDE_DIRS}
-        ${LIBGIT2_INCLUDE_DIRS}
+        ${WARPTEMPO_GIT_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
@@ -458,7 +494,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${HARFBUZZ_LIBRARIES}
         ${CAIRO_FT_LIBRARIES}
         ${JACK_LIBRARIES}
-        ${LIBGIT2_LIBRARIES}
+        ${WARPTEMPO_GIT_LIBRARIES}
         pthread
         dl
         m

@@ -9,7 +9,9 @@
 // guard compares, which directory a commit is about, the five-step checkpoint
 // act and every sentence the user reads — stays in history_diff.cpp, its one
 // caller. So the header carries no libgit2 type but the opaque repository
-// handle, and <git2.h> is included by git_repo.cpp alone.
+// handle, and <git2.h> is included by git_repo.cpp alone. A build with
+// WARPTEMPO_GUI_GIT off links git_repo_stub.cpp in its place, which answers
+// every question here with its "could not ask" value (the rule at its head).
 //
 // THE FENCE IS WHICH FUNCTION A CALL SITE NAMES: GuiGitRepo's reads write no
 // file, no ref and no index entry, and the FIVE MUTATORS — stage, commit,
@@ -90,7 +92,49 @@ GuiGitRoot gui_git_discover_root(const std::string& dir, std::string& root,
 // ONCE, by the remote session's prelude, of the one URL a fetch or a push is
 // handed: a non-SSH URL fails there, before any connection, its cause on
 // stderr.
-bool gui_git_is_ssh_url(std::string_view url);
+//
+// DEFINED HERE, INLINE, because it is pure string logic that needs no libgit2:
+// both implementations of this seam (git_repo.cpp and the no-libgit2 stub,
+// git_repo_stub.cpp) compile against the one copy. libgit2 picks the transport
+// from the spelling: a known scheme prefix, else ANY colon makes it SSH (its
+// scp-style reading), else a local directory. So the two admitted shapes are
+// the ones it reads as SSH, and each is parsed strictly enough that nothing it
+// would read another way gets through.
+inline bool gui_git_is_ssh_url(std::string_view url) {
+    if (url.empty()) return false;
+    for (const char c : url) {
+        const auto u = static_cast<unsigned char>(c);
+        if (u <= 0x20 || u == 0x7f) return false;
+    }
+    constexpr std::string_view kSshScheme = "ssh://";
+    if (url.starts_with(kSshScheme)) {
+        // ssh://[user@]host[:port]/path — a host and a path both named.
+        const std::string_view rest  = url.substr(kSshScheme.size());
+        const std::size_t      slash = rest.find('/');
+        if (slash == std::string_view::npos || slash + 1 == rest.size()) {
+            return false;
+        }
+        std::string_view  host = rest.substr(0, slash);
+        const std::size_t at   = host.rfind('@');
+        if (at != std::string_view::npos) host = host.substr(at + 1);
+        return !host.empty() && host.front() != ':';
+    }
+    // Every other scheme, and git's `<transport>::<address>` helper syntax.
+    if (url.find("://") != std::string_view::npos) return false;
+    if (url.find("::") != std::string_view::npos) return false;
+    // scp-style user@host:path — a colon with no slash before it (a slash
+    // first is a local path), a user and a host before it, a path after it.
+    const std::size_t colon = url.find(':');
+    if (colon == std::string_view::npos || colon + 1 == url.size()) {
+        return false;
+    }
+    const std::size_t slash = url.find('/');
+    if (slash != std::string_view::npos && slash < colon) return false;
+    const std::string_view authority = url.substr(0, colon);
+    const std::size_t      at        = authority.find('@');
+    return at != std::string_view::npos && at > 0 &&
+           at + 1 < authority.size();
+}
 
 // A path predicate over repo-relative paths in git's own spelling (forward
 // slashes, no leading slash). The history module's one sidecar predicate

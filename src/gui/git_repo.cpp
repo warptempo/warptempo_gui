@@ -415,50 +415,6 @@ bool local_fetch_failure(const RemoteState& state) {
 }  // namespace
 
 // ---------------------------------------------------------------------------
-// the transport (git_repo.h owns the contract)
-// ---------------------------------------------------------------------------
-
-// libgit2 picks the transport from the spelling: a known scheme prefix, else
-// ANY colon makes it SSH (its scp-style reading), else a local directory. So
-// the two admitted shapes are the ones it reads as SSH, and each is parsed
-// strictly enough that nothing it would read another way gets through.
-bool gui_git_is_ssh_url(std::string_view url) {
-    if (url.empty()) return false;
-    for (const char c : url) {
-        const auto u = static_cast<unsigned char>(c);
-        if (u <= 0x20 || u == 0x7f) return false;
-    }
-    constexpr std::string_view kSshScheme = "ssh://";
-    if (url.starts_with(kSshScheme)) {
-        // ssh://[user@]host[:port]/path — a host and a path both named.
-        const std::string_view rest  = url.substr(kSshScheme.size());
-        const std::size_t      slash = rest.find('/');
-        if (slash == std::string_view::npos || slash + 1 == rest.size()) {
-            return false;
-        }
-        std::string_view  host = rest.substr(0, slash);
-        const std::size_t at   = host.rfind('@');
-        if (at != std::string_view::npos) host = host.substr(at + 1);
-        return !host.empty() && host.front() != ':';
-    }
-    // Every other scheme, and git's `<transport>::<address>` helper syntax.
-    if (url.find("://") != std::string_view::npos) return false;
-    if (url.find("::") != std::string_view::npos) return false;
-    // scp-style user@host:path — a colon with no slash before it (a slash
-    // first is a local path), a user and a host before it, a path after it.
-    const std::size_t colon = url.find(':');
-    if (colon == std::string_view::npos || colon + 1 == url.size()) {
-        return false;
-    }
-    const std::size_t slash = url.find('/');
-    if (slash != std::string_view::npos && slash < colon) return false;
-    const std::string_view authority = url.substr(0, colon);
-    const std::size_t      at        = authority.find('@');
-    return at != std::string_view::npos && at > 0 &&
-           at + 1 < authority.size();
-}
-
-// ---------------------------------------------------------------------------
 // process-wide
 // ---------------------------------------------------------------------------
 
