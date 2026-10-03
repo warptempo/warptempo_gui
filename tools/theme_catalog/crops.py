@@ -9,9 +9,11 @@
 # relief bytes; menu_disabled from disabled_text); every role the entry lacks keeps the app's value. THE APP-SPECIFIC
 # ROLES BY THE ROLE MAPPING (architect 2026-10-03, late): the ruler label the theme's label, the ruler ticks its
 # bevel_shadow, the flag OUTLINE its bevel_dkshadow; the checked face the ground under the Hilight dither (ad2's), the
-# trim arrow glyph highlight_text_ink(ground) over the app's light ink #FCFCFC. THE WELL IS SOUND RECORDER'S WAVEFORM BOX (architect 2026-10-03, late): one bevel_shadow line on top and
-# one bevel_hilight line at the bottom, full width, no sides (Windows' one-line static edge). THE FLAGS are the
-# Sonic Foundry flag (render.py flags.style "bevelled"), the entry's flag_rule shading them, the scene's flags left to
+# trim arrow glyph highlight_text_ink(ground) over the app's light ink #FCFCFC. THE WELL KEEPS THE APP'S TWO-LINE EDGE
+# (architect 2026-10-03, late): the PLAIN SUNKEN field edge render.h draws round the waveform, top and bottom only, no
+# sides, full width -- bevel_shadow then bevel_dkshadow inward on top, bevel_light inward then bevel_hilight outward at
+# the bottom (WELL). THE FLAGS are the Sonic Foundry flag (render.py flags.style "bevelled"; its stem leaves the box's
+# first face column through a gap in the bottom lines), the entry's flag_rule shading them, the scene's flags left to
 # right unselected, SELECTED, INVALID, DISABLED and unselected (FLAG_STATES). THE PROGRAM'S OWN COLOURS (APP_KEEP):
 # the chrome is the theme's; the waveform pane, the flags and the playhead are the program's own elements, their
 # colours the program's and only the flags' shading the theme's (architect 2026-10-03, late): the waveform's ink and
@@ -49,13 +51,15 @@ ICCP = open(os.path.join(PALETTE, 'display_p3.iccp'), 'rb').read()
 APP_KEEP = {'canvas': '#141618', 'ink': '#96BFDA', 'flag_fill': '#8A5EAC', 'flag_label': '#000000',
             'flag_fill_red': '#FF0000', 'flag_label_red': '#FFFFFF', 'playhead_head': '#8B8B8B', 'playhead_stem': '#FCFCFC',
             'light_text': '#FCFCFC'}
+# the well's lines in screen order (render.py's list form): render.h's PLAIN SUNKEN edge, top and bottom only
+WELL = {'top': ['@bevel_shadow', '@bevel_dkshadow'], 'bottom': ['@bevel_light', '@bevel_hilight']}
 # the scene's flags (1002: five, left to right) in the four states, so each crop and mock shows every one
 FLAG_STATES = {'selected': [1], 'invalid': [2], 'disabled': [3]}
 APP_ROLES = {'ground': '#303030', 'label': '#FCFCFC', 'bevel_hilight': '#5E5E5E', 'bevel_light': '#434343',
              'bevel_shadow': '#1E1E1E', 'bevel_dkshadow': '#0A0A0A'}
 ROLE_TO_RENDERER = {'ground': 'ground', 'label': 'label', 'bevel_hilight': 'bevel_hilight', 'bevel_light': 'bevel_light',
                     'bevel_shadow': 'bevel_shadow', 'bevel_dkshadow': 'bevel_dkshadow', 'disabled_text': 'menu_disabled'}
-TOP = (0, 300)          # device rows: the menu down to 7 canvas rows under the well's top lines (ad2: 289..293)
+TOP = (0, 300)          # device rows: the menu down to 7 canvas rows under the well's two top lines (ad2: 289..293)
 TOP_RIGHT = TOP         # the right half over the same rows: its flags are the scene's third to fifth (x 1343, 1816, 2289)
 BOTTOM = (1346, 1440)   # the bottom row
 # the bottom row's right piece starts mid-gap before its last two groups (ad2 on 1002: the groups 1168..1540,
@@ -80,7 +84,7 @@ def theme_for(e):
                 'ruler_tick_light': '@bevel_hilight', 'down_face': '@ground'})
     col.update(APP_KEEP)
     t['colours'] = col
-    t['well'] = {'top': ['@bevel_shadow'], 'bottom': ['@bevel_hilight']}
+    t['well'] = {k: list(v) for k, v in WELL.items()}
     t['flags'] = {'style': 'bevelled', 'rule': e['flag_rule'], 'states': FLAG_STATES}
     return t
 
@@ -164,9 +168,10 @@ def write_md(cat, sizes):
          'what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette on ad2.json\'s '
          'geometry, cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the bottom '
          'row, transparent between them. The chrome is the theme\'s; the waveform pane and the flags are the program\'s '
-         'own elements, their colours the app\'s and their shading the theme\'s (architect 2026-10-03, late): the well is '
-         'Sound Recorder\'s waveform box (the theme\'s Shadow above, its Hilight below), the flags the bevelled box of '
-         'Sonic Foundry\'s editors shaded by the theme family\'s own rule (the entry\'s flag rule), shown left to right '
+         'own elements, their colours the app\'s and their shading the theme\'s (architect 2026-10-03, late): the well keeps '
+         'the app\'s two-line sunken edge (the theme\'s Shadow and DkShadow above, its 3DLight and Hilight below), the '
+         'flags the bevelled box of Sonic Foundry\'s editors shaded by the theme family\'s own rule (the entry\'s flag '
+         'rule), the stem leaving the box\'s face through a gap in its bottom lines, shown left to right '
          'unselected, selected, invalid and disabled, each label the colour recorded beside its face (black on the '
          'app\'s purple; the invalid flag is Windows\' error-icon pair, white on #FF0000); the playhead is the '
          'program\'s too (the app\'s #8B8B8B head, #FCFCFC stem); the ruler label is the theme\'s label, the ruler '

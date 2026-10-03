@@ -141,8 +141,9 @@ never scales: the top strip's left half and its right half over the same rows (t
 so all four flag states show), and the bottom row's status panel beside its last button groups, stacked 1152 x 702
 px with a 4-row FULLY TRANSPARENT gap between them (alpha 0 there, 255 everywhere else, so no join reads as chrome),
 written as RGBA (indexed with tRNS when a crop has at most 256 colours; none has: the antialiased text exceeds it),
-each with the Display-P3 iCCP chunk. On each: the role mapping above, the well as Sound Recorder's waveform box (one
-`bevel_shadow` line on top, one `bevel_hilight` line at the bottom, full width), and the Sonic Foundry flags shaded by
-the entry's `flag_rule`, the scene's flags left to right unselected, SELECTED, INVALID, DISABLED and unselected
-(render.py's `flags.style` "bevelled"); the waveform, the flags' face and label, the invalid flag's pair and the
-playhead are the program's colours (above). The icons are the app's, unchanged. 123 crops, 6.65 MB. Its head states which roles come from the entry and which are the program's.
+each with the Display-P3 iCCP chunk. On each: the role mapping above, the well with the app's two-line PLAIN SUNKEN
+edge, top and bottom only, full width (architect 2026-10-03, late: `bevel_shadow` then `bevel_dkshadow` inward on top,
+`bevel_light` inward then `bevel_hilight` outward at the bottom; crops.py `WELL`), and the Sonic Foundry flags shaded by
+the entry's `flag_rule`, the stem leaving the box's first face column through a gap in its bottom lines, the scene's
+flags left to right unselected, SELECTED, INVALID, DISABLED and unselected (render.py's `flags.style` "bevelled"); the waveform, the flags' face and label, the invalid flag's pair and the
+playhead are the program's colours (above). The icons are the app's, unchanged. 123 crops, 6.66 MB. Its head states which roles come from the entry and which are the program's.

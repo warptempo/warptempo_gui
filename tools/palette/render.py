@@ -92,13 +92,15 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'ruler_layout': None,
                 'menu': {'highlight': None},
                 'fonts': {'ui_px': None, 'small_px': None},
-                'state_text': STATE_TEXT_DEFAULT}
+                'state_text': STATE_TEXT_DEFAULT,
+                'playhead_lane_stem': 'stem'}
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
 # the options whose values are checked here (separators, bottom_border, ruler_tick_relief, clock_panel; the older options are not)
 OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border': ('app', 'line', 'etched', 'raised', 'none'),
-              'ruler_tick_relief': ('none', 'light_right'), 'clock_panel': ('flat', 'sunken', 'status')}
+              'ruler_tick_relief': ('none', 'light_right'), 'clock_panel': ('flat', 'sunken', 'status'),
+              'playhead_lane_stem': ('stem', 'head')}
 FLAG_RELIEF = ('none', 'raised')
 FLAG_STYLES = ('app', 'bevelled')
 FLAG_STATES = ('selected', 'invalid', 'disabled')
@@ -1009,8 +1011,11 @@ def draw_ruler(cr, th):
     for r in range(h0, P['head_rows']):
         hw = P['head_half'][r]; cr.rectangle(P['col'] - hw, P['head_top'] + r, 2 * hw + P['w'], 1)
     cr.fill(); cr.restore()
+    # playhead_lane_stem "head" (architect 2026-10-03, late, a mock option): this run over the chrome lanes takes the
+    # head's colour, opaque; in the well (its lines and the canvas, draw_stems) the stem keeps playhead_stem
     if not P.get('stem_suppressed'):   # playhead_stem_suppressed: a coincident marker's stem wins the whole column
-        fill(cr, P['col'], SCENE['lanes']['marker'][0], P['col'] + P['w'], SCENE['lanes']['marker'][1], th.get('playhead_stem'))
+        fill(cr, P['col'], SCENE['lanes']['marker'][0], P['col'] + P['w'], SCENE['lanes']['marker'][1],
+             th.get('playhead_head' if th.opt['playhead_lane_stem'] == 'head' else 'playhead_stem'))
 
 def draw_flags(cr, th):
     """Each flag: border, fill, the dark top band (or flags.relief), border, label. fonts.ui_px: the label at
@@ -1055,11 +1060,17 @@ def flag_label_ink(th, i):
     return th.get('flag_label_red' if th.flag_states[i][1] else 'flag_label')
 
 def flag_box(th, f):
-    """flags.style "bevelled": a flag's box (x0, y0, x1, y1), device px end-exclusive: the app style's box (its two
-    border columns and the fill between, so the same height and width) moved right by one border column, its LEFTMOST
-    column the stem's (architect 2026-10-03, late: no pixel of the flag left of the stem)."""
-    F = SCENE['flags']
-    return f['x'], F['y0'], f['x'] + F['border_w'] + flag_fill_w(th, f) + F['border_w'], F['y1']
+    """flags.style "bevelled": a flag's box (x0, y0, x1, y1), device px end-exclusive: the app style's height and
+    width (its two border columns and the fill between), placed so THE STEM'S COLUMN (the scene's flag x) IS THE BOX'S
+    FIRST FACE COLUMN, inside the one-line outline and the one-line bevel (architect 2026-10-03, late: the stem leaves
+    the flag from its face, not its corner, as the app's flags sat before the bevel), so the box's left edge lies 2 LW
+    left of the stem."""
+    F = SCENE['flags']; x0 = f['x'] - 2 * LW
+    return x0, F['y0'], x0 + F['border_w'] + flag_fill_w(th, f) + F['border_w'], F['y1']
+
+# flags.style "bevelled": the stem's width, one Windows px (the renderer's line, LW), and so the width of its gap in
+# the box's bottom lines (draw_flags_bevelled, draw_stems)
+FLAG_STEM_W = LW
 
 def draw_flags_bevelled(cr, th):
     """flags.style "bevelled": THE SONIC FOUNDRY FLAG (architect 2026-10-03, late; ACID's and Vegas' bevelled box) --
@@ -1075,7 +1086,11 @@ def draw_flags_bevelled(cr, th):
     (dark top and left, light bottom and right) with the label one logical px right and down, a pushed button's face;
     invalid = the face `flag_fill_red` (Windows' error red), its bevel by the same rule; disabled = a disabled button: the face `ground`,
     the theme's own bevel_hilight / bevel_shadow, the label ENGRAVED (Windows' disabled text: the label in
-    bevel_hilight one logical px right and down, then in bevel_shadow at its place) and no stem (draw_stems). Every
+    bevel_hilight one logical px right and down, then in bevel_shadow at its place) and no stem (draw_stems). THE STEM'S
+    GAP (architect 2026-10-03, late): in every state with a stem (all but disabled) the bottom outline line and the
+    bottom bevel line are broken at the stem's columns (the box's first face column, flag_box; FLAG_STEM_W wide) and
+    the face runs through, so the face and the stem below it are one unbroken same-colour region (a non-antialiased
+    selection of the face takes the stem with it); the sunken label's nudge moves neither the stem nor the gap. Every
     line is one logical px (LW, 2 device px), the renderer's unit for one Windows px."""
     F = SCENE['flags']; px = ui_font_px(th)
     for i, f in enumerate(F['flags']):
@@ -1085,6 +1100,7 @@ def draw_flags_bevelled(cr, th):
         fill(cr, x0, y0, x1, y1, th.get('flag_border'))                  # the outline (the face covers its inside)
         fill(cr, x0 + LW, y0 + LW, x1 - LW, y1 - LW, face)
         edge(cr, x0 + LW, y0 + LW, x1 - LW, y1 - LW, [(dark, light) if sel else (light, dark)])
+        if not dis: fill(cr, f['x'], y1 - 2 * LW, f['x'] + FLAG_STEM_W, y1, face)   # the stem's gap
         lx, ly = x0 + F['border_w'] + F['pad_l'] + (LW if sel else 0), F['baseline'] + (LW if sel else 0)
         if dis:
             show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('bevel_hilight'))
@@ -1169,7 +1185,7 @@ def draw_stems(cr, th):
     for i, f in enumerate(F['flags']):
         if th.flag_style == 'bevelled':     # the stem takes the flag's face in every state; a disabled flag has none
             face, _, dis = flag_face(th, i)
-            if not dis: fill(cr, f['x'], y0, f['x'] + F['stem_w'], y1, face)
+            if not dis: fill(cr, f['x'], y0, f['x'] + FLAG_STEM_W, y1, face)
             continue
         fill(cr, f['x'], y0, f['x'] + F['stem_w'], y1, th.get('flag_stem_sel' if f.get('selected') else 'flag_stem'))
     if not P.get('stem_suppressed'): fill(cr, P['col'], y0, P['col'] + P['w'], y1, th.get('playhead_stem'))
