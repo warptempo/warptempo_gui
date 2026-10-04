@@ -36,26 +36,42 @@ the product.
 - OUTSTANDING: the picker's NAVIGATION rework (history vs presets; editing a preset) — ask him when its time comes;
   his thinking-aloud about it is not a decision.
 
-## NEXT ARC (proposed by him 2026-10-04; awaiting the rulings below, then a plain go): THEME FILES
-A theme is a FILE in a `themes/` folder beside the device config (`device_config_path()`'s folder: XDG, then
-HOME/.config, on both devices), read ONCE AT LAUNCH, so a new look needs no rebuild. The helper turns "Preset N"
-into a named file (the rename lives there); the file carries recorded bytes for BOTH LEVELS (levels.py's arithmetic
-run once by the helper), so the app still derives nothing. Its grammar is the device config's own key=value form
-(src/gui, not frozen). A malformed file, or a key equal to a compiled theme's, is the load's FIRST-ERROR HARD FAIL
-(NO BACKSTOPS: the files are the helper's output). Nothing has to happen before the brief but his rulings.
+## NEXT ARC: THEME FILES (his rulings 2026-10-04 evening; brief on his plain go after the three decisions below)
+RULED:
+- A THEME FILE HOLDS EVERY COLOUR THE GUI PAINTS: the chrome and its relief, the clock panel's own colours, the
+  cards' own colours, the selected and field pairs, and the twelve program colours (canvas, ink, outline, flags,
+  invalid flags, labels, playhead) — the twelve device colour keys retire into it. Files live in a `themes/` folder
+  beside the device config (`device_config_path()`'s folder, both devices), read ONCE AT LAUNCH; the name is given
+  where a preset becomes a file (the picker keeps "Preset N").
+- ONE BUILT-IN THEME, compiled: WINDOWS 95 (Windows Standard), the basis. Every other theme — the imported catalog,
+  `warptempo`, `warptempo-2026-10-03`, his presets — ships as an EXTERNAL FILE bundled with the app, not compiled.
+- THE CARDS (and the tooltip) on Windows 95: the tooltip yellow #FFFFE1 under black text inside a THIN BLACK BORDER
+  (one line a side). This reverses the 2026-10-03 "the card stands on the ground under the label, inside the INFO
+  frame" (closed_questions' info-face lines are residue to amend); it lands with the theme files as the built-in's
+  card roles, not as a compiled change first.
+- THE SELECTED AND UNSELECTED FLAG LABELS share one text colour (for now). DIM is already gone (retired 2026-10-03).
+- THE PICKER: its Chrome keeps the Windows 95 rule for now, and the imported themes are not made by the picker; the
+  long-term goal (deferred) is the picker editing any imported theme, the Windows 95 rule then one option.
+- GETTING FILES ON AND OFF THE TABLET: a new verb in the sync script (his; the planner writes it); he works the
+  details out with the local planner.
+- An imported theme's MAPPING is BY NAME through one table (`tools/theme_catalog/roles.py`): Windows by its registry
+  names, KDE 3 by its kdeglobals names (its relief by KDE's own rule at import), CDE by COLOUR-SET NUMBER (Motif's
+  fixed meaning per set: 5 the ground, 4 the fields, 1 / 2 the title bars; relief by Motif's rule). The picker's
+  strip shows the SOURCE's raw names (and computed ones such as `motif:set5.ts`), every name that records a hex,
+  most of which no role reads: hence the strange names. Theme files carry ROLE names, so a picker that later loads a
+  file as a preset reads roles, never source names.
 
-## Decisions for you (the cloud planner, 2026-10-04)
-1. WHAT A THEME FILE HOLDS. (a) The chrome only (the 11 roles at light and dark); the twelve program colours stay
-   device keys, pasted separately (today's split). (b) THE WHOLE LOOK: the chrome at both levels AND the twelve
-   program colours (canvas, ink, outline, flags, invalid flags, labels, playhead); choosing the theme in Settings
-   gives the whole look, and the twelve device keys RETIRE (one road for a colour). A compiled imported theme then
-   pairs with the program's default colours; any other pairing is made in the picker (adopt the imported theme's
-   ground as the Chrome) and saved as a preset, so nothing is lost. RECOMMENDED: (b) — a preset is a whole look and
-   he tunes whole looks; two places for one look is a split he would have to keep in step by hand.
-2. THE COMPILED TABLE. The 96 imported themes, `warptempo` and `warptempo-2026-10-03` stay compiled (the catalog is
-   a fixed import, and the app boots with no files); the arc-2 entries `warptempo-preset-1` / `-2` LEAVE the table
-   and become files (one road per kind). RECOMMENDED: yes.
-3. THE ROAD ONTO THE TABLET. The tablet's config folder is the app's private storage. (a) A new verb in the sync
-   script (his; the planner writes it, he runs it), e.g. pushing the laptop's themes folder; (b) the local planner
-   by `adb shell run-as`, as config edits are today. RECOMMENDED: (a) for his own use, (b) for this arc's first
-   install.
+## Decisions for you (the cloud planner, 2026-10-04 evening)
+1. THE CLOCK PANEL'S COLOURS: FOUR, not six. Today it is Windows 95's STATUS-BAR panel, ONE line a side (Shadow top
+   and left, Hilight bottom and right) on the chrome ground under the label. Its own roles are then: ground, text,
+   top-left line, bottom-right line. Six would mean two lines a side (the sunken well's form): a geometry change as
+   well. RECOMMENDED: four, the one-line panel kept (it is Windows 95's own).
+2. THE DARK LEVEL: DROP IT. Kept, it is either a calculation in the app (reversing "colours are imported, never
+   derived in the app") or the offline arithmetic of today, whose results he finds not dark enough. Dropped: the
+   `theme_level` key retires, levels.py leaves the product's road, and a dark look is a theme he designs (his
+   presets already are dark looks). RECOMMENDED: drop.
+3. A FILE MAY NAME ONLY SOME ROLES: every role it does not name takes the BUILT-IN Windows 95's value (the built-in
+   is the base, a file overrides what it names); an unknown key or a malformed value is the load's first-error hard
+   fail. This makes files short and hand-tunable, and it is roles.py's rule already (a role a family has no word for
+   takes the app's own value): an imported KDE or CDE theme with no tooltip pair gets Windows' yellow card, and every
+   imported theme gets the built-in's canvas, ink and flags until he rearranges it. RECOMMENDED: yes.
