@@ -376,11 +376,18 @@ void scene_repaint(const Export& ex, int scene, const std::vector<uint32_t>& old
         if (st.deps & changed) picture[st.index] = stack_word(sc, st, words);
 }
 
+bool view_holds(const Pick& p) {
+    for (int k = 0; k < 3; ++k)
+        if (!(p.x[k] >= 0 && p.x[k] <= axis_max(p.model, k))) return false;
+    const Unit u = unit_of_view(p.model, p.x);
+    return unit_in_gamut(u) && rgb_of_unit(u) == p.rgb;
+}
+
 namespace {
 
-// a stored view lies in its ranges and gives its bytes (Pick's rule)
-bool view_holds(const Pick& p) {
-    return p.h >= 0 && p.h <= 360 && p.s >= 0 && p.s <= 1 && p.v >= 0 && p.v <= 1 && rgb_of_hsv(p.h, p.s, p.v) == p.rgb;
+// the ranges a view's message names
+std::string view_ranges(Model m) {
+    return m == Model::Lch ? "L 0..100, C 0..160, h 0..360" : m == Model::Hsl ? "h 0..360, s and l 0..1" : "h 0..360, s and v 0..1";
 }
 
 // one view number, the whole token: true and the double
@@ -389,6 +396,16 @@ bool read_view_number(const std::string& tok, double& out) {
     char* end = nullptr;
     out = std::strtod(tok.c_str(), &end);
     return end == tok.c_str() + tok.size();
+}
+
+// a JSON [a, b, c] of numbers into the pick's view of model m
+bool view_of_json(const Json& a, Model m, Pick& p) {
+    if (!a.is_array() || a.arr.size() != 3 || !a.arr[0].is_number() || !a.arr[1].is_number() || !a.arr[2].is_number())
+        return false;
+    p.has_view = true;
+    p.model = m;
+    for (int k = 0; k < 3; ++k) p.x[k] = a.arr[size_t(k)].num;
+    return true;
 }
 
 } // namespace
@@ -403,11 +420,12 @@ std::string view_number(double x) {
 }
 
 bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::map<std::string, int>& entries,
-                std::string& active, std::string& theme, std::string& err) {
+                std::string& active, std::string& theme, Model& model, std::string& err) {
     out.clear();
     entries.clear();
     active.clear();
     theme.clear();
+    model = Model::Hsv;
     std::string text;
     if (!read_file(path, text)) return true;   // no close yet
     Json st;
@@ -424,13 +442,21 @@ bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::
         return true;
     }
     const Json* ent = st.get("entry");
-    const Json* hsv = st.get("hsv");     // absent in the second build's file
     const Json* act = st.get("active");  // absent before the multi-element picker
     const Json* thm = st.get("theme");   // absent when no theme strip is open (and before the presets)
-    if (!ent || !ent->is_object() || (hsv && !hsv->is_object()) || (act && !act->is_string()) ||
-        (thm && (!thm->is_string() || thm->str.empty())) ||
-        st.obj.size() != 2u + (hsv ? 1u : 0u) + (act ? 1u : 0u) + (thm ? 1u : 0u)) {
-        err = "state.json: not {\"active\": key, \"colours\": {...}, \"hsv\": {...}, \"entry\": {...}, \"theme\": key}";
+    const Json* mdl = st.get("model");   // absent before the model switch: HSV
+    const Json* views[3];                // "hsv" absent in the second build's file; "hsl", "lch" before the model switch
+    size_t present = 0;
+    bool views_ok = true;
+    for (Model m : kAllModels) {
+        const Json* v = views[int(m)] = st.get(model_word(m));
+        if (v) { ++present; views_ok = views_ok && v->is_object(); }
+    }
+    if (!ent || !ent->is_object() || !views_ok || (act && !act->is_string()) ||
+        (thm && (!thm->is_string() || thm->str.empty())) || (mdl && (!mdl->is_string() || !model_of_word(mdl->str, model))) ||
+        st.obj.size() != 2u + present + (act ? 1u : 0u) + (thm ? 1u : 0u) + (mdl ? 1u : 0u)) {
+        err = "state.json: not {\"active\": key, \"model\": \"hsv\" | \"hsl\" | \"lch\", \"colours\": {...}, \"hsv\": {...}, "
+              "\"hsl\": {...}, \"lch\": {...}, \"entry\": {...}, \"theme\": key}";
         return false;
     }
     if (act) active = act->str;
@@ -440,21 +466,18 @@ bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::
         if (!kv.second.is_string() || !parse_hex(kv.second.str, p.rgb)) { err = "state.json: colours." + kv.first + " is not #rrggbb"; return false; }
         out[kv.first] = p;
     }
-    if (hsv)
-        for (const auto& kv : hsv->obj) {
-            const auto c = out.find(kv.first);
-            const Json& a = kv.second;
-            if (c == out.end() || !a.is_array() || a.arr.size() != 3 || !a.arr[0].is_number() || !a.arr[1].is_number() ||
-                !a.arr[2].is_number()) {
-                err = "state.json: hsv." + kv.first + " is not [h, s, v] beside a colour"; return false;
+    for (Model m : kAllModels)
+        if (views[int(m)])
+            for (const auto& kv : views[int(m)]->obj) {
+                const std::string where = std::string("state.json: ") + model_word(m) + "." + kv.first;
+                const auto c = out.find(kv.first);
+                if (c == out.end() || c->second.has_view || !view_of_json(kv.second, m, c->second)) {
+                    err = where + " is not [a, b, c] beside a colour, the element's one view"; return false;
+                }
+                if (!view_holds(c->second)) {
+                    err = where + " is not a view giving " + hex_of(c->second.rgb) + " (" + view_ranges(m) + ")"; return false;
+                }
             }
-            Pick& p = c->second;
-            p.has_hsv = true;
-            p.h = a.arr[0].num;
-            p.s = a.arr[1].num;
-            p.v = a.arr[2].num;
-            if (!view_holds(p)) { err = "state.json: hsv." + kv.first + " is not a view giving " + hex_of(p.rgb) + " (h 0..360, s and v 0..1)"; return false; }
-        }
     for (const auto& kv : ent->obj) {
         const double n = kv.second.num;
         if (!kv.second.is_number() || n < 1 || n != std::floor(n) || n > 1e9) {
@@ -476,7 +499,7 @@ bool picks_load(const std::string& path, std::map<std::string, std::vector<Pick>
         if (nl == std::string::npos) { err = where + " has no newline"; return false; }
         const std::string l = text.substr(at, nl - at);
         at = nl + 1;
-        // the words, single spaces: <time> <key...> #RRGGBB [hsv <h> <s> <v>]
+        // the words, single spaces: <time> <key...> #RRGGBB [<model> <a> <b> <c>]
         std::vector<std::string> w;
         for (size_t b = 0;;) {
             const size_t e = l.find(' ', b);
@@ -484,18 +507,21 @@ bool picks_load(const std::string& path, std::map<std::string, std::vector<Pick>
             if (e == std::string::npos) break;
             b = e + 1;
         }
-        const bool view = w.size() >= 7 && w[w.size() - 4] == "hsv";
-        const size_t hex_at = w.size() - (view ? 5 : 1);
         Pick p;
+        const bool view = w.size() >= 7 && model_of_word(w[w.size() - 4], p.model);
+        const size_t hex_at = w.size() - (view ? 5 : 1);
         std::string name;
         for (size_t k = 1; k < hex_at && w.size() >= 3; ++k) name += (k > 1 ? " " : "") + w[k];
         if (w.size() < 3 || w[0].empty() || name.empty() || !parse_hex(w[hex_at], p.rgb) ||
-            (view && !(read_view_number(w[w.size() - 3], p.h) && read_view_number(w[w.size() - 2], p.s) &&
-                       read_view_number(w[w.size() - 1], p.v)))) {
-            err = where + " is not \"<time> <key> #RRGGBB hsv <h> <s> <v>\" (nor \"<time> <key> #RRGGBB\")"; return false;
+            (view && !(read_view_number(w[w.size() - 3], p.x[0]) && read_view_number(w[w.size() - 2], p.x[1]) &&
+                       read_view_number(w[w.size() - 1], p.x[2])))) {
+            err = where + " is not \"<time> <key> #RRGGBB <hsv | hsl | lch> <a> <b> <c>\" (nor \"<time> <key> #RRGGBB\")"; return false;
         }
-        p.has_hsv = view;
-        if (view && !view_holds(p)) { err = where + "'s hsv is not a view giving " + hex_of(p.rgb) + " (h 0..360, s and v 0..1)"; return false; }
+        p.has_view = view;
+        if (view && !view_holds(p)) {
+            err = where + "'s " + model_word(p.model) + " is not a view giving " + hex_of(p.rgb) + " (" + view_ranges(p.model) + ")";
+            return false;
+        }
         out[name].push_back(p);
     }
     return true;
@@ -515,11 +541,22 @@ bool presets_load(const std::string& path, std::vector<Preset>& out, std::string
         const Json* num = p.get("number");
         const Json* saved = p.get("saved");
         const Json* cols = p.get("colours");
-        const Json* hsv = p.get("hsv");
-        if (!p.is_object() || p.obj.size() != 4 || !num || !num->is_number() || num->num < 1 || num->num > 1e9 ||
+        const Json* views[3];
+        size_t present = 0, nviews = 0;
+        bool views_ok = true;
+        for (Model m : kAllModels) {
+            const Json* v = views[int(m)] = p.get(model_word(m));
+            if (v) {
+                ++present;
+                views_ok = views_ok && v->is_object();
+                if (v->is_object()) nviews += v->obj.size();
+            }
+        }
+        if (!p.is_object() || p.obj.size() != 3 + present || !num || !num->is_number() || num->num < 1 || num->num > 1e9 ||
             num->num != std::floor(num->num) || !saved || !saved->is_string() || saved->str.empty() || !cols ||
-            !cols->is_object() || cols->obj.empty() || !hsv || !hsv->is_object() || hsv->obj.size() != cols->obj.size()) {
-            err = where + " is not {\"number\": a whole number from 1, \"saved\", \"colours\": {...}, \"hsv\": {...}}";
+            !cols->is_object() || cols->obj.empty() || !views_ok || nviews != cols->obj.size()) {
+            err = where + " is not {\"number\": a whole number from 1, \"saved\", \"colours\": {...}, \"hsv\" / \"hsl\" / "
+                          "\"lch\": {...} over the colours}";
             return false;
         }
         Preset P;
@@ -528,17 +565,18 @@ bool presets_load(const std::string& path, std::vector<Preset>& out, std::string
         if (!out.empty() && P.number <= out.back().number) { err = where + "'s number is not above the one before it"; return false; }
         for (const auto& kv : cols->obj) {
             Pick pk;
-            const Json* a = hsv->get(kv.first);
-            if (!kv.second.is_string() || !parse_hex(kv.second.str, pk.rgb) || P.colours.count(kv.first) || !a ||
-                !a->is_array() || a->arr.size() != 3 || !a->arr[0].is_number() || !a->arr[1].is_number() ||
-                !a->arr[2].is_number()) {
-                err = where + ": " + kv.first + " is not a #rrggbb once, with its [h, s, v] in hsv"; return false;
+            const Json* a = nullptr;
+            Model am = Model::Hsv;
+            int found = 0;
+            for (Model m : kAllModels)
+                if (const Json* v = views[int(m)] ? views[int(m)]->get(kv.first) : nullptr) { a = v; am = m; ++found; }
+            if (!kv.second.is_string() || !parse_hex(kv.second.str, pk.rgb) || P.colours.count(kv.first) || found != 1 ||
+                !view_of_json(*a, am, pk)) {
+                err = where + ": " + kv.first + " is not a #rrggbb once, with its [a, b, c] in one of hsv, hsl, lch"; return false;
             }
-            pk.has_hsv = true;
-            pk.h = a->arr[0].num;
-            pk.s = a->arr[1].num;
-            pk.v = a->arr[2].num;
-            if (!view_holds(pk)) { err = where + ": hsv." + kv.first + " is not a view giving " + hex_of(pk.rgb); return false; }
+            if (!view_holds(pk)) {
+                err = where + ": " + model_word(am) + "." + kv.first + " is not a view giving " + hex_of(pk.rgb); return false;
+            }
             P.colours[kv.first] = pk;
         }
         out.push_back(std::move(P));

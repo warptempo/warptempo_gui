@@ -3,7 +3,7 @@
 // part of the APK):
 //
 //   host_check <fonts dir> <work dir> --export <scene dir> <expects.txt> [--export <dir> <expects.txt>]...
-//              [--linmix <table>] [--today <dir>] [--late <dir>]
+//              [--linmix <table>] [--today <dir>] [--late <dir>] [--models <models_ref.txt>] [--presets <presets.json>]
 //
 //   - every export loads, and every expects.txt line ("<scene> <ppm> [<key>=#RRGGBB ...]": the mock tool's render of
 //     that scene with those elements moved from the manifest's colours) equals the picker's picture byte for byte,
@@ -12,6 +12,9 @@
 //   - the blend (colour.h over_n_8) equals cairo's own compositing of a solid source through an A8 mask on every
 //     (source, frame, coverage) byte triple, each channel; the chrome rule's scale_byte is half-to-even and capped;
 //   - ColourState over the whole cube, the view numbers, the readouts (one decimal; the widest fits its field);
+//   - THE MODELS: bytes -> HSL / LCh -> bytes the identity over the whole cube, every LCh inside the gamut, the C
+//     track's range holding P3's most chromatic colour, white and black, the retention; --models: check_refs.py's
+//     independent reference (HSL by colorsys, LCh by numpy over Display-P3) to 1e-9;
 //   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas and Ink over the scene
 //     waveform, Unselected Flag and Selected Flag over the scene flags, a Selection Test over a third scene with the
 //     first flag's editor open) and its active element (the chrome): the panel, the pick history, the HSV he dialled;
@@ -28,10 +31,15 @@
 //     THE THEME STRIP (opened from the pop-up, swatches adopted as edits into the chrome and, after a
 //     switch, the canvas, OLD reverting, the strip surviving the switch and a relaunch, Windows 95 Standard's quartet
 //     and a tinted theme's rule lines, its own scroll, the close control) on the first export;
+//   - THE MODEL SWITCH on the first export: the list's tap rules, HSL and LCh dialled, committed and restored exactly
+//     (relaunch, BACK / FORWARD, OLD, the leave, a preset over three models), the switch leaving views untouched, the
+//     ring and the triangle in both, the gamut stop on a C drag and an h drag, the out-of-gamut stretch's neutral, the
+//     new forms' refusals;
 //   - --today <dir>: the tablet's picks.txt and state.json of 2026-10-04 (morning) load unchanged; --late <dir>: those
-//     of the presets build's install (136 lines) too, the flags at the manifest's colours with empty histories;
-//   - THE PER-FRAME COST of a pen drag (R's track) on the ink, the chrome and the unselected flag: the live repaint
-//     and the frame;
+//     of the presets build's install (136 lines) too, the flags at the manifest's colours with empty histories, HSV
+//     shown; --presets: the repository's presets.json reads;
+//   - THE PER-FRAME COST of a pen drag (R's track) on the ink, the chrome and the unselected flag, and of LCh's h track
+//     on the chrome: the live repaint and the frame;
 //   - frames as PNGs in the work dir for the eye.
 
 #include "colour.h"
@@ -64,6 +72,7 @@ namespace {
 
 int g_fail = 0;
 std::string g_theme;   // state_load's theme, where a check does not read it
+Model g_model;         // and its model
 void check(bool ok, const std::string& what) {
     std::printf("%s %s\n", ok ? "ok  " : "FAIL", what.c_str());
     if (!ok) ++g_fail;
@@ -202,6 +211,8 @@ int main(int argc, char** argv) {
     Export ex0;                                   // the first export: the sessions' and the timing's
     std::string today;                            // --today: the tablet's picks.txt and state.json of 2026-10-04
     std::string late;                             // --late: those of the presets build's install, the same day
+    std::string models_ref;                       // --models: check_refs.py's models_ref.txt (HSL by colorsys, LCh by numpy)
+    std::string repo_presets;                     // --presets: the repository's copy of the tablet's presets.json
     Export round_ex;                              // the export labelled "scene" (the round's, as the tablet gets it)
     std::string round_expects;
     bool have = false;
@@ -226,6 +237,10 @@ int main(int argc, char** argv) {
             if (!have) { ex0 = std::move(ex); have = true; }
         } else if (a == "--today" && i + 1 < argc) {
             today = argv[++i];
+        } else if (a == "--models" && i + 1 < argc) {
+            models_ref = argv[++i];
+        } else if (a == "--presets" && i + 1 < argc) {
+            repo_presets = argv[++i];
         } else if (a == "--late" && i + 1 < argc) {
             late = argv[++i];
         } else if (a == "--linmix" && i + 1 < argc) {
@@ -313,15 +328,39 @@ int main(int argc, char** argv) {
         check(cs.h == h0 && cs.s == s0, "black set as bytes keeps the hue and the saturation");
         cs.set_rgb(Rgb{0x77, 0x77, 0x77});
         check(cs.h == h0 && cs.s == 0, "a grey set as bytes keeps the hue, saturation 0");
-        bool all = true;
-        for (int r = 0; r < 256 && all; ++r)
-            for (int g = 0; g < 256 && all; ++g)
-                for (int b = 0; b < 256 && all; ++b) {
+        // THE WHOLE CUBE, every model: bytes -> view -> bytes is the identity, the LCh inside the gamut (its bytes reached
+        // by rounding alone), every re-derived view in its ranges
+        long hsv_bad = 0, hsl_bad = 0, lch_bad = 0, lch_out = 0, range_bad = 0;
+        double cmax = 0;
+        Rgb cmax_at;
+        for (int r = 0; r < 256; ++r)
+            for (int g = 0; g < 256; ++g)
+                for (int b = 0; b < 256; ++b) {
+                    const Rgb c{uint8_t(r), uint8_t(g), uint8_t(b)};
                     ColourState t;
-                    t.set_rgb(Rgb{uint8_t(r), uint8_t(g), uint8_t(b)});
-                    all = rgb_of_hsv(t.h, t.s, t.v) == t.rgb;
+                    t.set_rgb(c);
+                    if (!(rgb_of_hsv(t.h, t.s, t.v) == c)) ++hsv_bad;
+                    if (!(rgb_of_hsl(t.hsl[0], t.hsl[1], t.hsl[2]) == c)) ++hsl_bad;
+                    const Unit u = unit_of_lch(t.lch[0], t.lch[1], t.lch[2]);
+                    if (!unit_in_gamut(u)) ++lch_out;
+                    if (!(rgb_of_unit(u) == c)) ++lch_bad;
+                    for (Model m : kAllModels)
+                        for (int k = 0; k < 3; ++k) {
+                            const double x = t.view(m)[size_t(k)];
+                            if (!(x >= 0 && x <= axis_max(m, k))) ++range_bad;
+                        }
+                    if (t.lch[1] > cmax) { cmax = t.lch[1]; cmax_at = c; }
                 }
-        check(all, "bytes -> HSV -> bytes is the identity (the whole cube)");
+        check(hsv_bad == 0, "bytes -> HSV -> bytes is the identity (the whole cube)");
+        check(hsl_bad == 0, "bytes -> HSL -> bytes is the identity (the whole cube, " + std::to_string(hsl_bad) + " differ)");
+        check(lch_bad == 0 && lch_out == 0 && range_bad == 0,
+              "bytes -> LCh -> bytes is the identity and every view inside the gamut and its ranges (the whole cube; " +
+                  std::to_string(lch_bad) + " differ, " + std::to_string(lch_out) + " outside the gamut, " +
+                  std::to_string(range_bad) + " numbers outside their ranges)");
+        char cm[200];
+        std::snprintf(cm, sizeof cm, "the most chromatic byte triple is %s at C %.4f, inside the C track's 0..%.0f",
+                      hex_of(cmax_at).c_str(), cmax, kChromaMax);
+        check(cmax <= kChromaMax && cmax_at == (Rgb{0, 255, 0}), cm);
         bool trip = view_number(0.35) == "0.35" && view_number(227) == "227" && view_number(0) == "0";
         for (int k = 0; k <= 100000 && trip; ++k) {
             const double xs[3] = {k / 100000.0, k / 7.0 / 100000.0 * 360, std::nearbyint(k % 101) / 100};
@@ -353,6 +392,64 @@ int main(int argc, char** argv) {
         std::snprintf(fit, sizeof fit, "the widest readout (%.1f px) fits its field (%d px) with %.1f px of air left of it, "
                       "%d right", widest, panel::kFieldW, panel::kFieldW - panel::kReadoutInset - widest, panel::kReadoutInset);
         check(widest + 2 * panel::kReadoutInset <= panel::kFieldW, fit);
+    }
+
+    // ---------------------------------------------------------------- THE MODELS: HSL and LCh over the bytes
+    {
+        double w[3], k[3];
+        lch_of_unit(Unit{1, 1, 1}, w);
+        lch_of_unit(Unit{0, 0, 0}, k);
+        char wk[200];
+        std::snprintf(wk, sizeof wk, "white #FFFFFF is L %.12f C %g, black L %g C %g", w[0], w[1], k[0], k[1]);
+        check(std::abs(w[0] - 100) < 1e-9 && w[1] == 0 && k[0] == 0 && k[1] == 0, wk);
+        // the retention: HSL keeps its hue through grey and its saturation through black and white; LCh its hue
+        ColourState g;
+        g.show(Model::Hsl);
+        g.set_rgb(Rgb{0x80, 0x40, 0x20});
+        const double gh = g.hsl[0], gs = g.hsl[1], lh = g.lch[2];
+        g.set_rgb(Rgb{0x77, 0x77, 0x77});
+        const bool grey_ok = g.hsl[0] == gh && g.hsl[1] == 0 && g.lch[2] == lh && g.lch[1] == 0;
+        g.set_rgb(Rgb{0x80, 0x40, 0x20});
+        g.set_rgb(Rgb{0, 0, 0});
+        const bool black_ok = g.hsl[0] == gh && g.hsl[1] == gs && g.hsl[2] == 0;
+        g.set_rgb(Rgb{0x80, 0x40, 0x20});
+        g.set_rgb(Rgb{255, 255, 255});
+        check(grey_ok && black_ok && g.hsl[0] == gh && g.hsl[1] == gs && g.hsl[2] == 1 && g.lch[2] == lh,
+              "HSL keeps its hue through grey and its saturation through black and white; LCh its hue through C 0");
+        // against the independent reference: HSL by colorsys, LCh by numpy
+        if (!models_ref.empty()) {
+            std::istringstream in(slurp(models_ref));
+            long n = 0, bad_hsl = 0, bad_lch = 0;
+            double worst_hsl = 0, worst_lch = 0;
+            std::map<std::string, std::string> named;
+            int r, g2, b;
+            double H, S, Lh, L, C, h;
+            while (in >> r >> g2 >> b >> H >> S >> Lh >> L >> C >> h) {
+                ++n;
+                const Rgb c{uint8_t(r), uint8_t(g2), uint8_t(b)};
+                ColourState t;
+                t.set_rgb(c);
+                const bool grey = r == g2 && g2 == b;
+                double dh = grey ? 0 : std::abs(std::remainder(t.hsl[0] - H, 360.0));
+                double e1 = std::max({dh, std::abs(t.hsl[1] - S), std::abs(t.hsl[2] - Lh)});
+                double dl = std::abs(std::remainder(t.lch[2] - h, 360.0));
+                double e2 = std::max({std::abs(t.lch[0] - L), std::abs(t.lch[1] - C), C > 1e-6 ? dl : 0.0});
+                worst_hsl = std::max(worst_hsl, e1);
+                worst_lch = std::max(worst_lch, e2);
+                if (e1 > 1e-9) ++bad_hsl;
+                if (e2 > 1e-9) ++bad_lch;
+                char line[160];
+                std::snprintf(line, sizeof line, "L %.4f C %.4f h %.4f (the reference: %.4f %.4f %.4f)", t.lch[0], t.lch[1],
+                              t.lch[2], L, C, h);
+                named[hex_of(c)] = line;
+            }
+            char what[240];
+            std::snprintf(what, sizeof what, "HSL equals Python's colorsys and LCh numpy's (Display-P3, D65) on %ld byte "
+                          "triples to 1e-9 (worst %.2g and %.2g)", n, worst_hsl, worst_lch);
+            check(n > 20000 && bad_hsl == 0 && bad_lch == 0, what);
+            for (const char* hx : {"#FF0000", "#00FF00", "#0000FF", "#00FFFF", "#FF00FF", "#FFFF00", "#FFFFFF"})
+                std::printf("     P3 %s: %s\n", hx, named[hx].c_str());
+        }
     }
 
     using namespace panel;
@@ -435,7 +532,7 @@ int main(int argc, char** argv) {
         std::map<std::string, Pick> st;
         std::map<std::string, int> ent;
         std::string act;
-        check(state_load(work + "/state.json", st, ent, act, g_theme, err) && st.count(L) && hex_of(st[L].rgb) == hex &&
+        check(state_load(work + "/state.json", st, ent, act, g_theme, g_model, err) && st.count(L) && hex_of(st[L].rgb) == hex &&
                   act == L && st.size() == p.exp().elements.size(),
               "state.json holds the commit, every element's colour and the active element");
         tap(p, 300, 700);
@@ -497,7 +594,7 @@ int main(int argc, char** argv) {
         std::map<std::string, Pick> sc;
         std::map<std::string, int> se;
         std::string act;
-        check(state_load(work + "/state.json", sc, se, act, g_theme, err) && sc[L].rgb == a1 && se[L] == 2,
+        check(state_load(work + "/state.json", sc, se, act, g_theme, g_model, err) && sc[L].rgb == a1 && se[L] == 2,
               "state.json records the stepped colour and the cursor 2");
 
         Picker r = launch();
@@ -518,7 +615,7 @@ int main(int argc, char** argv) {
         r.discard_if_open();
         check(!r.open() && lines_of(work + "/picks.txt") == 3 && r.colour().rgb == a1 && count(r) == "2 of 3",
               "leaving the app with an unsaved edit saves nothing: the colour and the cursor of the panel's opening");
-        check(state_load(work + "/state.json", sc, se, act, g_theme, err) && sc[L].rgb == a1 && se[L] == 2, "and state.json is untouched");
+        check(state_load(work + "/state.json", sc, se, act, g_theme, g_model, err) && sc[L].rgb == a1 && se[L] == 2, "and state.json is untouched");
         Picker r2 = launch();
         check(r2.colour().rgb == a1 && count(r2) == "2 of 3", "a relaunch after it comes back on the last saved state");
         tap(r, 1700, 700);
@@ -706,7 +803,7 @@ int main(int argc, char** argv) {
         std::map<std::string, Pick> st;
         std::map<std::string, int> ent;
         std::string act;
-        const bool st_ok = state_load(work + "/state.json", st, ent, act, g_theme, err);
+        const bool st_ok = state_load(work + "/state.json", st, ent, act, g_theme, g_model, err);
         check(p.active() == ink && p.open() && !p.chooser_open() && lines_of(work + "/picks.txt") == 1 &&
                   slurp(work + "/picks.txt").find(" chrome #206048 hsv ") != std::string::npos && st_ok && act == "ink" &&
                   st["chrome"].rgb == tint && ent["chrome"] == 1 && p.element(chrome).hist.cursor == 0,
@@ -906,7 +1003,7 @@ int main(int argc, char** argv) {
             std::map<std::string, Pick> st;
             std::map<std::string, int> ent;
             std::string act;
-            check(state_load(work + "/state.json", st, ent, act, g_theme, err) && st["chrome"].rgb == c1.rgb &&
+            check(state_load(work + "/state.json", st, ent, act, g_theme, g_model, err) && st["chrome"].rgb == c1.rgb &&
                       st["ink"].rgb == ink0 && ent["chrome"] == 3 && ent["ink"] == 2, "state.json follows the load");
         }
         tap(p, back_x, hist_y);
@@ -917,8 +1014,8 @@ int main(int argc, char** argv) {
         tap(p, 1700, 700);
         Picker r = launch();
         check(r.presets().size() == 2 && r.presets()[0].number == 1 && r.presets()[1].number == 2 &&
-                  r.save_label() == "Save as Preset 3" && r.presets()[1].colours.at("chrome").h == c2.h &&
-                  r.presets()[1].colours.at("chrome").s == c2.s && r.presets()[1].colours.at("chrome").v == c2.v,
+                  r.save_label() == "Save as Preset 3" && r.presets()[1].colours.at("chrome").x[0] == c2.h &&
+                  r.presets()[1].colours.at("chrome").x[1] == c2.s && r.presets()[1].colours.at("chrome").x[2] == c2.v,
               "a relaunch keeps the presets, their views exact; the next is Preset 3");
         // a scroll that acts on nothing, a tap outside
         tap(r, 1700, 700);
@@ -1008,7 +1105,7 @@ int main(int argc, char** argv) {
             std::map<std::string, Pick> st;
             std::map<std::string, int> ent;
             std::string act;
-            check(s.theme_open() == -1 && state_load(work + "/state.json", st, ent, act, g_theme, err) && g_theme.empty() &&
+            check(s.theme_open() == -1 && state_load(work + "/state.json", st, ent, act, g_theme, g_model, err) && g_theme.empty() &&
                       st["chrome"].rgb == brick && s.edited() && s.colour().rgb == alp_c,
                   "the close control closes the strip (state.json drops it, and holds the chrome's last saved colour, never "
                   "the unsaved adoption, which stays an edit)");
@@ -1054,6 +1151,283 @@ int main(int argc, char** argv) {
         fresh();
     }
 
+    // ---------------------------------------------------------------- THE MODEL SWITCH: HSL and LCh on the panel
+    if (six) {
+        fresh();
+        const double mb_x = ppx + kModelX0 + 60, mb_y = ppy + kModelY + kModelH / 2.0;
+        auto model_tap = [&](Picker& q, Model m) {
+            tap(q, mb_x, mb_y);
+            tap(q, mb_x, ppy + kModelListY + int(m) * kChooserRowH + kChooserRowH / 2.0);
+        };
+        auto shown = [](const ColourState& c, double a, double b, double d) {
+            const std::array<double, 3> x = c.view(c.model);
+            return x[0] == a && x[1] == b && x[2] == d;
+        };
+        auto same_all = [](const ColourState& a, const ColourState& b) {
+            return a.rgb == b.rgb && a.model == b.model && a.view(a.model) == b.view(b.model) && a.dialled == b.dialled &&
+                   a.view(a.dialled) == b.view(b.dialled);
+        };
+        auto readouts = [](const ColourState& c) {
+            return row_readout(c, 0) + " / " + row_readout(c, 1) + " / " + row_readout(c, 2);
+        };
+        auto last_line = [&]() {
+            const std::string t = slurp(work + "/picks.txt");
+            const size_t b = t.rfind('\n', t.size() - 2);
+            return t.substr(b == std::string::npos ? 0 : b + 1, t.size() - (b == std::string::npos ? 0 : b + 1) - 1);
+        };
+        Picker p = launch();
+        tap(p, 1700, 700);
+        check(p.model() == Model::Hsv && !p.models_open(), "the model switch shows HSV at a fresh start");
+        tap(p, mb_x, mb_y);
+        check(p.models_open(), "a tap on the model switch opens its list (HSV, HSL, LCh)");
+        p.paint(frame);
+        png(frame, work + "/frame_model_list_open.png");
+        tap(p, ppx + 600, ppy + 1000);
+        check(!p.models_open() && p.open() && p.model() == Model::Hsv && !std::ifstream(work + "/state.json"),
+              "a tap outside the list closes it and changes nothing (no file written)");
+        tap(p, mb_x, mb_y);
+        p.press(mb_x, ppy + kModelListY + kChooserRowH / 2.0 + kChooserRowH);       // pressed on HSL, lifted on LCh
+        p.release(mb_x, ppy + kModelListY + kChooserRowH / 2.0 + 2 * kChooserRowH);
+        check(p.models_open() && p.model() == Model::Hsv, "a press on one model lifted on another picks nothing (the list stays)");
+        tap(p, mb_x, ppy + kModelListY + kChooserRowH / 2.0 + kChooserRowH);
+        const Rgb before = p.colour().rgb;
+        check(!p.models_open() && p.model() == Model::Hsl && p.colour().rgb == before && p.old() == before &&
+                  slurp(work + "/state.json").find("\"model\": \"hsl\"") != std::string::npos &&
+                  !std::ifstream(work + "/picks.txt"),
+              "HSL chosen: the colour unchanged, state.json names the model, nothing committed");
+        // HSL dialled by its tracks and − / +
+        track(p, 0, 200.0 / 360); plus(p, 0); minus(p, 0);
+        track(p, 1, 0.6); plus(p, 1); minus(p, 1);
+        track(p, 2, 0.4); plus(p, 2);
+        const ColourState h1 = p.colour();
+        check(shown(h1, 200, 0.6, 0.41) && h1.rgb == rgb_of_hsl(200, 0.6, 0.41) && readouts(h1) == "200.0 / 60.0 / 41.0" &&
+                  h1.dialled == Model::Hsl && h1.ring[0] == 200,
+              "HSL's tracks and − / + set H 200, S 60, L 41 exactly (" + hex_of(h1.rgb) + "), the ring at its hue");
+        p.paint(frame);
+        png(frame, work + "/frame_model_hsl_open.png");
+        tap(p, 1700, 700);
+        check(last_line().find(" chrome " + hex_of(h1.rgb) + " hsl " + view_number(200) + " 0.6 0.41") != std::string::npos,
+              "the close commits the HSL view: " + last_line());
+        {
+            Picker r = launch();
+            check(r.model() == Model::Hsl && same_all(r.colour(), h1) && readouts(r.colour()) == "200.0 / 60.0 / 41.0",
+                  "a relaunch shows HSL and the view exactly as dialled");
+        }
+        tap(p, 1700, 700);
+        plus(p, 2);
+        const ColourState h2 = p.colour();
+        tap(p, 1700, 700);
+        tap(p, 1700, 700);
+        tap(p, back_x, hist_y);
+        const ColourState b1 = p.colour();
+        tap(p, fwd_x, hist_y);
+        check(same_all(b1, h1) && same_all(p.colour(), h2) && shown(h2, 200, 0.6, 0.42),
+              "BACK and FORWARD restore each HSL view exactly");
+        // the switch to HSV re-derives HSV from the bytes; back to HSL, unchanged, the dialled view
+        model_tap(p, Model::Hsv);
+        const ColourState hv = p.colour();
+        model_tap(p, Model::Hsl);
+        check(hv.model == Model::Hsv && hv.rgb == h2.rgb && rgb_of_hsv(hv.h, hv.s, hv.v) == h2.rgb && !p.edited() &&
+                  same_all(p.colour(), h2),
+              "HSV shows the bytes' own view (" + readouts(hv) + "); back to HSL the dialled view, no edit");
+        // the ring and the triangle in HSL: the triangle keeps the hue exactly, the ring sets it
+        p.press(ppx + kPad + kROut, ppy + kPad + kROut);
+        p.move(ppx + kPad + kROut + 30, ppy + kPad + kROut + 20);
+        p.release(ppx + kPad + kROut + 30, ppy + kPad + kROut + 20);
+        const ColourState tr = p.colour();
+        p.press(ppx + kPad + kROut + 255, ppy + kPad + kROut);
+        p.move(ppx + kPad + kROut, ppy + kPad + kROut - 255);
+        p.release(ppx + kPad + kROut, ppy + kPad + kROut - 255);
+        check(tr.hsl[0] == 200 && tr.rgb == rgb_of_hsl(tr.hsl[0], tr.hsl[1], tr.hsl[2]) && tr.dialled == Model::Hsl &&
+                  std::abs(p.colour().hsl[0] - 90) < 1e-9 && p.colour().ring[0] == p.colour().hsl[0],
+              "in HSL the triangle keeps the hue 200 exactly (" + readouts(tr) + "), the ring sets it (90)");
+        track(p, 1, 0);
+        const ColourState grey = p.colour();
+        track(p, 1, 0.5);
+        check(grey.rgb.r == grey.rgb.g && grey.rgb.g == grey.rgb.b && grey.hsl[0] == p.colour().hsl[0] &&
+                  std::abs(p.colour().hsl[0] - 90) < 1e-9, "HSL's S to 0 gives a grey and keeps the hue");
+        tap(p, ppx + kColX + 50, ppy + kSwatchY0 + 50);   // OLD
+        check(same_all(p.colour(), h2), "OLD restores the HSL view the panel opened with");
+
+        // LCh: the tracks, the gamut stop
+        model_tap(p, Model::Lch);
+        check(p.model() == Model::Lch && p.colour().rgb == h2.rgb && p.colour().lch[1] > 0, "LCh chosen: " + readouts(p.colour()));
+        track(p, 1, 0);
+        track(p, 0, 0.6); plus(p, 0); minus(p, 0);
+        track(p, 2, 250.0 / 360); plus(p, 2); minus(p, 2);
+        track(p, 1, 20.0 / kChromaMax); plus(p, 1); minus(p, 1);
+        check(shown(p.colour(), 60, 20, 250) && p.colour().dialled == Model::Lch, "LCh's tracks set L 60, C 20, h 250 exactly");
+        {
+            const double x0 = ppx + kTrackX + 20.0 / kChromaMax * (kTrackL - 1), y = ppy + row_y(1) + 30;
+            p.press(x0, y);
+            for (int k = 1; k <= 40; ++k) p.move(x0 + k * (kTrackL - (x0 - ppx - kTrackX)) / 40.0, y);
+            p.release(ppx + kTrackX + kTrackL + 10, y);
+        }
+        const ColourState cs = p.colour();
+        const double cstop = cs.lch[1];
+        const Unit u = unit_of_lch(60, cstop, 250);
+        char stop[240];
+        std::snprintf(stop, sizeof stop, "a drag on C to the track's end stops at the gamut, C %.9f (%s), inside; C + 1e-8 is "
+                      "outside; the bytes reached by rounding alone", cstop, hex_of(cs.rgb).c_str());
+        check(cstop > 20 && cstop < kChromaMax && lch_in_gamut(60, cstop, 250) && !lch_in_gamut(60, cstop + 1e-8, 250) &&
+                  unit_in_gamut(u) && rgb_of_unit(u) == cs.rgb && cs.lch[0] == 60 && cs.lch[2] == 250,
+              stop);
+        plus(p, 1);
+        check(same_all(p.colour(), cs), "C + at the gamut's edge moves nothing");
+        p.paint(frame);
+        png(frame, work + "/frame_model_lch_open.png");
+        {   // the C track's out-of-gamut stretch: the neutral, its in-gamut part the colour
+            const int ty = int(ppy) + row_y(1) + kRowH / 2;
+            auto at = [&](double c) {
+                const long k = long(ty) * W + long(ppx + kTrackX + std::lround(c / kChromaMax * (kTrackL - 1)));
+                return frame_word(frame, k, W);
+            };
+            const Rgb lch_g = rgb_of_unit(unit_of_lch(60, 0, 250));
+            check(at(155) == word_of(Rgb{0x19, 0x19, 0x19}) && at(cstop + 5) == word_of(Rgb{0x19, 0x19, 0x19}) &&
+                      at(0) == word_of(lch_g) && at(cstop - 5) != word_of(Rgb{0x19, 0x19, 0x19}),
+                  "the C track paints its out-of-gamut stretch (C > " + std::to_string(int(cstop)) +
+                      ") in the flat neutral #191919, the rest in colour (C 0 the grey " + hex_of(lch_g) + ")");
+        }
+        minus(p, 1);
+        const double cm = std::nearbyint(cstop) - 1;
+        check(shown(p.colour(), 60, cm, 250), "C − from the edge: C " + std::to_string(int(cm)) + " exactly");
+        {   // the h track dragged across the gamut's edges (C toward 70): every stop inside, at the edge or at the pen
+            track(p, 1, 70.0 / kChromaMax);
+            const double y = ppy + row_y(2) + 30;
+            bool ok = true;
+            int stops = 0;
+            p.press(ppx + kTrackX + p.colour().lch[2] / 360 * (kTrackL - 1), y);
+            for (int k = 0; k <= 72 && ok; ++k) {
+                const double target = (k % 2 ? 360 - k * 5 : k * 5);
+                p.move(ppx + kTrackX + target / 360 * (kTrackL - 1), y);
+                const ColourState& c = p.colour();
+                const double hh = c.lch[2];
+                const double t = std::max(0.0, std::min(360.0, (ppx + kTrackX + target / 360 * (kTrackL - 1) - (ppx + kTrackX)) /
+                                                                    (kTrackL - 1) * 360));
+                ok = lch_in_gamut(c.lch[0], c.lch[1], hh) && c.rgb == rgb_of_unit(unit_of_lch(c.lch[0], c.lch[1], hh));
+                if (hh != t) {
+                    ++stops;
+                    const double dir = t > hh ? 1 : -1;
+                    ok = ok && !lch_in_gamut(c.lch[0], c.lch[1], hh + dir * 1e-6);
+                }
+            }
+            p.release(ppx + kTrackX, y);
+            check(ok && stops > 0, "a drag on h across the gamut at C " + row_readout(p.colour(), 1) +
+                                   " (C 70 stopped there): every frame inside, the bytes unclipped, " + std::to_string(stops) +
+                                   " frames stopped at an edge");
+        }
+        // LCh's hue through C 0
+        track(p, 1, 0);
+        track(p, 0, 0.6); plus(p, 0); minus(p, 0);
+        track(p, 2, 250.0 / 360); plus(p, 2); minus(p, 2);
+        track(p, 1, 30.0 / kChromaMax); plus(p, 1); minus(p, 1);
+        const ColourState l1 = p.colour();
+        track(p, 1, 0);
+        const bool keeps = p.colour().lch[1] == 0 && p.colour().lch[2] == 250 && p.colour().rgb.r == p.colour().rgb.g &&
+                           p.colour().rgb.g == p.colour().rgb.b;
+        track(p, 1, 30.0 / kChromaMax); plus(p, 1); minus(p, 1);
+        check(keeps && same_all(p.colour(), l1), "LCh's C to 0 is a grey keeping h 250; C back to 30 the colour again exactly");
+        tap(p, 1700, 700);
+        check(last_line().find(" chrome " + hex_of(l1.rgb) + " lch " + view_number(60) + " " + view_number(30) + " " + view_number(250)) != std::string::npos,
+              "the close commits the LCh view: " + last_line());
+        {
+            Picker r = launch();
+            check(r.model() == Model::Lch && same_all(r.colour(), l1), "a relaunch shows LCh and the view exactly as dialled");
+            tap(r, 1700, 700);
+            tap(r, back_x, hist_y);   // the HSL pick h2, shown in LCh: re-derived
+            const ColourState rb = r.colour();
+            model_tap(r, Model::Hsl);
+            check(rb.model == Model::Lch && rb.rgb == h2.rgb && same_all(r.colour(), h2) && !r.edited(),
+                  "BACK in LCh to the HSL pick shows its bytes' LCh (" + readouts(rb) + "); HSL then shows its view exactly");
+            model_tap(r, Model::Lch);
+            tap(r, fwd_x, hist_y);
+            check(same_all(r.colour(), l1), "FORWARD restores the LCh view exactly");
+            tap(r, 1700, 700);
+        }
+        // the ring and the triangle in LCh: the pen's HSV gives the bytes, LCh reads them
+        {
+            Picker r = launch();
+            tap(r, 1700, 700);
+            r.press(ppx + kPad + kROut, ppy + kPad + kROut);
+            r.move(ppx + kPad + kROut - 40, ppy + kPad + kROut + 10);
+            r.release(ppx + kPad + kROut - 40, ppy + kPad + kROut + 10);
+            const ColourState& c = r.colour();
+            double x[3];
+            lch_of_unit(Unit{c.rgb.r / 255.0, c.rgb.g / 255.0, c.rgb.b / 255.0}, x);
+            check(c.rgb == rgb_of_hsv(c.ring[0], c.ring[1], c.ring[2]) && c.lch[0] == x[0] && c.lch[1] == x[1] &&
+                      c.dialled == Model::Lch,
+                  "in LCh the triangle's HSV gives the bytes and LCh reads them (" + readouts(c) + ")");
+            r.discard_if_open();
+            check(same_all(r.colour(), l1), "leaving the app restores the LCh view of the panel's opening");
+        }
+        // a preset over three models
+        {
+            Picker r = launch();
+            tap(r, 1700, 700);
+            tap(r, name_x, name_y);
+            row_tap(r, ink);
+            model_tap(r, Model::Hsl);
+            track(r, 0, 30.0 / 360); plus(r, 0); minus(r, 0);
+            const ColourState ink_l = r.colour();
+            tap(r, name_x, name_y);
+            row_tap(r, canvas);
+            model_tap(r, Model::Hsv);
+            plus(r, 2);
+            const ColourState can_v = r.colour();
+            tap(r, ppx + kPresetsX + 60, name_y);
+            tap(r, ppx + kPopX0 + 200, ppy + kPopY0 + kPopRowH / 2.0);
+            const std::string pj = slurp(work + "/presets.json");
+            check(pj.find("\"lch\": {\"chrome\": [" + view_number(60) + ", " + view_number(30) + ", " + view_number(250) + "]") != std::string::npos &&
+                      pj.find("\"hsl\": {\"ink\": [" + view_number(30) + ", ") != std::string::npos && pj.find("\"hsv\": {\"canvas\": [") != std::string::npos,
+                  "a preset keeps each element's view in its model's map (chrome lch, ink hsl, canvas hsv)");
+            tap(r, ppx + kColX + 50, ppy + kSwatchY0 + 50);
+            plus(r, 0);                                   // the canvas moved
+            tap(r, name_x, name_y);
+            row_tap(r, chrome);                           // the canvas committed; the chrome
+            plus(r, 3);                                   // moved by its R
+            tap(r, 1700, 700);
+            Picker s = launch();
+            check(s.presets().size() == 1 && s.presets()[0].colours.at("chrome").model == Model::Lch &&
+                      s.presets()[0].colours.at("ink").model == Model::Hsl, "a relaunch reads the preset's three models");
+            tap(s, 1700, 700);
+            tap(s, ppx + kPresetsX + 60, name_y);
+            tap(s, ppx + kPopX0 + 200, ppy + kPopListY0 + kPopRowH / 2.0);
+            check(s.element(chrome).cs.rgb == l1.rgb && s.element(chrome).cs.view(Model::Lch) == l1.view(Model::Lch) &&
+                      s.element(chrome).cs.dialled == Model::Lch && s.element(ink).cs.rgb == ink_l.rgb &&
+                      s.element(ink).cs.view(Model::Hsl) == ink_l.view(Model::Hsl) && s.element(canvas).cs.rgb == can_v.rgb &&
+                      s.element(canvas).cs.view(Model::Hsv) == can_v.view(Model::Hsv) && s.model() == Model::Hsv,
+                  "loading it restores every element's view in its own model exactly, the panel's model kept (HSV)");
+            tap(s, 1700, 700);
+        }
+        // a grey stored in HSV, shown in HSL: the hue it was saved under, not 0
+        put(work + "/picks.txt", "2026-10-04T12:00:00-04:00 chrome #808080 hsv 123 0 " + view_number(128 / 255.0) + "\n");
+        put(work + "/state.json", "{\"active\": \"chrome\", \"model\": \"hsl\", \"colours\": {\"chrome\": \"#808080\"}, "
+                                  "\"hsv\": {\"chrome\": [123, 0, " + view_number(128 / 255.0) + "]}, \"entry\": {\"chrome\": 1}}\n");
+        {
+            Picker r = launch();
+            check(r.model() == Model::Hsl && r.colour().hsl[0] == 123 && r.colour().hsl[1] == 0 && !r.edited() &&
+                      r.colour().dialled == Model::Hsv,
+                  "a grey saved in HSV and shown in HSL keeps the hue it was saved under (123)");
+        }
+        // the formats' refusals
+        auto refused = [&](const std::string& picks_text, const std::string& state_text, const std::string& what) {
+            put(work + "/picks.txt", picks_text);
+            if (state_text.empty()) std::remove((work + "/state.json").c_str());
+            else put(work + "/state.json", state_text);
+            std::string why;
+            const bool failed = load_fails(why);
+            check(failed, what + ": " + why);
+        };
+        refused("2026-10-04T05:00:00-04:00 chrome #808080 lch 50 170 0\n", "", "a picks.txt LCh C past 160 fails the load");
+        refused("2026-10-04T05:00:00-04:00 chrome #FF0000 lch 54.966557096508478 140 45.205497846029594\n", "",
+                "a picks.txt LCh view outside the gamut fails the load");
+        refused("2026-10-04T05:00:00-04:00 chrome #FF0000 hsl 0 1 0.6\n", "", "a picks.txt HSL view not giving its hex fails the load");
+        refused("", "{\"model\": \"rgb\", \"colours\": {}, \"entry\": {}}", "a state.json model that is none fails the load");
+        refused("", "{\"colours\": {\"chrome\": \"#FF0000\"}, \"hsv\": {\"chrome\": [0, 1, 1]}, \"hsl\": {\"chrome\": [0, 1, 0.5]}, "
+                    "\"entry\": {}}", "a state.json element with two views fails the load");
+        fresh();
+    }
+
     // ---------------------------------------------------------------- the tablet's files of 2026-10-04 load unchanged
     // the flags round's elements, absent from every file the tablet wrote before it: the manifest's colours, no history
     auto flags_fresh = [&](const Picker& q) {
@@ -1076,9 +1450,10 @@ int main(int argc, char** argv) {
                   I.s == 0.23 && I.v == 0.95 && t.element(chrome).hist.picks.size() == 11 &&
                   t.element(chrome).hist.cursor == 8 && t.element(canvas).hist.picks.size() == 22 &&
                   t.element(canvas).hist.cursor == 21 && t.element(ink).hist.picks.size() == 77 &&
-                  t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty() && flags_fresh(t),
+                  t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty() && flags_fresh(t) &&
+                  t.model() == Model::Hsv,
               "the tablet's picks.txt (110 lines) and state.json load unchanged: the canvas active, chrome 9 of 11, canvas "
-              "22 of 22, ink 77 of 77, every view exact; the flags at the manifest's colours, 0 of 0");
+              "22 of 22, ink 77 of 77, every view exact; the flags at the manifest's colours, 0 of 0; HSV shown (no model)");
         tap(t, 1700, 700);
         tap(t, ppx + kPresetsX + 60, ppy + kNameY + kNameH / 2.0);
         tap(t, ppx + kPopX0 + 200, ppy + kPopY0 + kPopRowH / 2.0);
@@ -1108,14 +1483,24 @@ int main(int argc, char** argv) {
                   t.element(chrome).hist.picks.size() == 12 && t.element(chrome).hist.cursor == 11 &&
                   t.element(canvas).hist.picks.size() == 34 && t.element(canvas).hist.cursor == 33 &&
                   t.element(ink).hist.picks.size() == 90 && t.element(ink).hist.cursor == 89 && t.theme_open() == -1 &&
-                  t.presets().empty() && flags_fresh(t),
+                  t.presets().empty() && flags_fresh(t) && t.model() == Model::Hsv,
               "the tablet's picks.txt (136 lines) and state.json at the presets build's install load unchanged: the ink "
               "active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90, every view exact; the flags at the manifest's "
-              "colours, 0 of 0");
+              "colours, 0 of 0; HSV shown (no model)");
         tap(t, 1700, 700);
         tap(t, 1700, 700);
         check(slurp(work + "/picks.txt") == picks0, "an open and a close on the unedited ink append nothing");
         fresh();
+    }
+
+    // ---------------------------------------------------------------- the repository's presets.json reads unchanged
+    if (!repo_presets.empty()) {
+        std::vector<Preset> ps;
+        const bool ok = presets_load(repo_presets, ps, err);
+        bool hsv = ok && !ps.empty();
+        for (const Preset& q : ps)
+            for (const auto& kv : q.colours) hsv = hsv && kv.second.has_view && kv.second.model == Model::Hsv;
+        check(hsv, "the repository's presets.json (the tablet's, " + std::to_string(ps.size()) + " presets) reads, every view HSV");
     }
 
     // ---------------------------------------------------------------- THE SWITCH'S PICTURE, byte for byte
@@ -1204,8 +1589,8 @@ int main(int argc, char** argv) {
         Picker t = launch();
         const History& h = t.element(ink).hist;
         bool same = h.picks.size() == 58;
-        for (int k = 0; same && k < 15; ++k) same = !h.picks[size_t(k)].has_hsv;
-        for (int k = 0; same && k < 43; ++k) same = h.picks[size_t(15 + k)].has_hsv && h.picks[size_t(15 + k)].h == views[size_t(k)].h;
+        for (int k = 0; same && k < 15; ++k) same = !h.picks[size_t(k)].has_view;
+        for (int k = 0; same && k < 43; ++k) same = h.picks[size_t(15 + k)].has_view && h.picks[size_t(15 + k)].x[0] == views[size_t(k)].h;
         check(same && h.cursor == 57 && t.element(ink).cs.rgb == (Rgb{0xA6, 0xB9, 0xDE}) && t.active() == act0 &&
                   t.element(chrome).hist.cursor == -1 && t.element(chrome).cs.rgb == ex.elements[size_t(chrome)].colour,
               "today's picks.txt (58 ink lines, 15 old and 43 new) and state.json load unchanged: the ink 58 of 58 "
@@ -1232,12 +1617,19 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------- the per-frame cost of a pen drag (R's track)
     {
         fresh();
-        for (int e : {ink, chrome, uflag}) {
+        for (int run = 0; run < 4; ++run) {   // R's track on the ink, the chrome, the unselected flag; LCh's h on the chrome
+            const int e = run == 0 ? ink : run == 2 ? uflag : chrome;
+            const bool lch = run == 3;
             if (e < 0) continue;
             Picker p = launch();
             tap(p, 1700, 700);
             if (e != p.active()) { tap(p, name_x, name_y); row_tap(p, e); }
-            const double ty = ppy + row_y(3) + 30;
+            if (lch) {   // LCh at C 60, its three tracks painted per frame, h swept (the gamut stop on its edges)
+                tap(p, ppx + kModelX0 + 60, ppy + kModelY + kModelH / 2.0);
+                tap(p, ppx + kModelX0 + 60, ppy + kModelListY + 2 * kChooserRowH + kChooserRowH / 2.0);
+                track(p, 1, 60.0 / kChromaMax);
+            }
+            const double ty = ppy + row_y(lch ? 2 : 3) + 30;
             p.press(ppx + kTrackX, ty);
             const int frames = 240;
             double t_move = 0, t_paint = 0;
@@ -1259,11 +1651,11 @@ int main(int argc, char** argv) {
                     for (const Run& run : sc.solid[r]) solid += run.len;
             for (const Stack& s : sc.stacks)
                 if (s.deps & (1u << e)) ++stacks;
-            std::printf("     the pen drag on %s: %.3f ms the live repaint (%zu solid px refilled, %zu antialiased px "
+            std::printf("     the pen drag on %s%s: %.3f ms the live repaint (%zu solid px refilled, %zu antialiased px "
                         "re-blended) + %.3f ms the frame (the picture copied, the panel painted) = %.3f ms per frame, "
-                        "%d frames\n", x.elements[size_t(e)].key.c_str(), t_move / frames, solid, stacks, t_paint / frames,
-                        (t_move + t_paint) / frames, frames);
-            check(true, "the per-frame cost of a pen drag on " + x.elements[size_t(e)].key + " measured");
+                        "%d frames\n", x.elements[size_t(e)].key.c_str(), lch ? " (LCh, h's track)" : "", t_move / frames,
+                        solid, stacks, t_paint / frames, (t_move + t_paint) / frames, frames);
+            check(true, "the per-frame cost of a pen drag on " + x.elements[size_t(e)].key + (lch ? " in LCh" : "") + " measured");
         }
         fresh();
     }

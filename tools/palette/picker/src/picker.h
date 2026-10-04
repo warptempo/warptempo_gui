@@ -5,7 +5,7 @@
 //
 // THE ELEMENTS (architect 2026-10-04, the chrome round: he picks the chrome and its neighbours as he picked the ink,
 // one element at a time, choosing which; the flags round added the unselected and the selected flag over a scene of
-// their own, in the theme alone): the export's elements (scene.h), each with its own colour, HSV view, pick
+// their own, in the theme alone): the export's elements (scene.h), each with its own colour, view, pick
 // history and cursor (ElementState), ONE ACTIVE -- the one the panel edits. Each element is picked over its own
 // scene; EVERY ELEMENT'S CURRENT COLOUR IS LIVE IN EVERY SCENE (picking the chrome shows the ink at its saved colour).
 //
@@ -19,23 +19,40 @@
 // empty history counts as edited, as at a close). Choosing the active element again is a no-op.
 //
 // THE COLOUR'S TRUTH IS THE RGB BYTE TRIPLE (ColourState): every control produces an exact triple, and the active
-// element repaints from it. HSV is a view over the bytes plus a RETAINED hue and saturation, as GTK's selector keeps
-// them: through grey (no chroma) the hue stays, through black (V 0) the saturation stays too, so a drag never snaps
-// the hue to 0.
+// element repaints from it. HSV, HSL and LCh are VIEWS over the bytes (colour.h, the models), each with a RETAINED hue
+// as GTK's selector keeps HSV's: through grey (no chroma) the hue stays -- HSV's and HSL's, and LCh's through C 0 --
+// and through black HSV's saturation stays too, HSL's through black and white, so a drag never snaps the hue to 0.
 //
-// THE HSV HE DIALLED IS PART OF THE PICK (architect 2026-10-04): a saved pick keeps the exact view it was saved under
-// beside its bytes (Pick, scene.h), and EVERY ROAD BACK TO A STORED COLOUR RESTORES THAT VIEW instead of re-deriving it
-// from the bytes -- the launch, BACK / FORWARD, OLD, leaving the app with the panel open. Re-derived, a view is the
-// bytes' own HSV (S 0.3529 where he dialled 0.35): the number reads 35.3 where he dialled 35.0 and the handle sits elsewhere, and the
-// next − / + rounds from the re-derived values, while at low saturation or value one byte is several degrees of hue
-// or a percent of saturation -- so an axis he never touched would move. Re-derivation from bytes stays only where the
-// bytes are the input: the R / G / B tracks and their − / +, and a pick saved before views were stored. The ring,
-// the triangle and the H / S / V tracks and − / + set the view directly.
+// THE MODEL SWITCH (architect 2026-10-04): a dropdown button over the three upper tracks picks the model they speak,
+// HSV, HSL or LCh (the chooser's style: a tap opens the list, a tap on an entry picks it, a tap outside closes it);
+// the tracks, their − / + and their one-decimal readouts then speak that model, R, G, B as ever. THE RING AND THE
+// TRIANGLE STAY HSV (GTK's and GIMP's own selector) and work in every model: in HSL the pen's HSV becomes the HSL view
+// exactly (the same hue, HSL's saturation and lightness by the closed form), in LCh the pen's HSV gives the bytes and
+// LCh reads them. The model is the panel's, every element's alike, and persists in state.json. ONLY LCh CAN LEAVE THE
+// GAMUT: a track paints its out-of-gamut stretch in a flat neutral (the panel's ground), and a drag, a tap or a − / +
+// whose value would leave the gamut stops at the last in-gamut value on the way there along that axis
+// (ColourState::move_axis: a walk from the current value in steps of 0.01 unit to the first value outside, then
+// bisection to 1e-9 unit); a value that lies inside the gamut is reached directly, across an out-of-gamut stretch if
+// need be. No colour is ever clipped: an LCh view always gives its bytes by rounding alone (colour.h unit_in_gamut).
 //
-// THE PANEL (GTK's colour selector and GIMP's colour dialog, their common ground, HSV only, no CMYK): the hue ring
+// THE VIEW HE DIALLED IS PART OF THE PICK (architect 2026-10-04): a saved pick keeps the exact view it was saved under
+// beside its bytes (Pick, scene.h) -- the model shown when the colour last changed, and its three numbers -- and EVERY
+// ROAD BACK TO A STORED COLOUR RESTORES THAT VIEW instead of re-deriving it from the bytes when the panel shows that
+// model -- the launch, BACK / FORWARD, OLD, leaving the app with the panel open, a preset's load; a panel showing
+// another model re-derives its view from the bytes (the stored view's hue retained for a grey when both are HSV or
+// HSL). Re-derived, a view is the bytes' own (S 0.3529 where he dialled 0.35): the number reads 35.3 where he dialled
+// 35.0 and the handle sits elsewhere, and the next − / + rounds from the re-derived values, while at low saturation or
+// value one byte is several degrees of hue or a percent of saturation -- so an axis he never touched would move.
+// Re-derivation from bytes stays only where the bytes are the input: the R / G / B tracks and their − / +, a theme's
+// swatch, and a pick saved before views were stored. The ring, the triangle and the three model tracks and − / + set
+// the view directly. Switching the model changes no colour and no stored view: switching back without a change
+// shows the numbers he dialled.
+//
+// THE PANEL (GTK's colour selector and GIMP's colour dialog, their common ground, no CMYK): the hue ring
 // with the saturation/value triangle inside it (the triangle's corners the pure hue, white and black, turning with
-// the hue); the element button (its name set smaller when it would run under the chooser's head), the hex in large type and the OLD | NEW swatches (a tap on OLD reverts); the six
-// sliders H, S, V and R, G, B, each a long track painted with its live gradient, a handle, a one-unit decrement and
+// the hue); the element button (its name set smaller when it would run under the chooser's head), the hex in large type and the OLD | NEW swatches (a tap on OLD reverts); the model
+// switch under the wheel; the six sliders -- the model's three (H, S, V or H, S, L or L, C, h) and R, G, B -- each a long
+// track painted with its live gradient, a handle, a one-unit decrement and
 // increment at its ends (acting at the lift) and the value beside it (row_readout). Its chrome is the app's own greys (the ground
 // #191919, the label #FFFFFF, fields #212121, flat 1-px #000000 edges), no relief, no alpha.
 //
@@ -95,6 +112,7 @@
 
 #include <cairo.h>
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -119,6 +137,7 @@ struct Launch {
     std::string note;
     std::vector<Preset> presets; // presets.json
     int theme = -1;              // state.json's open theme, an index into the export's themes, or -1
+    Model model = Model::Hsv;    // state.json's model (HSV when it names none)
 };
 bool picker_load(const std::string& data_dir, Export& ex, Launch& out, std::string& err);
 
@@ -127,24 +146,50 @@ void plog(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 
 struct ColourState {
     Rgb rgb;
-    double h = 0, s = 0, v = 0;   // degrees 0..360, 0..1, 0..1: the view, with the retained hue and saturation
+    Model model = Model::Hsv;     // the model the panel shows (the model switch; every element's alike)
+    Model dialled = Model::Hsv;   // the model shown when the colour last changed: the view a commit stores
+    double h = 0, s = 0, v = 0;   // the HSV view: degrees 0..360, 0..1, 0..1
+    double hsl[3] = {0, 0, 0};    // the HSL view: degrees, 0..1, 0..1
+    double lch[3] = {0, 0, 0};    // the LCh view: 0..100, 0..kChromaMax, degrees
+    double ring[3] = {0, 0, 0};   // the HSV the ring and the triangle show: the HSV view, or in HSL the HSL view's own
+                                  // HSV (the same hue), or the pen's HSV after a ring or triangle drag
+    // EVERY VIEW ALWAYS GIVES THE BYTES. The one a change sets is exact; the others are re-derived from the bytes at
+    // once, each keeping its own hue through grey (and HSV's saturation through black, HSL's through black and white),
+    // an HSV or HSL view re-derived after the other's change taking that one's hue for a grey.
 
-    // the bytes as given; HSV re-derived from them, the hue kept through grey and the saturation through black
+    std::array<double, 3> view(Model m) const;
+    // the bytes as given (the R / G / B tracks, a theme's swatch); every view re-derived from them
     void set_rgb(Rgb c);
-    // the bytes from HSV (each channel rounded to the nearest byte); the HSV kept as given
+    // the HSV view as given (each number clamped to its range), the bytes from it
     void set_hsv(double hh, double ss, double vv);
+    // the shown model's three numbers as given (clamped to the ranges; an LCh view the caller keeps inside the gamut),
+    // the bytes from them; the same numbers again change nothing
+    void set_view(std::array<double, 3> x);
+    // the shown model's axis (0..2) toward `target` (clamped to its range): there, or in LCh, when the target lies
+    // outside the gamut, the last in-gamut value on the way from the current one (picker.h's head: the walk)
+    void move_axis(int axis, double target);
+    // the ring and the triangle: an HSV
+    void set_ring(double hh, double ss, double vv);
+    // the model switch: the panel shows m (no colour, no view changes)
+    void show(Model m);
     // a stored pick: its bytes with its view as saved, or (a pick saved before views were stored) set_rgb's
     void restore(const Pick& p);
-    // the state as a pick, its view included: what a commit stores
-    Pick pick() const { return Pick{rgb, true, h, s, v}; }
-    // the state shows the pick: the same bytes and, when the pick carries a view, the same view
+    // the state as a pick, the dialled view included: what a commit stores
+    Pick pick() const;
+    // the state shows the pick: the same bytes and, when the pick carries a view, the same view in its model
     bool shows(const Pick& p) const;
+
+private:
+    void put(Model m, const std::array<double, 3>& x);
+    void derive(Model m, Model from);   // m's view from the bytes, retaining its hue (from's for a grey, both HSV / HSL)
+    void ring_follow();
 };
 
-// THE READOUT, the value a slider row shows in its field (rows H, S, V, R, G, B = 0..5): H in degrees and S, V in
-// percent to ONE DECIMAL, rounded to nearest ("247.3", "47.1", "100.0"), so the number shows where the view actually
-// is (architect 2026-10-04, as GIMP's HSV fields read; the view is exact doubles, and the − / + still step whole
-// degrees and percents from the rounded whole number); R, G, B their whole bytes
+// THE READOUT, the value a slider row shows in its field (rows 0..2 the model's, 3..5 R, G, B): the model's numbers to
+// ONE DECIMAL, rounded to nearest -- HSV's and HSL's hue in degrees and the rest in percent ("247.3", "47.1",
+// "100.0"), LCh's L, C and h as they are -- so the number shows where the view actually is (architect 2026-10-04, as
+// GIMP's fields read; the view is exact doubles, and the − / + still step whole units from the rounded whole number);
+// R, G, B their whole bytes
 std::string row_readout(const ColourState& cs, int row);
 
 // one element as the Picker holds it: its colour state and its history
@@ -180,6 +225,8 @@ public:
     const std::vector<uint32_t>& picture() const { return picture_; }   // the active element's scene, kept current
     bool open() const { return open_; }
     bool chooser_open() const { return chooser_; }
+    bool models_open() const { return models_; }
+    Model model() const { return el_[size_t(active_)].cs.model; }
     bool panel_on_right() const { return right_; }
     Rgb old() const { return old_.rgb; }
     bool edited() const;          // the state does not show the cursor's entry (ColourState::shows), or no history
@@ -200,7 +247,7 @@ public:
 
 private:
     enum class Target { None, Outside, Ring, Triangle, Track, Minus, Plus, Old, Back, Forward, Name, Row, OffChooser, Picture,
-                        Presets, PopSave, PopList, OffPopup, StripClose, StripList };
+                        Presets, PopSave, PopList, OffPopup, StripClose, StripList, ModelBtn, ModelRow, OffModels };
     // a scrolling list's state: its offset (content px) and the drag that moves it
     struct Scroll {
         int pos = 0, start = 0;
@@ -215,6 +262,7 @@ private:
     void close();                      // the one save: commit an edited colour, else rewrite state.json alone
     void append_pick(int e, bool log = true);   // picks.txt, e's history's end, its cursor to it, the logcat line
     void choose(int e);                // the chooser's pick: the close for the element left, then the panel on e
+    void set_model(Model m);           // the model switch's pick: every element (and OLD) shows m; state.json
     void write_state() const;          // state.json: every element's colour, view and cursor, the active element, the theme
     void open_presets();               // the pop-up: the close for the panel's edit first
     void save_preset();
@@ -250,6 +298,7 @@ private:
     ColourState old_;                  // the state the panel opened with (or the element chosen with): OLD's and the discard's
     int open_cursor_ = -1;             // the cursor then: discard_if_open's return
     bool open_ = false, right_ = false, dirty_ = true, chooser_ = false;
+    bool models_ = false;              // the model switch's list is open
     Target target_ = Target::None;
     int row_ = -1;                     // the slider row a Track / Minus / Plus press holds, the chooser row a Row press
     double down_x_ = 0, down_y_ = 0;
@@ -266,13 +315,13 @@ private:
 
     // caches: the hue ring (never changes) and the triangle at tri_h_
     std::vector<uint32_t> ring_;       // kWheel x kWheel, 0 = not ring
-    std::vector<uint32_t> tri_;        // kWheel x kWheel, 0 = not triangle
+    std::vector<uint32_t> tri_;        // kWheel x kWheel, 0 = not triangle (at the ring's hue tri_h_)
     double tri_h_ = -1;
 };
 
 // the panel's whole geometry, device px (the tablet's 2304 x 1440), relative to the panel's top-left
 namespace panel {
-constexpr int kW = 1120, kH = 1292, kMargin = 16, kPad = 36;
+constexpr int kW = 1120, kH = 1352, kMargin = 16, kPad = 36;
 constexpr int kWheel = 580, kROut = 290, kRIn = 220, kRTri = 210;
 constexpr int kColX = kPad + kWheel + 44, kColX1 = kW - kPad;            // the hex and swatch column
 constexpr int kNameY = kPad, kNameH = 64;                                 // the element button, the column's top
@@ -282,7 +331,11 @@ constexpr int kChooserY = kNameY + kNameH + 8, kChooserRowH = 76;         // the
 constexpr int kHistY = kPad + 176;                                        // BACK | N of M | FORWARD, under the hex
 constexpr int kSwatchY0 = kPad + 324, kSwatchY1 = kPad + kWheel;
 constexpr int kSwatchW = 200, kNewX = kColX1 - kSwatchW;
-constexpr int kRowsY = kPad + kWheel + 44, kRowStep = 100, kGroupGap = 20, kRowH = 76;
+// THE MODEL SWITCH: a button the element button's height under the wheel, at the left over the three tracks it
+// switches, its list (the chooser's rows) under it over the tracks
+constexpr int kModelX0 = kPad, kModelX1 = kPad + 180, kModelY = kPad + kWheel + 20, kModelH = kNameH;
+constexpr int kModelListY = kModelY + kModelH + 8;
+constexpr int kRowsY = kModelY + kModelH + 20, kRowStep = 100, kGroupGap = 20, kRowH = 76;
 constexpr int kLabelX = kPad, kMinusX = kPad + 50, kBtn = 76;
 constexpr int kTrackX = kMinusX + kBtn + 14, kTrackL = 642, kTrackH = 56;
 constexpr int kPlusX = kTrackX + kTrackL + 14, kFieldX = kPlusX + kBtn + 16, kFieldW = kColX1 - kFieldX;
@@ -293,6 +346,7 @@ constexpr double kNumPx = 38;
 constexpr int kReadoutInset = 14;
 constexpr int kBackX = kColX, kFwdX = kColX1 - kBtn;                      // the history's buttons, kBtn square
 constexpr int row_y(int i) { return kRowsY + i * kRowStep + (i >= 3 ? kGroupGap : 0); }
+static_assert(row_y(5) + kRowH + kPad == kH, "the panel ends kPad under the last row");
 // THE PRESETS POP-UP, under the two buttons over the whole panel inside its pad (the theme names are long): its fixed
 // save line, then the list's viewport down to the pad; rows the chooser's height
 constexpr int kPopX0 = kPad, kPopX1 = kColX1, kPopY0 = kChooserY, kPopY1 = kH - kPad, kPopRowH = kChooserRowH;

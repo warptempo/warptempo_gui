@@ -39,7 +39,9 @@ if [ "${1:-}" = "--check" ]; then
         --export "$BUILD/check/derived" "$BUILD/check/derived/expects.txt" \
         --linmix "$BUILD/check/linmix.bin" \
         --today "$HERE/check_data/tablet_2026-10-04" \
-        --late "$HERE/check_data/tablet_2026-10-04_presets"
+        --late "$HERE/check_data/tablet_2026-10-04_presets" \
+        --models "$BUILD/check/models_ref.txt" \
+        --presets "$HERE/presets/presets.json"
     exit 0
 fi
 

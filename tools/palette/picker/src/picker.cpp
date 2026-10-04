@@ -17,7 +17,12 @@ constexpr Rgb kGround{0x19, 0x19, 0x19}, kLabel{0xFF, 0xFF, 0xFF}, kField{0x21, 
 constexpr Rgb kDim{0x55, 0x55, 0x55};   // a disabled button's glyph: a flat grey, no alpha
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kWordPx = 36, kHexPx = 84, kCornerPx = 32;
-const char* const kRowNames[6] = {"H", "S", "V", "R", "G", "B"};
+// the slider rows' letters: the model's three, then R, G, B
+const char* row_name(Model m, int row) {
+    static const char* const kNames[3][3] = {{"H", "S", "V"}, {"H", "S", "L"}, {"L", "C", "h"}};
+    static const char* const kRgb[3] = {"R", "G", "B"};
+    return row < 3 ? kNames[int(m)][row] : kRgb[row - 3];
+}
 
 // ---------------------------------------------------------------- ColourState helpers
 double clamp01(double x) { return std::max(0.0, std::min(1.0, x)); }
@@ -103,25 +108,25 @@ void bary(const double v[3][2], double px, double py, double out[3]) {
 
 double row_value(const ColourState& cs, int row) {
     switch (row) {
-        case 0: return cs.h / 360.0;
-        case 1: return cs.s;
-        case 2: return cs.v;
+        case 0: case 1: case 2: return cs.view(cs.model)[size_t(row)] / axis_max(cs.model, row);
         case 3: return cs.rgb.r / 255.0;
         case 4: return cs.rgb.g / 255.0;
         default: return cs.rgb.b / 255.0;
     }
 }
 
-// the colour at fraction f along a row's track, the other channels as they stand
-Rgb row_colour(const ColourState& cs, int row, double f) {
-    switch (row) {
-        case 0: return rgb_of_hsv(f * 360, cs.s, cs.v);
-        case 1: return rgb_of_hsv(cs.h, f, cs.v);
-        case 2: return rgb_of_hsv(cs.h, cs.s, f);
-        case 3: return Rgb{byte_of_unit(f), cs.rgb.g, cs.rgb.b};
-        case 4: return Rgb{cs.rgb.r, byte_of_unit(f), cs.rgb.b};
-        default: return Rgb{cs.rgb.r, cs.rgb.g, byte_of_unit(f)};
+// the frame word at fraction f along a row's track, the other channels as they stand; an LCh colour outside the gamut
+// is the flat neutral kGround (the track has no colour there: the stretch reads as a gap in it)
+uint32_t row_word(const ColourState& cs, int row, double f) {
+    if (row < 3) {
+        std::array<double, 3> x = cs.view(cs.model);
+        x[size_t(row)] = f * axis_max(cs.model, row);
+        const Unit u = unit_of_view(cs.model, x.data());
+        return cs.model == Model::Lch && !unit_in_gamut(u) ? word_of(kGround) : word_of(rgb_of_unit(u));
     }
+    Rgb c = cs.rgb;
+    (row == 3 ? c.r : row == 4 ? c.g : c.b) = byte_of_unit(f);
+    return word_of(c);
 }
 
 // the history's count as the panel and the corner label show it: "N of M", "0 of 0" with no history
@@ -179,49 +184,180 @@ std::vector<std::string> wrap(cairo_t* cr, bool mono, double px, const std::vect
 } // namespace
 
 // ---------------------------------------------------------------- ColourState
-void ColourState::set_rgb(Rgb c) {
-    rgb = c;
-    const int mx = std::max({c.r, c.g, c.b}), mn = std::min({c.r, c.g, c.b});
-    v = mx / 255.0;
-    if (mx == mn) {                       // grey: no hue in the bytes, keep ours; black: keep the saturation too
-        if (mx > 0) s = 0;
+std::array<double, 3> ColourState::view(Model m) const {
+    if (m == Model::Hsv) return {h, s, v};
+    const double* x = m == Model::Hsl ? hsl : lch;
+    return {x[0], x[1], x[2]};
+}
+
+void ColourState::put(Model m, const std::array<double, 3>& x) {
+    if (m == Model::Hsv) { h = x[0]; s = x[1]; v = x[2]; return; }
+    double* d = m == Model::Hsl ? hsl : lch;
+    for (int k = 0; k < 3; ++k) d[k] = x[size_t(k)];
+}
+
+void ColourState::derive(Model m, Model from) {
+    const Rgb c = rgb;
+    if (m == Model::Lch) {
+        double x[3];
+        lch_of_unit(Unit{c.r / 255.0, c.g / 255.0, c.b / 255.0}, x);
+        lch[0] = x[0];
+        lch[1] = x[1];
+        if (x[1] != 0) lch[2] = x[2];     // C 0 (a grey): the hue stays
         return;
     }
-    const double d = mx - mn;
-    s = d / mx;
-    double hh;
-    if (mx == c.r) hh = (c.g - c.b) / d;
-    else if (mx == c.g) hh = 2 + (c.b - c.r) / d;
-    else hh = 4 + (c.r - c.g) / d;
-    hh *= 60;
-    if (hh < 0) hh += 360;
-    h = hh;
+    double* hue = m == Model::Hsv ? &h : &hsl[0];
+    if (from != m && from != Model::Lch) *hue = from == Model::Hsv ? h : hsl[0];   // HSV's and HSL's hue are one hue
+    const int mx = std::max({c.r, c.g, c.b}), mn = std::min({c.r, c.g, c.b});
+    if (m == Model::Hsv) {
+        v = mx / 255.0;
+        if (mx == mn) {                   // grey: no hue in the bytes, keep ours; black: keep the saturation too
+            if (mx > 0) s = 0;
+            return;
+        }
+        s = double(mx - mn) / mx;
+    } else {
+        hsl[2] = (mx + mn) / 510.0;
+        if (mx == mn) {                   // grey: keep the hue; black and white: keep the saturation too
+            if (mx > 0 && mx < 255) hsl[1] = 0;
+            return;
+        }
+        hsl[1] = (mx - mn) / (255.0 - std::abs(mx + mn - 255));
+    }
+    *hue = hue_of_bytes(c, mx, mn);
+}
+
+void ColourState::ring_follow() {
+    if (model != Model::Hsl) { ring[0] = h; ring[1] = s; ring[2] = v; return; }
+    // the HSL view's own HSV, the hue the same: V = L + S min(L, 1 - L), S = 2 (1 - L / V); black keeps the ring's S
+    const double l = hsl[2], vv = l + hsl[1] * std::min(l, 1 - l);
+    ring[0] = hsl[0];
+    if (vv > 0) ring[1] = clamp01(2 * (1 - l / vv));
+    ring[2] = clamp01(vv);
+}
+
+void ColourState::set_rgb(Rgb c) {
+    rgb = c;
+    dialled = model;
+    derive(model, model);
+    for (Model m : kAllModels)
+        if (m != model) derive(m, model);
+    ring_follow();
 }
 
 void ColourState::set_hsv(double hh, double ss, double vv) {
-    h = std::max(0.0, std::min(360.0, hh));
-    s = clamp01(ss);
-    v = clamp01(vv);
+    put(Model::Hsv, {std::max(0.0, std::min(360.0, hh)), clamp01(ss), clamp01(vv)});
     rgb = rgb_of_hsv(h, s, v);
+    dialled = Model::Hsv;
+    derive(Model::Hsl, Model::Hsv);
+    derive(Model::Lch, Model::Hsv);
+    ring_follow();
+}
+
+void ColourState::set_view(std::array<double, 3> x) {
+    for (int k = 0; k < 3; ++k) x[size_t(k)] = std::max(0.0, std::min(axis_max(model, k), x[size_t(k)]));
+    if (x == view(model)) return;         // the same numbers: nothing moves (the dialled view stays the one stored)
+    if (model == Model::Hsv) { set_hsv(x[0], x[1], x[2]); return; }
+    put(model, x);
+    rgb = rgb_of_view(model, x.data());
+    dialled = model;
+    for (Model m : kAllModels)
+        if (m != model) derive(m, model);
+    ring_follow();
+}
+
+void ColourState::move_axis(int axis, double target) {
+    const size_t a = size_t(axis);
+    target = std::max(0.0, std::min(axis_max(model, axis), target));
+    std::array<double, 3> x = view(model);
+    const double cur = x[a];
+    x[a] = target;
+    auto inside = [&](double t) { x[a] = t; return lch_in_gamut(x[0], x[1], x[2]); };
+    if (model == Model::Lch && !inside(target)) {
+        // THE GAMUT STOP: walk from the current value (inside) toward the target in steps of 0.01 unit to the first
+        // value outside, then bisect between the last inside and it to 1e-9 unit; the last inside is the stop. A
+        // stretch outside narrower than 0.01 unit can be stepped over (the stop is then inside, past it).
+        const double dir = target > cur ? 1 : -1;
+        double lo = cur, hi = target;
+        for (long k = 1;; ++k) {
+            const double t = cur + dir * 0.01 * double(k);
+            if (dir * (t - target) >= 0) break;
+            if (!inside(t)) { hi = t; break; }
+            lo = t;
+        }
+        for (int i = 0; i < 64 && std::abs(hi - lo) > 1e-9; ++i) {
+            const double mid = (lo + hi) / 2;
+            (inside(mid) ? lo : hi) = mid;
+        }
+        // a stop within 1e-6 unit of the current value is the current value: a − / + or a drag against the edge where
+        // the view already stands (itself a stop, within 1e-9 of the edge) moves nothing
+        x[a] = std::abs(lo - cur) < 1e-6 ? cur : lo;
+    } else {
+        x[a] = target;
+    }
+    set_view(x);
+}
+
+void ColourState::set_ring(double hh, double ss, double vv) {
+    hh = std::max(0.0, std::min(360.0, hh));
+    ss = clamp01(ss);
+    vv = clamp01(vv);
+    if (model == Model::Hsv) { set_hsv(hh, ss, vv); return; }
+    if (model == Model::Hsl) {
+        // the pen's HSV as the HSL view, exactly: the same hue, L = V (1 - S / 2), S = (V - L) / min(L, 1 - L)
+        // (black and white keep HSL's saturation)
+        const double l = vv * (1 - ss / 2);
+        const double sl = l > 0 && l < 1 ? clamp01((vv - l) / std::min(l, 1 - l)) : hsl[1];
+        put(Model::Hsl, {hh, sl, clamp01(l)});
+        rgb = rgb_of_hsl(hsl[0], hsl[1], hsl[2]);
+        dialled = Model::Hsl;
+        derive(Model::Hsv, Model::Hsl);
+        derive(Model::Lch, Model::Hsl);
+    } else {
+        // the pen's HSV gives the bytes, and LCh reads them (its own view of them, the hue kept through grey)
+        put(Model::Hsv, {hh, ss, vv});
+        rgb = rgb_of_hsv(hh, ss, vv);
+        dialled = Model::Lch;
+        derive(Model::Lch, Model::Hsv);
+        derive(Model::Hsl, Model::Hsv);
+    }
+    ring[0] = hh;   // the pen's own HSV: the triangle keeps its hue and the markers sit under the pen
+    ring[1] = ss;
+    ring[2] = vv;
+}
+
+void ColourState::show(Model m) {
+    model = m;
+    ring_follow();
 }
 
 void ColourState::restore(const Pick& p) {
-    if (!p.has_hsv) { set_rgb(p.rgb); return; }
+    if (!p.has_view) { set_rgb(p.rgb); return; }
     rgb = p.rgb;
-    h = p.h;
-    s = p.s;
-    v = p.v;
+    put(p.model, {p.x[0], p.x[1], p.x[2]});
+    dialled = p.model;
+    for (Model m : kAllModels)
+        if (m != p.model) derive(m, p.model);
+    ring_follow();
+}
+
+Pick ColourState::pick() const {
+    const std::array<double, 3> x = view(dialled);
+    return Pick{rgb, true, dialled, {x[0], x[1], x[2]}};
+}
+
+bool ColourState::shows(const Pick& p) const {
+    if (!(rgb == p.rgb)) return false;
+    if (!p.has_view) return true;
+    const std::array<double, 3> x = view(p.model);
+    return x[0] == p.x[0] && x[1] == p.x[1] && x[2] == p.x[2];
 }
 
 std::string row_readout(const ColourState& cs, int row) {
     if (row >= 3) return std::to_string(row == 3 ? cs.rgb.r : row == 4 ? cs.rgb.g : cs.rgb.b);
-    const double shown = row == 0 ? cs.h : (row == 1 ? cs.s : cs.v) * 100;   // degrees, percent
-    const long tenths = long(std::nearbyint(shown * 10));                    // never negative: the view's ranges
+    const double shown = cs.view(cs.model)[size_t(row)] * axis_scale(cs.model, row);   // degrees, percent, L, C
+    const long tenths = long(std::nearbyint(shown * 10));                            // never negative: the ranges
     return std::to_string(tenths / 10) + "." + std::to_string(tenths % 10);
-}
-
-bool ColourState::shows(const Pick& p) const {
-    return rgb == p.rgb && (!p.has_hsv || (h == p.h && s == p.s && v == p.v));
 }
 
 // ---------------------------------------------------------------- the launch state
@@ -230,12 +366,14 @@ bool picker_load(const std::string& data_dir, Export& ex, Launch& out, std::stri
     std::map<std::string, int> entries;
     std::map<std::string, std::vector<Pick>> picks;
     std::string active, theme;
-    if (!state_load(data_dir + "/state.json", colours, entries, active, theme, err)) return false;
+    Model model = Model::Hsv;
+    if (!state_load(data_dir + "/state.json", colours, entries, active, theme, model, err)) return false;
     if (!picks_load(data_dir + "/picks.txt", picks, err)) return false;
     const int n = int(ex.elements.size());
     out = Launch{};
     if (!presets_load(data_dir + "/presets.json", out.presets, err)) return false;
     out.theme = theme_of(ex, theme);   // no theme open, or one this export does not list: none
+    out.model = model;
     out.hist.resize(size_t(n));
     out.start.resize(size_t(n));
     out.active = element_of(ex, active);
@@ -249,11 +387,12 @@ bool picker_load(const std::string& data_dir, Export& ex, Launch& out, std::stri
         const auto c = colours.find(el.key);
         start = c != colours.end() ? c->second : Pick{el.colour};   // the last close's, else the manifest's
         el.colour = start.rgb;
-        std::string note = c == colours.end() ? "the manifest's colour" : start.has_hsv ? "state.json's colour and view" : "state.json's colour";
-        // an entry holds the start: the same bytes and, when both carry a view, the same view
+        std::string note = c == colours.end() ? "the manifest's colour" : start.has_view ? "state.json's colour and view" : "state.json's colour";
+        // an entry holds the start: the same bytes and, when both carry a view, the same view (its model and numbers)
         auto holds = [&](int k) {
             const Pick& p = hist.picks[size_t(k)];
-            return p.rgb == start.rgb && (!p.has_hsv || !start.has_hsv || (p.h == start.h && p.s == start.s && p.v == start.v));
+            return p.rgb == start.rgb && (!p.has_view || !start.has_view ||
+                                          (p.model == start.model && p.x[0] == start.x[0] && p.x[1] == start.x[1] && p.x[2] == start.x[2]));
         };
         const int m = int(hist.picks.size());
         const auto e = entries.find(el.key);
@@ -278,6 +417,7 @@ Picker::Picker(Export ex, std::string data_dir, Launch launch)
       presets_list_(std::move(launch.presets)), theme_(launch.theme) {
     el_.resize(ex_.elements.size());
     for (size_t i = 0; i < el_.size(); ++i) {
+        el_[i].cs.model = launch.model;
         el_[i].cs.restore(launch.start[i]);
         el_[i].hist = std::move(launch.hist[i]);
         ex_.elements[i].colour = el_[i].cs.rgb;
@@ -332,16 +472,22 @@ void Picker::write_state() const {
     // the last saved state: the active element as the panel opened (OLD and its cursor) while the panel is open
     auto saved = [&](size_t i) -> const ColourState& { return open_ && int(i) == active_ ? old_ : el_[i].cs; };
     auto cursor = [&](size_t i) { return open_ && int(i) == active_ ? open_cursor_ : el_[i].hist.cursor; };
-    std::string js = "{\n \"active\": \"" + ex_.elements[size_t(active_)].key + "\",\n \"colours\": {\n";
+    std::string js = "{\n \"active\": \"" + ex_.elements[size_t(active_)].key + "\",\n \"model\": \"" +
+                     model_word(model()) + "\",\n \"colours\": {\n";
     for (size_t i = 0; i < n; ++i)
         js += "  \"" + ex_.elements[i].key + "\": \"" + hex_of(saved(i).rgb) + "\"" + (i + 1 < n ? ",\n" : "\n");
-    js += " },\n \"hsv\": {\n";
-    for (size_t i = 0; i < n; ++i) {
-        const ColourState& c = saved(i);
-        js += "  \"" + ex_.elements[i].key + "\": [" + view_number(c.h) + ", " + view_number(c.s) + ", " + view_number(c.v) +
-              "]" + (i + 1 < n ? ",\n" : "\n");
+    js += " },\n";
+    for (Model m : kAllModels) {   // each element's view in its model's map; a map only when some view is in it
+        std::string map;
+        for (size_t i = 0; i < n; ++i) {
+            const Pick p = saved(i).pick();
+            if (p.model != m) continue;
+            map += std::string(map.empty() ? "" : ",\n") + "  \"" + ex_.elements[i].key + "\": [" + view_number(p.x[0]) + ", " +
+                   view_number(p.x[1]) + ", " + view_number(p.x[2]) + "]";
+        }
+        if (!map.empty()) js += std::string(" \"") + model_word(m) + "\": {\n" + map + "\n },\n";
     }
-    js += " },\n \"entry\": {";
+    js += " \"entry\": {";
     bool first = true;
     for (size_t i = 0; i < n; ++i)
         if (cursor(i) >= 0) {
@@ -360,17 +506,17 @@ void Picker::write_state() const {
 void Picker::append_pick(int ei, bool log) {
     const Element& e = ex_.elements[size_t(ei)];
     ElementState& es = el_[size_t(ei)];
-    const ColourState& c = es.cs;
-    const std::string hex = hex_of(c.rgb);
-    const std::string line = now_iso8601() + " " + e.key + " " + hex + " hsv " + view_number(c.h) + " " +
-                             view_number(c.s) + " " + view_number(c.v) + "\n";
+    const Pick p = es.cs.pick();
+    const std::string hex = hex_of(p.rgb);
+    const std::string line = now_iso8601() + " " + e.key + " " + hex + " " + model_word(p.model) + " " + view_number(p.x[0]) +
+                             " " + view_number(p.x[1]) + " " + view_number(p.x[2]) + "\n";
     if (FILE* f = std::fopen((data_dir_ + "/picks.txt").c_str(), "a")) {
         std::fputs(line.c_str(), f);
         std::fclose(f);
     } else {
         plog("picker: cannot append to %s/picks.txt", data_dir_.c_str());
     }
-    es.hist.picks.push_back(c.pick());
+    es.hist.picks.push_back(p);
     es.hist.cursor = int(es.hist.picks.size()) - 1;
     if (log) plog("picker: commit %s %s", e.key.c_str(), hex.c_str());
 }
@@ -378,6 +524,7 @@ void Picker::append_pick(int ei, bool log) {
 void Picker::close() {
     open_ = false;
     chooser_ = false;
+    models_ = false;
     presets_ = false;
     target_ = Target::None;
     if (edited()) append_pick(active_);   // else a colour reached by stepping, unchanged: nothing appended
@@ -402,10 +549,21 @@ void Picker::choose(int e) {
     plog("picker: element %s %s %s", ex_.elements[size_t(e)].key.c_str(), hex_of(cs().rgb).c_str(), count_of(hist()).c_str());
 }
 
+void Picker::set_model(Model m) {
+    models_ = false;
+    dirty_ = true;
+    if (m == model()) return;             // the shown model again: nothing
+    for (ElementState& es : el_) es.cs.show(m);
+    old_.show(m);
+    write_state();
+    plog("picker: model %s", model_name(m));
+}
+
 void Picker::discard_if_open() {
     if (!open_) return;
     open_ = false;
     chooser_ = false;
+    models_ = false;
     presets_ = false;
     target_ = Target::None;
     hist().cursor = open_cursor_;
@@ -446,15 +604,19 @@ void Picker::write_presets() const {
         const Preset& p = presets_list_[k];
         js += std::string(k ? ",\n" : "\n") + "  {\"number\": " + std::to_string(p.number) + ", \"saved\": \"" + p.saved +
               "\",\n   \"colours\": {";
-        std::string hsv;
+        std::string views[3];
         bool first = true;
         for (const auto& kv : p.colours) {   // the keys in the map's order; the reader takes them by name
             js += std::string(first ? "" : ", ") + "\"" + kv.first + "\": \"" + hex_of(kv.second.rgb) + "\"";
-            hsv += std::string(first ? "" : ", ") + "\"" + kv.first + "\": [" + view_number(kv.second.h) + ", " +
-                   view_number(kv.second.s) + ", " + view_number(kv.second.v) + "]";
+            std::string& map = views[int(kv.second.model)];
+            map += std::string(map.empty() ? "" : ", ") + "\"" + kv.first + "\": [" + view_number(kv.second.x[0]) + ", " +
+                   view_number(kv.second.x[1]) + ", " + view_number(kv.second.x[2]) + "]";
             first = false;
         }
-        js += "},\n   \"hsv\": {" + hsv + "}}";
+        js += "}";
+        for (Model m : kAllModels)   // each view in its model's map, a map only when some view is in it
+            if (!views[int(m)].empty()) js += std::string(",\n   \"") + model_word(m) + "\": {" + views[int(m)] + "}";
+        js += "}";
     }
     js += presets_list_.empty() ? "]\n}\n" : "\n ]\n}\n";
     const std::string tmp = data_dir_ + "/presets.json.part", dst = data_dir_ + "/presets.json";
@@ -591,14 +753,14 @@ void Picker::ring_to(double x, double y) {
     const double dx = x - (panel_x() + kPad + kROut), dy = y - (panel_y() + kPad + kROut);
     double a = std::atan2(-dy, dx) * 180 / kPi;
     if (a < 0) a += 360;
-    cs().set_hsv(a, cs().s, cs().v);
+    cs().set_ring(a, cs().ring[1], cs().ring[2]);
     apply_colours();
 }
 
 void Picker::triangle_to(double x, double y) {
     const double px = x - (panel_x() + kPad + kROut), py = y - (panel_y() + kPad + kROut);
     double v[3][2], b[3];
-    corners(cs().h, v);
+    corners(cs().ring[0], v);
     bary(v, px, py, b);
     if (b[0] < 0 || b[1] < 0 || b[2] < 0) {   // outside: the nearest point of the triangle's edges
         double best = 1e300, bx = 0, by = 0;
@@ -614,37 +776,32 @@ void Picker::triangle_to(double x, double y) {
         for (double& c : b) c = std::max(0.0, c);
     }
     const double vv = clamp01(b[0] + b[1]);
-    const double ss = vv > 0 ? clamp01(b[0] / vv) : cs().s;
-    cs().set_hsv(cs().h, ss, vv);
+    const double ss = vv > 0 ? clamp01(b[0] / vv) : cs().ring[1];
+    cs().set_ring(cs().ring[0], ss, vv);
     apply_colours();
 }
 
 void Picker::track_to(int row, double x) {
     const double f = clamp01((x - (panel_x() + kTrackX)) / (kTrackL - 1));
-    switch (row) {
-        case 0: cs().set_hsv(f * 360, cs().s, cs().v); break;
-        case 1: cs().set_hsv(cs().h, f, cs().v); break;
-        case 2: cs().set_hsv(cs().h, cs().s, f); break;
-        default: {
-            Rgb c = cs().rgb;
-            (row == 3 ? c.r : row == 4 ? c.g : c.b) = byte_of_unit(f);
-            cs().set_rgb(c);
-        }
+    if (row < 3) {
+        cs().move_axis(row, f * axis_max(cs().model, row));
+    } else {
+        Rgb c = cs().rgb;
+        (row == 3 ? c.r : row == 4 ? c.g : c.b) = byte_of_unit(f);
+        cs().set_rgb(c);
     }
     apply_colours();
 }
 
 void Picker::step(int row, int dir) {
-    switch (row) {
-        case 0: cs().set_hsv(std::nearbyint(cs().h) + dir, cs().s, cs().v); break;
-        case 1: cs().set_hsv(cs().h, (std::nearbyint(cs().s * 100) + dir) / 100, cs().v); break;
-        case 2: cs().set_hsv(cs().h, cs().s, (std::nearbyint(cs().v * 100) + dir) / 100); break;
-        default: {
-            Rgb c = cs().rgb;
-            uint8_t& ch = row == 3 ? c.r : row == 4 ? c.g : c.b;
-            ch = uint8_t(std::max(0, std::min(255, ch + dir)));
-            cs().set_rgb(c);
-        }
+    if (row < 3) {   // one shown unit, from the rounded shown number
+        const double sc = axis_scale(cs().model, row);
+        cs().move_axis(row, (std::nearbyint(cs().view(cs().model)[size_t(row)] * sc) + dir) / sc);
+    } else {
+        Rgb c = cs().rgb;
+        uint8_t& ch = row == 3 ? c.r : row == 4 ? c.g : c.b;
+        ch = uint8_t(std::max(0, std::min(255, ch + dir)));
+        cs().set_rgb(c);
     }
     apply_colours();
 }
@@ -667,6 +824,15 @@ void Picker::press(double x, double y) {
         }
         return;
     }
+    if (models_) {    // the model switch's list is modal as the chooser is
+        if (in(lx, ly, kModelX0, kModelListY, kModelX1, kModelListY + 3 * kChooserRowH)) {
+            target_ = Target::ModelRow;
+            row_ = int((ly - kModelListY) / kChooserRowH);
+        } else {
+            target_ = Target::OffModels;
+        }
+        return;
+    }
     if (presets_) {   // the pop-up is modal as the chooser is
         if (in(lx, ly, kPopX0, kPopY0, kPopX1, kPopListY0)) target_ = Target::PopSave;
         else if (in(lx, ly, kPopX0, kPopListY0, kPopX1, kPopY1)) { target_ = Target::PopList; item_ = pop_item_at(ly); }
@@ -686,7 +852,8 @@ void Picker::press(double x, double y) {
     if (!in(lx, ly, 0, 0, kW, kH)) { target_ = Target::Outside; return; }
     target_ = Target::None;
     const double r = std::hypot(lx - (kPad + kROut), ly - (kPad + kROut));
-    if (r <= kROut + 20 && in(lx, ly, 0, 0, kColX - 10, kRowsY - 20)) {
+    if (in(lx, ly, kModelX0, kModelY, kModelX1, kModelY + kModelH)) { target_ = Target::ModelBtn; return; }
+    if (r <= kROut + 20 && in(lx, ly, 0, 0, kColX - 10, kModelY - 4)) {
         if (r >= kRIn - 4) { target_ = Target::Ring; ring_to(x, y); }
         else { target_ = Target::Triangle; triangle_to(x, y); }
         return;
@@ -744,6 +911,17 @@ void Picker::release(double x, double y) {
             break;
         case Target::OffChooser:   // a tap outside the chooser: it closes, nothing else
             chooser_ = false;
+            dirty_ = true;
+            break;
+        case Target::ModelBtn:     // the model switch: its list opens at the lift
+            if (in(lx, ly, kModelX0, kModelY, kModelX1, kModelY + kModelH)) { models_ = true; dirty_ = true; }
+            break;
+        case Target::ModelRow:     // a model, lifted on the same entry: chosen
+            if (in(lx, ly, kModelX0, kModelListY + row_ * kChooserRowH, kModelX1, kModelListY + (row_ + 1) * kChooserRowH))
+                set_model(kAllModels[row_]);
+            break;
+        case Target::OffModels:    // a tap outside the list: it closes, nothing else
+            models_ = false;
             dirty_ = true;
             break;
         case Target::PopSave:      // the save line, lifted on it: saved, the pop-up closed
@@ -844,12 +1022,13 @@ void Picker::paint(cairo_surface_t* surf) {
     const int n = int(ex_.elements.size());
     const int np = int(presets_list_.size());
     if (!presets_) {
-        // the wheel: the ring, the triangle at the hue, their markers
+        // the wheel: the ring, the triangle at the ring's hue, their markers (the ring's HSV, every model)
         const int wx = ox + kPad, wy = oy + kPad, cx = wx + kROut, cy = wy + kROut;
+        const double rh = c.ring[0], rs = c.ring[1], rv = c.ring[2];
         fr.blit(ring_, kWheel, wx, wy);
         double v[3][2];
-        corners(c.h, v);
-        if (c.h != tri_h_) {
+        corners(rh, v);
+        if (rh != tri_h_) {
             tri_.assign(size_t(kWheel) * kWheel, 0);
             for (int y = 0; y < kWheel; ++y)
                 for (int x = 0; x < kWheel; ++x) {
@@ -857,15 +1036,15 @@ void Picker::paint(cairo_surface_t* surf) {
                     bary(v, x + 0.5 - kROut, y + 0.5 - kROut, b);
                     if (b[0] < 0 || b[1] < 0 || b[2] < 0) continue;
                     const double vv = clamp01(b[0] + b[1]);
-                    tri_[size_t(y) * kWheel + x] = word_of(rgb_of_hsv(c.h, vv > 0 ? clamp01(b[0] / vv) : 0, vv));
+                    tri_[size_t(y) * kWheel + x] = word_of(rgb_of_hsv(rh, vv > 0 ? clamp01(b[0] / vv) : 0, vv));
                 }
-            tri_h_ = c.h;
+            tri_h_ = rh;
         }
         fr.blit(tri_, kWheel, wx, wy);
-        const double ha = c.h * kPi / 180, rm = (kRIn + kROut) / 2.0;
+        const double ha = rh * kPi / 180, rm = (kRIn + kROut) / 2.0;
         fr.marker(int(std::lround(cx + rm * std::cos(ha))), int(std::lround(cy - rm * std::sin(ha))), 14, 3);
         {
-            const double a = c.s * c.v, b = c.v * (1 - c.s), cc = 1 - c.v;
+            const double a = rs * rv, b = rv * (1 - rs), cc = 1 - rv;
             const double px = a * v[0][0] + b * v[1][0] + cc * v[2][0], py = a * v[0][1] + b * v[1][1] + cc * v[2][1];
             fr.marker(int(std::lround(cx + px)), int(std::lround(cy + py)), 12, 3);
         }
@@ -902,7 +1081,7 @@ void Picker::paint(cairo_surface_t* surf) {
             fr.fill(ox + kFieldX, ry, ox + kFieldX + kFieldW, ry + kRowH, kField);
             fr.edge(ox + kFieldX, ry, ox + kFieldX + kFieldW, ry + kRowH, kEdge);
             for (int x = 0; x < kTrackL; ++x) {
-                const uint32_t w = word_of(row_colour(c, i, double(x) / (kTrackL - 1)));
+                const uint32_t w = row_word(c, i, double(x) / (kTrackL - 1));
                 for (int y = ty; y < ty + kTrackH; ++y) fr.px[size_t(y) * fr.stride + ox + kTrackX + x] = w;
             }
             fr.edge(ox + kTrackX, ty, ox + kTrackX + kTrackL, ty + kTrackH, kEdge);
@@ -918,6 +1097,22 @@ void Picker::paint(cairo_surface_t* surf) {
             for (int i = 1; i < n; ++i) fr.fill(ox + kColX, y0 + i * kChooserRowH, ox + kColX1, y0 + i * kChooserRowH + 1, kEdge);
             const int my = y0 + active_ * kChooserRowH + kChooserRowH / 2;
             fr.fill(ox + kColX + 22, my - 8, ox + kColX + 38, my + 8, kLabel);
+        }
+        // the model switch: a field with the model's name and the chooser's head; its list under it when open, the
+        // shown model's entry marked as the chooser marks the active element
+        fr.fill(ox + kModelX0, oy + kModelY, ox + kModelX1, oy + kModelY + kModelH, kField);
+        fr.edge(ox + kModelX0, oy + kModelY, ox + kModelX1, oy + kModelY + kModelH, kEdge);
+        {
+            const int mx = ox + kModelX1 - 36, my = oy + kModelY + kModelH / 2 - 6;
+            for (int i = 0; i < 12; ++i) fr.fill(mx - 1 - i, my + 11 - i, mx + 1 + i, my + 12 - i, kLabel);
+        }
+        if (models_) {
+            const int x0 = ox + kModelX0, x1 = ox + kModelX1, y0 = oy + kModelListY, y1 = y0 + 3 * kChooserRowH;
+            fr.fill(x0, y0, x1, y1, kField);
+            fr.edge(x0, y0, x1, y1, kEdge);
+            for (int i = 1; i < 3; ++i) fr.fill(x0, y0 + i * kChooserRowH, x1, y0 + i * kChooserRowH + 1, kEdge);
+            const int my = y0 + int(c.model) * kChooserRowH + kChooserRowH / 2;
+            fr.fill(x0 + 22, my - 8, x0 + 38, my + 8, kLabel);
         }
     } else {
         // THE PRESETS POP-UP over the panel: the save line, then the list clipped to its viewport (the presets with a
@@ -1008,9 +1203,16 @@ void Picker::paint(cairo_surface_t* surf) {
             text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
             text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
         }
+        text(cr, false, kWordPx, model_name(c.model), ox + kModelX0 + 18, cap_baseline(cr, false, kWordPx, oy + kModelY, kModelH), 0);
+        if (models_)
+            for (Model m : kAllModels) {
+                const int ry = oy + kModelListY + int(m) * kChooserRowH;
+                text(cr, false, kWordPx, model_name(m), ox + kModelX0 + 60, cap_baseline(cr, false, kWordPx, ry, kChooserRowH), 0);
+            }
         for (int i = 0; i < 6; ++i) {
             const int ry = oy + row_y(i);
-            text(cr, false, kWordPx, kRowNames[i], ox + kLabelX + 18, cap_baseline(cr, false, kWordPx, ry, kRowH), 1);
+            if (!models_ || row_y(i) + kRowH / 2 >= kModelListY + 3 * kChooserRowH)   // the letters the list does not cover
+                text(cr, false, kWordPx, row_name(c.model, i), ox + kLabelX + 18, cap_baseline(cr, false, kWordPx, ry, kRowH), 1);
             text(cr, true, kNumPx, row_readout(c, i), ox + kFieldX + kFieldW - kReadoutInset,
                  cap_baseline(cr, true, kNumPx, ry, kRowH), 2);
         }

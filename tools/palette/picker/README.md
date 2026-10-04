@@ -43,27 +43,59 @@ last still with the theme strip open (x 1148..1508); a tap on the left half open
 unselected flags at x 398 and 871 (only the first with the strip open).
 
 - A TAP on the picture opens the PANEL on the half of the screen opposite the tap, so the place tapped stays in view.
-- The panel (GTK's colour selector and GIMP's colour dialog, their common ground, HSV only, no CMYK): the hue RING with
+- The panel (GTK's colour selector and GIMP's colour dialog, their common ground, no CMYK): the hue RING with
   the saturation / value TRIANGLE inside it (its corners the pure hue, white and black, turning with the hue; drag
   either); the active element's NAME as a button and the PRESETS button beside it (below), its HEX in large type, under it BACK | "N of M" | FORWARD (the pick history, below in
   Use), the OLD | NEW swatches (the colour when the panel opened | now; a
-  tap on OLD reverts); six SLIDERS, H 0–360, S 0–100, V 0–100 and R, G, B 0–255, each a long track painted with its
+  tap on OLD reverts); under the wheel THE MODEL SWITCH (below); six SLIDERS, the model's three (HSV's H 0–360, S
+  0–100, V 0–100 at a fresh start) and R, G, B 0–255, each a long track painted with its
   live gradient (the colour along it, the other channels as they stand), a handle, its value at the right, and a
-  one-unit − / + at its ends (one degree, one percent, one byte; acting at the lift). THE READOUT shows H in degrees
-  and S, V in percent to ONE DECIMAL, rounded to nearest (247.3, 47.1, 100.0: where the view actually is, as GIMP's
-  HSV fields read; architect 2026-10-04), R, G, B whole bytes; the six fields are one width, sized for "360.0". The
-  H / S / V − / + still step whole degrees and percents, from the rounded whole number (speed over fineness). Every control produces an exact
-  byte triple and the scene repaints from it live. HSV is a view over the bytes plus a retained hue (and
-  saturation), as GTK keeps them: through grey the hue stays, through black the saturation too.
-- THE HSV HE DIALLED IS PART OF THE PICK (architect 2026-10-04). A saved pick keeps, beside its bytes, the exact HSV
-  view it was saved under, and every road back to a stored colour — the launch, BACK / FORWARD, OLD, leaving the app
-  with the panel open — restores that view instead of re-deriving it from the bytes. Re-derived, the view is the
-  bytes' own HSV (S 0.3529 where he dialled 0.35): the number reads 35.3 where he dialled 35.0 and the handle moves, and the next − / +
+  one-unit − / + at its ends (one degree, one percent, one L or C unit, one byte; acting at the lift). THE READOUT
+  shows the model's three to ONE DECIMAL, rounded to nearest — a hue in degrees, HSV's and HSL's S, V, L in percent,
+  LCh's L and C as they are (247.3, 47.1, 100.0: where the view actually is, as GIMP's fields read; architect
+  2026-10-04) — R, G, B whole bytes; the six fields are one width, sized for "360.0". The model's − / + still step
+  whole units, from the rounded whole number (speed over fineness). Every control produces an exact
+  byte triple and the scene repaints from it live. A model is a view over the bytes plus a retained hue, as GTK keeps
+  HSV's: through grey the hue stays (HSV's, HSL's, LCh's through C 0), through black HSV's saturation too, HSL's
+  through black and white.
+- THE MODEL SWITCH (architect 2026-10-04): a dropdown button under the wheel, at the left over the three tracks it
+  switches, built as the chooser (a tap opens the list HSV / HSL / LCh with the shown model marked; a tap on an entry
+  picks it, a press lifted on another picks nothing, a tap outside closes it). The three tracks, their − / + and their
+  readouts then speak that model; R, G, B stay. THE RING AND THE TRIANGLE STAY HSV (GTK's and GIMP's own selector) and
+  work in every model: in HSL the pen's HSV becomes the HSL view exactly (the same hue; the triangle never moves the
+  hue he dialled), in LCh the pen's HSV gives the bytes and LCh reads them. The model is the panel's, every element's
+  alike, and persists in `state.json` (one logcat line, `picker: model <HSV | HSL | LCh>`). Choosing a model changes
+  no colour and no stored view.
+  - HSL is GIMP's and CSS's HSL over the bytes: H 0–360, S 0–100, L 0–100.
+  - LCh is CIE LCh(ab) as GIMP's LCh scales show it — L 0–100, C 0–160, h 0–360 — COMPUTED OVER THE BYTES AS
+    DISPLAY-P3, the window's colour space (render.h: "A HEX HERE IS A DISPLAY-P3 BYTE TRIPLE"), with P3's own white
+    D65 as Lab's white and no chromatic adaptation, so the numbers describe what the glass shows: the bytes decode by
+    P3's transfer curve (the sRGB curve), go to XYZ by the matrix of P3's primaries (0.680, 0.320), (0.265, 0.690),
+    (0.150, 0.060) over D65 (0.3127, 0.3290), and to Lab by CIE's exact constants (`src/colour.h`). White #FFFFFF is
+    L 100 C 0; the primaries read #FF0000 L 54.97 C 133.55 h 45.21, #00FF00 L 86.59 C 157.75 h 136.95 (P3's most
+    chromatic colour, so the C track's 0–160 holds the whole gamut), #0000FF L 33.83 C 138.06 h 306.29. THE SAME HEX
+    READS OTHER LCh NUMBERS IN GIMP ON THE LAPTOP: GIMP's LCh is babl's, D50-adapted, over the image's space (sRGB
+    there).
+  - OUT OF GAMUT (LCh alone can leave it; a colour is inside when every channel's own rounding to a byte is a byte,
+    so it reaches the bytes with no clipping): a track paints its out-of-gamut stretch in a flat neutral, the panel's
+    ground #191919 (a gap in the track; no alpha, no hatching), and a drag, a tap or a − / + whose value lies outside
+    STOPS AT THE LAST IN-GAMUT VALUE ON THE WAY THERE along that axis: a walk from the current value toward the target
+    in steps of 0.01 unit to the first value outside, then bisection to 1e-9 unit (a stretch outside narrower than
+    0.01 unit can be stepped over; a stop within 1e-6 unit of where the view stands moves nothing, so − / + against the
+    edge is still). A value inside the gamut is reached directly, across an out-of-gamut stretch if the pen goes there.
+    No colour is ever clipped: an LCh view always gives its bytes by rounding alone.
+- THE VIEW HE DIALLED IS PART OF THE PICK (architect 2026-10-04). A saved pick keeps, beside its bytes, the exact
+  view it was saved under — the model shown when the colour last changed and its three numbers — and every road back
+  to a stored colour — the launch, BACK / FORWARD, OLD, leaving the app with the panel open, a preset's load —
+  restores that view instead of re-deriving it from the bytes when the panel shows that model; a panel showing another
+  model re-derives its view from the bytes (for a grey, an HSV view keeps a stored HSL view's hue and the other way
+  round), and switching to the stored model shows the stored view exactly. Re-derived, the view is the
+  bytes' own (S 0.3529 where he dialled 0.35): the number reads 35.3 where he dialled 35.0 and the handle moves, and the next − / +
   rounds from the re-derived values, while at low saturation or value one byte is several degrees of hue or a percent
   of saturation, so an axis he never touched would move. Re-derivation from bytes stays only where the bytes are the
-  input: the R / G / B tracks and their − / +, and a pick saved before views were stored. The ring, the triangle and
-  the H / S / V tracks and − / + set the view directly. The bytes stay the colour's truth (what is painted, what the
-  product takes); the view always gives them.
+  input: the R / G / B tracks and their − / +, a theme's swatch, and a pick saved before views were stored. The ring,
+  the triangle and the model's tracks and − / + set the view directly. The bytes stay the colour's truth (what is
+  painted, what the product takes); the view always gives them.
 - THE CHOOSER: a tap on the element's name (at the lift, as every panel control) opens a vertical list of the
   elements in manifest order over the panel's right column, the active one marked by a white square. A tap on an
   entry picks it and closes the chooser (a press on one entry lifted on another picks nothing and leaves it open); a
@@ -116,17 +148,20 @@ Everything lives in the app's EXTERNAL files dir, `/sdcard/Android/data/com.warp
 | path | written by | what |
 |---|---|---|
 | `scene/manifest.json`, `scene/<scene>.base.pgm`, `scene/<scene>.cover.bin` | the planner (`adb push`) | the export (formats below) |
-| `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <key> #RRGGBB hsv <h> <s> <v>` (the element's key; the view the pick was saved under) |
-| `state.json` | the app, at every close of the panel, every switch of element, a commit at the presets pop-up's opening, a preset load, and the theme strip's opening and close | `{"active": "<key>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "entry": {"<key>": N, ...}, "theme": "<theme key>"}`: the active element, every element's colour, its view and its history cursor (the N of "N of M"; absent with an empty history), and the open theme strip's theme (absent when none), rewritten whole. It is always THE LAST SAVED STATE: while the panel is open the active element is written as the panel's opening (OLD and its cursor), so an unsaved edit never reaches it |
-| `presets.json` | the app, at every save of a preset | `{"presets": [{"number": N, "saved": "<ISO-8601 local time>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}}, ...]}`: the presets oldest first, the numbers ascending (the name is "Preset N"), every colour with its view over the same keys, rewritten whole |
+| `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <key> #RRGGBB <model> <a> <b> <c>` (the element's key; the view the pick was saved under: its model's word, `hsv`, `hsl` or `lch`, and its three numbers) |
+| `state.json` | the app, at every close of the panel, every switch of element or model, a commit at the presets pop-up's opening, a preset load, and the theme strip's opening and close | `{"active": "<key>", "model": "hsv", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {"<key>": [h, s, l], ...}, "lch": {"<key>": [L, C, h], ...}, "entry": {"<key>": N, ...}, "theme": "<theme key>"}`: the active element, the model the panel shows, every element's colour, its view in the map of the view's model (a map written only when some view is in it) and its history cursor (the N of "N of M"; absent with an empty history), and the open theme strip's theme (absent when none), rewritten whole. It is always THE LAST SAVED STATE: while the panel is open the active element is written as the panel's opening (OLD and its cursor), so an unsaved edit never reaches it |
+| `presets.json` | the app, at every save of a preset | `{"presets": [{"number": N, "saved": "<ISO-8601 local time>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {...}, "lch": {...}}, ...]}`: the presets oldest first, the numbers ascending (the name is "Preset N"), every colour with its view in its model's map (each map only when some view is in it, so an all-HSV preset is written as before the model switch), the maps together over the colours' keys, rewritten whole |
 | `tools/palette/picker/presets/presets.json` (the repository) | the planner, each session (`adb pull`) | the tablet's `presets.json` copied verbatim into git, so his presets outlive the device and every planner (the cloud's too) can read them; the source the preset-to-product helper will read |
 
-THE VIEW'S NUMBERS are h in degrees 0..360 and s, v in 0..1, written as the shortest decimal that reads back as the
-same double (`227`, `0.35`, `0.34671532846715331` after a drag), so a stored view is restored exactly; a view must
-give its hex (`rgb_of_hsv`), and one that does not, or lies outside those ranges, fails the load. Earlier files still
-read: a `picks.txt` line without a view, `<ISO-8601 local time> <key> #RRGGBB`, is a pick whose view is re-derived
+THE VIEW'S NUMBERS are, for HSV, h in degrees 0..360 and s, v in 0..1; for HSL h in degrees, s, l in 0..1; for LCh L
+0..100, C 0..160, h in degrees — written as the shortest decimal that reads back as the
+same double (`227`, `0.35`, `0.34671532846715331` after a drag, `2e+02` for 200), so a stored view is restored
+exactly; a view must give its hex (`src/colour.h` `rgb_of_view`; an LCh view inside the gamut), and one that does not,
+or lies outside those ranges, fails the load, as does an element with views in two maps or a `"model"` that is none of
+the three. Earlier files still read, the HSV form being today's HSV view unchanged: a `state.json` without `"model"`
+shows HSV; a `picks.txt` line without a view, `<ISO-8601 local time> <key> #RRGGBB`, is a pick whose view is re-derived
 from its bytes as before (the lines are never rewritten; a new commit appends the new form after them), and a
-`state.json` without `"hsv"` starts on its colour re-derived; one with `"hsv"` and `"entry"` for one layer alone and
+`state.json` without a view map starts on its colour re-derived; one with `"hsv"` and `"entry"` for one layer alone and
 no `"active"` (the single-layer builds', such as the ink round's `{"colours": {"ink": "#A6B9DE"}, "entry": {"ink":
 58}}`) starts every other element at the manifest's colour, on the manifest's active element. A key that is no element
 of the export (an earlier round's layer) is read and never used; so is a `"theme"` the export does not list, and a
@@ -142,7 +177,8 @@ element is `state.json`'s when it names one, else the manifest's. An entry HOLDS
 start when their bytes are equal and, if both carry a view, their views are too (the first build's `state.json`,
 `{"<layer>": "#RRGGBB", ...}` with no entry, still reads; so does a kept `state.json` beside a deleted `picks.txt`).
 Every commit also logs one line under the tag `warptempo_picker`: `picker: commit <key> #RRGGBB`; every history step
-`picker: step <key> N of M #RRGGBB`; every switch `picker: element <key> #RRGGBB N of M`. A missing or malformed scene, `state.json` or `picks.txt`
+`picker: step <key> N of M #RRGGBB`; every switch `picker: element <key> #RRGGBB N of M`; every model chosen
+`picker: model <HSV | HSL | LCh>`. A missing or malformed scene, `state.json` or `picks.txt`
 shows a plain message on the screen (which file, what is wrong) and logs it; there is no recovery path.
 
 ## The export's formats
@@ -210,7 +246,18 @@ the live repaint; a synthetic export with roles derived over the canvas element 
 `colour.py`'s composition at the canvas and the ink moved; the C++ `lin_mix` equals `colour.py`'s on all 65536 byte
 pairs; THE BLEND equals cairo's solid source through an A8 mask on every (source, frame, coverage) byte triple, each
 channel (16,777,216 cases); `scale_byte` is half to even and capped; HSV keeps the hue through grey and black and
-bytes -> HSV -> bytes is the identity over the whole cube; the H / S / V readouts show one decimal rounded to nearest
+bytes -> HSV -> bytes is the identity over the whole cube; THE MODELS (bytes -> HSL -> bytes and bytes -> LCh -> bytes
+the identity over the whole cube, every LCh inside the gamut, the most chromatic triple #00FF00 at C 157.75 inside the
+C track; white L 100 C 0, black L 0; HSL's and LCh's retention; HSL against Python's own `colorsys` and LCh against
+`check_refs.py`'s independent numpy over Display-P3 (D65) on 20264 byte triples, to 1e-9, the P3 primaries and
+secondaries printed; THE MODEL SWITCH's sessions: the list's tap rules, HSL dialled by its tracks and − / + and its
+view committed (`hsl` in picks.txt), restored exactly by a relaunch, BACK and FORWARD, the switch to HSV and back
+leaving it untouched, the triangle keeping its hue, OLD; LCh dialled, A DRAG ON C TO THE TRACK'S END STOPPING AT THE
+GAMUT (inside, C + 1e-8 outside, the bytes unclipped), C + at the edge moving nothing, the out-of-gamut stretch
+painted in the neutral, a drag on h across the gamut's edges inside at every frame, its hue through C 0, its view
+committed and restored by a relaunch, BACK and FORWARD; an HSL pick met by BACK in LCh and shown exactly in HSL; the
+triangle in LCh; a preset over three models restored exactly; a grey saved in HSV keeping its hue in HSL; the new
+forms' refusals); the readouts show one decimal rounded to nearest
 (247.27 -> 247.3, 0.4714 -> 47.1, 0.99999 -> 100.0) and the widest, measured in the mono face, fits its field; the scripted sessions on the active element (the panel,
 the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; a tap outside it closes it alone, writing
 nothing; a press lifted on another entry picks nothing; the active entry again is a no-op; the edited chrome
@@ -231,15 +278,16 @@ switch to the canvas committing it with the strip still open, another swatch ado
 surviving a relaunch; Brick's ground giving the rule's lines and not its own; CDE Alpine's strip scrolled by a drag
 that adopts nothing; the close control, `state.json` never holding an unsaved adoption); THE TABLET'S FILES OF
 2026-10-04 (`check_data/tablet_2026-10-04/`: 110 `picks.txt` lines over three elements and its `state.json`) loading
-unchanged, every view exact, the flags at the manifest's colours with empty histories, and a preset saved and loaded
-over them appending nothing; those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 136 lines,
+unchanged, every view exact, HSV shown, the flags at the manifest's colours with empty histories, and a preset saved
+and loaded over them appending nothing; the repository's `presets/presets.json` reading unchanged; those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 136 lines,
 the ink active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90) loading unchanged the same way; and THE PER-FRAME COST
-of a pen drag on the ink, the chrome and the unselected flag (printed). Its frames are written as PNGs in
+of a pen drag on the ink, the chrome and the unselected flag, and on the chrome's h track in LCh (printed). Its frames are written as PNGs in
 `build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`,
 `frame_{unselected,selected}_flag_open.png` (the flags scene, the panel on the left), `frame_selection_test_open.png`,
 `frame_switch_flags_moved.png`,
 the history's `frame_history_*.png`, `frame_presets_open.png`, `frame_presets_themes.png` (the pop-up scrolled into
-the themes), `frame_strip_{open,adopted,scrolled}.png`).
+the themes), `frame_strip_{open,adopted,scrolled}.png`, `frame_model_list_open.png`, `frame_model_hsl_open.png` and
+`frame_model_lch_open.png` (the C track's out-of-gamut stretch and h's).
 
 ## Use (the planner, over adb)
 
@@ -268,7 +316,7 @@ THE PICK HISTORY (architect 2026-10-04: backtrack and compare without typing a h
 picks, oldest first, exactly its `picks.txt` lines, read at launch (it survives restarts) and grown by each commit. A
 cursor marks the entry being shown; the panel's count "N of M" is the active element's cursor's entry of its
 history's length ("0 of 0" with none), and the closed corner label repeats it after the hex. Every element keeps its
-own history, cursor and HSV view across switches and relaunches.
+own history, cursor and view across switches and relaunches.
 
 - BACK and FORWARD (the arrows under the hex) move the cursor one entry and restore that entry, its bytes and its
   view, at the pen's lift: the scene repaints live and every control follows; OLD stays the colour the panel opened
@@ -299,13 +347,13 @@ An element's history is every `picks.txt` line under its key, across rounds, unt
 
 | file | what |
 |---|---|
-| `src/colour.h` | the byte triple, hex, the frame's pixel word, `lin_mix` (colour.py's, step for step), `scale_byte` (the chrome rule), `over_n_8` (pixman's blend, line for line), HSV -> bytes |
+| `src/colour.h` | the byte triple, hex, the frame's pixel word, `lin_mix` (colour.py's, step for step), `scale_byte` (the chrome rule), `over_n_8` (pixman's blend, line for line), THE MODELS: HSV, HSL and LCh over Display-P3 (D65) to and from the bytes, the gamut test |
 | `src/json.{h,cpp}` | the tiny JSON reader (manifest.json, state.json) |
 | `src/scene.{h,cpp}` | the export: load and validate (`themes.json` too), the roles' rules, the scene's runs and stacks, the whole paint and the live repaint; the Pick (bytes and view); the readers of state.json, picks.txt and presets.json |
 | `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
-| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus the retained hue, a stored view restored), the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, the panel's geometry, painting, touch, the close's save |
+| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus every model's view with its retained hue, a stored view restored, the gamut stop), the model switch, the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |
-| `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, `check_data/tablet_2026-10-04_presets/` those at the presets build's install, copied verbatim |
+| `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above; `check_refs.py` also writes the models' independent reference); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, `check_data/tablet_2026-10-04_presets/` those at the presets build's install, copied verbatim |
 | `java/com/warptempo/picker/PickerActivity.java` | the full-screen sliver |
 | `AndroidManifest.xml` | the package, the colour mode, the orientation lock |
 | `build_picker.sh` | the APK, or `--check` |

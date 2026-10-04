@@ -15,6 +15,12 @@
 #   <dir>/{scene,multi}/expects.txt  one line per reference: "<scene> <ppm> [<key>=#RRGGBB ...]" (the elements moved
 #                           from the manifest's colours); the picker's picture at those colours must equal the ppm
 #   <dir>/linmix.bin        colour.lin_mix(a, b, 0.5)'s red byte for every pair (a, b), 65536 bytes, a * 256 + b
+#   <dir>/models_ref.txt    THE MODELS' REFERENCE, computed here independently of the C++ (colour.h): for every byte
+#                           triple of a set -- the cube's corners, all 256 greys, the P3 primaries and secondaries and
+#                           20000 seeded random triples -- one line "r g b  H S L  L C h": HSL by Python's own colorsys
+#                           (rgb_to_hls, hue scaled to degrees) and CIE LCh(ab) over the bytes as Display-P3 (D65, no
+#                           adaptation) by numpy, the matrix solved from the primaries' chromaticities, Lab by CIE's
+#                           epsilon / kappa form (216/24389, 24389/27), every number repr'd (exact doubles)
 #   <dir>/derived/          a SYNTHETIC export exercising the derive rule, which today's scenes do not paint (scene
 #                           1002 has no outline pixels at its zoom): the export's waveform scene with its ink pixels
 #                           from x 1152 to 1727 given to a role derived from the ink over the CANVAS ELEMENT (the
@@ -63,6 +69,25 @@ lines += export_with_refs(check_theme, 'multi')
 scene = os.path.join(out, 'scene'); man = json.load(open(os.path.join(scene, 'manifest.json')))
 tab = bytes(colour.lin_mix((a, 0, 0), (b, 0, 0), 0.5)[0] for a in range(256) for b in range(256))
 open(os.path.join(out, 'linmix.bin'), 'wb').write(tab)
+
+# THE MODELS' REFERENCE: HSL by colorsys, LCh by numpy over Display-P3 (D65), independent of colour.h's code
+import colorsys, random
+_xy = [(0.680, 0.320), (0.265, 0.690), (0.150, 0.060)]; _w = (0.3127, 0.3290)
+_xyz = lambda x, y: np.array([x / y, 1.0, (1 - x - y) / y])
+_P = np.stack([_xyz(*c) for c in _xy], 1); _M = _P * np.linalg.solve(_P, _xyz(*_w)); _Wn = _M.sum(1)
+def _lch(r, g, b):
+    c = np.array([r, g, b]) / 255.0
+    lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+    t = (_M @ lin) / _Wn; eps, kap = 216 / 24389, 24389 / 27
+    f = np.where(t > eps, np.cbrt(t), (kap * t + 16) / 116)
+    L, a, bb = 116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])
+    return float(L), float(np.hypot(a, bb)), float(np.degrees(np.arctan2(bb, a)) % 360)
+_set = [(r, g, b) for r in (0, 255) for g in (0, 255) for b in (0, 255)] + [(k, k, k) for k in range(256)]
+_rnd = random.Random(20261004); _set += [tuple(_rnd.randrange(256) for _ in range(3)) for _ in range(20000)]
+with open(os.path.join(out, 'models_ref.txt'), 'w') as f:
+    for r, g, b in _set:
+        hh, ll, ss = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+        f.write(' '.join(repr(v) for v in (r, g, b, hh * 360, ss, ll) + _lch(r, g, b)) + '\n')
 
 # the synthetic derive export
 der = os.path.join(out, 'derived')
