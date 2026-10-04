@@ -370,6 +370,10 @@ bool picker_load(const std::string& data_dir, Export& ex, Launch& out, std::stri
     if (!state_load(data_dir + "/state.json", colours, entries, active, theme, model, err)) return false;
     if (!picks_load(data_dir + "/picks.txt", picks, err)) return false;
     const int n = int(ex.elements.size());
+    if (n > panel::kChooserMax) {   // the chooser's fit (picker.h): the panel holds no more rows
+        err = "manifest.json: " + std::to_string(n) + " elements; the chooser holds " + std::to_string(panel::kChooserMax);
+        return false;
+    }
     out = Launch{};
     if (!presets_load(data_dir + "/presets.json", out.presets, err)) return false;
     out.theme = theme_of(ex, theme);   // no theme open, or one this export does not list: none
@@ -1089,7 +1093,8 @@ void Picker::paint(cairo_surface_t* surf) {
             fr.fill(hx - 6, ty - 10, hx + 7, ty + kTrackH + 10, kEdge);
             fr.fill(hx - 3, ty - 7, hx + 4, ty + kTrackH + 7, kLabel);
         }
-        // the chooser, over the column: a field per element in manifest order, the active one's marked by a square
+        // the chooser, over the column and the slider rows it runs down over (painted after them, so their fields,
+        // tracks and handles are under it): a field per element in manifest order, the active one's marked by a square
         if (chooser_) {
             const int y0 = oy + kChooserY, y1 = y0 + n * kChooserRowH;
             fr.fill(ox + kColX, y0, ox + kColX1, y1, kField);
@@ -1189,20 +1194,21 @@ void Picker::paint(cairo_surface_t* surf) {
     }
     text(cr, false, kWordPx, "Presets", ox + (kPresetsX + kColX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kNameY, kNameH), 1);
     if (!presets_) {
-        if (!chooser_) {
-            text(cr, true, kHexPx, hex_of(c.rgb), ox + kColX, oy + kPad + 150, 0);
-            text(cr, true, kNumPx, count_of(hist()), ox + (kBackX + kBtn + kFwdX) / 2.0,
-                 cap_baseline(cr, true, kNumPx, oy + kHistY, kBtn), 1);
-        } else {
-            for (int i = 0; i < n; ++i) {
-                const int ry = oy + kChooserY + i * kChooserRowH;
-                text(cr, false, kWordPx, ex_.elements[size_t(i)].name, ox + kColX + 60, cap_baseline(cr, false, kWordPx, ry, kChooserRowH), 0);
-            }
+        // THE CHOOSER IS PAINTED OVER EVERYTHING IT COVERS: its field and rules went over the panel's fills above, and
+        // the panel's words are clipped to outside it (the hex, the count, Old and New, a readout of a slider row it
+        // runs over), its own names then painted inside it
+        if (chooser_) {
+            cairo_save(cr);
+            cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+            cairo_rectangle(cr, 0, 0, fr.w, fr.h);
+            cairo_rectangle(cr, ox + kColX, oy + kChooserY, kColX1 - kColX, n * kChooserRowH);
+            cairo_clip(cr);
         }
-        if (!chooser_ || kChooserY + n * kChooserRowH < kSwatchY0 - 50) {   // the words the chooser does not cover
-            text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
-            text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
-        }
+        text(cr, true, kHexPx, hex_of(c.rgb), ox + kColX, oy + kPad + 150, 0);
+        text(cr, true, kNumPx, count_of(hist()), ox + (kBackX + kBtn + kFwdX) / 2.0,
+             cap_baseline(cr, true, kNumPx, oy + kHistY, kBtn), 1);
+        text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
+        text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
         text(cr, false, kWordPx, model_name(c.model), ox + kModelX0 + 18, cap_baseline(cr, false, kWordPx, oy + kModelY, kModelH), 0);
         if (models_)
             for (Model m : kAllModels) {
@@ -1215,6 +1221,13 @@ void Picker::paint(cairo_surface_t* surf) {
                 text(cr, false, kWordPx, row_name(c.model, i), ox + kLabelX + 18, cap_baseline(cr, false, kWordPx, ry, kRowH), 1);
             text(cr, true, kNumPx, row_readout(c, i), ox + kFieldX + kFieldW - kReadoutInset,
                  cap_baseline(cr, true, kNumPx, ry, kRowH), 2);
+        }
+        if (chooser_) {
+            cairo_restore(cr);
+            for (int i = 0; i < n; ++i) {
+                const int ry = oy + kChooserY + i * kChooserRowH;
+                text(cr, false, kWordPx, ex_.elements[size_t(i)].name, ox + kColX + 60, cap_baseline(cr, false, kWordPx, ry, kChooserRowH), 0);
+            }
         }
     } else {
         const int x0 = ox + kPopX0 + 24, vy0 = oy + kPopListY0, vy1 = oy + kPopY1;

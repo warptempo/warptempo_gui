@@ -14,10 +14,12 @@ imported either (architect 2026-10-04; build.py `preset_entries`, from `tools/pa
 the preset's chrome ground through the picker's chrome rule (`tools/palette/colour.py` `windows95_chrome`) applied
 here, at generation, THE LABEL AND THE FIELD TEXT the preset's `label` (the picker's Label element, architect
 2026-10-04: text is a pickable element, never a black / white switch or a contrast rule; white when the preset records
-none, as every preset saved before the Label round was painted), and the roles the picker shows fixed (the selected
-pair), so the entry's light level is exactly the chrome the picker painted; its dark level is levels.py's dark rule's
-(its label white); the preset's other elements are program keys, whose device-config lines `preset_keys.py` prints
-(the label is a theme role, so it prints nothing for it). A
+none, as every preset saved before the Label round was painted), and THE SELECTED PAIR the preset's `selected_fill`
+and `selected_text` (the picker's Selection and Selected Text, the open-flag round, architect 2026-10-04; #666666 under
+white when it records none, the picker's starting colours), so the entry's light level is exactly the chrome the
+picker painted; its dark level is levels.py's dark rule's (the selected fill darkened in proportion, its label and
+selected text white); the preset's other elements are program keys, whose device-config lines `preset_keys.py` prints
+(the label and the selected pair are theme roles, so it prints nothing for them). A
 standalone utility: no
 link path from any product target, no CMake, Python 3 + numpy (and `tools/palette/` for the crops).
 
@@ -114,7 +116,7 @@ Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts 
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
-| `warptempo` | `src/gui/render.h` at da0b1051 (git show); the architect's ruling of 2026-10-03 | `warptempo-2026-10-03`, the app's own look on the morning of 2026-10-03, so it stays selectable as bytes; `warptempo` (display name `warptempo`, all lowercase, his spelling), the app's default, CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (the app carries none), its dark level whatever levels.py's dark rule makes of them, untuned; `warptempo-preset-<n>` (display name `Warptempo Preset <n>`), one per preset the colour picker saved (`tools/palette/picker/presets/presets.json`, architect 2026-10-04), CHOSEN, NOT IMPORTED: the preset's chrome ground through the picker's chrome rule, the label and the field text the preset's Label (white when it records none), the selected pair #666666 / #FFFFFF as the picker shows it fixed, its dark level levels.py's dark rule's |
+| `warptempo` | `src/gui/render.h` at da0b1051 (git show); the architect's ruling of 2026-10-03 | `warptempo-2026-10-03`, the app's own look on the morning of 2026-10-03, so it stays selectable as bytes; `warptempo` (display name `warptempo`, all lowercase, his spelling), the app's default, CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (the app carries none), its dark level whatever levels.py's dark rule makes of them, untuned; `warptempo-preset-<n>` (display name `Warptempo Preset <n>`), one per preset the colour picker saved (`tools/palette/picker/presets/presets.json`, architect 2026-10-04), CHOSEN, NOT IMPORTED: the preset's chrome ground through the picker's chrome rule, the label and the field text the preset's Label (white when it records none), the selected pair the preset's Selection and Selected Text (#666666 / #FFFFFF when it records none), its dark level levels.py's dark rule's |
 
 Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 4 (with the two presets of
 2026-10-04) — 100 entries. A new copy of presets.json adds its new presets on the next run (a preset's number is never

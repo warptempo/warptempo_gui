@@ -412,35 +412,38 @@ def chosen_entry():
 # not a black / white switch and not automatic contrast -- the product imports each theme's recorded text colour and
 # has no contrast rule), else white, the picker's starting colour and the label every preset saved before the Label
 # round was painted under. THE FIELD TEXT IS THE LABEL TOO: the chrome rule makes the field ground the Hilight, a
-# ground-family colour, so its text is the label's case (the picker's theme states field_text "@label"). The roles the
-# picker shows fixed, as its theme (tools/palette/themes/picker.json) states them on 2026-10-04: the selected pair
-# #666666 under white (fixed until the picker's open-flag round). The theme's DARK row is levels.py's dark rule over
-# these bytes, whatever the label (its label white). The preset's other elements (the canvas, the ink, the flags, the
-# playhead) are program keys, not theme roles: tools/theme_catalog/preset_keys.py prints their device-config lines.
-# The entries follow presets.json: a new copy adds its new presets on the next run, and a preset's number is never
-# reused (the picker only appends). A colour key the preset names that is neither the chrome, the label nor a program
-# key is a hard fail: a newly pickable chrome role (the selected fill, at the open-flag round) changes what a preset's
-# theme is, which is a ruling, not a silent drop.
+# ground-family colour, so its text is the label's case (the picker's theme states field_text "@label"). THE SELECTED
+# PAIR the preset's `selected_fill` and `selected_text` when it records them (the picker's Selection and Selected Text,
+# the open-flag round, architect 2026-10-04), else #666666 under white, the picker's starting colours and the pair
+# every preset saved before that round was painted under. The theme's DARK row is levels.py's dark rule over these
+# bytes, whatever the preset picked (the selected fill darkened in proportion, the label and the selected text the
+# level's white). The preset's other elements (the canvas, the ink, the flags, the playhead) are program keys, not
+# theme roles: tools/theme_catalog/preset_keys.py prints their device-config lines. The entries follow presets.json: a
+# new copy adds its new presets on the next run, and a preset's number is never reused (the picker only appends). A
+# colour key the preset names that is neither the chrome, a theme role it picks (PRESET_THEME_KEYS) nor a program key
+# is a hard fail: a newly pickable chrome role changes what a preset's theme is, which is a ruling, not a silent drop.
 PRESETS = os.path.join(REPO, 'tools', 'palette', 'picker', 'presets', 'presets.json')
 PRESET_PREFIX = 'warptempo-preset-'
-# the label and the field text at a preset that records no label (the picker's Label at its starting colour)
+# the theme roles at a preset that records none of the picker's theme elements (each at its starting colour)
 PRESET_FIXED = {'label': '#FFFFFF', 'selected_fill': '#666666', 'selected_text': '#FFFFFF', 'field_text': '#FFFFFF'}
-PRESET_LABEL_ROLES = ('label', 'field_text')     # the roles a preset's `label` gives its colour
+# the picker's theme elements -> the roles each gives its colour (the label also the field text)
+PRESET_THEME_KEYS = {'label': ('label', 'field_text'), 'selected_fill': ('selected_fill',),
+                     'selected_text': ('selected_text',)}
 PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'unselected_flag', 'selected_flag', 'playhead_head', 'playhead_stem')
 
 
-def preset_fixed(label):
-    """PRESET_FIXED with the label and the field text the preset's label ('#RRGGBB')."""
-    return PRESET_FIXED | {r: label for r in PRESET_LABEL_ROLES}
+def preset_fixed(picked):
+    """PRESET_FIXED with each role a picked theme element ({key: '#RRGGBB'}, PRESET_THEME_KEYS) gives its colour."""
+    return PRESET_FIXED | {r: picked[k] for k, rs in PRESET_THEME_KEYS.items() if k in picked for r in rs}
 
 
-def preset_roles(ground, label=PRESET_FIXED['label']):
-    """A preset's chrome ground and label ('#RRGGBB') -> its catalog roles: the chrome rule's lines, the label and the
-    field text the label, and the picker's fixed roles."""
+def preset_roles(ground, picked={}):
+    """A preset's chrome ground and its picked theme elements ('#RRGGBB'; {key: hex}) -> its catalog roles: the chrome
+    rule's lines, the picked roles, and the picker's starting colours for the rest."""
     ch = {r: hx(c) for r, c in CL.windows95_chrome(unhex(ground)).items()}
     # levels.py's LIGHT row takes the emboss's light copy as the recorded Hilight; the chrome rule's is the same
     assert ch['emboss_hilight'] == ch['bevel_hilight'], ground
-    fixed = preset_fixed(label)
+    fixed = preset_fixed(picked)
     return {r: ch[r] if r in ch else fixed[r] for r in ROLES if r in ch or r in fixed}
 
 
@@ -452,26 +455,29 @@ def preset_entries():
     out = []
     for p in sorted(ps, key=lambda p: p['number']):
         n, cols = p['number'], p['colours']
-        bad = sorted(set(cols) - {'chrome', 'label'} - set(PRESET_PROGRAM_KEYS))
-        if bad: raise SystemExit(f'build: Preset {n} names {bad}, neither the chrome, the label nor a program key')
+        bad = sorted(set(cols) - {'chrome'} - set(PRESET_THEME_KEYS) - set(PRESET_PROGRAM_KEYS))
+        if bad: raise SystemExit(f'build: Preset {n} names {bad}, neither the chrome, a theme element nor a program key')
         ground = cols['chrome']
-        has_label = 'label' in cols
-        label = cols['label'] if has_label else PRESET_FIXED['label']
-        roles = preset_roles(ground, label)
-        raw = {'chrome': ground} | preset_fixed(label)
+        picked = {k: cols[k] for k in PRESET_THEME_KEYS if k in cols}
+        given = {r for k in picked for r in PRESET_THEME_KEYS[k]}
+        roles = preset_roles(ground, picked)
+        raw = {'chrome': ground} | preset_fixed(picked)
         record = (f'the chrome ground {ground}; the relief quartet, the field ground and the emboss\'s light '
                   f'copy the picker\'s chrome rule over it (tools/palette/colour.py windows95_chrome: Windows '
                   f'95\'s proportions, Hilight / 3DLight / Shadow the ground x 255 / 223 / 128 over 192 per '
                   f'channel, half to even, capped; DkShadow black; the field ground and the emboss the Hilight)')
-        if has_label: record += f'; the label {label}, the field text the label (the picker\'s Label element)'
+        if 'label' in picked: record += f'; the label {picked["label"]}, the field text the label (the picker\'s Label element)'
+        if 'selected_fill' in picked: record += f'; the selected fill {picked["selected_fill"]} (the picker\'s Selection)'
+        if 'selected_text' in picked:
+            record += f'; the selected text {picked["selected_text"]} (the picker\'s Selected Text)'
         e = {'key': f'{PRESET_PREFIX}{n}', 'name': f'Warptempo Preset {n}', 'family': 'warptempo',
              'provenance': {'sources': [
                  {'project': f'chosen, not imported: the architect\'s Preset {n} on the colour picker (architect 2026-10-04)',
                   'file': os.path.relpath(PRESETS, REPO), 'preset': n, 'saved': p['saved'],
-                  'keys': ['chrome', 'label'] if has_label else ['chrome'], 'record': record},
+                  'keys': ['chrome'] + list(picked), 'record': record},
                  {'project': 'the colour picker\'s theme, the roles it shows fixed (2026-10-04)',
                   'file': 'tools/palette/themes/picker.json',
-                  'keys': [r for r in PRESET_FIXED if not (has_label and r in PRESET_LABEL_ROLES)]}]},
+                  'keys': [r for r in PRESET_FIXED if r not in given]}]},
              'raw': raw, 'roles': roles, 'flag_rule': {'id': FLAG_RULE['warptempo']}}
         e['display_tier'] = display_tier(e['roles'])
         e['notes'] = [f'chosen by the architect on the colour picker, not imported from a desktop of the era: his '
@@ -533,10 +539,15 @@ def checks(entries, k):
     assert preset_roles('#191919') == CHOSEN_ROLES
     # a preset recording a label carries it into the label and the field text, and nothing else moves (a synthetic
     # preset: the neutral ground under a black label, the light variant a theme strip's #000000 makes)
-    assert preset_roles('#191919', '#000000') == CHOSEN_ROLES | {'label': '#000000', 'field_text': '#000000'}
+    assert preset_roles('#191919', {'label': '#000000'}) == CHOSEN_ROLES | {'label': '#000000', 'field_text': '#000000'}
+    # a preset recording the selected pair (the picker's Selection and Selected Text, architect 2026-10-04) carries it
+    # into its two roles alone (a synthetic preset: a Windows-blue selection under yellow text)
+    assert preset_roles('#191919', {'selected_fill': '#000080', 'selected_text': '#FFFF00'}) == \
+        CHOSEN_ROLES | {'selected_fill': '#000080', 'selected_text': '#FFFF00'}
     for e in entries:
         if e['key'].startswith(PRESET_PREFIX):
-            assert e['family'] == 'warptempo' and e['roles'] == preset_roles(e['raw']['chrome'], e['raw']['label']), e['key']
+            picked = {k: e['raw'][k] for k in PRESET_THEME_KEYS}
+            assert e['family'] == 'warptempo' and e['roles'] == preset_roles(e['raw']['chrome'], picked), e['key']
     app = by['warptempo-2026-10-03']
     for n, v in app['raw'].items(): assert v == hx(k[n]), n
     assert [app['roles'][x] for x in ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',

@@ -1,7 +1,7 @@
 # tools/palette/picker — Warptempo Picker, the colour picker over a true picture of the app
 
 A design tool for picking the app's colours (render.h's palette block: the chrome, the waveform's canvas and ink,
-the flags, the playhead, the chrome's text) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
+the flags, the playhead, the chrome's text, the selected pair) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
 exported by the mock tool. A separate APK, package
 `com.warptempo.picker`, label "Warptempo Picker", installed beside the product and never touching
 `com.warptempo.gui` or its files. NO LINK PATH TO OR FROM THE PRODUCT: nothing in `src/`, `android/app/` or
@@ -52,14 +52,20 @@ one picture (the menu words, the icons' text ink, the ruler's timestamps, the cl
 label, which would stay white beside it. Every role the theme's label roots follows it live — `label`, `legend`,
 `clock`, `ruler_label`, `icon_label`, `trim_arrow`, `playhead_head_border` (the export's inventory,
 tools/palette/README.md) — the antialiased edges re-blended over the chrome; the field text follows it too (the field
-ground is the Hilight, a ground-family colour, so its text is the label's case); the selected text stays fixed #FFFFFF
-(the open-flag round's, with the selected fill); every disabled word and glyph is the emboss, the chrome's. The label
-round added no app code: the theme's element and scene, a new export (`waveform`, `flags` and `playhead` byte for byte
-as before). THE CHOOSER'S HEIGHT: its eight entries end at panel y 716, above the slider rows at 720; a ninth (the
-check theme's Selection Test, and the next round's element) runs over the H row's right end, its readout painted over
-the ninth entry (the check's `frame_chooser_open.png`), so the next round brings the model list's rule to the chooser
-(a row's readout the chooser covers is not drawn). The round to come, again a new theme and export: the open flag with
-its selection (where the selected fill, fixed #666666 now, becomes pickable).
+ground is the Hilight, a ground-family colour, so its text is the label's case); the selected text is the Selected
+Text's (below); every disabled word and glyph is the emboss, the chrome's. The label round added no app code: the
+theme's element and scene, a new export (`waveform`, `flags` and `playhead` byte for byte as before). Then SELECTION
+and SELECTED TEXT (architect 2026-10-04: the theme's SELECTED PAIR, `selected_fill` and `selected_text`, Windows'
+Hilight / HilightText — render.h's mapping: every text field's selection band and selected substring, a dropdown's lit
+row, the open menu anchor — starting #666666 and #FFFFFF, the colours the app's `warptempo` theme records; the planner named the band
+"Selection", not "Selected Fill", so it does not read as the Selected Flag in the chooser), over the scene
+`open_flag` — the flags scene's stems and flags with NO flag selected and the FOURTH flag's EDITOR OPEN, its whole text
+selected, as he meets it (opening a flag's editor selects its whole text): the face the selected face (the Selected
+Flag's), the black frame (the flag editor's, the product's one named literal, fixed), the band the Selection under the
+glyphs in the Selected Text, their antialiased edges re-blended over the band, the stem the selected face. The open-flag
+round added the theme's elements and scene, a new export (`waveform`, `flags`, `playhead` and `label` byte for byte as
+before), and one fit in the app: THE CHOOSER now runs down over the slider rows (below), its ten entries ending at
+panel y 868. The round to come, again a new theme and export: the invalid flags.
 
 WHERE THE FLAGS SHOW: a tap on the right half opens the panel on the left (x 16..1136), leaving the flags at x 1343
 (unselected), 1816 (SELECTED) and 2289 (unselected, clipped at the window's edge) in view, the selected one and the
@@ -68,7 +74,11 @@ unselected flags at x 398 and 871 (only the first with the strip open). WHERE TH
 x 277..311 on the ruler lane's foot), left of the first flag, so the panel on the right (a tap on the LEFT half,
 x 1168..2288, its strip x 796..1156) leaves it in view; the panel on the left covers it. WHERE THE LABEL SHOWS: everywhere; the panel on
 the right (a tap on the left half) leaves the menu, the left half of the icon row, the ruler's first timestamps, the
-clock and the state line in view.
+clock and the state line in view. WHERE THE OPEN FLAG SHOWS: the fourth flag, x 1816, the flags scene's selected one
+(the flag he selects, then opens), in view with the panel on the LEFT (a tap on the right half) and its theme strip
+open (x 1148..1508); the panel on the right covers it. No flag stays in view on both halves (the two panels leave only
+x 1136..1168 between them uncovered), so the open flag is one the strip leaves in view too, on the side the flags
+round's selected flag is seen from (the first flag, x 398, is the only other a strip leaves in view).
 
 - A TAP on the picture opens the PANEL on the half of the screen opposite the tap, so the place tapped stays in view.
 - The panel (GTK's colour selector and GIMP's colour dialog, their common ground, no CMYK): the hue RING with
@@ -125,7 +135,12 @@ clock and the state line in view.
   the triangle and the model's tracks and − / + set the view directly. The bytes stay the colour's truth (what is
   painted, what the product takes); the view always gives them.
 - THE CHOOSER: a tap on the element's name (at the lift, as every panel control) opens a vertical list of the
-  elements in manifest order over the panel's right column, the active one marked by a white square. A tap on an
+  elements in manifest order over the panel's right column, the active one marked by a white square. ITS FIT
+  (2026-10-04: room for the elements to come, the invalid flags among them): its rows keep the pop-up's and the model list's 76 px and run down
+  from under the button (panel y 108) over the slider rows as far as the panel's pad, PAINTED OVER EVERYTHING THEY COVER
+  — the fields, tracks and handles go under its field, and the panel's words (the hex, the count, Old and New, a
+  readout) are clipped to outside it — so ten entries end at y 868, fourteen at 1172 and fifteen, the most, at 1248
+  (`panel::kChooserMax`; an export with more is refused at the launch with a message). A tap on an
   entry picks it and closes the chooser (a press on one entry lifted on another picks nothing and leaves it open); a
   tap anywhere outside the chooser closes it and changes nothing. CHOOSING ANOTHER ELEMENT IS THE CLOSE FOR THE ONE
   BEING LEFT (the history's rules, below in Use); choosing the active element again is a no-op.
@@ -266,8 +281,9 @@ LOAD segments, DT_NEEDED exactly libc / libdl / libm / libandroid / libnativewin
 
 The LAPTOP CHECK builds the portable core (`json`, `scene`, `fonts`, `picker`) with the host's g++, cairo and
 FreeType into `build/check/host_check`; `check_refs.py` exports `themes/picker.json` afresh (`build/check/scene/`) and
-THE CHECK THEME (`build/check/multi/`: the round's theme plus a Selection Test element, the selected fill, over a
-fifth scene with the flags and the first flag's editor open, its whole text selected), and renders their references with the mock tool's own code. It
+THE CHECK THEME (`build/check/multi/`: the round's theme plus test elements filling the chooser to fourteen entries —
+the icons' inks over the waveform scene, the invalid face over a scene of its own with two flags invalid), and renders
+their references with the mock tool's own code. It
 checks: every scene of both at the manifest's colours and at every colour set of `render.picker_check_sets` (each
 element moved, each other element to a probe colour of its own, the chrome to the tint #206048 whose 32 and 96 hit the rule's half-to-even ties and to the bright
 #E6D2B4 whose lines cap, all moved at once) equals the mock tool's render BYTE FOR BYTE, painted whole and reached by
@@ -288,22 +304,28 @@ committed and restored by a relaunch, BACK and FORWARD; an HSL pick met by BACK 
 triangle in LCh; a preset over three models restored exactly; a grey saved in HSV keeping its hue in HSL; the new
 forms' refusals); the readouts show one decimal rounded to nearest
 (247.27 -> 247.3, 0.4714 -> 47.1, 0.99999 -> 100.0) and the widest, measured in the mono face, fits its field; the scripted sessions on the active element (the panel,
-the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; a tap outside it closes it alone, writing
+the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; ITS FIT: fourteen entries inside the panel's
+pad and the screen, its rectangle the same picture at two colours while the hex, the swatch and the readouts, tracks
+and handles of the slider rows under it changed; a tap outside it closes it alone, writing
 nothing; a press lifted on another entry picks nothing; the active entry again is a no-op; the edited chrome
 committed by the switch to the Ink; the switch Ink -> Unselected Flag showing the flags scene with both faces, the
 chrome's tint and the ink's colour live in it, the unselected face repainting alone; the switches on to the Selected
-Flag and the Selection Test's scene, each committing the element left); THE PLAYHEAD (architect 2026-10-04: the panel
+Flag, the Selection's scene and the chooser's last entry, over the slider rows, each committing the element left); THE PLAYHEAD (architect 2026-10-04: the panel
 on the right, the playhead left of it; the switch to the Playhead Head showing the playhead scene, the head, its
 outline the Label's #FFFFFF and the stem at the manifest's colours, in the picture and the frame; the head repainting
 alone, its outline and the stem staying; its edit committed by the switch to the Playhead Stem; the stem repainting
 alone; its edit committed by the close; both kept by a relaunch with their views, every other element untouched);
 THE SWITCH'S PICTURE (the round's own export launched at the colours of its all-moved reference: the waveform scene,
 the switch Ink -> Unselected Flag and the switch back, and the switch Ink -> Playhead Head each equal the mock tool's
-render byte for byte, and the switch on to the Label the label scene's); THE LABEL (architect 2026-10-04: its role the
-element, the flag labels and the selected text fixed #FFFFFF; the panel on the right, the switch to the Label showing
+render byte for byte, the switch on to the Label the label scene's and on to the Selection the open_flag scene's); THE
+LABEL (architect 2026-10-04: its role the element, the flag labels fixed #FFFFFF; the panel on the right, the switch to the Label showing
 the label scene, a word's solid pixel repainting and the antialiased edges re-blending over the chrome at one byte's
 move; committed by the close and kept by a relaunch; the playhead head's outline then the new label, the flag labels
-still white); every element's history, cursor and view independent across switches and relaunches, and the element he
+still white); THE OPEN FLAG (the open-flag round, architect 2026-10-04; both roles their elements, the editor's frame fixed black; the panel
+on the left, the open flag right of it and of the strip's column; the switch to the Selection showing the open_flag
+scene, the band repainting and the selected text's antialiased edges re-blending over it, the text, the face and the
+frame staying; committed by the switch to the Selected Text, whose glyphs and edges then repaint, the band staying;
+committed by the close; both kept by a relaunch with their views, every other element untouched); every element's history, cursor and view independent across switches and relaunches, and the element he
 left returned to; today's `picks.txt` (58 ink lines, 15 of the first build's form and 43 with a view, the last
 #A6B9DE) and `state.json` (`{"colours": {"ink": "#A6B9DE"}, "entry": {"ink": 58}}`) loading unchanged; THE PRESETS
 (the export's themes, their count the data's, the program's own family last with its presets after `warptempo`; two
@@ -311,28 +333,28 @@ saves named Preset 1 and Preset 2, the edited panel colour committed by the pop-
 opening; a load giving each changed element one pick and an unchanged one none, OLD the loaded colour, BACK returning;
 a relaunch keeping the presets and their views; a drag that scrolls and acts on nothing; a tap outside that changes
 nothing; a malformed `presets.json` refused; a three-element preset, saved before the flags round, loading and
-committing the chrome, canvas and ink while both flags, both playhead elements and the Label stay as they were, no
-pick for any); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
+committing the chrome, canvas and ink while both flags, both playhead elements, the Label and the selected pair stay
+as they were, no pick for any); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
 the chrome as an edit giving its own quartet #FFFFFF / #DFDFDF / #808080 / #000000 exactly, OLD reverting it, the
 switch to the canvas committing it with the strip still open, another swatch adopted into the canvas, the strip
 surviving a relaunch; Brick's ground giving the rule's lines and not its own; CDE Alpine's strip scrolled by a drag
 that adopts nothing; the close control, `state.json` never holding an unsaved adoption); THE TABLET'S FILES OF
 2026-10-04 (`check_data/tablet_2026-10-04/`: 110 `picks.txt` lines over three elements and its `state.json`) loading
-unchanged, every view exact, HSV shown, the flags, the playhead and the Label at the manifest's colours with empty histories, and
+unchanged, every view exact, HSV shown, the flags, the playhead, the Label and the selected pair at the manifest's colours with empty histories, and
 a preset saved and loaded over them appending nothing; the repository's `presets/presets.json` reading unchanged;
 those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 136 lines, the ink active, chrome 12
 of 12, canvas 34 of 34, ink 90 of 90) loading unchanged the same way; THE REPOSITORY'S COPY OF THE TABLET'S FILES
 (`presets/`'s `picks.txt`, `state.json` and `presets.json`, whatever the latest copy holds; architect 2026-10-04, the
 playhead round's install) loading over the round's own export: every element `state.json` names at its colour, its
-model, active element and open theme, every element the files never name (the playhead's two, the Label) at the manifest's
+model, active element and open theme, every element the files never name (the playhead's two, the Label, the selected pair) at the manifest's
 colour with an empty history, and each of his presets loaded over them setting the elements it names and leaving
 every other as it was, with no pick; and THE PER-FRAME COST
 of a pen drag on the ink, the chrome and the unselected flag, and on the chrome's h track in LCh (printed). Its frames are written as PNGs in
 `build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`,
 `frame_{unselected,selected}_flag_open.png` (the flags scene, the panel on the left),
 `frame_playhead_{head,stem}_open.png` (the playhead scene, the panel on the right), `frame_label_open.png` (the label
-scene, the panel on the right), `frame_selection_test_open.png`,
-`frame_switch_flags_moved.png`,
+scene, the panel on the right), `frame_selection_open.png` and `frame_selected_text_open.png` (the open_flag scene, the
+panel on the left), `frame_selection_switch_open.png`, `frame_switch_flags_moved.png`, `frame_switch_open_flag_moved.png`,
 the history's `frame_history_*.png`, `frame_presets_open.png`, `frame_presets_themes.png` (the pop-up scrolled into
 the themes), `frame_strip_{open,adopted,scrolled}.png`, `frame_model_list_open.png`, `frame_model_hsl_open.png` and
 `frame_model_lch_open.png` (the C track's out-of-gamut stretch and h's).

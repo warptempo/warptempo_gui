@@ -18,23 +18,29 @@
 //     independent reference (HSL by colorsys, LCh by numpy over Display-P3) to 1e-9;
 //   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas and Ink over the scene
 //     waveform, Unselected Flag and Selected Flag over the scene flags, Playhead Head and Playhead Stem over the scene
-//     playhead, the Label over the scene label, a Selection Test over a fifth scene with the first flag's editor open)
-//     and its active element (the chrome): the panel, the pick history, the HSV he dialled; then THE CHOOSER (open, a
-//     tap outside it, the no-op re-choice, the edited-then-switch commit, the switches of scene Ink -> Unselected
-//     Flag -> Selected Flag -> Selection Test), every element's history, cursor and view independent across a switch and a relaunch, and
-//     today's picks.txt (58 ink lines, the old form and the new) and state.json loading unchanged; THE PLAYHEAD
-//     (architect 2026-10-04: the panel on the right, the head and the stem each repainting alone, the head's outline
-//     the Label's, each committed by the switch or the close and kept by a relaunch); THE LABEL (architect 2026-10-04:
-//     the chrome's text colour over the scene label, its role the element, the flag labels and the selected text fixed;
-//     its words repainting and their antialiased edges re-blending, committed by the close, kept by a relaunch);
+//     playhead, the Label over the scene label, Selection and Selected Text over the scene open_flag, then test
+//     elements filling the chooser to fourteen entries, the last over a scene of its own) and its active element (the
+//     chrome): the panel, the pick history, the HSV he dialled; then THE CHOOSER (open, its fit -- fourteen entries
+//     inside the panel and the screen, painted over the slider rows it covers, the same picture at two colours -- a tap
+//     outside it, the no-op re-choice, the edited-then-switch commit, the switches of scene Ink -> Unselected Flag ->
+//     Selected Flag -> Selection -> the last entry, over the slider rows), every element's history, cursor and view
+//     independent across a switch and a relaunch, and today's picks.txt (58 ink lines, the old form and the new) and
+//     state.json loading unchanged; THE PLAYHEAD (architect 2026-10-04: the panel on the right, the head and the stem
+//     each repainting alone, the head's outline the Label's, each committed by the switch or the close and kept by a
+//     relaunch); THE LABEL (architect 2026-10-04: the chrome's text colour over the scene label, its role the element,
+//     the flag labels fixed; its words repainting and their antialiased edges re-blending, committed by the close, kept
+//     by a relaunch); THE OPEN FLAG (architect 2026-10-04: the selected pair over the scene open_flag, the panel on the
+//     left, the band and the glyphs each repainting alone with the antialiased edges re-blending, the face and the
+//     editor's black frame staying, each committed by the switch or the close and kept by a relaunch);
 //   - THE SWITCH'S PICTURE on the round's own export (the one labelled "scene"): launched with every element at the
 //     colours of its "all moved" reference, the waveform scene and, after the chooser's switch Ink -> Unselected Flag,
 //     the flags scene equal the mock tool's renders byte for byte, the switch back the waveform's again, and the
-//     switch Ink -> Playhead Head the playhead scene's, then the switch on to the Label the label scene's;
+//     switch Ink -> Playhead Head the playhead scene's, then the switch on to the Label the label scene's and on to the
+//     Selection the open_flag scene's;
 //   - THE PRESETS (two saves, the edited colour committed by the pop-up's opening; a load committing each changed
 //     element once and an unchanged one never, BACK returning; a relaunch; a scroll and a tap outside that act on
-//     nothing; a preset saved before the flags round, three elements, loading and leaving the flags, the playhead and
-//     the Label as they are) and
+//     nothing; a preset saved before the flags round, three elements, loading and leaving the flags, the playhead, the
+//     Label and the selected pair as they are) and
 //     THE THEME STRIP (opened from the pop-up, swatches adopted as edits into the chrome and, after a
 //     switch, the canvas, OLD reverting, the strip surviving the switch and a relaunch, Windows 95 Standard's quartet
 //     and a tinted theme's rule lines, its own scroll, the close control) on the first export;
@@ -43,12 +49,12 @@
 //     ring and the triangle in both, the gamut stop on a C drag and an h drag, the out-of-gamut stretch's neutral, the
 //     new forms' refusals;
 //   - --today <dir>: the tablet's picks.txt and state.json of 2026-10-04 (morning) load unchanged; --late <dir>: those
-//     of the presets build's install (136 lines) too, the flags, the playhead and the Label at the manifest's colours
-//     with empty histories, HSV shown; --presets: the repository's presets.json reads; --kept <dir>: the repository's
-//     copy of the tablet's files (picks.txt, state.json, presets.json) loads over the round's own export, every
-//     element they name at state.json's colour, every element they never name (the playhead's two and the Label,
-//     architect 2026-10-04) at the manifest's with an empty history, and each preset loaded leaves the elements it
-//     does not name as they were, with no pick;
+//     of the presets build's install (136 lines) too, the flags, the playhead, the Label and the selected pair at the
+//     manifest's colours with empty histories, HSV shown; --presets: the repository's presets.json reads; --kept <dir>:
+//     the repository's copy of the tablet's files (picks.txt, state.json, presets.json) loads over the round's own
+//     export, every element they name at state.json's colour, every element they never name (the playhead's two, the
+//     Label and the selected pair, architect 2026-10-04) at the manifest's with an empty history, and each preset
+//     loaded leaves the elements it does not name as they were, with no pick;
 //   - THE PER-FRAME COST of a pen drag (R's track) on the ink, the chrome and the unselected flag, and of LCh's h track
 //     on the chrome: the live repaint and the frame;
 //   - frames as PNGs in the work dir for the eye.
@@ -473,7 +479,9 @@ int main(int argc, char** argv) {
     const int ink = element_of(ex, "ink"), chrome = element_of(ex, "chrome"), canvas = element_of(ex, "canvas"),
               uflag = element_of(ex, "unselected_flag"), sflag = element_of(ex, "selected_flag"),
               phead = element_of(ex, "playhead_head"), pstem = element_of(ex, "playhead_stem"),
-              lbl = element_of(ex, "label"), seltest = element_of(ex, "selection_test");
+              lbl = element_of(ex, "label"), selfill = element_of(ex, "selected_fill"),
+              seltext = element_of(ex, "selected_text");
+    const int last = int(ex.elements.size()) - 1;   // the chooser's last entry (a check test element, over the slider rows)
     auto launch = [&]() {
         Export e = ex;
         Launch l;
@@ -760,16 +768,18 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------- THE CHOOSER
     const auto scene_el = [&](int e) { return ex.elements[size_t(e)].scene; };
     const bool nine = chrome == act0 && chrome == 0 && canvas == 1 && ink == 2 && uflag == 3 && sflag == 4 && phead == 5 &&
-                      pstem == 6 && lbl == 7 && seltest == 8 && scene_el(uflag) == scene_el(sflag) &&
-                      scene_el(phead) == scene_el(pstem) && scene_el(uflag) != scene_el(chrome) &&
+                      pstem == 6 && lbl == 7 && selfill == 8 && seltext == 9 && last >= 13 &&
+                      scene_el(uflag) == scene_el(sflag) && scene_el(phead) == scene_el(pstem) &&
+                      scene_el(selfill) == scene_el(seltext) && scene_el(uflag) != scene_el(chrome) &&
                       scene_el(phead) != scene_el(chrome) && scene_el(phead) != scene_el(uflag) &&
                       scene_el(lbl) != scene_el(chrome) && scene_el(lbl) != scene_el(uflag) && scene_el(lbl) != scene_el(phead) &&
-                      scene_el(seltest) != scene_el(uflag) && scene_el(seltest) != scene_el(chrome) &&
-                      scene_el(seltest) != scene_el(phead) && scene_el(seltest) != scene_el(lbl);
+                      scene_el(selfill) != scene_el(uflag) && scene_el(selfill) != scene_el(chrome) &&
+                      scene_el(selfill) != scene_el(phead) && scene_el(selfill) != scene_el(lbl) &&
+                      scene_el(last) != scene_el(selfill) && scene_el(last) != scene_el(uflag);
     if (!nine) {
         check(false, "the check export lists Chrome (active), Canvas, Ink over one scene, Unselected Flag and Selected Flag "
-                     "over a second, Playhead Head and Playhead Stem over a third, the Label over a fourth and a Selection "
-                     "Test over a fifth");
+                     "over a second, Playhead Head and Playhead Stem over a third, the Label over a fourth, Selection and "
+                     "Selected Text over a fifth, and test elements to fourteen entries, the last over a scene of its own");
     } else {
         fresh();
         const Rgb chrome0 = ex.elements[size_t(chrome)].colour, ink0 = ex.elements[size_t(ink)].colour,
@@ -777,11 +787,32 @@ int main(int argc, char** argv) {
         const Rgb tint{0x20, 0x60, 0x48};
         Picker p = launch();
         tap(p, 1700, 700);
+        // THE CHOOSER'S FIT (2026-10-04, room for the elements to come): the rectangle it covers, read from the frame with the chooser closed
+        // and open, here and again at another colour below (every readout, handle and swatch moved): open, it is the same
+        // picture both times, so nothing under it shows through
+        const int n_el = int(ex.elements.size()), cy0 = kChooserY, cy1 = kChooserY + n_el * kChooserRowH;
+        auto chooser_px = [&](Picker& q) {
+            q.paint(frame);
+            std::vector<uint32_t> v;
+            for (int y = int(ppy) + cy0; y < int(ppy) + cy1; ++y)
+                for (int x = int(ppx) + kColX; x < int(ppx) + kColX1; ++x) v.push_back(frame_word(frame, long(y) * W + x, W));
+            return v;
+        };
+        const std::vector<uint32_t> closed0 = chooser_px(p);
         tap(p, name_x, name_y);
         check(p.chooser_open() && p.open(), "a tap on the element's name opens the chooser (Chrome, Canvas, Ink, Unselected "
                                             "Flag, Selected Flag, ...)");
-        p.paint(frame);
+        const std::vector<uint32_t> open0 = chooser_px(p);
         png(frame, work + "/frame_chooser_open.png");
+        {
+            char fit[320];
+            std::snprintf(fit, sizeof fit, "the chooser's %d entries fit: panel y %d..%d (window %d..%d), inside the panel's "
+                          "pad (%d) and the screen (%d); %d entries would fit (y ..%d)", n_el, cy0, cy1, int(ppy) + cy0,
+                          int(ppy) + cy1, kH - kPad, ex.height, kChooserMax, kChooserY + kChooserMax * kChooserRowH);
+            check(n_el >= 14 && n_el <= kChooserMax && cy1 <= kH - kPad && int(ppy) + cy1 <= ex.height, fit);
+            std::printf("     the chooser at 10 entries: panel y %d..%d, at 14: %d..%d (the slider rows from %d)\n", cy0,
+                        kChooserY + 10 * kChooserRowH, cy0, kChooserY + 14 * kChooserRowH, row_y(0));
+        }
         tap(p, ppx + 200, ppy + 900);                 // inside the panel, outside the chooser
         check(!p.chooser_open() && p.open() && p.active() == chrome && !std::ifstream(work + "/state.json"),
               "a tap outside the chooser closes it and changes nothing (the panel open, no file written)");
@@ -800,6 +831,18 @@ int main(int argc, char** argv) {
         track(p, 4, tint.g / 255.0);
         track(p, 5, tint.b / 255.0);
         check(p.colour().rgb == tint, "the chrome dialled to #206048 by its tracks");
+        {
+            const std::vector<uint32_t> closed1 = chooser_px(p);
+            tap(p, name_x, name_y);
+            const std::vector<uint32_t> open1 = chooser_px(p);
+            size_t under = 0;
+            for (size_t k = 0; k < closed0.size(); ++k) under += closed0[k] != closed1[k];
+            check(p.chooser_open() && open1 == open0 && under > 0,
+                  "the chooser is painted over everything it covers: at #206048 its " + std::to_string(open0.size()) +
+                      " px are the same picture as before, while " + std::to_string(under) + " px under it (the hex, the "
+                      "swatch, the readouts, tracks and handles of the slider rows it runs over) changed");
+            tap(p, ppx + 200, ppy + 300);             // outside the chooser (the wheel): it closes alone
+        }
         p.paint(frame);
         png(frame, work + "/frame_chrome_tint_open.png");
         {
@@ -866,37 +909,47 @@ int main(int argc, char** argv) {
                   ", 0 of 0)");
         p.paint(frame);
         png(frame, work + "/frame_selected_flag_open.png");
-        // the switch to the Selection Test: a third scene (the first flag's editor open); the selected face's empty
-        // history commits it
+        // the switch to the Selection: a third scene (the open flag); the selected face's empty history commits it
         tap(p, name_x, name_y);
-        row_tap(p, seltest);
-        const int esc = p.exp().elements[size_t(seltest)].scene;
-        const long ke = element_pixel(p.exp(), esc, seltest, -1);
-        check(p.active() == seltest && lines_of(work + "/picks.txt") == 4 && ke >= 0 &&
-                  p.picture()[size_t(ke)] == word_of(ex.elements[size_t(seltest)].colour),
-              "the switch to the Selection Test (the selected face committed, as an empty history's close): its scene");
+        row_tap(p, selfill);
+        const int esc = p.exp().elements[size_t(selfill)].scene;
+        const long ke = element_pixel(p.exp(), esc, selfill, -1);
+        check(p.active() == selfill && lines_of(work + "/picks.txt") == 4 && ke >= 0 &&
+                  p.picture()[size_t(ke)] == word_of(ex.elements[size_t(selfill)].colour),
+              "the switch to the Selection (the selected face committed, as an empty history's close): its scene");
         plus(p, 4);                                   // the band moves: the selected text's edges re-blend over it
         p.paint(frame);
-        png(frame, work + "/frame_selection_test_open.png");
+        png(frame, work + "/frame_selection_switch_open.png");
+        // the chooser's LAST entry, over the slider rows: picked by a tap there, its scene of its own; the Selection
+        // committed
+        tap(p, name_x, name_y);
+        row_tap(p, last);
+        const long kt = element_pixel(p.exp(), scene_el(last), last, -1);
+        check(p.active() == last && !p.chooser_open() && lines_of(work + "/picks.txt") == 5 && kt >= 0 &&
+                  p.picture()[size_t(kt)] == word_of(ex.elements[size_t(last)].colour) &&
+                  slurp(work + "/picks.txt").find(" selected_fill " + hex_of(p.element(selfill).cs.rgb) + " hsv ") != std::string::npos,
+              "a tap on the chooser's last entry (" + ex.elements[size_t(last)].name + ", panel y " +
+                  std::to_string(kChooserY + last * kChooserRowH) + ".." + std::to_string(kChooserY + (last + 1) * kChooserRowH) +
+                  ", over the slider rows) picks it: its scene; the edited Selection committed");
         tap(p, name_x, name_y);
         row_tap(p, chrome);
-        check(p.active() == chrome && lines_of(work + "/picks.txt") == 5 && count(p) == "1 of 1" && p.colour().rgb == tint,
+        check(p.active() == chrome && lines_of(work + "/picks.txt") == 6 && count(p) == "1 of 1" && p.colour().rgb == tint,
               "the switch back to the chrome: its own history (1 of 1), its tint");
         tap(p, 2200, 1300);
-        check(!p.open() && lines_of(work + "/picks.txt") == 5, "an unedited chrome's close appends nothing");
+        check(!p.open() && lines_of(work + "/picks.txt") == 6, "an unedited chrome's close appends nothing");
         p.paint(frame);
         png(frame, work + "/frame_chrome_tint.png");
         // a relaunch: the element he left, every element's colour, history and view
         Picker r = launch();
         bool hists = r.element(canvas).hist.cursor == -1;
-        for (int e : {chrome, ink, uflag, sflag, seltest}) hists = hists && r.element(e).hist.picks.size() == 1;
+        for (int e : {chrome, ink, uflag, sflag, selfill, last}) hists = hists && r.element(e).hist.picks.size() == 1;
         check(r.active() == chrome && r.colour().rgb == tint && r.element(ink).cs.rgb == ink1 &&
                   r.element(canvas).cs.rgb == ex.elements[size_t(canvas)].colour && r.element(uflag).cs.rgb == uf1 &&
-                  r.element(sflag).cs.rgb == sf0 && r.element(seltest).cs.rgb == p.element(seltest).cs.rgb && hists,
+                  r.element(sflag).cs.rgb == sf0 && r.element(selfill).cs.rgb == p.element(selfill).cs.rgb && hists,
               "a relaunch returns to the element he left, every element's colour and history its own");
         check(same_view(r.element(chrome).cs, p.element(chrome).cs) && same_view(r.element(ink).cs, p.element(ink).cs) &&
                   same_view(r.element(uflag).cs, p.element(uflag).cs) && same_view(r.element(sflag).cs, p.element(sflag).cs) &&
-                  same_view(r.element(seltest).cs, p.element(seltest).cs), "and every element's view exactly as it was");
+                  same_view(r.element(selfill).cs, p.element(selfill).cs), "and every element's view exactly as it was");
         // histories and cursors independent across a switch
         tap(r, 1700, 700);
         tap(r, name_x, name_y);
@@ -910,12 +963,13 @@ int main(int argc, char** argv) {
         check(r.active() == ink && count(r) == "1 of 2" && r.colour().rgb == ink1, "the ink's own history: BACK to 1 of 2");
         tap(r, name_x, name_y);
         row_tap(r, chrome);                           // a stepped ink is no edit: nothing appended
-        check(count(r) == "1 of 1" && r.element(ink).hist.cursor == 0 && lines_of(work + "/picks.txt") == 6,
+        check(count(r) == "1 of 1" && r.element(ink).hist.cursor == 0 && lines_of(work + "/picks.txt") == 7,
               "the chrome's cursor and the ink's are their own across the switch (a stepped ink switched away appends nothing)");
         Picker r2 = launch();
         check(r2.active() == chrome && r2.element(ink).hist.cursor == 0 && r2.element(ink).cs.rgb == ink1 &&
                   r2.element(chrome).hist.cursor == 0 && r2.element(uflag).hist.cursor == 0 &&
-                  r2.element(sflag).hist.cursor == 0 && r2.element(seltest).hist.cursor == 0, "and across a relaunch");
+                  r2.element(sflag).hist.cursor == 0 && r2.element(selfill).hist.cursor == 0 &&
+                  r2.element(last).hist.cursor == 0, "and across a relaunch");
         std::remove((work + "/state.json").c_str());
         Picker r3 = launch();
         check(r3.active() == chrome && r3.colour().rgb == chrome0 && r3.element(chrome).hist.cursor == 0 && r3.edited() &&
@@ -992,7 +1046,8 @@ int main(int argc, char** argv) {
     // the chrome's text colour, one element over its own scene (the waveform scene with row 8's state line on), the
     // panel on the right so the menu, the clock and the state line stay in view. Every role the theme's label roots
     // follows it (the words, the clock, the ruler's timestamps, the icons' text ink, the scroll arrow, the playhead
-    // head's outline); the flag labels and the selected text are program keys of their own and stay fixed. Its edit
+    // head's outline); the flag labels are program keys of their own and stay fixed, the selected text the Selected
+    // Text element's (the open-flag round). Its edit
     // repaints the solid word pixels and re-blends the antialiased edges over the chrome; committed by the close, kept
     // by a relaunch
     if (nine) {
@@ -1004,13 +1059,14 @@ int main(int argc, char** argv) {
         std::string follow;
         for (const Role& R : ex.roles) {
             if (R.name == "label") roles_ok = roles_ok && R.kind == Role::Kind::Element && R.el == lbl;
-            if (R.name == "flag_label" || R.name == "flag_label_sel" || R.name == "selected_text")
+            if (R.name == "flag_label" || R.name == "flag_label_sel")
                 roles_ok = roles_ok && R.kind == Role::Kind::Colour && R.rgb == (Rgb{0xFF, 0xFF, 0xFF});
+            if (R.name == "selected_text") roles_ok = roles_ok && R.kind == Role::Kind::Element && R.el == seltext;
             if (R.kind == Role::Kind::Element && R.el == lbl) follow += " " + R.name;
         }
         check(roles_ok && lb0 == (Rgb{0xFF, 0xFF, 0xFF}),
               "the Label starts #FFFFFF and its role is the element (the export's role:" + follow + "); the flag labels "
-              "and the selected text stay fixed #FFFFFF");
+              "stay fixed #FFFFFF, the selected text is the Selected Text's");
         Picker p = launch();
         tap(p, 600, 700);
         tap(p, rname_x, name_y);
@@ -1054,6 +1110,104 @@ int main(int argc, char** argv) {
                     if (run.len) { flag_white = r.picture()[run.start] == word_of(Rgb{0xFF, 0xFF, 0xFF}); break; }
         check(kh >= 0 && kf >= 0 && r.picture()[size_t(kh - W)] == word_of(lb1) && flag_white,
               "in the playhead scene the head's outline is the Label's " + hex_of(lb1) + "; the flag labels stay #FFFFFF");
+        fresh();
+    }
+
+    // ---------------------------------------------------------------- THE OPEN FLAG (architect 2026-10-04)
+    // the selected pair, Selection and Selected Text, over their own scene: the fourth flag's editor open, its whole
+    // text selected (the editor opens so), the panel on the left so the open flag stays in view, the theme strip's
+    // column too. The Selection repaints the band and re-blends the selected text's antialiased edges over it, the text
+    // staying; the Selected Text repaints its glyphs and their edges, the band staying; the flag's face (the Selected
+    // Flag's) and the editor's black frame stay; each committed by the switch away or the close, both kept by a relaunch
+    if (nine) {
+        fresh();
+        const Rgb sl0 = ex.elements[size_t(selfill)].colour, st0 = ex.elements[size_t(seltext)].colour,
+                  sf0 = ex.elements[size_t(sflag)].colour;
+        bool roles_ok = true;
+        for (const Role& R : ex.roles) {
+            if (R.name == "selected_fill") roles_ok = roles_ok && R.kind == Role::Kind::Element && R.el == selfill;
+            if (R.name == "selected_text") roles_ok = roles_ok && R.kind == Role::Kind::Element && R.el == seltext;
+            if (R.name == "flag_border_edit") roles_ok = roles_ok && R.kind == Role::Kind::Colour && R.rgb == (Rgb{0, 0, 0});
+        }
+        check(roles_ok && sl0 == (Rgb{0x66, 0x66, 0x66}) && st0 == (Rgb{0xFF, 0xFF, 0xFF}),
+              "the Selection starts #666666 and the Selected Text #FFFFFF, each role its element; the editor's frame "
+              "fixed #000000");
+        const int view_x = kMargin + kW + kStripGap + kStripW;   // right of the panel on the left and its strip
+        Picker p = launch();
+        tap(p, 1700, 700);
+        tap(p, name_x, name_y);
+        row_tap(p, selfill);                          // the chrome left: its empty history commits it (one line)
+        const int osc = scene_el(selfill);
+        const Scene& sc = p.exp().scenes[size_t(osc)];
+        const long kb = element_pixel(p.exp(), osc, selfill, view_x), kt = element_pixel(p.exp(), osc, seltext, view_x),
+                   kf = element_pixel(p.exp(), osc, sflag, view_x);
+        long kframe = -1;                             // the editor's frame
+        for (size_t q = 0; q < p.exp().roles.size() && kframe < 0; ++q)
+            if (p.exp().roles[q].name == "flag_border_edit")
+                for (const Run& run : sc.solid[q])
+                    if (run.len && int(run.start % uint32_t(W)) > view_x) { kframe = long(run.start); break; }
+        auto edges = [&](int e) {                     // the antialiased pixels reading e, in view
+            std::vector<std::pair<uint32_t, uint32_t>> v;
+            for (const Stack& st : sc.stacks)
+                if ((st.deps & (1u << e)) && int(st.index % uint32_t(W)) > view_x) v.push_back({st.index, p.picture()[st.index]});
+            return v;
+        };
+        const auto band_aa = edges(selfill), text_aa = edges(seltext);
+        p.paint(frame);
+        check(p.open() && !p.panel_on_right() && p.active() == selfill && count(p) == "0 of 0" && kb >= 0 && kt >= 0 &&
+                  kf >= 0 && kframe >= 0 && !band_aa.empty() && !text_aa.empty() && p.picture()[size_t(kb)] == word_of(sl0) &&
+                  p.picture()[size_t(kt)] == word_of(st0) && p.picture()[size_t(kf)] == word_of(sf0) &&
+                  p.picture()[size_t(kframe)] == word_of(Rgb{0, 0, 0}) && frame_word(frame, kb, W) == word_of(sl0) &&
+                  frame_word(frame, kt, W) == word_of(st0),
+              "the switch to the Selection shows the open flag right of the panel and the strip's column (x > " +
+                  std::to_string(view_x) + "): the band " + hex_of(sl0) + ", the text " + hex_of(st0) + " (" +
+                  std::to_string(text_aa.size()) + " antialiased px over the band), the face " + hex_of(sf0) +
+                  ", the frame black");
+        plus(p, 4);                                   // the band moves: its text's edges re-blend over it
+        const Rgb sl1 = p.colour().rgb;
+        size_t moved = 0;
+        for (const auto& [k, w] : band_aa) moved += p.picture()[k] != w;
+        check(sl1 != sl0 && p.picture()[size_t(kb)] == word_of(sl1) && p.picture()[size_t(kt)] == word_of(st0) &&
+                  p.picture()[size_t(kf)] == word_of(sf0) && p.picture()[size_t(kframe)] == word_of(Rgb{0, 0, 0}) && moved > 0,
+              "the Selection repaints live: the band " + hex_of(sl1) + ", " + std::to_string(moved) + " of " +
+                  std::to_string(band_aa.size()) + " antialiased edges re-blended; the text, the face and the frame stay");
+        p.paint(frame);
+        png(frame, work + "/frame_selection_open.png");
+        tap(p, name_x, name_y);
+        row_tap(p, seltext);
+        check(p.active() == seltext && lines_of(work + "/picks.txt") == 2 &&
+                  slurp(work + "/picks.txt").find(" selected_fill " + hex_of(sl1) + " hsv ") != std::string::npos &&
+                  p.colour().rgb == st0 && count(p) == "0 of 0" && p.picture()[size_t(kb)] == word_of(sl1),
+              "the edited Selection is committed by the switch to the Selected Text (" + hex_of(st0) + ", 0 of 0)");
+        const auto text_aa1 = edges(seltext);
+        minus(p, 3);                                  // R one byte down: the glyphs and their edges follow
+        const Rgb st1 = p.colour().rgb;
+        size_t tmoved = 0;
+        for (const auto& [k, w] : text_aa1) tmoved += p.picture()[k] != w;
+        check(st1 == (Rgb{0xFE, 0xFF, 0xFF}) && p.picture()[size_t(kt)] == word_of(st1) &&
+                  p.picture()[size_t(kb)] == word_of(sl1) && p.picture()[size_t(kf)] == word_of(sf0) && tmoved > 0,
+              "the Selected Text repaints live: the glyphs " + hex_of(st1) + ", " + std::to_string(tmoved) + " of " +
+                  std::to_string(text_aa1.size()) + " antialiased edges re-blended (the rest round to the same byte); the "
+                  "band and the face stay");
+        p.paint(frame);
+        png(frame, work + "/frame_selected_text_open.png");
+        tap(p, 1700, 700);                            // outside the panel: the close commits the Selected Text
+        check(!p.open() && lines_of(work + "/picks.txt") == 3 &&
+                  slurp(work + "/picks.txt").find(" selected_text " + hex_of(st1) + " hsv ") != std::string::npos,
+              "the close commits the edited Selected Text");
+        Picker r = launch();
+        bool others = true;
+        for (int e = 0; e < int(r.exp().elements.size()); ++e)
+            if (e != selfill && e != seltext)
+                others = others && r.element(e).cs.rgb == ex.elements[size_t(e)].colour &&
+                         r.element(e).hist.picks.size() == (e == chrome ? 1u : 0u);
+        check(r.active() == seltext && r.element(selfill).cs.rgb == sl1 && r.element(seltext).cs.rgb == st1 &&
+                  r.element(selfill).hist.picks.size() == 1 && r.element(seltext).hist.picks.size() == 1 && others &&
+                  same_view(r.element(selfill).cs, p.element(selfill).cs) &&
+                  same_view(r.element(seltext).cs, p.element(seltext).cs) && r.picture()[size_t(kb)] == word_of(sl1) &&
+                  r.picture()[size_t(kt)] == word_of(st1),
+              "a relaunch keeps both, each with its own history (1 of 1) and view, the open flag at them; every other "
+              "element at the manifest's colour");
         fresh();
     }
 
@@ -1156,8 +1310,8 @@ int main(int argc, char** argv) {
                   same_view(p.colour(), c1) && p.old() == c1.rgb && p.element(ink).cs.rgb == ink0 &&
                   after_load.find(" chrome " + hex_of(c1.rgb) + " hsv ", after_load.size() - 200) != std::string::npos &&
                   untouched(p),
-              "loading Preset 1: the chrome and the ink each one committed pick (5 lines), the canvas, the flags and the "
-              "selection test none; OLD the loaded chrome, its view exact");
+              "loading Preset 1: the chrome and the ink each one committed pick (5 lines), every other element none; OLD "
+              "the loaded chrome, its view exact");
         {
             std::map<std::string, Pick> st;
             std::map<std::string, int> ent;
@@ -1278,8 +1432,8 @@ int main(int argc, char** argv) {
         std::string why;
         const bool refused_view = load_fails(why);
         check(refused_view, "a presets.json view that does not give its hex fails the load: " + why);
-        // A PRESET SAVED BEFORE THE FLAGS ROUND (three elements) loads, and leaves the flags, the playhead and the Label
-        // as they are
+        // A PRESET SAVED BEFORE THE FLAGS ROUND (three elements) loads, and leaves the flags, the playhead, the Label and
+        // the selected pair as they are
         fresh();
         put(work + "/presets.json",
             "{\n \"presets\": [\n  {\"number\": 1, \"saved\": \"2026-10-04T08:30:00-04:00\", \"colours\": {\"canvas\": "
@@ -1309,9 +1463,12 @@ int main(int argc, char** argv) {
                   o.element(phead).cs.rgb == ex.elements[size_t(phead)].colour && o.element(phead).hist.picks.empty() &&
                   o.element(pstem).cs.rgb == ex.elements[size_t(pstem)].colour && o.element(pstem).hist.picks.empty() &&
                   o.element(lbl).cs.rgb == ex.elements[size_t(lbl)].colour && o.element(lbl).hist.picks.empty() &&
-                  occurrences(tail, " playhead_") == 0 && occurrences(tail, " label ") == 0,
+                  o.element(selfill).cs.rgb == ex.elements[size_t(selfill)].colour && o.element(selfill).hist.picks.empty() &&
+                  o.element(seltext).cs.rgb == ex.elements[size_t(seltext)].colour && o.element(seltext).hist.picks.empty() &&
+                  occurrences(tail, " playhead_") == 0 && occurrences(tail, " label ") == 0 &&
+                  occurrences(tail, " selected_fill ") == 0 && occurrences(tail, " selected_text ") == 0,
               "loading it commits the chrome, the canvas and the ink (3 lines, their views exact) and leaves both flags, "
-              "both playhead elements and the Label as they were, no pick for any");
+              "both playhead elements, the Label, the Selection and the Selected Text as they were, no pick for any");
         fresh();
     }
 
@@ -1593,11 +1750,11 @@ int main(int argc, char** argv) {
     }
 
     // ---------------------------------------------------------------- the tablet's files of 2026-10-04 load unchanged
-    // the flags round's elements, the playhead round's and the label round's (architect 2026-10-04), absent from every
-    // file the tablet wrote before them: the manifest's colours, no history
+    // the flags round's elements, the playhead round's, the label round's and the open-flag round's (architect
+    // 2026-10-04), absent from every file the tablet wrote before them: the manifest's colours, no history
     auto flags_fresh = [&](const Picker& q) {
-        bool ok = uflag >= 0 && sflag >= 0 && phead >= 0 && pstem >= 0 && lbl >= 0;
-        for (int e : {uflag, sflag, phead, pstem, lbl})
+        bool ok = uflag >= 0 && sflag >= 0 && phead >= 0 && pstem >= 0 && lbl >= 0 && selfill >= 0 && seltext >= 0;
+        for (int e : {uflag, sflag, phead, pstem, lbl, selfill, seltext})
             ok = ok && q.element(e).cs.rgb == ex.elements[size_t(e)].colour && q.element(e).hist.cursor == -1;
         return ok;
     };
@@ -1619,8 +1776,8 @@ int main(int argc, char** argv) {
                   t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty() && flags_fresh(t) &&
                   t.model() == Model::Hsv,
               "the tablet's picks.txt (110 lines) and state.json load unchanged: the canvas active, chrome 9 of 11, canvas "
-              "22 of 22, ink 77 of 77, every view exact; the flags, the playhead and the Label at the manifest's colours, "
-              "0 of 0; HSV shown (no model)");
+              "22 of 22, ink 77 of 77, every view exact; the flags, the playhead, the Label and the selected pair at the "
+              "manifest's colours, 0 of 0; HSV shown (no model)");
         tap(t, 1700, 700);
         tap(t, ppx + kPresetsX + 60, ppy + kNameY + kNameH / 2.0);
         tap(t, ppx + kPopX0 + 200, ppy + kPopY0 + kPopRowH / 2.0);
@@ -1652,8 +1809,8 @@ int main(int argc, char** argv) {
                   t.element(ink).hist.picks.size() == 90 && t.element(ink).hist.cursor == 89 && t.theme_open() == -1 &&
                   t.presets().empty() && flags_fresh(t) && t.model() == Model::Hsv,
               "the tablet's picks.txt (136 lines) and state.json at the presets build's install load unchanged: the ink "
-              "active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90, every view exact; the flags, the playhead and the "
-              "Label at the manifest's colours, 0 of 0; HSV shown (no model)");
+              "active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90, every view exact; the flags, the playhead, the "
+              "Label and the selected pair at the manifest's colours, 0 of 0; HSV shown (no model)");
         tap(t, 1700, 700);
         tap(t, 1700, 700);
         check(slurp(work + "/picks.txt") == picks0, "an open and a close on the unedited ink append nothing");
@@ -1673,7 +1830,8 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------- the repository's copy of the tablet's files
     // presets/'s picks.txt, state.json and presets.json, as the tablet holds them, over the round's own export (the
     // playhead round's install, architect 2026-10-04): they load; every element state.json names at its colour; every
-    // element the files never name (the playhead's two, the Label) at the manifest's colour with an empty history; and each
+    // element the files never name (the playhead's two, the Label, the selected pair) at the manifest's colour with an
+    // empty history; and each
     // preset loaded leaves every element it does not name as it was, with no pick. Read from the files, never a
     // count, so a later copy of his files keeps the check
     if (!kept.empty() && !round_ex.elements.empty()) {
@@ -1739,9 +1897,10 @@ int main(int argc, char** argv) {
                 }
             }
             const std::string kp = slurp(work + "/picks.txt");
-            check(kept_ok && !q.open() && occurrences(kp, " playhead_") == 0 && occurrences(kp, " label ") == 0,
+            check(kept_ok && !q.open() && occurrences(kp, " playhead_") == 0 && occurrences(kp, " label ") == 0 &&
+                      occurrences(kp, " selected_fill ") == 0 && occurrences(kp, " selected_text ") == 0,
                   "each of his presets loaded over them sets the elements it names and leaves every other as it was, no "
-                  "pick (none for the playhead or the Label)");
+                  "pick (none for the playhead, the Label or the selected pair)");
         }
         fresh();
     }
@@ -1749,10 +1908,11 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------- THE SWITCH'S PICTURE, byte for byte
     // the round's own export at the colours of its "all moved" references: the waveform scene, then after the chooser's
     // switch Ink -> Unselected Flag the flags scene, then back, then after the switch Ink -> Playhead Head the playhead
-    // scene, then after the switch Playhead Head -> Label the label scene, each the mock tool's render
+    // scene, then after the switch Playhead Head -> Label the label scene, then after the switch Label -> Selection the
+    // open_flag scene, each the mock tool's render
     if (!round_expects.empty()) {
         std::istringstream in(slurp(round_expects));
-        std::string line, wave_ppm, flags_ppm, head_ppm, label_ppm;
+        std::string line, wave_ppm, flags_ppm, head_ppm, label_ppm, open_ppm;
         std::vector<std::string> moved;
         size_t most = 0;
         while (std::getline(in, line)) {
@@ -1764,7 +1924,7 @@ int main(int argc, char** argv) {
             if (toks.size() < most) continue;
             if (toks.size() > most) {
                 most = toks.size();
-                wave_ppm.clear(); flags_ppm.clear(); head_ppm.clear(); label_ppm.clear();
+                wave_ppm.clear(); flags_ppm.clear(); head_ppm.clear(); label_ppm.clear(); open_ppm.clear();
                 moved = toks;
             }
             if (toks != moved) continue;
@@ -1772,14 +1932,15 @@ int main(int argc, char** argv) {
             if (sc == "flags") flags_ppm = ppm;
             if (sc == "playhead") head_ppm = ppm;
             if (sc == "label") label_ppm = ppm;
+            if (sc == "open_flag") open_ppm = ppm;
         }
         const Export& rx = round_ex;
         const int ri = element_of(rx, "ink"), ru = element_of(rx, "unselected_flag"), rh = element_of(rx, "playhead_head"),
-                  rl = element_of(rx, "label");
-        if (wave_ppm.empty() || flags_ppm.empty() || head_ppm.empty() || label_ppm.empty() ||
-            moved.size() != rx.elements.size() || ri < 0 || ru < 0 || rh < 0 || rl < 0) {
-            check(false, "the round's export has an all-moved reference of its four scenes, an ink, an unselected flag, "
-                         "a playhead head and a label");
+                  rl = element_of(rx, "label"), rs = element_of(rx, "selected_fill");
+        if (wave_ppm.empty() || flags_ppm.empty() || head_ppm.empty() || label_ppm.empty() || open_ppm.empty() ||
+            moved.size() != rx.elements.size() || ri < 0 || ru < 0 || rh < 0 || rl < 0 || rs < 0) {
+            check(false, "the round's export has an all-moved reference of its five scenes, an ink, an unselected flag, "
+                         "a playhead head, a label and a selection");
         } else {
             fresh();
             std::string cols;
@@ -1812,11 +1973,18 @@ int main(int argc, char** argv) {
             tap(q, name_x, name_y);
             row_tap(q, rl);
             const long d4 = diff_ppm(q.picture(), label_ppm, rx.width, rx.height);
-            check(back_on_ink && on_head && q.active() == rl && d0 == 0 && d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0,
+            const bool on_label = q.active() == rl;
+            tap(q, name_x, name_y);
+            row_tap(q, rs);
+            const long d5 = diff_ppm(q.picture(), open_ppm, rx.width, rx.height);
+            q.paint(frame);
+            png(frame, work + "/frame_switch_open_flag_moved.png");
+            check(back_on_ink && on_head && on_label && q.active() == rs && d0 == 0 && d1 == 0 && d2 == 0 && d3 == 0 &&
+                      d4 == 0 && d5 == 0,
                   "the round's export at" + said + ": the waveform scene, the switch Ink -> Unselected Flag and back, "
-                  "the switch Ink -> Playhead Head and the switch on to the Label each equal the mock tool's render (" +
-                  std::to_string(d0) + ", " + std::to_string(d1) + ", " + std::to_string(d2) + ", " + std::to_string(d3) +
-                  ", " + std::to_string(d4) + " px differ)");
+                  "the switch Ink -> Playhead Head, the switch on to the Label and on to the Selection each equal the mock "
+                  "tool's render (" + std::to_string(d0) + ", " + std::to_string(d1) + ", " + std::to_string(d2) + ", " +
+                  std::to_string(d3) + ", " + std::to_string(d4) + ", " + std::to_string(d5) + " px differ)");
             fresh();
         }
     }

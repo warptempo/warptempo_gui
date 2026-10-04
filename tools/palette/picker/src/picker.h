@@ -10,7 +10,8 @@
 // scene; EVERY ELEMENT'S CURRENT COLOUR IS LIVE IN EVERY SCENE (picking the chrome shows the ink at its saved colour).
 //
 // THE CHOOSER: the active element's NAME at the panel's top is a button; a tap on it (at the lift, as every panel
-// control) opens the chooser, a vertical list of the elements in manifest order, the active one marked. A tap on an
+// control) opens the chooser, a vertical list of the elements in manifest order, the active one marked, running down
+// over the slider rows and painted over all it covers (panel::kChooserMax, its fit). A tap on an
 // entry picks it and closes the chooser; a tap outside the chooser closes it and changes nothing. CHOOSING ANOTHER
 // ELEMENT IS THE CLOSE FOR THE ONE BEING LEFT (the planner's ruling, confirmed by the architect 2026-10-04): an
 // edited colour is committed exactly as a close commits it (one picks.txt line, the logcat line, state.json), then
@@ -328,6 +329,12 @@ constexpr int kNameY = kPad, kNameH = 64;                                 // the
 constexpr int kNameX1 = kColX + 264;                                      // the element button kColX..kNameX1
 constexpr int kPresetsX = kNameX1 + 12;                                   // the presets button kPresetsX..kColX1
 constexpr int kChooserY = kNameY + kNameH + 8, kChooserRowH = 76;         // the chooser's rows, under the button
+// THE CHOOSER'S FIT (2026-10-04: room for the elements to come, the invalid flags among them): its rows, the pop-up's and the model list's
+// height, run down the column from under the button over the slider rows as far as the panel's pad, painted over
+// everything they cover (a readout, a handle, a field; Picker::paint); kChooserMax entries fit (15: 108..1248 of the
+// panel's 1352), and picker_load refuses an export with more
+constexpr int kChooserMax = (kH - kPad - kChooserY) / kChooserRowH;
+static_assert(kChooserMax >= 14, "the chooser holds at least fourteen entries inside the panel");
 constexpr int kHistY = kPad + 176;                                        // BACK | N of M | FORWARD, under the hex
 constexpr int kSwatchY0 = kPad + 324, kSwatchY1 = kPad + kWheel;
 constexpr int kSwatchW = 200, kNewX = kColX1 - kSwatchW;

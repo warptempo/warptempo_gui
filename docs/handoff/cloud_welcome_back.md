@@ -37,6 +37,14 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
   text. NOTE FOR ARC 4: the chooser's 8 entries end at y 716, the slider rows start at 720; a NINTH element overruns
   the H row (the check theme already shows it), so arc 4 must fit the chooser (hide a readout the chooser covers, as
   the model list does, or whatever the picker's own style gives).
+- THE ARCHITECT ON THE GLASS after DONE 1: the playhead works (head fill, stem); the head's border has no element,
+  "ok for now, not a priority" (since arc 3 it follows the Label).
+- ARC 4 LANDED (the open-flag commit): Selection (`selected_fill`, #666666) and Selected Text (`selected_text`,
+  #FFFFFF) over a new scene `open_flag` (the fourth flag, x 1816, the flags scene's selected one, its editor open and
+  its whole text selected; no flag stays in view on both panel halves, this one does with the panel on the left and
+  the strip open). THE CHOOSER now runs down over the slider rows, painted over all it covers, holding up to 15
+  entries (picker.h kChooserMax; picker_load refuses more): the one picker app-code change of the run. The helper
+  takes a preset's selected pair into its theme (the dark level by levels.py's rule).
 
 ## Decisions for you (the cloud planner, 2026-10-04)
 1. THE FIELD TEXT FOLLOWS THE LABEL (applied in arc 3, easy to undo). The picker's chrome rule makes the field ground

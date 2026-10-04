@@ -5,10 +5,10 @@
 #     python3 tools/palette/picker/check_refs.py <theme.json> <dir>
 #
 #   <dir>/scene/            the theme exported (render.py --export): the picker's export as the tablet receives it
-#   <dir>/multi/            THE CHECK THEME exported (<dir>/picker_check.json: the theme plus a Selection Test element,
-#                           the selected fill, over a fifth scene with the flags on and the first flag's editor open,
-#                           its whole text selected), which the sessions drive: the switches of scene, stacks over a
-#                           picked base (the flag labels over the flag faces, the selected text over the band)
+#   <dir>/multi/            THE CHECK THEME exported (<dir>/picker_check.json: the theme plus test elements filling the
+#                           chooser to fourteen entries, below), which the sessions drive: the switches of scene, stacks
+#                           over a picked base (the flag labels over the flag faces, the selected text over the
+#                           selection), the chooser's fit
 #   <dir>/expect/*.ppm      every scene of both rendered by render.py at the manifest's colours and at every colour set
 #                           of render.picker_check_sets (each element moved, the chrome to a tint whose 32 and 96 hit
 #                           the rule's half-to-even ties and to a bright ground whose lines cap, all at once)
@@ -53,18 +53,30 @@ expect = os.path.join(out, 'expect')
 if os.path.isdir(expect): shutil.rmtree(expect)
 os.makedirs(expect)
 lines = export_with_refs(theme, 'scene')
-# THE CHECK THEME: the round's theme (its waveform, flags, playhead and label scenes, the flags round's two elements over
-# the second, the playhead round's two over the third, the label round's Label over the fourth; architect 2026-10-04)
-# plus one element over a fifth scene -- the selected fill, the in-place editor's selection band (the open-flag round's
-# coming element), over the flags scene with the first flag's editor open and its whole text selected: the selected
-# text's antialiased edges are stacks over a picked base on a picked face -- so five scenes and a chooser of nine
-# entries that walks them are exercised; never exported for the tablet
+# THE CHECK THEME: the round's theme (its waveform, flags, playhead, label and open_flag scenes; architect 2026-10-04)
+# plus TEST ELEMENTS filling the chooser to CHOOSER_FIT entries (the chooser's fit, 2026-10-04: room for the elements to
+# come, the invalid flags among them, painted over the slider rows it covers), each a role the round does not pick, taken in the order of
+# TEST_ELEMENTS: the icons' inks over the waveform scene, then the invalid flag's roles over a scene of their own
+# (`check_invalid`, the flags scene with the second and third flags invalid, the third selected), added only when a
+# test element names it -- so the chooser's last entries lie over the slider rows and the last walks to a scene of its
+# own; never exported for the tablet
+CHOOSER_FIT = 14
+TEST_ELEMENTS = (('icon_record', 'Record Test', 'waveform'), ('icon_preview_on', 'Preview Test', 'waveform'),
+                 ('icon_lift_cross', 'Lift Test', 'waveform'), ('flag_fill_red', 'Invalid Test', 'check_invalid'),
+                 ('flag_fill_red_sel', 'Invalid Selected Test', 'check_invalid'),
+                 ('flag_label_red', 'Invalid Label Test', 'check_invalid'))
 ct = json.load(open(theme)); cpk = ct['picker']
-if 'selected_fill' in {e['role'] for e in cpk['elements']}:
-    raise SystemExit('check_refs.py: the round picks the selected fill itself; give the check theme another test element')
-cpk['elements'].append({'key': 'selection_test', 'name': 'Selection Test', 'role': 'selected_fill', 'scene': 'flag_editor'})
-cpk['scenes']['flag_editor'] = {'elements': {'ink': True, 'outline': True, 'stems': True, 'flags': True, 'playhead': False,
-                                             'state_line': False}, 'flags': {'states': {'editing': [0]}}}
+picked = {e['role'] for e in cpk['elements']}
+tests = [t for t in TEST_ELEMENTS if t[0] not in picked][:max(0, CHOOSER_FIT - len(cpk['elements']))]
+if len(cpk['elements']) + len(tests) < CHOOSER_FIT:
+    raise SystemExit(f'check_refs.py: the round picks the test roles itself; give TEST_ELEMENTS more, to fill the chooser '
+                     f'to {CHOOSER_FIT}')
+for role, name, sc in tests:
+    cpk['elements'].append({'key': role + '_test', 'name': name, 'role': role, 'scene': sc})
+if any(sc == 'check_invalid' for _, _, sc in tests):
+    cpk['scenes']['check_invalid'] = {'elements': {'ink': True, 'outline': True, 'stems': True, 'flags': True,
+                                                   'playhead': False, 'state_line': False},
+                                      'flags': {'states': {'invalid': [1, 2], 'selected': [2]}}}
 check_theme = os.path.join(out, 'picker_check.json'); json.dump(ct, open(check_theme, 'w'), indent=1)
 lines += export_with_refs(check_theme, 'multi')
 scene = os.path.join(out, 'scene'); man = json.load(open(os.path.join(scene, 'manifest.json')))

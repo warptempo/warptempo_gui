@@ -2211,11 +2211,12 @@ def read_cover(path):
 
 # THE CHECK'S COLOUR SETS (picker_check_sets): a chrome element at a TINT whose channels 32 and 96 hit the rule's
 # half-to-even ties (32 x 255 / 192 = 42.5, 96 x 223 / 192 = 111.5) and at a BRIGHT ground whose x 255 / 192 caps at
-# 255; every other element at a probe colour of its own (eight probes: the label round's seven non-ground elements and
-# the laptop check's Selection Test each distinct, so the all-moved set tells every element from every other); then
-# all of them moved at once
+# 255; every other element at a probe colour of its own (thirteen probes: the open-flag round's nine non-ground
+# elements and the laptop check's four test elements, which fill its chooser to fourteen entries, each distinct, so the
+# all-moved set tells every element from every other); then all of them moved at once
 CHECK_GROUNDS = ('#206048', '#E6D2B4')
-CHECK_PROBES = ('#CC9966', '#203040', '#3366CC', '#7A2E5C', '#55AA22', '#E0B030', '#30A0A8', '#D0482C')
+CHECK_PROBES = ('#CC9966', '#203040', '#3366CC', '#7A2E5C', '#55AA22', '#E0B030', '#30A0A8', '#D0482C', '#8844CC',
+                '#44CC88', '#C0C040', '#6080A0', '#A04070')
 
 def picker_check_sets(elements):
     """-> [{key: '#RRGGBB'}, ...]: the export's and the laptop check's colour sets (above)."""
