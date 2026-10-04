@@ -173,7 +173,7 @@ The only conversion is the one a theme asks for: a colour written `"srgb:#303030
 | `waveform_<tag>.json` | per canvas column, the vertical runs `[y, len, y, len, ...]` (relative to the canvas top) of ink and of outline pixels |
 | `glyphs/<tag>/` | `<row>_<Button>__<ink>.pgm`: each app glyph's 8-bit rasteriser coverage per ink (44x44 device px), `index.json` (icon, enabled, inks, files, under) |
 | `themes/frozen.json` | THE theme: the design the app paints since 2026-10-02 |
-| `themes/picker.json` | THE PICKER'S THEME (2026-10-04, the chrome round; the ink round's `picker_ink.json` before it): warptempo.json with the chrome under THE CHROME RULE at the ground #191919 (`chrome`), the canvas #0E0E0E, the ink #A6B9DE, the outline `"auto"` (its rule), the selected fill #666666 (fixed this round); `picker` its three elements in the architect's order of importance, Chrome (active), Canvas, Ink, over the scene `waveform` (stems, flags, playhead and state line off); exported to `out/picker/`. The later rounds follow in this order, each a new element and scene here and a new export, no app code: the unselected flag, the selected flag, the open flag with its selection (where the selected fill becomes pickable) |
+| `themes/picker.json` | THE PICKER'S THEME (2026-10-04, the chrome round, then the flags round; the ink round's `picker_ink.json` before it): warptempo.json with the chrome under THE CHROME RULE at the ground #191919 (`chrome`), the canvas #0E0E0E, the ink #A6B9DE, the outline `"auto"` (its rule), the flag's face #666699 and selected face #9999CC (CE01, for now) under BOTH LABELS WHITE (`flag_label_sel` #FFFFFF, his ruling: consistency), the selected fill #666666 (fixed); `picker` its five elements in the architect's order of importance, Chrome (active), Canvas, Ink over the scene `waveform` (stems, flags, playhead and state line off), Unselected Flag and Selected Flag over the scene `flags` (the stems and flags on, the fourth flag selected with its payload addressed: its stem bright); exported to `out/picker/`. The next round, a new element and scene here and a new export: the open flag with its selection (where the selected fill becomes pickable) |
 | `picker/` | THE COLOUR PICKER APP (`com.warptempo.picker`): the tablet's own colour handling over an exported scene, its own README, build script and source |
 | `themes/ad2.json` | the set-AD2 geometry the architect picked on 2026-10-02 (the Windows-95 chrome scaled x 1.375 from the scene's logical px, the laptop's gui_scale 138 drawn at the tablet's 2 device px per logical px), reconciled with this renderer on 2026-10-03: the colour keys nothing here paints under its options dropped (the old trim lane's bar, cap, ground-bevel and bottom-border colours, `row_ground`, `popup`, `tab_line`, `line`, `selected_fill`), `down_face` kept (the toggled sunken face still reads it), the relief quartet the recorded bytes of the catalog's Warptempo entry (`warptempo-2026-10-03`: 5E5E5E / 434343 / 1E1E1E / 0A0A0A, render.h's constants; Parity below). The dark design the colour loop starts from |
 | `themes/win95_standard.json` | Windows 95's Standard scheme: the face #C0C0C0 and the quartet FFFFFF / DFDFDF / 808080 / 000000 as the catalog's `windows-95-standard` entry records them, and the few roles Windows names, on ad2.json's geometry and options; each role Windows has no word for takes the nearest system colour or the app's own value, the choice stated in its `description`. THE ACCURACY CHECK, NOT A DESIGN |
@@ -450,9 +450,10 @@ rasterizing on the device (`render.py`'s export section is the authoritative sta
 python3 tools/palette/render.py tools/palette/themes/picker.json --export tools/palette/out/picker
 ```
 
-writes the chrome round (about 5 s): 3 elements (Chrome, Canvas, Ink), 12 roles, the one scene `waveform` (20,619
-antialiased px in 22,513 stacked paints, the deepest two); the base map 3.3 MB, the stacks 148 KB. THE ROLES IT
-PAINTS, as each painter asks for them (the export prints this inventory):
+writes the flags round (about 12 s): 5 elements (Chrome, Canvas, Ink, Unselected Flag, Selected Flag), 16 roles, two
+scenes: `waveform` (20,619 antialiased px in 22,513 stacked paints, the deepest two; 148 KB of stacks) and `flags`
+(the same with the stems and the five flags on, the fourth selected: 23,090 antialiased px in 24,984 paints; 165 KB);
+each base map 3.3 MB. THE ROLES THEY PAINT, as each painter asks for them (the export prints this inventory):
 
 | painter's role | root | rule |
 |---|---|---|
@@ -461,18 +462,21 @@ PAINTS, as each painter asks for them (the export prints this inventory):
 | `emboss_hilight` (the disabled word's and glyph's light copy; antialiased) | `emboss_hilight` | Chrome x 255 / 192 |
 | `bevel_light` (the outer light lines, the well's lower line) | `bevel_light` | Chrome x 223 / 192 |
 | `bevel_shadow` (the relief's dark lines, the status panel, the emboss's top copy, antialiased), `ruler_tick` | `bevel_shadow` | Chrome x 128 / 192 |
-| `bevel_dkshadow` (the outer dark lines, the well's top line) | `bevel_dkshadow` | fixed #000000 (DkShadow) |
+| `bevel_dkshadow` (the outer dark lines, the well's top line), `flag_border` (the flag outline; `flags` only) | `bevel_dkshadow` | fixed #000000 (DkShadow) |
 | `canvas` | `canvas` | the Canvas element |
 | `ink` | `ink` | the Ink element |
+| `flag_fill` (the unselected faces and their stems; `flags` only) | `flag_fill` | the Unselected Flag element |
+| `flag_fill_sel` (the selected face and its stem; `flags` only) | `flag_fill_sel` | the Selected Flag element |
+| `flag_label`, `flag_label_sel` (the labels, antialiased over the faces; `flags` only) | their own | fixed #FFFFFF |
 | `label`, `legend`, `clock`, `ruler_label`, `icon_label`, `trim_arrow` (the words antialiased) | `label` | fixed #FFFFFF |
 | `icon_record`, `icon_preview_on`, `icon_lift_cross` | their own | fixed (the icons' inks, antialiased) |
 
-Not painted by this scene, with their rule should a later scene paint them: `field_ground` (Chrome x 255 / 192; no
-dialog), `flag_border` (DkShadow, fixed), `outline` (derive: the ink over the canvas; scene 1002 has no outline
-pixels), `selected_fill` (fixed #666666 until the open-flag round makes it an element), the flags' faces and labels
-(fixed). The check's theme (`picker/check_refs.py`) adds a Flag Test element, the flag face, over a second scene with
-the flags and the first flag's editor open: its labels' antialiased edges are stacks over a picked base, so the flag
-rounds need no new machinery.
+Not painted by these scenes, with their rule should a later scene paint them: `field_ground` (Chrome x 255 / 192; no
+dialog), `outline` (derive: the ink over the canvas; scene 1002 has no outline pixels), `selected_fill` (fixed #666666
+until the open-flag round makes it an element), the invalid faces and their label (fixed; scene 1002 has no red flag).
+The check's theme (`picker/check_refs.py`) adds a Selection Test element, the selected fill, over a third scene with
+the flags and the first flag's editor open, its whole text selected: the selected text's antialiased edges are stacks
+over a picked base, as the flag labels are over the picked faces.
 
 ## Adding a theme
 

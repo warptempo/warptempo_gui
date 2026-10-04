@@ -38,7 +38,8 @@ if [ "${1:-}" = "--check" ]; then
         --export "$BUILD/check/scene" "$BUILD/check/scene/expects.txt" \
         --export "$BUILD/check/derived" "$BUILD/check/derived/expects.txt" \
         --linmix "$BUILD/check/linmix.bin" \
-        --today "$HERE/check_data/tablet_2026-10-04"
+        --today "$HERE/check_data/tablet_2026-10-04" \
+        --late "$HERE/check_data/tablet_2026-10-04_presets"
     exit 0
 fi
 

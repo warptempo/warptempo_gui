@@ -76,7 +76,7 @@ struct Scene {
 //
 // A theme's COLOURS are every distinct byte triple the catalog records for it (its roles, its source's raw values, its
 // toolkit's computed shades), each once with every name that records it, the ground first. The presets pop-up lists
-// the themes by name with a swatch of the ground; a theme OPENED shows its colours as the panel's theme strip
+// the themes by key with a swatch of the ground; a theme OPENED shows its colours as the panel's theme strip
 // (picker.h).
 struct ThemeColour {
     Rgb rgb;

@@ -5,9 +5,10 @@
 #     python3 tools/palette/picker/check_refs.py <theme.json> <dir>
 #
 #   <dir>/scene/            the theme exported (render.py --export): the picker's export as the tablet receives it
-#   <dir>/multi/            THE CHECK THEME exported (<dir>/picker_check.json: the theme plus a Flag Test element, the
-#                           flag face, over a second scene with the flags on and the first flag's editor open), which
-#                           the sessions drive: a switch of scene, stacks over a picked base
+#   <dir>/multi/            THE CHECK THEME exported (<dir>/picker_check.json: the theme plus a Selection Test element,
+#                           the selected fill, over a third scene with the flags on and the first flag's editor open,
+#                           its whole text selected), which the sessions drive: the switches of scene, stacks over a
+#                           picked base (the flag labels over the flag faces, the selected text over the band)
 #   <dir>/expect/*.ppm      every scene of both rendered by render.py at the manifest's colours and at every colour set
 #                           of render.picker_check_sets (each element moved, the chrome to a tint whose 32 and 96 hit
 #                           the rule's half-to-even ties and to a bright ground whose lines cap, all at once)
@@ -46,14 +47,17 @@ expect = os.path.join(out, 'expect')
 if os.path.isdir(expect): shutil.rmtree(expect)
 os.makedirs(expect)
 lines = export_with_refs(theme, 'scene')
-# THE CHECK THEME: the round's theme plus one element over a second scene -- the first flag's face (its labels'
-# antialiased edges over it: an element as the base of stacks) over a scene with the flags, their stems and the first
-# flag's editor open -- so the chooser's switch of scene and the stacks over a picked base are exercised before the
-# flag rounds need them (architect 2026-10-04: the flags come next); never exported for the tablet
+# THE CHECK THEME: the round's theme (its waveform and flags scenes, the flags round's two elements over the second)
+# plus one element over a third scene -- the selected fill, the in-place editor's selection band (the open-flag round's
+# coming element), over the flags scene with the first flag's editor open and its whole text selected: the selected
+# text's antialiased edges are stacks over a picked base on a picked face -- so three scenes and a chooser that walks
+# them are exercised; never exported for the tablet
 ct = json.load(open(theme)); cpk = ct['picker']
-cpk['elements'].append({'key': 'flag_test', 'name': 'Flag Test', 'role': 'flag_fill', 'scene': 'flags'})
-cpk['scenes']['flags'] = {'elements': {'ink': True, 'outline': True, 'stems': True, 'flags': True, 'playhead': False,
-                                       'state_line': False}, 'flags': {'states': {'editing': [0]}}}
+if 'selected_fill' in {e['role'] for e in cpk['elements']}:
+    raise SystemExit('check_refs.py: the round picks the selected fill itself; give the check theme another test element')
+cpk['elements'].append({'key': 'selection_test', 'name': 'Selection Test', 'role': 'selected_fill', 'scene': 'flag_editor'})
+cpk['scenes']['flag_editor'] = {'elements': {'ink': True, 'outline': True, 'stems': True, 'flags': True, 'playhead': False,
+                                             'state_line': False}, 'flags': {'states': {'editing': [0]}}}
 check_theme = os.path.join(out, 'picker_check.json'); json.dump(ct, open(check_theme, 'w'), indent=1)
 lines += export_with_refs(check_theme, 'multi')
 scene = os.path.join(out, 'scene'); man = json.load(open(os.path.join(scene, 'manifest.json')))

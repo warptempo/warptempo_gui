@@ -3,7 +3,7 @@
 // part of the APK):
 //
 //   host_check <fonts dir> <work dir> --export <scene dir> <expects.txt> [--export <dir> <expects.txt>]...
-//              [--linmix <table>] [--today <dir>]
+//              [--linmix <table>] [--today <dir>] [--late <dir>]
 //
 //   - every export loads, and every expects.txt line ("<scene> <ppm> [<key>=#RRGGBB ...]": the mock tool's render of
 //     that scene with those elements moved from the manifest's colours) equals the picker's picture byte for byte,
@@ -12,18 +12,26 @@
 //   - the blend (colour.h over_n_8) equals cairo's own compositing of a solid source through an A8 mask on every
 //     (source, frame, coverage) byte triple, each channel; the chrome rule's scale_byte is half-to-even and capped;
 //   - ColourState over the whole cube, the view numbers, the readouts (one decimal; the widest fits its field);
-//   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas, Ink and a Flag Test over
-//     a second scene) and its active element (the chrome): the panel, the pick history, the HSV he dialled; then THE
-//     CHOOSER (open, a tap outside it, the no-op re-choice, the edited-then-switch commit, the switch of scene),
-//     every element's history, cursor and view independent across a switch and a relaunch, and today's picks.txt
-//     (58 ink lines, the old form and the new) and state.json loading unchanged;
+//   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas and Ink over the scene
+//     waveform, Unselected Flag and Selected Flag over the scene flags, a Selection Test over a third scene with the
+//     first flag's editor open) and its active element (the chrome): the panel, the pick history, the HSV he dialled;
+//     then THE CHOOSER (open, a tap outside it, the no-op re-choice, the edited-then-switch commit, the switches of
+//     scene Ink -> Unselected Flag -> Selected Flag -> Selection Test), every element's history, cursor and view
+//     independent across a switch and a relaunch, and today's picks.txt (58 ink lines, the old form and the new) and
+//     state.json loading unchanged;
+//   - THE SWITCH'S PICTURE on the round's own export (the one labelled "scene"): launched with every element at the
+//     colours of its "all moved" reference, the waveform scene and, after the chooser's switch Ink -> Unselected Flag,
+//     the flags scene equal the mock tool's renders byte for byte, and the switch back the waveform's again;
 //   - THE PRESETS (two saves, the edited colour committed by the pop-up's opening; a load committing each changed
 //     element once and an unchanged one never, BACK returning; a relaunch; a scroll and a tap outside that act on
-//     nothing) and THE THEME STRIP (opened from the pop-up, swatches adopted as edits into the chrome and, after a
+//     nothing; a preset saved before the flags round, three elements, loading and leaving the flags as they are) and
+//     THE THEME STRIP (opened from the pop-up, swatches adopted as edits into the chrome and, after a
 //     switch, the canvas, OLD reverting, the strip surviving the switch and a relaunch, Windows 95 Standard's quartet
 //     and a tinted theme's rule lines, its own scroll, the close control) on the first export;
-//   - --today <dir>: the tablet's picks.txt and state.json of 2026-10-04 load unchanged;
-//   - THE PER-FRAME COST of a pen drag (R's track) on the ink and on the chrome: the live repaint and the frame;
+//   - --today <dir>: the tablet's picks.txt and state.json of 2026-10-04 (morning) load unchanged; --late <dir>: those
+//     of the presets build's install (136 lines) too, the flags at the manifest's colours with empty histories;
+//   - THE PER-FRAME COST of a pen drag (R's track) on the ink, the chrome and the unselected flag: the live repaint
+//     and the frame;
 //   - frames as PNGs in the work dir for the eye.
 
 #include "colour.h"
@@ -83,6 +91,12 @@ long diff_ppm(const std::vector<uint32_t>& pic, const std::string& ppm_path, int
     long n = 0;
     for (size_t k = 0; k < size_t(w) * h; ++k)
         if (pic[k] != word_of(Rgb{p[3 * k], p[3 * k + 1], p[3 * k + 2]})) ++n;
+    return n;
+}
+
+size_t occurrences(const std::string& text, const std::string& what) {
+    size_t n = 0;
+    for (size_t at = text.find(what); at != std::string::npos; at = text.find(what, at + 1)) ++n;
     return n;
 }
 
@@ -187,6 +201,9 @@ int main(int argc, char** argv) {
     std::string err;
     Export ex0;                                   // the first export: the sessions' and the timing's
     std::string today;                            // --today: the tablet's picks.txt and state.json of 2026-10-04
+    std::string late;                             // --late: those of the presets build's install, the same day
+    Export round_ex;                              // the export labelled "scene" (the round's, as the tablet gets it)
+    std::string round_expects;
     bool have = false;
     for (int i = 3; i < argc; ++i) {
         const std::string a = argv[i];
@@ -203,10 +220,14 @@ int main(int argc, char** argv) {
             std::printf("export %s: %dx%d, %zu elements, %zu roles, %zu scenes, %zu antialiased px (%zu paints), %zu solid runs\n",
                         dir.c_str(), ex.width, ex.height, ex.elements.size(), ex.roles.size(), ex.scenes.size(), stacks,
                         layers, runs);
-            check_expects(ex, expects, dir.substr(dir.find_last_of('/') + 1));
+            const std::string label = dir.substr(dir.find_last_of('/') + 1);
+            check_expects(ex, expects, label);
+            if (label == "scene") { round_ex = ex; round_expects = expects; }
             if (!have) { ex0 = std::move(ex); have = true; }
         } else if (a == "--today" && i + 1 < argc) {
             today = argv[++i];
+        } else if (a == "--late" && i + 1 < argc) {
+            late = argv[++i];
         } else if (a == "--linmix" && i + 1 < argc) {
             const std::string t = slurp(argv[++i]);
             size_t bad = 0;
@@ -339,7 +360,8 @@ int main(int argc, char** argv) {
     const std::string L = ex.elements[size_t(ex.active)].key;   // its key
     const int act0 = ex.active;   // the manifest's active element (the chrome): the panel's, history's and HSV sessions'
     const int ink = element_of(ex, "ink"), chrome = element_of(ex, "chrome"), canvas = element_of(ex, "canvas"),
-              flag = element_of(ex, "flag_test");
+              uflag = element_of(ex, "unselected_flag"), sflag = element_of(ex, "selected_flag"),
+              seltest = element_of(ex, "selection_test");
     auto launch = [&]() {
         Export e = ex;
         Launch l;
@@ -624,17 +646,24 @@ int main(int argc, char** argv) {
     }
 
     // ---------------------------------------------------------------- THE CHOOSER
-    if (chrome != act0 || ink < 0 || canvas < 0 || flag < 0 || chrome != 0 || canvas != 1 || ink != 2 ||
-        ex.elements[size_t(flag)].scene == ex.elements[size_t(chrome)].scene) {
-        check(false, "the check export lists Chrome (active), Canvas, Ink and a Flag Test over a second scene");
+    const bool six = chrome == act0 && chrome == 0 && canvas == 1 && ink == 2 && uflag == 3 && sflag == 4 && seltest == 5 &&
+                     ex.elements[size_t(uflag)].scene == ex.elements[size_t(sflag)].scene &&
+                     ex.elements[size_t(uflag)].scene != ex.elements[size_t(chrome)].scene &&
+                     ex.elements[size_t(seltest)].scene != ex.elements[size_t(uflag)].scene &&
+                     ex.elements[size_t(seltest)].scene != ex.elements[size_t(chrome)].scene;
+    if (!six) {
+        check(false, "the check export lists Chrome (active), Canvas, Ink over one scene, Unselected Flag and Selected Flag "
+                     "over a second, and a Selection Test over a third");
     } else {
         fresh();
-        const Rgb chrome0 = ex.elements[size_t(chrome)].colour, ink0 = ex.elements[size_t(ink)].colour;
+        const Rgb chrome0 = ex.elements[size_t(chrome)].colour, ink0 = ex.elements[size_t(ink)].colour,
+                  uf0 = ex.elements[size_t(uflag)].colour, sf0 = ex.elements[size_t(sflag)].colour;
         const Rgb tint{0x20, 0x60, 0x48};
         Picker p = launch();
         tap(p, 1700, 700);
         tap(p, name_x, name_y);
-        check(p.chooser_open() && p.open(), "a tap on the element's name opens the chooser (Chrome, Canvas, Ink, ...)");
+        check(p.chooser_open() && p.open(), "a tap on the element's name opens the chooser (Chrome, Canvas, Ink, Unselected "
+                                            "Flag, Selected Flag, ...)");
         p.paint(frame);
         png(frame, work + "/frame_chooser_open.png");
         tap(p, ppx + 200, ppy + 900);                 // inside the panel, outside the chooser
@@ -644,8 +673,8 @@ int main(int argc, char** argv) {
         tap(p, 2200, 1300);                           // outside the panel too: only the chooser closes
         check(!p.chooser_open() && p.open(), "a tap outside the panel while the chooser is open closes the chooser alone");
         tap(p, name_x, name_y);
-        p.press(name_x, ppy + kChooserY + ink * kChooserRowH + 30);   // pressed on Ink, lifted on Flag Test
-        p.release(name_x, ppy + kChooserY + flag * kChooserRowH + 30);
+        p.press(name_x, ppy + kChooserY + ink * kChooserRowH + 30);   // pressed on Ink, lifted on Unselected Flag
+        p.release(name_x, ppy + kChooserY + uflag * kChooserRowH + 30);
         check(p.chooser_open() && p.active() == chrome, "a press on one entry lifted on another chooses nothing (the chooser stays)");
         row_tap(p, chrome);
         check(!p.chooser_open() && p.active() == chrome && !std::ifstream(work + "/state.json") &&
@@ -689,41 +718,69 @@ int main(int argc, char** argv) {
         const long ki = element_pixel(p.exp(), wsc, ink, kMargin + kW + 10), kg = element_pixel(p.exp(), wsc, chrome, 1300);
         check(ki >= 0 && kg >= 0 && frame_word(frame, ki, W) == word_of(ink0) && frame_word(frame, kg, W) == word_of(tint),
               "the chrome's tint stays live beside the ink");
-        // an edited ink, then the switch to the Flag Test: another scene
+        // an edited ink, then the switch to the Unselected Flag: the flags scene
         plus(p, 3);
         const Rgb ink1 = p.colour().rgb;
         tap(p, name_x, name_y);
-        row_tap(p, flag);
-        const int fsc = p.exp().elements[size_t(flag)].scene;
-        const long kf = element_pixel(p.exp(), fsc, flag, -1), kc = element_pixel(p.exp(), fsc, chrome, 1300),
-                   kn = element_pixel(p.exp(), fsc, ink, kMargin + kW + 10);
-        check(p.active() == flag && lines_of(work + "/picks.txt") == 2 &&
+        row_tap(p, uflag);
+        const int fsc = p.exp().elements[size_t(uflag)].scene;
+        const long kf = element_pixel(p.exp(), fsc, uflag, kMargin + kW + 10), ks = element_pixel(p.exp(), fsc, sflag, -1),
+                   kc = element_pixel(p.exp(), fsc, chrome, 1300), kn = element_pixel(p.exp(), fsc, ink, kMargin + kW + 10);
+        check(p.active() == uflag && lines_of(work + "/picks.txt") == 2 &&
                   slurp(work + "/picks.txt").find(" ink " + hex_of(ink1) + " hsv ") != std::string::npos,
-              "the edited ink is committed by the switch to the Flag Test");
-        check(kf >= 0 && kc >= 0 && kn >= 0 && p.picture()[size_t(kf)] == word_of(ex.elements[size_t(flag)].colour) &&
-                  p.picture()[size_t(kc)] == word_of(tint) && p.picture()[size_t(kn)] == word_of(ink1),
-              "the switch shows the Flag Test's scene, the chrome's tint and the ink's new colour live in it");
-        plus(p, 4);                                   // the flag face moves: its labels' antialiased edges re-blend over it
+              "the edited ink is committed by the switch to the Unselected Flag");
+        check(kf >= 0 && ks >= 0 && kc >= 0 && kn >= 0 && p.picture()[size_t(kf)] == word_of(uf0) &&
+                  p.picture()[size_t(ks)] == word_of(sf0) && p.picture()[size_t(kc)] == word_of(tint) &&
+                  p.picture()[size_t(kn)] == word_of(ink1),
+              "the switch shows the flags scene: both flag faces at their colours, the chrome's tint and the ink's new colour "
+              "live in it");
+        plus(p, 4);                                   // the face moves: its labels' antialiased edges re-blend over it
+        const Rgb uf1 = p.colour().rgb;
+        check(p.picture()[size_t(kf)] == word_of(uf1) && p.picture()[size_t(ks)] == word_of(sf0),
+              "the unselected face repaints live, the selected face stays");
         p.paint(frame);
-        png(frame, work + "/frame_flag_open.png");
-        // the Flag Test's history is empty: switching away commits it, as a close with an empty history does
+        png(frame, work + "/frame_unselected_flag_open.png");
+        // the switch to the Selected Flag: the same scene, the unselected face's edit committed
+        tap(p, name_x, name_y);
+        row_tap(p, sflag);
+        check(p.active() == sflag && lines_of(work + "/picks.txt") == 3 &&
+                  slurp(work + "/picks.txt").find(" unselected_flag " + hex_of(uf1) + " hsv ") != std::string::npos &&
+                  p.colour().rgb == sf0 && count(p) == "0 of 0" && p.picture()[size_t(kf)] == word_of(uf1),
+              "the edited unselected face is committed by the switch to the Selected Flag (#" + hex_of(sf0).substr(1) +
+                  ", 0 of 0)");
+        p.paint(frame);
+        png(frame, work + "/frame_selected_flag_open.png");
+        // the switch to the Selection Test: a third scene (the first flag's editor open); the selected face's empty
+        // history commits it
+        tap(p, name_x, name_y);
+        row_tap(p, seltest);
+        const int esc = p.exp().elements[size_t(seltest)].scene;
+        const long ke = element_pixel(p.exp(), esc, seltest, -1);
+        check(p.active() == seltest && lines_of(work + "/picks.txt") == 4 && ke >= 0 &&
+                  p.picture()[size_t(ke)] == word_of(ex.elements[size_t(seltest)].colour),
+              "the switch to the Selection Test (the selected face committed, as an empty history's close): its scene");
+        plus(p, 4);                                   // the band moves: the selected text's edges re-blend over it
+        p.paint(frame);
+        png(frame, work + "/frame_selection_test_open.png");
         tap(p, name_x, name_y);
         row_tap(p, chrome);
-        check(p.active() == chrome && lines_of(work + "/picks.txt") == 3 && count(p) == "1 of 1" && p.colour().rgb == tint,
+        check(p.active() == chrome && lines_of(work + "/picks.txt") == 5 && count(p) == "1 of 1" && p.colour().rgb == tint,
               "the switch back to the chrome: its own history (1 of 1), its tint");
         tap(p, 2200, 1300);
-        check(!p.open() && lines_of(work + "/picks.txt") == 3, "an unedited chrome's close appends nothing");
+        check(!p.open() && lines_of(work + "/picks.txt") == 5, "an unedited chrome's close appends nothing");
         p.paint(frame);
         png(frame, work + "/frame_chrome_tint.png");
         // a relaunch: the element he left, every element's colour, history and view
         Picker r = launch();
+        bool hists = r.element(canvas).hist.cursor == -1;
+        for (int e : {chrome, ink, uflag, sflag, seltest}) hists = hists && r.element(e).hist.picks.size() == 1;
         check(r.active() == chrome && r.colour().rgb == tint && r.element(ink).cs.rgb == ink1 &&
-                  r.element(canvas).cs.rgb == ex.elements[size_t(canvas)].colour && r.element(flag).cs.rgb == p.element(flag).cs.rgb &&
-                  r.element(ink).hist.picks.size() == 1 && r.element(chrome).hist.picks.size() == 1 &&
-                  r.element(flag).hist.picks.size() == 1 && r.element(canvas).hist.cursor == -1,
+                  r.element(canvas).cs.rgb == ex.elements[size_t(canvas)].colour && r.element(uflag).cs.rgb == uf1 &&
+                  r.element(sflag).cs.rgb == sf0 && r.element(seltest).cs.rgb == p.element(seltest).cs.rgb && hists,
               "a relaunch returns to the element he left, every element's colour and history its own");
         check(same_view(r.element(chrome).cs, p.element(chrome).cs) && same_view(r.element(ink).cs, p.element(ink).cs) &&
-                  same_view(r.element(flag).cs, p.element(flag).cs), "and every element's view exactly as it was");
+                  same_view(r.element(uflag).cs, p.element(uflag).cs) && same_view(r.element(sflag).cs, p.element(sflag).cs) &&
+                  same_view(r.element(seltest).cs, p.element(seltest).cs), "and every element's view exactly as it was");
         // histories and cursors independent across a switch
         tap(r, 1700, 700);
         tap(r, name_x, name_y);
@@ -737,20 +794,22 @@ int main(int argc, char** argv) {
         check(r.active() == ink && count(r) == "1 of 2" && r.colour().rgb == ink1, "the ink's own history: BACK to 1 of 2");
         tap(r, name_x, name_y);
         row_tap(r, chrome);                           // a stepped ink is no edit: nothing appended
-        check(count(r) == "1 of 1" && r.element(ink).hist.cursor == 0 && lines_of(work + "/picks.txt") == 4,
+        check(count(r) == "1 of 1" && r.element(ink).hist.cursor == 0 && lines_of(work + "/picks.txt") == 6,
               "the chrome's cursor and the ink's are their own across the switch (a stepped ink switched away appends nothing)");
         Picker r2 = launch();
         check(r2.active() == chrome && r2.element(ink).hist.cursor == 0 && r2.element(ink).cs.rgb == ink1 &&
-                  r2.element(chrome).hist.cursor == 0 && r2.element(flag).hist.cursor == 0, "and across a relaunch");
+                  r2.element(chrome).hist.cursor == 0 && r2.element(uflag).hist.cursor == 0 &&
+                  r2.element(sflag).hist.cursor == 0 && r2.element(seltest).hist.cursor == 0, "and across a relaunch");
         std::remove((work + "/state.json").c_str());
         Picker r3 = launch();
         check(r3.active() == chrome && r3.colour().rgb == chrome0 && r3.element(chrome).hist.cursor == 0 && r3.edited() &&
-                  r3.element(ink).cs.rgb == ink0 && r3.element(ink).hist.cursor == 1 && r3.element(canvas).hist.cursor == -1,
+                  r3.element(ink).cs.rgb == ink0 && r3.element(ink).hist.cursor == 1 && r3.element(canvas).hist.cursor == -1 &&
+                  r3.element(uflag).cs.rgb == uf0 && r3.element(uflag).hist.cursor == 0,
               "state.json deleted: the manifest's active element and colours, each history at its end");
     }
 
     // ---------------------------------------------------------------- THE PRESETS AND THE THEME STRIP
-    if (chrome == 0 && canvas == 1 && ink == 2 && flag >= 0) {
+    if (six) {
         fresh();
         const double pres_x = ppx + kPresetsX + 60, save_x = ppx + kPopX0 + 200, save_y = ppy + kPopY0 + kPopRowH / 2.0;
         auto presets_btn = [&](Picker& q) { tap(q, pres_x, name_y); };
@@ -797,7 +856,15 @@ int main(int argc, char** argv) {
                   std::to_string(cmax) + " colours each)");
 
         Picker p = launch();
-        const Rgb ink0 = p.element(ink).cs.rgb, cv0 = p.element(canvas).cs.rgb, fl0 = p.element(flag).cs.rgb;
+        const Rgb ink0 = p.element(ink).cs.rgb;
+        // every element the presets below never touch: its colour now, to stay so with an empty history
+        auto untouched = [&](const Picker& q) {
+            bool ok = true;
+            for (int e = 0; e < int(q.exp().elements.size()); ++e)
+                if (e != chrome && e != ink)
+                    ok = ok && q.element(e).cs.rgb == ex.elements[size_t(e)].colour && q.element(e).hist.picks.empty();
+            return ok;
+        };
         tap(p, 1700, 700);
         plus(p, 3);                                   // the chrome edited
         const ColourState c1 = p.colour();
@@ -811,7 +878,8 @@ int main(int argc, char** argv) {
         tap(p, save_x, save_y);
         check(!p.presets_open() && p.open() && p.presets().size() == 1 && p.presets()[0].number == 1 &&
                   slurp(work + "/presets.json").find("\"number\": 1") != std::string::npos &&
-                  p.presets()[0].colours.at("chrome").rgb == c1.rgb && p.presets()[0].colours.size() == 4,
+                  p.presets()[0].colours.at("chrome").rgb == c1.rgb && p.presets()[0].colours.size() == ex.elements.size() &&
+                  p.presets()[0].colours.count("unselected_flag") && p.presets()[0].colours.count("selected_flag"),
               "Save writes Preset 1 (every element's colour and view) and closes the pop-up; the panel stays open");
         choose_el(p, ink);
         plus(p, 3);
@@ -831,10 +899,9 @@ int main(int argc, char** argv) {
         check(!p.presets_open() && p.open() && lines_of(work + "/picks.txt") == 5 && p.colour().rgb == c1.rgb &&
                   same_view(p.colour(), c1) && p.old() == c1.rgb && p.element(ink).cs.rgb == ink0 &&
                   after_load.find(" chrome " + hex_of(c1.rgb) + " hsv ", after_load.size() - 200) != std::string::npos &&
-                  p.element(canvas).cs.rgb == cv0 && p.element(canvas).hist.picks.empty() &&
-                  p.element(flag).cs.rgb == fl0 && p.element(flag).hist.picks.empty(),
-              "loading Preset 1: the chrome and the ink each one committed pick (5 lines), the canvas and the flag none; "
-              "OLD the loaded chrome, its view exact");
+                  untouched(p),
+              "loading Preset 1: the chrome and the ink each one committed pick (5 lines), the canvas, the flags and the "
+              "selection test none; OLD the loaded chrome, its view exact");
         {
             std::map<std::string, Pick> st;
             std::map<std::string, int> ent;
@@ -953,11 +1020,47 @@ int main(int argc, char** argv) {
         put(work + "/presets.json", "{\"presets\": [{\"number\": 2, \"saved\": \"x\", \"colours\": {\"chrome\": \"#212533\"}, "
                                     "\"hsv\": {\"chrome\": [227, 0.36, 0.21]}}]}\n");
         std::string why;
-        check(load_fails(why), "a presets.json view that does not give its hex fails the load: " + why);
+        const bool refused_view = load_fails(why);
+        check(refused_view, "a presets.json view that does not give its hex fails the load: " + why);
+        // A PRESET SAVED BEFORE THE FLAGS ROUND (three elements) loads, and leaves the flags as they are
+        fresh();
+        put(work + "/presets.json",
+            "{\n \"presets\": [\n  {\"number\": 1, \"saved\": \"2026-10-04T08:30:00-04:00\", \"colours\": {\"canvas\": "
+            "\"#0D0D0D\", \"chrome\": \"#4C666D\", \"ink\": \"#D2E8DF\"},\n   \"hsv\": {\"canvas\": [176.03043599605004, "
+            "1.7359654195688278e-16, 0.05], \"chrome\": [193.0393034140969, 0.3063294442914831, 0.4291970677312775], "
+            "\"ink\": [155.00037250875818, 0.09285947824889867, 0.9082819956864905]}}\n ]\n}\n");
+        Picker o = launch();
+        tap(o, 1700, 700);
+        choose_el(o, uflag);
+        plus(o, 4);
+        const Rgb ufo = o.colour().rgb;
+        choose_el(o, sflag);                          // commits the unselected face; the selected one stays the manifest's
+        const size_t lines_o = lines_of(work + "/picks.txt");
+        presets_btn(o);                               // commits the selected face (its empty history)
+        const size_t lines_p = lines_of(work + "/picks.txt");
+        check(o.presets().size() == 1 && o.presets()[0].colours.size() == 3 && o.save_label() == "Save as Preset 2",
+              "a three-element presets.json (written before the flags round) loads: Preset 1, the next Preset 2");
+        tap(o, save_x, item_y(o, 0));
+        const std::string tail = slurp(work + "/picks.txt");
+        check(lines_of(work + "/picks.txt") == lines_p + 3 && lines_p == lines_o + 1 &&
+                  o.element(chrome).cs.rgb == (Rgb{0x4C, 0x66, 0x6D}) && o.element(canvas).cs.rgb == (Rgb{0x0D, 0x0D, 0x0D}) &&
+                  o.element(ink).cs.rgb == (Rgb{0xD2, 0xE8, 0xDF}) && o.element(ink).cs.v == 0.9082819956864905 &&
+                  o.element(uflag).cs.rgb == ufo && o.element(uflag).hist.picks.size() == 1 &&
+                  o.element(sflag).cs.rgb == ex.elements[size_t(sflag)].colour && o.element(sflag).hist.picks.size() == 1 &&
+                  o.active() == sflag && o.colour().rgb == ex.elements[size_t(sflag)].colour &&
+                  occurrences(tail, " unselected_flag ") == 1 && occurrences(tail, " selected_flag ") == 1,
+              "loading it commits the chrome, the canvas and the ink (3 lines, their views exact) and leaves both flags as "
+              "they were, no pick for either");
         fresh();
     }
 
     // ---------------------------------------------------------------- the tablet's files of 2026-10-04 load unchanged
+    // the flags round's elements, absent from every file the tablet wrote before it: the manifest's colours, no history
+    auto flags_fresh = [&](const Picker& q) {
+        return uflag >= 0 && sflag >= 0 && q.element(uflag).cs.rgb == ex.elements[size_t(uflag)].colour &&
+               q.element(sflag).cs.rgb == ex.elements[size_t(sflag)].colour && q.element(uflag).hist.cursor == -1 &&
+               q.element(sflag).hist.cursor == -1;
+    };
     if (!today.empty() && chrome == 0 && canvas == 1 && ink == 2) {
         fresh();
         const std::string picks0 = slurp(today + "/picks.txt"), state0 = slurp(today + "/state.json");
@@ -973,9 +1076,9 @@ int main(int argc, char** argv) {
                   I.s == 0.23 && I.v == 0.95 && t.element(chrome).hist.picks.size() == 11 &&
                   t.element(chrome).hist.cursor == 8 && t.element(canvas).hist.picks.size() == 22 &&
                   t.element(canvas).hist.cursor == 21 && t.element(ink).hist.picks.size() == 77 &&
-                  t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty(),
+                  t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty() && flags_fresh(t),
               "the tablet's picks.txt (110 lines) and state.json load unchanged: the canvas active, chrome 9 of 11, canvas "
-              "22 of 22, ink 77 of 77, every view exact");
+              "22 of 22, ink 77 of 77, every view exact; the flags at the manifest's colours, 0 of 0");
         tap(t, 1700, 700);
         tap(t, ppx + kPresetsX + 60, ppy + kNameY + kNameH / 2.0);
         tap(t, ppx + kPopX0 + 200, ppy + kPopY0 + kPopRowH / 2.0);
@@ -985,6 +1088,90 @@ int main(int argc, char** argv) {
         check(slurp(work + "/picks.txt") == picks0 && t.presets().size() == 1,
               "a preset saved and loaded over them appends nothing (every element unchanged): picks.txt byte for byte");
         fresh();
+    }
+
+    // ---------------------------------------------------------------- the tablet's files at the presets build's install
+    if (!late.empty() && chrome == 0 && canvas == 1 && ink == 2) {
+        fresh();
+        const std::string picks0 = slurp(late + "/picks.txt"), state0 = slurp(late + "/state.json");
+        put(work + "/picks.txt", picks0);
+        put(work + "/state.json", state0);
+        Picker t = launch();
+        const auto& C = t.element(chrome).cs;
+        const auto& V = t.element(canvas).cs;
+        const auto& I = t.element(ink).cs;
+        check(std::count(picks0.begin(), picks0.end(), '\n') == 136 && t.active() == ink &&
+                  C.rgb == (Rgb{0x4C, 0x66, 0x6D}) && C.h == 193.0393034140969 && C.s == 0.3063294442914831 &&
+                  C.v == 0.4291970677312775 && V.rgb == (Rgb{0x0D, 0x0D, 0x0D}) && V.h == 176.03043599605004 &&
+                  V.s == 1.7359654195688278e-16 && V.v == 0.05 && I.rgb == (Rgb{0xD2, 0xE8, 0xDF}) &&
+                  I.h == 155.00037250875818 && I.s == 0.09285947824889867 && I.v == 0.9082819956864905 &&
+                  t.element(chrome).hist.picks.size() == 12 && t.element(chrome).hist.cursor == 11 &&
+                  t.element(canvas).hist.picks.size() == 34 && t.element(canvas).hist.cursor == 33 &&
+                  t.element(ink).hist.picks.size() == 90 && t.element(ink).hist.cursor == 89 && t.theme_open() == -1 &&
+                  t.presets().empty() && flags_fresh(t),
+              "the tablet's picks.txt (136 lines) and state.json at the presets build's install load unchanged: the ink "
+              "active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90, every view exact; the flags at the manifest's "
+              "colours, 0 of 0");
+        tap(t, 1700, 700);
+        tap(t, 1700, 700);
+        check(slurp(work + "/picks.txt") == picks0, "an open and a close on the unedited ink append nothing");
+        fresh();
+    }
+
+    // ---------------------------------------------------------------- THE SWITCH'S PICTURE, byte for byte
+    // the round's own export at the colours of its "all moved" references: the waveform scene, then after the chooser's
+    // switch Ink -> Unselected Flag the flags scene, then back, each the mock tool's render
+    if (!round_expects.empty()) {
+        std::istringstream in(slurp(round_expects));
+        std::string line, wave_ppm, flags_ppm;
+        std::vector<std::string> moved;
+        size_t most = 0;
+        while (std::getline(in, line)) {
+            std::istringstream ls(line);
+            std::string sc, ppm, t;
+            std::vector<std::string> toks;
+            ls >> sc >> ppm;
+            while (ls >> t) toks.push_back(t);
+            if (toks.size() < most) continue;
+            if (toks.size() > most) { most = toks.size(); wave_ppm.clear(); flags_ppm.clear(); moved = toks; }
+            if (toks != moved) continue;
+            if (sc == "waveform") wave_ppm = ppm;
+            if (sc == "flags") flags_ppm = ppm;
+        }
+        const Export& rx = round_ex;
+        const int ri = element_of(rx, "ink"), ru = element_of(rx, "unselected_flag");
+        if (wave_ppm.empty() || flags_ppm.empty() || moved.size() != rx.elements.size() || ri < 0 || ru < 0) {
+            check(false, "the round's export has an all-moved reference of both scenes and an ink and an unselected flag");
+        } else {
+            fresh();
+            std::string cols;
+            for (const std::string& t : moved) {
+                const size_t eq = t.find('=');
+                cols += std::string(cols.empty() ? "" : ", ") + "\"" + t.substr(0, eq) + "\": \"" + t.substr(eq + 1) + "\"";
+            }
+            put(work + "/state.json", "{\"active\": \"ink\", \"colours\": {" + cols + "}, \"entry\": {}}\n");
+            Export e = rx;
+            Launch l;
+            if (!picker_load(work, e, l, err)) check(false, "picker_load on the round's export: " + err);
+            Picker q(std::move(e), work, std::move(l));
+            std::string said;
+            for (const std::string& t : moved) said += " " + t;
+            const long d0 = diff_ppm(q.picture(), wave_ppm, rx.width, rx.height);
+            tap(q, 1700, 700);
+            tap(q, name_x, name_y);
+            row_tap(q, ru);
+            const long d1 = diff_ppm(q.picture(), flags_ppm, rx.width, rx.height);
+            q.paint(frame);
+            png(frame, work + "/frame_switch_flags_moved.png");
+            tap(q, name_x, name_y);
+            row_tap(q, ri);
+            const long d2 = diff_ppm(q.picture(), wave_ppm, rx.width, rx.height);
+            check(q.active() == ri && d0 == 0 && d1 == 0 && d2 == 0,
+                  "the round's export at" + said + ": the waveform scene, the switch Ink -> Unselected Flag and back each "
+                  "equal the mock tool's render (" + std::to_string(d0) + ", " + std::to_string(d1) + ", " +
+                  std::to_string(d2) + " px differ)");
+            fresh();
+        }
     }
 
     // ---------------------------------------------------------------- today's files load unchanged
@@ -1045,7 +1232,7 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------- the per-frame cost of a pen drag (R's track)
     {
         fresh();
-        for (int e : {ink, chrome}) {
+        for (int e : {ink, chrome, uflag}) {
             if (e < 0) continue;
             Picker p = launch();
             tap(p, 1700, 700);

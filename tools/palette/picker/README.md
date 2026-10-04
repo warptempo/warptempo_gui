@@ -1,7 +1,7 @@
 # tools/palette/picker — Warptempo Picker, the colour picker over a true picture of the app
 
 A design tool for picking the app's colours (render.h's palette block: the chrome, the waveform's canvas and ink,
-next the flags) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
+the flags) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
 exported by the mock tool. A separate APK, package
 `com.warptempo.picker`, label "Warptempo Picker", installed beside the product and never touching
 `com.warptempo.gui` or its files. NO LINK PATH TO OR FROM THE PRODUCT: nothing in `src/`, `android/app/` or
@@ -25,10 +25,22 @@ the panel edits. Each element is picked over its own scene (several share one); 
 their rules — the chrome's every line follows its ground by Windows 95's proportions, the waveform outline follows
 the ink over the canvas — so a mock render and the picker agree by construction.
 
-THE ELEMENTS this round (architect 2026-10-04, in his order of importance, the chooser's order): CHROME (the ground,
-one knob; the active element at a fresh start), CANVAS, INK, all over the scene `waveform`. The rounds to come, in
-this order, are each a new theme and export with no new app code: the unselected flag, the selected flag, then the
-open flag with its selection (where the selected fill, fixed #666666 now, becomes pickable).
+THE ELEMENTS (architect 2026-10-04, in his order of importance, the chooser's order): CHROME (the ground, one knob;
+the active element at a fresh start), CANVAS, INK, over the scene `waveform`; then UNSELECTED FLAG (the flag's face
+and its stem, starting #666699) and SELECTED FLAG (the selected face and its stem, starting #9999CC: the current
+design for now, CE01), over the scene `flags` — the waveform scene with the marker stems and the flags on, the fourth
+flag from the left (x 1816) SELECTED with its payload box the addressed cell, so its stem is bright, the state he
+meets a selected flag in most (with a bound cell addressed the stem keeps the resting face). Both labels are FIXED
+white (his ruling: consistency), fixed roles re-blended over the live faces; the invalid faces and the flag outline
+are fixed roles too. The flags round added the elements and the scene in the theme and no app code but one fit: the
+element button sets a name too long for it (Unselected Flag) smaller, so it ends clear of the chooser's head. The
+round to come, again a new theme and export: the open flag with its selection (where the selected fill, fixed
+#666666 now, becomes pickable).
+
+WHERE THE FLAGS SHOW: a tap on the right half opens the panel on the left (x 16..1136), leaving the flags at x 1343
+(unselected), 1816 (SELECTED) and 2289 (unselected, clipped at the window's edge) in view, the selected one and the
+last still with the theme strip open (x 1148..1508); a tap on the left half opens the panel on the right, leaving the
+unselected flags at x 398 and 871 (only the first with the strip open).
 
 - A TAP on the picture opens the PANEL on the half of the screen opposite the tap, so the place tapped stays in view.
 - The panel (GTK's colour selector and GIMP's colour dialog, their common ground, HSV only, no CMYK): the hue RING with
@@ -66,7 +78,8 @@ open flag with its selection (where the selected fill, fixed #666666 now, become
   the file lives); under it a LIST THAT SCROLLS by a pen or finger drag (a drag past 16 px scrolls and acts on nothing;
   a tap acts at the lift; the scroll is kept while the app lives): the saved presets, oldest first, each with a small
   swatch of every element's colour in manifest order; then the plain heading "Themes" and THE PRODUCT'S THEMES (the
-  export's `themes.json`, below), each by its name with a swatch of its ground. A scroll frame paints the list and
+  export's `themes.json`, below), each by its CATALOG KEY (the name he types in the app's Settings, the family prefix
+  grouping them by provenance; architect 2026-10-04) with a swatch of its ground. A scroll frame paints the list and
   nothing else (no re-blend).
   - SAVE appends the whole look — every element's colour and its exact view — to `presets.json` as "Preset N" (one
     logcat line, `picker: preset save Preset N: <key> #RRGGBB ...`); duplicates are allowed.
@@ -79,7 +92,7 @@ open flag with its selection (where the selected fill, fixed #666666 now, become
   - No rename, delete or overwrite (they wait for a keyboard).
 - THE THEME STRIP (architect 2026-10-04: the product's themes as inspiration). A tap on a theme in the pop-up OPENS it:
   the pop-up closes and the panel grows a STRIP, a 360-px column 12 px beside it on the scene's side and the panel's
-  height (the panel itself unchanged): the theme's name, a close control (an X, top right), and EVERY COLOUR THE
+  height (the panel itself unchanged): the theme's key with its display title small under it, a close control (an X, top right), and EVERY COLOUR THE
   CATALOG RECORDS FOR THE THEME, each a swatch beside its hex and every name that records it (wrapped small text), a
   list that scrolls as the pop-up's does. A TAP ON A SWATCH ADOPTS IT AS THE ACTIVE ELEMENT'S COLOUR, AS AN EDIT,
   exactly as a control's drag would: the bytes set, the view re-derived from them (a theme stores no view), the scene
@@ -116,7 +129,9 @@ from its bytes as before (the lines are never rewritten; a new commit appends th
 no `"active"` (the single-layer builds', such as the ink round's `{"colours": {"ink": "#A6B9DE"}, "entry": {"ink":
 58}}`) starts every other element at the manifest's colour, on the manifest's active element. A key that is no element
 of the export (an earlier round's layer) is read and never used; so is a `"theme"` the export does not list, and a
-preset's key that is no element (that element keeps its colour at a load). `presets.json` is read as strictly as the
+preset's key that is no element. An element a file does not name (the flags in every file written before the flags
+round) starts at the manifest's colour with an empty history, and a preset that does not name it (one saved with three
+elements) leaves it as it is at a load. `presets.json` is read as strictly as the
 others: a number not above the one before, a colour without its view, or a view not giving its hex fails the load.
 
 At launch EVERY ELEMENT starts at its colour in `state.json` if there is one (the last close, with its view when
@@ -185,8 +200,8 @@ LOAD segments, DT_NEEDED exactly libc / libdl / libm / libandroid / libnativewin
 
 The LAPTOP CHECK builds the portable core (`json`, `scene`, `fonts`, `picker`) with the host's g++, cairo and
 FreeType into `build/check/host_check`; `check_refs.py` exports `themes/picker.json` afresh (`build/check/scene/`) and
-THE CHECK THEME (`build/check/multi/`: the round's theme plus a Flag Test element, the flag face, over a second scene
-with the flags and the first flag's editor open), and renders their references with the mock tool's own code. It
+THE CHECK THEME (`build/check/multi/`: the round's theme plus a Selection Test element, the selected fill, over a
+third scene with the flags and the first flag's editor open, its whole text selected), and renders their references with the mock tool's own code. It
 checks: every scene of both at the manifest's colours and at every colour set of `render.picker_check_sets` (each
 element moved, the chrome to the tint #206048 whose 32 and 96 hit the rule's half-to-even ties and to the bright
 #E6D2B4 whose lines cap, all moved at once) equals the mock tool's render BYTE FOR BYTE, painted whole and reached by
@@ -198,22 +213,30 @@ bytes -> HSV -> bytes is the identity over the whole cube; the H / S / V readout
 (247.27 -> 247.3, 0.4714 -> 47.1, 0.99999 -> 100.0) and the widest, measured in the mono face, fits its field; the scripted sessions on the active element (the panel,
 the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; a tap outside it closes it alone, writing
 nothing; a press lifted on another entry picks nothing; the active entry again is a no-op; the edited chrome
-committed by the switch to the Ink; the switch to the Flag Test's scene with the chrome's tint and the ink's colour
-live in it); every element's history, cursor and view independent across switches and relaunches, and the element he
+committed by the switch to the Ink; the switch Ink -> Unselected Flag showing the flags scene with both faces, the
+chrome's tint and the ink's colour live in it, the unselected face repainting alone; the switches on to the Selected
+Flag and the Selection Test's scene, each committing the element left); THE SWITCH'S PICTURE (the round's own export
+launched at the colours of its all-moved reference: the waveform scene, the switch Ink -> Unselected Flag and the
+switch back each equal the mock tool's render byte for byte); every element's history, cursor and view independent across switches and relaunches, and the element he
 left returned to; today's `picks.txt` (58 ink lines, 15 of the first build's form and 43 with a view, the last
 #A6B9DE) and `state.json` (`{"colours": {"ink": "#A6B9DE"}, "entry": {"ink": 58}}`) loading unchanged; THE PRESETS
 (the export's 98 themes; two saves named Preset 1 and Preset 2, the edited panel colour committed by the pop-up's
 opening; a load giving each changed element one pick and an unchanged one none, OLD the loaded colour, BACK returning;
 a relaunch keeping the presets and their views; a drag that scrolls and acts on nothing; a tap outside that changes
-nothing; a malformed `presets.json` refused); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
+nothing; a malformed `presets.json` refused; a three-element preset, saved before the flags round, loading and
+committing the chrome, canvas and ink while both flags stay as they were, no pick for either); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
 the chrome as an edit giving its own quartet #FFFFFF / #DFDFDF / #808080 / #000000 exactly, OLD reverting it, the
 switch to the canvas committing it with the strip still open, another swatch adopted into the canvas, the strip
 surviving a relaunch; Brick's ground giving the rule's lines and not its own; CDE Alpine's strip scrolled by a drag
 that adopts nothing; the close control, `state.json` never holding an unsaved adoption); THE TABLET'S FILES OF
 2026-10-04 (`check_data/tablet_2026-10-04/`: 110 `picks.txt` lines over three elements and its `state.json`) loading
-unchanged, every view exact, and a preset saved and loaded over them appending nothing; and THE
-PER-FRAME COST of a pen drag on the ink and on the chrome (printed). Its frames are written as PNGs in
-`build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`, `frame_flag_open.png`,
+unchanged, every view exact, the flags at the manifest's colours with empty histories, and a preset saved and loaded
+over them appending nothing; those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 136 lines,
+the ink active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90) loading unchanged the same way; and THE PER-FRAME COST
+of a pen drag on the ink, the chrome and the unselected flag (printed). Its frames are written as PNGs in
+`build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`,
+`frame_{unselected,selected}_flag_open.png` (the flags scene, the panel on the left), `frame_selection_test_open.png`,
+`frame_switch_flags_moved.png`,
 the history's `frame_history_*.png`, `frame_presets_open.png`, `frame_presets_themes.png` (the pop-up scrolled into
 the themes), `frame_strip_{open,adopted,scrolled}.png`).
 
@@ -281,7 +304,7 @@ An element's history is every `picks.txt` line under its key, across rounds, unt
 | `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
 | `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus the retained hue, a stored view restored), the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |
-| `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, copied verbatim |
+| `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, `check_data/tablet_2026-10-04_presets/` those at the presets build's install, copied verbatim |
 | `java/com/warptempo/picker/PickerActivity.java` | the full-screen sliver |
 | `AndroidManifest.xml` | the package, the colour mode, the orientation lock |
 | `build_picker.sh` | the APK, or `--check` |

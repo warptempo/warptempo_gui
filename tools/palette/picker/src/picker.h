@@ -4,7 +4,8 @@
 // host_check.cpp drives it on the laptop.
 //
 // THE ELEMENTS (architect 2026-10-04, the chrome round: he picks the chrome and its neighbours as he picked the ink,
-// one element at a time, choosing which): the export's elements (scene.h), each with its own colour, HSV view, pick
+// one element at a time, choosing which; the flags round added the unselected and the selected flag over a scene of
+// their own, in the theme alone): the export's elements (scene.h), each with its own colour, HSV view, pick
 // history and cursor (ElementState), ONE ACTIVE -- the one the panel edits. Each element is picked over its own
 // scene; EVERY ELEMENT'S CURRENT COLOUR IS LIVE IN EVERY SCENE (picking the chrome shows the ink at its saved colour).
 //
@@ -33,7 +34,7 @@
 //
 // THE PANEL (GTK's colour selector and GIMP's colour dialog, their common ground, HSV only, no CMYK): the hue ring
 // with the saturation/value triangle inside it (the triangle's corners the pure hue, white and black, turning with
-// the hue); the element button, the hex in large type and the OLD | NEW swatches (a tap on OLD reverts); the six
+// the hue); the element button (its name set smaller when it would run under the chooser's head), the hex in large type and the OLD | NEW swatches (a tap on OLD reverts); the six
 // sliders H, S, V and R, G, B, each a long track painted with its live gradient, a handle, a one-unit decrement and
 // increment at its ends (acting at the lift) and the value beside it (row_readout). Its chrome is the app's own greys (the ground
 // #191919, the label #FFFFFF, fields #212121, flat 1-px #000000 edges), no relief, no alpha.
@@ -64,7 +65,8 @@
 // colour is committed first (one picks.txt line, state.json), so a preset always snapshots saved colours. Its first
 // line, fixed, is "Save as Preset N"; under it a list that SCROLLS by a drag (a drag past kSlop px scrolls and acts on
 // nothing; a tap acts at the lift): the saved presets, oldest first, each with a small swatch of every element's
-// colour in manifest order; then the heading "Themes" and THE PRODUCT'S THEMES (scene.h), each by its name with a
+// colour in manifest order; then the heading "Themes" and THE PRODUCT'S THEMES (scene.h), each by its CATALOG KEY (the
+// name he types in the app's Settings, whose family prefix groups them by provenance; architect 2026-10-04) with a
 // swatch of its ground. The list keeps its scroll while the app lives. SAVE appends the whole look (every element's
 // colour and view) to presets.json as "Preset N" (scene.h) -- duplicates allowed -- one logcat line. LOAD sets every
 // element to the preset's colour and view: each element whose colour or view changes gets ONE committed pick in its
@@ -75,7 +77,7 @@
 //
 // THE THEME STRIP (architect 2026-10-04: the product's themes as inspiration, not as looks to load): a tap on a theme
 // in the pop-up OPENS it -- the pop-up closes and the panel grows a STRIP, a column beside it on the scene's side (the
-// panel itself unchanged): the theme's name, a close control, and every colour the catalog records for it (scene.h,
+// panel itself unchanged): the theme's key with its display title small under it, a close control, and every colour the catalog records for it (scene.h,
 // Theme) as a swatch beside its hex and the names that record it, a list that scrolls as the pop-up's does. A TAP ON A
 // SWATCH ADOPTS IT AS THE ACTIVE ELEMENT'S COLOUR, AS AN EDIT, exactly as a control's drag would: the bytes set, the
 // view re-derived from them (set_rgb; a theme stores no view), the scene repainted live, NEW showing it, OLD still
@@ -257,7 +259,8 @@ private:
     Scroll pop_, strip_;
     int item_ = -1;                    // the pop-up item or strip row a PopList / StripList press holds
     int theme_ = -1;                   // the open theme strip's theme, or -1
-    std::vector<std::string> strip_title_;
+    std::vector<std::string> strip_title_;   // the header's key lines
+    std::vector<std::string> strip_sub_;     // and its display title's, small, under them
     std::vector<StripRow> strip_rows_;
     int strip_content_ = 0, strip_head_ = 0;   // the rows' height, the header's (the list starts under it)
 

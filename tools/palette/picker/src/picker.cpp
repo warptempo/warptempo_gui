@@ -74,6 +74,15 @@ double cap_baseline(cairo_t* cr, bool mono, double px, double y0, double h) {
     return std::round(y0 + (h - e.height) / 2 - e.y_bearing);
 }
 
+// the largest size up to px at which s is no wider than width: the element button's name, which must clear the
+// chooser's head at the button's right (the flags round's "Unselected Flag" is 256 px at 36 px where 186 fit)
+double fit_px(cairo_t* cr, bool mono, double px, const std::string& s, double width) {
+    fonts_select(cr, mono, px);
+    cairo_text_extents_t e;
+    cairo_text_extents(cr, s.c_str(), &e);
+    return e.x_advance <= width ? px : std::floor(px * width / e.x_advance);
+}
+
 // the triangle's corners, relative to the wheel's centre: the pure hue, white, black (GTK's order, counter-clockwise)
 void corners(double h, double v[3][2]) {
     for (int k = 0; k < 3; ++k) {
@@ -539,8 +548,12 @@ void Picker::layout_strip() {
     const Theme& t = ex_.themes[size_t(theme_)];
     cairo_surface_t* ms = cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
     cairo_t* cr = cairo_create(ms);
-    strip_title_ = wrap(cr, false, kStripTitlePx, split_words(t.name, " "), kStripW - 2 * kStripPad - kBtn - 12);
-    strip_head_ = kStripPad + std::max(kBtn, int(std::ceil(strip_title_.size() * kStripTitleLineH))) + 16;
+    // the header: the theme's CATALOG KEY, the name he types in the app's Settings (wrapped at its hyphens), and its
+    // display title under it, small (architect 2026-10-04)
+    strip_title_ = wrap(cr, false, kStripTitlePx, split_words(t.key, "-"), kStripW - 2 * kStripPad - kBtn - 12);
+    strip_sub_ = wrap(cr, false, kStripNamePx, split_words(t.name, " "), kStripW - 2 * kStripPad - kBtn - 12);
+    strip_head_ = kStripPad + std::max(kBtn, int(std::ceil(strip_title_.size() * kStripTitleLineH +
+                                                            strip_sub_.size() * kStripLineH))) + 16;
     strip_rows_.clear();
     int y = 0;
     for (const ThemeColour& c : t.colours) {
@@ -975,7 +988,10 @@ void Picker::paint(cairo_surface_t* surf) {
     }
     cairo_surface_mark_dirty(surf);
     cairo_t* cr = cairo_create(surf);
-    text(cr, false, kWordPx, act.name, ox + kColX + 18, cap_baseline(cr, false, kWordPx, oy + kNameY, kNameH), 0);
+    {   // the name in the word size, or smaller to end 12 px short of the head (kNameX1 - 36 - 12)
+        const double npx = fit_px(cr, false, kWordPx, act.name, kNameX1 - 60 - (kColX + 18));
+        text(cr, false, npx, act.name, ox + kColX + 18, cap_baseline(cr, false, npx, oy + kNameY, kNameH), 0);
+    }
     text(cr, false, kWordPx, "Presets", ox + (kPresetsX + kColX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kNameY, kNameH), 1);
     if (!presets_) {
         if (!chooser_) {
@@ -1008,7 +1024,7 @@ void Picker::paint(cairo_surface_t* surf) {
             const int ry = vy0 + k * kPopRowH - pop_.pos;
             if (ry + kPopRowH <= vy0 || ry >= vy1) continue;
             const std::string w = k < np ? "Preset " + std::to_string(presets_list_[size_t(k)].number)
-                                : k == np ? "Themes" : ex_.themes[size_t(k - np - 1)].name;
+                                : k == np ? "Themes" : ex_.themes[size_t(k - np - 1)].key;
             text(cr, false, kWordPx, w, x0, cap_baseline(cr, false, kWordPx, ry, kPopRowH), 0);
         }
         cairo_restore(cr);
@@ -1018,6 +1034,9 @@ void Picker::paint(cairo_surface_t* surf) {
         for (size_t l = 0; l < strip_title_.size(); ++l)
             text(cr, false, kStripTitlePx, strip_title_[l], sx + kStripPad,
                  oy + kStripPad + (l + 1) * kStripTitleLineH - 8, 0);
+        for (size_t l = 0; l < strip_sub_.size(); ++l)
+            text(cr, false, kStripNamePx, strip_sub_[l], sx + kStripPad,
+                 oy + kStripPad + strip_title_.size() * kStripTitleLineH + (l + 1) * kStripLineH - 5, 0);
         cairo_save(cr);
         cairo_rectangle(cr, sx + 1, lv0, kStripW - 2, lv1 - lv0);
         cairo_clip(cr);
