@@ -2,24 +2,23 @@
 // laptop's cairo and FreeType, against the mock tool's own bytes. Built and run by build_picker.sh --check (never
 // part of the APK):
 //
-//   host_check <fonts dir> <scene dir> <work dir> [--linmix <table>] [--expect <#rrggbb> <ppm>]...
+//   host_check <fonts dir> <work dir> --export <scene dir> <expects.txt> [--export <dir> <expects.txt>]...
+//              [--linmix <table>]
 //
-//   - the scene loads and its picture (background + layers in the manifest's colours) is the background byte for byte
-//     (the export wrote the render as the background);
-//   - --linmix: a 65536-byte table from colour.py, lin_mix(a, b, 0.5) for every byte pair: the C++ port must agree
-//     on every one;
-//   - --expect: the active layer set to the hex, the picture must equal the ppm (the mock tool's render of the theme
-//     with that colour) byte for byte -- the derived layers following by their rule;
-//   - a scripted session (open, drag, steps, revert, close) on the work dir, its frames written as PNGs there for the
-//     eye, its commit's picks.txt and state.json checked;
-//   - a scripted HISTORY session (picker.h's pick history): the empty history's disabled buttons, commits, BACK and
-//     FORWARD, the disabled ends, a no-op close after a step, an edit-then-step discard, leaving the app with an
-//     unsaved edit, reloads restoring the cursor (this build's state.json and the previous build's),
-//     frame_history_*.png for the eye;
-//   - a scripted HSV session (picker.h's "the HSV he dialled is part of the pick"): every road back to a saved pick
-//     restores its view exactly, V's + alone across saves moves neither H nor S, a view-only S step is an edit, the
-//     old-format picks.txt and state.json load unchanged and behave as before, a view that does not give its hex
-//     fails the load.
+//   - every export loads, and every expects.txt line ("<scene> <ppm> [<key>=#RRGGBB ...]": the mock tool's render of
+//     that scene with those elements moved from the manifest's colours) equals the picker's picture byte for byte,
+//     both painted whole and reached by the live repaint from the manifest's colours (the road a pen drag takes);
+//   - --linmix: a 65536-byte table from colour.py, lin_mix(a, b, 0.5) for every byte pair: the C++ port must agree;
+//   - the blend (colour.h over_n_8) equals cairo's own compositing of a solid source through an A8 mask on every
+//     (source, frame, coverage) byte triple, each channel; the chrome rule's scale_byte is half-to-even and capped;
+//   - ColourState over the whole cube, the view numbers;
+//   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas, Ink and a Flag Test over
+//     a second scene) and its active element (the chrome): the panel, the pick history, the HSV he dialled; then THE
+//     CHOOSER (open, a tap outside it, the no-op re-choice, the edited-then-switch commit, the switch of scene),
+//     every element's history, cursor and view independent across a switch and a relaunch, and today's picks.txt
+//     (58 ink lines, the old form and the new) and state.json loading unchanged;
+//   - THE PER-FRAME COST of a pen drag (R's track) on the ink and on the chrome: the live repaint and the frame;
+//   - frames as PNGs in the work dir for the eye.
 
 #include "colour.h"
 #include "fonts.h"
@@ -27,6 +26,7 @@
 #include "scene.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
@@ -61,13 +61,19 @@ std::string slurp(const std::string& path) {
     return ss.str();
 }
 
-// the picture's words against a binary P6 (the export's header shape)
-size_t diff_ppm(const std::vector<uint32_t>& pic, const std::string& ppm_path, int w, int h) {
+void put(const std::string& path, const std::string& text) {
+    FILE* f = std::fopen(path.c_str(), "w");
+    std::fputs(text.c_str(), f);
+    std::fclose(f);
+}
+
+// the picture's words against a binary P6 (the export's header shape): the pixels that differ, or -1
+long diff_ppm(const std::vector<uint32_t>& pic, const std::string& ppm_path, int w, int h) {
     const std::string d = slurp(ppm_path);
     const std::string hdr = "P6\n" + std::to_string(w) + " " + std::to_string(h) + "\n255\n";
-    if (d.compare(0, hdr.size(), hdr) != 0 || d.size() != hdr.size() + size_t(w) * h * 3) return size_t(-1);
+    if (d.compare(0, hdr.size(), hdr) != 0 || d.size() != hdr.size() + size_t(w) * h * 3) return -1;
     const auto* p = reinterpret_cast<const uint8_t*>(d.data() + hdr.size());
-    size_t n = 0;
+    long n = 0;
     for (size_t k = 0; k < size_t(w) * h; ++k)
         if (pic[k] != word_of(Rgb{p[3 * k], p[3 * k + 1], p[3 * k + 2]})) ++n;
     return n;
@@ -78,46 +84,120 @@ size_t lines_of(const std::string& path) {
     return size_t(std::count(t.begin(), t.end(), '\n'));
 }
 
-std::vector<uint32_t> picture_of(const Scene& s) {
-    std::vector<uint32_t> pic(size_t(s.width) * s.height);
-    scene_paint(s, pic.data());
-    return pic;
-}
-
 void png(cairo_surface_t* surf, const std::string& path) {
     cairo_surface_write_to_png(surf, path.c_str());
     std::printf("     wrote %s\n", path.c_str());
+}
+
+int scene_of(const Export& ex, const std::string& name) {
+    for (size_t k = 0; k < ex.scenes.size(); ++k)
+        if (ex.scenes[k].name == name) return int(k);
+    return -1;
+}
+
+// "key=#hex" overrides -> the export's elements moved; false on a bad token
+bool apply_overrides(Export& ex, const std::vector<std::string>& toks, uint32_t& changed) {
+    changed = 0;
+    for (const std::string& t : toks) {
+        const size_t eq = t.find('=');
+        if (eq == std::string::npos) return false;
+        const int e = element_of(ex, t.substr(0, eq));
+        Rgb c;
+        if (e < 0 || !parse_hex(t.substr(eq + 1), c)) return false;
+        ex.elements[size_t(e)].colour = c;
+        changed |= 1u << e;
+    }
+    return true;
+}
+
+// every expects.txt line: the picture painted whole and by the live repaint, each against the ppm
+void check_expects(const Export& ex0, const std::string& path, const std::string& label) {
+    std::istringstream in(slurp(path));
+    std::string line;
+    int lines = 0;
+    while (std::getline(in, line)) {
+        if (line.empty()) continue;
+        std::istringstream ls(line);
+        std::string scene, ppm, t;
+        ls >> scene >> ppm;
+        std::vector<std::string> toks;
+        while (ls >> t) toks.push_back(t);
+        const int sc = scene_of(ex0, scene);
+        Export ex = ex0;
+        uint32_t changed = 0;
+        if (sc < 0 || !apply_overrides(ex, toks, changed)) { check(false, label + ": a bad expects line: " + line); continue; }
+        std::vector<uint32_t> words, w0, pic(size_t(ex.width) * ex.height), live(pic.size());
+        role_words(ex, words);
+        scene_paint(ex, sc, words, pic.data());
+        role_words(ex0, w0);                                  // the live road: from the manifest's picture
+        scene_paint(ex0, sc, w0, live.data());
+        scene_repaint(ex, sc, w0, words, changed, live.data());
+        const long a = diff_ppm(pic, ppm, ex.width, ex.height), b = diff_ppm(live, ppm, ex.width, ex.height);
+        std::string what = label + " " + scene;
+        for (const std::string& k : toks) what += " " + k;
+        if (toks.empty()) what += " (the manifest's colours)";
+        check(a == 0 && b == 0, what + " equals the mock tool's render (" + std::to_string(a) + " px differ painted whole, " +
+                                    std::to_string(b) + " by the live repaint)");
+        ++lines;
+    }
+    check(lines > 0, label + ": " + std::to_string(lines) + " references read");
+}
+
+// a solid pixel of element e's own role in the scene `sc`, right of min_x: its index, or -1
+long element_pixel(const Export& ex, int sc, int e, int min_x) {
+    for (size_t r = 0; r < ex.roles.size(); ++r) {
+        const Role& R = ex.roles[r];
+        if (R.kind != Role::Kind::Element || R.el != e) continue;
+        for (const Run& run : ex.scenes[size_t(sc)].solid[r])
+            for (uint32_t k = run.start; k < run.start + run.len; ++k)
+                if (int(k % ex.width) > min_x) return long(k);
+    }
+    return -1;
+}
+
+uint32_t frame_word(cairo_surface_t* frame, long k, int width) {
+    cairo_surface_flush(frame);
+    const auto* w = reinterpret_cast<const uint32_t*>(cairo_image_surface_get_data(frame));
+    const int st = cairo_image_surface_get_stride(frame) / 4;
+    return w[size_t(k / width) * st + k % width];
 }
 
 } // namespace
 
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IOLBF, 0);   // the check's lines in order with plog's stderr
-    if (argc < 4) {
-        std::fprintf(stderr, "usage: host_check <fonts dir> <scene dir> <work dir> [--linmix <table>] [--expect <#rrggbb> <ppm>]...\n");
+    if (argc < 6) {
+        std::fprintf(stderr, "usage: host_check <fonts dir> <work dir> --export <scene dir> <expects.txt> [--export ...] [--linmix <table>]\n");
         return 2;
     }
-    const std::string fonts = argv[1], scene_dir = argv[2], work = argv[3];
+    const std::string fonts = argv[1], work = argv[2];
     const std::string sans = slurp(fonts + "/Roboto-Regular.ttf"), mono = slurp(fonts + "/RobotoMono-Regular.ttf");
     if (!fonts_install(reinterpret_cast<const uint8_t*>(sans.data()), sans.size(),
                        reinterpret_cast<const uint8_t*>(mono.data()), mono.size())) {
         std::fprintf(stderr, "fonts did not install\n");
         return 2;
     }
-    Scene scene;
     std::string err;
-    if (!scene_load(scene_dir, scene, err)) {
-        std::fprintf(stderr, "scene: %s\n", err.c_str());
-        return 1;
-    }
-    std::printf("scene %dx%d, %zu layers, active %s %s\n", scene.width, scene.height, scene.layers.size(),
-                scene.layers[scene.active].name.c_str(), hex_of(scene.layers[scene.active].colour).c_str());
-    check(diff_ppm(picture_of(scene), scene_dir + "/background.ppm", scene.width, scene.height) == 0,
-          "the picture in the manifest's colours is the background byte for byte");
-
-    for (int i = 4; i < argc; ++i) {
+    Export ex0;                                   // the first export: the sessions' and the timing's
+    bool have = false;
+    for (int i = 3; i < argc; ++i) {
         const std::string a = argv[i];
-        if (a == "--linmix" && i + 1 < argc) {
+        if (a == "--export" && i + 2 < argc) {
+            const std::string dir = argv[++i], expects = argv[++i];
+            Export ex;
+            if (!export_load(dir, ex, err)) { check(false, dir + ": " + err); continue; }
+            size_t stacks = 0, layers = 0, runs = 0;
+            for (const Scene& sc : ex.scenes) {
+                stacks += sc.stacks.size();
+                layers += sc.layers.size();
+                for (const auto& r : sc.solid) runs += r.size();
+            }
+            std::printf("export %s: %dx%d, %zu elements, %zu roles, %zu scenes, %zu antialiased px (%zu paints), %zu solid runs\n",
+                        dir.c_str(), ex.width, ex.height, ex.elements.size(), ex.roles.size(), ex.scenes.size(), stacks,
+                        layers, runs);
+            check_expects(ex, expects, dir.substr(dir.find_last_of('/') + 1));
+            if (!have) { ex0 = std::move(ex); have = true; }
+        } else if (a == "--linmix" && i + 1 < argc) {
             const std::string t = slurp(argv[++i]);
             size_t bad = 0;
             if (t.size() != 65536) bad = 65536;
@@ -126,20 +206,67 @@ int main(int argc, char** argv) {
                     for (int y = 0; y < 256; ++y)
                         if (lin_mix_byte(x, y, 0.5) != uint8_t(t[size_t(x) * 256 + y])) ++bad;
             check(bad == 0, "lin_mix(a, b, 0.5) equals colour.py on all 65536 byte pairs (" + std::to_string(bad) + " differ)");
-        } else if (a == "--expect" && i + 2 < argc) {
-            const std::string hex = argv[++i], ppm = argv[++i];
-            Scene s2 = scene;
-            Rgb c;
-            if (!parse_hex(hex, c)) { std::fprintf(stderr, "bad hex %s\n", hex.c_str()); return 2; }
-            s2.layers[s2.active].colour = c;
-            scene_derive(s2);
-            const size_t n = diff_ppm(picture_of(s2), ppm, s2.width, s2.height);
-            check(n == 0, "the picture with " + s2.layers[s2.active].name + " " + hex + " equals " + ppm +
-                              " (" + std::to_string(n == size_t(-1) ? -1L : long(n)) + " px differ)");
+        } else {
+            std::fprintf(stderr, "host_check: unknown argument %s\n", a.c_str());
+            return 2;
         }
     }
+    if (!have) return 1;
+    const Export& ex = ex0;
 
-    // ColourState: the bytes are the truth, the hue survives grey and black
+    // ---------------------------------------------------------------- the blend against cairo, every byte triple
+    {
+        // for each source byte s: a 256 x 256 frame whose row d holds the frame byte d, through an A8 mask whose
+        // column m holds the coverage m; the channels run through bijections of s and d, so each sees every triple
+        cairo_surface_t* dst = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 256, 256);
+        cairo_surface_t* msk = cairo_image_surface_create(CAIRO_FORMAT_A8, 256, 256);
+        {
+            cairo_surface_flush(msk);
+            uint8_t* m = cairo_image_surface_get_data(msk);
+            const int ms = cairo_image_surface_get_stride(msk);
+            for (int y = 0; y < 256; ++y)
+                for (int x = 0; x < 256; ++x) m[y * ms + x] = uint8_t(x);
+            cairo_surface_mark_dirty(msk);
+        }
+        auto drow = [](int d) { return Rgb{uint8_t(d), uint8_t((d * 5 + 1) & 255), uint8_t(255 - d)}; };
+        long bad = 0;
+        for (int s = 0; s < 256; ++s) {
+            const Rgb src{uint8_t(s), uint8_t(255 - s), uint8_t((s * 7 + 3) & 255)};
+            cairo_surface_flush(dst);
+            auto* px = reinterpret_cast<uint32_t*>(cairo_image_surface_get_data(dst));
+            const int st = cairo_image_surface_get_stride(dst) / 4;
+            for (int y = 0; y < 256; ++y)
+                for (int x = 0; x < 256; ++x) px[y * st + x] = word_of(drow(y));
+            cairo_surface_mark_dirty(dst);
+            cairo_t* cr = cairo_create(dst);
+            cairo_set_source_rgb(cr, src.r / 255.0, src.g / 255.0, src.b / 255.0);
+            cairo_mask_surface(cr, msk, 0, 0);
+            cairo_destroy(cr);
+            cairo_surface_flush(dst);
+            for (int y = 0; y < 256; ++y)
+                for (int x = 0; x < 256; ++x)
+                    if ((px[y * st + x] & 0xFFFFFF) != (over_n_8(word_of(src), uint8_t(x), word_of(drow(y))) & 0xFFFFFF)) ++bad;
+        }
+        cairo_surface_destroy(dst);
+        cairo_surface_destroy(msk);
+        check(bad == 0, "the blend (over_n_8) equals cairo's solid source through an A8 mask on every (source, frame, "
+                        "coverage) byte triple, each channel (" + std::to_string(bad) + " of 16777216 px differ)");
+        bool scale = true;
+        for (int c = 0; c < 256; ++c)
+            for (int num : {255, 223, 128}) {
+                const double q = double(c) * num / 192;
+                scale = scale && scale_byte(c, num, 192) == uint8_t(std::min(255.0, std::nearbyint(q)));
+            }
+        check(scale && scale_byte(32, 255, 192) == 42 && scale_byte(96, 223, 192) == 112 &&
+                  scale_rgb(Rgb{0x19, 0x19, 0x19}, 255, 192) == (Rgb{0x21, 0x21, 0x21}) &&
+                  scale_rgb(Rgb{0x19, 0x19, 0x19}, 223, 192) == (Rgb{0x1D, 0x1D, 0x1D}) &&
+                  scale_rgb(Rgb{0x19, 0x19, 0x19}, 128, 192) == (Rgb{0x11, 0x11, 0x11}) &&
+                  scale_rgb(Rgb{0xE6, 0xD2, 0xB4}, 255, 192) == (Rgb{0xFF, 0xFF, 0xEF}),
+              "the chrome rule's scale_byte: half to even (32 x 255 / 192 -> 42, 96 x 223 / 192 -> 112), capped, #191919 -> "
+              "#212121 / #1D1D1D / #111111");
+    }
+
+    // ---------------------------------------------------------------- ColourState: the bytes are the truth
     {
         ColourState cs;
         cs.set_rgb(Rgb{0x80, 0x40, 0x20});
@@ -155,8 +282,6 @@ int main(int argc, char** argv) {
         check(cs.h == h0 && cs.s == s0, "black set as bytes keeps the hue and the saturation");
         cs.set_rgb(Rgb{0x77, 0x77, 0x77});
         check(cs.h == h0 && cs.s == 0, "a grey set as bytes keeps the hue, saturation 0");
-        // the whole cube: so the R / G / B controls never reach a view that fails a stored pick's load check
-        // (rgb_of_hsv(view) == bytes, scene.h's Pick)
         bool all = true;
         for (int r = 0; r < 256 && all; ++r)
             for (int g = 0; g < 256 && all; ++g)
@@ -174,102 +299,99 @@ int main(int argc, char** argv) {
         check(trip, "a stored view number reads back as the same double, in the shortest form (0.35, 227)");
     }
 
-    // a scripted session over the scene, on its own copy, frames written for the eye
-    std::remove((work + "/picks.txt").c_str());
-    std::remove((work + "/state.json").c_str());
-    History hist0;
-    std::string note;
-    Scene scene0 = scene;
-    Pick start0;
-    const bool loaded0 = picker_load(work, scene0, hist0, start0, note, err);
-    check(loaded0 && hist0.cursor == -1 && hist0.picks.empty(),
-          "no state.json and no picks.txt: the manifest's colour, an empty history (" + note + ")");
-    Picker p(scene0, work, hist0, start0);
-    cairo_surface_t* frame = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, scene.width, scene.height);
-    p.paint(frame);
-    png(frame, work + "/frame_closed.png");
-    p.press(1700, 700);
-    p.release(1700, 700);
-    check(p.open() && !p.panel_on_right(), "a tap on the right half opens the panel on the left");
-    p.paint(frame);
-    png(frame, work + "/frame_open_left.png");
-    const Rgb start = p.colour().rgb;
-    // R's track: press at the byte 200's column, drag to 230's
     using namespace panel;
-    const double px = kMargin, py = (scene.height - kH) / 2;
-    auto track_x = [&](int byte) { return px + kTrackX + byte / 255.0 * (kTrackL - 1); };
-    p.press(track_x(200), py + row_y(3) + 30);
-    p.move(track_x(230), py + row_y(3) + 40);
-    p.release(track_x(230), py + row_y(3) + 40);
-    check(p.colour().rgb.r == 230 && p.colour().rgb.g == start.g, "R's track sets the byte under the pen");
-    p.press(px + kPlusX + 30, py + row_y(5) + 30);
-    p.release(px + kPlusX + 30, py + row_y(5) + 30);
-    check(p.colour().rgb.b == start.b + 1, "B's increment is one byte");
-    p.press(px + kPad + kROut + 255, py + kPad + kROut);   // the ring at 0 degrees
-    p.move(px + kPad + kROut, py + kPad + kROut - 255);    // to 90
-    p.release(px + kPad + kROut, py + kPad + kROut - 255);
-    check(std::abs(p.colour().h - 90) < 1e-9, "the ring sets the hue by the angle (90 at the top)");
-    p.paint(frame);
-    png(frame, work + "/frame_dragged.png");
-    {   // the active layer on the picture is the new colour
-        cairo_surface_flush(frame);
-        const auto* w = reinterpret_cast<const uint32_t*>(cairo_image_surface_get_data(frame));
-        uint32_t k = 0;      // a pixel of the active layer right of the panel (open on the left)
-        for (uint32_t q : p.scene().layers[p.scene().active].pixels)
-            if (int(q % scene.width) > kMargin + kW + 10) { k = q; break; }
-        const int st = cairo_image_surface_get_stride(frame) / 4;
-        check(w[size_t(k / scene.width) * st + k % scene.width] == word_of(p.colour().rgb),
-              "the active layer repaints live with the pick");
+    const int W = ex.width;
+    const std::string L = ex.elements[size_t(ex.active)].key;   // its key
+    const int act0 = ex.active;   // the manifest's active element (the chrome): the panel's, history's and HSV sessions'
+    const int ink = element_of(ex, "ink"), chrome = element_of(ex, "chrome"), canvas = element_of(ex, "canvas"),
+              flag = element_of(ex, "flag_test");
+    auto launch = [&]() {
+        Export e = ex;
+        Launch l;
+        if (!picker_load(work, e, l, err)) { std::printf("FAIL picker_load: %s\n", err.c_str()); ++g_fail; }
+        return Picker(std::move(e), work, std::move(l));
+    };
+    auto load_fails = [&](std::string& why) {
+        Export e = ex;
+        Launch l;
+        return !picker_load(work, e, l, why);
+    };
+    auto tap = [](Picker& q, double x, double y) { q.press(x, y); q.release(x, y); };
+    auto count = [](const Picker& q) {
+        return std::to_string(q.history().cursor + 1) + " of " + std::to_string(q.history().picks.size());
+    };
+    auto fresh = [&]() {
+        std::remove((work + "/picks.txt").c_str());
+        std::remove((work + "/state.json").c_str());
+    };
+    // the panel opens on the left (a tap at x 1700): its controls in window px
+    const double ppx = kMargin, ppy = (ex.height - kH) / 2;
+    const double back_x = ppx + kBackX + kBtn / 2.0, fwd_x = ppx + kFwdX + kBtn / 2.0, hist_y = ppy + kHistY + kBtn / 2.0;
+    const double name_x = ppx + kColX + 100, name_y = ppy + kNameY + kNameH / 2.0;
+    auto plus = [&](Picker& q, int row) { tap(q, ppx + kPlusX + 30, ppy + row_y(row) + 30); };
+    auto minus = [&](Picker& q, int row) { tap(q, ppx + kMinusX + 30, ppy + row_y(row) + 30); };
+    auto track = [&](Picker& q, int row, double f) { tap(q, ppx + kTrackX + f * (kTrackL - 1), ppy + row_y(row) + 30); };
+    auto row_tap = [&](Picker& q, int e) { tap(q, name_x, ppy + kChooserY + e * kChooserRowH + kChooserRowH / 2.0); };
+    auto same_view = [](const ColourState& a, const ColourState& b) {
+        return a.rgb == b.rgb && a.h == b.h && a.s == b.s && a.v == b.v;
+    };
+    cairo_surface_t* frame = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ex.width, ex.height);
+
+    // ---------------------------------------------------------------- a scripted session over the active element
+    {
+        fresh();
+        Picker p = launch();
+        check(p.history().cursor == -1 && p.history().picks.empty() && p.active() == act0,
+              "no state.json and no picks.txt: the manifest's active element and colour, an empty history");
+        p.paint(frame);
+        png(frame, work + "/frame_closed.png");
+        tap(p, 1700, 700);
+        check(p.open() && !p.panel_on_right(), "a tap on the right half opens the panel on the left");
+        p.paint(frame);
+        png(frame, work + "/frame_open_left.png");
+        const Rgb start = p.colour().rgb;
+        auto track_x = [&](int byte) { return ppx + kTrackX + byte / 255.0 * (kTrackL - 1); };
+        p.press(track_x(200), ppy + row_y(3) + 30);
+        p.move(track_x(230), ppy + row_y(3) + 40);
+        p.release(track_x(230), ppy + row_y(3) + 40);
+        check(p.colour().rgb.r == 230 && p.colour().rgb.g == start.g, "R's track sets the byte under the pen");
+        plus(p, 5);
+        check(p.colour().rgb.b == start.b + 1, "B's increment is one byte");
+        p.press(ppx + kPad + kROut + 255, ppy + kPad + kROut);   // the ring at 0 degrees
+        p.move(ppx + kPad + kROut, ppy + kPad + kROut - 255);    // to 90
+        p.release(ppx + kPad + kROut, ppy + kPad + kROut - 255);
+        check(std::abs(p.colour().h - 90) < 1e-9, "the ring sets the hue by the angle (90 at the top)");
+        p.paint(frame);
+        png(frame, work + "/frame_dragged.png");
+        const long k = element_pixel(p.exp(), p.exp().elements[size_t(act0)].scene, act0, kMargin + kW + 10);
+        check(k >= 0 && frame_word(frame, k, W) == word_of(p.colour().rgb), "the active element repaints live with the pick");
+        tap(p, ppx + kColX + 50, ppy + kSwatchY0 + 50);
+        check(p.colour().rgb == start, "a tap on OLD reverts");
+        tap(p, ppx + kTrackX + 100, ppy + row_y(0) + 30);   // H's track, then close
+        const std::string hex = hex_of(p.colour().rgb);
+        tap(p, 1700, 700);
+        check(!p.open(), "a tap outside the panel closes it");
+        const std::string picks = slurp(work + "/picks.txt");
+        check(picks.size() > 30 && picks.find(" " + L + " " + hex + " hsv ") != std::string::npos,
+              "the commit appended to picks.txt: " + picks.substr(0, picks.size() - 1));
+        std::map<std::string, Pick> st;
+        std::map<std::string, int> ent;
+        std::string act;
+        check(state_load(work + "/state.json", st, ent, act, err) && st.count(L) && hex_of(st[L].rgb) == hex &&
+                  act == L && st.size() == p.exp().elements.size(),
+              "state.json holds the commit, every element's colour and the active element");
+        tap(p, 300, 700);
+        check(p.open() && p.panel_on_right(), "a tap on the left half opens the panel on the right");
+        p.paint(frame);
+        png(frame, work + "/frame_open_right.png");
+        tap(p, 300, 700);    // close again (the panel is on the right), unchanged: the history's last entry
+        check(!p.open() && lines_of(work + "/picks.txt") == 1, "a close on the unedited colour appends nothing");
     }
-    p.press(px + kColX + 50, py + kSwatchY0 + 50);
-    p.release(px + kColX + 50, py + kSwatchY0 + 50);
-    check(p.colour().rgb == start, "a tap on OLD reverts");
-    p.press(px + kTrackX + 100, py + row_y(0) + 30);   // H's track, then close
-    p.release(px + kTrackX + 100, py + row_y(0) + 30);
-    const std::string hex = hex_of(p.colour().rgb);
-    p.press(1700, 700);
-    p.release(1700, 700);
-    check(!p.open(), "a tap outside the panel closes it");
-    const std::string picks = slurp(work + "/picks.txt");
-    check(picks.size() > 30 && picks.find(" " + p.scene().layers[p.scene().active].name + " " + hex + " hsv ") != std::string::npos,
-          "the commit appended to picks.txt: " + picks.substr(0, picks.size() - 1));
-    std::map<std::string, Pick> st;
-    std::map<std::string, int> ent;
-    check(state_load(work + "/state.json", st, ent, err) && st.count(p.scene().layers[p.scene().active].name) &&
-              hex_of(st[p.scene().layers[p.scene().active].name].rgb) == hex,
-          "state.json holds the commit");
-    p.press(300, 700);
-    p.release(300, 700);
-    check(p.open() && p.panel_on_right(), "a tap on the left half opens the panel on the right");
-    p.paint(frame);
-    png(frame, work + "/frame_open_right.png");
-    p.press(300, 700);    // close again (the panel is on the right), unchanged: the history's last entry
-    p.release(300, 700);
-    check(!p.open() && lines_of(work + "/picks.txt") == 1, "a close on the unedited colour appends nothing");
 
     // ---------------------------------------------------------------- the pick history
     {
-        std::remove((work + "/picks.txt").c_str());
-        std::remove((work + "/state.json").c_str());
-        const std::string L = scene.layers[scene.active].name;
-        // a Picker as the device builds it at launch, over the work dir as it stands
-        auto launch = [&](std::string& why) {
-            Scene sc = scene;
-            History h;
-            Pick st;
-            if (!picker_load(work, sc, h, st, why, err)) { std::printf("FAIL picker_load: %s\n", err.c_str()); ++g_fail; }
-            return Picker(sc, work, h, st);
-        };
-        auto tap = [](Picker& q, double x, double y) { q.press(x, y); q.release(x, y); };
-        auto count = [](const Picker& q) {
-            return std::to_string(q.history().cursor + 1) + " of " + std::to_string(q.history().picks.size());
-        };
-        // the panel opens on the left (a tap at x 1700): its buttons in window px
-        const double ppx = kMargin, ppy = (scene.height - kH) / 2;
-        const double back_x = ppx + kBackX + kBtn / 2.0, fwd_x = ppx + kFwdX + kBtn / 2.0, hist_y = ppy + kHistY + kBtn / 2.0;
-        auto plus = [&](Picker& q, int row) { tap(q, ppx + kPlusX + 30, ppy + row_y(row) + 30); };
-
-        Picker q = launch(note);
+        fresh();
+        Picker q = launch();
         const Rgb a0 = q.colour().rgb;
         tap(q, 1700, 700);
         check(q.open() && !q.back_enabled() && !q.forward_enabled() && count(q) == "0 of 0",
@@ -292,21 +414,13 @@ int main(int argc, char** argv) {
         tap(q, 1700, 700);
         check(lines_of(work + "/picks.txt") == 3 && count(q) == "3 of 3" && q.history().picks[1].rgb == a1 &&
                   q.history().picks[2].rgb == a2, "two edited closes commit: 3 of 3");
-
         tap(q, 1700, 700);
         check(q.back_enabled() && !q.forward_enabled(), "at the last entry: BACK enabled, FORWARD disabled");
         tap(q, back_x, hist_y);
         check(q.colour().rgb == a1 && count(q) == "2 of 3" && q.old() == a2, "BACK shows the entry before; OLD stays");
-        {   // the active layer repaints live with the step
-            q.paint(frame);
-            cairo_surface_flush(frame);
-            const auto* w = reinterpret_cast<const uint32_t*>(cairo_image_surface_get_data(frame));
-            uint32_t k = 0;
-            for (uint32_t i : q.scene().layers[q.scene().active].pixels)
-                if (int(i % scene.width) > kMargin + kW + 10) { k = i; break; }
-            const int stw = cairo_image_surface_get_stride(frame) / 4;
-            check(w[size_t(k / scene.width) * stw + k % scene.width] == word_of(a1), "the active layer repaints with the step");
-        }
+        q.paint(frame);
+        const long k = element_pixel(q.exp(), q.exp().elements[size_t(act0)].scene, act0, kMargin + kW + 10);
+        check(k >= 0 && frame_word(frame, k, W) == word_of(a1), "the active element repaints with the step");
         check(q.back_enabled() && q.forward_enabled(), "mid-history: both enabled");
         png(frame, work + "/frame_history_mid.png");
         tap(q, back_x, hist_y);
@@ -324,11 +438,12 @@ int main(int argc, char** argv) {
         png(frame, work + "/frame_history_closed.png");
         std::map<std::string, Pick> sc;
         std::map<std::string, int> se;
-        check(state_load(work + "/state.json", sc, se, err) && sc[L].rgb == a1 && se[L] == 2,
+        std::string act;
+        check(state_load(work + "/state.json", sc, se, act, err) && sc[L].rgb == a1 && se[L] == 2,
               "state.json records the stepped colour and the cursor 2");
 
-        Picker r = launch(note);
-        check(r.colour().rgb == a1 && count(r) == "2 of 3", "a reload restores the colour and the cursor (" + note + ")");
+        Picker r = launch();
+        check(r.colour().rgb == a1 && count(r) == "2 of 3", "a reload restores the colour and the cursor");
         tap(r, 1700, 700);
         plus(r, 5);                                   // B + 1: an unsaved edit
         check(r.edited() && r.back_enabled() && r.forward_enabled(), "an unsaved edit mid-history: both enabled");
@@ -345,8 +460,8 @@ int main(int argc, char** argv) {
         r.discard_if_open();
         check(!r.open() && lines_of(work + "/picks.txt") == 3 && r.colour().rgb == a1 && count(r) == "2 of 3",
               "leaving the app with an unsaved edit saves nothing: the colour and the cursor of the panel's opening");
-        check(state_load(work + "/state.json", sc, se, err) && sc[L].rgb == a1 && se[L] == 2, "and state.json is untouched");
-        Picker r2 = launch(note);
+        check(state_load(work + "/state.json", sc, se, act, err) && sc[L].rgb == a1 && se[L] == 2, "and state.json is untouched");
+        Picker r2 = launch();
         check(r2.colour().rgb == a1 && count(r2) == "2 of 3", "a relaunch after it comes back on the last saved state");
         tap(r, 1700, 700);
         plus(r, 3);
@@ -354,83 +469,34 @@ int main(int argc, char** argv) {
         tap(r, 1700, 700);
         check(lines_of(work + "/picks.txt") == 4 && count(r) == "4 of 4" && r.history().picks[3].rgb == a4,
               "a close on an edited colour from the middle commits it at the end: 4 of 4");
-
-        // the previous build's state.json: no entry; the newest entry equal to the colour, else the end
-        {
-            FILE* f = std::fopen((work + "/state.json").c_str(), "w");
-            std::fprintf(f, "{\n \"%s\": \"%s\"\n}\n", L.c_str(), hex_of(a2).c_str());
-            std::fclose(f);
-        }
-        Picker o = launch(note);
-        check(o.colour().rgb == a2 && count(o) == "3 of 4", "the previous build's state.json: the newest equal entry (" + note + ")");
-        {
-            FILE* f = std::fopen((work + "/state.json").c_str(), "w");
-            std::fprintf(f, "{\n \"%s\": \"#010203\"\n}\n", L.c_str());
-            std::fclose(f);
-        }
-        Picker e = launch(note);
-        check(count(e) == "4 of 4" && e.edited(), "no entry equals the colour: the end, edited (" + note + ")");
+        // the first build's state.json: no entry; the newest entry equal to the colour, else the end
+        put(work + "/state.json", "{\n \"" + L + "\": \"" + hex_of(a2) + "\"\n}\n");
+        Picker o = launch();
+        check(o.colour().rgb == a2 && count(o) == "3 of 4", "the first build's state.json: the newest equal entry");
+        put(work + "/state.json", "{\n \"" + L + "\": \"#010203\"\n}\n");
+        Picker e = launch();
+        check(count(e) == "4 of 4" && e.edited(), "no entry equals the colour: the end, edited");
         tap(e, 1700, 700);
         tap(e, 1700, 700);
         check(lines_of(work + "/picks.txt") == 5, "and its close commits it");
-        // picks.txt deleted beside a kept state.json: the entry is out of range
         std::remove((work + "/picks.txt").c_str());
-        Picker d = launch(note);
-        check(count(d) == "0 of 0" && d.colour().rgb == (Rgb{1, 2, 3}), "picks.txt deleted: an empty history (" + note + ")");
-        // a malformed picks.txt is a hard fail
-        {
-            FILE* f = std::fopen((work + "/picks.txt").c_str(), "w");
-            std::fprintf(f, "2026-10-04T05:00:00+00:00 %s #12345\n", L.c_str());
-            std::fclose(f);
-            Scene sx = scene;
-            History hx;
-            std::string ex;
-            Pick sp;
-            const bool loaded = picker_load(work, sx, hx, sp, note, ex);
-            check(!loaded, "a malformed picks.txt fails the load: " + ex);
-        }
+        Picker d = launch();
+        check(count(d) == "0 of 0" && d.colour().rgb == (Rgb{1, 2, 3}), "picks.txt deleted: an empty history");
+        put(work + "/picks.txt", "2026-10-04T05:00:00+00:00 " + L + " #12345\n");
+        std::string why;
+        const bool failed = load_fails(why);
+        check(failed, "a malformed picks.txt fails the load: " + why);
     }
 
     // ---------------------------------------------------------------- the HSV he dialled is part of the pick
     {
-        const std::string L = scene.layers[scene.active].name;
-        auto put = [&](const std::string& name, const std::string& text) {
-            FILE* f = std::fopen((work + "/" + name).c_str(), "w");
-            std::fputs(text.c_str(), f);
-            std::fclose(f);
-        };
-        std::remove((work + "/picks.txt").c_str());
-        std::remove((work + "/state.json").c_str());
-        auto launch = [&]() {
-            Scene sc = scene;
-            History h;
-            std::string why;
-            Pick st;
-            if (!picker_load(work, sc, h, st, why, err)) { std::printf("FAIL picker_load: %s\n", err.c_str()); ++g_fail; }
-            return Picker(sc, work, h, st);
-        };
-        auto tap = [](Picker& q, double x, double y) { q.press(x, y); q.release(x, y); };
-        const double ppx = kMargin, ppy = (scene.height - kH) / 2;
-        const double back_x = ppx + kBackX + kBtn / 2.0, fwd_x = ppx + kFwdX + kBtn / 2.0, hist_y = ppy + kHistY + kBtn / 2.0;
-        auto plus = [&](Picker& q, int row) { tap(q, ppx + kPlusX + 30, ppy + row_y(row) + 30); };
-        auto minus = [&](Picker& q, int row) { tap(q, ppx + kMinusX + 30, ppy + row_y(row) + 30); };
-        auto track = [&](Picker& q, int row, double f) { tap(q, ppx + kTrackX + f * (kTrackL - 1), ppy + row_y(row) + 30); };
-        // the numbers and the handles as the panel paints them (picker.cpp's row_number and the handle's column)
+        fresh();
         auto nums = [](const ColourState& c) {
             char b[160];
-            std::snprintf(b, sizeof b, "H %d S %d V %d (exact %.6f %.6f %.6f, handles at %ld %ld %ld) %s",
-                          int(std::nearbyint(c.h)), int(std::nearbyint(c.s * 100)), int(std::nearbyint(c.v * 100)),
-                          c.h, c.s, c.v, std::lround(c.h / 360 * (kTrackL - 1)), std::lround(c.s * (kTrackL - 1)),
-                          std::lround(c.v * (kTrackL - 1)), hex_of(c.rgb).c_str());
+            std::snprintf(b, sizeof b, "H %d S %d V %d (exact %.6f %.6f %.6f) %s", int(std::nearbyint(c.h)),
+                          int(std::nearbyint(c.s * 100)), int(std::nearbyint(c.v * 100)), c.h, c.s, c.v, hex_of(c.rgb).c_str());
             return std::string(b);
         };
-        auto count = [](const Picker& q) {
-            return std::to_string(q.history().cursor + 1) + " of " + std::to_string(q.history().picks.size());
-        };
-        auto same_view = [](const ColourState& a, const ColourState& b) {
-            return a.rgb == b.rgb && a.h == b.h && a.s == b.s && a.v == b.v;
-        };
-        // dial H 227, S 35, V 20 as he does: a track, then the axis's + and − to land on the number
         Picker q = launch();
         tap(q, 1700, 700);
         track(q, 0, 227.2 / 360); plus(q, 0); minus(q, 0);
@@ -438,31 +504,24 @@ int main(int argc, char** argv) {
         track(q, 2, 0.202); plus(q, 2); minus(q, 2);
         const ColourState d1 = q.colour();
         std::printf("     dialled: %s\n", nums(d1).c_str());
-        tap(q, 1700, 700);                            // close: 1 of 1
         tap(q, 1700, 700);
-        plus(q, 2);                                   // V + 1
+        tap(q, 1700, 700);
+        plus(q, 2);
         const ColourState d2 = q.colour();
-        tap(q, 1700, 700);                            // close: 2 of 2
-        // symptom 1: BACK and FORWARD come back to the pick he saved, every handle where it was
+        tap(q, 1700, 700);
         tap(q, 1700, 700);
         tap(q, back_x, hist_y);
         const ColourState b1 = q.colour();
         tap(q, fwd_x, hist_y);
         const ColourState f2 = q.colour();
-        std::printf("     BACK:    %s\n     saved:   %s\n", nums(b1).c_str(), nums(d1).c_str());
-        std::printf("     FORWARD: %s\n     saved:   %s\n", nums(f2).c_str(), nums(d2).c_str());
         check(same_view(b1, d1) && same_view(f2, d2), "BACK and FORWARD restore the HSV each pick was saved under");
-        // OLD restores the HSV the panel opened with
         plus(q, 1);
         tap(q, ppx + kColX + 50, ppy + kSwatchY0 + 50);
         check(same_view(q.colour(), d2), "OLD restores the HSV the panel opened with: " + nums(q.colour()));
         tap(q, 1700, 700);
-        // the launch restores it too
         Picker r = launch();
         check(same_view(r.colour(), d2), "a relaunch restores the HSV of the last close: " + nums(r.colour()));
-        // symptom 2: V's + alone across saves and relaunches; H's and S's numbers never move
         int moved = 0, handles = 0;
-        std::string first_move;
         for (int k = 0; k < 20; ++k) {
             Picker c = launch();
             const ColourState before = c.colour();
@@ -475,20 +534,12 @@ int main(int argc, char** argv) {
             tap(c2, fwd_x, hist_y);
             const ColourState after = c2.colour();
             tap(c2, 1700, 700);
-            const bool numbers = std::nearbyint(after.h) == std::nearbyint(before.h) &&
-                                 std::nearbyint(after.s * 100) == std::nearbyint(before.s * 100);
-            if (!numbers) {
-                if (!moved) first_move = "cycle " + std::to_string(k + 1) + ": " + nums(before) + " -> " + nums(after);
-                ++moved;
-            }
+            if (std::nearbyint(after.h) != std::nearbyint(before.h) || std::nearbyint(after.s * 100) != std::nearbyint(before.s * 100)) ++moved;
             if (after.h != before.h || after.s != before.s) ++handles;
         }
-        if (moved) std::printf("     %s\n", first_move.c_str());
         check(moved == 0 && handles == 0, "20 saves of V + 1 (each relaunched, BACK, FORWARD): H and S never move (" +
-                              std::to_string(moved) + " cycles moved their numbers, " + std::to_string(handles) +
-                              " their exact values)");
-
-        // leaving the app with the panel open restores the opening's view, not a re-derivation
+                                              std::to_string(moved) + " cycles moved their numbers, " + std::to_string(handles) +
+                                              " their exact values)");
         {
             Picker c = launch();
             const ColourState opened = c.colour();
@@ -498,8 +549,6 @@ int main(int argc, char** argv) {
             c.discard_if_open();
             check(same_view(c.colour(), opened), "leaving the app with an edit restores the opening's view: " + nums(c.colour()));
         }
-
-        // an S step at V 2 moves the view and not the bytes: an edit, saved, and BACK / FORWARD tell the two apart
         {
             Picker c = launch();
             tap(c, 1700, 700);
@@ -521,71 +570,241 @@ int main(int argc, char** argv) {
                   "its close commits it, and BACK / FORWARD show S 35 and S 36 over the same bytes");
             tap(c, 1700, 700);
         }
-
-        // THE OLD FORMAT: 15 lines without a view (12 of this layer) and the previous build's state.json, no view
-        {
-            const Rgb olds[12] = {{0x80, 0x80, 0x80}, {0x9A, 0xAB, 0xEA}, {0x9B, 0xAB, 0xEA}, {0x77, 0x77, 0x77},
-                                  {0, 0, 0},          {0x21, 0x25, 0x33}, {0x22, 0x25, 0x33}, {0x60, 0x70, 0x90},
-                                  {0x61, 0x70, 0x90}, {0x61, 0x71, 0x90}, {0x10, 0x10, 0x14}, {0xCC, 0x99, 0x66}};
-            std::string text;
-            for (int k = 0, i = 0; k < 15; ++k) {
-                char t[32];
-                std::snprintf(t, sizeof t, "2026-10-04T05:%02d:00-04:00", k);
-                text += std::string(t) + " " + (k % 5 == 4 ? std::string("some_other_layer #123456") : L + " " + hex_of(olds[i++])) + "\n";
-            }
-            put("picks.txt", text);
-            put("state.json", "{\n \"colours\": {\n  \"" + L + "\": \"" + hex_of(olds[5]) + "\"\n },\n \"entry\": {\"" + L + "\": 6}\n}\n");
-            Picker c = launch();
-            bool same = c.history().picks.size() == 12;
-            for (size_t i = 0; same && i < 12; ++i) same = c.history().picks[i].rgb == olds[i] && !c.history().picks[i].has_hsv;
-            ColourState derived;
-            derived.set_rgb(olds[5]);
-            check(same && c.history().cursor == 5 && same_view(c.colour(), derived),
-                  "the old-format picks.txt and state.json load unchanged: 12 picks without a view, 6 of 12, the colour "
-                  "re-derived from its bytes as before");
-            tap(c, 1700, 700);
-            ColourState prior = c.colour();
-            tap(c, back_x, hist_y);                   // to the black
-            prior.set_rgb(olds[4]);
-            const bool black = same_view(c.colour(), prior);
-            prior = c.colour();
-            tap(c, back_x, hist_y);                   // to the grey: the hue and the saturation kept through black
-            prior.set_rgb(olds[3]);
-            check(black && same_view(c.colour(), prior) && !c.edited(),
-                  "an old entry steps as before: re-derived from its bytes, the hue kept through grey and black");
-            plus(c, 2);
-            const ColourState e = c.colour();
-            tap(c, 1700, 700);
-            const std::string after = slurp(work + "/picks.txt");
-            check(after.compare(0, text.size(), text) == 0 && lines_of(work + "/picks.txt") == 16 &&
-                      after.find(" " + L + " " + hex_of(e.rgb) + " hsv ") == text.size() + 25,
-                  "a commit appends one line with its view after the old lines, which stay as they were: " +
-                      after.substr(text.size(), after.size() - text.size() - 1));
-            Picker d = launch();
-            check(d.history().picks.size() == 13 && d.history().picks[12].has_hsv && count(d) == "13 of 13" &&
-                      same_view(d.colour(), e), "both forms read back: 13 picks, the last with its view, restored exactly");
-        }
-
-        // a stored view that does not give its bytes, or out of its range, fails the load
         auto refused = [&](const std::string& picks_text, const std::string& state_text, const std::string& what) {
-            put("picks.txt", picks_text);
+            put(work + "/picks.txt", picks_text);
             if (state_text.empty()) std::remove((work + "/state.json").c_str());
-            else put("state.json", state_text);
-            Scene sx = scene;
-            History hx;
-            Pick px;
-            std::string ex, why;
-            const bool loaded = picker_load(work, sx, hx, px, why, ex);
-            check(!loaded, what + ": " + ex);
+            else put(work + "/state.json", state_text);
+            std::string why;
+            const bool failed = load_fails(why);
+            check(failed, what + ": " + why);
         };
         refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 227 0.36 0.21\n", "", "a picks.txt view that does not give its hex fails the load");
         refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 587 0.35 0.2\n", "", "a picks.txt hue past 360 fails the load");
         refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 227 0.35\n", "", "a picks.txt view short of a number fails the load");
-        refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 227 x 0.2\n", "", "a picks.txt view number that is not one fails the load");
+        refused("2026-10-04T05:00:00-04:00 chrome #212533 hsv 227 x 0.2\n", "", "a view number that is not one fails the load (any element's line)");
         refused("", "{\"colours\": {\"" + L + "\": \"#212533\"}, \"hsv\": {\"" + L + "\": [227, 0.36, 0.21]}, \"entry\": {}}",
                 "a state.json view that does not give its colour fails the load");
-        std::remove((work + "/picks.txt").c_str());
+        refused("", "{\"active\": 3, \"colours\": {}, \"entry\": {}}", "a state.json active that is not a key fails the load");
+    }
+
+    // ---------------------------------------------------------------- THE CHOOSER
+    if (chrome != act0 || ink < 0 || canvas < 0 || flag < 0 || chrome != 0 || canvas != 1 || ink != 2 ||
+        ex.elements[size_t(flag)].scene == ex.elements[size_t(chrome)].scene) {
+        check(false, "the check export lists Chrome (active), Canvas, Ink and a Flag Test over a second scene");
+    } else {
+        fresh();
+        const Rgb chrome0 = ex.elements[size_t(chrome)].colour, ink0 = ex.elements[size_t(ink)].colour;
+        const Rgb tint{0x20, 0x60, 0x48};
+        Picker p = launch();
+        tap(p, 1700, 700);
+        tap(p, name_x, name_y);
+        check(p.chooser_open() && p.open(), "a tap on the element's name opens the chooser (Chrome, Canvas, Ink, ...)");
+        p.paint(frame);
+        png(frame, work + "/frame_chooser_open.png");
+        tap(p, ppx + 200, ppy + 900);                 // inside the panel, outside the chooser
+        check(!p.chooser_open() && p.open() && p.active() == chrome && !std::ifstream(work + "/state.json"),
+              "a tap outside the chooser closes it and changes nothing (the panel open, no file written)");
+        tap(p, name_x, name_y);
+        tap(p, 2200, 1300);                           // outside the panel too: only the chooser closes
+        check(!p.chooser_open() && p.open(), "a tap outside the panel while the chooser is open closes the chooser alone");
+        tap(p, name_x, name_y);
+        p.press(name_x, ppy + kChooserY + ink * kChooserRowH + 30);   // pressed on Ink, lifted on Flag Test
+        p.release(name_x, ppy + kChooserY + flag * kChooserRowH + 30);
+        check(p.chooser_open() && p.active() == chrome, "a press on one entry lifted on another chooses nothing (the chooser stays)");
+        row_tap(p, chrome);
+        check(!p.chooser_open() && p.active() == chrome && !std::ifstream(work + "/state.json") &&
+                  !std::ifstream(work + "/picks.txt"), "choosing the active element again is a no-op");
+        // the chrome at a tint, dialled by its R / G / B tracks: every line follows
+        track(p, 3, tint.r / 255.0);
+        track(p, 4, tint.g / 255.0);
+        track(p, 5, tint.b / 255.0);
+        check(p.colour().rgb == tint, "the chrome dialled to #206048 by its tracks");
+        p.paint(frame);
+        png(frame, work + "/frame_chrome_tint_open.png");
+        {
+            std::vector<uint32_t> words;
+            role_words(p.exp(), words);
+            bool lines_ok = true;
+            std::string said;
+            for (size_t r = 0; r < p.exp().roles.size(); ++r) {
+                const Role& R = p.exp().roles[r];
+                if (R.kind != Role::Kind::Scale) continue;
+                const Rgb want = scale_rgb(tint, R.num, R.den);
+                lines_ok = lines_ok && words[r] == word_of(want);
+                said += " " + R.name + " " + hex_of(want);
+            }
+            check(lines_ok, "every chrome line is the tint x its Windows 95 byte / 192:" + said);
+        }
+        // the switch to Ink commits the edited chrome
+        tap(p, name_x, name_y);
+        row_tap(p, ink);
+        std::map<std::string, Pick> st;
+        std::map<std::string, int> ent;
+        std::string act;
+        const bool st_ok = state_load(work + "/state.json", st, ent, act, err);
+        check(p.active() == ink && p.open() && !p.chooser_open() && lines_of(work + "/picks.txt") == 1 &&
+                  slurp(work + "/picks.txt").find(" chrome #206048 hsv ") != std::string::npos && st_ok && act == "ink" &&
+                  st["chrome"].rgb == tint && ent["chrome"] == 1 && p.element(chrome).hist.cursor == 0,
+              "the edited chrome is committed by the switch (one picks.txt line, state.json), the panel on Ink");
+        check(p.old() == ink0 && p.colour().rgb == ink0 && count(p) == "0 of 0",
+              "OLD is the chosen element's current colour; its own history (0 of 0)");
+        p.paint(frame);
+        const int wsc = p.exp().elements[size_t(ink)].scene;
+        const long ki = element_pixel(p.exp(), wsc, ink, kMargin + kW + 10), kg = element_pixel(p.exp(), wsc, chrome, 1300);
+        check(ki >= 0 && kg >= 0 && frame_word(frame, ki, W) == word_of(ink0) && frame_word(frame, kg, W) == word_of(tint),
+              "the chrome's tint stays live beside the ink");
+        // an edited ink, then the switch to the Flag Test: another scene
+        plus(p, 3);
+        const Rgb ink1 = p.colour().rgb;
+        tap(p, name_x, name_y);
+        row_tap(p, flag);
+        const int fsc = p.exp().elements[size_t(flag)].scene;
+        const long kf = element_pixel(p.exp(), fsc, flag, -1), kc = element_pixel(p.exp(), fsc, chrome, 1300),
+                   kn = element_pixel(p.exp(), fsc, ink, kMargin + kW + 10);
+        check(p.active() == flag && lines_of(work + "/picks.txt") == 2 &&
+                  slurp(work + "/picks.txt").find(" ink " + hex_of(ink1) + " hsv ") != std::string::npos,
+              "the edited ink is committed by the switch to the Flag Test");
+        check(kf >= 0 && kc >= 0 && kn >= 0 && p.picture()[size_t(kf)] == word_of(ex.elements[size_t(flag)].colour) &&
+                  p.picture()[size_t(kc)] == word_of(tint) && p.picture()[size_t(kn)] == word_of(ink1),
+              "the switch shows the Flag Test's scene, the chrome's tint and the ink's new colour live in it");
+        plus(p, 4);                                   // the flag face moves: its labels' antialiased edges re-blend over it
+        p.paint(frame);
+        png(frame, work + "/frame_flag_open.png");
+        // the Flag Test's history is empty: switching away commits it, as a close with an empty history does
+        tap(p, name_x, name_y);
+        row_tap(p, chrome);
+        check(p.active() == chrome && lines_of(work + "/picks.txt") == 3 && count(p) == "1 of 1" && p.colour().rgb == tint,
+              "the switch back to the chrome: its own history (1 of 1), its tint");
+        tap(p, 2200, 1300);
+        check(!p.open() && lines_of(work + "/picks.txt") == 3, "an unedited chrome's close appends nothing");
+        p.paint(frame);
+        png(frame, work + "/frame_chrome_tint.png");
+        // a relaunch: the element he left, every element's colour, history and view
+        Picker r = launch();
+        check(r.active() == chrome && r.colour().rgb == tint && r.element(ink).cs.rgb == ink1 &&
+                  r.element(canvas).cs.rgb == ex.elements[size_t(canvas)].colour && r.element(flag).cs.rgb == p.element(flag).cs.rgb &&
+                  r.element(ink).hist.picks.size() == 1 && r.element(chrome).hist.picks.size() == 1 &&
+                  r.element(flag).hist.picks.size() == 1 && r.element(canvas).hist.cursor == -1,
+              "a relaunch returns to the element he left, every element's colour and history its own");
+        check(same_view(r.element(chrome).cs, p.element(chrome).cs) && same_view(r.element(ink).cs, p.element(ink).cs) &&
+                  same_view(r.element(flag).cs, p.element(flag).cs), "and every element's view exactly as it was");
+        // histories and cursors independent across a switch
+        tap(r, 1700, 700);
+        tap(r, name_x, name_y);
+        row_tap(r, ink);
+        plus(r, 0);
+        tap(r, name_x, name_y);
+        row_tap(r, chrome);                           // commits ink 2
+        tap(r, name_x, name_y);
+        row_tap(r, ink);
+        tap(r, back_x, hist_y);
+        check(r.active() == ink && count(r) == "1 of 2" && r.colour().rgb == ink1, "the ink's own history: BACK to 1 of 2");
+        tap(r, name_x, name_y);
+        row_tap(r, chrome);                           // a stepped ink is no edit: nothing appended
+        check(count(r) == "1 of 1" && r.element(ink).hist.cursor == 0 && lines_of(work + "/picks.txt") == 4,
+              "the chrome's cursor and the ink's are their own across the switch (a stepped ink switched away appends nothing)");
+        Picker r2 = launch();
+        check(r2.active() == chrome && r2.element(ink).hist.cursor == 0 && r2.element(ink).cs.rgb == ink1 &&
+                  r2.element(chrome).hist.cursor == 0 && r2.element(flag).hist.cursor == 0, "and across a relaunch");
         std::remove((work + "/state.json").c_str());
+        Picker r3 = launch();
+        check(r3.active() == chrome && r3.colour().rgb == chrome0 && r3.element(chrome).hist.cursor == 0 && r3.edited() &&
+                  r3.element(ink).cs.rgb == ink0 && r3.element(ink).hist.cursor == 1 && r3.element(canvas).hist.cursor == -1,
+              "state.json deleted: the manifest's active element and colours, each history at its end");
+    }
+
+    // ---------------------------------------------------------------- today's files load unchanged
+    if (ink >= 0 && chrome >= 0) {
+        // the 15 lines of the first build (the old form, kept verbatim from the tablet's file) and 43 of the HSV build,
+        // the last #A6B9DE; the state.json the brief names
+        const char* olds[15] = {"2026-10-04T05:05:02-04:00 ink #A979A3", "2026-10-04T05:07:58-04:00 ink #6E6EA5",
+                                "2026-10-04T05:08:03-04:00 ink #6E6EA5", "2026-10-04T05:08:11-04:00 ink #9D9DEC",
+                                "2026-10-04T05:09:15-04:00 ink #9D9DEC", "2026-10-04T05:10:12-04:00 ink #999DEC",
+                                "2026-10-04T05:10:16-04:00 ink #969DEC", "2026-10-04T05:10:50-04:00 ink #969FEC",
+                                "2026-10-04T05:18:07-04:00 ink #9E9FFF", "2026-10-04T05:18:09-04:00 ink #9E9FFF",
+                                "2026-10-04T05:18:13-04:00 ink #9494EE", "2026-10-04T05:18:59-04:00 ink #95A7EC",
+                                "2026-10-04T05:20:03-04:00 ink #9AABEA", "2026-10-04T05:20:32-04:00 ink #9AABEA",
+                                "2026-10-04T05:24:07-04:00 ink #9AABEA"};
+        std::string text;
+        for (const char* l : olds) text += std::string(l) + "\n";
+        std::vector<ColourState> views;
+        for (int k = 0; k < 43; ++k) {
+            ColourState c;
+            if (k == 42) c.set_rgb(Rgb{0xA6, 0xB9, 0xDE});
+            else c.set_hsv(218 + k * 0.25, 0.2 + k * 0.003, 0.7 + k * 0.004);
+            views.push_back(c);
+            char t[40];
+            std::snprintf(t, sizeof t, "2026-10-04T06:%02d:00-04:00", k);
+            text += std::string(t) + " ink " + hex_of(c.rgb) + " hsv " + view_number(c.h) + " " + view_number(c.s) + " " +
+                    view_number(c.v) + "\n";
+        }
+        put(work + "/picks.txt", text);
+        put(work + "/state.json", "{\"colours\": {\"ink\": \"#A6B9DE\"}, \"entry\": {\"ink\": 58}}");
+        Picker t = launch();
+        const History& h = t.element(ink).hist;
+        bool same = h.picks.size() == 58;
+        for (int k = 0; same && k < 15; ++k) same = !h.picks[size_t(k)].has_hsv;
+        for (int k = 0; same && k < 43; ++k) same = h.picks[size_t(15 + k)].has_hsv && h.picks[size_t(15 + k)].h == views[size_t(k)].h;
+        check(same && h.cursor == 57 && t.element(ink).cs.rgb == (Rgb{0xA6, 0xB9, 0xDE}) && t.active() == act0 &&
+                  t.element(chrome).hist.cursor == -1 && t.element(chrome).cs.rgb == ex.elements[size_t(chrome)].colour,
+              "today's picks.txt (58 ink lines, 15 old and 43 new) and state.json load unchanged: the ink 58 of 58 "
+              "#A6B9DE, the other elements at the manifest's colours, the manifest's active element (no active in the file)");
+        tap(t, 1700, 700);
+        tap(t, name_x, name_y);
+        row_tap(t, ink);
+        tap(t, back_x, hist_y);
+        check(count(t) == "57 of 58" && t.colour().rgb == views[41].rgb, "and the ink steps as before");
+        tap(t, name_x, name_y);
+        row_tap(t, chrome);                           // a stepped ink: nothing appended
+        plus(t, 2);
+        tap(t, 2200, 1300);
+        const std::string after = slurp(work + "/picks.txt");
+        check(after.compare(0, text.size(), text) == 0 && lines_of(work + "/picks.txt") == 60 &&
+                  after.find(" chrome ", text.size()) == text.size() + 25,
+              "the chrome's lines append after the 58, which stay as they were (its start, committed by the switch from "
+              "its empty history, and its edit)");
+        Picker u = launch();
+        check(u.active() == chrome && u.element(ink).hist.picks.size() == 58 && u.element(ink).hist.cursor == 56 &&
+                  u.element(chrome).hist.picks.size() == 2, "the new state.json reads back: chrome active, the ink at 57 of 58");
+    }
+
+    // ---------------------------------------------------------------- the per-frame cost of a pen drag (R's track)
+    {
+        fresh();
+        for (int e : {ink, chrome}) {
+            if (e < 0) continue;
+            Picker p = launch();
+            tap(p, 1700, 700);
+            if (e != p.active()) { tap(p, name_x, name_y); row_tap(p, e); }
+            const double ty = ppy + row_y(3) + 30;
+            p.press(ppx + kTrackX, ty);
+            const int frames = 240;
+            double t_move = 0, t_paint = 0;
+            for (int f = 1; f <= frames; ++f) {   // R's track swept: every frame a new byte, the scene repainted
+                const auto t0 = std::chrono::steady_clock::now();
+                p.move(ppx + kTrackX + (f % 2 ? f : frames - f) * (kTrackL - 1.0) / frames, ty);
+                const auto t1 = std::chrono::steady_clock::now();
+                p.paint(frame);
+                const auto t2 = std::chrono::steady_clock::now();
+                t_move += std::chrono::duration<double, std::milli>(t1 - t0).count();
+                t_paint += std::chrono::duration<double, std::milli>(t2 - t1).count();
+            }
+            p.release(ppx + kTrackX, ty);
+            const Export& x = p.exp();
+            const Scene& sc = x.scenes[size_t(x.elements[size_t(e)].scene)];
+            size_t solid = 0, stacks = 0;
+            for (size_t r = 0; r < x.roles.size(); ++r)
+                if (x.roles[r].deps & (1u << e))
+                    for (const Run& run : sc.solid[r]) solid += run.len;
+            for (const Stack& s : sc.stacks)
+                if (s.deps & (1u << e)) ++stacks;
+            std::printf("     the pen drag on %s: %.3f ms the live repaint (%zu solid px refilled, %zu antialiased px "
+                        "re-blended) + %.3f ms the frame (the picture copied, the panel painted) = %.3f ms per frame, "
+                        "%d frames\n", x.elements[size_t(e)].key.c_str(), t_move / frames, solid, stacks, t_paint / frames,
+                        (t_move + t_paint) / frames, frames);
+            check(true, "the per-frame cost of a pen drag on " + x.elements[size_t(e)].key + " measured");
+        }
+        fresh();
     }
 
     std::vector<std::string> msg = {"warptempo picker: no scene", "manifest.json: missing or unreadable (in /x/scene)"};

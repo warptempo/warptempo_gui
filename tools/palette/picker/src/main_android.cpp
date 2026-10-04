@@ -40,7 +40,7 @@ constexpr const char* kTag = "warptempo_picker";
 struct App {
     android_app* glue = nullptr;
     ANativeWindow* window = nullptr;
-    cairo_surface_t* frame = nullptr;     // the scene's size (the panel's), ARGB32
+    cairo_surface_t* frame = nullptr;     // the export's size (the window's), ARGB32
     std::unique_ptr<Picker> picker;
     std::vector<std::string> message;     // non-empty: the scene failed; the message is the whole screen
     bool repaint = true;
@@ -85,8 +85,8 @@ void blit(App& a) {
 void paint(App& a) {
     if (!a.window) return;
     if (!a.frame) {
-        const int w = a.picker ? a.picker->scene().width : ANativeWindow_getWidth(a.window);
-        const int h = a.picker ? a.picker->scene().height : ANativeWindow_getHeight(a.window);
+        const int w = a.picker ? a.picker->exp().width : ANativeWindow_getWidth(a.window);
+        const int h = a.picker ? a.picker->exp().height : ANativeWindow_getHeight(a.window);
         a.frame = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
     }
     if (a.message.empty()) a.picker->paint(a.frame);
@@ -114,10 +114,10 @@ void adopt_window(App& a) {
     __android_log_print(ANDROID_LOG_INFO, kTag, "picker: ANativeWindow_setFrameRate(90, FIXED_SOURCE) -> %d", int(rate));
     const int w = ANativeWindow_getWidth(a.window), h = ANativeWindow_getHeight(a.window);
     __android_log_print(ANDROID_LOG_INFO, kTag, "picker: window %dx%d", w, h);
-    if (a.picker && (w != a.picker->scene().width || h != a.picker->scene().height))
+    if (a.picker && (w != a.picker->exp().width || h != a.picker->exp().height))
         fail_screen(a, {"warptempo picker: the window is " + std::to_string(w) + "x" + std::to_string(h) +
-                            ", the scene " + std::to_string(a.picker->scene().width) + "x" +
-                            std::to_string(a.picker->scene().height),
+                            ", the export " + std::to_string(a.picker->exp().width) + "x" +
+                            std::to_string(a.picker->exp().height),
                         "manifest.json: width and height must be the screen's"});
     if (!a.picker && a.frame &&
         (cairo_image_surface_get_width(a.frame) != w || cairo_image_surface_get_height(a.frame) != h)) {
@@ -199,21 +199,25 @@ void android_main(android_app* glue) {
     // THE DATA DIR: the external files dir (adb reads and writes it); the scene under scene/, the picks beside it
     const char* ext = glue->activity->externalDataPath;
     const std::string data = ext ? ext : "";
-    std::string err, note;
-    Scene scene;
-    History hist;
-    Pick start;
+    std::string err;
+    Export ex;
+    Launch launch;
     if (data.empty()) fail_screen(a, {"warptempo picker: no external files dir (externalDataPath)"});
-    else if (!scene_load(data + "/scene", scene, err))
+    else if (!export_load(data + "/scene", ex, err))
         fail_screen(a, {"warptempo picker: the scene in " + data + "/scene", err});
-    else if (!picker_load(data, scene, hist, start, note, err))
+    else if (!picker_load(data, ex, launch, err))
         fail_screen(a, {"warptempo picker: the state in " + data, err});
     else {
-        const Layer& act = scene.layers[scene.active];
-        __android_log_print(ANDROID_LOG_INFO, kTag, "picker: scene %dx%d, %zu layers, active %s %s (%s), %d of %zu",
-                            scene.width, scene.height, scene.layers.size(), act.name.c_str(), hex_of(act.colour).c_str(),
-                            note.c_str(), hist.cursor + 1, hist.picks.size());
-        a.picker = std::make_unique<Picker>(std::move(scene), data, std::move(hist), start);
+        const Element& act = ex.elements[size_t(launch.active)];
+        size_t stacks = 0;
+        for (const Scene& sc : ex.scenes) stacks += sc.stacks.size();
+        __android_log_print(ANDROID_LOG_INFO, kTag,
+                            "picker: export %dx%d, %zu elements, %zu roles, %zu scenes (%zu antialiased px), active %s %s "
+                            "(%s), %d of %zu",
+                            ex.width, ex.height, ex.elements.size(), ex.roles.size(), ex.scenes.size(), stacks,
+                            act.key.c_str(), hex_of(act.colour).c_str(), launch.note.c_str(),
+                            launch.hist[size_t(launch.active)].cursor + 1, launch.hist[size_t(launch.active)].picks.size());
+        a.picker = std::make_unique<Picker>(std::move(ex), data, std::move(launch));
     }
 
     for (;;) {

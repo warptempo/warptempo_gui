@@ -13,7 +13,7 @@
 #           3. javac -> d8 (PickerActivity)   4. aapt2 link (manifest + assets; no res/)   5. zip the .so (-0) and
 #           classes.dex in   6. zipalign -P 16   7. apksigner sign   8. verify
 #
-# -ffp-contract=off on every compile, as the product's: the derived layer's linear-light mix must be the mock tool's
+# -ffp-contract=off on every compile, as the product's: the derived role's linear-light mix must be the mock tool's
 # double arithmetic step for step (colour.h), never a fused multiply-add.
 
 set -euo pipefail
@@ -31,12 +31,13 @@ if [ "${1:-}" = "--check" ]; then
     # shellcheck disable=SC2046
     g++ "${CXXSTD[@]}" -o "$BUILD/check/host_check" "${COMMON_SRC[@]}" "$SRC/host_check.cpp" \
         $(pkg-config --cflags --libs cairo freetype2)
-    python3 "$HERE/check_refs.py" "$REPO/tools/palette/themes/picker_ink.json" "$BUILD/check"
-    "$BUILD/check/host_check" "$REPO/fonts" "$BUILD/check/scene" "$BUILD/check" \
-        --linmix "$BUILD/check/linmix.bin" --expect '#CC9966' "$BUILD/check/expect_CC9966.ppm"
-    mkdir -p "$BUILD/check/derived_work"
-    "$BUILD/check/host_check" "$REPO/fonts" "$BUILD/check/derived" "$BUILD/check/derived_work" \
-        --expect '#CC9966' "$BUILD/check/derived/expect_CC9966.ppm"
+    python3 "$HERE/check_refs.py" "$REPO/tools/palette/themes/picker.json" "$BUILD/check"
+    mkdir -p "$BUILD/check/work"
+    "$BUILD/check/host_check" "$REPO/fonts" "$BUILD/check/work" \
+        --export "$BUILD/check/multi" "$BUILD/check/multi/expects.txt" \
+        --export "$BUILD/check/scene" "$BUILD/check/scene/expects.txt" \
+        --export "$BUILD/check/derived" "$BUILD/check/derived/expects.txt" \
+        --linmix "$BUILD/check/linmix.bin"
     exit 0
 fi
 

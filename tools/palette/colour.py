@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # tools/palette/colour.py — the tool's one colour owner: sRGB <-> linear light, the sRGB -> Display-P3 pass, the
-# linear-light blend, and the default theme's two-pass rule.
+# linear-light blend, the default theme's two-pass rule, the chrome rule (windows95_chrome) and cairo's antialiasing
+# blend (over_coverage).
 #
 # srgb_to_p3 is one pass of the platform's sRGB -> Display-P3 conversion in linear light (sRGB -> XYZ D65 -> P3),
 # rounded to bytes; a theme colour written "srgb:#rrggbb" goes through it once. lin_mix is the GIMP-style
@@ -47,6 +48,76 @@ def srgb_to_p3(rgb):
 def lin_mix(a, b, t):
     """The linear-light blend of a toward b by t (0 = a, 1 = b), rounded to bytes."""
     return tuple(l2s(s2l(a[i]) * (1 - t) + s2l(b[i]) * t) for i in range(3))
+
+# ------------------------------------------------------------------ THE CHROME RULE (architect 2026-10-04: the chrome is ONE KNOB,
+# the ground; tools/palette/picker/ picks it on the glass)
+# WINDOWS 95'S PROPORTIONS: Windows 95 Standard's relief quartet over its ground 192 (#C0C0C0; theme_table.h's
+# `windows-95-standard` light row: Hilight #FFFFFF, 3DLight #DFDFDF, Shadow #808080, DkShadow #000000) carried to
+# any ground -- each line is the ground x (its Windows 95 byte) / 192, PER CHANNEL, so a tinted ground keeps its hue
+# in every line; DkShadow is #000000 whatever the ground; Windows 95's field (COLOR_WINDOW, white) is its Hilight and
+# so is the emboss's light copy (levels.py's LIGHT rule: the recorded Hilight). The theme `warptempo`'s light row is
+# exactly this at the ground #191919 (25 x 255 / 192 = 33.20 -> #21, x 223 / 192 = 29.04 -> #1D, x 128 / 192 = 16.67
+# -> #11; theme_table.h's row 0x191919 / 0x212121 / 0x1D1D1D / 0x111111 / 0x000000, field and emboss 0x212121).
+# THE ROUNDING IS levels.py's (its rgb(): `int(round(v * 255))`, Python's round, HALF TO EVEN), here on the exact
+# rational ground x num / 192, capped at 255: scale_byte below, integer arithmetic, and the picker's
+# src/colour.h scale_byte the same step for step. A tie occurs (32 x 255 / 192 = 42.5 -> 42; 96 x 223 / 192 = 111.5
+# -> 112), so the half-to-even mode is part of the rule.
+CHROME_DEN = 192
+CHROME_LINES = (('bevel_hilight', 255), ('bevel_light', 223), ('bevel_shadow', 128))   # (role, Windows 95's byte)
+CHROME_SAME = (('field_ground', 'bevel_hilight'), ('emboss_hilight', 'bevel_hilight'))
+CHROME_FIXED = (('bevel_dkshadow', (0, 0, 0)),)
+CHROME_ROLES = ('ground',) + tuple(r for r, _ in CHROME_LINES) + tuple(r for r, _ in CHROME_FIXED) + tuple(r for r, _ in CHROME_SAME)
+
+def scale_byte(c, num, den=CHROME_DEN):
+    """One channel of the chrome rule: c x num / den rounded half to even (levels.py's round), capped at 255."""
+    q, r = divmod(int(c) * num, den)
+    if 2 * r > den or (2 * r == den and q % 2): q += 1
+    return min(255, q)
+
+def windows95_chrome(ground):
+    """-> {role: (r, g, b)} for every role in CHROME_ROLES at the ground (8-bit), the rule above."""
+    g = tuple(int(v) for v in ground)
+    out = {'ground': g}
+    for role, num in CHROME_LINES: out[role] = tuple(scale_byte(v, num) for v in g)
+    for role, c in CHROME_FIXED: out[role] = c
+    for role, same in CHROME_SAME: out[role] = out[same]
+    return out
+
+# THE CHECKS (run at import): the rounding is levels.py's on every byte and numerator, and the neutral #191919 gives
+# the theme `warptempo`'s row exactly
+assert all(scale_byte(c, n) == min(255, int(round(c * n / CHROME_DEN))) for c in range(256) for n in (255, 223, 128))
+assert windows95_chrome((0x19, 0x19, 0x19)) == {
+    'ground': (0x19,) * 3, 'bevel_hilight': (0x21,) * 3, 'bevel_light': (0x1D,) * 3, 'bevel_shadow': (0x11,) * 3,
+    'bevel_dkshadow': (0, 0, 0), 'field_ground': (0x21,) * 3, 'emboss_hilight': (0x21,) * 3}
+assert windows95_chrome((0xC0, 0xC0, 0xC0))['bevel_light'] == (0xDF,) * 3      # Windows 95 Standard itself
+
+
+# ------------------------------------------------------------------ CAIRO'S ANTIALIASING BLEND (the picker re-blends with it)
+# Text and icon glyphs are the only antialiased paints (render.py's PaintRecord): an opaque solid source through an
+# 8-bit coverage m onto the opaque frame. cairo hands that to pixman, whose arithmetic is pixman-0.46.4's
+# pixman-fast-path.c fast_composite_over_n_8_8888 (the loop body: m 0xff and an opaque source -> the source; m 0 ->
+# the frame untouched; else d = in (src, m), *dst = over (d, *dst)) over pixman-combine32.h's macros: in() is
+# UN8x4_MUL_UN8, over() UN8x4_MUL_UN8_ADD_UN8x4 (dest x (255 - alpha(d)) + d), each lane's product
+# MUL: t = x x a + 0x80, (t + (t >> 8)) >> 8 (UN8_rb_MUL_UN8), the sum saturating at 255 (UN8_rb_ADD_UN8_rb). The four
+# lanes never carry into each other, so this is the same arithmetic one channel at a time; the picker's
+# src/colour.h over_n_8 is the word form, the macros line for line. render.py --export proves this against cairo's
+# own picture (every antialiased pixel recomposed byte for byte), and build_picker.sh --check the C++ form against
+# cairo on every (source, frame, coverage) byte triple.
+def _mul_un8(x, a):
+    t = x * a + 0x80
+    return (t + (t >> 8)) >> 8
+
+def over_coverage(src, m, dst):
+    """One channel (ints or numpy int arrays): the frame byte dst after an opaque src byte through coverage m."""
+    d = _mul_un8(src, m)                               # in (src, m)
+    alpha = _mul_un8(0xFF, m)                          # alpha (d): the opaque source's 0xff through the same multiply
+    out = _mul_un8(dst, 0xFF - alpha) + d              # over (d, dst): dest x (255 - alpha) + d, saturating
+    return out.clip(None, 255) if hasattr(out, 'dtype') else min(255, out)
+
+# the fast path's two branches are this arithmetic's own ends: m 0xff gives the source (MUL(x, 0xff) = x, MUL(x, 0) =
+# 0) and m 0 the frame
+assert all(_mul_un8(x, 0xFF) == x and _mul_un8(x, 0) == 0 for x in range(256))
+
 
 MEASURED_TWO_PASS = {
     (11, 6, 13): (9, 6, 13), (25, 15, 30): (23, 15, 28), (51, 74, 84): (59, 72, 82), (57, 74, 83): (63, 73, 81),

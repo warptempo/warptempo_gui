@@ -38,7 +38,7 @@ python3 tools/palette/extract.py <dir>/tablet_base_<tag>.png --first-label M:SS.
   tools/palette/out/frozen_1002.png` (`out/` is the conventional, git-ignored home of renders; the renderer makes
   the output's directory when it is missing).
 - Rendering is deterministic (same theme + scene -> same bytes) and takes about half a second.
-- `--export <dir>` writes THE PICKER'S SCENE instead of a PNG (THE EXPORT below; `picker/README.md` is the app).
+- `--export <dir>` writes THE PICKER'S EXPORT instead of a PNG (THE EXPORT below; `picker/README.md` is the app).
 
 ## Dependencies
 
@@ -173,7 +173,7 @@ The only conversion is the one a theme asks for: a colour written `"srgb:#303030
 | `waveform_<tag>.json` | per canvas column, the vertical runs `[y, len, y, len, ...]` (relative to the canvas top) of ink and of outline pixels |
 | `glyphs/<tag>/` | `<row>_<Button>__<ink>.pgm`: each app glyph's 8-bit rasteriser coverage per ink (44x44 device px), `index.json` (icon, enabled, inks, files, under) |
 | `themes/frozen.json` | THE theme: the design the app paints since 2026-10-02 |
-| `themes/picker_ink.json` | THE PICKER'S INK ROUND (2026-10-04): warptempo.json with the canvas #0E0E0E, the ink #808080, the outline `"auto"` (its rule), the stems, flags, playhead and state line switched off (`elements`), `picker` {active ink, layers ink + outline}; exported to `out/picker_ink/` |
+| `themes/picker.json` | THE PICKER'S THEME (2026-10-04, the chrome round; the ink round's `picker_ink.json` before it): warptempo.json with the chrome under THE CHROME RULE at the ground #191919 (`chrome`), the canvas #0E0E0E, the ink #A6B9DE, the outline `"auto"` (its rule), the selected fill #666666 (fixed this round); `picker` its three elements in the architect's order of importance, Chrome (active), Canvas, Ink, over the scene `waveform` (stems, flags, playhead and state line off); exported to `out/picker/`. The later rounds follow in this order, each a new element and scene here and a new export, no app code: the unselected flag, the selected flag, the open flag with its selection (where the selected fill becomes pickable) |
 | `picker/` | THE COLOUR PICKER APP (`com.warptempo.picker`): the tablet's own colour handling over an exported scene, its own README, build script and source |
 | `themes/ad2.json` | the set-AD2 geometry the architect picked on 2026-10-02 (the Windows-95 chrome scaled x 1.375 from the scene's logical px, the laptop's gui_scale 138 drawn at the tablet's 2 device px per logical px), reconciled with this renderer on 2026-10-03: the colour keys nothing here paints under its options dropped (the old trim lane's bar, cap, ground-bevel and bottom-border colours, `row_ground`, `popup`, `tab_line`, `line`, `selected_fill`), `down_face` kept (the toggled sunken face still reads it), the relief quartet the recorded bytes of the catalog's Warptempo entry (`warptempo-2026-10-03`: 5E5E5E / 434343 / 1E1E1E / 0A0A0A, render.h's constants; Parity below). The dark design the colour loop starts from |
 | `themes/win95_standard.json` | Windows 95's Standard scheme: the face #C0C0C0 and the quartet FFFFFF / DFDFDF / 808080 / 000000 as the catalog's `windows-95-standard` entry records them, and the few roles Windows names, on ad2.json's geometry and options; each role Windows has no word for takes the nearest system colour or the app's own value, the choice stated in its `description`. THE ACCURACY CHECK, NOT A DESIGN |
@@ -241,7 +241,23 @@ Top level: `name`, `description` (free text), `geometry` (`"scene"`, the default
 GEOMETRY below, which fixes or refuses every option but the colours and the states), `colours` {role: colour}, `waveform` {`ink`, `canvas`, `outline`},
 `flags` {`fill`, `edge`, `border`, `label`, `stem`, `fill_sel`, `edge_sel`, `stem_sel`, `hilight`, `hilight_sel`,
 `fill_red`, `label_red`, `fill_red_sel`, `label_sel`, `border_edit`} (aliases of the roles `ink`, `canvas`, `outline`, `flag_*`) plus `flags.relief`, `flags.style`,
-`flags.rule`, `flags.states`, `flags.selection` and `flags.editing_selected` (below), the numbers and the options below.
+`flags.rule`, `flags.states`, `flags.selection` and `flags.editing_selected` (below), `chrome` (THE CHROME RULE
+below), the numbers and the options below.
+
+THE CHROME RULE (architect 2026-10-04: the chrome is ONE KNOB, the ground): `"chrome": {"ground": colour, "rule":
+"windows95"}` states the ground and fills every other chrome role from it by WINDOWS 95'S PROPORTIONS — Windows 95
+Standard's quartet over its ground 192 (theme_table.h's `windows-95-standard`: #FFFFFF / #DFDFDF / #808080 /
+#000000 over #C0C0C0) carried to any ground, PER CHANNEL: `bevel_hilight` = ground x 255 / 192, `bevel_light` = x
+223 / 192, `bevel_shadow` = x 128 / 192, `bevel_dkshadow` #000000, `field_ground` = the Hilight (Windows 95's field is
+white, its Hilight) and `emboss_hilight` = the Hilight (levels.py's LIGHT rule). THE ROUNDING IS levels.py's: its
+`rgb()` rounds `int(round(v * 255))`, Python's round, HALF TO EVEN; here the exact rational ground x num / 192,
+half to even, capped at 255 (`colour.scale_byte`, integer arithmetic; ties exist: 32 x 255 / 192 = 42.5 -> 42,
+96 x 223 / 192 = 111.5 -> 112). A neutral ground reproduces the theme `warptempo` exactly: #191919 -> 25 x 255 / 192
+= 33.20 -> #212121, x 223 / 192 = 29.04 -> #1D1D1D, x 128 / 192 = 16.67 -> #111111, #000000, field and emboss
+#212121 (theme_table.h's light row; `colour.py` asserts it at import, and warptempo.json renders `cmp`-identical
+stated either way); a tinted ground keeps its hue in every line (#206048 -> #2A8060 / #257054 / #154030). A theme
+with `chrome` states none of those seven roles in `colours`; the label stays its own (fixed). The picker
+(`picker/src/colour.h` scale_byte) repaints every line from the picked ground by the same arithmetic.
 
 ### Colour roles (default = `colour.two_pass` of the scene's app constant)
 
@@ -311,7 +327,7 @@ sunken — and differ from it in the well and the lane geometry each one names; 
 | key | values (default first) | effect |
 |---|---|---|
 | `elements` | `{"ink": true, "outline": true, "stems": true, "flags": true, "playhead": true, "state_line": true}` (a top-level object; each key optional, each value true or false) | THE ELEMENT SWITCHES (2026-10-04), each on by default (every picture unchanged): `ink` and `outline` the waveform's two run classes (`draw_waveform`; scene 1002 has no outline pixels at its zoom, so `outline` changes nothing there); `stems` the marker stems (`draw_stems`); `flags` the flag boxes and labels (`draw_flags`, the flat flag's stem piece over its bottom outline included); `playhead` the head, its outline, its marker-lane stem and its stem in the well (`draw_ruler`, `draw_stems`); `state_line` row 8's state line (`state_line`), which also turns `--label` into THE ROW-8 STAMP (above). Stated in the tablet geometry too. They replace the scratch monkeypatch wrappers of sets CQ and CR (`render_canvas_only.py`, `render_ink_only.py`), whose pictures they reproduce byte for byte |
-| `picker` | `null` \| `{"active": role, "layers": [role, ...]}` (a top-level object; distinct colour roles, the active one among them) | read only by `--export` (THE EXPORT below): the picker's layers, each a colour role, and the one being picked. A layer whose role is `"auto"` is refused, except `outline`, which the export derives from `ink` (then a layer too) |
+| `picker` | `null` \| `{"active": key, "elements": [{"key", "name", "role", "scene"}, ...], "scenes": {name: overrides, ...}}` (a top-level object) | read only by `--export` (THE EXPORT below; `picker_key` checks it). An ELEMENT is one colour the picker picks: `key` its word in picks.txt and state.json (`[a-z][a-z0-9_]*`), `name` its Title Case name in the chooser, `role` the colour role it sets (stated as a colour, or `ground` under the chrome rule), `scene` the scene it is picked over; 1..32 elements, keys, names and roles distinct, `active` one of the keys. A SCENE is the theme with its overrides merged in (an object merges key by key, anything else replaces): the states a mock shows (`elements`, `flags` states, `buttons.down`, ...), never a colour (`colours`, `chrome`, `waveform` and the flags' colour aliases are refused), so one role table serves every scene. The single-layer form (`layers`) retired 2026-10-04 |
 | `relief` | `"flat"` \| `"thin"` \| `"thick"` | line count of every raised/sunken edge: thin = one logical line (2 device px) a side, thick = the two-line DrawEdge |
 | `buttons` | `{"raised": false, "rows": ["icon","bottom"], "down": ["ViewTW"], "down_shift": true, "toggled": null, "down_dither": false, "gap": null, "sep_gap": null, "group_space": null, "case": null, "disabled": "mix"}` | `raised`: the listed rows' buttons get a face + EDGE_RAISED+BF_SOFT; `down`: buttons drawn down; `toggled`: `"app"` (the rounded fill + ring the app paints; default when not raised), `"sunken"` (EDGE_SUNKEN+BF_SOFT on `down_face`; default when raised), `"flat_fill"` (square fill, no edge); `down_shift`: the glyph moves one logical px down-right on a sunken button; `down_dither`: the Windows checked face, a 1-logical-px checkerboard of bevel_hilight |
 | `buttons.gap` | `null` (the scene's measured positions: 2 logical px between the 32-px boxes) \| a whole number of logical px >= 0 | the gap between adjacent buttons of one group; both rows are RE-PACKED as the app walks them (`render.button_geometry`): a chain of groups whose separators stand at equal gaps either side packs from its first button's measured x walking right, or, when its last button ends at the row's right margin (2288 on 1002: the icon row's view group and the whole bottom row), from that edge walking left; the measured separator gaps are kept (widened by `buttons.sep_gap`, below) and each separator moves with its groups; only x changes. 2 re-derives every measured x (byte-identical to `null`); 0 on 1002 = the buttons touching: Save 16, Undo 98, Load in Place 1514, the view group from 2096 (its separator 2086), the bottom row from 1134 (Marker Drop) to 2224, its separators 1528 1806 2084 |
@@ -398,29 +414,59 @@ an even height, the extractor's measured rule). At the same height the runs are 
 1002 the ink spans canvas rows 128..954 (400..1226); one Shadow / one Hilight line gives canvas 270..1343 (1074) and
 ink 399..1228; three lines a side 274..1339 (1066), ink 402..1225; no seam 268..1345 (1078), ink 397..1230.
 
-## The export (the picker's scene, 2026-10-04)
+## The export (the picker's elements and scenes, 2026-10-04)
 
-`render.py THEME --export DIR` writes what the colour picker app (`picker/README.md`) paints: `background.ppm` (binary
-P6, the render as it stands), one binary mask per layer `<role>.pgm` (binary P5, 0 or 255) and `manifest.json`
-(`{"width", "height", "background", "active", "layers": [{"name", "mask", "colour": "#RRGGBB"} | {"name", "mask",
-"derive": {"from": "ink", "over": <the canvas>, "linear_mix": 0.5}}]}`; the format is the picker README's). The
-layers are the theme's `picker` key. EACH MASK IS TAKEN FROM THE RENDERER ITSELF (`export_scene`): the theme
-rendered twice with the layer's role in two sentinel colours (#FF00FF, #00FF00), every other layer stated at its
-resolved colour, the pixels that differ being the role's; each must be exactly the sentinel in both renders, else
-the role's pixels are blended (antialiasing, alpha) and a binary mask cannot carry them: a hard fail. A layer that
-paints no pixel is left out with a NOTE. Before anything is written it checks that the masks are disjoint, that a
-layer with an `elements` switch masks exactly what the switch removes, and that the background with every layer
-painted through its mask in the theme's colours (the derived one by its rule, `colour.lin_mix`) equals the render
-byte for byte, both for the background written and for one with every layer in a sentinel colour; the files are read
-back and recomposed once more.
+`render.py THEME --export DIR` writes what the colour picker app (`picker/README.md`, which has the formats) paints:
+every scene of the theme's `picker` key as a picture whose EVERY PIXEL IS NAMED — which colour role it shows, and
+over which roles it is blended — so the picker repaints any element live, antialiased edges included, with no
+rasterizing on the device (`render.py`'s export section is the authoritative statement).
+
+- THE PAINT RECORD (`PaintRecord`, `TeeContext`): each scene is rendered once through a recording context that runs
+  every cairo call twice, on the picture and on an A8 PROBE with an opaque source under the same path, clip,
+  transform and font, so each paint's 8-bit COVERAGE is cairo's own (the glyphs and the scaled icon masks as cairo
+  rasterized them for the picture; no text layout is re-implemented) and its colour names its role (`Theme.get`
+  returns a `RoleColour` tagged with the role asked and its alias ROOT; `common.src` tells the context). Per pixel the
+  record keeps the BASE (the last paint covering it fully) and the COVERAGE STACK (each partial paint since, oldest
+  first: the disabled emboss is two, the light copy at +1, +1 then Shadow; an icon's touching inks a few). A source
+  with alpha, a pattern source, an unknown cairo call or a pixel no opaque paint covers is a hard fail.
+- THE ROLE TABLE: every identity painted, with its rule over the elements (`picker_roles`): an element's own role,
+  a chrome line (`scale` of the chrome element, or DkShadow's fixed #000000), the outline's `derive` (the 50 %
+  linear-light mix of the ink over the canvas ELEMENT, following both live), else a fixed `colour`.
+- THE FILES: `manifest.json` (elements, roles, scenes), and per scene `<scene>.base.pgm` (each byte the role index
+  of the pixel's base) and `<scene>.cover.bin` (the stacks). All the theme's scenes come from one `--export`.
+- THE CHECKS: the record recomposed by cairo's arithmetic (`colour.over_coverage`, pixman's, cited there) equals the
+  render byte for byte; the written files read back equal it again; and at every colour set of
+  `picker_check_sets` — each element moved, the chrome to a tint whose channels 32 and 96 hit the rule's ties
+  (#206048) and to a bright ground whose x 255 / 192 caps (#E6D2B4), all moved at once — a fresh render of each
+  scene equals the files recomposed at those colours: the proof that no pixel is attributed to the wrong role.
 
 ```
-python3 tools/palette/render.py tools/palette/themes/picker_ink.json --export tools/palette/out/picker_ink
+python3 tools/palette/render.py tools/palette/themes/picker.json --export tools/palette/out/picker
 ```
 
-writes the ink round (the ink 439,235 px; `outline` left out, scene 1002 having no outline pixels at its zoom). A
-later round (a flag face) is a theme with another `picker` key; a role whose pixels are antialiased against
-something (a flag face under its label's glyph edges) fails the binary check by design and needs a decision first.
+writes the chrome round (about 5 s): 3 elements (Chrome, Canvas, Ink), 12 roles, the one scene `waveform` (20,619
+antialiased px in 22,513 stacked paints, the deepest two); the base map 3.3 MB, the stacks 148 KB. THE ROLES IT
+PAINTS, as each painter asks for them (the export prints this inventory):
+
+| painter's role | root | rule |
+|---|---|---|
+| `ground`, `menu_ground`, `icon_row_ground`, `trim_ground`, `ruler_ground`, `marker_ground`, `bottom_row_ground`, `icon_face`, `button_face`, `down_face` | `ground` | the Chrome element |
+| `bevel_hilight` (the relief's light lines, the checked face's and the trim track's dither), `ruler_tick_light` | `bevel_hilight` | Chrome x 255 / 192 |
+| `emboss_hilight` (the disabled word's and glyph's light copy; antialiased) | `emboss_hilight` | Chrome x 255 / 192 |
+| `bevel_light` (the outer light lines, the well's lower line) | `bevel_light` | Chrome x 223 / 192 |
+| `bevel_shadow` (the relief's dark lines, the status panel, the emboss's top copy, antialiased), `ruler_tick` | `bevel_shadow` | Chrome x 128 / 192 |
+| `bevel_dkshadow` (the outer dark lines, the well's top line) | `bevel_dkshadow` | fixed #000000 (DkShadow) |
+| `canvas` | `canvas` | the Canvas element |
+| `ink` | `ink` | the Ink element |
+| `label`, `legend`, `clock`, `ruler_label`, `icon_label`, `trim_arrow` (the words antialiased) | `label` | fixed #FFFFFF |
+| `icon_record`, `icon_preview_on`, `icon_lift_cross` | their own | fixed (the icons' inks, antialiased) |
+
+Not painted by this scene, with their rule should a later scene paint them: `field_ground` (Chrome x 255 / 192; no
+dialog), `flag_border` (DkShadow, fixed), `outline` (derive: the ink over the canvas; scene 1002 has no outline
+pixels), `selected_fill` (fixed #666666 until the open-flag round makes it an element), the flags' faces and labels
+(fixed). The check's theme (`picker/check_refs.py`) adds a Flag Test element, the flag face, over a second scene with
+the flags and the first flag's editor open: its labels' antialiased edges are stacks over a picked base, so the flag
+rounds need no new machinery.
 
 ## Adding a theme
 
@@ -465,7 +511,8 @@ outlined head, the engraved disabled word and glyph, the flat flag with the sele
 "face", since step 16); a theme may
 state one only as the app has it, and every geometry option (`buttons.case`, `fonts`, `ruler_layout`, `trim.lane_h`,
 `playhead_head_rows` and their kin) is refused. A tablet theme states its colours, the scene's states (`buttons.down`,
-`trim.held`, `flags.states`), the element switches and the export's layers (`elements`, `picker`) and the optional
+`trim.held`, `flags.states`), the chrome rule (`chrome`), the element switches and the export's elements (`elements`,
+`picker`) and the optional
 surfaces (`state_text`, `dialog`, `card`, whose step-11 layout is the
 app's at 275 % already and now takes the 3-px line and the 35.75-px face). `compare.py --scene tablet` counts by the
 tablet geometry's lanes. The scene geometry is untouched: ad2, win95_standard and frozen (and set AV01's theme)
@@ -618,6 +665,11 @@ disabled and invalid editing states, the white outline `flag_border_sel` / `"out
 `flags.outline_px` retired) moved nothing on the scene geometry: ad2, win95_standard and frozen render `cmp`-identical
 before and after on 1002, 1002a and s4 (they use the app style). tablet.json moved by design (its colours the new
 default look), and the 98 crops were re-rendered with it.
+
+The chrome rule, the paint record and the multi-element export (2026-10-04, the chrome round) moved nothing either:
+warptempo, tablet and win95_standard on 1002 and frozen and ad2 on 1002, 1002a and s4, each with and without
+`--label`, render `cmp`-identical before and after, and warptempo.json with its seven chrome roles replaced by
+`"chrome": {"ground": "#191919", "rule": "windows95"}` renders identically to it.
 
 The element switches, the row-8 stamp and the export (2026-10-04) moved nothing at their defaults: warptempo,
 tablet, frozen, ad2 and win95_standard on 1002 with and without `--label`, and frozen and ad2 on 1002a and s4 with

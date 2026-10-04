@@ -1,0 +1,75 @@
+{
+ "name": "picker",
+ "description": "THE PICKER'S THEME (2026-10-04, the chrome round): themes/warptempo.json with the chrome as ONE KNOB, its ground #191919 under the chrome rule (`chrome`: Windows 95's proportions, every relief line, the field and the emboss's light copy following the ground; at #191919 the theme warptempo's own row), the canvas #0E0E0E, the ink #A6B9DE (the ink round's latest pick), the outline by its rule (\"auto\": the 50 % linear-light blend of the ink over the canvas), the selected fill #666666 (fixed this round). Exported with --export for tools/palette/picker/: three elements in the architect's order of importance (2026-10-04), Chrome, Canvas and Ink, the chrome active, all over the scene `waveform` (the ink round's: the marker stems, the flags, the playhead and row 8's state line switched off). The later rounds come in this order, each a new element and scene here and a new export: the unselected flag, the selected flag, then the open flag with its selection (where the selected fill becomes pickable).",
+ "geometry": "tablet",
+ "chrome": {
+  "ground": "#191919",
+  "rule": "windows95"
+ },
+ "colours": {
+  "label": "#FFFFFF",
+  "selected_fill": "#666666",
+  "selected_text": "#FFFFFF",
+  "field_text": "#FFFFFF",
+  "ruler_label": "@label",
+  "ruler_tick": "@bevel_shadow",
+  "ruler_tick_light": "@bevel_hilight",
+  "flag_border": "@bevel_dkshadow",
+  "down_face": "@ground",
+  "trim_arrow": "@label",
+  "canvas": "#0E0E0E",
+  "ink": "#A6B9DE",
+  "outline": "auto",
+  "flag_fill": "#666699",
+  "flag_fill_sel": "#CCCCFF",
+  "flag_label": "#FFFFFF",
+  "flag_label_sel": "#000000",
+  "flag_fill_red": "#993333",
+  "flag_fill_red_sel": "#FF6666",
+  "flag_label_red": "#FFFFFF",
+  "playhead_head": "#8B8B8B",
+  "playhead_stem": "#FCFCFC",
+  "icon_record": "#BB575A",
+  "icon_negative": "#BB575A",
+  "icon_preview_on": "#B65C5D",
+  "icon_lift_cross": "#B65C5D",
+  "icon_accent": "#96BFDA",
+  "icon_wav": "#96BFDA",
+  "icon_plain_white": "#FFFFFF"
+ },
+ "picker": {
+  "active": "chrome",
+  "elements": [
+   {
+    "key": "chrome",
+    "name": "Chrome",
+    "role": "ground",
+    "scene": "waveform"
+   },
+   {
+    "key": "canvas",
+    "name": "Canvas",
+    "role": "canvas",
+    "scene": "waveform"
+   },
+   {
+    "key": "ink",
+    "name": "Ink",
+    "role": "ink",
+    "scene": "waveform"
+   }
+  ],
+  "scenes": {
+   "waveform": {
+    "elements": {
+     "ink": true,
+     "outline": true,
+     "stems": false,
+     "flags": false,
+     "playhead": false,
+     "state_line": false
+    }
+   }
+  }
+ }
+}

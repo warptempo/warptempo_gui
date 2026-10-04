@@ -175,7 +175,10 @@ def outline_of(ink, canvas):
     return tuple(lin_mix(tuple(ink), tuple(canvas), 0.5))
 
 def src(cr, c, a=None):
-    """cairo source from 0..255 bytes (fractional allowed, as GuiColor doubles are)."""
+    """cairo source from 0..255 bytes (fractional allowed, as GuiColor doubles are). A recording context
+    (render.py's TeeContext) is told the colour first, so the paint names the role it came from."""
+    note = getattr(cr, 'note_source', None)
+    if note is not None: note(c, a)
     if a is None: cr.set_source_rgb(c[0] / 255.0, c[1] / 255.0, c[2] / 255.0)
     else: cr.set_source_rgba(c[0] / 255.0, c[1] / 255.0, c[2] / 255.0, a)
 

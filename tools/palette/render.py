@@ -9,6 +9,7 @@
 import os, sys, json, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common as C            # before cairo: FONTCONFIG_FILE
+import colour as CL           # the chrome rule and cairo's antialiasing blend (the export)
 import cairo
 import numpy as np
 # the toolkits' own rules (tools/theme_catalog/toolkit_rules.py), read by flags.style "bevelled" (flag_bevel)
@@ -194,10 +195,10 @@ TABLET_FIXED = {
              'lane_h': None, 'acid_inset': 1},
     'menu': {'highlight': None, 'disabled': 'engraved'},
 }
-# what a tablet theme states freely: its colours, the scene's states (the toggled buttons, the held trim cap, the flags'
+# what a tablet theme states freely: its colours (the chrome rule's ground among them), the scene's states (the toggled buttons, the held trim cap, the flags'
 # states), the optional surfaces (the state line, the dialog, the card), the element switches and the picker's export
-TABLET_FREE = ('name', 'description', 'geometry', 'colours', 'waveform', 'flags', 'state_text', 'dialog', 'card',
-               'elements', 'picker')
+TABLET_FREE = ('name', 'description', 'geometry', 'colours', 'chrome', 'waveform', 'flags', 'state_text', 'dialog',
+               'card', 'elements', 'picker')
 TABLET_FREE_SUB = {'buttons': ('down',), 'trim': ('held',)}
 
 def use_tablet(path, t):
@@ -238,6 +239,21 @@ def use_tablet(path, t):
     LW = TB.SCENE['flags']['border_w']; FLAG_STEM_W = TB.SCENE['flags']['stem_w']
     return t
 
+class RoleColour(tuple):
+    """A resolved role's bytes as Theme.get returns them, tagged with the role the painter asked for (`asked`) and the
+    ROOT of its alias chain (`root`: the role whose own value is a colour, a rule or the chrome rule's line), so every
+    paint names the role that owns its colour (PaintRecord, the export). Otherwise a plain (r, g, b) tuple."""
+    def __new__(cls, c, root, asked):
+        o = tuple.__new__(cls, c); o.root = root; o.asked = asked; return o
+
+# THE CHROME RULE (architect 2026-10-04: the chrome is ONE KNOB, the ground): a theme's top-level `chrome` key,
+# {"ground": colour, "rule": "windows95"}, states the ground and fills every other chrome role from it by Windows 95's
+# proportions (colour.py windows95_chrome: Hilight, 3DLight and Shadow the ground x 255 / 223 / 128 over 192 per
+# channel, half to even, capped; DkShadow #000000; the field ground and the emboss's light copy the Hilight). The roles
+# it fills (colour.CHROME_ROLES) are then not stated in `colours`; the label stays the theme's own (fixed). The picker
+# picks the ground and repaints every line from it by the same arithmetic (picker/src/colour.h scale_byte).
+CHROME_RULES = ('windows95',)
+
 class Theme:
     def __init__(self, path, data=None):
         """path: the theme file (its name the default name and every message's subject); data: the theme's object
@@ -249,6 +265,15 @@ class Theme:
         if self.geometry == 'tablet': t = use_tablet(path, t)
         self.name = t.get('name', os.path.splitext(os.path.basename(path))[0] if path else 'default')
         raw = dict(DEFAULTS); raw.update(t.get('colours', {}))
+        self.chrome = t.get('chrome')
+        if self.chrome is not None:
+            ch = self.chrome
+            if (not isinstance(ch, dict) or set(ch) != {'ground', 'rule'} or ch['rule'] not in CHROME_RULES
+                    or not isinstance(ch['ground'], str)):
+                raise SystemExit(f'theme {path}: chrome is null or {{"ground": "#rrggbb", "rule": one of {CHROME_RULES}}}, not {ch!r}')
+            both = sorted(set(t.get('colours', {})) & set(CL.CHROME_ROLES))
+            if both: raise SystemExit(f'theme {path}: the chrome rule fills {both}; a theme with `chrome` does not state them')
+            for r, c in CL.windows95_chrome(C.parse_colour(ch['ground'])).items(): raw[r] = C.hexs(c)
         for sec, keys in COLOUR_SECTIONS:
             bad = set(t.get(sec, {})) - set(keys) - (set(FLAG_OPTIONS) if sec == 'flags' else set())
             if bad: raise SystemExit(f'theme {path}: unknown {sec} keys {sorted(bad)}')
@@ -296,7 +321,7 @@ class Theme:
         self.num = dict(NUM_DEFAULTS); self.num.update({k: t[k] for k in NUM_DEFAULTS if k in t})
         self.opt = json.loads(json.dumps(OPT_DEFAULTS))
         for k, v in t.items():
-            if k in ('colours', 'waveform', 'flags', 'name', 'description', 'geometry') or k in NUM_DEFAULTS: continue
+            if k in ('colours', 'chrome', 'waveform', 'flags', 'name', 'description', 'geometry') or k in NUM_DEFAULTS: continue
             if k not in OPT_DEFAULTS: raise SystemExit(f'theme {path}: unknown key {k!r}')
             if isinstance(OPT_DEFAULTS[k], dict):
                 bad = set(v) - set(OPT_DEFAULTS[k])
@@ -415,19 +440,7 @@ class Theme:
         if not all(isinstance(v, bool) for v in el.values()):
             raise SystemExit(f'theme {path}: elements maps each of {sorted(OPT_DEFAULTS["elements"])} to true or false, not {el!r}')
         pk = self.opt['picker']
-        if pk is not None:
-            if (not isinstance(pk, dict) or set(pk) != {'active', 'layers'} or not isinstance(pk['layers'], list)
-                    or not pk['layers'] or len(set(pk['layers'])) != len(pk['layers'])
-                    or not all(isinstance(r, str) and r in DEFAULTS for r in pk['layers'])
-                    or pk['active'] not in pk['layers']):
-                raise SystemExit(f'theme {path}: picker is null or {{"active": role, "layers": [role, ...]}}, distinct '
-                                 f'colour roles with the active one among them, not {pk!r}')
-            for r in pk['layers']:
-                if raw[r] == 'auto' and r != 'outline':
-                    raise SystemExit(f'theme {path}: picker layer {r!r} is "auto"; the export derives only the '
-                                     f'outline (its rule, the 50 % linear-light blend of ink over canvas)')
-                if r == 'outline' and raw[r] == 'auto' and 'ink' not in pk['layers']:
-                    raise SystemExit(f'theme {path}: the derived outline layer follows the ink, which is not a layer')
+        if pk is not None: picker_key(path, self, pk)
         st = self.opt['state_text']
         if st is not None and not isinstance(st, str):
             raise SystemExit(f'theme {path}: state_text is a string (row 8\'s state line) or null (no line), not {st!r}')
@@ -461,14 +474,16 @@ class Theme:
         return C.parse_colour(v)
 
     def get(self, role, _stack=()):
+        """-> the role's bytes as a RoleColour (its alias chain's root named on it)."""
         if role in self.c: return self.c[role]
         if role in _stack: raise SystemExit(f'colour reference loop at {role}')
         v = self.raw[role]
         if v is None: raise SystemExit(f'theme {self.name}: {role} is not stated (a theme that draws relief states its four relief bytes)')
-        if isinstance(v, str) and v.startswith('@'): c = self.get(v[1:], _stack + (role,))
+        root = role
+        if isinstance(v, str) and v.startswith('@'): c = self.get(v[1:], _stack + (role,)); root = c.root
         elif v == 'auto': c = self.auto(role, _stack + (role,))
         else: c = C.parse_colour(v)
-        self.c[role] = tuple(c); return self.c[role]
+        self.c[role] = RoleColour(tuple(c), root, role); return self.c[role]
 
     def auto(self, role, st):
         if role == 'menu_disabled': return C.mix(self.get('label', st), self.get('menu_ground', st), self.num['disabled_mix'])
@@ -495,6 +510,64 @@ class Theme:
         """One clause for the render's log line: the relief set as stated, or that the theme draws none."""
         if any(self.raw[r] is None for r in BEVELS): return 'no relief set stated'
         return 'relief ' + ' / '.join(C.hexs(self.get(r))[1:] for r in BEVELS)
+
+# THE PICKER KEY (read only by --export; THE EXPORT below): {"active": key, "elements": [{"key", "name", "role",
+# "scene"}, ...], "scenes": {name: overrides, ...}}. An ELEMENT is one colour the picker picks: `key` its word in
+# picks.txt and state.json (lower case, [a-z][a-z0-9_]*), `name` its Title Case name in the chooser, `role` the colour
+# role it sets -- one the theme states as a colour, or `ground` under the chrome rule (the chrome's one knob) -- and
+# `scene` the scene it is picked over. A SCENE is this theme with its overrides merged in (picker_scene_theme: an
+# object merges key by key, anything else replaces), one picture of the app: several elements may share one. A scene
+# overrides the states a mock shows (elements, flags' states, buttons.down, trim.held, dialog, card, state_text), never
+# a colour: the role table is one for every scene.
+PICKER_KEY_RE = r'[a-z][a-z0-9_]*'
+PICKER_SCENE_FIXED = ('name', 'description', 'geometry', 'colours', 'chrome', 'waveform', 'picker')
+
+def picker_key(path, th, pk):
+    """Theme's check of the `picker` key (the head above); a hard fail names what is wrong."""
+    import re
+    if not isinstance(pk, dict) or 'layers' in pk:
+        raise SystemExit(f'theme {path}: picker is {{"active": key, "elements": [...], "scenes": {{...}}}} (the layers form '
+                         f'retired 2026-10-04 with the multi-element picker), not {pk!r}')
+    if set(pk) != {'active', 'elements', 'scenes'}:
+        raise SystemExit(f'theme {path}: picker has exactly the keys active, elements and scenes, not {sorted(pk)}')
+    sc = pk['scenes']
+    if not isinstance(sc, dict) or not sc or not all(isinstance(k, str) and re.fullmatch(PICKER_KEY_RE, k) and isinstance(v, dict)
+                                                    for k, v in sc.items()):
+        raise SystemExit(f'theme {path}: picker.scenes maps scene names ([a-z][a-z0-9_]*) to override objects, not {sc!r}')
+    for name, ov in sc.items():
+        bad = sorted(set(ov) & set(PICKER_SCENE_FIXED))
+        if bad: raise SystemExit(f'theme {path}: picker scene {name!r} overrides {bad}; a scene changes states, never a colour')
+        fl = ov.get('flags', {})
+        if not isinstance(fl, dict) or set(fl) - set(FLAG_OPTIONS):
+            raise SystemExit(f'theme {path}: picker scene {name!r}: flags overrides only {FLAG_OPTIONS}, never a colour')
+    els = pk['elements']
+    if not isinstance(els, list) or not 1 <= len(els) <= 32:
+        raise SystemExit(f'theme {path}: picker.elements is a list of 1..32 elements, not {els!r}')
+    seen = {'key': set(), 'name': set(), 'role': set()}
+    for e in els:
+        if (not isinstance(e, dict) or set(e) != {'key', 'name', 'role', 'scene'} or not all(isinstance(v, str) and v for v in e.values())
+                or not re.fullmatch(PICKER_KEY_RE, e['key'])):
+            raise SystemExit(f'theme {path}: a picker element is {{"key": [a-z][a-z0-9_]*, "name": "Title Case", "role": role, '
+                             f'"scene": name}}, not {e!r}')
+        for k in seen:
+            if e[k] in seen[k]: raise SystemExit(f'theme {path}: two picker elements share the {k} {e[k]!r}')
+            seen[k].add(e[k])
+        if e['scene'] not in sc: raise SystemExit(f'theme {path}: picker element {e["key"]!r}\'s scene {e["scene"]!r} is not in picker.scenes')
+        r = e['role']
+        if r not in DEFAULTS: raise SystemExit(f'theme {path}: picker element {e["key"]!r}\'s role {r!r} is not a colour role')
+        if r == 'ground':
+            if th.chrome is None:
+                raise SystemExit(f'theme {path}: the element {e["key"]!r} picks the ground, which needs the chrome rule (the '
+                                 f'`chrome` key): its lines follow it')
+        elif r in CL.CHROME_ROLES and th.chrome is not None:
+            raise SystemExit(f'theme {path}: picker element {e["key"]!r}\'s role {r!r} is a line of the chrome rule, not a colour')
+        else:
+            v = th.raw[r]
+            if not isinstance(v, (str, list)) or (isinstance(v, str) and (v.startswith('@') or v == 'auto')):
+                raise SystemExit(f'theme {path}: picker element {e["key"]!r}\'s role {r!r} is {v!r}; an element\'s role is stated '
+                                 f'as a colour (an alias or a rule would follow another role)')
+    if pk['active'] not in seen['key']:
+        raise SystemExit(f'theme {path}: picker.active {pk["active"]!r} is not an element\'s key')
 
 def flag_states(path, fl):
     """flags.states -> one (selected, invalid, disabled, editing) per scene flag, left to right: {"selected": [i, ...],
@@ -1018,8 +1091,9 @@ def draw_app_glyph(cr, th, g, x, y, under, enabled, px):
         C.src(cr, th.get(top)); paint_mask(cr, m, x, y, px)
         return
     keep = 1.0 if enabled else th.num['disabled_mix']
-    for ink in g['inks']:
-        C.src(cr, C.mix(ink_colour(th, ink), under, keep)); paint_mask(cr, pgm(g['files'][ink]), x, y, px)
+    for ink in g['inks']:     # enabled: the ink itself (mix at keep 1 is the same bytes; the role stays named on it)
+        c = ink_colour(th, ink) if enabled else C.mix(ink_colour(th, ink), under, keep)
+        C.src(cr, c); paint_mask(cr, pgm(g['files'][ink]), x, y, px)
 
 def draw_buttons(cr, th, rows):
     """Faces and the app's glyphs through cairo, each box at button_geometry's x (measured, or re-packed by buttons.gap /
@@ -1580,12 +1654,17 @@ def waveform_runs(th):
     rel = WAVE['channel_split'] - WAVE['y0']
     return c0, cols, c0 + -(-rel * new_h // old_h)
 
-def draw_waveform(arr, th):
-    y0, cols, _ = waveform_runs(th); ink = np.array(th.get('ink'), np.uint8); out = np.array(th.get('outline'), np.uint8)
-    for cls, c in (('ink', ink), ('outline', out)):
+def draw_waveform(arr, th, record=None):
+    """The capture's runs into the picture's bytes, ink then outline; with a PaintRecord each class is one opaque paint."""
+    y0, cols, _ = waveform_runs(th)
+    for cls in ('ink', 'outline'):
         if not th.opt['elements'][cls]: continue        # elements.ink / elements.outline false: that class unpainted
+        c = th.get(cls); m = np.zeros(arr.shape[:2], bool)
         for x, runs in enumerate(cols[cls]):
-            for i in range(0, len(runs), 2): arr[y0 + runs[i]:y0 + runs[i] + runs[i + 1], x] = c
+            for i in range(0, len(runs), 2): m[y0 + runs[i]:y0 + runs[i] + runs[i + 1], x] = True
+        arr[m] = np.array(c, np.uint8)
+        idx = np.flatnonzero(m)
+        if record is not None and idx.size: record.paint(c, idx, np.full(idx.size, 255, np.uint8))
 
 def draw_stems(cr, th):
     # THE STEMS' ROWS: the app of the scenes' commit runs every stem through the well's black border rows to the
@@ -1850,9 +1929,10 @@ def render(theme_path, out_path, label=False):
     C.save_png(out_path, rgb)
     return th
 
-def render_rgb(theme_path, label_text=None, data=None):
+def render_rgb(theme_path, label_text=None, data=None, record=None):
     """-> (Theme, the picture as an H x W x 3 uint8 array): the theme at theme_path (or its object `data`, the path then
-    naming it), stamped with label_text when given."""
+    naming it), stamped with label_text when given. With a PaintRecord `record` every paint is also recorded in it
+    (TeeContext; the export)."""
     C.verify_fonts()
     th = Theme(theme_path, data)
     di, db = case_delta(th)
@@ -1860,6 +1940,7 @@ def render_rgb(theme_path, label_text=None, data=None):
     SCENE = order_scene(seat_flags(shift_scene(SCENE, marker_shift(th), 'marker'), th), th.opt['lane_order'])
     SCENE = seat_clock(shift_scene(SCENE, db, 'bottom'), th)
     surf = cairo.ImageSurface(cairo.FORMAT_RGB24, C.W, C.H); cr = cairo.Context(surf)
+    if record is not None: cr = TeeContext(cr, record)
     cr.set_antialias(cairo.ANTIALIAS_DEFAULT)
     draw_grounds(cr, th)
     draw_bars(cr, th)
@@ -1873,7 +1954,7 @@ def render_rgb(theme_path, label_text=None, data=None):
     surf.flush()
     # the waveform's runs go straight into the surface's bytes (RGB24 = BGRx in memory)
     st = surf.get_stride(); mem = np.frombuffer(surf.get_data(), np.uint8).reshape(C.H, st)[:, :C.W * 4].reshape(C.H, C.W, 4)
-    rgb = C.surface_to_rgb(surf); draw_waveform(rgb, th)
+    rgb = C.surface_to_rgb(surf); draw_waveform(rgb, th, record)
     mem[..., 0] = rgb[..., 2]; mem[..., 1] = rgb[..., 1]; mem[..., 2] = rgb[..., 0]; surf.mark_dirty()
     draw_stems(cr, th)
     if th.opt['dialog'] is None:
@@ -1884,22 +1965,40 @@ def render_rgb(theme_path, label_text=None, data=None):
         draw_dialog(cr, th)
     draw_card(cr, th)
     if label_text is not None: stamp(cr, th, label_text)
+    if record is not None: record.finish()
     return th, C.surface_to_rgb(surf)
 
-# ------------------------------------------------------------------ THE PICKER'S SCENE (tools/palette/picker/)
-# `render.py THEME --export DIR` writes what the colour picker app paints (picker/README.md): background.ppm (the
-# render as it stands), one binary mask per layer (<role>.pgm, 0 or 255) and manifest.json. A LAYER IS A COLOUR ROLE
-# the theme's `picker` key names; its mask is TAKEN FROM THE RENDERER ITSELF: the theme rendered twice with that
-# role in two sentinel colours (every other layer stated at its resolved colour, so a derived one stays put), the
-# pixels that differ being the role's own -- each of them must be exactly the sentinel in both renders, or the
-# role's pixels are blended with something (antialiasing, alpha) and a binary mask cannot carry them: a hard fail.
-# A layer whose mask comes out empty paints nothing in this scene and is left out of the manifest (a note says so).
-# Checked before anything is written: the masks are disjoint, a layer with an `elements` switch masks exactly what
-# the switch removes, and the background with every layer painted through its mask in the theme's colours -- the
-# derived one by its rule -- equals the render byte for byte, both for the background written and for one with
-# every layer in a sentinel colour (so no pixel of a layer is left outside its mask); the written files are read
-# back for the first.
-SENTINELS = ((255, 0, 255), (0, 255, 0))
+# ------------------------------------------------------------------ THE PICKER'S EXPORT (tools/palette/picker/)
+# `render.py THEME --export DIR` writes what the colour picker app paints (picker/README.md): every scene of the theme's
+# `picker` key as a picture whose every pixel is NAMED -- which colour role it shows, and over which roles it is
+# blended -- so the picker repaints any element live, antialiased edges included, with no rasterizing on the device.
+#
+# THE PAINT RECORD (PaintRecord, TeeContext): the scene is rendered once with a recording context, which runs every
+# cairo call twice -- on the picture, and on an A8 PROBE with an opaque source under the same path, clip, transform
+# and font -- so each paint's 8-bit COVERAGE is cairo's own (the glyphs' and the icon masks' antialiasing as cairo
+# rasterized them for the picture; nothing is re-implemented), and its colour names its role (common.src tells the
+# context the RoleColour, its alias root the identity; any other colour is a literal '#RRGGBB'). Per pixel the record
+# keeps the BASE (the last paint covering it fully) and the COVERAGE STACK (every partial paint since, in order). The
+# palette composites nothing else: a source with alpha, an operator, a pattern source or a pixel no opaque paint
+# covers is a hard fail.
+#
+# THE ROLES: every identity a scene paints becomes one row of the manifest's role table, with its RULE over the
+# elements (picker_roles): an element's own role; a line of the chrome rule (`scale` of the chrome element, the
+# Windows 95 proportion, or DkShadow's fixed #000000); the waveform outline's `derive` (the 50 % linear-light mix of
+# the ink over the canvas, following both live); anything else a fixed `colour`.
+#
+# THE FILES: manifest.json, and per scene <scene>.base.pgm (binary P5: each byte the role-table index of the pixel's
+# base) and <scene>.cover.bin (the stacks: COVER_MAGIC, a little-endian uint32 count, then per stacked pixel in
+# ascending order its uint32 index y x W + x, a uint8 depth n >= 1 and n (uint8 role, uint8 coverage 1..254) pairs,
+# oldest first).
+#
+# THE CHECKS, before anything is trusted: the record recomposed (colour.over_coverage, cairo's arithmetic) equals the
+# render byte for byte; the written files read back equal it again; and for every colour set of picker_check_sets
+# (each element moved, the chrome to a tinted ground with the rule's half-to-even ties and to a bright one whose lines
+# cap, all moved at once) a fresh render of each scene at those colours equals the files recomposed at them -- the
+# proof that no pixel is attributed to the wrong role.
+COVER_MAGIC = b'WTCOVER1'
+PAINT_DEPTH = 8                 # the deepest coverage stack accepted (the emboss is two, an icon's touching inks a few)
 
 def write_pnm(path, arr):
     """Binary PNM, 8-bit: P6 for an H x W x 3 array, P5 for an H x W one."""
@@ -1913,84 +2012,304 @@ def read_pnm(path):
     assert mx == b'255' and magic in (b'P6', b'P5')
     return np.frombuffer(rest, np.uint8).reshape((int(h), int(w), 3) if magic == b'P6' else (int(h), int(w)))
 
-def picker_layer_colours(th, layers, derive):
-    """-> {layer: (r, g, b)}: a picked layer's the theme's, a derived one's its rule over the picked colours."""
-    out = {r: th.get(r) for r in layers if r not in derive}
-    for r, d in derive.items():
-        out[r] = tuple(C.lin_mix(out[d['from']], C.parse_colour(d['over']), d['linear_mix']))
-    return out
+def colour_identity(c):
+    """-> (identity, asked): a RoleColour's alias root and the role the painter asked for; any other colour its bytes
+    as cairo takes them (cairo-color.c: each channel / 255 x 65535 + 0.5, truncated to 16 bits, its high byte to
+    pixman) as '#RRGGBB', twice."""
+    if isinstance(c, RoleColour): return c.root, c.asked
+    h = C.hexs(tuple(int(v / 255.0 * 65535.0 + 0.5) >> 8 for v in c)); return h, h
 
-def recompose(bg, masks, colours):
-    out = bg.copy()
-    for r, m in masks.items(): out[m] = colours[r]
-    return out
+class PaintRecord:
+    """The paint record of one render (the head above): base, depth and the coverage stacks per pixel, flat y x W + x."""
+    def __init__(self):
+        n = C.W * C.H
+        self.ids, self.index = [], {}
+        self.base = np.full(n, -1, np.int32); self.depth = np.zeros(n, np.int32)
+        self.lid = np.zeros((PAINT_DEPTH, n), np.int32); self.lcov = np.zeros((PAINT_DEPTH, n), np.uint8)
+        self.asked = {}         # (asked role, identity) -> [px covered fully, px covered partly], the inventory
+
+    def paint(self, c, idx, cov):
+        """One paint of colour c: the pixels idx (flat, ascending, distinct) at coverages cov (1..255)."""
+        ident, asked = colour_identity(c)
+        if ident not in self.index: self.index[ident] = len(self.ids); self.ids.append(ident)
+        i = self.index[ident]
+        full = cov == 255; fi, pi, pc = idx[full], idx[~full], cov[~full]
+        self.base[fi] = i; self.depth[fi] = 0
+        if pi.size:
+            d = self.depth[pi]
+            if (d >= PAINT_DEPTH).any(): raise SystemExit(f'export: a pixel stacks more than {PAINT_DEPTH} partial paints')
+            self.lid[d, pi] = i; self.lcov[d, pi] = pc; self.depth[pi] = d + 1
+        a = self.asked.setdefault((asked, ident), [0, 0]); a[0] += int(fi.size); a[1] += int(pi.size)
+
+    def finish(self):
+        bad = np.flatnonzero(self.base < 0)
+        if bad.size:
+            raise SystemExit(f'export: {bad.size} pixels are covered by no opaque paint (the first at x {bad[0] % C.W}, '
+                             f'y {bad[0] // C.W}); the picture is not the paints alone')
+
+    def stacks(self):
+        """-> (idx, n, roles P x K, coverages P x K) of the stacked pixels, ascending."""
+        idx = np.flatnonzero(self.depth > 0); n = self.depth[idx]; k = int(n.max()) if idx.size else 0
+        return idx, n, self.lid[:k, idx].T.copy(), self.lcov[:k, idx].T.copy()
+
+class TeeContext:
+    """THE RECORDING CONTEXT (the head above): the picture's cairo.Context and an A8 probe driven by the same calls.
+    Path, clip, transform, antialias and font calls go to both; a paint runs on both and the probe's nonzero bytes are
+    that paint's coverage (then cleared); the source is set on the picture alone (the probe's stays opaque) and named by
+    the colour common.src notes first. Any call it does not know is refused, so no state can reach one side only."""
+    _BOTH = frozenset(('save', 'restore', 'rectangle', 'move_to', 'line_to', 'arc', 'arc_negative', 'curve_to',
+                       'close_path', 'new_sub_path', 'new_path', 'clip', 'translate', 'scale', 'set_antialias',
+                       'select_font_face', 'set_font_size', 'set_font_options', 'set_line_width'))
+    _PAINT = frozenset(('fill', 'fill_preserve', 'stroke', 'stroke_preserve', 'mask', 'mask_surface', 'show_glyphs'))
+    _READ = frozenset(('get_font_face', 'get_scaled_font', 'text_extents'))
+
+    def __init__(self, cr, record):
+        self._cr, self._rec = cr, record
+        self._ps = cairo.ImageSurface(cairo.FORMAT_A8, C.W, C.H)
+        if self._ps.get_stride() != C.W: raise SystemExit('export: the A8 probe\'s stride is not the width')
+        self._pc = cairo.Context(self._ps); self._pc.set_source_rgba(0, 0, 0, 1)
+        self._buf = np.frombuffer(self._ps.get_data(), np.uint8)
+        self._noted = None; self._source = None
+
+    def note_source(self, c, a):
+        if a is not None and a != 1.0:
+            raise SystemExit(f'export: a paint with alpha {a} (the palette composites nothing but antialiasing)')
+        self._noted = c
+
+    def _take_source(self, r, g, b):
+        c, self._noted = self._noted, None
+        self._source = c if c is not None else tuple(v * 255.0 for v in (r, g, b))
+
+    def set_source_rgb(self, r, g, b):
+        self._take_source(r, g, b); self._cr.set_source_rgb(r, g, b)
+
+    def set_source_rgba(self, r, g, b, a):
+        if a != 1.0: raise SystemExit(f'export: a source with alpha {a}')
+        self._take_source(r, g, b); self._cr.set_source_rgba(r, g, b, a)
+
+    def __getattr__(self, name):
+        if name.startswith('_'): raise AttributeError(name)
+        if name in self._READ: return getattr(self._cr, name)
+        if name in self._BOTH:
+            f, g = getattr(self._cr, name), getattr(self._pc, name)
+            def both(*a, **k): g(*a, **k); return f(*a, **k)
+            return both
+        if name in self._PAINT:
+            f, g = getattr(self._cr, name), getattr(self._pc, name)
+            def paint(*a, **k):
+                if self._source is None: raise SystemExit(f'export: a {name} with no source set')
+                r = f(*a, **k); g(*a, **k); self._take(); return r
+            return paint
+        raise SystemExit(f'export: the recording context does not know cairo\'s {name}; mirror it or refuse it')
+
+    def _take(self):
+        self._ps.flush()
+        nz = np.flatnonzero(self._buf)
+        if nz.size:
+            self._rec.paint(self._source, nz, self._buf[nz].copy())
+            self._buf[nz] = 0; self._ps.mark_dirty()
+
+def blend_stacks(img, idx, n, lr, lc, role_rgb):
+    """img (pixels x 3, int64) with each stacked pixel's paints blended over its base, oldest first (colour.over_coverage,
+    cairo's arithmetic); role_rgb the colour of every role / identity index."""
+    for k in range(lr.shape[1] if lr.ndim == 2 else 0):
+        sel = n > k; ii = idx[sel]
+        img[ii] = CL.over_coverage(role_rgb[lr[sel, k]], lc[sel, k].astype(np.int64)[:, None], img[ii])
+    return img
+
+def recompose(base, stacks, role_rgb):
+    """-> the H x W x 3 picture of a base index map (flat) and its stacks at the roles' colours."""
+    role_rgb = np.asarray(role_rgb, np.int64)
+    img = role_rgb[base].copy()
+    blend_stacks(img, *stacks, role_rgb)
+    return img.reshape(C.H, C.W, 3).astype(np.uint8)
+
+def picker_scene_theme(base, ov):
+    """One picker scene's theme: `base` with the scene's overrides merged in (an object merges key by key, anything
+    else replaces)."""
+    def merge(a, b):
+        out = json.loads(json.dumps(a))
+        for k, v in b.items():
+            out[k] = merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else json.loads(json.dumps(v))
+        return out
+    return merge(base, ov)
+
+def picker_apply(data, elements, colours):
+    """The theme `data` with element colours {key: '#RRGGBB'} stated: an element's role in `colours` (any section
+    alias of it dropped), the ground through the chrome key."""
+    t = json.loads(json.dumps(data)); role = {e['key']: e['role'] for e in elements}
+    for key, hexv in colours.items():
+        r = role[key]
+        if r == 'ground': t['chrome']['ground'] = hexv; continue
+        for sec, keys in COLOUR_SECTIONS:
+            for k, rr in keys.items():
+                if rr == r: t.get(sec, {}).pop(k, None)
+        t.setdefault('colours', {})[r] = hexv
+    return t
+
+def picker_roles(th, elements, idents):
+    """-> the manifest's role table, one row per identity in `idents` order: {"name", and one of "element": key,
+    "scale": {"of": key, "num", "den"}, "derive": {"from": key, "over": key or "#RRGGBB", "linear_mix"}, "colour"}
+    (the head above). A rule follows elements only; a role whose rule would follow no element is its fixed colour."""
+    by_role = {e['role']: e['key'] for e in elements}
+    lines = dict(CL.CHROME_LINES); same = dict(CL.CHROME_SAME); fixed = dict(CL.CHROME_FIXED)
+    rows = []
+    for ident in idents:
+        row = {'name': ident}
+        if ident.startswith('#'): row['colour'] = ident
+        elif ident in by_role: row['element'] = by_role[ident]
+        elif th.chrome is not None and 'ground' in by_role and ident in CL.CHROME_ROLES:
+            if ident in fixed: row['colour'] = C.hexs(fixed[ident])
+            else: row['scale'] = {'of': by_role['ground'], 'num': lines[same.get(ident, ident)], 'den': CL.CHROME_DEN}
+        elif ident == 'outline' and th.raw['outline'] == 'auto' and 'ink' in by_role:
+            row['derive'] = {'from': by_role['ink'], 'over': by_role.get('canvas', C.hexs(th.get('canvas'))), 'linear_mix': 0.5}
+        elif th.raw.get(ident) == 'auto':
+            raise SystemExit(f'export: the role {ident!r} is painted by its "auto" rule, which the picker does not carry; '
+                             f'state it, or port its rule (picker_roles, the picker\'s src/scene.cpp)')
+        else: row['colour'] = C.hexs(th.get(ident))
+        rows.append(row)
+    return rows
+
+def picker_role_colours(roles, el_colours):
+    """-> (roles x 3) the role table's colours at the element colours {key: (r, g, b)}: the picker's src/scene.cpp
+    role_colour, the same arithmetic (colour.scale_byte, colour.lin_mix)."""
+    out = []
+    for r in roles:
+        if 'element' in r: c = el_colours[r['element']]
+        elif 'colour' in r: c = C.parse_colour(r['colour'])
+        elif 'scale' in r:
+            sc = r['scale']; c = tuple(CL.scale_byte(v, sc['num'], sc['den']) for v in el_colours[sc['of']])
+        else:
+            d = r['derive']; over = C.parse_colour(d['over']) if d['over'].startswith('#') else el_colours[d['over']]
+            c = CL.lin_mix(tuple(el_colours[d['from']]), tuple(over), d['linear_mix'])
+        out.append(tuple(c))
+    return np.array(out, np.int64)
+
+def write_cover(path, idx, n, lr, lc):
+    """<scene>.cover.bin (the head above)."""
+    out = bytearray(COVER_MAGIC); out += int(idx.size).to_bytes(4, 'little')
+    for p in range(idx.size):
+        out += int(idx[p]).to_bytes(4, 'little'); out.append(int(n[p]))
+        for k in range(int(n[p])): out.append(int(lr[p, k])); out.append(int(lc[p, k]))
+    with open(path, 'wb') as f: f.write(out)
+
+def read_cover(path):
+    """The inverse of write_cover -> (idx, n, roles P x K, coverages P x K)."""
+    b = open(path, 'rb').read()
+    if b[:8] != COVER_MAGIC: raise SystemExit(f'{path}: not a cover file')
+    cnt = int.from_bytes(b[8:12], 'little'); at = 12; recs = []
+    for _ in range(cnt):
+        i = int.from_bytes(b[at:at + 4], 'little'); k = b[at + 4]; at += 5
+        recs.append((i, k, b[at:at + 2 * k:2], b[at + 1:at + 2 * k:2])); at += 2 * k
+    if at != len(b): raise SystemExit(f'{path}: trailing bytes')
+    K = max((r[1] for r in recs), default=0)
+    idx = np.array([r[0] for r in recs], np.int64); n = np.array([r[1] for r in recs], np.int64)
+    lr = np.zeros((cnt, K), np.int64); lc = np.zeros((cnt, K), np.int64)
+    for p, r in enumerate(recs): lr[p, :r[1]] = list(r[2]); lc[p, :r[1]] = list(r[3])
+    return idx, n, lr, lc
+
+# THE CHECK'S COLOUR SETS (picker_check_sets): a chrome element at a TINT whose channels 32 and 96 hit the rule's
+# half-to-even ties (32 x 255 / 192 = 42.5, 96 x 223 / 192 = 111.5) and at a BRIGHT ground whose x 255 / 192 caps at
+# 255; every other element at a probe colour of its own; then all of them moved at once
+CHECK_GROUNDS = ('#206048', '#E6D2B4')
+CHECK_PROBES = ('#CC9966', '#203040', '#3366CC', '#7A2E5C', '#55AA22')
+
+def picker_check_sets(elements):
+    """-> [{key: '#RRGGBB'}, ...]: the export's and the laptop check's colour sets (above)."""
+    sets, every, k = [], {}, 0
+    for e in elements:
+        if e['role'] == 'ground':
+            sets += [{e['key']: g} for g in CHECK_GROUNDS]; every[e['key']] = CHECK_GROUNDS[1]
+        else:
+            p = CHECK_PROBES[k % len(CHECK_PROBES)]; k += 1; sets.append({e['key']: p}); every[e['key']] = p
+    return sets + [every]
+
+def picker_manifest_rgb(man):
+    """{element key: (r, g, b)} of a manifest's own element colours."""
+    return {e['key']: C.parse_colour(e['colour']) for e in man['elements']}
 
 def export_scene(theme_path, out_dir):
     base = json.load(open(theme_path))
-    th, normal = render_rgb(theme_path, data=base)
-    pk = th.opt['picker']
-    if pk is None: raise SystemExit(f'theme {theme_path}: --export needs the theme\'s picker key (the layers and the active one)')
-    layers = pk['layers']; colours = {r: th.get(r) for r in layers}
-
-    def variant(stated, elements=None):
-        """The theme with the given roles stated outright (their section aliases dropped) and elements switched."""
-        t = json.loads(json.dumps(base)); cs = t.setdefault('colours', {})
-        for sec, keys in COLOUR_SECTIONS:
-            for k, role in keys.items():
-                if role in stated: t.get(sec, {}).pop(k, None)
-        cs.update({r: C.hexs(c) for r, c in stated.items()})
-        if elements: t.setdefault('elements', {}).update(elements)
-        return render_rgb(theme_path, data=t)[1]
-
-    masks = {}
-    for r in layers:
-        a, b = (variant({**colours, r: snt}) for snt in SENTINELS)
-        m = (a != b).any(axis=2)
-        if not ((a[m] == SENTINELS[0]).all() and (b[m] == SENTINELS[1]).all()):
-            raise SystemExit(f'export: the layer {r!r} paints {int(m.sum())} pixels, some of them blended with what is '
-                             f'under them: a binary mask cannot carry it')
-        if not (normal[m] == colours[r]).all(): raise SystemExit(f'export: the layer {r!r} does not render its own colour')
-        if not m.any():
-            print(f'NOTE: the layer {r!r} paints no pixel in this scene; left out of the manifest'); continue
-        sw = OPT_DEFAULTS['elements'].get(r)
-        if sw is not None and th.opt['elements'][r]:
-            off = (variant({}, {r: False}) != normal).any(axis=2)
-            if not (off == m).all():
-                raise SystemExit(f'export: the layer {r!r}\'s mask ({int(m.sum())} px) is not what elements.{r} removes '
-                                 f'({int(off.sum())} px)')
-        masks[r] = m
-    if not masks: raise SystemExit('export: no layer paints a pixel in this scene')
-    rs = list(masks)
-    for i, r in enumerate(rs):
-        for o in rs[i + 1:]:
-            if (masks[r] & masks[o]).any(): raise SystemExit(f'export: the masks of {r!r} and {o!r} overlap')
-    if pk['active'] not in masks: raise SystemExit(f'export: the active layer {pk["active"]!r} paints no pixel')
-    # the derived outline (Theme refuses any other "auto" layer): the 50 % linear-light blend of the ink over the canvas
-    derive = {r: {'from': 'ink', 'over': C.hexs(th.get('canvas')), 'linear_mix': 0.5}
-              for r in rs if th.raw[r] == 'auto'}
-    for r, d in derive.items():
-        if d['from'] not in masks: raise SystemExit(f'export: the derived layer {r!r} follows {d["from"]!r}, which paints no pixel')
-    want = picker_layer_colours(th, rs, derive)
-    if want != {r: colours[r] for r in rs}: raise SystemExit(f'export: a derived colour disagrees with the render: {want} / {colours}')
-    sentinel_bg = variant({r: SENTINELS[0] for r in rs})
-    if not (recompose(sentinel_bg, masks, want) == normal).all():
-        raise SystemExit('export: the sentinel background recomposed through the masks is not the render')
+    th0 = Theme(theme_path, base)
+    pk = th0.opt['picker']
+    if pk is None: raise SystemExit(f'theme {theme_path}: --export needs the theme\'s picker key (the elements and their scenes)')
+    elements = pk['elements']
+    # 1. every scene rendered once with the record, the record recomposed against its own render
+    recs = {}
+    for name, ov in pk['scenes'].items():
+        rec = PaintRecord(); th, rgb = render_rgb(theme_path, data=picker_scene_theme(base, ov), record=rec)
+        own = np.array([th.get(i) if not i.startswith('#') else C.parse_colour(i) for i in rec.ids], np.int64)
+        if not (recompose(rec.base, rec.stacks(), own) == rgb).all():
+            bad = int((recompose(rec.base, rec.stacks(), own) != rgb).any(axis=2).sum())
+            raise SystemExit(f'export: scene {name!r}: the paint record recomposed differs from the render at {bad} px')
+        recs[name] = (rec, rgb)
+    # 2. the role table: every identity painted, scenes in order
+    idents = []
+    for rec, _ in recs.values(): idents += [i for i in rec.ids if i not in idents]
+    roles = picker_roles(th0, elements, idents); ri = {r['name']: k for k, r in enumerate(roles)}
+    if len(roles) > 255: raise SystemExit(f'export: {len(roles)} roles; a base byte names at most 255')
+    for e in elements:
+        if e['role'] not in recs[e['scene']][0].ids:
+            raise SystemExit(f'export: the element {e["key"]!r} ({e["role"]}) paints no pixel of its scene {e["scene"]!r}')
+    # 3. the files
     os.makedirs(out_dir, exist_ok=True)
-    write_pnm(os.path.join(out_dir, 'background.ppm'), normal)
-    man = {'width': C.W, 'height': C.H, 'background': 'background.ppm', 'active': pk['active'], 'layers': []}
-    for r in rs:
-        write_pnm(os.path.join(out_dir, r + '.pgm'), masks[r].astype(np.uint8) * 255)
-        man['layers'].append({'name': r, 'mask': r + '.pgm', **({'derive': derive[r]} if r in derive else {'colour': C.hexs(want[r])})})
+    man = {'width': C.W, 'height': C.H, 'active': pk['active'],
+           'elements': [{'key': e['key'], 'name': e['name'], 'colour': C.hexs(th0.get(e['role'])), 'scene': e['scene']}
+                        for e in elements],
+           'roles': roles, 'scenes': []}
+    for name, (rec, _) in recs.items():
+        remap = np.array([ri[i] for i in rec.ids], np.int64)
+        idx, n, lr, lc = rec.stacks()
+        write_pnm(os.path.join(out_dir, name + '.base.pgm'), remap[rec.base].astype(np.uint8).reshape(C.H, C.W))
+        write_cover(os.path.join(out_dir, name + '.cover.bin'), idx, n, remap[lr] if lr.size else lr, lc)
+        man['scenes'].append({'name': name, 'base': name + '.base.pgm', 'cover': name + '.cover.bin'})
     with open(os.path.join(out_dir, 'manifest.json'), 'w') as f: json.dump(man, f, indent=1); f.write('\n')
-    # read back: the files as written, recomposed, are the render
-    bg = read_pnm(os.path.join(out_dir, 'background.ppm'))
-    back = {r: read_pnm(os.path.join(out_dir, r + '.pgm')) for r in rs}
-    if not all(set(np.unique(m)) <= {0, 255} for m in back.values()): raise SystemExit('export: a written mask is not binary')
-    same = (recompose(bg, {r: m == 255 for r, m in back.items()}, want) == normal).all()
-    if not same: raise SystemExit('export: the written scene recomposed is not the render')
-    print(f'exported {out_dir}: ' + ', '.join(f'{r} {int(masks[r].sum())} px' + (' (derived)' if r in derive else '') for r in rs)
-          + f'; active {pk["active"]} {C.hexs(want[pk["active"]])}; the written scene recomposes byte-identically (and from a '
-          f'sentinel background)')
+    # 4. read back: the files at the manifest's colours are each scene's render; at every check set, a fresh render
+    back = picker_read(out_dir)
+    sets = picker_check_sets(elements)
+    for name, (rec, rgb) in recs.items():
+        if not (picker_picture(back, name, picker_manifest_rgb(back[0])) == rgb).all():
+            raise SystemExit(f'export: scene {name!r}: the written files recomposed are not the render')
+        for cs in sets:
+            want = render_rgb(theme_path, data=picker_apply(picker_scene_theme(base, pk['scenes'][name]), elements, cs))[1]
+            el = {**picker_manifest_rgb(back[0]), **{k: C.parse_colour(v) for k, v in cs.items()}}
+            got = picker_picture(back, name, el)
+            if not (got == want).all():
+                raise SystemExit(f'export: scene {name!r} at {cs}: the files recomposed differ from the render at '
+                                 f'{int((got != want).any(axis=2).sum())} px (a pixel attributed to the wrong role)')
+    # the report: per scene the painted px and the stacks; the inventory of every role a painter asked for
+    for name, (rec, _) in recs.items():
+        idx, n, _, _ = rec.stacks()
+        print(f'scene {name}: {len(rec.ids)} roles painted, {idx.size} antialiased px ({int(n.sum())} stacked paints, '
+              f'deepest {int(n.max()) if n.size else 0}); {os.path.getsize(os.path.join(out_dir, name + ".cover.bin"))} '
+              f'cover bytes')
+    print('roles:')
+    rule = {r['name']: ('element ' + r['element'] if 'element' in r else
+                        'scale %s x %d / %d' % (r['scale']['of'], r['scale']['num'], r['scale']['den']) if 'scale' in r else
+                        'derive %s over %s' % (r['derive']['from'], r['derive']['over']) if 'derive' in r else
+                        'fixed ' + r['colour']) for r in roles}
+    asked = {}
+    for name, (rec, _) in recs.items():
+        for (a, i), (full, part) in rec.asked.items():
+            v = asked.setdefault((a, i), {}); v[name] = (full, part)
+    for (a, i) in sorted(asked, key=lambda k: (rule[k[1]], k[1], k[0])):
+        px = '; '.join(f'{sc} {f} solid / {p} aa' for sc, (f, p) in asked[(a, i)].items())
+        print(f'  {a:<18} -> {i:<16} {rule[i]:<30} {px}')
+    print(f'exported {out_dir}: {len(elements)} elements ({", ".join(e["key"] for e in elements)}), {len(roles)} roles, '
+          f'{len(recs)} scenes; the record and the written files recompose each render byte for byte, and at '
+          f'{len(sets)} colour sets each fresh render too')
+
+def picker_read(out_dir):
+    """-> (manifest, {scene: (base flat, stacks)}): an export read back."""
+    man = json.load(open(os.path.join(out_dir, 'manifest.json')))
+    return man, {s['name']: (read_pnm(os.path.join(out_dir, s['base'])).reshape(-1).astype(np.int64),
+                             read_cover(os.path.join(out_dir, s['cover']))) for s in man['scenes']}
+
+def picker_picture(back, scene, el_colours):
+    """An export's scene recomposed at the element colours {key: (r, g, b)}: the picker's picture, in Python."""
+    man, sc = back
+    base, stacks = sc[scene]
+    return recompose(base, stacks, picker_role_colours(man['roles'], el_colours))
 
 if __name__ == '__main__':
     argv = sys.argv[1:]; args = []
