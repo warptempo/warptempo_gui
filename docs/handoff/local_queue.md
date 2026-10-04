@@ -58,3 +58,45 @@ theme or colour keys on either device (the new themes are only selectable). Answ
 6. Commit (the wrapper) any presets copied in step 1 and any catalog / table change from step 2 (then rerun
    `python3 tools/theme_catalog/preset_keys.py` and paste its output into DONE 1), push, and write DONE 1: exit
    codes, logcat lines, the screencap's finding, anything refused.
+
+## DONE 1 (2026-10-04 ~12:00, the local planner; HEAD c4f7e4fc)
+1. Pulled to c4f7e4fc. The tablet's picker files (presets.json 707 B, picks.txt 15368 B, state.json 713 B) are
+   BYTE-IDENTICAL to the repository's copies: nothing new to commit. His state: active selected_flag, model hsl,
+   chrome #41525C, canvas #002736, ink #9ABCC9, unselected_flag #7D81BF, selected_flag #9C9BD0, theme strip
+   cde-northern-sky.
+2. The full `build.py`: exit 0; `gen_theme_table.py`: exit 0, "100 entries x 2 levels". `git diff --stat` of
+   docs/themes/catalog.json and src/gui/theme_table.h: EMPTY (the full run reproduces the presets-only bytes; no
+   imported entry changed). The tree stayed clean.
+3. `cmake --build build` (libgit2 ON, CLI ON): exit 0 (the GUI relinked; the CLI already up to date).
+4. The picker: `--check` exit 0, "all checks pass"; the APK exit 0; the export exit 0 ("7 elements (chrome, canvas,
+   ink, unselected_flag, selected_flag, playhead_head, playhead_stem), 18 roles, 3 scenes; ... recompose each render
+   byte for byte"; themes.json 100 themes). Installed; the whole folder pushed (8 files, playhead.* included),
+   chmod 777, relaunched. Logcat:
+   `picker: export 2304x1440, 7 elements, 18 roles, 3 scenes (66799 antialiased px), active selected_flag #9C9BD0
+   (state.json's colour and view, state.json's entry), 16 of 16`; setBuffersGeometry(RGBA_8888) -> 0,
+   setBuffersDataSpace(DISPLAY_P3) -> 0, setFrameRate(90) -> 0, window 2304x1440, buffer stride 2304 format 1.
+   The launch line names only the active element; the other colours, model and strip are state.json's (step 1).
+   SCREENCAP NOT TAKEN AS EVIDENCE: the tablet is dozing (a black capture). The playhead was NOT chosen by touch, ON
+   PURPOSE: Playhead Head has an empty history, so choosing it and then choosing his element back would COMMIT its
+   colour as a first pick into his picks.txt (the README's "an element with an empty history commits its colour as
+   he leaves it"). His state is as found. The head at x 293 stays for his glass.
+5. The product APK: exit 0, installed, relaunched; logcat loads his project (550 - 1, 228 markers, 435 phase
+   resets) and starts its render, no error. The config was only READ: theme=kde3-solaris, theme_level=light
+   (untouched).
+6. No catalog, table or preset change, so no commit beyond this block. `preset_keys.py`:
+```
+# Preset 1 (saved 2026-10-04T08:30:28-04:00)
+theme=warptempo-preset-1
+theme_level=light
+waveform_ink=#D2E8DF
+waveform_canvas=#0D0D0D
+waveform_outline=#9AABA4
+
+# Preset 2 (saved 2026-10-04T08:34:19-04:00)
+theme=warptempo-preset-2
+theme_level=light
+waveform_ink=#9ABCC9
+waveform_canvas=#002736
+waveform_outline=#708C97
+```
+Wakes used: 1 of 8.
