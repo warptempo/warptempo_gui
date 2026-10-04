@@ -61,17 +61,32 @@ RULED:
   most of which no role reads: hence the strange names. Theme files carry ROLE names, so a picker that later loads a
   file as a preset reads roles, never source names.
 
+- RULED LATER THE SAME EVENING (his answers to the planner's three decisions, and more):
+  - THE CLOCK PANEL has TWO own roles, its GROUND and its TEXT; its one-line status edge takes the theme's Shadow
+    and Hilight (relief colours are set in ONE place, by the Windows 95 scheme of how many lines a side).
+  - THE DARK LEVEL IS DROPPED (`theme_level` retires; a dark look is a theme he designs).
+  - A FILE MAY NAME ONLY SOME ROLES; every role it does not name takes the built-in Windows 95's value; an unknown
+    key or a malformed value is the load's first-error hard fail.
+  - THE FLAG EDITOR becomes Windows' in-place edit field: a thin black frame round a FIELD (the theme's field pair:
+    on Windows 95 black text on white), its selection the theme's selected pair (white on navy). This reverses
+    2026-10-03's "the flag editor is the selected flag opened for edit and takes no field colour" (render.h's
+    palette block). So the resting flag label (a program colour) and the editor's text (the field text) are
+    independent: dark text on a light flag is possible, the editor still black on white.
+  - THE BUILT-IN THEME'S PROGRAM COLOURS ARE FROM WINDOWS' 20 SOLID COLOURS: the canvas black, the ink Sound
+    Recorder's green, the flag purple, the invalid flag red (the rest in the decisions below). The colours Windows
+    95 Standard RECORDS for its chrome stay as recorded (its 3DLight #DFDFDF and InfoWindow #FFFFE1 are not among
+    the 20).
+
 ## Decisions for you (the cloud planner, 2026-10-04 evening)
-1. THE CLOCK PANEL'S COLOURS: FOUR, not six. Today it is Windows 95's STATUS-BAR panel, ONE line a side (Shadow top
-   and left, Hilight bottom and right) on the chrome ground under the label. Its own roles are then: ground, text,
-   top-left line, bottom-right line. Six would mean two lines a side (the sunken well's form): a geometry change as
-   well. RECOMMENDED: four, the one-line panel kept (it is Windows 95's own).
-2. THE DARK LEVEL: DROP IT. Kept, it is either a calculation in the app (reversing "colours are imported, never
-   derived in the app") or the offline arithmetic of today, whose results he finds not dark enough. Dropped: the
-   `theme_level` key retires, levels.py leaves the product's road, and a dark look is a theme he designs (his
-   presets already are dark looks). RECOMMENDED: drop.
-3. A FILE MAY NAME ONLY SOME ROLES: every role it does not name takes the BUILT-IN Windows 95's value (the built-in
-   is the base, a file overrides what it names); an unknown key or a malformed value is the load's first-error hard
-   fail. This makes files short and hand-tunable, and it is roles.py's rule already (a role a family has no word for
-   takes the app's own value): an imported KDE or CDE theme with no tooltip pair gets Windows' yellow card, and every
-   imported theme gets the built-in's canvas, ink and flags until he rearranges it. RECOMMENDED: yes.
+1. THE BUILT-IN'S REMAINING PROGRAM COLOURS, all from the 20 (each pair dark / bright as the 16 VGA colours pair):
+   the ink LIME #00FF00 (Sound Recorder's trace) over BLACK; the waveform's lit outline GREEN #008000; the flag
+   PURPLE #800080, selected FUCHSIA #FF00FF; the invalid flag MAROON #800000, selected RED #FF0000 ("bright red means
+   selected and error" kept); the flag label WHITE, the one selected label BLACK (on fuchsia and red); the playhead
+   head GRAY #808080, stem WHITE #FFFFFF. RECOMMENDED as listed; the alternative for the invalid flag is RED
+   unselected with no brighter red for selected (red is the 16's brightest), which breaks the pair.
+2. THE HISTORY VIEW'S RED AND GREEN were RETIRED 2026-10-03 ("red is invalid-only"): the diff flags take the one
+   flag colour and the label carries the sign, `[+]` / `[-]`. Bringing them back reopens that ruling (two more
+   program colours, green #008000 / lime and red, the red then shared with the invalid flag). RECOMMENDED: keep them
+   retired; the sign already reads.
+3. THE EDITOR'S BLACK FRAME, today the one literal beside the palette, becomes a theme role (Windows' WindowFrame,
+   black on Windows 95), so a theme file holds every colour the GUI paints. RECOMMENDED: yes.
