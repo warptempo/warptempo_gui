@@ -121,7 +121,10 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'fonts': {'ui_px': None, 'small_px': None},
                 'state_text': STATE_TEXT_DEFAULT,
                 'playhead_lane_stem': 'stem', 'playhead_head_outline': 'none',
-                'dialog': None, 'card': None}
+                'dialog': None, 'card': None,
+                'elements': {'ink': True, 'outline': True, 'stems': True, 'flags': True, 'playhead': True,
+                             'state_line': True},
+                'picker': None}
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
 MENU_HL_STYLES = ('fill', 'sunken', 'raised')
@@ -192,8 +195,9 @@ TABLET_FIXED = {
     'menu': {'highlight': None, 'disabled': 'engraved'},
 }
 # what a tablet theme states freely: its colours, the scene's states (the toggled buttons, the held trim cap, the flags'
-# states) and the optional surfaces (the state line, the dialog, the card)
-TABLET_FREE = ('name', 'description', 'geometry', 'colours', 'waveform', 'flags', 'state_text', 'dialog', 'card')
+# states), the optional surfaces (the state line, the dialog, the card), the element switches and the picker's export
+TABLET_FREE = ('name', 'description', 'geometry', 'colours', 'waveform', 'flags', 'state_text', 'dialog', 'card',
+               'elements', 'picker')
 TABLET_FREE_SUB = {'buttons': ('down',), 'trim': ('held',)}
 
 def use_tablet(path, t):
@@ -235,8 +239,10 @@ def use_tablet(path, t):
     return t
 
 class Theme:
-    def __init__(self, path):
-        t = json.load(open(path)) if path else {}
+    def __init__(self, path, data=None):
+        """path: the theme file (its name the default name and every message's subject); data: the theme's object
+        itself when the caller built it (export_scene's variants), path then naming the file it came from."""
+        t = data if data is not None else json.load(open(path)) if path else {}
         self.geometry = t.get('geometry', 'scene')
         if self.geometry not in GEOMETRIES:
             raise SystemExit(f'theme {path}: geometry must be one of {GEOMETRIES}, not {self.geometry!r}')
@@ -405,6 +411,23 @@ class Theme:
             # app's rule until 2026-10-03, kept here as a legacy fallback) unless the theme sets it by hand
             self.menu_hl_label = (self.colour(hl['label']) if 'label' in hl
                                   else self.highlight_ink(self.get('accent')))
+        el = self.opt['elements']
+        if not all(isinstance(v, bool) for v in el.values()):
+            raise SystemExit(f'theme {path}: elements maps each of {sorted(OPT_DEFAULTS["elements"])} to true or false, not {el!r}')
+        pk = self.opt['picker']
+        if pk is not None:
+            if (not isinstance(pk, dict) or set(pk) != {'active', 'layers'} or not isinstance(pk['layers'], list)
+                    or not pk['layers'] or len(set(pk['layers'])) != len(pk['layers'])
+                    or not all(isinstance(r, str) and r in DEFAULTS for r in pk['layers'])
+                    or pk['active'] not in pk['layers']):
+                raise SystemExit(f'theme {path}: picker is null or {{"active": role, "layers": [role, ...]}}, distinct '
+                                 f'colour roles with the active one among them, not {pk!r}')
+            for r in pk['layers']:
+                if raw[r] == 'auto' and r != 'outline':
+                    raise SystemExit(f'theme {path}: picker layer {r!r} is "auto"; the export derives only the '
+                                     f'outline (its rule, the 50 % linear-light blend of ink over canvas)')
+                if r == 'outline' and raw[r] == 'auto' and 'ink' not in pk['layers']:
+                    raise SystemExit(f'theme {path}: the derived outline layer follows the ink, which is not a layer')
         st = self.opt['state_text']
         if st is not None and not isinstance(st, str):
             raise SystemExit(f'theme {path}: state_text is a string (row 8\'s state line) or null (no line), not {st!r}')
@@ -1221,7 +1244,9 @@ def draw_ruler(cr, th):
     for lb in R['labels']:
         show(cr, C.SANS, px, lb['text'], lb['x'], base, th.get('ruler_label'))
     # the head: aliased rows at kPlayheadHeadAlpha, then the stem down the marker lane (flags cover it);
-    # playhead_head_rows draws only the head's last rows (head_rows_drawn), its bottom row where it was
+    # playhead_head_rows draws only the head's last rows (head_rows_drawn), its bottom row where it was;
+    # elements.playhead false: no head, no outline, no lane stem (and no stem in the well, draw_stems)
+    if not th.opt['elements']['playhead']: return
     h0, hn = head_rows_drawn(th)
     cr.save(); cr.rectangle(0, P['head_top'] + h0, C.W, hn); cr.clip()
     C.src(cr, th.get('playhead_head'), th.num['playhead_head_alpha'])
@@ -1558,6 +1583,7 @@ def waveform_runs(th):
 def draw_waveform(arr, th):
     y0, cols, _ = waveform_runs(th); ink = np.array(th.get('ink'), np.uint8); out = np.array(th.get('outline'), np.uint8)
     for cls, c in (('ink', ink), ('outline', out)):
+        if not th.opt['elements'][cls]: continue        # elements.ink / elements.outline false: that class unpainted
         for x, runs in enumerate(cols[cls]):
             for i in range(0, len(runs), 2): arr[y0 + runs[i]:y0 + runs[i] + runs[i + 1], x] = c
 
@@ -1573,7 +1599,8 @@ def draw_stems(cr, th):
     wt, wb, c0, c1 = well_geometry(th)
     if th.opt['well'] == 'bordered': y0, y1 = F['stem_y0'], F['stem_y1'] + wb - SCENE['lanes']['well'][1]
     else: y0, y1 = (wt if flags_on_well(th) else c0), c1
-    for i, f in enumerate(F['flags']):
+    el = th.opt['elements']      # elements.stems false: no marker stem; elements.playhead false: no playhead stem
+    for i, f in enumerate(F['flags'] if el['stems'] else ()):
         if th.flag_style == 'bevelled':     # the stem takes the flag's face in every state; a disabled flag has none
             face, _, dis = flag_face(th, i)
             if not dis: fill(cr, f['x'], y0, f['x'] + FLAG_STEM_W, y1, face)
@@ -1583,7 +1610,7 @@ def draw_stems(cr, th):
             if sc is not None: fill(cr, f['x'], y0, f['x'] + FLAG_STEM_W, y1, sc)
             continue
         fill(cr, f['x'], y0, f['x'] + F['stem_w'], y1, th.get('flag_stem_sel' if f.get('selected') else 'flag_stem'))
-    if not P.get('stem_suppressed'): fill(cr, P['col'], y0, P['col'] + P['w'], y1, th.get('playhead_stem'))
+    if el['playhead'] and not P.get('stem_suppressed'): fill(cr, P['col'], y0, P['col'] + P['w'], y1, th.get('playhead_stem'))
 
 def clock_cell(th):
     """-> (cell width, the dirty mark's advance), device px at the clock's seated size: the app's reserved cell
@@ -1618,10 +1645,10 @@ def state_line(th):
     normal face (ui_font_px) in `label`, left-aligned one group space (group_space_px) past the status panel's right
     line, clipped one group space short of the bottom row's button block, on the row's solved baseline over its
     content rows (redesign_baseline, the clock's band). It stands beside the "status" panel alone (clock_panel
-    "status", today's row 8: ONE status panel and a line); with any other clock_panel, with state_text null or "", or
-    with no span left, there is no line."""
+    "status", today's row 8: ONE status panel and a line); with any other clock_panel, with state_text null or "",
+    with elements.state_line false, or with no span left, there is no line."""
     text = th.opt['state_text']; pr = clock_panel_rect(th)
-    if th.opt['clock_panel'] != 'status' or not text: return None
+    if th.opt['clock_panel'] != 'status' or not text or not th.opt['elements']['state_line']: return None
     gs = group_space_px(th); x = pr[2] + gs
     right = min(b['x'] for b in button_geometry(th)[0] if b['row'] == 'bottom') - gs
     if right <= x: return None
@@ -1793,10 +1820,24 @@ def draw_card(cr, th):
     show(cr, C.SANS, ui_font_px(th), th.opt['card']['text'], tx, base, th.get('label'))
 
 def stamp(cr, th, text):
-    # the file-name stamp: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the scene's label_box (x 300,
-    # y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's content top); x clears what
-    # row 8 paints left of it: max(label_box x0, the clock panel's right edge + 16, the state line's painted end + 16
-    # device px)
+    # THE ROW-8 STAMP (architect 2026-10-04), with elements.state_line false: the file name at the RULER TIMESTAMPS'
+    # DRAWN size (ruler_label_seat's px: 27.5 device px on the tablet geometry, not ruler_label_px's 32) in the
+    # theme's `label`, its drawn glyphs' ink box (cairo's text extents) centred vertically on row 8's content rows,
+    # 16 device px past the clock panel's right edge (the scene's label_box x0 when no panel is painted; the
+    # dialog's right edge + 16 when the dialog stands in the row's tenants' place)
+    if not th.opt['elements']['state_line']:
+        px = ruler_label_seat(th)[0]; y0, y1 = SCENE['bottom_content']; pr = clock_panel_rect(th)
+        dl = dialog_layout(th)
+        x = (max(SCENE['label_box']['x0'], dl['right'] + 16) if dl is not None
+             else SCENE['label_box']['x0'] if pr is None else pr[2] + 16)
+        cr.save(); C.set_font(cr, C.SANS, px); e = cr.text_extents(text); cr.restore()
+        base = int(round(y0 + (y1 - y0 - e.height) / 2 - e.y_bearing))
+        show(cr, C.SANS, px, text, x, base, th.get('label'))
+        return
+    # with the state line on, the stamp as before: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the
+    # scene's label_box (x 300, y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's
+    # content top); x clears what row 8 paints left of it: max(label_box x0, the clock panel's right edge + 16, the
+    # state line's painted end + 16 device px)
     asc = C.font_extents(C.SANS, 20)[0]; lb = SCENE['label_box']; pr = clock_panel_rect(th); sl = state_line(th)
     x = lb['x0'] if pr is None else max(lb['x0'], pr[2] + 16)
     if sl is not None: x = max(x, int(math.ceil(min(sl[0] + C.shape(C.SANS, sl[3], sl[4])[1], sl[1]))) + 16)
@@ -1805,8 +1846,15 @@ def stamp(cr, th, text):
     show(cr, C.SANS, 20, text, x, lb['y0'] + math.ceil(asc), th.get('stamp'))
 
 def render(theme_path, out_path, label=False):
+    th, rgb = render_rgb(theme_path, os.path.splitext(os.path.basename(out_path))[0] if label else None)
+    C.save_png(out_path, rgb)
+    return th
+
+def render_rgb(theme_path, label_text=None, data=None):
+    """-> (Theme, the picture as an H x W x 3 uint8 array): the theme at theme_path (or its object `data`, the path then
+    naming it), stamped with label_text when given."""
     C.verify_fonts()
-    th = Theme(theme_path)
+    th = Theme(theme_path, data)
     di, db = case_delta(th)
     global SCENE; SCENE = shift_scene(shift_scene(shift_scene(BASE_SCENE, di, 'icon'), lane_shift(th), 'trim'), pad_shift(th), 'ruler')
     SCENE = order_scene(seat_flags(shift_scene(SCENE, marker_shift(th), 'marker'), th), th.opt['lane_order'])
@@ -1820,7 +1868,7 @@ def render(theme_path, out_path, label=False):
     draw_buttons(cr, th, ('icon',))
     draw_trim(cr, th)
     draw_ruler(cr, th)
-    draw_flags(cr, th)
+    if th.opt['elements']['flags']: draw_flags(cr, th)
     draw_well(cr, th)
     surf.flush()
     # the waveform's runs go straight into the surface's bytes (RGB24 = BGRx in memory)
@@ -1835,15 +1883,124 @@ def render(theme_path, out_path, label=False):
         draw_bottom_border(cr, th)
         draw_dialog(cr, th)
     draw_card(cr, th)
-    if label: stamp(cr, th, os.path.splitext(os.path.basename(out_path))[0])
-    C.save_png(out_path, C.surface_to_rgb(surf))
-    return th
+    if label_text is not None: stamp(cr, th, label_text)
+    return th, C.surface_to_rgb(surf)
+
+# ------------------------------------------------------------------ THE PICKER'S SCENE (tools/palette/picker/)
+# `render.py THEME --export DIR` writes what the colour picker app paints (picker/README.md): background.ppm (the
+# render as it stands), one binary mask per layer (<role>.pgm, 0 or 255) and manifest.json. A LAYER IS A COLOUR ROLE
+# the theme's `picker` key names; its mask is TAKEN FROM THE RENDERER ITSELF: the theme rendered twice with that
+# role in two sentinel colours (every other layer stated at its resolved colour, so a derived one stays put), the
+# pixels that differ being the role's own -- each of them must be exactly the sentinel in both renders, or the
+# role's pixels are blended with something (antialiasing, alpha) and a binary mask cannot carry them: a hard fail.
+# A layer whose mask comes out empty paints nothing in this scene and is left out of the manifest (a note says so).
+# Checked before anything is written: the masks are disjoint, a layer with an `elements` switch masks exactly what
+# the switch removes, and the background with every layer painted through its mask in the theme's colours -- the
+# derived one by its rule -- equals the render byte for byte, both for the background written and for one with
+# every layer in a sentinel colour (so no pixel of a layer is left outside its mask); the written files are read
+# back for the first.
+SENTINELS = ((255, 0, 255), (0, 255, 0))
+
+def write_pnm(path, arr):
+    """Binary PNM, 8-bit: P6 for an H x W x 3 array, P5 for an H x W one."""
+    arr = np.ascontiguousarray(arr, np.uint8)
+    magic = b'P6' if arr.ndim == 3 else b'P5'
+    with open(path, 'wb') as f: f.write(b'%s\n%d %d\n255\n' % (magic, arr.shape[1], arr.shape[0])); f.write(arr.tobytes())
+
+def read_pnm(path):
+    """The inverse of write_pnm (its own header shape only)."""
+    b = open(path, 'rb').read(); magic, w, h, mx, rest = b.split(maxsplit=4)
+    assert mx == b'255' and magic in (b'P6', b'P5')
+    return np.frombuffer(rest, np.uint8).reshape((int(h), int(w), 3) if magic == b'P6' else (int(h), int(w)))
+
+def picker_layer_colours(th, layers, derive):
+    """-> {layer: (r, g, b)}: a picked layer's the theme's, a derived one's its rule over the picked colours."""
+    out = {r: th.get(r) for r in layers if r not in derive}
+    for r, d in derive.items():
+        out[r] = tuple(C.lin_mix(out[d['from']], C.parse_colour(d['over']), d['linear_mix']))
+    return out
+
+def recompose(bg, masks, colours):
+    out = bg.copy()
+    for r, m in masks.items(): out[m] = colours[r]
+    return out
+
+def export_scene(theme_path, out_dir):
+    base = json.load(open(theme_path))
+    th, normal = render_rgb(theme_path, data=base)
+    pk = th.opt['picker']
+    if pk is None: raise SystemExit(f'theme {theme_path}: --export needs the theme\'s picker key (the layers and the active one)')
+    layers = pk['layers']; colours = {r: th.get(r) for r in layers}
+
+    def variant(stated, elements=None):
+        """The theme with the given roles stated outright (their section aliases dropped) and elements switched."""
+        t = json.loads(json.dumps(base)); cs = t.setdefault('colours', {})
+        for sec, keys in COLOUR_SECTIONS:
+            for k, role in keys.items():
+                if role in stated: t.get(sec, {}).pop(k, None)
+        cs.update({r: C.hexs(c) for r, c in stated.items()})
+        if elements: t.setdefault('elements', {}).update(elements)
+        return render_rgb(theme_path, data=t)[1]
+
+    masks = {}
+    for r in layers:
+        a, b = (variant({**colours, r: snt}) for snt in SENTINELS)
+        m = (a != b).any(axis=2)
+        if not ((a[m] == SENTINELS[0]).all() and (b[m] == SENTINELS[1]).all()):
+            raise SystemExit(f'export: the layer {r!r} paints {int(m.sum())} pixels, some of them blended with what is '
+                             f'under them: a binary mask cannot carry it')
+        if not (normal[m] == colours[r]).all(): raise SystemExit(f'export: the layer {r!r} does not render its own colour')
+        if not m.any():
+            print(f'NOTE: the layer {r!r} paints no pixel in this scene; left out of the manifest'); continue
+        sw = OPT_DEFAULTS['elements'].get(r)
+        if sw is not None and th.opt['elements'][r]:
+            off = (variant({}, {r: False}) != normal).any(axis=2)
+            if not (off == m).all():
+                raise SystemExit(f'export: the layer {r!r}\'s mask ({int(m.sum())} px) is not what elements.{r} removes '
+                                 f'({int(off.sum())} px)')
+        masks[r] = m
+    if not masks: raise SystemExit('export: no layer paints a pixel in this scene')
+    rs = list(masks)
+    for i, r in enumerate(rs):
+        for o in rs[i + 1:]:
+            if (masks[r] & masks[o]).any(): raise SystemExit(f'export: the masks of {r!r} and {o!r} overlap')
+    if pk['active'] not in masks: raise SystemExit(f'export: the active layer {pk["active"]!r} paints no pixel')
+    # the derived outline (Theme refuses any other "auto" layer): the 50 % linear-light blend of the ink over the canvas
+    derive = {r: {'from': 'ink', 'over': C.hexs(th.get('canvas')), 'linear_mix': 0.5}
+              for r in rs if th.raw[r] == 'auto'}
+    for r, d in derive.items():
+        if d['from'] not in masks: raise SystemExit(f'export: the derived layer {r!r} follows {d["from"]!r}, which paints no pixel')
+    want = picker_layer_colours(th, rs, derive)
+    if want != {r: colours[r] for r in rs}: raise SystemExit(f'export: a derived colour disagrees with the render: {want} / {colours}')
+    sentinel_bg = variant({r: SENTINELS[0] for r in rs})
+    if not (recompose(sentinel_bg, masks, want) == normal).all():
+        raise SystemExit('export: the sentinel background recomposed through the masks is not the render')
+    os.makedirs(out_dir, exist_ok=True)
+    write_pnm(os.path.join(out_dir, 'background.ppm'), normal)
+    man = {'width': C.W, 'height': C.H, 'background': 'background.ppm', 'active': pk['active'], 'layers': []}
+    for r in rs:
+        write_pnm(os.path.join(out_dir, r + '.pgm'), masks[r].astype(np.uint8) * 255)
+        man['layers'].append({'name': r, 'mask': r + '.pgm', **({'derive': derive[r]} if r in derive else {'colour': C.hexs(want[r])})})
+    with open(os.path.join(out_dir, 'manifest.json'), 'w') as f: json.dump(man, f, indent=1); f.write('\n')
+    # read back: the files as written, recomposed, are the render
+    bg = read_pnm(os.path.join(out_dir, 'background.ppm'))
+    back = {r: read_pnm(os.path.join(out_dir, r + '.pgm')) for r in rs}
+    if not all(set(np.unique(m)) <= {0, 255} for m in back.values()): raise SystemExit('export: a written mask is not binary')
+    same = (recompose(bg, {r: m == 255 for r, m in back.items()}, want) == normal).all()
+    if not same: raise SystemExit('export: the written scene recomposed is not the render')
+    print(f'exported {out_dir}: ' + ', '.join(f'{r} {int(masks[r].sum())} px' + (' (derived)' if r in derive else '') for r in rs)
+          + f'; active {pk["active"]} {C.hexs(want[pk["active"]])}; the written scene recomposes byte-identically (and from a '
+          f'sentinel background)')
 
 if __name__ == '__main__':
     argv = sys.argv[1:]; args = []
     for i, a in enumerate(argv):
-        if a.startswith('--') or (i and argv[i - 1] == '--scene'): continue
+        if a.startswith('--') or (i and argv[i - 1] in ('--scene', '--export')): continue
         args.append(a)
-    if len(args) != 2: raise SystemExit('usage: render.py <theme.json> <out.png> [--scene <tag>] [--label]')
+    if '--export' in argv:
+        if len(args) != 1 or argv.index('--export') + 1 >= len(argv): raise SystemExit('usage: render.py <theme.json> --export <dir> [--scene <tag>]')
+        export_scene(args[0], argv[argv.index('--export') + 1]); raise SystemExit(0)
+    if len(args) != 2: raise SystemExit('usage: render.py <theme.json> <out.png> [--scene <tag>] [--label]\n'
+                                        '       render.py <theme.json> --export <dir> [--scene <tag>]')
     th = render(args[0], args[1], '--label' in sys.argv)
     print('wrote', args[1], f'(scene {SCENE_TAG}; {th.quartet_report()})')

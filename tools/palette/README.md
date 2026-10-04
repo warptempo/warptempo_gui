@@ -17,6 +17,7 @@ app's default look in it (since step 16, 2026-10-03, the `warptempo` entry at it
 
 ```
 python3 tools/palette/render.py  tools/palette/themes/<theme>.json <out.png> [--scene <tag>] [--label]
+python3 tools/palette/render.py  tools/palette/themes/<theme>.json --export <dir> [--scene <tag>]
 python3 tools/palette/compare.py <render.png> <reference.png>      [--scene <tag>] [--diff out.png]
 python3 tools/palette/extract.py <dir>/tablet_base_<tag>.png --first-label M:SS.mmm --flags T1,T2,... \
         --clock '<clock text>' --legend '<legend text>' [--rev <commit>] [--step 125] [--out-dir DIR]
@@ -24,7 +25,12 @@ python3 tools/palette/extract.py <dir>/tablet_base_<tag>.png --first-label M:SS.
 
 - `--scene <tag>` picks `scene_<tag>.json` (+ its `waveform_<tag>.json` and `glyphs/<tag>/`). The default is
   `1002`; `compare.py` takes the same tag for its lane rows, so compare a render against a picture of the same scene.
-- `--label` stamps the output's file name (no extension) in Roboto 20 px, `stamp` (140,140,140), its box's top-left
+- `--label` stamps the output's file name (no extension). With row 8's state line switched off (`elements`,
+  below) it is THE ROW-8 STAMP (architect 2026-10-04): the name at the RULER TIMESTAMPS' DRAWN size
+  (`ruler_label_seat`'s px, 27.5 device px on the tablet geometry — not `ruler_label_px`, which answers 32 there), in
+  the theme's `label`, its drawn glyphs' ink box (cairo's text extents) centred vertically on row 8's content rows,
+  16 device px past the clock panel's right edge (the scene's `label_box` x when no panel is painted, the dialog's
+  right edge + 16 when the dialog stands there). With the state line on, the stamp is unchanged: Roboto 20 px, `stamp` (140,140,140), its box's top-left
   at x 300, y 1382 on the bottom row's ground (the scene's `label_box`, which `compare.py` excludes; `buttons.case`
   moves it with the bottom row's content top), its x clearing what row 8 paints left of it (max(300, a painted clock
   panel's right edge + 16, the state line's painted end + 16; `clock_panel`, `state_text`)).
@@ -32,6 +38,7 @@ python3 tools/palette/extract.py <dir>/tablet_base_<tag>.png --first-label M:SS.
   tools/palette/out/frozen_1002.png` (`out/` is the conventional, git-ignored home of renders; the renderer makes
   the output's directory when it is missing).
 - Rendering is deterministic (same theme + scene -> same bytes) and takes about half a second.
+- `--export <dir>` writes THE PICKER'S SCENE instead of a PNG (THE EXPORT below; `picker/README.md` is the app).
 
 ## Dependencies
 
@@ -166,6 +173,8 @@ The only conversion is the one a theme asks for: a colour written `"srgb:#303030
 | `waveform_<tag>.json` | per canvas column, the vertical runs `[y, len, y, len, ...]` (relative to the canvas top) of ink and of outline pixels |
 | `glyphs/<tag>/` | `<row>_<Button>__<ink>.pgm`: each app glyph's 8-bit rasteriser coverage per ink (44x44 device px), `index.json` (icon, enabled, inks, files, under) |
 | `themes/frozen.json` | THE theme: the design the app paints since 2026-10-02 |
+| `themes/picker_ink.json` | THE PICKER'S INK ROUND (2026-10-04): warptempo.json with the canvas #0E0E0E, the ink #808080, the outline `"auto"` (its rule), the stems, flags, playhead and state line switched off (`elements`), `picker` {active ink, layers ink + outline}; exported to `out/picker_ink/` |
+| `picker/` | THE COLOUR PICKER APP (`com.warptempo.picker`): the tablet's own colour handling over an exported scene, its own README, build script and source |
 | `themes/ad2.json` | the set-AD2 geometry the architect picked on 2026-10-02 (the Windows-95 chrome scaled x 1.375 from the scene's logical px, the laptop's gui_scale 138 drawn at the tablet's 2 device px per logical px), reconciled with this renderer on 2026-10-03: the colour keys nothing here paints under its options dropped (the old trim lane's bar, cap, ground-bevel and bottom-border colours, `row_ground`, `popup`, `tab_line`, `line`, `selected_fill`), `down_face` kept (the toggled sunken face still reads it), the relief quartet the recorded bytes of the catalog's Warptempo entry (`warptempo-2026-10-03`: 5E5E5E / 434343 / 1E1E1E / 0A0A0A, render.h's constants; Parity below). The dark design the colour loop starts from |
 | `themes/win95_standard.json` | Windows 95's Standard scheme: the face #C0C0C0 and the quartet FFFFFF / DFDFDF / 808080 / 000000 as the catalog's `windows-95-standard` entry records them, and the few roles Windows names, on ad2.json's geometry and options; each role Windows has no word for takes the nearest system colour or the app's own value, the choice stated in its `description`. THE ACCURACY CHECK, NOT A DESIGN |
 | `out/` | renders and compare diffs (generated, git-ignored) |
@@ -226,7 +235,7 @@ newer options (`separators`, `bottom_border`, `well`, `canvas_delta`, `trim.cap_
 `menu.highlight`, `ruler_label_pt`, `playhead_head_rows`, `icons`, `buttons.gap`, `buttons.sep_gap`,
 `buttons.group_space`, `buttons.case`, `buttons.disabled`, `clock_panel`, `fonts`, `state_text`, `flags.style`,
 `flags.rule`, `flags.states`, `flags.selection`, `flags.editing_selected`, `playhead_lane_stem`, `playhead_head_outline`, `menu.disabled`,
-`trim.held`, `dialog`, `card`) refuse an unknown value.
+`trim.held`, `dialog`, `card`, `elements`, `picker`) refuse an unknown value.
 
 Top level: `name`, `description` (free text), `geometry` (`"scene"`, the default, or `"tablet"`: THE TABLET
 GEOMETRY below, which fixes or refuses every option but the colours and the states), `colours` {role: colour}, `waveform` {`ink`, `canvas`, `outline`},
@@ -301,6 +310,8 @@ sunken — and differ from it in the well and the lane geometry each one names; 
 
 | key | values (default first) | effect |
 |---|---|---|
+| `elements` | `{"ink": true, "outline": true, "stems": true, "flags": true, "playhead": true, "state_line": true}` (a top-level object; each key optional, each value true or false) | THE ELEMENT SWITCHES (2026-10-04), each on by default (every picture unchanged): `ink` and `outline` the waveform's two run classes (`draw_waveform`; scene 1002 has no outline pixels at its zoom, so `outline` changes nothing there); `stems` the marker stems (`draw_stems`); `flags` the flag boxes and labels (`draw_flags`, the flat flag's stem piece over its bottom outline included); `playhead` the head, its outline, its marker-lane stem and its stem in the well (`draw_ruler`, `draw_stems`); `state_line` row 8's state line (`state_line`), which also turns `--label` into THE ROW-8 STAMP (above). Stated in the tablet geometry too. They replace the scratch monkeypatch wrappers of sets CQ and CR (`render_canvas_only.py`, `render_ink_only.py`), whose pictures they reproduce byte for byte |
+| `picker` | `null` \| `{"active": role, "layers": [role, ...]}` (a top-level object; distinct colour roles, the active one among them) | read only by `--export` (THE EXPORT below): the picker's layers, each a colour role, and the one being picked. A layer whose role is `"auto"` is refused, except `outline`, which the export derives from `ink` (then a layer too) |
 | `relief` | `"flat"` \| `"thin"` \| `"thick"` | line count of every raised/sunken edge: thin = one logical line (2 device px) a side, thick = the two-line DrawEdge |
 | `buttons` | `{"raised": false, "rows": ["icon","bottom"], "down": ["ViewTW"], "down_shift": true, "toggled": null, "down_dither": false, "gap": null, "sep_gap": null, "group_space": null, "case": null, "disabled": "mix"}` | `raised`: the listed rows' buttons get a face + EDGE_RAISED+BF_SOFT; `down`: buttons drawn down; `toggled`: `"app"` (the rounded fill + ring the app paints; default when not raised), `"sunken"` (EDGE_SUNKEN+BF_SOFT on `down_face`; default when raised), `"flat_fill"` (square fill, no edge); `down_shift`: the glyph moves one logical px down-right on a sunken button; `down_dither`: the Windows checked face, a 1-logical-px checkerboard of bevel_hilight |
 | `buttons.gap` | `null` (the scene's measured positions: 2 logical px between the 32-px boxes) \| a whole number of logical px >= 0 | the gap between adjacent buttons of one group; both rows are RE-PACKED as the app walks them (`render.button_geometry`): a chain of groups whose separators stand at equal gaps either side packs from its first button's measured x walking right, or, when its last button ends at the row's right margin (2288 on 1002: the icon row's view group and the whole bottom row), from that edge walking left; the measured separator gaps are kept (widened by `buttons.sep_gap`, below) and each separator moves with its groups; only x changes. 2 re-derives every measured x (byte-identical to `null`); 0 on 1002 = the buttons touching: Save 16, Undo 98, Load in Place 1514, the view group from 2096 (its separator 2086), the bottom row from 1134 (Marker Drop) to 2224, its separators 1528 1806 2084 |
@@ -387,6 +398,30 @@ an even height, the extractor's measured rule). At the same height the runs are 
 1002 the ink spans canvas rows 128..954 (400..1226); one Shadow / one Hilight line gives canvas 270..1343 (1074) and
 ink 399..1228; three lines a side 274..1339 (1066), ink 402..1225; no seam 268..1345 (1078), ink 397..1230.
 
+## The export (the picker's scene, 2026-10-04)
+
+`render.py THEME --export DIR` writes what the colour picker app (`picker/README.md`) paints: `background.ppm` (binary
+P6, the render as it stands), one binary mask per layer `<role>.pgm` (binary P5, 0 or 255) and `manifest.json`
+(`{"width", "height", "background", "active", "layers": [{"name", "mask", "colour": "#RRGGBB"} | {"name", "mask",
+"derive": {"from": "ink", "over": <the canvas>, "linear_mix": 0.5}}]}`; the format is the picker README's). The
+layers are the theme's `picker` key. EACH MASK IS TAKEN FROM THE RENDERER ITSELF (`export_scene`): the theme
+rendered twice with the layer's role in two sentinel colours (#FF00FF, #00FF00), every other layer stated at its
+resolved colour, the pixels that differ being the role's; each must be exactly the sentinel in both renders, else
+the role's pixels are blended (antialiasing, alpha) and a binary mask cannot carry them: a hard fail. A layer that
+paints no pixel is left out with a NOTE. Before anything is written it checks that the masks are disjoint, that a
+layer with an `elements` switch masks exactly what the switch removes, and that the background with every layer
+painted through its mask in the theme's colours (the derived one by its rule, `colour.lin_mix`) equals the render
+byte for byte, both for the background written and for one with every layer in a sentinel colour; the files are read
+back and recomposed once more.
+
+```
+python3 tools/palette/render.py tools/palette/themes/picker_ink.json --export tools/palette/out/picker_ink
+```
+
+writes the ink round (the ink 439,235 px; `outline` left out, scene 1002 having no outline pixels at its zoom). A
+later round (a flag face) is a theme with another `picker` key; a role whose pixels are antialiased against
+something (a flag face under its label's glyph edges) fails the binary check by design and needs a decision first.
+
 ## Adding a theme
 
 Copy `themes/frozen.json`, change what you need, render; an empty `{}` is the default look. A colour borrowed from
@@ -430,7 +465,8 @@ outlined head, the engraved disabled word and glyph, the flat flag with the sele
 "face", since step 16); a theme may
 state one only as the app has it, and every geometry option (`buttons.case`, `fonts`, `ruler_layout`, `trim.lane_h`,
 `playhead_head_rows` and their kin) is refused. A tablet theme states its colours, the scene's states (`buttons.down`,
-`trim.held`, `flags.states`) and the optional surfaces (`state_text`, `dialog`, `card`, whose step-11 layout is the
+`trim.held`, `flags.states`), the element switches and the export's layers (`elements`, `picker`) and the optional
+surfaces (`state_text`, `dialog`, `card`, whose step-11 layout is the
 app's at 275 % already and now takes the 3-px line and the 35.75-px face). `compare.py --scene tablet` counts by the
 tablet geometry's lanes. The scene geometry is untouched: ad2, win95_standard and frozen (and set AV01's theme)
 render `cmp`-identical before and after the change, on 1002, 1002a and s4.
@@ -582,6 +618,12 @@ disabled and invalid editing states, the white outline `flag_border_sel` / `"out
 `flags.outline_px` retired) moved nothing on the scene geometry: ad2, win95_standard and frozen render `cmp`-identical
 before and after on 1002, 1002a and s4 (they use the app style). tablet.json moved by design (its colours the new
 default look), and the 98 crops were re-rendered with it.
+
+The element switches, the row-8 stamp and the export (2026-10-04) moved nothing at their defaults: warptempo,
+tablet, frozen, ad2 and win95_standard on 1002 with and without `--label`, and frozen and ad2 on 1002a and s4 with
+`--label`, render `cmp`-identical before and after. Set CR's CR01 theme with `elements` {stems, flags, playhead,
+state_line false} renders `cmp`-identical to `render_ink_only.py`'s picture of it (the stamp included), and set CQ's
+CQ08 with {ink, outline, stems, flags, playhead false} to `render_canvas_only.py`'s.
 
 ## Recorded notes (each scene's `mismatches`; none unexplained)
 

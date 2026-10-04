@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Warptempo Picker (tools/palette/picker/README.md): a design tool installed beside the product, never touching
+     com.warptempo.gui or its files. A NativeActivity subclass over libwarptempo_picker.so.
+
+     THE WINDOW'S COLOUR IS THE PRODUCT'S: colorMode="wideColorGamut" exactly as android/app/AndroidManifest.xml has
+     it (the comment there is the rule: with it the compositor and the display hardware honour the buffers'
+     dataspace, which src/main_android.cpp tags DISPLAY_P3 as the product's adopt_window does), the same
+     Theme.NoTitleBar, the same sensorLandscape lock, the same configChanges so a 180-degree flip never recreates
+     the activity. debuggable, so `adb shell run-as com.warptempo.picker` reaches its files. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.warptempo.picker">
+
+  <application
+      android:label="Warptempo Picker"
+      android:hasCode="true"
+      android:extractNativeLibs="false"
+      android:allowBackup="false"
+      android:debuggable="true">
+
+    <activity
+        android:name=".PickerActivity"
+        android:exported="true"
+        android:label="Warptempo Picker"
+        android:theme="@android:style/Theme.NoTitleBar"
+        android:screenOrientation="sensorLandscape"
+        android:resizeableActivity="false"
+        android:launchMode="singleTask"
+        android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density|uiMode|navigation|keyboard"
+        android:windowSoftInputMode="adjustNothing"
+        android:colorMode="wideColorGamut">
+
+      <meta-data android:name="android.app.lib_name" android:value="warptempo_picker" />
+
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
