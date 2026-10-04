@@ -14,14 +14,16 @@
 # paint_trim_arrow_button); the checked face the ground under the Hilight dither. EVERY OPTION IS THE APP'S (the tablet
 # geometry fixes them, render.py TABLET_FIXED): the well's two-line PLAIN SUNKEN edge (Shadow then DkShadow inward on
 # top, 3DLight inward then Hilight outward at the bottom), the flat flag with its one-px DkShadow outline and the stem
-# leaving the box's first face column across the bottom outline, the SELECTED flag's WHITE OUTLINE (architect
-# 2026-10-03, step 12: the ring whole on four sides, the underline retired), the engraved disabled word and glyph
-# (Windows' DSS_DISABLED: the emboss's light copy one px right and down, then the word or glyph in Shadow), the
-# playhead's head outlined in the theme's label. The scene's flags show left to right EDITING (the in-place editor: a
-# black frame on the field ground, its whole text in the selected pair), SELECTED, INVALID, DISABLED (the ground, the
-# label embossed, no stem) and unselected (FLAG_STATES). THE PROGRAM'S OWN COLOURS (APP_KEEP, the device config's
-# defaults): the waveform's ink, canvas and outline, the flag's face and its RECORDED label, the invalid face and its
-# label, the playhead's head and stem; the icons' fixed inks are icons.cpp's (tablet.json).
+# leaving the box's first face column across the bottom outline, the SELECTED flag's BRIGHTER FACE (architect
+# 2026-10-03, the colour loop: the face and the stem the selected key under the selected label, the outline still
+# DkShadow; the white outline retired), the engraved disabled word and glyph (Windows' DSS_DISABLED: the emboss's light
+# copy one px right and down, then the word or glyph in Shadow), the playhead's head outlined in the theme's label. The
+# scene's flags show left to right EDITING (the in-place editor, the selected flag opened for edit: a black frame on the
+# selected face, its whole text in the selected pair), SELECTED, INVALID, DISABLED (the ground, the label embossed, no
+# stem) and unselected (FLAG_STATES). THE PROGRAM'S OWN COLOURS (APP_KEEP, the device config's defaults): the
+# waveform's ink, canvas and outline, the flag's face, selected face and RECORDED label, the one selected label, the
+# invalid face, its selected face and its label, the playhead's head and stem; the icons' fixed inks are icons.cpp's
+# (tablet.json).
 #
 # THE CROP: four regions of the 2304 x 1440 render stacked top to bottom, 1152 px wide, a 4-row FULLY TRANSPARENT gap
 # between them (alpha 0 there, 255 everywhere else, so no join reads as chrome): the top strip's left half (menu, the
@@ -52,12 +54,13 @@ MD = os.path.join(REPO, 'docs', 'themes', 'CATALOG.md')
 SCRATCH = os.path.join(REPO, 'tmp', 'theme_catalog')
 ICCP = open(os.path.join(PALETTE, 'display_p3.iccp'), 'rb').read()
 
-# the program's own elements, P3 bytes as-is: the device config's defaults (device_config.h, architect 2026-10-03) --
-# the waveform's ink, canvas and lit inner-bar outline, the flag's face and its recorded label, the invalid face and its
-# label (#BB575A / #000000, the app's mellow red; Windows' error-icon pair #FF0000 / #FFFFFF was struck the same day),
-# the playhead's head and stem
-APP_KEEP = {'canvas': '#141618', 'ink': '#96BFDA', 'outline': '#6E8DA1', 'flag_fill': '#8A5EAC', 'flag_label': '#000000',
-            'flag_fill_red': '#BB575A', 'flag_label_red': '#000000', 'playhead_head': '#8B8B8B',
+# the program's own elements, P3 bytes as-is: the device config's defaults (device_config.h, architect 2026-10-03, the
+# colour loop) -- the waveform's grey ink on its black canvas and the lit inner-bar outline, the flag's slate violet,
+# its selected #CCCCFF and its recorded white label, the one selected label black, the invalid dark red, its selected
+# bright red and its white label, the playhead's head and stem
+APP_KEEP = {'canvas': '#000000', 'ink': '#808080', 'outline': '#5C5C5C', 'flag_fill': '#666699', 'flag_fill_sel': '#CCCCFF',
+            'flag_label': '#FFFFFF', 'flag_label_sel': '#000000', 'flag_fill_red': '#993333',
+            'flag_fill_red_sel': '#FF6666', 'flag_label_red': '#FFFFFF', 'playhead_head': '#8B8B8B',
             'playhead_stem': '#FCFCFC'}
 # the scene's flags (1002: five, left to right) in every state, so each crop shows each one
 FLAG_STATES = {'editing': [0], 'selected': [1], 'invalid': [2], 'disabled': [3]}
@@ -163,7 +166,8 @@ FAMILY_HEAD = {
     'windows-plus': 'Windows 98 / Plus! desktop themes (the shipped .theme files)',
     'kde3': 'KDE 3.5 colour schemes, as Trinity\'s tdebase carries them (relief by KDE 3\'s own rule at each scheme\'s contrast)',
     'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',
-    'warptempo': 'Warptempo: the app\'s own look as it stands on 2026-10-03',
+    'warptempo': 'Warptempo: the program\'s own (the app\'s look of the morning of 2026-10-03 recorded off render.h, and '
+                 '`warptempo`, the architect\'s pick of the colour loop and the app\'s default: chosen, not imported)',
 }
 
 
@@ -182,7 +186,10 @@ def write_md(cat, sizes):
          'Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, '
          'imported only"): its colours are the bytes its source records, each with its provenance in '
          '[catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the '
-         'relief at run time (KDE 3, CDE / Motif), that toolkit\'s rule ran once at import and is named. The KEY is '
+         'relief at run time (KDE 3, CDE / Motif), that toolkit\'s rule ran once at import and is named. The one '
+         'family that imports nothing is the program\'s own, Warptempo: the app\'s look of 2026-10-03 recorded off '
+         'render.h, and `warptempo`, the app\'s default, CHOSEN, NOT IMPORTED (the architect\'s pick of the colour '
+         'loop, 2026-10-03; its provenance is his ruling). The KEY is '
          'what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet '
          'geometry: the tablet\'s 2304 x 1440 at gui_scale 275, every length derived from the app\'s own constants; '
          'cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well\'s bottom '
@@ -190,11 +197,12 @@ def write_md(cat, sizes):
          'generated table\'s, tools/theme_catalog/levels.py). The chrome is the theme\'s; the waveform pane, the flags '
          'and the playhead are the program\'s own elements in the app\'s default colours (architect 2026-10-03): the '
          'well keeps the app\'s two-line sunken edge (the theme\'s Shadow and DkShadow above, its 3DLight and Hilight '
-         'below); the flags are the flat Acid flag, the face the app\'s purple with its recorded black label and a '
-         'one-px outline in the theme\'s DkShadow, the stem leaving the face across the bottom outline, shown left to '
-         'right editing (the in-place editor on the theme\'s field ground, its text in the selected pair), selected '
-         '(a white outline round the box), invalid (#BB575A, black label), disabled (the ground, the label embossed) and '
-         'unselected; the playhead\'s #8B8B8B head carries a one-px outline in the theme\'s label over its #FCFCFC '
+         'below) round the grey waveform on black; the flags are the flat Acid flag, the face the app\'s slate violet '
+         '#666699 with its recorded white label and a one-px outline in the theme\'s DkShadow, the stem leaving the face '
+         'across the bottom outline, shown left to right editing (the in-place editor: the selected face under a black '
+         'frame, its text in the selected pair), selected (the brighter face #CCCCFF under a black label, the stem '
+         'with it), invalid (#993333, white label), disabled (the ground, the label embossed) and unselected; the '
+         'playhead\'s #8B8B8B head carries a one-px outline in the theme\'s label over its #FCFCFC '
          'stem; disabled words and glyphs are Windows\' emboss; the ruler label and the trim arrow are the theme\'s '
          'label, the ruler ticks its Shadow. The DISPLAY TIER is the smallest period colour set holding '
          'every colour the entry\'s roles use: vga (the 16 VGA colours), windows-20 (those and Windows\' four static '

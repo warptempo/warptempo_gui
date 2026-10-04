@@ -724,6 +724,7 @@ private:
         double x0    = 0.0;   // left screen x, clipped to the area
         double x1    = 0.0;   // right screen x, exclusive, clipped
         bool   red   = false; // the reset is in the column's red set (the ring's colour)
+        bool   selected = false; // the reset is in the live selection (the ring's colour)
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
 
@@ -843,10 +844,11 @@ private:
     // of the active column stems, always, from its flag's bottom (= the marker
     // lane's bottom = the waveform top) down through the waveform to the
     // window's content bottom, in its flag box's fill; a DISABLED marker stems
-    // never. A selected marker's stem takes its flag's BRIGHT fill (architect
-    // 2026-09-23, reversing the calm-stem rule), so at a coarse zoom the
-    // selected stems stand out among many; the colour is resolved in the
-    // painter (resolve_flag_face) and published in the stash. The stems paint
+    // never. A selected marker's stem takes its SELECTED FACE (architect
+    // 2026-10-03, the brighter selected flag; the bright selected stem first
+    // ruled 2026-09-23), so at a coarse zoom the selected stems stand out
+    // among many; the colour is resolved in the painter (resolve_flag_face)
+    // and published in the stash. The stems paint
     // UNDER the playhead's stem and the flags (architect 2026-09-23); a marker
     // on the playhead's own frame keeps its stem through the playhead's
     // suppression (playhead_stem_suppressed).
@@ -859,9 +861,9 @@ private:
     // part.
     //
     // NO PAINT-TIME COLOUR OVERRIDE (architect 2026-10-03): the stem paints
-    // the stash's colour, the marker's resolved face. The open flag editor's
-    // refusal is its red FRAME alone and reaches no stem (the override that
-    // reddened the stem from 2026-08-01 retired with the red frame).
+    // the stash's colour, the marker's resolved stem. The open flag editor's
+    // refusal recolours nothing, the stem included (the override that
+    // reddened the stem from 2026-08-01 is retired).
     //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag

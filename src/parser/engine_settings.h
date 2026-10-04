@@ -63,7 +63,7 @@ std::string default_render_title(const std::string& source_stem);
 // the surrounding "key 'X' has invalid value 'Y':" prefix. Used by the
 // whole-file schema reader (read_settings_file) and
 // GuiSettingsEditor::commit — one implementation, load-fatal on the load's
-// face and the red flash on the editor's, so a value loads iff it commits.
+// face and the refusal on the editor's, so a value loads iff it commits.
 //
 // Returns false with reason "unknown engine key" if `key` is not in
 // the canonical engine set — defensible against callers that didn't

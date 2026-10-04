@@ -131,7 +131,7 @@ namespace warpmarkers_internal {
 // (history_diff.cpp), and the flag editor's candidate parse — reads the same
 // grammar, and the no-whitespace refusal is what rejects any suffix: a ` //`
 // on a sidecar line is adversarial and load-fatal, and one typed into the
-// payload field is a grammar error that red-flashes at the commit.
+// payload field is a grammar error that refuses at the commit.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
     const std::string& raw_line);
 

@@ -320,7 +320,7 @@ struct GuiSettingValue {
 // boundaries (the load-side trim past-EOF walls live in
 // first_past_eof_wall_defect; the editor adds its own trim walls and
 // active/inactive routing on top). Both the whole-file reader below
-// (load-fatal) and the GUI settings editor (the red flash) call this, so a
+// (load-fatal) and the GUI settings editor (the refusal) call this, so a
 // spelling is loadable iff it commits. Returns std::nullopt when `key` is not
 // a GUI-kind key (the caller falls through to its own unknown-key handling,
 // mirroring try_engine_key); an expected error carries the bad_value-style

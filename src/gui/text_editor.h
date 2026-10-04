@@ -16,7 +16,7 @@
 // keep it inline on AppState. Validation, commit semantics, and visual
 // rendering are the caller's concerns; this module only handles the
 // keyboard-driven mutation of `pending` + cursor state and exposes hooks
-// for blink and the parse-failure red frame.
+// for blink and the refused commit's whole-text selection (refuse).
 //
 // Reuse: the several editor surfaces supply different
 // validators and writers but reuse this state shape and keystroke routing.
@@ -116,7 +116,7 @@ namespace text_editor {
 // remainder was advertising typing the commit refuses.)
 //
 // An operation that would grow the pending past this cap refuses atomically
-// and sets the red state (the whole edit lands or the buffer is untouched);
+// (the whole edit lands or the buffer is untouched);
 // shrinking and non-growing edits are always accepted. THAT SHRINK LATITUDE
 // IS NEVER EXERCISED HERE, and the roster's honest home for it is the
 // settings value (kMaxPendingCharsSettings below), whose free text does load
@@ -352,14 +352,6 @@ struct State {
     // backspace, and by enter/deactivate.
     int selection_anchor = -1;
 
-    // THE RED STATE: true after a refused commit (refuse, below) or a growth
-    // the field's cap refused (replace_selection). Cleared by any keystroke
-    // that mutates `pending`, and by enter/deactivate. Its picture is the
-    // field's FRAME in the `invalid_face` key (architect 2026-10-03: the flag
-    // editor's one black line, the dialog field's both sunken lines), never
-    // its face.
-    bool red = false;
-
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
     // scrolled right through `pending`. Byte 0 paints at (text origin -
     // view_offset_px), so a positive value hides text off the box's left edge.
@@ -427,12 +419,14 @@ inline int selection_end(const State& s) {
 // Reset `s` so `is_active` returns false.
 void deactivate(State& s);
 
-// A REFUSED ENTER (architect 2026-10-03, Windows' in-place edit): the red
-// state, and THE WHOLE TEXT SELECTED in the selected pair, the caret at its
-// end — so the first keystroke replaces it (replace_selection, which clears
-// the red) and the frame returns. Every commit refusal of every editor calls
-// this; the cap's refusal (replace_selection) sets the red alone, being no
-// Enter.
+// A REFUSED ENTER (architect 2026-10-03, Windows' in-place edit): THE WHOLE
+// TEXT SELECTED in the selected pair, the caret at its end — so the first
+// keystroke replaces it (replace_selection). That and the refusing owner's
+// card are the whole refusal: no frame or face changes colour (the red frame
+// retired the same day, "a red outline and the card is redundant"), so the
+// session carries no refusal state. Every commit refusal of every editor
+// calls this; the cap's refusal (replace_selection) leaves the buffer and the
+// selection as they stand, being no Enter, and its caller's card says why.
 void refuse(State& s);
 
 // Begin editing `target` with the given seed pending.
@@ -469,7 +463,7 @@ enum class KeyAction {
     PasteRequested,
     // A TYPED CHARACTER THE FIELD HAD NO ROOM FOR (architect 2026-08-30, the
     // strictness ruling): consumed exactly as Consumed is — the buffer and the
-    // selection are untouched and the field is red — but told apart from it so
+    // selection are untouched — but told apart from it so
     // the DISPATCH LAYER can say why. This module has no GuiNotifications and
     // wants none (it is the pure editor over one buffer), so the refusal is
     // REPORTED here and CARDED at route_modal_editor_key, the one place every
@@ -543,13 +537,12 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 //     resumes at the next byte, so the good text around it survives.
 // It then atomically either replaces the selection with the FULL filtered text
 // or, when that would grow the pending past the field's per-Kind byte cap,
-// refuses the whole operation and sets the red state (buffer and selection
-// untouched). Cut calls it with an empty string, an always-accepted shrink that
+// refuses the whole operation (buffer and selection untouched). Cut calls it with an empty string, an always-accepted shrink that
 // simply deletes the selection.
 //
 // IT ANSWERS FALSE ON EXACTLY THAT REFUSAL (architect 2026-08-30, the
 // strictness ruling; true on every applied path, the empty-insert shrink
-// included) so the caller can say WHY the field went red — the paste's card is
+// included) so the caller can say WHY nothing was inserted — the paste's card is
 // raised by the input handler, which knows a press happened, this module having
 // no notifications of its own. The keyboard's over-capacity refusal is the
 // SAME verdict wearing another return: handle_key turns this false into

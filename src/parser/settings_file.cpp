@@ -327,7 +327,7 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // seven lanes (six in the top strip plus the bottom row) 350 keeps the
     // stack inside a 1080-tall window). The ONE owner is is_gui_scale_percent
     // there, called by that file's reader and by the settings editor's
-    // red-flash alike, so this sentence names no bracket of its own. The CLI
+    // refusal alike, so this sentence names no bracket of its own. The CLI
     // never read the key.
     // (architect approval 2026-08-29, comment only)
     // (architect approval 2026-09-16, comment only)

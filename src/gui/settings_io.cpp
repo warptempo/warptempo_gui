@@ -382,7 +382,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
-    // THE ELEVEN COLOUR KEYS (2026-10-03), verbatim — the struct holds each
+    // THE FOURTEEN COLOUR KEYS (2026-10-03), verbatim — the struct holds each
     // as typed and the file writes it so.
     if (app.device_config != nullptr) {
         if (key == "theme")       return app.device_config->theme;

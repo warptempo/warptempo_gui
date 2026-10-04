@@ -330,22 +330,19 @@ bool replace_selection(State& s, const std::string& raw) {
     const int ins      = static_cast<int>(clean.size());
     const int new_size = old_size - sel + ins;
     if (new_size > cap && new_size > old_size) {
-        s.red = true;
         touch_blink(s);
         // The one refusal this primitive has, reported so the caller can say
-        // why the field went red (the contract is at the declaration).
+        // why nothing was inserted (the contract is at the declaration).
         return false;
     }
     if (has_selection(s)) erase_selection(s);
     s.pending.insert(static_cast<size_t>(s.cursor_pos), clean);
     s.cursor_pos += ins;
-    s.red = false;
     touch_blink(s);
     return true;
 }
 
 void refuse(State& s) {
-    s.red              = true;
     s.selection_anchor = 0;
     s.cursor_pos       = static_cast<int>(s.pending.size());
     touch_blink(s);
@@ -359,7 +356,6 @@ void deactivate(State& s) {
     s.pending.clear();
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
-    s.red               = false;
     s.view_offset_px    = 0.0;
 }
 
@@ -388,7 +384,6 @@ void enter(State& s, int target,
     s.pending           = std::move(initial_pending);
     s.cursor_pos        = static_cast<int>(s.pending.size());
     s.selection_anchor  = -1;
-    s.red               = false;
     // A fresh session starts unscrolled; the flag editor's painter travels it on
     // the first frame if the seeded cursor (at end of text) is already past the
     // box. The dialog editors leave it at zero for their whole session.
@@ -616,7 +611,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::BackSpace) {
         if (has_selection(s)) {
             erase_selection(s);
-            s.red = false;
         } else {
             // Editing keys collapse degenerate anchors before cursor movement can resurrect phantom selections.
             s.selection_anchor = -1;
@@ -626,7 +620,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                     s.pending.erase(static_cast<size_t>(b),
                                     static_cast<size_t>(s.cursor_pos - b));
                     s.cursor_pos = b;
-                    s.red = false;
                 }
             } else if (s.cursor_pos > 0) {
                 // A WHOLE CODEPOINT, not a byte — deleting one byte of a
@@ -636,7 +629,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                 s.pending.erase(static_cast<size_t>(b),
                                 static_cast<size_t>(s.cursor_pos - b));
                 s.cursor_pos = b;
-                s.red = false;
             }
         }
         touch_blink(s);
@@ -645,7 +637,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Delete) {
         if (has_selection(s)) {
             erase_selection(s);
-            s.red = false;
         } else {
             s.selection_anchor = -1;
             if (ctrl) {
@@ -653,7 +644,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                 if (e > s.cursor_pos) {
                     s.pending.erase(static_cast<size_t>(s.cursor_pos),
                                     static_cast<size_t>(e - s.cursor_pos));
-                    s.red = false;
                 }
             } else if (s.cursor_pos < static_cast<int>(s.pending.size())) {
                 // A WHOLE CODEPOINT forward — the mirror of BackSpace's.
@@ -661,7 +651,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                     next_codepoint_boundary(s.pending, s.cursor_pos);
                 s.pending.erase(static_cast<size_t>(s.cursor_pos),
                                 static_cast<size_t>(e - s.cursor_pos));
-                s.red = false;
             }
         }
         touch_blink(s);
@@ -675,7 +664,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // compose or dead-key sequence arrives here whole and is UTF-8 encoded
     // below, landing as one insertion of one to four bytes. Characters that are
     // invalid for this field are NOT filtered here — the commit-time validator
-    // rejects the value (red frame) when Enter is pressed. This replaces the
+    // refuses the value (text_editor::refuse, and the owner's card) when Enter
+    // is pressed. This replaces the
     // per-Kind keysym_to_char vocabulary entirely.
     //
     // THE CAP AND ITS GROWTH RULE HAVE ONE OWNER AND THE TYPED PATH WRAPS IT:
@@ -685,7 +675,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // The filter half is a no-op on this road by construction — encode_utf8 of
     // an insertable codepoint is well-formed shortest-form UTF-8, which is
     // exactly what the filter passes — so the only verdict it adds here is the
-    // cap's, and it owns the red state and the blink on both outcomes.
+    // cap's, and it owns the blink on both outcomes.
     if (!ctrl && !mods.alt && is_insertable_codepoint(mods.codepoint)) {
         if (!replace_selection(s, encode_utf8(mods.codepoint))) {
             // CONSUMED, AND SAID SO (architect 2026-08-30): the key is eaten

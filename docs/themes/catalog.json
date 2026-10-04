@@ -1,5 +1,5 @@
 {
- "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is).",
+ "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family that imports nothing is the program's own, \"warptempo\": the app's look of 2026-10-03 recorded off render.h, and the architect's chosen default `warptempo`, chosen, not imported (its provenance is his ruling).",
  "roles": [
   "ground",
   "label",
@@ -8331,6 +8331,50 @@
    "display_tier": "high-colour",
    "notes": [
     "the look the app paints on 2026-10-03, its relief derived from the ground by the app's ratio rule at that commit; recorded here so it stays selectable as bytes"
+   ]
+  },
+  {
+   "key": "warptempo",
+   "name": "warptempo",
+   "family": "warptempo",
+   "provenance": {
+    "sources": [
+     {
+      "project": "chosen, not imported: the architect's ruling (2026-10-03)",
+      "record": "the colour loop's mock sets: BA03 for the chrome (Windows 95 Standard darkened in proportion to a ground of relative luminance 0.010, white text), BM02 for the selection grey; the bytes as ruled"
+     }
+    ]
+   },
+   "raw": {
+    "ground": "#191919",
+    "label": "#FFFFFF",
+    "bevel_hilight": "#212121",
+    "bevel_light": "#1D1D1D",
+    "bevel_shadow": "#111111",
+    "bevel_dkshadow": "#000000",
+    "selected_fill": "#666666",
+    "selected_text": "#FFFFFF",
+    "field_ground": "#212121",
+    "field_text": "#FFFFFF"
+   },
+   "roles": {
+    "ground": "#191919",
+    "label": "#FFFFFF",
+    "bevel_hilight": "#212121",
+    "bevel_light": "#1D1D1D",
+    "bevel_shadow": "#111111",
+    "bevel_dkshadow": "#000000",
+    "selected_fill": "#666666",
+    "selected_text": "#FFFFFF",
+    "field_ground": "#212121",
+    "field_text": "#FFFFFF"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
+   "display_tier": "high-colour",
+   "notes": [
+    "chosen by the architect on the colour loop, not imported from a desktop of the era; the app's default theme at its light level (2026-10-03)"
    ]
   }
  ]

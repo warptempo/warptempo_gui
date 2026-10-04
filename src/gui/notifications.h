@@ -139,7 +139,7 @@
 //     refusal and kCheckpointPublishing, every Ctrl+S road inheriting them);
 //     the device config's write failure (write_device_config, device_config.h)
 //     and kProjectsPathAppliesCard below on a successful persist.
-//   * EVERY RED FRAME'S REASON (2026-08-30): the flag-editor cluster's
+//   * EVERY REFUSED FIELD'S REASON (2026-08-30): the flag-editor cluster's
 //     "Edit rejected: …", "Range bound rejected: …" and the BPM editor's
 //     three "BPM edit rejected: …" (flag_editor.cpp); the settings editor's
 //     five "Settings edit rejected: …" (settings_editor.cpp); the commit
@@ -149,7 +149,9 @@
 //     "This field is full" at route_modal_editor_key — the settings recall's
 //     own replace_selection call staying silent, that text being the
 //     product's). The card drops the offending text, which stands on screen
-//     in the red field.
+//     in the refused field, selected whole (text_editor::refuse; the field
+//     changes no colour, architect 2026-10-03, so the card is the refusal's
+//     one statement).
 //   * THE PROPAGATE REPORTS: the phase-reset pastes' "Stopped at …" and
 //     kNothingMatched (propagate_blocks.h, two readers); a paste that wrote
 //     no block skips the switch to target view, the card being the whole

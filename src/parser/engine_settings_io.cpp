@@ -75,7 +75,7 @@ bool validate_engine_setting(const std::string& key,
         // writer's spelling (format_value_double, min 4 decimals), so "2"
         // refuses and "2.0000" loads. This single validator serves both
         // boundaries: a malformed .settings aborts the load, an editor commit
-        // red-flashes.
+        // refuses.
         double v;
         if (!parse_value_double(value, v) || !(v > 0.0) ||
             v < kScaleMin || v > kScaleMax ||

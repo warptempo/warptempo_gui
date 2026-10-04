@@ -72,15 +72,20 @@ DEFAULTS = {
     # Stop icon's white X on VGA bright red), the face #FF0000 and its RECORDED label #FFFFFF (Windows recorded a text
     # colour beside every face; the luminance rule is WCAG's, not Windows')
     'flag_fill_red': '#FF0000', 'flag_label_red': '#FFFFFF',
-    # read only by flags.style "flat" (draw_flags_flat): a SELECTED flag's outline, white (architect 2026-10-03, late),
-    # and the EDITING flag's -- the in-place editor's box -- outline black (Windows' WindowFrame), its face the field
-    # ground (Windows' Window) and its selected text's glyphs `selected_text` (HilightText) over `selected_fill`
-    # (Hilight; flat_edit_colours, which falls back to Windows' #000080 when the theme does not state it)
-    'flag_border_sel': '#FFFFFF', 'flag_border_edit': '#000000', 'field_ground': '#FFFFFF', 'selected_text': '#FFFFFF',
+    # read only by flags.style "flat" (draw_flags_flat) with flags.selection "face", the app's (architect 2026-10-03,
+    # the colour loop: THE SELECTED MARKER IS A BRIGHTER FACE, nothing white): a SELECTED flag's face `flag_fill_sel`
+    # (above, the app style's selected fill, its default that style's measured one; the device config's
+    # flag_face_selected), an invalid one's `flag_fill_red_sel` (invalid_face_selected), under the ONE selected label
+    # `flag_label_sel` (flag_label_selected), these two defaulting to the app's defaults; and the EDITING flag -- the in-place editor's box, the selected flag opened for edit --
+    # its outline black (`flag_border_edit`, Windows' WindowFrame), its face the edited flag's selected face, its text
+    # `flag_label_sel`, the selected substring's glyphs `selected_text` (HilightText) over `selected_fill` (Hilight;
+    # flat_edit_colours, which falls back to Windows' #000080 when the theme does not state it)
+    'flag_fill_red_sel': '#FF6666', 'flag_label_sel': '#000000',
+    'flag_border_edit': '#000000', 'field_ground': '#FFFFFF', 'selected_text': '#FFFFFF',
     # THE FIELD'S TEXT (2026-10-03, step 11), read only by the optional surface `dialog` (draw_dialog): Windows'
-    # WindowText. `field_ground` above is the dialog field's ground too, so the EDITING flag and the dialog's field
-    # read one role, as the app's two fields do. The `card` has no role of its own: it is the ground under the label
-    # (architect 2026-10-03, step 15: the app's INFO FACE, render.h's palette block; the info pair retired)
+    # WindowText. `field_ground` above is the dialog field's ground, and only that since 2026-10-03 (the editing flag
+    # is the selected flag opened for edit, the app's). The `card` has no role of its own: it is the ground under the
+    # label (architect 2026-10-03, step 15: the app's INFO FACE, render.h's palette block; the info pair retired)
     'field_text': '#000000',
     # icon inks (icons.cpp), two_pass of each
     'icon_label': '@label', **{f'icon_{k}': list(C.two_pass(v)) for k, v in INKC.items() if k != 'text'},
@@ -132,11 +137,15 @@ OPT_VALUES = {'separators': ('line', 'etched', 'raised', 'none'), 'bottom_border
 FLAG_RELIEF = ('none', 'raised')
 FLAG_STYLES = ('app', 'bevelled', 'flat')
 FLAG_STATES = ('selected', 'invalid', 'disabled', 'editing')
-# flags.selection, read only by flags.style "flat": how a SELECTED flag shows -- "outline" the white outline (step 5's,
-# its width flags.outline_px), "underline" the label underlined (architect 2026-10-03, late), "fill" the face in the
-# selected pair, "outline+fill" both (step 11, mock options; draw_flags_flat)
-FLAG_SELECTIONS = ('outline', 'underline', 'fill', 'outline+fill')
-FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection', 'outline_px')     # the flags section's keys beside its colour aliases
+# flags.selection, read only by flags.style "flat": how a SELECTED flag shows -- "face" THE APP'S (architect 2026-10-03,
+# the colour loop: the selected face `flag_fill_sel` / `flag_fill_red_sel` under `flag_label_sel`, its stem the
+# selected face, the outline unchanged), "underline" the label underlined (architect 2026-10-03, late), "fill" the face
+# in the selected pair (step 11, a mock option; draw_flags_flat). The white outline ("outline", "outline+fill" and
+# their flags.outline_px) retired with the app's white ring, 2026-10-03.
+FLAG_SELECTIONS = ('face', 'underline', 'fill')
+# the flags section's keys beside its colour aliases; flags.editing_selected (read only by flags.style "flat" with an
+# editing flag): how many of the editing flag's leading characters are selected, null for all (the editor as it opens)
+FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection', 'editing_selected')
 # trim.held (trim.style "scrollbar" only): one arrow button HELD, as a single-bound drag holds it -- "flat" the app's
 # face (render.cpp paint_trim_arrow_button: Windows' DFCS_PUSHED | DFCS_FLAT, one Shadow line round the face), "sunken"
 # the push button's pressed face (the plain sunken edge); the glyph one line right and down in both (step 11). Its
@@ -154,7 +163,8 @@ COLOUR_SECTIONS = (('waveform', {'ink': 'ink', 'canvas': 'canvas', 'outline': 'o
                    ('flags', {'fill': 'flag_fill', 'edge': 'flag_edge', 'border': 'flag_border', 'label': 'flag_label', 'stem': 'flag_stem',
                               'fill_sel': 'flag_fill_sel', 'edge_sel': 'flag_edge_sel', 'stem_sel': 'flag_stem_sel',
                               'hilight': 'flag_hilight', 'hilight_sel': 'flag_hilight_sel', 'fill_red': 'flag_fill_red',
-                              'label_red': 'flag_label_red', 'border_sel': 'flag_border_sel', 'border_edit': 'flag_border_edit'}))
+                              'label_red': 'flag_label_red', 'fill_red_sel': 'flag_fill_red_sel', 'label_sel': 'flag_label_sel',
+                              'border_edit': 'flag_border_edit'}))
 
 BEVELS = ('bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')     # Windows' COLOR_3D* order
 
@@ -211,11 +221,11 @@ def use_tablet(path, t):
         elif v != fx:
             raise SystemExit(f'theme {path}: the tablet geometry paints the app\'s {k} ({fx!r}), not {v!r}')
     fl = t.setdefault('flags', {})
-    for k in ('relief', 'rule', 'outline_px'):
+    for k in ('relief', 'rule'):
         if k in fl: raise SystemExit(f'theme {path}: flags.{k} is not read by the tablet geometry (the app\'s flat flag)')
-    if fl.get('style', 'flat') != 'flat' or fl.get('selection', 'outline') != 'outline':
+    if fl.get('style', 'flat') != 'flat' or fl.get('selection', 'face') != 'face':
         raise SystemExit(f'theme {path}: the tablet geometry paints the app\'s flag (flags.style "flat", flags.selection '
-                         f'"outline": the white ring), not {fl.get("style")!r} / {fl.get("selection")!r}')
+                         f'"face": the brighter selected face), not {fl.get("style")!r} / {fl.get("selection")!r}')
     fl['style'] = 'flat'
     for k, fx in TABLET_FIXED.items():
         if isinstance(fx, dict) and k != 'well': t.setdefault(k, {}).update(fx)
@@ -244,18 +254,21 @@ class Theme:
         self.flag_style = fl.get('style', 'app')
         if self.flag_style not in FLAG_STYLES: raise SystemExit(f'theme {path}: flags.style must be one of {FLAG_STYLES}')
         self.flag_rule = fl.get('rule'); self.flag_states = flag_states(path, fl)
-        self.flag_selection = fl.get('selection', 'outline')
+        self.flag_selection = fl.get('selection', 'face')
         if 'selection' in fl and self.flag_style != 'flat':
             raise SystemExit(f'theme {path}: flags.selection is read only by flags.style "flat"')
         if self.flag_selection not in FLAG_SELECTIONS:
-            raise SystemExit(f'theme {path}: flags.selection must be one of {FLAG_SELECTIONS}, not {self.flag_selection!r}')
-        self.flag_outline_px = fl.get('outline_px', LW)
-        if 'outline_px' in fl:
-            op = fl['outline_px']; bh = BASE_SCENE['flags']['y1'] - BASE_SCENE['flags']['y0']
-            if self.flag_style != 'flat' or self.flag_selection not in ('outline', 'outline+fill'):
-                raise SystemExit(f'theme {path}: flags.outline_px is read only by flags.style "flat" with selection "outline" / "outline+fill"')
-            if not isinstance(op, int) or isinstance(op, bool) or not 1 <= op < bh // 2:
-                raise SystemExit(f'theme {path}: flags.outline_px is a whole number of device px 1..{bh // 2 - 1}, not {op!r}')
+            raise SystemExit(f'theme {path}: flags.selection must be one of {FLAG_SELECTIONS}, not {self.flag_selection!r} '
+                             f'(the white outline retired 2026-10-03)')
+        self.flag_editing_selected = fl.get('editing_selected')
+        if 'editing_selected' in fl:
+            es = fl['editing_selected']
+            if self.flag_style != 'flat' or not any(st[3] for st in self.flag_states):
+                raise SystemExit(f'theme {path}: flags.editing_selected is read only by flags.style "flat" with an editing flag')
+            n_ed = min(len(f['text']) for f, st in zip(BASE_SCENE['flags']['flags'], self.flag_states) if st[3])
+            if es is not None and (not isinstance(es, int) or isinstance(es, bool) or not 0 <= es <= n_ed):
+                raise SystemExit(f'theme {path}: flags.editing_selected is null (the whole text) or a whole number of the '
+                                 f'editing flag\'s leading characters 0..{n_ed}, not {es!r}')
         if self.flag_style == 'bevelled':
             if 'relief' in fl: raise SystemExit(f'theme {path}: flags.relief is the "app" style\'s; "bevelled" draws its own bevel')
             toolkit_rules.flag_bevel(self.flag_rule, (0, 0, 0))    # a missing or malformed flags.rule fails here, in one line
@@ -464,9 +477,11 @@ def flag_states(path, fl):
     """flags.states -> one (selected, invalid, disabled, editing) per scene flag, left to right: {"selected": [i, ...],
     "invalid": [...], "disabled": [...], "editing": [...]}, each a list of the scene's flag indices (0 = the leftmost);
     a flag the lists do not name is unselected, valid and enabled, a scene flag measured selected stays selected.
-    Selected and invalid combine (a red sunken flag); disabled stands alone (a disabled button is neither pushed nor
-    red); editing stands alone too (the in-place editor's box replaces every other face; flags.style "flat" only). Read
-    by flags.style "bevelled" and "flat" (draw_flags), so one mock shows every state."""
+    Selected and invalid combine (a red sunken flag; flat: the bright selected red); disabled is never invalid (the
+    app's ladder: disabled wins) and combines with selected for flags.style "flat" alone (the app's provisional
+    selected-disabled arm, 2026-10-03; a bevelled disabled button is never pushed); editing combines with invalid alone
+    (the in-place editor over an invalid marker takes its selected red; flags.style "flat" only). Read by flags.style
+    "bevelled" and "flat" (draw_flags), so one mock shows every state."""
     n = len(BASE_SCENE['flags']['flags']); st = fl.get('states', {})
     if (not isinstance(st, dict) or set(st) - set(FLAG_STATES)
             or not all(isinstance(v, list) and len(set(v)) == len(v)
@@ -474,10 +489,14 @@ def flag_states(path, fl):
         raise SystemExit(f'theme {path}: flags.states is {{"selected": [i, ...], "invalid": [...], "disabled": [...]}}, the scene\'s '
                          f'flag indices 0..{n - 1} left to right, each at most once per list, not {st!r}')
     dis = set(st.get('disabled', [])); ed = set(st.get('editing', []))
-    if dis & (set(st.get('selected', [])) | set(st.get('invalid', []))):
-        raise SystemExit(f'theme {path}: flags.states: a disabled flag is neither selected nor invalid ({sorted(dis)})')
-    if ed & (set(st.get('selected', [])) | set(st.get('invalid', [])) | dis):
-        raise SystemExit(f'theme {path}: flags.states: an editing flag is in no other list ({sorted(ed)})')
+    if dis & set(st.get('invalid', [])):
+        raise SystemExit(f'theme {path}: flags.states: a disabled flag is not invalid ({sorted(dis)}; disabled wins)')
+    if dis & set(st.get('selected', [])) and fl.get('style') != 'flat':
+        raise SystemExit(f'theme {path}: flags.states: a selected disabled flag is read only by flags.style "flat"')
+    if ed & (set(st.get('selected', [])) | dis):
+        raise SystemExit(f'theme {path}: flags.states: an editing flag is in no other list but "invalid" ({sorted(ed)})')
+    if ed & set(st.get('invalid', [])) and fl.get('style') != 'flat':
+        raise SystemExit(f'theme {path}: flags.states: an invalid editing flag is read only by flags.style "flat"')
     return [(i not in ed and (i in st.get('selected', []) or BASE_SCENE['flags']['flags'][i].get('selected', False)),
              i in st.get('invalid', []), i in dis, i in ed) for i in range(n)]
 
@@ -1346,20 +1365,37 @@ def flat_flag_box(th, f):
     x0 = f['x'] - LW
     return x0, F['y0'], x0 + 2 * LW + flag_fill_w(th, f), F['y1']
 
-def flat_edit_colours(th):
-    """flags.style "flat": the EDITING flag's (face, selection fill, selected text): the theme's `field_ground`
-    (Windows' Window), `selected_fill` (Hilight) and `selected_text` (HilightText), each as the theme states it, else
-    Windows' defaults #FFFFFF, #000080, #FFFFFF. `selected_fill` is read only when the theme states it (Theme.stated):
-    its renderer default is the app's constant, kept for down_face, not Windows' Hilight."""
-    sf = th.get('selected_fill') if 'selected_fill' in th.stated else C.parse_colour('#000080')
-    return th.get('field_ground'), sf, th.get('selected_text')
+def flat_selection_fill(th):
+    """flags.style "flat": the selected pair's fill (Windows' Hilight) -- `selected_fill` as the theme states it, else
+    Windows' #000080. `selected_fill` is read only when the theme states it (Theme.stated): its renderer default is the
+    app's constant, kept for down_face, not Windows' Hilight."""
+    return th.get('selected_fill') if 'selected_fill' in th.stated else C.parse_colour('#000080')
+
+def flat_selected_face(th, i):
+    """flags.style "flat": scene flag i's SELECTED FACE, the app's (architect 2026-10-03, the colour loop):
+    `flag_fill_red_sel` over an invalid flag ("bright red means selected and error"), else `flag_fill_sel` -- a
+    selected disabled flag's too (the provisional arm)."""
+    sel, red, dis, ed = th.flag_states[i]
+    return th.get('flag_fill_red_sel' if red and not dis else 'flag_fill_sel')
+
+def flat_edit_colours(th, i):
+    """flags.style "flat": the EDITING flag i's (face, text, selection fill, selected text), the app's in-place editor
+    (render_flag_editor_box, architect 2026-10-03, set BX): THE SELECTED FLAG OPENED FOR EDIT -- its face the flag's
+    selected face (flat_selected_face: `flag_fill_sel`, or `flag_fill_red_sel` over an invalid flag; the field pair
+    plays no part), its text `flag_label_sel`, the selected substring in the selected pair: `selected_fill`
+    (flat_selection_fill) under `selected_text` (Windows' HilightText, #FFFFFF where the theme states none)."""
+    return flat_selected_face(th, i), th.get('flag_label_sel'), flat_selection_fill(th), th.get('selected_text')
 
 def flat_stem_colour(th, i):
-    """flags.style "flat": scene flag i's stem colour, or None (no stem): the face's (`flag_fill`, `flag_fill_red`
-    when invalid; selection keeps the face), the EDITING flag's the marker's own `flag_fill` (its face is the editor's
-    field, and the marker it edits keeps its stem, as the app's editor box does), a disabled flag none."""
+    """flags.style "flat": scene flag i's stem colour, or None (no stem): THE SELECTED FACE on a selected flag under
+    flags.selection "face" (the app's: the selected flag's face and stem take the selected colour) and on the EDITING
+    flag (the edited marker is the selected one, the app's editor stem), else the face's (`flag_fill`, `flag_fill_red`
+    when invalid; the "underline" and "fill" mock forms keep the marker's own); a disabled flag none, selected or
+    not."""
     sel, red, dis, ed = th.flag_states[i]
-    return None if dis else th.get('flag_fill_red' if red and not ed else 'flag_fill')
+    if dis: return None
+    if ed or (sel and th.flag_selection == 'face'): return flat_selected_face(th, i)
+    return th.get('flag_fill_red' if red else 'flag_fill')
 
 def face_underline(family, size_px):
     """The face's OWN UNDERLINE at size_px -> (top, thickness), device px as unrounded doubles, the top measured DOWN
@@ -1391,58 +1427,72 @@ def draw_flags_flat(cr, th):
     """flags.style "flat": THE ACID FLAG (architect 2026-10-03, late, the bevelled flag retired as the candidate: "a
     3D surface with a cut through it, and when you press it the cut goes the opposite direction"). The box is the
     app style's (flat_flag_box): a ONE-LW OUTLINE on all four sides, `flag_border` (the catalog themes alias it to
-    `@bevel_dkshadow`, the theme's dark colour), the face inside it filled flat, no bevel, the label at the app
-    style's seat (x border_w + pad_l past the box's left, the scene's baseline). THE STEM leaves from the box's FIRST
-    FACE COLUMN and runs down CROSSING THE BOTTOM OUTLINE, drawn over it here (one LW wide, FLAG_STEM_W), then on
-    through the well's top lines into the canvas (draw_stems), so the face, the outline's crossing and the stem are
-    one same-colour column. THE STATES (flags.states): unselected = the face `flag_fill`, the label `flag_label`;
-    SELECTED = the outline `flag_border_sel` (white), the face, label and stem unchanged, no nudge; INVALID = the face
-    `flag_fill_red`, the label `flag_label_red` (with selected: the white outline over it). flags.selection
-    "underline" (architect 2026-10-03, late; Windows 95 underlined every menu and button accelerator letter) changes
-    SELECTED alone: the label's text UNDERLINED and nothing else -- the outline stays `flag_border`, no nudge, no
-    width or height change -- at Roboto's own underline position and thickness at the label's size
+    `@bevel_dkshadow`, the theme's dark colour) in every state but editing, the face inside it filled flat, no bevel,
+    the label at the app style's seat (x border_w + pad_l past the box's left, the scene's baseline). THE STEM leaves
+    from the box's FIRST FACE COLUMN and runs down CROSSING THE BOTTOM OUTLINE, drawn over it here (one LW wide,
+    FLAG_STEM_W), then on through the well's top lines into the canvas (draw_stems), so the face, the outline's
+    crossing and the stem are one same-colour column (flat_stem_colour). THE STATES (flags.states): unselected = the
+    face `flag_fill`, the label `flag_label`; INVALID = the face `flag_fill_red`, the label `flag_label_red`;
+    SELECTED under flags.selection "face" (the app's, architect 2026-10-03, the colour loop: A BRIGHTER FACE, NOTHING
+    WHITE) = the face and the stem the selected face (`flag_fill_sel`, or `flag_fill_red_sel` when invalid), the label
+    `flag_label_sel`, the outline unchanged; DISABLED = the face `ground`, the label ENGRAVED (in `emboss_hilight` one
+    LW right and down, then in `bevel_shadow` at its place), no stem; SELECTED DISABLED (the app's provisional arm,
+    Windows 95's highlighted disabled menu item) = the face `flag_fill_sel`, the label FLAT in `bevel_shadow` (no
+    emboss), no stem; EDITING = the in-place editor, the selected flag opened for edit (flat_edit_colours): the face
+    the flag's selected face (`flag_fill_red_sel` over an invalid flag), the outline `flag_border_edit` (black, the
+    window frame), the text `flag_label_sel` with its selected substring -- the whole text as the editor opens, or the
+    first flags.editing_selected characters -- in the selected pair: the `selected_fill` band over the face's rows
+    inside the outline, its columns the nearbyint of the run's origin and of the selected run's end (the app's band,
+    render_flag_editor_box; at least one column), the glyphs in `selected_text` clipped to it and in `flag_label_sel`
+    clipped to its complement, so no pixel takes both inks; the caret is not drawn (its blink's dark half); the box
+    keeps its width (architect: "the extending part is not necessary"), the stem the selected face. A refused Enter
+    recolours nothing in the app (the red frame retired, 2026-10-03), so there is no refusal state to draw.
+    THE SELECTION'S OTHER FORMS (mock options): "underline" (architect 2026-10-03, late; Windows 95 underlined every
+    menu and button accelerator letter) changes SELECTED alone: the label's text UNDERLINED and nothing else -- no
+    nudge, no width or height change -- at Roboto's own underline position and thickness at the label's size
     (flat_underline_rect), in the label's colour, straight through any descender (no skip-ink, as Windows drew it),
-    across the shaped run's advance; EDITING = the in-place
-    editor as it opens with its whole text selected: the face the field ground, the outline `flag_border_edit`
-    (black, the window frame), the label drawn as SELECTED TEXT -- the selection fill behind it over the face's rows
-    inside the outline and across the run's columns (the app's band, render_flag_editor_box: its columns the
-    nearbyint of the run's origin and end), the glyphs in the selected text colour clipped to that band
-    (flat_edit_colours) -- the box keeping its width (architect: "the extending part is not necessary"), the stem the
-    marker's `flag_fill` (flat_stem_colour); DISABLED = the face `ground`, the outline `flag_border`, the label
-    ENGRAVED (in `emboss_hilight` one LW right and down, then in `bevel_shadow` at its place), no stem.
-    THE SELECTION'S OTHER FORMS (step 11, 2026-10-03, mock options): "outline" paints the white ring
-    flags.outline_px device px wide (default LW, step 5's; the app's one Windows px is 3 at 275 %) INWARD from the
-    box's outer edge, the box's size unchanged, the face inside it, the stem crossing the ring's bottom rows; "fill"
-    the face in the selected pair -- `selected_fill` behind (flat_edit_colours' fill, Windows' #000080 where the
-    theme states none), the label in `selected_text` -- the outline `flag_border`, the stem the marker's own
-    (flat_stem_colour, as the editing flag keeps it); "outline+fill" both: the white ring round the selected face."""
+    across the shaped run's advance; "fill" (step 11) the face in the selected pair -- `selected_fill` behind
+    (flat_selection_fill, Windows' #000080 where the theme states none), the label in `selected_text` -- the stem the
+    marker's own (flat_stem_colour). Neither applies to a disabled flag, which shows only the "face" form's arm."""
     F = SCENE['flags']; px = ui_font_px(th)
     for i, f in enumerate(F['flags']):
         x0, y0, x1, y1 = flat_flag_box(th, f); sel, red, dis, ed = th.flag_states[i]
-        if ed: face, sel_fill, sel_text = flat_edit_colours(th)
-        else: face = th.get('ground' if dis else 'flag_fill_red' if red else 'flag_fill')
-        ul = sel and th.flag_selection == 'underline'
-        ol = sel and th.flag_selection in ('outline', 'outline+fill')
-        sf = sel and th.flag_selection in ('fill', 'outline+fill')
-        if sf: face = flat_edit_colours(th)[1]
-        ring = th.flag_outline_px if ol else LW
-        border = th.get('flag_border_edit' if ed else 'flag_border_sel' if ol else 'flag_border')
+        sface = sel and th.flag_selection == 'face'
+        sf = sel and not dis and th.flag_selection == 'fill'
+        ul = sel and not dis and th.flag_selection == 'underline'
+        if ed: face, ed_text, sel_fill, sel_text = flat_edit_colours(th, i)
+        elif sface: face = flat_selected_face(th, i)
+        elif dis: face = th.get('ground')
+        elif sf: face = flat_selection_fill(th)
+        else: face = th.get('flag_fill_red' if red else 'flag_fill')
+        border = th.get('flag_border_edit' if ed else 'flag_border')
         fill(cr, x0, y0, x1, y1, border)                                   # the outline (the face covers its inside)
-        fill(cr, x0 + ring, y0 + ring, x1 - ring, y1 - ring, face)
+        fill(cr, x0 + LW, y0 + LW, x1 - LW, y1 - LW, face)
         sc = flat_stem_colour(th, i)
-        if sc is not None: fill(cr, f['x'], y1 - ring, f['x'] + FLAG_STEM_W, y1, sc)   # the stem over the bottom outline
+        if sc is not None: fill(cr, f['x'], y1 - LW, f['x'] + FLAG_STEM_W, y1, sc)   # the stem over the bottom outline
         lx, ly = x0 + F['border_w'] + F['pad_l'], F['baseline']
-        if dis:
+        if dis and sface:
+            show(cr, C.SANS, px, f['text'], lx, ly, th.get('bevel_shadow'))
+        elif dis:
             show(cr, C.SANS, px, f['text'], lx + LW, ly + LW, th.get('emboss_hilight'))
             show(cr, C.SANS, px, f['text'], lx, ly, th.get('bevel_shadow'))
+        elif ed and th.flag_editing_selected == 0:                         # no selection: the text alone
+            show(cr, C.SANS, px, f['text'], lx, ly, ed_text)
         elif ed:
-            ix0 = int(np.rint(lx)); ix1 = int(np.rint(lx + C.shape(C.SANS, px, f['text'])[1]))
+            n = th.flag_editing_selected
+            run = f['text'] if n is None else f['text'][:n]
+            ix0 = int(np.rint(lx)); ix1 = int(np.rint(lx + C.shape(C.SANS, px, run)[1]))
             bx0, bx1 = max(ix0, x0 + LW), min(max(ix1, ix0 + 1), x1 - LW)
-            fill(cr, bx0, y0 + LW, bx1, y1 - LW, sel_fill)
-            cr.save(); cr.rectangle(bx0, y0 + LW, bx1 - bx0, y1 - y0 - 2 * LW); cr.clip()
+            iy0, iy1 = y0 + LW, y1 - LW
+            fill(cr, bx0, iy0, bx1, iy1, sel_fill)
+            cr.save()                                                      # the text off the band
+            if bx0 > x0 + LW: cr.rectangle(x0 + LW, iy0, bx0 - (x0 + LW), iy1 - iy0)
+            if x1 - LW > bx1: cr.rectangle(bx1, iy0, (x1 - LW) - bx1, iy1 - iy0)
+            cr.clip(); show(cr, C.SANS, px, f['text'], lx, ly, ed_text); cr.restore()
+            cr.save(); cr.rectangle(bx0, iy0, bx1 - bx0, iy1 - iy0); cr.clip()   # the text on the band
             show(cr, C.SANS, px, f['text'], lx, ly, sel_text); cr.restore()
         else:
-            ink = th.get('selected_text' if sf else 'flag_label_red' if red else 'flag_label')
+            ink = th.get('flag_label_sel' if sface else 'selected_text' if sf else 'flag_label_red' if red else 'flag_label')
             show(cr, C.SANS, px, f['text'], lx, ly, ink)
             if ul: fill(cr, *flat_underline_rect(th, f), ink)
 
@@ -1528,7 +1578,7 @@ def draw_stems(cr, th):
             face, _, dis = flag_face(th, i)
             if not dis: fill(cr, f['x'], y0, f['x'] + FLAG_STEM_W, y1, face)
             continue
-        if th.flag_style == 'flat':         # flat_stem_colour: the face's, the editing flag's flag_fill; a disabled flag has none
+        if th.flag_style == 'flat':         # flat_stem_colour: the face's, a selected or editing flag's selected face; a disabled flag has none
             sc = flat_stem_colour(th, i)
             if sc is not None: fill(cr, f['x'], y0, f['x'] + FLAG_STEM_W, y1, sc)
             continue

@@ -246,7 +246,7 @@ std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 // TWO CALLERS, both producers that can write a definition:
 //   * GuiFlagEditor::commit_top_flag_edit — the candidate line's own def
 //     against the rest of the column, the edited row excepted; a hit
-//     refuses (the field's red frame) and commits nothing.
+//     refuses (the field's whole text selected, and a card) and commits nothing.
 //   * GuiInputHandler::run_history_revert — every def of the store the act
 //     PROPOSES, each row excepting itself; a hit refuses the whole act on a
 //     card.
@@ -703,7 +703,7 @@ inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
 // editor's byte cap be derived rather than chosen (kMaxPendingCharsBpm,
 // text_editor.h). On failure returns false and leaves out-params unchanged;
 // the one caller (commit_bpm_edit, flag_editor.cpp) turns every refusal here
-// into the same red frame and the same `BPM edit rejected: invalid syntax`
+// into the same refused field and the same `BPM edit rejected: invalid syntax`
 // card, whichever field was the offender.
 inline bool parse_bpm_bracket(const std::string& s,
                               int& beats, double& lo, double& hi) {

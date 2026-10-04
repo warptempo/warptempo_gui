@@ -491,9 +491,9 @@ struct Viewport {
     //   * THE CARET BLINK — main.cpp's per-tick blink transitions, one per
     //     dialog editor (the flag editor's BPM arm among them, its other two
     //     kinds damaging the top strip instead).
-    //   * THE RED FRAME — every red-frame refusal in settings_editor,
+    //   * THE REFUSAL — every refused commit in settings_editor,
     //     flag_editor's BPM commit and the commit-title editor's blank
-    //     refusal.
+    //     refusal (text_editor::refuse selects the whole text).
     //   * THE CLOSERS — every commit / abandon that deactivates a dialog
     //     editor (settings_editor's applied / unchanged / exit_no_commit,
     //     flag_editor's BPM commit and exit_bpm_mode, and the commit-title

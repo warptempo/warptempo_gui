@@ -27,7 +27,7 @@ struct GuiThemeEntry {
     GuiThemeLevelWords dark;
 };
 
-inline constexpr int kGuiThemeCount = 97;
+inline constexpr int kGuiThemeCount = 98;
 
 inline constexpr GuiThemeEntry kGuiThemeTable[kGuiThemeCount] = {
     {"windows-brick", "Brick", "windows",
@@ -321,4 +321,7 @@ inline constexpr GuiThemeEntry kGuiThemeTable[kGuiThemeCount] = {
     {"warptempo-2026-10-03", "Warptempo 2026-10-03", "warptempo",
      {0x303030, 0xFCFCFC, 0x5E5E5E, 0x434343, 0x1E1E1E, 0x0A0A0A, 0x5E5E5E, 0x96BFDA, 0x000000, 0x141618, 0xFCFCFC},  // light
      {0x353535, 0xFFFFFF, 0x686868, 0x4A4A4A, 0x212121, 0x0B0B0B, 0x9A9A9A, 0xA2CEEB, 0xFFFFFF, 0x16191B, 0xFFFFFF}},  // dark
+    {"warptempo", "warptempo", "warptempo",
+     {0x191919, 0xFFFFFF, 0x212121, 0x1D1D1D, 0x111111, 0x000000, 0x212121, 0x666666, 0xFFFFFF, 0x212121, 0xFFFFFF},  // light
+     {0x353535, 0xFFFFFF, 0x464646, 0x3D3D3D, 0x242424, 0x000000, 0x9A9A9A, 0xB8B8B8, 0xFFFFFF, 0x424242, 0xFFFFFF}},  // dark
 };

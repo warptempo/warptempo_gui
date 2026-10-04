@@ -25,10 +25,12 @@ struct GuiFlagEditor {
     Selection&            selection;
     Undo&                 undo;
     GuiTargetRender&   target_render;
-    // THE RED FRAME'S SECOND READER (architect 2026-08-30, the strictness
-    // ruling): every commit refusal in this cluster composes ONE sentence and
-    // feeds it to the stderr line AND to a normal card, because a field that
-    // turns red says only THAT it refused. The reference sits here rather than
+    // THE REFUSAL'S REASON (architect 2026-08-30, the strictness ruling;
+    // 2026-10-03, the red frame retired): every commit refusal in this cluster
+    // composes ONE sentence and feeds it to the stderr line AND to a normal
+    // card, because the refused field itself only selects its whole text
+    // (text_editor::refuse) and says nothing of why — the card is the
+    // refusal's one statement. The reference sits here rather than
     // in the dispatcher because the reason is composed where the fact lives —
     // the settings editor's own arrangement, and the mirror image of the
     // freeze-adjacent ops clusters, which return their sentences instead
@@ -80,7 +82,7 @@ struct GuiFlagEditor {
     // the signed two-decimal cent bound on warp, the signed whole hop on
     // phase — and satisfy the walls, which are the partner bound plus the
     // tempo window on warp and the partner bound plus the reset's HOP WINDOW
-    // on phase, else the editor stands, red, and a card says which (an
+    // on phase, else the editor stands, its text selected, and a card says which (an
     // editor-owned refusal: a bracket is session state no parser reads, its
     // backstops the sweep's inverted-bracket breach arm). On success
     // the pair is written through that column's one write site
@@ -93,7 +95,7 @@ struct GuiFlagEditor {
 
     void enter_bpm_edit(int idx);
     // Returns true iff the pending buffer parsed and committed (editor
-    // closed). False on parse failure (editor stays open, red, and a card
+    // closed). False on parse failure (editor stays open, its text selected, and a card
     // names which of the three bpm refusals it was) or an invalid target. The
     // caller fires render_bpm_sweep() on true.
     bool commit_bpm_edit();

@@ -90,9 +90,9 @@ bool parse_signed_hops(const std::string& v, int& out) {
 
 void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
-    // The strip repaint below is the whole damage of a close, a refused
-    // field's red frame included: the frame is the field's own and reaches
-    // no stem (architect 2026-10-03).
+    // The strip repaint below is the whole damage of a close: the field and
+    // the stem crossing its frame are the strip's (render_flag_editor_box),
+    // and the stem's run below takes the flag cache's own damage.
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
 }
@@ -329,8 +329,8 @@ void GuiFlagEditor::commit_iter_bound_edit() {
         text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_top_strip();
         // ONE COMPOSER, TWO READERS: the stderr line keeps the offending
-        // token after the sentence; the card does not, that text standing in
-        // the red field the refusal leaves.
+        // token after the sentence; the card does not, that text standing
+        // selected in the field the refusal leaves.
         const std::string refusal = "Range bound rejected: " + why;
         std::fprintf(stderr, "warptempo_gui: %s: %s\n",
                      refusal.c_str(), next.c_str());
@@ -439,10 +439,11 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     }
     const GuiPhaseResetMarker& live = pv_const[static_cast<size_t>(idx)];
 
-    // The warp arm's refuse composer verbatim: `red = true`, a top-strip
-    // repaint, one stderr line keeping the offending token, one normal card
-    // carrying the sentence alone (that text standing in the red field the
-    // refusal leaves), and the session left open for correction.
+    // The warp arm's refuse composer verbatim: text_editor::refuse (the whole
+    // text selected), a top-strip repaint, one stderr line keeping the
+    // offending token, one normal card carrying the sentence alone (that text
+    // standing selected in the field the refusal leaves), and the session
+    // left open for correction.
     auto refuse = [&](const std::string& why) {
         text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_top_strip();
@@ -545,8 +546,8 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
 // label_def changes onto every other marker that referenced the old
 // name. Pushes one undo entry covering all touched markers.
 //
-// On failure: sets `red`, leaves pending/cursor intact, leaves the
-// editor active. The red frame CALLS the loader's own line predicate, no
+// On failure: selects the whole pending text (text_editor::refuse), cards
+// the reason, leaves the editor active. The refusal CALLS the loader's own line predicate, no
 // second grammar, so a payload loads iff it commits; the load's face of the
 // same function is load-fatal.
 void GuiFlagEditor::commit_top_flag_edit() {
@@ -938,8 +939,8 @@ void GuiFlagEditor::enter_bpm_edit(int idx) {
 
 // Commit the BPM editor's pending buffer. Strict syntax via
 // parse_bpm_bracket, then the derived-tempo bracket gate below. On
-// refusal the editor stays open with a red
-// outline and false is returned; on success the parsed values are stored
+// refusal the editor stays open with its text selected and a card, and
+// false is returned; on success the parsed values are stored
 // on the marker (the marker is already the BPM owner), the editor closes,
 // and true is returned. No undo entry — BPM values are session-only,
 // treated like view state. The Enter dispatch fires render_bpm_sweep()
@@ -978,7 +979,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     // every cell: if either endpoint bpm refuses — the derived base tempo
     // lands outside [kTempoMinCents, kTempoMaxCents], the derived scale
     // outside [kScaleMin, kScaleMax], or any rescaled marker outside the
-    // tempo bracket — the commit refuses with the red frame like any invalid
+    // tempo bracket — the commit refuses with its card like any invalid
     // editor value. Never clamp: a clamped
     // derivation would silently mistune the span. Gated on a well-formed
     // span (owner before endpoint, positive duration); without one,

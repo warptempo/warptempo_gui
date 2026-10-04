@@ -3327,11 +3327,11 @@ struct SettingsPopupItem {
 // which moved `GUI Scale` from the first row to the device group's head, the
 // group keeping kDeviceConfigKeys' own order.
 //
-// THE ELEVEN COLOUR KEYS JOINED 2026-10-03 (architect: the theme, its level
+// THE FOURTEEN COLOUR KEYS JOINED 2026-10-03 (architect: the theme, its level
 // and the program's colours are device keys with Settings rows), after
 // `Projects Path` in kDeviceConfigKeys' order, behind A SECOND SEPARATOR: a
 // Windows menu groups related items between separators, and the colour rows
-// are one group of eleven, longer than the rest of the device half together.
+// are one group of fourteen, longer than the rest of the device half together.
 // Each row's label is its key's name in Title Case.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Title",               "title",         false},
@@ -3348,8 +3348,11 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Waveform Canvas",     "waveform_canvas",  false},
     {"Waveform Outline",    "waveform_outline", false},
     {"Flag Face",           "flag_face",        false},
+    {"Flag Face Selected",  "flag_face_selected", false},
     {"Flag Label",          "flag_label",       false},
+    {"Flag Label Selected", "flag_label_selected", false},
     {"Invalid Face",        "invalid_face",     false},
+    {"Invalid Face Selected", "invalid_face_selected", false},
     {"Invalid Label",       "invalid_label",    false},
     {"Playhead Head",       "playhead_head",    false},
     {"Playhead Stem",       "playhead_stem",    false},
@@ -7090,10 +7093,12 @@ struct AppState {
     // history" means here, are at GuiHistoryDiff, history_diff.h).
     //
     // WHAT IT SHOWS. While it stands the marker lane paints NO live marker.
-    // In their place it paints ONE COMMIT'S DELTA against the session: a GREEN
-    // flag per line the session has and that commit did not, a RED flag per line
-    // that commit had and the session dropped, and ONE DOUBLE-WIDTH flag per
-    // same-frame pair (red half then, green half now). The flags sit at their
+    // In their place it paints ONE COMMIT'S DELTA against the session: a flag
+    // per line the session has and that commit did not (`[+]`), a flag per line
+    // that commit had and the session dropped (`[-]`), and ONE DOUBLE-WIDTH
+    // flag per same-frame pair (the removed half then, the added half now), all
+    // in the one flag colour, the label's sign telling them apart
+    // (render_history_diff_flags). The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
     // marker stands exactly where it stood. Row 8's state cell, beside the
     // clock, carries the walk line: the member's position, then the
@@ -8174,7 +8179,7 @@ struct AppState {
     // "shall I?" and the question "under what message?" are the same pause, and
     // only the second one carries information — a bare Enter is the old `y`.
     // Esc abandons with nothing written, and an empty or whitespace-only buffer
-    // refuses with the red frame rather than committing an unnamed checkpoint.
+    // refuses with a card rather than committing an unnamed checkpoint.
     // A dialog modal like the two above, with its own State so the paint
     // regions stay independent; it can only be open while the history mode
     // stands, which is what keeps it out of every other surface's way.
@@ -8368,7 +8373,7 @@ struct AppState {
         // returns, so no card raised by a worker, a pointer gesture or a paint
         // can ever read a stale true. It lives here rather than being threaded
         // through the raise sites because the raises are everywhere — the
-        // gates, the ops' returned refusals, the red frames — and one bit set
+        // gates, the ops' returned refusals, the editors' refusals — and one bit set
         // where the event arrives cannot drift from the event the way a
         // parameter copied down a dozen call chains would.
         bool                             held_repeat_dispatch = false;

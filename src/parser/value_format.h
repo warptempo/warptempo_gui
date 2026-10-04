@@ -31,7 +31,7 @@
 // tempo, sweep-derived base tempo) spans the multiplicatively symmetric
 // [0.25, 4.00] (4 = 1/0.25), held as integer cents [25, 400] so every
 // bracket comparison — adversarial load-fatal, the flag editor's typed-tempo
-// red flash (its candidate canonical line runs through this same strict
+// refusal (its candidate canonical line runs through this same strict
 // parse, so the editor and the load share one bracket compare), the bare
 // Up/Down cent step's CONSTRUCTIVE CLAMP at adjust_tempo_cents (its group
 // arm refusing at the same edge instead), the bpm derivation's refusal
@@ -44,7 +44,7 @@
 // below by 0.25 * 0.5 * 0.5 = 1/16 — the bound the target-view whole-frame
 // nudge guarantee is computed from. Absurd magnitudes (1e307 tempos, 2^53
 // bpm bounds) are adversarial, not use cases: every GUI input surface
-// enforces these bounds — the flag and settings editors' red-flash refusals,
+// enforces these bounds — the flag and settings editors' refusals,
 // each routed through the very strict parser the load itself uses (the flag
 // payload through parse_single_canonical_line, the settings block through the
 // whole-file schema load), the bare Up/Down cent step's constructive clamp,

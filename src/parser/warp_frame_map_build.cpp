@@ -796,7 +796,7 @@ std::string resolved_marker_payload(
 // moves: the capitalization is the 2026-08-02 frozen grant's ("capitalize for
 // correct english... but change nothing else"), which that day's terminal pass
 // extended to every other frozen refusal reaching the GUI — the ones ending at
-// stderr or at an editor's red flash — so the case is uniform across the tree
+// stderr or at an editor's refusal card — so the case is uniform across the tree
 // and no distinction rests on where a string lands. The CLI prints these same
 // strings and its bytes move with them — accepted under the grant, since one
 // string cannot serve two cases. Wording, punctuation and vocabulary are

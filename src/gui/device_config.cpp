@@ -19,7 +19,7 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SIXTEEN keys; the count's
+// set the shared scanner enforces after the loop (NINETEEN keys; the count's
 // succession, up to seventeen with the tuning phases of 2026-09-23..27, is
 // the header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
 // with the fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
@@ -32,8 +32,8 @@ namespace {
 // lists because its writer is GUI-side and its reader parser-side;
 // here both halves are in this file, so one list is the honest shape).
 //
-// THE ELEVEN COLOUR KEYS ARE APPENDED (2026-10-03): the theme, its level,
-// then the nine program keys in kProgramColourKeys' order (device_config.h),
+// THE FOURTEEN COLOUR KEYS ARE APPENDED (2026-10-03): the theme, its level,
+// then the twelve program keys in kProgramColourKeys' order (device_config.h),
 // which this list spells out again because the scanner takes a plain array —
 // the static_assert below keeps the two in step.
 constexpr const char* kDeviceConfigKeys[] = {
@@ -48,8 +48,11 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform_canvas",
     "waveform_outline",
     "flag_face",
+    "flag_face_selected",
     "flag_label",
+    "flag_label_selected",
     "invalid_face",
+    "invalid_face_selected",
     "invalid_label",
     "playhead_head",
     "playhead_stem",

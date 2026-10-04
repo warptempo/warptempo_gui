@@ -3142,11 +3142,11 @@ void GuiInputHandler::commit_title_editor_exit_no_commit() {
 
 // Enter: run the act under the typed title.
 //
-// A BLANK BUFFER IS A RED FRAME, not a commit: git would take an empty message
+// A BLANK BUFFER IS A REFUSAL, not a commit: git would take an empty message
 // only under --allow-empty-message, and a checkpoint nobody can name is not a
 // thing this product writes. Whitespace-only counts as blank (ASCII whitespace
 // in the "C"
-// locale — the settings editor's own trim rule), and the flash leaves the
+// locale — the settings editor's own trim rule), and the refusal leaves the
 // editor open with the text in place to be corrected, which is every editor's
 // refusal shape here. A constructive refusal of a legal but unhonorable
 // keystroke sequence, pre-save and pre-dispatch, and editor-owned: the one
@@ -3170,8 +3170,8 @@ void GuiInputHandler::commit_title_editor_commit() {
         text_editor::refuse(app.commit_title_editor);
         viewport.invalidate_modal_dialog_area();
         // THE CARD IS THE WHOLE MESSAGE HERE (architect 2026-08-30): this
-        // refusal never had a stderr line and gains none — the red field says
-        // that it refused, the card says why.
+        // refusal never had a stderr line and gains none — the card is the
+        // refusal's one statement, the field only selecting its text.
         notifications.notify(AppState::NotificationClass::Normal,
                              "Enter a title for the checkpoint");
         return;
@@ -6713,8 +6713,8 @@ bool GuiInputHandler::route_modal_editor_key(
         return true;
     }
     // THE FIELD HAD NO ROOM FOR THE CHARACTER (architect 2026-08-30): consumed
-    // and repainted exactly as Consumed is — the editor has already set red and
-    // left the buffer alone — plus the card the red field cannot say. This is
+    // and repainted exactly as Consumed is — the editor has already left the
+    // buffer alone — plus the card that says why nothing went in. This is
     // the ONE place every editor's keys pass through, which is why the sentence
     // sits here and not once per editor.
     if (action == text_editor::KeyAction::OverCapacity) {
@@ -9088,8 +9088,8 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 // Enter commits + renders + closes in one action.
                 // A successful commit stores the values on the owner and
                 // closes the editor; only then does the BPM sweep fire. A
-                // parse failure leaves the editor open (red) and renders
-                // nothing.
+                // parse failure leaves the editor open (its text selected,
+                // a card saying why) and renders nothing.
                 if (flag_editor.commit_bpm_edit()) {
                     // render_bpm_sweep owns the mode teardown on its success
                     // path: after the batch is built and accepted (dispatched,
@@ -9111,7 +9111,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 } else if (!text_editor::is_active(app.top_flag_editor)) {
                     // commit_bpm_edit closed the editor without committing
                     // (the invalid-target backstop): take the mode down with
-                    // it. A red-frame refusal leaves the editor open and
+                    // it. A refusal leaves the editor open and
                     // deliberately does not land here.
                     flag_editor.exit_bpm_mode();
                 }
@@ -9125,8 +9125,8 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     }
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
         // The ITERATION BOUND editor: the payload editor's route — the same
-        // modal route, the same top-strip repaint, its whole surface (the
-        // red frame of a refusal included) being the field in the strip.
+        // modal route, the same top-strip repaint, its whole surface (a
+        // refusal's selected text included) being the field in the strip.
         return route_modal_editor_key(
             app.top_flag_editor, key, mods,
             /*autocomplete=*/nullptr,
@@ -9135,9 +9135,9 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             [this] { viewport.invalidate_top_strip(); });
     }
     // FlagPayload: the same modal route, the same top-strip repaint. A
-    // refusal's RED FRAME is the field's own (render_flag_editor_box) and
-    // reaches no stem (architect 2026-10-03), so the strip is the whole
-    // damage of its every flip.
+    // refusal recolours nothing and only selects the field's text
+    // (render_flag_editor_box, architect 2026-10-03), so the strip is the
+    // whole damage of its every keystroke.
     return route_modal_editor_key(
         app.top_flag_editor, key, mods,
         /*autocomplete=*/nullptr,

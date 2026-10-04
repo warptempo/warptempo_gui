@@ -26,7 +26,7 @@
 #   1.0, into a saturated olive; its HSV saturation is 0.118). The ratio's numerator is the level's ruled luminance
 #   TARGET, not the luminance the searched ground lands on: that is AS02's own arithmetic, and the landed one
 #   (#353535 for #C0C0C0) would land a ground one blue step off AS02's mock (its card #494940). An entry whose
-#   recorded ground is darker than the target (the warptempo entry) has a ratio above 1, so its two grounds LIGHTEN
+#   recorded ground is darker than the target (both warptempo entries) has a ratio above 1, so its two grounds LIGHTEN
 #   with its face — the rule as ruled, which the search caps at the brightest colour of the hue and saturation. THE
 #   TEXT ON EACH OF THE TWO IS THE LEVEL'S LABEL #FFFFFF, mock AS02's rule.
 # THE INFO PAIR IS NOT CARRIED (architect 2026-10-03, on mock set AY: "the card should just become ground"): the

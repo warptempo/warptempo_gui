@@ -4060,11 +4060,14 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // the seed grain's end, derived in the block below from the same frame
     // and the same map the paint sample reads.
     int64_t width_samples;
-    // The reset's CLASS, for the ring's colour: the column's RESTING red set
-    // keyed by store index, the set and the index the flag pass reads for
-    // this reset's stem — at rest and through a drag alike, the drag writing
-    // only its proposal, so the ring and the stem share one class throughout.
+    // The reset's CLASS and SELECTION, for the ring's colour: the column's
+    // RESTING red set keyed by store index, the set and the index the flag
+    // pass reads for this reset's stem — at rest and through a drag alike, the
+    // drag writing only its proposal, so the ring and the stem share one class
+    // throughout — and the live selection the same pass reads for the stem's
+    // selected face.
     bool red_class = false;
+    bool selected  = false;
     {
         assert(app.active_audio_view == 'T');   // P stands in target alone
 
@@ -4077,6 +4080,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // label cascade).
         if (marker.disabled) return out;
         red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
+        selected  = app.selected_markers.count(idx) > 0;
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
         // — the SAME map the flags, stems, drag overlay and riding playhead read,
@@ -4177,6 +4181,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     out.x0    = x0;
     out.x1    = x1;
     out.red   = red_class;
+    out.selected = selected;
     return out;
 }
 
@@ -4216,15 +4221,16 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
     // annotates. It wears what that stem wears: the `invalid_face` key when
     // the reset is in the column's red set (band.red), the `flag_face` key
-    // otherwise; selection moves neither (architect 2026-10-03: the selected
-    // flag's white outline is its box's alone). phase_reset_stem_color asks
-    // the one ladder rather than restating it, so ring and stem cannot drift.
+    // otherwise, each its selected key while the reset is selected
+    // (band.selected; architect 2026-10-03, the selected face takes the stem
+    // with it). phase_reset_stem_color asks the one ladder rather than
+    // restating it, so ring and stem cannot drift.
     // DAMAGE: this pass paints live in on_redraw from app state, never from a
     // cached surface, and every change to its colour's inputs misses the flag
     // cache's fingerprint, whose rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
     // repaint; a palette install damages the whole window.
-    const GuiColor ring = phase_reset_stem_color(band.red);
+    const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
     set_palette_source(cr, ring);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
@@ -4425,9 +4431,9 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (app.marker_stems.empty()) return;
 
     // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
-    // refused commit is its frame alone (render_flag_editor_box), never the
-    // stem, so no paint-time override stands here — the stash's colour is the
-    // marker's resolved face, the whole answer.
+    // refused commit recolours nothing, so no paint-time override stands
+    // here — the stash's colour is the marker's resolved stem, the whole
+    // answer.
     cairo_save(cr);
     const GuiRect band = waveform_stem_band(area);
     const double y0 = static_cast<double>(band.y);
@@ -6008,8 +6014,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
         // THE FIELD CHROME (architect 2026-10-02, the Windows text field): a
         // PLAIN SUNKEN edge (EDGE_SUNKEN, two relief lines) on the theme's
-        // FIELD ground (architect 2026-10-03, unified fields: the flag editor
-        // takes the same pair), square. No outline says hover or focus: a
+        // FIELD ground (architect 2026-10-03; the flag editor is the selected
+        // flag opened for edit and keeps no field pair), square. No outline
+        // says hover or focus: a
         // FOCUSED FIELD SHOWS ITS CARET and nothing else, the caret painting
         // only while the ring has not stepped onto a button (below).
         //
@@ -6018,30 +6025,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (AppState::modal_dialog_focus), which includes the open, where the
         // user is there to type.
         //
-        // A REFUSED ENTER TURNS THE FRAME RED (architect 2026-10-03): BOTH
-        // LINES OF THE SUNKEN EDGE, all four sides, in the `invalid_face` key,
-        // with the whole text selected (text_editor::refuse) — the first
-        // keystroke that edits replaces the text and the edge returns. The
-        // face stays the field ground and the frame itself carries no glyph;
-        // the red frame says only THAT the value was refused, and the
-        // reason card the refusing commit posts (the owner's own sentence,
-        // GuiFlagEditor::notifications and the settings editor's equivalent)
-        // says why, standing beside it — THE CARD STAYS (architect
-        // 2026-10-03: the frame says that a value was refused, the card says
-        // why). The flag editor's frame is the same rule on its one black
-        // line (render_flag_editor_box).
+        // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red
+        // outline and the card is redundant"; the red frame retired from both
+        // editors): the edge stays its plain sunken pair and the face the
+        // field ground, the whole text is selected (text_editor::refuse) so
+        // the first keystroke replaces it, and the reason card the refusing
+        // commit posts (the owner's own sentence, GuiFlagEditor::notifications
+        // and the settings editor's equivalent) says why. The flag editor
+        // takes the same rule (render_flag_editor_box).
         const bool field_focused = app.modal_dialog_focus < 0;
         paint_cell_rect(cr, field_inner, palette().field_ground);
-        if (ed->red) {
-            const int lw = relief_line_px();
-            paint_relief_line_frame(cr, field_outer, palette().invalid_face);
-            paint_relief_line_frame(
-                cr, GuiRect{field_outer.x + lw, field_outer.y + lw,
-                            field_outer.w - 2 * lw, field_outer.h - 2 * lw},
-                palette().invalid_face);
-        } else {
-            paint_relief_plain_sunken(cr, field_outer);
-        }
+        paint_relief_plain_sunken(cr, field_outer);
 
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, ed->pending);

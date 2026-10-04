@@ -16,19 +16,19 @@ struct GuiInputHandler;
 // Settings-prompt editor cluster. Opens on `;`, accepts a single
 // `key=value` line, applies it on Enter, and closes. Same primitive as
 // the flag editor (text_editor::State, kind-dispatched keyboard
-// vocabulary, red on parse failure) but painted as a MODAL ON THE BOTTOM ROW
-// (2026-08-13 — its prefix the label at the row's left pad, the buffer in the
-// sunken field whose edge turns red on a refusal, OK and Cancel right-
-// aligned) instead of over the flag rect.
+// vocabulary, the whole text selected and a card on a refusal) but painted as
+// a MODAL ON THE BOTTOM ROW (2026-08-13 — its prefix the label at the row's
+// left pad, the buffer in the sunken field, OK and Cancel right-aligned)
+// instead of over the flag rect.
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FIFTEEN editable ones the per-device config carries — gui_scale and
+// EIGHTEEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-09-13
-// max_waveform_height, and since 2026-10-03 the eleven colour keys (the
-// theme, its level and the nine program colours; the config's key
+// max_waveform_height, and since 2026-10-03 the fourteen colour keys (the
+// theme, its level and the twelve program colours; the config's key
 // last_project is the program's own and has no editor; the hold delay's
 // key, editable for its
 // one-day tuning phase 2026-09-29, is struck, the value hard-coded as
@@ -37,9 +37,9 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — max_waveform_height,
-//    projects_repo, projects_path and the eleven colour keys — in ONE body,
+//    projects_repo, projects_path and the fourteen colour keys — in ONE body,
 //    commit_device_setting: the key's own grammar
-//    owner in device_config.h decides (red frame and card on refusal), the
+//    owner in device_config.h decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
 //    that write is the whole persist, Ctrl+S carrying only the sidecar keys.
 //    projects_repo is in force at once (every reader reads the
@@ -56,7 +56,7 @@ struct GuiInputHandler;
 //    active_markers_view / active_tab_view / per-tab trim /
 //    per-tab read_only / gui_scale):
 //    commit_gui_setting
-//    parses strictly (red-frame on any malformed or out-of-vocabulary value,
+//    parses strictly (a refused commit on any malformed or out-of-vocabulary value,
 //    mirroring the load schema) then applies through the key's own gesture
 //    chokepoint. These are launch/view state: no undo entry, no dirty; a
 //    same-value commit no-op-deactivates like the engine no-op gate.
@@ -67,7 +67,7 @@ struct GuiInputHandler;
 // 3. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown
-//    engine key") with a red-frame and no commit. This arm is also where the
+//    engine key") with a refused commit and no write. This arm is also where the
 //    read-only lock lives since 2026-09-04 (architect: the lock governs the
 //    keys, not the surface): an engine key IS the piece, so a locked active
 //    tab refuses it with the lock's own card, while items 1 and 2 above —
@@ -88,7 +88,7 @@ struct GuiSettingsEditor {
     GuiTargetRender&   target_render;
     GuiPlaybackLifecycle& playback_lifecycle;
     // The card surface, wired 2026-08-30 for the refusals this unit answers
-    // with a sentence: every red frame says its reason on a card, and the
+    // with a sentence: every refused commit says its reason on a card, and the
     // read-only lock says its own at the engine-key commit arm (it stood at
     // open() from 2026-08-30 until 2026-09-04, when the lock moved to the
     // keys). The SETTINGS DROPDOWN's item clicks are the only road onto a
@@ -161,10 +161,10 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `max_waveform_height=`, `projects_repo=`,
-    // `projects_path=` and the eleven colour keys — in one body (the head's
+    // `projects_path=` and the fourteen colour keys — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
-    // refused with the red frame); false otherwise, so commit() goes on to the
+    // refused with a card); false otherwise, so commit() goes on to the
     // routers.
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
@@ -184,7 +184,7 @@ private:
     bool complete_path_value(const std::string& value);
     // GUI-kind key router. Returns true when `key` is a recognized GUI-kind
     // key, in which case the commit is fully handled inside (applied +
-    // deactivated, or refused with the red frame); false when `key` is not a
+    // deactivated, or refused with a card); false when `key` is not a
     // GUI-kind key, so
     // commit() falls through to the engine-key path. Each apply routes through
     // the key's own gesture chokepoint — no parallel state writer.

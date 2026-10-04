@@ -79,7 +79,7 @@ namespace {
 // SYNTHESIZED REPEATS coalesce into one, so the notify chokepoint has to know
 // which kind of fire it is answering — and the raise sites are everywhere on
 // this dispatch (the gates here, the ops' returned GuiOpRefusal sentences, the
-// editors' red frames), so threading a parameter down every chain would be a
+// editors' refusals), so threading a parameter down every chain would be a
 // dozen signatures for one fact that arrives once, at the top, with the event.
 // This guard writes that fact into AppState::Notifications for the length of
 // the dispatch and takes it away again at EVERY return of on_key's body,
@@ -3566,8 +3566,8 @@ bool GuiInputHandler::apply_editor_clipboard(
             // clipboard is precisely the boundary it was written for.
             //
             // AND A PASTE TOO LONG FOR THE FIELD SAYS SO (architect
-            // 2026-08-30): the filter refuses the operation whole and turns the
-            // field red, which says THAT it refused; the card says why. The
+            // 2026-08-30): the filter refuses the operation whole, leaving the
+            // field as it stood, and the card says why. The
             // sentence is here because this is the paste's one site — the
             // keyboard's own over-capacity refusal reports through
             // KeyAction::OverCapacity and cards at route_modal_editor_key.

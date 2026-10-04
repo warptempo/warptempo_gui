@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Sixteen keys live here and nowhere else:
+// piece (architect 2026-08-27). Nineteen keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -24,12 +24,15 @@
 //   theme=<key>              THE CHROME'S THEME, a catalog key of the
 //                            generated table (theme_table.h)
 //   theme_level=<level>      light | dark, the theme's level
-//   waveform_ink=<colour>    THE PROGRAM'S OWN COLOURS, nine keys, each a
+//   waveform_ink=<colour>    THE PROGRAM'S OWN COLOURS, twelve keys, each a
 //   waveform_canvas=         program colour (is_program_colour below): the
 //   waveform_outline=        waveform's ink, canvas and lit inner-bar
-//   flag_face=               outline; the flag's face and its recorded
-//   flag_label=              label; the invalid face and its label; the
+//   flag_face=               outline; the flag's face and its selected
+//   flag_face_selected=      face, its recorded label and the selected
+//   flag_label=              label (one for both faces); the invalid face
+//   flag_label_selected=     and its selected face, and its label; the
 //   invalid_face=            playhead's head and stem
+//   invalid_face_selected=
 //   invalid_label=
 //   playhead_head=
 //   playhead_stem=
@@ -37,9 +40,10 @@
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // max_waveform_height, 2026-09-13, placed right after gui_scale;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
-// them left 2026-09-27, below; the eleven colour keys APPENDED after
-// last_project, 2026-10-03, the theme before its level and the nine program
-// keys in the palette's own order, render.h's GuiPalette);
+// them left 2026-09-27, below; the colour keys APPENDED after
+// last_project, 2026-10-03, the theme before its level and the program
+// keys in the palette's own order, render.h's GuiPalette, each selected
+// face and the selected label right after its sibling);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -139,16 +143,16 @@
 // P3 bytes the same day. A config still carrying either is unknown-key
 // fatal, no migration.
 // THE COLOUR KEYS JOINED 2026-10-03 (architect), and they are SETTLED
-// KEYS, not a tuning phase: the chrome is an imported desktop theme of the
-// era (`theme` at its `theme_level`, read off the generated table — render.h's
-// palette block owns the mapping) and the program's own elements take their
-// colours from nine OPEN keys, every one the user's to set. The defaults are
-// the values the hard-coded palette carried that day (THE PROGRAM COLOUR
-// DEFAULTS, below), and the theme's default is Windows 95 Standard at its
-// DARK level (THE THEME DEFAULTS, below). A config written before that day
-// lacks the eleven and refuses
-// at startup like any other missing key — no migration; the two devices'
-// files gain the lines by hand.
+// KEYS, not a tuning phase: the chrome is a theme of the generated table
+// (`theme` at its `theme_level` — render.h's palette block owns the mapping)
+// and the program's own elements take their colours from twelve OPEN keys,
+// every one the user's to set (the three selected keys joined the nine the
+// same evening, when the selected marker became a brighter face). The
+// defaults are the architect's picks of the colour loop (THE PROGRAM COLOUR
+// DEFAULTS, below), and the theme's default is the `warptempo` entry at its
+// LIGHT level (THE THEME DEFAULTS, below). A config lacking any of the
+// fourteen refuses at startup like any other missing key — no migration; the
+// two devices' files gain the lines by hand.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -162,7 +166,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the sixteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nineteen
 // keys and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -189,7 +193,7 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`,
 // `Max Waveform Height` (since 2026-09-13), `Projects Repository`,
-// `Projects Path` and, since 2026-10-03, a row for each of the eleven colour
+// `Projects Path` and, since 2026-10-03, a row for each of the fourteen colour
 // keys (kSettingsPopupItems, app_state.h) as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
 // writer under the key's own grammar below. Until that day the path keys
@@ -204,7 +208,7 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// sixteen. THE ELEVEN COLOUR KEYS' DEFAULTS ARE ALSO THE TEMPLATES' — both
+// nineteen. THE FOURTEEN COLOUR KEYS' DEFAULTS ARE ALSO THE TEMPLATES' — both
 // backends stamp a default-constructed struct's colours
 // (GuiPlatform::device_config_defaults), so the first-run file of either
 // device carries them.
@@ -229,27 +233,41 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE THEME DEFAULTS (architect 2026-10-03): Windows 95 Standard AT ITS
-    // DARK LEVEL — the theme and its level two separate keys, so the default
-    // look is the one catalog entry darkened by the level arithmetic
-    // (tools/theme_catalog/levels.py), not an entry of its own.
-    std::string theme            = "windows-95-standard";
-    std::string theme_level      = "dark";
-    // THE PROGRAM COLOUR DEFAULTS (architect 2026-10-03: "defaults today's
-    // values") — what the hard-coded palette painted on 2026-10-03, the
-    // record of each at render.h's palette block and its GuiPalette field.
-    std::string waveform_ink     = "#96BFDA";
-    std::string waveform_canvas  = "#141618";
-    std::string waveform_outline = "#6E8DA1";
-    std::string flag_face        = "#8A5EAC";
-    std::string flag_label       = "#000000";
-    std::string invalid_face     = "#BB575A";
-    std::string invalid_label    = "#000000";
-    std::string playhead_head    = "#8B8B8B";
-    std::string playhead_stem    = "#FCFCFC";
+    // THE THEME DEFAULTS (architect 2026-10-03, the colour loop's mock sets
+    // BF..BX): THE `warptempo` ENTRY AT ITS LIGHT LEVEL — the program's own
+    // theme, the architect's pick rather than an import (Windows 95 Standard
+    // darkened in proportion to a ground of luminance 0.010 under white text,
+    // set BA03, with the selection grey of set BM02; its record is
+    // tools/theme_catalog/build.py's chosen_entry). The level is the entry as
+    // recorded; its dark level is whatever levels.py's dark rule makes of it,
+    // which nobody tuned (light / dark as a whole is still in flux).
+    std::string theme            = "warptempo";
+    std::string theme_level      = "light";
+    // THE PROGRAM COLOUR DEFAULTS (architect 2026-10-03, the colour loop) —
+    // the record of each at render.h's palette block and its GuiPalette
+    // field. The waveform a grey ink on a black canvas (the ink may leave the
+    // 216 cube: its steps are the sRGB black-to-white blend in 5 % steps) and
+    // the outline its own rule's output, the ink over the canvas blended 50 %
+    // in linear light; the flag a slate violet under a white label, its
+    // selected face the bright #CCCCFF; the invalid face a dark red under a
+    // white label, its selected face the bright #FF6666 ("bright red means
+    // selected and error"); ONE selected label, black, on both selected faces
+    // (the symmetry); the playhead unchanged.
+    std::string waveform_ink          = "#808080";
+    std::string waveform_canvas       = "#000000";
+    std::string waveform_outline      = "#5C5C5C";
+    std::string flag_face             = "#666699";
+    std::string flag_face_selected    = "#CCCCFF";
+    std::string flag_label            = "#FFFFFF";
+    std::string flag_label_selected   = "#000000";
+    std::string invalid_face          = "#993333";
+    std::string invalid_face_selected = "#FF6666";
+    std::string invalid_label         = "#FFFFFF";
+    std::string playhead_head         = "#8B8B8B";
+    std::string playhead_stem         = "#FCFCFC";
 };
 
-// THE NINE PROGRAM COLOUR KEYS — THE ONE ENUMERATION, in the writer's order
+// THE TWELVE PROGRAM COLOUR KEYS — THE ONE ENUMERATION, in the writer's order
 // (the palette's own, GuiPalette in render.h): the reader's arm, the writer's
 // arm, the settings editor's commit and recall, and install_palette all walk
 // it, so a key cannot be read and not written, or written and not painted.
@@ -258,15 +276,18 @@ struct ProgramColourKey {
     std::string DeviceConfig::* member;
 };
 inline constexpr ProgramColourKey kProgramColourKeys[] = {
-    {"waveform_ink",     &DeviceConfig::waveform_ink},
-    {"waveform_canvas",  &DeviceConfig::waveform_canvas},
-    {"waveform_outline", &DeviceConfig::waveform_outline},
-    {"flag_face",        &DeviceConfig::flag_face},
-    {"flag_label",       &DeviceConfig::flag_label},
-    {"invalid_face",     &DeviceConfig::invalid_face},
-    {"invalid_label",    &DeviceConfig::invalid_label},
-    {"playhead_head",    &DeviceConfig::playhead_head},
-    {"playhead_stem",    &DeviceConfig::playhead_stem},
+    {"waveform_ink",          &DeviceConfig::waveform_ink},
+    {"waveform_canvas",       &DeviceConfig::waveform_canvas},
+    {"waveform_outline",      &DeviceConfig::waveform_outline},
+    {"flag_face",             &DeviceConfig::flag_face},
+    {"flag_face_selected",    &DeviceConfig::flag_face_selected},
+    {"flag_label",            &DeviceConfig::flag_label},
+    {"flag_label_selected",   &DeviceConfig::flag_label_selected},
+    {"invalid_face",          &DeviceConfig::invalid_face},
+    {"invalid_face_selected", &DeviceConfig::invalid_face_selected},
+    {"invalid_label",         &DeviceConfig::invalid_label},
+    {"playhead_head",         &DeviceConfig::playhead_head},
+    {"playhead_stem",         &DeviceConfig::playhead_stem},
 };
 
 // The program colour key named `key`, or null — the readers' one lookup.
@@ -293,8 +314,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE gui_scale RANGE — the ONE owner, moved here from the `.settings` schema
 // 2026-08-27 with the key (architect approval 2026-08-27). Both askers call it
 // and neither respells the bracket: this file's reader, and the settings
-// editor's `gui_scale=` red-frame ("loadable iff it commits", the standing
-// rule).
+// editor's `gui_scale=` refused commit ("loadable iff it commits", the
+// standing rule).
 //
 // THE PERCENT IS DEVICE PX PER WINDOWS-95 PX since 2026-10-02 (architect; the
 // unit's statement is at render.h's scaled_px): the laptop runs 138 (a
@@ -390,7 +411,7 @@ inline bool is_projects_path(const std::string& v) {
 }
 
 // THE GRAMMARS' REASONS, spelled once beside the predicates they explain:
-// the config reader's `bad_value` line and the settings editor's red-frame
+// the config reader's `bad_value` line and the settings editor's refusal
 // card are the two readers of each, so a refusal says the same words on the
 // terminal at startup and on a card at the commit. THE PATH REASONS NAME THE
 // EDGE RULE because that is the fault a hand actually makes: an absolute path
@@ -423,8 +444,8 @@ inline bool is_projects_repo(const std::string& v) {
 }
 
 // THE theme GRAMMAR — the ONE owner: a KEY OF THE GENERATED TABLE
-// (theme_table.h, the catalog's 97 entries), byte for byte. A key the table
-// does not hold is the settings editor's refused commit (its red frame) and,
+// (theme_table.h, the catalog's 98 entries), byte for byte. A key the table
+// does not hold is the settings editor's refused commit (its card) and,
 // in a hand-edited config, the load's first-error hard fail (NO BACKSTOPS FOR
 // ADVERSARIAL USE: no nearest match, no fallback theme). find_theme answers
 // the row itself, for install_palette (render.cpp); the struct is the table's.
@@ -449,7 +470,7 @@ inline bool is_theme_level(const std::string& v) {
     return parse_theme_level(v).has_value();
 }
 
-// THE PROGRAM COLOUR GRAMMAR — the ONE owner for the nine program keys
+// THE PROGRAM COLOUR GRAMMAR — the ONE owner for the twelve program keys
 // (architect 2026-10-03): `#` and six hexadecimal digits, either case, OR one
 // of WINDOWS' TWENTY ALWAYS-SOLID COLOURS by name, lowercase — the colours a
 // 256-colour display's system palette reserved, so every program of the era
@@ -620,11 +641,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIXTEEN KEY COMMITS, and this is their inventory
+// THREE CALL SITES CARRY THE NINETEEN KEY COMMITS, and this is their inventory
 // (re-greped 2026-10-03):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves fourteen keys —
-// `max_waveform_height=`, `projects_repo=`, `projects_path=` and the eleven
+// the settings editor's ONE device-key body, which serves seventeen keys —
+// `max_waveform_height=`, `projects_repo=`, `projects_path=` and the fourteen
 // colour keys (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the cap's arm joined 2026-09-13, the path arm 2026-09-02, the colour arm
 // 2026-10-03); and gui_main's

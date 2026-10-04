@@ -148,7 +148,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // tablet the menu
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
-// the red frame every other refusal there wears, while commit_device_setting's
+// the selected text every other refusal there leaves, while commit_device_setting's
 // three keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
@@ -237,7 +237,7 @@ void GuiSettingsEditor::exit_no_commit() {
 
 // GUI-kind key router. It hands (key, value) to the single grammar owner
 // validate_gui_setting (src/parser/settings_file.cpp — the same check the load
-// schema runs), refuses with the red frame AND CARDS with the returned reason
+// schema runs), refuses (text_editor::refuse) AND CARDS with the returned reason
 // on any
 // malformed or out-of-vocabulary value (2026-08-30: one composed sentence, the
 // stderr line and the card its two readers), and otherwise applies the typed
@@ -254,8 +254,8 @@ void GuiSettingsEditor::exit_no_commit() {
 bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                            const std::string& value) {
     // ONE COMPOSER, TWO READERS (architect 2026-08-30): the refusal sentence
-    // is built once and read by the stderr line and by the card, a red field
-    // saying only THAT it refused.
+    // is built once and read by the stderr line and by the card, the refused
+    // field saying nothing of why (its whole text selected, nothing more).
     auto reject = [&](const std::string& reason) {
         text_editor::refuse(app.settings_editor);
         viewport.invalidate_modal_dialog_area();
@@ -311,7 +311,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
 
     // The shared grammar/vocabulary owner. std::nullopt: `key` is not a
     // GUI-kind key — fall through to the engine path. An error: malformed or
-    // out-of-vocabulary value — red-frame with the returned reason. Otherwise
+    // out-of-vocabulary value — refused with the returned reason. Otherwise
     // route the typed value through the key's gesture chokepoint below. The
     // editor's state-dependent refusals (the trim walls; the read-only-tab trim
     // refusal that stood beside them was deleted 2026-08-07) stay here.
@@ -324,7 +324,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // (`follow=`, `centered=` and `center_on_next_marker=` had arms here
     // until 2026-09-11. The three camera postures left the schema whole that
     // day, so they are UNKNOWN to this editor now and take the unknown-key
-    // refusal below — red frame and a card — like any other name that is not
+    // refusal below — the refused field and a card — like any other name that is not
     // a settable key. The two surviving lamps are reached by their own bare
     // chords and their own icon-row buttons and by nothing else; the third,
     // center_on_next_marker, was deleted 2026-09-13, the Tab walk's framing
@@ -337,8 +337,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // what is left of it (iteration_lock_key_blocked's delta (a)). It asks
         // the REQUESTED value rather than the direction of a flip: under a lit
         // lamp the view is target by invariant, so `S` is the only value that
-        // could move it, and a typed `T` falls to the no-op below. Red frame
-        // plus card, the column arm's own shape and sentence.
+        // could move it, and a typed `T` falls to the no-op below. The refused
+        // field plus card, the column arm's own shape and sentence.
         if (app.iteration_mode_enabled && gv.c == 'S') {
             text_editor::refuse(app.settings_editor);
             viewport.invalidate_modal_dialog_area();
@@ -377,7 +377,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // rather than behind it: the chord refused whichever column it was
         // pressed in, and a typed same-column commit is the same press asking
         // the same question. One press, one answer, whatever the column.
-        // Red frame plus card, this surface's shape, on the GENERIC sentence
+        // The refused field plus card, this surface's shape, on the GENERIC sentence
         // (kIterationLockCard) the gate itself says for every chord it eats.
         if (app.iteration_mode_enabled) {
             text_editor::refuse(app.settings_editor);
@@ -449,7 +449,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     if (suffix == "zoom") {
         // validate_gui_setting already accepted the one continuous
         // [kMinZoom, kMaxZoom] double vocabulary and refused anything else
-        // (the red frame)
+        // (the refused field and its card)
         // (0 and 0.5 included); gv.d carries the level.
         const double v = gv.d;
         if (active) {
@@ -536,7 +536,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // the locked tab is what refused afterwards, and that rule is gone.
         // AN UNLOCK IN EITHER DIRECTION COMMITS under a lit lamp: it can only
         // widen what is reachable, which is why the `gv.b` term is the whole
-        // of the direction test. Red frame plus card, this surface's shape,
+        // of the direction test. The refused field plus card, this surface's shape,
         // with the sentence forked at the one composer. Without this arm the
         // editor — which the Settings dropdown opens under a lit lamp, the
         // lock governing the keys and not the surface — would be a second
@@ -586,7 +586,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // window is always set, so there is nothing to unset. A typed `-1` now
         // fails the SHARED validator (validate_gui_setting, settings_file.h —
         // the same grammar the whole-file load runs, so a spelling is loadable
-        // iff it commits) and refuses with the red frame like any other
+        // iff it commits) and refuses with its card like any other
         // invalid value, with no
         // second spelling of the refusal here. Shift+0 is the maximizer.
         const int64_t v = gv.i64;
@@ -686,8 +686,8 @@ void GuiSettingsEditor::commit() {
     // 3a. GUI-kind keys. Every key that can appear in a `.settings` file is
     // settable here: the router parses strictly and applies through the key's
     // own gesture chokepoint (no parallel writer). It returns true when it has
-    // fully handled the commit (applied + deactivated, or refused with the red
-    // frame); false
+    // fully handled the commit (applied + deactivated, or refused with a
+    // card); false
     // when `key` is not a GUI-kind key, so we fall through to the engine path.
     if (commit_gui_setting(key, value)) return;
 
@@ -725,7 +725,7 @@ void GuiSettingsEditor::commit() {
     // is_canonical_engine_key so an unknown key still hears that it is
     // unknown, and ahead of the value validator because the lock outranks the
     // grammar: a locked tab refuses the key whatever the value would have
-    // been. Red frame plus card, the shape every refusal on this surface
+    // been. The refused field plus card, the shape every refusal on this surface
     // wears.
     //
     // IT IS BOTH LOCKS SINCE 2026-09-10 (authoring_locked, app_state.h): an
@@ -905,7 +905,7 @@ void GuiSettingsEditor::commit() {
 // both as rows), which is what made the arm a body: ONE SHAPE FOR THE TWO.
 // The key's own grammar owner in device_config.h decides —
 // is_projects_repo, is_projects_path, never a second spelling
-// — and a refusal is the red frame and the card with the grammar's own
+// — and a refusal is the refused field and the card with the grammar's own
 // reason, through the composer every other key uses. A value byte-equal to
 // the live one is the consumed no-op every routed GUI-kind key takes (the
 // empty value included) and writes nothing. On success the LIVE STRUCT takes
@@ -953,8 +953,8 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
     // `gui_scale` arm's sentence exactly (the reason after the tag and no key
     // name, the field on screen already showing which key): the refusal
-    // sentence is built once and read by the stderr line and by the card, a
-    // red field saying only THAT it refused.
+    // sentence is built once and read by the stderr line and by the card, the
+    // refused field saying nothing of why.
     auto reject = [&](const char* reason) {
         text_editor::refuse(app.settings_editor);
         viewport.invalidate_modal_dialog_area();
@@ -1010,12 +1010,12 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
-    // THE ELEVEN COLOUR KEYS (architect 2026-10-03; the record at
-    // device_config.h's head): the theme, its level and the nine program
+    // THE FOURTEEN COLOUR KEYS (architect 2026-10-03; the record at
+    // device_config.h's head): the theme, its level and the twelve program
     // colours, each under its one grammar owner in device_config.h — a theme
     // key the generated table does not hold, a level outside light | dark, a
     // colour that is neither `#rrggbb` nor one of the twenty names is the
-    // refusal (the red frame and the card, this body's shape). The value
+    // refusal (the refused field and the card, this body's shape). The value
     // is kept AS TYPED. The commit RE-PAINTS AT ONCE: the palette is
     // installed from the live struct (install_palette, render.h) and the
     // whole window damaged; the flag cache keys the palette's generation and
@@ -1228,9 +1228,9 @@ bool GuiSettingsEditor::autocomplete_value() {
     // ruling's two capacity sentences answer what the USER just supplied — a
     // typed character, a pasted clipboard — while this text is the product's
     // own recall of a value it already holds, so a field too short for it is a
-    // cap that needs widening, not a refusal to explain. It leaves the red the
-    // filter set, and Tab still walks (the buffer advanced, the prefix having
-    // been rewritten above).
+    // cap that needs widening, not a refusal to explain. Nothing marks it, and
+    // Tab still walks (the buffer advanced, the prefix having been rewritten
+    // above).
     (void)text_editor::replace_selection(app.settings_editor, *cur);
 
     viewport.invalidate_modal_dialog_area();

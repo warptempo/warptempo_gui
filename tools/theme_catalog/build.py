@@ -3,6 +3,9 @@
 # bytes with their provenance, the values its own toolkit computed at import (toolkit_rules.py, the rule named), and
 # its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
+# THE ONE EXCEPTION IS THE PROGRAM'S OWN FAMILY, `warptempo`, and it derives nothing either: `warptempo-2026-10-03` is
+# the app's look recorded off render.h's constants (app_entry), and `warptempo` is THE ARCHITECT'S PICK, CHOSEN, NOT
+# IMPORTED (chosen_entry: his ruling of 2026-10-03 on the colour loop's mock sets, its bytes his, recorded as ruled).
 # NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
 # schemes no independent source records as Windows', the usability schemes, the KDE schemes KDE 3.5 did not ship, and
 # the role-identical duplicates. The
@@ -357,6 +360,36 @@ APP_RAW = ('kRedesignContentGround', 'kRedesignLabel', 'kRedesignAccent', 'kRede
            'kTrimArrowGlyph')
 
 
+# THE CHOSEN ENTRY (architect 2026-10-03, the colour loop's mock sets BA..BX): key and display name `warptempo` (all
+# lowercase, one word, his spelling), the app's default theme (device_config.h). CHOSEN, NOT IMPORTED — no desktop of
+# the era recorded it, so it carries no source file: its record is the ruling. Its chrome is set BA03, Windows 95
+# Standard darkened in proportion to a ground of relative luminance 0.010 under white text (the quartet and the field
+# ground scaled with the face, DkShadow black), and its selection the grey of set BM02 under white; each byte below is
+# the ruled one, in levels.py's role order (its LIGHT row; its emboss's light copy is the recorded Hilight there, as
+# for every entry). Its DARK row is whatever levels.py's dark rule makes of these bytes, untuned (architect: "if the
+# user sets this theme and puts dark, it's going to look bad -- that's fine"). The info pair is not ruled (the app
+# carries none: render.h's THE INFO FACE), so it is absent; the flags' rule is the family's.
+CHOSEN_ROLES = {'ground': '#191919', 'label': '#FFFFFF', 'bevel_hilight': '#212121', 'bevel_light': '#1D1D1D',
+                'bevel_shadow': '#111111', 'bevel_dkshadow': '#000000', 'selected_fill': '#666666',
+                'selected_text': '#FFFFFF', 'field_ground': '#212121', 'field_text': '#FFFFFF'}
+
+
+def chosen_entry():
+    e = {'key': 'warptempo', 'name': 'warptempo', 'family': 'warptempo',
+         'provenance': {'sources': [{
+             'project': 'chosen, not imported: the architect\'s ruling (2026-10-03)',
+             'record': 'the colour loop\'s mock sets: BA03 for the chrome (Windows 95 Standard darkened in proportion '
+                       'to a ground of relative luminance 0.010, white text), BM02 for the selection grey; the bytes '
+                       'as ruled'}]},
+         'raw': dict(CHOSEN_ROLES), 'roles': {r: CHOSEN_ROLES[r] for r in ROLES if r in CHOSEN_ROLES},
+         'flag_rule': {'id': FLAG_RULE['warptempo']}}
+    e['display_tier'] = display_tier(e['roles'])
+    e['notes'] = ['chosen by the architect on the colour loop, not imported from a desktop of the era; the app\'s '
+                  'default theme at its light level (2026-10-03)']
+    e['corroborated'] = 0
+    return e
+
+
 def app_entry():
     k = render_h_constants()
     k['kTrimArrowGlyph'] = k['kRedesignLabel']   # highlight_text_ink(the ground): the label white on #303030
@@ -403,6 +436,7 @@ def checks(entries, k):
     assert not [e['key'] for e in entries if e['display_tier'] == 'windows-20']
     assert display_tier(by['windows-standard']['roles']) == 'high-colour' and \
         display_tier({r: v for r, v in by['windows-standard']['roles'].items() if r != 'info_ground'}) == 'vga'
+    assert by['warptempo']['roles'] == CHOSEN_ROLES and by['warptempo']['display_tier'] == 'high-colour'
     app = by['warptempo-2026-10-03']
     for n, v in app['raw'].items(): assert v == hx(k[n]), n
     assert [app['roles'][x] for x in ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',
@@ -425,6 +459,7 @@ def main():
     entries = win + kde
     cde, mono = cde_entries(); entries += cde
     app, k = app_entry(); entries.append(app)
+    entries.append(chosen_entry())
     entries, dups = drop_duplicates(entries)
     entries.sort(key=lambda e: FAMILIES.index(e['family']))
     checks(entries, k)
@@ -435,7 +470,10 @@ def main():
                 'once at import and its rule and sources are named in the entry\'s provenance. "raw" holds every value '
                 'the source records under its own key names; "roles" the catalog roles (tools/theme_catalog/roles.py); '
                 'a role a source has no word for is absent and the app\'s own value applies. Bytes are #RRGGBB as the '
-                'source records them (the renderer takes a theme byte as a Display-P3 byte as-is).',
+                'source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family '
+                'that imports nothing is the program\'s own, "warptempo": the app\'s look of 2026-10-03 recorded off '
+                'render.h, and the architect\'s chosen default `warptempo`, chosen, not imported (its provenance is '
+                'his ruling).',
         'roles': list(ROLES),
         'rules': RULES,
         'display_tiers': {'what': 'each entry\'s display_tier: the smallest of these period colour sets holding every '

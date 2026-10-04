@@ -3,7 +3,12 @@
 THE APP CARRIES IMPORTED THEMES ONLY, NO DERIVATION (architect 2026-10-03: "no derived, imported only; derivation
 stays in git history"; "I don't want to be designing my own theme"). This tool turns the era's own theme files into
 `docs/themes/catalog.json` — every colour a recorded byte with its provenance — and renders the app in each one
-(`docs/themes/crops/`, listed in `docs/themes/CATALOG.md`), which is how a theme is chosen. A standalone utility: no
+(`docs/themes/crops/`, listed in `docs/themes/CATALOG.md`), which is how a theme is chosen. THE ONE FAMILY THAT
+IMPORTS NOTHING is the program's own, `warptempo`, and it derives nothing either: `warptempo-2026-10-03` records the
+app's look of that morning off render.h's constants, and `warptempo` — THE APP'S DEFAULT THEME — is CHOSEN, NOT
+IMPORTED (architect 2026-10-03, the colour loop's mock sets: BA03's chrome, Windows 95 Standard darkened in proportion
+to a ground of relative luminance 0.010 under white text, and BM02's selection grey), its bytes his ruling as recorded
+(build.py `chosen_entry`), because no desktop of the era recorded the look he picked. A standalone utility: no
 link path from any product target, no CMake, Python 3 + numpy (and `tools/palette/` for the crops).
 
 ```
@@ -86,7 +91,7 @@ the sets are also catalog.json's `display_tiers`, and each entry's CATALOG.md bl
 | `high-colour` | anything else |
 
 Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts the list), `windows-20` 0,
-`high-colour` 94. Windows Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and its
+`high-colour` 95. Windows Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and its
 3DLight DFDFDF (asserted for Windows Standard).
 
 ## Families and sources
@@ -97,9 +102,9 @@ Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts 
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
-| `warptempo` | `src/gui/render.h` at da0b1051 (git show) | the app's own look on 2026-10-03, so it stays selectable as bytes |
+| `warptempo` | `src/gui/render.h` at da0b1051 (git show); the architect's ruling of 2026-10-03 | `warptempo-2026-10-03`, the app's own look on the morning of 2026-10-03, so it stays selectable as bytes; `warptempo` (display name `warptempo`, all lowercase, his spelling), the app's default, CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (the app carries none), its dark level whatever levels.py's dark rule makes of them, untuned |
 
-Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 1 — 97 entries.
+Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 2 — 98 entries.
 
 ## Not imported (architect 2026-10-03, late; catalog.json's `not_imported`, asserted by build.py)
 
@@ -132,7 +137,8 @@ Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, 
 | `title_active` | `ActiveTitle` | `activeBackground` | `set1` | absent |
 | `title_inactive` | `InactiveTitle` | `inactiveBackground` | `set2` | absent |
 
-A `kde3:` or `motif:` value is computed by that toolkit's rule at import (`provenance.rule.computed`); every other
+The `warptempo` column is the recorded entry's; the chosen `warptempo` entry maps nothing, its roles being the ruled
+bytes under the role names themselves. A `kde3:` or `motif:` value is computed by that toolkit's rule at import (`provenance.rule.computed`); every other
 value is a raw key. KDE 3's relief comes from the scheme's `background` (its `buttonBackground` is recorded raw: the
 app has one ground). CDE's colour sets (Motif `ColorObj.c`'s resource defaults, dtsession `SrvPalette.c`, dtwm
 `WmResource.c` / `Dtwm.defs`): 1 the active window frame, 2 the inactive frame, 3 and 7 workspace backdrops, 4 text
@@ -145,10 +151,12 @@ and the trim lane's arrow glyph <- `label`; the ruler ticks <- `bevel_shadow`; t
 (round the flag, keeping overlapping flags apart; the stem crosses its bottom line); the playhead head's outline <-
 `label`; THE DISABLED EMBOSS's light copy <- `bevel_hilight` on the light level (`levels.py`). THE PROGRAM'S OWN
 COLOURS, not catalog roles, the app's open device keys (src/gui/device_config.h): the waveform ink, canvas and lit
-outline; the flag's face and its label, a RECORDED colour beside the face as Windows 95 recorded a text colour beside
-every face (no luminance rule anywhere: that is WCAG 2.0's contrast math, not Windows'): black on the app's purple;
-the invalid face and its label, #BB575A and black (Windows' error-icon pair #FF0000 / #FFFFFF was struck,
-architect 2026-10-03); the playhead's head and stem (#8B8B8B / #FCFCFC).
+outline (#808080 / #000000 / #5C5C5C); the flag's face and its label, a RECORDED colour beside the face as Windows 95
+recorded a text colour beside every face (no luminance rule anywhere: that is WCAG 2.0's contrast math, not
+Windows'): white on the slate violet #666699; the selected flag's brighter face #CCCCFF and the one selected label,
+black; the invalid face and its label, #993333 and white, its selected face #FF6666 (Windows' error-icon pair #FF0000
+/ #FFFFFF was struck, architect 2026-10-03); the playhead's head and stem (#8B8B8B / #FCFCFC) — the defaults of the
+colour loop (architect 2026-10-03).
 
 ## The checks (build.py, before the write)
 
@@ -158,8 +166,8 @@ Windows 95 Standard's quartet is FFFFFF / DFDFDF / 808080 / 000000 on C0C0C0; KD
 1E252A (both from an 8-bit colour as X parses `#rrggbb`, each byte replicated; `toolkit_rules.py` asserts the same at
 import); Windows' dialog rule gives D4D0C8 -> Hilight EAE8E3 and Rainy Day 8399B1 -> C1CCD9 / 4F657D; every entry's
 `flag_rule` is its family's and runs; kde3 has 25 entries; the not-imported lists are exactly the schemes found (a re-pinned source cannot
-change them silently) and each duplicate is role-identical to its twin; the Warptempo entry equals render.h's
-constants; the `vga` entries are exactly Windows Storm, Teal and Red, White, and Blue, none is `windows-20`;
+change them silently) and each duplicate is role-identical to its twin; the Warptempo 2026-10-03 entry equals
+render.h's constants and the chosen `warptempo` entry the ruled bytes; the `vga` entries are exactly Windows Storm, Teal and Red, White, and Blue, none is `windows-20`;
 every key is unique and ASCII. The last lines print each family (entries, corroborated, sources), the display
 tiers' counts and the schemes not imported.
 
@@ -179,9 +187,10 @@ On each: THE APP'S FINAL DESIGN AT THE LIGHT LEVEL (architect 2026-10-03; `level
 own row) with the role mapping above, every option the app's (the tablet geometry fixes them, render.py
 `TABLET_FIXED`): the well's two-line PLAIN SUNKEN edge, top and bottom only, full width (`bevel_shadow` then
 `bevel_dkshadow` inward on top, `bevel_light` inward then `bevel_hilight` outward at the bottom); the flat flags left
-to right EDITING (the in-place editor's black frame on the field ground, its text in the selected pair), SELECTED (the
-app's WHITE OUTLINE round the box, architect 2026-10-03, step 12; the underline retired), INVALID, DISABLED (the
-ground, the label embossed, no stem) and unselected; the playhead head outlined in the label; the disabled menu word
+to right EDITING (the in-place editor, the selected flag opened for edit: its black frame on the selected face, its
+text in the selected pair), SELECTED (the app's BRIGHTER FACE, the face and the stem the selected key under the
+selected label, the outline still DkShadow; architect 2026-10-03, the colour loop, the white outline retired),
+INVALID, DISABLED (the ground, the label embossed, no stem) and unselected; the playhead head outlined in the label; the disabled menu word
 and buttons engraved over `emboss_hilight`; the trim arrow in the label (`trim_arrow`). The waveform, the flags' face
 and label, the invalid pair and the playhead are the program's colours (above), the icons' fixed inks icons.cpp's.
-97 crops, 5.42 MB. Its head states which roles come from the entry and which are the program's.
+98 crops, 5.47 MB. Its head states which roles come from the entry and which are the program's.

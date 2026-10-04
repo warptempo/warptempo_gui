@@ -3273,7 +3273,7 @@ int gui_main(const char* argument) {
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme at its
-    // level and the nine program keys, installed before the first paint, and
+    // level and the twelve program keys, installed before the first paint, and
     // again at the settings editor's commit of any colour key
     // (commit_device_setting). Every painter reads it through palette()
     // (render.h's palette block).

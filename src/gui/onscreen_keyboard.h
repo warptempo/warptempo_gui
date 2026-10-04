@@ -26,8 +26,7 @@
 // backend's synthesize_key and the ORDINARY key path runs unchanged from there
 // — GuiInputHandler::on_key, the keyboard-modal gate, route_modal_editor_key,
 // each editor's own vocabulary, the undo coalescing, and the core's repeat
-// synthesis for a held key. So the editors' grammars, their red-frame
-// refusals, their commit and cancel bodies and their byte caps are inherited
+// synthesis for a held key. So the editors' grammars, their refusals, their commit and cancel bodies and their byte caps are inherited
 // whole rather than mirrored, and a new editor gets a working keyboard by
 // existing.
 //
