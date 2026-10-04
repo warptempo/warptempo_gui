@@ -67,26 +67,25 @@ RULED:
   - THE DARK LEVEL IS DROPPED (`theme_level` retires; a dark look is a theme he designs).
   - A FILE MAY NAME ONLY SOME ROLES; every role it does not name takes the built-in Windows 95's value; an unknown
     key or a malformed value is the load's first-error hard fail.
-  - THE FLAG EDITOR becomes Windows' in-place edit field: a thin black frame round a FIELD (the theme's field pair:
-    on Windows 95 black text on white), its selection the theme's selected pair (white on navy). This reverses
-    2026-10-03's "the flag editor is the selected flag opened for edit and takes no field colour" (render.h's
-    palette block). So the resting flag label (a program colour) and the editor's text (the field text) are
-    independent: dark text on a light flag is possible, the editor still black on white.
+  - THE FLAG EDITOR STAYS AS IT IS, EDIT IN PLACE (he withdrew the field-style editor the same evening): the
+    selected flag opened for edit, no field colour; its one black frame stays the one literal beside the palette.
   - THE BUILT-IN THEME'S PROGRAM COLOURS ARE FROM WINDOWS' 20 SOLID COLOURS: the canvas black, the ink Sound
     Recorder's green, the flag purple, the invalid flag red (the rest in the decisions below). The colours Windows
     95 Standard RECORDS for its chrome stay as recorded (its 3DLight #DFDFDF and InfoWindow #FFFFE1 are not among
     the 20).
 
-## Decisions for you (the cloud planner, 2026-10-04 evening)
-1. THE BUILT-IN'S REMAINING PROGRAM COLOURS, all from the 20 (each pair dark / bright as the 16 VGA colours pair):
-   the ink LIME #00FF00 (Sound Recorder's trace) over BLACK; the waveform's lit outline GREEN #008000; the flag
-   PURPLE #800080, selected FUCHSIA #FF00FF; the invalid flag MAROON #800000, selected RED #FF0000 ("bright red means
-   selected and error" kept); the flag label WHITE, the one selected label BLACK (on fuchsia and red); the playhead
-   head GRAY #808080, stem WHITE #FFFFFF. RECOMMENDED as listed; the alternative for the invalid flag is RED
-   unselected with no brighter red for selected (red is the 16's brightest), which breaks the pair.
-2. THE HISTORY VIEW'S RED AND GREEN were RETIRED 2026-10-03 ("red is invalid-only"): the diff flags take the one
-   flag colour and the label carries the sign, `[+]` / `[-]`. Bringing them back reopens that ruling (two more
-   program colours, green #008000 / lime and red, the red then shared with the invalid flag). RECOMMENDED: keep them
-   retired; the sign already reads.
-3. THE EDITOR'S BLACK FRAME, today the one literal beside the palette, becomes a theme role (Windows' WindowFrame,
-   black on Windows 95), so a theme file holds every colour the GUI paints. RECOMMENDED: yes.
+  - ACCEPTED (his word): the ink LIME #00FF00 over BLACK; the lit outline GREEN #008000; the flag PURPLE #800080,
+    selected FUCHSIA #FF00FF; the invalid flag MAROON #800000, selected RED #FF0000; the flag label WHITE, the one
+    selected label BLACK; the playhead head GRAY #808080, stem WHITE #FFFFFF.
+  - SEPARATE FLAG COLOURS BY KIND (this reopens 2026-10-03's "the history's greens and red retired; red is
+    invalid-only", closed_questions residue to amend): WARP, PHASE RESET, and the HISTORY view's ADDED and REMOVED,
+    each a face and a selected face (the history's focus swap wears the selected face). THE INVALID FLAG SHARES THE
+    HISTORY'S REMOVED PAIR, one red for both, the context telling them apart (invalid while authoring, removed in
+    `h`). Warp keeps purple / fuchsia. The picker's flag elements follow the kinds in a later picker round.
+
+## Decisions for you (the cloud planner, 2026-10-04 evening, after the rulings above)
+1. THE PHASE-RESET FLAG: TEAL #008080, selected AQUA #00FFFF. Navy / blue would vanish on the black canvas the stems
+   cross; olive / yellow reads as a warning. RECOMMENDED: teal / aqua.
+2. THE HISTORY'S ADDED FLAG: GREEN #008000, selected MONEY GREEN #C0DCC0 (one of the four Windows added to the 16).
+   Lime, the natural bright partner, is the waveform's ink, and a selected flag's stem runs down across the
+   waveform, so a lime stem disappears where it crosses a lime trace. RECOMMENDED: green / money green.
