@@ -16,7 +16,7 @@ namespace {
 constexpr Rgb kGround{0x19, 0x19, 0x19}, kLabel{0xFF, 0xFF, 0xFF}, kField{0x21, 0x21, 0x21}, kEdge{0, 0, 0};
 constexpr Rgb kDim{0x55, 0x55, 0x55};   // a disabled button's glyph: a flat grey, no alpha
 constexpr double kPi = 3.14159265358979323846;
-constexpr double kNumPx = 38, kWordPx = 36, kHexPx = 84, kCornerPx = 32;
+constexpr double kWordPx = 36, kHexPx = 84, kCornerPx = 32;
 const char* const kRowNames[6] = {"H", "S", "V", "R", "G", "B"};
 
 // ---------------------------------------------------------------- ColourState helpers
@@ -103,17 +103,6 @@ double row_value(const ColourState& cs, int row) {
     }
 }
 
-int row_number(const ColourState& cs, int row) {
-    switch (row) {
-        case 0: return int(std::nearbyint(cs.h));
-        case 1: return int(std::nearbyint(cs.s * 100));
-        case 2: return int(std::nearbyint(cs.v * 100));
-        case 3: return cs.rgb.r;
-        case 4: return cs.rgb.g;
-        default: return cs.rgb.b;
-    }
-}
-
 // the colour at fraction f along a row's track, the other channels as they stand
 Rgb row_colour(const ColourState& cs, int row, double f) {
     switch (row) {
@@ -181,6 +170,13 @@ void ColourState::restore(const Pick& p) {
     h = p.h;
     s = p.s;
     v = p.v;
+}
+
+std::string row_readout(const ColourState& cs, int row) {
+    if (row >= 3) return std::to_string(row == 3 ? cs.rgb.r : row == 4 ? cs.rgb.g : cs.rgb.b);
+    const double shown = row == 0 ? cs.h : (row == 1 ? cs.s : cs.v) * 100;   // degrees, percent
+    const long tenths = long(std::nearbyint(shown * 10));                    // never negative: the view's ranges
+    return std::to_string(tenths / 10) + "." + std::to_string(tenths % 10);
 }
 
 bool ColourState::shows(const Pick& p) const {
@@ -659,7 +655,7 @@ void Picker::paint(cairo_surface_t* surf) {
     for (int i = 0; i < 6; ++i) {
         const int ry = oy + row_y(i);
         text(cr, false, kWordPx, kRowNames[i], ox + kLabelX + 18, cap_baseline(cr, false, kWordPx, ry, kRowH), 1);
-        text(cr, true, kNumPx, std::to_string(row_number(c, i)), ox + kFieldX + kFieldW - 14,
+        text(cr, true, kNumPx, row_readout(c, i), ox + kFieldX + kFieldW - kReadoutInset,
              cap_baseline(cr, true, kNumPx, ry, kRowH), 2);
     }
     cairo_destroy(cr);

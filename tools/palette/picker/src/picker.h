@@ -25,7 +25,7 @@
 // THE HSV HE DIALLED IS PART OF THE PICK (architect 2026-10-04): a saved pick keeps the exact view it was saved under
 // beside its bytes (Pick, scene.h), and EVERY ROAD BACK TO A STORED COLOUR RESTORES THAT VIEW instead of re-deriving it
 // from the bytes -- the launch, BACK / FORWARD, OLD, leaving the app with the panel open. Re-derived, a view is the
-// bytes' own HSV (S 0.3529 where he dialled 0.35): the number still reads 35 but the handle sits elsewhere, and the
+// bytes' own HSV (S 0.3529 where he dialled 0.35): the number reads 35.3 where he dialled 35.0 and the handle sits elsewhere, and the
 // next − / + rounds from the re-derived values, while at low saturation or value one byte is several degrees of hue
 // or a percent of saturation -- so an axis he never touched would move. Re-derivation from bytes stays only where the
 // bytes are the input: the R / G / B tracks and their − / +, and a pick saved before views were stored. The ring,
@@ -35,7 +35,7 @@
 // with the saturation/value triangle inside it (the triangle's corners the pure hue, white and black, turning with
 // the hue); the element button, the hex in large type and the OLD | NEW swatches (a tap on OLD reverts); the six
 // sliders H, S, V and R, G, B, each a long track painted with its live gradient, a handle, a one-unit decrement and
-// increment at its ends (acting at the lift) and the value beside it. Its chrome is the app's own greys (the ground
+// increment at its ends (acting at the lift) and the value beside it (row_readout). Its chrome is the app's own greys (the ground
 // #191919, the label #FFFFFF, fields #212121, flat 1-px #000000 edges), no relief, no alpha.
 //
 // OPENING AND CLOSING: a tap on the picture opens the panel on the HALF OPPOSITE the tap, so the place tapped stays in
@@ -105,6 +105,12 @@ struct ColourState {
     // the state shows the pick: the same bytes and, when the pick carries a view, the same view
     bool shows(const Pick& p) const;
 };
+
+// THE READOUT, the value a slider row shows in its field (rows H, S, V, R, G, B = 0..5): H in degrees and S, V in
+// percent to ONE DECIMAL, rounded to nearest ("247.3", "47.1", "100.0"), so the number shows where the view actually
+// is (architect 2026-10-04, as GIMP's HSV fields read; the view is exact doubles, and the − / + still step whole
+// degrees and percents from the rounded whole number); R, G, B their whole bytes
+std::string row_readout(const ColourState& cs, int row);
 
 // one element as the Picker holds it: its colour state and its history
 struct ElementState {
@@ -194,8 +200,13 @@ constexpr int kSwatchY0 = kPad + 324, kSwatchY1 = kPad + kWheel;
 constexpr int kSwatchW = 200, kNewX = kColX1 - kSwatchW;
 constexpr int kRowsY = kPad + kWheel + 44, kRowStep = 100, kGroupGap = 20, kRowH = 76;
 constexpr int kLabelX = kPad, kMinusX = kPad + 50, kBtn = 76;
-constexpr int kTrackX = kMinusX + kBtn + 14, kTrackL = 682, kTrackH = 56;
+constexpr int kTrackX = kMinusX + kBtn + 14, kTrackL = 642, kTrackH = 56;
 constexpr int kPlusX = kTrackX + kTrackL + 14, kFieldX = kPlusX + kBtn + 16, kFieldW = kColX1 - kFieldX;
+// the numbers' mono size (the readouts and the history's count); a readout ends kReadoutInset px inside its field's
+// right edge. The six fields are one width, kFieldW (160), sized for the widest readouts "360.0" and "100.0" with air
+// on both sides (architect 2026-10-04: H, S, V to one decimal); the track gave up the width.
+constexpr double kNumPx = 38;
+constexpr int kReadoutInset = 14;
 constexpr int kBackX = kColX, kFwdX = kColX1 - kBtn;                      // the history's buttons, kBtn square
 constexpr int row_y(int i) { return kRowsY + i * kRowStep + (i >= 3 ? kGroupGap : 0); }
 } // namespace panel

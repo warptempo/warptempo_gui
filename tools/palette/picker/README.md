@@ -37,13 +37,16 @@ open flag with its selection (where the selected fill, fixed #666666 now, become
   Use), the OLD | NEW swatches (the colour when the panel opened | now; a
   tap on OLD reverts); six SLIDERS, H 0–360, S 0–100, V 0–100 and R, G, B 0–255, each a long track painted with its
   live gradient (the colour along it, the other channels as they stand), a handle, its value at the right, and a
-  one-unit − / + at its ends (one degree, one percent, one byte; acting at the lift). Every control produces an exact
+  one-unit − / + at its ends (one degree, one percent, one byte; acting at the lift). THE READOUT shows H in degrees
+  and S, V in percent to ONE DECIMAL, rounded to nearest (247.3, 47.1, 100.0: where the view actually is, as GIMP's
+  HSV fields read; architect 2026-10-04), R, G, B whole bytes; the six fields are one width, sized for "360.0". The
+  H / S / V − / + still step whole degrees and percents, from the rounded whole number (speed over fineness). Every control produces an exact
   byte triple and the scene repaints from it live. HSV is a view over the bytes plus a retained hue (and
   saturation), as GTK keeps them: through grey the hue stays, through black the saturation too.
 - THE HSV HE DIALLED IS PART OF THE PICK (architect 2026-10-04). A saved pick keeps, beside its bytes, the exact HSV
   view it was saved under, and every road back to a stored colour — the launch, BACK / FORWARD, OLD, leaving the app
   with the panel open — restores that view instead of re-deriving it from the bytes. Re-derived, the view is the
-  bytes' own HSV (S 0.3529 where he dialled 0.35): the number still reads 35 but the handle moves, and the next − / +
+  bytes' own HSV (S 0.3529 where he dialled 0.35): the number reads 35.3 where he dialled 35.0 and the handle moves, and the next − / +
   rounds from the re-derived values, while at low saturation or value one byte is several degrees of hue or a percent
   of saturation, so an axis he never touched would move. Re-derivation from bytes stays only where the bytes are the
   input: the R / G / B tracks and their − / +, and a pick saved before views were stored. The ring, the triangle and
@@ -147,7 +150,8 @@ the live repaint; a synthetic export with roles derived over the canvas element 
 `colour.py`'s composition at the canvas and the ink moved; the C++ `lin_mix` equals `colour.py`'s on all 65536 byte
 pairs; THE BLEND equals cairo's solid source through an A8 mask on every (source, frame, coverage) byte triple, each
 channel (16,777,216 cases); `scale_byte` is half to even and capped; HSV keeps the hue through grey and black and
-bytes -> HSV -> bytes is the identity over the whole cube; the scripted sessions on the active element (the panel,
+bytes -> HSV -> bytes is the identity over the whole cube; the H / S / V readouts show one decimal rounded to nearest
+(247.27 -> 247.3, 0.4714 -> 47.1, 0.99999 -> 100.0) and the widest, measured in the mono face, fits its field; the scripted sessions on the active element (the panel,
 the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; a tap outside it closes it alone, writing
 nothing; a press lifted on another entry picks nothing; the active entry again is a no-op; the edited chrome
 committed by the switch to the Ink; the switch to the Flag Test's scene with the chrome's tint and the ink's colour

@@ -11,7 +11,7 @@
 //   - --linmix: a 65536-byte table from colour.py, lin_mix(a, b, 0.5) for every byte pair: the C++ port must agree;
 //   - the blend (colour.h over_n_8) equals cairo's own compositing of a solid source through an A8 mask on every
 //     (source, frame, coverage) byte triple, each channel; the chrome rule's scale_byte is half-to-even and capped;
-//   - ColourState over the whole cube, the view numbers;
+//   - ColourState over the whole cube, the view numbers, the readouts (one decimal; the widest fits its field);
 //   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas, Ink and a Flag Test over
 //     a second scene) and its active element (the chrome): the panel, the pick history, the HSV he dialled; then THE
 //     CHOOSER (open, a tap outside it, the no-op re-choice, the edited-then-switch commit, the switch of scene),
@@ -297,6 +297,31 @@ int main(int argc, char** argv) {
             for (double x : xs) trip = trip && std::strtod(view_number(x).c_str(), nullptr) == x;
         }
         check(trip, "a stored view number reads back as the same double, in the shortest form (0.35, 227)");
+        ColourState f;
+        f.set_hsv(247.27, 0.4714, 0.99999);
+        const bool tenths = row_readout(f, 0) == "247.3" && row_readout(f, 1) == "47.1" && row_readout(f, 2) == "100.0" &&
+                            row_readout(f, 3) == std::to_string(f.rgb.r) && row_readout(f, 5) == std::to_string(f.rgb.b);
+        f.set_hsv(360, 0, 1);
+        const bool ends = row_readout(f, 0) == "360.0" && row_readout(f, 1) == "0.0" && row_readout(f, 2) == "100.0";
+        f.set_hsv(0.04, 0.00051, 0.00049);
+        const bool low = row_readout(f, 0) == "0.0" && row_readout(f, 1) == "0.1" && row_readout(f, 2) == "0.0";
+        check(tenths && ends && low, "the H / S / V readouts show one decimal, rounded to nearest (247.27 -> 247.3, "
+                                     "0.4714 -> 47.1, 0.99999 -> 100.0), R / G / B whole bytes");
+        cairo_surface_t* ms = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 4, 4);
+        cairo_t* mc = cairo_create(ms);
+        fonts_select(mc, true, panel::kNumPx);
+        double widest = 0;
+        for (const char* t : {"360.0", "100.0", "255"}) {
+            cairo_text_extents_t e;
+            cairo_text_extents(mc, t, &e);
+            widest = std::max(widest, e.x_advance);
+        }
+        cairo_destroy(mc);
+        cairo_surface_destroy(ms);
+        char fit[160];
+        std::snprintf(fit, sizeof fit, "the widest readout (%.1f px) fits its field (%d px) with %.1f px of air left of it, "
+                      "%d right", widest, panel::kFieldW, panel::kFieldW - panel::kReadoutInset - widest, panel::kReadoutInset);
+        check(widest + 2 * panel::kReadoutInset <= panel::kFieldW, fit);
     }
 
     using namespace panel;
