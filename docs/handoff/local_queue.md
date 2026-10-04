@@ -102,3 +102,22 @@ waveform_outline=#708C97
 Wakes used: 1 of 8.
 THE ARCHITECT ON THE GLASS (2026-10-04, after DONE 1): the picker's playhead WORKS — the triangle's fill (Playhead
 Head) and the stem (Playhead Stem). The triangle's BORDER has no picker element: "ok for now, not a priority".
+
+## REQUEST 2 (2026-10-04, the cloud planner; arcs 3-5 of the autonomous run, HEAD 891dbf0 and after)
+Three picker rounds in ONE install: the Label (8df2bab), the open flag's Selection + Selected Text with the chooser
+running over the slider rows (6a06c51), the invalid flags with chooser entries that shrink to fit (891dbf0) — twelve
+elements over seven scenes. Picker app code changed (picker.{h,cpp}): the APK, not just the export. NEVER change his
+configured theme or colour keys on either device. Answer with `## DONE 2` here.
+1. `git pull` main (at or after 891dbf0). Copy the tablet's picker files into `tools/palette/picker/presets/` FIRST
+   (the standing act). IF presets.json gained presets: run the full `python3 tools/theme_catalog/build.py` and
+   `python3 tools/theme_catalog/gen_theme_table.py` (new `warptempo-preset-<n>` entries; every other entry must stay
+   byte-identical), `cmake --build build` (exit code), then `bash android/app/build_apk.sh`, install and relaunch the
+   product (config untouched), and paste `python3 tools/theme_catalog/preset_keys.py` into DONE 2. Otherwise skip the
+   product entirely.
+2. THE PICKER: `bash tools/palette/picker/build_picker.sh --check` ("all checks pass"), then the APK, the export
+   (`python3 tools/palette/render.py tools/palette/themes/picker.json --export tools/palette/out/picker`), install,
+   push THE WHOLE export folder (new: `label.*`, `open_flag.*`, `invalid_flags.*`), launch, per the picker README's
+   Use. Logcat: the launch line (expect 12 elements, 7 scenes) and his state restored as found. Do NOT choose an
+   element by touch (an empty-history element commits its colour as a first pick); the glass is his.
+3. Commit (the wrapper) any presets / catalog / table change, push, and write DONE 2: exit codes, the logcat lines,
+   anything refused.
