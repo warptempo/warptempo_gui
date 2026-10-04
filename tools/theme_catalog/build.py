@@ -417,8 +417,9 @@ def chosen_entry():
 # the open-flag round, architect 2026-10-04), else #666666 under white, the picker's starting colours and the pair
 # every preset saved before that round was painted under. The theme's DARK row is levels.py's dark rule over these
 # bytes, whatever the preset picked (the selected fill darkened in proportion, the label and the selected text the
-# level's white). The preset's other elements (the canvas, the ink, the flags, the playhead) are program keys, not
-# theme roles: tools/theme_catalog/preset_keys.py prints their device-config lines. The entries follow presets.json: a
+# level's white). The preset's other elements (the canvas, the ink, the flags, the playhead, the invalid flags -- the
+# invalid-flags round, architect 2026-10-04) are program keys, not theme roles: tools/theme_catalog/preset_keys.py
+# prints their device-config lines. The entries follow presets.json: a
 # new copy adds its new presets on the next run, and a preset's number is never reused (the picker only appends). A
 # colour key the preset names that is neither the chrome, a theme role it picks (PRESET_THEME_KEYS) nor a program key
 # is a hard fail: a newly pickable chrome role changes what a preset's theme is, which is a ruling, not a silent drop.
@@ -429,7 +430,8 @@ PRESET_FIXED = {'label': '#FFFFFF', 'selected_fill': '#666666', 'selected_text':
 # the picker's theme elements -> the roles each gives its colour (the label also the field text)
 PRESET_THEME_KEYS = {'label': ('label', 'field_text'), 'selected_fill': ('selected_fill',),
                      'selected_text': ('selected_text',)}
-PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'unselected_flag', 'selected_flag', 'playhead_head', 'playhead_stem')
+PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'unselected_flag', 'selected_flag', 'playhead_head', 'playhead_stem',
+                       'unselected_invalid_flag', 'selected_invalid_flag')
 
 
 def preset_fixed(picked):

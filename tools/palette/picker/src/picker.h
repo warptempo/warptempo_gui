@@ -329,6 +329,9 @@ constexpr int kNameY = kPad, kNameH = 64;                                 // the
 constexpr int kNameX1 = kColX + 264;                                      // the element button kColX..kNameX1
 constexpr int kPresetsX = kNameX1 + 12;                                   // the presets button kPresetsX..kColX1
 constexpr int kChooserY = kNameY + kNameH + 8, kChooserRowH = 76;         // the chooser's rows, under the button
+// a chooser entry's name from kChooserNameX, past the active mark (kColX + 22..38), ending by kChooserNameX1, as far
+// inside the list's right edge as the mark stands inside its left; a longer name is set smaller (fit_px)
+constexpr int kChooserNameX = kColX + 60, kChooserNameX1 = kColX1 - 22;
 // THE CHOOSER'S FIT (2026-10-04: room for the elements to come, the invalid flags among them): its rows, the pop-up's and the model list's
 // height, run down the column from under the button over the slider rows as far as the panel's pad, painted over
 // everything they cover (a readout, a handle, a field; Picker::paint); kChooserMax entries fit (15: 108..1248 of the

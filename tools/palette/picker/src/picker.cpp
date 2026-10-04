@@ -80,7 +80,8 @@ double cap_baseline(cairo_t* cr, bool mono, double px, double y0, double h) {
 }
 
 // the largest size up to px at which s is no wider than width: the element button's name, which must clear the
-// chooser's head at the button's right (the flags round's "Unselected Flag" is 256 px at 36 px where 186 fit)
+// chooser's head at the button's right (the flags round's "Unselected Flag" is 256 px at 36 px where 186 fit), and a
+// chooser entry's, which must end inside the list (kChooserNameX1)
 double fit_px(cairo_t* cr, bool mono, double px, const std::string& s, double width) {
     fonts_select(cr, mono, px);
     cairo_text_extents_t e;
@@ -1224,9 +1225,13 @@ void Picker::paint(cairo_surface_t* surf) {
         }
         if (chooser_) {
             cairo_restore(cr);
+            // each name in the word size, or smaller to end as far inside the list's right edge as the active mark
+            // stands inside its left (22 px; "Unselected Invalid Flag" is 369 px at 36 px where 342 fit)
             for (int i = 0; i < n; ++i) {
                 const int ry = oy + kChooserY + i * kChooserRowH;
-                text(cr, false, kWordPx, ex_.elements[size_t(i)].name, ox + kColX + 60, cap_baseline(cr, false, kWordPx, ry, kChooserRowH), 0);
+                const std::string& nm = ex_.elements[size_t(i)].name;
+                const double npx = fit_px(cr, false, kWordPx, nm, kChooserNameX1 - kChooserNameX);
+                text(cr, false, npx, nm, ox + kChooserNameX, cap_baseline(cr, false, npx, ry, kChooserRowH), 0);
             }
         }
     } else {

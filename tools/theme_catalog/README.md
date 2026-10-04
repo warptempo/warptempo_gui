@@ -19,7 +19,10 @@ and `selected_text` (the picker's Selection and Selected Text, the open-flag rou
 white when it records none, the picker's starting colours), so the entry's light level is exactly the chrome the
 picker painted; its dark level is levels.py's dark rule's (the selected fill darkened in proportion, its label and
 selected text white); the preset's other elements are program keys, whose device-config lines `preset_keys.py` prints
-(the label and the selected pair are theme roles, so it prints nothing for them). A
+(the label and the selected pair are theme roles, so it prints nothing for them) -- the canvas, the ink and their
+outline, the flags, the playhead and THE INVALID FLAGS (the invalid-flags round, architect 2026-10-04: the Unselected
+Invalid Flag as `invalid_face` with the fixed `invalid_label`, the Selected Invalid Flag as `invalid_face_selected`
+with the fixed `flag_label_selected`, the product's one label on both selected faces). A
 standalone utility: no
 link path from any product target, no CMake, Python 3 + numpy (and `tools/palette/` for the crops).
 

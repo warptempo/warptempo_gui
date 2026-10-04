@@ -45,12 +45,25 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
   the strip open). THE CHOOSER now runs down over the slider rows, painted over all it covers, holding up to 15
   entries (picker.h kChooserMax; picker_load refuses more): the one picker app-code change of the run. The helper
   takes a preset's selected pair into its theme (the dark level by levels.py's rule).
+- ARC 5 LANDED (the invalid-flags commit): Unselected Invalid Flag (#993333) and Selected Invalid Flag (#FF6666),
+  each its face and stem, over a new scene `invalid_flags` (flags 3 and 4 invalid, flag 4 selected with its payload
+  addressed; both in view with the panel on the left); the invalid label fixed #FFFFFF. A selected invalid flag takes
+  the product's one selected label (`flag_label_selected`), so preset_keys.py prints `invalid_label` with the
+  unselected invalid face and `flag_label_selected` with either selected face (the product's rule, followed). Chooser
+  entries now shrink to fit like the element button's name (one picker app-code fit; needs the APK).
+- REQUEST 2 (arcs 3-5 batched, one picker install) is in local_queue.md. THE RUN'S ARCS ARE ALL LANDED: after DONE 2
+  is read and logged here, THE RUN STOPS (the rest needs his discussion: the clock's colour, icon accents, the
+  picker's navigation rework).
 
 ## Decisions for you (the cloud planner, 2026-10-04)
 1. THE FIELD TEXT FOLLOWS THE LABEL (applied in arc 3, easy to undo). The picker's chrome rule makes the field ground
    the Hilight, a ground-family colour, so the field's text is the label's case: a light variant made by adopting
    #000000 as the Label gets black text in its fields too. The alternative is a separate Field Text element (one more
    knob nobody would set apart from the Label). Recommended: keep as applied.
+2. THE TWO LONGEST ELEMENT NAMES ARE SMALL ON THE BUTTON. "Unselected Invalid Flag" and "Selected Invalid Flag" fit
+   the element button only at about 18 and 20 px against the 36-px body (the chooser's list sets them nearer full
+   size). Options: (a) keep the flags round's naming and the small set, (b) shorter names for the red pair only, e.g.
+   "Invalid Flag" / "Selected Invalid", breaking the sibling symmetry. Recommended: (a), judged on the glass first.
 
 ## Ruled 2026-10-04 (the architect agreed with all three recommendations)
 1. THE ROADMAP ORDER (dark themes first): (1) the PLAYHEAD element (head + stem; always on screen; a scene with the

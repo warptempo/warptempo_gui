@@ -18,8 +18,9 @@
 //     independent reference (HSL by colorsys, LCh by numpy over Display-P3) to 1e-9;
 //   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas and Ink over the scene
 //     waveform, Unselected Flag and Selected Flag over the scene flags, Playhead Head and Playhead Stem over the scene
-//     playhead, the Label over the scene label, Selection and Selected Text over the scene open_flag, then test
-//     elements filling the chooser to fourteen entries, the last over a scene of its own) and its active element (the
+//     playhead, the Label over the scene label, Selection and Selected Text over the scene open_flag, Unselected
+//     Invalid Flag and Selected Invalid Flag over the scene invalid_flags, then test elements filling the chooser to
+//     fourteen entries, the last over the waveform scene) and its active element (the
 //     chrome): the panel, the pick history, the HSV he dialled; then THE CHOOSER (open, its fit -- fourteen entries
 //     inside the panel and the screen, painted over the slider rows it covers, the same picture at two colours -- a tap
 //     outside it, the no-op re-choice, the edited-then-switch commit, the switches of scene Ink -> Unselected Flag ->
@@ -31,16 +32,20 @@
 //     the flag labels fixed; its words repainting and their antialiased edges re-blending, committed by the close, kept
 //     by a relaunch); THE OPEN FLAG (architect 2026-10-04: the selected pair over the scene open_flag, the panel on the
 //     left, the band and the glyphs each repainting alone with the antialiased edges re-blending, the face and the
-//     editor's black frame staying, each committed by the switch or the close and kept by a relaunch);
+//     editor's black frame staying, each committed by the switch or the close and kept by a relaunch); THE INVALID
+//     FLAGS (architect 2026-10-04: the two invalid faces over the scene invalid_flags, the panel on the left, each face
+//     repainting with its stem, the fixed labels' antialiased edges re-blending over it, the other face staying, each
+//     committed by the switch or the close and kept by a relaunch; the names' fit, measured in the frame: each set
+//     clear of the button's head, every chooser entry inside the list);
 //   - THE SWITCH'S PICTURE on the round's own export (the one labelled "scene"): launched with every element at the
 //     colours of its "all moved" reference, the waveform scene and, after the chooser's switch Ink -> Unselected Flag,
 //     the flags scene equal the mock tool's renders byte for byte, the switch back the waveform's again, and the
-//     switch Ink -> Playhead Head the playhead scene's, then the switch on to the Label the label scene's and on to the
-//     Selection the open_flag scene's;
+//     switch Ink -> Playhead Head the playhead scene's, then the switch on to the Label the label scene's, on to the
+//     Selection the open_flag scene's and on to the Unselected Invalid Flag the invalid_flags scene's;
 //   - THE PRESETS (two saves, the edited colour committed by the pop-up's opening; a load committing each changed
 //     element once and an unchanged one never, BACK returning; a relaunch; a scroll and a tap outside that act on
 //     nothing; a preset saved before the flags round, three elements, loading and leaving the flags, the playhead, the
-//     Label and the selected pair as they are) and
+//     Label, the selected pair and the invalid flags as they are) and
 //     THE THEME STRIP (opened from the pop-up, swatches adopted as edits into the chrome and, after a
 //     switch, the canvas, OLD reverting, the strip surviving the switch and a relaunch, Windows 95 Standard's quartet
 //     and a tinted theme's rule lines, its own scroll, the close control) on the first export;
@@ -49,11 +54,13 @@
 //     ring and the triangle in both, the gamut stop on a C drag and an h drag, the out-of-gamut stretch's neutral, the
 //     new forms' refusals;
 //   - --today <dir>: the tablet's picks.txt and state.json of 2026-10-04 (morning) load unchanged; --late <dir>: those
-//     of the presets build's install (136 lines) too, the flags, the playhead, the Label and the selected pair at the
-//     manifest's colours with empty histories, HSV shown; --presets: the repository's presets.json reads; --kept <dir>:
+//     of the presets build's install (136 lines) too, the flags, the playhead, the Label, the selected pair and the
+//     invalid flags at the manifest's colours with empty histories, HSV shown; --presets: the repository's presets.json
+//     reads; --kept <dir>:
 //     the repository's copy of the tablet's files (picks.txt, state.json, presets.json) loads over the round's own
 //     export, every element they name at state.json's colour, every element they never name (the playhead's two, the
-//     Label and the selected pair, architect 2026-10-04) at the manifest's with an empty history, and each preset
+//     Label, the selected pair and the invalid flags, architect 2026-10-04) at the manifest's with an empty history,
+//     and each preset
 //     loaded leaves the elements it does not name as they were, with no pick;
 //   - THE PER-FRAME COST of a pen drag (R's track) on the ink, the chrome and the unselected flag, and of LCh's h track
 //     on the chrome: the live repaint and the frame;
@@ -480,7 +487,8 @@ int main(int argc, char** argv) {
               uflag = element_of(ex, "unselected_flag"), sflag = element_of(ex, "selected_flag"),
               phead = element_of(ex, "playhead_head"), pstem = element_of(ex, "playhead_stem"),
               lbl = element_of(ex, "label"), selfill = element_of(ex, "selected_fill"),
-              seltext = element_of(ex, "selected_text");
+              seltext = element_of(ex, "selected_text"), uinv = element_of(ex, "unselected_invalid_flag"),
+              sinv = element_of(ex, "selected_invalid_flag");
     const int last = int(ex.elements.size()) - 1;   // the chooser's last entry (a check test element, over the slider rows)
     auto launch = [&]() {
         Export e = ex;
@@ -768,9 +776,12 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------- THE CHOOSER
     const auto scene_el = [&](int e) { return ex.elements[size_t(e)].scene; };
     const bool nine = chrome == act0 && chrome == 0 && canvas == 1 && ink == 2 && uflag == 3 && sflag == 4 && phead == 5 &&
-                      pstem == 6 && lbl == 7 && selfill == 8 && seltext == 9 && last >= 13 &&
+                      pstem == 6 && lbl == 7 && selfill == 8 && seltext == 9 && uinv == 10 && sinv == 11 && last >= 13 &&
                       scene_el(uflag) == scene_el(sflag) && scene_el(phead) == scene_el(pstem) &&
-                      scene_el(selfill) == scene_el(seltext) && scene_el(uflag) != scene_el(chrome) &&
+                      scene_el(selfill) == scene_el(seltext) && scene_el(uinv) == scene_el(sinv) &&
+                      scene_el(uinv) != scene_el(chrome) && scene_el(uinv) != scene_el(uflag) &&
+                      scene_el(uinv) != scene_el(phead) && scene_el(uinv) != scene_el(lbl) &&
+                      scene_el(uinv) != scene_el(selfill) && scene_el(uflag) != scene_el(chrome) &&
                       scene_el(phead) != scene_el(chrome) && scene_el(phead) != scene_el(uflag) &&
                       scene_el(lbl) != scene_el(chrome) && scene_el(lbl) != scene_el(uflag) && scene_el(lbl) != scene_el(phead) &&
                       scene_el(selfill) != scene_el(uflag) && scene_el(selfill) != scene_el(chrome) &&
@@ -779,7 +790,8 @@ int main(int argc, char** argv) {
     if (!nine) {
         check(false, "the check export lists Chrome (active), Canvas, Ink over one scene, Unselected Flag and Selected Flag "
                      "over a second, Playhead Head and Playhead Stem over a third, the Label over a fourth, Selection and "
-                     "Selected Text over a fifth, and test elements to fourteen entries, the last over a scene of its own");
+                     "Selected Text over a fifth, Unselected Invalid Flag and Selected Invalid Flag over a sixth, and test "
+                     "elements to fourteen entries, the last over another scene than the Selection's and the flags'");
     } else {
         fresh();
         const Rgb chrome0 = ex.elements[size_t(chrome)].colour, ink0 = ex.elements[size_t(ink)].colour,
@@ -1211,6 +1223,185 @@ int main(int argc, char** argv) {
         fresh();
     }
 
+    // ---------------------------------------------------------------- THE INVALID FLAGS (architect 2026-10-04)
+    // the invalid face and its selected face, Unselected Invalid Flag and Selected Invalid Flag, over their own scene:
+    // the flags scene with the third and fourth flags invalid, the fourth selected (its payload the addressed cell, so
+    // its stem is bright), the panel on the left so both stay in view (x 1343 and 1816; no strip open). Each face
+    // repaints with its stem, the one knob, the other face staying; the labels stay fixed #FFFFFF -- the invalid label
+    // over the unselected face, the one selected label over the selected face (the product's ladder, render.cpp
+    // resolve_flag_face) -- their antialiased edges re-blending over the live face; each committed by the switch away
+    // or the close, both kept by a relaunch. THE NAMES' FIT: the element button sets each name to end clear of the
+    // chooser's head, and every chooser entry ends inside the list (fit_px), measured in the painted frame
+    if (nine) {
+        fresh();
+        const Rgb ui0 = ex.elements[size_t(uinv)].colour, si0 = ex.elements[size_t(sinv)].colour,
+                  uf0 = ex.elements[size_t(uflag)].colour;
+        const Rgb white{0xFF, 0xFF, 0xFF};
+        bool roles_ok = true;
+        int r_ilabel = -1, r_slabel = -1;
+        for (size_t q = 0; q < ex.roles.size(); ++q) {
+            const Role& R = ex.roles[q];
+            if (R.name == "flag_fill_red") roles_ok = roles_ok && R.kind == Role::Kind::Element && R.el == uinv;
+            if (R.name == "flag_fill_red_sel") roles_ok = roles_ok && R.kind == Role::Kind::Element && R.el == sinv;
+            if (R.name == "flag_label_red") { r_ilabel = int(q); roles_ok = roles_ok && R.kind == Role::Kind::Colour && R.rgb == white; }
+            if (R.name == "flag_label_sel") { r_slabel = int(q); roles_ok = roles_ok && R.kind == Role::Kind::Colour && R.rgb == white; }
+        }
+        check(roles_ok && r_ilabel >= 0 && r_slabel >= 0 && ui0 == (Rgb{0x99, 0x33, 0x33}) && si0 == (Rgb{0xFF, 0x66, 0x66}),
+              "the Unselected Invalid Flag starts #993333 and the Selected Invalid Flag #FF6666, each role its element; "
+              "the invalid label and the selected label fixed #FFFFFF");
+        const int view_x = kMargin + kW;              // right of the panel on the left (no strip open)
+        Picker p = launch();
+        tap(p, 1700, 700);
+        tap(p, name_x, name_y);
+        row_tap(p, uinv);                             // the chrome left: its empty history commits it (one line)
+        const int isc = scene_el(uinv);
+        const Scene& sc = p.exp().scenes[size_t(isc)];
+        auto last_pixel = [&](int e) {                // the element's last solid pixel in view: its stem's foot
+            long k = -1;
+            for (size_t r = 0; r < p.exp().roles.size(); ++r) {
+                const Role& R = p.exp().roles[r];
+                if (R.kind != Role::Kind::Element || R.el != e) continue;
+                for (const Run& run : sc.solid[r])
+                    for (uint32_t j = run.start; j < run.start + run.len; ++j)
+                        if (int(j % uint32_t(W)) > view_x) k = std::max(k, long(j));
+            }
+            return k;
+        };
+        auto label_px = [&](int r) {                  // a label's first solid pixel in view
+            for (const Run& run : sc.solid[size_t(r)])
+                for (uint32_t j = run.start; j < run.start + run.len; ++j)
+                    if (int(j % uint32_t(W)) > view_x) return long(j);
+            return -1L;
+        };
+        auto edges = [&](int e) {                     // the antialiased pixels reading e, in view
+            std::vector<std::pair<uint32_t, uint32_t>> v;
+            for (const Stack& st : sc.stacks)
+                if ((st.deps & (1u << e)) && int(st.index % uint32_t(W)) > view_x) v.push_back({st.index, p.picture()[st.index]});
+            return v;
+        };
+        const long ku = element_pixel(p.exp(), isc, uinv, view_x), kus = last_pixel(uinv),
+                   ks = element_pixel(p.exp(), isc, sinv, view_x), kss = last_pixel(sinv),
+                   kv = element_pixel(p.exp(), isc, uflag, view_x), kil = label_px(r_ilabel), ksl = label_px(r_slabel);
+        const auto u_aa = edges(uinv), s_aa = edges(sinv);
+        p.paint(frame);
+        const bool stems = ku >= 0 && kus >= 0 && ks >= 0 && kss >= 0 && kus / W > ku / W + 100 && kss / W > ks / W + 100 &&
+                           kus % W - ku % W >= 0 && kus % W - ku % W < 8 && kss % W - ks % W >= 0 &&
+                           kss % W - ks % W < 8 && ku % W < ks % W;   // each stem's foot under its face's first columns
+        check(p.open() && !p.panel_on_right() && p.active() == uinv && count(p) == "0 of 0" && stems && kv >= 0 &&
+                  kil >= 0 && ksl >= 0 && !u_aa.empty() && !s_aa.empty() && p.picture()[size_t(ku)] == word_of(ui0) &&
+                  p.picture()[size_t(kus)] == word_of(ui0) && p.picture()[size_t(ks)] == word_of(si0) &&
+                  p.picture()[size_t(kss)] == word_of(si0) && p.picture()[size_t(kv)] == word_of(uf0) &&
+                  p.picture()[size_t(kil)] == word_of(white) && p.picture()[size_t(ksl)] == word_of(white) &&
+                  frame_word(frame, ku, W) == word_of(ui0) && frame_word(frame, ks, W) == word_of(si0),
+              "the switch to the Unselected Invalid Flag shows the invalid_flags scene, both invalid flags right of the "
+              "panel (x " + std::to_string(ku % W) + " and " + std::to_string(ks % W) + "): the faces and their stems (to "
+              "rows " + std::to_string(kus / W) + ", " + std::to_string(kss / W) + ") " + hex_of(ui0) + " and " +
+                  hex_of(si0) + ", both labels #FFFFFF (" + std::to_string(u_aa.size()) + " and " +
+                  std::to_string(s_aa.size()) + " antialiased px over the faces), a valid flag's face " + hex_of(uf0));
+        plus(p, 4);                                   // the face moves: its stem with it, its label's edges re-blend
+        const Rgb ui1 = p.colour().rgb;
+        size_t umoved = 0, ustill = 0;
+        for (const auto& [k, w] : u_aa) umoved += p.picture()[k] != w;
+        for (const auto& [k, w] : s_aa) ustill += p.picture()[k] != w;
+        check(ui1 != ui0 && p.picture()[size_t(ku)] == word_of(ui1) && p.picture()[size_t(kus)] == word_of(ui1) &&
+                  p.picture()[size_t(ks)] == word_of(si0) && p.picture()[size_t(kss)] == word_of(si0) &&
+                  p.picture()[size_t(kil)] == word_of(white) && p.picture()[size_t(kv)] == word_of(uf0) && umoved > 0 &&
+                  ustill == 0,
+              "the Unselected Invalid Flag repaints live: the face and its stem " + hex_of(ui1) + ", " +
+                  std::to_string(umoved) + " of " + std::to_string(u_aa.size()) + " antialiased edges of the invalid "
+                  "label re-blended over it (the label #FFFFFF); the selected face, its stem and its label's edges and the "
+                  "valid face stay");
+        p.paint(frame);
+        png(frame, work + "/frame_unselected_invalid_flag_open.png");
+        // THE NAMES' FIT, in the painted frame (the panel on the left: ox ppx, oy ppy)
+        const int ox = int(ppx), oy = int(ppy);
+        const uint32_t fieldw = word_of(Rgb{0x21, 0x21, 0x21}), edgew = word_of(Rgb{0, 0, 0});
+        auto button_right = [&]() {                   // the name's rightmost pixel in the element button, the head's left
+            const int mx = ox + kNameX1 - 36, my = oy + kNameY + kNameH / 2 - 6;
+            int r = -1;
+            for (int y = oy + kNameY + 1; y < oy + kNameY + kNameH - 1; ++y)
+                for (int x = ox + kColX + 1; x < ox + kNameX1 - 1; ++x) {
+                    const int i = my + 11 - y;
+                    if (i >= 0 && i < 12 && x >= mx - 1 - i && x < mx + 1 + i) continue;   // the head
+                    const uint32_t w = frame_word(frame, long(y) * W + x, W);
+                    if (w != fieldw && w != edgew) r = std::max(r, x);
+                }
+            return std::make_pair(r, mx - 12);
+        };
+        const auto [ub_r, head_x] = button_right();
+        check(ub_r >= 0 && ub_r < head_x - 1,
+              "the element button's \"" + ex.elements[size_t(uinv)].name + "\" (set smaller) ends at panel x " +
+                  std::to_string(ub_r - ox) + ", " + std::to_string(head_x - 1 - ub_r) + " px clear of the chooser's head (" +
+                  std::to_string(head_x - ox) + ")");
+        tap(p, name_x, name_y);
+        p.paint(frame);
+        png(frame, work + "/frame_chooser_invalid_open.png");
+        {
+            int worst = -1, worst_e = -1;
+            bool rows_ok = p.chooser_open();
+            for (int e = 0; e < int(ex.elements.size()); ++e) {
+                const int ry = oy + kChooserY + e * kChooserRowH;
+                int r = -1;
+                for (int y = ry + 2; y < ry + kChooserRowH - 1; ++y)
+                    for (int x = ox + kChooserNameX; x < ox + kColX1 - 1; ++x) {
+                        const uint32_t w = frame_word(frame, long(y) * W + x, W);
+                        if (w != fieldw && w != edgew) r = std::max(r, x);
+                    }
+                rows_ok = rows_ok && r >= 0 && r < ox + kColX1 - 2;
+                if (r > worst) { worst = r; worst_e = e; }
+            }
+            check(rows_ok, "every chooser entry ends inside the list: the widest, \"" +
+                               (worst_e >= 0 ? ex.elements[size_t(worst_e)].name : std::string()) + "\", at panel x " +
+                               std::to_string(worst - ox) + ", " + std::to_string(ox + kColX1 - 1 - 1 - worst) +
+                               " px inside the list's edge (" + std::to_string(kColX1 - 1) + ")");
+        }
+        row_tap(p, sinv);
+        check(p.active() == sinv && lines_of(work + "/picks.txt") == 2 &&
+                  slurp(work + "/picks.txt").find(" unselected_invalid_flag " + hex_of(ui1) + " hsv ") != std::string::npos &&
+                  p.colour().rgb == si0 && count(p) == "0 of 0" && p.picture()[size_t(ku)] == word_of(ui1),
+              "the edited Unselected Invalid Flag is committed by the switch to the Selected Invalid Flag (" + hex_of(si0) +
+                  ", 0 of 0)");
+        p.paint(frame);
+        {
+            const auto [sb_r, sh_x] = button_right();
+            check(sb_r >= 0 && sb_r < sh_x - 1,
+                  "the element button's \"" + ex.elements[size_t(sinv)].name + "\" ends at panel x " +
+                      std::to_string(sb_r - ox) + ", " + std::to_string(sh_x - 1 - sb_r) + " px clear of the chooser's head");
+        }
+        const auto s_aa1 = edges(sinv), u_aa1 = edges(uinv);
+        plus(p, 4);                                   // the selected face moves: its stem with it, its label's edges re-blend
+        const Rgb si1 = p.colour().rgb;
+        size_t smoved = 0, sstill = 0;
+        for (const auto& [k, w] : s_aa1) smoved += p.picture()[k] != w;
+        for (const auto& [k, w] : u_aa1) sstill += p.picture()[k] != w;
+        check(si1 != si0 && p.picture()[size_t(ks)] == word_of(si1) && p.picture()[size_t(kss)] == word_of(si1) &&
+                  p.picture()[size_t(ku)] == word_of(ui1) && p.picture()[size_t(kus)] == word_of(ui1) &&
+                  p.picture()[size_t(ksl)] == word_of(white) && smoved > 0 && sstill == 0,
+              "the Selected Invalid Flag repaints live: the face and its stem " + hex_of(si1) + ", " +
+                  std::to_string(smoved) + " of " + std::to_string(s_aa1.size()) + " antialiased edges of the selected "
+                  "label re-blended over it (the label #FFFFFF); the unselected invalid face, its stem and its label's "
+                  "edges stay");
+        p.paint(frame);
+        png(frame, work + "/frame_selected_invalid_flag_open.png");
+        tap(p, 1700, 700);                            // outside the panel: the close commits the Selected Invalid Flag
+        check(!p.open() && lines_of(work + "/picks.txt") == 3 &&
+                  slurp(work + "/picks.txt").find(" selected_invalid_flag " + hex_of(si1) + " hsv ") != std::string::npos,
+              "the close commits the edited Selected Invalid Flag");
+        Picker r = launch();
+        bool others = true;
+        for (int e = 0; e < int(r.exp().elements.size()); ++e)
+            if (e != uinv && e != sinv)
+                others = others && r.element(e).cs.rgb == ex.elements[size_t(e)].colour &&
+                         r.element(e).hist.picks.size() == (e == chrome ? 1u : 0u);
+        check(r.active() == sinv && r.element(uinv).cs.rgb == ui1 && r.element(sinv).cs.rgb == si1 &&
+                  r.element(uinv).hist.picks.size() == 1 && r.element(sinv).hist.picks.size() == 1 && others &&
+                  same_view(r.element(uinv).cs, p.element(uinv).cs) && same_view(r.element(sinv).cs, p.element(sinv).cs) &&
+                  r.picture()[size_t(ku)] == word_of(ui1) && r.picture()[size_t(kss)] == word_of(si1),
+              "a relaunch keeps both, each with its own history (1 of 1) and view, the invalid flags at them; every "
+              "other element at the manifest's colour");
+        fresh();
+    }
+
     // ---------------------------------------------------------------- THE PRESETS AND THE THEME STRIP
     if (nine) {
         fresh();
@@ -1432,8 +1623,8 @@ int main(int argc, char** argv) {
         std::string why;
         const bool refused_view = load_fails(why);
         check(refused_view, "a presets.json view that does not give its hex fails the load: " + why);
-        // A PRESET SAVED BEFORE THE FLAGS ROUND (three elements) loads, and leaves the flags, the playhead, the Label and
-        // the selected pair as they are
+        // A PRESET SAVED BEFORE THE FLAGS ROUND (three elements) loads, and leaves the flags, the playhead, the Label,
+        // the selected pair and the invalid flags as they are
         fresh();
         put(work + "/presets.json",
             "{\n \"presets\": [\n  {\"number\": 1, \"saved\": \"2026-10-04T08:30:00-04:00\", \"colours\": {\"canvas\": "
@@ -1465,10 +1656,14 @@ int main(int argc, char** argv) {
                   o.element(lbl).cs.rgb == ex.elements[size_t(lbl)].colour && o.element(lbl).hist.picks.empty() &&
                   o.element(selfill).cs.rgb == ex.elements[size_t(selfill)].colour && o.element(selfill).hist.picks.empty() &&
                   o.element(seltext).cs.rgb == ex.elements[size_t(seltext)].colour && o.element(seltext).hist.picks.empty() &&
+                  o.element(uinv).cs.rgb == ex.elements[size_t(uinv)].colour && o.element(uinv).hist.picks.empty() &&
+                  o.element(sinv).cs.rgb == ex.elements[size_t(sinv)].colour && o.element(sinv).hist.picks.empty() &&
                   occurrences(tail, " playhead_") == 0 && occurrences(tail, " label ") == 0 &&
-                  occurrences(tail, " selected_fill ") == 0 && occurrences(tail, " selected_text ") == 0,
+                  occurrences(tail, " selected_fill ") == 0 && occurrences(tail, " selected_text ") == 0 &&
+                  occurrences(tail, "_invalid_flag ") == 0,
               "loading it commits the chrome, the canvas and the ink (3 lines, their views exact) and leaves both flags, "
-              "both playhead elements, the Label, the Selection and the Selected Text as they were, no pick for any");
+              "both playhead elements, the Label, the Selection, the Selected Text and both invalid flags as they were, "
+              "no pick for any");
         fresh();
     }
 
@@ -1750,11 +1945,13 @@ int main(int argc, char** argv) {
     }
 
     // ---------------------------------------------------------------- the tablet's files of 2026-10-04 load unchanged
-    // the flags round's elements, the playhead round's, the label round's and the open-flag round's (architect
-    // 2026-10-04), absent from every file the tablet wrote before them: the manifest's colours, no history
+    // the flags round's elements, the playhead round's, the label round's, the open-flag round's and the invalid-flags
+    // round's (architect 2026-10-04), absent from every file the tablet wrote before them: the manifest's colours, no
+    // history
     auto flags_fresh = [&](const Picker& q) {
-        bool ok = uflag >= 0 && sflag >= 0 && phead >= 0 && pstem >= 0 && lbl >= 0 && selfill >= 0 && seltext >= 0;
-        for (int e : {uflag, sflag, phead, pstem, lbl, selfill, seltext})
+        bool ok = uflag >= 0 && sflag >= 0 && phead >= 0 && pstem >= 0 && lbl >= 0 && selfill >= 0 && seltext >= 0 &&
+                  uinv >= 0 && sinv >= 0;
+        for (int e : {uflag, sflag, phead, pstem, lbl, selfill, seltext, uinv, sinv})
             ok = ok && q.element(e).cs.rgb == ex.elements[size_t(e)].colour && q.element(e).hist.cursor == -1;
         return ok;
     };
@@ -1776,8 +1973,8 @@ int main(int argc, char** argv) {
                   t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty() && flags_fresh(t) &&
                   t.model() == Model::Hsv,
               "the tablet's picks.txt (110 lines) and state.json load unchanged: the canvas active, chrome 9 of 11, canvas "
-              "22 of 22, ink 77 of 77, every view exact; the flags, the playhead, the Label and the selected pair at the "
-              "manifest's colours, 0 of 0; HSV shown (no model)");
+              "22 of 22, ink 77 of 77, every view exact; the flags, the playhead, the Label, the selected pair and the "
+              "invalid flags at the manifest's colours, 0 of 0; HSV shown (no model)");
         tap(t, 1700, 700);
         tap(t, ppx + kPresetsX + 60, ppy + kNameY + kNameH / 2.0);
         tap(t, ppx + kPopX0 + 200, ppy + kPopY0 + kPopRowH / 2.0);
@@ -1810,7 +2007,7 @@ int main(int argc, char** argv) {
                   t.presets().empty() && flags_fresh(t) && t.model() == Model::Hsv,
               "the tablet's picks.txt (136 lines) and state.json at the presets build's install load unchanged: the ink "
               "active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90, every view exact; the flags, the playhead, the "
-              "Label and the selected pair at the manifest's colours, 0 of 0; HSV shown (no model)");
+              "Label, the selected pair and the invalid flags at the manifest's colours, 0 of 0; HSV shown (no model)");
         tap(t, 1700, 700);
         tap(t, 1700, 700);
         check(slurp(work + "/picks.txt") == picks0, "an open and a close on the unedited ink append nothing");
@@ -1830,8 +2027,8 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------- the repository's copy of the tablet's files
     // presets/'s picks.txt, state.json and presets.json, as the tablet holds them, over the round's own export (the
     // playhead round's install, architect 2026-10-04): they load; every element state.json names at its colour; every
-    // element the files never name (the playhead's two, the Label, the selected pair) at the manifest's colour with an
-    // empty history; and each
+    // element the files never name (the playhead's two, the Label, the selected pair, the invalid flags) at the
+    // manifest's colour with an empty history; and each
     // preset loaded leaves every element it does not name as it was, with no pick. Read from the files, never a
     // count, so a later copy of his files keeps the check
     if (!kept.empty() && !round_ex.elements.empty()) {
@@ -1898,9 +2095,10 @@ int main(int argc, char** argv) {
             }
             const std::string kp = slurp(work + "/picks.txt");
             check(kept_ok && !q.open() && occurrences(kp, " playhead_") == 0 && occurrences(kp, " label ") == 0 &&
-                      occurrences(kp, " selected_fill ") == 0 && occurrences(kp, " selected_text ") == 0,
+                      occurrences(kp, " selected_fill ") == 0 && occurrences(kp, " selected_text ") == 0 &&
+                      occurrences(kp, "_invalid_flag ") == 0,
                   "each of his presets loaded over them sets the elements it names and leaves every other as it was, no "
-                  "pick (none for the playhead, the Label or the selected pair)");
+                  "pick (none for the playhead, the Label, the selected pair or the invalid flags)");
         }
         fresh();
     }
@@ -1909,10 +2107,11 @@ int main(int argc, char** argv) {
     // the round's own export at the colours of its "all moved" references: the waveform scene, then after the chooser's
     // switch Ink -> Unselected Flag the flags scene, then back, then after the switch Ink -> Playhead Head the playhead
     // scene, then after the switch Playhead Head -> Label the label scene, then after the switch Label -> Selection the
-    // open_flag scene, each the mock tool's render
+    // open_flag scene, then after the switch Selection -> Unselected Invalid Flag the invalid_flags scene, each the mock
+    // tool's render
     if (!round_expects.empty()) {
         std::istringstream in(slurp(round_expects));
-        std::string line, wave_ppm, flags_ppm, head_ppm, label_ppm, open_ppm;
+        std::string line, wave_ppm, flags_ppm, head_ppm, label_ppm, open_ppm, invalid_ppm;
         std::vector<std::string> moved;
         size_t most = 0;
         while (std::getline(in, line)) {
@@ -1925,6 +2124,7 @@ int main(int argc, char** argv) {
             if (toks.size() > most) {
                 most = toks.size();
                 wave_ppm.clear(); flags_ppm.clear(); head_ppm.clear(); label_ppm.clear(); open_ppm.clear();
+                invalid_ppm.clear();
                 moved = toks;
             }
             if (toks != moved) continue;
@@ -1933,14 +2133,17 @@ int main(int argc, char** argv) {
             if (sc == "playhead") head_ppm = ppm;
             if (sc == "label") label_ppm = ppm;
             if (sc == "open_flag") open_ppm = ppm;
+            if (sc == "invalid_flags") invalid_ppm = ppm;
         }
         const Export& rx = round_ex;
         const int ri = element_of(rx, "ink"), ru = element_of(rx, "unselected_flag"), rh = element_of(rx, "playhead_head"),
-                  rl = element_of(rx, "label"), rs = element_of(rx, "selected_fill");
+                  rl = element_of(rx, "label"), rs = element_of(rx, "selected_fill"),
+                  rv = element_of(rx, "unselected_invalid_flag");
         if (wave_ppm.empty() || flags_ppm.empty() || head_ppm.empty() || label_ppm.empty() || open_ppm.empty() ||
-            moved.size() != rx.elements.size() || ri < 0 || ru < 0 || rh < 0 || rl < 0 || rs < 0) {
-            check(false, "the round's export has an all-moved reference of its five scenes, an ink, an unselected flag, "
-                         "a playhead head, a label and a selection");
+            invalid_ppm.empty() || moved.size() != rx.elements.size() || ri < 0 || ru < 0 || rh < 0 || rl < 0 || rs < 0 ||
+            rv < 0) {
+            check(false, "the round's export has an all-moved reference of its six scenes, an ink, an unselected flag, "
+                         "a playhead head, a label, a selection and an unselected invalid flag");
         } else {
             fresh();
             std::string cols;
@@ -1979,12 +2182,19 @@ int main(int argc, char** argv) {
             const long d5 = diff_ppm(q.picture(), open_ppm, rx.width, rx.height);
             q.paint(frame);
             png(frame, work + "/frame_switch_open_flag_moved.png");
-            check(back_on_ink && on_head && on_label && q.active() == rs && d0 == 0 && d1 == 0 && d2 == 0 && d3 == 0 &&
-                      d4 == 0 && d5 == 0,
+            const bool on_selection = q.active() == rs;
+            tap(q, name_x, name_y);
+            row_tap(q, rv);
+            const long d6 = diff_ppm(q.picture(), invalid_ppm, rx.width, rx.height);
+            q.paint(frame);
+            png(frame, work + "/frame_switch_invalid_flags_moved.png");
+            check(back_on_ink && on_head && on_label && on_selection && q.active() == rv && d0 == 0 && d1 == 0 && d2 == 0 &&
+                      d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0,
                   "the round's export at" + said + ": the waveform scene, the switch Ink -> Unselected Flag and back, "
-                  "the switch Ink -> Playhead Head, the switch on to the Label and on to the Selection each equal the mock "
-                  "tool's render (" + std::to_string(d0) + ", " + std::to_string(d1) + ", " + std::to_string(d2) + ", " +
-                  std::to_string(d3) + ", " + std::to_string(d4) + ", " + std::to_string(d5) + " px differ)");
+                  "the switch Ink -> Playhead Head, the switch on to the Label, on to the Selection and on to the "
+                  "Unselected Invalid Flag each equal the mock tool's render (" + std::to_string(d0) + ", " +
+                  std::to_string(d1) + ", " + std::to_string(d2) + ", " + std::to_string(d3) + ", " + std::to_string(d4) +
+                  ", " + std::to_string(d5) + ", " + std::to_string(d6) + " px differ)");
             fresh();
         }
     }

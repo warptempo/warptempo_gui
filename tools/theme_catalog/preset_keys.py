@@ -7,7 +7,12 @@
 #   ink -> waveform_ink, canvas -> waveform_canvas, and waveform_outline the picker theme's "auto" rule over the two
 #   (the 50 % linear-light blend of the ink over the canvas), computed ONCE here by render.py's own resolution;
 #   unselected_flag -> flag_face with flag_label, selected_flag -> flag_face_selected with flag_label_selected (each
-#   label the white the picker shows fixed); playhead_head and playhead_stem -> the same-named keys.
+#   label the white the picker shows fixed); playhead_head and playhead_stem -> the same-named keys; THE INVALID FLAGS
+#   (the invalid-flags round, architect 2026-10-04) unselected_invalid_flag -> invalid_face with invalid_label, and
+#   selected_invalid_flag -> invalid_face_selected with flag_label_selected -- the product's ONE selected label on
+#   both selected faces (render.cpp resolve_flag_face; the picker paints the selected invalid flag's label in the
+#   fixed `flag_label_sel`), so flag_label_selected is printed once when the preset records either selected face, and
+#   invalid_label labels the unselected invalid face alone.
 # A key whose element the preset does not record is not printed (the outline needs both the ink and the canvas).
 # The preset's chrome, its LABEL (the picker's Label element) and its SELECTED PAIR (the picker's Selection and
 # Selected Text, the open-flag round; architect 2026-10-04) are theme roles, not device keys: build.py writes them into
@@ -42,9 +47,14 @@ PICKER_THEME = os.path.join(PALETTE, 'themes', 'picker.json')
 ELEMENT_KEYS = (('ink', 'waveform_ink'), ('canvas', 'waveform_canvas'), ('outline', 'waveform_outline'),
                 ('unselected_flag', 'flag_face'), ('flag_label', 'flag_label'),
                 ('selected_flag', 'flag_face_selected'), ('flag_label_sel', 'flag_label_selected'),
-                ('playhead_head', 'playhead_head'), ('playhead_stem', 'playhead_stem'))
-# the labels the picker shows fixed (2026-10-04, picker.json: both white), each printed with its flag face
-FIXED_LABELS = {'flag_label': ('unselected_flag', '#FFFFFF'), 'flag_label_sel': ('selected_flag', '#FFFFFF')}
+                ('playhead_head', 'playhead_head'), ('playhead_stem', 'playhead_stem'),
+                ('unselected_invalid_flag', 'invalid_face'), ('flag_label_red', 'invalid_label'),
+                ('selected_invalid_flag', 'invalid_face_selected'))
+# the labels the picker shows fixed (2026-10-04, picker.json: all three white), each printed when the preset records a
+# face it labels (the head)
+FIXED_LABELS = {'flag_label': (('unselected_flag',), '#FFFFFF'),
+                'flag_label_sel': (('selected_flag', 'selected_invalid_flag'), '#FFFFFF'),
+                'flag_label_red': (('unselected_invalid_flag',), '#FFFFFF')}
 
 
 def lines(preset, picker, catalog):
@@ -69,7 +79,7 @@ def lines(preset, picker, catalog):
             assert picker['colours']['outline'] == 'auto'
             out.append(f'{cfg}={C.hexs(th.get("outline"))}')
         elif el in FIXED_LABELS:
-            if FIXED_LABELS[el][0] in cols: out.append(f'{cfg}={FIXED_LABELS[el][1]}')
+            if any(f in cols for f in FIXED_LABELS[el][0]): out.append(f'{cfg}={FIXED_LABELS[el][1]}')
         elif el in cols:
             out.append(f'{cfg}={C.hexs(th.get(element_role(picker, el)))}')
     return out
