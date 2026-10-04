@@ -58,10 +58,9 @@
 //     invalid flags at the manifest's colours with empty histories, HSV shown; --presets: the repository's presets.json
 //     reads; --kept <dir>:
 //     the repository's copy of the tablet's files (picks.txt, state.json, presets.json) loads over the round's own
-//     export, every element they name at state.json's colour, every element they never name (the playhead's two, the
-//     Label, the selected pair and the invalid flags, architect 2026-10-04) at the manifest's with an empty history,
-//     and each preset
-//     loaded leaves the elements it does not name as they were, with no pick;
+//     export, every element they name at state.json's colour, every element they never name at the manifest's with an
+//     empty history, and each preset loaded sets the elements it names (a commit for each whose colour or view
+//     changes, none for the rest) and leaves the elements it does not name as they were, with no pick;
 //   - THE PER-FRAME COST of a pen drag (R's track) on the ink, the chrome and the unselected flag, and of LCh's h track
 //     on the chrome: the live repaint and the frame;
 //   - frames as PNGs in the work dir for the eye.
@@ -2018,19 +2017,22 @@ int main(int argc, char** argv) {
     if (!repo_presets.empty()) {
         std::vector<Preset> ps;
         const bool ok = presets_load(repo_presets, ps, err);
-        bool hsv = ok && !ps.empty();
+        // any model's view (each element's is saved in its own, the model switch's): a later copy of his file keeps it
+        bool viewed = ok && !ps.empty();
         for (const Preset& q : ps)
-            for (const auto& kv : q.colours) hsv = hsv && kv.second.has_view && kv.second.model == Model::Hsv;
-        check(hsv, "the repository's presets.json (the tablet's, " + std::to_string(ps.size()) + " presets) reads, every view HSV");
+            for (const auto& kv : q.colours) viewed = viewed && kv.second.has_view && view_holds(kv.second);
+        check(viewed, "the repository's presets.json (the tablet's, " + std::to_string(ps.size()) +
+                          " presets) reads, every colour with a view that gives its hex");
     }
 
     // ---------------------------------------------------------------- the repository's copy of the tablet's files
     // presets/'s picks.txt, state.json and presets.json, as the tablet holds them, over the round's own export (the
     // playhead round's install, architect 2026-10-04): they load; every element state.json names at its colour; every
-    // element the files never name (the playhead's two, the Label, the selected pair, the invalid flags) at the
-    // manifest's colour with an empty history; and each
-    // preset loaded leaves every element it does not name as it was, with no pick. Read from the files, never a
-    // count, so a later copy of his files keeps the check
+    // element the files never name at the manifest's colour with an empty history; and each preset loaded sets the
+    // elements it names (a commit for each whose colour or view changes, none for the rest) and leaves every element it
+    // does not name at the colour it had, with no pick. Every expectation is read from the files (which elements they
+    // name, the colours and histories they give, picks.txt before and after each load), never a count or an element
+    // list, so a later copy of his files keeps the check
     if (!kept.empty() && !round_ex.elements.empty()) {
         fresh();
         const std::string picks0 = slurp(kept + "/picks.txt");
@@ -2067,14 +2069,20 @@ int main(int argc, char** argv) {
                       std::to_string(std::count(picks0.begin(), picks0.end(), '\n')) + " picks.txt lines, " +
                       std::to_string(ps.size()) + " presets) loads: every element at state.json's colour, its model, "
                       "active element and theme; the elements they never name at the manifest's colours, 0 of 0:" + fresh_keys);
+            // each load against the state it found (his files' state, then the previous load's): every element the
+            // preset names at its colour, one pick if its colour or view changed and none if not; every other element
+            // at the colour it had, its history unchanged; picks.txt gaining exactly those commits, each element's
+            // once with the preset's hex and model, and nothing else
             bool kept_ok = true;
+            size_t committed = 0;
             for (size_t k = 0; k < ps.size(); ++k) {
-                std::vector<Rgb> before;
+                std::vector<ColourState> before;
                 std::vector<size_t> lines;
                 for (int x = 0; x < int(rx.elements.size()); ++x) {
-                    before.push_back(q.element(x).cs.rgb);
+                    before.push_back(q.element(x).cs);
                     lines.push_back(q.element(x).hist.picks.size());
                 }
+                const std::string picks_before = slurp(work + "/picks.txt");
                 tap(q, 1700, 700);                    // the panel on the left, the strip (if open) right of it
                 tap(q, ppx + kPresetsX + 60, name_y);
                 const int want = std::max(0, int(k) * kPopRowH - 400);   // scrolled into view by a drag (acting on nothing)
@@ -2086,19 +2094,41 @@ int main(int argc, char** argv) {
                 }
                 tap(q, ppx + kPopX0 + 200, ppy + kPopListY0 + int(k) * kPopRowH - q.pop_scroll() + kPopRowH / 2.0);
                 tap(q, 1700, 700);
+                std::map<std::string, std::string> want_line;   // key -> " <hex> <model>" of its one expected commit
                 for (int x = 0; x < int(rx.elements.size()); ++x) {
                     const std::string& key = rx.elements[size_t(x)].key;
-                    if (ps[k].colours.count(key)) kept_ok = kept_ok && q.element(x).cs.rgb == ps[k].colours.at(key).rgb;
-                    else kept_ok = kept_ok && q.element(x).cs.rgb == before[size_t(x)] &&
-                                   q.element(x).hist.picks.size() == lines[size_t(x)];
+                    const auto c = ps[k].colours.find(key);
+                    if (c != ps[k].colours.end()) {
+                        const bool changes = !before[size_t(x)].shows(c->second);
+                        kept_ok = kept_ok && q.element(x).cs.shows(c->second) &&
+                                  q.element(x).hist.picks.size() == lines[size_t(x)] + (changes ? 1 : 0);
+                        if (changes) want_line[key] = " " + hex_of(c->second.rgb) + " " + model_word(c->second.model);
+                    } else {
+                        kept_ok = kept_ok && q.element(x).cs.rgb == before[size_t(x)].rgb &&
+                                  q.element(x).hist.picks.size() == lines[size_t(x)];
+                    }
                 }
+                const std::string picks_after = slurp(work + "/picks.txt");
+                kept_ok = kept_ok && picks_after.compare(0, picks_before.size(), picks_before) == 0;
+                std::istringstream added(picks_after.size() >= picks_before.size() ? picks_after.substr(picks_before.size())
+                                                                                   : std::string());
+                size_t n_added = 0;
+                for (std::string line; std::getline(added, line); ++n_added) {
+                    std::istringstream ls(line);
+                    std::string ts, key, hex, model;
+                    ls >> ts >> key >> hex >> model;
+                    const auto w = want_line.find(key);
+                    kept_ok = kept_ok && w != want_line.end() && w->second == " " + hex + " " + model;
+                    if (w != want_line.end()) want_line.erase(w);   // each element's commit once
+                }
+                kept_ok = kept_ok && want_line.empty();
+                committed += n_added;
             }
-            const std::string kp = slurp(work + "/picks.txt");
-            check(kept_ok && !q.open() && occurrences(kp, " playhead_") == 0 && occurrences(kp, " label ") == 0 &&
-                      occurrences(kp, " selected_fill ") == 0 && occurrences(kp, " selected_text ") == 0 &&
-                      occurrences(kp, "_invalid_flag ") == 0,
-                  "each of his presets loaded over them sets the elements it names and leaves every other as it was, no "
-                  "pick (none for the playhead, the Label, the selected pair or the invalid flags)");
+            check(kept_ok && !q.open(),
+                  "each of his presets loaded over them sets the elements it names, a pick for each whose colour or view "
+                  "changes and none for the rest, and leaves every other element as it was with no pick (" +
+                      std::to_string(committed) + " picks.txt lines appended over " + std::to_string(ps.size()) +
+                      " loads, each a named element's commit)");
         }
         fresh();
     }

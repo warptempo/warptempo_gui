@@ -377,9 +377,10 @@ those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 1
 of 12, canvas 34 of 34, ink 90 of 90) loading unchanged the same way; THE REPOSITORY'S COPY OF THE TABLET'S FILES
 (`presets/`'s `picks.txt`, `state.json` and `presets.json`, whatever the latest copy holds; architect 2026-10-04, the
 playhead round's install) loading over the round's own export: every element `state.json` names at its colour, its
-model, active element and open theme, every element the files never name (the playhead's two, the Label, the selected pair, the invalid flags) at the manifest's
-colour with an empty history, and each of his presets loaded over them setting the elements it names and leaving
-every other as it was, with no pick; and THE PER-FRAME COST
+model, active element and open theme, every element the files never name at the manifest's colour with an empty
+history, and each of his presets loaded over them setting the elements it names (`picks.txt` gaining exactly one
+commit for each whose colour or view changes and nothing else) and leaving every other at the colour it had, with no
+pick — every expectation read from the files, so a later copy keeps the check; and THE PER-FRAME COST
 of a pen drag on the ink, the chrome and the unselected flag, and on the chrome's h track in LCh (printed). Its frames are written as PNGs in
 `build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`,
 `frame_{unselected,selected}_flag_open.png` (the flags scene, the panel on the left),

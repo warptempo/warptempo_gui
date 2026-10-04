@@ -51,9 +51,15 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
   the product's one selected label (`flag_label_selected`), so preset_keys.py prints `invalid_label` with the
   unselected invalid face and `flag_label_selected` with either selected face (the product's rule, followed). Chooser
   entries now shrink to fit like the element button's name (one picker app-code fit; needs the APK).
-- REQUEST 2 (arcs 3-5 batched, one picker install) is in local_queue.md. THE RUN'S ARCS ARE ALL LANDED: after DONE 2
-  is read and logged here, THE RUN STOPS (the rest needs his discussion: the clock's colour, icon accents, the
-  picker's navigation rework).
+- REQUEST 2 (arcs 3-5 batched) -> DONE 2 (3744c95, 2 of 8 local wakes): the picker installed at 891dbf0 with its
+  export (12 elements, 24 roles, 6 scenes: waveform, flags, playhead, label, open_flag, invalid_flags); presets.json
+  unchanged (still 2), so the product was skipped; his two playhead picks from the glass copied in. The laptop check
+  then failed one clause that assumed his history held no playhead picks; the next commit makes the --kept run judge
+  each preset load against the state it found (no code change on the tablet needed).
+- THE RUN IS DONE (2026-10-04): all five arcs landed and installed. The cloud planner stopped here. NEXT (each needs
+  his discussion first): his look on the glass for the new elements, the two decisions below, the clock's own colour,
+  icon accents, the picker's navigation rework; a new preset he saves becomes a product theme by the helper (a
+  REQUEST: copy, full build.py, gen_theme_table.py, both product builds).
 
 ## Decisions for you (the cloud planner, 2026-10-04)
 1. THE FIELD TEXT FOLLOWS THE LABEL (applied in arc 3, easy to undo). The picker's chrome rule makes the field ground
