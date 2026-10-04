@@ -135,6 +135,38 @@ std::string now_iso8601() {
     return std::string(buf) + zone;
 }
 
+// the words split at `sep` (kept on all but the last word, so a line reads as typed)
+std::vector<std::string> split_words(const std::string& s, const std::string& sep) {
+    std::vector<std::string> out;
+    for (size_t b = 0;;) {
+        const size_t e = s.find(sep, b);
+        if (e == std::string::npos) { out.push_back(s.substr(b)); break; }
+        out.push_back(s.substr(b, e - b + sep.size()));
+        b = e + sep.size();
+    }
+    return out;
+}
+
+// the tokens laid into lines no wider than `width` (a token wider than a line stands alone on its own; the painter
+// clips it), each line's trailing space dropped
+std::vector<std::string> wrap(cairo_t* cr, bool mono, double px, const std::vector<std::string>& toks, double width) {
+    fonts_select(cr, mono, px);
+    auto w = [&](const std::string& t) {
+        cairo_text_extents_t e;
+        cairo_text_extents(cr, t.c_str(), &e);
+        return e.x_advance;
+    };
+    auto trim = [](std::string t) { while (!t.empty() && t.back() == ' ') t.pop_back(); return t; };
+    std::vector<std::string> lines;
+    std::string line;
+    for (const std::string& t : toks) {
+        if (!line.empty() && w(trim(line + t)) > width) { lines.push_back(trim(line)); line.clear(); }
+        line += t;
+    }
+    if (!line.empty()) lines.push_back(trim(line));
+    return lines;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------- ColourState
@@ -188,11 +220,13 @@ bool picker_load(const std::string& data_dir, Export& ex, Launch& out, std::stri
     std::map<std::string, Pick> colours;
     std::map<std::string, int> entries;
     std::map<std::string, std::vector<Pick>> picks;
-    std::string active;
-    if (!state_load(data_dir + "/state.json", colours, entries, active, err)) return false;
+    std::string active, theme;
+    if (!state_load(data_dir + "/state.json", colours, entries, active, theme, err)) return false;
     if (!picks_load(data_dir + "/picks.txt", picks, err)) return false;
     const int n = int(ex.elements.size());
     out = Launch{};
+    if (!presets_load(data_dir + "/presets.json", out.presets, err)) return false;
+    out.theme = theme_of(ex, theme);   // no theme open, or one this export does not list: none
     out.hist.resize(size_t(n));
     out.start.resize(size_t(n));
     out.active = element_of(ex, active);
@@ -231,7 +265,8 @@ bool picker_load(const std::string& data_dir, Export& ex, Launch& out, std::stri
 
 // ---------------------------------------------------------------- Picker
 Picker::Picker(Export ex, std::string data_dir, Launch launch)
-    : ex_(std::move(ex)), data_dir_(std::move(data_dir)), active_(launch.active) {
+    : ex_(std::move(ex)), data_dir_(std::move(data_dir)), active_(launch.active),
+      presets_list_(std::move(launch.presets)), theme_(launch.theme) {
     el_.resize(ex_.elements.size());
     for (size_t i = 0; i < el_.size(); ++i) {
         el_[i].cs.restore(launch.start[i]);
@@ -254,19 +289,24 @@ Picker::Picker(Export ex, std::string data_dir, Launch launch)
             if (a < 0) a += 360;
             ring_[size_t(y) * kWheel + x] = word_of(rgb_of_hsv(a, 1, 1));
         }
+    if (theme_ >= 0) layout_strip();
 }
 
 double Picker::panel_x() const { return right_ ? ex_.width - kMargin - kW : kMargin; }
 double Picker::panel_y() const { return (ex_.height - kH) / 2; }
 
-void Picker::apply_colour() {
+void Picker::apply_colours() {
     dirty_ = true;
-    Element& e = ex_.elements[size_t(active_)];
-    if (e.colour == cs().rgb) return;
-    e.colour = cs().rgb;
+    uint32_t changed = 0;
+    for (size_t i = 0; i < el_.size(); ++i)
+        if (!(ex_.elements[i].colour == el_[i].cs.rgb)) {
+            ex_.elements[i].colour = el_[i].cs.rgb;
+            changed |= 1u << i;
+        }
+    if (!changed) return;
     old_words_ = words_;
     role_words(ex_, words_);
-    scene_repaint(ex_, shown_, old_words_, words_, 1u << active_, picture_.data());
+    scene_repaint(ex_, shown_, old_words_, words_, changed, picture_.data());
 }
 
 bool Picker::edited() const {
@@ -280,50 +320,58 @@ bool Picker::forward_enabled() const { return history().cursor + 1 < int(history
 
 void Picker::write_state() const {
     const size_t n = el_.size();
+    // the last saved state: the active element as the panel opened (OLD and its cursor) while the panel is open
+    auto saved = [&](size_t i) -> const ColourState& { return open_ && int(i) == active_ ? old_ : el_[i].cs; };
+    auto cursor = [&](size_t i) { return open_ && int(i) == active_ ? open_cursor_ : el_[i].hist.cursor; };
     std::string js = "{\n \"active\": \"" + ex_.elements[size_t(active_)].key + "\",\n \"colours\": {\n";
     for (size_t i = 0; i < n; ++i)
-        js += "  \"" + ex_.elements[i].key + "\": \"" + hex_of(el_[i].cs.rgb) + "\"" + (i + 1 < n ? ",\n" : "\n");
+        js += "  \"" + ex_.elements[i].key + "\": \"" + hex_of(saved(i).rgb) + "\"" + (i + 1 < n ? ",\n" : "\n");
     js += " },\n \"hsv\": {\n";
     for (size_t i = 0; i < n; ++i) {
-        const ColourState& c = el_[i].cs;
+        const ColourState& c = saved(i);
         js += "  \"" + ex_.elements[i].key + "\": [" + view_number(c.h) + ", " + view_number(c.s) + ", " + view_number(c.v) +
               "]" + (i + 1 < n ? ",\n" : "\n");
     }
     js += " },\n \"entry\": {";
     bool first = true;
     for (size_t i = 0; i < n; ++i)
-        if (el_[i].hist.cursor >= 0) {
-            js += std::string(first ? "" : ", ") + "\"" + ex_.elements[i].key + "\": " + std::to_string(el_[i].hist.cursor + 1);
+        if (cursor(i) >= 0) {
+            js += std::string(first ? "" : ", ") + "\"" + ex_.elements[i].key + "\": " + std::to_string(cursor(i) + 1);
             first = false;
         }
-    js += "}\n}\n";
+    js += "}";
+    if (theme_ >= 0) js += ",\n \"theme\": \"" + ex_.themes[size_t(theme_)].key + "\"";
+    js += "\n}\n";
     const std::string tmp = data_dir_ + "/state.json.part", dst = data_dir_ + "/state.json";
     FILE* f = std::fopen(tmp.c_str(), "w");
     if (!f || std::fputs(js.c_str(), f) < 0 || std::fclose(f) != 0 || std::rename(tmp.c_str(), dst.c_str()) != 0)
         plog("picker: cannot write %s", dst.c_str());
 }
 
-void Picker::append_pick() {
-    const Element& e = ex_.elements[size_t(active_)];
-    const std::string hex = hex_of(cs().rgb);
-    const std::string line = now_iso8601() + " " + e.key + " " + hex + " hsv " + view_number(cs().h) + " " +
-                             view_number(cs().s) + " " + view_number(cs().v) + "\n";
+void Picker::append_pick(int ei, bool log) {
+    const Element& e = ex_.elements[size_t(ei)];
+    ElementState& es = el_[size_t(ei)];
+    const ColourState& c = es.cs;
+    const std::string hex = hex_of(c.rgb);
+    const std::string line = now_iso8601() + " " + e.key + " " + hex + " hsv " + view_number(c.h) + " " +
+                             view_number(c.s) + " " + view_number(c.v) + "\n";
     if (FILE* f = std::fopen((data_dir_ + "/picks.txt").c_str(), "a")) {
         std::fputs(line.c_str(), f);
         std::fclose(f);
     } else {
         plog("picker: cannot append to %s/picks.txt", data_dir_.c_str());
     }
-    hist().picks.push_back(cs().pick());
-    hist().cursor = int(hist().picks.size()) - 1;
-    plog("picker: commit %s %s", e.key.c_str(), hex.c_str());
+    es.hist.picks.push_back(c.pick());
+    es.hist.cursor = int(es.hist.picks.size()) - 1;
+    if (log) plog("picker: commit %s %s", e.key.c_str(), hex.c_str());
 }
 
 void Picker::close() {
     open_ = false;
     chooser_ = false;
+    presets_ = false;
     target_ = Target::None;
-    if (edited()) append_pick();   // else a colour reached by stepping, unchanged: nothing appended
+    if (edited()) append_pick(active_);   // else a colour reached by stepping, unchanged: nothing appended
     write_state();
     dirty_ = true;
 }
@@ -332,7 +380,7 @@ void Picker::choose(int e) {
     chooser_ = false;
     dirty_ = true;
     if (e == active_) return;           // the active element again: nothing
-    if (edited()) append_pick();        // the close for the element left (the head's ruling)
+    if (edited()) append_pick(active_);        // the close for the element left (the head's ruling)
     active_ = e;
     old_ = cs();
     open_cursor_ = hist().cursor;
@@ -349,19 +397,181 @@ void Picker::discard_if_open() {
     if (!open_) return;
     open_ = false;
     chooser_ = false;
+    presets_ = false;
     target_ = Target::None;
     hist().cursor = open_cursor_;
     cs() = old_;
-    apply_colour();
+    apply_colours();
 }
 
 void Picker::history_step(int dir) {
     if (!(dir < 0 ? back_enabled() : forward_enabled())) return;
     hist().cursor += dir;
     cs().restore(hist().picks[size_t(hist().cursor)]);
-    apply_colour();
+    apply_colours();
     const Element& e = ex_.elements[size_t(active_)];
     plog("picker: step %s %s %s", e.key.c_str(), count_of(hist()).c_str(), hex_of(e.colour).c_str());
+}
+
+// ---------------------------------------------------------------- the presets pop-up
+std::string Picker::save_label() const {
+    return "Save as Preset " + std::to_string(presets_list_.empty() ? 1 : presets_list_.back().number + 1);
+}
+
+void Picker::open_presets() {
+    chooser_ = false;
+    presets_ = true;
+    dirty_ = true;
+    if (edited()) {                    // the close for the panel's edit: commit it, the panel's opening is now it
+        append_pick(active_);
+        old_ = cs();
+        open_cursor_ = hist().cursor;
+        write_state();
+    }
+    pop_.pos = std::min(pop_.pos, pop_max());
+}
+
+void Picker::write_presets() const {
+    std::string js = "{\n \"presets\": [";
+    for (size_t k = 0; k < presets_list_.size(); ++k) {
+        const Preset& p = presets_list_[k];
+        js += std::string(k ? ",\n" : "\n") + "  {\"number\": " + std::to_string(p.number) + ", \"saved\": \"" + p.saved +
+              "\",\n   \"colours\": {";
+        std::string hsv;
+        bool first = true;
+        for (const auto& kv : p.colours) {   // the keys in the map's order; the reader takes them by name
+            js += std::string(first ? "" : ", ") + "\"" + kv.first + "\": \"" + hex_of(kv.second.rgb) + "\"";
+            hsv += std::string(first ? "" : ", ") + "\"" + kv.first + "\": [" + view_number(kv.second.h) + ", " +
+                   view_number(kv.second.s) + ", " + view_number(kv.second.v) + "]";
+            first = false;
+        }
+        js += "},\n   \"hsv\": {" + hsv + "}}";
+    }
+    js += presets_list_.empty() ? "]\n}\n" : "\n ]\n}\n";
+    const std::string tmp = data_dir_ + "/presets.json.part", dst = data_dir_ + "/presets.json";
+    FILE* f = std::fopen(tmp.c_str(), "w");
+    if (!f || std::fputs(js.c_str(), f) < 0 || std::fclose(f) != 0 || std::rename(tmp.c_str(), dst.c_str()) != 0)
+        plog("picker: cannot write %s", dst.c_str());
+}
+
+void Picker::save_preset() {
+    Preset p;
+    p.number = presets_list_.empty() ? 1 : presets_list_.back().number + 1;
+    p.saved = now_iso8601();
+    std::string said;
+    for (size_t i = 0; i < el_.size(); ++i) {
+        p.colours[ex_.elements[i].key] = el_[i].cs.pick();
+        said += " " + ex_.elements[i].key + " " + hex_of(el_[i].cs.rgb);
+    }
+    presets_list_.push_back(std::move(p));
+    write_presets();
+    plog("picker: preset save Preset %d:%s", presets_list_.back().number, said.c_str());
+}
+
+void Picker::load_preset(int i) {
+    const Preset& p = presets_list_[size_t(i)];
+    std::string moved, kept;
+    for (size_t e = 0; e < el_.size(); ++e) {
+        const std::string& key = ex_.elements[e].key;
+        const auto c = p.colours.find(key);
+        if (c == p.colours.end()) continue;               // an element the preset predates: it keeps its colour
+        if (el_[e].cs.shows(c->second)) { kept += " " + key; continue; }
+        el_[e].cs.restore(c->second);
+        append_pick(int(e), false);                       // one committed pick; the load's line says it
+        moved += " " + key + " " + hex_of(c->second.rgb);
+    }
+    apply_colours();
+    old_ = cs();
+    open_cursor_ = hist().cursor;
+    write_state();
+    plog("picker: preset load Preset %d: committed%s; unchanged%s", p.number, moved.empty() ? " nothing" : moved.c_str(),
+         kept.empty() ? " nothing" : kept.c_str());
+}
+
+int Picker::pop_items() const {
+    return int(presets_list_.size()) + (ex_.themes.empty() ? 0 : 1 + int(ex_.themes.size()));
+}
+
+int Picker::pop_max() const { return std::max(0, pop_items() * kPopRowH - (kPopY1 - kPopListY0)); }
+
+int Picker::pop_item_at(double ly) const {
+    if (ly < kPopListY0 || ly >= kPopY1) return -1;
+    const int k = int(std::floor((ly - kPopListY0 + pop_.pos) / kPopRowH));
+    return k < pop_items() ? k : -1;
+}
+
+void Picker::pop_act(int item) {
+    const int np = int(presets_list_.size());
+    if (item == np) return;                                // the heading: no entry
+    presets_ = false;
+    dirty_ = true;
+    if (item < np) load_preset(item);
+    else open_theme(item - np - 1);
+}
+
+void Picker::scroll_move(Scroll& sc, double y, int max) {
+    if (!sc.dragging) {
+        if (std::abs(y - down_y_) <= kSlop) return;
+        sc.dragging = true;                                // past the slop: a scroll from here, no jump
+        sc.anchor = down_y_ + (y > down_y_ ? kSlop : -kSlop);
+        sc.start = sc.pos;
+    }
+    const int pos = std::max(0, std::min(max, int(std::lround(sc.start - (y - sc.anchor)))));
+    if (pos != sc.pos) { sc.pos = pos; dirty_ = true; }
+}
+
+// ---------------------------------------------------------------- the theme strip
+double Picker::strip_x() const { return right_ ? panel_x() - kStripGap - kStripW : panel_x() + kW + kStripGap; }
+double Picker::strip_list_y0() const { return panel_y() + strip_head_; }
+double Picker::strip_list_y1() const { return panel_y() + kH - kStripPad; }
+double Picker::strip_row_y(int i) const { return strip_list_y0() + strip_rows_[size_t(i)].y - strip_.pos; }
+int Picker::strip_max() const { return std::max(0, strip_content_ - int(strip_list_y1() - strip_list_y0())); }
+
+int Picker::strip_row_at(double y) const {
+    if (y < strip_list_y0() || y >= strip_list_y1()) return -1;
+    const double cy = y - strip_list_y0() + strip_.pos;
+    for (size_t i = 0; i < strip_rows_.size(); ++i)
+        if (cy >= strip_rows_[i].y && cy < strip_rows_[i].y + strip_rows_[i].h) return int(i);
+    return -1;
+}
+
+void Picker::layout_strip() {
+    const Theme& t = ex_.themes[size_t(theme_)];
+    cairo_surface_t* ms = cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
+    cairo_t* cr = cairo_create(ms);
+    strip_title_ = wrap(cr, false, kStripTitlePx, split_words(t.name, " "), kStripW - 2 * kStripPad - kBtn - 12);
+    strip_head_ = kStripPad + std::max(kBtn, int(std::ceil(strip_title_.size() * kStripTitleLineH))) + 16;
+    strip_rows_.clear();
+    int y = 0;
+    for (const ThemeColour& c : t.colours) {
+        std::vector<std::string> toks;
+        for (size_t k = 0; k < c.names.size(); ++k) toks.push_back(c.names[k] + (k + 1 < c.names.size() ? ", " : ""));
+        StripRow r;
+        r.names = wrap(cr, false, kStripNamePx, toks, kStripW - kStripTextX - kStripPad);
+        r.y = y;
+        r.h = std::max(kStripSwH, int((1 + r.names.size()) * kStripLineH) + 6);
+        y += r.h + kStripRowGap;
+        strip_rows_.push_back(std::move(r));
+    }
+    strip_content_ = y - kStripRowGap;
+    cairo_destroy(cr);
+    cairo_surface_destroy(ms);
+}
+
+void Picker::open_theme(int t) {
+    theme_ = t;
+    strip_.pos = 0;
+    layout_strip();
+    dirty_ = true;
+    write_state();
+    plog("picker: theme open %s (%zu colours)", ex_.themes[size_t(t)].key.c_str(), ex_.themes[size_t(t)].colours.size());
+}
+
+void Picker::close_theme() {
+    plog("picker: theme close %s", ex_.themes[size_t(theme_)].key.c_str());
+    theme_ = -1;
+    dirty_ = true;
+    write_state();
 }
 
 void Picker::ring_to(double x, double y) {
@@ -369,7 +579,7 @@ void Picker::ring_to(double x, double y) {
     double a = std::atan2(-dy, dx) * 180 / kPi;
     if (a < 0) a += 360;
     cs().set_hsv(a, cs().s, cs().v);
-    apply_colour();
+    apply_colours();
 }
 
 void Picker::triangle_to(double x, double y) {
@@ -393,7 +603,7 @@ void Picker::triangle_to(double x, double y) {
     const double vv = clamp01(b[0] + b[1]);
     const double ss = vv > 0 ? clamp01(b[0] / vv) : cs().s;
     cs().set_hsv(cs().h, ss, vv);
-    apply_colour();
+    apply_colours();
 }
 
 void Picker::track_to(int row, double x) {
@@ -408,7 +618,7 @@ void Picker::track_to(int row, double x) {
             cs().set_rgb(c);
         }
     }
-    apply_colour();
+    apply_colours();
 }
 
 void Picker::step(int row, int dir) {
@@ -423,13 +633,15 @@ void Picker::step(int row, int dir) {
             cs().set_rgb(c);
         }
     }
-    apply_colour();
+    apply_colours();
 }
 
 void Picker::press(double x, double y) {
     down_x_ = x;
     down_y_ = y;
     row_ = -1;
+    item_ = -1;
+    pop_.dragging = strip_.dragging = false;
     if (!open_) { target_ = Target::Picture; return; }
     const double ox = panel_x(), oy = panel_y(), lx = x - ox, ly = y - oy;
     if (chooser_) {   // the chooser is modal: a press on a row holds it, any other press is outside it
@@ -442,6 +654,22 @@ void Picker::press(double x, double y) {
         }
         return;
     }
+    if (presets_) {   // the pop-up is modal as the chooser is
+        if (in(lx, ly, kPopX0, kPopY0, kPopX1, kPopListY0)) target_ = Target::PopSave;
+        else if (in(lx, ly, kPopX0, kPopListY0, kPopX1, kPopY1)) { target_ = Target::PopList; item_ = pop_item_at(ly); }
+        else target_ = Target::OffPopup;
+        return;
+    }
+    if (theme_ >= 0) {
+        const double sx = strip_x(), sy = oy;
+        if (in(x, y, sx, sy, sx + kStripW, sy + kH)) {
+            target_ = Target::None;
+            if (in(x - sx, y - sy, kStripW - kStripPad - kBtn - 8, kStripPad - 8, kStripW - kStripPad + 8, kStripPad + kBtn + 8))
+                target_ = Target::StripClose;
+            else if (y >= strip_list_y0() && y < strip_list_y1()) { target_ = Target::StripList; item_ = strip_row_at(y); }
+            return;
+        }
+    }
     if (!in(lx, ly, 0, 0, kW, kH)) { target_ = Target::Outside; return; }
     target_ = Target::None;
     const double r = std::hypot(lx - (kPad + kROut), ly - (kPad + kROut));
@@ -450,7 +678,8 @@ void Picker::press(double x, double y) {
         else { target_ = Target::Triangle; triangle_to(x, y); }
         return;
     }
-    if (in(lx, ly, kColX, kNameY, kColX1, kNameY + kNameH)) { target_ = Target::Name; return; }
+    if (in(lx, ly, kColX, kNameY, kNameX1, kNameY + kNameH)) { target_ = Target::Name; return; }
+    if (in(lx, ly, kPresetsX, kNameY, kColX1, kNameY + kNameH)) { target_ = Target::Presets; return; }
     if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { target_ = Target::Old; return; }
     if (between(ly, kHistY - 12, kHistY + kBtn + 12)) {   // a disabled button still holds the press: it does nothing
         if (between(lx, kBackX - 8, kBackX + kBtn + 8)) { target_ = Target::Back; return; }
@@ -472,6 +701,8 @@ void Picker::move(double x, double y) {
         case Target::Ring: ring_to(x, y); break;
         case Target::Triangle: triangle_to(x, y); break;
         case Target::Track: track_to(row_, x); break;
+        case Target::PopList: scroll_move(pop_, y, pop_max()); break;
+        case Target::StripList: scroll_move(strip_, y, strip_max()); break;
         default: break;
     }
 }
@@ -490,7 +721,10 @@ void Picker::release(double x, double y) {
             close();
             break;
         case Target::Name:         // the element button: the chooser opens at the lift
-            if (in(lx, ly, kColX, kNameY, kColX1, kNameY + kNameH)) { chooser_ = true; dirty_ = true; }
+            if (in(lx, ly, kColX, kNameY, kNameX1, kNameY + kNameH)) { chooser_ = true; dirty_ = true; }
+            break;
+        case Target::Presets:      // the presets button: the pop-up opens at the lift
+            if (in(lx, ly, kPresetsX, kNameY, kColX1, kNameY + kNameH)) open_presets();
             break;
         case Target::Row:          // an entry, lifted on the same entry: chosen
             if (in(lx, ly, kColX, kChooserY + row_ * kChooserRowH, kColX1, kChooserY + (row_ + 1) * kChooserRowH)) choose(row_);
@@ -499,8 +733,36 @@ void Picker::release(double x, double y) {
             chooser_ = false;
             dirty_ = true;
             break;
+        case Target::PopSave:      // the save line, lifted on it: saved, the pop-up closed
+            if (in(lx, ly, kPopX0, kPopY0, kPopX1, kPopListY0)) {
+                save_preset();
+                presets_ = false;
+                dirty_ = true;
+            }
+            break;
+        case Target::PopList:      // an entry tapped (no scroll), lifted on the same entry: it acts
+            if (!pop_.dragging && item_ >= 0 && in(lx, ly, kPopX0, kPopListY0, kPopX1, kPopY1) && pop_item_at(ly) == item_)
+                pop_act(item_);
+            break;
+        case Target::OffPopup:     // a tap outside the pop-up: it closes, nothing else
+            presets_ = false;
+            dirty_ = true;
+            break;
+        case Target::StripClose: {
+            const double sx = strip_x(), sy = panel_y();
+            if (in(x - sx, y - sy, kStripW - kStripPad - kBtn - 8, kStripPad - 8, kStripW - kStripPad + 8, kStripPad + kBtn + 8))
+                close_theme();
+            break;
+        }
+        case Target::StripList:    // a swatch tapped (no scroll), lifted on the same row: adopted, an edit
+            if (!strip_.dragging && item_ >= 0 && in(x, y, strip_x(), strip_list_y0(), strip_x() + kStripW, strip_list_y1()) &&
+                strip_row_at(y) == item_) {
+                cs().set_rgb(ex_.themes[size_t(theme_)].colours[size_t(item_)].rgb);
+                apply_colours();
+            }
+            break;
         case Target::Old:
-            if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { cs() = old_; apply_colour(); }
+            if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { cs() = old_; apply_colours(); }
             break;
         case Target::Back:
         case Target::Forward: {
@@ -517,9 +779,13 @@ void Picker::release(double x, double y) {
         default: break;
     }
     target_ = Target::None;
+    pop_.dragging = strip_.dragging = false;
 }
 
-void Picker::cancel() { target_ = Target::None; }
+void Picker::cancel() {
+    target_ = Target::None;
+    pop_.dragging = strip_.dragging = false;
+}
 
 void Picker::paint(cairo_surface_t* surf) {
     cairo_surface_flush(surf);
@@ -552,111 +818,217 @@ void Picker::paint(cairo_surface_t* surf) {
     const int ox = int(panel_x()), oy = int(panel_y());
     fr.fill(ox, oy, ox + kW, oy + kH, kGround);
     fr.edge(ox, oy, ox + kW, oy + kH, kEdge);
-    // the wheel: the ring, the triangle at the hue, their markers
-    const int wx = ox + kPad, wy = oy + kPad, cx = wx + kROut, cy = wy + kROut;
-    fr.blit(ring_, kWheel, wx, wy);
-    double v[3][2];
-    corners(c.h, v);
-    if (c.h != tri_h_) {
-        tri_.assign(size_t(kWheel) * kWheel, 0);
-        for (int y = 0; y < kWheel; ++y)
-            for (int x = 0; x < kWheel; ++x) {
-                double b[3];
-                bary(v, x + 0.5 - kROut, y + 0.5 - kROut, b);
-                if (b[0] < 0 || b[1] < 0 || b[2] < 0) continue;
-                const double vv = clamp01(b[0] + b[1]);
-                tri_[size_t(y) * kWheel + x] = word_of(rgb_of_hsv(c.h, vv > 0 ? clamp01(b[0] / vv) : 0, vv));
-            }
-        tri_h_ = c.h;
-    }
-    fr.blit(tri_, kWheel, wx, wy);
-    const double ha = c.h * kPi / 180, rm = (kRIn + kROut) / 2.0;
-    fr.marker(int(std::lround(cx + rm * std::cos(ha))), int(std::lround(cy - rm * std::sin(ha))), 14, 3);
+    // the element button: a field with the name and, at its right, a down-pointing head (the chooser below it); the
+    // presets button beside it
+    fr.fill(ox + kColX, oy + kNameY, ox + kNameX1, oy + kNameY + kNameH, kField);
+    fr.edge(ox + kColX, oy + kNameY, ox + kNameX1, oy + kNameY + kNameH, kEdge);
     {
-        const double a = c.s * c.v, b = c.v * (1 - c.s), cc = 1 - c.v;
-        const double px = a * v[0][0] + b * v[1][0] + cc * v[2][0], py = a * v[0][1] + b * v[1][1] + cc * v[2][1];
-        fr.marker(int(std::lround(cx + px)), int(std::lround(cy + py)), 12, 3);
-    }
-    // the element button: a field with the name and, at its right, a down-pointing head (the chooser below it)
-    fr.fill(ox + kColX, oy + kNameY, ox + kColX1, oy + kNameY + kNameH, kField);
-    fr.edge(ox + kColX, oy + kNameY, ox + kColX1, oy + kNameY + kNameH, kEdge);
-    {
-        const int mx = ox + kColX1 - 36, my = oy + kNameY + kNameH / 2 - 6;
+        const int mx = ox + kNameX1 - 36, my = oy + kNameY + kNameH / 2 - 6;
         for (int i = 0; i < 12; ++i) fr.fill(mx - 1 - i, my + 11 - i, mx + 1 + i, my + 12 - i, kLabel);   // the head, 24 px across
     }
-    // the swatches: OLD | NEW
-    fr.fill(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, old_.rgb);
-    fr.edge(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, kEdge);
-    fr.fill(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, c.rgb);
-    fr.edge(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, kEdge);
-    // the history: BACK and FORWARD, an arrow each (a solid head and the − / +'s 4-px shaft, 32 px across), dimmed
-    // when disabled
-    for (int dir : {-1, 1}) {
-        const int bx = ox + (dir < 0 ? kBackX : kFwdX), by = oy + kHistY;
+    fr.fill(ox + kPresetsX, oy + kNameY, ox + kColX1, oy + kNameY + kNameH, kField);
+    fr.edge(ox + kPresetsX, oy + kNameY, ox + kColX1, oy + kNameY + kNameH, kEdge);
+    const int n = int(ex_.elements.size());
+    const int np = int(presets_list_.size());
+    if (!presets_) {
+        // the wheel: the ring, the triangle at the hue, their markers
+        const int wx = ox + kPad, wy = oy + kPad, cx = wx + kROut, cy = wy + kROut;
+        fr.blit(ring_, kWheel, wx, wy);
+        double v[3][2];
+        corners(c.h, v);
+        if (c.h != tri_h_) {
+            tri_.assign(size_t(kWheel) * kWheel, 0);
+            for (int y = 0; y < kWheel; ++y)
+                for (int x = 0; x < kWheel; ++x) {
+                    double b[3];
+                    bary(v, x + 0.5 - kROut, y + 0.5 - kROut, b);
+                    if (b[0] < 0 || b[1] < 0 || b[2] < 0) continue;
+                    const double vv = clamp01(b[0] + b[1]);
+                    tri_[size_t(y) * kWheel + x] = word_of(rgb_of_hsv(c.h, vv > 0 ? clamp01(b[0] / vv) : 0, vv));
+                }
+            tri_h_ = c.h;
+        }
+        fr.blit(tri_, kWheel, wx, wy);
+        const double ha = c.h * kPi / 180, rm = (kRIn + kROut) / 2.0;
+        fr.marker(int(std::lround(cx + rm * std::cos(ha))), int(std::lround(cy - rm * std::sin(ha))), 14, 3);
+        {
+            const double a = c.s * c.v, b = c.v * (1 - c.s), cc = 1 - c.v;
+            const double px = a * v[0][0] + b * v[1][0] + cc * v[2][0], py = a * v[0][1] + b * v[1][1] + cc * v[2][1];
+            fr.marker(int(std::lround(cx + px)), int(std::lround(cy + py)), 12, 3);
+        }
+        // the swatches: OLD | NEW
+        fr.fill(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, old_.rgb);
+        fr.edge(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, kEdge);
+        fr.fill(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, c.rgb);
+        fr.edge(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, kEdge);
+        // the history: BACK and FORWARD, an arrow each (a solid head and the − / +'s 4-px shaft, 32 px across), dimmed
+        // when disabled
+        for (int dir : {-1, 1}) {
+            const int bx = ox + (dir < 0 ? kBackX : kFwdX), by = oy + kHistY;
+            fr.fill(bx, by, bx + kBtn, by + kBtn, kField);
+            fr.edge(bx, by, bx + kBtn, by + kBtn, kEdge);
+            const Rgb g = (dir < 0 ? back_enabled() : forward_enabled()) ? kLabel : kDim;
+            const int mx = bx + kBtn / 2, my = by + kBtn / 2;
+            for (int i = 0; i < 16; ++i) {   // the head: column i from the tip, 2 + 2i px tall
+                const int x = dir < 0 ? mx - 16 + i : mx + 15 - i;
+                fr.fill(x, my - 1 - i, x + 1, my + 1 + i, g);
+            }
+            if (dir < 0) fr.fill(mx, my - 2, mx + 16, my + 2, g);
+            else fr.fill(mx - 16, my - 2, mx, my + 2, g);
+        }
+        // the sliders: the field behind each value and each button, the track's live gradient, the handle, the signs
+        for (int i = 0; i < 6; ++i) {
+            const int ry = oy + row_y(i), ty = ry + (kRowH - kTrackH) / 2;
+            for (int bx : {kMinusX, kPlusX}) {
+                fr.fill(ox + bx, ry, ox + bx + kBtn, ry + kRowH, kField);
+                fr.edge(ox + bx, ry, ox + bx + kBtn, ry + kRowH, kEdge);
+                const int mx = ox + bx + kBtn / 2, my = ry + kRowH / 2;
+                fr.fill(mx - 15, my - 2, mx + 15, my + 2, kLabel);
+                if (bx == kPlusX) fr.fill(mx - 2, my - 15, mx + 2, my + 15, kLabel);
+            }
+            fr.fill(ox + kFieldX, ry, ox + kFieldX + kFieldW, ry + kRowH, kField);
+            fr.edge(ox + kFieldX, ry, ox + kFieldX + kFieldW, ry + kRowH, kEdge);
+            for (int x = 0; x < kTrackL; ++x) {
+                const uint32_t w = word_of(row_colour(c, i, double(x) / (kTrackL - 1)));
+                for (int y = ty; y < ty + kTrackH; ++y) fr.px[size_t(y) * fr.stride + ox + kTrackX + x] = w;
+            }
+            fr.edge(ox + kTrackX, ty, ox + kTrackX + kTrackL, ty + kTrackH, kEdge);
+            const int hx = ox + kTrackX + int(std::lround(row_value(c, i) * (kTrackL - 1)));
+            fr.fill(hx - 6, ty - 10, hx + 7, ty + kTrackH + 10, kEdge);
+            fr.fill(hx - 3, ty - 7, hx + 4, ty + kTrackH + 7, kLabel);
+        }
+        // the chooser, over the column: a field per element in manifest order, the active one's marked by a square
+        if (chooser_) {
+            const int y0 = oy + kChooserY, y1 = y0 + n * kChooserRowH;
+            fr.fill(ox + kColX, y0, ox + kColX1, y1, kField);
+            fr.edge(ox + kColX, y0, ox + kColX1, y1, kEdge);
+            for (int i = 1; i < n; ++i) fr.fill(ox + kColX, y0 + i * kChooserRowH, ox + kColX1, y0 + i * kChooserRowH + 1, kEdge);
+            const int my = y0 + active_ * kChooserRowH + kChooserRowH / 2;
+            fr.fill(ox + kColX + 22, my - 8, ox + kColX + 38, my + 8, kLabel);
+        }
+    } else {
+        // THE PRESETS POP-UP over the panel: the save line, then the list clipped to its viewport (the presets with a
+        // swatch per element, the heading on the ground, the themes with their ground's swatch), rows ruled as the
+        // chooser's
+        const int x0 = ox + kPopX0, x1 = ox + kPopX1, vy0 = oy + kPopListY0, vy1 = oy + kPopY1;
+        fr.fill(x0, oy + kPopY0, x1, vy1, kField);
+        fr.edge(x0, oy + kPopY0, x1, vy1, kEdge);
+        fr.fill(x0, vy0 - 1, x1, vy0 + 1, kEdge);      // the save line's rule, 2 px: the fixed line apart from the list
+        auto clip_fill = [&](int a0, int b0, int a1, int b1, Rgb col) { fr.fill(a0, std::max(b0, vy0 + 1), a1, std::min(b1, vy1), col); };
+        auto swatch = [&](int sx, int sy, Rgb col) {
+            clip_fill(sx, sy, sx + kPopSw, sy + kPopSw, col);
+            clip_fill(sx - 1, sy - 1, sx + kPopSw + 1, sy, kEdge);
+            clip_fill(sx - 1, sy + kPopSw, sx + kPopSw + 1, sy + kPopSw + 1, kEdge);
+            clip_fill(sx - 1, sy, sx, sy + kPopSw, kEdge);
+            clip_fill(sx + kPopSw, sy, sx + kPopSw + 1, sy + kPopSw, kEdge);
+        };
+        for (int k = 0; k < pop_items(); ++k) {
+            const int ry = vy0 + k * kPopRowH - pop_.pos;
+            if (ry + kPopRowH <= vy0 || ry >= vy1) continue;
+            if (k > 0) clip_fill(x0, ry, x1, ry + 1, kEdge);
+            const int sy = ry + (kPopRowH - kPopSw) / 2;
+            if (k < np) {
+                std::vector<Rgb> cols;
+                for (const Element& e : ex_.elements) {
+                    const auto f = presets_list_[size_t(k)].colours.find(e.key);
+                    if (f != presets_list_[size_t(k)].colours.end()) cols.push_back(f->second.rgb);
+                }
+                int sx = x1 - kPopSwInset - int(cols.size()) * kPopSw - (int(cols.size()) - 1) * kPopSwGap;
+                for (const Rgb& col : cols) { swatch(sx, sy, col); sx += kPopSw + kPopSwGap; }
+            } else if (k == np) {
+                clip_fill(x0, ry + 1, x1, ry + kPopRowH, kGround);
+            } else {
+                swatch(x1 - kPopSwInset - kPopSw, sy, ex_.themes[size_t(k - np - 1)].ground);
+            }
+        }
+    }
+    // THE THEME STRIP, beside the panel on the scene's side: its name, its close control, its colours
+    const int sx = int(strip_x()), lv0 = int(strip_list_y0()), lv1 = int(strip_list_y1());
+    if (theme_ >= 0) {
+        fr.fill(sx, oy, sx + kStripW, oy + kH, kGround);
+        fr.edge(sx, oy, sx + kStripW, oy + kH, kEdge);
+        const int bx = sx + kStripW - kStripPad - kBtn, by = oy + kStripPad;
         fr.fill(bx, by, bx + kBtn, by + kBtn, kField);
         fr.edge(bx, by, bx + kBtn, by + kBtn, kEdge);
-        const Rgb g = (dir < 0 ? back_enabled() : forward_enabled()) ? kLabel : kDim;
-        const int mx = bx + kBtn / 2, my = by + kBtn / 2;
-        for (int i = 0; i < 16; ++i) {   // the head: column i from the tip, 2 + 2i px tall
-            const int x = dir < 0 ? mx - 16 + i : mx + 15 - i;
-            fr.fill(x, my - 1 - i, x + 1, my + 1 + i, g);
+        for (int i = -14; i < 14; ++i) {               // the close glyph: two 4-px strokes crossing, 32 px across
+            const int mx = bx + kBtn / 2, my = by + kBtn / 2;
+            fr.fill(mx + i - 2, my + i - 2, mx + i + 2, my + i + 2, kLabel);
+            fr.fill(mx + i - 2, my - i - 3, mx + i + 2, my - i + 1, kLabel);
         }
-        if (dir < 0) fr.fill(mx, my - 2, mx + 16, my + 2, g);
-        else fr.fill(mx - 16, my - 2, mx, my + 2, g);
-    }
-    // the sliders: the field behind each value and each button, the track's live gradient, the handle, the signs
-    for (int i = 0; i < 6; ++i) {
-        const int ry = oy + row_y(i), ty = ry + (kRowH - kTrackH) / 2;
-        for (int bx : {kMinusX, kPlusX}) {
-            fr.fill(ox + bx, ry, ox + bx + kBtn, ry + kRowH, kField);
-            fr.edge(ox + bx, ry, ox + bx + kBtn, ry + kRowH, kEdge);
-            const int mx = ox + bx + kBtn / 2, my = ry + kRowH / 2;
-            fr.fill(mx - 15, my - 2, mx + 15, my + 2, kLabel);
-            if (bx == kPlusX) fr.fill(mx - 2, my - 15, mx + 2, my + 15, kLabel);
+        fr.fill(sx + kStripPad, lv0 - 9, sx + kStripW - kStripPad, lv0 - 8, kEdge);   // the header's rule
+        const Theme& t = ex_.themes[size_t(theme_)];
+        for (size_t i = 0; i < strip_rows_.size(); ++i) {
+            const int ry = lv0 + strip_rows_[i].y - strip_.pos;
+            if (ry + strip_rows_[i].h <= lv0 || ry >= lv1) continue;
+            const int a0 = sx + kStripPad, b0 = ry;
+            auto clip = [&](int p0, int q0, int p1, int q1, Rgb col) { fr.fill(p0, std::max(q0, lv0), p1, std::min(q1, lv1), col); };
+            clip(a0, b0, a0 + kStripSwW, b0 + kStripSwH, t.colours[i].rgb);
+            clip(a0 - 1, b0 - 1, a0 + kStripSwW + 1, b0, kEdge);
+            clip(a0 - 1, b0 + kStripSwH, a0 + kStripSwW + 1, b0 + kStripSwH + 1, kEdge);
+            clip(a0 - 1, b0, a0, b0 + kStripSwH, kEdge);
+            clip(a0 + kStripSwW, b0, a0 + kStripSwW + 1, b0 + kStripSwH, kEdge);
+            if (t.colours[i].rgb == c.rgb) {           // the active element shows this colour: marked
+                const int mx = a0 + kStripSwW / 2, my = b0 + kStripSwH / 2;
+                if (my - 12 >= lv0 && my + 12 <= lv1) fr.marker(mx, my, 12, 3);
+            }
         }
-        fr.fill(ox + kFieldX, ry, ox + kFieldX + kFieldW, ry + kRowH, kField);
-        fr.edge(ox + kFieldX, ry, ox + kFieldX + kFieldW, ry + kRowH, kEdge);
-        for (int x = 0; x < kTrackL; ++x) {
-            const uint32_t w = word_of(row_colour(c, i, double(x) / (kTrackL - 1)));
-            for (int y = ty; y < ty + kTrackH; ++y) fr.px[size_t(y) * fr.stride + ox + kTrackX + x] = w;
-        }
-        fr.edge(ox + kTrackX, ty, ox + kTrackX + kTrackL, ty + kTrackH, kEdge);
-        const int hx = ox + kTrackX + int(std::lround(row_value(c, i) * (kTrackL - 1)));
-        fr.fill(hx - 6, ty - 10, hx + 7, ty + kTrackH + 10, kEdge);
-        fr.fill(hx - 3, ty - 7, hx + 4, ty + kTrackH + 7, kLabel);
-    }
-    // the chooser, over the column: a field per element in manifest order, the active one's marked by a square
-    const int n = int(ex_.elements.size());
-    if (chooser_) {
-        const int y0 = oy + kChooserY, y1 = y0 + n * kChooserRowH;
-        fr.fill(ox + kColX, y0, ox + kColX1, y1, kField);
-        fr.edge(ox + kColX, y0, ox + kColX1, y1, kEdge);
-        for (int i = 1; i < n; ++i) fr.fill(ox + kColX, y0 + i * kChooserRowH, ox + kColX1, y0 + i * kChooserRowH + 1, kEdge);
-        const int my = y0 + active_ * kChooserRowH + kChooserRowH / 2;
-        fr.fill(ox + kColX + 22, my - 8, ox + kColX + 38, my + 8, kLabel);
     }
     cairo_surface_mark_dirty(surf);
     cairo_t* cr = cairo_create(surf);
     text(cr, false, kWordPx, act.name, ox + kColX + 18, cap_baseline(cr, false, kWordPx, oy + kNameY, kNameH), 0);
-    if (!chooser_) {
-        text(cr, true, kHexPx, hex_of(c.rgb), ox + kColX, oy + kPad + 150, 0);
-        text(cr, true, kNumPx, count_of(hist()), ox + (kBackX + kBtn + kFwdX) / 2.0,
-             cap_baseline(cr, true, kNumPx, oy + kHistY, kBtn), 1);
-    } else {
-        for (int i = 0; i < n; ++i) {
-            const int ry = oy + kChooserY + i * kChooserRowH;
-            text(cr, false, kWordPx, ex_.elements[size_t(i)].name, ox + kColX + 60, cap_baseline(cr, false, kWordPx, ry, kChooserRowH), 0);
+    text(cr, false, kWordPx, "Presets", ox + (kPresetsX + kColX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kNameY, kNameH), 1);
+    if (!presets_) {
+        if (!chooser_) {
+            text(cr, true, kHexPx, hex_of(c.rgb), ox + kColX, oy + kPad + 150, 0);
+            text(cr, true, kNumPx, count_of(hist()), ox + (kBackX + kBtn + kFwdX) / 2.0,
+                 cap_baseline(cr, true, kNumPx, oy + kHistY, kBtn), 1);
+        } else {
+            for (int i = 0; i < n; ++i) {
+                const int ry = oy + kChooserY + i * kChooserRowH;
+                text(cr, false, kWordPx, ex_.elements[size_t(i)].name, ox + kColX + 60, cap_baseline(cr, false, kWordPx, ry, kChooserRowH), 0);
+            }
         }
+        if (!chooser_ || kChooserY + n * kChooserRowH < kSwatchY0 - 50) {   // the words the chooser does not cover
+            text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
+            text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
+        }
+        for (int i = 0; i < 6; ++i) {
+            const int ry = oy + row_y(i);
+            text(cr, false, kWordPx, kRowNames[i], ox + kLabelX + 18, cap_baseline(cr, false, kWordPx, ry, kRowH), 1);
+            text(cr, true, kNumPx, row_readout(c, i), ox + kFieldX + kFieldW - kReadoutInset,
+                 cap_baseline(cr, true, kNumPx, ry, kRowH), 2);
+        }
+    } else {
+        const int x0 = ox + kPopX0 + 24, vy0 = oy + kPopListY0, vy1 = oy + kPopY1;
+        text(cr, false, kWordPx, save_label(), x0, cap_baseline(cr, false, kWordPx, oy + kPopY0, kPopRowH), 0);
+        cairo_save(cr);
+        cairo_rectangle(cr, ox + kPopX0, vy0 + 1, kPopX1 - kPopX0, vy1 - vy0 - 1);
+        cairo_clip(cr);
+        for (int k = 0; k < pop_items(); ++k) {
+            const int ry = vy0 + k * kPopRowH - pop_.pos;
+            if (ry + kPopRowH <= vy0 || ry >= vy1) continue;
+            const std::string w = k < np ? "Preset " + std::to_string(presets_list_[size_t(k)].number)
+                                : k == np ? "Themes" : ex_.themes[size_t(k - np - 1)].name;
+            text(cr, false, kWordPx, w, x0, cap_baseline(cr, false, kWordPx, ry, kPopRowH), 0);
+        }
+        cairo_restore(cr);
     }
-    if (!chooser_ || kChooserY + n * kChooserRowH < kSwatchY0 - 50) {   // the words the chooser does not cover
-        text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
-        text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
-    }
-    for (int i = 0; i < 6; ++i) {
-        const int ry = oy + row_y(i);
-        text(cr, false, kWordPx, kRowNames[i], ox + kLabelX + 18, cap_baseline(cr, false, kWordPx, ry, kRowH), 1);
-        text(cr, true, kNumPx, row_readout(c, i), ox + kFieldX + kFieldW - kReadoutInset,
-             cap_baseline(cr, true, kNumPx, ry, kRowH), 2);
+    if (theme_ >= 0) {
+        const Theme& t = ex_.themes[size_t(theme_)];
+        for (size_t l = 0; l < strip_title_.size(); ++l)
+            text(cr, false, kStripTitlePx, strip_title_[l], sx + kStripPad,
+                 oy + kStripPad + (l + 1) * kStripTitleLineH - 8, 0);
+        cairo_save(cr);
+        cairo_rectangle(cr, sx + 1, lv0, kStripW - 2, lv1 - lv0);
+        cairo_clip(cr);
+        for (size_t i = 0; i < strip_rows_.size(); ++i) {
+            const int ry = lv0 + strip_rows_[i].y - strip_.pos;
+            if (ry + strip_rows_[i].h <= lv0 || ry >= lv1) continue;
+            text(cr, true, kStripHexPx, hex_of(t.colours[i].rgb), sx + kStripTextX, ry + kStripLineH - 5, 0);
+            for (size_t l = 0; l < strip_rows_[i].names.size(); ++l)
+                text(cr, false, kStripNamePx, strip_rows_[i].names[l], sx + kStripTextX, ry + (l + 2) * kStripLineH - 5, 0);
+        }
+        cairo_restore(cr);
     }
     cairo_destroy(cr);
     cairo_surface_flush(surf);

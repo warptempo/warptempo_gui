@@ -67,16 +67,41 @@ struct Scene {
     std::vector<Layer> layers;
 };
 
+// THE PRODUCT'S THEMES (themes.json beside the manifest, written by the same export; render.py product_themes is the
+// authoritative statement): every entry of the product's theme table (src/gui/theme_table.h, from
+// docs/themes/catalog.json) at its LIGHT level, in the table's order --
+//
+//   {"source": "...", "themes": [{"key": "windows-95-standard", "name": "Windows 95 Standard", "ground": "#C0C0C0",
+//                                 "colours": [{"hex": "#C0C0C0", "names": ["ground", "Scrollbar", ...]}, ...]}, ...]}
+//
+// A theme's COLOURS are every distinct byte triple the catalog records for it (its roles, its source's raw values, its
+// toolkit's computed shades), each once with every name that records it, the ground first. The presets pop-up lists
+// the themes by name with a swatch of the ground; a theme OPENED shows its colours as the panel's theme strip
+// (picker.h).
+struct ThemeColour {
+    Rgb rgb;
+    std::vector<std::string> names;
+};
+struct Theme {
+    std::string key, name;
+    Rgb ground;
+    std::vector<ThemeColour> colours;
+};
+
 struct Export {
     int width = 0, height = 0;
     std::vector<Element> elements;
     std::vector<Role> roles;
     std::vector<Scene> scenes;
     int active = -1;             // the manifest's active element
+    std::vector<Theme> themes;   // themes.json
 };
 
-// <dir>/manifest.json and the files it names -> true and the export; false and `err` ("<file>: what is wrong")
+// <dir>/manifest.json, the files it names and themes.json -> true and the export; false and `err` ("<file>: what is
+// wrong"); an export without themes.json (written before the presets) is refused: export the theme again
 bool export_load(const std::string& dir, Export& ex, std::string& err);
+// the theme index of `key`, or -1
+int theme_of(const Export& ex, const std::string& key);
 
 // a role's colour at the elements' current colours
 Rgb role_colour(const Export& ex, const Role& r);
@@ -113,17 +138,36 @@ std::string view_number(double x);
 // element:
 //
 //   {"active": "<key>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...},
-//    "entry": {"<key>": N, ...}}
+//    "entry": {"<key>": N, ...}, "theme": "<theme key>"}
 //
 // every element's colour, its HSV view (Pick) and its history cursor as the panel's count shows it (N of M, 1-based:
-// the Nth of that element's picks.txt lines; absent with an empty history), and the active element. Earlier builds'
+// the Nth of that element's picks.txt lines; absent with an empty history), the active element, and the theme whose
+// strip is open (absent when none; a key no theme of the export has is read and never used). Earlier builds'
 // files still read: no "active" (the manifest's active element), "hsv" for the active layer alone or no "hsv" (a
 // colour without a view starts re-derived), and the first build's flat {"<layer>": "#RRGGBB", ...} (no entry: the
 // cursor is placed by picker_load's rule). `out` takes every key's colour, with the view where the file has one; a
 // key that is no element of this export is carried and never read. A missing file is empty maps (no close yet); a
 // malformed one is false and `err`.
 bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::map<std::string, int>& entries,
-                std::string& active, std::string& err);
+                std::string& active, std::string& theme, std::string& err);
+
+// A PRESET (architect 2026-10-04): the whole look -- every element's colour with the exact view it held (as state.json
+// holds them) -- under its automatic name "Preset <number>"; the number is the highest in the file plus one, so never
+// reused while the file lives (there is no rename, delete or overwrite until a keyboard). <data dir>/presets.json,
+// rewritten whole at every save:
+//
+//   {"presets": [{"number": 1, "saved": "<ISO-8601 local time>", "colours": {"<key>": "#RRGGBB", ...},
+//                 "hsv": {"<key>": [h, s, v], ...}}, ...]}
+//
+// oldest first, the numbers ascending; every colour with its view (one giving its hex), the two maps over the same
+// keys. A key that is no element of the export is read and never used. A missing file is no presets; a malformed one
+// is false and `err`, the first error.
+struct Preset {
+    int number = 0;
+    std::string saved;
+    std::map<std::string, Pick> colours;   // every view present (has_hsv)
+};
+bool presets_load(const std::string& path, std::vector<Preset>& out, std::string& err);
 
 // THE PICKS LOG, <data dir>/picks.txt, appended at every commit: one line per pick,
 // "<ISO-8601 local time> <key> #RRGGBB hsv <h> <s> <v>\n" (the view as view_number writes it); a line written before

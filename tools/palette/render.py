@@ -1990,7 +1990,8 @@ def render_rgb(theme_path, label_text=None, data=None, record=None):
 # THE FILES: manifest.json, and per scene <scene>.base.pgm (binary P5: each byte the role-table index of the pixel's
 # base) and <scene>.cover.bin (the stacks: COVER_MAGIC, a little-endian uint32 count, then per stacked pixel in
 # ascending order its uint32 index y x W + x, a uint8 depth n >= 1 and n (uint8 role, uint8 coverage 1..254) pairs,
-# oldest first).
+# oldest first); and themes.json, THE PRODUCT'S THEMES (product_themes, below), which the picker lists in its presets
+# pop-up and opens as a strip of swatches.
 #
 # THE CHECKS, before anything is trusted: the record recomposed (colour.over_coverage, cairo's arithmetic) equals the
 # render byte for byte; the written files read back equal it again; and for every colour set of picker_check_sets
@@ -2264,6 +2265,10 @@ def export_scene(theme_path, out_dir):
         write_cover(os.path.join(out_dir, name + '.cover.bin'), idx, n, remap[lr] if lr.size else lr, lc)
         man['scenes'].append({'name': name, 'base': name + '.base.pgm', 'cover': name + '.cover.bin'})
     with open(os.path.join(out_dir, 'manifest.json'), 'w') as f: json.dump(man, f, indent=1); f.write('\n')
+    themes = product_themes()
+    with open(os.path.join(out_dir, 'themes.json'), 'w') as f:
+        json.dump({'source': 'docs/themes/catalog.json, checked against src/gui/theme_table.h; the light level',
+                   'themes': themes}, f, indent=1); f.write('\n')
     # 4. read back: the files at the manifest's colours are each scene's render; at every check set, a fresh render
     back = picker_read(out_dir)
     sets = picker_check_sets(elements)
@@ -2297,7 +2302,46 @@ def export_scene(theme_path, out_dir):
         print(f'  {a:<18} -> {i:<16} {rule[i]:<30} {px}')
     print(f'exported {out_dir}: {len(elements)} elements ({", ".join(e["key"] for e in elements)}), {len(roles)} roles, '
           f'{len(recs)} scenes; the record and the written files recompose each render byte for byte, and at '
-          f'{len(sets)} colour sets each fresh render too')
+          f'{len(sets)} colour sets each fresh render too; themes.json: {len(themes)} product themes, '
+          f'{min(len(t["colours"]) for t in themes)}..{max(len(t["colours"]) for t in themes)} colours each')
+
+# THE PRODUCT'S THEMES (themes.json; architect 2026-10-04: the product's themes as starting points, a theme OPENED in
+# the picker as a strip of every colour it records, any one adopted as an element's colour). Taken at export time from
+# exactly what generates the product's table, never a hand-kept copy: the entries of docs/themes/catalog.json
+# (tools/theme_catalog/levels.py entries(), which gen_theme_table.py writes src/gui/theme_table.h from), in its order,
+# each at its LIGHT level (the theme as its makers recorded it; the dark level is the app's arithmetic, not a record).
+# The generated table is read too and must list the same keys, names and light grounds in the same order, so a stale
+# table is a hard fail ("regenerate it"), not a silent difference. A theme's COLOURS are every distinct byte triple
+# the catalog records for it: its catalog roles (ground first), every raw value its source records under the source's
+# own key names, and every value its toolkit's rule computed at import (provenance.rule.computed: KDE 3's relief, CDE's
+# Motif shades of each colour set); each colour once, in that order of first appearance, with every name that records
+# it.
+THEME_TABLE = os.path.join(C.REPO, 'src', 'gui', 'theme_table.h')
+THEME_CATALOG = os.path.join(C.REPO, 'docs', 'themes', 'catalog.json')
+
+def product_themes():
+    """-> [{"key", "name", "ground", "colours": [{"hex", "names": [...]}, ...]}, ...] (the head above)."""
+    import re
+    entries = json.load(open(THEME_CATALOG))['entries']
+    text = open(THEME_TABLE).read()
+    count = re.search(r'kGuiThemeCount = (\d+);', text)
+    rows = re.findall(r'^    \{"([^"]*)", "([^"]*)", "[^"]*",\n     \{0x([0-9A-F]{6}),[^\n]*// light$', text, re.M)
+    if not count or int(count.group(1)) != len(rows):
+        raise SystemExit(f'export: {THEME_TABLE}: {len(rows)} entries read, not kGuiThemeCount; the table\'s shape changed')
+    want = [(e['key'], e['name'], e['roles']['ground'].upper()[1:]) for e in entries]
+    if [(k, n, g) for k, n, g in rows] != want:
+        raise SystemExit(f'export: {THEME_TABLE} does not list the catalog\'s entries (keys, names, light grounds) in its '
+                         f'order; regenerate it (tools/theme_catalog/gen_theme_table.py)')
+    out = []
+    for e in entries:
+        names = {}
+        for src in (e['roles'], e['raw'], (e['provenance'].get('rule') or {}).get('computed', {})):
+            for k, v in src.items():
+                if not re.fullmatch(r'#[0-9A-Fa-f]{6}', v): raise SystemExit(f'export: {e["key"]}: {k} is {v!r}, not #rrggbb')
+                names.setdefault(v.upper(), []).append(k)
+        out.append({'key': e['key'], 'name': e['name'], 'ground': e['roles']['ground'].upper(),
+                    'colours': [{'hex': h, 'names': n} for h, n in names.items()]})
+    return out
 
 def picker_read(out_dir):
     """-> (manifest, {scene: (base flat, stacks)}): an export read back."""

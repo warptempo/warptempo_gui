@@ -37,7 +37,8 @@ if [ "${1:-}" = "--check" ]; then
         --export "$BUILD/check/multi" "$BUILD/check/multi/expects.txt" \
         --export "$BUILD/check/scene" "$BUILD/check/scene/expects.txt" \
         --export "$BUILD/check/derived" "$BUILD/check/derived/expects.txt" \
-        --linmix "$BUILD/check/linmix.bin"
+        --linmix "$BUILD/check/linmix.bin" \
+        --today "$HERE/check_data/tablet_2026-10-04"
     exit 0
 fi
 

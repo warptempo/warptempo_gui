@@ -56,6 +56,37 @@
 // open (discard_if_open: the colour, its view and the cursor go back to the panel's opening, the last saved state).
 // TRUTHFUL BUTTONS: BACK is disabled at the first entry, FORWARD at the last, both with an empty history; a disabled
 // button's glyph is dimmed and its lift does nothing.
+//
+// THE PRESETS (architect 2026-10-04: he tunes whole looks on the glass and keeps them to come back to): a PRESETS
+// button beside the element button opens the PRESETS POP-UP, built like the chooser (the same chrome; a tap on an entry
+// acts and closes it, a press lifted on another entry acts on nothing, a tap outside it closes it and changes nothing)
+// over the panel below the two buttons. OPENING IT IS THE CLOSE FOR THE PANEL'S EDIT (the chooser's rule): an edited
+// colour is committed first (one picks.txt line, state.json), so a preset always snapshots saved colours. Its first
+// line, fixed, is "Save as Preset N"; under it a list that SCROLLS by a drag (a drag past kSlop px scrolls and acts on
+// nothing; a tap acts at the lift): the saved presets, oldest first, each with a small swatch of every element's
+// colour in manifest order; then the heading "Themes" and THE PRODUCT'S THEMES (scene.h), each by its name with a
+// swatch of its ground. The list keeps its scroll while the app lives. SAVE appends the whole look (every element's
+// colour and view) to presets.json as "Preset N" (scene.h) -- duplicates allowed -- one logcat line. LOAD sets every
+// element to the preset's colour and view: each element whose colour or view changes gets ONE committed pick in its
+// own history (picks.txt, as a commit; the element left unchanged gets none), so BACK steps to the history's previous
+// newest entry (where he was, when his cursor stood there: always for the active element, whose edit the opening
+// committed); state.json follows; the panel stays open on the active element, OLD now the loaded colour; one logcat
+// line. No rename, delete or overwrite (they wait for a keyboard).
+//
+// THE THEME STRIP (architect 2026-10-04: the product's themes as inspiration, not as looks to load): a tap on a theme
+// in the pop-up OPENS it -- the pop-up closes and the panel grows a STRIP, a column beside it on the scene's side (the
+// panel itself unchanged): the theme's name, a close control, and every colour the catalog records for it (scene.h,
+// Theme) as a swatch beside its hex and the names that record it, a list that scrolls as the pop-up's does. A TAP ON A
+// SWATCH ADOPTS IT AS THE ACTIVE ELEMENT'S COLOUR, AS AN EDIT, exactly as a control's drag would: the bytes set, the
+// view re-derived from them (set_rgb; a theme stores no view), the scene repainted live, NEW showing it, OLD still
+// reverting, the close the one save. For the chrome that sets the ground and every line follows by Windows 95's rule,
+// never the theme's own relief. The swatch showing the active element's colour is marked. THE STRIP STAYS OPEN ACROSS
+// ELEMENT SWITCHES (he adopts for another element by choosing it) and across relaunches (state.json's "theme"), until
+// its close control or another theme opened; it shows while the panel is open.
+//
+// STATE.JSON IS THE LAST SAVED STATE: written at a close, a switch, a commit at the pop-up's opening, a preset load and
+// the strip's opening and close; while the panel is open the active element is written as the panel's opening (OLD
+// and its cursor, the last saved state), so an unsaved edit never reaches the file.
 
 #include "colour.h"
 #include "scene.h"
@@ -84,6 +115,8 @@ struct Launch {
     std::vector<Pick> start;     // per element
     int active = -1;
     std::string note;
+    std::vector<Preset> presets; // presets.json
+    int theme = -1;              // state.json's open theme, an index into the export's themes, or -1
 };
 bool picker_load(const std::string& data_dir, Export& ex, Launch& out, std::string& err);
 
@@ -150,14 +183,51 @@ public:
     bool edited() const;          // the state does not show the cursor's entry (ColourState::shows), or no history
     bool back_enabled() const;
     bool forward_enabled() const;
+    bool presets_open() const { return presets_; }
+    const std::vector<Preset>& presets() const { return presets_list_; }
+    std::string save_label() const;      // "Save as Preset N"
+    int pop_scroll() const { return pop_.pos; }
+    int theme_open() const { return theme_; }   // the strip's theme, or -1
+    int strip_scroll() const { return strip_.pos; }
+    double strip_x() const;              // the strip's left edge, window px
+    // the strip's row i (the theme's colour i): its top in window px at the current scroll, and its height
+    double strip_row_y(int i) const;
+    int strip_row_h(int i) const { return strip_rows_[size_t(i)].h; }
+    double strip_list_y0() const;        // the list's viewport, window px
+    double strip_list_y1() const;
 
 private:
-    enum class Target { None, Outside, Ring, Triangle, Track, Minus, Plus, Old, Back, Forward, Name, Row, OffChooser, Picture };
-    void apply_colour();               // the active element takes its cs' bytes; the roles follow; the picture repaints
+    enum class Target { None, Outside, Ring, Triangle, Track, Minus, Plus, Old, Back, Forward, Name, Row, OffChooser, Picture,
+                        Presets, PopSave, PopList, OffPopup, StripClose, StripList };
+    // a scrolling list's state: its offset (content px) and the drag that moves it
+    struct Scroll {
+        int pos = 0, start = 0;
+        double anchor = 0;
+        bool dragging = false;
+    };
+    struct StripRow {
+        int y = 0, h = 0;                  // content px, from the list's top
+        std::vector<std::string> names;    // the names' lines, wrapped
+    };
+    void apply_colours();              // every element takes its cs' bytes; the roles follow; the picture repaints
     void close();                      // the one save: commit an edited colour, else rewrite state.json alone
-    void append_pick();                // picks.txt, the history's end, the cursor to it, the logcat line
+    void append_pick(int e, bool log = true);   // picks.txt, e's history's end, its cursor to it, the logcat line
     void choose(int e);                // the chooser's pick: the close for the element left, then the panel on e
-    void write_state() const;          // state.json: every element's colour, view and cursor, the active element
+    void write_state() const;          // state.json: every element's colour, view and cursor, the active element, the theme
+    void open_presets();               // the pop-up: the close for the panel's edit first
+    void save_preset();
+    void load_preset(int i);
+    void open_theme(int t);            // the strip on theme t
+    void close_theme();
+    void layout_strip();               // the strip's title lines and rows for theme_ (text measured once)
+    void write_presets() const;
+    void pop_act(int item);            // a tap on the pop-up list's item
+    int pop_item_at(double ly) const;  // the pop-up list's item under the panel-relative y, or -1
+    int pop_items() const;             // presets, the heading, the themes
+    int pop_max() const;               // the list's furthest scroll
+    int strip_row_at(double y) const;  // the strip's row under the window y, or -1
+    int strip_max() const;
+    void scroll_move(Scroll& sc, double y, int max);
     void history_step(int dir);        // BACK (-1) / FORWARD (+1) from the cursor's entry, an unsaved edit discarded
     void track_to(int row, double x);
     void step(int row, int dir);
@@ -182,6 +252,15 @@ private:
     int row_ = -1;                     // the slider row a Track / Minus / Plus press holds, the chooser row a Row press
     double down_x_ = 0, down_y_ = 0;
 
+    bool presets_ = false;             // the pop-up is open
+    std::vector<Preset> presets_list_;
+    Scroll pop_, strip_;
+    int item_ = -1;                    // the pop-up item or strip row a PopList / StripList press holds
+    int theme_ = -1;                   // the open theme strip's theme, or -1
+    std::vector<std::string> strip_title_;
+    std::vector<StripRow> strip_rows_;
+    int strip_content_ = 0, strip_head_ = 0;   // the rows' height, the header's (the list starts under it)
+
     // caches: the hue ring (never changes) and the triangle at tri_h_
     std::vector<uint32_t> ring_;       // kWheel x kWheel, 0 = not ring
     std::vector<uint32_t> tri_;        // kWheel x kWheel, 0 = not triangle
@@ -194,6 +273,8 @@ constexpr int kW = 1120, kH = 1292, kMargin = 16, kPad = 36;
 constexpr int kWheel = 580, kROut = 290, kRIn = 220, kRTri = 210;
 constexpr int kColX = kPad + kWheel + 44, kColX1 = kW - kPad;            // the hex and swatch column
 constexpr int kNameY = kPad, kNameH = 64;                                 // the element button, the column's top
+constexpr int kNameX1 = kColX + 264;                                      // the element button kColX..kNameX1
+constexpr int kPresetsX = kNameX1 + 12;                                   // the presets button kPresetsX..kColX1
 constexpr int kChooserY = kNameY + kNameH + 8, kChooserRowH = 76;         // the chooser's rows, under the button
 constexpr int kHistY = kPad + 176;                                        // BACK | N of M | FORWARD, under the hex
 constexpr int kSwatchY0 = kPad + 324, kSwatchY1 = kPad + kWheel;
@@ -209,6 +290,18 @@ constexpr double kNumPx = 38;
 constexpr int kReadoutInset = 14;
 constexpr int kBackX = kColX, kFwdX = kColX1 - kBtn;                      // the history's buttons, kBtn square
 constexpr int row_y(int i) { return kRowsY + i * kRowStep + (i >= 3 ? kGroupGap : 0); }
+// THE PRESETS POP-UP, under the two buttons over the whole panel inside its pad (the theme names are long): its fixed
+// save line, then the list's viewport down to the pad; rows the chooser's height
+constexpr int kPopX0 = kPad, kPopX1 = kColX1, kPopY0 = kChooserY, kPopY1 = kH - kPad, kPopRowH = kChooserRowH;
+constexpr int kPopListY0 = kPopY0 + kPopRowH;
+constexpr int kPopSw = 44, kPopSwGap = 8, kPopSwInset = 24;               // a preset's / theme's swatches, right-aligned
+constexpr int kSlop = 16;                                                 // a drag past it scrolls, and acts on nothing
+// THE THEME STRIP: a column kStripW wide, kStripGap from the panel on the scene's side, the panel's height; its close
+// control kBtn square at the top right, the name left of it; each colour a kStripSwW x kStripSwH swatch and, right of
+// it, its hex (mono) and the names that record it (sans, wrapped), rows kStripRowGap apart
+constexpr int kStripW = 360, kStripGap = 12, kStripPad = 20;
+constexpr int kStripSwW = 88, kStripSwH = 64, kStripTextX = kStripPad + kStripSwW + 14, kStripRowGap = 12;
+constexpr double kStripTitlePx = 28, kStripTitleLineH = 34, kStripNamePx = 18, kStripHexPx = 20, kStripLineH = 24;
 } // namespace panel
 
 // a plain message on the ground (the scene missing or malformed): each line in the sans, white

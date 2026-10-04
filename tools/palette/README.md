@@ -434,6 +434,12 @@ rasterizing on the device (`render.py`'s export section is the authoritative sta
   linear-light mix of the ink over the canvas ELEMENT, following both live), else a fixed `colour`.
 - THE FILES: `manifest.json` (elements, roles, scenes), and per scene `<scene>.base.pgm` (each byte the role index
   of the pixel's base) and `<scene>.cover.bin` (the stacks). All the theme's scenes come from one `--export`.
+- THE PRODUCT'S THEMES, `themes.json` (`product_themes`; the picker's presets pop-up lists them and opens one as a
+  strip of swatches to adopt from): every entry of `docs/themes/catalog.json` — exactly what
+  `tools/theme_catalog/gen_theme_table.py` generates `src/gui/theme_table.h` from, in its order — at its LIGHT level,
+  with every distinct colour the catalog records for it (its roles, its source's raw values, its toolkit's computed
+  shades) and the names recording each. The generated table is read too and must list the same keys, names and light
+  grounds in the same order, so a stale table fails the export ("regenerate it"). 98 themes, 6 to 34 colours each.
 - THE CHECKS: the record recomposed by cairo's arithmetic (`colour.over_coverage`, pixman's, cited there) equals the
   render byte for byte; the written files read back equal it again; and at every colour set of
   `picker_check_sets` — each element moved, the chrome to a tint whose channels 32 and 96 hit the rule's ties

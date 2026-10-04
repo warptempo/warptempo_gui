@@ -140,6 +140,62 @@ bool scene_files(const std::string& dir, const Export& ex, const Json& js, Scene
     return true;
 }
 
+// themes.json (scene.h): strictly the export's shape, the first error named
+bool themes_file(const std::string& path, Export& ex, std::string& err) {
+    std::string text;
+    if (!read_file(path, text)) {
+        err = "themes.json: missing or unreadable; an export written before the presets: export the theme again "
+              "(render.py --export)";
+        return false;
+    }
+    Json js;
+    std::string jerr;
+    if (!json_parse(text, js, jerr)) { err = "themes.json: " + jerr; return false; }
+    const Json* src = js.is_object() ? js.get("source") : nullptr;
+    const Json* ths = js.is_object() ? js.get("themes") : nullptr;
+    if (!src || !src->is_string() || !ths || !ths->is_array() || js.obj.size() != 2) {
+        err = "themes.json: not {\"source\", \"themes\": [...]}"; return false;
+    }
+    for (const Json& t : ths->arr) {
+        const Json* key = t.get("key");
+        const Json* name = t.get("name");
+        const Json* ground = t.get("ground");
+        const Json* cols = t.get("colours");
+        Theme T;
+        if (!t.is_object() || t.obj.size() != 4 || !key || !key->is_string() || key->str.empty() || !name ||
+            !name->is_string() || name->str.empty() || !ground || !ground->is_string() ||
+            !parse_hex(ground->str, T.ground) || !cols || !cols->is_array() || cols->arr.empty()) {
+            err = "themes.json: theme " + std::to_string(ex.themes.size() + 1) +
+                  " is not {\"key\", \"name\", \"ground\": \"#rrggbb\", \"colours\": [...]}";
+            return false;
+        }
+        T.key = key->str;
+        T.name = name->str;
+        if (theme_of(ex, T.key) >= 0) { err = "themes.json: the theme " + T.key + " twice"; return false; }
+        for (const Json& c : cols->arr) {
+            const Json* hex = c.get("hex");
+            const Json* names = c.get("names");
+            ThemeColour tc;
+            bool ok = c.is_object() && c.obj.size() == 2 && hex && hex->is_string() && parse_hex(hex->str, tc.rgb) &&
+                      names && names->is_array() && !names->arr.empty();
+            for (size_t k = 0; ok && k < names->arr.size(); ++k) {
+                ok = names->arr[k].is_string() && !names->arr[k].str.empty();
+                if (ok) tc.names.push_back(names->arr[k].str);
+            }
+            for (const ThemeColour& o : T.colours) ok = ok && !(o.rgb == tc.rgb);
+            if (!ok) {
+                err = "themes.json: " + T.key + "'s colour " + std::to_string(T.colours.size() + 1) +
+                      " is not {\"hex\": a #rrggbb not listed before, \"names\": [one or more]}";
+                return false;
+            }
+            T.colours.push_back(std::move(tc));
+        }
+        if (!(T.colours.front().rgb == T.ground)) { err = "themes.json: " + T.key + "'s first colour is not its ground"; return false; }
+        ex.themes.push_back(std::move(T));
+    }
+    return true;
+}
+
 } // namespace
 
 bool export_load(const std::string& dir, Export& ex, std::string& err) {
@@ -260,7 +316,13 @@ bool export_load(const std::string& dir, Export& ex, std::string& err) {
         if (!scene_files(dir, ex, s, sc, err)) return false;
         ex.scenes.push_back(std::move(sc));
     }
-    return true;
+    return themes_file(dir + "/themes.json", ex, err);
+}
+
+int theme_of(const Export& ex, const std::string& key) {
+    for (size_t k = 0; k < ex.themes.size(); ++k)
+        if (ex.themes[k].key == key) return int(k);
+    return -1;
 }
 
 int element_of(const Export& ex, const std::string& key) {
@@ -341,10 +403,11 @@ std::string view_number(double x) {
 }
 
 bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::map<std::string, int>& entries,
-                std::string& active, std::string& err) {
+                std::string& active, std::string& theme, std::string& err) {
     out.clear();
     entries.clear();
     active.clear();
+    theme.clear();
     std::string text;
     if (!read_file(path, text)) return true;   // no close yet
     Json st;
@@ -363,11 +426,15 @@ bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::
     const Json* ent = st.get("entry");
     const Json* hsv = st.get("hsv");     // absent in the second build's file
     const Json* act = st.get("active");  // absent before the multi-element picker
+    const Json* thm = st.get("theme");   // absent when no theme strip is open (and before the presets)
     if (!ent || !ent->is_object() || (hsv && !hsv->is_object()) || (act && !act->is_string()) ||
-        st.obj.size() != 2u + (hsv ? 1u : 0u) + (act ? 1u : 0u)) {
-        err = "state.json: not {\"active\": key, \"colours\": {...}, \"hsv\": {...}, \"entry\": {...}}"; return false;
+        (thm && (!thm->is_string() || thm->str.empty())) ||
+        st.obj.size() != 2u + (hsv ? 1u : 0u) + (act ? 1u : 0u) + (thm ? 1u : 0u)) {
+        err = "state.json: not {\"active\": key, \"colours\": {...}, \"hsv\": {...}, \"entry\": {...}, \"theme\": key}";
+        return false;
     }
     if (act) active = act->str;
+    if (thm) theme = thm->str;
     for (const auto& kv : cols->obj) {
         Pick p;
         if (!kv.second.is_string() || !parse_hex(kv.second.str, p.rgb)) { err = "state.json: colours." + kv.first + " is not #rrggbb"; return false; }
@@ -430,6 +497,51 @@ bool picks_load(const std::string& path, std::map<std::string, std::vector<Pick>
         p.has_hsv = view;
         if (view && !view_holds(p)) { err = where + "'s hsv is not a view giving " + hex_of(p.rgb) + " (h 0..360, s and v 0..1)"; return false; }
         out[name].push_back(p);
+    }
+    return true;
+}
+
+bool presets_load(const std::string& path, std::vector<Preset>& out, std::string& err) {
+    out.clear();
+    std::string text;
+    if (!read_file(path, text)) return true;   // no save yet
+    Json js;
+    std::string jerr;
+    if (!json_parse(text, js, jerr)) { err = "presets.json: " + jerr; return false; }
+    const Json* ps = js.is_object() ? js.get("presets") : nullptr;
+    if (!ps || !ps->is_array() || js.obj.size() != 1) { err = "presets.json: not {\"presets\": [...]}"; return false; }
+    for (const Json& p : ps->arr) {
+        const std::string where = "presets.json: preset " + std::to_string(out.size() + 1);
+        const Json* num = p.get("number");
+        const Json* saved = p.get("saved");
+        const Json* cols = p.get("colours");
+        const Json* hsv = p.get("hsv");
+        if (!p.is_object() || p.obj.size() != 4 || !num || !num->is_number() || num->num < 1 || num->num > 1e9 ||
+            num->num != std::floor(num->num) || !saved || !saved->is_string() || saved->str.empty() || !cols ||
+            !cols->is_object() || cols->obj.empty() || !hsv || !hsv->is_object() || hsv->obj.size() != cols->obj.size()) {
+            err = where + " is not {\"number\": a whole number from 1, \"saved\", \"colours\": {...}, \"hsv\": {...}}";
+            return false;
+        }
+        Preset P;
+        P.number = int(num->num);
+        P.saved = saved->str;
+        if (!out.empty() && P.number <= out.back().number) { err = where + "'s number is not above the one before it"; return false; }
+        for (const auto& kv : cols->obj) {
+            Pick pk;
+            const Json* a = hsv->get(kv.first);
+            if (!kv.second.is_string() || !parse_hex(kv.second.str, pk.rgb) || P.colours.count(kv.first) || !a ||
+                !a->is_array() || a->arr.size() != 3 || !a->arr[0].is_number() || !a->arr[1].is_number() ||
+                !a->arr[2].is_number()) {
+                err = where + ": " + kv.first + " is not a #rrggbb once, with its [h, s, v] in hsv"; return false;
+            }
+            pk.has_hsv = true;
+            pk.h = a->arr[0].num;
+            pk.s = a->arr[1].num;
+            pk.v = a->arr[2].num;
+            if (!view_holds(pk)) { err = where + ": hsv." + kv.first + " is not a view giving " + hex_of(pk.rgb); return false; }
+            P.colours[kv.first] = pk;
+        }
+        out.push_back(std::move(P));
     }
     return true;
 }

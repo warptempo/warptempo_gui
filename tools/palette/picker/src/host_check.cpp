@@ -3,7 +3,7 @@
 // part of the APK):
 //
 //   host_check <fonts dir> <work dir> --export <scene dir> <expects.txt> [--export <dir> <expects.txt>]...
-//              [--linmix <table>]
+//              [--linmix <table>] [--today <dir>]
 //
 //   - every export loads, and every expects.txt line ("<scene> <ppm> [<key>=#RRGGBB ...]": the mock tool's render of
 //     that scene with those elements moved from the manifest's colours) equals the picker's picture byte for byte,
@@ -17,6 +17,12 @@
 //     CHOOSER (open, a tap outside it, the no-op re-choice, the edited-then-switch commit, the switch of scene),
 //     every element's history, cursor and view independent across a switch and a relaunch, and today's picks.txt
 //     (58 ink lines, the old form and the new) and state.json loading unchanged;
+//   - THE PRESETS (two saves, the edited colour committed by the pop-up's opening; a load committing each changed
+//     element once and an unchanged one never, BACK returning; a relaunch; a scroll and a tap outside that act on
+//     nothing) and THE THEME STRIP (opened from the pop-up, swatches adopted as edits into the chrome and, after a
+//     switch, the canvas, OLD reverting, the strip surviving the switch and a relaunch, Windows 95 Standard's quartet
+//     and a tinted theme's rule lines, its own scroll, the close control) on the first export;
+//   - --today <dir>: the tablet's picks.txt and state.json of 2026-10-04 load unchanged;
 //   - THE PER-FRAME COST of a pen drag (R's track) on the ink and on the chrome: the live repaint and the frame;
 //   - frames as PNGs in the work dir for the eye.
 
@@ -49,6 +55,7 @@ void plog(const char* fmt, ...) {
 namespace {
 
 int g_fail = 0;
+std::string g_theme;   // state_load's theme, where a check does not read it
 void check(bool ok, const std::string& what) {
     std::printf("%s %s\n", ok ? "ok  " : "FAIL", what.c_str());
     if (!ok) ++g_fail;
@@ -179,6 +186,7 @@ int main(int argc, char** argv) {
     }
     std::string err;
     Export ex0;                                   // the first export: the sessions' and the timing's
+    std::string today;                            // --today: the tablet's picks.txt and state.json of 2026-10-04
     bool have = false;
     for (int i = 3; i < argc; ++i) {
         const std::string a = argv[i];
@@ -197,6 +205,8 @@ int main(int argc, char** argv) {
                         layers, runs);
             check_expects(ex, expects, dir.substr(dir.find_last_of('/') + 1));
             if (!have) { ex0 = std::move(ex); have = true; }
+        } else if (a == "--today" && i + 1 < argc) {
+            today = argv[++i];
         } else if (a == "--linmix" && i + 1 < argc) {
             const std::string t = slurp(argv[++i]);
             size_t bad = 0;
@@ -348,6 +358,7 @@ int main(int argc, char** argv) {
     auto fresh = [&]() {
         std::remove((work + "/picks.txt").c_str());
         std::remove((work + "/state.json").c_str());
+        std::remove((work + "/presets.json").c_str());
     };
     // the panel opens on the left (a tap at x 1700): its controls in window px
     const double ppx = kMargin, ppy = (ex.height - kH) / 2;
@@ -402,7 +413,7 @@ int main(int argc, char** argv) {
         std::map<std::string, Pick> st;
         std::map<std::string, int> ent;
         std::string act;
-        check(state_load(work + "/state.json", st, ent, act, err) && st.count(L) && hex_of(st[L].rgb) == hex &&
+        check(state_load(work + "/state.json", st, ent, act, g_theme, err) && st.count(L) && hex_of(st[L].rgb) == hex &&
                   act == L && st.size() == p.exp().elements.size(),
               "state.json holds the commit, every element's colour and the active element");
         tap(p, 300, 700);
@@ -464,7 +475,7 @@ int main(int argc, char** argv) {
         std::map<std::string, Pick> sc;
         std::map<std::string, int> se;
         std::string act;
-        check(state_load(work + "/state.json", sc, se, act, err) && sc[L].rgb == a1 && se[L] == 2,
+        check(state_load(work + "/state.json", sc, se, act, g_theme, err) && sc[L].rgb == a1 && se[L] == 2,
               "state.json records the stepped colour and the cursor 2");
 
         Picker r = launch();
@@ -485,7 +496,7 @@ int main(int argc, char** argv) {
         r.discard_if_open();
         check(!r.open() && lines_of(work + "/picks.txt") == 3 && r.colour().rgb == a1 && count(r) == "2 of 3",
               "leaving the app with an unsaved edit saves nothing: the colour and the cursor of the panel's opening");
-        check(state_load(work + "/state.json", sc, se, act, err) && sc[L].rgb == a1 && se[L] == 2, "and state.json is untouched");
+        check(state_load(work + "/state.json", sc, se, act, g_theme, err) && sc[L].rgb == a1 && se[L] == 2, "and state.json is untouched");
         Picker r2 = launch();
         check(r2.colour().rgb == a1 && count(r2) == "2 of 3", "a relaunch after it comes back on the last saved state");
         tap(r, 1700, 700);
@@ -666,7 +677,7 @@ int main(int argc, char** argv) {
         std::map<std::string, Pick> st;
         std::map<std::string, int> ent;
         std::string act;
-        const bool st_ok = state_load(work + "/state.json", st, ent, act, err);
+        const bool st_ok = state_load(work + "/state.json", st, ent, act, g_theme, err);
         check(p.active() == ink && p.open() && !p.chooser_open() && lines_of(work + "/picks.txt") == 1 &&
                   slurp(work + "/picks.txt").find(" chrome #206048 hsv ") != std::string::npos && st_ok && act == "ink" &&
                   st["chrome"].rgb == tint && ent["chrome"] == 1 && p.element(chrome).hist.cursor == 0,
@@ -736,6 +747,244 @@ int main(int argc, char** argv) {
         check(r3.active() == chrome && r3.colour().rgb == chrome0 && r3.element(chrome).hist.cursor == 0 && r3.edited() &&
                   r3.element(ink).cs.rgb == ink0 && r3.element(ink).hist.cursor == 1 && r3.element(canvas).hist.cursor == -1,
               "state.json deleted: the manifest's active element and colours, each history at its end");
+    }
+
+    // ---------------------------------------------------------------- THE PRESETS AND THE THEME STRIP
+    if (chrome == 0 && canvas == 1 && ink == 2 && flag >= 0) {
+        fresh();
+        const double pres_x = ppx + kPresetsX + 60, save_x = ppx + kPopX0 + 200, save_y = ppy + kPopY0 + kPopRowH / 2.0;
+        auto presets_btn = [&](Picker& q) { tap(q, pres_x, name_y); };
+        auto choose_el = [&](Picker& q, int e) { tap(q, name_x, name_y); row_tap(q, e); };
+        // the pop-up's item k, scrolled into view by a drag (the drag acts on nothing), then its window y
+        auto item_y = [&](Picker& q, int k) {
+            const int want = std::max(0, k * kPopRowH - 400);
+            const double delta = want - q.pop_scroll(), y0 = ppy + kPopListY0 + 500;
+            if (delta != 0) {
+                q.press(save_x, y0);
+                q.move(save_x, y0 - delta - (delta > 0 ? kSlop : -kSlop));
+                q.release(save_x, y0 - delta - (delta > 0 ? kSlop : -kSlop));
+            }
+            return ppy + kPopListY0 + k * kPopRowH - q.pop_scroll() + kPopRowH / 2.0;
+        };
+        auto theme_item = [&](const Picker& q, const std::string& key) {
+            return int(q.presets().size()) + 1 + theme_of(q.exp(), key);
+        };
+        auto open_theme = [&](Picker& q, const std::string& key) {
+            presets_btn(q);
+            const int k = theme_item(q, key);
+            const double y = item_y(q, k);
+            tap(q, save_x, y);
+        };
+        auto strip_tap = [&](Picker& q, int i) { tap(q, q.strip_x() + 60, q.strip_row_y(i) + 20); };
+        auto strip_close = [&](Picker& q) { tap(q, q.strip_x() + kStripW - kStripPad - kBtn / 2.0, ppy + kStripPad + kBtn / 2.0); };
+        auto word = [&](const Picker& q, const std::string& role) {
+            std::vector<uint32_t> w;
+            role_words(q.exp(), w);
+            for (size_t r = 0; r < q.exp().roles.size(); ++r)
+                if (q.exp().roles[r].name == role) return hex_of(Rgb{uint8_t(w[r] >> 16), uint8_t(w[r] >> 8), uint8_t(w[r])});
+            return std::string("(no role ") + role + ")";
+        };
+        auto quartet = [&](const Picker& q) {
+            return word(q, "bevel_hilight") + " / " + word(q, "bevel_light") + " / " + word(q, "bevel_shadow") + " / " +
+                   word(q, "bevel_dkshadow");
+        };
+        const int n_themes = int(ex.themes.size());
+        size_t cmin = 1000, cmax = 0;
+        for (const Theme& t : ex.themes) { cmin = std::min(cmin, t.colours.size()); cmax = std::max(cmax, t.colours.size()); }
+        check(n_themes == 98 && ex.themes[0].key == "windows-brick" && theme_of(ex, "windows-95-standard") >= 0 &&
+                  theme_of(ex, "warptempo") == n_themes - 1,
+              "themes.json lists the product's 98 themes in the table's order (" + std::to_string(cmin) + ".." +
+                  std::to_string(cmax) + " colours each)");
+
+        Picker p = launch();
+        const Rgb ink0 = p.element(ink).cs.rgb, cv0 = p.element(canvas).cs.rgb, fl0 = p.element(flag).cs.rgb;
+        tap(p, 1700, 700);
+        plus(p, 3);                                   // the chrome edited
+        const ColourState c1 = p.colour();
+        presets_btn(p);
+        check(p.presets_open() && lines_of(work + "/picks.txt") == 1 &&
+                  slurp(work + "/picks.txt").find(" chrome " + hex_of(c1.rgb) + " hsv ") != std::string::npos &&
+                  p.old() == c1.rgb && !p.edited() && p.save_label() == "Save as Preset 1",
+              "opening the pop-up commits the edited chrome first (OLD now it); its first line Save as Preset 1");
+        p.paint(frame);
+        png(frame, work + "/frame_presets_open.png");
+        tap(p, save_x, save_y);
+        check(!p.presets_open() && p.open() && p.presets().size() == 1 && p.presets()[0].number == 1 &&
+                  slurp(work + "/presets.json").find("\"number\": 1") != std::string::npos &&
+                  p.presets()[0].colours.at("chrome").rgb == c1.rgb && p.presets()[0].colours.size() == 4,
+              "Save writes Preset 1 (every element's colour and view) and closes the pop-up; the panel stays open");
+        choose_el(p, ink);
+        plus(p, 3);
+        const Rgb ink1 = p.colour().rgb;
+        choose_el(p, chrome);                         // commits the ink
+        plus(p, 4);
+        const ColourState c2 = p.colour();
+        presets_btn(p);
+        check(p.save_label() == "Save as Preset 2" && lines_of(work + "/picks.txt") == 3, "the second save's line: Save as Preset 2");
+        tap(p, save_x, save_y);
+        check(p.presets().size() == 2 && p.presets()[1].number == 2 && p.presets()[1].colours.at("ink").rgb == ink1 &&
+                  p.presets()[1].colours.at("chrome").rgb == c2.rgb, "Preset 2 holds the ink and chrome edited since");
+        presets_btn(p);
+        check(lines_of(work + "/picks.txt") == 3, "opening the pop-up on an unedited colour commits nothing");
+        tap(p, save_x, item_y(p, 0));                 // Preset 1
+        const std::string after_load = slurp(work + "/picks.txt");
+        check(!p.presets_open() && p.open() && lines_of(work + "/picks.txt") == 5 && p.colour().rgb == c1.rgb &&
+                  same_view(p.colour(), c1) && p.old() == c1.rgb && p.element(ink).cs.rgb == ink0 &&
+                  after_load.find(" chrome " + hex_of(c1.rgb) + " hsv ", after_load.size() - 200) != std::string::npos &&
+                  p.element(canvas).cs.rgb == cv0 && p.element(canvas).hist.picks.empty() &&
+                  p.element(flag).cs.rgb == fl0 && p.element(flag).hist.picks.empty(),
+              "loading Preset 1: the chrome and the ink each one committed pick (5 lines), the canvas and the flag none; "
+              "OLD the loaded chrome, its view exact");
+        {
+            std::map<std::string, Pick> st;
+            std::map<std::string, int> ent;
+            std::string act;
+            check(state_load(work + "/state.json", st, ent, act, g_theme, err) && st["chrome"].rgb == c1.rgb &&
+                      st["ink"].rgb == ink0 && ent["chrome"] == 3 && ent["ink"] == 2, "state.json follows the load");
+        }
+        tap(p, back_x, hist_y);
+        check(p.colour().rgb == c2.rgb && same_view(p.colour(), c2), "BACK on the chrome returns to where he was (its Preset 2 colour)");
+        choose_el(p, ink);
+        tap(p, back_x, hist_y);
+        check(p.colour().rgb == ink1, "and BACK on the ink to its colour before the load");
+        tap(p, 1700, 700);
+        Picker r = launch();
+        check(r.presets().size() == 2 && r.presets()[0].number == 1 && r.presets()[1].number == 2 &&
+                  r.save_label() == "Save as Preset 3" && r.presets()[1].colours.at("chrome").h == c2.h &&
+                  r.presets()[1].colours.at("chrome").s == c2.s && r.presets()[1].colours.at("chrome").v == c2.v,
+              "a relaunch keeps the presets, their views exact; the next is Preset 3");
+        // a scroll that acts on nothing, a tap outside
+        tap(r, 1700, 700);
+        presets_btn(r);
+        const size_t lines0 = lines_of(work + "/picks.txt");
+        const std::string pre0 = slurp(work + "/presets.json");
+        const double y0 = item_y(r, 0);
+        r.press(save_x, y0);
+        r.move(save_x, y0 - 300);
+        const int scrolled = r.pop_scroll();
+        r.move(save_x, y0);
+        r.release(save_x, y0);
+        check(scrolled == 300 - kSlop && r.pop_scroll() == 0 && r.presets_open() && lines_of(work + "/picks.txt") == lines0,
+              "a drag on Preset 1 scrolls the list (" + std::to_string(scrolled) + " px) and, lifted back on it, loads nothing");
+        tap(r, 2200, 1300);
+        check(!r.presets_open() && r.open() && lines_of(work + "/picks.txt") == lines0 && slurp(work + "/presets.json") == pre0,
+              "a tap outside the pop-up closes it alone; nothing changes");
+        // the pop-up scrolled into the themes, then a theme opened
+        presets_btn(r);
+        item_y(r, theme_item(r, "windows-95-standard"));
+        r.paint(frame);
+        png(frame, work + "/frame_presets_themes.png");
+        tap(r, 2200, 1300);
+        choose_el(r, chrome);                         // the relaunch came back on the ink, the element he left
+        const Rgb chrome_r = r.element(chrome).cs.rgb;
+        open_theme(r, "windows-95-standard");
+        const int w95 = theme_of(r.exp(), "windows-95-standard");
+        check(!r.presets_open() && r.theme_open() == w95 && r.colour().rgb == chrome_r &&
+                  slurp(work + "/state.json").find("\"theme\": \"windows-95-standard\"") != std::string::npos,
+              "a tap on Windows 95 Standard opens its strip (no colour changes; state.json names it)");
+        r.paint(frame);
+        png(frame, work + "/frame_strip_open.png");
+        strip_tap(r, 0);                              // the ground, #C0C0C0
+        check(r.colour().rgb == (Rgb{0xC0, 0xC0, 0xC0}) && r.edited() && r.old() == chrome_r &&
+                  quartet(r) == "#FFFFFF / #DFDFDF / #808080 / #000000",
+              "adopting its ground into the chrome is an edit, and gives Windows 95 Standard's own quartet: " + quartet(r));
+        r.paint(frame);
+        png(frame, work + "/frame_strip_adopted.png");
+        tap(r, ppx + kColX + 50, ppy + kSwatchY0 + 50);
+        check(r.colour().rgb == chrome_r, "OLD reverts the adoption");
+        strip_tap(r, 0);
+        const size_t lines1 = lines_of(work + "/picks.txt");
+        choose_el(r, canvas);
+        check(r.theme_open() == w95 && lines_of(work + "/picks.txt") == lines1 + 1 &&
+                  slurp(work + "/picks.txt").find(" chrome #C0C0C0 hsv ") != std::string::npos,
+              "the switch to the canvas commits the adopted chrome; the strip stays open");
+        const Rgb adopt = r.exp().themes[size_t(w95)].colours[3].rgb;
+        strip_tap(r, 3);
+        check(r.colour().rgb == adopt && r.edited(), "a swatch adopted into the canvas: " + hex_of(adopt));
+        tap(r, 1700, 700);
+        Picker s = launch();
+        check(s.theme_open() == w95 && s.active() == canvas && s.colour().rgb == adopt && s.element(chrome).cs.rgb == (Rgb{0xC0, 0xC0, 0xC0}),
+              "a relaunch keeps the strip open on Windows 95 Standard, the canvas's adoption saved by the close");
+        // a tinted theme: its ground's lines are the rule's, never its own recorded relief
+        tap(s, 1700, 700);
+        choose_el(s, chrome);
+        open_theme(s, "windows-brick");
+        strip_tap(s, 0);
+        const Rgb brick{0xC2, 0xBF, 0xA5};
+        check(s.colour().rgb == brick && word(s, "bevel_hilight") == hex_of(scale_rgb(brick, 255, 192)) &&
+                  word(s, "bevel_light") == hex_of(scale_rgb(brick, 223, 192)) &&
+                  word(s, "bevel_shadow") == hex_of(scale_rgb(brick, 128, 192)) && word(s, "bevel_hilight") != "#E1E0D2" &&
+                  word(s, "bevel_shadow") != "#8D8961",
+              "Brick's ground #C2BFA5 gives the rule's lines " + quartet(s) + ", not its own #E1E0D2 / #C2BFA5 / #8D8961 / #000000");
+        // the strip's own scroll: a drag that adopts nothing
+        open_theme(s, "cde-alpine");
+        const Rgb before = s.colour().rgb;
+        const double sy0 = s.strip_row_y(2) + 10;
+        s.press(s.strip_x() + 60, sy0);
+        for (int k = 1; k <= 20; ++k) s.move(s.strip_x() + 60, sy0 - 20 * k);
+        s.release(s.strip_x() + 60, sy0 - 400);
+        check(s.strip_scroll() == 400 - kSlop && s.colour().rgb == before,
+              "CDE Alpine's " + std::to_string(s.exp().themes[size_t(theme_of(s.exp(), "cde-alpine"))].colours.size()) +
+                  " colours: a drag scrolls the strip (" + std::to_string(s.strip_scroll()) + " px) and adopts nothing");
+        s.paint(frame);
+        png(frame, work + "/frame_strip_scrolled.png");
+        check(slurp(work + "/picks.txt").find(" chrome #C2BFA5 hsv ") != std::string::npos,
+              "(the Brick ground, adopted, was committed by the pop-up's opening, as any edit)");
+        const Theme& alp = s.exp().themes[size_t(theme_of(s.exp(), "cde-alpine"))];
+        int vis = 0;
+        while (s.strip_row_y(vis) < s.strip_list_y0()) ++vis;
+        strip_tap(s, vis);
+        const Rgb alp_c = alp.colours[size_t(vis)].rgb;
+        check(s.colour().rgb == alp_c && s.edited(), "a swatch tapped on the scrolled strip adopts its colour " + hex_of(alp_c));
+        strip_close(s);
+        {
+            std::map<std::string, Pick> st;
+            std::map<std::string, int> ent;
+            std::string act;
+            check(s.theme_open() == -1 && state_load(work + "/state.json", st, ent, act, g_theme, err) && g_theme.empty() &&
+                      st["chrome"].rgb == brick && s.edited() && s.colour().rgb == alp_c,
+                  "the close control closes the strip (state.json drops it, and holds the chrome's last saved colour, never "
+                  "the unsaved adoption, which stays an edit)");
+        }
+        tap(s, 1700, 700);
+        Picker u = launch();
+        check(u.theme_open() == -1 && u.colour().rgb == alp_c, "a relaunch after the close: no strip; the adoption saved by the close");
+        // a malformed presets.json fails the load
+        put(work + "/presets.json", "{\"presets\": [{\"number\": 2, \"saved\": \"x\", \"colours\": {\"chrome\": \"#212533\"}, "
+                                    "\"hsv\": {\"chrome\": [227, 0.36, 0.21]}}]}\n");
+        std::string why;
+        check(load_fails(why), "a presets.json view that does not give its hex fails the load: " + why);
+        fresh();
+    }
+
+    // ---------------------------------------------------------------- the tablet's files of 2026-10-04 load unchanged
+    if (!today.empty() && chrome == 0 && canvas == 1 && ink == 2) {
+        fresh();
+        const std::string picks0 = slurp(today + "/picks.txt"), state0 = slurp(today + "/state.json");
+        put(work + "/picks.txt", picks0);
+        put(work + "/state.json", state0);
+        Picker t = launch();
+        const auto& C = t.element(chrome).cs;
+        const auto& V = t.element(canvas).cs;
+        const auto& I = t.element(ink).cs;
+        check(std::count(picks0.begin(), picks0.end(), '\n') == 110 && t.active() == canvas &&
+                  C.rgb == (Rgb{0x63, 0x63, 0x9C}) && C.h == 240 && C.s == 0.36538461538461536 && C.v == 0.611764705882353 &&
+                  V.rgb == (Rgb{0x63, 0x63, 0x9C}) && I.rgb == (Rgb{0xBB, 0xCE, 0xF2}) && I.h == 218.50048182819384 &&
+                  I.s == 0.23 && I.v == 0.95 && t.element(chrome).hist.picks.size() == 11 &&
+                  t.element(chrome).hist.cursor == 8 && t.element(canvas).hist.picks.size() == 22 &&
+                  t.element(canvas).hist.cursor == 21 && t.element(ink).hist.picks.size() == 77 &&
+                  t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty(),
+              "the tablet's picks.txt (110 lines) and state.json load unchanged: the canvas active, chrome 9 of 11, canvas "
+              "22 of 22, ink 77 of 77, every view exact");
+        tap(t, 1700, 700);
+        tap(t, ppx + kPresetsX + 60, ppy + kNameY + kNameH / 2.0);
+        tap(t, ppx + kPopX0 + 200, ppy + kPopY0 + kPopRowH / 2.0);
+        tap(t, ppx + kPresetsX + 60, ppy + kNameY + kNameH / 2.0);
+        tap(t, ppx + kPopX0 + 200, ppy + kPopListY0 + kPopRowH / 2.0);   // Preset 1, at the top of the list
+        tap(t, 1700, 700);
+        check(slurp(work + "/picks.txt") == picks0 && t.presets().size() == 1,
+              "a preset saved and loaded over them appends nothing (every element unchanged): picks.txt byte for byte");
+        fresh();
     }
 
     // ---------------------------------------------------------------- today's files load unchanged

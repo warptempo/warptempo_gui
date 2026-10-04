@@ -33,7 +33,7 @@ open flag with its selection (where the selected fill, fixed #666666 now, become
 - A TAP on the picture opens the PANEL on the half of the screen opposite the tap, so the place tapped stays in view.
 - The panel (GTK's colour selector and GIMP's colour dialog, their common ground, HSV only, no CMYK): the hue RING with
   the saturation / value TRIANGLE inside it (its corners the pure hue, white and black, turning with the hue; drag
-  either); the active element's NAME as a button (below), its HEX in large type, under it BACK | "N of M" | FORWARD (the pick history, below in
+  either); the active element's NAME as a button and the PRESETS button beside it (below), its HEX in large type, under it BACK | "N of M" | FORWARD (the pick history, below in
   Use), the OLD | NEW swatches (the colour when the panel opened | now; a
   tap on OLD reverts); six SLIDERS, H 0–360, S 0–100, V 0–100 and R, G, B 0–255, each a long track painted with its
   live gradient (the colour along it, the other channels as they stand), a handle, its value at the right, and a
@@ -57,6 +57,37 @@ open flag with its selection (where the selected fill, fixed #666666 now, become
   entry picks it and closes the chooser (a press on one entry lifted on another picks nothing and leaves it open); a
   tap anywhere outside the chooser closes it and changes nothing. CHOOSING ANOTHER ELEMENT IS THE CLOSE FOR THE ONE
   BEING LEFT (the history's rules, below in Use); choosing the active element again is a no-op.
+- THE PRESETS (architect 2026-10-04: he tunes whole looks on the glass and keeps them to come back to). A PRESETS
+  button beside the element's name opens the PRESETS POP-UP, built like the chooser (the same chrome and tap rules: a
+  tap on an entry acts and closes it, a press lifted on another entry acts on nothing, a tap outside it closes it and
+  changes nothing), over the panel below the two buttons and the panel's whole width (the theme names are long).
+  OPENING IT IS THE CLOSE FOR THE PANEL'S EDIT (the chooser's rule): an edited colour commits first, so a preset always
+  snapshots saved colours. Its first line, fixed, is "Save as Preset N" (N the highest saved + 1, never reused while
+  the file lives); under it a LIST THAT SCROLLS by a pen or finger drag (a drag past 16 px scrolls and acts on nothing;
+  a tap acts at the lift; the scroll is kept while the app lives): the saved presets, oldest first, each with a small
+  swatch of every element's colour in manifest order; then the plain heading "Themes" and THE PRODUCT'S THEMES (the
+  export's `themes.json`, below), each by its name with a swatch of its ground. A scroll frame paints the list and
+  nothing else (no re-blend).
+  - SAVE appends the whole look — every element's colour and its exact view — to `presets.json` as "Preset N" (one
+    logcat line, `picker: preset save Preset N: <key> #RRGGBB ...`); duplicates are allowed.
+  - LOAD sets every element to the preset's colour and view: each element whose colour or view changes gets ONE
+    committed pick in its own history (a `picks.txt` line, as a commit), an unchanged element none, so BACK steps to
+    the history's previous newest entry — where he was when his cursor stood there, always so for the active element,
+    whose edit the opening committed (an element he had stepped back mid-history and left finds that entry further
+    back). `state.json` follows; the panel stays open on the active element, OLD now the loaded colour; one logcat
+    line, `picker: preset load Preset N: committed <key> #RRGGBB ...; unchanged <key> ...`.
+  - No rename, delete or overwrite (they wait for a keyboard).
+- THE THEME STRIP (architect 2026-10-04: the product's themes as inspiration). A tap on a theme in the pop-up OPENS it:
+  the pop-up closes and the panel grows a STRIP, a 360-px column 12 px beside it on the scene's side and the panel's
+  height (the panel itself unchanged): the theme's name, a close control (an X, top right), and EVERY COLOUR THE
+  CATALOG RECORDS FOR THE THEME, each a swatch beside its hex and every name that records it (wrapped small text), a
+  list that scrolls as the pop-up's does. A TAP ON A SWATCH ADOPTS IT AS THE ACTIVE ELEMENT'S COLOUR, AS AN EDIT,
+  exactly as a control's drag would: the bytes set, the view re-derived from them (a theme stores no view), the scene
+  live, NEW showing it, OLD still reverting, the close the one save. Adopted as the chrome it sets the ground, and every
+  line follows by Windows 95's rule, never the theme's own relief. The swatch showing the active element's colour is
+  marked. THE STRIP STAYS OPEN ACROSS ELEMENT SWITCHES (he adopts for another element by choosing it with the chooser)
+  and across relaunches (`state.json`'s `"theme"`), until its close control or another theme opened; it shows while
+  the panel is open, and a tap on it is never a tap outside the panel. Opening and closing it log a line each.
 - A tap OUTSIDE the panel closes it, and that close is the ONE DELIBERATE SAVE: it COMMITS the pick when the colour
   is edited (the history's rules, below in Use). While closed, a small label at the bottom right shows the active
   element's name, hex and count. Leaving the app with the panel open (home, the cover) saves nothing: the unsaved colour
@@ -73,7 +104,8 @@ Everything lives in the app's EXTERNAL files dir, `/sdcard/Android/data/com.warp
 |---|---|---|
 | `scene/manifest.json`, `scene/<scene>.base.pgm`, `scene/<scene>.cover.bin` | the planner (`adb push`) | the export (formats below) |
 | `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <key> #RRGGBB hsv <h> <s> <v>` (the element's key; the view the pick was saved under) |
-| `state.json` | the app, at every close of the panel and every switch of element | `{"active": "<key>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "entry": {"<key>": N, ...}}`: the active element, and every element's colour, its view and its history cursor (the N of "N of M"; absent with an empty history), rewritten whole |
+| `state.json` | the app, at every close of the panel, every switch of element, a commit at the presets pop-up's opening, a preset load, and the theme strip's opening and close | `{"active": "<key>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "entry": {"<key>": N, ...}, "theme": "<theme key>"}`: the active element, every element's colour, its view and its history cursor (the N of "N of M"; absent with an empty history), and the open theme strip's theme (absent when none), rewritten whole. It is always THE LAST SAVED STATE: while the panel is open the active element is written as the panel's opening (OLD and its cursor), so an unsaved edit never reaches it |
+| `presets.json` | the app, at every save of a preset | `{"presets": [{"number": N, "saved": "<ISO-8601 local time>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}}, ...]}`: the presets oldest first, the numbers ascending (the name is "Preset N"), every colour with its view over the same keys, rewritten whole |
 
 THE VIEW'S NUMBERS are h in degrees 0..360 and s, v in 0..1, written as the shortest decimal that reads back as the
 same double (`227`, `0.35`, `0.34671532846715331` after a drag), so a stored view is restored exactly; a view must
@@ -83,7 +115,9 @@ from its bytes as before (the lines are never rewritten; a new commit appends th
 `state.json` without `"hsv"` starts on its colour re-derived; one with `"hsv"` and `"entry"` for one layer alone and
 no `"active"` (the single-layer builds', such as the ink round's `{"colours": {"ink": "#A6B9DE"}, "entry": {"ink":
 58}}`) starts every other element at the manifest's colour, on the manifest's active element. A key that is no element
-of the export (an earlier round's layer) is read and never used.
+of the export (an earlier round's layer) is read and never used; so is a `"theme"` the export does not list, and a
+preset's key that is no element (that element keeps its colour at a load). `presets.json` is read as strictly as the
+others: a number not above the one before, a colour without its view, or a view not giving its hex fails the load.
 
 At launch EVERY ELEMENT starts at its colour in `state.json` if there is one (the last close, with its view when
 the file has one), else the manifest's; its history is its `picks.txt` lines, and its cursor `state.json`'s entry when
@@ -118,7 +152,17 @@ statement:
   1..254) pairs, oldest first. Such a pixel is its base's colour with each paint blended over it by CAIRO'S OWN
   ARITHMETIC (`src/colour.h` over_n_8: pixman 0.46.4's fast_composite_over_n_8_8888 and pixman-combine32.h's
   UN8x4_MUL_UN8 / UN8x4_MUL_UN8_ADD_UN8x4, line for line), so the picture is render.py's byte for byte at any colours.
-- An earlier export (`layers`, `background.ppm`) is refused with a message: export the theme again.
+- `themes.json`: THE PRODUCT'S THEMES, `{"source": "...", "themes": [{"key": "windows-95-standard", "name": "Windows
+  95 Standard", "ground": "#C0C0C0", "colours": [{"hex": "#C0C0C0", "names": ["ground", "Scrollbar", ...]}, ...]},
+  ...]}`: every entry of the product's theme table, LIGHT level, in the table's order (98 today), each with every
+  distinct colour the catalog records for it, the ground first (`render.py` product_themes is the authoritative
+  statement: the source is `docs/themes/catalog.json`, exactly what `tools/theme_catalog/gen_theme_table.py` generates
+  `src/gui/theme_table.h` from, and the table is read too and must agree, so a stale table fails the export). A
+  theme's colours are its catalog roles, every raw value its source records under the source's own key names, and
+  every value its toolkit's rule computed at import (KDE 3's relief, CDE's Motif shades of each colour set): 6 to 34
+  colours a theme.
+- An earlier export (`layers`, `background.ppm`) is refused with a message: export the theme again; so is an export
+  without `themes.json` (written before the presets).
 
 NOTHING IS RASTERIZED ON THE DEVICE. At load each scene's base map becomes runs of one role per row (the stacked
 pixels left out) and its stacks a list, each carrying the bits of the elements its colour reads. A colour change
@@ -157,10 +201,21 @@ nothing; a press lifted on another entry picks nothing; the active entry again i
 committed by the switch to the Ink; the switch to the Flag Test's scene with the chrome's tint and the ink's colour
 live in it); every element's history, cursor and view independent across switches and relaunches, and the element he
 left returned to; today's `picks.txt` (58 ink lines, 15 of the first build's form and 43 with a view, the last
-#A6B9DE) and `state.json` (`{"colours": {"ink": "#A6B9DE"}, "entry": {"ink": 58}}`) loading unchanged; and THE
+#A6B9DE) and `state.json` (`{"colours": {"ink": "#A6B9DE"}, "entry": {"ink": 58}}`) loading unchanged; THE PRESETS
+(the export's 98 themes; two saves named Preset 1 and Preset 2, the edited panel colour committed by the pop-up's
+opening; a load giving each changed element one pick and an unchanged one none, OLD the loaded colour, BACK returning;
+a relaunch keeping the presets and their views; a drag that scrolls and acts on nothing; a tap outside that changes
+nothing; a malformed `presets.json` refused); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
+the chrome as an edit giving its own quartet #FFFFFF / #DFDFDF / #808080 / #000000 exactly, OLD reverting it, the
+switch to the canvas committing it with the strip still open, another swatch adopted into the canvas, the strip
+surviving a relaunch; Brick's ground giving the rule's lines and not its own; CDE Alpine's strip scrolled by a drag
+that adopts nothing; the close control, `state.json` never holding an unsaved adoption); THE TABLET'S FILES OF
+2026-10-04 (`check_data/tablet_2026-10-04/`: 110 `picks.txt` lines over three elements and its `state.json`) loading
+unchanged, every view exact, and a preset saved and loaded over them appending nothing; and THE
 PER-FRAME COST of a pen drag on the ink and on the chrome (printed). Its frames are written as PNGs in
 `build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`, `frame_flag_open.png`,
-the history's `frame_history_*.png`).
+the history's `frame_history_*.png`, `frame_presets_open.png`, `frame_presets_themes.png` (the pop-up scrolled into
+the themes), `frame_strip_{open,adopted,scrolled}.png`).
 
 ## Use (the planner, over adb)
 
@@ -175,7 +230,7 @@ adb shell chmod -R 777 $D/scene                                     # adb's new 
 adb shell am force-stop com.warptempo.picker
 adb shell am start -n com.warptempo.picker/.PickerActivity
 adb logcat -s warptempo_picker:I                                    # the window's set-up lines, the scene, each commit and step
-adb shell cat $D/picks.txt                                          # the picks; state.json beside it
+adb shell cat $D/picks.txt                                          # the picks; state.json and presets.json beside it
 ```
 
 The `chmod` is the product's own experience (`scripts/warptempo_sync`: a directory `adb push` creates belongs to
@@ -222,11 +277,11 @@ An element's history is every `picks.txt` line under its key, across rounds, unt
 |---|---|
 | `src/colour.h` | the byte triple, hex, the frame's pixel word, `lin_mix` (colour.py's, step for step), `scale_byte` (the chrome rule), `over_n_8` (pixman's blend, line for line), HSV -> bytes |
 | `src/json.{h,cpp}` | the tiny JSON reader (manifest.json, state.json) |
-| `src/scene.{h,cpp}` | the export: load and validate, the roles' rules, the scene's runs and stacks, the whole paint and the live repaint; the Pick (bytes and view); the readers of state.json and picks.txt |
+| `src/scene.{h,cpp}` | the export: load and validate (`themes.json` too), the roles' rules, the scene's runs and stacks, the whole paint and the live repaint; the Pick (bytes and view); the readers of state.json, picks.txt and presets.json |
 | `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
-| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus the retained hue, a stored view restored), the launch state (`picker_load`), every element's state and pick history, the chooser, the panel's geometry, painting, touch, the close's save |
+| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus the retained hue, a stored view restored), the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |
-| `src/host_check.cpp`, `check_refs.py` | the laptop check (above) |
+| `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, copied verbatim |
 | `java/com/warptempo/picker/PickerActivity.java` | the full-screen sliver |
 | `AndroidManifest.xml` | the package, the colour mode, the orientation lock |
 | `build_picker.sh` | the APK, or `--check` |
