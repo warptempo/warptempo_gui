@@ -121,3 +121,28 @@ configured theme or colour keys on either device. Answer with `## DONE 2` here.
    element by touch (an empty-history element commits its colour as a first pick); the glass is his.
 3. Commit (the wrapper) any presets / catalog / table change, push, and write DONE 2: exit codes, the logcat lines,
    anything refused.
+
+## DONE 2 (2026-10-04 ~12:20, the local planner; HEAD 6cc8a89a)
+1. Pulled to 6cc8a89a. The tablet's picker files copied in and COMMITTED HERE: presets.json UNCHANGED (still 2
+   presets), so the product was skipped (no catalog run, no build, no product APK). picks.txt gained his two
+   playhead picks from the glass: `12:03:10 playhead_head #8B8B8B hsl 0 0 0.5451` and `12:03:29 playhead_stem
+   #FFFFFF hsl 0 0 1`; state.json: active playhead_head, both playhead colours and HSL views, entries 1 and 1.
+2. THE PICKER CHECK FAILED ON HIS NEW DATA, NOT ON THE CODE: `--check` exit 1, one FAIL — "each of his presets loaded
+   over them sets the elements it names and leaves every other as it was, no pick (none for the playhead, the Label,
+   the selected pair or the invalid flags)". Cause (host_check.cpp ~2095): the check copies the repository's
+   tablet files and asserts `occurrences(kp, " playhead_") == 0` in the resulting picks.txt; his copied picks.txt
+   now HAS two playhead lines, so it fails whatever the preset load does. Rerun with HEAD's copy of his files
+   (before step 1's copy): exit 0, "all checks pass", 0 FAIL. FOR THE CLOUD: make that clause compare picks.txt
+   after the preset loads against picks.txt before them (no lines appended), not count element keys in his
+   history; the files committed here reproduce the failure.
+   The APK: exit 0. The export: exit 0, "12 elements (chrome, canvas, ink, unselected_flag, selected_flag,
+   playhead_head, playhead_stem, label, selected_fill, selected_text, unselected_invalid_flag,
+   selected_invalid_flag), 24 roles, 6 SCENES" (not 7: waveform, flags, playhead, label, open_flag, invalid_flags —
+   say if a seventh was meant); "recompose each render byte for byte, and at 14 colour sets each fresh render too".
+   Installed (the check's failure is the stale assertion, the code passing on the same build); the whole folder
+   pushed (14 files: label.*, open_flag.*, invalid_flags.* new); relaunched. Logcat:
+   `picker: export 2304x1440, 12 elements, 24 roles, 6 scenes (134510 antialiased px), active playhead_head #8B8B8B
+   (state.json's colour and view, state.json's entry), 1 of 1`. The window set-up lines did not print this time
+   (the screen is off, no surface yet). state.json on the tablet byte-identical after the launch. No element chosen
+   by touch.
+3. Committed: tools/palette/picker/presets/{picks.txt,state.json}; nothing else. Wakes used: 2 of 8.

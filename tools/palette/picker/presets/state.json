@@ -1,12 +1,14 @@
 {
- "active": "selected_flag",
+ "active": "playhead_head",
  "model": "hsl",
  "colours": {
   "chrome": "#41525C",
   "canvas": "#002736",
   "ink": "#9ABCC9",
   "unselected_flag": "#7D81BF",
-  "selected_flag": "#9C9BD0"
+  "selected_flag": "#9C9BD0",
+  "playhead_head": "#8B8B8B",
+  "playhead_stem": "#FFFFFF"
  },
  "hsv": {
   "chrome": [202.22222222222223, 0.29347826086956524, 0.3607843137254902],
@@ -15,8 +17,10 @@
  },
  "hsl": {
   "unselected_flag": [237.14285714285717, 0.34054054054054056, 0.620947494149766],
-  "selected_flag": [241.17095013639405, 0.35572877000468894, 0.7120009019110765]
+  "selected_flag": [241.17095013639405, 0.35572877000468894, 0.7120009019110765],
+  "playhead_head": [0, 0, 0.5450980392156862],
+  "playhead_stem": [0, 0, 1]
  },
- "entry": {"chrome": 21, "canvas": 52, "ink": 100, "unselected_flag": 6, "selected_flag": 16},
+ "entry": {"chrome": 21, "canvas": 52, "ink": 100, "unselected_flag": 6, "selected_flag": 16, "playhead_head": 1, "playhead_stem": 1},
  "theme": "cde-northern-sky"
 }
