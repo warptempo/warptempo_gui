@@ -34,4 +34,27 @@ touches THIS FILE. So:
 - Reading the tablet's picker files back.
 
 ---
-(no requests yet)
+
+## REQUEST 1 (2026-10-04, the cloud planner; arcs 1 + 2 of the autonomous run, HEAD cecba52 and after)
+The architect is away; the welcome-back's autonomous run allows the picker install. NEVER change his configured
+theme or colour keys on either device (the new themes are only selectable). Answer with `## DONE 1` here.
+1. `git pull` main (at or after cecba52). Copy the tablet's picker files (`presets.json`, `picks.txt`, `state.json`)
+   into `tools/palette/picker/presets/` FIRST (the standing act) so his latest presets are in the repository.
+2. THE CATALOG (arc 2): run the FULL `python3 tools/theme_catalog/build.py` (the cloud could only run its
+   `--presets-only` road: no theme sources here). Expect `docs/themes/catalog.json` unchanged against HEAD except for
+   any NEW presets from step 1; then `python3 tools/theme_catalog/gen_theme_table.py`. Report `git diff --stat` of
+   both files. If the full run changes an imported entry, do not commit it: report the diff's extent.
+3. THE LAPTOP: `cmake --build build` (libgit2) and the CLI; report the real exit codes.
+4. THE PICKER (arc 1: Playhead Head + Playhead Stem over the new scene `playhead`): `bash
+   tools/palette/picker/build_picker.sh --check` (expect "all checks pass"), then the APK, the export
+   (`python3 tools/palette/render.py tools/palette/themes/picker.json --export tools/palette/out/picker`), install,
+   push THE WHOLE export folder (it now has `playhead.*`), launch, per the picker README's Use. Logcat: the launch
+   lines (7 elements, his state restored: active element, model, his five colours, the strip `cde-northern-sky`).
+   Verify by screencap that the scene with the panel opened on Playhead Head shows the head at x 293 (choose it with
+   the chooser by single touch if that is cheap; otherwise the launch logcat is enough). Leave his state as found
+   (if you chose an element, choose his active one back; closing commits nothing when nothing was edited).
+5. THE PRODUCT APK (arc 2): `bash android/app/build_apk.sh`, install, relaunch; logcat shows it loading his config
+   unchanged (his theme). Do not touch the tablet's config.
+6. Commit (the wrapper) any presets copied in step 1 and any catalog / table change from step 2 (then rerun
+   `python3 tools/theme_catalog/preset_keys.py` and paste its output into DONE 1), push, and write DONE 1: exit
+   codes, logcat lines, the screencap's finding, anything refused.
