@@ -31,8 +31,11 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
    `docs/handoff/local_queue.md` to build, export, install (on his word) and verify.
 
 ## THE AUTONOMOUS RUN (architect 2026-10-04: about EIGHT HOURS unattended; neither meter may die)
-He leaves the run alone for ~8 hours. Budgets: the cloud's remaining credit (~$239; spend at most ~$50 this run) and
-the LOCAL weekly meter (~1-2 % left; the local session must stay tiny). Work in ARCS, each ending at a STOPPING POINT.
+He leaves the run alone for ~8 hours. Budgets (raised by him 2026-10-04): the cloud may BURN DOWN MOST OF ITS CREDIT
+(~$239) between now and the local weekly reset, TUESDAY 2026-10-06 ~11 pm ET, paced so the work lasts until then: about
+$70 per eight-hour run, keeping ~$30 in reserve at the reset. The LOCAL weekly meter (~1-2 % left until that reset) is
+the binding limit: the laptop has AT MOST 8 WAKES IN TOTAL until the reset, so BATCH several arcs into one REQUEST
+when they can wait (e.g. one install for two picker arcs). Work in ARCS, each ending at a STOPPING POINT.
 
 AN ARC = one brief -> ONE Opus-high coder round (plus at most one fix-up message to the same coder) -> your review ->
 `build_picker.sh --check` (or the product build) -> commit + push -> ONE batched REQUEST in local_queue.md (build,
@@ -46,13 +49,16 @@ THE RUN'S ARCS, in order (all ruled above; stop after the last, or earlier at an
    for each), the table regenerated, the product built (cloud: GIT=OFF; the local REQUEST builds both devices and
    installs the APK). NEVER change his configured theme or colour keys on either device: the new themes only become
    selectable in Settings; he switches himself.
-3. The LABEL element (text), if 1 and 2 are done and the budget below holds.
+3. The LABEL element (text).
+4. The OPEN FLAG (the selected fill + its text), then 5. the INVALID (red) flags — scenes and elements only; his
+   picks come later on the glass.
+Past these, stop: the rest needs his discussion.
 
 HARD STOPS (write the state into this file, commit, and stop working):
 - Any ruling needed from him (a design choice the rulings above do not cover): put it in "Decisions for you" here,
   skip to the next arc only if it does not depend on it, else stop.
-- More than 4 coder rounds, or ~$50 of cloud credit by your best estimate (if you cannot see the meter, count: an arc
-  is roughly $5-15), or 8 hours.
+- ~$70 of cloud credit this run by your best estimate (if you cannot see the meter, count: an arc is roughly $5-15),
+  or 8 hours; never below the ~$30 reserve.
 - A REQUEST unanswered for 90 minutes (the laptop may be off): stop.
 No Fable, no codex, no mocks for judgment (no one is there to judge), no product scope beyond the arcs.
 
