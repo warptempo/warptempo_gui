@@ -1,7 +1,7 @@
 # tools/palette/picker — Warptempo Picker, the colour picker over a true picture of the app
 
 A design tool for picking the app's colours (render.h's palette block: the chrome, the waveform's canvas and ink,
-the flags) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
+the flags, the playhead) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
 exported by the mock tool. A separate APK, package
 `com.warptempo.picker`, label "Warptempo Picker", installed beside the product and never touching
 `com.warptempo.gui` or its files. NO LINK PATH TO OR FROM THE PRODUCT: nothing in `src/`, `android/app/` or
@@ -33,14 +33,23 @@ flag from the left (x 1816) SELECTED with its payload box the addressed cell, so
 meets a selected flag in most (with a bound cell addressed the stem keeps the resting face). Both labels are FIXED
 white (his ruling: consistency), fixed roles re-blended over the live faces; the invalid faces and the flag outline
 are fixed roles too. The flags round added the elements and the scene in the theme and no app code but one fit: the
-element button sets a name too long for it (Unselected Flag) smaller, so it ends clear of the chooser's head. The
-round to come, again a new theme and export: the open flag with its selection (where the selected fill, fixed
-#666666 now, becomes pickable).
+element button sets a name too long for it (Unselected Flag) smaller, so it ends clear of the chooser's head. Then
+PLAYHEAD HEAD and PLAYHEAD STEM (architect 2026-10-04: the program's two playhead keys, render.h's THE PLAYHEAD block,
+starting at the product's defaults #8B8B8B and #FCFCFC), over the scene `playhead` — the flags scene's stems and flags
+with NO flag selected (in the app a marker click lands the playhead on it, and a playhead standing on a marker
+suppresses its own stem, so a selected flag away from the playhead is not how he meets it) and the playhead ON at its
+column, x 293: the head the product's aliased shape, opaque, with its one-Windows-px outline in the label (a fixed
+role), the stem uniform from the head down the marker lane and the well to the
+canvas's foot. The playhead round added no app code: the theme's elements and scene, a new export (`waveform` and
+`flags` byte for byte as before). The round to come, again a new theme and export: the open flag with its selection
+(where the selected fill, fixed #666666 now, becomes pickable).
 
 WHERE THE FLAGS SHOW: a tap on the right half opens the panel on the left (x 16..1136), leaving the flags at x 1343
 (unselected), 1816 (SELECTED) and 2289 (unselected, clipped at the window's edge) in view, the selected one and the
 last still with the theme strip open (x 1148..1508); a tap on the left half opens the panel on the right, leaving the
-unselected flags at x 398 and 871 (only the first with the strip open).
+unselected flags at x 398 and 871 (only the first with the strip open). WHERE THE PLAYHEAD SHOWS: at x 293 (its head
+x 277..311 on the ruler lane's foot), left of the first flag, so the panel on the right (a tap on the LEFT half,
+x 1168..2288, its strip x 796..1156) leaves it in view; the panel on the left covers it.
 
 - A TAP on the picture opens the PANEL on the half of the screen opposite the tap, so the place tapped stays in view.
 - The panel (GTK's colour selector and GIMP's colour dialog, their common ground, no CMYK): the hue RING with
@@ -151,7 +160,7 @@ Everything lives in the app's EXTERNAL files dir, `/sdcard/Android/data/com.warp
 | `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <key> #RRGGBB <model> <a> <b> <c>` (the element's key; the view the pick was saved under: its model's word, `hsv`, `hsl` or `lch`, and its three numbers) |
 | `state.json` | the app, at every close of the panel, every switch of element or model, a commit at the presets pop-up's opening, a preset load, and the theme strip's opening and close | `{"active": "<key>", "model": "hsv", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {"<key>": [h, s, l], ...}, "lch": {"<key>": [L, C, h], ...}, "entry": {"<key>": N, ...}, "theme": "<theme key>"}`: the active element, the model the panel shows, every element's colour, its view in the map of the view's model (a map written only when some view is in it) and its history cursor (the N of "N of M"; absent with an empty history), and the open theme strip's theme (absent when none), rewritten whole. It is always THE LAST SAVED STATE: while the panel is open the active element is written as the panel's opening (OLD and its cursor), so an unsaved edit never reaches it |
 | `presets.json` | the app, at every save of a preset | `{"presets": [{"number": N, "saved": "<ISO-8601 local time>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {...}, "lch": {...}}, ...]}`: the presets oldest first, the numbers ascending (the name is "Preset N"), every colour with its view in its model's map (each map only when some view is in it, so an all-HSV preset is written as before the model switch), the maps together over the colours' keys, rewritten whole |
-| `tools/palette/picker/presets/presets.json` (the repository) | the planner, each session (`adb pull`) | the tablet's `presets.json` copied verbatim into git, so his presets outlive the device and every planner (the cloud's too) can read them; the source the preset-to-product helper will read |
+| `tools/palette/picker/presets/presets.json` (the repository) | the planner, each session (`adb pull`) | the tablet's `presets.json` copied verbatim into git, so his presets outlive the device and every planner (the cloud's too) can read them; the source the preset-to-product helper will read; the tablet's `picks.txt` and `state.json` copied beside it, and the laptop check loads all three over each new export (Build, the laptop check) |
 
 THE VIEW'S NUMBERS are, for HSV, h in degrees 0..360 and s, v in 0..1; for HSL h in degrees, s, l in 0..1; for LCh L
 0..100, C 0..160, h in degrees — written as the shortest decimal that reads back as the
@@ -238,9 +247,9 @@ LOAD segments, DT_NEEDED exactly libc / libdl / libm / libandroid / libnativewin
 The LAPTOP CHECK builds the portable core (`json`, `scene`, `fonts`, `picker`) with the host's g++, cairo and
 FreeType into `build/check/host_check`; `check_refs.py` exports `themes/picker.json` afresh (`build/check/scene/`) and
 THE CHECK THEME (`build/check/multi/`: the round's theme plus a Selection Test element, the selected fill, over a
-third scene with the flags and the first flag's editor open, its whole text selected), and renders their references with the mock tool's own code. It
+fourth scene with the flags and the first flag's editor open, its whole text selected), and renders their references with the mock tool's own code. It
 checks: every scene of both at the manifest's colours and at every colour set of `render.picker_check_sets` (each
-element moved, the chrome to the tint #206048 whose 32 and 96 hit the rule's half-to-even ties and to the bright
+element moved, each other element to a probe colour of its own, the chrome to the tint #206048 whose 32 and 96 hit the rule's half-to-even ties and to the bright
 #E6D2B4 whose lines cap, all moved at once) equals the mock tool's render BYTE FOR BYTE, painted whole and reached by
 the live repaint; a synthetic export with roles derived over the canvas element and over a literal equals
 `colour.py`'s composition at the canvas and the ink moved; the C++ `lin_mix` equals `colour.py`'s on all 65536 byte
@@ -263,27 +272,40 @@ the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; a tap o
 nothing; a press lifted on another entry picks nothing; the active entry again is a no-op; the edited chrome
 committed by the switch to the Ink; the switch Ink -> Unselected Flag showing the flags scene with both faces, the
 chrome's tint and the ink's colour live in it, the unselected face repainting alone; the switches on to the Selected
-Flag and the Selection Test's scene, each committing the element left); THE SWITCH'S PICTURE (the round's own export
-launched at the colours of its all-moved reference: the waveform scene, the switch Ink -> Unselected Flag and the
-switch back each equal the mock tool's render byte for byte); every element's history, cursor and view independent across switches and relaunches, and the element he
+Flag and the Selection Test's scene, each committing the element left); THE PLAYHEAD (architect 2026-10-04: the panel
+on the right, the playhead left of it; the switch to the Playhead Head showing the playhead scene, the head, its
+outline the label #FFFFFF and the stem at the manifest's colours, in the picture and the frame; the head repainting
+alone, its outline and the stem staying; its edit committed by the switch to the Playhead Stem; the stem repainting
+alone; its edit committed by the close; both kept by a relaunch with their views, every other element untouched);
+THE SWITCH'S PICTURE (the round's own export launched at the colours of its all-moved reference: the waveform scene,
+the switch Ink -> Unselected Flag and the switch back, and the switch Ink -> Playhead Head each equal the mock tool's
+render byte for byte); every element's history, cursor and view independent across switches and relaunches, and the element he
 left returned to; today's `picks.txt` (58 ink lines, 15 of the first build's form and 43 with a view, the last
 #A6B9DE) and `state.json` (`{"colours": {"ink": "#A6B9DE"}, "entry": {"ink": 58}}`) loading unchanged; THE PRESETS
 (the export's 98 themes; two saves named Preset 1 and Preset 2, the edited panel colour committed by the pop-up's
 opening; a load giving each changed element one pick and an unchanged one none, OLD the loaded colour, BACK returning;
 a relaunch keeping the presets and their views; a drag that scrolls and acts on nothing; a tap outside that changes
 nothing; a malformed `presets.json` refused; a three-element preset, saved before the flags round, loading and
-committing the chrome, canvas and ink while both flags stay as they were, no pick for either); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
+committing the chrome, canvas and ink while both flags and both playhead elements stay as they were, no pick for
+any); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
 the chrome as an edit giving its own quartet #FFFFFF / #DFDFDF / #808080 / #000000 exactly, OLD reverting it, the
 switch to the canvas committing it with the strip still open, another swatch adopted into the canvas, the strip
 surviving a relaunch; Brick's ground giving the rule's lines and not its own; CDE Alpine's strip scrolled by a drag
 that adopts nothing; the close control, `state.json` never holding an unsaved adoption); THE TABLET'S FILES OF
 2026-10-04 (`check_data/tablet_2026-10-04/`: 110 `picks.txt` lines over three elements and its `state.json`) loading
-unchanged, every view exact, HSV shown, the flags at the manifest's colours with empty histories, and a preset saved
-and loaded over them appending nothing; the repository's `presets/presets.json` reading unchanged; those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 136 lines,
-the ink active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90) loading unchanged the same way; and THE PER-FRAME COST
+unchanged, every view exact, HSV shown, the flags and the playhead at the manifest's colours with empty histories, and
+a preset saved and loaded over them appending nothing; the repository's `presets/presets.json` reading unchanged;
+those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 136 lines, the ink active, chrome 12
+of 12, canvas 34 of 34, ink 90 of 90) loading unchanged the same way; THE REPOSITORY'S COPY OF THE TABLET'S FILES
+(`presets/`'s `picks.txt`, `state.json` and `presets.json`, whatever the latest copy holds; architect 2026-10-04, the
+playhead round's install) loading over the round's own export: every element `state.json` names at its colour, its
+model, active element and open theme, every element the files never name (the playhead's two) at the manifest's
+colour with an empty history, and each of his presets loaded over them setting the elements it names and leaving
+every other as it was, with no pick; and THE PER-FRAME COST
 of a pen drag on the ink, the chrome and the unselected flag, and on the chrome's h track in LCh (printed). Its frames are written as PNGs in
 `build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`,
-`frame_{unselected,selected}_flag_open.png` (the flags scene, the panel on the left), `frame_selection_test_open.png`,
+`frame_{unselected,selected}_flag_open.png` (the flags scene, the panel on the left),
+`frame_playhead_{head,stem}_open.png` (the playhead scene, the panel on the right), `frame_selection_test_open.png`,
 `frame_switch_flags_moved.png`,
 the history's `frame_history_*.png`, `frame_presets_open.png`, `frame_presets_themes.png` (the pop-up scrolled into
 the themes), `frame_strip_{open,adopted,scrolled}.png`, `frame_model_list_open.png`, `frame_model_hsl_open.png` and
@@ -353,7 +375,7 @@ An element's history is every `picks.txt` line under its key, across rounds, unt
 | `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
 | `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus every model's view with its retained hue, a stored view restored, the gamut stop), the model switch, the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |
-| `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above; `check_refs.py` also writes the models' independent reference); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, `check_data/tablet_2026-10-04_presets/` those at the presets build's install, copied verbatim |
+| `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above; `check_refs.py` also writes the models' independent reference); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, `check_data/tablet_2026-10-04_presets/` those at the presets build's install, copied verbatim; `presets/` (the latest copy) read too |
 | `java/com/warptempo/picker/PickerActivity.java` | the full-screen sliver |
 | `AndroidManifest.xml` | the package, the colour mode, the orientation lock |
 | `build_picker.sh` | the APK, or `--check` |

@@ -2211,9 +2211,11 @@ def read_cover(path):
 
 # THE CHECK'S COLOUR SETS (picker_check_sets): a chrome element at a TINT whose channels 32 and 96 hit the rule's
 # half-to-even ties (32 x 255 / 192 = 42.5, 96 x 223 / 192 = 111.5) and at a BRIGHT ground whose x 255 / 192 caps at
-# 255; every other element at a probe colour of its own; then all of them moved at once
+# 255; every other element at a probe colour of its own (seven probes: the playhead round's six non-ground elements and
+# the laptop check's Selection Test each distinct, so the all-moved set tells every element from every other); then
+# all of them moved at once
 CHECK_GROUNDS = ('#206048', '#E6D2B4')
-CHECK_PROBES = ('#CC9966', '#203040', '#3366CC', '#7A2E5C', '#55AA22')
+CHECK_PROBES = ('#CC9966', '#203040', '#3366CC', '#7A2E5C', '#55AA22', '#E0B030', '#30A0A8')
 
 def picker_check_sets(elements):
     """-> [{key: '#RRGGBB'}, ...]: the export's and the laptop check's colour sets (above)."""

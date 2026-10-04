@@ -6,7 +6,7 @@
 #
 #   <dir>/scene/            the theme exported (render.py --export): the picker's export as the tablet receives it
 #   <dir>/multi/            THE CHECK THEME exported (<dir>/picker_check.json: the theme plus a Selection Test element,
-#                           the selected fill, over a third scene with the flags on and the first flag's editor open,
+#                           the selected fill, over a fourth scene with the flags on and the first flag's editor open,
 #                           its whole text selected), which the sessions drive: the switches of scene, stacks over a
 #                           picked base (the flag labels over the flag faces, the selected text over the band)
 #   <dir>/expect/*.ppm      every scene of both rendered by render.py at the manifest's colours and at every colour set
@@ -53,11 +53,12 @@ expect = os.path.join(out, 'expect')
 if os.path.isdir(expect): shutil.rmtree(expect)
 os.makedirs(expect)
 lines = export_with_refs(theme, 'scene')
-# THE CHECK THEME: the round's theme (its waveform and flags scenes, the flags round's two elements over the second)
-# plus one element over a third scene -- the selected fill, the in-place editor's selection band (the open-flag round's
-# coming element), over the flags scene with the first flag's editor open and its whole text selected: the selected
-# text's antialiased edges are stacks over a picked base on a picked face -- so three scenes and a chooser that walks
-# them are exercised; never exported for the tablet
+# THE CHECK THEME: the round's theme (its waveform, flags and playhead scenes, the flags round's two elements over the
+# second, the playhead round's two over the third; architect 2026-10-04) plus one element over a fourth scene -- the
+# selected fill, the in-place editor's selection band (the open-flag round's coming element), over the flags scene with
+# the first flag's editor open and its whole text selected: the selected text's antialiased edges are stacks over a
+# picked base on a picked face -- so four scenes and a chooser that walks them are exercised; never exported for the
+# tablet
 ct = json.load(open(theme)); cpk = ct['picker']
 if 'selected_fill' in {e['role'] for e in cpk['elements']}:
     raise SystemExit('check_refs.py: the round picks the selected fill itself; give the check theme another test element')

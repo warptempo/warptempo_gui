@@ -1,6 +1,6 @@
 {
  "name": "picker",
- "description": "THE PICKER'S THEME (2026-10-04; the chrome round, then the flags round): themes/warptempo.json with the chrome as ONE KNOB, its ground #191919 under the chrome rule (`chrome`: Windows 95's proportions, every relief line, the field and the emboss's light copy following the ground; at #191919 the theme warptempo's own row), the canvas #0E0E0E, the ink #A6B9DE (the ink round's latest pick), the outline by its rule (\"auto\": the 50 % linear-light blend of the ink over the canvas), the flag's face #666699 and its selected face #9999CC (the current design for now, CE01), BOTH LABELS WHITE (architect 2026-10-04: consistency; `flag_label_sel` #FFFFFF where the app's default is #000000), the selected fill #666666 (fixed until the open-flag round). Exported with --export for tools/palette/picker/: five elements in the architect's order of importance (2026-10-04), Chrome (active), Canvas and Ink over the scene `waveform` (the ink round's: the marker stems, the flags, the playhead and row 8's state line switched off), then Unselected Flag and Selected Flag over the scene `flags` (the waveform scene with the stems and the flags on, the fourth flag from the left SELECTED with its payload box the addressed cell, so its stem is bright: the state he meets a selected flag in most). The invalid faces, their labels and the flag outline stay fixed roles. The next round, a new element and scene here and a new export: the open flag with its selection (where the selected fill becomes pickable).",
+ "description": "THE PICKER'S THEME (2026-10-04; the chrome round, the flags round, then the playhead round): themes/warptempo.json with the chrome as ONE KNOB, its ground #191919 under the chrome rule (`chrome`: Windows 95's proportions, every relief line, the field and the emboss's light copy following the ground; at #191919 the theme warptempo's own row), the canvas #0E0E0E, the ink #A6B9DE (the ink round's latest pick), the outline by its rule (\"auto\": the 50 % linear-light blend of the ink over the canvas), the flag's face #666699 and its selected face #9999CC (the current design for now, CE01), BOTH LABELS WHITE (architect 2026-10-04: consistency; `flag_label_sel` #FFFFFF where the app's default is #000000), the selected fill #666666 (fixed until the open-flag round). Exported with --export for tools/palette/picker/: seven elements in the architect's order of importance (2026-10-04), Chrome (active), Canvas and Ink over the scene `waveform` (the ink round's: the marker stems, the flags, the playhead and row 8's state line switched off), then Unselected Flag and Selected Flag over the scene `flags` (the waveform scene with the stems and the flags on, the fourth flag from the left SELECTED with its payload box the addressed cell, so its stem is bright: the state he meets a selected flag in most). Then Playhead Head and Playhead Stem (architect 2026-10-04: the program's two playhead keys, #8B8B8B and #FCFCFC, the product's defaults) over the scene `playhead` (the flags scene's stems and flags with NO flag selected -- in the app a marker click lands the playhead on it, and a playhead standing on a marker suppresses its own stem -- and the playhead ON at its column, x 293: the head opaque in the tablet geometry, its one-LW outline the fixed label, the stem uniform down the marker lane and the well). The invalid faces, their labels and the flag outline stay fixed roles. The next round, a new element and scene here and a new export: the open flag with its selection (where the selected fill becomes pickable).",
  "geometry": "tablet",
  "chrome": {
   "ground": "#191919",
@@ -69,6 +69,18 @@
     "name": "Selected Flag",
     "role": "flag_fill_sel",
     "scene": "flags"
+   },
+   {
+    "key": "playhead_head",
+    "name": "Playhead Head",
+    "role": "playhead_head",
+    "scene": "playhead"
+   },
+   {
+    "key": "playhead_stem",
+    "name": "Playhead Stem",
+    "role": "playhead_stem",
+    "scene": "playhead"
    }
   ],
   "scenes": {
@@ -97,6 +109,16 @@
        3
       ]
      }
+    }
+   },
+   "playhead": {
+    "elements": {
+     "ink": true,
+     "outline": true,
+     "stems": true,
+     "flags": true,
+     "playhead": true,
+     "state_line": false
     }
    }
   }

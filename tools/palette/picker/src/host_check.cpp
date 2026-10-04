@@ -4,6 +4,7 @@
 //
 //   host_check <fonts dir> <work dir> --export <scene dir> <expects.txt> [--export <dir> <expects.txt>]...
 //              [--linmix <table>] [--today <dir>] [--late <dir>] [--models <models_ref.txt>] [--presets <presets.json>]
+//              [--kept <dir>]
 //
 //   - every export loads, and every expects.txt line ("<scene> <ppm> [<key>=#RRGGBB ...]": the mock tool's render of
 //     that scene with those elements moved from the manifest's colours) equals the picker's picture byte for byte,
@@ -16,18 +17,22 @@
 //     track's range holding P3's most chromatic colour, white and black, the retention; --models: check_refs.py's
 //     independent reference (HSL by colorsys, LCh by numpy over Display-P3) to 1e-9;
 //   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas and Ink over the scene
-//     waveform, Unselected Flag and Selected Flag over the scene flags, a Selection Test over a third scene with the
-//     first flag's editor open) and its active element (the chrome): the panel, the pick history, the HSV he dialled;
-//     then THE CHOOSER (open, a tap outside it, the no-op re-choice, the edited-then-switch commit, the switches of
-//     scene Ink -> Unselected Flag -> Selected Flag -> Selection Test), every element's history, cursor and view
-//     independent across a switch and a relaunch, and today's picks.txt (58 ink lines, the old form and the new) and
-//     state.json loading unchanged;
+//     waveform, Unselected Flag and Selected Flag over the scene flags, Playhead Head and Playhead Stem over the scene
+//     playhead, a Selection Test over a fourth scene with the first flag's editor open) and its active element (the
+//     chrome): the panel, the pick history, the HSV he dialled; then THE CHOOSER (open, a tap outside it, the no-op
+//     re-choice, the edited-then-switch commit, the switches of scene Ink -> Unselected Flag -> Selected Flag ->
+//     Selection Test), every element's history, cursor and view independent across a switch and a relaunch, and
+//     today's picks.txt (58 ink lines, the old form and the new) and state.json loading unchanged; THE PLAYHEAD
+//     (architect 2026-10-04: the panel on the right, the head and the stem each repainting alone, the head's outline
+//     the fixed label, each committed by the switch or the close and kept by a relaunch);
 //   - THE SWITCH'S PICTURE on the round's own export (the one labelled "scene"): launched with every element at the
 //     colours of its "all moved" reference, the waveform scene and, after the chooser's switch Ink -> Unselected Flag,
-//     the flags scene equal the mock tool's renders byte for byte, and the switch back the waveform's again;
+//     the flags scene equal the mock tool's renders byte for byte, the switch back the waveform's again, and the
+//     switch Ink -> Playhead Head the playhead scene's;
 //   - THE PRESETS (two saves, the edited colour committed by the pop-up's opening; a load committing each changed
 //     element once and an unchanged one never, BACK returning; a relaunch; a scroll and a tap outside that act on
-//     nothing; a preset saved before the flags round, three elements, loading and leaving the flags as they are) and
+//     nothing; a preset saved before the flags round, three elements, loading and leaving the flags and the playhead
+//     as they are) and
 //     THE THEME STRIP (opened from the pop-up, swatches adopted as edits into the chrome and, after a
 //     switch, the canvas, OLD reverting, the strip surviving the switch and a relaunch, Windows 95 Standard's quartet
 //     and a tinted theme's rule lines, its own scroll, the close control) on the first export;
@@ -36,8 +41,12 @@
 //     ring and the triangle in both, the gamut stop on a C drag and an h drag, the out-of-gamut stretch's neutral, the
 //     new forms' refusals;
 //   - --today <dir>: the tablet's picks.txt and state.json of 2026-10-04 (morning) load unchanged; --late <dir>: those
-//     of the presets build's install (136 lines) too, the flags at the manifest's colours with empty histories, HSV
-//     shown; --presets: the repository's presets.json reads;
+//     of the presets build's install (136 lines) too, the flags and the playhead at the manifest's colours with
+//     empty histories, HSV shown; --presets: the repository's presets.json reads; --kept <dir>: the repository's
+//     copy of the tablet's files (picks.txt, state.json, presets.json) loads over the round's own export, every
+//     element they name at state.json's colour, every element they never name (the playhead's two, architect
+//     2026-10-04) at the manifest's with an empty history, and each preset loaded leaves the elements it does not
+//     name as they were, with no pick;
 //   - THE PER-FRAME COST of a pen drag (R's track) on the ink, the chrome and the unselected flag, and of LCh's h track
 //     on the chrome: the live repaint and the frame;
 //   - frames as PNGs in the work dir for the eye.
@@ -213,6 +222,7 @@ int main(int argc, char** argv) {
     std::string late;                             // --late: those of the presets build's install, the same day
     std::string models_ref;                       // --models: check_refs.py's models_ref.txt (HSL by colorsys, LCh by numpy)
     std::string repo_presets;                     // --presets: the repository's copy of the tablet's presets.json
+    std::string kept;                             // --kept: the repository's copy of the tablet's files (presets/)
     Export round_ex;                              // the export labelled "scene" (the round's, as the tablet gets it)
     std::string round_expects;
     bool have = false;
@@ -243,6 +253,8 @@ int main(int argc, char** argv) {
             repo_presets = argv[++i];
         } else if (a == "--late" && i + 1 < argc) {
             late = argv[++i];
+        } else if (a == "--kept" && i + 1 < argc) {
+            kept = argv[++i];
         } else if (a == "--linmix" && i + 1 < argc) {
             const std::string t = slurp(argv[++i]);
             size_t bad = 0;
@@ -458,6 +470,7 @@ int main(int argc, char** argv) {
     const int act0 = ex.active;   // the manifest's active element (the chrome): the panel's, history's and HSV sessions'
     const int ink = element_of(ex, "ink"), chrome = element_of(ex, "chrome"), canvas = element_of(ex, "canvas"),
               uflag = element_of(ex, "unselected_flag"), sflag = element_of(ex, "selected_flag"),
+              phead = element_of(ex, "playhead_head"), pstem = element_of(ex, "playhead_stem"),
               seltest = element_of(ex, "selection_test");
     auto launch = [&]() {
         Export e = ex;
@@ -743,14 +756,15 @@ int main(int argc, char** argv) {
     }
 
     // ---------------------------------------------------------------- THE CHOOSER
-    const bool six = chrome == act0 && chrome == 0 && canvas == 1 && ink == 2 && uflag == 3 && sflag == 4 && seltest == 5 &&
-                     ex.elements[size_t(uflag)].scene == ex.elements[size_t(sflag)].scene &&
-                     ex.elements[size_t(uflag)].scene != ex.elements[size_t(chrome)].scene &&
-                     ex.elements[size_t(seltest)].scene != ex.elements[size_t(uflag)].scene &&
-                     ex.elements[size_t(seltest)].scene != ex.elements[size_t(chrome)].scene;
-    if (!six) {
+    const auto scene_el = [&](int e) { return ex.elements[size_t(e)].scene; };
+    const bool eight = chrome == act0 && chrome == 0 && canvas == 1 && ink == 2 && uflag == 3 && sflag == 4 && phead == 5 &&
+                       pstem == 6 && seltest == 7 && scene_el(uflag) == scene_el(sflag) && scene_el(phead) == scene_el(pstem) &&
+                       scene_el(uflag) != scene_el(chrome) && scene_el(phead) != scene_el(chrome) &&
+                       scene_el(phead) != scene_el(uflag) && scene_el(seltest) != scene_el(uflag) &&
+                       scene_el(seltest) != scene_el(chrome) && scene_el(seltest) != scene_el(phead);
+    if (!eight) {
         check(false, "the check export lists Chrome (active), Canvas, Ink over one scene, Unselected Flag and Selected Flag "
-                     "over a second, and a Selection Test over a third");
+                     "over a second, Playhead Head and Playhead Stem over a third, and a Selection Test over a fourth");
     } else {
         fresh();
         const Rgb chrome0 = ex.elements[size_t(chrome)].colour, ink0 = ex.elements[size_t(ink)].colour,
@@ -905,8 +919,71 @@ int main(int argc, char** argv) {
               "state.json deleted: the manifest's active element and colours, each history at its end");
     }
 
+    // ---------------------------------------------------------------- THE PLAYHEAD (architect 2026-10-04)
+    // its two elements over their own scene, the panel on the right (a tap on the left half), so the playhead at x 293
+    // stays in view: the head and the stem each repaint alone, the head's one-LW outline the theme's label (a fixed
+    // role); each committed by the switch away or the close, and both kept by a relaunch
+    if (eight) {
+        fresh();
+        const double rpx = W - kMargin - kW, rname_x = rpx + kColX + 100;
+        auto rchoose = [&](Picker& q, int e) {
+            tap(q, rname_x, name_y);
+            tap(q, rname_x, ppy + kChooserY + e * kChooserRowH + kChooserRowH / 2.0);
+        };
+        auto rplus = [&](Picker& q, int row) { tap(q, rpx + kPlusX + 30, ppy + row_y(row) + 30); };
+        const Rgb ph0 = ex.elements[size_t(phead)].colour, ps0 = ex.elements[size_t(pstem)].colour;
+        const uint32_t white = word_of(Rgb{0xFF, 0xFF, 0xFF});
+        Picker p = launch();
+        tap(p, 600, 700);
+        rchoose(p, phead);                            // the chrome left: its empty history commits it (one line)
+        const int psc = scene_el(phead);
+        // kh the head's first face pixel (its top face row, the outline's LW rows above it), kb the outline pixel over it
+        const long kh = element_pixel(p.exp(), psc, phead, -1), ks = element_pixel(p.exp(), psc, pstem, -1),
+                   kb = kh - W;
+        p.paint(frame);
+        check(p.open() && p.panel_on_right() && p.active() == phead && count(p) == "0 of 0" && kh >= 0 && ks >= 0 &&
+                  kb >= 0 && kh % W < rpx && ks % W < rpx && p.picture()[size_t(kh)] == word_of(ph0) &&
+                  p.picture()[size_t(ks)] == word_of(ps0) && p.picture()[size_t(kb)] == white &&
+                  frame_word(frame, kh, W) == word_of(ph0) && frame_word(frame, kb, W) == white,
+              "the switch to the Playhead Head shows the playhead scene, the playhead left of the panel: the head " +
+                  hex_of(ph0) + ", its outline the label #FFFFFF, the stem " + hex_of(ps0));
+        rplus(p, 4);                                  // the head moves: the stem and the outline stay
+        const Rgb ph1 = p.colour().rgb;
+        check(ph1 != ph0 && p.picture()[size_t(kh)] == word_of(ph1) && p.picture()[size_t(ks)] == word_of(ps0) &&
+                  p.picture()[size_t(kb)] == white, "the head repaints live, the stem and the head's outline stay");
+        p.paint(frame);
+        png(frame, work + "/frame_playhead_head_open.png");
+        rchoose(p, pstem);
+        check(p.active() == pstem && lines_of(work + "/picks.txt") == 2 &&
+                  slurp(work + "/picks.txt").find(" playhead_head " + hex_of(ph1) + " hsv ") != std::string::npos &&
+                  p.colour().rgb == ps0 && count(p) == "0 of 0" && p.picture()[size_t(kh)] == word_of(ph1),
+              "the edited head is committed by the switch to the Playhead Stem (" + hex_of(ps0) + ", 0 of 0)");
+        rplus(p, 5);                                  // the stem moves: the head and the outline stay
+        const Rgb ps1 = p.colour().rgb;
+        check(ps1 != ps0 && p.picture()[size_t(ks)] == word_of(ps1) && p.picture()[size_t(kh)] == word_of(ph1) &&
+                  p.picture()[size_t(kb)] == white, "the stem repaints live, the head and its outline stay");
+        p.paint(frame);
+        png(frame, work + "/frame_playhead_stem_open.png");
+        tap(p, 300, 1300);                            // outside the panel: the close commits the stem
+        check(!p.open() && lines_of(work + "/picks.txt") == 3 &&
+                  slurp(work + "/picks.txt").find(" playhead_stem " + hex_of(ps1) + " hsv ") != std::string::npos,
+              "the close commits the edited stem");
+        Picker r = launch();
+        bool others = true;
+        for (int e = 0; e < int(r.exp().elements.size()); ++e)
+            if (e != phead && e != pstem)
+                others = others && r.element(e).cs.rgb == ex.elements[size_t(e)].colour &&
+                         r.element(e).hist.picks.size() == (e == chrome ? 1u : 0u);
+        check(r.active() == pstem && r.element(phead).cs.rgb == ph1 && r.element(pstem).cs.rgb == ps1 &&
+                  r.element(phead).hist.picks.size() == 1 && r.element(pstem).hist.picks.size() == 1 && others &&
+                  same_view(r.element(phead).cs, p.element(phead).cs) && same_view(r.element(pstem).cs, p.element(pstem).cs),
+              "a relaunch keeps both, each with its own history (1 of 1) and view; every other element at the manifest's "
+              "colour (the chrome's one pick its commit on the way)");
+        fresh();
+    }
+
     // ---------------------------------------------------------------- THE PRESETS AND THE THEME STRIP
-    if (six) {
+    if (eight) {
         fresh();
         const double pres_x = ppx + kPresetsX + 60, save_x = ppx + kPopX0 + 200, save_y = ppy + kPopY0 + kPopRowH / 2.0;
         auto presets_btn = [&](Picker& q) { tap(q, pres_x, name_y); };
@@ -1119,7 +1196,7 @@ int main(int argc, char** argv) {
         std::string why;
         const bool refused_view = load_fails(why);
         check(refused_view, "a presets.json view that does not give its hex fails the load: " + why);
-        // A PRESET SAVED BEFORE THE FLAGS ROUND (three elements) loads, and leaves the flags as they are
+        // A PRESET SAVED BEFORE THE FLAGS ROUND (three elements) loads, and leaves the flags and the playhead as they are
         fresh();
         put(work + "/presets.json",
             "{\n \"presets\": [\n  {\"number\": 1, \"saved\": \"2026-10-04T08:30:00-04:00\", \"colours\": {\"canvas\": "
@@ -1145,14 +1222,17 @@ int main(int argc, char** argv) {
                   o.element(uflag).cs.rgb == ufo && o.element(uflag).hist.picks.size() == 1 &&
                   o.element(sflag).cs.rgb == ex.elements[size_t(sflag)].colour && o.element(sflag).hist.picks.size() == 1 &&
                   o.active() == sflag && o.colour().rgb == ex.elements[size_t(sflag)].colour &&
-                  occurrences(tail, " unselected_flag ") == 1 && occurrences(tail, " selected_flag ") == 1,
-              "loading it commits the chrome, the canvas and the ink (3 lines, their views exact) and leaves both flags as "
-              "they were, no pick for either");
+                  occurrences(tail, " unselected_flag ") == 1 && occurrences(tail, " selected_flag ") == 1 &&
+                  o.element(phead).cs.rgb == ex.elements[size_t(phead)].colour && o.element(phead).hist.picks.empty() &&
+                  o.element(pstem).cs.rgb == ex.elements[size_t(pstem)].colour && o.element(pstem).hist.picks.empty() &&
+                  occurrences(tail, " playhead_") == 0,
+              "loading it commits the chrome, the canvas and the ink (3 lines, their views exact) and leaves both flags and "
+              "both playhead elements as they were, no pick for any");
         fresh();
     }
 
     // ---------------------------------------------------------------- THE MODEL SWITCH: HSL and LCh on the panel
-    if (six) {
+    if (eight) {
         fresh();
         const double mb_x = ppx + kModelX0 + 60, mb_y = ppy + kModelY + kModelH / 2.0;
         auto model_tap = [&](Picker& q, Model m) {
@@ -1429,11 +1509,13 @@ int main(int argc, char** argv) {
     }
 
     // ---------------------------------------------------------------- the tablet's files of 2026-10-04 load unchanged
-    // the flags round's elements, absent from every file the tablet wrote before it: the manifest's colours, no history
+    // the flags round's elements and the playhead round's (architect 2026-10-04), absent from every file the tablet
+    // wrote before them: the manifest's colours, no history
     auto flags_fresh = [&](const Picker& q) {
-        return uflag >= 0 && sflag >= 0 && q.element(uflag).cs.rgb == ex.elements[size_t(uflag)].colour &&
-               q.element(sflag).cs.rgb == ex.elements[size_t(sflag)].colour && q.element(uflag).hist.cursor == -1 &&
-               q.element(sflag).hist.cursor == -1;
+        bool ok = uflag >= 0 && sflag >= 0 && phead >= 0 && pstem >= 0;
+        for (int e : {uflag, sflag, phead, pstem})
+            ok = ok && q.element(e).cs.rgb == ex.elements[size_t(e)].colour && q.element(e).hist.cursor == -1;
+        return ok;
     };
     if (!today.empty() && chrome == 0 && canvas == 1 && ink == 2) {
         fresh();
@@ -1453,7 +1535,8 @@ int main(int argc, char** argv) {
                   t.element(ink).hist.cursor == 76 && t.theme_open() == -1 && t.presets().empty() && flags_fresh(t) &&
                   t.model() == Model::Hsv,
               "the tablet's picks.txt (110 lines) and state.json load unchanged: the canvas active, chrome 9 of 11, canvas "
-              "22 of 22, ink 77 of 77, every view exact; the flags at the manifest's colours, 0 of 0; HSV shown (no model)");
+              "22 of 22, ink 77 of 77, every view exact; the flags and the playhead at the manifest's colours, 0 of 0; HSV "
+              "shown (no model)");
         tap(t, 1700, 700);
         tap(t, ppx + kPresetsX + 60, ppy + kNameY + kNameH / 2.0);
         tap(t, ppx + kPopX0 + 200, ppy + kPopY0 + kPopRowH / 2.0);
@@ -1485,8 +1568,8 @@ int main(int argc, char** argv) {
                   t.element(ink).hist.picks.size() == 90 && t.element(ink).hist.cursor == 89 && t.theme_open() == -1 &&
                   t.presets().empty() && flags_fresh(t) && t.model() == Model::Hsv,
               "the tablet's picks.txt (136 lines) and state.json at the presets build's install load unchanged: the ink "
-              "active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90, every view exact; the flags at the manifest's "
-              "colours, 0 of 0; HSV shown (no model)");
+              "active, chrome 12 of 12, canvas 34 of 34, ink 90 of 90, every view exact; the flags and the playhead at "
+              "the manifest's colours, 0 of 0; HSV shown (no model)");
         tap(t, 1700, 700);
         tap(t, 1700, 700);
         check(slurp(work + "/picks.txt") == picks0, "an open and a close on the unedited ink append nothing");
@@ -1503,12 +1586,88 @@ int main(int argc, char** argv) {
         check(hsv, "the repository's presets.json (the tablet's, " + std::to_string(ps.size()) + " presets) reads, every view HSV");
     }
 
+    // ---------------------------------------------------------------- the repository's copy of the tablet's files
+    // presets/'s picks.txt, state.json and presets.json, as the tablet holds them, over the round's own export (the
+    // playhead round's install, architect 2026-10-04): they load; every element state.json names at its colour; every
+    // element the files never name (the playhead's two) at the manifest's colour with an empty history; and each
+    // preset loaded leaves every element it does not name as it was, with no pick. Read from the files, never a
+    // count, so a later copy of his files keeps the check
+    if (!kept.empty() && !round_ex.elements.empty()) {
+        fresh();
+        const std::string picks0 = slurp(kept + "/picks.txt");
+        put(work + "/picks.txt", picks0);
+        put(work + "/state.json", slurp(kept + "/state.json"));
+        put(work + "/presets.json", slurp(kept + "/presets.json"));
+        std::map<std::string, Pick> st;
+        std::map<std::string, int> ent;
+        std::map<std::string, std::vector<Pick>> hist;
+        std::vector<Preset> ps;
+        std::string act, thm;
+        Model mdl = Model::Hsv;
+        const bool read = state_load(kept + "/state.json", st, ent, act, thm, mdl, err) &&
+                          picks_load(kept + "/picks.txt", hist, err) && presets_load(kept + "/presets.json", ps, err);
+        Export e = round_ex;
+        Launch l;
+        if (!read || !picker_load(work, e, l, err)) {
+            check(false, "the repository's copy of the tablet's files loads over the round's export: " + err);
+        } else {
+            Picker q(std::move(e), work, std::move(l));
+            const Export& rx = q.exp();
+            bool named = true, unnamed = true;
+            std::string fresh_keys;
+            for (int k = 0; k < int(rx.elements.size()); ++k) {
+                const std::string& key = rx.elements[size_t(k)].key;
+                if (st.count(key)) named = named && q.element(k).cs.rgb == st[key].rgb;
+                if (st.count(key) || hist.count(key)) continue;
+                unnamed = unnamed && q.element(k).cs.rgb == rx.elements[size_t(k)].colour && q.element(k).hist.picks.empty();
+                fresh_keys += " " + key;
+            }
+            check(named && unnamed && q.model() == mdl && (act.empty() || rx.elements[size_t(q.active())].key == act) &&
+                      q.presets().size() == ps.size() && (thm.empty() || q.theme_open() == theme_of(rx, thm)),
+                  "the repository's copy of the tablet's files (" +
+                      std::to_string(std::count(picks0.begin(), picks0.end(), '\n')) + " picks.txt lines, " +
+                      std::to_string(ps.size()) + " presets) loads: every element at state.json's colour, its model, "
+                      "active element and theme; the elements they never name at the manifest's colours, 0 of 0:" + fresh_keys);
+            bool kept_ok = true;
+            for (size_t k = 0; k < ps.size(); ++k) {
+                std::vector<Rgb> before;
+                std::vector<size_t> lines;
+                for (int x = 0; x < int(rx.elements.size()); ++x) {
+                    before.push_back(q.element(x).cs.rgb);
+                    lines.push_back(q.element(x).hist.picks.size());
+                }
+                tap(q, 1700, 700);                    // the panel on the left, the strip (if open) right of it
+                tap(q, ppx + kPresetsX + 60, name_y);
+                const int want = std::max(0, int(k) * kPopRowH - 400);   // scrolled into view by a drag (acting on nothing)
+                const double y0 = ppy + kPopListY0 + 500, delta = want - q.pop_scroll();
+                if (delta != 0) {
+                    q.press(ppx + kPopX0 + 200, y0);
+                    q.move(ppx + kPopX0 + 200, y0 - delta - (delta > 0 ? kSlop : -kSlop));
+                    q.release(ppx + kPopX0 + 200, y0 - delta - (delta > 0 ? kSlop : -kSlop));
+                }
+                tap(q, ppx + kPopX0 + 200, ppy + kPopListY0 + int(k) * kPopRowH - q.pop_scroll() + kPopRowH / 2.0);
+                tap(q, 1700, 700);
+                for (int x = 0; x < int(rx.elements.size()); ++x) {
+                    const std::string& key = rx.elements[size_t(x)].key;
+                    if (ps[k].colours.count(key)) kept_ok = kept_ok && q.element(x).cs.rgb == ps[k].colours.at(key).rgb;
+                    else kept_ok = kept_ok && q.element(x).cs.rgb == before[size_t(x)] &&
+                                   q.element(x).hist.picks.size() == lines[size_t(x)];
+                }
+            }
+            check(kept_ok && !q.open() && occurrences(slurp(work + "/picks.txt"), " playhead_") == 0,
+                  "each of his presets loaded over them sets the elements it names and leaves every other as it was, no "
+                  "pick (none for the playhead)");
+        }
+        fresh();
+    }
+
     // ---------------------------------------------------------------- THE SWITCH'S PICTURE, byte for byte
     // the round's own export at the colours of its "all moved" references: the waveform scene, then after the chooser's
-    // switch Ink -> Unselected Flag the flags scene, then back, each the mock tool's render
+    // switch Ink -> Unselected Flag the flags scene, then back, then after the switch Ink -> Playhead Head the playhead
+    // scene, each the mock tool's render
     if (!round_expects.empty()) {
         std::istringstream in(slurp(round_expects));
-        std::string line, wave_ppm, flags_ppm;
+        std::string line, wave_ppm, flags_ppm, head_ppm;
         std::vector<std::string> moved;
         size_t most = 0;
         while (std::getline(in, line)) {
@@ -1518,15 +1677,18 @@ int main(int argc, char** argv) {
             ls >> sc >> ppm;
             while (ls >> t) toks.push_back(t);
             if (toks.size() < most) continue;
-            if (toks.size() > most) { most = toks.size(); wave_ppm.clear(); flags_ppm.clear(); moved = toks; }
+            if (toks.size() > most) { most = toks.size(); wave_ppm.clear(); flags_ppm.clear(); head_ppm.clear(); moved = toks; }
             if (toks != moved) continue;
             if (sc == "waveform") wave_ppm = ppm;
             if (sc == "flags") flags_ppm = ppm;
+            if (sc == "playhead") head_ppm = ppm;
         }
         const Export& rx = round_ex;
-        const int ri = element_of(rx, "ink"), ru = element_of(rx, "unselected_flag");
-        if (wave_ppm.empty() || flags_ppm.empty() || moved.size() != rx.elements.size() || ri < 0 || ru < 0) {
-            check(false, "the round's export has an all-moved reference of both scenes and an ink and an unselected flag");
+        const int ri = element_of(rx, "ink"), ru = element_of(rx, "unselected_flag"), rh = element_of(rx, "playhead_head");
+        if (wave_ppm.empty() || flags_ppm.empty() || head_ppm.empty() || moved.size() != rx.elements.size() || ri < 0 ||
+            ru < 0 || rh < 0) {
+            check(false, "the round's export has an all-moved reference of its three scenes, an ink, an unselected flag "
+                         "and a playhead head");
         } else {
             fresh();
             std::string cols;
@@ -1551,10 +1713,14 @@ int main(int argc, char** argv) {
             tap(q, name_x, name_y);
             row_tap(q, ri);
             const long d2 = diff_ppm(q.picture(), wave_ppm, rx.width, rx.height);
-            check(q.active() == ri && d0 == 0 && d1 == 0 && d2 == 0,
-                  "the round's export at" + said + ": the waveform scene, the switch Ink -> Unselected Flag and back each "
-                  "equal the mock tool's render (" + std::to_string(d0) + ", " + std::to_string(d1) + ", " +
-                  std::to_string(d2) + " px differ)");
+            const bool back_on_ink = q.active() == ri;
+            tap(q, name_x, name_y);
+            row_tap(q, rh);
+            const long d3 = diff_ppm(q.picture(), head_ppm, rx.width, rx.height);
+            check(back_on_ink && q.active() == rh && d0 == 0 && d1 == 0 && d2 == 0 && d3 == 0,
+                  "the round's export at" + said + ": the waveform scene, the switch Ink -> Unselected Flag and back, and "
+                  "the switch Ink -> Playhead Head each equal the mock tool's render (" + std::to_string(d0) + ", " +
+                  std::to_string(d1) + ", " + std::to_string(d2) + ", " + std::to_string(d3) + " px differ)");
             fresh();
         }
     }

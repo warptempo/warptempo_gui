@@ -41,7 +41,8 @@ if [ "${1:-}" = "--check" ]; then
         --today "$HERE/check_data/tablet_2026-10-04" \
         --late "$HERE/check_data/tablet_2026-10-04_presets" \
         --models "$BUILD/check/models_ref.txt" \
-        --presets "$HERE/presets/presets.json"
+        --presets "$HERE/presets/presets.json" \
+        --kept "$HERE/presets"
     exit 0
 fi
 
