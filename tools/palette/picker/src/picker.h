@@ -8,6 +8,15 @@
 // them: through grey (no chroma) the hue stays, through black (V 0) the saturation stays too, so a drag never snaps
 // the hue to 0.
 //
+// THE HSV HE DIALLED IS PART OF THE PICK (architect 2026-10-04): a saved pick keeps the exact view it was saved under
+// beside its bytes (Pick, scene.h), and EVERY ROAD BACK TO A STORED COLOUR RESTORES THAT VIEW instead of re-deriving it
+// from the bytes -- the launch, BACK / FORWARD, OLD, leaving the app with the panel open. Re-derived, a view is the
+// bytes' own HSV (S 0.3529 where he dialled 0.35): the number still reads 35 but the handle sits elsewhere, and the
+// next − / + rounds from the re-derived values, while at low saturation or value one byte is several degrees of hue
+// or a percent of saturation -- so an axis he never touched would move. Re-derivation from bytes stays only where the
+// bytes are the input: the R / G / B tracks and their − / +, and a pick saved before views were stored. The ring,
+// the triangle and the H / S / V tracks and − / + set the view directly.
+//
 // THE PANEL (GTK's colour selector and GIMP's colour dialog, their common ground, HSV only, no CMYK): the hue ring
 // with the saturation/value triangle inside it (the triangle's corners the pure hue, white and black, turning with
 // the hue); the hex in large type and the OLD | NEW swatches (a tap on OLD reverts); the six sliders H, S, V and
@@ -22,13 +31,15 @@
 // THE PICK HISTORY (architect 2026-10-04: an undo / redo over the saved picks, so he can backtrack and compare without
 // typing a hex): the active layer's committed picks, oldest first -- exactly its picks.txt lines, read at launch and
 // appended to as commits happen -- and a CURSOR on the entry being shown. BACK and FORWARD (under the hex, the count
-// "N of M" between them) move the cursor one entry and set the colour to it, at the pen's lift. NO SAVED PICK IS
-// EVER THROWN AWAY, AND CLOSING THE PANEL IS THE ONE DELIBERATE SAVE (architect 2026-10-04: "just throw it away. One
-// deliberate save action"): the colour is EDITED when it differs from the cursor's entry (or the history is empty);
-// a close commits an edited colour (picks.txt, the history's end, one logcat line) and the cursor goes to the new
-// end, while a close on an unedited colour appends nothing (state.json still records the colour and the cursor). An
-// unsaved edit is DISCARDED by a step (the step goes from the cursor's entry) and by leaving the app with the panel
-// open (discard_if_open: the colour and the cursor go back to the panel's opening, the last saved state).
+// "N of M" between them) move the cursor one entry and restore it (its bytes and its view), at the pen's lift. NO
+// SAVED PICK IS EVER THROWN AWAY, AND CLOSING THE PANEL IS THE ONE DELIBERATE SAVE (architect 2026-10-04: "just throw
+// it away. One deliberate save action"): the colour is EDITED when it differs from the cursor's entry -- its bytes, or
+// its view when the entry carries one (at low value an S − / + can move the view and not the bytes, and the number he
+// reads is what he saves) -- or the history is empty; a close commits an edited colour (picks.txt, the history's end,
+// one logcat line) and the cursor goes to the new end, while a close on an unedited colour appends nothing
+// (state.json still records the colour, its view and the cursor). An unsaved edit is DISCARDED by a step (the step
+// goes from the cursor's entry) and by leaving the app with the panel open (discard_if_open: the colour, its view and
+// the cursor go back to the panel's opening, the last saved state).
 // TRUTHFUL BUTTONS: BACK is disabled at the first entry, FORWARD at the last, both with an empty history; a disabled
 // button's glyph is dimmed and its lift does nothing.
 
@@ -40,19 +51,22 @@
 #include <string>
 #include <vector>
 
-// the active layer's history: its picks.txt colours, oldest first; the cursor an index into them, -1 iff empty
+// the active layer's history: its picks.txt picks, oldest first; the cursor an index into them, -1 iff empty
 struct History {
-    std::vector<Rgb> picks;
+    std::vector<Pick> picks;
     int cursor = -1;
 };
 
 // THE LAUNCH STATE, shared by the device and the laptop check: state.json and picks.txt under data_dir over the
 // loaded scene. The active layer takes its state.json colour if any (the last close), else keeps the manifest's;
-// derived layers follow. The cursor is state.json's entry for the active layer when that entry exists, lies in the
-// history and holds the colour; otherwise (the previous build's state.json, which has no entry, or a picks.txt
-// deleted or trimmed beside a kept state.json) the NEWEST entry equal to the colour, else the end. `note` says which,
-// for the log line. A malformed file is false and `err`.
-bool picker_load(const std::string& data_dir, Scene& scene, History& hist, std::string& note, std::string& err);
+// derived layers follow; `start` is that colour with state.json's view of it when the file has one (the Picker opens on
+// it). The cursor is state.json's entry for the active layer when that entry exists, lies in the history and holds
+// the start; otherwise (an earlier build's state.json, which may have no entry, or a picks.txt deleted or trimmed
+// beside a kept state.json) the NEWEST entry holding it, else the end. An entry HOLDS the start when their bytes are
+// equal and, if both carry a view, their views are too. `note` says which, for the log line. A malformed file is
+// false and `err`.
+bool picker_load(const std::string& data_dir, Scene& scene, History& hist, Pick& start, std::string& note,
+                 std::string& err);
 
 // the platform's log line (logcat tag warptempo_picker on the device, stderr on the laptop)
 void plog(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -65,12 +79,18 @@ struct ColourState {
     void set_rgb(Rgb c);
     // the bytes from HSV (each channel rounded to the nearest byte); the HSV kept as given
     void set_hsv(double hh, double ss, double vv);
+    // a stored pick: its bytes with its view as saved, or (a pick saved before views were stored) set_rgb's
+    void restore(const Pick& p);
+    // the state as a pick, its view included: what a commit stores
+    Pick pick() const { return Pick{rgb, true, h, s, v}; }
+    // the state shows the pick: the same bytes and, when the pick carries a view, the same view
+    bool shows(const Pick& p) const;
 };
 
 class Picker {
 public:
-    // the scene and the history as picker_load left them; data_dir is where picks.txt and state.json go
-    Picker(Scene scene, std::string data_dir, History hist);
+    // the scene, the history and the start as picker_load left them; data_dir is where picks.txt and state.json go
+    Picker(Scene scene, std::string data_dir, History hist, Pick start);
 
     // one pointer, window pixels
     void press(double x, double y);
@@ -90,9 +110,9 @@ public:
     const ColourState& colour() const { return cs_; }
     bool open() const { return open_; }
     bool panel_on_right() const { return right_; }
-    Rgb old() const { return old_; }
+    Rgb old() const { return old_.rgb; }
     const History& history() const { return hist_; }
-    bool edited() const;          // the colour differs from the cursor's entry, or the history is empty
+    bool edited() const;          // the state does not show the cursor's entry (ColourState::shows), or no history
     bool back_enabled() const;
     bool forward_enabled() const;
 
@@ -114,7 +134,7 @@ private:
     std::string data_dir_;
     std::vector<uint32_t> picture_;    // the background with every layer, kept current
     ColourState cs_;
-    Rgb old_;
+    ColourState old_;                  // the state the panel opened with, its view included: OLD's and the discard's
     History hist_;
     int open_cursor_ = -1;             // the cursor when the panel opened: discard_if_open's return
     bool open_ = false, right_ = false, dirty_ = true;

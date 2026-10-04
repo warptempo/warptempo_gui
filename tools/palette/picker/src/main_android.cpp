@@ -202,17 +202,18 @@ void android_main(android_app* glue) {
     std::string err, note;
     Scene scene;
     History hist;
+    Pick start;
     if (data.empty()) fail_screen(a, {"warptempo picker: no external files dir (externalDataPath)"});
     else if (!scene_load(data + "/scene", scene, err))
         fail_screen(a, {"warptempo picker: the scene in " + data + "/scene", err});
-    else if (!picker_load(data, scene, hist, note, err))
+    else if (!picker_load(data, scene, hist, start, note, err))
         fail_screen(a, {"warptempo picker: the state in " + data, err});
     else {
         const Layer& act = scene.layers[scene.active];
         __android_log_print(ANDROID_LOG_INFO, kTag, "picker: scene %dx%d, %zu layers, active %s %s (%s), %d of %zu",
                             scene.width, scene.height, scene.layers.size(), act.name.c_str(), hex_of(act.colour).c_str(),
                             note.c_str(), hist.cursor + 1, hist.picks.size());
-        a.picker = std::make_unique<Picker>(std::move(scene), data, std::move(hist));
+        a.picker = std::make_unique<Picker>(std::move(scene), data, std::move(hist), start);
     }
 
     for (;;) {

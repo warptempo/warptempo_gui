@@ -15,7 +15,11 @@
 //   - a scripted HISTORY session (picker.h's pick history): the empty history's disabled buttons, commits, BACK and
 //     FORWARD, the disabled ends, a no-op close after a step, an edit-then-step discard, leaving the app with an
 //     unsaved edit, reloads restoring the cursor (this build's state.json and the previous build's),
-//     frame_history_*.png for the eye.
+//     frame_history_*.png for the eye;
+//   - a scripted HSV session (picker.h's "the HSV he dialled is part of the pick"): every road back to a saved pick
+//     restores its view exactly, V's + alone across saves moves neither H nor S, a view-only S step is an edit, the
+//     old-format picks.txt and state.json load unchanged and behave as before, a view that does not give its hex
+//     fails the load.
 
 #include "colour.h"
 #include "fonts.h"
@@ -23,8 +27,10 @@
 #include "scene.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <map>
@@ -86,6 +92,7 @@ void png(cairo_surface_t* surf, const std::string& path) {
 } // namespace
 
 int main(int argc, char** argv) {
+    std::setvbuf(stdout, nullptr, _IOLBF, 0);   // the check's lines in order with plog's stderr
     if (argc < 4) {
         std::fprintf(stderr, "usage: host_check <fonts dir> <scene dir> <work dir> [--linmix <table>] [--expect <#rrggbb> <ppm>]...\n");
         return 2;
@@ -148,15 +155,23 @@ int main(int argc, char** argv) {
         check(cs.h == h0 && cs.s == s0, "black set as bytes keeps the hue and the saturation");
         cs.set_rgb(Rgb{0x77, 0x77, 0x77});
         check(cs.h == h0 && cs.s == 0, "a grey set as bytes keeps the hue, saturation 0");
+        // the whole cube: so the R / G / B controls never reach a view that fails a stored pick's load check
+        // (rgb_of_hsv(view) == bytes, scene.h's Pick)
         bool all = true;
-        for (int r = 0; r < 256 && all; r += 5)
-            for (int g = 0; g < 256 && all; g += 7)
-                for (int b = 0; b < 256 && all; b += 3) {
+        for (int r = 0; r < 256 && all; ++r)
+            for (int g = 0; g < 256 && all; ++g)
+                for (int b = 0; b < 256 && all; ++b) {
                     ColourState t;
                     t.set_rgb(Rgb{uint8_t(r), uint8_t(g), uint8_t(b)});
                     all = rgb_of_hsv(t.h, t.s, t.v) == t.rgb;
                 }
-        check(all, "bytes -> HSV -> bytes is the identity (a sampled cube)");
+        check(all, "bytes -> HSV -> bytes is the identity (the whole cube)");
+        bool trip = view_number(0.35) == "0.35" && view_number(227) == "227" && view_number(0) == "0";
+        for (int k = 0; k <= 100000 && trip; ++k) {
+            const double xs[3] = {k / 100000.0, k / 7.0 / 100000.0 * 360, std::nearbyint(k % 101) / 100};
+            for (double x : xs) trip = trip && std::strtod(view_number(x).c_str(), nullptr) == x;
+        }
+        check(trip, "a stored view number reads back as the same double, in the shortest form (0.35, 227)");
     }
 
     // a scripted session over the scene, on its own copy, frames written for the eye
@@ -165,10 +180,11 @@ int main(int argc, char** argv) {
     History hist0;
     std::string note;
     Scene scene0 = scene;
-    const bool loaded0 = picker_load(work, scene0, hist0, note, err);
+    Pick start0;
+    const bool loaded0 = picker_load(work, scene0, hist0, start0, note, err);
     check(loaded0 && hist0.cursor == -1 && hist0.picks.empty(),
           "no state.json and no picks.txt: the manifest's colour, an empty history (" + note + ")");
-    Picker p(scene0, work, hist0);
+    Picker p(scene0, work, hist0, start0);
     cairo_surface_t* frame = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, scene.width, scene.height);
     p.paint(frame);
     png(frame, work + "/frame_closed.png");
@@ -215,12 +231,12 @@ int main(int argc, char** argv) {
     p.release(1700, 700);
     check(!p.open(), "a tap outside the panel closes it");
     const std::string picks = slurp(work + "/picks.txt");
-    check(picks.size() > 30 && picks.find(" " + p.scene().layers[p.scene().active].name + " " + hex + "\n") != std::string::npos,
+    check(picks.size() > 30 && picks.find(" " + p.scene().layers[p.scene().active].name + " " + hex + " hsv ") != std::string::npos,
           "the commit appended to picks.txt: " + picks.substr(0, picks.size() - 1));
-    std::map<std::string, Rgb> st;
+    std::map<std::string, Pick> st;
     std::map<std::string, int> ent;
     check(state_load(work + "/state.json", st, ent, err) && st.count(p.scene().layers[p.scene().active].name) &&
-              hex_of(st[p.scene().layers[p.scene().active].name]) == hex,
+              hex_of(st[p.scene().layers[p.scene().active].name].rgb) == hex,
           "state.json holds the commit");
     p.press(300, 700);
     p.release(300, 700);
@@ -240,8 +256,9 @@ int main(int argc, char** argv) {
         auto launch = [&](std::string& why) {
             Scene sc = scene;
             History h;
-            if (!picker_load(work, sc, h, why, err)) { std::printf("FAIL picker_load: %s\n", err.c_str()); ++g_fail; }
-            return Picker(sc, work, h);
+            Pick st;
+            if (!picker_load(work, sc, h, st, why, err)) { std::printf("FAIL picker_load: %s\n", err.c_str()); ++g_fail; }
+            return Picker(sc, work, h, st);
         };
         auto tap = [](Picker& q, double x, double y) { q.press(x, y); q.release(x, y); };
         auto count = [](const Picker& q) {
@@ -273,8 +290,8 @@ int main(int argc, char** argv) {
         plus(q, 4);                                   // G + 1
         const Rgb a2 = q.colour().rgb;
         tap(q, 1700, 700);
-        check(lines_of(work + "/picks.txt") == 3 && count(q) == "3 of 3" && q.history().picks[1] == a1 &&
-                  q.history().picks[2] == a2, "two edited closes commit: 3 of 3");
+        check(lines_of(work + "/picks.txt") == 3 && count(q) == "3 of 3" && q.history().picks[1].rgb == a1 &&
+                  q.history().picks[2].rgb == a2, "two edited closes commit: 3 of 3");
 
         tap(q, 1700, 700);
         check(q.back_enabled() && !q.forward_enabled(), "at the last entry: BACK enabled, FORWARD disabled");
@@ -305,9 +322,9 @@ int main(int argc, char** argv) {
         check(lines_of(work + "/picks.txt") == 3, "a close on a stepped, unchanged colour appends nothing");
         q.paint(frame);
         png(frame, work + "/frame_history_closed.png");
-        std::map<std::string, Rgb> sc;
+        std::map<std::string, Pick> sc;
         std::map<std::string, int> se;
-        check(state_load(work + "/state.json", sc, se, err) && sc[L] == a1 && se[L] == 2,
+        check(state_load(work + "/state.json", sc, se, err) && sc[L].rgb == a1 && se[L] == 2,
               "state.json records the stepped colour and the cursor 2");
 
         Picker r = launch(note);
@@ -328,14 +345,14 @@ int main(int argc, char** argv) {
         r.discard_if_open();
         check(!r.open() && lines_of(work + "/picks.txt") == 3 && r.colour().rgb == a1 && count(r) == "2 of 3",
               "leaving the app with an unsaved edit saves nothing: the colour and the cursor of the panel's opening");
-        check(state_load(work + "/state.json", sc, se, err) && sc[L] == a1 && se[L] == 2, "and state.json is untouched");
+        check(state_load(work + "/state.json", sc, se, err) && sc[L].rgb == a1 && se[L] == 2, "and state.json is untouched");
         Picker r2 = launch(note);
         check(r2.colour().rgb == a1 && count(r2) == "2 of 3", "a relaunch after it comes back on the last saved state");
         tap(r, 1700, 700);
         plus(r, 3);
         const Rgb a4 = r.colour().rgb;
         tap(r, 1700, 700);
-        check(lines_of(work + "/picks.txt") == 4 && count(r) == "4 of 4" && r.history().picks[3] == a4,
+        check(lines_of(work + "/picks.txt") == 4 && count(r) == "4 of 4" && r.history().picks[3].rgb == a4,
               "a close on an edited colour from the middle commits it at the end: 4 of 4");
 
         // the previous build's state.json: no entry; the newest entry equal to the colour, else the end
@@ -368,9 +385,207 @@ int main(int argc, char** argv) {
             Scene sx = scene;
             History hx;
             std::string ex;
-            const bool loaded = picker_load(work, sx, hx, note, ex);
+            Pick sp;
+            const bool loaded = picker_load(work, sx, hx, sp, note, ex);
             check(!loaded, "a malformed picks.txt fails the load: " + ex);
         }
+    }
+
+    // ---------------------------------------------------------------- the HSV he dialled is part of the pick
+    {
+        const std::string L = scene.layers[scene.active].name;
+        auto put = [&](const std::string& name, const std::string& text) {
+            FILE* f = std::fopen((work + "/" + name).c_str(), "w");
+            std::fputs(text.c_str(), f);
+            std::fclose(f);
+        };
+        std::remove((work + "/picks.txt").c_str());
+        std::remove((work + "/state.json").c_str());
+        auto launch = [&]() {
+            Scene sc = scene;
+            History h;
+            std::string why;
+            Pick st;
+            if (!picker_load(work, sc, h, st, why, err)) { std::printf("FAIL picker_load: %s\n", err.c_str()); ++g_fail; }
+            return Picker(sc, work, h, st);
+        };
+        auto tap = [](Picker& q, double x, double y) { q.press(x, y); q.release(x, y); };
+        const double ppx = kMargin, ppy = (scene.height - kH) / 2;
+        const double back_x = ppx + kBackX + kBtn / 2.0, fwd_x = ppx + kFwdX + kBtn / 2.0, hist_y = ppy + kHistY + kBtn / 2.0;
+        auto plus = [&](Picker& q, int row) { tap(q, ppx + kPlusX + 30, ppy + row_y(row) + 30); };
+        auto minus = [&](Picker& q, int row) { tap(q, ppx + kMinusX + 30, ppy + row_y(row) + 30); };
+        auto track = [&](Picker& q, int row, double f) { tap(q, ppx + kTrackX + f * (kTrackL - 1), ppy + row_y(row) + 30); };
+        // the numbers and the handles as the panel paints them (picker.cpp's row_number and the handle's column)
+        auto nums = [](const ColourState& c) {
+            char b[160];
+            std::snprintf(b, sizeof b, "H %d S %d V %d (exact %.6f %.6f %.6f, handles at %ld %ld %ld) %s",
+                          int(std::nearbyint(c.h)), int(std::nearbyint(c.s * 100)), int(std::nearbyint(c.v * 100)),
+                          c.h, c.s, c.v, std::lround(c.h / 360 * (kTrackL - 1)), std::lround(c.s * (kTrackL - 1)),
+                          std::lround(c.v * (kTrackL - 1)), hex_of(c.rgb).c_str());
+            return std::string(b);
+        };
+        auto count = [](const Picker& q) {
+            return std::to_string(q.history().cursor + 1) + " of " + std::to_string(q.history().picks.size());
+        };
+        auto same_view = [](const ColourState& a, const ColourState& b) {
+            return a.rgb == b.rgb && a.h == b.h && a.s == b.s && a.v == b.v;
+        };
+        // dial H 227, S 35, V 20 as he does: a track, then the axis's + and − to land on the number
+        Picker q = launch();
+        tap(q, 1700, 700);
+        track(q, 0, 227.2 / 360); plus(q, 0); minus(q, 0);
+        track(q, 1, 0.352); plus(q, 1); minus(q, 1);
+        track(q, 2, 0.202); plus(q, 2); minus(q, 2);
+        const ColourState d1 = q.colour();
+        std::printf("     dialled: %s\n", nums(d1).c_str());
+        tap(q, 1700, 700);                            // close: 1 of 1
+        tap(q, 1700, 700);
+        plus(q, 2);                                   // V + 1
+        const ColourState d2 = q.colour();
+        tap(q, 1700, 700);                            // close: 2 of 2
+        // symptom 1: BACK and FORWARD come back to the pick he saved, every handle where it was
+        tap(q, 1700, 700);
+        tap(q, back_x, hist_y);
+        const ColourState b1 = q.colour();
+        tap(q, fwd_x, hist_y);
+        const ColourState f2 = q.colour();
+        std::printf("     BACK:    %s\n     saved:   %s\n", nums(b1).c_str(), nums(d1).c_str());
+        std::printf("     FORWARD: %s\n     saved:   %s\n", nums(f2).c_str(), nums(d2).c_str());
+        check(same_view(b1, d1) && same_view(f2, d2), "BACK and FORWARD restore the HSV each pick was saved under");
+        // OLD restores the HSV the panel opened with
+        plus(q, 1);
+        tap(q, ppx + kColX + 50, ppy + kSwatchY0 + 50);
+        check(same_view(q.colour(), d2), "OLD restores the HSV the panel opened with: " + nums(q.colour()));
+        tap(q, 1700, 700);
+        // the launch restores it too
+        Picker r = launch();
+        check(same_view(r.colour(), d2), "a relaunch restores the HSV of the last close: " + nums(r.colour()));
+        // symptom 2: V's + alone across saves and relaunches; H's and S's numbers never move
+        int moved = 0, handles = 0;
+        std::string first_move;
+        for (int k = 0; k < 20; ++k) {
+            Picker c = launch();
+            const ColourState before = c.colour();
+            tap(c, 1700, 700);
+            plus(c, 2);
+            tap(c, 1700, 700);
+            Picker c2 = launch();
+            tap(c2, 1700, 700);
+            tap(c2, back_x, hist_y);
+            tap(c2, fwd_x, hist_y);
+            const ColourState after = c2.colour();
+            tap(c2, 1700, 700);
+            const bool numbers = std::nearbyint(after.h) == std::nearbyint(before.h) &&
+                                 std::nearbyint(after.s * 100) == std::nearbyint(before.s * 100);
+            if (!numbers) {
+                if (!moved) first_move = "cycle " + std::to_string(k + 1) + ": " + nums(before) + " -> " + nums(after);
+                ++moved;
+            }
+            if (after.h != before.h || after.s != before.s) ++handles;
+        }
+        if (moved) std::printf("     %s\n", first_move.c_str());
+        check(moved == 0 && handles == 0, "20 saves of V + 1 (each relaunched, BACK, FORWARD): H and S never move (" +
+                              std::to_string(moved) + " cycles moved their numbers, " + std::to_string(handles) +
+                              " their exact values)");
+
+        // leaving the app with the panel open restores the opening's view, not a re-derivation
+        {
+            Picker c = launch();
+            const ColourState opened = c.colour();
+            tap(c, 1700, 700);
+            plus(c, 0);
+            plus(c, 1);
+            c.discard_if_open();
+            check(same_view(c.colour(), opened), "leaving the app with an edit restores the opening's view: " + nums(c.colour()));
+        }
+
+        // an S step at V 2 moves the view and not the bytes: an edit, saved, and BACK / FORWARD tell the two apart
+        {
+            Picker c = launch();
+            tap(c, 1700, 700);
+            track(c, 2, 0.022); plus(c, 2); minus(c, 2);
+            tap(c, 1700, 700);
+            const size_t n0 = lines_of(work + "/picks.txt");
+            const ColourState s35 = c.colour();
+            tap(c, 1700, 700);
+            plus(c, 1);
+            const ColourState s36 = c.colour();
+            check(s36.rgb == s35.rgb && std::nearbyint(s36.s * 100) == 36 && c.edited(),
+                  "S + 1 at V 2 keeps the bytes " + hex_of(s36.rgb) + " and is an edit: " + nums(s36));
+            tap(c, 1700, 700);
+            tap(c, 1700, 700);
+            tap(c, back_x, hist_y);
+            const ColourState b = c.colour();
+            tap(c, fwd_x, hist_y);
+            check(lines_of(work + "/picks.txt") == n0 + 1 && same_view(b, s35) && same_view(c.colour(), s36),
+                  "its close commits it, and BACK / FORWARD show S 35 and S 36 over the same bytes");
+            tap(c, 1700, 700);
+        }
+
+        // THE OLD FORMAT: 15 lines without a view (12 of this layer) and the previous build's state.json, no view
+        {
+            const Rgb olds[12] = {{0x80, 0x80, 0x80}, {0x9A, 0xAB, 0xEA}, {0x9B, 0xAB, 0xEA}, {0x77, 0x77, 0x77},
+                                  {0, 0, 0},          {0x21, 0x25, 0x33}, {0x22, 0x25, 0x33}, {0x60, 0x70, 0x90},
+                                  {0x61, 0x70, 0x90}, {0x61, 0x71, 0x90}, {0x10, 0x10, 0x14}, {0xCC, 0x99, 0x66}};
+            std::string text;
+            for (int k = 0, i = 0; k < 15; ++k) {
+                char t[32];
+                std::snprintf(t, sizeof t, "2026-10-04T05:%02d:00-04:00", k);
+                text += std::string(t) + " " + (k % 5 == 4 ? std::string("some_other_layer #123456") : L + " " + hex_of(olds[i++])) + "\n";
+            }
+            put("picks.txt", text);
+            put("state.json", "{\n \"colours\": {\n  \"" + L + "\": \"" + hex_of(olds[5]) + "\"\n },\n \"entry\": {\"" + L + "\": 6}\n}\n");
+            Picker c = launch();
+            bool same = c.history().picks.size() == 12;
+            for (size_t i = 0; same && i < 12; ++i) same = c.history().picks[i].rgb == olds[i] && !c.history().picks[i].has_hsv;
+            ColourState derived;
+            derived.set_rgb(olds[5]);
+            check(same && c.history().cursor == 5 && same_view(c.colour(), derived),
+                  "the old-format picks.txt and state.json load unchanged: 12 picks without a view, 6 of 12, the colour "
+                  "re-derived from its bytes as before");
+            tap(c, 1700, 700);
+            ColourState prior = c.colour();
+            tap(c, back_x, hist_y);                   // to the black
+            prior.set_rgb(olds[4]);
+            const bool black = same_view(c.colour(), prior);
+            prior = c.colour();
+            tap(c, back_x, hist_y);                   // to the grey: the hue and the saturation kept through black
+            prior.set_rgb(olds[3]);
+            check(black && same_view(c.colour(), prior) && !c.edited(),
+                  "an old entry steps as before: re-derived from its bytes, the hue kept through grey and black");
+            plus(c, 2);
+            const ColourState e = c.colour();
+            tap(c, 1700, 700);
+            const std::string after = slurp(work + "/picks.txt");
+            check(after.compare(0, text.size(), text) == 0 && lines_of(work + "/picks.txt") == 16 &&
+                      after.find(" " + L + " " + hex_of(e.rgb) + " hsv ") == text.size() + 25,
+                  "a commit appends one line with its view after the old lines, which stay as they were: " +
+                      after.substr(text.size(), after.size() - text.size() - 1));
+            Picker d = launch();
+            check(d.history().picks.size() == 13 && d.history().picks[12].has_hsv && count(d) == "13 of 13" &&
+                      same_view(d.colour(), e), "both forms read back: 13 picks, the last with its view, restored exactly");
+        }
+
+        // a stored view that does not give its bytes, or out of its range, fails the load
+        auto refused = [&](const std::string& picks_text, const std::string& state_text, const std::string& what) {
+            put("picks.txt", picks_text);
+            if (state_text.empty()) std::remove((work + "/state.json").c_str());
+            else put("state.json", state_text);
+            Scene sx = scene;
+            History hx;
+            Pick px;
+            std::string ex, why;
+            const bool loaded = picker_load(work, sx, hx, px, why, ex);
+            check(!loaded, what + ": " + ex);
+        };
+        refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 227 0.36 0.21\n", "", "a picks.txt view that does not give its hex fails the load");
+        refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 587 0.35 0.2\n", "", "a picks.txt hue past 360 fails the load");
+        refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 227 0.35\n", "", "a picks.txt view short of a number fails the load");
+        refused("2026-10-04T05:00:00-04:00 " + L + " #212533 hsv 227 x 0.2\n", "", "a picks.txt view number that is not one fails the load");
+        refused("", "{\"colours\": {\"" + L + "\": \"#212533\"}, \"hsv\": {\"" + L + "\": [227, 0.36, 0.21]}, \"entry\": {}}",
+                "a state.json view that does not give its colour fails the load");
+        std::remove((work + "/picks.txt").c_str());
+        std::remove((work + "/state.json").c_str());
     }
 
     std::vector<std::string> msg = {"warptempo picker: no scene", "manifest.json: missing or unreadable (in /x/scene)"};

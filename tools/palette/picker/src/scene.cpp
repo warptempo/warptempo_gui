@@ -171,9 +171,35 @@ void scene_paint(const Scene& scene, uint32_t* picture) {
     scene_paint_layers(scene, picture);
 }
 
-bool state_load(const std::string& path, std::map<std::string, Rgb>& colours, std::map<std::string, int>& entries,
+namespace {
+
+// a stored view lies in its ranges and gives its bytes (Pick's rule)
+bool view_holds(const Pick& p) {
+    return p.h >= 0 && p.h <= 360 && p.s >= 0 && p.s <= 1 && p.v >= 0 && p.v <= 1 && rgb_of_hsv(p.h, p.s, p.v) == p.rgb;
+}
+
+// one view number, the whole token: true and the double
+bool read_view_number(const std::string& tok, double& out) {
+    if (tok.empty()) return false;
+    char* end = nullptr;
+    out = std::strtod(tok.c_str(), &end);
+    return end == tok.c_str() + tok.size();
+}
+
+} // namespace
+
+std::string view_number(double x) {
+    char buf[40];
+    for (int p = 1; p <= 17; ++p) {
+        std::snprintf(buf, sizeof buf, "%.*g", p, x);
+        if (std::strtod(buf, nullptr) == x) break;
+    }
+    return buf;
+}
+
+bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::map<std::string, int>& entries,
                 std::string& err) {
-    colours.clear();
+    out.clear();
     entries.clear();
     std::string text;
     if (!read_file(path, text)) return true;   // no close yet
@@ -182,21 +208,39 @@ bool state_load(const std::string& path, std::map<std::string, Rgb>& colours, st
     if (!json_parse(text, st, jerr)) { err = "state.json: " + jerr; return false; }
     if (!st.is_object()) { err = "state.json: not an object"; return false; }
     const Json* cols = st.get("colours");
-    if (!cols || !cols->is_object()) {   // the previous build's file: the colours alone, flat
+    if (!cols || !cols->is_object()) {   // the first build's file: the colours alone, flat
         for (const auto& kv : st.obj) {
-            Rgb c;
-            if (!kv.second.is_string() || !parse_hex(kv.second.str, c)) { err = "state.json: " + kv.first + " is not #rrggbb"; return false; }
-            colours[kv.first] = c;
+            Pick p;
+            if (!kv.second.is_string() || !parse_hex(kv.second.str, p.rgb)) { err = "state.json: " + kv.first + " is not #rrggbb"; return false; }
+            out[kv.first] = p;
         }
         return true;
     }
     const Json* ent = st.get("entry");
-    if (!ent || !ent->is_object() || st.obj.size() != 2) { err = "state.json: not {\"colours\": {...}, \"entry\": {...}}"; return false; }
-    for (const auto& kv : cols->obj) {
-        Rgb c;
-        if (!kv.second.is_string() || !parse_hex(kv.second.str, c)) { err = "state.json: colours." + kv.first + " is not #rrggbb"; return false; }
-        colours[kv.first] = c;
+    const Json* hsv = st.get("hsv");   // absent in the previous build's file
+    if (!ent || !ent->is_object() || (hsv && !hsv->is_object()) || st.obj.size() != (hsv ? 3u : 2u)) {
+        err = "state.json: not {\"colours\": {...}, \"hsv\": {...}, \"entry\": {...}}"; return false;
     }
+    for (const auto& kv : cols->obj) {
+        Pick p;
+        if (!kv.second.is_string() || !parse_hex(kv.second.str, p.rgb)) { err = "state.json: colours." + kv.first + " is not #rrggbb"; return false; }
+        out[kv.first] = p;
+    }
+    if (hsv)
+        for (const auto& kv : hsv->obj) {
+            const auto c = out.find(kv.first);
+            const Json& a = kv.second;
+            if (c == out.end() || !a.is_array() || a.arr.size() != 3 || !a.arr[0].is_number() || !a.arr[1].is_number() ||
+                !a.arr[2].is_number()) {
+                err = "state.json: hsv." + kv.first + " is not [h, s, v] beside a colour"; return false;
+            }
+            Pick& p = c->second;
+            p.has_hsv = true;
+            p.h = a.arr[0].num;
+            p.s = a.arr[1].num;
+            p.v = a.arr[2].num;
+            if (!view_holds(p)) { err = "state.json: hsv." + kv.first + " is not a view giving " + hex_of(p.rgb) + " (h 0..360, s and v 0..1)"; return false; }
+        }
     for (const auto& kv : ent->obj) {
         const double n = kv.second.num;
         if (!kv.second.is_number() || n < 1 || n != std::floor(n) || n > 1e9) {
@@ -207,7 +251,7 @@ bool state_load(const std::string& path, std::map<std::string, Rgb>& colours, st
     return true;
 }
 
-bool picks_load(const std::string& path, const std::string& layer, std::vector<Rgb>& out, std::string& err) {
+bool picks_load(const std::string& path, const std::string& layer, std::vector<Pick>& out, std::string& err) {
     out.clear();
     std::string text;
     if (!read_file(path, text)) return true;   // no commit yet
@@ -218,12 +262,27 @@ bool picks_load(const std::string& path, const std::string& layer, std::vector<R
         if (nl == std::string::npos) { err = where + " has no newline"; return false; }
         const std::string l = text.substr(at, nl - at);
         at = nl + 1;
-        const size_t first = l.find(' '), last = l.rfind(' ');
-        Rgb c;
-        if (first == std::string::npos || first == 0 || last <= first + 1 || !parse_hex(l.substr(last + 1), c)) {
-            err = where + " is not \"<time> <layer> #RRGGBB\""; return false;
+        // the words, single spaces: <time> <layer...> #RRGGBB [hsv <h> <s> <v>]
+        std::vector<std::string> w;
+        for (size_t b = 0;;) {
+            const size_t e = l.find(' ', b);
+            w.push_back(l.substr(b, e == std::string::npos ? std::string::npos : e - b));
+            if (e == std::string::npos) break;
+            b = e + 1;
         }
-        if (l.compare(first + 1, last - first - 1, layer) == 0 && last - first - 1 == layer.size()) out.push_back(c);
+        const bool view = w.size() >= 7 && w[w.size() - 4] == "hsv";
+        const size_t hex_at = w.size() - (view ? 5 : 1);
+        Pick p;
+        std::string name;
+        for (size_t k = 1; k < hex_at && w.size() >= 3; ++k) name += (k > 1 ? " " : "") + w[k];
+        if (w.size() < 3 || w[0].empty() || name.empty() || !parse_hex(w[hex_at], p.rgb) ||
+            (view && !(read_view_number(w[w.size() - 3], p.h) && read_view_number(w[w.size() - 2], p.s) &&
+                       read_view_number(w[w.size() - 1], p.v)))) {
+            err = where + " is not \"<time> <layer> #RRGGBB hsv <h> <s> <v>\" (nor \"<time> <layer> #RRGGBB\")"; return false;
+        }
+        p.has_hsv = view;
+        if (view && !view_holds(p)) { err = where + "'s hsv is not a view giving " + hex_of(p.rgb) + " (h 0..360, s and v 0..1)"; return false; }
+        if (name == layer) out.push_back(p);
     }
     return true;
 }

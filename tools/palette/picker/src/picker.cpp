@@ -175,41 +175,60 @@ void ColourState::set_hsv(double hh, double ss, double vv) {
     rgb = rgb_of_hsv(h, s, v);
 }
 
+void ColourState::restore(const Pick& p) {
+    if (!p.has_hsv) { set_rgb(p.rgb); return; }
+    rgb = p.rgb;
+    h = p.h;
+    s = p.s;
+    v = p.v;
+}
+
+bool ColourState::shows(const Pick& p) const {
+    return rgb == p.rgb && (!p.has_hsv || (h == p.h && s == p.s && v == p.v));
+}
+
 // ---------------------------------------------------------------- the launch state
-bool picker_load(const std::string& data_dir, Scene& scene, History& hist, std::string& note, std::string& err) {
-    std::map<std::string, Rgb> colours;
+bool picker_load(const std::string& data_dir, Scene& scene, History& hist, Pick& start, std::string& note,
+                 std::string& err) {
+    std::map<std::string, Pick> colours;
     std::map<std::string, int> entries;
     if (!state_load(data_dir + "/state.json", colours, entries, err)) return false;
     Layer& act = scene.layers[scene.active];
     hist = History{};
     if (!picks_load(data_dir + "/picks.txt", act.name, hist.picks, err)) return false;
     const auto c = colours.find(act.name);
-    if (c != colours.end()) act.colour = c->second;   // the last close's, else the manifest's
+    start = c != colours.end() ? c->second : Pick{act.colour};   // the last close's, else the manifest's
+    act.colour = start.rgb;
     scene_derive(scene);
-    note = c != colours.end() ? "state.json's colour" : "the manifest's colour";
+    note = c == colours.end() ? "the manifest's colour" : start.has_hsv ? "state.json's colour and view" : "state.json's colour";
+    // an entry holds the start: the same bytes and, when both carry a view, the same view
+    auto holds = [&](int k) {
+        const Pick& p = hist.picks[size_t(k)];
+        return p.rgb == start.rgb && (!p.has_hsv || !start.has_hsv || (p.h == start.h && p.s == start.s && p.v == start.v));
+    };
     const int m = int(hist.picks.size());
     const auto e = entries.find(act.name);
     if (m == 0) {
         note += ", no history";
         return true;
     }
-    if (e != entries.end() && e->second <= m && hist.picks[size_t(e->second - 1)] == act.colour) {
+    if (e != entries.end() && e->second <= m && holds(e->second - 1)) {
         hist.cursor = e->second - 1;
         note += ", state.json's entry";
         return true;
     }
     hist.cursor = m - 1;
     for (int k = m - 1; k >= 0; --k)
-        if (hist.picks[size_t(k)] == act.colour) { hist.cursor = k; break; }
-    note += hist.picks[size_t(hist.cursor)] == act.colour ? ", the newest entry equal to it" : ", the end (no entry equals it)";
+        if (holds(k)) { hist.cursor = k; break; }
+    note += holds(hist.cursor) ? ", the newest entry holding it" : ", the end (no entry holds it)";
     return true;
 }
 
 // ---------------------------------------------------------------- Picker
-Picker::Picker(Scene scene, std::string data_dir, History hist)
+Picker::Picker(Scene scene, std::string data_dir, History hist, Pick start)
     : scene_(std::move(scene)), data_dir_(std::move(data_dir)), hist_(std::move(hist)) {
-    cs_.set_rgb(scene_.layers[scene_.active].colour);
-    old_ = cs_.rgb;
+    cs_.restore(start);
+    old_ = cs_;
     picture_.resize(size_t(scene_.width) * scene_.height);
     scene_paint(scene_, picture_.data());
     // the hue ring: every pixel whose centre lies between the radii, its hue the angle (0 = red at the right,
@@ -237,7 +256,7 @@ void Picker::apply_colour() {
     dirty_ = true;
 }
 
-bool Picker::edited() const { return hist_.cursor < 0 || hist_.picks[size_t(hist_.cursor)] != cs_.rgb; }
+bool Picker::edited() const { return hist_.cursor < 0 || !cs_.shows(hist_.picks[size_t(hist_.cursor)]); }
 
 bool Picker::back_enabled() const { return hist_.cursor > 0; }
 
@@ -248,7 +267,8 @@ void Picker::write_state() const {
     for (size_t i = 0; i < scene_.layers.size(); ++i)
         js += "  \"" + scene_.layers[i].name + "\": \"" + hex_of(scene_.layers[i].colour) + "\"" +
               (i + 1 < scene_.layers.size() ? ",\n" : "\n");
-    js += " },\n \"entry\": {";
+    js += " },\n \"hsv\": {\"" + scene_.layers[scene_.active].name + "\": [" + view_number(cs_.h) + ", " +
+          view_number(cs_.s) + ", " + view_number(cs_.v) + "]},\n \"entry\": {";
     if (hist_.cursor >= 0) js += "\"" + scene_.layers[scene_.active].name + "\": " + std::to_string(hist_.cursor + 1);
     js += "}\n}\n";
     const std::string tmp = data_dir_ + "/state.json.part", dst = data_dir_ + "/state.json";
@@ -260,14 +280,15 @@ void Picker::write_state() const {
 void Picker::commit() {
     const Layer& a = scene_.layers[scene_.active];
     const std::string hex = hex_of(a.colour);
-    const std::string line = now_iso8601() + " " + a.name + " " + hex + "\n";
+    const std::string line = now_iso8601() + " " + a.name + " " + hex + " hsv " + view_number(cs_.h) + " " +
+                             view_number(cs_.s) + " " + view_number(cs_.v) + "\n";
     if (FILE* f = std::fopen((data_dir_ + "/picks.txt").c_str(), "a")) {
         std::fputs(line.c_str(), f);
         std::fclose(f);
     } else {
         plog("picker: cannot append to %s/picks.txt", data_dir_.c_str());
     }
-    hist_.picks.push_back(a.colour);
+    hist_.picks.push_back(cs_.pick());
     hist_.cursor = int(hist_.picks.size()) - 1;
     write_state();
     plog("picker: commit %s %s", a.name.c_str(), hex.c_str());
@@ -286,14 +307,14 @@ void Picker::discard_if_open() {
     open_ = false;
     target_ = Target::None;
     hist_.cursor = open_cursor_;
-    cs_.set_rgb(old_);
+    cs_ = old_;
     apply_colour();
 }
 
 void Picker::history_step(int dir) {
     if (!(dir < 0 ? back_enabled() : forward_enabled())) return;
     hist_.cursor += dir;
-    cs_.set_rgb(hist_.picks[size_t(hist_.cursor)]);
+    cs_.restore(hist_.picks[size_t(hist_.cursor)]);
     apply_colour();
     const Layer& a = scene_.layers[scene_.active];
     plog("picker: step %s %s %s", a.name.c_str(), count_of(hist_).c_str(), hex_of(a.colour).c_str());
@@ -406,7 +427,7 @@ void Picker::release(double x, double y) {
         case Target::Picture:      // closed: the panel opens on the half opposite the tap
             open_ = true;
             right_ = down_x_ < scene_.width / 2.0;
-            old_ = cs_.rgb;
+            old_ = cs_;
             open_cursor_ = hist_.cursor;
             dirty_ = true;
             break;
@@ -414,7 +435,7 @@ void Picker::release(double x, double y) {
             close();
             break;
         case Target::Old:
-            if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { cs_.set_rgb(old_); apply_colour(); }
+            if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { cs_ = old_; apply_colour(); }
             break;
         case Target::Back:
         case Target::Forward: {
@@ -491,7 +512,7 @@ void Picker::paint(cairo_surface_t* surf) {
         fr.marker(int(std::lround(cx + px)), int(std::lround(cy + py)), 12, 3);
     }
     // the swatches: OLD | NEW
-    fr.fill(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, old_);
+    fr.fill(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, old_.rgb);
     fr.edge(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, kEdge);
     fr.fill(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, cs_.rgb);
     fr.edge(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, kEdge);

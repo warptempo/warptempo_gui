@@ -32,6 +32,15 @@ live with it. No menus, no layer switching: a round is a scene.
   one-unit − / + at its ends (one degree, one percent, one byte; acting at the lift). Every control produces an exact
   byte triple and the active layer repaints from it live. HSV is a view over the bytes plus a retained hue (and
   saturation), as GTK keeps them: through grey the hue stays, through black the saturation too.
+- THE HSV HE DIALLED IS PART OF THE PICK (architect 2026-10-04). A saved pick keeps, beside its bytes, the exact HSV
+  view it was saved under, and every road back to a stored colour — the launch, BACK / FORWARD, OLD, leaving the app
+  with the panel open — restores that view instead of re-deriving it from the bytes. Re-derived, the view is the
+  bytes' own HSV (S 0.3529 where he dialled 0.35): the number still reads 35 but the handle moves, and the next − / +
+  rounds from the re-derived values, while at low saturation or value one byte is several degrees of hue or a percent
+  of saturation, so an axis he never touched would move. Re-derivation from bytes stays only where the bytes are the
+  input: the R / G / B tracks and their − / +, and a pick saved before views were stored. The ring, the triangle and
+  the H / S / V tracks and − / + set the view directly. The bytes stay the colour's truth (what is painted, what the
+  product takes); the view always gives them.
 - A tap OUTSIDE the panel closes it, and that close is the ONE DELIBERATE SAVE: it COMMITS the pick when the colour
   is edited (the history's rules, below in Use). While closed, a small label at the bottom right shows the active
   layer's name, hex and count. Leaving the app with the panel open (home, the cover) saves nothing: the unsaved colour
@@ -47,15 +56,23 @@ Everything lives in the app's EXTERNAL files dir, `/sdcard/Android/data/com.warp
 | path | written by | what |
 |---|---|---|
 | `scene/manifest.json`, `scene/background.ppm`, `scene/<layer>.pgm` | the planner (`adb push`) | the scene (formats below) |
-| `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <layer> #RRGGBB` |
-| `state.json` | the app, at every close of the panel | `{"colours": {"<layer>": "#RRGGBB", ...}, "entry": {"<active layer>": N}}`: every layer's colour at the last close and the active layer's history cursor (the N of "N of M"), rewritten whole |
+| `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <layer> #RRGGBB hsv <h> <s> <v>` (the view the pick was saved under) |
+| `state.json` | the app, at every close of the panel | `{"colours": {"<layer>": "#RRGGBB", ...}, "hsv": {"<active layer>": [h, s, v]}, "entry": {"<active layer>": N}}`: every layer's colour at the last close, the active layer's view at that close and its history cursor (the N of "N of M"), rewritten whole |
 
-At launch the active layer starts at its colour in `state.json` if there is one (the last close), else the
-manifest's; its history is its `picks.txt` lines, and the cursor `state.json`'s entry when that entry lies in the
-history and holds the colour, else the newest entry equal to the colour, else the end (a `state.json` from the
-previous build, `{"<layer>": "#RRGGBB", ...}` with no entry, still reads; so does a kept `state.json` beside a deleted
-`picks.txt`). Every commit also logs one line under the tag `warptempo_picker`: `picker: commit <layer> #RRGGBB`;
-every history step `picker: step <layer> N of M #RRGGBB`. A missing or malformed scene, `state.json` or `picks.txt`
+THE VIEW'S NUMBERS are h in degrees 0..360 and s, v in 0..1, written as the shortest decimal that reads back as the
+same double (`227`, `0.35`, `0.34671532846715331` after a drag), so a stored view is restored exactly; a view must
+give its hex (`rgb_of_hsv`), and one that does not, or lies outside those ranges, fails the load. Earlier files still
+read: a `picks.txt` line without a view, `<ISO-8601 local time> <layer> #RRGGBB`, is a pick whose view is re-derived
+from its bytes as before (the lines are never rewritten; a new commit appends the new form after them), and a
+`state.json` without `"hsv"` starts on its colour re-derived.
+
+At launch the active layer starts at its colour in `state.json` if there is one (the last close, with its view when
+the file has one), else the manifest's; its history is its `picks.txt` lines, and the cursor `state.json`'s entry when
+that entry lies in the history and holds the start, else the newest entry holding it, else the end. An entry HOLDS the
+start when their bytes are equal and, if both carry a view, their views are too (the first build's `state.json`,
+`{"<layer>": "#RRGGBB", ...}` with no entry, still reads; so does a kept `state.json` beside a deleted `picks.txt`).
+Every commit also logs one line under the tag `warptempo_picker`: `picker: commit <layer> #RRGGBB`; every history step
+`picker: step <layer> N of M #RRGGBB`. A missing or malformed scene, `state.json` or `picks.txt`
 shows a plain message on the screen (which file, what is wrong) and logs it; there is no recovery path.
 
 ## The scene's formats
@@ -92,11 +109,17 @@ FreeType into `build/check/host_check`, has `check_refs.py` export `themes/picke
 references with the mock tool's own code, and checks: the scene's picture is the background byte for byte; the C++
 `lin_mix` equals `colour.py`'s on all 65536 byte pairs; the picture with the ink at #CC9966 equals the mock tool's
 render of the theme with that ink, byte for byte; a synthetic scene with a derived layer (today's has none) equals
-`colour.py`'s composition; HSV keeps the hue through grey and black and bytes -> HSV -> bytes is the identity; a
+`colour.py`'s composition; HSV keeps the hue through grey and black and bytes -> HSV -> bytes is the identity over the
+whole cube (so no byte control reaches a view the load would refuse), and a view number reads back as the same double; a
 scripted session (open on the opposite half, a track, an increment, the ring, OLD, close) behaves and commits to
 `picks.txt` and `state.json`; a scripted HISTORY session covers the empty history, commits, BACK and FORWARD, the
 disabled ends, a no-op close after a step, an edit-then-step discard, leaving the app with an unsaved edit, and
-reloads restoring the cursor (this build's `state.json`, the previous build's, a deleted `picks.txt`). Its frames are
+reloads restoring the cursor (this build's `state.json`, the previous build's, a deleted `picks.txt`); a scripted
+HSV session dials H 227 S 35 V 20 by tracks and − / +, saves, steps V, and checks BACK, FORWARD, OLD, a relaunch and
+the discard restore each saved view exactly, twenty saves of V + 1 (each relaunched, BACK, FORWARD) moving neither H
+nor S, an S step at V 2 that keeps the bytes counting as an edit, an old-format `picks.txt` (15 lines) and `state.json`
+loading unchanged and stepping as before with a new line appended after them, and a view that does not give its hex
+failing the load. Its frames are
 written as PNGs in `build/check/` for the eye (`frame_history_{empty,mid,first,closed}.png` the history's).
 
 ## Use (the planner, over adb)
@@ -126,12 +149,14 @@ layer's committed picks, oldest first: exactly its `picks.txt` lines, read at la
 by each commit. A cursor marks the entry being shown; the panel's count "N of M" is the cursor's entry of the
 history's length ("0 of 0" with none), and the closed corner label repeats it after the hex.
 
-- BACK and FORWARD (the arrows under the hex) move the cursor one entry and set the colour to that entry, at the pen's
-  lift: the layer repaints live and every control follows; OLD stays the colour the panel opened with.
+- BACK and FORWARD (the arrows under the hex) move the cursor one entry and restore that entry, its bytes and its
+  view, at the pen's lift: the layer repaints live and every control follows; OLD stays the colour the panel opened
+  with.
 - A disabled button (its glyph dimmed) does nothing: BACK at the first entry, FORWARD at the last, both with an empty
   history.
 - CLOSING THE PANEL IS THE ONE DELIBERATE SAVE ("just throw it away. One deliberate save action"). The colour is
-  EDITED when it differs from the cursor's entry (or the history is empty). A close on an edited colour commits it
+  EDITED when it differs from the cursor's entry — its bytes, or its view when the entry carries one (at low value an
+  S − / + can move the view and not the bytes; the number he reads is what he saves) — or the history is empty. A close on an edited colour commits it
   (one `picks.txt` line, the history's new end, the logcat line) and the cursor goes to the end; a close on a colour
   reached by stepping, unchanged, appends nothing, and `state.json` records the colour and the cursor.
 - An UNSAVED edit is thrown away by a step (BACK / FORWARD go from the cursor's entry) and by leaving the app with the
@@ -149,9 +174,9 @@ start a round from the manifest. A layer's history is every `picks.txt` line und
 |---|---|
 | `src/colour.h` | the byte triple, hex, the frame's pixel word, `lin_mix` (colour.py's, step for step), HSV -> bytes |
 | `src/json.{h,cpp}` | the tiny JSON reader (manifest.json, state.json) |
-| `src/scene.{h,cpp}` | the scene: load and validate, derive, paint the picture; the readers of state.json and picks.txt |
+| `src/scene.{h,cpp}` | the scene: load and validate, derive, paint the picture; the Pick (bytes and view); the readers of state.json and picks.txt |
 | `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
-| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus the retained hue), the launch state (`picker_load`), the pick history, the panel's geometry, painting, touch, the close's save |
+| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus the retained hue, a stored view restored), the launch state (`picker_load`), the pick history, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |
 | `src/host_check.cpp`, `check_refs.py` | the laptop check (above) |
 | `java/com/warptempo/picker/PickerActivity.java` | the full-screen sliver |
