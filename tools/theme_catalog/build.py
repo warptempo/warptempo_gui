@@ -5,17 +5,30 @@
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
 # THE ONE EXCEPTION IS THE PROGRAM'S OWN FAMILY, `warptempo`, and it derives nothing either: `warptempo-2026-10-03` is
 # the app's look recorded off render.h's constants (app_entry), and `warptempo` is THE ARCHITECT'S PICK, CHOSEN, NOT
-# IMPORTED (chosen_entry: his ruling of 2026-10-03 on the colour loop's mock sets, its bytes his, recorded as ruled).
+# IMPORTED (chosen_entry: his ruling of 2026-10-03 on the colour loop's mock sets, its bytes his, recorded as ruled),
+# and so is each `warptempo-preset-<n>`, THE ARCHITECT'S PRESET <n> ON THE COLOUR PICKER (preset_entries, architect
+# 2026-10-04: his saved looks carried into the product, the picker's chrome rule applied here, at generation, so the
+# app derives nothing).
 # NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
 # schemes no independent source records as Windows', the usability schemes, the KDE schemes KDE 3.5 did not ship, and
 # the role-identical duplicates. The
 # checks run before the write; the last lines report each family: entries, corroborated, sources.
 #
 #   python3 tools/theme_catalog/build.py
+#   python3 tools/theme_catalog/build.py --presets-only
+#
+# --presets-only (architect 2026-10-04) is the road for a host that cannot reach the pinned sources (the cloud: the
+# Trinity mirror is outside its egress): it re-derives only what needs no fetched file -- the preset entries from
+# presets.json and the header -- and carries every other entry and the not-imported record from the committed
+# catalog.json byte for byte, after recomputing the two entries that need no source (app_entry, chosen_entry) and
+# asserting they equal the carried ones; the checks run on the whole. The full run writes the same bytes where the
+# sources are at hand (both roads build the document through one function, document()).
 import json, os, re, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from sources import SOURCES, APP, REPO, local_path, provenance
+sys.path.insert(0, os.path.join(REPO, 'tools', 'palette'))
+import colour as CL      # the picker's chrome rule (windows95_chrome), the one the picker paints with
 from parse_windows import parse_hivedef, parse_theme
 from parse_kde import parse_kcsrc
 from parse_cde import parse_dp
@@ -390,6 +403,65 @@ def chosen_entry():
     return e
 
 
+# THE PRESET ENTRIES (architect 2026-10-04): each preset the colour picker saved (tools/palette/picker/, README "THE
+# PRESETS"; the repository's copy of the tablet's presets.json) becomes `warptempo-preset-<n>`, display name
+# "Warptempo Preset <n>", CHOSEN, NOT IMPORTED, its record the preset. Its chrome is exactly what the picker painted:
+# the preset's chrome ground through the picker's chrome rule (colour.windows95_chrome: the relief lines, the field
+# ground and the emboss's light copy from the ground, DkShadow black) and the roles the picker shows fixed, as its
+# theme (tools/palette/themes/picker.json) states them on 2026-10-04: the label white, the selected pair #666666 under
+# white (fixed until the picker's open-flag round), the field text white. The preset's other elements (the canvas, the
+# ink, the flags, the playhead) are program keys, not theme roles: tools/theme_catalog/preset_keys.py prints their
+# device-config lines. The entries follow presets.json: a new copy adds its new presets on the next run, and a
+# preset's number is never reused (the picker only appends). A colour key the preset names that is neither the chrome
+# nor a program key is a hard fail: a newly pickable chrome role (the selected fill, at the open-flag round) changes
+# what a preset's theme is, which is a ruling, not a silent drop.
+PRESETS = os.path.join(REPO, 'tools', 'palette', 'picker', 'presets', 'presets.json')
+PRESET_PREFIX = 'warptempo-preset-'
+PRESET_FIXED = {'label': '#FFFFFF', 'selected_fill': '#666666', 'selected_text': '#FFFFFF', 'field_text': '#FFFFFF'}
+PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'unselected_flag', 'selected_flag', 'playhead_head', 'playhead_stem')
+
+
+def preset_roles(ground):
+    """A preset's chrome ground ('#RRGGBB') -> its catalog roles: the chrome rule's lines and the picker's fixed roles."""
+    ch = {r: hx(c) for r, c in CL.windows95_chrome(unhex(ground)).items()}
+    # levels.py's LIGHT row takes the emboss's light copy as the recorded Hilight; the chrome rule's is the same
+    assert ch['emboss_hilight'] == ch['bevel_hilight'], ground
+    return {r: ch[r] if r in ch else PRESET_FIXED[r] for r in ROLES if r in ch or r in PRESET_FIXED}
+
+
+def preset_entries():
+    ps = json.load(open(PRESETS))['presets']
+    nums = [p['number'] for p in ps]
+    if any(not isinstance(n, int) or isinstance(n, bool) or n < 1 for n in nums) or len(nums) != len(set(nums)):
+        raise SystemExit(f'build: {PRESETS}: the preset numbers {nums} are not distinct whole numbers from 1')
+    out = []
+    for p in sorted(ps, key=lambda p: p['number']):
+        n, cols = p['number'], p['colours']
+        bad = sorted(set(cols) - {'chrome'} - set(PRESET_PROGRAM_KEYS))
+        if bad: raise SystemExit(f'build: Preset {n} names {bad}, neither the chrome nor a program key')
+        ground = cols['chrome']
+        roles = preset_roles(ground)
+        raw = {'chrome': ground} | PRESET_FIXED
+        e = {'key': f'{PRESET_PREFIX}{n}', 'name': f'Warptempo Preset {n}', 'family': 'warptempo',
+             'provenance': {'sources': [
+                 {'project': f'chosen, not imported: the architect\'s Preset {n} on the colour picker (architect 2026-10-04)',
+                  'file': os.path.relpath(PRESETS, REPO), 'preset': n, 'saved': p['saved'], 'keys': ['chrome'],
+                  'record': f'the chrome ground {ground}; the relief quartet, the field ground and the emboss\'s light '
+                            f'copy the picker\'s chrome rule over it (tools/palette/colour.py windows95_chrome: Windows '
+                            f'95\'s proportions, Hilight / 3DLight / Shadow the ground x 255 / 223 / 128 over 192 per '
+                            f'channel, half to even, capped; DkShadow black; the field ground and the emboss the Hilight)'},
+                 {'project': 'the colour picker\'s theme, the roles it shows fixed (2026-10-04)',
+                  'file': 'tools/palette/themes/picker.json', 'keys': list(PRESET_FIXED)}]},
+             'raw': raw, 'roles': roles, 'flag_rule': {'id': FLAG_RULE['warptempo']}}
+        e['display_tier'] = display_tier(e['roles'])
+        e['notes'] = [f'chosen by the architect on the colour picker, not imported from a desktop of the era: his '
+                      f'Preset {n}\'s chrome at its light level, exactly as the picker painted it (2026-10-04); its '
+                      f'canvas, ink and other elements are program keys (tools/theme_catalog/preset_keys.py)']
+        e['corroborated'] = 0
+        out.append(e)
+    return out
+
+
 def app_entry():
     k = render_h_constants()
     k['kTrimArrowGlyph'] = k['kRedesignLabel']   # highlight_text_ink(the ground): the label white on #303030
@@ -437,6 +509,11 @@ def checks(entries, k):
     assert display_tier(by['windows-standard']['roles']) == 'high-colour' and \
         display_tier({r: v for r, v in by['windows-standard']['roles'].items() if r != 'info_ground'}) == 'vga'
     assert by['warptempo']['roles'] == CHOSEN_ROLES and by['warptempo']['display_tier'] == 'high-colour'
+    # the preset road at the neutral ground #191919 is the chosen `warptempo` exactly (the picker's default chrome)
+    assert preset_roles('#191919') == CHOSEN_ROLES
+    for e in entries:
+        if e['key'].startswith(PRESET_PREFIX):
+            assert e['family'] == 'warptempo' and e['roles'] == preset_roles(e['raw']['chrome']), e['key']
     app = by['warptempo-2026-10-03']
     for n, v in app['raw'].items(): assert v == hx(k[n]), n
     assert [app['roles'][x] for x in ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',
@@ -453,17 +530,10 @@ def drop_duplicates(entries):
     return [e for e in entries if e['key'] not in DUPLICATES], dict(DUPLICATES)
 
 
-def main():
-    win, ros_only = windows_entries()
-    kde, kde_later = kde_entries()
-    entries = win + kde
-    cde, mono = cde_entries(); entries += cde
-    app, k = app_entry(); entries.append(app)
-    entries.append(chosen_entry())
-    entries, dups = drop_duplicates(entries)
-    entries.sort(key=lambda e: FAMILIES.index(e['family']))
-    checks(entries, k)
-    doc = {
+def document(entries, not_imported):
+    """The catalog document over the entries (in their written order) and the not-imported record: both roads' one
+    writer of everything else in the file."""
+    return {
         'what': 'The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, '
                 'no derivation). Every colour is a recorded byte with its provenance; where the source records only base '
                 'colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif), that toolkit\'s own rule ran '
@@ -472,8 +542,10 @@ def main():
                 'a role a source has no word for is absent and the app\'s own value applies. Bytes are #RRGGBB as the '
                 'source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family '
                 'that imports nothing is the program\'s own, "warptempo": the app\'s look of 2026-10-03 recorded off '
-                'render.h, and the architect\'s chosen default `warptempo`, chosen, not imported (its provenance is '
-                'his ruling).',
+                'render.h, the architect\'s chosen default `warptempo`, and his presets saved on the colour picker '
+                '(`warptempo-preset-<n>`, architect 2026-10-04: the preset\'s chrome ground through the picker\'s chrome '
+                'rule, the roles the picker shows fixed), chosen, not imported (their provenance is his ruling or his '
+                'preset).',
         'roles': list(ROLES),
         'rules': RULES,
         'display_tiers': {'what': 'each entry\'s display_tier: the smallest of these period colour sets holding every '
@@ -482,25 +554,62 @@ def main():
                           'windows-20': {'adds': list(WINDOWS_STATIC_EXTRAS),
                                          'what': 'the VGA 16 plus the four static colours Windows reserves in a '
                                                  '256-colour display\'s system palette, always solid there'}},
-        'not_imported': {
-            'cde_monochrome': {'files': [f'{m}.dp' for m in mono],
-                               'reason': 'X colour names for monochrome displays; dtsession refuses them on a colour display '
-                                         '(SrvFile_io.c ParsePaletteInfo)'},
-            'reactos': {'schemes': {n: REACTOS_ONLY[n][1] for n in ros_only},
-                        'reason': 'ReactOS hivedef.inf schemes no independent source records as Windows\' (architect '
-                                  '2026-10-03, late: the whole family is dropped)'},
-            'kde3_usability': {'schemes': list(KDE_USABILITY),
-                               'reason': 'usability schemes (architect 2026-10-03, late)'},
-            'kde3_not_kde35': {'schemes': kde_later,
-                               'reason': 'KDE colour schemes KDE 3.5 did not ship, added later by Trinity; the '
-                                         'catalog keeps what KDE 3.5 shipped (architect 2026-10-03, late)'},
-            'duplicates': {'keys': dups,
-                           'reason': 'role-identical to the named entry, which is kept (architect 2026-10-03, late)'}},
+        'not_imported': not_imported,
         'entries': [{x: v for x, v in e.items() if x != 'corroborated'} for e in entries],
     }
+
+
+def write(doc):
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     open(OUT, 'w').write(json.dumps(doc, indent=1, ensure_ascii=True) + '\n')
-    print(f'wrote {os.path.relpath(OUT, REPO)}: {len(entries)} entries')
+    print(f'wrote {os.path.relpath(OUT, REPO)}: {len(doc["entries"])} entries')
+
+
+def presets_only():
+    """The --presets-only road (the head): the committed catalog's other entries and not-imported record carried, the
+    preset entries and the header written anew."""
+    old = json.load(open(OUT))
+    carried = [e for e in old['entries'] if not e['key'].startswith(PRESET_PREFIX)]
+    by = {e['key']: e for e in carried}
+    app, k = app_entry()
+    for e in (app, chosen_entry()):
+        if {x: v for x, v in e.items() if x != 'corroborated'} != by[e['key']]:
+            raise SystemExit(f'build: {e["key"]} recomputed differs from the committed catalog; run the full build')
+    entries = carried + preset_entries()
+    entries.sort(key=lambda e: FAMILIES.index(e['family']))
+    checks(entries, k)
+    write(document(entries, old['not_imported']))
+    print(f'carried {len(carried)} entries from the committed catalog; presets: '
+          + ', '.join(e['key'] for e in entries if e['key'].startswith(PRESET_PREFIX)))
+
+
+def main():
+    if sys.argv[1:] == ['--presets-only']: return presets_only()
+    if sys.argv[1:]: raise SystemExit('usage: python3 tools/theme_catalog/build.py [--presets-only]')
+    win, ros_only = windows_entries()
+    kde, kde_later = kde_entries()
+    entries = win + kde
+    cde, mono = cde_entries(); entries += cde
+    app, k = app_entry(); entries.append(app)
+    entries.append(chosen_entry())
+    entries += preset_entries()
+    entries, dups = drop_duplicates(entries)
+    entries.sort(key=lambda e: FAMILIES.index(e['family']))
+    checks(entries, k)
+    write(document(entries, {
+        'cde_monochrome': {'files': [f'{m}.dp' for m in mono],
+                           'reason': 'X colour names for monochrome displays; dtsession refuses them on a colour display '
+                                     '(SrvFile_io.c ParsePaletteInfo)'},
+        'reactos': {'schemes': {n: REACTOS_ONLY[n][1] for n in ros_only},
+                    'reason': 'ReactOS hivedef.inf schemes no independent source records as Windows\' (architect '
+                              '2026-10-03, late: the whole family is dropped)'},
+        'kde3_usability': {'schemes': list(KDE_USABILITY),
+                           'reason': 'usability schemes (architect 2026-10-03, late)'},
+        'kde3_not_kde35': {'schemes': kde_later,
+                           'reason': 'KDE colour schemes KDE 3.5 did not ship, added later by Trinity; the '
+                                     'catalog keeps what KDE 3.5 shipped (architect 2026-10-03, late)'},
+        'duplicates': {'keys': dups,
+                       'reason': 'role-identical to the named entry, which is kept (architect 2026-10-03, late)'}}))
     for fam in FAMILIES:
         es = [e for e in entries if e['family'] == fam]
         srcs = set()

@@ -444,7 +444,9 @@ inline bool is_projects_repo(const std::string& v) {
 }
 
 // THE theme GRAMMAR — the ONE owner: a KEY OF THE GENERATED TABLE
-// (theme_table.h, the catalog's 98 entries), byte for byte. A key the table
+// (theme_table.h, every catalog entry, kGuiThemeCount of them; the
+// architect's colour-picker presets join as `warptempo-preset-<n>`,
+// 2026-10-04), byte for byte. A key the table
 // does not hold is the settings editor's refused commit (its card) and,
 // in a hand-edited config, the load's first-error hard fail (NO BACKSTOPS FOR
 // ADVERSARIAL USE: no nearest match, no fallback theme). find_theme answers

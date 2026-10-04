@@ -160,7 +160,7 @@ Everything lives in the app's EXTERNAL files dir, `/sdcard/Android/data/com.warp
 | `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <key> #RRGGBB <model> <a> <b> <c>` (the element's key; the view the pick was saved under: its model's word, `hsv`, `hsl` or `lch`, and its three numbers) |
 | `state.json` | the app, at every close of the panel, every switch of element or model, a commit at the presets pop-up's opening, a preset load, and the theme strip's opening and close | `{"active": "<key>", "model": "hsv", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {"<key>": [h, s, l], ...}, "lch": {"<key>": [L, C, h], ...}, "entry": {"<key>": N, ...}, "theme": "<theme key>"}`: the active element, the model the panel shows, every element's colour, its view in the map of the view's model (a map written only when some view is in it) and its history cursor (the N of "N of M"; absent with an empty history), and the open theme strip's theme (absent when none), rewritten whole. It is always THE LAST SAVED STATE: while the panel is open the active element is written as the panel's opening (OLD and its cursor), so an unsaved edit never reaches it |
 | `presets.json` | the app, at every save of a preset | `{"presets": [{"number": N, "saved": "<ISO-8601 local time>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {...}, "lch": {...}}, ...]}`: the presets oldest first, the numbers ascending (the name is "Preset N"), every colour with its view in its model's map (each map only when some view is in it, so an all-HSV preset is written as before the model switch), the maps together over the colours' keys, rewritten whole |
-| `tools/palette/picker/presets/presets.json` (the repository) | the planner, each session (`adb pull`) | the tablet's `presets.json` copied verbatim into git, so his presets outlive the device and every planner (the cloud's too) can read them; the source the preset-to-product helper will read; the tablet's `picks.txt` and `state.json` copied beside it, and the laptop check loads all three over each new export (Build, the laptop check) |
+| `tools/palette/picker/presets/presets.json` (the repository) | the planner, each session (`adb pull`) | the tablet's `presets.json` copied verbatim into git, so his presets outlive the device and every planner (the cloud's too) can read them; the source of the product's preset themes (`tools/theme_catalog/build.py` preset_entries, architect 2026-10-04) and of their device-config lines (`tools/theme_catalog/preset_keys.py`); the tablet's `picks.txt` and `state.json` copied beside it, and the laptop check loads all three over each new export (Build, the laptop check) |
 
 THE VIEW'S NUMBERS are, for HSV, h in degrees 0..360 and s, v in 0..1; for HSL h in degrees, s, l in 0..1; for LCh L
 0..100, C 0..160, h in degrees — written as the shortest decimal that reads back as the
@@ -215,8 +215,9 @@ statement:
   UN8x4_MUL_UN8 / UN8x4_MUL_UN8_ADD_UN8x4, line for line), so the picture is render.py's byte for byte at any colours.
 - `themes.json`: THE PRODUCT'S THEMES, `{"source": "...", "themes": [{"key": "windows-95-standard", "name": "Windows
   95 Standard", "ground": "#C0C0C0", "colours": [{"hex": "#C0C0C0", "names": ["ground", "Scrollbar", ...]}, ...]},
-  ...]}`: every entry of the product's theme table, LIGHT level, in the table's order (98 today), each with every
-  distinct colour the catalog records for it, the ground first (`render.py` product_themes is the authoritative
+  ...]}`: every entry of the product's theme table, LIGHT level, in the table's order (100 on 2026-10-04, the
+  architect's presets `warptempo-preset-<n>` last), each with every distinct colour the catalog records for it, the
+  ground first (`render.py` product_themes is the authoritative
   statement: the source is `docs/themes/catalog.json`, exactly what `tools/theme_catalog/gen_theme_table.py` generates
   `src/gui/theme_table.h` from, and the table is read too and must agree, so a stale table fails the export). A
   theme's colours are its catalog roles, every raw value its source records under the source's own key names, and
@@ -282,7 +283,8 @@ the switch Ink -> Unselected Flag and the switch back, and the switch Ink -> Pla
 render byte for byte); every element's history, cursor and view independent across switches and relaunches, and the element he
 left returned to; today's `picks.txt` (58 ink lines, 15 of the first build's form and 43 with a view, the last
 #A6B9DE) and `state.json` (`{"colours": {"ink": "#A6B9DE"}, "entry": {"ink": 58}}`) loading unchanged; THE PRESETS
-(the export's 98 themes; two saves named Preset 1 and Preset 2, the edited panel colour committed by the pop-up's
+(the export's themes, their count the data's, the program's own family last with its presets after `warptempo`; two
+saves named Preset 1 and Preset 2, the edited panel colour committed by the pop-up's
 opening; a load giving each changed element one pick and an unchanged one none, OLD the loaded colour, BACK returning;
 a relaunch keeping the presets and their views; a drag that scrolls and acts on nothing; a tap outside that changes
 nothing; a malformed `presets.json` refused; a three-element preset, saved before the flags round, loading and

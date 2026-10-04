@@ -166,8 +166,9 @@ FAMILY_HEAD = {
     'windows-plus': 'Windows 98 / Plus! desktop themes (the shipped .theme files)',
     'kde3': 'KDE 3.5 colour schemes, as Trinity\'s tdebase carries them (relief by KDE 3\'s own rule at each scheme\'s contrast)',
     'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',
-    'warptempo': 'Warptempo: the program\'s own (the app\'s look of the morning of 2026-10-03 recorded off render.h, and '
-                 '`warptempo`, the architect\'s pick of the colour loop and the app\'s default: chosen, not imported)',
+    'warptempo': 'Warptempo: the program\'s own (the app\'s look of the morning of 2026-10-03 recorded off render.h, '
+                 '`warptempo`, the architect\'s pick of the colour loop and the app\'s default, and his presets saved on '
+                 'the colour picker: chosen, not imported)',
 }
 
 
@@ -188,8 +189,10 @@ def write_md(cat, sizes):
          '[catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the '
          'relief at run time (KDE 3, CDE / Motif), that toolkit\'s rule ran once at import and is named. The one '
          'family that imports nothing is the program\'s own, Warptempo: the app\'s look of 2026-10-03 recorded off '
-         'render.h, and `warptempo`, the app\'s default, CHOSEN, NOT IMPORTED (the architect\'s pick of the colour '
-         'loop, 2026-10-03; its provenance is his ruling). The KEY is '
+         'render.h, `warptempo`, the app\'s default, CHOSEN, NOT IMPORTED (the architect\'s pick of the colour '
+         'loop, 2026-10-03; its provenance is his ruling), and each `warptempo-preset-<n>`, his Preset <n> saved on '
+         'the colour picker, chosen, not imported either (2026-10-04: the preset\'s chrome ground through the '
+         'picker\'s chrome rule, the roles the picker shows fixed). The KEY is '
          'what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet '
          'geometry: the tablet\'s 2304 x 1440 at gui_scale 275, every length derived from the app\'s own constants; '
          'cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well\'s bottom '

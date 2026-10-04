@@ -8,12 +8,20 @@ IMPORTS NOTHING is the program's own, `warptempo`, and it derives nothing either
 app's look of that morning off render.h's constants, and `warptempo` — THE APP'S DEFAULT THEME — is CHOSEN, NOT
 IMPORTED (architect 2026-10-03, the colour loop's mock sets: BA03's chrome, Windows 95 Standard darkened in proportion
 to a ground of relative luminance 0.010 under white text, and BM02's selection grey), its bytes his ruling as recorded
-(build.py `chosen_entry`), because no desktop of the era recorded the look he picked. A standalone utility: no
+(build.py `chosen_entry`), because no desktop of the era recorded the look he picked; and each
+`warptempo-preset-<n>` ("Warptempo Preset <n>") is THE ARCHITECT'S PRESET <n> ON THE COLOUR PICKER, chosen, not
+imported either (architect 2026-10-04; build.py `preset_entries`, from `tools/palette/picker/presets/presets.json`):
+the preset's chrome ground through the picker's chrome rule (`tools/palette/colour.py` `windows95_chrome`) applied
+here, at generation, and the roles the picker shows fixed, so the entry's light level is exactly the chrome the picker
+painted; the preset's other elements are program keys, whose device-config lines `preset_keys.py` prints. A
+standalone utility: no
 link path from any product target, no CMake, Python 3 + numpy (and `tools/palette/` for the crops).
 
 ```
 python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/theme_sources/ (git-ignored)
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
+python3 tools/theme_catalog/build.py --presets-only  # no sources: the preset entries anew, every other entry carried
+python3 tools/theme_catalog/preset_keys.py [n]     # prints each preset's device-config lines (writes nothing)
 python3 tools/theme_catalog/gen_theme_table.py     # -> src/gui/theme_table.h, the app's generated table (committed)
 python3 tools/theme_catalog/levels.py --verify     # the vectorized ground search against its exhaustive definition
 python3 tools/theme_catalog/crops.py [key ...]     # -> docs/themes/crops/<key>.png, docs/themes/CATALOG.md
@@ -102,9 +110,15 @@ Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts 
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
-| `warptempo` | `src/gui/render.h` at da0b1051 (git show); the architect's ruling of 2026-10-03 | `warptempo-2026-10-03`, the app's own look on the morning of 2026-10-03, so it stays selectable as bytes; `warptempo` (display name `warptempo`, all lowercase, his spelling), the app's default, CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (the app carries none), its dark level whatever levels.py's dark rule makes of them, untuned |
+| `warptempo` | `src/gui/render.h` at da0b1051 (git show); the architect's ruling of 2026-10-03 | `warptempo-2026-10-03`, the app's own look on the morning of 2026-10-03, so it stays selectable as bytes; `warptempo` (display name `warptempo`, all lowercase, his spelling), the app's default, CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (the app carries none), its dark level whatever levels.py's dark rule makes of them, untuned; `warptempo-preset-<n>` (display name `Warptempo Preset <n>`), one per preset the colour picker saved (`tools/palette/picker/presets/presets.json`, architect 2026-10-04), CHOSEN, NOT IMPORTED: the preset's chrome ground through the picker's chrome rule, the label, the selected pair #666666 / #FFFFFF and the field text as the picker shows them fixed, its dark level levels.py's dark rule's |
 
-Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 2 — 98 entries.
+Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 4 (with the two presets of
+2026-10-04) — 100 entries. A new copy of presets.json adds its new presets on the next run (a preset's number is never
+reused: the picker only appends). Where the pinned sources cannot be fetched (the cloud: the Trinity mirror lies
+outside its egress), `build.py --presets-only` writes the preset entries and the header anew and carries every other
+entry and the not-imported record from the committed catalog.json byte for byte, after recomputing the two entries
+that need no source and asserting they equal the carried ones; both roads write through one function, so the full
+run writes the same bytes.
 
 ## Not imported (architect 2026-10-03, late; catalog.json's `not_imported`, asserted by build.py)
 
@@ -137,8 +151,8 @@ Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, 
 | `title_active` | `ActiveTitle` | `activeBackground` | `set1` | absent |
 | `title_inactive` | `InactiveTitle` | `inactiveBackground` | `set2` | absent |
 
-The `warptempo` column is the recorded entry's; the chosen `warptempo` entry maps nothing, its roles being the ruled
-bytes under the role names themselves. A `kde3:` or `motif:` value is computed by that toolkit's rule at import (`provenance.rule.computed`); every other
+The `warptempo` column is the recorded entry's; the chosen `warptempo` entry and the preset entries map nothing,
+their roles being the ruled or the picker's bytes under the role names themselves. A `kde3:` or `motif:` value is computed by that toolkit's rule at import (`provenance.rule.computed`); every other
 value is a raw key. KDE 3's relief comes from the scheme's `background` (its `buttonBackground` is recorded raw: the
 app has one ground). CDE's colour sets (Motif `ColorObj.c`'s resource defaults, dtsession `SrvPalette.c`, dtwm
 `WmResource.c` / `Dtwm.defs`): 1 the active window frame, 2 the inactive frame, 3 and 7 workspace backdrops, 4 text
@@ -193,4 +207,4 @@ selected label, the outline still DkShadow; architect 2026-10-03, the colour loo
 INVALID, DISABLED (the ground, the label embossed, no stem) and unselected; the playhead head outlined in the label; the disabled menu word
 and buttons engraved over `emboss_hilight`; the trim arrow in the label (`trim_arrow`). The waveform, the flags' face
 and label, the invalid pair and the playhead are the program's colours (above), the icons' fixed inks icons.cpp's.
-98 crops, 5.47 MB. Its head states which roles come from the entry and which are the program's.
+100 crops, 5.58 MB. Its head states which roles come from the entry and which are the program's.

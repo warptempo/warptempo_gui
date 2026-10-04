@@ -439,7 +439,8 @@ rasterizing on the device (`render.py`'s export section is the authoritative sta
   `tools/theme_catalog/gen_theme_table.py` generates `src/gui/theme_table.h` from, in its order — at its LIGHT level,
   with every distinct colour the catalog records for it (its roles, its source's raw values, its toolkit's computed
   shades) and the names recording each. The generated table is read too and must list the same keys, names and light
-  grounds in the same order, so a stale table fails the export ("regenerate it"). 98 themes, 6 to 34 colours each.
+  grounds in the same order, so a stale table fails the export ("regenerate it"). 100 themes on 2026-10-04 (the
+  architect's colour-picker presets join the program's own family), 6 to 34 colours each.
 - THE CHECKS: the record recomposed by cairo's arithmetic (`colour.over_coverage`, pixman's, cited there) equals the
   render byte for byte; the written files read back equal it again; and at every colour set of
   `picker_check_sets` — each element moved (every other element to a probe colour of its own, seven probes), the

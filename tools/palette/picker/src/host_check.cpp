@@ -1024,9 +1024,16 @@ int main(int argc, char** argv) {
         const int n_themes = int(ex.themes.size());
         size_t cmin = 1000, cmax = 0;
         for (const Theme& t : ex.themes) { cmin = std::min(cmin, t.colours.size()); cmax = std::max(cmax, t.colours.size()); }
-        check(n_themes == 98 && ex.themes[0].key == "windows-brick" && theme_of(ex, "windows-95-standard") >= 0 &&
-                  theme_of(ex, "warptempo") == n_themes - 1,
-              "themes.json lists the product's 98 themes in the table's order (" + std::to_string(cmin) + ".." +
+        // the count is the data's (the export checks themes.json against theme_table.h's kGuiThemeCount); the
+        // program's own family closes the table, the architect's colour-picker presets (`warptempo-preset-<n>`,
+        // 2026-10-04) after `warptempo`
+        const int wt = theme_of(ex, "warptempo");
+        bool wt_tail = wt > 0 && theme_of(ex, "warptempo-2026-10-03") == wt - 1;
+        for (int t = wt + 1; t < n_themes; ++t)
+            wt_tail = wt_tail && ex.themes[size_t(t)].key.rfind("warptempo-preset-", 0) == 0;
+        check(n_themes > 0 && ex.themes[0].key == "windows-brick" && theme_of(ex, "windows-95-standard") >= 0 && wt_tail,
+              "themes.json lists the product's " + std::to_string(n_themes) + " themes in the table's order, the "
+                  "program's own family last, its presets after warptempo (" + std::to_string(cmin) + ".." +
                   std::to_string(cmax) + " colours each)");
 
         Picker p = launch();

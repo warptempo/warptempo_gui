@@ -1,6 +1,6 @@
 # The theme catalog
 
-Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, imported only"): its colours are the bytes its source records, each with its provenance in [catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the relief at run time (KDE 3, CDE / Motif), that toolkit's rule ran once at import and is named. The one family that imports nothing is the program's own, Warptempo: the app's look of 2026-10-03 recorded off render.h, and `warptempo`, the app's default, CHOSEN, NOT IMPORTED (the architect's pick of the colour loop, 2026-10-03; its provenance is his ruling). The KEY is what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet geometry: the tablet's 2304 x 1440 at gui_scale 275, every length derived from the app's own constants; cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well's bottom lines and the bottom row, transparent between them, at the theme's LIGHT level (the app's `theme_level`; dark is the generated table's, tools/theme_catalog/levels.py). The chrome is the theme's; the waveform pane, the flags and the playhead are the program's own elements in the app's default colours (architect 2026-10-03): the well keeps the app's two-line sunken edge (the theme's Shadow and DkShadow above, its 3DLight and Hilight below) round the grey waveform on black; the flags are the flat Acid flag, the face the app's slate violet #666699 with its recorded white label and a one-px outline in the theme's DkShadow, the stem leaving the face across the bottom outline, shown left to right editing (the in-place editor: the selected face under a black frame, its text in the selected pair), selected (the brighter face #CCCCFF under a black label, the stem with it), invalid (#993333, white label), disabled (the ground, the label embossed) and unselected; the playhead's #8B8B8B head carries a one-px outline in the theme's label over its #FCFCFC stem; disabled words and glyphs are Windows' emboss; the ruler label and the trim arrow are the theme's label, the ruler ticks its Shadow. The DISPLAY TIER is the smallest period colour set holding every colour the entry's roles use: vga (the 16 VGA colours), windows-20 (those and Windows' four static extras #C0DCC0, #A6CAF0, #FFFBF0, #A0A0A4, always solid on a 256-colour display), else high-colour. Not imported: catalog.json's `not_imported`. Built by `tools/theme_catalog/` (fetch.py, build.py, crops.py).
+Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, imported only"): its colours are the bytes its source records, each with its provenance in [catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the relief at run time (KDE 3, CDE / Motif), that toolkit's rule ran once at import and is named. The one family that imports nothing is the program's own, Warptempo: the app's look of 2026-10-03 recorded off render.h, `warptempo`, the app's default, CHOSEN, NOT IMPORTED (the architect's pick of the colour loop, 2026-10-03; its provenance is his ruling), and each `warptempo-preset-<n>`, his Preset <n> saved on the colour picker, chosen, not imported either (2026-10-04: the preset's chrome ground through the picker's chrome rule, the roles the picker shows fixed). The KEY is what to type in Settings to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet geometry: the tablet's 2304 x 1440 at gui_scale 275, every length derived from the app's own constants; cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well's bottom lines and the bottom row, transparent between them, at the theme's LIGHT level (the app's `theme_level`; dark is the generated table's, tools/theme_catalog/levels.py). The chrome is the theme's; the waveform pane, the flags and the playhead are the program's own elements in the app's default colours (architect 2026-10-03): the well keeps the app's two-line sunken edge (the theme's Shadow and DkShadow above, its 3DLight and Hilight below) round the grey waveform on black; the flags are the flat Acid flag, the face the app's slate violet #666699 with its recorded white label and a one-px outline in the theme's DkShadow, the stem leaving the face across the bottom outline, shown left to right editing (the in-place editor: the selected face under a black frame, its text in the selected pair), selected (the brighter face #CCCCFF under a black label, the stem with it), invalid (#993333, white label), disabled (the ground, the label embossed) and unselected; the playhead's #8B8B8B head carries a one-px outline in the theme's label over its #FCFCFC stem; disabled words and glyphs are Windows' emboss; the ruler label and the trim arrow are the theme's label, the ruler ticks its Shadow. The DISPLAY TIER is the smallest period colour set holding every colour the entry's roles use: vga (the 16 VGA colours), windows-20 (those and Windows' four static extras #C0DCC0, #A6CAF0, #FFFBF0, #A0A0A4, always solid on a 256-colour display), else high-colour. Not imported: catalog.json's `not_imported`. Built by `tools/theme_catalog/` (fetch.py, build.py, crops.py).
 
 ## Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes saved as .theme files; Windows 95 Standard hand-recorded)
 
@@ -786,9 +786,9 @@ Display tier: high-colour
 
 ![cde-summer](crops/cde-summer.png)
 
-## Warptempo: the program's own (the app's look of the morning of 2026-10-03 recorded off render.h, and `warptempo`, the architect's pick of the colour loop and the app's default: chosen, not imported)
+## Warptempo: the program's own (the app's look of the morning of 2026-10-03 recorded off render.h, `warptempo`, the architect's pick of the colour loop and the app's default, and his presets saved on the colour picker: chosen, not imported)
 
-2 entries, darkest ground first.
+4 entries, darkest ground first.
 
 ### `warptempo`
 
@@ -805,4 +805,20 @@ Display tier: high-colour
 Display tier: high-colour
 
 ![warptempo-2026-10-03](crops/warptempo-2026-10-03.png)
+
+### `warptempo-preset-2`
+
+**Warptempo Preset 2** · ground #41525C · chosen, not imported: the architect's Preset 2 on the colour picker (architect 2026-10-04) `tools/palette/picker/presets/presets.json` + 1 more
+
+Display tier: high-colour
+
+![warptempo-preset-2](crops/warptempo-preset-2.png)
+
+### `warptempo-preset-1`
+
+**Warptempo Preset 1** · ground #4C666D · chosen, not imported: the architect's Preset 1 on the colour picker (architect 2026-10-04) `tools/palette/picker/presets/presets.json` + 1 more
+
+Display tier: high-colour
+
+![warptempo-preset-1](crops/warptempo-preset-1.png)
 

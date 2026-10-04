@@ -17,6 +17,17 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
 - The product is untouched (tablet APK 8cd49da7). Its defaults (selected flag #CCCCFF, black selected label) stay until
   the preset-to-product helper overrides them; he accepts the transitional state.
 
+## THE RUN'S LOG (the cloud planner, 2026-10-04; newest last)
+- ARC 1 LANDED (de053b1): Playhead Head + Playhead Stem, the scene `playhead` (no flag selected, the playhead at
+  x 293); no picker app code; the old scenes export byte-identical; the laptop check now also runs the repository's
+  copy of his tablet files against the export.
+- ARC 2 LANDED (the commit after de053b1): `warptempo-preset-1` / `-2` in the catalog (build.py `--presets-only`:
+  the cloud cannot reach the theme sources, so the full build.py run is REQUEST 1's to confirm), the table at 100
+  entries, `tools/theme_catalog/preset_keys.py [n]` prints each preset's device lines (writes nothing). The product
+  builds GIT=OFF here. Presets carry only chrome / canvas / ink so far. NOTE FOR ARC 3: build.py hard-fails on a
+  preset key it does not know, so the LABEL element must extend PRESET_PROGRAM_KEYS / the fixed roles with it.
+- REQUEST 1 (arcs 1 + 2 batched) is in local_queue.md. While it waits: arcs 3-5 here, then REQUEST 2.
+
 ## Ruled 2026-10-04 (the architect agreed with all three recommendations)
 1. THE ROADMAP ORDER (dark themes first): (1) the PLAYHEAD element (head + stem; always on screen; a scene with the
    playhead on), (2) the PRESET-TO-PRODUCT HELPER (a preset's chrome -> a program-own theme entry `warptempo-<preset>`

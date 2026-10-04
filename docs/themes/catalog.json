@@ -1,5 +1,5 @@
 {
- "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family that imports nothing is the program's own, \"warptempo\": the app's look of 2026-10-03 recorded off render.h, and the architect's chosen default `warptempo`, chosen, not imported (its provenance is his ruling).",
+ "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family that imports nothing is the program's own, \"warptempo\": the app's look of 2026-10-03 recorded off render.h, the architect's chosen default `warptempo`, and his presets saved on the colour picker (`warptempo-preset-<n>`, architect 2026-10-04: the preset's chrome ground through the picker's chrome rule, the roles the picker shows fixed), chosen, not imported (their provenance is his ruling or his preset).",
  "roles": [
   "ground",
   "label",
@@ -8375,6 +8375,116 @@
    "display_tier": "high-colour",
    "notes": [
     "chosen by the architect on the colour loop, not imported from a desktop of the era; the app's default theme at its light level (2026-10-03)"
+   ]
+  },
+  {
+   "key": "warptempo-preset-1",
+   "name": "Warptempo Preset 1",
+   "family": "warptempo",
+   "provenance": {
+    "sources": [
+     {
+      "project": "chosen, not imported: the architect's Preset 1 on the colour picker (architect 2026-10-04)",
+      "file": "tools/palette/picker/presets/presets.json",
+      "preset": 1,
+      "saved": "2026-10-04T08:30:28-04:00",
+      "keys": [
+       "chrome"
+      ],
+      "record": "the chrome ground #4C666D; the relief quartet, the field ground and the emboss's light copy the picker's chrome rule over it (tools/palette/colour.py windows95_chrome: Windows 95's proportions, Hilight / 3DLight / Shadow the ground x 255 / 223 / 128 over 192 per channel, half to even, capped; DkShadow black; the field ground and the emboss the Hilight)"
+     },
+     {
+      "project": "the colour picker's theme, the roles it shows fixed (2026-10-04)",
+      "file": "tools/palette/themes/picker.json",
+      "keys": [
+       "label",
+       "selected_fill",
+       "selected_text",
+       "field_text"
+      ]
+     }
+    ]
+   },
+   "raw": {
+    "chrome": "#4C666D",
+    "label": "#FFFFFF",
+    "selected_fill": "#666666",
+    "selected_text": "#FFFFFF",
+    "field_text": "#FFFFFF"
+   },
+   "roles": {
+    "ground": "#4C666D",
+    "label": "#FFFFFF",
+    "bevel_hilight": "#658791",
+    "bevel_light": "#58767F",
+    "bevel_shadow": "#334449",
+    "bevel_dkshadow": "#000000",
+    "selected_fill": "#666666",
+    "selected_text": "#FFFFFF",
+    "field_ground": "#658791",
+    "field_text": "#FFFFFF"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
+   "display_tier": "high-colour",
+   "notes": [
+    "chosen by the architect on the colour picker, not imported from a desktop of the era: his Preset 1's chrome at its light level, exactly as the picker painted it (2026-10-04); its canvas, ink and other elements are program keys (tools/theme_catalog/preset_keys.py)"
+   ]
+  },
+  {
+   "key": "warptempo-preset-2",
+   "name": "Warptempo Preset 2",
+   "family": "warptempo",
+   "provenance": {
+    "sources": [
+     {
+      "project": "chosen, not imported: the architect's Preset 2 on the colour picker (architect 2026-10-04)",
+      "file": "tools/palette/picker/presets/presets.json",
+      "preset": 2,
+      "saved": "2026-10-04T08:34:19-04:00",
+      "keys": [
+       "chrome"
+      ],
+      "record": "the chrome ground #41525C; the relief quartet, the field ground and the emboss's light copy the picker's chrome rule over it (tools/palette/colour.py windows95_chrome: Windows 95's proportions, Hilight / 3DLight / Shadow the ground x 255 / 223 / 128 over 192 per channel, half to even, capped; DkShadow black; the field ground and the emboss the Hilight)"
+     },
+     {
+      "project": "the colour picker's theme, the roles it shows fixed (2026-10-04)",
+      "file": "tools/palette/themes/picker.json",
+      "keys": [
+       "label",
+       "selected_fill",
+       "selected_text",
+       "field_text"
+      ]
+     }
+    ]
+   },
+   "raw": {
+    "chrome": "#41525C",
+    "label": "#FFFFFF",
+    "selected_fill": "#666666",
+    "selected_text": "#FFFFFF",
+    "field_text": "#FFFFFF"
+   },
+   "roles": {
+    "ground": "#41525C",
+    "label": "#FFFFFF",
+    "bevel_hilight": "#566D7A",
+    "bevel_light": "#4B5F6B",
+    "bevel_shadow": "#2B373D",
+    "bevel_dkshadow": "#000000",
+    "selected_fill": "#666666",
+    "selected_text": "#FFFFFF",
+    "field_ground": "#566D7A",
+    "field_text": "#FFFFFF"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
+   "display_tier": "high-colour",
+   "notes": [
+    "chosen by the architect on the colour picker, not imported from a desktop of the era: his Preset 2's chrome at its light level, exactly as the picker painted it (2026-10-04); its canvas, ink and other elements are program keys (tools/theme_catalog/preset_keys.py)"
    ]
   }
  ]
