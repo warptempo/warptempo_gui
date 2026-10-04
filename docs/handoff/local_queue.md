@@ -100,3 +100,5 @@ waveform_canvas=#002736
 waveform_outline=#708C97
 ```
 Wakes used: 1 of 8.
+THE ARCHITECT ON THE GLASS (2026-10-04, after DONE 1): the picker's playhead WORKS — the triangle's fill (Playhead
+Head) and the stem (Playhead Stem). The triangle's BORDER has no picker element: "ok for now, not a priority".
