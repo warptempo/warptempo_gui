@@ -17,18 +17,18 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
 - The product is untouched (tablet APK 8cd49da7). Its defaults (selected flag #CCCCFF, black selected label) stay until
   the preset-to-product helper overrides them; he accepts the transitional state.
 
-## Open decisions (asked 2026-10-04, unanswered — put them in "Decisions for you")
-1. The ROADMAP ORDER (dark themes first): (1) the PLAYHEAD element (head + stem; always on screen; a scene with the
-   playhead on), (2) the PRESET-TO-PRODUCT HELPER (his go already given: a preset's chrome -> a program-own theme entry
-   `warptempo-<preset>` in `tools/theme_catalog/` with the rule applied at generation, so the app derives nothing;
-   canvas / ink / flags / playhead -> the twelve device colour keys, `src/gui/device_config.h`'s head; regenerate
-   `theme_table.h`; a product rebuild), (3) a pickable LABEL element (text), (4) the OPEN FLAG (selected fill + text),
-   (5) the INVALID (red) flags, (6) the clock's own colour (an idea he asked to carry forward for discussion), icon
-   accents later. The planner recommended this order.
-2. TEXT: a pickable Label element (recommended; the product imports each theme's recorded text colour and has no
-   contrast rule, so a free element is the truthful form; adopting #000000 from a theme strip makes a light variant)
-   vs a black/white switch vs automatic contrast.
-3. Go on step 1 (the playhead)?
+## Ruled 2026-10-04 (the architect agreed with all three recommendations)
+1. THE ROADMAP ORDER (dark themes first): (1) the PLAYHEAD element (head + stem; always on screen; a scene with the
+   playhead on), (2) the PRESET-TO-PRODUCT HELPER (a preset's chrome -> a program-own theme entry `warptempo-<preset>`
+   in `tools/theme_catalog/` with the rule applied at generation, so the app derives nothing; canvas / ink / flags /
+   playhead -> the twelve device colour keys, `src/gui/device_config.h`'s head; regenerate `theme_table.h`; a product
+   rebuild), (3) a pickable LABEL element (text), (4) the OPEN FLAG (selected fill + text), (5) the INVALID (red)
+   flags, (6) the clock's own colour (an idea he asked to carry forward for discussion), icon accents later.
+2. TEXT is a pickable LABEL element (not a black/white switch, not automatic contrast): the product imports each
+   theme's recorded text colour and has no contrast rule; adopting #000000 from a theme strip makes a light variant.
+3. GO on step 1, the PLAYHEAD: brief it first (one Opus-high coder; the picker's machinery: a new element pair + a
+   scene in `tools/palette/themes/picker.json`, a new export; app code only if truly missing). Then a REQUEST in
+   `docs/handoff/local_queue.md` to build, export, install (on his word) and verify.
 
 ## Later (his words, not decisions)
 - The picker's NAVIGATION rework (history vs presets; editing a preset). He asked that his thinking-aloud about it NOT
