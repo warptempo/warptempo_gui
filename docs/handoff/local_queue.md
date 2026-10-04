@@ -15,6 +15,13 @@ touches THIS FILE. So:
 - Standing local acts (no request needed): at each picker install, copy the tablet's `presets.json`, `picks.txt`,
   `state.json` into `tools/palette/picker/presets/` and commit them.
 
+## The local session's budget (architect 2026-10-04: the weekly meter has ~1-2 % left)
+- The watch's loop is free while waiting; only a WAKE costs (one turn that re-reads the session's context). Start the
+  local session fresh (/clear), keep tool output small (tail builds; never cat big files), and answer one REQUEST per
+  wake.
+- AT MOST 6 WAKES in a run. After the 6th, or if the session's context passes ~80k tokens, append
+  `## LOCAL PAUSED (<time>): needs a fresh local session` here, commit, push, and stop re-arming the watch.
+
 ## Local-only acts (what a REQUEST may ask for)
 - The picker APK: `bash tools/palette/picker/build_picker.sh`; the export `python3 tools/palette/render.py
   tools/palette/themes/picker.json --export tools/palette/out/picker`; install + push the whole export folder +

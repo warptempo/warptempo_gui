@@ -30,6 +30,35 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
    scene in `tools/palette/themes/picker.json`, a new export; app code only if truly missing). Then a REQUEST in
    `docs/handoff/local_queue.md` to build, export, install (on his word) and verify.
 
+## THE AUTONOMOUS RUN (architect 2026-10-04: about EIGHT HOURS unattended; neither meter may die)
+He leaves the run alone for ~8 hours. Budgets: the cloud's remaining credit (~$239; spend at most ~$50 this run) and
+the LOCAL weekly meter (~1-2 % left; the local session must stay tiny). Work in ARCS, each ending at a STOPPING POINT.
+
+AN ARC = one brief -> ONE Opus-high coder round (plus at most one fix-up message to the same coder) -> your review ->
+`build_picker.sh --check` (or the product build) -> commit + push -> ONE batched REQUEST in local_queue.md (build,
+export, install, verify, read back) -> wait for DONE (poll origin/main with a background shell loop: free while
+waiting) -> update THIS FILE's state (what landed, what is next) and commit. That commit is the STOPPING POINT: a
+fresh session could resume from this file alone.
+
+THE RUN'S ARCS, in order (all ruled above; stop after the last, or earlier at any hard stop):
+1. The PLAYHEAD element (head + stem). Installing the picker while he is away is allowed (his files are kept).
+2. The PRESET-TO-PRODUCT HELPER: themes `warptempo-preset-<n>` for his saved presets (and the program keys printed
+   for each), the table regenerated, the product built (cloud: GIT=OFF; the local REQUEST builds both devices and
+   installs the APK). NEVER change his configured theme or colour keys on either device: the new themes only become
+   selectable in Settings; he switches himself.
+3. The LABEL element (text), if 1 and 2 are done and the budget below holds.
+
+HARD STOPS (write the state into this file, commit, and stop working):
+- Any ruling needed from him (a design choice the rulings above do not cover): put it in "Decisions for you" here,
+  skip to the next arc only if it does not depend on it, else stop.
+- More than 4 coder rounds, or ~$50 of cloud credit by your best estimate (if you cannot see the meter, count: an arc
+  is roughly $5-15), or 8 hours.
+- A REQUEST unanswered for 90 minutes (the laptop may be off): stop.
+No Fable, no codex, no mocks for judgment (no one is there to judge), no product scope beyond the arcs.
+
+KEEP YOUR OWN SESSION SHORT: every turn re-reads the whole context. Have coders return compact reports; read diffs
+by stat and targeted hunks; never paste big files into your context.
+
 ## Later (his words, not decisions)
 - The picker's NAVIGATION rework (history vs presets; editing a preset). He asked that his thinking-aloud about it NOT
   be recorded as decisions: ask him when the time comes.
