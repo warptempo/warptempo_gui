@@ -9,6 +9,9 @@
 #   unselected_flag -> flag_face with flag_label, selected_flag -> flag_face_selected with flag_label_selected (each
 #   label the white the picker shows fixed); playhead_head and playhead_stem -> the same-named keys.
 # A key whose element the preset does not record is not printed (the outline needs both the ink and the canvas).
+# The preset's chrome and its LABEL (the picker's Label element, architect 2026-10-04) are theme roles, not device
+# keys: build.py writes them into the preset's catalog entry (the label and the field text), so `theme=` carries them
+# and nothing is printed for the label.
 # With no argument every preset is printed, each block led by a `# Preset <n> (saved ...)` line and the blocks a blank
 # line apart -- the device config admits neither (device_config.h: no blank or comment lines), so paste a block's key
 # lines only; with a preset number, that preset's lines alone, nothing else (pipeable).

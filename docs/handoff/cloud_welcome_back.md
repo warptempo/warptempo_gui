@@ -26,7 +26,23 @@ COLOUR PICKER, a design tool beside the product, and carrying its picks into the
   entries, `tools/theme_catalog/preset_keys.py [n]` prints each preset's device lines (writes nothing). The product
   builds GIT=OFF here. Presets carry only chrome / canvas / ink so far. NOTE FOR ARC 3: build.py hard-fails on a
   preset key it does not know, so the LABEL element must extend PRESET_PROGRAM_KEYS / the fixed roles with it.
-- REQUEST 1 (arcs 1 + 2 batched) is in local_queue.md. While it waits: arcs 3-5 here, then REQUEST 2.
+- REQUEST 1 (arcs 1 + 2 batched) -> DONE 1 (eb8c69c, 1 of 8 local wakes): all built, checked, installed; the full
+  build.py reproduced the presets-only bytes; his tablet files unchanged; his product config untouched (theme
+  kde3-solaris). The playhead on the glass is his to see: choosing an element with an empty history commits its
+  colour as a first pick, so the laptop did not touch it. Next: arcs 3-5 here, then REQUEST 2.
+- ARC 3 LANDED (the Label commit): the element Label (role `label`, #FFFFFF) over a new scene `label` (the waveform
+  scene with row 8's state line on; stems, flags and playhead off so the fixed-white flag labels do not sit beside a
+  moving Label); every chrome word, the clock, the state line and the playhead head's outline follow it; the flag
+  labels and the selected text stay fixed white. The helper takes a preset's label into the theme's label and field
+  text. NOTE FOR ARC 4: the chooser's 8 entries end at y 716, the slider rows start at 720; a NINTH element overruns
+  the H row (the check theme already shows it), so arc 4 must fit the chooser (hide a readout the chooser covers, as
+  the model list does, or whatever the picker's own style gives).
+
+## Decisions for you (the cloud planner, 2026-10-04)
+1. THE FIELD TEXT FOLLOWS THE LABEL (applied in arc 3, easy to undo). The picker's chrome rule makes the field ground
+   the Hilight, a ground-family colour, so the field's text is the label's case: a light variant made by adopting
+   #000000 as the Label gets black text in its fields too. The alternative is a separate Field Text element (one more
+   knob nobody would set apart from the Label). Recommended: keep as applied.
 
 ## Ruled 2026-10-04 (the architect agreed with all three recommendations)
 1. THE ROADMAP ORDER (dark themes first): (1) the PLAYHEAD element (head + stem; always on screen; a scene with the
