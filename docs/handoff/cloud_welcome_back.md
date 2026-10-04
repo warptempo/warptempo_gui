@@ -36,7 +36,7 @@ the product.
 - OUTSTANDING: the picker's NAVIGATION rework (history vs presets; editing a preset) — ask him when its time comes;
   his thinking-aloud about it is not a decision.
 
-## NEXT ARC: THEME FILES (his rulings 2026-10-04 evening; brief on his plain go after the three decisions below)
+## NEXT ARC: THEME FILES (his rulings 2026-10-04 evening; brief on his plain go after the decisions below)
 RULED:
 - A THEME FILE HOLDS EVERY COLOUR THE GUI PAINTS: the chrome and its relief, the clock panel's own colours, the
   cards' own colours, the selected and field pairs, and the twelve program colours (canvas, ink, outline, flags,
