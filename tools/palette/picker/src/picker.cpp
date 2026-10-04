@@ -7,12 +7,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <map>
 
 using namespace panel;
 
 namespace {
 
 constexpr Rgb kGround{0x19, 0x19, 0x19}, kLabel{0xFF, 0xFF, 0xFF}, kField{0x21, 0x21, 0x21}, kEdge{0, 0, 0};
+constexpr Rgb kDim{0x55, 0x55, 0x55};   // a disabled button's glyph: a flat grey, no alpha
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kNumPx = 38, kWordPx = 36, kHexPx = 84, kCornerPx = 32;
 const char* const kRowNames[6] = {"H", "S", "V", "R", "G", "B"};
@@ -124,6 +126,11 @@ Rgb row_colour(const ColourState& cs, int row, double f) {
     }
 }
 
+// the history's count as the panel and the corner label show it: "N of M", "0 of 0" with no history
+std::string count_of(const History& h) {
+    return std::to_string(h.cursor + 1) + " of " + std::to_string(h.picks.size());
+}
+
 bool in(double x, double y, double x0, double y0, double x1, double y1) { return x >= x0 && x < x1 && y >= y0 && y < y1; }
 bool between(double v, double a, double b) { return v >= a && v < b; }
 
@@ -168,8 +175,39 @@ void ColourState::set_hsv(double hh, double ss, double vv) {
     rgb = rgb_of_hsv(h, s, v);
 }
 
+// ---------------------------------------------------------------- the launch state
+bool picker_load(const std::string& data_dir, Scene& scene, History& hist, std::string& note, std::string& err) {
+    std::map<std::string, Rgb> colours;
+    std::map<std::string, int> entries;
+    if (!state_load(data_dir + "/state.json", colours, entries, err)) return false;
+    Layer& act = scene.layers[scene.active];
+    hist = History{};
+    if (!picks_load(data_dir + "/picks.txt", act.name, hist.picks, err)) return false;
+    const auto c = colours.find(act.name);
+    if (c != colours.end()) act.colour = c->second;   // the last close's, else the manifest's
+    scene_derive(scene);
+    note = c != colours.end() ? "state.json's colour" : "the manifest's colour";
+    const int m = int(hist.picks.size());
+    const auto e = entries.find(act.name);
+    if (m == 0) {
+        note += ", no history";
+        return true;
+    }
+    if (e != entries.end() && e->second <= m && hist.picks[size_t(e->second - 1)] == act.colour) {
+        hist.cursor = e->second - 1;
+        note += ", state.json's entry";
+        return true;
+    }
+    hist.cursor = m - 1;
+    for (int k = m - 1; k >= 0; --k)
+        if (hist.picks[size_t(k)] == act.colour) { hist.cursor = k; break; }
+    note += hist.picks[size_t(hist.cursor)] == act.colour ? ", the newest entry equal to it" : ", the end (no entry equals it)";
+    return true;
+}
+
 // ---------------------------------------------------------------- Picker
-Picker::Picker(Scene scene, std::string data_dir) : scene_(std::move(scene)), data_dir_(std::move(data_dir)) {
+Picker::Picker(Scene scene, std::string data_dir, History hist)
+    : scene_(std::move(scene)), data_dir_(std::move(data_dir)), hist_(std::move(hist)) {
     cs_.set_rgb(scene_.layers[scene_.active].colour);
     old_ = cs_.rgb;
     picture_.resize(size_t(scene_.width) * scene_.height);
@@ -199,6 +237,26 @@ void Picker::apply_colour() {
     dirty_ = true;
 }
 
+bool Picker::edited() const { return hist_.cursor < 0 || hist_.picks[size_t(hist_.cursor)] != cs_.rgb; }
+
+bool Picker::back_enabled() const { return hist_.cursor > 0; }
+
+bool Picker::forward_enabled() const { return hist_.cursor + 1 < int(hist_.picks.size()); }
+
+void Picker::write_state() const {
+    std::string js = "{\n \"colours\": {\n";
+    for (size_t i = 0; i < scene_.layers.size(); ++i)
+        js += "  \"" + scene_.layers[i].name + "\": \"" + hex_of(scene_.layers[i].colour) + "\"" +
+              (i + 1 < scene_.layers.size() ? ",\n" : "\n");
+    js += " },\n \"entry\": {";
+    if (hist_.cursor >= 0) js += "\"" + scene_.layers[scene_.active].name + "\": " + std::to_string(hist_.cursor + 1);
+    js += "}\n}\n";
+    const std::string tmp = data_dir_ + "/state.json.part", dst = data_dir_ + "/state.json";
+    FILE* f = std::fopen(tmp.c_str(), "w");
+    if (!f || std::fputs(js.c_str(), f) < 0 || std::fclose(f) != 0 || std::rename(tmp.c_str(), dst.c_str()) != 0)
+        plog("picker: cannot write %s", dst.c_str());
+}
+
 void Picker::commit() {
     const Layer& a = scene_.layers[scene_.active];
     const std::string hex = hex_of(a.colour);
@@ -209,24 +267,36 @@ void Picker::commit() {
     } else {
         plog("picker: cannot append to %s/picks.txt", data_dir_.c_str());
     }
-    std::string js = "{\n";
-    for (size_t i = 0; i < scene_.layers.size(); ++i)
-        js += " \"" + scene_.layers[i].name + "\": \"" + hex_of(scene_.layers[i].colour) + "\"" +
-              (i + 1 < scene_.layers.size() ? ",\n" : "\n");
-    js += "}\n";
-    const std::string tmp = data_dir_ + "/state.json.part", dst = data_dir_ + "/state.json";
-    FILE* f = std::fopen(tmp.c_str(), "w");
-    if (!f || std::fputs(js.c_str(), f) < 0 || std::fclose(f) != 0 || std::rename(tmp.c_str(), dst.c_str()) != 0)
-        plog("picker: cannot write %s", dst.c_str());
+    hist_.picks.push_back(a.colour);
+    hist_.cursor = int(hist_.picks.size()) - 1;
+    write_state();
     plog("picker: commit %s %s", a.name.c_str(), hex.c_str());
 }
 
-void Picker::commit_if_open() {
+void Picker::close() {
+    open_ = false;
+    target_ = Target::None;
+    if (edited()) commit();
+    else write_state();   // a colour reached by stepping, unchanged: nothing appended, the cursor recorded
+    dirty_ = true;
+}
+
+void Picker::discard_if_open() {
     if (!open_) return;
     open_ = false;
     target_ = Target::None;
-    commit();
-    dirty_ = true;
+    hist_.cursor = open_cursor_;
+    cs_.set_rgb(old_);
+    apply_colour();
+}
+
+void Picker::history_step(int dir) {
+    if (!(dir < 0 ? back_enabled() : forward_enabled())) return;
+    hist_.cursor += dir;
+    cs_.set_rgb(hist_.picks[size_t(hist_.cursor)]);
+    apply_colour();
+    const Layer& a = scene_.layers[scene_.active];
+    plog("picker: step %s %s %s", a.name.c_str(), count_of(hist_).c_str(), hex_of(a.colour).c_str());
 }
 
 void Picker::ring_to(double x, double y) {
@@ -306,6 +376,10 @@ void Picker::press(double x, double y) {
         return;
     }
     if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { target_ = Target::Old; return; }
+    if (between(ly, kHistY - 12, kHistY + kBtn + 12)) {   // a disabled button still holds the press: it does nothing
+        if (between(lx, kBackX - 8, kBackX + kBtn + 8)) { target_ = Target::Back; return; }
+        if (between(lx, kFwdX - 8, kFwdX + kBtn + 8)) { target_ = Target::Forward; return; }
+    }
     for (int i = 0; i < 6; ++i) {
         const int ry = row_y(i);
         if (!between(ly, ry - 12, ry + kRowH + 12)) continue;
@@ -333,14 +407,21 @@ void Picker::release(double x, double y) {
             open_ = true;
             right_ = down_x_ < scene_.width / 2.0;
             old_ = cs_.rgb;
+            open_cursor_ = hist_.cursor;
             dirty_ = true;
             break;
         case Target::Outside:
-            commit_if_open();
+            close();
             break;
         case Target::Old:
             if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { cs_.set_rgb(old_); apply_colour(); }
             break;
+        case Target::Back:
+        case Target::Forward: {
+            const int bx = target_ == Target::Back ? kBackX : kFwdX;
+            if (in(lx, ly, bx - 8, kHistY - 12, bx + kBtn + 8, kHistY + kBtn + 12)) history_step(target_ == Target::Back ? -1 : 1);
+            break;
+        }
         case Target::Minus:
         case Target::Plus: {
             const int bx = target_ == Target::Minus ? kMinusX : kPlusX, ry = row_y(row_);
@@ -361,10 +442,10 @@ void Picker::paint(cairo_surface_t* surf) {
     for (int y = 0; y < fr.h; ++y)
         std::memcpy(fr.px + size_t(y) * fr.stride, picture_.data() + size_t(y) * scene_.width, size_t(fr.w) * 4);
     const Layer& act = scene_.layers[scene_.active];
-    if (!open_) {   // the corner label: the active layer's name and hex, bottom right
+    if (!open_) {   // the corner label: the active layer's name, hex and count, bottom right
         cairo_surface_mark_dirty(surf);
         cairo_t* cr = cairo_create(surf);
-        const std::string s = act.name + " " + hex_of(act.colour);
+        const std::string s = act.name + " " + hex_of(act.colour) + "  " + count_of(hist_);
         fonts_select(cr, true, kCornerPx);
         cairo_text_extents_t e;
         cairo_text_extents(cr, s.c_str(), &e);
@@ -414,6 +495,21 @@ void Picker::paint(cairo_surface_t* surf) {
     fr.edge(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, kEdge);
     fr.fill(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, cs_.rgb);
     fr.edge(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, kEdge);
+    // the history: BACK and FORWARD, an arrow each (a solid head and the − / +'s 4-px shaft, 32 px across), dimmed
+    // when disabled
+    for (int dir : {-1, 1}) {
+        const int bx = ox + (dir < 0 ? kBackX : kFwdX), by = oy + kHistY;
+        fr.fill(bx, by, bx + kBtn, by + kBtn, kField);
+        fr.edge(bx, by, bx + kBtn, by + kBtn, kEdge);
+        const Rgb g = (dir < 0 ? back_enabled() : forward_enabled()) ? kLabel : kDim;
+        const int mx = bx + kBtn / 2, my = by + kBtn / 2;
+        for (int i = 0; i < 16; ++i) {   // the head: column i from the tip, 2 + 2i px tall
+            const int x = dir < 0 ? mx - 16 + i : mx + 15 - i;
+            fr.fill(x, my - 1 - i, x + 1, my + 1 + i, g);
+        }
+        if (dir < 0) fr.fill(mx, my - 2, mx + 16, my + 2, g);
+        else fr.fill(mx - 16, my - 2, mx, my + 2, g);
+    }
     // the sliders: the field behind each value and each button, the track's live gradient, the handle, the signs
     for (int i = 0; i < 6; ++i) {
         const int ry = oy + row_y(i), ty = ry + (kRowH - kTrackH) / 2;
@@ -439,6 +535,8 @@ void Picker::paint(cairo_surface_t* surf) {
     cairo_t* cr = cairo_create(surf);
     text(cr, false, kWordPx, act.name, ox + kColX, oy + kPad + 34, 0);
     text(cr, true, kHexPx, hex_of(cs_.rgb), ox + kColX, oy + kPad + 150, 0);
+    text(cr, true, kNumPx, count_of(hist_), ox + (kBackX + kBtn + kFwdX) / 2.0,
+         cap_baseline(cr, true, kNumPx, oy + kHistY, kBtn), 1);
     text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
     text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
     for (int i = 0; i < 6; ++i) {

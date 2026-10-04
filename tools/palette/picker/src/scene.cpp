@@ -2,6 +2,7 @@
 
 #include "json.h"
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -170,18 +171,59 @@ void scene_paint(const Scene& scene, uint32_t* picture) {
     scene_paint_layers(scene, picture);
 }
 
-bool state_load(const std::string& path, std::map<std::string, Rgb>& out, std::string& err) {
-    out.clear();
+bool state_load(const std::string& path, std::map<std::string, Rgb>& colours, std::map<std::string, int>& entries,
+                std::string& err) {
+    colours.clear();
+    entries.clear();
     std::string text;
-    if (!read_file(path, text)) return true;   // no commit yet
+    if (!read_file(path, text)) return true;   // no close yet
     Json st;
     std::string jerr;
     if (!json_parse(text, st, jerr)) { err = "state.json: " + jerr; return false; }
     if (!st.is_object()) { err = "state.json: not an object"; return false; }
-    for (const auto& kv : st.obj) {
+    const Json* cols = st.get("colours");
+    if (!cols || !cols->is_object()) {   // the previous build's file: the colours alone, flat
+        for (const auto& kv : st.obj) {
+            Rgb c;
+            if (!kv.second.is_string() || !parse_hex(kv.second.str, c)) { err = "state.json: " + kv.first + " is not #rrggbb"; return false; }
+            colours[kv.first] = c;
+        }
+        return true;
+    }
+    const Json* ent = st.get("entry");
+    if (!ent || !ent->is_object() || st.obj.size() != 2) { err = "state.json: not {\"colours\": {...}, \"entry\": {...}}"; return false; }
+    for (const auto& kv : cols->obj) {
         Rgb c;
-        if (!kv.second.is_string() || !parse_hex(kv.second.str, c)) { err = "state.json: " + kv.first + " is not #rrggbb"; return false; }
-        out[kv.first] = c;
+        if (!kv.second.is_string() || !parse_hex(kv.second.str, c)) { err = "state.json: colours." + kv.first + " is not #rrggbb"; return false; }
+        colours[kv.first] = c;
+    }
+    for (const auto& kv : ent->obj) {
+        const double n = kv.second.num;
+        if (!kv.second.is_number() || n < 1 || n != std::floor(n) || n > 1e9) {
+            err = "state.json: entry." + kv.first + " is not a whole number from 1"; return false;
+        }
+        entries[kv.first] = int(n);
+    }
+    return true;
+}
+
+bool picks_load(const std::string& path, const std::string& layer, std::vector<Rgb>& out, std::string& err) {
+    out.clear();
+    std::string text;
+    if (!read_file(path, text)) return true;   // no commit yet
+    size_t at = 0;
+    for (int line = 1; at < text.size(); ++line) {
+        const size_t nl = text.find('\n', at);
+        const std::string where = "picks.txt: line " + std::to_string(line);
+        if (nl == std::string::npos) { err = where + " has no newline"; return false; }
+        const std::string l = text.substr(at, nl - at);
+        at = nl + 1;
+        const size_t first = l.find(' '), last = l.rfind(' ');
+        Rgb c;
+        if (first == std::string::npos || first == 0 || last <= first + 1 || !parse_hex(l.substr(last + 1), c)) {
+            err = where + " is not \"<time> <layer> #RRGGBB\""; return false;
+        }
+        if (l.compare(first + 1, last - first - 1, layer) == 0 && last - first - 1 == layer.size()) out.push_back(c);
     }
     return true;
 }

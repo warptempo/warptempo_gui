@@ -136,9 +136,9 @@ void on_cmd(android_app* glue, int32_t cmd) {
         case APP_CMD_CONFIG_CHANGED:
         case APP_CMD_WINDOW_RESIZED:
         case APP_CMD_GAINED_FOCUS: a.repaint = true; break;
-        case APP_CMD_PAUSE:
+        case APP_CMD_PAUSE:   // leaving the app saves nothing: the open panel's unsaved colour is discarded
             if (a.picker) {
-                a.picker->commit_if_open();
+                a.picker->discard_if_open();
                 a.repaint = true;
             }
             break;
@@ -199,23 +199,20 @@ void android_main(android_app* glue) {
     // THE DATA DIR: the external files dir (adb reads and writes it); the scene under scene/, the picks beside it
     const char* ext = glue->activity->externalDataPath;
     const std::string data = ext ? ext : "";
-    std::string err;
+    std::string err, note;
     Scene scene;
-    std::map<std::string, Rgb> state;
+    History hist;
     if (data.empty()) fail_screen(a, {"warptempo picker: no external files dir (externalDataPath)"});
     else if (!scene_load(data + "/scene", scene, err))
         fail_screen(a, {"warptempo picker: the scene in " + data + "/scene", err});
-    else if (!state_load(data + "/state.json", state, err))
-        fail_screen(a, {"warptempo picker: " + data + "/state.json", err});
+    else if (!picker_load(data, scene, hist, note, err))
+        fail_screen(a, {"warptempo picker: the state in " + data, err});
     else {
-        Layer& act = scene.layers[scene.active];
-        const auto it = state.find(act.name);
-        if (it != state.end()) act.colour = it->second;   // the last committed pick, else the manifest's
-        scene_derive(scene);
-        __android_log_print(ANDROID_LOG_INFO, kTag, "picker: scene %dx%d, %zu layers, active %s %s (%s)", scene.width,
-                            scene.height, scene.layers.size(), act.name.c_str(), hex_of(act.colour).c_str(),
-                            it != state.end() ? "the last commit" : "the manifest's");
-        a.picker = std::make_unique<Picker>(std::move(scene), data);
+        const Layer& act = scene.layers[scene.active];
+        __android_log_print(ANDROID_LOG_INFO, kTag, "picker: scene %dx%d, %zu layers, active %s %s (%s), %d of %zu",
+                            scene.width, scene.height, scene.layers.size(), act.name.c_str(), hex_of(act.colour).c_str(),
+                            note.c_str(), hist.cursor + 1, hist.picks.size());
+        a.picker = std::make_unique<Picker>(std::move(scene), data, std::move(hist));
     }
 
     for (;;) {
@@ -226,7 +223,6 @@ void android_main(android_app* glue) {
         while (ALooper_pollOnce(timeout, nullptr, &events, reinterpret_cast<void**>(&source)) >= 0) {
             if (source) source->process(glue, source);
             if (glue->destroyRequested) {
-                if (a.picker) a.picker->commit_if_open();
                 if (a.frame) cairo_surface_destroy(a.frame);
                 return;
             }

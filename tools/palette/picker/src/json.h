@@ -1,6 +1,6 @@
 #pragma once
 // tools/palette/picker — a tiny JSON reader for the scene's manifest.json and the picker's own state.json. Both
-// producers are ours (render.py --export, the picker's commit), so this reads standard JSON and reports the first
+// producers are ours (render.py --export, the picker's close), so this reads standard JSON and reports the first
 // error with its byte offset; it does not try to be a general library (no \u escapes beyond ASCII, numbers as
 // doubles).
 

@@ -51,6 +51,18 @@ void scene_paint(const Scene& scene, uint32_t* picture);
 // every layer in order only (the background already in place): what a colour change repaints
 void scene_paint_layers(const Scene& scene, uint32_t* picture);
 
-// THE PICKER'S STATE FILE, <data dir>/state.json: {"<layer>": "#RRGGBB", ...}, each layer's colour at the last
-// commit. A missing file is an empty map (no commit yet); a malformed one is false and `err`.
-bool state_load(const std::string& path, std::map<std::string, Rgb>& out, std::string& err);
+// THE PICKER'S STATE FILE, <data dir>/state.json, rewritten whole at every close of the panel:
+//
+//   {"colours": {"<layer>": "#RRGGBB", ...}, "entry": {"<active layer>": N}}
+//
+// every layer's colour at the last close, and the active layer's history cursor as the panel's count shows it (N of
+// M, 1-based: the Nth of that layer's picks.txt lines). The previous build's file, {"<layer>": "#RRGGBB", ...}, still
+// reads (no entry: the cursor is placed by picker_load's rule). A missing file is two empty maps (no close yet); a
+// malformed one is false and `err`.
+bool state_load(const std::string& path, std::map<std::string, Rgb>& colours, std::map<std::string, int>& entries,
+                std::string& err);
+
+// THE PICKS LOG, <data dir>/picks.txt, appended at every commit: one line per pick,
+// "<ISO-8601 local time> <layer> #RRGGBB\n". `out` takes the hexes of `layer`'s lines, oldest first (its history); other
+// layers' lines are skipped. A missing file is an empty history; a line not of that shape is false and `err`.
+bool picks_load(const std::string& path, const std::string& layer, std::vector<Rgb>& out, std::string& err);
