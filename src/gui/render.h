@@ -335,8 +335,12 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 //             CELL'S (architect 2026-09-05): the ADDRESSED cell wears the
 //             selected face — the payload for every selected marker but the
 //             focus, whose addressed cell is AppState::addressed_cell — and
-//             THE STEM IS THE MARKER'S, so it takes the selected face whenever
-//             its marker is selected, whichever cell is addressed;
+//             THE STEM IS THE FLAG BOX'S (architect 2026-10-04, "otherwise it
+//             looks disconnected": the stem belongs to the box it leaves
+//             from), so it takes the selected face only when the PAYLOAD is
+//             the bright cell and keeps the marker's resting face (`flag_face`,
+//             or `invalid_face` on an invalid marker) while a BOUND CELL is
+//             the addressed one;
 //   SELECTED DISABLED (architect 2026-10-03, PROVISIONAL, pending his ruling;
 //             a disabled marker is selectable, so its selection must show):
 //             Windows 95's highlighted disabled menu item — the selected face
@@ -360,7 +364,9 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // THE PHASE-RESET LEAD-IN RING on the waveform wears the colour its reset's
 // stem wears (paint_phase_reset_overlay_ring, through phase_reset_stem_color —
 // architect 2026-09-17): the flag key, or the invalid key on a red reset, and
-// the matching selected key while the reset is selected.
+// the matching selected key while the reset's PAYLOAD is the bright cell
+// (architect 2026-10-04: a reset whose addressed cell is a bound cell keeps
+// its resting stem, and so its resting ring).
 //
 // EDITING IS WINDOWS 95's IN-PLACE LABEL EDIT (architect 2026-10-03, Explorer's
 // F2 rename, Acid Pro's track-name editor): over the edited flag or cell a FLAT
@@ -369,9 +375,12 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // SELECTED FACE (`flag_face_selected`, or `invalid_face_selected` over an
 // invalid marker), framed ONE Windows px in black (kFlagEditorFrame), its TEXT
 // and caret `flag_label_selected`, the selected substring in the theme's
-// SELECTED pair, Windows' field margin strips (the pads) kept; the edited
-// marker's stem the selected face (render_flag_editor_box). The field pair
-// plays no part in it; the bound-cell editor is the same editor.
+// SELECTED pair, Windows' field margin strips (the pads) kept. THE STEM
+// FOLLOWS THE PAYLOAD BOX (architect 2026-10-04): the selected face under the
+// PAYLOAD field, which is the payload box opened and the addressed cell; the
+// marker's resting face under a BOUND-CELL field, the flag box standing at
+// rest beside it (render_flag_editor_box). The field pair plays no part in it;
+// the bound-cell editor is the same editor.
 //
 // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
@@ -2456,10 +2465,11 @@ struct FlagLaneRects {
 // (GuiPaintHandler::paint_marker_stems) and the playhead's stem
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
-// The published COLOUR is the marker's resolved stem — the flag key or the
-// invalid key, or the matching selected key while the marker is selected
-// (architect 2026-10-03: the selected flag's face and stem take the selected
-// colour) — and the consumer paints it as published.
+// The published COLOUR is the marker's resolved stem — its FLAG BOX's face:
+// the flag key or the invalid key, or the matching selected key while the
+// payload box is the bright one (architect 2026-10-04: the stem follows the
+// box it leaves from, so a selected marker whose addressed cell is a bound
+// cell publishes its resting stem) — and the consumer paints it as published.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -2572,7 +2582,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              2026-10-01, now one value with nothing to pair).
 //   Selected:  the addressed cell's face `flag_face_selected` (or
 //              `invalid_face_selected` over an invalid one) under
-//              `flag_label_selected`, the marker's stem in its selected face;
+//              `flag_label_selected`; the stem in the FLAG BOX's face, so
+//              selected only while the payload is the addressed cell
+//              (architect 2026-10-04);
 //              a selected DISABLED cell the selected face under a flat Shadow
 //              label, no stem (provisional). The outline stays DkShadow.
 //
@@ -2606,8 +2618,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // own cell's selection lives. The rule is stated once at the palette block's
 // marker-lane paragraph and applies on both columns — a phase reset's bound
 // cells are cells too. Disabled and invalid resolve cell by cell through the
-// same ladder; the stem is the marker's, its selected face whenever the
-// marker is selected.
+// same ladder; the stem is the flag box's, its selected face only while the
+// payload is the bright cell (architect 2026-10-04).
 //
 // `cr`'s scaled font is set by this function (the redesign sans face at
 // redesign_font_size_px) and restored.
@@ -2890,9 +2902,10 @@ void render_phase_reset_flags(cairo_t* cr,
 // architect 2026-09-17). It asks the one ladder (resolve_flag_face,
 // render.cpp) rather than restating it: the `invalid_face` key when `red` (the
 // column's red set, phase_reset_red_flag_set_cached), the `flag_face` key
-// otherwise, each its selected key when `selected` (the reset in the live
-// selection, architect 2026-10-03: a selected marker's stem takes its selected
-// face), so the ring and its stem stay one object at rest and selected.
+// otherwise, each its selected key when `selected` (the reset selected AND
+// its payload the bright cell — the bit the flag pass hands the payload box
+// whose face the stem wears, architect 2026-10-04), so the ring and its stem
+// stay one object at rest and selected.
 // No disabled arm, a disabled reset painting neither stem nor ring.
 GuiColor phase_reset_stem_color(bool red, bool selected);
 

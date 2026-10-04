@@ -4060,14 +4060,27 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // the seed grain's end, derived in the block below from the same frame
     // and the same map the paint sample reads.
     int64_t width_samples;
-    // The reset's CLASS and SELECTION, for the ring's colour: the column's
-    // RESTING red set keyed by store index, the set and the index the flag
-    // pass reads for this reset's stem — at rest and through a drag alike, the
-    // drag writing only its proposal, so the ring and the stem share one class
-    // throughout — and the live selection the same pass reads for the stem's
-    // selected face.
+    // The reset's CLASS, for the ring's colour: the column's RESTING red set
+    // keyed by store index, the set and the index the flag pass reads for
+    // this reset's stem — at rest and through a drag alike, the drag writing
+    // only its proposal, so the ring and the stem share one class throughout.
     bool red_class = false;
-    bool selected  = false;
+    // THE RESET'S SELECTION BIT, for the ring's colour (architect 2026-09-23:
+    // the ring and the stem are one object and brighten together; 2026-10-04:
+    // the stem follows its FLAG BOX). It is the bit the flag pass hands this
+    // reset's PAYLOAD face, whose stem the ring mirrors
+    // (render_flag_boxes_impl, render.cpp), re-spelled across the pass's
+    // parameter boundary from the same state its fingerprint carries (the
+    // selection, the addressed cell, the mode verdict): selected iff the reset
+    // is a member (app.selected_markers, the pass's own membership set) and
+    // its bright cell is the payload. This reset IS the focus, so its bright
+    // cell is app.addressed_cell — falling back to the payload where that
+    // bound cell is painted nowhere, which is the pass's rule and
+    // marker_paints_iter_cells' question (a bound field opens only on a
+    // painted cell, enter_iter_bound_edit, so the pass's suppression arm adds
+    // nothing here). A selected reset whose addressed cell is a bound cell
+    // keeps its resting stem, so its ring keeps the resting colour too.
+    bool selected = false;
     {
         assert(app.active_audio_view == 'T');   // P stands in target alone
 
@@ -4080,7 +4093,9 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // label cascade).
         if (marker.disabled) return out;
         red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
-        selected  = app.selected_markers.count(idx) > 0;
+        selected  = app.selected_markers.count(idx) > 0 &&
+                    (app.addressed_cell == MarkerCell::Payload ||
+                     !marker_paints_iter_cells(app, 'P', idx));
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
         // — the SAME map the flags, stems, drag overlay and riding playhead read,
@@ -4221,10 +4236,10 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
     // annotates. It wears what that stem wears: the `invalid_face` key when
     // the reset is in the column's red set (band.red), the `flag_face` key
-    // otherwise, each its selected key while the reset is selected
-    // (band.selected; architect 2026-10-03, the selected face takes the stem
-    // with it). phase_reset_stem_color asks the one ladder rather than
-    // restating it, so ring and stem cannot drift.
+    // otherwise, each its selected key while the reset's payload box is the
+    // bright one (band.selected; architect 2026-10-04, the stem follows the
+    // box it leaves from). phase_reset_stem_color asks the one ladder rather
+    // than restating it, so ring and stem cannot drift.
     // DAMAGE: this pass paints live in on_redraw from app state, never from a
     // cached surface, and every change to its colour's inputs misses the flag
     // cache's fingerprint, whose rebuild damages the waveform with the strip

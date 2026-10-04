@@ -1612,9 +1612,12 @@ void render_flag_boxes_impl(
             // does not paint (a bound cell on an owner disabled after its
             // press), the payload takes it, so a selected marker always shows
             // its selection somewhere. Disabled and invalid resolve cell by
-            // cell through the same ladder. THE STEM IS THE MARKER'S (the
-            // palette block's THE STATES): its selected face whenever the
-            // marker is selected, whichever cell is addressed.
+            // cell through the same ladder. THE STEM IS THE FLAG BOX'S
+            // (architect 2026-10-04, "otherwise it looks disconnected"; the
+            // palette block's THE STATES): it leaves from the payload box and
+            // wears that box's face, so it takes the selected face only when
+            // the payload is the bright cell, and keeps the marker's resting
+            // face while a bound cell is the addressed one.
             MarkerCell bright = i == focus_marker ? focus_cell
                                                   : MarkerCell::Payload;
             // THE FALLBACK ASKS WHETHER THE BRIGHT CELL IS SHOWN AT ALL, by
@@ -1637,10 +1640,10 @@ void render_flag_boxes_impl(
             const auto cell_selected = [&](MarkerCell c) {
                 return sel && c == bright;
             };
+            // The payload box's face, and with it the marker's stem
+            // (face.stem): the one resolution both read.
             const FlagFace face =
                 resolve_flag_face(dis, red, cell_selected(MarkerCell::Payload));
-            // The marker's stem: the ladder's stem at the MARKER's selection.
-            const FlagFace stem_face = resolve_flag_face(dis, red, sel);
 
             // THE EDITED MARKER'S BOX IS NOT PAINTED HERE — the open editor
             // owns every pixel of it (render_flag_editor_box, which paints the
@@ -1706,9 +1709,8 @@ void render_flag_boxes_impl(
                 paint_flat_flag_box(cr, lane, bx, bw, border_w, edge_h,
                                     pass_closes && !paint_lower,
                                     palette().dk_shadow, face.face);
-                if (stem_face.has_stem)
-                    paint_flag_stem_crossing(cr, lane, bx, edge_h,
-                                             stem_face.stem);
+                if (face.has_stem)
+                    paint_flag_stem_crossing(cr, lane, bx, edge_h, face.stem);
                 // The label, on the run just measured — same font, same glyphs,
                 // so the box width and the painted text cannot disagree.
                 paint_flag_label(cr, run, static_cast<double>(bx + pad_l),
@@ -1861,7 +1863,7 @@ void render_flag_boxes_impl(
             }
             // The stem stash is gated to [0, w), both edges
             // (stem_column_on_waveform).
-            if (stem_face.has_stem &&
+            if (face.has_stem &&
                 stem_column_on_waveform(bx - top_strip_area.x,
                                         waveform_width)) {
                 // THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN — bx, the
@@ -1870,7 +1872,7 @@ void render_flag_boxes_impl(
                 // marker_flag_border_px).
                 if (out_stems)
                     out_stems->push_back(
-                        MarkerStem{i, static_cast<double>(bx), stem_face.stem});
+                        MarkerStem{i, static_cast<double>(bx), face.stem});
             }
         });
 
@@ -2661,8 +2663,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE MARKER'S OWN STATE, through the one ladder (resolve_flag_face) —
     // for the box, which is the marker's SELECTED face (below), for the STEM
-    // the payload field's marker keeps, and for the cells riding the field's
-    // right edge, which keep their resting anatomy.
+    // under the payload field (the payload box's own face), and for the cells
+    // riding the field's right edge, which keep their resting anatomy.
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
     // The class's red is the COLUMN'S OWN paint cue, the set the resting flag
@@ -2688,7 +2690,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // set BX): the ladder's SELECTED answer for the edited marker — its face
     // `flag_face_selected`, or `invalid_face_selected` over an invalid marker
     // (a disabled marker's the provisional selected-disabled arm's face, an
-    // edit field never being embossed), its stem in that face.
+    // edit field never being embossed); under the payload field its stem is
+    // in that face (below).
     const FlagFace face = resolve_flag_face(dis, red_class, /*selected=*/true);
     // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
     // ends on ONE outline column on its rightmost box)? Iff nothing rides past
@@ -2723,12 +2726,19 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    embossed.
     paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
                         /*closes=*/!ride_cells, kFlagEditorFrame, face.face);
-    // THE STEM IS THE SELECTED FACE (architect 2026-10-03): the payload
-    // field's marker stems in the face its box wears, crossing the frame's
-    // bottom rows from the box's leftmost face column
-    // (paint_flag_stem_crossing) — the flag pass publishes the same colour for
-    // the waveform's run, the edited marker being the selected one; a bound
-    // field is a cell, and a cell carries no stem.
+    // THE STEM FOLLOWS THE PAYLOAD BOX (architect 2026-10-04, "otherwise it
+    // looks disconnected"). Under the PAYLOAD field the field IS the payload
+    // box opened, and the open seats the axis there (set_single_selection
+    // resets AppState::addressed_cell to the payload), so the payload is the
+    // bright cell and the stem wears the box's selected face, crossing the
+    // frame's bottom rows from the box's leftmost face column
+    // (paint_flag_stem_crossing) — the colour the flag pass publishes for the
+    // waveform's run off the same bit. Under a BOUND-CELL field nothing is
+    // painted here: the field is a cell and a cell carries no stem, and the
+    // flag box stands in the flag pass at rest, the open having seated the
+    // axis on the edited cell (enter_iter_bound_edit writes
+    // app.addressed_cell = side), so that box — and the stem leaving it —
+    // keeps the marker's resting face.
     if (field_cell == MarkerCell::Payload && face.has_stem)
         paint_flag_stem_crossing(cr, lane, bx, edge_h, face.stem);
 
