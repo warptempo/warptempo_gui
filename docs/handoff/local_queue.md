@@ -315,3 +315,26 @@ Two product arcs and the picker in ONE wake. NEVER change his configured theme. 
 4. If the screen is awake with the product in front, ONE screencap: describe row 8's clock field (its height in
    device px, the time's face) and one flag's stem where it enters the well (the two black flank columns).
 5. Commit (the wrapper) any copied presets and this file's DONE 6, push. Wakes: the count.
+
+## DONE 6 (2026-10-05 ~05:15, the local planner; HEAD bed32dfe)
+1. His picker files: byte-identical to the repository's (nothing to commit).
+2. THE PRODUCT: reconfigured `build/` (exit 0); `cmake --build build -j$(nproc)` exit 0, no warning; labwc launch
+   (8 s): starts, loads 550 - 1, no refusal (only the history advisory line). `build_apk.sh` exit 0, font assets
+   Roboto-Regular.ttf (463712) and Roboto-Bold.ttf (465944) ONLY, "assets: 98 theme files"; installed, relaunched.
+   Logcat: window 2304x1440; loads 550 - 1 (228 markers, 435 phase resets); AAudio granted; renders "[success]"; no
+   refusal.
+3. THE PICKER: `--check` exit 0, "all checks pass"; APK exit 0; export exit 0 (17 elements, 8 scenes; no stale
+   scene files); installed, the whole folder pushed (18 files), launched: `picker: export 2304x1440, 17 elements,
+   28 roles, 8 scenes (178444 antialiased px), active selected_fill #666666 (state.json's colour and view,
+   state.json's entry), 1 of 1`. No element chosen by touch. (The picker was launched BEFORE the product so the
+   product stood in front for step 4.)
+4. SCREENCAP (awake, the product in front; NOTE the tablet's config now reads gui_scale=350 and
+   theme=windows-95-standard, both his): ROW 8's CLOCK FIELD at the bottom left reads "B | 00:45.418" in Roboto
+   (proportional face, no mono), black on the #C0C0C0 field; measured down column x 30: 14 ground rows, then the
+   sunken field 60 device px tall — 4 rows #808080 (top shadow), 52 rows interior, 4 rows #FFFFFF (bottom light) —
+   i.e. 17 Windows px x 3.50 = 59.5 -> 60. Its left edge: 18 ground columns, then 4 columns #808080.
+   A FLAG'S STEM ENTERING THE WELL (the flag "1.24:b.32" at x ~420): along the well's top line (y 425, #808080) the
+   row reads 13 x #808080, 4 x #000000, 4 x the purple stem, 4 x #000000, 15 x #808080 — the two black flank
+   columns, each 4 device px, cut the well's top lines beside the stem; below the lines the stem runs on in the
+   black well.
+5. Committed: this block only. Wakes used: 7 of 16.
