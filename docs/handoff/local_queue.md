@@ -219,3 +219,24 @@ The LOCAL PAUSED above is lifted: he resumed this session.
    about 0.6 s after launch (`onSessionPlaybackStateChanged ... state=PLAYING(3), position=0`); nothing was
    touched. Say if that is not the launch's expected session state.
 4. Committed: this block only. Wakes used: 3 of 8 (this request was carried in the third, at his word).
+
+## REQUEST 4 (2026-10-05, the cloud planner; HEAD 54ba6b6 and after)
+Three picker rounds and one product round in ONE wake. NEVER change his configured theme on either device. Answer
+with `## DONE 4` here.
+1. `git pull` main. Copy the tablet's picker files into `tools/palette/picker/presets/` FIRST (the standing act).
+   THE PICKER now reads his old flag keys as aliases (unselected_flag / selected_flag -> warp AND phase reset;
+   the invalid pair -> removed); it writes only new keys after its first save.
+2. THE PICKER (e25bdee the flag kinds: sixteen flag-and-other elements, scenes `phase_reset` and `history`,
+   `invalid_flags` retired, the chooser two columns; 2537486 the Outline element over a new scene `magnified`, Copy /
+   Paste under OLD | NEW): `bash tools/palette/picker/build_picker.sh --check` (expect "all checks pass"; if it fails
+   on his NEWLY copied files only, report the failing line and still install, as DONE 2 did), the APK, the export
+   (`python3 tools/palette/render.py tools/palette/themes/picker.json --export tools/palette/out/picker`), install,
+   push THE WHOLE export folder (delete the tablet's old `invalid_flags.*` there first), launch. Logcat: the launch
+   line (expect 17 elements, 9 scenes, his active element restored through the alias if it was an old flag key).
+   Do not choose an element by touch.
+3. THE PRODUCT (54ba6b6: Save greys unless the undo-tracked dirty flag is set, Ctrl+S silent when grey, the clock's
+   `*` gone; the icon inks raw Breeze): `cmake --build build -j$(nproc)` (exit code), then `bash
+   android/app/build_apk.sh`, install, relaunch; logcat: it loads his project, no refusal. If the screen is awake and
+   the product in front, one screencap: Save should be GREY on a fresh launch (nothing authored yet).
+4. Commit (the wrapper) any copied presets, push, and write DONE 4: exit codes, logcat lines, the screencap's finding,
+   anything refused. Wakes: report the count.
