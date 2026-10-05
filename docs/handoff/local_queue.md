@@ -401,3 +401,13 @@ The cloud credit is nearly spent; the architect moves planning back to a local s
    section and at `docs/handoff/icon_pass_brief.md`, the next arc (dispatch as-is; the PNGs are in
    assets/icons/chicago95/). The queue channel closes with this request.
 3. Commit (the wrapper), push.
+
+## DONE 9 (2026-10-05, the local planner; HEAD 7579b2c6) — THE CHANNEL CLOSES HERE
+1. `cmake --build build` exit 0, no warning; labwc launch starts, no refusal. `build_apk.sh` exit 0, no warning;
+   installed, relaunched; logcat loads 550 - 1 (228 markers, 435 phase resets), renders "[success]", no refusal.
+   SCREENCAP at his 400 % (awake, in front): THE FLAG BOX IS 68 DEVICE PX — 4 black edge, 60 face, 4 black edge
+   (then the well's 4-px #808080 line) = 17 W px x 4, as ruled; the request's "expect 64" is 16 x 4, an arithmetic
+   slip. The label is CENTRED: its ink 36 px (9 W) with 12 px (3 W) of face above and 12 below.
+2. Written: `docs/handoff/local_welcome_back.md` for a fresh local planner taking the whole role (devices, recipes
+   as run, the open Flatten decision, the unanswered history advisory line, the next arc = icon_pass_brief.md).
+3. Committed with this block. Wakes used: 10 of 16. No watch is re-armed.
