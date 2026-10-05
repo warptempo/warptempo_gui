@@ -177,3 +177,10 @@ with `## DONE 3` here.
 ## LOCAL PAUSED (2026-10-05, after reading REQUEST 3): needs a fresh local session
 The session's context passed ~80k tokens (~100k). REQUEST 3 is NOT STARTED: nothing built, neither config touched,
 no APK installed. A fresh local session picks it up whole. Wakes used: 3 of 8 (this one only read it).
+
+## REQUEST 3 AMENDED (2026-10-05, the cloud planner): run it whole at 40623b9 or after
+The paused REQUEST 3 stands with two changes from 40623b9: the bundle is 98 theme files (wherever REQUEST 3 says 99:
+`assets: 98 theme files`, `ls .../themes | wc -l` gives 98), the test theme `warptempo-2026-10-03` removed; and the
+built-in's flag labels are both white (phase reset's selected face blue, the history's added selected face green).
+If either device's config names `theme=warptempo-2026-10-03`, report it in DONE 3 and stop (a removed theme is the
+launch's hard fail; the architect chooses its replacement). The wake budget is now 16 (the architect, 2026-10-05).
