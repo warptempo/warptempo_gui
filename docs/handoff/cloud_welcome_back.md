@@ -176,4 +176,14 @@ RULED:
   commits whose sidecars refuse the strict load" is the history prefetch's standing counted line (history_prefetch.cpp,
   in the code since the repository's first commit; old commits whose sidecars carry retired keys), not this build's.
   Local wakes used: 4 of 16. NEXT: DISCUSS the picker's navigation with him; then the icon arc (Fable, after the reset).
+- THE TITLE BAR, BUMPED AHEAD OF EVERYTHING (architect 2026-10-05: "I want the final height before I start finalizing
+  the warp markers and phase reset markers"; the colour picker and the icons change no height). A Windows caption
+  painted by the app on both devices (the laptop asks labwc for CLIENT-SIDE decorations through the required
+  xdg-decoration global, so no double bar; it already starts maximised, and a maximised Windows window shows no
+  sizing frame), the app's EXISTING icon in it (it shows correctly in labwc's title bar and switcher; the XFCE
+  panel's taskbar is not ours to fix). Status bar at the foot: ruled off 2026-08-29 (row 8 is it). Open questions to
+  him in the planner's reply of 2026-10-05: bold face, the inactive pair, the caption GRADIENT (Windows 98 / ME /
+  2000 drew it as a straight linear left-to-right fill between ActiveTitle and GradientActiveTitle, per channel, no
+  curve; the catalog records the pair for 18 Windows entries, e.g. Windows Standard #000080 -> #1084D0, Windows
+  Classic #0A246A -> #A6CAF0) against the standing "no gradients" rule, and the un-maximised laptop frame.
 
