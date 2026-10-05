@@ -23,9 +23,9 @@ touches THIS FILE. So:
   2026-10-05). After the 16th, append `## LOCAL PAUSED (<time>): wake budget spent` here, commit, push, and stop
   re-arming the watch.
 - THE LOCAL SESSION NEVER PAUSES ON ITS CONTEXT ALONE (architect 2026-10-05: work must not stall on a fresh session
-  while he is away): it answers every REQUEST. It is REFRESHED (/clear, then this file and CLAUDE.md) at the moment
-  the cloud planner starts a NEW THREAD — the welcome-back's rewrite is when the two sessions are synchronised — and
-  otherwise only if its context passes ~250k tokens (25 %), at a quiet moment between REQUESTs, never mid-request.
+  while he is away): it answers every REQUEST. It is REFRESHED (/clear, then this file and CLAUDE.md) at HIS WORD
+  (a new cloud thread is the natural moment, but on 2026-10-05 he kept it running across one) or past ~250k tokens
+  (25 %), at a quiet moment between REQUESTs, never mid-request.
 
 ## Local-only acts (what a REQUEST may ask for)
 - The picker APK: `bash tools/palette/picker/build_picker.sh`; the export `python3 tools/palette/render.py
