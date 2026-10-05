@@ -1444,10 +1444,10 @@ int main(int argc, char** argv) {
         size_t cmin = 1000, cmax = 0;
         for (const Theme& t : ex.themes) { cmin = std::min(cmin, t.colours.size()); cmax = std::max(cmax, t.colours.size()); }
         // the count is the data's (the export checks themes.json against the bundled theme files); the
-        // program's own family closes the table, the architect's colour-picker presets (`warptempo-preset-<n>`,
-        // 2026-10-04) after `warptempo`
+        // program's own family closes the table, `warptempo` first, the architect's colour-picker presets
+        // (`warptempo-preset-<n>`, 2026-10-04) after it
         const int wt = theme_of(ex, "warptempo");
-        bool wt_tail = wt > 0 && theme_of(ex, "warptempo-2026-10-03") == wt - 1;
+        bool wt_tail = wt > 0 && ex.themes[size_t(wt - 1)].key.rfind("warptempo", 0) != 0;
         for (int t = wt + 1; t < n_themes; ++t)
             wt_tail = wt_tail && ex.themes[size_t(t)].key.rfind("warptempo-preset-", 0) == 0;
         check(n_themes > 0 && ex.themes[0].key == "windows-brick" && theme_of(ex, "windows-95-standard") >= 0 && wt_tail,

@@ -56,16 +56,6 @@ MAPPING = {
         'field_ground': 'set4', 'field_text': 'motif:set4.fg',
         'title_active': 'set1', 'title_inactive': 'set2',
     },
-    # The app itself (src/gui/render.h's constants): the highlight is the accent with the highlight text rule's
-    # dark ink, the field is the modal text field (the canvas under the label white).
-    'warptempo': {
-        'ground': 'kRedesignContentGround', 'label': 'kRedesignLabel',
-        'bevel_hilight': 'kReliefHilight', 'bevel_light': 'kRelief3DLight', 'bevel_shadow': 'kReliefShadow',
-        'bevel_dkshadow': 'kReliefDkShadow',
-        'selected_fill': 'kRedesignAccent', 'selected_text': 'kRedesignHighlightLabel',
-        'info_ground': 'kInfoGround', 'info_text': 'kInfoText',
-        'field_ground': 'kModalFieldGround', 'field_text': 'kRedesignLabel',
-    },
 }
 for _fam, _row in MAPPING.items():
     assert set(_row) <= set(ROLES), (_fam, set(_row) - set(ROLES))

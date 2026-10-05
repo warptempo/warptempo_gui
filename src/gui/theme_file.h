@@ -23,8 +23,8 @@
 // panel; Windows' InfoWindow / InfoText and its tooltip's black border for
 // the cards), and the program's roles are the planner's picks from Windows'
 // twenty solid colours (the architect's delegation, 2026-10-04: "the default
-// theme is just a fallback"), each flag kind a dark / bright pair of the VGA
-// sixteen.
+// theme is just a fallback"), each flag kind a face and a selected face of the
+// VGA sixteen under white labels (the role table's program block).
 //
 // ONE THEME IS BUILT IN, compiled: `windows-95-standard` (kBuiltinThemeKey),
 // the role table's values, the device config's default `theme`. Every other
@@ -43,8 +43,8 @@
 // read; neither is a directory or any other non-regular entry.
 //
 // THE BUNDLED FILES ARE COPIED IN AT EVERY LAUNCH (architect 2026-10-05):
-// every theme other than the built-in — the imported catalog, `warptempo`,
-// `warptempo-2026-10-03` and his colour-picker presets — SHIPS WITH THE
+// every theme other than the built-in — the imported catalog, `warptempo`
+// and his colour-picker presets — SHIPS WITH THE
 // PROGRAM as a `.theme` file (generated into the repository's
 // `assets/themes/` by tools/theme_catalog/gen_theme_files.py, which states
 // what each file names), and each launch, BEFORE THE ONE READ, writes every
@@ -115,23 +115,28 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // THE PROGRAM'S OWN ELEMENTS — Windows' twenty solid colours: the canvas
     // black under Sound Recorder's lime trace (measured on his Windows 98
     // screenshot 2026-10-05), the lit outline green; each flag kind a dark
-    // face and its bright selected face — warp purple / fuchsia, phase reset
-    // teal / aqua, the history's added olive / yellow, its removed maroon /
-    // red, which the invalid flag wears too; one white label, one black
-    // selected label; the playhead's head gray, its stem white.
+    // face and a selected face — warp purple / fuchsia, phase reset teal /
+    // blue, the history's added olive / green, its removed maroon / red,
+    // which the invalid flag wears too; BOTH FLAG LABELS WHITE (architect
+    // 2026-10-05: "white text for the flags is going to be the most common;
+    // the highlights will generally be chosen so white shows" — so a file
+    // that names flag faces and no labels gets white on both, and every
+    // selected face here is one white reads on: the brighter aqua and yellow
+    // of 2026-10-04 gave way to blue and green); the playhead's head gray,
+    // its stem white.
     {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000},
     {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00},
     {"waveform_outline",          &GuiPalette::waveform_outline,          0x008000},
     {"warp_flag",                 &GuiPalette::warp_flag,                 0x800080},
     {"warp_flag_selected",        &GuiPalette::warp_flag_selected,        0xFF00FF},
     {"phase_reset_flag",          &GuiPalette::phase_reset_flag,          0x008080},
-    {"phase_reset_flag_selected", &GuiPalette::phase_reset_flag_selected, 0x00FFFF},
+    {"phase_reset_flag_selected", &GuiPalette::phase_reset_flag_selected, 0x0000FF},
     {"added_flag",                &GuiPalette::added_flag,                0x808000},
-    {"added_flag_selected",       &GuiPalette::added_flag_selected,       0xFFFF00},
+    {"added_flag_selected",       &GuiPalette::added_flag_selected,       0x008000},
     {"removed_flag",              &GuiPalette::removed_flag,              0x800000},
     {"removed_flag_selected",     &GuiPalette::removed_flag_selected,     0xFF0000},
     {"flag_label",                &GuiPalette::flag_label,                0xFFFFFF},
-    {"flag_label_selected",       &GuiPalette::flag_label_selected,       0x000000},
+    {"flag_label_selected",       &GuiPalette::flag_label_selected,       0xFFFFFF},
     {"playhead_head",             &GuiPalette::playhead_head,             0x808080},
     {"playhead_stem",             &GuiPalette::playhead_stem,             0xFFFFFF},
 };

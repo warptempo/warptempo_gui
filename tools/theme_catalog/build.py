@@ -3,9 +3,8 @@
 # bytes with their provenance, the values its own toolkit computed at import (toolkit_rules.py, the rule named), and
 # its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
-# THE ONE EXCEPTION IS THE PROGRAM'S OWN FAMILY, `warptempo`, and it derives nothing either: `warptempo-2026-10-03` is
-# the app's look recorded off render.h's constants (app_entry), and `warptempo` is THE ARCHITECT'S PICK, CHOSEN, NOT
-# IMPORTED (chosen_entry: his ruling of 2026-10-03 on the colour loop's mock sets, its bytes his, recorded as ruled),
+# THE ONE EXCEPTION IS THE PROGRAM'S OWN FAMILY, `warptempo`, and it derives nothing either: `warptempo` is THE
+# ARCHITECT'S PICK, CHOSEN, NOT IMPORTED (chosen_entry: his ruling of 2026-10-03 on the colour loop's mock sets, its bytes his, recorded as ruled),
 # and so is each `warptempo-preset-<n>`, THE ARCHITECT'S PRESET <n> ON THE COLOUR PICKER (preset_entries, architect
 # 2026-10-04: his saved looks carried into the product, the picker's chrome rule applied here, at generation, so the
 # app derives nothing).
@@ -18,15 +17,15 @@
 #   python3 tools/theme_catalog/build.py --presets-only
 #
 # --presets-only (architect 2026-10-04) is the road for a host that cannot reach the pinned sources (the cloud: the
-# Trinity mirror is outside its egress): it re-derives only what needs no fetched file -- the preset entries from
-# presets.json and the header -- and carries every other entry and the not-imported record from the committed
-# catalog.json byte for byte, after recomputing the two entries that need no source (app_entry, chosen_entry) and
-# asserting they equal the carried ones; the checks run on the whole. The full run writes the same bytes where the
+# Trinity mirror is outside its egress): it re-derives only what needs no fetched file -- the program's own family
+# (the chosen entry, recomputed and asserted equal to the committed one, and the preset entries from presets.json) and
+# the header -- and carries every imported entry and the not-imported record from the committed catalog.json byte for
+# byte; the checks run on the whole. The full run writes the same bytes where the
 # sources are at hand (both roads build the document through one function, document()).
-import json, os, re, subprocess, sys
+import json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from sources import SOURCES, APP, REPO, local_path, provenance
+from sources import SOURCES, REPO, local_path, provenance
 sys.path.insert(0, os.path.join(REPO, 'tools', 'palette'))
 import colour as CL      # the picker's chrome rule (windows95_chrome), the one the picker paints with
 from parse_windows import parse_hivedef, parse_theme
@@ -37,9 +36,9 @@ from roles import ROLES, MAPPING, map_roles
 
 OUT = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
 FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'warptempo')
-KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde', 'warptempo': 'warptempo'}
+KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde'}
 # THE FLAGS' RULE per family (architect 2026-10-03, late: a flag's one-line bevel is its theme family's own rule on the
-# flag's face, toolkit_rules.flag_bevel): Windows' Appearance dialog for the Windows families and the app's own look
+# flag's face, toolkit_rules.flag_bevel): Windows' Appearance dialog for the Windows families and the program's own
 # ("take Windows' rule"), KDE 3's at the scheme's contrast, Motif's for CDE.
 FLAG_RULE = {'windows': 'windows-dialog', 'windows-plus': 'windows-dialog', 'warptempo': 'windows-dialog',
              'kde3': 'kde3', 'cde': 'motif'}
@@ -338,41 +337,6 @@ def cde_entries():
 
 
 # ------------------------------------------------------------------ the app
-def render_h_constants():
-    """src/gui/render.h at APP's commit -> {constant: rgb}: a hex(0x..) literal, a uint32 0x.. literal, an alias of
-    another constant, hex() of one, or a derived word whose static_assert states its value (the compiler checks
-    those, so they are the bytes)."""
-    txt = subprocess.run(['git', '-C', REPO, 'show', f"{APP['commit']}:{APP['file']}"], capture_output=True, text=True,
-                         check=True).stdout
-    defs = dict((n, e.strip()) for n, e in re.findall(r'inline constexpr (?:GuiColor|uint32_t)\s+(k\w+)\s*=\s*([^;]+);', txt))
-    asserted = {n: int(v, 16) for n, v in re.findall(r'static_assert\((k\w+)\s*==\s*0x([0-9A-Fa-f]{6})\)', txt)}
-    memo = {}
-
-    def val(n):
-        if n in memo: return memo[n]
-        e = re.sub(r'\s+', ' ', defs[n])
-        if m := re.fullmatch(r'hex\(0x([0-9A-Fa-f]{6})\)', e): v = int(m.group(1), 16)
-        elif m := re.fullmatch(r'0x([0-9A-Fa-f]{6})', e): v = int(m.group(1), 16)
-        elif m := re.fullmatch(r'hex\((k\w+)\)', e): v = val(m.group(1))
-        elif re.fullmatch(r'k\w+', e) and e in defs: v = val(e)
-        elif n in asserted: v = asserted[n]
-        else: return None
-        memo[n] = v; return v
-    out = {}
-    for n in defs:
-        v = val(n)
-        if v is not None: out[n] = ((v >> 16) & 255, (v >> 8) & 255, v & 255)
-    return out
-
-
-APP_RAW = ('kRedesignContentGround', 'kRedesignLabel', 'kRedesignAccent', 'kRedesignHighlightLabel',
-           'kRedesignAccentInactive', 'kReliefHilight', 'kRelief3DLight', 'kReliefShadow', 'kReliefDkShadow',
-           'kInfoGround', 'kInfoText', 'kModalFieldGround', 'kRulerLabel', 'kRulerTick', 'kPlayheadHead',
-           'kPlayheadStem', 'kMarkerFlagBorder', 'kMarkerFlagFill', 'kMarkerFlagEdge', 'kMarkerFlagFillSel',
-           'kMarkerFlagEdgeSel', 'kMarkerFlagLabel', 'kMarkerFlagFillRed', 'kWaveformInk', 'kWaveformCanvas',
-           'kTrimArrowGlyph')
-
-
 # THE CHOSEN ENTRY (architect 2026-10-03, the colour loop's mock sets BA..BX): key and display name `warptempo` (all
 # lowercase, one word, his spelling), the app's default theme 2026-10-03..04. CHOSEN, NOT IMPORTED — no desktop of
 # the era recorded it, so it carries no source file: its record is the ruling. Its chrome is set BA03, Windows 95
@@ -489,22 +453,8 @@ def preset_entries():
     return out
 
 
-def app_entry():
-    k = render_h_constants()
-    k['kTrimArrowGlyph'] = k['kRedesignLabel']   # highlight_text_ink(the ground): the label white on #303030
-    raw = {n: k[n] for n in APP_RAW}
-    prov = {'project': APP['project'], 'file': APP['file'], 'commit': APP['commit'],
-            'record': 'the constants src/gui/render.h compiles to (its hex() literals and the static_asserts of its '
-                      'derived words); kTrimArrowGlyph is highlight_text_ink(kRedesignContentGround)'}
-    e = entry('warptempo', '2026-10-03', 'Warptempo 2026-10-03', prov, raw, notes=[
-        'the look the app paints on 2026-10-03, its relief derived from the ground by the app\'s ratio rule at that '
-        'commit; recorded here so it stays selectable as bytes'])
-    e['corroborated'] = 0
-    return e, k
-
-
 # ------------------------------------------------------------------ the checks and the write
-def checks(entries, k):
+def checks(entries):
     by = {e['key']: e for e in entries}
     keys = [e['key'] for e in entries]
     assert len(keys) == len(set(keys)), sorted(x for x in keys if keys.count(x) > 1)
@@ -549,11 +499,6 @@ def checks(entries, k):
         if e['key'].startswith(PRESET_PREFIX):
             picked = {k: e['raw'][k] for k in PRESET_THEME_KEYS}
             assert e['family'] == 'warptempo' and e['roles'] == preset_roles(e['raw']['chrome'], picked), e['key']
-    app = by['warptempo-2026-10-03']
-    for n, v in app['raw'].items(): assert v == hx(k[n]), n
-    assert [app['roles'][x] for x in ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow',
-                                      'selected_fill', 'selected_text', 'info_ground', 'info_text', 'field_ground')] == \
-        ['#303030', '#FCFCFC', '#5E5E5E', '#434343', '#1E1E1E', '#0A0A0A', '#96BFDA', '#000000', '#FFFFE1', '#000000', '#141618']
 
 
 def drop_duplicates(entries):
@@ -576,8 +521,7 @@ def document(entries, not_imported):
                 'the source records under its own key names; "roles" the catalog roles (tools/theme_catalog/roles.py); '
                 'a role a source has no word for is absent and the app\'s own value applies. Bytes are #RRGGBB as the '
                 'source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family '
-                'that imports nothing is the program\'s own, "warptempo": the app\'s look of 2026-10-03 recorded off '
-                'render.h, the architect\'s chosen default `warptempo`, and his presets saved on the colour picker '
+                'that imports nothing is the program\'s own, "warptempo": the architect\'s chosen `warptempo` and his presets saved on the colour picker '
                 '(`warptempo-preset-<n>`, architect 2026-10-04: the preset\'s chrome ground through the picker\'s chrome '
                 'rule, the roles the picker shows fixed), chosen, not imported (their provenance is his ruling or his '
                 'preset).',
@@ -601,18 +545,17 @@ def write(doc):
 
 
 def presets_only():
-    """The --presets-only road (the head): the committed catalog's other entries and not-imported record carried, the
-    preset entries and the header written anew."""
+    """The --presets-only road (the head): the committed catalog's imported entries and not-imported record carried,
+    the program's own family and the header written anew."""
     old = json.load(open(OUT))
-    carried = [e for e in old['entries'] if not e['key'].startswith(PRESET_PREFIX)]
-    by = {e['key']: e for e in carried}
-    app, k = app_entry()
-    for e in (app, chosen_entry()):
-        if {x: v for x, v in e.items() if x != 'corroborated'} != by[e['key']]:
-            raise SystemExit(f'build: {e["key"]} recomputed differs from the committed catalog; run the full build')
-    entries = carried + preset_entries()
+    carried = [e for e in old['entries'] if e['family'] != 'warptempo']
+    by = {e['key']: e for e in old['entries']}
+    chosen = chosen_entry()
+    if {x: v for x, v in chosen.items() if x != 'corroborated'} != by[chosen['key']]:
+        raise SystemExit(f'build: {chosen["key"]} recomputed differs from the committed catalog; run the full build')
+    entries = carried + [chosen] + preset_entries()
     entries.sort(key=lambda e: FAMILIES.index(e['family']))
-    checks(entries, k)
+    checks(entries)
     write(document(entries, old['not_imported']))
     print(f'carried {len(carried)} entries from the committed catalog; presets: '
           + ', '.join(e['key'] for e in entries if e['key'].startswith(PRESET_PREFIX)))
@@ -625,12 +568,11 @@ def main():
     kde, kde_later = kde_entries()
     entries = win + kde
     cde, mono = cde_entries(); entries += cde
-    app, k = app_entry(); entries.append(app)
     entries.append(chosen_entry())
     entries += preset_entries()
     entries, dups = drop_duplicates(entries)
     entries.sort(key=lambda e: FAMILIES.index(e['family']))
-    checks(entries, k)
+    checks(entries)
     write(document(entries, {
         'cde_monochrome': {'files': [f'{m}.dp' for m in mono],
                            'reason': 'X colour names for monochrome displays; dtsession refuses them on a colour display '

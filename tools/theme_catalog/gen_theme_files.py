@@ -13,12 +13,11 @@
 #   THE CLOCK PANEL, clock_ground / clock_text = the entry's ground and label: Windows' status bar is ButtonFace /
 #     ButtonText, a mapping by Windows' own rule (the built-in's own two roles are the same pair).
 #   THE CARD, card_ground / card_text = the entry's recorded info pair (roles.py: Windows' InfoWindow / InfoText; the
-#     two Windows families and `warptempo-2026-10-03` record it, KDE 3 and CDE have no tooltip pair, the chosen
-#     `warptempo` and the presets carry none), unnamed where the entry records none. card_frame is never named: the
+#     two Windows families record it, KDE 3 and CDE have no tooltip pair, the chosen `warptempo` and the presets carry
+#     none), unnamed where the entry records none. card_frame is never named: the
 #     built-in's black is Windows' tooltip border, and no entry records a frame colour of its own (every Windows entry's
 #     raw WindowFrame is #000000, which no role reads).
-#   THE PROGRAM'S ROLES only where the entry records them: the imported entries and the two chosen `warptempo` entries
-#     name none; HIS PRESETS (`warptempo-preset-<n>`, build.py preset_entries over the picker's presets.json, architect
+#   THE PROGRAM'S ROLES only where the entry records them: the imported entries and the chosen `warptempo` name none; HIS PRESETS (`warptempo-preset-<n>`, build.py preset_entries over the picker's presets.json, architect
 #     2026-10-04) name their program colours (PRESET_ELEMENT_ROLES below), each resolved through the picker's own theme
 #     (tools/palette/themes/picker.json with the preset's colours applied, render.picker_apply), so every value is the
 #     colour the picker painted: the canvas, the ink and the outline the picker's "auto" rule over the two (the 50 %
@@ -27,8 +26,8 @@
 #     picked, one flag colour painted every authored kind, so this reproduces what the picker showed him), and the
 #     Unselected / Selected Invalid Flag onto the removed pair (the invalid flag wears the removed pair). THE LABELS:
 #     label and field_text the preset's label as build.py's preset rule gives them (the chrome above); the flag labels
-#     are never named, the picker having no flag-label element (it shows them fixed), so a preset records none and the
-#     built-in's apply.
+#     are never named, the picker having no flag-label element (it shows them fixed white), so a preset records none and
+#     the built-in's apply, white on both (architect 2026-10-05), as the picker painted them.
 #   Before writing, each preset's chrome is checked against the picker: its light roles must equal the chrome the
 #   picker paints for that preset, else a stale catalog (re-run build.py) or a changed picker theme (a ruling).
 #
@@ -77,12 +76,18 @@ PRESET_ELEMENT_ROLES = (('canvas', ('waveform_canvas',)), ('ink', ('waveform_ink
                         ('playhead_head', ('playhead_head',)), ('playhead_stem', ('playhead_stem',)))
 
 
-def role_table_names():
-    """kGuiThemeRoles' names in order, read off src/gui/theme_file.h."""
+def role_table():
+    """kGuiThemeRoles read off src/gui/theme_file.h -> ((name, the built-in's '#RRGGBB'), ...) in order."""
     text = open(THEME_FILE_H).read()
     body = text[text.index('kGuiThemeRoles[] = {'):]
     body = body[:body.index('};')]
-    return tuple(re.findall(r'\{"([a-z0-9_]+)",\s*&GuiPalette::', body))
+    return tuple((n, '#' + v.upper()) for n, v in
+                 re.findall(r'\{"([a-z0-9_]+)",\s*&GuiPalette::\w+,\s*0x([0-9A-Fa-f]{6})\}', body))
+
+
+def role_table_names():
+    """kGuiThemeRoles' names in order."""
+    return tuple(n for n, _ in role_table())
 
 
 def preset_program_roles(e, preset, picker):
@@ -120,6 +125,20 @@ def file_roles(e, presets, picker):
     return out
 
 
+def inputs():
+    """What file_roles reads beside the entry: (presets.json's presets by number, the picker's theme)."""
+    return {p['number']: p for p in json.load(open(PRESETS))['presets']}, json.load(open(PICKER_THEME))
+
+
+def resolved_roles(e, presets, picker):
+    """One catalog entry -> every role's '#RRGGBB' as the app resolves its theme (theme_file.h's head): the built-in's
+    values, overwritten by the roles the entry's file names; the built-in itself, which has no file, its own values.
+    Read by crops.py, so a crop paints what the app paints."""
+    out = dict(role_table())
+    if e['key'] != BUILTIN: out.update(file_roles(e, presets, picker))
+    return out
+
+
 def text_of(rs):
     for role, v in rs.items():
         assert role in ROLE_ORDER, role
@@ -133,8 +152,7 @@ def main():
         raise SystemExit(f'gen_theme_files: {THEME_FILE_H}\'s kGuiThemeRoles is {role_table_names()}, not ROLE_ORDER')
     entries = json.load(open(CATALOG))['entries']
     if BUILTIN not in [e['key'] for e in entries]: raise SystemExit(f'gen_theme_files: no {BUILTIN} in the catalog')
-    presets = {p['number']: p for p in json.load(open(PRESETS))['presets']}
-    picker = json.load(open(PICKER_THEME))
+    presets, picker = inputs()
     os.makedirs(OUT, exist_ok=True)
     want = {}
     for e in entries:

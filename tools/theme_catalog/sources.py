@@ -76,7 +76,3 @@ def provenance(src, path):
     s = SOURCES[src]
     return {'project': s['project'], 'file': path, 'repository': s['repo'], 'commit': s['commit'],
             'url': file_url(src, path)}
-
-# THE APP'S OWN ENTRY reads src/gui/render.h at this commit (git show, read-only): the constants of the look the app
-# paints on 2026-10-03, so the catalog's bytes never move with a later commit.
-APP = dict(project='Warptempo GUI', file='src/gui/render.h', commit='da0b10513314bde5a5a06307197b2ca9d1517f44')

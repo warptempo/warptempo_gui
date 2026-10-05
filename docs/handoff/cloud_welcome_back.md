@@ -44,7 +44,7 @@ RULED:
   beside the device config (`device_config_path()`'s folder, both devices), read ONCE AT LAUNCH; the name is given
   where a preset becomes a file (the picker keeps "Preset N").
 - ONE BUILT-IN THEME, compiled: WINDOWS 95 (Windows Standard), the basis. Every other theme — the imported catalog,
-  `warptempo`, `warptempo-2026-10-03`, his presets — ships as an EXTERNAL FILE bundled with the app, not compiled.
+  `warptempo`, his presets — ships as an EXTERNAL FILE bundled with the app, not compiled.
 - THE CARDS (and the tooltip) on Windows 95: the tooltip yellow #FFFFE1 under black text inside a THIN BLACK BORDER
   (one line a side). This reverses the 2026-10-03 "the card stands on the ground under the label, inside the INFO
   frame" (closed_questions' info-face lines are residue to amend); it lands with the theme files as the built-in's
@@ -107,12 +107,13 @@ RULED:
   and 71acf95 (`tools/theme_catalog/gen_theme_files.py` -> the 99 files of `assets/themes/`, the copy-in at every
   launch, theme_table.h / levels.py / preset_keys.py retired, the sync script's setup dropping the retired keys).
   REQUEST 3 (the laptop build, both configs migrated with his values recorded first, the APK) is OUT; read DONE 3.
-- OPEN FOR HIM (asked 2026-10-05, no answer yet): (1) each preset's flag LABELS — the picker shows both white, the
-  built-in's selected label is black; presets name no flag label today (none records a flag colour yet): name them
-  white whenever a preset records a flag colour (the planner's recommendation, what preset_keys.py did)? (2) should
-  `warptempo-2026-10-03.theme` also name that day's recorded program colours (the catalog keeps them) so it
-  reproduces the old look whole? (3) the crops (`docs/themes/crops/`) still paint 2026-10-03's program colours: keep,
-  or take each file's program roles (else the built-in's) at the next re-render?
+- ANSWERED 2026-10-05 (the three questions): (1) FLAG LABELS WHITE BY DEFAULT — "white text for the flags is going
+  to be the most common; the highlights will generally be chosen so white shows": the built-in's `flag_label_selected`
+  is now white too, so a file naming only faces gets white labels; the built-in's selected faces where white would not
+  read changed (the planner's pick on his delegation): phase reset aqua -> BLUE #0000FF, history added yellow ->
+  GREEN #008000 (the table above is the evening's; theme_file.h is authoritative). (2) `warptempo-2026-10-03` was
+  testing: REMOVED (catalog, bundle, crop). (3) THE CROPS paint each file's program roles, else the built-in's.
+  WAKES: the local budget raised to 16 (at least) until the reset; "go ahead and use one".
 - THE PICKER'S FLAG ELEMENTS follow the four kinds in a later picker round (his ruling); a preset's one flag pair
   goes onto both warp and phase reset until then.
 - NOTHING ELSE IS OPEN FOR HIM ON THIS ARC. The original plan: likely two arcs, (1) theme files, the one
@@ -120,3 +121,13 @@ RULED:
   `theme_level` retired), (2) the generator writing the catalog and his presets as bundled files, plus the sync verb;
   each ending in one laptop REQUEST. The residue: closed_questions' lines on the card face, the history's colours,
   the dark level; CLAUDE.md's COLOURS rule (the planner's).
+
+## Decisions for you (the cloud planner, 2026-10-05)
+1. WHITE LABELS BREAK ONE CLOSED RULE ON THE BUILT-IN. closed_questions rules that a selected face is a BRIGHTER
+   SHADE OF ITS FLAG'S OWN COLOUR (set BL, 2026-10-03). Under white labels, only three of Windows' sixteen pairs
+   carry white on the bright partner: purple / fuchsia, maroon / red, navy / blue. Teal's partner aqua and olive's
+   partner yellow do not, so the built-in now has teal / BLUE and olive / GREEN: another hue, the rule broken on
+   those two kinds (the closed line is amended to say so, pending your word). The alternative that keeps the rule is
+   phase reset NAVY / blue, whose unselected stem all but vanishes on the black canvas. RECOMMENDED: accept the
+   break on the built-in only (it is the fallback; your own themes follow the rule).
+

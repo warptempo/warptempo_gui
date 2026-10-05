@@ -19,7 +19,7 @@ touches THIS FILE. So:
 - The watch's loop is free while waiting; only a WAKE costs (one turn that re-reads the session's context). Start the
   local session fresh (/clear), keep tool output small (tail builds; never cat big files), and answer one REQUEST per
   wake.
-- AT MOST 8 WAKES IN TOTAL until the weekly reset (Tuesday 2026-10-06 ~11 pm ET). After the 8th, or if the session's context passes ~80k tokens, append
+- AT MOST 16 WAKES IN TOTAL until the weekly reset (Tuesday 2026-10-06 ~11 pm ET; raised from 8 by the architect 2026-10-05). After the 16th, or if the session's context passes ~80k tokens, append
   `## LOCAL PAUSED (<time>): needs a fresh local session` here, commit, push, and stop re-arming the watch.
 
 ## Local-only acts (what a REQUEST may ask for)

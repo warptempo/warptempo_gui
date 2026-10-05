@@ -77,7 +77,7 @@ DEFAULTS = {
     # the colour loop: THE SELECTED MARKER IS A BRIGHTER FACE, nothing white): a SELECTED flag's face `flag_fill_sel`
     # (above, the app style's selected fill, its default that style's measured one; the device config's
     # flag_face_selected), an invalid one's `flag_fill_red_sel` (invalid_face_selected), under the ONE selected label
-    # `flag_label_sel` (flag_label_selected), these two defaulting to the app's defaults; and the EDITING flag -- the in-place editor's box, the selected flag opened for edit --
+    # `flag_label_sel` (flag_label_selected), these two defaulting to the app's defaults of 2026-10-03 (the built-in's selected label is white since 2026-10-05); and the EDITING flag -- the in-place editor's box, the selected flag opened for edit --
     # its outline black (`flag_border_edit`, Windows' WindowFrame), its face the edited flag's selected face, its text
     # `flag_label_sel`, the selected substring's glyphs `selected_text` (HilightText) over `selected_fill` (Hilight;
     # flat_edit_colours, which falls back to Windows' #000080 when the theme does not state it)
