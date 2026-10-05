@@ -240,3 +240,24 @@ with `## DONE 4` here.
    the product in front, one screencap: Save should be GREY on a fresh launch (nothing authored yet).
 4. Commit (the wrapper) any copied presets, push, and write DONE 4: exit codes, logcat lines, the screencap's finding,
    anything refused. Wakes: report the count.
+
+## DONE 4 (2026-10-05 ~00:40, the local planner; HEAD 7e8b2146)
+1. His picker files copied in and COMMITTED HERE: presets.json unchanged (2 presets); picks.txt +2 lines;
+   state.json: active `selected_fill`.
+2. THE PICKER: `--check` exit 0, "all checks pass" (on his newly copied files). The APK exit 0; the export exit 0,
+   "17 elements (chrome, canvas, ink, waveform_outline, warp_flag, warp_flag_selected, phase_reset_flag,
+   phase_reset_flag_selected, added_flag, added_flag_selected, removed_flag, removed_flag_selected, playhead_head,
+   playhead_stem, label, selected_fill, selected_text), 28 roles, 8 scenes". The export does NOT clear stale files:
+   the laptop's out/picker still held `invalid_flags.*`; removed there (gitignored, not in the manifest) and on the
+   tablet before the push, so the tablet's scene/ holds no `invalid_*`. Installed, the whole folder pushed (18
+   files), relaunched. Logcat: `picker: export 2304x1440, 17 elements, 28 roles, 8 scenes (178796 antialiased px),
+   active selected_fill #666666 (state.json's colour and view, state.json's entry), 1 of 1`; geometry, DISPLAY_P3,
+   setFrameRate(90) all -> 0, window 2304x1440, buffer stride 2304 format 1. (His active element was not an old flag
+   key, so the alias was not exercised at launch.) No element chosen by touch.
+3. THE PRODUCT: `cmake --build build` exit 0, no warning; the APK exit 0 ("assets: 98 theme files"); installed,
+   relaunched. Logcat: window 2304x1440; loads 550 - 1 (228 markers, 435 phase resets); AAudio LOW_LATENCY 48 kHz;
+   renders the working buffer ("[success]"); no refusal. One advisory line: `History hid 68 commits whose sidecars
+   refuse the strict load` (the history prefetch; not new to this build as far as the laptop knows — say if it is).
+   SCREENCAP (the product in front, the screen awake): the top strip under his theme; SAVE IS GREY on the fresh launch
+   (the disabled emboss, like Undo and Redo beside it); the clock panel reads "100% | 12:35 AM", no `*`.
+4. Committed: tools/palette/picker/presets/{picks.txt,state.json} and this block. Wakes used: 4 of 8.
