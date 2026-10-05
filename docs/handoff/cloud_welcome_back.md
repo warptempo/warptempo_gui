@@ -186,4 +186,9 @@ RULED:
   2000 drew it as a straight linear left-to-right fill between ActiveTitle and GradientActiveTitle, per channel, no
   curve; the catalog records the pair for 18 Windows entries, e.g. Windows Standard #000080 -> #1084D0, Windows
   Classic #0A246A -> #A6CAF0) against the standing "no gradients" rule, and the un-maximised laptop frame.
+- RULED 2026-10-05 on the title bar: a BOLD caption face, the INACTIVE caption pair on the laptop, the caption
+  GRADIENT (linear, the one exception to "no gradients"), the laptop's SIZING FRAME when un-maximised ("always").
+  Still in discussion before any brief (his word: "let's talk about the font and the dithering before we proceed"):
+  the face (Roboto vs Liberation; Liberation was superseded 2026-10-02) and DITHERING (the caption, the playhead,
+  a general rule for colours a period display could not show).
 
