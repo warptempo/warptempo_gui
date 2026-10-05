@@ -1379,11 +1379,14 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // 2026-08-12, narrowed on 2026-08-13 and deleted whole on 2026-08-14, used to
 // take part of this partition's DEAD column out of the icon row's walk
 // entirely. It does not any more — this walk's verdict is the grey face
-// everywhere, on every row. THE PRODUCT NOW HIDES NOTHING AT ALL (2026-08-18):
-// the bottom row's cluster swap was the last hiding mechanism left, and it went
-// with the four history companions when they returned to the icon row — the
-// arrows paint unconditionally and every roster button publishes a real rect in
-// every state.
+// everywhere, on every row. ONE SWAP STANDS (architect 2026-10-05): in the
+// `h` view the history companions stand in the icon row's slots of the two
+// groups THIS WALK answers DEAD whole — Undo's (Undo, Redo, Copy Value,
+// Render) and the iteration group — and outside it the companions do not
+// stand (kIconRowHistoryStandIns, paint_handler.cpp, which names this walk as
+// the membership's derivation). A change here that answers one of those
+// seven LIVE in the view is a change to that table too. The bottom row's
+// arrows paint unconditionally.
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // THE THREE ANCHORS ARE NOT THIS PARTITION'S (2026-09-24): their one
     // verdict, menu_anchor_live (app_state.h), answers them at the head of
@@ -7352,8 +7355,9 @@ void GuiInputHandler::finalize_active_drags() {
 // THE ROSTER'S POINTER WALK over the whole roster (row 1's three menu
 // anchors, the icon row's twenty-six and the bottom row's seventeen: the
 // enum's own count at kRedesignButtonCount — the stash is
-// AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
-// with a zero rect now, and it contains no point). IT STORES NO HOVER: no
+// AppState::redesign_buttons; a MODAL's yield leaves a bottom-row member with
+// a zero rect, as do the icon row's overflow rule and its history stand-ins a
+// member that does not stand, and a zero rect contains no point). IT STORES NO HOVER: no
 // roster button wears a hover face (architect 2026-10-02, the frozen design),
 // so the walk answers exactly two readers from the remembered position — the
 // TOOLTIP's wait (the button a resting pointer's hint names, handed to

@@ -625,8 +625,9 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // row (the kdenlive menu bar: a flat ground carrying the
 // three menu anchors flush left and the battery + clock legend flush right),
 // directly under the caption. Lane 2 is the ICON row (the twenty-six
-// view/mode/action buttons — kIconRowButtons and kIconRowViewGroup,
-// paint_handler.cpp, are the count's authority), directly under the menu row
+// view/mode/action buttons — kIconRowButtons, kIconRowViewGroup and the
+// history stand-ins, paint_handler.cpp, are the count's authority; twenty
+// stand outside the `h` view and nineteen inside it), directly under the menu row
 // with nothing between and no border of its own. Lane 3 is the TRIM lane (the
 // thumb and its two ends, every trim gesture and the span-framing double-click),
 // the first lane UNDER GAP

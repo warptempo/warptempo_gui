@@ -285,8 +285,8 @@ def build():
     left_end = x
     for i, name in enumerate(K['kIconRowViewGroup']): buttons.append(button('icon', name, view_x0 + i * case_w, btn_y))
     if left_end > view_x0 - gap: raise SystemExit('tablet.py: the icon row\'s left walk runs under its view group')
-    row('icon row', 'left walk end (pad + 23 cases + 5 gaps)', '8 + 23 x 23 + 5 x 8', left_end,
-        'paint_handler.cpp paint_icon_row', 1581)
+    row('icon row', 'left walk end (pad + 17 cases + 5 gaps; outside the h view)', '8 + 17 x 23 + 5 x 8', left_end,
+        'paint_handler.cpp paint_icon_row', 1203)
     row('icon row', 'view group from the right (gap + 3 cases + pad)', '8 + 3 x 23 + 8', W - view_x0 + gap,
         'paint_handler.cpp paint_icon_row', 233)
     content = [L['bottom'][0] + bb, L['bottom'][1]]

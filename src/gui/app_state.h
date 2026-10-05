@@ -1945,8 +1945,10 @@ struct TrimBarPressSeed {
 // the 2026-08-12 relayout, COPY VALUE between Redo and Render since
 // 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS follow since 2026-08-18, with LOAD IN PLACE at their tail since
-// 2026-09-01, and THE VIEW GROUP'S THREE close the row flush right since
-// 2026-10-01), then the bottom row's SEVENTEEN (re-counted 2026-09-29 evening,
+// 2026-09-01 — the six behind the opener standing in two greyed authoring
+// groups' slots, and only in the `h` view, since 2026-10-05
+// (kIconRowHistoryStandIns, paint_handler.cpp) — and THE VIEW GROUP'S THREE
+// close the row flush right since 2026-10-01), then the bottom row's SEVENTEEN (re-counted 2026-09-29 evening,
 // when Edit Flag and Copy Value went up and Jump to Defining Marker joined;
 // Edit Flag was deleted later that evening) —
 // the transport three, the MARKER-VERB GROUP'S SIX (kMarkerVerbGroup,
@@ -2487,10 +2489,16 @@ enum class RedesignButton {
     // opened the view closes it. It held a separator-led group of exactly this
     // shape from 2026-08-04 until 2026-08-14, when the four companions left for
     // the bottom row and the opener joined the render-entry group in last
-    // place; this ruling puts both halves back where they were. IT IS EIGHT
-    // SINCE 2026-09-01, the LOAD IN PLACE having joined at the tail (its own
-    // entry, below the companions): the group is now everything the `h` view
-    // can be driven by from this row.
+    // place; this ruling puts both halves back where they were. IT IS SEVEN
+    // SINCE 2026-09-04 (the walk radios' collapse into one lamp), the LOAD IN
+    // PLACE having joined at the tail on 2026-09-01 (its own entry, below the
+    // companions): the group is everything the `h` view can be driven by
+    // from this row. SINCE 2026-10-05 (architect, the row fitting the
+    // tablet at gui_scale 400) ONLY THE OPENER STANDS IN EVERY STATE: the six
+    // behind it stand only in the view, in the slots of the two authoring
+    // groups the view greys whole (kIconRowHistoryStandIns, paint_handler.cpp,
+    // the swap's one owner, which also says which slot each takes). This
+    // enum keeps the group's order; the painted order is the painter's.
     IconHistory,
     // The walk lamp, between the opener and the cumulative toggle, which is
     // where the architect put the surface on 2026-08-18 ("add two radio buttons
@@ -2513,11 +2521,11 @@ enum class RedesignButton {
     // SESSION and it wears the Session glyph, shallow-history. Deep-history
     // left the icon roster with the Git half.
     //
-    // It GREYS OUTSIDE THE `h` VIEW AND IS LIVE INSIDE IT, the icon row's
-    // settled rule and the same answer its four neighbours give — bare `g` is
-    // bound in exactly one place in the product and it is inside the view. Its
-    // arm is the companions' own at redesign_button_enabled, which states why it
-    // owns that fact rather than the derived partition.
+    // It STANDS ONLY IN THE `h` VIEW since 2026-10-05 (the stand-ins) and
+    // its arm still answers DEAD outside it, the same answer its neighbours
+    // give — bare `g` is bound in exactly one place in the product and it is
+    // inside the view. Its arm is the companions' own at
+    // redesign_button_enabled, which states why it stays.
     //
     // ITS LAMP IS SCOPED TO THE VIEW, unlike the Cumulative toggle beside it,
     // and the contrast is the state's own: the READING is a program-session
@@ -2538,9 +2546,11 @@ enum class RedesignButton {
     // their keys are bound in one place in the product and it is inside the
     // view. That arm went plain-true on 2026-08-15 because the move to the
     // bottom row had stopped painting them outside the view at all, so no face
-    // read it; THIS ROW HIDES NOTHING, so they paint in every state and the
-    // face has to be honest again. The arm is at redesign_button_enabled and
-    // says which owner it uses and why.
+    // read it; the icon row painted them in every state from 2026-08-18 until
+    // 2026-10-05, when they became STAND-INS standing only inside the view
+    // (kIconRowHistoryStandIns, paint_handler.cpp), so the resting grey
+    // reaches no pixel again. The arm is at redesign_button_enabled and says
+    // which owner it uses and why it stays.
     //
     // INSIDE THE VIEW THEY ARE TRUTHFUL SINCE 2026-08-30 (architect: "Any
     // time a button would be a no-op, grey it"): REVERT greys with no subject
@@ -2560,8 +2570,8 @@ enum class RedesignButton {
     // THE LOAD IN PLACE CLOSES THE GROUP (architect 2026-09-01), off the
     // render-entry group two separators back: the act it runs from the icon
     // row is the `h` VIEW'S — the load confirmation on the viewed walk member
-    // — so the button sits with the view's other seven, and OUTSIDE the view it
-    // greys with them. What it was doing over there was Play renders' own act
+    // — so the button sits with the view's other six, and OUTSIDE the view it
+    // answers dead with them (and, since 2026-10-05, does not stand there). What it was doing over there was Play renders' own act
     // (bare `'` outside the view opens the render player), which is the
     // duplicate the move deletes: the player keeps ONE icon-row opener now.
     // It is one of the group's TWO members whose chord is not the mode's own
@@ -3189,6 +3199,13 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // this predicate can feel: it names LEADERS, so a member changing groups is
 // the roster enum's and the painter's table's business, and those two plus
 // this one are the three sites a reorder keeps in step.
+//
+// THE HISTORY STAND-INS NAME NO LEADER (architect 2026-10-05): in the `h`
+// view a stand-in group paints in place of an authoring group and takes THAT
+// group's leader's gap (kIconRowHistoryStandIns, paint_handler.cpp, keys each
+// stand-in by the leader it replaces), so the companions are absent here and
+// the row's boundaries are the same in both states. The history opener leads
+// a group of one since then.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
@@ -14630,8 +14647,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // 2026-08-14, when they left this row for the BOTTOM one and became the
         // arrows' mode twin; the arm went plain-true on 2026-08-15 because down
         // there they were not painted outside the view at all. The relayout
-        // brought them back to a row that hides nothing, and the arm with them.
-        // The whole succession is at their own arm below.)
+        // brought them back to a row that painted them in every state, and the
+        // arm with them; since 2026-10-05 they stand only inside the view
+        // again (kIconRowHistoryStandIns), the arm kept. The whole succession
+        // is at their own arm below.)
         // Their presses
         // always dispatch and the CHORDS' OWN refusals answer: the read-only
         // gate blocks the authoring
@@ -15484,9 +15503,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // (redesign_button_selected below).
         case RedesignButton::IconAddToSelection:
             break;
-        // THE FIVE HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
-        // ICON ROW's own settled rule, which is where they live again since
-        // the roster relayout: what a mode refuses simply GREYS, and their
+        // THE FIVE HISTORY BUTTONS ANSWER DEAD OUTSIDE THE `h` VIEW
+        // (2026-08-18) — the ICON ROW's own settled rule, which is where they
+        // live again since the roster relayout: what a mode refuses simply
+        // GREYS, and their
         // chords (bare `g` for the walk lamp, bare `u`, bare `v`, bare `,`
         // and bare `.` for the four companions) are bound in exactly one place
         // in the product and it is inside the view.
@@ -15507,10 +15527,17 @@ inline bool redesign_button_enabled(const AppState& a,
         // own slots under a cluster swap, so outside the view they were not
         // painted at all — they published zero rects — and the resting answer
         // reached no pixel, which made the arm below moot rather than wrong.
-        // THE ICON ROW HIDES NOTHING, so the premise is gone: they paint in
-        // every state now and the face has to be honest again. The arm is the
-        // one they held 2026-08-05..15 (2026-08-08 for the Cumulative toggle),
-        // for this same reason, restored verbatim in effect.
+        // The icon row painted them in every state from 2026-08-18, so the
+        // face had to be honest again, and the arm is the one they held
+        // 2026-08-05..15 (2026-08-08 for the Cumulative toggle), restored
+        // verbatim in effect. SINCE 2026-10-05 THE PREMISE IS GONE AGAIN —
+        // they stand only inside the view, in the slots of the two authoring
+        // groups it greys whole (kIconRowHistoryStandIns, paint_handler.cpp),
+        // and publish empty rects outside it — so the resting half reaches no
+        // pixel. IT STAYS because it is the chord's truth: the stash the press
+        // claim and the drift comparator read then never holds a live bit for
+        // a chord bound nowhere outside the view, and a ruling that stands a
+        // companion outside the view again inherits an honest face.
         //
         // INSIDE THE VIEW THEY ARE TRUTHFUL TOO SINCE 2026-08-30 (architect:
         // "Any time a button would be a no-op, grey it"), and the two in-view
@@ -15544,12 +15571,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE CUMULATIVE TOGGLE'S SELECTED FACE IS UNAFFECTED and was never
         // scoped this way: the reading is a session preference
         // (AppState::history_cumulative) that outlives every visit, so the lamp
-        // reports it wherever the button is painted — which now includes every
-        // frame outside the view, where it composes DISABLED + SELECTED. The
-        // shared face expressions already handle that pair (the note at
-        // paint_button, paint_handler.cpp): the disabled blend mixes the fill
-        // and the line toward the ground rather than dropping them, so the
-        // reading stays readable and dimmed.
+        // reports it wherever the button is painted — inside the view only,
+        // since 2026-10-05 (from 2026-08-18 it also composed DISABLED +
+        // SELECTED on every frame outside it, which the shared face
+        // expressions handle: a dead checked button stays checked, its glyph
+        // engraved).
         //
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
         // loading piece, so `false` is already this arm's answer there.
@@ -16744,8 +16770,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the surface these arrows serve.
         // The tooltips-on-disabled ruling (architect 2026-08-07, kdenlive's own
         // behavior: a disabled icon still explains itself) governs these where
-        // they rest disabled, which since 2026-08-18 is every frame outside the
-        // `h` view and since 2026-08-30 the walk's two walls inside it — the
+        // they rest disabled, which since 2026-10-05 (when they stopped
+        // standing outside the `h` view) is the walk's two walls inside it — the
         // shift line stays on a greyed arrow, the jump it names moving nothing
         // there either. ON A LIVE ARROW ONE STEP FROM ITS WALL THE LINE DROPS
         // (the stateful overload's own fork, which compares the two landings
@@ -16754,8 +16780,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // exactly where the modified press does something different.
         // They were painted inside the view alone from 2026-08-12
         // (first as the icon row's collapsed four, then as the bottom row's
-        // swapped cluster) until the relayout brought them back to a row that
-        // hides nothing.
+        // swapped cluster) until the 2026-08-18 relayout, and are again since
+        // 2026-10-05, as the icon row's history stand-ins.
         case RedesignButton::HistoryOlder:
             return {"Older (,)", "Press Shift for oldest."};
         case RedesignButton::HistoryNewer:

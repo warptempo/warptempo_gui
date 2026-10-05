@@ -740,8 +740,9 @@ private:
     // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
     // flat sampled ground, the three menu anchors flush left and the battery +
     // clock legend flush right), the ICON ROW (top lane 2, row 4: the
-    // twenty-six view/mode/action buttons and their separators, no border of
-    // its own since 2026-10-01, every button painted on every frame), and the
+    // twenty-six view/mode/action buttons, no border of its own since
+    // 2026-10-01, twenty standing outside the `h` view and nineteen inside it
+    // since 2026-10-05 — kIconRowHistoryStandIns), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom lane 0, the strip's ONE
     // lane, ON THE WINDOW'S FOOT: the clock cell and the STATE CELL left, then
     // the marker verbs, the marker walk, the arrow four and the transport

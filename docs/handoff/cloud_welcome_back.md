@@ -76,3 +76,21 @@ on the period font, not Roboto) — and how the icons map (Chicago95's 16 / 22 p
 - The picker's navigation: deferred ("moving down in importance").
 - His to-do: retire `max_waveform_height`; remove the menu row's battery + clock legend. Ruled out 2026-10-05: menus
   behind the caption icon, removing the well.
+- 2026-10-05, later (same thread): HE UPLOADED the X11 bitmap font set as OTB (100dpi, 75dpi, cyrillic, misc),
+  Chicago95's icon theme and its xfwm4 theme (title-bar button XPMs). They live in tmp/ref/assets/ (gitignored; a
+  new container will not have them — ask him to re-upload). MEASURED: CRONYX HELVETICA 11 px (cyrillic/crox1h.otb;
+  bold crox1hb) has MS Sans Serif 8's exact cell (ascent 11, descent 2 = 13), a 9-px cap (the period's measured
+  digits), "$" no taller than the capitals, tabular 6-px digits; side by side with ACID's menu text at 4x it is the
+  closest (tmp/mock/bitmap_fonts_x4.png). Also measured per 1000 em: LIBERATION SANS cap 688, "$" 741, deepest 213
+  (ink span 954) vs ROBOTO cap 712, "$" 827, "(" 230 (span 1057): Liberation's flag box would be ~1.3 W px shorter
+  (Liberation was superseded 2026-10-02; his call to reverse it for the fallback scales). The time fields and the
+  flag box MEASURE THE LIVE FACE (shaped at the live size), so a face change carries through; only the 17-px field
+  height is a period constant. HISTORY ROW ACCEPTED: the history group's non-entry buttons only in history mode —
+  a coder is on it. Licences to verify before bundling: X11 Adobe / Cronyx bitmap fonts (permissive X notices),
+  Chicago95 (GPL-3.0, upstream grassmunk/Chicago95) — no licence files were in the archives.
+
+- LANDED (the history-row commit, 2026-10-05): the six non-entry history buttons show only in history mode, in the
+  greyed Undo group's and iteration group's slots (kIconRowHistoryStandIns, paint_handler.cpp); the row is 524 W
+  outside / 501 W inside history mode: fits 2304 up to 440 % / 459 %. OPEN FOR HIM: in history mode the `h` entry
+  button and Tooltips sit 23 W px further left (six buttons in seven slots); the slot order (Older / Newer where
+  Undo / Redo were). Not installed yet (the next REQUEST). THIS THREAD STOPS HERE; he continues in a new thread.

@@ -781,8 +781,10 @@ inline int menu_row_h_px() {
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, directly
 // under the MENU ROW with nothing between (row 4 of the redesign: TWENTY-SIX
-// view/mode/action buttons — the kIconRowButtons and kIconRowViewGroup tables
-// are the count's one authority, and ALL of them paint on every frame;
+// view/mode/action buttons — the kIconRowButtons, kIconRowViewGroup and
+// history stand-in tables are the count's one authority; twenty stand outside
+// the `h` view and nineteen inside it since 2026-10-05, the swap's one owner
+// being kIconRowHistoryStandIns (paint_handler.cpp);
 // icons::kIconCount is a different number, the GLYPH set, which the row does
 // not exhaust). THIS BLOCK IS ALSO THE BOTTOM ROW'S CONTENT: that lane
 // delegates its content height to icon_row_content_h_px below.

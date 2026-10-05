@@ -1717,13 +1717,11 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     chord until the 2026-09-04 collapse); this claim is what answers its face
 //     LIVE inside the view, its resting grey outside it being its own arm's;
 //   * BARE `,` / BARE `.` — the walk's own two buttons (2026-08-05), the
-//     roster's first RESTING-DISABLED entries, and resting-disabled again
-//     since 2026-08-18: the icon row hides nothing, so what keeps them from
-//     dispatching outside the view is their ENABLED BIT
-//     (redesign_button_enabled reads `history_mode.active` for them and states
-//     the whole succession, including the plain `true` they answered from
-//     2026-08-15 while the bottom row's cluster swap left them unpainted out
-//     there);
+//     roster's first RESTING-DISABLED entries. Outside the view they do not
+//     stand since 2026-10-05 (the icon row's history stand-ins publish empty
+//     rects there), so no press reaches them; their ENABLED BIT still answers
+//     dead out there (redesign_button_enabled reads `history_mode.active` for
+//     them and states the whole succession);
 //   * BARE `u` — the Cumulative toggle's own button (2026-08-08), which joined
 //     that family on exactly the same terms and shares that arm;
 //   * BARE Home / BARE End — the bottom row's two SKIP buttons;

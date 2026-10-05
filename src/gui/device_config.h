@@ -260,17 +260,16 @@ inline constexpr const char* kDefaultProjectsRepo =
 // which the waveform is the zero height waveform_area's floor answers (the
 // arithmetic and the guard at waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 662
-// Windows px of window at 100 % the icon row's twenty-six buttons in seven
-// groups no longer fit, and its flush-right view group covers the groups to
-// its left (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The
-// tablet's 2304-px panel holds the row whole up to 350 % — 1814 device px
-// at 275 %, exactly 2304 at 348 % to 350 % (the arithmetic is at
-// paint_icon_row, paint_handler.cpp; the laptop-pixel unit's 245 % fit
-// ceiling and its succession are git history) — and past it the overflow
-// rule answers: at 400 % the left walk ends at 2308 against the view
-// group's gap at 1964, so Load in Place, History Newer and History Older
-// are covered whole and History Revert cut to its first 24 columns. The
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 524
+// Windows px of window at 100 % (501 in the `h` view) the icon row's twenty
+// standing buttons in seven groups (nineteen in the view, its history
+// stand-ins — architect 2026-10-05, so the row fits the tablet at 400 %) no
+// longer fit, and its flush-right view group covers the groups to its left
+// (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
+// 2304-px panel holds the row whole in both states up to 440 % — 2096 device
+// px at 400 % outside the view, 2004 inside it (the arithmetic is at
+// paint_icon_row, paint_handler.cpp; the earlier fit ceilings and their
+// succession are git history) — and past it the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A
