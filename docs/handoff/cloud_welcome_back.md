@@ -56,12 +56,13 @@ settled before horizontal warp-marker placement work). Brief in flight / landed 
 - FLAG COLOURS: phase reset teal / AQUA (selected); history added GREEN / LIME; warp purple / fuchsia and removed
   maroon / red stay. All four are true dark / bright pairs of Windows' 16.
 - History row (b0904c1): his yes to the `h` shift and the slot order (not yet seen on glass). Not installed yet.
-- THE ICON PASS (opened by him 2026-10-05): a mock on his 400 % screenshot (tmp/mock/chicago_mock.py: 22 Chicago95
-  16-px icons x4 in the 23 x 22 cases, fits one-to-one; colour icons beside mono Breeze look unfinished, so the pass
-  is all-or-nothing). PUT TO HIM: start the button -> Chicago95 name table (candidates where loose, a full mock for
-  his picks, then one brief recording Chicago95's GPL-3.0 provenance); the disabled rule (emboss the icon's DARK
-  pixels, Windows' toolbar way, vs the whole silhouette). Bitmap mode only; Breeze elsewhere. His uploads (icons,
-  xfwm4) live only in tmp/ref/ of this container.
+- THE ICON PASS (his go, 2026-10-05; bitmap mode only, Breeze elsewhere): the candidate sheets went to him
+  (tmp/icons/: mapping.md, contact_sheet_1/2.png, data.py + build.py regenerate them; 50 buttons + 6 alternate
+  faces + 4 card/row glyphs, 1-3 Chicago95 16-px candidates each). AWAITING HIS PICKS. No match: IconRestrictUndo,
+  IconBpm (no note), HistoryWalk, HistoryCumulative (no sum). DISABLED = Windows' toolbar rule (his WordPad
+  screenshots): the icon's pixels that are neither white nor silver in Shadow, a Hilight copy +1,+1 (the same
+  DSS_DISABLED emboss the Breeze glyphs use). The brief records Chicago95's GPL-3.0 provenance beside the assets.
+  His uploads (icons, xfwm4) and tmp/icons live only in this container; a new one needs a re-upload.
 - THE ICON ARC with Fable after the reset (now tied to the bitmap mode above); a new LOGO.
 - The Alt-key menu accelerators (File / Edit / Settings; the bare `E` binding freed) — low, after the reset.
 - The picker's navigation: deferred ("moving down in importance").
