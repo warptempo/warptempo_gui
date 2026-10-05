@@ -83,9 +83,22 @@ RULED:
     HISTORY'S REMOVED PAIR, one red for both, the context telling them apart (invalid while authoring, removed in
     `h`). Warp keeps purple / fuchsia. The picker's flag elements follow the kinds in a later picker round.
 
-## Decisions for you (the cloud planner, 2026-10-04 evening, after the rulings above)
-1. THE PHASE-RESET FLAG: TEAL #008080, selected AQUA #00FFFF. Navy / blue would vanish on the black canvas the stems
-   cross; olive / yellow reads as a warning. RECOMMENDED: teal / aqua.
-2. THE HISTORY'S ADDED FLAG: GREEN #008000, selected MONEY GREEN #C0DCC0 (one of the four Windows added to the 16).
-   Lime, the natural bright partner, is the waveform's ink, and a selected flag's stem runs down across the
-   waveform, so a lime stem disappears where it crosses a lime trace. RECOMMENDED: green / money green.
+- THE BUILT-IN'S COLOURS, THE PLANNER'S PICK (he delegated every default colour 2026-10-04: "the default theme is
+  just a fallback"; the recommended theme will be a custom one, made in the picker, not yet ready). All from Windows'
+  20 solid colours, each flag kind a dark / bright pair of the 16:
+  | role | colour | | role | colour |
+  |---|---|---|---|---|
+  | canvas | black #000000 | | ink | LIME #00FF00 (Sound Recorder's green trace on black) |
+  | lit outline | green #008000 | | playhead head / stem | gray #808080 / white #FFFFFF |
+  | warp flag / selected | purple #800080 / fuchsia #FF00FF | | phase-reset flag / selected | teal #008080 / aqua #00FFFF |
+  | history removed AND invalid / selected | maroon #800000 / red #FF0000 | | history added / selected | olive #808000 / yellow #FFFF00 |
+  | flag label | white #FFFFFF | | the one selected label | black #000000 |
+  | clock ground / text | silver #C0C0C0 / black (Windows' status bar: ButtonFace, ButtonText) | | card ground / text / frame | #FFFFE1 / black / black (InfoWindow is recorded, not of the 20) |
+  Why: navy / blue would vanish on the black canvas the stems cross; lime is the ink, so no flag takes it; gray is
+  the playhead's; olive / yellow was the pair left over, and the `[+]` / `[-]` sign carries the meaning. The chrome
+  is Windows 95 Standard as recorded.
+- NOTHING IS OPEN FOR HIM ON THIS ARC. A fresh thread briefs it on his go: likely two arcs, (1) theme files, the one
+  built-in, every colour a role (the clock's two, the card's three, the flag kinds, the twelve device keys retired,
+  `theme_level` retired), (2) the generator writing the catalog and his presets as bundled files, plus the sync verb;
+  each ending in one laptop REQUEST. The residue: closed_questions' lines on the card face, the history's colours,
+  the dark level; CLAUDE.md's COLOURS rule (the planner's).
