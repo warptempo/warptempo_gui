@@ -189,3 +189,33 @@ The paused REQUEST 3 stands with two changes from 40623b9: the bundle is 98 them
 built-in's flag labels are both white (phase reset's selected face blue, the history's added selected face green).
 If either device's config names `theme=warptempo-2026-10-03`, report it in DONE 3 and stop (a removed theme is the
 launch's hard fail; the architect chooses its replacement). The wake budget is now 16 (the architect, 2026-10-05).
+
+## DONE 3 (2026-10-05, the local planner, on the architect's word "carry on with request three"; HEAD a8f64068)
+The LOCAL PAUSED above is lifted: he resumed this session.
+1. Reconfigured `build/` (exit 0); `cmake --build build -j$(nproc)` (libgit2 ON, CLI ON): exit 0, no warning.
+2. THE LAPTOP'S CONFIG, his values on record before the edit:
+   `theme=warptempo`, `theme_level=light`, `waveform_ink=#808080`, `waveform_canvas=#000000`,
+   `waveform_outline=#5C5C5C`, `flag_face=#666699`, `flag_face_selected=#CCCCFF`, `flag_label=#FFFFFF`,
+   `flag_label_selected=#000000`, `invalid_face=#993333`, `invalid_face_selected=#FF6666`, `invalid_label=#FFFFFF`,
+   `playhead_head=#8B8B8B`, `playhead_stem=#FCFCFC`.
+   The thirteen deleted (19 -> 6 lines, the theme line kept). `./build/warptempo_gui` under labwc: it STARTS (killed by
+   an 8 s timeout, no refusal), loads 550 - 1 (228 markers, 435 phase resets), JACK direct.
+   `~/.config/warptempo_gui/themes`: 98 FILES, NOT 99 — and the repository's `assets/themes/` itself holds 98, so
+   the copy-in is faithful. The program's own files present: `warptempo.theme`, `warptempo-preset-1.theme`,
+   `warptempo-preset-2.theme`; `warptempo-2026-10-03` has NO file. Say whether that is meant (100 table entries
+   less the built-in would be 99).
+3. THE PRODUCT APK: exit 0, "assets: 98 theme files" (same count), `bundled_theme_files` compiled clean. The
+   tablet's config before (his values on record):
+   `theme=kde3-solaris`, `theme_level=light`, `waveform_ink=#808080`, `waveform_canvas=#000000`,
+   `waveform_outline=#5C5C5C`, `flag_face=#666699`, `flag_face_selected=#CCCCFF`, `flag_label=#FFFFFF`,
+   `flag_label_selected=#000000`, `invalid_face=#993333`, `invalid_face_selected=#FF6666`, `invalid_label=#FFFFFF`,
+   `playhead_head=#8B8B8B`, `playhead_stem=#FCFCFC`.
+   Rewritten through run-as without the thirteen (19 -> 6 lines, 507 -> 210 bytes; read back byte-identical to the
+   intended text; the other six lines untouched). Installed, relaunched. Logcat: window 2304x1440, tick 5 ms; loads
+   550 - 1 (228 markers, 435 phase resets); AAudio granted; no refusal, no stderr error. `themes/`: 98 files.
+   NO SCREENCAP OF THE APP: the screen was awake but the architect had the Claude app in the foreground; the
+   product was left behind it rather than pulled over his session. The chrome and flags are for his glass.
+   One observation only: the system's MediaSessionService logged the product's session going STOPPED -> PLAYING
+   about 0.6 s after launch (`onSessionPlaybackStateChanged ... state=PLAYING(3), position=0`); nothing was
+   touched. Say if that is not the launch's expected session state.
+4. Committed: this block only. Wakes used: 3 of 8 (this request was carried in the third, at his word).
