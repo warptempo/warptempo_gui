@@ -245,43 +245,43 @@ namespace {
 // construction), so the toolbar air's 5 -> 3 retune on 2026-10-05 shrank the
 // bottom row too, at every scale below.
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
-//   lanes are 25 caption + 27 menu + 46 icon + 22 trim + 27 ruler + 26 marker
-//   = 173 above, of which 98 is the caption and the two toolbar rows above
-//   the gap and 75 the block above the waveform, and 39 below (the bottom
-//   row's 38 content and its 1-px top row); leftover 868.
-//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 116, gap 2 =
-//     250 — 25 caption / 27 menu / 46 icon / 116 blank / 75 block / 502
+//   lanes are 25 caption + 27 menu + 46 icon + 22 trim + 26 ruler + 23 marker
+//   = 169 above, of which 98 is the caption and the two toolbar rows above
+//   the gap and 71 the block above the waveform, and 39 below (the bottom
+//   row's 38 content and its 1-px top row); leftover 872.
+//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 120, gap 2 =
+//     250 — 25 caption / 27 menu / 46 icon / 120 blank / 71 block / 502
 //     waveform / 250 blank / 39 row, the waveform spanning y 289..791 about
 //     the window's midline 540 (the clamp fixes its height and the midpoint
 //     rule its centre, so gap 1 absorbs every row the lanes above it gain or
 //     lose — the caption's 25 among them).
-//     At 0: waveform UNCLAMPED at 868, both gaps 0 (the midpoint rule would
-//     want 540 - 173 - 434 = -67) — 25 / 27 / 46 / 0 / 75 / 868 / 0 / 39.
+//     At 0: waveform UNCLAMPED at 872, both gaps 0 (the midpoint rule would
+//     want 540 - 169 - 436 = -65) — 25 / 27 / 46 / 0 / 71 / 872 / 0 / 39.
 //   2304x1440 AT gui_scale 275, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — the caption across its top): the lanes are 50
-//   caption + 55 menu + 96 icon + 44 trim + 50 ruler + 54 marker = 349 above
+//   caption + 55 menu + 96 icon + 44 trim + 49 ruler + 51 marker = 345 above
 //   (the ruler's and the marker lane's heights derived from their faces,
 //   ruler_lane_h_px and marker_lane_h_px at render.h) and 79 below (76 + its
-//   3-row top row), leftover 1012.
+//   3-row top row), leftover 1016.
 //     At 364: waveform CLAMPED at 1001 (the scaled 364), gap 1 = 0 (the
-//     midpoint rule would want 720 - 349 - 500 = -129), gap 2 = 11
-//     — 50 / 55 / 96 / 0 / 148 / 1001 / 11 / 79.
-//     At 0: waveform UNCLAMPED at 1012, both gaps 0 (the rule would want
-//     720 - 349 - 506 = -135) — 50 / 55 / 96 / 0 / 148 / 1012 / 0 / 79.
+//     midpoint rule would want 720 - 345 - 500 = -125), gap 2 = 15
+//     — 50 / 55 / 96 / 0 / 144 / 1001 / 15 / 79.
+//     At 0: waveform UNCLAMPED at 1016, both gaps 0 (the rule would want
+//     720 - 345 - 508 = -133) — 50 / 55 / 96 / 0 / 144 / 1016 / 0 / 79.
 //   2304x1440 AT gui_scale 400 (the architect's own tablet value since
 //   2026-10-05; same surface, the scale alone different): the lanes are 72
-//   caption + 80 menu + 140 icon + 64 trim + 72 ruler + 68 marker = 496 above
-//   (292 the caption and the two toolbar rows, 204 the block) and 116 below
-//   (112 + its 4-row top row), leftover 828. 364 Windows px scales to 1456,
+//   caption + 80 menu + 140 icon + 64 trim + 72 ruler + 72 marker = 500 above
+//   (292 the caption and the two toolbar rows, 208 the block) and 116 below
+//   (112 + its 4-row top row), leftover 824. 364 Windows px scales to 1456,
 //   past the leftover, so BOTH readings are the same: waveform UNCLAMPED at
-//   828, both gaps 0 (the rule would want 720 - 496 - 414 = -190)
-//   — 72 / 80 / 140 / 0 / 204 / 828 / 0 / 116.
+//   824, both gaps 0 (the rule would want 720 - 500 - 412 = -192)
+//   — 72 / 80 / 140 / 0 / 208 / 824 / 0 / 116.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
 //   exist for; no host runs this geometry), the same at either value:
-//     leftover 388 -> waveform UNCLAMPED at 388, both gaps 0
-//     — 25 / 27 / 46 / 0 / 75 / 388 / 0 / 39. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = 300 - 173 - 194 = -67), so the
+//     leftover 392 -> waveform UNCLAMPED at 392, both gaps 0
+//     — 25 / 27 / 46 / 0 / 71 / 392 / 0 / 39. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = 300 - 169 - 196 = -65), so the
 //     waveform keeps everything, which is the rule's own floor rather than a
 //     special case.
 //
@@ -535,18 +535,18 @@ GuiRect waveform_area(const AppState& a) {
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
-    // the vocabulary reaches it: the seven lanes are 156 Windows px at 100 %,
-    // the top strip's 123 plus the bottom row's 33 (lane by lane through
+    // the vocabulary reaches it: the seven lanes are 154 Windows px at 100 %,
+    // the top strip's 125 plus the bottom row's 29 (lane by lane through
     // scaled_px and each lane from its rounded parts, which is not one
-    // multiply of the sum). At 350 % they take 546 device px (63 caption +
-    // 66 menu + 112 icon + 56 trim + 63 ruler + 70 marker = 430 above, and 116
-    // row), leaving a 1080-tall window 534; at 400 %, the value the ceiling
-    // was raised to try, 620 (488 + 132), leaving the tablet's 1440 rows 820;
-    // and they pass 1440 near 930 %, short of the 1000 % ceiling (architect
+    // multiply of the sum). At 350 % they take 538 device px (63 caption +
+    // 70 menu + 122 icon + 56 trim + 62 ruler + 65 marker = 438 above, and 100
+    // row), leaving a 1080-tall window 542; at 400 %, the value the ceiling
+    // was raised to try, 616 (500 + 116), leaving the tablet's 1440 rows 824;
+    // and they pass 1440 near 935 %, short of the 1000 % ceiling (architect
     // 2026-10-05), so the top of the vocabulary lands on this floor. (The
     // hosts run far below it: the laptop is 138 % on 1080, where the seven
-    // lanes take 215, and the tablet 275 % on its 1440-tall surface, where
-    // they take 429.) The guard
+    // lanes take 208, and the tablet 275 % on its 1440-tall surface, where
+    // they take 424.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If

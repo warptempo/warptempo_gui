@@ -254,9 +254,9 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
-// pixel the seven lanes (the caption's among them) paint 488 device rows
-// above the waveform and 132 below at 400 %, 620 in all, leaving the
-// tablet's 1440 rows 820 of waveform; they pass 1440 near 930 %, past
+// pixel the seven lanes (the caption's among them) paint 500 device rows
+// above the waveform and 116 below at 400 %, 616 in all, leaving the
+// tablet's 1440 rows 824 of waveform; they pass 1440 near 935 %, past
 // which the waveform is the zero height waveform_area's floor answers (the
 // arithmetic and the guard at waveform_area, main.cpp).
 //

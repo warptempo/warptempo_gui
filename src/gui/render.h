@@ -1109,7 +1109,7 @@ int ruler_lane_h_px();
 // The box's label is seated as a LINE under its face band (baseline = box
 // top + edge + face + ascent): 138 % box 1 + 1 + 15 + 3 + 1 + 1 = 22,
 // lane 23; 275 % 3 + 3 + 30 + 6 + 3 + 3 = 48, lane 51; 400 % 4 + 4 + 44 +
-// 8 + 4 + 4 = 64, lane 68 (2026-10-05; the air, the face bands and the
+// 8 + 4 + 4 = 68, lane 72 (2026-10-05; the air, the face bands and the
 // edges floored at one row). Every box
 // painter and every flag hit rect takes the BOX's rows
 // (marker_flag_box_band), never the lane's: the box is what is painted and
@@ -1219,14 +1219,17 @@ int  waveform_max_h_px();
 // restating its number — one source, so a retune of the icon row carries down
 // here by construction. Its border is its own (below).
 //
-// So the content is the icon row's rule — the toolbar case with five Windows
-// px of ground above and below it, 32 Windows px (architect 2026-10-02). (Its
-// earlier boxes — row 8's kdenlive 26 px transport boxes, then the icon row's
-// 32-laptop-px square — are git history.)
+// So the content is the icon row's rule — the toolbar case with three
+// Windows px of ground above and below it (WordPad's air, kIconRowAirPx),
+// 28 Windows px (architect 2026-10-05, carried down from the icon row's own
+// retune). (Its earlier boxes — row 8's kdenlive 26 px transport boxes, then
+// the icon row's 32-laptop-px square, then the five-px-air 32 of 2026-10-02 —
+// are git history.)
 //
-// THE CSS BOX MODEL, ONE TOP ROW: the content is the icon row's 32 and a
-// one-Windows-px row of ground sits OUTSIDE it on top (91 device rows at
-// 275 %, 45 at 138 %), on the WAVEFORM side — where row 8's border-top
+// THE CSS BOX MODEL, ONE TOP ROW: the content is the icon row's 28 and a
+// one-Windows-px row of ground sits OUTSIDE it on top (39 device rows at
+// 138 %, 79 at 275 %, 116 at 400 %), on the WAVEFORM side — where row 8's
+// border-top
 // stood. NO LINE IS DRAWN THERE since
 // 2026-10-02 (architect: nothing between the well and this row, the well's
 // own bottom line being the seam), and the row is kept so nothing on the row

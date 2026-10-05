@@ -1076,17 +1076,20 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // seat is one answer in the bitmap mode and the fallback alike, Liberation's
 // em being the one that stands its "H" exactly that tall.
 //
-// THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row lane seats at row
-// floor((52 + 24.75) / 2) = 38, the dropdown's 47-row item at 35; the answer
-// is independent of the box's y by construction rather than by a tie rule.
+// THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row CONTENT band (not
+// its 55-row lane, which carries a foot the label never centres in since
+// 2026-10-05) seats at row floor((52 + 24.75) / 2) = 38, the dropdown's
+// 47-row item at 35; the answer is independent of the box's y by
+// construction rather than by a tie rule.
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
 // rule is not asked. FOURTEEN BOX SEATS (re-grepped 2026-10-05): the
 // caption's title, the menu row's
-// anchors and its battery + clock legend (both in the row's whole lane,
-// render.h's kMenuRowHeightPx), the row-8 clock (in its time field) and the
+// anchors and its battery + clock legend (both in the row's CONTENT alone
+// since 2026-10-05, render.h's menu_row_content_h_px, never the taller
+// lane), the row-8 clock (in its time field) and the
 // state line beside it (in the row's content band), the notification
 // card's first line, the dropdown items, the prompt's message, the render player's
 // two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
@@ -2401,8 +2404,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     cairo_save(cr);
 
     // The row's seats, shared with the render player's row (bottom_row_seats):
-    // the case on the row's five-px air, the icon row's own arithmetic on the
-    // icon row's own height (render.h's icon-row block), and the two pads.
+    // the case on the row's three-px air (WordPad's, kIconRowAirPx), the icon
+    // row's own arithmetic on the icon row's own height (render.h's icon-row
+    // block), and the two pads.
     const BottomRowSeats seats = bottom_row_seats(content);
     const int btn_w     = seats.case_w;
     const int btn_h     = seats.case_h;
@@ -7277,10 +7281,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      the marker stems and under the flags.
         //   8. the SCANNER (waveform).
         //   9. the RULER lane — etched ticks and labels — AND, in the same
-        //      pass, the cursor's HEAD on the ruler's bottom rows (opaque, over
-        //      the labels' lowest row and a major tick's rise) and the cursor's column through
-        //      the marker lane, under the flags (the reasoning is at that
-        //      block in paint_ruler_row).
+        //      pass, the cursor's HEAD (WordPad's 9x8 marker, opaque) seated
+        //      through the ruler with its tip row on the marker lane's own
+        //      first row (marker_lane_air_px, one Windows px above the flag
+        //      box) rather than flush on the ruler's own bottom: at 138 % its
+        //      top stands 3 rows below the labels' baseline (no overlap), at
+        //      275 % it rises 2 rows into the digits' own ink, and at 400 %
+        //      it lands exactly on the baseline (render.h's
+        //      kRulerBaselineToMarkerPx block) — and the cursor's column
+        //      through the marker lane, under the flags (the reasoning is at
+        //      that block in paint_ruler_row).
         //  10. the FLAG BLIT.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
