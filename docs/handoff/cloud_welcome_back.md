@@ -191,4 +191,12 @@ RULED:
   Still in discussion before any brief (his word: "let's talk about the font and the dithering before we proceed"):
   the face (Roboto vs Liberation; Liberation was superseded 2026-10-02) and DITHERING (the caption, the playhead,
   a general rule for colours a period display could not show).
+- RULED 2026-10-05, the face and the dither: ROBOTO stays, ROBOTO BOLD added for the caption. THE CAPTION GRADIENT IS
+  DITHERED (his reason: the tablet showed BANDING on an earlier gradient experiment, and banding / dither is authentic):
+  MEASURED on his Toasty Tech reference (Windows 2000 "My Documents", lossless; a copy at tmp/ref/, gitignored): the
+  caption is 15-BIT HIGH COLOUR — every channel 5 bits, bit-replicated (0x52, 0x5A, 0x63 ...; 25 of 25 distinct
+  values) — under an ORDERED dither repeating every 4 rows, not noise. So the caption: the linear gradient per
+  channel, quantised to 5 bits through an ordered dither matrix (to be read off the reference), expanded by bit
+  replication. The PLAYHEAD gets no dither now; NO GENERAL DITHER RULE (only the scroll track's and checked buttons'
+  checker, as now, and the caption). Awaiting his plain go for the title-bar brief.
 
