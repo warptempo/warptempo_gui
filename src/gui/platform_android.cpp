@@ -2432,12 +2432,12 @@ namespace {
 // picker. What this backend still owns of the convention is WHERE the projects
 // are: the template's projects_path, device_config_defaults above.)
 
-// LOAD THE PRODUCT'S THREE FACES OUT OF THE APK, or die. The assets are the
-// repository's own `fonts/Roboto-Regular.ttf`, `fonts/Roboto-Bold.ttf` (the
-// caption's title, 2026-10-05) and `fonts/RobotoMono-Regular.ttf` (architect
-// 2026-10-02, gui_font.h; build_apk.sh's asset step copies them). A
-// missing or unreadable asset is a BUILD defect — the packaging step puts all
-// three files in and there is no runtime state that removes them — so there is no
+// LOAD THE PRODUCT'S TWO FACES OUT OF THE APK, or die. The assets are the
+// repository's own `fonts/Roboto-Regular.ttf` and `fonts/Roboto-Bold.ttf` (the
+// caption's title, 2026-10-05; architect 2026-10-02, gui_font.h; build_apk.sh's
+// asset step copies them). A
+// missing or unreadable asset is a BUILD defect — the packaging step puts both
+// files in and there is no runtime state that removes them — so there is no
 // error arm to design: painting would otherwise silently use cairo's default,
 // which is worse than not starting. This ABORTS instead, and the abort is the
 // CALLER'S: gui_font_bundled.cpp keeps its own log-and-leave-unset arms.
@@ -2450,7 +2450,7 @@ namespace {
 //
 // The assets need not stay open for the process's life — unlike the spike,
 // gui_font_install_bundled COPIES the bytes (its LIFETIME comment says so),
-// so the three AAssets are closed as soon as it returns.
+// so the two AAssets are closed as soon as it returns.
 void install_fonts_or_die(android_app* app) {
     AAssetManager* mgr = app->activity ? app->activity->assetManager : nullptr;
     if (!mgr) {
@@ -2460,10 +2460,9 @@ void install_fonts_or_die(android_app* app) {
     }
 
     struct Slot { const char* name; AAsset* asset; const uint8_t* bytes; size_t len; };
-    Slot slots[3] = {
-        {"Roboto-Regular.ttf",     nullptr, nullptr, 0},
-        {"Roboto-Bold.ttf",        nullptr, nullptr, 0},
-        {"RobotoMono-Regular.ttf", nullptr, nullptr, 0},
+    Slot slots[2] = {
+        {"Roboto-Regular.ttf", nullptr, nullptr, 0},
+        {"Roboto-Bold.ttf",    nullptr, nullptr, 0},
     };
     for (Slot& s : slots) {
         s.asset = AAssetManager_open(mgr, s.name, AASSET_MODE_BUFFER);
@@ -2480,8 +2479,7 @@ void install_fonts_or_die(android_app* app) {
 
     const bool installed =
         gui_font_install_bundled(slots[0].bytes, slots[0].len,
-                                 slots[1].bytes, slots[1].len,
-                                 slots[2].bytes, slots[2].len);
+                                 slots[1].bytes, slots[1].len);
     for (Slot& s : slots) AAsset_close(s.asset);
     if (!installed) {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,

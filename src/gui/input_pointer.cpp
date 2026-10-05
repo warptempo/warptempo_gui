@@ -8458,7 +8458,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // about the lock either way: the editor refused on a read-only ACTIVE tab
     // from 2026-08-07 to that date, and the lock now governs the KEYS at their
     // own commit arms instead — the four sidecar rows are engine keys and say
-    // the lock's sentence when they commit, while the four device rows commit
+    // the lock's sentence when they commit, while the five device rows commit
     // regardless (the account is at GuiSettingsEditor::open). The modal
     // playback stop stays at that opener, where it moved off this line in
     // 2026-08-07. THE ITEMS GREY DURING A LOAD ALONE (2026-09-24,
@@ -9116,7 +9116,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
     // published until paint_dropdown runs, and a redraw is CLIPPED to the
     // damage it was handed — so strip damage alone would clip away whatever the
-    // popup hangs past the strip. The settings menu (eight rows and a
+    // popup hangs past the strip. The settings menu (nine rows and a
     // separator) is taller than the four lanes below the menu lane at every
     // scale, so without the band its overhang would never paint.
     //

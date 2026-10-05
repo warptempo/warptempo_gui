@@ -236,9 +236,8 @@ int main(int argc, char** argv) {
         return 2;
     }
     const std::string fonts = argv[1], work = argv[2];
-    const std::string sans = slurp(fonts + "/Roboto-Regular.ttf"), mono = slurp(fonts + "/RobotoMono-Regular.ttf");
-    if (!fonts_install(reinterpret_cast<const uint8_t*>(sans.data()), sans.size(),
-                       reinterpret_cast<const uint8_t*>(mono.data()), mono.size())) {
+    const std::string sans = slurp(fonts + "/Roboto-Regular.ttf");
+    if (!fonts_install(reinterpret_cast<const uint8_t*>(sans.data()), sans.size())) {
         std::fprintf(stderr, "fonts did not install\n");
         return 2;
     }
@@ -417,7 +416,7 @@ int main(int argc, char** argv) {
                                      "0.4714 -> 47.1, 0.99999 -> 100.0), R / G / B whole bytes");
         cairo_surface_t* ms = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 4, 4);
         cairo_t* mc = cairo_create(ms);
-        fonts_select(mc, true, panel::kNumPx);
+        fonts_select(mc, panel::kNumPx);
         double widest = 0;
         for (const char* t : {"360.0", "100.0", "255"}) {
             cairo_text_extents_t e;

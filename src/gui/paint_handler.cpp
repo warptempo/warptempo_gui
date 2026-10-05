@@ -32,30 +32,24 @@
 
 // -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
 //
-// THE STATUS TEXT IS SANS, AND MONOSPACE IS A NAMED TWO-CELL SET
-// (architect 2026-08-11, HIS REVERSAL of his own 2026-08-01 absolute, "I wanted
-// to get rid of monospace altogether — the last row should be the same font as
-// the rest"): monospace is the CLOCK's — the unified bottom row's
-// left cell (paint_bottom_row_buttons_and_clock, which owns the face, the
-// size and the cell) and, since 2026-08-28, the render player's modal clock,
-// which is that same cell said twice and takes its metrics from it. The set is
-// TWO CELLS, ENUMERATED HERE AND AT gui_font.h — the row-8 clock and the
-// player's modal clock — and nothing outside those two may take the face.
-// (A THIRD, the AV Sync Stats panel's column of figures, stood 2026-09-03 to
-// 2026-09-30 and went with the panel; the RENDER PLAYER'S and the OPEN
-// PROJECT PICKER'S listings were in it for the few hours of 2026-09-03's
-// evening the architect tried the monospace against their width asymmetry,
-// and he reverted them himself at his first look. Re-greped 2026-09-30: two
-// GuiFontFamily::Mono selections in this file — this cell and the player's
-// modal clock.)
+// THE BOTTOM ROW IS ONE FACE — THE SANS (architect 2026-10-05, after his
+// ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere"): the
+// clock and the render player's two time fields are Roboto at the body size
+// in their own sunken fields (kTimeFieldHeightPx below), the state line and
+// every modal string the same face. MONOSPACE WAS A NAMED TWO-CELL SET from
+// 2026-08-11 to that day (the architect's reversal of his own 2026-08-01
+// "I wanted to get rid of monospace altogether — the last row should be the
+// same font as the rest"): the row-8 clock and, from 2026-08-28, the render
+// player's modal clock; Roboto Mono, its face since 2026-10-02, retired with
+// it, and the no-wiggle guarantee it was trusted with is the fields' own
+// fixed widths now.
 //
 // EVERY STRING THE STATE LINE CARRIES — the queue/render status and the
 // history walk line — IS THE SANS AT THE NORMAL FACE (redesign_font_size_px,
 // 13 Windows px) in the theme's label, on the row's ground a group space right
-// of the clock's panel (architect 2026-10-03; the block at the line's painter
-// below and notifications.h are the live record), so the line is no
-// monospace cell. For 2026-10-02 it stood in a second status panel at the
-// small face; from 2026-08-31 it was the clock's
+// of the clock's field (architect 2026-10-03; the block at the line's painter
+// below and notifications.h are the live record). For 2026-10-02 it stood in
+// a second status panel at the small face; from 2026-08-31 it was the clock's
 // monospace, ONE run behind a literal pipe; before that the redesign's sans
 // at the redesign's size through its three earlier homes — the bottom row to
 // the tab row on 2026-08-13, the tab row to the one-day status bar on
@@ -65,17 +59,18 @@
 // row (paint_notifications, 2026-08-29). (The dirty mark that rode this row
 // retired 2026-10-05, Save's grey being the mark.)
 //
-// The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen —
-// belongs to the clock and lives at its own metrics, re-derived on the
-// monospace face rather than trusted to it.
+// The no-wiggle DERIVATION — the widest digit, the widest tab letter, the
+// "DD:DD.DDD" specimen — belongs to the time fields and lives at their own
+// metrics (time_field_metrics), measured on the face rather than trusted to
+// it.
 
 // The bottom row's ONE sans face, selected on `cr` through the one face owner
 // (gui_font.h). Returns the scaled font every shape and paint that takes it
 // must share — the text_shape precondition is that a run is shown with the same
 // font it was shaped with. Its callers are the MODAL DIALOG (whose labels,
 // field text and button words are the row's only sans left) and, through
-// show_row_text below, the modal's own strings; the clock selects monospace for
-// itself.
+// show_row_text below, the modal's own strings — and, since 2026-10-05, the
+// time fields and the state line.
 static cairo_scaled_font_t* select_bottom_row_face(cairo_t* cr) {
     gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
@@ -116,8 +111,8 @@ static void show_row_text_embossed(cairo_t* cr, cairo_scaled_font_t* font,
 // CELL it had been for those two days into the clock's own monospace string;
 // 2026-10-02, the Windows-95 chrome, giving it a status panel of its own at
 // the small face; and 2026-10-03, taking the panel away again). The lower
-// left is ONE PANEL AND A LINE, the Vegas / ACID pattern: the clock in one
-// status panel, the state on the row's ground beside it at the normal face,
+// left is ONE FIELD AND A LINE, the Vegas / ACID pattern: the clock in its
+// time field, the state on the row's ground beside it at the normal face,
 // left-aligned a group space past the panel and clipped a group space short
 // of the right block — painted by paint_bottom_row_buttons_and_clock, the
 // ruling this block and that painter's own.
@@ -1066,7 +1061,7 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // The floor IS the cell rule (containing_pixel, input_core.h) and not an
 // exception to it: a half-row tie belongs to the row that contains it, which
 // is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
-// LABEL and both monospace clocks (Qt's integer box rule fails the crops).
+// LABEL and every time field (Qt's integer box rule fails the crops).
 //
 // THE MEASURED FACES (the product's own, through the one face owner's road —
 // Roboto, 2026-10-02 — hint metrics on, so every extent is a whole pixel):
@@ -1074,11 +1069,10 @@ double cap_height_px(cairo_scaled_font_t* font) {
 //     face / size              ascent  descent  cap "H"  asc+desc
 //     sans 17.94px  (138%)       17       5        13        22
 //     sans 35.75px  (275%)       34       9        25        43
-//     mono 16.56px  (138%)       18       5        12        23
-//     mono 33px     (275%)       35       9        24        44
+//     sans 45.5px   (350%)       43      12        33        55
 //
-// (the normal face at 13 Windows px and the clock's mono at 12, architect
-// 2026-10-02; the small face, the ruler's, is at render.h's ruler block).
+// (the normal face at 13 Windows px, architect 2026-10-02; the small face,
+// the ruler's, is at render.h's ruler block).
 //
 // THE TABLE HOLDS ON BOTH DEVICES BY CONSTRUCTION: one implementation builds
 // both faces from the same bytes under the same hint style
@@ -1095,11 +1089,13 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. TWELVE BOX SEATS (re-grepped 2026-10-01): the menu row's
+// rule is not asked. FOURTEEN BOX SEATS (re-grepped 2026-10-05): the
+// caption's title, the menu row's
 // anchors and its battery + clock legend (both in the row's whole lane,
-// render.h's kMenuRowHeightPx), the row-8 clock, the notification
+// render.h's kMenuRowHeightPx), the row-8 clock (in its time field) and the
+// state line beside it (in the row's content band), the notification
 // card's first line, the dropdown items, the prompt's message, the render player's
-// clock, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
+// two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
 // keyboard's caps, and the folder overlay's rows. FOUR LINE SEATS: the
 // tooltip's two lines, the ruler's labels and, since 2026-10-02, the marker
@@ -1120,10 +1116,10 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // row's content band was 46 at 100% and 104 at 225%, and cap-centring the
 // monospace digits gave row 28 and row 63 — exactly where the old proxy plus
 // the architect's authored drop put them, at both scales. His measured pixel
-// WAS cap-centring, so the offset is gone. At the Windows pixel (2026-10-02)
-// the 88-row band at 275 % seats Roboto Mono's 24-row cap at row 56
-// (thirty-two rows above it, thirty-two below) and the 44-row band at 138 %
-// its 12-row cap at row 28.
+// WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
+// their own box: the 47-row field at 275 % puts Roboto's 25-row cap at row 36
+// (eleven rows above it, eleven below — a 3-row line and 8 of face each
+// side), the 23-row field at 138 % its 13-row cap at row 18 (five and five).
 // AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop, which is what levels it with OK
 // and Cancel at every scale (the reasoning is at the modal's own site).
@@ -1935,9 +1931,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // RIGHT (architect 2026-09-29, for the right-handed tablet: the most-used
 // buttons at the bottom right):
 //
-//   THE CLOCK at the lane's left pad — the timestamp in MONOSPACE (the face,
-//   the size and the no-wiggle cell are at kClockShape below) — in a status
-//   panel (architect 2026-10-02, Windows' status bar), with THE STATE LINE on
+//   THE CLOCK at the lane's left pad — the tab letter and the timestamp in
+//   a TIME FIELD (architect 2026-10-02 for Windows' status bar, 2026-10-05
+//   for the field's face, height and fixed width, all at kTimeFieldHeightPx
+//   below), with THE STATE LINE on
 //   the ground beside it at the normal face, clipped one group space short
 //   of the right block (architect 2026-10-03);
 //
@@ -2181,83 +2178,91 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // and the mode term in this row's layout all went together. The arrows paint
 // unconditionally now — nothing on this lane is conditional on a mode.)
 
-// THE CLOCK — ROW 8'S LEFT-ALIGNED CELL, AND THE FIRST OF THE PRODUCT'S
-// TWO MONOSPACE CELLS (with the render player's modal clock, which derives
-// from it — the set is named at gui_font.h)
-// (architect 2026-08-11, moving the timestamp off the status line and reversing
-// his own 2026-08-01 "monospace is gone from the product" in the same breath —
-// the reversal is scoped to this cell and the status line stays sans, which is
-// stated at that row's own header block; the chain has been the TAB ROW's
-// since 2026-08-13 and this is the only text left on this lane).
+// THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
+// LENGTH, ONE FIELD SHAPE (architect 2026-10-05, measured on his ACID Pro 3.0
+// and Vegas Audio screenshots and Windows' Sound Recorder): a period time
+// field is a ONE-LINE SUNKEN field — paint_relief_status_sunken, the theme's
+// Shadow top and left and Hilight bottom and right, over `clock_ground` under
+// its digits in `clock_text` — kTimeFieldHeightPx tall, VERTICALLY CENTRED in
+// its row's content band (a half-row tie toward the top, the cap rule's own),
+// its run in ROBOTO AT THE BODY SIZE (redesign_font_size_px, 13 Windows px;
+// no period field used a monospace face, ACID's big clock included), its cap
+// band centred in the field by redesign_baseline. Roboto 13 gives the
+// period's 9-px digits with 3 px of face above and below them, and its digits
+// are TABULAR: measured 2026-10-05 through the product's road, every digit one
+// advance (10.078 px at 138 %, 20.094 at 275 %, 25.578 at 350 %) and no
+// kerning between any two of the digits, the colon and the point, so the
+// colon and the point stand still as the time runs.
 //
-// THE FACE IS THE PRODUCT'S MONOSPACE at NORMAL weight — Roboto Mono on both
-// devices since 2026-10-02 (gui_font.h). It shipped BOLD for the row's first
-// hours and the architect dropped the weight at his second look (keep the
-// face, lose the bold); the specimen derivation below is agnostic to weight
-// and face alike and the memoised metrics key on size, so the cell measures
-// whatever face it is handed and neither change needed a second edit. THE SIZE IS
-// 11pt SINCE 2026-08-14 (clock_font_size_px, render.h — the architect's live
-// call, and the product's one departure from the redesign's shared 12pt; 12
-// against 13 Windows px since 2026-10-02); it
-// rides gui_scale like every other string, and it is a RETUNABLE rather than
-// a sampled number, unlike this row's geometry. The cell re-measures itself
-// at whatever size this returns — the memo keys on it — so the smaller face
-// simply gives a narrower cell, at the same left-aligned origin.
-//
-// THE NO-WIGGLE GUARANTEE IS BY CONSTRUCTION, NOT BY FACE TRUST, which is why
-// the widest-digit derivation came along from row 9 rather than dying with
-// section A: a monospace face is a strong reason to believe every digit
-// advances alike, and this measures it instead. The ten digits are shaped at
-// the CURRENT scaled font, the widest advance wins, and the cell is a specimen
-// built from THAT digit — "DD:DD.DDD", the MM:SS.mmm shape with its 7 digit
-// slots — shaped through the same one-run path the painted clock takes. The
-// cell then starts at the lane's left pad (architect 2026-09-29) and the
-// live text starts at its LEFT pen too, so the reserved box does not move at
-// all on a given scale and the glyphs never walk inside it.
+// EACH FIELD'S WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
+// "a 1 is skinnier than a 0", nothing in the field or right of it may move as
+// the time runs). The reserved cell is measured from the widest string the
+// field can ever show in this face — the widest digit in every digit slot of
+// "DD:DD.DDD" (kTimeShape) and, on row 8, the widest TAB LETTER in the
+// letter's slot (kClockTabLetters) — shaped through the one chokepoint at the
+// live size, so nothing is trusted to the face. The field is that cell plus
+// kStatusPanelPadPx of face either side, its width ceiled. THE RUN STARTS AT
+// THE CELL'S LEFT, the digits at a fixed offset from it: row 8's letter is
+// painted in its slot and the ` | ` and the timestamp from the slot's end, so
+// switching tab (A is 1 px wider than B at 275 %) moves the letter's own ink
+// and nothing after it.
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
 // no wider.
-constexpr const char* kClockShape = "DD:DD.DDD";
+constexpr const char* kTimeShape = "DD:DD.DDD";
+
+// The tab letters row 8's clock leads with (AppState::active_tab_view's two
+// values) — the set the letter slot is measured over.
+constexpr std::string_view kClockTabLetters = "AB";
+
+// THE FIELD'S HEIGHT, 17 WINDOWS PX (architect 2026-10-05): ACID Pro 3.0's
+// time fields run rows 716..732 of his lossless capture and Vegas Audio's
+// 484..500 — one line, three px of face, the 9-px digits, three px of face,
+// one line. One element, rounded once (scaled_px): 23 device px at 138 %, 47
+// at 275 %, 60 at 350 %, against Roboto 13's caps of 13, 25 and 33.
+constexpr double kTimeFieldHeightPx = 17.0;
+
+// THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
+// (architect 2026-10-05): ACID's adjacent fields stand three Windows px of
+// ground apart (columns 1136..1138 between its first two, the same capture).
+constexpr double kTimeFieldGapPx = 3.0;
 
 // (THE SEPARATOR → DIGITS OFFSET and THE SEPARATOR → TIMESTAMP DISTANCE,
 // kClockCellOffsetXPx and kTransportSepToClockPx, retired 2026-10-02 with the
 // render player's separators, their last reader: the air round the player's
 // scrub and clock is the roster's group space.)
 
-// ROW 8'S ONE STATUS PANEL, ROUND THE CLOCK (architect 2026-10-02, Windows'
-// status bar; one panel and a line since 2026-10-03; the painter is
-// paint_bottom_row_buttons_and_clock): STATUS SUNKEN (one line, Shadow
-// top-left / Hilight bottom-right), its reserved cell 3 Windows px in from
-// the panel's line on each side (the laptop pixel's 4 re-authored at the
-// unit's change). With the clock cell at the lane's 8 px pad, the panel's
-// left line stands 5 px in from the window's edge. (The second panel, the
-// state's, and its 2-px SB_SETPARTS gap, kStatusPanelGapPx, retired
-// 2026-10-03: the state is a line on the row's ground.)
+// THE FIELD'S HORIZONTAL PAD (architect 2026-10-02, Windows' status bar; the
+// field's own name since 2026-10-05): the reserved cell stands 3 Windows px
+// in from the field's line on each side (the laptop pixel's 4 re-authored at
+// the unit's change). With row 8's clock cell at the lane's 8 px pad, its
+// field's left line stands 5 px in from the window's edge. (The second
+// panel, the state's, and its 2-px SB_SETPARTS gap, kStatusPanelGapPx,
+// retired 2026-10-03: the state is a line on the row's ground.)
 constexpr double kStatusPanelPadPx = 3.0;
 
-// The clock's cell, MEMOISED ON THE FONT SIZE — eleven tiny shaping
-// passes (ten digits plus the specimen) that answer the same thing on every
-// frame, the face being fixed and the size the only variable. Single-threaded
-// paint state; the waveform worker never reaches this file's text tiers.
+// The time fields' metrics, MEMOISED ON THE FONT SIZE — thirteen tiny shaping
+// passes (ten digits, the two letters and the specimen) that answer the same
+// thing on every frame, the face being fixed and the size the only variable.
+// Single-threaded paint state; the waveform worker never reaches this file's
+// text tiers.
 //
-// THE CELL IS THE SPECIMEN'S ADVANCE: `cell_w` is the reserved WIDTH the digits
-// are laid inside — an advance sum, so no digit ever walks — and it is the
-// cell's damage box too. (It carried the specimen's INK pair beside it from
-// 2026-08-30 to 2026-08-31, for the sans STATE CELL that butted against the
-// digits by eye rather than by advance; both fields and the one ink reader in
-// text_shape retired when the state text joined this clock's run. The state
-// stands on the row's ground a group space right of the clock's panel now,
-// so nothing reads the clock's ink.)
-struct TransportClockMetrics {
-    double px        = -1.0;   // the size this was measured at
-    double cell_w    = 0.0;    // the widest specimen's shaped width (advances)
+// THE CELLS ARE ADVANCES: `time_w` is the specimen's advance sum and
+// `letter_w` the widest letter's, so no glyph ever walks; row 8's cell is
+// letter_w + the shaped ` | ` + time_w, each player field's time_w, and each
+// cell is its field's damage box too.
+struct TimeFieldMetrics {
+    double px       = -1.0;   // the size this was measured at
+    double time_w   = 0.0;    // the widest-digit specimen's shaped width
+    double letter_w = 0.0;    // the widest tab letter's shaped width
 };
-static TransportClockMetrics g_clock_metrics;
+static TimeFieldMetrics g_time_field_metrics;
 
-static const TransportClockMetrics& clock_cell_metrics(
-        cairo_scaled_font_t* font, double size_px) {
-    if (g_clock_metrics.px == size_px) return g_clock_metrics;
+static const TimeFieldMetrics& time_field_metrics(cairo_scaled_font_t* font,
+                                                  double size_px) {
+    TimeFieldMetrics& m = g_time_field_metrics;
+    if (m.px == size_px) return m;
     char widest = '0';
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
@@ -2265,17 +2270,33 @@ static const TransportClockMetrics& clock_cell_metrics(
         const double w = text_shape::shape_text_run(font, one).width_px;
         if (w > widest_w) { widest_w = w; widest = d; }
     }
-    std::string specimen(kClockShape);
+    std::string specimen(kTimeShape);
     for (char& c : specimen) if (c == 'D') c = widest;
-    const text_shape::ShapedRun run =
-        text_shape::shape_text_run(font, specimen);
-    g_clock_metrics.cell_w    = run.width_px;
-    g_clock_metrics.px        = size_px;
-    return g_clock_metrics;
+    m.time_w = text_shape::shape_text_run(font, specimen).width_px;
+    m.letter_w = 0.0;
+    for (char l : kClockTabLetters) {
+        const char one[2] = {l, '\0'};
+        m.letter_w = std::max(m.letter_w,
+                              text_shape::shape_text_run(font, one).width_px);
+    }
+    m.px = size_px;
+    return m;
 }
 
-static double clock_cell_width_px(cairo_scaled_font_t* font, double size_px) {
-    return clock_cell_metrics(font, size_px).cell_w;
+// ONE TIME FIELD'S RECT round a reserved cell starting at `cell_x`, centred
+// in the content band [band_y, band_y + band_h).
+static GuiRect time_field_rect(int cell_x, double cell_w, int band_y,
+                               int band_h) {
+    const int pad = scaled_px(kStatusPanelPadPx);
+    const int h   = scaled_px(kTimeFieldHeightPx);
+    return GuiRect{cell_x - pad, band_y + (band_h - h) / 2,
+                   static_cast<int>(std::ceil(cell_w)) + 2 * pad, h};
+}
+
+// ONE TIME FIELD'S FACE: the ground, then the one-line sunken edge.
+static void paint_time_field(cairo_t* cr, const GuiRect& field) {
+    paint_cell_rect(cr, field, palette().clock_ground);
+    paint_relief_status_sunken(cr, field);
 }
 
 void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
@@ -2340,7 +2361,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
     // layout: the most-used buttons at the bottom right): the CLOCK at the
-    // lane's left pad in its status panel with THE STATE LINE on the ground
+    // lane's left pad in its time field with THE STATE LINE on the ground
     // behind it (since 2026-10-03; the block at the clock below) — then THE
     // RIGHT BLOCK,
     // anchored at the right margin — the MARKER-VERB GROUP (its six counted
@@ -2362,19 +2383,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // Windows px (2026-10-02, the Windows case; the verb group six since
     // 2026-09-29 evening). In device px, off the painted walk: 17·32 + 3·11 =
     // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, and the
-    // clock cell — thirteen monospace cells since 2026-10-05 (the dirty mark's
-    // reserved fourteenth retired with the mark), the nine of `00:00.000` and
-    // the tab letter's `A | `, ~9.9 px each at 16.56 px — spanning 11..~140,
-    // its panel 7..~144, the state line from one group space past it, ~155,
-    // clipped one group space short of the block at 1321 (~1166 px); at the
-    // tablet's 275 % 17·63 + 3·22 = 1137, starting at 2304 − 22 − 1137 =
-    // 1145, the clock (~19.8 px cells) ending at ~280, its panel at ~288, the
-    // state line ~310..1123 (~813 device px). THE ROW CARRIES NO
+    // clock's time field (kTimeFieldHeightPx, 2026-10-05) — its cell the
+    // widest `A | 00:00.000` in Roboto 13, ~104.6 px at 17.94 px, ceiled to
+    // 105 — spanning 7..120, the state line from one group space past it,
+    // 131, clipped one group space short of the block at 1321 (~1190 px); at
+    // the tablet's 275 % 17·63 + 3·22 = 1137, starting at 2304 − 22 − 1137 =
+    // 1145, the field (its cell ~208.5, ceiled to 209) spanning 14..239, the
+    // state line 261..1123 (~862 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
-    // scale driven toward the 350 ceiling: the block reaches the clock's
-    // right edge once the window falls below about 535 Windows px (8 + ~104
-    // + 415 + 8). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
+    // scale driven toward the 350 ceiling: the block reaches the field's
+    // right edge once the window falls below about 510 Windows px (8 − 3 +
+    // ~76 + 6 + 415 + 8). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
     // group space short of the block, so a long line is cut rather than
     // colliding.
     int right_block_x = lane.x + lane.w - pad;
@@ -2412,41 +2432,29 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         }
     }
 
-    // THE CLOCK. Its own face on this context — the monospace face, selected
-    // through the one face owner (gui_font.h) — contained by the save/restore
-    // this body already opened; nothing else on the row draws text. ONE FACE,
-    // TWO CELLS: this one and the RENDER PLAYER's `<position> / <length>` on
-    // the modal row — which takes this cell's size and metrics so the digits
-    // never walk between them (2026-08-28). THE TWO NEVER PAINT IN THE SAME
-    // FRAME: the player owns the row whole while it stands. The set's own
-    // record is at this file's bottom-row text block.
+    // THE CLOCK — the first TIME FIELD (the shape, the face and the
+    // fixed-width rule at kTimeFieldHeightPx above, architect 2026-10-05), in
+    // the body face selected through the one face owner (gui_font.h) and
+    // contained by the save/restore this body already opened. The render
+    // player's two fields share its shape, face and metrics; THE TWO NEVER
+    // PAINT IN THE SAME FRAME: the player owns the row whole while it stands.
     {
-        gui_select_font_face(cr, GuiFontFamily::Mono);
-        const double size_px = clock_font_size_px();
-        cairo_set_font_size(cr, size_px);
-        cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-        const TransportClockMetrics& clock_metrics =
-            clock_cell_metrics(font, size_px);
+        cairo_scaled_font_t* font = select_bottom_row_face(cr);
+        const TimeFieldMetrics& tm =
+            time_field_metrics(font, redesign_font_size_px());
         // THE ACTIVE TAB'S LETTER LEADS THE CELL (architect 2026-10-01, the
         // tab row deleted as "a waste of space"): `A | 00:45.115` — the
         // letter, a space, the LITERAL pipe, a space, then the timestamp. THE
-        // DIGITS NEVER WALK: their origin is the cell's x plus the prefix's
-        // advance, and the prefix is fixed per tab — monospace, four cells,
-        // the letter one of them. THE RESERVED CELL IS THE PREFIX AND THE
-        // DIGITS' SPECIMEN — the specimen the timestamp's alone, which is
-        // what the render player's modal clock reads. Both advances are
-        // measured off the live strings (the letter changes only on a tab
-        // switch, whose clock damage covers the whole cell). THE RUN FILLS
-        // THE CELL from its origin, so the panel's pad stands alike on both
-        // sides of it — centred (architect 2026-10-03). (The cell reserved a
-        // fourteenth cell's width for the dirty mark `*` glued to the digits,
-        // and the run started half of it in, until the mark retired, SAVE
-        // BEING THE DIRTY MARK — architect 2026-10-05, plain_save_actionable.)
-        const std::string tab_prefix =
-            std::string(1, app.active_tab_view) + " | ";
-        const double prefix_w =
-            text_shape::shape_text_run(font, tab_prefix).width_px;
-        const double cell_w = prefix_w + clock_metrics.cell_w;
+        // RESERVED CELL IS THE WIDEST LETTER'S SLOT, THE ` | ` AND THE
+        // DIGITS' SPECIMEN, so it is ONE WIDTH ON EVERY TAB AND AT EVERY TIME:
+        // the letter paints at the cell's x and the rest at the slot's end,
+        // which no tab switch and no tick moves. (The cell reserved a
+        // fourteenth monospace cell for the dirty mark `*` glued to the
+        // digits until the mark retired, SAVE BEING THE DIRTY MARK —
+        // architect 2026-10-05, plain_save_actionable.)
+        const std::string sep = " | ";
+        const double sep_w = text_shape::shape_text_run(font, sep).width_px;
+        const double cell_w = tm.letter_w + sep_w + tm.time_w;
         // THE CELL STARTS AT THE LANE'S LEFT PAD (architect 2026-09-29, the
         // transport having moved to the row's right end). THE AIR IS A MARGIN
         // MIRROR: the row's last button keeps one lane pad from the lane's
@@ -2454,61 +2462,52 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // row's two ends read alike — the rule the retired separator →
         // digits offset carried while the cell sat behind a separator, which
         // at a bare margin is the pad itself. It is also where the modal row's
-        // prompt message starts. The cell is a reserved WIDTH — measured from
-        // the widest digit's specimen, so the glyphs never walk inside it.
+        // prompt message starts.
         const int cell_x = lane.x + pad;
-        // THE LEFT OF THE ROW IS ONE PANEL AND A LINE (architect 2026-10-02
-        // for the panel, 2026-10-03 for the line; the metric at
-        // kStatusPanelPadPx) — the Vegas / ACID pattern: a time in a sunken
-        // cell, words on the chrome.
-        //   THE CLOCK'S PANEL: STATUS SUNKEN — one line, the theme's Shadow /
-        //   Hilight like every relief — over the buttons' own rows, the same
-        //   btn_y and btn_h the right block's cases stand in, its face the
-        //   theme's `clock_ground` under the clock's run in `clock_text`
-        //   (architect 2026-10-04, Windows' status bar: the panel's own two
-        //   roles), from
-        //   kStatusPanelPadPx left of the reserved cell to as far past its end
-        //   (the cell's width ceiled, as its damage box is). Its width is
-        //   fixed per tab — the letter is one monospace cell — so the state
-        //   line never moves.
+        // THE LEFT OF THE ROW IS ONE FIELD AND A LINE (architect 2026-10-02
+        // for the panel, 2026-10-03 for the line, 2026-10-05 for the field's
+        // height and face) — the Vegas / ACID pattern: a time in a sunken
+        // field, words on the chrome.
+        //   THE CLOCK'S FIELD: time_field_rect round the reserved cell,
+        //   centred in the content band, painted by paint_time_field. Its
+        //   width is fixed (the cell's), so the state line never moves.
         //   THE STATE LINE: on the row's ground, no panel, from one group
         //   space (the eight Windows px of bare ground that stand between
-        //   every two groups on this row) right of the panel's right line,
+        //   every two groups on this row) right of the field's right line,
         //   clipped one group space short of the right block; a window too
         //   narrow to leave that span positive paints no state text — the
         //   row's crop-at-the-floor allowance (the block above).
         // THE CLOCK'S PER-TICK DAMAGE BOX (app.clock_cell_rect, below: the
-        // cell ± 1 px over the content rows) CROSSES THE PANEL'S TOP AND
-        // BOTTOM LINES, which a tick repaints identically under its clip; the
-        // panel's two vertical lines and the whole state line — which starts
-        // a group space right of the panel — fall outside it. Every state
-        // change damages the lane whole (Viewport::invalidate_status_cell_area),
-        // which repaints the panel and the line.
-        const int panel_pad = scaled_px(kStatusPanelPadPx);
-        const GuiRect clock_panel{
-            cell_x - panel_pad, btn_y,
-            static_cast<int>(std::ceil(cell_w)) + 2 * panel_pad, btn_h};
-        paint_cell_rect(cr, clock_panel, palette().clock_ground);
-        paint_relief_status_sunken(cr, clock_panel);
-        const int state_x = clock_panel.x + clock_panel.w + group_gap;
+        // cell ± 1 px over the content rows) CROSSES THE FIELD'S TOP AND
+        // BOTTOM LINES and the ground above and below them, which a tick
+        // repaints identically under its clip; the field's two vertical lines
+        // and the whole state line — which starts a group space right of the
+        // field — fall outside it. Every state change damages the lane whole
+        // (Viewport::invalidate_status_cell_area), which repaints the field
+        // and the line.
+        const GuiRect clock_field =
+            time_field_rect(cell_x, cell_w, content_y, content_h);
+        paint_time_field(cr, clock_field);
+        const int state_x = clock_field.x + clock_field.w + group_gap;
         const int state_w = (right_block_x - group_gap) - state_x;
-        // THE BASELINE IS THE BAND'S SOLVED ONE AND NOTHING ELSE: the solver
-        // centres the face's cap band, which is where the architect measured
-        // these digits, so the vertical drop that used to ride here is gone.
+        // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the
+        // period field's 3 px of face above and below its digits, by the one
+        // box solver; the field is symmetric about its own lines, so the cap
+        // band sits centred inside them too.
         const double baseline =
-            redesign_baseline(font, static_cast<double>(content_y),
-                              static_cast<double>(content_h));
+            redesign_baseline(font, static_cast<double>(clock_field.y),
+                              static_cast<double>(clock_field.h));
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
         // on each side: the reserved width is an ADVANCE sum and a glyph's ink
         // may sit a hair outside it, and the band is the row's content height,
-        // which contains the baseline's ascent and descent by construction.
+        // which contains the field and so the baseline's ink by construction.
         // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the origin
         // above is `cell_x` and so is this box's, so the damage can never
         // miss the painted digits. The vertical axis needs no term at
-        // all: the box is the row's whole content band, which the baseline's
-        // ink stays inside, and the band's bottom IS the window's, so widening
+        // all: the box is the row's whole content band, which the field
+        // stands inside, and the band's bottom IS the window's, so widening
         // it downward would damage past the surface.
         // CEIL, NOT nearbyint: cell_w is a fractional advance sum and this is
         // a DAMAGE box, which may be a hair too wide but never a hair too
@@ -2538,7 +2537,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         }
         if (seconds < 0.0) seconds = 0.0;
 
-        // THE PANEL AND THE LINE, THEIR CONTENT AND ITS PRECEDENCE: the panel
+        // THE FIELD AND THE LINE, THEIR CONTENT AND ITS PRECEDENCE: the field
         // carries the clock's run, the line the STATE — the `h` walk line,
         // else the render / batch / loading progress line. The two state
         // strings CAN COEXIST and THE WALK LINE WINS — nothing STARTS a render
@@ -2547,27 +2546,28 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // through it, so the mode's line is what the line is for while the
         // view stands and the progress line is back the moment it closes.
         //
-        // TWO FACES (architect 2026-10-03, superseding the second status
-        // panel at the small face of 2026-10-02, which had itself superseded
-        // the one monospace run of 2026-08-31, `A | 00:00.100 | Updating...`):
-        //   * THE CLOCK — the tab letter's prefix and the digits, the
-        //     monospace face at the clock's size, filling the cell (the block
-        //     above). IT IS NEVER CLIPPED: the row's
+        // ONE FACE, TWO SEATS (the line architect 2026-10-03, superseding the
+        // second status panel at the small face of 2026-10-02, which had
+        // itself superseded the one monospace run of 2026-08-31,
+        // `A | 00:00.100 | Updating...`; the clock's face 2026-10-05):
+        //   * THE CLOCK — the tab letter and the digits in the body face,
+        //     filling the cell (the block above) on the field's own seat. IT
+        //     IS NEVER CLIPPED: the row's
         //     crop-at-its-floor allowance (the block above) is what covers the
         //     narrow window where the right block has already walked over this
         //     ground.
         //   * THE STATE — the sans at THE NORMAL FACE (redesign_font_size_px,
         //     13 Windows px) in the theme's label, painted straight on the row's
         //     ground as the menu row's words are, LEFT-ALIGNED a group space
-        //     past the clock's panel, on the row's solved baseline over the
-        //     content band (redesign_baseline, the clock's own band). The
+        //     past the clock's field, on the row's solved baseline over the
+        //     content band (redesign_baseline). The
         //     normal face over the small one is the architect's (2026-10-03):
         //     "I don't really read it" at the small face, and a running
         //     render's progress should read. IT IS CLIPPED, NEVER ELLIPSISED —
         //     a cairo rectangle clip, the folder overlay rows' precedent — one
         //     group space short of the right block, so a long line is cut
         //     rather than colliding with the marker verbs. The tablet's span
-        //     (~790 device px at 275 %, the numbers above) can be narrower
+        //     (~860 device px at 275 %, the numbers above) can be narrower
         //     than the longest walk line, so the composer puts the segment
         //     that must survive the cut ahead of the one that may lose it —
         //     the GitHub word before the scale (history_walk_line, architect
@@ -2578,7 +2578,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // before that) retired, SAVE'S GREY BEING THE MARK on both machines
         // (plain_save_actionable, app_state.h).
         // THE ROW YIELDS WHOLE TO A MODAL,
-        // so the panel and the line are hidden while a prompt, a dialog editor, the
+        // so the field and the line are hidden while a prompt, a dialog editor, the
         // render player or the picker stands
         // (architect-accepted at the fold; the
         // one-day status BAR painted through a modal, that being what a
@@ -2596,25 +2596,24 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // class (it is the only feedback on the loading frame).
             state = app.queue_progress_text;
         }
-        // THE CLOCK, UNCLIPPED — the tab letter's prefix and the digits, one
-        // run from the cell's origin, so the digits stand at the prefix's
-        // advance by construction.
-        const std::string clock = tab_prefix + format_timestamp(seconds);
-        show_row_text(cr, font, static_cast<double>(cell_x),
-                      baseline, clock, palette().clock_text);
+        // THE CLOCK, UNCLIPPED — the tab letter at the cell's origin, then
+        // ` | ` and the digits as one run from the letter slot's end, so the
+        // digits stand at a fixed offset whatever the letter.
+        show_row_text(cr, font, static_cast<double>(cell_x), baseline,
+                      std::string(1, app.active_tab_view),
+                      palette().clock_text);
+        show_row_text(cr, font, static_cast<double>(cell_x) + tm.letter_w,
+                      baseline, sep + format_timestamp(seconds),
+                      palette().clock_text);
         if (state_w > 0 && !state.empty()) {
-            // The normal face, selected on the context after the clock's run
-            // has been shown (the borrowed `font` above is not read again).
-            gui_select_font_face(cr, GuiFontFamily::Sans);
-            cairo_set_font_size(cr, redesign_font_size_px());
-            cairo_scaled_font_t* state_font = cairo_get_scaled_font(cr);
+            // The same face as the clock's run, on the content band's seat.
             const double state_baseline =
-                redesign_baseline(state_font, static_cast<double>(content_y),
+                redesign_baseline(font, static_cast<double>(content_y),
                                   static_cast<double>(content_h));
             cairo_save(cr);
             cairo_rectangle(cr, state_x, lane.y, state_w, lane.h);
             cairo_clip(cr);
-            show_row_text(cr, state_font, static_cast<double>(state_x),
+            show_row_text(cr, font, static_cast<double>(state_x),
                           state_baseline, state, palette().label);
             cairo_restore(cr);
         }
@@ -4977,7 +4976,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // carries that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
 // YIELDS WHOLE: all SEVENTEEN buttons — the VERB GROUP'S SIX, the marker
 // walk group's four, the four arrows and the transport three — plus the clock's
-// status panel and the state line beside it stand down, nothing negotiates for
+// time field and the state line beside it stand down, nothing negotiates for
 // space, and paint_modal_dialog paints the modal into the lane they left.
 //
 // The two helpers below are that fork, shared by the row's painter (which
@@ -5154,8 +5153,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // left edge, with its degenerate-span early return; and the read of the
     // painter's own TransportLeft stash as the chain's right anchor. The chain
     // itself was deleted on 2026-08-29 and its three STATE strings are the
-    // STATE CELL right of the clock since 2026-08-29's evening fold — its own
-    // status panel since 2026-10-02 — painted by
+    // STATE CELL right of the clock since 2026-08-29's evening fold — the
+    // STATE LINE on the row's ground since 2026-10-03 — painted by
     // paint_bottom_row_buttons_and_clock: one string, not a ladder, and the
     // resolved readout retired with the one-day bar that carried it.)
     paint_bottom_row_buttons_and_clock(cr);
@@ -5877,7 +5876,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    Windows-95 chrome; Sound Recorder, whose slider the scrub is, has
         //    none): the groups stand the roster's eight Windows px of bare
         //    ground apart (icon_group_space_px) — transport → scrub, scrub →
-        //    clock, clock → the lamp.
+        //    clock, clock → the lamp. THE CLOCK IS TWO TIME FIELDS since
+        //    2026-10-05 (architect: Sound Recorder's Position and Length
+        //    panels, ACID's separate fields), kTimeFieldGapPx apart — the
+        //    position, then the length.
         //
         //    THE SCRUB IS THE ONE FLEXIBLE ITEM and everything else is fixed,
         //    so the row's primacy rule reads plainly here: THE BUTTONS STAY
@@ -5910,19 +5912,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int ggap     = scaled_px(kPlayerGlyphGapPx, 1);
         const int group    = icon_group_space_px();
 
-        // THE CLOCK'S CELL IS MEASURED BEFORE ANYTHING IS PLACED, its width
-        // being one of the fixed terms the scrub's own is what is left over.
-        // ONE FACE, TWO CELLS since 2026-08-28 (the set's own record is at
-        // this file's bottom-row text block): the row-8 clock's face, size
-        // and cell metrics, so the digits never walk between the project's
-        // clock and the player's.
-        gui_select_font_face(cr, GuiFontFamily::Mono);
-        const double csize = clock_font_size_px();
-        cairo_set_font_size(cr, csize);
-        cairo_scaled_font_t* cfont = cairo_get_scaled_font(cr);
-        const double cell_w = clock_cell_width_px(cfont, csize);
-        const double csep_w = text_shape::shape_text_run(cfont, " / ").width_px;
-        const int clock_w   = static_cast<int>(std::ceil(2.0 * cell_w + csep_w));
+        // THE CLOCK'S TWO FIELDS ARE MEASURED BEFORE ANYTHING IS PLACED,
+        // their width being one of the fixed terms the scrub's own is what is
+        // left over. Each is a TIME FIELD (the shape, the face and the
+        // fixed-width rule at kTimeFieldHeightPx), its cell the widest-digit
+        // specimen alone (time_field_metrics, row 8's own memo), so neither
+        // field nor anything right of it moves as the position runs or an
+        // item of another length loads.
+        cairo_scaled_font_t* cfont = select_bottom_row_face(cr);
+        const double cell_w =
+            time_field_metrics(cfont, redesign_font_size_px()).time_w;
+        const int field_pad = scaled_px(kStatusPanelPadPx);
+        const int field_w   =
+            static_cast<int>(std::ceil(cell_w)) + 2 * field_pad;
+        const int field_gap = scaled_px(kTimeFieldGapPx);
+        const int clock_w   = field_w + field_gap + field_w;
 
         // -- The walk: the fixed left run, the right-flushed PAIR (word
         //    buttons until 2026-09-01, glyph boxes since), and the scrub
@@ -6024,50 +6028,50 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             }
         }
 
-        // -- THE CLOCK, after the scrub (there since 2026-08-28; the cell
-        //    itself is unchanged). Its cell is PUBLISHED (dlg.clock) for the
-        //    tick's per-position damage, beside the scrub's, and it CLIPS at
-        //    the lane's right pad on a narrow window. --
-        // The band's solved baseline, row 8's clock said twice — the same
-        // face, the same size and the same seat, this row standing in that
-        // lane. ITS INK IS THE LABEL: it stands in no panel, on the row's
-        // ground, so the clock panel's own pair (`clock_ground` /
-        // `clock_text`, row 8's, render.h's palette block) has no face here
-        // to answer.
-        const double cbase =
-            redesign_baseline(cfont, static_cast<double>(content.y),
-                              static_cast<double>(content.h));
+        // -- THE CLOCK, after the scrub (there since 2026-08-28): TWO TIME
+        //    FIELDS since 2026-10-05, the POSITION and then the LENGTH, each
+        //    centred in the content band with its run on the field's own
+        //    seat in the field's pair (`clock_ground` / `clock_text`, row 8's,
+        //    render.h's palette block) — the fields row 8's clock is, said
+        //    twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
+        //    tick's per-position damage, beside the scrub's, and the two CLIP
+        //    at the lane's right pad on a narrow window. --
         const int sr = audio.sample_rate();
         auto seconds_of = [sr](int64_t frames) {
             return sr > 0 ? static_cast<double>(frames) / static_cast<double>(sr)
                           : 0.0;
         };
-        const std::string clock_text =
-            format_timestamp(seconds_of(pos)) + " / " +
-            format_timestamp(seconds_of(rp.frames));
         const int clock_right = std::min(clock_end, cx1);
         if (clock_right > clock_x0) {
             cairo_save(cr);
             cairo_rectangle(cr, clock_x0, content.y, clock_right - clock_x0,
                             content.h);
             cairo_clip(cr);
-            show_row_text(cr, cfont, static_cast<double>(clock_x0), cbase,
-                          clock_text, palette().label);
+            const int64_t shown[2] = {pos, rp.frames};
+            for (int i = 0; i < 2; ++i) {
+                const int cell_x =
+                    clock_x0 + i * (field_w + field_gap) + field_pad;
+                const GuiRect field =
+                    time_field_rect(cell_x, cell_w, content.y, content.h);
+                paint_time_field(cr, field);
+                show_row_text(cr, cfont, static_cast<double>(cell_x),
+                              redesign_baseline(
+                                  cfont, static_cast<double>(field.y),
+                                  static_cast<double>(field.h)),
+                              format_timestamp(seconds_of(shown[i])),
+                              palette().clock_text);
+            }
             cairo_restore(cr);
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
                                 clock_right - clock_x0 + 2, content.h};
         }
-        // THE SANS FACE BACK, AND THE HANDLE WITH IT: a cairo_scaled_font_t*
-        // borrowed from the context is only good until the context's font
-        // changes, and the clock's monospace switch is exactly that change —
-        // so the row's `font` is RE-TAKEN here rather than assumed to have
-        // survived. (This is the one branch that switches faces before the
-        // buttons are painted; the clock's own cell was painted after them
-        // until the relaid row of 2026-08-28 moved the time.) IT STAYS THOUGH
-        // THIS OWNER'S ROW PAINTS NO WORD BUTTON SINCE 2026-09-01: the walk
-        // below is SHARED, its word arm reads `font`, and this line is what
-        // keeps that arm's precondition a property of the body rather than of
-        // which branch happened to run.
+        // THE HANDLE RE-TAKEN: a cairo_scaled_font_t* borrowed from the
+        // context is only good until the context's font changes, so the
+        // row's `font` is RE-TAKEN here rather than assumed to have survived
+        // the clock's own select (the same face since 2026-10-05, when the
+        // clock's monospace retired; the walk below is SHARED, its word arm
+        // reads `font`, and this line keeps that arm's precondition a
+        // property of the body rather than of which branch happened to run).
         font = select_bottom_row_face(cr);
     } else if (picker_up) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since

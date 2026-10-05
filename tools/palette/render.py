@@ -659,8 +659,8 @@ def ruler_label_px(th):
 
 def ui_font_px(th):
     """fonts.ui_px -> the normal face in device px: ui_px x S, or the app's C.SANS_PX (12 pt x 2 = 32) when null. It
-    drives the menu items and legend (draw_menu), the flag labels (flag_seat, draw_flags) and, by the same ratio, the
-    clock (seat_clock); the --label stamp keeps its 20 px."""
+    drives the menu items and legend (draw_menu), the flag labels (flag_seat, draw_flags) and the clock (seat_clock:
+    the app's time field is the body face since 2026-10-05); the --label stamp keeps its 20 px."""
     if TABLET: return SCENE['ui_px']        # the tablet geometry: 13 Windows px x 2.75 = 35.75
     up = th.opt['fonts']['ui_px']
     return C.SANS_PX if up is None else float(up * S)
@@ -705,15 +705,10 @@ def seat_flags(sc, th):
     return sc
 
 def seat_clock(sc, th):
-    """fonts.ui_px -> the clock's Roboto Mono at the scene's measured size_px x ui_px x S / C.SANS_PX (the normal face's
-    ratio), re-seated by the app's rule over the bottom row's content rows (redesign_baseline, as shift_scene 'bottom'
-    re-seats it: the baseline moves by the rule's change). Null returns the scene itself."""
-    if th.opt['fonts']['ui_px'] is None: return sc
-    sc = json.loads(json.dumps(sc)); ck = sc['clock']; bc = sc['bottom_content']
-    px = ck['size_px'] * ui_font_px(th) / C.SANS_PX
-    ck['baseline'] += (C.redesign_baseline(C.MONO, px, bc[0], bc[1] - bc[0])
-                       - C.redesign_baseline(C.MONO, ck['size_px'], bc[0], bc[1] - bc[0]))
-    ck['size_px'] = px
+    """The clock at THE APP'S TIME FIELD'S FACE (paint_handler.cpp kTimeFieldHeightPx, architect 2026-10-05): Roboto at
+    the normal face (ui_font_px), whatever the scene measured (the scenes' captures predate the field and were Roboto
+    Mono, retired that day). Its seat is the field's (clock_baseline), derived where it is drawn."""
+    sc = json.loads(json.dumps(sc)); sc['clock']['size_px'] = ui_font_px(th)
     return sc
 
 def head_rows_drawn(th):
@@ -807,9 +802,9 @@ def shift_scene(sc, d, at):
       at 'bottom' (buttons.case, case_delta's bottom d): the OTHER direction -- the bottom row d rows taller, opened
         at its top: the row's top (its border-top, the content rows' top) moves UP by d, and with it the well's bottom,
         the measured canvas bottom, the stems' bottoms, the row's buttons and separators (their air above kept), and
-        the --label stamp's box; the clock's baseline is re-seated by the app's rule over the new content rows
-        (redesign_baseline, paint_handler.cpp's clock: box = the content rows' top .. their bottom, the cap band
-        centred), which keeps it centred on the buttons as well, their air being equal above and below. The menu and
+        the --label stamp's box; the clock's field and baseline follow the new content rows where they are drawn
+        (clock_field_rows, clock_baseline: the field centred in the rows, the cap band centred in the field), which
+        keeps it centred on the buttons as well, their air being equal above and below. The menu and
         everything from the icon row to the well's top stay, so the canvas loses d rows (negative d: gains).
       at 'marker' (fonts.ui_px, marker_shift): the marker lane d rows taller, opened at its BOTTOM (applied in the
         default lane order, the marker lane directly over the well, before order_scene): the lane's bottom, the ticks'
@@ -825,10 +820,7 @@ def shift_scene(sc, d, at):
         sc['flags']['stem_y0'] += d; sc['playhead']['stem_y0'] += d
         return sc
     if at == 'bottom':
-        u = -d; bc = sc['bottom_content']; ck = sc['clock']
-        old = C.redesign_baseline(C.MONO, ck['size_px'], bc[0], bc[1] - bc[0])
-        new = C.redesign_baseline(C.MONO, ck['size_px'], bc[0] + u, bc[1] - bc[0] - u)
-        ck['baseline'] += new - old
+        u = -d; bc = sc['bottom_content']
         bc[0] += u; L['bottom'][0] += u; sc['bottom_border']['y'] += u
         L['well'][1] += u; sc['canvas'][1] += u
         sc['flags']['stem_y1'] += u; sc['playhead']['stem_y1'] += u
@@ -1597,7 +1589,7 @@ def face_underline(family, size_px):
     of the underline's TOP from the baseline, negative below it (the OpenType definition; FreeType's
     FT_Face.underline_position moves it to the stroke's centre, this does not)."""
     import struct
-    d = open(C.SANS_FILE if family == C.SANS else C.MONO_FILE, 'rb').read()
+    d = open(C.SANS_FILE, 'rb').read()
     n = struct.unpack('>H', d[4:6])[0]
     tab = {d[12 + 16 * i:16 + 16 * i]: struct.unpack('>I', d[20 + 16 * i:24 + 16 * i])[0] for i in range(n)}
     pos, thick = struct.unpack('>hh', d[tab[b'post'] + 8:tab[b'post'] + 12])
@@ -1841,25 +1833,48 @@ def draw_stems(cr, th):
         fill(cr, f['x'], y0, f['x'] + F['stem_w'], y1, th.get('flag_stem_sel' if f.get('selected') else 'flag_stem'))
     if el['playhead'] and not P.get('stem_suppressed'): fill(cr, P['col'], y0, P['col'] + P['w'], y1, th.get('playhead_stem'))
 
+# THE APP'S TIME FIELD (paint_handler.cpp, architect 2026-10-05): kTimeFieldHeightPx Windows px tall (logical px in the
+# scene geometry; the tablet geometry reads the app's own constant, tablet.py), centred in the bottom row's content
+# rows, the clock's cap band centred in it
+TIME_FIELD_H = 17
+
 def clock_cell(th):
-    """-> (cell width, the dirty mark's advance), device px at the clock's seated size: the app's reserved cell
-    (paint_bottom_row_buttons_and_clock) -- the tab prefix ('B | '), the DD:DD.DDD specimen at the widest digit (nine
-    equal monospace advances) and the dirty mark's one cell, reserved whether or not it is painted."""
-    ck = SCENE['clock']
-    dw = max(C.shape(C.MONO, ck['size_px'], d)[1] for d in '0123456789')
-    mark = C.shape(C.MONO, ck['size_px'], '*')[1]
-    return C.shape(C.MONO, ck['size_px'], 'B | ')[1] + 9 * dw + mark, mark
+    """-> (cell width, the letter slot), device px at the clock's face: the app's reserved cell (time_field_metrics,
+    paint_bottom_row_buttons_and_clock) -- the widest tab letter's slot (A, B), the ' | ' and the DD:DD.DDD specimen at
+    the widest digit (Roboto's are tabular), one width on every tab and at every time."""
+    px = SCENE['clock']['size_px']
+    dw = max('0123456789', key=lambda d: C.shape(C.SANS, px, d)[1])
+    letter = max(C.shape(C.SANS, px, l)[1] for l in 'AB')
+    return letter + C.shape(C.SANS, px, ' | ')[1] + C.shape(C.SANS, px, 'DD:DD.DDD'.replace('D', dw))[1], letter
+
+def clock_field_rows(th):
+    """-> (y0, y1) of the clock's time field: its height (the tablet geometry's scaled_px(kTimeFieldHeightPx), else
+    TIME_FIELD_H x S) centred in the bottom row's content rows, a half-row tie toward the top (the app's integer
+    halving)."""
+    bc = SCENE['bottom_content']
+    fh = SCENE['time_field_h'] if TABLET else TIME_FIELD_H * S
+    y0 = bc[0] + (bc[1] - bc[0] - fh) // 2
+    return y0, y0 + fh
+
+def clock_baseline(th):
+    """The clock's baseline: the app's redesign_baseline over its field (clock_field_rows) when a panel is drawn, over
+    the bottom row's content rows otherwise (clock_panel "flat")."""
+    px = SCENE['clock']['size_px']
+    if clock_panel_rect(th) is None:
+        bc = SCENE['bottom_content']; return C.redesign_baseline(C.SANS, px, bc[0], bc[1] - bc[0])
+    y0, y1 = clock_field_rows(th)
+    return C.redesign_baseline(C.SANS, px, y0, y1 - y0)
 
 def clock_panel_rect(th):
     """-> (x0, y0, x1, y1) of the painted clock panel (clock_panel "sunken" / "status"), or None ("flat"): the clock
     cell (clock_cell, its width ceiled) with 4 logical px either side -- the app's kStatusPanelPadPx, 3 Windows px, at
-    the set-AD scale (x 1.375: 4.125 -> 4; it does not follow another scale) -- over the bottom buttons' rows
-    (buttons.case's height), the cell starting at the scene's clock x. draw_bottom paints it; stamp clears it."""
+    the set-AD scale (x 1.375: 4.125 -> 4; it does not follow another scale) -- over the time field's rows
+    (clock_field_rows), the cell starting at the scene's clock x. draw_bottom paints it; stamp clears it."""
     if th.opt['clock_panel'] not in ('sunken', 'status'): return None
     ck = SCENE['clock']; cell = clock_cell(th)[0]
-    bb0 = [b for b in button_geometry(th)[0] if b['row'] == 'bottom'][0]
     pp = SCENE['panel_pad'] if TABLET else 4 * S        # the tablet geometry: scaled_px(kStatusPanelPadPx 3) = 8
-    return ck['x'] - pp, bb0['y'], ck['x'] + int(math.ceil(cell)) + pp, bb0['y'] + bb0['h']
+    y0, y1 = clock_field_rows(th)
+    return ck['x'] - pp, y0, ck['x'] + int(math.ceil(cell)) + pp, y1
 
 def group_space_px(th):
     """The bottom row's space between two groups in device px: buttons.group_space x S, or 8 logical px (Windows'
@@ -1900,18 +1915,18 @@ def draw_bottom_border(cr, th):
 
 def draw_bottom(cr, th):
     draw_bottom_border(cr, th)
-    ck = SCENE['clock']; pr = clock_panel_rect(th); cx = ck['x']
+    ck = SCENE['clock']; pr = clock_panel_rect(th)
     if pr is not None:
         x0, y0, x1, y1 = pr
         # "status": Windows' status-bar panel, ONE LW line whatever `relief` is (Shadow top and left, Hilight bottom
         # and right, the BR pair last); "sunken": relief_lines 'sunken' at the theme's relief
         lines = [(th.get('bevel_shadow'), th.get('bevel_hilight'))] if th.opt['clock_panel'] == 'status' else relief_lines(th, 'sunken')
         edge(cr, x0, y0, x1, y1, lines)
-        # "status": THE RUN IS CENTRED IN THE CELL (the app, architect 2026-10-03): it starts half the dirty mark's
-        # advance past the cell's origin, a fractional x, so the prefix and the digits stand centred in the reserved
-        # cell whether or not the mark is painted
-        if th.opt['clock_panel'] == 'status': cx = ck['x'] + clock_cell(th)[1] / 2
-    show(cr, C.MONO, ck['size_px'], ck['text'], cx, ck['baseline'], th.get('clock'))
+    # THE RUN FROM THE CELL'S LEFT (the app, 2026-10-05): the tab letter at the cell's x, the rest of the text (' | '
+    # and the digits) from the letter slot's end, so nothing after the letter moves with it
+    base = clock_baseline(th)
+    show(cr, C.SANS, ck['size_px'], ck['text'][:1], ck['x'], base, th.get('clock'))
+    show(cr, C.SANS, ck['size_px'], ck['text'][1:], ck['x'] + clock_cell(th)[1], base, th.get('clock'))
     sl = state_line(th)
     if sl is not None:      # the state line, clipped (never ellipsised) one group space short of the button block
         x, right, base, px, text = sl; bc = SCENE['bottom_content']

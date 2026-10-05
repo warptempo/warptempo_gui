@@ -72,7 +72,7 @@ struct TrimRange {
 //
 // THE GUI'S COLOURS ARE ONE THEME'S ROLES AND NOTHING ELSE (architect
 // 2026-10-04): a THEME holds every colour the GUI paints — the chrome and its
-// relief, the clock panel's own pair, the cards' three, the selected and field
+// relief, the time fields' own pair, the cards' three, the selected and field
 // pairs, and the program's own elements (the waveform's canvas, ink and
 // outline, each flag kind's face and selected face, the flag labels, the
 // playhead's head and stem). The roles, their order and THE BUILT-IN's values
@@ -125,8 +125,8 @@ struct TrimRange {
 //                 (EDGE_RAISED);
 //   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field, the well
 //                 (EDGE_SUNKEN);
-//   STATUS SUNKEN ONE line, Shadow / Hilight — a status-bar panel (row 8's
-//                 clock panel);
+//   STATUS SUNKEN ONE line, Shadow / Hilight — a status-bar panel, a time
+//                 field (row 8's clock, the render player's two);
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
 //                 the ruler's ticks, a menu separator.
 // THE CARD FRAME is no relief: ONE flat line a side in the `card_frame` role,
@@ -159,14 +159,13 @@ struct TrimRange {
 //   field pair    the modal dialogs' fields, the caret its field's text
 //                 (architect 2026-10-03); the flag editor is the selected flag
 //                 opened for edit and takes no field colour (EDITING, below);
-//   clock pair    ROW 8'S CLOCK PANEL (architect 2026-10-04, Windows' status
-//                 bar: ButtonFace / ButtonText): `clock_ground` fills the
-//                 panel inside its STATUS SUNKEN line, which keeps the
-//                 quartet's Shadow / Hilight, and `clock_text` is the clock's
-//                 run — the tab letter and the digits
-//                 (paint_bottom_row_buttons_and_clock). The render player's
-//                 modal clock stands in no panel, on the row's ground, and so
-//                 keeps the label;
+//   clock pair    THE TIME FIELDS (architect 2026-10-04, Windows' status
+//                 bar: ButtonFace / ButtonText; every time field since
+//                 2026-10-05): `clock_ground` fills the field inside its
+//                 STATUS SUNKEN line, which keeps the quartet's Shadow /
+//                 Hilight, and `clock_text` is its run — row 8's tab letter
+//                 and digits (paint_bottom_row_buttons_and_clock) and the
+//                 render player's position and length (paint_modal_dialog);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
 //   caption six   THE CAPTION (architect 2026-10-05, the window's title
@@ -284,8 +283,9 @@ const GuiPalette& palette();
 // key, already through the one grammar, is_theme_key — the built-in or a
 // file read at launch, theme_file.h), so this resolves and never refuses. It
 // bumps palette_generation below, the flag cache's fingerprint term, and the
-// plate's two baked inks (waveform_plate_inks) move with it; the caller
-// damages the window. Declared against device_config.h's struct, which
+// plate's two baked inks (waveform_plate_inks) move with it; the settings
+// commit then rebuilds both caches synchronously and damages the window
+// (commit_device_setting's theme arm, settings_editor.cpp). Declared against device_config.h's struct, which
 // render.cpp includes.
 struct DeviceConfig;
 void install_palette(const DeviceConfig& cfg);
@@ -1044,9 +1044,9 @@ int  waveform_max_h_px();
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
-// strip's ONLY lane since the relayout's commit B): the monospace clock in
-// its status panel and the state line on the ground beside it at the left
-// pad (architect 2026-10-02 / 2026-10-03),
+// strip's ONLY lane since the relayout's commit B): the clock in its time
+// field and the state line on the ground beside it at the left pad
+// (architect 2026-10-02 / 2026-10-03 / 2026-10-05),
 // and the MARKER-VERB GROUP, the marker walk, the four cardinal arrows and
 // the transport three flush right, eight Windows px of bare ground between
 // groups (architect 2026-09-29; kMarkerVerbGroup in
@@ -1110,8 +1110,9 @@ inline int bottom_row_h_px() {
 // paint_bottom_row_buttons_and_clock (paint_handler.cpp).)
 
 // THE REDESIGN'S SHARED TEXT SIZE, in device pixels — every text's size but
-// the three named exceptions (the clock's, the ruler timestamps' and the
-// tooltip's second line, each beside its painter's owner). AN EM OF 13
+// the two named exceptions (the ruler timestamps' and the tooltip's second
+// line, each beside its painter's owner) — the time fields included since
+// 2026-10-05. AN EM OF 13
 // WINDOWS PX (architect 2026-10-02): MS Sans Serif 8 pt's 13-px cell, whose
 // capitals are 9 px tall — Roboto's cap of 0.711 em gives 9.2 at 13 px, and
 // the hinted face measures 9 at 100 % — so the product's text stands at
@@ -1134,27 +1135,14 @@ inline double redesign_font_size_px() {
     return kRedesignFontSizePx * gui_scale_factor();
 }
 
-// THE CLOCK'S SIZE — AN EXCEPTION to the shared size above (the ruler's
-// timestamps, below, are the other)
-// (architect 2026-08-14, at his live test: the bottom row's timestamp drops to
-// 11 pt against the shared 12; since 2026-10-02 12 Windows px against the
-// shared 13, the same 11/12). It stays MONOSPACE, which is the cell's own
-// ruled face and unchanged (kClockShape, paint_handler.cpp, carries that
-// ruling); only the size moved, and it rides gui_scale_factor() unrounded,
-// as every font size does. 33 device px at 275 %, 16.56 at 138 %.
-//
-// THE NO-WIGGLE CELL RE-MEASURES ITSELF: the cell is a shaped widest-digit
-// specimen and its memo keys on the SIZE it was measured at
-// (clock_cell_width_px), so this smaller size simply produces a smaller cell,
-// which the painter then re-centres in the lane. Nothing about the cell is
-// authored in pixels, which is why the change is one constant.
-inline constexpr double kClockFontSizePx = 12.0;   // Windows px
-inline double clock_font_size_px() {
-    return kClockFontSizePx * gui_scale_factor();
-}
+// (THE CLOCK'S OWN SIZE RETIRED — architect 2026-10-05, with its face: from
+// 2026-08-14 the clock stood a step under the shared size in the monospace —
+// 12 Windows px against 13 since 2026-10-02 — and the time fields are the
+// shared size in the body face now, the period's own (kTimeFieldHeightPx,
+// paint_handler.cpp).)
 
-// THE RULER TIMESTAMPS' SIZE — the product's second exception to the shared
-// size, the clock's precedent (architect 2026-10-02, the S4 mock judged on
+// THE RULER TIMESTAMPS' SIZE — an exception to the shared size (architect
+// 2026-10-02, the S4 mock judged on
 // the tablet; 8 pt until the unit's change): THE SMALL FACE, 10 WINDOWS PX
 // of Roboto through the one face owner (gui_select_font_face,
 // GuiFontFamily::Sans), on the ruler lane only — 27.5 device px at 275 %,

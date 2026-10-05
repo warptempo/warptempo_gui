@@ -47,8 +47,9 @@ struct GuiInputHandler;
 //    next launch, the open project staying open, and the commit says so on a
 //    card; max_waveform_height is in force at once, the body handing it to
 //    apply_max_waveform_height for the live relayout; the theme is in
-//    force at once, the body installing the palette and damaging the
-//    window (install_palette, render.h). gui_scale, the one other
+//    force at once, the body installing the palette, rebuilding the plate
+//    and the flags before the next paint and damaging the window
+//    (install_palette, render.h). gui_scale, the one other
 //    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
 //    is to reach one.

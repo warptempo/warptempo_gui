@@ -984,8 +984,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     viewport.invalidate_top_strip();
     // AND THE WAVEFORM, for the STEMS (row 5): a tempo step can move a marker in
     // or out of the RED set (a value that normalizes to the 1.00 fallback), and
-    // the stem carries its class's colour now — #da4453 for red, the calm purple
-    // otherwise. In SOURCE view nothing else here damages the waveform at all, so
+    // the stem wears its flag's face (resolve_flag_face, render.cpp) — the
+    // removed pair's for an invalid flag, its kind's otherwise, the theme's
+    // roles. In SOURCE view nothing else here damages the waveform at all, so
     // without this the stem would keep its old colour until some unrelated
     // repaint. In target view the synchronous re-warp below repaints anyway; this
     // is the cheaper honest owner for both.
@@ -1406,8 +1407,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     viewport.invalidate_top_strip();
     // AND THE WAVEFORM, for the STEMS (row 5): a tempo step can move a marker in
     // or out of the RED set (a value that normalizes to the 1.00 fallback), and
-    // the stem carries its class's colour now — #da4453 for red, the calm purple
-    // otherwise. In SOURCE view nothing else here damages the waveform at all, so
+    // the stem wears its flag's face (resolve_flag_face, render.cpp) — the
+    // removed pair's for an invalid flag, its kind's otherwise, the theme's
+    // roles. In SOURCE view nothing else here damages the waveform at all, so
     // without this the stem would keep its old colour until some unrelated
     // repaint. In target view the synchronous re-warp below repaints anyway; this
     // is the cheaper honest owner for both.

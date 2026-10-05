@@ -774,8 +774,8 @@ private:
     // its own exposure.
     void paint_caption_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
-    // 2026-08-12; the layout architect 2026-09-29): the monospace clock at
-    // the lane's left pad in a status panel with THE STATE LINE on the ground
+    // 2026-08-12; the layout architect 2026-09-29): the clock at the lane's
+    // left pad in its time field (2026-10-05) with THE STATE LINE on the ground
     // beside it (architect 2026-10-03: the `h` walk line or the render's
     // progress line at the normal face, clipped one group space short of the
     // right block), then the right

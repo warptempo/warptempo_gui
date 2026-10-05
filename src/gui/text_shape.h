@@ -92,9 +92,9 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // a measured gap right of the monospace clock and read about two pixels wider
 // than the separator-to-clock gap beside it, the two runs' side bearings both
 // falling inside the air. It retired with that cell when the state text joined
-// the clock's own run (2026-08-31); since 2026-10-02 the state stands in a
-// status panel of its own, placed at the panel's pad rather than against the
-// clock's ink, so still no bearings to correct
+// the clock's own run (2026-08-31); since 2026-10-03 the state stands on the
+// row's ground a group space past the clock's field, placed off the field's
+// line rather than against the clock's ink, so still no bearings to correct
 // (paint_bottom_row_buttons_and_clock). Nothing else
 // ever asked for ink: every other layout here wants a reserved CELL, which is
 // `width_px`'s job. A layout that needs equal air again reinstates this from

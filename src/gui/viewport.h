@@ -172,6 +172,12 @@ struct Viewport {
     //    plate CONTENT change with no geometry behind it, so the reclamp below
     //    is a pure no-op for it. It touches no audio: the gain is the
     //    picture's.
+    //  - THE PLATE'S INKS (2026-10-05): the `theme` commit
+    //    (GuiSettingsEditor::commit_device_setting) installs a palette whose
+    //    waveform ink and outline the plate bakes and whose flag faces the
+    //    flag cache bakes, and kicks so the new plate and the new flags land
+    //    in the commit's frame rather than a paint ahead of the next tick —
+    //    a CONTENT change with no geometry behind it, the gain's shape.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries
@@ -436,7 +442,7 @@ struct Viewport {
     // THE RECT IS THE BOTTOM ROW'S LANE WHOLE, not a span of it, and
     // deliberately: the cell is the row's STATE LINE on the ground since
     // 2026-10-03 (paint_bottom_row_buttons_and_clock), whose span only the
-    // painter knows — it starts a group space after the clock's panel and is
+    // painter knows — it starts a group space after the clock's field and is
     // clipped one group space short of the right block, both measured at
     // paint — so a shorter
     // new string must erase a longer old one and there is no published box to

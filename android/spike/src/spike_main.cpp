@@ -141,9 +141,9 @@ struct Spike {
     // FT_Done_FreeType runs, and a destructor body runs before its own members'.
     FT_Library ft = nullptr;
     AAsset* sans_asset = nullptr;
-    AAsset* mono_asset = nullptr;
+    AAsset* bold_asset = nullptr;
     std::unique_ptr<SpikeFont> sans = std::make_unique<SpikeFont>();
-    std::unique_ptr<SpikeFont> mono = std::make_unique<SpikeFont>();
+    std::unique_ptr<SpikeFont> bold = std::make_unique<SpikeFont>();
     std::unique_ptr<SpikeFont> info = std::make_unique<SpikeFont>();
     std::string font_error;
 
@@ -173,11 +173,11 @@ struct Spike {
         if (cr) cairo_destroy(cr);
         if (back) cairo_surface_destroy(back);
         sans.reset();
-        mono.reset();
+        bold.reset();
         info.reset();
         if (ft) FT_Done_FreeType(ft);
         if (sans_asset) AAsset_close(sans_asset);
-        if (mono_asset) AAsset_close(mono_asset);
+        if (bold_asset) AAsset_close(bold_asset);
     }
 };
 
@@ -197,18 +197,18 @@ bool load_fonts(Spike& s) {
 
     const void* sans_bytes = open("Roboto-Regular.ttf", &s.sans_asset);
     if (!sans_bytes) return false;
-    const void* mono_bytes = open("RobotoMono-Regular.ttf", &s.mono_asset);
-    if (!mono_bytes) return false;
+    const void* bold_bytes = open("Roboto-Bold.ttf", &s.bold_asset);
+    if (!bold_bytes) return false;
 
     // The AAssets stay open for the process's life: FT_New_Memory_Face does not
     // copy, so the mapped bytes must outlive every face built on them.
     const size_t sans_len = static_cast<size_t>(AAsset_getLength(s.sans_asset));
-    const size_t mono_len = static_cast<size_t>(AAsset_getLength(s.mono_asset));
+    const size_t bold_len = static_cast<size_t>(AAsset_getLength(s.bold_asset));
 
     std::string err;
     if (!s.sans->init(s.ft, sans_bytes, sans_len, kDemoPx, err)) { s.font_error = "sans: " + err; return false; }
-    if (!s.mono->init(s.ft, mono_bytes, mono_len, kDemoPx, err)) { s.font_error = "mono: " + err; return false; }
-    if (!s.info->init(s.ft, mono_bytes, mono_len, kInfoPx, err)) { s.font_error = "info: " + err; return false; }
+    if (!s.bold->init(s.ft, bold_bytes, bold_len, kDemoPx, err)) { s.font_error = "bold: " + err; return false; }
+    if (!s.info->init(s.ft, sans_bytes, sans_len, kInfoPx, err)) { s.font_error = "info: " + err; return false; }
     return true;
 }
 
@@ -319,9 +319,9 @@ void paint(Spike& s) {
     s.sans->draw(cr, margin, y + kDemoPx,
                 "Sans 48px  AVATAR Wavy To 0123 \xE2\x80\x94 fi fl \xC2\xAB quoted \xC2\xBB");
     y += s.sans->line_height();
-    s.mono->draw(cr, margin, y + kDemoPx,
-                "Mono 48px  ||||  0O1lI  #{}[]()<>  \xE2\x80\x94  |");
-    y += s.mono->line_height() + 12.0;
+    s.bold->draw(cr, margin, y + kDemoPx,
+                "Bold 48px  ||||  0O1lI  #{}[]()<>  \xE2\x80\x94  |");
+    y += s.bold->line_height() + 12.0;
 
     // --- 5. the run-loop facts, including the frame counter.
     set_rgb(cr, 0x90E0FFu);

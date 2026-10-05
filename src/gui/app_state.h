@@ -3691,9 +3691,9 @@ inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
 // The open dropdown's painted HEIGHT, derived from its table and the scale
 // alone — no shaping, no paint. Its one non-painter reader is the OPEN EDGE
 // (toggle_dropdown), which has to damage the box on the frame BEFORE the box
-// exists: at 100% the settings popup happens to fit inside the top strip, but at
-// 200% it hangs ~40px past it, and a redraw is clipped to the damage it was
-// given. The painter calls this too, so the damaged height and the painted
+// exists: the settings popup (kSettingsPopupItems' nine rows and a separator)
+// hangs past the top strip at every scale, and a redraw is clipped to the
+// damage it was given. The painter calls this too, so the damaged height and the painted
 // height are one expression and cannot drift.
 inline int dropdown_h_px(DropdownMenu m) {
     const int count = dropdown_item_count(m);
@@ -6254,8 +6254,9 @@ struct AppState {
         // router arms the thumb drag against it — published
         // geometry may only SELECT, the seek's frame is decided against the
         // live item length — and the
-        // CLOCK cell (the tick's per-position damage while the player's
-        // transport is live, beside the scrub's). Both follow the owner-tag
+        // CLOCK cell — one rect round its two time fields, the position and
+        // the length (2026-10-05) — the tick's per-position damage while the
+        // player's transport is live, beside the scrub's. Both follow the owner-tag
         // doctrine above: read only through a stash that names the live
         // player session.
         GuiRect                        scrub{0, 0, 0, 0};
@@ -6631,13 +6632,13 @@ struct AppState {
 
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
-    // centre in monospace; the row unification merged that row and the status
-    // line into the one bottom row a day later; the cell sits at the lane's
-    // left pad since 2026-09-29). It is a PAINTER STASH in the
-    // roster's own model — the rect
+    // centre; the row unification merged that row and the status line into
+    // the one bottom row a day later; the cell sits at the lane's left pad
+    // since 2026-09-29, in its time field since 2026-10-05). It is a PAINTER
+    // STASH in the roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
-    // a SHAPED specimen on the monospace face at the live size, which only the
-    // painter is holding a scaled font for.
+    // a SHAPED specimen at the live size (time_field_metrics,
+    // paint_handler.cpp), which only the painter is holding a scaled font for.
     //
     // ITS ONE CONSUMER IS clock_invalidate_rect, which hands it to every route
     // that moves the playhead or the scanner, so a clock advance dirties the

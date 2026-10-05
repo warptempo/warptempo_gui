@@ -150,7 +150,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the selected text every other refusal there leaves, while commit_device_setting's
-// three keys and the `gui_scale` arm commit regardless. So every Settings
+// four keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
 //
@@ -286,9 +286,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other three editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, and since 2026-09-13
-    // max_waveform_height — take their one direct-set body in commit(),
+    // move. (The other four editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-09-13 max_waveform_height and
+    // since 2026-10-03 theme — take their one direct-set body in commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
@@ -679,7 +679,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The three device keys other than the scale — one body, ahead of the
+    // 2. The four device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest, max_waveform_height's live relayout included).
     if (commit_device_setting(key, value)) return;
@@ -1017,10 +1017,16 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // refused field and the card, this body's shape), its reason naming the
     // launch read, since a file added to the folder under a running app is
     // not a theme until the next launch. The value is kept AS TYPED. The
-    // commit RE-PAINTS AT ONCE: the palette is installed from the live struct
-    // (install_palette, render.h) and the whole window damaged; the flag
-    // cache keys the palette's generation and the waveform plate its two
-    // baked inks, so each rebuilds BY FIELD on the next tick.
+    // commit RE-PAINTS AT ONCE AND WHOLE: the palette is installed from the
+    // live struct (install_palette, render.h), then the two caches that bake
+    // palette colours are rebuilt BEFORE the next paint by the synchronous
+    // plate rebuild (Viewport::kick_waveform_sync — the plate re-renders in
+    // the new inks and its tail rebuilds the flag cache, whose fingerprint
+    // keys the palette's generation), and the whole window is damaged. The
+    // tick's fingerprint checks would catch both too, but a frame callback
+    // can paint ahead of the next tick (the run loop services the display's
+    // events first), which would blit the old flags and plate over the new
+    // chrome for a frame — the rebuild here is what makes the swap one frame.
     if (key == "theme") {
         if (!is_theme_key(value)) { reject(kThemeGrammarReason); return true; }
         if (value == app.device_config->theme) { unchanged(); return true; }
@@ -1028,6 +1034,7 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         (void)persist();
         applied();
         install_palette(*app.device_config);
+        viewport.kick_waveform_sync();
         viewport.invalidate_all();
         return true;
     }

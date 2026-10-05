@@ -321,7 +321,8 @@ means exactly what a first run means.
    panel shows up here long before it shows up in text), and two harfbuzz-shaped
    lines at a fixed 48 px — one in the sans, one in the monospace (Liberation
    Sans and Liberation Mono when the spike ran; the product's own Roboto and
-   Roboto Mono, from the repository's `fonts/`, since 2026-10-02).
+   Roboto Mono, from the repository's `fonts/`, from 2026-10-02; the second
+   line in Roboto Bold since 2026-10-05, when Roboto Mono retired).
 2. **Live touch echo** — a ring + dot per active finger labelled with its POINTER
    ID and coordinates, tracked by id (never by index).
 3. **PLAY WAV / STOP WAV** — a tap region running the bundled 3 s 44.1 kHz stereo
@@ -748,7 +749,8 @@ Two things the backend does that are not on the Wayland side at all:
   see 10.4.
 
 Font install failure is a **hard abort**, not a fallback: `install_fonts_or_die`
-opens both font assets — Roboto and Roboto Mono, copied by `build_apk.sh` from the
+opens the font assets — Roboto and Roboto Bold (Roboto Mono beside Roboto from
+2026-10-02 until 2026-10-05), copied by `build_apk.sh` from the
 repository's `fonts/` since 2026-10-02 (Liberation from the host's package
 before) — installs them, and the install ANSWERS whether selecting each family
 actually put an FT-backed face on a probe context (the probe moved from this

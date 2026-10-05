@@ -9,7 +9,7 @@
 # android/prebuilt/arm64-v8a, the Roboto faces of fonts/, and the product's debug keystore. No CMake: a handful of
 # clang++ calls through the NDK. The device is not involved; there is no adb step here.
 #
-# Pipeline: 0. the keystore (present, never minted)   1. assets (the two Roboto TTFs)   2. compile + link the .so
+# Pipeline: 0. the keystore (present, never minted)   1. assets (the Roboto TTF)   2. compile + link the .so
 #           3. javac -> d8 (PickerActivity)   4. aapt2 link (manifest + assets; no res/)   5. zip the .so (-0) and
 #           classes.dex in   6. zipalign -P 16   7. apksigner sign   8. verify
 #
@@ -73,12 +73,12 @@ wt_say "keystore present: $KEYSTORE"
 rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$OBJ" "$CLASSES" "$DEXDIR"
 
-# --- 1. assets: the two faces ----------------------------------------------
-for f in Roboto-Regular.ttf RobotoMono-Regular.ttf; do
+# --- 1. assets: the one face (Roboto Mono retired 2026-10-05) --------------
+for f in Roboto-Regular.ttf; do
     [ -f "$REPO/fonts/$f" ] || wt_die "missing $REPO/fonts/$f"
     cp -f "$REPO/fonts/$f" "$ASSETS/$f"
 done
-wt_say "assets: the two Roboto faces"
+wt_say "assets: the Roboto face"
 
 # --- 2. compile + link ------------------------------------------------------
 [ -f "$WT_PREFIX/lib/libcairo.a" ] || wt_die "missing $WT_PREFIX/lib/libcairo.a (android/deps/build_all.sh)"

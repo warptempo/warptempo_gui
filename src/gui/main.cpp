@@ -162,8 +162,8 @@ namespace {
 // them), whose bottom edge is the waveform top. ALL SIX ride the gui_scale
 // axis. The BOTTOM strip is ONE LANE: THE UNIFIED BOTTOM ROW,
 // bottom_row_h_px() tall (the icon row's content height plus a 1px row of
-// ground on top, where its border-top stood) — the monospace clock cell in
-// its status panel (the active tab's letter, a pipe
+// ground on top, where its border-top stood) — the clock cell in its time
+// field (the active tab's letter, a pipe
 // and the timestamp, "A | 00:45.115") and THE STATE LINE on the ground
 // beside it (2026-10-03) at the left pad and,
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
@@ -683,8 +683,9 @@ GuiRect top_marker_row_area(const AppState& a) {
 // 2026-08-12, rows 8
 // and 9 merged; the succession is at the bottom row's geometry block,
 // render.h), with GAP 2's blank window ground between it
-// and the waveform: the monospace clock at the left pad in a status panel
-// (architect 2026-10-02, Windows' status bar) with THE STATE LINE on the
+// and the waveform: the clock at the left pad in a time field (architect
+// 2026-10-02, Windows' status bar; 2026-10-05, the period's field) with THE
+// STATE LINE on the
 // ground right of it (architect 2026-10-03), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
 // walk, the four cardinal arrows and the transport three, at the icon row's
@@ -1146,12 +1147,13 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // painter last drew it, at the lane's left pad (AppState::clock_cell_rect,
 // whose stash contract is at the field). Narrow by construction: on_redraw
 // clips to the damage region, so paint_bottom_strip runs but its buttons, the
-// clock panel's two vertical lines and the whole state line — a group space
-// right of the panel — fall outside the
-// clip and cost nothing (the clock panel's top and bottom lines cross the box
-// and are repainted identically under it), which is what makes this
+// clock field's two vertical lines and the whole state line — a group space
+// right of the field — fall outside the
+// clip and cost nothing (the field's top and bottom lines and the ground
+// round them cross the box and are repainted identically under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. The
-// cell's width is the shaped specimen and only the painter knows its origin,
+// cell's width is the shaped widest specimen (one width on every tab and at
+// every time) and only the painter knows its origin,
 // so a move of the cell moves nothing here. What stands beside the clock is THE
 // STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
 // whose rect is the lane WHOLE — see the record just above.

@@ -245,7 +245,7 @@ show, the added `[+]1.27+0.00:b.33` at 398 and the removed `[-]b.33` at 871 (the
   element's name, hex and count. Leaving the app with the panel open (home, the cover) saves nothing: the unsaved colour
   is discarded and the app comes back on the last saved state.
 - The panel's chrome is the app's own greys: the ground #191919, the label #FFFFFF, fields #212121, flat 1-px #000000
-  edges; no relief, no alpha. Text in Roboto and Roboto Mono, FreeType + cairo as the product does it.
+  edges; no relief, no alpha. Text in Roboto (its digits tabular; Roboto Mono retired 2026-10-05), FreeType + cairo as the product does it.
 
 ## Files on the tablet
 
@@ -379,7 +379,7 @@ painted in the neutral, a drag on h across the gamut's edges inside at every fra
 committed and restored by a relaunch, BACK and FORWARD; an HSL pick met by BACK in LCh and shown exactly in HSL; the
 triangle in LCh; a preset over three models restored exactly; a grey saved in HSV keeping its hue in HSL; the new
 forms' refusals); the readouts show one decimal rounded to nearest
-(247.27 -> 247.3, 0.4714 -> 47.1, 0.99999 -> 100.0) and the widest, measured in the mono face, fits its field; the scripted sessions on the active element (the panel,
+(247.27 -> 247.3, 0.4714 -> 47.1, 0.99999 -> 100.0) and the widest, measured in the face, fits its field; the scripted sessions on the active element (the panel,
 the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; ITS FIT: nineteen entries in two columns of
 ten and nine inside the panel's pad and the screen, the extents at sixteen and twenty-two printed, its rectangle the
 same picture at two colours while the wheel, the hex, the swatch and the readouts, tracks and handles of the slider
@@ -527,7 +527,7 @@ An element's history is every `picks.txt` line under its key, across rounds, unt
 | `src/colour.h` | the byte triple, hex, the frame's pixel word, `lin_mix` (colour.py's, step for step), `scale_byte` (the chrome rule), `over_n_8` (pixman's blend, line for line), THE MODELS: HSV, HSL and LCh over Display-P3 (D65) to and from the bytes, the gamut test |
 | `src/json.{h,cpp}` | the tiny JSON reader (manifest.json, state.json) |
 | `src/scene.{h,cpp}` | the export: load and validate (`themes.json` too), the roles' rules, the scene's runs and stacks, the whole paint and the live repaint; the Pick (bytes and view); the readers of state.json, picks.txt and presets.json, and the renamed keys they read (`renamed_key`) |
-| `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
+| `src/fonts.{h,cpp}` | Roboto from memory, as `src/gui/gui_font_bundled.cpp` builds it (SLIGHT hinting) |
 | `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus every model's view with its retained hue, a stored view restored, the gamut stop), the model switch, the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, copy and paste, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |
 | `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above; `check_refs.py` also writes the models' independent reference); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, `check_data/tablet_2026-10-04_presets/` those at the presets build's install, copied verbatim; `presets/` (the latest copy) read too |

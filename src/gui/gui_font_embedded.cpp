@@ -1,11 +1,11 @@
 #include "gui_font.h"
 
 // THE LINUX BINARY CARRIES ITS OWN FACES (architect 2026-10-02, "bundle it for
-// both"): the three files under the repository's `fonts/` are compiled into the
+// both"): the two files under the repository's `fonts/` are compiled into the
 // executable here, so the laptop depends on no installed font package and asks
 // fontconfig nothing. The Wayland backend hands these to
 // gui_font_install_bundled (gui_font.h) once, at the head of GuiPlatform::init.
-// THIS FILE IS NOT IN THE ANDROID TARGET (the APK ships the same three files as
+// THIS FILE IS NOT IN THE ANDROID TARGET (the APK ships the same two files as
 // assets, which its backend reads out of the package), nor in warptempo_cli,
 // which paints nothing.
 //
@@ -34,8 +34,3 @@ const uint8_t gui_font_embedded_sans_bold[] = {
 };
 const size_t gui_font_embedded_sans_bold_len =
     sizeof(gui_font_embedded_sans_bold);
-
-const uint8_t gui_font_embedded_mono[] = {
-#include "RobotoMono-Regular.ttf.inc"
-};
-const size_t gui_font_embedded_mono_len = sizeof(gui_font_embedded_mono);

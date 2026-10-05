@@ -1,10 +1,10 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the three
-// families resolve to the product's own three font FILES, Roboto, Roboto Bold
-// and Roboto Mono from the repository's `fonts/`, handed in once through
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the two
+// families resolve to the product's own two font FILES, Roboto and Roboto Bold
+// from the repository's `fonts/`, handed in once through
 // gui_font_install_bundled — the Linux executable's compiled-in copy
-// (gui_font_embedded.cpp) or the APK's three assets. The faces are built with
+// (gui_font_embedded.cpp) or the APK's two assets. The faces are built with
 // FreeType and wrapped as cairo font faces, which is the FT-backed shape
 // text_shape requires (an FT-backed scaled font), and no site below the seam
 // learns which device handed the bytes in.
@@ -41,14 +41,14 @@
 //     mono 29.33px (11pt @200%)    20.85       21       21         31 / 8
 //
 // THAT TABLE IS THE REFERENCE THE HINTER WAS CHOSEN ON, at the faces of its
-// day (12 / 10 / 11 pt of the laptop-pixel unit). The product's faces are the
-// Windows pixel's since 2026-10-02 (render.h: 13 / 10 / 12 Windows px, the
-// tooltip hint 11) and measure, under SLIGHT through the same road, cap and
-// ascent / descent:
+// day (12 / 10 / 11 pt of the laptop-pixel unit; its mono rows the retired
+// Roboto Mono's). The product's faces are the Windows pixel's since
+// 2026-10-02 (render.h: 13 / 10 Windows px, the tooltip hint 11) and measure,
+// under SLIGHT through the same road, cap and ascent / descent:
 //
 //     sans  17.94px (13 @138%)   cap 13   17 / 5      35.75px (13 @275%)   cap 25   34 / 9
+//     sans  45.5px  (13 @350%)   cap 33   43 / 12
 //     sans  13.8px  (10 @138%)   cap 11   13 / 4      27.5px  (10 @275%)   cap 20   26 / 7
-//     mono  16.56px (12 @138%)   cap 12   18 / 5      33px    (12 @275%)   cap 24   35 / 9
 //
 // (the native hinter's caps at these sizes are unmeasured: the choice of
 // SLIGHT rests on the reasons above, not on a size). THE BOLD FACE (the
@@ -74,9 +74,9 @@
 //
 // A RETUNE IS A FILE SWAP PLUS THIS TABLE RE-MEASURED (fonts/README.md): the
 // seats and the comments that quote these rows (redesign_baseline's table,
-// the ruler lane's arithmetic, the clock's) re-derive from it.
+// the ruler lane's arithmetic, the time fields') re-derive from it.
 //
-// LIFETIME: the library, the three FT faces, the three cairo faces and the font
+// LIFETIME: the library, the two FT faces, the two cairo faces and the font
 // options are created once and never destroyed — the process's exit reclaims
 // them, and there is no second install. The byte buffers are COPIES this file
 // owns, because FT_New_Memory_Face does not copy and the face reads from them
@@ -107,7 +107,6 @@ FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
 BundledFace           g_sans;
 BundledFace           g_sans_bold;
-BundledFace           g_mono;
 
 // Build one face from a copy of `data`. A failure leaves `out` empty, which
 // gui_select_font_face reads as "nothing installed" and answers by leaving the
@@ -145,8 +144,7 @@ bool faces_select_ft_backed() {
         cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
     cairo_t* probe = cairo_create(probe_surface);
     bool ft_backed = true;
-    for (GuiFontFamily family : {GuiFontFamily::Sans, GuiFontFamily::SansBold,
-                                 GuiFontFamily::Mono}) {
+    for (GuiFontFamily family : {GuiFontFamily::Sans, GuiFontFamily::SansBold}) {
         gui_select_font_face(probe, family);
         if (cairo_font_face_get_type(cairo_get_font_face(probe)) !=
             CAIRO_FONT_TYPE_FT) {
@@ -161,8 +159,7 @@ bool faces_select_ft_backed() {
 } // namespace
 
 bool gui_font_install_bundled(const uint8_t* sans, size_t sans_len,
-                              const uint8_t* sans_bold, size_t sans_bold_len,
-                              const uint8_t* mono, size_t mono_len) {
+                              const uint8_t* sans_bold, size_t sans_bold_len) {
     // Once per process (see LIFETIME above): a second call builds nothing and
     // reports the standing install.
     if (g_library != nullptr) return faces_select_ft_backed();
@@ -179,18 +176,16 @@ bool gui_font_install_bundled(const uint8_t* sans, size_t sans_len,
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     build_face(g_sans, sans, sans_len, "sans");
     build_face(g_sans_bold, sans_bold, sans_bold_len, "bold sans");
-    build_face(g_mono, mono, mono_len, "monospace");
     return faces_select_ft_backed();
 }
 
 void gui_select_font_face(cairo_t* cr, GuiFontFamily family) {
-    const BundledFace& f = family == GuiFontFamily::Mono     ? g_mono
-                         : family == GuiFontFamily::SansBold ? g_sans_bold
-                                                             : g_sans;
+    const BundledFace& f =
+        family == GuiFontFamily::SansBold ? g_sans_bold : g_sans;
     if (f.face == nullptr) return;
     cairo_set_font_face(cr, f.face);
     // The hint style rides with the face at every select, which is why no site
-    // above knows about it: the painters (clock_cell_metrics measures on the
+    // above knows about it: the painters (time_field_metrics measures on the
     // painter's own font) and the install's own probe, which borrows a
     // scratch context, all arrive here before they size, shape, measure or
     // paint.

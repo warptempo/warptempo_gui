@@ -559,14 +559,20 @@ elif ph_col in [f['x'] for f in flags]:
           f'(playhead_stem_suppressed)')
 else: mismatch(f'playhead at {ph_col}: no stem visible and no marker stem on its column')
 
-# ------------------------------------------------------------------ the clock (Roboto Mono 11pt, paint_bottom_row_buttons_and_clock)
+# ------------------------------------------------------------------ the clock (paint_bottom_row_buttons_and_clock)
+# THE CLOCK'S TEXT IS A PARAMETER AND ITS SEAT IS NOT MEASURED HERE: the captures this reads (a6f53163) painted it in
+# Roboto Mono 11 pt, the face that retired from the repository 2026-10-05 with the app's time fields, so its pixels
+# cannot be re-rendered and are not checked; render.py draws the clock at today's rule (the time field, Roboto at the
+# normal face), whatever the scene records. The baseline and size below are the capture's era's, kept as the scene's
+# record: cap-centred in the content rows at that face's measured 21-row cap (gui_font_bundled.cpp's reference table).
 cb_h = content_bottom[1] - content_bottom[0]
-clock = dict(text=ARGS.clock, x=PAD, baseline=C.redesign_baseline(C.MONO, C.CLOCK_PX, content_bottom[0], cb_h),
-             size_px=C.CLOCK_PX)
+clock = dict(text=ARGS.clock, x=PAD, baseline=content_bottom[0] + (cb_h + 21) // 2,
+             size_px=11.0 * 96.0 / 72.0 * C.SCALE)
 
 # ------------------------------------------------------------------ the texts, re-rendered against the capture
 # Every text the parameters name, drawn through the app's road on its ground and compared byte for byte with the
-# capture's band: the menu row (items + legend), the ruler's label band (rows above the head) and the clock cell.
+# capture's band: the menu row (items + legend) and the ruler's label band (rows above the head); the clock is not
+# (its face retired, above).
 def text_band(y0, y1, x0, x1, draws):
     s = cairo.ImageSurface(cairo.FORMAT_RGB24, C.W, C.H); cr = cairo.Context(s)
     C.src(cr, GROUND); cr.paint()
@@ -585,13 +591,9 @@ mdraws.append((C.SANS, C.SANS_PX, menu['legend'], menu['legend_right'] - int(np.
 n_menu = text_band(0, 60, 0, C.W, mdraws)
 n_rl = text_band(ruler_y0, head_top, 0, C.W, [(C.SANS, C.SANS_PX, l['text'], l['x'], ruler_baseline, K['kRulerLabel'])
                                               for l in labels] + [])
-first_bottom_x = min(b['x'] for b in buttons if b['row'] == 'bottom')
-n_clock = text_band(content_bottom[0], C.H, 0, first_bottom_x, [(C.MONO, C.CLOCK_PX, clock['text'], clock['x'],
-                                                                   clock['baseline'], LABEL)])
 # the ruler band also holds the major ticks' rise only from major_top, below head_top, so the band is text alone
-print(f'text check (differing px): menu row + legend {n_menu}, ruler labels {n_rl}, clock {n_clock}')
-for n, what in ((n_menu, 'menu row / legend (--legend)'), (n_rl, 'ruler labels (--first-label, --step)'),
-                (n_clock, 'clock (--clock)')):
+print(f'text check (differing px): menu row + legend {n_menu}, ruler labels {n_rl}')
+for n, what in ((n_menu, 'menu row / legend (--legend)'), (n_rl, 'ruler labels (--first-label, --step)')):
     if n: mismatch(f'text check: {what} differs from the capture in {n} px')
 
 # ------------------------------------------------------------------ the waveform: per-column runs

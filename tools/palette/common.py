@@ -3,8 +3,9 @@
 # this file, so the tool runs from any working directory.
 #
 # IMPORT THIS BEFORE `import cairo` ANYWHERE: it points fontconfig at the tool's own fonts.conf,
-# which lists ONLY the repository's fonts/ directory, so cairo's toy face "Roboto" / "Roboto Mono"
-# can resolve to nothing but fonts/Roboto-Regular.ttf / fonts/RobotoMono-Regular.ttf.
+# which lists ONLY the repository's fonts/ directory, so cairo's toy face "Roboto" can resolve to
+# nothing but fonts/Roboto-Regular.ttf (the app's one face for every row it paints here; its
+# monospace, Roboto Mono, retired 2026-10-05 with the app's time fields).
 # verify_fonts() proves it (fontconfig's own match, glyph ids against HarfBuzz on the file, and the
 # app's measured metrics table at gui_font_bundled.cpp) and the renderer calls it on every run.
 import os, sys, ctypes
@@ -13,7 +14,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, '..', '..'))
 FONTS = os.path.join(REPO, 'fonts')
 SANS_FILE = os.path.join(FONTS, 'Roboto-Regular.ttf')
-MONO_FILE = os.path.join(FONTS, 'RobotoMono-Regular.ttf')
 W, H = 2304, 1440
 SCALE = 2                      # gui_scale 200 %: one logical px = 2 device px
 
@@ -42,7 +42,7 @@ def save_png(path, arr):
     write_png(path, arr, [(b'iCCP', ICCP)])
 
 # ------------------------------------------------------------------ fonts: cairo side
-SANS, MONO = 'Roboto', 'Roboto Mono'
+SANS = 'Roboto'
 def font_options():
     o = cairo.FontOptions()
     o.set_antialias(cairo.ANTIALIAS_GRAY)          # the app: cairo's default GRAY, no subpixel order
@@ -90,7 +90,7 @@ def _hb_face(path):
 
 def shape(family, size_px, text):
     """-> (glyphs [(index, x_offset, y_offset, x_advance)], width_px) exactly like text_shape::shape_text_run."""
-    font = _hb.hb_font_create(_hb_face(SANS_FILE if family == SANS else MONO_FILE))
+    font = _hb.hb_font_create(_hb_face(SANS_FILE))
     sc = int(round(size_px * 64)); _hb.hb_font_set_scale(font, sc, sc)
     buf = _hb.hb_buffer_create(); b = text.encode('utf-8')
     _hb.hb_buffer_add_utf8(buf, b, len(b), 0, len(b)); _hb.hb_buffer_set_direction(buf, 4)   # HB_DIRECTION_LTR
@@ -123,13 +123,12 @@ def line_baseline(family, size_px, line_y):
     import math; return line_y + math.ceil(font_extents(family, size_px)[0])
 
 SANS_PX = 12.0 * 96.0 / 72.0 * SCALE        # kRedesignFontSizePt -> 32 px
-CLOCK_PX = 11.0 * 96.0 / 72.0 * SCALE       # kClockFontSizePt  -> 29.333 px
 
 def verify_fonts(verbose=False):
-    """Fail loudly unless both families resolve to the repository's files. Three proofs:
+    """Fail loudly unless the family resolves to the repository's file. Three proofs:
     (1) fontconfig's own FcFontMatch (the call cairo makes) names the file; (2) the glyph ids cairo maps
     for a probe string equal HarfBuzz's on the file; (3) the metrics equal the app's measured table
-    (gui_font_bundled.cpp: sans 32px ascent 30 / descent 8 / cap 22, mono 29.33px 31 / 8 / 21)."""
+    (gui_font_bundled.cpp: sans 32px ascent 30 / descent 8 / cap 22)."""
     fc = ctypes.CDLL('libfontconfig.so.1')
     fc.FcInitLoadConfigAndFonts.restype = ctypes.c_void_p
     fc.FcNameParse.restype = ctypes.c_void_p; fc.FcNameParse.argtypes = [ctypes.c_char_p]
@@ -139,7 +138,7 @@ def verify_fonts(verbose=False):
     fc.FcPatternGetString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p)]
     cfg = fc.FcInitLoadConfigAndFonts()
     report = []
-    for fam, want, px, metr in ((SANS, SANS_FILE, SANS_PX, (30, 8, 22)), (MONO, MONO_FILE, CLOCK_PX, (31, 8, 21))):
+    for fam, want, px, metr in ((SANS, SANS_FILE, SANS_PX, (30, 8, 22)),):
         pat = fc.FcNameParse(fam.encode()); fc.FcConfigSubstitute(cfg, pat, 0); fc.FcDefaultSubstitute(pat)
         res = ctypes.c_int(0); m = fc.FcFontMatch(cfg, pat, ctypes.byref(res))
         f = ctypes.c_char_p(); fc.FcPatternGetString(m, b'file', 0, ctypes.byref(f))

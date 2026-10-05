@@ -381,7 +381,7 @@ constexpr int kRowsY = kModelY + kModelH + 20, kRowStep = 100, kGroupGap = 20, k
 constexpr int kLabelX = kPad, kMinusX = kPad + 50, kBtn = 76;
 constexpr int kTrackX = kMinusX + kBtn + 14, kTrackL = 642, kTrackH = 56;
 constexpr int kPlusX = kTrackX + kTrackL + 14, kFieldX = kPlusX + kBtn + 16, kFieldW = kColX1 - kFieldX;
-// the numbers' mono size (the readouts and the history's count); a readout ends kReadoutInset px inside its field's
+// the numbers' size (the readouts and the history's count); a readout ends kReadoutInset px inside its field's
 // right edge. The six fields are one width, kFieldW (160), sized for the widest readouts "360.0" and "100.0" with air
 // on both sides (architect 2026-10-04: H, S, V to one decimal); the track gave up the width.
 constexpr double kNumPx = 38;
@@ -400,7 +400,7 @@ constexpr int kPopSw = 44, kPopSwGap = 8, kPopSwInset = 24;               // a p
 constexpr int kSlop = 16;                                                 // a drag past it scrolls, and acts on nothing
 // THE THEME STRIP: a column kStripW wide, kStripGap from the panel on the scene's side, the panel's height; its close
 // control kBtn square at the top right, the name left of it; each colour a kStripSwW x kStripSwH swatch and, right of
-// it, its hex (mono) and the names that record it (sans, wrapped), rows kStripRowGap apart
+// it, its hex and the names that record it (wrapped), rows kStripRowGap apart
 constexpr int kStripW = 360, kStripGap = 12, kStripPad = 20;
 constexpr int kStripSwW = 88, kStripSwH = 64, kStripTextX = kStripPad + kStripSwW + 14, kStripRowGap = 12;
 constexpr double kStripTitlePx = 28, kStripTitleLineH = 34, kStripNamePx = 18, kStripHexPx = 20, kStripLineH = 24;

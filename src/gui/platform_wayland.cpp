@@ -699,7 +699,7 @@ GuiPlatform::bundled_theme_files() {
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {
-    // THE PRODUCT'S THREE FACES, INSTALLED BEFORE ANYTHING ELSE (architect
+    // THE PRODUCT'S TWO FACES, INSTALLED BEFORE ANYTHING ELSE (architect
     // 2026-10-02, gui_font.h): the bytes compiled into this executable
     // (gui_font_embedded.cpp) go to the one face owner once, ahead of the
     // window and so of the first paint — init() runs once per process (the
@@ -711,9 +711,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     if (!gui_font_install_bundled(gui_font_embedded_sans,
                                   gui_font_embedded_sans_len,
                                   gui_font_embedded_sans_bold,
-                                  gui_font_embedded_sans_bold_len,
-                                  gui_font_embedded_mono,
-                                  gui_font_embedded_mono_len)) {
+                                  gui_font_embedded_sans_bold_len)) {
         std::fprintf(stderr,
                      "warptempo_gui: the bundled fonts did not install; "
                      "refusing to paint with cairo's default face\n");

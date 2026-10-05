@@ -7,8 +7,8 @@
 #   * a length is scaled_px (render.h): std::nearbyint(windows_px x 2.75), ROUNDED AT THE ELEMENT; a composite is the
 #     sum of its rounded parts (the case = lead + glyph + trail), never one rounding of the sum. Python's round() is
 #     round-half-even, std::nearbyint's default mode;
-#   * a font size is 13 / 12 / 10 Windows px x 2.75, an unrounded double (35.75 / 33 / 27.5), on the repository's
-#     Roboto / Roboto Mono through common.py's road (cairo + FreeType, SLIGHT, hint metrics on; HarfBuzz shaping on
+#   * a font size is 13 / 10 Windows px x 2.75, an unrounded double (35.75 / 27.5), on the repository's
+#     Roboto through common.py's road (cairo + FreeType, SLIGHT, hint metrics on; HarfBuzz shaping on
 #     the same file), and every seat is the app's: redesign_baseline (box_y + floor((box_h + cap) / 2)) for a box,
 #     line_baseline (line_y + ceil(ascent)) for a line.
 # THE STATE IS SCENE 1002's (scene_1002.json, the 2026-10-02 capture): its view in DEVICE px (the ruler's ms per px
@@ -74,10 +74,10 @@ def read_constants():
                  'kIconRowAirPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
-                 'kRedesignFontSizePx', 'kClockFontSizePx', 'kRulerLabelFontSizePx', 'kPlayheadHeadHeightPx',
+                 'kRedesignFontSizePx', 'kRulerLabelFontSizePx', 'kPlayheadHeadHeightPx',
                  'kPlayheadUnitPx', 'kTrimArrowGlyphCols'):
         K[name] = _num(rh, 'render.h', name); own[name] = 'render.h'
-    for name in ('kMenuLabelPadPx', 'kStatusPanelPadPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
+    for name in ('kMenuLabelPadPx', 'kStatusPanelPadPx', 'kTimeFieldHeightPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
                  'kRulerMinorsPerStep', 'kRulerMinMinorPitchPx', 'kModalButtonGapPx', 'kModalFieldHeightPx',
                  'kModalFieldPadXPx', 'kModalFieldWidthPx', 'kModalBtnBoxPx', 'kModalBtnMinWidthPx',
                  'kModalBtnPadLeftPx', 'kModalBtnPadRightPx', 'kModalFocusFramePx'):
@@ -111,16 +111,15 @@ K, OWNER = read_constants()
 
 # the faces at 275 % (render.h: a font size is not a grid point)
 UI_PX = K['kRedesignFontSizePx'] * SCALE         # 35.75, the normal face
-CLOCK_PX = K['kClockFontSizePx'] * SCALE         # 33, Roboto Mono
 SMALL_PX = K['kRulerLabelFontSizePx'] * SCALE    # 27.5, the ruler's labels
 # the app's measured faces at 275 % (paint_handler.cpp's redesign_baseline table, render.h's ruler block)
-FACE_TABLE = {'sans': (UI_PX, 34, 9, 25), 'mono': (CLOCK_PX, 35, 9, 24), 'small': (SMALL_PX, 26, 7, 20)}
+FACE_TABLE = {'sans': (UI_PX, 34, 9, 25), 'small': (SMALL_PX, 26, 7, 20)}
 
 
 def verify_faces():
-    """The three faces' ascent / descent / cap through this tool's road equal the app's measured table at 275 %."""
+    """The two faces' ascent / descent / cap through this tool's road equal the app's measured table at 275 %."""
     for key, (size, asc, desc, cap) in FACE_TABLE.items():
-        fam = C.MONO if key == 'mono' else C.SANS
+        fam = C.SANS
         e = C.font_extents(fam, size); got = (math.ceil(e[0]), math.ceil(e[1]), int(round(C.cap_height(fam, size))))
         if got != (asc, desc, cap):
             raise SystemExit(f'tablet.py: the {key} face at {size} px measures ascent/descent/cap {got}, the app\'s table '
@@ -142,7 +141,7 @@ def waveform_band(area_y, area_h, inset):
 # ------------------------------------------------------------------ the geometry
 def build():
     """-> (scene, table): the scene dict render.py draws (the keys of scene_<tag>.json it reads, plus the tablet's own:
-    glyph_off, panel_pad, group_space, ui_px, small_px, waveform_map) and the derivation table's rows."""
+    glyph_off, panel_pad, group_space, ui_px, small_px, time_field_h, waveform_map) and the derivation table's rows."""
     verify_faces()
     base = json.load(open(os.path.join(C.HERE, f'scene_{SCENE_TAG}.json')))
     T = []          # (region, element, windows px, device px, owner, the owner's own 275 % record or None)
@@ -244,9 +243,8 @@ def build():
                            ('kPanelPadPx', 'card inset from the window edge and the menu row', 'notification_stack_bound')):
         row('surfaces', el, K[name], px(K[name], 1 if name == 'kModalFocusFramePx' or name == 'kPanelPadPx' else None),
             f'{OWNER[name]} {name} ({own_})')
-    row('fonts', 'normal face (menu, legend, flags, state line, dialog, card)', K['kRedesignFontSizePx'], UI_PX,
+    row('fonts', 'normal face (menu, legend, flags, the clock, state line, dialog, card)', K['kRedesignFontSizePx'], UI_PX,
         'render.h redesign_font_size_px', 35.75)
-    row('fonts', 'clock face (Roboto Mono)', K['kClockFontSizePx'], CLOCK_PX, 'render.h clock_font_size_px', 33.0)
     row('fonts', 'small face (ruler labels)', K['kRulerLabelFontSizePx'], SMALL_PX, 'render.h ruler_label_font_size_px', 27.5)
 
     # ---- the rows, top to bottom
@@ -345,21 +343,29 @@ def build():
              'flags': [dict(f, w=pad_l + int(round(shaped_w(C.SANS, UI_PX, f['text']))) + pad_r) for f in F0['flags']]}
     for f in flags['flags']: f['clipped'] = f['x'] + f['w'] + border_w > W
 
-    # ---- the clock: the reserved cell at the row pad, the run centred in it, the cap band centred in the content
+    # ---- the clock: THE TIME FIELD (paint_handler.cpp, architect 2026-10-05) -- kTimeFieldHeightPx centred in the
+    # content rows, the reserved cell at the row pad (the widest tab letter, ' | ', the widest-digit specimen), the
+    # cap band centred in the field
     ck = base['clock']
-    clock_base = C.redesign_baseline(C.MONO, CLOCK_PX, content[0], content[1] - content[0])
-    row('bottom row', 'clock baseline in the 88-row content = floor((88 + cap 24) / 2)', '-', clock_base - content[0],
-        'paint_handler.cpp redesign_baseline', 56)
-    cell = shaped_w(C.MONO, CLOCK_PX, ck['text'][:ck['text'].index('|') + 2]) + \
-        9 * max(shaped_w(C.MONO, CLOCK_PX, d) for d in '0123456789') + shaped_w(C.MONO, CLOCK_PX, '*')
+    field_h = row('bottom row', 'time field height', K['kTimeFieldHeightPx'], px(K['kTimeFieldHeightPx']),
+                  'paint_handler.cpp kTimeFieldHeightPx', 47)
+    field_y = content[0] + (content[1] - content[0] - field_h) // 2
+    row('bottom row', 'time field top in the 88-row content = (88 - 47) / 2', '-', field_y - content[0],
+        'paint_handler.cpp time_field_rect', 20)
+    clock_base = C.redesign_baseline(C.SANS, UI_PX, field_y, field_h)
+    row('bottom row', 'clock baseline in the 47-row field = floor((47 + cap 25) / 2)', '-', clock_base - field_y,
+        'paint_handler.cpp redesign_baseline', 36)
+    wd = max('0123456789', key=lambda d: shaped_w(C.SANS, UI_PX, d))
+    cell = max(shaped_w(C.SANS, UI_PX, l) for l in 'AB') + shaped_w(C.SANS, UI_PX, ' | ') + \
+        shaped_w(C.SANS, UI_PX, 'DD:DD.DDD'.replace('D', wd))
     panel_r = pad - panel_pad + math.ceil(cell) + 2 * panel_pad
-    row('bottom row', 'status panel right edge (cell at the pad, ceiled, + 2 pads)', '-', panel_r,
-        'paint_handler.cpp paint_bottom_row_buttons_and_clock', None)
-    row('bottom row', 'state line x = panel right + group space', '-', panel_r + gap,
-        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 330)
+    row('bottom row', 'time field right edge (cell at the pad, ceiled, + 2 pads)', '-', panel_r,
+        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 239)
+    row('bottom row', 'state line x = field right + group space', '-', panel_r + gap,
+        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 261)
     row('bottom row', 'state line clip right = block x - group space', '-', block_x - gap,
         'paint_handler.cpp paint_bottom_row_buttons_and_clock', 1123)
-    clock = {'text': ck['text'], 'x': pad, 'baseline': clock_base, 'size_px': CLOCK_PX}
+    clock = {'text': ck['text'], 'x': pad, 'baseline': clock_base, 'size_px': UI_PX}
 
     # ---- the waveform: the 200 % capture's drawing band -> the 275 % band, channel by channel (waveform_columns)
     old_area = base['lanes']['well']; old_inset = 16      # a6f53163: scaled_px(8 laptop px) at 200 %
@@ -381,6 +387,7 @@ def build():
              'disabled_mix': base['disabled_mix'], 'label_box': base['label_box'],
              # the tablet's own keys (render.py reads them under "geometry": "tablet")
              'glyph_off': lead, 'panel_pad': panel_pad, 'group_space': gap, 'ui_px': UI_PX, 'small_px': SMALL_PX,
+             'time_field_h': field_h,
              'waveform_map': {'old_band': list(old_band), 'new_band': list(new_band)},
              'bottom_groups': group_starts, 'block_x': block_x}
     return scene, T

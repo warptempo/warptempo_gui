@@ -61,8 +61,8 @@ struct Frame {
 void set_source(cairo_t* cr, Rgb c) { cairo_set_source_rgb(cr, c.r / 255.0, c.g / 255.0, c.b / 255.0); }
 
 // text with its baseline at y, starting at x (align 0), centred on x (align 1) or ending at x (align 2)
-void text(cairo_t* cr, bool mono, double px, const std::string& s, double x, double y, int align, Rgb c = kLabel) {
-    fonts_select(cr, mono, px);
+void text(cairo_t* cr, double px, const std::string& s, double x, double y, int align, Rgb c = kLabel) {
+    fonts_select(cr, px);
     cairo_text_extents_t e;
     cairo_text_extents(cr, s.c_str(), &e);
     const double ox = align == 0 ? 0 : align == 1 ? -e.x_advance / 2 : -e.x_advance;
@@ -72,8 +72,8 @@ void text(cairo_t* cr, bool mono, double px, const std::string& s, double x, dou
 }
 
 // the baseline that centres the face's cap height on a box (y0, h): the digits' and capitals' ink centred
-double cap_baseline(cairo_t* cr, bool mono, double px, double y0, double h) {
-    fonts_select(cr, mono, px);
+double cap_baseline(cairo_t* cr, double px, double y0, double h) {
+    fonts_select(cr, px);
     cairo_text_extents_t e;
     cairo_text_extents(cr, "H", &e);
     return std::round(y0 + (h - e.height) / 2 - e.y_bearing);
@@ -82,8 +82,8 @@ double cap_baseline(cairo_t* cr, bool mono, double px, double y0, double h) {
 // the largest size up to px at which s is no wider than width: the element button's name, which must clear the
 // chooser's head at the button's right (186 px at 36 px: a flag kind's name, "Selected Phase Reset Flag" the longest, is
 // set smaller), and a chooser entry's, which must end inside its cell (kChooserNameW)
-double fit_px(cairo_t* cr, bool mono, double px, const std::string& s, double width) {
-    fonts_select(cr, mono, px);
+double fit_px(cairo_t* cr, double px, const std::string& s, double width) {
+    fonts_select(cr, px);
     cairo_text_extents_t e;
     cairo_text_extents(cr, s.c_str(), &e);
     return e.x_advance <= width ? px : std::floor(px * width / e.x_advance);
@@ -177,8 +177,8 @@ std::vector<std::string> split_words(const std::string& s, const std::string& se
 
 // the tokens laid into lines no wider than `width` (a token wider than a line stands alone on its own; the painter
 // clips it), each line's trailing space dropped
-std::vector<std::string> wrap(cairo_t* cr, bool mono, double px, const std::vector<std::string>& toks, double width) {
-    fonts_select(cr, mono, px);
+std::vector<std::string> wrap(cairo_t* cr, double px, const std::vector<std::string>& toks, double width) {
+    fonts_select(cr, px);
     auto w = [&](const std::string& t) {
         cairo_text_extents_t e;
         cairo_text_extents(cr, t.c_str(), &e);
@@ -744,8 +744,8 @@ void Picker::layout_strip() {
     cairo_t* cr = cairo_create(ms);
     // the header: the theme's CATALOG KEY, the name he types in the app's Settings (wrapped at its hyphens), and its
     // display title under it, small (architect 2026-10-04)
-    strip_title_ = wrap(cr, false, kStripTitlePx, split_words(t.key, "-"), kStripW - 2 * kStripPad - kBtn - 12);
-    strip_sub_ = wrap(cr, false, kStripNamePx, split_words(t.name, " "), kStripW - 2 * kStripPad - kBtn - 12);
+    strip_title_ = wrap(cr, kStripTitlePx, split_words(t.key, "-"), kStripW - 2 * kStripPad - kBtn - 12);
+    strip_sub_ = wrap(cr, kStripNamePx, split_words(t.name, " "), kStripW - 2 * kStripPad - kBtn - 12);
     strip_head_ = kStripPad + std::max(kBtn, int(std::ceil(strip_title_.size() * kStripTitleLineH +
                                                             strip_sub_.size() * kStripLineH))) + 16;
     strip_rows_.clear();
@@ -754,7 +754,7 @@ void Picker::layout_strip() {
         std::vector<std::string> toks;
         for (size_t k = 0; k < c.names.size(); ++k) toks.push_back(c.names[k] + (k + 1 < c.names.size() ? ", " : ""));
         StripRow r;
-        r.names = wrap(cr, false, kStripNamePx, toks, kStripW - kStripTextX - kStripPad);
+        r.names = wrap(cr, kStripNamePx, toks, kStripW - kStripTextX - kStripPad);
         r.y = y;
         r.h = std::max(kStripSwH, int((1 + r.names.size()) * kStripLineH) + 6);
         y += r.h + kStripRowGap;
@@ -1030,7 +1030,7 @@ void Picker::paint(cairo_surface_t* surf) {
         cairo_surface_mark_dirty(surf);
         cairo_t* cr = cairo_create(surf);
         const std::string s = act.name + " " + hex_of(c.rgb) + "  " + count_of(hist());
-        fonts_select(cr, true, kCornerPx);
+        fonts_select(cr, kCornerPx);
         cairo_text_extents_t e;
         cairo_text_extents(cr, s.c_str(), &e);
         const int bw = int(std::ceil(e.x_advance)) + 32, bh = 60;
@@ -1040,7 +1040,7 @@ void Picker::paint(cairo_surface_t* surf) {
         fr.edge(x0, y0, x0 + bw, y0 + bh, kEdge);
         cairo_surface_mark_dirty(surf);
         cr = cairo_create(surf);
-        text(cr, true, kCornerPx, s, x0 + 16, cap_baseline(cr, true, kCornerPx, y0, bh), 0);
+        text(cr, kCornerPx, s, x0 + 16, cap_baseline(cr, kCornerPx, y0, bh), 0);
         cairo_destroy(cr);
         cairo_surface_flush(surf);
         dirty_ = false;
@@ -1234,10 +1234,10 @@ void Picker::paint(cairo_surface_t* surf) {
     cairo_surface_mark_dirty(surf);
     cairo_t* cr = cairo_create(surf);
     {   // the name in the word size, or smaller to end 12 px short of the head (kNameX1 - 36 - 12)
-        const double npx = fit_px(cr, false, kWordPx, act.name, kNameX1 - 60 - (kColX + 18));
-        text(cr, false, npx, act.name, ox + kColX + 18, cap_baseline(cr, false, npx, oy + kNameY, kNameH), 0);
+        const double npx = fit_px(cr, kWordPx, act.name, kNameX1 - 60 - (kColX + 18));
+        text(cr, npx, act.name, ox + kColX + 18, cap_baseline(cr, npx, oy + kNameY, kNameH), 0);
     }
-    text(cr, false, kWordPx, "Presets", ox + (kPresetsX + kColX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kNameY, kNameH), 1);
+    text(cr, kWordPx, "Presets", ox + (kPresetsX + kColX1) / 2.0, cap_baseline(cr, kWordPx, oy + kNameY, kNameH), 1);
     if (!presets_) {
         // THE CHOOSER IS PAINTED OVER EVERYTHING IT COVERS: its field and rules went over the panel's fills above, and
         // the panel's words are clipped to outside it (the hex, the count, Old and New, a readout of a slider row it
@@ -1249,26 +1249,26 @@ void Picker::paint(cairo_surface_t* surf) {
             cairo_rectangle(cr, ox + kChooserX0, oy + kChooserY, kChooserX1 - kChooserX0, chooser_rows(n) * kChooserRowH);
             cairo_clip(cr);
         }
-        text(cr, true, kHexPx, hex_of(c.rgb), ox + kColX, oy + kPad + 150, 0);
-        text(cr, true, kNumPx, count_of(hist()), ox + (kBackX + kBtn + kFwdX) / 2.0,
-             cap_baseline(cr, true, kNumPx, oy + kHistY, kBtn), 1);
-        text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
-        text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
-        text(cr, false, kWordPx, "Copy", ox + (kCopyX0 + kCopyX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kClipY, kClipH), 1);
-        text(cr, false, kWordPx, "Paste", ox + (kPasteX0 + kPasteX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kClipY, kClipH),
+        text(cr, kHexPx, hex_of(c.rgb), ox + kColX, oy + kPad + 150, 0);
+        text(cr, kNumPx, count_of(hist()), ox + (kBackX + kBtn + kFwdX) / 2.0,
+             cap_baseline(cr, kNumPx, oy + kHistY, kBtn), 1);
+        text(cr, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
+        text(cr, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
+        text(cr, kWordPx, "Copy", ox + (kCopyX0 + kCopyX1) / 2.0, cap_baseline(cr, kWordPx, oy + kClipY, kClipH), 1);
+        text(cr, kWordPx, "Paste", ox + (kPasteX0 + kPasteX1) / 2.0, cap_baseline(cr, kWordPx, oy + kClipY, kClipH),
              1, has_clip_ ? kLabel : kDim);   // greyed while nothing has been copied
-        text(cr, false, kWordPx, model_name(c.model), ox + kModelX0 + 18, cap_baseline(cr, false, kWordPx, oy + kModelY, kModelH), 0);
+        text(cr, kWordPx, model_name(c.model), ox + kModelX0 + 18, cap_baseline(cr, kWordPx, oy + kModelY, kModelH), 0);
         if (models_)
             for (Model m : kAllModels) {
                 const int ry = oy + kModelListY + int(m) * kChooserRowH;
-                text(cr, false, kWordPx, model_name(m), ox + kModelX0 + 60, cap_baseline(cr, false, kWordPx, ry, kChooserRowH), 0);
+                text(cr, kWordPx, model_name(m), ox + kModelX0 + 60, cap_baseline(cr, kWordPx, ry, kChooserRowH), 0);
             }
         for (int i = 0; i < 6; ++i) {
             const int ry = oy + row_y(i);
             if (!models_ || row_y(i) + kRowH / 2 >= kModelListY + 3 * kChooserRowH)   // the letters the list does not cover
-                text(cr, false, kWordPx, row_name(c.model, i), ox + kLabelX + 18, cap_baseline(cr, false, kWordPx, ry, kRowH), 1);
-            text(cr, true, kNumPx, row_readout(c, i), ox + kFieldX + kFieldW - kReadoutInset,
-                 cap_baseline(cr, true, kNumPx, ry, kRowH), 2);
+                text(cr, kWordPx, row_name(c.model, i), ox + kLabelX + 18, cap_baseline(cr, kWordPx, ry, kRowH), 1);
+            text(cr, kNumPx, row_readout(c, i), ox + kFieldX + kFieldW - kReadoutInset,
+                 cap_baseline(cr, kNumPx, ry, kRowH), 2);
         }
         if (chooser_) {
             cairo_restore(cr);
@@ -1277,13 +1277,13 @@ void Picker::paint(cairo_surface_t* surf) {
             for (int i = 0; i < n; ++i) {
                 const int ry = oy + chooser_y(i, n);
                 const std::string& nm = ex_.elements[size_t(i)].name;
-                const double npx = fit_px(cr, false, kWordPx, nm, kChooserNameW);
-                text(cr, false, npx, nm, ox + chooser_x(i, n) + kChooserNameDX, cap_baseline(cr, false, npx, ry, kChooserRowH), 0);
+                const double npx = fit_px(cr, kWordPx, nm, kChooserNameW);
+                text(cr, npx, nm, ox + chooser_x(i, n) + kChooserNameDX, cap_baseline(cr, npx, ry, kChooserRowH), 0);
             }
         }
     } else {
         const int x0 = ox + kPopX0 + 24, vy0 = oy + kPopListY0, vy1 = oy + kPopY1;
-        text(cr, false, kWordPx, save_label(), x0, cap_baseline(cr, false, kWordPx, oy + kPopY0, kPopRowH), 0);
+        text(cr, kWordPx, save_label(), x0, cap_baseline(cr, kWordPx, oy + kPopY0, kPopRowH), 0);
         cairo_save(cr);
         cairo_rectangle(cr, ox + kPopX0, vy0 + 1, kPopX1 - kPopX0, vy1 - vy0 - 1);
         cairo_clip(cr);
@@ -1292,17 +1292,17 @@ void Picker::paint(cairo_surface_t* surf) {
             if (ry + kPopRowH <= vy0 || ry >= vy1) continue;
             const std::string w = k < np ? "Preset " + std::to_string(presets_list_[size_t(k)].number)
                                 : k == np ? "Themes" : ex_.themes[size_t(k - np - 1)].key;
-            text(cr, false, kWordPx, w, x0, cap_baseline(cr, false, kWordPx, ry, kPopRowH), 0);
+            text(cr, kWordPx, w, x0, cap_baseline(cr, kWordPx, ry, kPopRowH), 0);
         }
         cairo_restore(cr);
     }
     if (theme_ >= 0) {
         const Theme& t = ex_.themes[size_t(theme_)];
         for (size_t l = 0; l < strip_title_.size(); ++l)
-            text(cr, false, kStripTitlePx, strip_title_[l], sx + kStripPad,
+            text(cr, kStripTitlePx, strip_title_[l], sx + kStripPad,
                  oy + kStripPad + (l + 1) * kStripTitleLineH - 8, 0);
         for (size_t l = 0; l < strip_sub_.size(); ++l)
-            text(cr, false, kStripNamePx, strip_sub_[l], sx + kStripPad,
+            text(cr, kStripNamePx, strip_sub_[l], sx + kStripPad,
                  oy + kStripPad + strip_title_.size() * kStripTitleLineH + (l + 1) * kStripLineH - 5, 0);
         cairo_save(cr);
         cairo_rectangle(cr, sx + 1, lv0, kStripW - 2, lv1 - lv0);
@@ -1310,9 +1310,9 @@ void Picker::paint(cairo_surface_t* surf) {
         for (size_t i = 0; i < strip_rows_.size(); ++i) {
             const int ry = lv0 + strip_rows_[i].y - strip_.pos;
             if (ry + strip_rows_[i].h <= lv0 || ry >= lv1) continue;
-            text(cr, true, kStripHexPx, hex_of(t.colours[i].rgb), sx + kStripTextX, ry + kStripLineH - 5, 0);
+            text(cr, kStripHexPx, hex_of(t.colours[i].rgb), sx + kStripTextX, ry + kStripLineH - 5, 0);
             for (size_t l = 0; l < strip_rows_[i].names.size(); ++l)
-                text(cr, false, kStripNamePx, strip_rows_[i].names[l], sx + kStripTextX, ry + (l + 2) * kStripLineH - 5, 0);
+                text(cr, kStripNamePx, strip_rows_[i].names[l], sx + kStripTextX, ry + (l + 2) * kStripLineH - 5, 0);
         }
         cairo_restore(cr);
     }
@@ -1327,7 +1327,7 @@ void paint_message(cairo_surface_t* surf, const std::vector<std::string>& lines)
     cairo_paint(cr);
     double y = 120;
     for (const std::string& l : lines) {
-        text(cr, false, 40, l, 80, y, 0);
+        text(cr, 40, l, 80, y, 0);
         y += 64;
     }
     cairo_destroy(cr);

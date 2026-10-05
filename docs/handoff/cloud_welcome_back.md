@@ -119,4 +119,27 @@ FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag fir
   Roboto 13 (the body face) also gives a 9-px cap with TABULAR digits (all 7 px) and 3-px punctuation. MOCKS sent:
   the clock today vs a 17-px field in Roboto 13 (tmp/mock/clock_350.png), and B2 — the flag button floating in the
   marker lane, the stem only inside the well under its left edge (tmp/mock/flag_button2.py). His Sol run is alive.
+- RULED 2026-10-05: THE FLAG IS "A+" — today's flat flag, and the DkShadow OUTLINE CARRIED DOWN BOTH SIDES OF THE
+  STEM through the well's two top lines, stopping at the canvas (tmp/mock/flag_flank.py), so the stem never touches
+  the well; the well's BOTTOM unchanged. Brief it after the time-fields arc (one coder at a time).
+- RULED 2026-10-05: ROBOTO MONO RETIRES; every time shows in Roboto 13 (tabular digits) in a 17-px one-line sunken
+  field of FIXED width (the widest string it can show); the player's two times each their own field (the period's
+  Sound Recorder / ACID). In progress with a coder, with the Sol review's still-true findings (the theme commit's
+  one stale frame: "the live face always reflects what's painted").
+- THE SOL REVIEW READ AN OLD SNAPSHOT in places because the brief listed arc hashes (7227c38 ...) and Sol inspected
+  those commits as such; his pull was fine. NEXT BRIEFS: "review the code AT HEAD only; the hashes are history
+  pointers, never a snapshot to check out". The review is archived at tmp/codex_review_sol_2026-10-05.md.
+- LOW PRIORITY, FIT IN WHEREVER (his word 2026-10-05, "deferred indefinitely", small enough to ride beside another
+  arc): MENU ACCELERATORS for realism — the underlined first letter of File, Edit, Settings (Alt+F / Alt+E / Alt+S
+  open them, Windows' mnemonic), which needs the bare `E` key's current binding (a mouse / pointer act) REMOVED to
+  free it; read chord_is_bound and the alt vocabulary (gui_input.h, input_key_dispatch.cpp) and closed_questions
+  before briefing, and confirm with him which act `E` does today.
+- LANDED 2026-10-05 (the time-fields commit): Roboto Mono gone; row 8's clock and the player's position / length are
+  17-px time fields in Roboto 13, fixed width (the widest tab letter's slot + " | " + the widest digit in every place:
+  the pipe and digits never move; only A / B's own ink differs); the Sol defect fixed (a theme commit rebuilds the
+  plate and the flag cache before the next paint, kick_waveform_sync). Open, his word if he wants them: the player's
+  fields unlabelled (Sound Recorder said "Position:" / "Length:"); digits left-aligned in the fixed cell (ACID
+  right-aligns; near-identical at the widest cell). NEXT: brief A+; then a REQUEST (laptop build + APK).
+  BUDGET: about $65 of cloud credit left (2026-10-05). HE ASKS FOR TERSE REPLIES: no "holding off / uncommitted"
+  status notes.
 
