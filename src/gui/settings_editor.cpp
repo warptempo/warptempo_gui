@@ -3,6 +3,7 @@
 #include "input_handler.h"
 #include "render_output_naming.h"
 #include "device_config.h"
+#include "theme_file.h"        // is_theme_key, kThemeGrammarReason
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -1010,44 +1011,25 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
-    // THE FOURTEEN COLOUR KEYS (architect 2026-10-03; the record at
-    // device_config.h's head): the theme, its level and the twelve program
-    // colours, each under its one grammar owner in device_config.h — a theme
-    // key the generated table does not hold, a level outside light | dark, a
-    // colour that is neither `#rrggbb` nor one of the twenty names is the
-    // refusal (the refused field and the card, this body's shape). The value
-    // is kept AS TYPED. The commit RE-PAINTS AT ONCE: the palette is
-    // installed from the live struct (install_palette, render.h) and the
-    // whole window damaged; the flag cache keys the palette's generation and
-    // the waveform plate its two baked inks, so each rebuilds BY FIELD on the
-    // next tick.
-    {
-        std::string* ckey_live = nullptr;
-        bool (*ckey_grammar)(const std::string&) = nullptr;
-        const char* ckey_reason = nullptr;
-        if (key == "theme") {
-            ckey_live    = &app.device_config->theme;
-            ckey_grammar = &is_theme_key;
-            ckey_reason  = kThemeGrammarReason;
-        } else if (key == "theme_level") {
-            ckey_live    = &app.device_config->theme_level;
-            ckey_grammar = &is_theme_level;
-            ckey_reason  = kThemeLevelGrammarReason;
-        } else if (const ProgramColourKey* pk = find_program_colour_key(key)) {
-            ckey_live    = &(app.device_config->*(pk->member));
-            ckey_grammar = &is_program_colour;
-            ckey_reason  = kProgramColourGrammarReason;
-        }
-        if (ckey_live) {
-            if (!ckey_grammar(value)) { reject(ckey_reason); return true; }
-            if (value == *ckey_live) { unchanged(); return true; }
-            *ckey_live = value;
-            (void)persist();
-            applied();
-            install_palette(*app.device_config);
-            viewport.invalidate_all();
-            return true;
-        }
+    // THE THEME (architect 2026-10-03; the themes 2026-10-04, theme_file.h):
+    // the built-in's key or the key of a theme file READ AT LAUNCH, under its
+    // one grammar owner (is_theme_key) — any other word is the refusal (the
+    // refused field and the card, this body's shape), its reason naming the
+    // launch read, since a file added to the folder under a running app is
+    // not a theme until the next launch. The value is kept AS TYPED. The
+    // commit RE-PAINTS AT ONCE: the palette is installed from the live struct
+    // (install_palette, render.h) and the whole window damaged; the flag
+    // cache keys the palette's generation and the waveform plate its two
+    // baked inks, so each rebuilds BY FIELD on the next tick.
+    if (key == "theme") {
+        if (!is_theme_key(value)) { reject(kThemeGrammarReason); return true; }
+        if (value == app.device_config->theme) { unchanged(); return true; }
+        app.device_config->theme = value;
+        (void)persist();
+        applied();
+        install_palette(*app.device_config);
+        viewport.invalidate_all();
+        return true;
     }
 
     std::string* live    = nullptr;

@@ -529,8 +529,8 @@ void draw_in_ink(cairo_t* cr, Icon icon, double x, double y, double size_px,
 
 // THE ENGRAVED GLYPH — a disabled toolbar button's face (architect
 // 2026-10-02, the AB set; Windows' DrawState DSS_DISABLED): the glyph's whole
-// shape, every path in one ink, painted TWICE — first in the theme's EMBOSS
-// LIGHT COPY `offset_px` right and down (the caller passes one Windows px,
+// shape, every path in one ink, painted TWICE — first in the theme's HILIGHT
+// `offset_px` right and down (the caller passes one Windows px,
 // relief_line_px), then in its Shadow at (x, y) — so the dead glyph reads
 // as cut into the face. THE GLYPH HALF OF THE DISABLED EMBOSS (architect
 // 2026-10-03; the word half is show_embossed_run, render.h, the rule at the

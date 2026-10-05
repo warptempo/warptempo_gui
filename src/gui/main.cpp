@@ -23,6 +23,7 @@
 #include "history_prefetch.h"
 #include "audio.h"
 #include "device_config.h"
+#include "theme_file.h"
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -3216,13 +3217,12 @@ int gui_main(const char* argument) {
     // checkpoint worker both reach libgit2 on their own threads.
     gui_git_init();
 
-    // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled
-    // from ~/.config/warptempo_gui/colors.conf by load_color_config() at exactly
-    // this point — before the first paint and before anything could derive a
-    // value from them. The whole system retired 2026-08-02: the palette is
-    // constexpr, so there is nothing to initialize and every reader, the
-    // waveform worker thread included, sees compile-time constants. The record
-    // is at the palette block, render.h.)
+    // (NO colors.conf LOAD HERE ANY MORE. The colors were 23 mutable globals
+    // filled from ~/.config/warptempo_gui/colors.conf by load_color_config()
+    // at exactly this point; that system retired 2026-08-02. The palette is
+    // installed below from the device config's `theme` (install_palette, after
+    // the themes folder and the config are read); the record is at the
+    // palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
     // Its keys (kDeviceConfigKeys, device_config.cpp) describe the MACHINE,
@@ -3246,6 +3246,17 @@ int gui_main(const char* argument) {
     // down, and a failed persist (advisory) loses nothing the user committed.
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
+    //
+    // THE THEMES FOLDER IS READ FIRST, ONCE (architect 2026-10-04,
+    // theme_file.h): the config's `theme` key is judged against the built-in
+    // and the files loaded here, so the files must be in hand before the
+    // config's reader runs. Its failure is the config's own road — a bad
+    // theme file is a hand edit, the same adversarial class — one blunt line
+    // naming the file and no window.
+    if (const std::optional<std::string> err = read_theme_folder()) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        return 1;
+    }
     DeviceConfig device_config;
     {
         auto cfg = load_device_config(GuiPlatform::device_config_defaults());
@@ -3272,11 +3283,11 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme at its
-    // level and the twelve program keys, installed before the first paint, and
-    // again at the settings editor's commit of any colour key
-    // (commit_device_setting). Every painter reads it through palette()
-    // (render.h's palette block).
+    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme the
+    // config names (the built-in or a file read above, 2026-10-04), installed
+    // before the first paint, and again at the settings editor's `theme`
+    // commit (commit_device_setting). Every painter reads it through
+    // palette() (render.h's palette block).
     install_palette(device_config);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,

@@ -42,8 +42,8 @@ struct GuiColor {
 };
 
 // Build a GuiColor from a 0xRRGGBB word, converting each 8-bit channel to an
-// exact [0,1] double — the one road from a recorded byte triple (the theme
-// table's, a program key's, a named literal's) to a colour. RGB only: the
+// exact [0,1] double — the one road from a byte triple (a theme role's, a
+// named literal's) to a colour. RGB only: the
 // palette composites nothing (its head, below), and the renderer hands colours
 // to cairo through set_palette_source and set_waveform_source.
 inline constexpr GuiColor hex(uint32_t rgb) {
@@ -70,29 +70,32 @@ struct TrimRange {
 
 // -- Palette ---------------------------------------------------------------
 //
-// THE GUI'S COLOURS ARE TWO SETS AND NOTHING ELSE (architect 2026-10-03): THE
-// THEME'S RECORDED ROLES — an imported desktop theme of the era, the device
-// config's `theme` at its `theme_level`, read off the generated table
-// (theme_table.h, tools/theme_catalog/: the catalog's bytes, the level
-// arithmetic run once there, so the app computes no colour) — and THE
-// PROGRAM'S OWN COLOURS, open device keys (device_config.h): the waveform's
-// ink, canvas and outline, the flag's face and selected face and their
-// recorded labels, the invalid face and its selected face and its label, the
-// playhead's head and stem. The chrome is the theme's; the waveform pane, the
-// flags and the playhead are the program's own elements.
+// THE GUI'S COLOURS ARE ONE THEME'S ROLES AND NOTHING ELSE (architect
+// 2026-10-04): a THEME holds every colour the GUI paints — the chrome and its
+// relief, the clock panel's own pair, the cards' three, the selected and field
+// pairs, and the program's own elements (the waveform's canvas, ink and
+// outline, each flag kind's face and selected face, the flag labels, the
+// playhead's head and stem). The roles, their order and THE BUILT-IN's values
+// are the role table (kGuiThemeRoles, theme_file.h); the active theme is the
+// device config's `theme` — the one built-in, `windows-95-standard`, or a
+// `<key>.theme` file read at launch from the `themes/` folder beside the
+// device config (theme_file.h's head: the grammar, a file naming only some
+// roles, the hard fail). There is NO LEVEL: a dark look is a theme of its own
+// (architect 2026-10-04). The app computes no colour.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette(), or the one named literal beside them (the in-place
 // editor's frame, kFlagEditorFrame below), or one of icons.cpp's hand-listed
-// inks. TEXT OVER A FILL IS THE FILL'S RECORDED PAIR — Windows recorded a text
+// inks. TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
-// Window / WindowText) — never a luminance verdict.
+// Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
+// beside every ground role — never a luminance verdict.
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
 // HOVER FACES: every colour is a solid fill of integer cells.
 //
 // A HEX HERE IS A DISPLAY-P3 BYTE TRIPLE AND IS WHAT THE TABLET SHOWS
 // (architect 2026-10-02). The tablet's window is a Display-P3 layer
 // (GuiPlatform::adopt_window, platform_android.cpp), so the panel takes the
-// bytes as P3 coordinates as-is — a theme's recorded byte included; the
+// bytes as P3 coordinates as-is — a theme's byte included; the
 // laptop's untagged sRGB surface shows the same bytes a little differently,
 // which is accepted (the laptop is for debug testing). No colour is converted
 // anywhere between a byte and cairo.
@@ -102,9 +105,11 @@ struct TrimRange {
 // Windows px (relief_line_px, below), the outer pair first and the inner pair
 // inset one line, and in each pair the top-left line first and the
 // bottom-right line last so it owns the top-right and bottom-left corner
-// pixels. THE FAMILIES (the painters are paint_relief_soft_raised and its
-// siblings, below), lines given outer then inner, top-left / bottom-right, in
-// the theme's quartet:
+// pixels. RELIEF COLOURS ARE SET IN ONE PLACE (architect 2026-10-04): every
+// edge below takes the theme's quartet by Windows 95's scheme of how many
+// lines a side, and no other role draws a relief line. THE FAMILIES (the
+// painters are paint_relief_soft_raised and its siblings, below), lines given
+// outer then inner, top-left / bottom-right, in the theme's quartet:
 //   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a toolbar button
 //                 (EDGE_RAISED | BF_SOFT);
 //   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a toolbar button
@@ -114,31 +119,28 @@ struct TrimRange {
 //                 (EDGE_RAISED);
 //   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field, the well
 //                 (EDGE_SUNKEN);
-//   STATUS SUNKEN ONE line, Shadow / Hilight — a status-bar panel;
+//   STATUS SUNKEN ONE line, Shadow / Hilight — a status-bar panel (row 8's
+//                 clock panel);
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
-//                 the ruler's ticks, a menu separator;
-//   INFO FRAME    ONE line, 3DLight top-left / DkShadow bottom-right — the
-//                 tooltip and the notification cards, on the ground under
-//                 the label (THE INFO FACE, below; the frame measured on
-//                 Windows' ToolTip, a light top-left and a black
-//                 bottom-right, architect 2026-10-02).
+//                 the ruler's ticks, a menu separator.
+// THE CARD FRAME is no relief: ONE flat line a side in the `card_frame` role,
+// Windows 95's tooltip border (THE CARD FACE, below).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
 // ground in one-Windows-px cells (paint_checker_rect, below).
 //
-// THE MAPPING (architect 2026-10-03), role -> what it paints:
+// THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
+// paints:
 //   ground        every chrome surface: the five lanes, the bottom row, the
 //                 dropdowns, the folder overlay and the picker, the on-screen
-//                 keyboard, every button face, a DISABLED flag's face, the
-//                 tooltip and every notification card (THE INFO FACE);
+//                 keyboard, every button face, a DISABLED flag's face;
 //   label         chrome text and glyphs, the ruler labels, the trim lane's
-//                 arrow glyph, the playhead head's outline, the tooltip's
-//                 two lines and every card's words;
-//   the quartet   every relief line, the families unchanged; Shadow also the
+//                 arrow glyph, the playhead head's outline;
+//   the quartet   every relief line, the families unchanged; Hilight also the
+//                 light copy of THE DISABLED EMBOSS (below); Shadow also the
 //                 ruler ticks (the etch's Hilight line beside each) and a
 //                 selected disabled flag's label, DkShadow also the flag
 //                 outline (on every flag, selected or not) and the dialog
 //                 focus frame;
-//   emboss_light  the light copy of THE DISABLED EMBOSS (below);
 //   selected pair a dropdown's lit row, the open menu anchor, the folder
 //                 overlay's and the picker's highlighted row (its glyph in
 //                 the selected text too, icons::draw_in_ink), the selection
@@ -149,45 +151,52 @@ struct TrimRange {
 //                 Hilight / HilightText in a window that has lost the focus);
 //   field pair    the modal dialogs' fields, the caret its field's text
 //                 (architect 2026-10-03); the flag editor is the selected flag
-//                 opened for edit and takes no field colour (EDITING, below).
-// THE TWO PAIRS ARE THE TABLE'S ROW like every role: as recorded at LIGHT,
-// and at DARK each ground darkened in proportion with the face under the
-// level's white text (architect 2026-10-03, mock sets AS and AT; the rule
-// is tools/theme_catalog/levels.py's), so no painter asks the level.
-// THE INFO FACE IS THE LEVEL'S GROUND UNDER THE LEVEL'S LABEL, ON BOTH LEVELS
-// (architect 2026-10-03, on mock set AY: "the card should just become
-// ground"): the tooltip, both of its lines (no dimmed second line: Windows'
-// ink, no dims), and every notification card, framed by the one-line INFO
-// FRAME, which is what tells a card from the chrome (paint_popup_chrome's
-// Info face). Windows' COLOR_INFOBK yellow and a theme's recorded
-// InfoWindow / InfoText are not carried: at dark the proportional info ground
-// read as "a dingy beige", and a recorded pair, picked for contrast on its
-// own light ground, does not translate — one rule for both levels and no
-// recorded exceptions, so the light level loses the yellow too. THIS
-// PARAGRAPH IS THE RULE'S ONE STATEMENT: a later ruling that restores the
-// LIGHT level's recorded pair amends it here, and the pair rides the table
-// again (tools/theme_catalog/levels.py; catalog.json still records every
-// entry's).
+//                 opened for edit and takes no field colour (EDITING, below);
+//   clock pair    ROW 8'S CLOCK PANEL (architect 2026-10-04, Windows' status
+//                 bar: ButtonFace / ButtonText): `clock_ground` fills the
+//                 panel inside its STATUS SUNKEN line, which keeps the
+//                 quartet's Shadow / Hilight, and `clock_text` is the clock's
+//                 run — the tab letter, the digits, the dirty mark
+//                 (paint_bottom_row_buttons_and_clock). The render player's
+//                 modal clock stands in no panel, on the row's ground, and so
+//                 keeps the label;
+//   card trio     the tooltip and every notification card (THE CARD FACE,
+//                 below);
+//   the program's the waveform's canvas, ink and outline (ROW 6, below), the
+//                 flag kinds' faces and the flag labels (THE MARKER LANE,
+//                 below), the playhead's head and stem (THE PLAYHEAD, below).
+// THE CARD FACE IS WINDOWS 95's TOOLTIP (architect 2026-10-04, reversing the
+// card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
+// second line: Windows' ink, no dims), and every notification card stand on
+// `card_ground` under `card_text` inside a THIN FRAME of `card_frame`, ONE
+// Windows px a side (relief_line_px) and no relief line — the built-in's
+// #FFFFE1 (InfoWindow) under black (InfoText) inside a black border
+// (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE RULE'S ONE
+// STATEMENT.
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD AND GLYPH (architect 2026-10-03,
-// Windows' DrawState DSS_DISABLED): the word or glyph in emboss_light one
-// Windows px right and down, then the same word or glyph in Shadow at its
-// place over it. The glyph half is icons::draw_engraved, the word half
-// show_embossed_run (below); nothing else dims — the dims of the kdenlive
-// design (the disabled mix, the accelerator column's and the tooltip line's)
-// retired with the luminance rule the same day. A DROPDOWN'S ACCELERATOR
-// COLUMN takes its item's own ink: the item's label ink, the selected text on
-// a lit row, the emboss on a disabled one.
+// Windows' DrawState DSS_DISABLED): the word or glyph in the theme's HILIGHT
+// one Windows px right and down, then the same word or glyph in Shadow at its
+// place over it (the light copy is Hilight by Windows' own rule, architect
+// 2026-10-04, the separate light-copy role leaving with the dark level). The
+// glyph half is icons::draw_engraved, the word half show_embossed_run
+// (below); nothing else dims — the dims of the kdenlive design (the disabled
+// mix, the accelerator column's and the tooltip line's) retired with the
+// luminance rule the same day. A DROPDOWN'S ACCELERATOR COLUMN takes its
+// item's own ink: the item's label ink, the selected text on a lit row, the
+// emboss on a disabled one.
 //
 // WHAT WAS HERE BEFORE, in one sentence, because the file's shape is its
-// residue: until 2026-10-03 the palette was eight hard-coded base roles (a dark
-// #303030 ground, a #96BFDA accent and the program's colours) with every other
-// colour derived from them by stated ratios under static_asserts and the text
-// over a fill chosen by WCAG 2.0's relative-luminance contrast — before that a
-// kdenlive-sampled face (2026-07-31..10-02) and, until 2026-08-02, 23 mutable
-// globals read from ~/.config — and the catalog keeps that dark look as an
-// entry (`warptempo-2026-10-03`), the rest being git history.
+// residue: from 2026-10-03 to 2026-10-04 the chrome was a row of a generated
+// table of imported themes (theme_table.h) at a light or dark level and the
+// program's elements twelve device keys; until 2026-10-03 the palette was
+// eight hard-coded base roles (a dark #303030 ground, a #96BFDA accent and the
+// program's colours) with every other colour derived from them by stated
+// ratios under static_asserts and the text over a fill chosen by WCAG 2.0's
+// relative-luminance contrast — before that a kdenlive-sampled face
+// (2026-07-31..10-02) and, until 2026-08-02, 23 mutable globals read from
+// ~/.config — the rest being git history.
 
 // -- THE CHOKEPOINTS ----------------------------------------------------------
 //
@@ -202,34 +211,41 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
-// The resolved colours, one struct: the theme's roles (theme_table.h's row at
-// the level, the mapping above) and the program's keys. Every field is a solid
-// byte triple.
+// The resolved colours, one struct: the active theme's ROLES, one field each,
+// in the role table's order (kGuiThemeRoles, theme_file.h — the one
+// enumeration, which names each field's role and the built-in's value; the
+// mapping above says what each paints). Every field is a solid byte triple.
 struct GuiPalette {
-    // THE THEME'S RECORDED ROLES.
-    GuiColor ground;          // COLOR_3DFACE (KDE's background, CDE's set 5)
+    // THE CHROME (Windows' names for the built-in's recorded values).
+    GuiColor ground;          // COLOR_3DFACE
     GuiColor label;           // COLOR_BTNTEXT
     GuiColor hilight;         // COLOR_3DHILIGHT
     GuiColor light_3d;        // COLOR_3DLIGHT
     GuiColor shadow;          // COLOR_3DSHADOW
     GuiColor dk_shadow;       // COLOR_3DDKSHADOW
-    GuiColor emboss_light;    // the disabled emboss's light copy (levels.py)
     GuiColor selected_fill;   // COLOR_HIGHLIGHT
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_ground;    // COLOR_WINDOW
     GuiColor field_text;      // COLOR_WINDOWTEXT
-    // THE PROGRAM'S OWN COLOURS, the device config's open keys (the record of
-    // each is at its key, device_config.h).
-    GuiColor waveform_ink;
+    GuiColor clock_ground;    // the status bar's ButtonFace
+    GuiColor clock_text;      // the status bar's ButtonText
+    GuiColor card_ground;     // COLOR_INFOBK
+    GuiColor card_text;       // COLOR_INFOTEXT
+    GuiColor card_frame;      // the tooltip's border
+    // THE PROGRAM'S OWN ELEMENTS.
     GuiColor waveform_canvas;
+    GuiColor waveform_ink;
     GuiColor waveform_outline;
-    GuiColor flag_face;
-    GuiColor flag_face_selected;
+    GuiColor warp_flag;
+    GuiColor warp_flag_selected;
+    GuiColor phase_reset_flag;
+    GuiColor phase_reset_flag_selected;
+    GuiColor added_flag;
+    GuiColor added_flag_selected;
+    GuiColor removed_flag;
+    GuiColor removed_flag_selected;
     GuiColor flag_label;
     GuiColor flag_label_selected;
-    GuiColor invalid_face;
-    GuiColor invalid_face_selected;
-    GuiColor invalid_label;
     GuiColor playhead_head;
     GuiColor playhead_stem;
 };
@@ -237,18 +253,18 @@ struct GuiPalette {
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
 // state in render.cpp, written by install_palette alone at its TWO
 // application points — gui_main's startup, before the window exists, and the
-// settings editor's commit of any of the device config's colour keys
-// (`theme`, `theme_level` and the twelve program keys) — the gui_scale shape.
-// Before the first install it is construction state (black), never painted.
+// settings editor's commit of the device config's `theme` key — the gui_scale
+// shape. Before the first install it is construction state (black), never
+// painted.
 const GuiPalette& palette();
 
-// Install the palette the device config `cfg` names: its theme row at its
-// level (theme_table.h) and its twelve program keys, each already through the
-// one grammar (device_config.h), so this resolves and never refuses. It bumps
-// palette_generation below, the flag cache's fingerprint term, and the plate's
-// two baked inks (waveform_plate_inks) move with it; the caller damages the
-// window. Declared against device_config.h's struct, which render.cpp
-// includes.
+// Install the palette of the theme the device config `cfg` names (its `theme`
+// key, already through the one grammar, is_theme_key — the built-in or a
+// file read at launch, theme_file.h), so this resolves and never refuses. It
+// bumps palette_generation below, the flag cache's fingerprint term, and the
+// plate's two baked inks (waveform_plate_inks) move with it; the caller
+// damages the window. Declared against device_config.h's struct, which
+// render.cpp includes.
 struct DeviceConfig;
 void install_palette(const DeviceConfig& cfg);
 
@@ -261,10 +277,10 @@ uint64_t palette_generation();
 // THE IN-PLACE EDITOR'S FRAME — Windows' WindowFrame, BLACK (architect
 // 2026-10-03, on Explorer's F2 rename and Acid Pro's track-name editor): the
 // flag editor's one-Windows-px frame round its flat box (render_flag_editor_box).
-// A LITERAL, the chrome's one colour that is neither a theme role nor a
-// program key: the ruling names black, as Windows 95 Standard records its
-// WindowFrame, on every theme, and it stays black whatever the edit's state
-// (a refused Enter recolours nothing, EDITING below).
+// A LITERAL, the one colour that is not a theme role: the ruling names black,
+// as Windows 95 Standard records its WindowFrame, on every theme, and it
+// stays black whatever the edit's state (a refused Enter recolours nothing,
+// EDITING below; the flag editor stays as it is, architect 2026-10-04).
 inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 
 // -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
@@ -285,69 +301,79 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // right over the same rows (architect 2026-10-02, the Sonic Foundry etching;
 // paint_ruler_row).
 
-// THE PLAYHEAD (the program's keys, architect 2026-10-03). The HEAD is an
-// aliased shape in the `playhead_head` key, seated on the ruler lane's bottom
+// THE PLAYHEAD (the program's roles, architect 2026-10-03). The HEAD is an
+// aliased shape in the `playhead_head` role, seated on the ruler lane's bottom
 // rows (paint_ruler_row), with a ONE-WINDOWS-PX OUTLINE in the theme's LABEL —
 // the head's own boundary pixels, so the head keeps its size (the Windows 95
 // arrow cursor's edge). THE HEAD IS THE HOLD POSTURE'S LAMP (architect
-// 2026-09-24): while AppState::camera_hold stands it paints in the STEM'S key,
+// 2026-09-24): while AppState::camera_hold stands it paints in the STEM'S role,
 // outline kept — a STATE COLOUR, not a class — repainted by the per-tick
 // comparator (main.cpp), since the bit flips with no damage of its own. THE
-// STEM is the `playhead_stem` key, UNIFORM from the head to the canvas's foot
+// STEM is the `playhead_stem` role, UNIFORM from the head to the canvas's foot
 // (its contrast over the chrome and the canvas is the user's choice), and THE
 // SCANNER — the moving playback line, paint_scanner — is the moving stem and
-// takes the same key, as does the zoom anchor's stem (render_strip_anchor_stem).
+// takes the same role, as does the zoom anchor's stem (render_strip_anchor_stem).
 
 // -- THE MARKER LANE: THE FLAT FLAGS ---------------------------------------------
 //
 // THE FLAG IS THE ACID FLAG (architect 2026-10-03, the bevelled Sonic Foundry
-// box retired as "a 3D surface with a cut through it"): a FLAT BOX in the
-// `flag_face` key, its label in the key's RECORDED label colour `flag_label`
-// (a recorded pair, like Windows' — never a luminance verdict), and a
-// ONE-WINDOWS-PX OUTLINE in the theme's DkShadow on all four sides, selected
-// or not (below) — the box's left border column, its top row, its run's
-// closing column and its bottom row, so the box keeps its width and height. THE STEM leaves from the box's
-// LEFTMOST FACE COLUMN (the marker's own frame column) and crosses the bottom
-// outline into the well and the canvas, one same-colour column. Warp and
-// phase-reset flags alike: ONE FLAG COLOUR FOR EVERY KIND (the column pairs
-// retired), and the bound cells take the same anatomy, each cell's left seam
-// the shared outline column.
+// box retired as "a 3D surface with a cut through it"): a FLAT BOX in its
+// KIND's face, its label in `flag_label` (a pair, like Windows' — never a
+// luminance verdict), and a ONE-WINDOWS-PX OUTLINE in the theme's DkShadow on
+// all four sides, selected or not (below) — the box's left border column, its
+// top row, its run's closing column and its bottom row, so the box keeps its
+// width and height. THE STEM leaves from the box's LEFTMOST FACE COLUMN (the
+// marker's own frame column) and crosses the bottom outline into the well and
+// the canvas, one same-colour column. The bound cells take the same anatomy,
+// each cell's left seam the shared outline column.
+//
+// EACH KIND HAS ITS OWN PAIR (architect 2026-10-04, reopening 2026-10-03's one
+// flag colour for every kind) — GuiFlagKind, render.cpp: WARP (`warp_flag` /
+// `warp_flag_selected`) and PHASE RESET (`phase_reset_flag` /
+// `phase_reset_flag_selected`), each authoring column's flags by their column,
+// and the `h` view's ADDED (`added_flag` / `added_flag_selected`) and REMOVED
+// (`removed_flag` / `removed_flag_selected`), each a face and a brighter
+// selected face. ONE LABEL PAIR FOR EVERY KIND: `flag_label` on a face,
+// `flag_label_selected` on a selected face (architect 2026-10-04, "for now").
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
-// then invalid, then the flag; each arm answers selected and unselected):
-//   THE FLAG  the `flag_face` key under `flag_label`, the stem in the face;
+// then invalid, then the kind's own pair; each arm answers selected and
+// unselected):
+//   THE FLAG  the kind's face under `flag_label`, the stem in the face;
 //   INVALID   the red-flag class (warp_red_flag_set_cached and its phase-reset
-//             twin): the `invalid_face` key under `invalid_label`, the stem in
-//             that face colour;
+//             twin) WEARS THE REMOVED PAIR (architect 2026-10-04): one red
+//             for both, the context telling them apart — invalid while
+//             authoring, removed in `h` — `removed_flag` under `flag_label`,
+//             the stem in that face;
 //   DISABLED  the theme's GROUND for the face, the label in THE DISABLED
 //             EMBOSS (above), and NO STEM;
 //   SELECTED  A BRIGHTER FACE, NOTHING WHITE (architect 2026-10-03, the colour
 //             loop's sets BG..BT, retiring the white outline ring of mock
-//             AR02): the selected flag's FACE AND STEM take its selected key —
-//             `flag_face_selected`, or `invalid_face_selected` over an invalid
-//             one ("bright red means selected and error") — and its LABEL the
-//             one `flag_label_selected`, on both faces (the symmetry). The
-//             OUTLINE STAYS the one-line DkShadow ("it has to be black and stay
-//             black; it's the only one that stays out of the way of the
-//             stem"), so every seam column is DkShadow whichever box paints
-//             it. It is Windows' own selected-icon reversal, a face that
-//             changes rather than a frame that appears. SELECTION IS ONE
-//             CELL'S (architect 2026-09-05): the ADDRESSED cell wears the
-//             selected face — the payload for every selected marker but the
-//             focus, whose addressed cell is AppState::addressed_cell — and
-//             THE STEM IS THE FLAG BOX'S (architect 2026-10-04, "otherwise it
-//             looks disconnected": the stem belongs to the box it leaves
-//             from), so it takes the selected face only when the PAYLOAD is
-//             the bright cell and keeps the marker's resting face (`flag_face`,
-//             or `invalid_face` on an invalid marker) while a BOUND CELL is
-//             the addressed one;
+//             AR02): the selected flag's FACE AND STEM take the selected face
+//             of its pair — the kind's, or `removed_flag_selected` over an
+//             invalid one ("bright red means selected and error") — and its
+//             LABEL `flag_label_selected`, on every selected face (the
+//             symmetry). The OUTLINE STAYS the one-line DkShadow ("it has to
+//             be black and stay black; it's the only one that stays out of
+//             the way of the stem"), so every seam column is DkShadow
+//             whichever box paints it. It is Windows' own selected-icon
+//             reversal, a face that changes rather than a frame that appears.
+//             SELECTION IS ONE CELL'S (architect 2026-09-05): the ADDRESSED
+//             cell wears the selected face — the payload for every selected
+//             marker but the focus, whose addressed cell is
+//             AppState::addressed_cell — and THE STEM IS THE FLAG BOX'S
+//             (architect 2026-10-04, "otherwise it looks disconnected": the
+//             stem belongs to the box it leaves from), so it takes the
+//             selected face only when the PAYLOAD is the bright cell and
+//             keeps the marker's resting face (the kind's, or `removed_flag`
+//             on an invalid marker) while a BOUND CELL is the addressed one;
 //   SELECTED DISABLED (architect 2026-10-03, PROVISIONAL, pending his ruling;
 //             a disabled marker is selectable, so its selection must show):
-//             Windows 95's highlighted disabled menu item — the selected face
-//             (`flag_face_selected`), the label FLAT in the theme's Shadow
-//             (Windows' GrayText on the highlight, no emboss), and still NO
-//             STEM. It is the ladder's one arm for the case, so a later ruling
-//             changes that arm alone.
+//             Windows 95's highlighted disabled menu item — the KIND's
+//             selected face, the label FLAT in the theme's Shadow (Windows'
+//             GrayText on the highlight, no emboss), and still NO STEM. It is
+//             the ladder's one arm for the case, so a later ruling changes
+//             that arm alone.
 // A FLAG HAS NO HOVER FACE (architect 2026-09-29): the pointer over a flag says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
 //
@@ -363,8 +389,8 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 //
 // THE PHASE-RESET LEAD-IN RING on the waveform wears the colour its reset's
 // stem wears (paint_phase_reset_overlay_ring, through phase_reset_stem_color —
-// architect 2026-09-17): the flag key, or the invalid key on a red reset, and
-// the matching selected key while the reset's PAYLOAD is the bright cell
+// architect 2026-09-17): the phase-reset face, or the removed face on a red
+// reset, and the matching selected face while the reset's PAYLOAD is the bright cell
 // (architect 2026-10-04: a reset whose addressed cell is a bound cell keeps
 // its resting stem, and so its resting ring).
 //
@@ -372,8 +398,8 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // F2 rename, Acid Pro's track-name editor): over the edited flag or cell a FLAT
 // box of the flag's height and its run's width — THE SELECTED FLAG OPENED FOR
 // EDIT (architect 2026-10-03, set BX) — its BACKGROUND the edited marker's
-// SELECTED FACE (`flag_face_selected`, or `invalid_face_selected` over an
-// invalid marker), framed ONE Windows px in black (kFlagEditorFrame), its TEXT
+// SELECTED FACE (its kind's, or `removed_flag_selected` over an invalid
+// marker), framed ONE Windows px in black (kFlagEditorFrame), its TEXT
 // and caret `flag_label_selected`, the selected substring in the theme's
 // SELECTED pair, Windows' field margin strips (the pads) kept. THE STEM
 // FOLLOWS THE PAYLOAD BOX (architect 2026-10-04): the selected face under the
@@ -389,30 +415,29 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // flag editor's frame stays its one black line and the dialog field's edge
 // its plain sunken pair. No glyph marks it.
 //
-// THE HISTORY VIEW'S DIFF FLAGS take the one flag colour (the greens and the
-// removed red retired, architect 2026-10-03: red is invalid-only), THE LABEL
-// CARRYING THE SIGN — the history mode's one bracket spelling, `[+]` before
-// an added line's payload and `[-]` before a removed one's (architect
-// 2026-08-05; history_diff_label, paint_handler.h, the same sign row 8's walk
-// line spells), each half of a changed pair its own — and the view's focus
-// swap wears the selected face, face, label and stem
+// THE HISTORY VIEW'S DIFF FLAGS take their own two kinds (architect
+// 2026-10-04): an ADDED half the `added_flag` pair, a REMOVED half the
+// `removed_flag` pair, each half of a changed pair its own, and THE LABEL
+// CARRIES THE SIGN — the history mode's one bracket spelling, `[+]` before an
+// added line's payload and `[-]` before a removed one's (architect 2026-08-05;
+// history_diff_label, paint_handler.h, the same sign row 8's walk line
+// spells), which says the kind in words where the colour says it at a glance.
+// The view's focus swap wears the selected face, face, label and stem
 // (render_history_diff_flags).
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
 //
-// THE WAVEFORM IS THE PROGRAM'S, A NEUTRAL CANVAS UNDER ONE INK (the
-// `waveform_canvas` and `waveform_ink` keys): with the magnification lamp dark
+// THE WAVEFORM IS THE PROGRAM'S, A CANVAS UNDER ONE INK (the
+// `waveform_canvas` and `waveform_ink` roles): with the magnification lamp dark
 // the plate is the raw bar alone in the ink, with no outline; lit, the plate
 // is two bars (the rule is at render_waveform's declaration), BOTH FILLED IN
 // THE INK, the inner distinguished only by its OUTLINE, its true contour, an
 // erosion at distance waveform_line_px() (1 px on the laptop at 138 %, 3 on
-// the tablet at 275 %), in the `waveform_outline` key — ITS OWN COLOUR
+// the tablet at 275 %), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
-// magnified and the compressed bars, the ink's hides it. Its default #5C5C5C
-// is the 2026-09-27 rule's output on the default grey ink #808080 over the
-// black canvas (architect 2026-10-03: still its own rule) — the ink over the
-// canvas blended 50 % in linear light (GIMP's default compositing), the rule
-// picked by eye on 2026-09-27. THE PLATE
+// magnified and the compressed bars, the ink's hides it. The built-in's is
+// Windows' GREEN #008000 under Sound Recorder's LIME #00FF00 trace on black
+// (theme_file.h's role table). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the
 // pair rides each render job and the cache's fingerprint
 // (waveform_plate_inks); the canvas is laid live under the plate's
@@ -1704,7 +1729,7 @@ struct FlagHitRect {
 
 // The two ground fills, one per surface class: render_background erases
 // CHROME in the theme's ground, render_canvas erases the WAVEFORM AREA in the
-// `waveform_canvas` key (palette()). on_redraw calls the first
+// `waveform_canvas` role (palette()). on_redraw calls the first
 // over the whole exposed rect, then the second over the exposed part of the
 // waveform area, so the canvas wins exactly the pixels the plate, the ground
 // recolours, the playheads and the marker stems paint on — cold frames (no
@@ -1740,9 +1765,10 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         lines, full width).
 //   paint_relief_status_sunken — STATUS SUNKEN, ONE ring: a status-bar panel.
 //   paint_relief_line_frame — one colour all round: the dialog's
-//                         default-button frame and the list's focus frame.
-//   (The INFO FRAME — the tooltip's and the cards' — is paint_relief_frame
-//   itself, 3DLight / DkShadow, at paint_popup_chrome.)
+//                         default-button frame, the list's focus frame and the
+//                         card frame.
+//   (The CARD FRAME — the tooltip's and the cards' — is no relief:
+//   paint_relief_line_frame in the `card_frame` role, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
 //                         [x, x + w) (the dropdown's separator). (Its
@@ -1776,7 +1802,7 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 
 // THE DISABLED EMBOSS, THE WORD HALF (architect 2026-10-03, Windows' DrawState
 // DSS_DISABLED; the rule at the palette block): `run` painted in the theme's
-// emboss_light one Windows px (relief_line_px) right and down, then in its
+// Hilight one Windows px (relief_line_px) right and down, then in its
 // Shadow at (x, baseline) over it — every disabled word in the product goes
 // through here, as every disabled glyph goes through icons::draw_engraved.
 // `cr` carries the run's scaled font (shape with the font you paint with).
@@ -1930,7 +1956,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // use sees the pixels.
 //
 // THE INKS ARE PASSED, `inks` (WaveformPlateInks, the job's snapshot of the
-// `waveform_ink` and `waveform_outline` keys — the worker reads no live
+// `waveform_ink` and `waveform_outline` roles — the worker reads no live
 // state): the plate paints in the ink with the lamp dark, and lit both bars in
 // the ink with the inner's outline in the outline (row 6) — it
 // is trim-agnostic, and the out-of-trim dim that
@@ -2154,7 +2180,7 @@ void render_playhead(cairo_t* cr,
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
 // spanning the stems' band like a marker stem (waveform_stem_band), in
-// the `playhead_stem` key — the product's one position-line colour (the
+// the `playhead_stem` role — the product's one position-line colour (the
 // ruling is at the paint site).
 // The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
@@ -2466,7 +2492,8 @@ struct FlagLaneRects {
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved stem — its FLAG BOX's face:
-// the flag key or the invalid key, or the matching selected key while the
+// its kind's face or the removed face (invalid), or the matching selected
+// face while the
 // payload box is the bright one (architect 2026-10-04: the stem follows the
 // box it leaves from, so a selected marker whose addressed cell is a bound
 // cell publishes its resting stem) — and the consumer paints it as published.
@@ -2568,25 +2595,25 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // for.)
 //
 // THE STATES, resolved in priority order by the one ladder
-// (resolve_flag_face, render.cpp) — DISABLED WINS, then INVALID, then the flag
-// — and SELECTION IS THE BRIGHTER FACE of whichever stands (the palette
-// block's THE STATES):
+// (resolve_flag_face, render.cpp) — DISABLED WINS, then INVALID, then the
+// kind's own pair — and SELECTION IS THE BRIGHTER FACE of whichever stands
+// (the palette block's THE STATES):
 //   Disabled:  the theme's ground for the face, the label in the disabled
 //              emboss, NO STEM. A disabled invalid marker is disabled.
 //   Invalid:   the red set (warp_red_flag_set_cached, or the phase-reset
-//              column's): the `invalid_face` key and its `invalid_label`, the
-//              stem in the face.
-//   Otherwise: the `flag_face` key and its `flag_label`, the stem in the face
-//              — ONE FLAG COLOUR ON BOTH COLUMNS AND THEIR CELLS (architect
-//              2026-10-03: "phase resets take whatever warp markers take",
-//              2026-10-01, now one value with nothing to pair).
-//   Selected:  the addressed cell's face `flag_face_selected` (or
-//              `invalid_face_selected` over an invalid one) under
+//              column's): the REMOVED pair's `removed_flag` under
+//              `flag_label`, the stem in the face.
+//   Otherwise: the column's KIND — `warp_flag` on the warp column,
+//              `phase_reset_flag` on the phase-reset column, their cells
+//              alike (architect 2026-10-04) — under `flag_label`, the stem in
+//              the face.
+//   Selected:  the addressed cell's selected face (the kind's, or
+//              `removed_flag_selected` over an invalid one) under
 //              `flag_label_selected`; the stem in the FLAG BOX's face, so
 //              selected only while the payload is the addressed cell
 //              (architect 2026-10-04);
-//              a selected DISABLED cell the selected face under a flat Shadow
-//              label, no stem (provisional). The outline stays DkShadow.
+//              a selected DISABLED cell the kind's selected face under a flat
+//              Shadow label, no stem (provisional). The outline stays DkShadow.
 //
 // `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; the
 // phase-reset painter below carries the same parameter for its own hop
@@ -2900,9 +2927,10 @@ void render_phase_reset_flags(cairo_t* cr,
 // THE COLOUR A LIVE PHASE RESET'S STEM WEARS, for a surface that must wear it
 // too — the lead-in ring (paint_phase_reset_overlay_ring, paint_handler.cpp,
 // architect 2026-09-17). It asks the one ladder (resolve_flag_face,
-// render.cpp) rather than restating it: the `invalid_face` key when `red` (the
-// column's red set, phase_reset_red_flag_set_cached), the `flag_face` key
-// otherwise, each its selected key when `selected` (the reset selected AND
+// render.cpp) rather than restating it: the `removed_flag` face when `red`
+// (the column's red set, phase_reset_red_flag_set_cached), the
+// `phase_reset_flag` face otherwise, each its selected face when `selected`
+// (the reset selected AND
 // its payload the bright cell — the bit the flag pass hands the payload box
 // whose face the stem wears, architect 2026-10-04), so the ring and its stem
 // stay one object at rest and selected.
@@ -2992,14 +3020,13 @@ struct HistoryDiffFlag {
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
 // THE ANATOMY IS THE LIVE FLAG'S (the palette block's marker-lane paragraph):
-// the flat box in the ONE FLAG COLOUR (architect 2026-10-03: the greens and the
-// removed red retired, red being invalid-only), its one-Windows-px DkShadow
-// outline — the left border outside the face, the top and bottom rows, the
-// closing column — and the label on the redesign's sans at the lane baseline
-// in the flag's recorded label. THE LABEL CARRIES THE SIGN (architect
-// 2026-10-03, the colour no longer saying it): `[+]` before an added line's
-// payload, `[-]` before a removed one's (history_diff_label,
-// paint_handler.h). A CHANGED pair is that same box
+// the flat box in ITS KIND's face (architect 2026-10-04): an added half the
+// `added_flag` pair, a removed half the `removed_flag` pair, its
+// one-Windows-px DkShadow outline — the left border outside the face, the top
+// and bottom rows, the closing column — and the label on the redesign's sans
+// at the lane baseline in `flag_label`. THE LABEL CARRIES THE SIGN: `[+]`
+// before an added line's payload, `[-]` before a removed one's
+// (history_diff_label, paint_handler.h). A CHANGED pair is that same box
 // at double width — the removed half then the added half, each its own label,
 // ONE outline column wrapping the whole at its left and a SECOND outline
 // column ON THE SEAM between them (2026-08-20, standing since 2026-09-02; the
@@ -3035,8 +3062,9 @@ struct HistoryDiffFlag {
 // stem through the one ladder). One face for both,
 // deliberately — the focus is the selection's singleton when the set is empty,
 // and the revert act reads them the same way, so a second face would be a
-// distinction nothing acts on. The STEM is the flag colour, its selected face
-// with the flag's. THE STEM READS THE DISABLED AXIS (architect 2026-08-22): a SINGLE
+// distinction nothing acts on. The STEM is the face of the half it leaves
+// from — the removed half's on a changed pair, which paints first — its
+// selected face with the flag's. THE STEM READS THE DISABLED AXIS (architect 2026-08-22): a SINGLE
 // flag — added-only or removed-only — whose one side is EFFECTIVELY disabled
 // publishes NO STEM AT ALL, the live lane's rule verbatim, while a CHANGED
 // PAIR KEEPS ITS STEM whichever halves are disabled, because the pair as a

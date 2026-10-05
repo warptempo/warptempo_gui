@@ -85,10 +85,10 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
-// flags paint the INVALID face (the `invalid_face` key and its recorded
-// label, the stem in the face — render.h's palette block, architect
-// 2026-10-03), selection being the invalid face's own selected key
-// (`invalid_face_selected`, the bright red: "bright red means selected and
+// flags paint the INVALID face (the REMOVED pair's `removed_flag` under the
+// one `flag_label`, the stem in the face — render.h's palette block, architect
+// 2026-10-04), selection being that pair's own selected face
+// (`removed_flag_selected`, the bright red: "bright red means selected and
 // error"), so the cue is never masked. `red` is a PAINT cue with two meanings: the
 // render normalizes this marker, OR this marker shares its frame with another.
 // Three contributors, all computed SILENTLY from the display path (no resolver

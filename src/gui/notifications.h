@@ -11,12 +11,11 @@
 // (notification_pad_px below — the card's chrome reads one number on all
 // five of its distances, the text's right air adding the glyph's own inset
 // so it matches the air the eye sees left of the text, 2026-10-01), ON THE
-// GROUND UNDER THE LABEL, both levels (architect 2026-10-03, "the card should
-// just become ground": Windows' #FFFFE1 tooltip yellow retired, render.h's
-// palette block, THE INFO FACE) inside Windows' one-line tooltip frame,
-// 3DLight top-left and DkShadow bottom-right, which is what tells the card
-// from the chrome: the tooltip's own box (paint_popup_chrome), square, with
-// no drop shadow (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
+// CARD FACE — Windows 95's tooltip, the theme's `card_ground` under
+// `card_text` inside a thin `card_frame` line, one Windows px a side
+// (architect 2026-10-04; render.h's palette block, THE CARD FACE): the
+// tooltip's own box (paint_popup_chrome), square, with no drop shadow
+// (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card
 // dismisses it at the lift (the hit section below). A sentence too long for

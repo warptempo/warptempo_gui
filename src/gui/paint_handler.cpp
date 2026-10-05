@@ -2308,9 +2308,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // for the panel, 2026-10-03 for the line; the metric at
         // kStatusPanelPadPx) — the Vegas / ACID pattern: a time in a sunken
         // cell, words on the chrome.
-        //   THE CLOCK'S PANEL: STATUS SUNKEN — one line — over the buttons'
-        //   own rows, the same btn_y and btn_h the right block's cases stand
-        //   in, with no fill (its face is the row's ground), from
+        //   THE CLOCK'S PANEL: STATUS SUNKEN — one line, the theme's Shadow /
+        //   Hilight like every relief — over the buttons' own rows, the same
+        //   btn_y and btn_h the right block's cases stand in, its face the
+        //   theme's `clock_ground` under the clock's run in `clock_text`
+        //   (architect 2026-10-04, Windows' status bar: the panel's own two
+        //   roles), from
         //   kStatusPanelPadPx left of the reserved cell to as far past its end
         //   (the cell's width ceiled, as its damage box is). Its width is
         //   fixed per tab — the cell reserves the dirty mark's one cell
@@ -2333,6 +2336,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const GuiRect clock_panel{
             cell_x - panel_pad, btn_y,
             static_cast<int>(std::ceil(cell_w)) + 2 * panel_pad, btn_h};
+        paint_cell_rect(cr, clock_panel, palette().clock_ground);
         paint_relief_status_sunken(cr, clock_panel);
         const int state_x = clock_panel.x + clock_panel.w + group_gap;
         const int state_w = (right_block_x - group_gap) - state_x;
@@ -2471,7 +2475,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         std::string clock = tab_prefix + format_timestamp(seconds);
         if (app.dirty) clock += "*";
         show_row_text(cr, font, static_cast<double>(cell_x) + mark_w / 2.0,
-                      baseline, clock, palette().label);
+                      baseline, clock, palette().clock_text);
         if (state_w > 0 && !state.empty()) {
             // The normal face, selected on the context after the clock's run
             // has been shown (the borrowed `font` above is not read again).
@@ -2498,24 +2502,21 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
                                          PopupFace face) {
     // ONE BOX PAINTER FOR EVERY FLOATING SURFACE, TWO FACES (architect
-    // 2026-10-02, the Windows-95 chrome), each a square fill of the ground
-    // then its frame — the faces differ by the frame alone:
-    //   MENU — the PLAIN RAISED two-line edge: a dropdown (Windows drew
-    //          menus as raised panels, EDGE_RAISED);
-    //   INFO — Windows' tooltip frame, ONE line a side, 3DLight top and left,
-    //          DkShadow bottom and right (measured on the Windows ToolTip:
-    //          light top-left, black bottom-right), and no relief lines on
-    //          the face: the tooltip and every notification card, whose frame
-    //          this hard-codes for good. ITS FACE IS THE GROUND, ITS WORDS
-    //          THE LABEL, ON BOTH LEVELS (architect 2026-10-03, "the card
-    //          should just become ground"; Windows' COLOR_INFOBK yellow
-    //          retired — the rule is render.h's palette block, THE INFO
-    //          FACE): the one-line frame is what tells it from the chrome.
-    paint_cell_rect(cr, r, palette().ground);
-    if (face == PopupFace::Menu)
+    // 2026-10-02, the Windows-95 chrome), each a square fill then its frame:
+    //   MENU — the ground inside the PLAIN RAISED two-line edge: a dropdown
+    //          (Windows drew menus as raised panels, EDGE_RAISED);
+    //   INFO — THE CARD FACE, Windows 95's tooltip (architect 2026-10-04;
+    //          the rule is render.h's palette block): `card_ground` inside a
+    //          THIN flat frame of `card_frame`, ONE Windows px a side and no
+    //          relief line — the tooltip and every notification card, whose
+    //          words their painters set in `card_text`.
+    if (face == PopupFace::Menu) {
+        paint_cell_rect(cr, r, palette().ground);
         paint_relief_plain_raised(cr, r);
-    else
-        paint_relief_frame(cr, r, palette().light_3d, palette().dk_shadow);
+    } else {
+        paint_cell_rect(cr, r, palette().card_ground);
+        paint_relief_line_frame(cr, r, palette().card_frame);
+    }
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
@@ -2717,18 +2718,18 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // laid end to end with the authored gap between them, which is what makes
     // the symmetry above true of the ink and not merely of the arithmetic.
     cairo_set_font_size(cr, size1);
-    set_palette_source(cr, palette().label);
+    set_palette_source(cr, palette().card_text);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
         line_baseline(cairo_get_scaled_font(cr),
                       static_cast<double>(y + pad_y)));
     if (two_line) {
         cairo_set_font_size(cr, size2);
-        // The hint line takes THE LABEL like the first (architect
+        // The hint line takes THE CARD TEXT like the first (architect
         // 2026-10-03, Windows' ink, no dims: the kdenlive design's dimmed hint
-        // line retired with the luminance rule; the Info face's words are the
-        // label, render.h's palette block).
-        set_palette_source(cr, palette().label);
+        // line retired with the luminance rule; the card face's words are
+        // `card_text` since 2026-10-04, render.h's palette block).
+        set_palette_source(cr, palette().card_text);
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
             line_baseline(cairo_get_scaled_font(cr),
@@ -2839,8 +2840,8 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
 // THE LOOK (architect 2026-10-02, the Windows-95 chrome; its colours
-// 2026-10-03): the INFO FACE — the level's ground inside Windows' one-line
-// tooltip frame, its words the level's label (render.h's palette block) —
+// 2026-10-04): THE CARD FACE — Windows 95's tooltip, `card_ground` inside a
+// thin `card_frame` line, its words `card_text` (render.h's palette block) —
 // square, NO DROP SHADOW, through the one popup box painter
 // (paint_popup_chrome's Info face, the tooltip's own);
 // a row of the icon row's own height, holding — left to right, EVERY
@@ -3033,7 +3034,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
-            set_palette_source(cr, palette().label);
+            set_palette_source(cr, palette().card_text);
             // The FIRST line's baseline is the one-line card's, solved over
             // the first line's own band; each further line is one face
             // line-height lower.
@@ -3259,7 +3260,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // the row the pointer is over, or the press is armed on, is a FLAT
         // FILL IN THE SELECTED FILL over the whole item box — square, no
         // outline, inside the frame's one-px margin — under the selected text,
-        // label and accelerator alike (the theme's recorded pair).
+        // label and accelerator alike (the theme's selected pair).
         // It is a SELECTION FACE,
         // NOT A HOVER: the hovered-item tracking is what a press resolves
         // against, and the row it lights is the row a press arms (ON SCREEN
@@ -3712,7 +3713,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // tools/palette's head_outline_runs is the same rule.
     //
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
-    // waveform_line_px()-wide run in the `playhead_stem` key (the waveform
+    // waveform_line_px()-wide run in the `playhead_stem` role (the waveform
     // segment's own
     // columns) from the marker lane's top to the waveform top,
     // where render_playhead's waveform segment (paint_playheads) begins and
@@ -4234,9 +4235,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE RING IS THE STEM'S COLOUR (architect 2026-08-01; the class rule
     // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
-    // annotates. It wears what that stem wears: the `invalid_face` key when
-    // the reset is in the column's red set (band.red), the `flag_face` key
-    // otherwise, each its selected key while the reset's payload box is the
+    // annotates. It wears what that stem wears: the `removed_flag` face when
+    // the reset is in the column's red set (band.red), the `phase_reset_flag`
+    // face otherwise, each its selected face while the reset's payload box is the
     // bright one (band.selected; architect 2026-10-04, the stem follows the
     // box it leaves from). phase_reset_stem_color asks the one ladder rather
     // than restating it, so ring and stem cannot drift.
@@ -5080,9 +5081,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   AN EDITOR — its prefix as the LABEL at the left pad, then the pending
 //   buffer in a SUNKEN FIELD on the theme's field pair, then OK and Cancel.
 //   The field is the existing text_editor machinery — selection, caret,
-//   click-to-caret, byte-identical editing — and a refused Enter turns BOTH
-//   LINES OF THE FIELD'S SUNKEN EDGE the `invalid_face` key with the whole
-//   text selected (architect 2026-10-03; the field paint below).
+//   click-to-caret, byte-identical editing — and a refused Enter selects the
+//   whole text, the edge unchanged, its owner's card saying why (architect
+//   2026-10-03; render.h's palette block, A REFUSED ENTER RECOLOURS NOTHING).
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
@@ -5907,7 +5908,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    the lane's right pad on a narrow window. --
         // The band's solved baseline, row 8's clock said twice — the same
         // face, the same size and the same seat, this row standing in that
-        // lane.
+        // lane. ITS INK IS THE LABEL: it stands in no panel, on the row's
+        // ground, so the clock panel's own pair (`clock_ground` /
+        // `clock_text`, row 8's, render.h's palette block) has no face here
+        // to answer.
         const double cbase =
             redesign_baseline(cfont, static_cast<double>(content.y),
                               static_cast<double>(content.h));

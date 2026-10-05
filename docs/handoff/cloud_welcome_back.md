@@ -97,7 +97,15 @@ RULED:
   Why: navy / blue would vanish on the black canvas the stems cross; lime is the ink, so no flag takes it; gray is
   the playhead's; olive / yellow was the pair left over, and the `[+]` / `[-]` sign carries the meaning. The chrome
   is Windows 95 Standard as recorded.
-- NOTHING IS OPEN FOR HIM ON THIS ARC. A fresh thread briefs it on his go: likely two arcs, (1) theme files, the one
+- RULED 2026-10-05 (his go given the same morning): THE BUNDLED FILES ARE COPIED IN AT EVERY LAUNCH — each launch
+  writes the bundled theme files into `themes/` (the bundle wins for its own names; his files of any other name are
+  never touched), then reads the folder once. The source: the APK's assets on the tablet; on the laptop the
+  repository's `assets/themes/`, its path compiled in (the laptop runs from the build tree). The sync verb stays his
+  with the local planner (the ruling above).
+- ARC 1 (theme files, the one built-in `windows-95-standard`, 30 roles, the flag kinds, `theme_level` and the twelve
+  keys retired, the emboss's light copy reading Hilight) was briefed 2026-10-05; arc 2 (the generator writing
+  `assets/themes/`, the copy-in, theme_table.h and its generator retired) follows it.
+- NOTHING ELSE IS OPEN FOR HIM ON THIS ARC. The original plan: likely two arcs, (1) theme files, the one
   built-in, every colour a role (the clock's two, the card's three, the flag kinds, the twelve device keys retired,
   `theme_level` retired), (2) the generator writing the catalog and his presets as bundled files, plus the sync verb;
   each ending in one laptop REQUEST. The residue: closed_questions' lines on the card face, the history's colours,

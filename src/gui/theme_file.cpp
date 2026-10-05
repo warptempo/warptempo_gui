@@ -1,0 +1,148 @@
+#include "theme_file.h"
+
+#include "device_config.h"     // device_config_path, DeviceConfig (the default)
+#include "settings_file.h"     // warptempo_settings::scan_key_value_file
+#include "parse_text_util.h"   // warptempo_parse::prefix_line_error
+
+#include <algorithm>
+#include <cassert>
+#include <expected>
+#include <fstream>
+#include <map>
+#include <span>
+#include <system_error>
+#include <vector>
+
+namespace {
+
+// THE BUILT-IN'S WORDS, the role table's third column.
+constexpr GuiThemeWords builtin_words() {
+    GuiThemeWords w{};
+    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
+        w[i] = kGuiThemeRoles[i].builtin;
+    return w;
+}
+constexpr GuiThemeWords kBuiltinWords = builtin_words();
+
+// The role table names each role once, so the reader's lookup is a bijection.
+constexpr bool role_names_unique() {
+    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
+        if (theme_role_index(kGuiThemeRoles[i].name) != i) return false;
+    return true;
+}
+static_assert(role_names_unique());
+static_assert(is_theme_key_spelling(kBuiltinThemeKey));
+// The device config's default `theme` is the built-in (its initializer spells
+// the key; both templates stamp a default-constructed struct's).
+static_assert(DeviceConfig{}.theme == kBuiltinThemeKey);
+
+// THE THEMES READ AT LAUNCH, by key — written once by read_theme_folder, read
+// by is_theme_key and theme_words for the process's life. Single-threaded:
+// the read precedes every reader, and only the GUI thread reads it.
+std::map<std::string, GuiThemeWords, std::less<>> g_loaded_themes;
+
+constexpr std::string_view kThemeSuffix = ".theme";
+
+// ONE FILE under the grammar (theme_file.h's head), its stem already judged:
+// the built-in's words, each role the file names overwritten.
+std::expected<GuiThemeWords, std::string> read_theme_file(
+        const std::filesystem::path& path) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return std::unexpected(std::string("could not open the file"));
+    GuiThemeWords words = kBuiltinWords;
+    auto scan = warptempo_settings::scan_key_value_file(
+        f, [&words](int ln, const std::string& role, const std::string& value)
+                  -> std::expected<void, std::string> {
+        const std::size_t i = theme_role_index(role);
+        if (i == kGuiThemeRoleCount) {
+            return warptempo_parse::prefix_line_error(
+                ln, "unknown role '" + role + "'");
+        }
+        const std::optional<uint32_t> w = theme_colour_word(value);
+        if (!w) {
+            return warptempo_parse::prefix_line_error(
+                ln, "role '" + role + "' has invalid value '" + value +
+                    "': must be #rrggbb or one of the twenty Windows colour "
+                    "names");
+        }
+        words[i] = *w;
+        return {};
+        // NO ROLE IS REQUIRED: a file may name only some (the head).
+    }, std::span<const char* const>{});
+    if (!scan) return std::unexpected(std::move(scan.error()));
+    return words;
+}
+
+} // namespace
+
+std::filesystem::path theme_folder_path() {
+    const std::filesystem::path cfg = device_config_path();
+    if (cfg.empty()) return {};
+    return cfg.parent_path() / "themes";
+}
+
+std::optional<std::string> read_theme_folder() {
+    const std::filesystem::path folder = theme_folder_path();
+    if (folder.empty()) return std::nullopt;
+    std::error_code ec;
+    if (!std::filesystem::exists(folder, ec)) {
+        // A MISSING FOLDER IS NO FILES; a failed query is the next call's
+        // failure, said with the system's words.
+        if (!ec) return std::nullopt;
+    }
+    // THE NAMES FIRST, SORTED, so the first error is the same file on every
+    // launch (a directory's own order is the filesystem's business).
+    std::vector<std::filesystem::path> files;
+    std::filesystem::directory_iterator it(folder, ec);
+    if (ec) {
+        return "could not read the themes folder '" + folder.string() +
+               "': " + ec.message();
+    }
+    for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
+        if (ec) break;
+        const std::string name = it->path().filename().string();
+        if (name.size() <= kThemeSuffix.size() ||
+            !name.ends_with(kThemeSuffix))
+            continue;
+        std::error_code tec;
+        if (!it->is_regular_file(tec)) continue;
+        files.push_back(it->path());
+    }
+    if (ec) {
+        return "could not read the themes folder '" + folder.string() +
+               "': " + ec.message();
+    }
+    std::sort(files.begin(), files.end());
+
+    for (const std::filesystem::path& p : files) {
+        const std::string name = p.filename().string();
+        const std::string key =
+            name.substr(0, name.size() - kThemeSuffix.size());
+        const std::string head = "invalid theme file '" + p.string() + "': ";
+        if (!is_theme_key_spelling(key)) {
+            return head + "the name must be <key>.theme, the key lowercase "
+                          "letters and digits in runs joined by single "
+                          "hyphens";
+        }
+        if (key == kBuiltinThemeKey) {
+            return head + "windows-95-standard is the built-in theme and "
+                          "takes no file";
+        }
+        auto words = read_theme_file(p);
+        if (!words) return head + words.error();
+        g_loaded_themes.emplace(key, *words);
+    }
+    return std::nullopt;
+}
+
+bool is_theme_key(const std::string& v) {
+    return v == kBuiltinThemeKey || g_loaded_themes.contains(v);
+}
+
+const GuiThemeWords& theme_words(std::string_view key) {
+    if (key == kBuiltinThemeKey) return kBuiltinWords;
+    const auto it = g_loaded_themes.find(key);
+    // Every caller's key came through is_theme_key: a miss is a program bug.
+    assert(it != g_loaded_themes.end());
+    return it->second;
+}

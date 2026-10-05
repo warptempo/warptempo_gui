@@ -382,14 +382,12 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
-    // THE FOURTEEN COLOUR KEYS (2026-10-03), verbatim — the struct holds each
-    // as typed and the file writes it so.
-    if (app.device_config != nullptr) {
-        if (key == "theme")       return app.device_config->theme;
-        if (key == "theme_level") return app.device_config->theme_level;
-        if (const ProgramColourKey* pk = find_program_colour_key(key))
-            return app.device_config->*(pk->member);
-    }
+    // THE THEME (2026-10-03), verbatim — the struct holds it as typed and the
+    // file writes it so. The recall is the live value, which is always the
+    // built-in or a theme loaded at launch (its grammar, is_theme_key), so a
+    // recalled `theme=` commits back as an unchanged no-op.
+    if (key == "theme" && app.device_config != nullptr)
+        return app.device_config->theme;
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

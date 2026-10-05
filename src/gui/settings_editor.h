@@ -23,13 +23,13 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// EIGHTEEN editable ones the per-device config carries — gui_scale and
+// FIVE editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, and since 2026-09-13
-// max_waveform_height, and since 2026-10-03 the fourteen colour keys (the
-// theme, its level and the twelve program colours; the config's key
-// last_project is the program's own and has no editor; the hold delay's
+// max_waveform_height, and since 2026-10-03 theme (its level and the twelve
+// program colour keys, editable 2026-10-03..04, left with their keys; the
+// config's key last_project is the program's own and has no editor; the hold delay's
 // key, editable for its
 // one-day tuning phase 2026-09-29, is struck, the value hard-coded as
 // kHoldDelayMs; `audio_player`, once
@@ -37,7 +37,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — max_waveform_height,
-//    projects_repo, projects_path and the fourteen colour keys — in ONE body,
+//    projects_repo, projects_path and theme — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
@@ -46,7 +46,7 @@ struct GuiInputHandler;
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; max_waveform_height is in force at once, the body handing it to
-//    apply_max_waveform_height for the live relayout; a colour key is in
+//    apply_max_waveform_height for the live relayout; the theme is in
 //    force at once, the body installing the palette and damaging the
 //    window (install_palette, render.h). gui_scale, the one other
 //    editable device key, stays in the GUI-kind router
@@ -161,7 +161,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `max_waveform_height=`, `projects_repo=`,
-    // `projects_path=` and the fourteen colour keys — in one body (the head's
+    // `projects_path=` and `theme=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

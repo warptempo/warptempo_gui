@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Nineteen keys live here and nowhere else:
+// piece (architect 2026-08-27). Six keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -21,29 +21,15 @@
 //                            projects (project_model.h owns the model)
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
-//   theme=<key>              THE CHROME'S THEME, a catalog key of the
-//                            generated table (theme_table.h)
-//   theme_level=<level>      light | dark, the theme's level
-//   waveform_ink=<colour>    THE PROGRAM'S OWN COLOURS, twelve keys, each a
-//   waveform_canvas=         program colour (is_program_colour below): the
-//   waveform_outline=        waveform's ink, canvas and lit inner-bar
-//   flag_face=               outline; the flag's face and its selected
-//   flag_face_selected=      face, its recorded label and the selected
-//   flag_label=              label (one for both faces); the invalid face
-//   flag_label_selected=     and its selected face, and its label; the
-//   invalid_face=            playhead's head and stem
-//   invalid_face_selected=
-//   invalid_label=
-//   playhead_head=
-//   playhead_stem=
+//   theme=<key>              THE THEME every colour is painted in: the
+//                            built-in `windows-95-standard` or a theme file
+//                            read at launch (is_theme_key, theme_file.h)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // max_waveform_height, 2026-09-13, placed right after gui_scale;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
-// them left 2026-09-27, below; the colour keys APPENDED after
-// last_project, 2026-10-03, the theme before its level and the program
-// keys in the palette's own order, render.h's GuiPalette, each selected
-// face and the selected label right after its sibling);
+// them left 2026-09-27, below; `theme` APPENDED after last_project,
+// 2026-10-03, the colour keys that stood after it for a day gone, below);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -83,8 +69,8 @@
 // closed the phase by eye, and the chosen values went back to render.h as
 // constants (the lit plate's inks settled after their own tuning phase,
 // below). A config still carrying `waveform_magnified_ink` or
-// `waveform_ghost_ink` is unknown-key fatal, no migration; `waveform_ink` is
-// a key again since 2026-10-03, a settled one (THE COLOUR KEYS, below).
+// `waveform_ghost_ink` is unknown-key fatal, no migration; `waveform_ink` was
+// a key again for a day, 2026-10-03..04 (THE COLOUR KEYS, below).
 // THE LIT PLATE'S INK KEYS CAME AND WENT 2026-09-25..27 (architect), A SHORT
 // STRUCK RECORD: `fg_color` (the inner's one flat ink), then `fg_blend_loud`
 // / `fg_blend_quiet` (the core shade by the bar gap, struck: "it doesn't
@@ -93,8 +79,9 @@
 // `bg_border_color` (each bar's fill and one-pixel outline), closed by eye
 // 2026-09-27 on both fills in the plate's ink and the inner's outline its
 // linear-light blend over the canvas, constants in render.h until the
-// `waveform_ink` and `waveform_outline` keys of 2026-10-03. A config
-// still carrying any of them is unknown-key fatal, no migration.
+// `waveform_ink` and `waveform_outline` keys of 2026-10-03, theme roles
+// since 2026-10-04 (theme_file.h). A config still carrying any of them is
+// unknown-key fatal, no migration.
 // `waveform_widening` CAME AND WENT 2026-09-27 (architect), its own tuning
 // phase: k columns on each side of a plate column's peak read, closed by eye
 // on 0.00, so the read is the column's own span and the key is struck with
@@ -142,17 +129,18 @@
 // Settings row; the architect settled on the two-pass package, frozen as
 // P3 bytes the same day. A config still carrying either is unknown-key
 // fatal, no migration.
-// THE COLOUR KEYS JOINED 2026-10-03 (architect), and they are SETTLED
-// KEYS, not a tuning phase: the chrome is a theme of the generated table
-// (`theme` at its `theme_level` — render.h's palette block owns the mapping)
-// and the program's own elements take their colours from twelve OPEN keys,
-// every one the user's to set (the three selected keys joined the nine the
-// same evening, when the selected marker became a brighter face). The
-// defaults are the architect's picks of the colour loop (THE PROGRAM COLOUR
-// DEFAULTS, below), and the theme's default is the `warptempo` entry at its
-// LIGHT level (THE THEME DEFAULTS, below). A config lacking any of the
-// fourteen refuses at startup like any other missing key — no migration; the
-// two devices' files gain the lines by hand.
+// THE COLOUR KEYS (architect): `theme` JOINED 2026-10-03 and is a settled key,
+// naming THE THEME every colour is painted in (theme_file.h owns the themes,
+// render.h's palette block what each role paints). Beside it from 2026-10-03
+// to 2026-10-04 stood `theme_level` (light | dark, the generated table's two
+// levels) and the twelve program colour keys (`waveform_ink`,
+// `waveform_canvas`, `waveform_outline`, `flag_face`, `flag_face_selected`,
+// `flag_label`, `flag_label_selected`, `invalid_face`,
+// `invalid_face_selected`, `invalid_label`, `playhead_head`,
+// `playhead_stem`), each with a Settings row; they LEFT 2026-10-04 when every
+// colour became a role of a theme file and the dark level was dropped (a dark
+// look is a theme of its own). A config still carrying any of the thirteen is
+// unknown-key fatal, no migration, the fix deleting those lines.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -166,7 +154,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nineteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six
 // keys and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -193,8 +181,8 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`,
 // `Max Waveform Height` (since 2026-09-13), `Projects Repository`,
-// `Projects Path` and, since 2026-10-03, a row for each of the fourteen colour
-// keys (kSettingsPopupItems, app_state.h) as rows that open the
+// `Projects Path` and, since 2026-10-03, `Theme`
+// (kSettingsPopupItems, app_state.h) as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
 // writer under the key's own grammar below. Until that day the path keys
 // were hand-edited only, and HELP told the user to edit one without
@@ -208,10 +196,9 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// nineteen. THE FOURTEEN COLOUR KEYS' DEFAULTS ARE ALSO THE TEMPLATES' — both
-// backends stamp a default-constructed struct's colours
-// (GuiPlatform::device_config_defaults), so the first-run file of either
-// device carries them.
+// six. THE THEME'S DEFAULT IS ALSO THE TEMPLATES' — both backends stamp a
+// default-constructed struct's `theme` (GuiPlatform::device_config_defaults),
+// so the first-run file of either device names the built-in.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -222,80 +209,20 @@
 //
 // The members are in the writer's order.
 //
-// A COLOUR KEY HOLDS ITS VALUE AS TYPED (2026-10-03): `#rrggbb` in either
-// case or one of the twenty names (is_program_colour), so the file and the
-// editor's recall show the spelling the user chose — `teal` stays `teal` —
-// and the palette resolves it at install (program_colour_word). The theme
-// and its level are their keys verbatim.
+// THE THEME IS ITS KEY VERBATIM (2026-10-03); the palette resolves it at
+// install (install_palette, render.h).
 struct DeviceConfig {
     int         gui_scale = 138;
     int         max_waveform_height = 364;
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE THEME DEFAULTS (architect 2026-10-03, the colour loop's mock sets
-    // BF..BX): THE `warptempo` ENTRY AT ITS LIGHT LEVEL — the program's own
-    // theme, the architect's pick rather than an import (Windows 95 Standard
-    // darkened in proportion to a ground of luminance 0.010 under white text,
-    // set BA03, with the selection grey of set BM02; its record is
-    // tools/theme_catalog/build.py's chosen_entry). The level is the entry as
-    // recorded; its dark level is whatever levels.py's dark rule makes of it,
-    // which nobody tuned (light / dark as a whole is still in flux).
-    std::string theme            = "warptempo";
-    std::string theme_level      = "light";
-    // THE PROGRAM COLOUR DEFAULTS (architect 2026-10-03, the colour loop) —
-    // the record of each at render.h's palette block and its GuiPalette
-    // field. The waveform a grey ink on a black canvas (the ink may leave the
-    // 216 cube: its steps are the sRGB black-to-white blend in 5 % steps) and
-    // the outline its own rule's output, the ink over the canvas blended 50 %
-    // in linear light; the flag a slate violet under a white label, its
-    // selected face the bright #CCCCFF; the invalid face a dark red under a
-    // white label, its selected face the bright #FF6666 ("bright red means
-    // selected and error"); ONE selected label, black, on both selected faces
-    // (the symmetry); the playhead unchanged.
-    std::string waveform_ink          = "#808080";
-    std::string waveform_canvas       = "#000000";
-    std::string waveform_outline      = "#5C5C5C";
-    std::string flag_face             = "#666699";
-    std::string flag_face_selected    = "#CCCCFF";
-    std::string flag_label            = "#FFFFFF";
-    std::string flag_label_selected   = "#000000";
-    std::string invalid_face          = "#993333";
-    std::string invalid_face_selected = "#FF6666";
-    std::string invalid_label         = "#FFFFFF";
-    std::string playhead_head         = "#8B8B8B";
-    std::string playhead_stem         = "#FCFCFC";
+    // THE THEME DEFAULT (architect 2026-10-04): THE BUILT-IN, Windows 95
+    // Standard's chrome with the program's elements in Windows' twenty solid
+    // colours — kBuiltinThemeKey (theme_file.h, whose static_assert keeps
+    // this spelling and that key one).
+    std::string theme = "windows-95-standard";
 };
-
-// THE TWELVE PROGRAM COLOUR KEYS — THE ONE ENUMERATION, in the writer's order
-// (the palette's own, GuiPalette in render.h): the reader's arm, the writer's
-// arm, the settings editor's commit and recall, and install_palette all walk
-// it, so a key cannot be read and not written, or written and not painted.
-struct ProgramColourKey {
-    const char*               key;
-    std::string DeviceConfig::* member;
-};
-inline constexpr ProgramColourKey kProgramColourKeys[] = {
-    {"waveform_ink",          &DeviceConfig::waveform_ink},
-    {"waveform_canvas",       &DeviceConfig::waveform_canvas},
-    {"waveform_outline",      &DeviceConfig::waveform_outline},
-    {"flag_face",             &DeviceConfig::flag_face},
-    {"flag_face_selected",    &DeviceConfig::flag_face_selected},
-    {"flag_label",            &DeviceConfig::flag_label},
-    {"flag_label_selected",   &DeviceConfig::flag_label_selected},
-    {"invalid_face",          &DeviceConfig::invalid_face},
-    {"invalid_face_selected", &DeviceConfig::invalid_face_selected},
-    {"invalid_label",         &DeviceConfig::invalid_label},
-    {"playhead_head",         &DeviceConfig::playhead_head},
-    {"playhead_stem",         &DeviceConfig::playhead_stem},
-};
-
-// The program colour key named `key`, or null — the readers' one lookup.
-inline const ProgramColourKey* find_program_colour_key(std::string_view key) {
-    for (const ProgramColourKey& k : kProgramColourKeys)
-        if (key == k.key) return &k;
-    return nullptr;
-}
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -443,91 +370,11 @@ inline bool is_projects_repo(const std::string& v) {
     return true;
 }
 
-// THE theme GRAMMAR — the ONE owner: a KEY OF THE GENERATED TABLE
-// (theme_table.h, every catalog entry, kGuiThemeCount of them; the
-// architect's colour-picker presets join as `warptempo-preset-<n>`,
-// 2026-10-04), byte for byte. A key the table
-// does not hold is the settings editor's refused commit (its card) and,
-// in a hand-edited config, the load's first-error hard fail (NO BACKSTOPS FOR
-// ADVERSARIAL USE: no nearest match, no fallback theme). find_theme answers
-// the row itself, for install_palette (render.cpp); the struct is the table's.
-struct GuiThemeEntry;
-const GuiThemeEntry* find_theme(std::string_view key);
-inline bool is_theme_key(const std::string& v) {
-    return find_theme(v) != nullptr;
-}
-
-// THE theme_level GRAMMAR — the ONE owner: `light` or `dark`, exactly
-// (architect 2026-10-03; the two levels are the generated table's, their
-// arithmetic tools/theme_catalog/levels.py's, which says why there is no
-// level between them). Any other word, `dim` included, is the settings
-// editor's refused commit and a hand-edited config's first-error hard fail.
-enum class GuiThemeLevel { Light, Dark };
-inline std::optional<GuiThemeLevel> parse_theme_level(std::string_view v) {
-    if (v == "light") return GuiThemeLevel::Light;
-    if (v == "dark")  return GuiThemeLevel::Dark;
-    return std::nullopt;
-}
-inline bool is_theme_level(const std::string& v) {
-    return parse_theme_level(v).has_value();
-}
-
-// THE PROGRAM COLOUR GRAMMAR — the ONE owner for the twelve program keys
-// (architect 2026-10-03): `#` and six hexadecimal digits, either case, OR one
-// of WINDOWS' TWENTY ALWAYS-SOLID COLOURS by name, lowercase — the colours a
-// 256-colour display's system palette reserved, so every program of the era
-// could count on them drawing solid:
-//   THE VGA SIXTEEN under their HTML 4.01 names (the W3C HTML 4.01
-//   Recommendation, 1999, section 6.5 "Colors"): black #000000, maroon
-//   #800000, green #008000, olive #808000, navy #000080, purple #800080, teal
-//   #008080, silver #C0C0C0, gray #808080, red #FF0000, lime #00FF00, yellow
-//   #FFFF00, blue #0000FF, fuchsia #FF00FF, aqua #00FFFF, white #FFFFFF;
-//   THE FOUR WINDOWS RESERVES under Delphi VCL's names (Graphics.pas's
-//   clMoneyGreen, clSkyBlue, clCream, clMedGray, without the `cl`):
-//   moneygreen #C0DCC0, skyblue #A6CAF0, cream #FFFBF0, medgray #A0A0A4.
-// The word is the value's 0xRRGGBB; nothing else is a program colour.
-struct NamedProgramColour {
-    const char* name;
-    uint32_t    rgb;
-};
-inline constexpr NamedProgramColour kNamedProgramColours[] = {
-    {"black", 0x000000},  {"maroon", 0x800000}, {"green", 0x008000},
-    {"olive", 0x808000},  {"navy", 0x000080},   {"purple", 0x800080},
-    {"teal", 0x008080},   {"silver", 0xC0C0C0}, {"gray", 0x808080},
-    {"red", 0xFF0000},    {"lime", 0x00FF00},   {"yellow", 0xFFFF00},
-    {"blue", 0x0000FF},   {"fuchsia", 0xFF00FF}, {"aqua", 0x00FFFF},
-    {"white", 0xFFFFFF},
-    {"moneygreen", 0xC0DCC0}, {"skyblue", 0xA6CAF0}, {"cream", 0xFFFBF0},
-    {"medgray", 0xA0A0A4},
-};
-inline std::optional<uint32_t> program_colour_word(std::string_view v) {
-    for (const NamedProgramColour& n : kNamedProgramColours)
-        if (v == n.name) return n.rgb;
-    if (v.size() != 7 || v[0] != '#') return std::nullopt;
-    uint32_t w = 0;
-    for (size_t i = 1; i < 7; ++i) {
-        const char c = v[i];
-        uint32_t d = 0;
-        if (c >= '0' && c <= '9')      d = static_cast<uint32_t>(c - '0');
-        else if (c >= 'A' && c <= 'F') d = static_cast<uint32_t>(c - 'A' + 10);
-        else if (c >= 'a' && c <= 'f') d = static_cast<uint32_t>(c - 'a' + 10);
-        else return std::nullopt;
-        w = (w << 4) | d;
-    }
-    return w;
-}
-inline bool is_program_colour(const std::string& v) {
-    return program_colour_word(v).has_value();
-}
-
-// The colour keys' reasons, spelled once for their two readers each (the
-// config reader's `bad_value` line and the settings editor's card).
-inline constexpr const char* kThemeGrammarReason =
-    "must be a theme key of the catalog (docs/themes/CATALOG.md)";
-inline constexpr const char* kThemeLevelGrammarReason =
-    "must be light or dark";
-inline constexpr const char* kProgramColourGrammarReason =
-    "must be #rrggbb or one of the twenty Windows colour names";
+// (THE theme GRAMMAR is theme_file.h's is_theme_key, its reason
+// kThemeGrammarReason beside it, with THE ONE COLOUR GRAMMAR every theme
+// role's value takes. The `theme_level` grammar and the program colour
+// grammar of the twelve keys left with those keys 2026-10-04, the colour
+// grammar moving whole to the theme files.)
 
 // HOW A PATH UNDER THE PROJECTS PATH IS NAMED IN A SENTENCE — the basename
 // rule's composer for everything the project model and the loaders say
@@ -643,13 +490,13 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE NINETEEN KEY COMMITS, and this is their inventory
-// (re-greped 2026-10-03):
+// THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
+// (re-greped 2026-10-04):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves seventeen keys —
-// `max_waveform_height=`, `projects_repo=`, `projects_path=` and the fourteen
-// colour keys (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
-// the cap's arm joined 2026-09-13, the path arm 2026-09-02, the colour arm
+// the settings editor's ONE device-key body, which serves four keys —
+// `max_waveform_height=`, `projects_repo=`, `projects_path=` and `theme=`
+// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
+// the cap's arm joined 2026-09-13, the path arm 2026-09-02, the theme's
 // 2026-10-03); and gui_main's
 // `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
@@ -664,7 +511,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 275 % and its external files dir's `projects/`;
-// both stamp a max_waveform_height of 364, the colour keys' defaults,
+// both stamp a max_waveform_height of 364, the built-in theme,
 // kDefaultProjectsRepo and a blank
 // last_project),
 // so a first run on either device lands a

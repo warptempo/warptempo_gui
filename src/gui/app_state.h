@@ -3327,12 +3327,15 @@ struct SettingsPopupItem {
 // which moved `GUI Scale` from the first row to the device group's head, the
 // group keeping kDeviceConfigKeys' own order.
 //
-// THE FOURTEEN COLOUR KEYS JOINED 2026-10-03 (architect: the theme, its level
-// and the program's colours are device keys with Settings rows), after
-// `Projects Path` in kDeviceConfigKeys' order, behind A SECOND SEPARATOR: a
-// Windows menu groups related items between separators, and the colour rows
-// are one group of fourteen, longer than the rest of the device half together.
-// Each row's label is its key's name in Title Case.
+// `Theme` JOINED 2026-10-03 (architect: the theme is a device key with a
+// Settings row), after `Projects Path` in kDeviceConfigKeys' order, the last
+// row of the device group. Its label is its key's name in Title Case. It
+// stood at the head of a SECOND GROUP behind its own separator while the
+// colour rows were fourteen (2026-10-03..04: the theme, its level and the
+// twelve program colours, a group longer than the rest of the device half
+// together); with `theme_level` and the twelve keys gone into the theme files
+// (architect 2026-10-04) the group is the one row, and the separator went
+// with the reason for it — the device half is one group again.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Title",               "title",         false},
     {"Notes",               "notes",         false},
@@ -3342,20 +3345,7 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Max Waveform Height", "max_waveform_height", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
-    {"Theme",               "theme",            true},
-    {"Theme Level",         "theme_level",      false},
-    {"Waveform Ink",        "waveform_ink",     false},
-    {"Waveform Canvas",     "waveform_canvas",  false},
-    {"Waveform Outline",    "waveform_outline", false},
-    {"Flag Face",           "flag_face",        false},
-    {"Flag Face Selected",  "flag_face_selected", false},
-    {"Flag Label",          "flag_label",       false},
-    {"Flag Label Selected", "flag_label_selected", false},
-    {"Invalid Face",        "invalid_face",     false},
-    {"Invalid Face Selected", "invalid_face_selected", false},
-    {"Invalid Label",       "invalid_label",    false},
-    {"Playhead Head",       "playhead_head",    false},
-    {"Playhead Stem",       "playhead_stem",    false},
+    {"Theme",               "theme",         false},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
@@ -4725,8 +4715,8 @@ struct AppState {
     // (run_project constructs this AppState fresh), outside undo, not carried
     // by `'`, in no sidecar and no settings vocabulary. THE HOLD'S LAMP IS
     // THE PLAYHEAD HEAD (architect 2026-09-24): the head paints in the
-    // `playhead_stem` key while the bit stands and in its own `playhead_head`
-    // key when it does not (render.h's playhead paragraph, 2026-10-03),
+    // `playhead_stem` role while the bit stands and in its own `playhead_head`
+    // role when it does not (render.h's playhead paragraph, 2026-10-03),
     // repainted by the per-tick face
     // comparator (main.cpp) — no icon, no card when it is armed or cleared;
     // follow wears its icon-row lamp.
@@ -7096,9 +7086,9 @@ struct AppState {
     // In their place it paints ONE COMMIT'S DELTA against the session: a flag
     // per line the session has and that commit did not (`[+]`), a flag per line
     // that commit had and the session dropped (`[-]`), and ONE DOUBLE-WIDTH
-    // flag per same-frame pair (the removed half then, the added half now), all
-    // in the one flag colour, the label's sign telling them apart
-    // (render_history_diff_flags). The flags sit at their
+    // flag per same-frame pair (the removed half then, the added half now),
+    // each half in its kind's colour, added or removed, the label's sign
+    // saying it in words too (render_history_diff_flags). The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
     // marker stands exactly where it stood. Row 8's state cell, beside the
     // clock, carries the walk line: the member's position, then the

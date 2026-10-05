@@ -4,7 +4,7 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "theme_table.h"       // kGuiThemeTable, find_theme
+#include "theme_file.h"        // is_theme_key, kThemeGrammarReason
 
 #include <cstddef>
 #include <cstdio>
@@ -19,9 +19,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (NINETEEN keys; the count's
-// succession, up to seventeen with the tuning phases of 2026-09-23..27, is
-// the header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
+// set the shared scanner enforces after the loop (SIX keys; the count's
+// succession, up to seventeen with the tuning phases of 2026-09-23..27 and
+// nineteen with the colour keys of 2026-10-03..04, is the header's record
+// and git's). THE ORDER IS THE ARCHITECT'S OWN, given
 // with the fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
 // last_project — max_waveform_height placed right after gui_scale (architect
 // 2026-09-13). The scanner takes it as a
@@ -32,10 +33,7 @@ namespace {
 // lists because its writer is GUI-side and its reader parser-side;
 // here both halves are in this file, so one list is the honest shape).
 //
-// THE FOURTEEN COLOUR KEYS ARE APPENDED (2026-10-03): the theme, its level,
-// then the twelve program keys in kProgramColourKeys' order (device_config.h),
-// which this list spells out again because the scanner takes a plain array —
-// the static_assert below keeps the two in step.
+// `theme` IS APPENDED (2026-10-03).
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "max_waveform_height",
@@ -43,39 +41,9 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "theme",
-    "theme_level",
-    "waveform_ink",
-    "waveform_canvas",
-    "waveform_outline",
-    "flag_face",
-    "flag_face_selected",
-    "flag_label",
-    "flag_label_selected",
-    "invalid_face",
-    "invalid_face_selected",
-    "invalid_label",
-    "playhead_head",
-    "playhead_stem",
 };
-constexpr bool program_keys_in_step() {
-    constexpr size_t first = 7;
-    if (std::size(kDeviceConfigKeys) != first + std::size(kProgramColourKeys))
-        return false;
-    for (size_t i = 0; i < std::size(kProgramColourKeys); ++i)
-        if (std::string_view(kDeviceConfigKeys[first + i]) !=
-            kProgramColourKeys[i].key)
-            return false;
-    return true;
-}
-static_assert(program_keys_in_step());
 
 } // namespace
-
-const GuiThemeEntry* find_theme(std::string_view key) {
-    for (const GuiThemeEntry& e : kGuiThemeTable)
-        if (key == e.key) return &e;
-    return nullptr;
-}
 
 std::string format_gui_scale_percent(int percent) {
     char buf[32];
@@ -130,11 +98,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += cfg.last_project;
         } else if (k == "theme") {
             s += cfg.theme;
-        } else if (k == "theme_level") {
-            s += cfg.theme_level;
-        } else if (const ProgramColourKey* pk = find_program_colour_key(k)) {
-            // As typed (the struct's record): a name stays a name.
-            s += cfg.*(pk->member);
         }
         s += '\n';
     }
@@ -220,27 +183,14 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.last_project = value;
             return {};
         }
-        // THE COLOUR KEYS (2026-10-03): each under its one grammar owner in
-        // the header, the value kept as typed.
+        // THE THEME (2026-10-03): the built-in's key or a theme file's read
+        // at launch, under its one grammar owner (is_theme_key, theme_file.h)
+        // — which is why gui_main reads the themes folder BEFORE this file.
         if (key == "theme") {
             if (!is_theme_key(value)) {
                 return bad_value(ln, key, value, kThemeGrammarReason);
             }
             out.theme = value;
-            return {};
-        }
-        if (key == "theme_level") {
-            if (!is_theme_level(value)) {
-                return bad_value(ln, key, value, kThemeLevelGrammarReason);
-            }
-            out.theme_level = value;
-            return {};
-        }
-        if (const ProgramColourKey* pk = find_program_colour_key(key)) {
-            if (!is_program_colour(value)) {
-                return bad_value(ln, key, value, kProgramColourGrammarReason);
-            }
-            out.*(pk->member) = value;
             return {};
         }
         return warptempo_parse::prefix_line_error(

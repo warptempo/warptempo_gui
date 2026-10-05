@@ -5,7 +5,7 @@
 #include "gui_display_context.h"
 #include "gui_font.h"
 #include "text_shape.h"
-#include "theme_table.h"
+#include "theme_file.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -154,7 +154,7 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // The ground is the `waveform_canvas` key (the palette's row-6 block),
+    // The ground is the `waveform_canvas` role (the palette's row-6 block),
     // through the waveform's chokepoint (set_waveform_source, render.h).
     set_waveform_source(cr, palette().waveform_canvas);
     cairo_rectangle(cr, x, y, w, h);
@@ -430,8 +430,8 @@ void render_waveform(cairo_surface_t* dest,
     // THE PREMULTIPLIED WORDS, each built once per call through the one word
     // owner (argb32_opaque_word, render.h — its byte-order and rounding
     // contract lives there): the plate's ink (`inks`, the job's snapshot of
-    // the `waveform_ink` key), worn by the dark lamp's raw bar and by both lit
-    // bars' fills, and the inner bar's outline (the `waveform_outline` key;
+    // the `waveform_ink` role), worn by the dark lamp's raw bar and by both lit
+    // bars' fills, and the inner bar's outline (the `waveform_outline` role;
     // built always, written only when lit).
     const uint32_t ink_word     = argb32_opaque_word(hex(inks.ink_rgb));
     const uint32_t outline_word = argb32_opaque_word(hex(inks.outline_rgb));
@@ -731,7 +731,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
 
     cairo_save(cr);
     // THE ANCHOR STEM IS THE PLAYHEAD'S STEM (architect 2026-08-01, at the
-    // row-6 live look; the `playhead_stem` key since 2026-10-03), superseding
+    // row-6 live look; the `playhead_stem` role since 2026-10-03), superseding
     // the dim tunable grey #686a6c this drew in. The affordance is
     // deliberately no longer "less loud than a marker stem": it is a position
     // line during a gesture, and the product's position lines are this one
@@ -1262,6 +1262,13 @@ static IterCellLayout measure_iter_cells(cairo_scaled_font_t* font,
     return l;
 }
 
+// THE FLAG'S KIND (architect 2026-10-04, reopening 2026-10-03's one flag
+// colour for every kind): which of the theme's four flag pairs a box wears —
+// WARP and PHASE RESET, co-equal, the authoring columns' flags by their
+// column, and the `h` view's ADDED and REMOVED diff halves. The palette
+// block's marker-lane paragraph (render.h) owns the look.
+enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
+
 // The resolved paint of ONE marker flag box (the palette block's marker-lane
 // paragraph, render.h, owns the look): its face, its label's ink — or the
 // disabled emboss — and the stem. The OUTLINE is no part of it: every flag's
@@ -1275,40 +1282,54 @@ struct FlagFace {
     bool     has_stem;
 };
 
+// A kind's face and its selected face, off the theme's roles.
+struct FlagPair {
+    GuiColor face;
+    GuiColor selected;
+};
+FlagPair flag_pair(GuiFlagKind kind) {
+    const GuiPalette& p = palette();
+    switch (kind) {
+        case GuiFlagKind::Warp:
+            return {p.warp_flag, p.warp_flag_selected};
+        case GuiFlagKind::PhaseReset:
+            return {p.phase_reset_flag, p.phase_reset_flag_selected};
+        case GuiFlagKind::Added:
+            return {p.added_flag, p.added_flag_selected};
+        case GuiFlagKind::Removed:
+            return {p.removed_flag, p.removed_flag_selected};
+    }
+    return {p.warp_flag, p.warp_flag_selected};
+}
+
 // THE ONE LADDER for every flag box — both marker columns, their bound cells,
 // the `h` view's diff flags, the editor's riding cells and the editor's own
-// box (architect 2026-10-03, the flat flag): DISABLED wins (the theme's
-// ground, the label embossed, no stem), then INVALID (the `invalid_face` key
-// and its recorded label, the stem in the face), then the flag (the
-// `flag_face` key and its recorded label, the stem in the face). SELECTION IS
-// A BRIGHTER FACE (architect 2026-10-03, retiring the white outline): each arm
-// answers `selected` with its selected key — `flag_face_selected`, or
-// `invalid_face_selected` on the invalid arm — under the one
-// `flag_label_selected`, the stem in that face; and THE SELECTED DISABLED ARM,
+// box (architect 2026-10-03, the flat flag; the kinds 2026-10-04): DISABLED
+// wins (the theme's ground, the label embossed, no stem), then INVALID, which
+// WEARS THE REMOVED PAIR (one red for both, the context telling them apart:
+// invalid while authoring, removed in `h`), then the KIND's own pair, the
+// stem in the face. ONE LABEL PAIR FOR EVERY KIND: `flag_label` on a face,
+// `flag_label_selected` on a selected one. SELECTION IS A BRIGHTER FACE
+// (architect 2026-10-03, retiring the white outline): each arm answers
+// `selected` with its pair's selected face; and THE SELECTED DISABLED ARM,
 // PROVISIONAL (the palette block's THE STATES), is Windows 95's highlighted
-// disabled menu item: `flag_face_selected` under a FLAT label in the theme's
-// Shadow, no emboss, and still no stem. ONE FLAG COLOUR FOR EVERY KIND, so
-// the ladder asks no column (the column pairs and their FlagColumnFace
-// argument retired the same day: there is nothing left to pick between the
-// columns).
-FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
+// disabled menu item: the KIND's selected face under a FLAT label in the
+// theme's Shadow, no emboss, and still no stem.
+FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red,
+                           bool selected) {
     const GuiPalette& p = palette();
     FlagFace f;
     if (disabled) {
-        f.face     = selected ? p.flag_face_selected : p.ground;
+        f.face     = selected ? flag_pair(kind).selected : p.ground;
         f.label    = p.shadow;   // the emboss's word ink, or the flat GrayText
         f.embossed = !selected;  // show_embossed_run on the ground only
         f.stem     = f.face;
         f.has_stem = false;      // NO STEM EVER for a disabled marker
         return f;
     }
-    if (selected) {
-        f.face  = red ? p.invalid_face_selected : p.flag_face_selected;
-        f.label = p.flag_label_selected;
-    } else {
-        f.face  = red ? p.invalid_face : p.flag_face;
-        f.label = red ? p.invalid_label : p.flag_label;
-    }
+    const FlagPair pair = flag_pair(red ? GuiFlagKind::Removed : kind);
+    f.face     = selected ? pair.selected : pair.face;
+    f.label    = selected ? p.flag_label_selected : p.flag_label;
     f.embossed = false;
     f.stem     = f.face;
     f.has_stem = true;
@@ -1382,7 +1403,8 @@ static void paint_flag_label(cairo_t* cr, const text_shape::ShapedRun& run,
 // It stands outside the file's anonymous namespace so paint_handler.cpp
 // reaches it; the ladder it calls stays file-local.
 GuiColor phase_reset_stem_color(bool red, bool selected) {
-    return resolve_flag_face(/*disabled=*/false, red, selected).stem;
+    return resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false, red,
+                             selected).stem;
 }
 
 namespace {
@@ -1442,6 +1464,9 @@ template <typename MarkerVec, typename LabelFn, typename DisabledFn,
           typename CellsFn>
 void render_flag_boxes_impl(
     cairo_t* cr,
+    // The column's flag kind (Warp or PhaseReset), every box of the pass its
+    // face pair's (resolve_flag_face).
+    GuiFlagKind kind,
     GuiRect top_strip_area,
     FlagLaneRects lanes,
     int waveform_width,
@@ -1642,8 +1667,8 @@ void render_flag_boxes_impl(
             };
             // The payload box's face, and with it the marker's stem
             // (face.stem): the one resolution both read.
-            const FlagFace face =
-                resolve_flag_face(dis, red, cell_selected(MarkerCell::Payload));
+            const FlagFace face = resolve_flag_face(
+                kind, dis, red, cell_selected(MarkerCell::Payload));
 
             // THE EDITED MARKER'S BOX IS NOT PAINTED HERE — the open editor
             // owns every pixel of it (render_flag_editor_box, which paints the
@@ -1744,8 +1769,8 @@ void render_flag_boxes_impl(
                     // cells at all); the FLAG BOX above is untouched and
                     // keeps its live state, the disabled face being about the
                     // cells alone.
-                    return resolve_flag_face(dis || cells.follower, red,
-                                             cell_selected(which));
+                    return resolve_flag_face(kind, dis || cells.follower,
+                                             red, cell_selected(which));
                 };
                 const FlagFace lower_face = cell_face(MarkerCell::Lower);
                 // The lower cell never closes a run this pass paints: with no
@@ -1926,7 +1951,7 @@ void render_flags(cairo_t* cr,
                   const DragOverlay* drag_overlay,
                   SuppressedBox suppressed) {
     render_flag_boxes_impl(
-        cr, top_strip_area, lanes, waveform_width, markers,
+        cr, GuiFlagKind::Warp, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
         // THE PAINTED COMPOSER (flag_display_text, render.h): the tempo's
@@ -1963,7 +1988,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             const DragOverlay* drag_overlay,
                             SuppressedBox suppressed) {
     render_flag_boxes_impl(
-        cr, top_strip_area, lanes, waveform_width, phase_resets,
+        cr, GuiFlagKind::PhaseReset, top_strip_area, lanes, waveform_width,
+        phase_resets,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
         // A phase reset authors no payload, so its flag carries the display-only
@@ -2135,18 +2161,19 @@ void render_history_diff_flags(
             const bool added_disabled   = f.now_effective_disabled;
 
             // EACH HALF THROUGH THE LIVE LANE'S ONE LADDER (resolve_flag_face,
-            // architect 2026-10-03): the ONE FLAG COLOUR for a live half — the
-            // greens and the removed red retired, red being invalid-only, and
-            // a diff line is never the invalid class — the disabled face (the
+            // architect 2026-10-03), AS ITS OWN KIND (architect 2026-10-04): a
+            // removed half the Removed pair, an added half the Added pair — a
+            // diff line is never the invalid class — the disabled face (the
             // ground, the label embossed) for a half whose own side disables
             // it, and the selected face on both when the flag is focused or
-            // selected. THE LABEL CARRIES THE
-            // SIGN (history_diff_label's bracket, paint_handler.h), which is
-            // all that tells an added half from a removed one now.
-            const FlagFace removed_face =
-                resolve_flag_face(removed_disabled, /*red=*/false, focused);
-            const FlagFace added_face =
-                resolve_flag_face(added_disabled, /*red=*/false, focused);
+            // selected. THE LABEL CARRIES THE SIGN too (history_diff_label's
+            // bracket, paint_handler.h), saying in words what the face says
+            // at a glance.
+            const FlagFace removed_face = resolve_flag_face(
+                GuiFlagKind::Removed, removed_disabled, /*red=*/false,
+                focused);
+            const FlagFace added_face = resolve_flag_face(
+                GuiFlagKind::Added, added_disabled, /*red=*/false, focused);
 
             // THE FLAT BOX, the live lane's anatomy (paint_flat_flag_box): ONE
             // outline column at the box's left, outside the face, the top and
@@ -2208,10 +2235,13 @@ void render_history_diff_flags(
             // lane's rule (stem_column_on_waveform).
             if (stem_column_on_waveform(bx - top_strip_area.x,
                                         waveform_width)) {
-                // THE STEM IS THE ONE FLAG COLOUR (architect 2026-10-03),
-                // its selected face when the flag is focused or selected (the
-                // live lane's stem, through the one ladder), and a diff flag
-                // is never the invalid class.
+                // THE STEM IS THE FACE OF THE HALF IT LEAVES FROM (architect
+                // 2026-10-04, the stem belonging to its box): the box's
+                // leftmost face column is the removed half's on a changed
+                // pair or a removed-only flag, the added half's on an
+                // added-only one — its selected face when the flag is focused
+                // or selected (the live lane's stem, through the one ladder),
+                // and a diff flag is never the invalid class.
                 //
                 // AND IT READS THE DISABLED AXIS (architect 2026-08-22), on the
                 // SINGLE-half flags alone. A removed-only or added-only flag
@@ -2232,7 +2262,9 @@ void render_history_diff_flags(
                                             : added_disabled);
                 if (!single_disabled) {
                     const GuiColor stem_c =
-                        resolve_flag_face(/*disabled=*/false, /*red=*/false,
+                        resolve_flag_face(w_removed > 0 ? GuiFlagKind::Removed
+                                                        : GuiFlagKind::Added,
+                                          /*disabled=*/false, /*red=*/false,
                                           focused).stem;
                     paint_flag_stem_crossing(cr, lane, bx, edge_h, stem_c);
                     if (out_stems)
@@ -2302,54 +2334,27 @@ uint64_t palette_generation() { return g_palette_generation; }
 WaveformPlateInks waveform_plate_inks() { return g_plate_inks; }
 
 void install_palette(const DeviceConfig& cfg) {
-    // Every value arrived through its one grammar (the config's reader or the
-    // settings editor's commit, device_config.h), so each lookup below has
-    // no producer of a miss: a null here is a program bug.
-    const GuiThemeEntry* theme = find_theme(cfg.theme);
-    const std::optional<GuiThemeLevel> level =
-        parse_theme_level(cfg.theme_level);
-    assert(theme && level);
-    const GuiThemeLevelWords& w =
-        *level == GuiThemeLevel::Light ? theme->light : theme->dark;
-    const auto key = [&](std::string DeviceConfig::* m) {
-        const std::optional<uint32_t> word = program_colour_word(cfg.*m);
-        assert(word);
-        return *word;
-    };
-    GuiPalette p;
-    p.ground        = hex(w.ground);
-    p.label         = hex(w.label);
-    p.hilight       = hex(w.hilight);
-    p.light_3d      = hex(w.light_3d);
-    p.shadow        = hex(w.shadow);
-    p.dk_shadow     = hex(w.dk_shadow);
-    p.emboss_light  = hex(w.emboss_light);
-    p.selected_fill = hex(w.selected_fill);
-    p.selected_text = hex(w.selected_text);
-    p.field_ground  = hex(w.field_ground);
-    p.field_text    = hex(w.field_text);
-    p.waveform_ink     = hex(key(&DeviceConfig::waveform_ink));
-    p.waveform_canvas  = hex(key(&DeviceConfig::waveform_canvas));
-    p.waveform_outline = hex(key(&DeviceConfig::waveform_outline));
-    p.flag_face        = hex(key(&DeviceConfig::flag_face));
-    p.flag_face_selected = hex(key(&DeviceConfig::flag_face_selected));
-    p.flag_label       = hex(key(&DeviceConfig::flag_label));
-    p.flag_label_selected = hex(key(&DeviceConfig::flag_label_selected));
-    p.invalid_face     = hex(key(&DeviceConfig::invalid_face));
-    p.invalid_face_selected = hex(key(&DeviceConfig::invalid_face_selected));
-    p.invalid_label    = hex(key(&DeviceConfig::invalid_label));
-    p.playhead_head    = hex(key(&DeviceConfig::playhead_head));
-    p.playhead_stem    = hex(key(&DeviceConfig::playhead_stem));
+    // The key arrived through its one grammar (the config's reader or the
+    // settings editor's commit, is_theme_key), so the lookup has no producer
+    // of a miss (theme_words asserts it). Every field is filled off the role
+    // table, the one enumeration (theme_file.h), so a role cannot be read and
+    // not painted.
+    const GuiThemeWords& w = theme_words(cfg.theme);
+    GuiPalette p{};
+    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
+        p.*(kGuiThemeRoles[i].member) = hex(w[i]);
     g_palette = p;
-    g_plate_inks = WaveformPlateInks{key(&DeviceConfig::waveform_ink),
-                                     key(&DeviceConfig::waveform_outline)};
+    static constexpr std::size_t kInk     = theme_role_index("waveform_ink");
+    static constexpr std::size_t kOutline = theme_role_index("waveform_outline");
+    static_assert(kInk < kGuiThemeRoleCount && kOutline < kGuiThemeRoleCount);
+    g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
     ++g_palette_generation;
 }
 
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline) {
     const double off = static_cast<double>(relief_line_px());
-    set_palette_source(cr, palette().emboss_light);
+    set_palette_source(cr, palette().hilight);
     text_shape::show_shaped_run(cr, run, x + off, baseline + off);
     set_palette_source(cr, palette().shadow);
     text_shape::show_shaped_run(cr, run, x, baseline);
@@ -2667,9 +2672,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // riding the field's right edge, which keep their resting anatomy.
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
+    // The column's kind, the flag pass's own (render_flags /
+    // render_phase_reset_flags), so the field and the boxes riding it wear
+    // the pair their resting twins wear.
+    const GuiFlagKind kind = phase ? GuiFlagKind::PhaseReset
+                                   : GuiFlagKind::Warp;
     // The class's red is the COLUMN'S OWN paint cue, the set the resting flag
     // pass for this column reads, so the boxes riding the field wear the
-    // invalid face their resting twins wear on every column.
+    // removed face (the invalid one) their resting twins wear on every
+    // column.
     const bool red_class =
         phase
             ? phase_reset_red_flag_set_cached(app).red.count(idx) > 0
@@ -2687,12 +2698,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                                   ? app.addressed_cell : MarkerCell::Payload;
     const auto cell_selected = [&](MarkerCell c) { return sel && c == bright; };
     // THE FIELD IS THE SELECTED FLAG OPENED FOR EDIT (architect 2026-10-03,
-    // set BX): the ladder's SELECTED answer for the edited marker — its face
-    // `flag_face_selected`, or `invalid_face_selected` over an invalid marker
+    // set BX): the ladder's SELECTED answer for the edited marker — its
+    // kind's selected face, or `removed_flag_selected` over an invalid marker
     // (a disabled marker's the provisional selected-disabled arm's face, an
     // edit field never being embossed); under the payload field its stem is
     // in that face (below).
-    const FlagFace face = resolve_flag_face(dis, red_class, /*selected=*/true);
+    const FlagFace face =
+        resolve_flag_face(kind, dis, red_class, /*selected=*/true);
     // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
     // ends on ONE outline column on its rightmost box)? Iff nothing rides past
     // it — the UPPER field, the marker's last box by rank, or a payload field
@@ -2940,7 +2952,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // colour below.
         const int lower_seam = cursor_x;
         const FlagFace lower_face = resolve_flag_face(
-            cell_dis, red_class, cell_selected(MarkerCell::Lower));
+            kind, cell_dis, red_class, cell_selected(MarkerCell::Lower));
         if (ride_lower) {
             paint_iter_bound_cell(
                 cr, lane, cursor_x, cl.lower_w, border_w, edge_h, pad_l,
@@ -2953,7 +2965,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         const int upper_seam = cursor_x;
         if (ride_upper) {
             const FlagFace upper_face = resolve_flag_face(
-                cell_dis, red_class, cell_selected(MarkerCell::Upper));
+                kind, cell_dis, red_class, cell_selected(MarkerCell::Upper));
             paint_iter_bound_cell(
                 cr, lane, cursor_x, cl.upper_w, border_w, edge_h, pad_l,
                 baseline, cl.upper_run, upper_face,

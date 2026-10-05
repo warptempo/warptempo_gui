@@ -150,7 +150,7 @@ std::string format_settings_text(
 // (format_gui_scale_percent and format_max_waveform_height, device_config.h)
 // or verbatim for the two
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`) and
-// the fourteen colour keys (since 2026-10-03, held as typed): the same "recall
+// `theme` (since 2026-10-03, held as typed): the same "recall
 // and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is
 // not editable and recalls nothing: it is the program's own.)

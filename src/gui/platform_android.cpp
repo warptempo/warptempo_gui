@@ -697,8 +697,8 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // under the DISPLAY_P3 tag (the manifest's colorMode makes the compositor
     // honour it), so the panel receives them as it receives a gallery
     // viewer's P3-tagged image — and every colour is taken as Display-P3
-    // bytes (render.h's palette head, 2026-10-02): a theme's recorded byte,
-    // or a program key's, is what this panel shows. A REFUSAL IS REPORTED
+    // bytes (render.h's palette head, 2026-10-02): a theme role's byte is
+    // what this panel shows. A REFUSAL IS REPORTED
     // AND NOT FATAL, as the geometry's is: the layer then stays sRGB and the
     // colours read a
     // little differently, as they do on the laptop, whose Wayland surface

@@ -161,6 +161,10 @@ set(WARPTEMPO_GUI_SOURCES
     # by construction: warptempo_cli never read any of them, and the file
     # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp
+    # THE THEME FILES (2026-10-04): the role table, the one built-in theme and
+    # the themes folder beside the device config, read once at launch.
+    # GUI-ONLY like the config: the CLI paints nothing.
+    src/gui/theme_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp

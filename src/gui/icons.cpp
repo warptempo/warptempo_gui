@@ -1680,10 +1680,11 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
     const IconDef& def = icon_def(icon);
     if (def.view_box <= 0.0) return;
     if (!icon_paths_valid(icon, def)) return;
-    // The whole shape twice, every path in one ink: the emboss's light copy
-    // one offset right and down beneath, then Shadow at the glyph's own place.
+    // The whole shape twice, every path in one ink: the emboss's light copy,
+    // the theme's Hilight, one offset right and down beneath, then Shadow at
+    // the glyph's own place.
     fill_icon_paths(cr, def, x + offset_px, y + offset_px, size_px,
-                    [](const IconPath&) { return palette().emboss_light; });
+                    [](const IconPath&) { return palette().hilight; });
     fill_icon_paths(cr, def, x, y, size_px,
                     [](const IconPath&) { return palette().shadow; });
 }
