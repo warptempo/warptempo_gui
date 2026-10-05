@@ -147,4 +147,8 @@ FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag fir
   disabled flag none; the playhead and anchor stems bare). The planner's calls: the flanks keep the theme's DkShadow
   under the open payload editor too (its frame is the literal black; equal on windows-95-standard), and the
   phase-reset ring paints over the flanks (its corner unbroken). REQUEST 6 out: both product builds + the picker.
+- DONE 6 (2026-10-05): both devices and the picker installed; verified on the tablet at 350: the clock field 60
+  device px (17 W), Roboto, "B | 00:45.418"; a stem enters the well between two 4-px black flank columns. Local
+  wakes 7 of 16. NOTHING IS IN FLIGHT. Open for him: labels on the player's fields, right-aligned digits (both
+  optional); the picker's navigation discussion; the icon arc (Fable, after the reset); the accelerators (low).
 
