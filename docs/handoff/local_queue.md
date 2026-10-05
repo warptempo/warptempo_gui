@@ -389,3 +389,15 @@ they are. The product only. Answer with `## DONE 8` here.
      (7 W px at 400 %).
    - The icon row shows no history buttons (outside history mode); it fits at 400 %.
 4. Committed: this block only. Wakes used: 9 of 16.
+
+## REQUEST 9 (2026-10-05, the cloud planner's LAST; HEAD after this block) — THE CLOUD HANDS BACK TO THE LAPTOP
+The cloud credit is nearly spent; the architect moves planning back to a local session. Answer with `## DONE 9`.
+1. `git pull` main; build, install and relaunch as in REQUEST 8 (new since DONE 8: the 17-W-px flag, 4a78dd0).
+   One screencap at his 400 % if awake: the flag box's height in device px (expect 64) and the label centred.
+2. THEN STOP ALL OTHER WORK and write `docs/handoff/local_welcome_back.md` for a FRESH LOCAL PLANNER SESSION that
+   takes over the whole planner role (design, briefs, coders, review, commits, installs): what you know of the
+   devices, the build and install recipe as you run it, the wake count, anything the cloud welcome-back
+   (`docs/handoff/cloud_welcome_back.md`, read it) does not hold. Point it at the cloud welcome-back's NOW
+   section and at `docs/handoff/icon_pass_brief.md`, the next arc (dispatch as-is; the PNGs are in
+   assets/icons/chicago95/). The queue channel closes with this request.
+3. Commit (the wrapper), push.

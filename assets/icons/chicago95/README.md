@@ -1,0 +1,12 @@
+# Chicago95 icons (bitmap mode's icon set)
+
+The 16-px icons the architect picked on 2026-10-05 (`mapping.md`: each button, its Chicago95 name, and every
+icon's ink box and centring), copied unmodified from the Chicago95 icon theme's `<context>/16/` folders.
+
+Provenance: Chicago95 by grassmunk, https://github.com/grassmunk/Chicago95, a recreation of the Windows 95 look
+for Linux desktops. Licence: GPL-3.0 per upstream (the archive the architect uploaded carried no licence file;
+the local planner copies upstream's COPYING here when it has network). Bundling is the architect's ruling for this
+one-user program (2026-10-05).
+
+`object-merge.png` (Flatten's first pick) is 32 x 32 in Chicago95's own 16-px folder; see the welcome-back.
+Do not edit these files: a new pick is a new copy from upstream, recorded in `mapping.md`.

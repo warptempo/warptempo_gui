@@ -56,13 +56,15 @@ settled before horizontal warp-marker placement work). Brief in flight / landed 
 - FLAG COLOURS: phase reset teal / AQUA (selected); history added GREEN / LIME; warp purple / fuchsia and removed
   maroon / red stay. All four are true dark / bright pairs of Windows' 16.
 - History row (b0904c1): his yes to the `h` shift and the slot order (not yet seen on glass). Not installed yet.
-- THE ICON PASS (his go, 2026-10-05; bitmap mode only, Breeze elsewhere): the candidate sheets went to him
-  (tmp/icons/: mapping.md, contact_sheet_1/2.png, data.py + build.py regenerate them; 50 buttons + 6 alternate
-  faces + 4 card/row glyphs, 1-3 Chicago95 16-px candidates each). AWAITING HIS PICKS. No match: IconRestrictUndo,
-  IconBpm (no note), HistoryWalk, HistoryCumulative (no sum). DISABLED = Windows' toolbar rule (his WordPad
-  screenshots): the icon's pixels that are neither white nor silver in Shadow, a Hilight copy +1,+1 (the same
-  DSS_DISABLED emboss the Breeze glyphs use). The brief records Chicago95's GPL-3.0 provenance beside the assets.
-  His uploads (icons, xfwm4) and tmp/icons live only in this container; a new one needs a re-upload.
+- THE ICON PASS — PICKED, BRIEF READY, HANDED TO THE LAPTOP (2026-10-05; the cloud credit ran low): his picks are
+  candidate 1 everywhere except Toggle History View = document-open-recent, History Walk = view-dual, Cumulative =
+  object-group, Follow = view-refresh. No redesigns now (better pictures for BPM, Restrict Undo, the edit-select
+  pointer etc. are a later Fable job). The 51 PNGs are committed in assets/icons/chicago95/16/ with mapping.md
+  (every button, its pick, each icon's ink box and centring) and a README (GPL-3.0 provenance; copy upstream's
+  COPYING in when there is network). THE CODER BRIEF IS docs/handoff/icon_pass_brief.md (dispatch as-is): bitmap
+  mode only, centre on the ink (half-pixel ties up / left; his named arrows), Windows' toolbar disabled rule.
+  OPEN: Flatten's pick (object-merge) has only 32-px art in Chicago95's 16 folder — ask him (recommend
+  object-group, candidate 2).
 - THE ICON ARC with Fable after the reset (now tied to the bitmap mode above); a new LOGO.
 - The Alt-key menu accelerators (File / Edit / Settings; the bare `E` binding freed) — low, after the reset.
 - The picker's navigation: deferred ("moving down in importance").
