@@ -147,7 +147,8 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // (architect 2026-10-05: "white text for the flags is going to be the
     // most common; the highlights will generally be chosen so white shows"
     // — so a file that names flag faces and no labels gets white on both);
-    // the playhead's head gray, its stem white.
+    // the playhead's head gray, the stem yellow (architect 2026-10-05:
+    // Windows' own "yellow", one of the twenty named colours).
     {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000},
     {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00},
     {"waveform_outline",          &GuiPalette::waveform_outline,          0x008000},
@@ -162,7 +163,7 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"flag_label",                &GuiPalette::flag_label,                0xFFFFFF},
     {"flag_label_selected",       &GuiPalette::flag_label_selected,       0xFFFFFF},
     {"playhead_head",             &GuiPalette::playhead_head,             0x808080},
-    {"playhead_stem",             &GuiPalette::playhead_stem,             0xFFFFFF},
+    {"playhead_stem",             &GuiPalette::playhead_stem,             0xFFFF00},
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);
 

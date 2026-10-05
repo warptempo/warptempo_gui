@@ -523,15 +523,21 @@ AppState::RedesignButtonFace& publish_button_face(
     return face;
 }
 
-// ROW 4 — THE ICON ROW: Windows 95's toolbar at the Windows pixel (architect
-// 2026-10-02). Its metrics — the 23 x 22 case with the 16-px glyph at (3, 3),
-// the five px of ground above and below, the eight px between groups — live
-// in render.h's icon-row block, where the lane table and the notification
-// card read them too; this row spells none of them.
+// ROW 4 — THE ICON ROW: Windows 95's menu-bar-plus-toolbar stack at the
+// Windows pixel (architect 2026-10-02; the etched pairs and WordPad's 3 / 3
+// air 2026-10-05). Its metrics — the 23 x 22 case with the 16-px glyph at
+// (3, 3), the three px of ground above and below it, the eight px between
+// groups, the two etched line pairs — live in render.h's icon-row block,
+// where the lane table and the notification card read them too (the
+// toolbar band — air, case, air — alone, never the etched lines); this row
+// spells none of them.
 //
-// THE VERTICAL STORY: the case stands on the row's five-px air
-// (icon_row_content_h_px is the air, the case, the air), so its top is the
-// lane's top plus scaled_px(5).
+// THE VERTICAL STORY: the case stands on the top etched pair and the
+// toolbar's own three-px air (icon_case_top_offset_px), so its top is the
+// lane's top plus that offset — NOT scaled_px(5): the bottom row shares only
+// the toolbar band (icon_row_content_h_px, the air, the case, the air), with
+// neither etched line nor the icon row's foot air, so its own case sits at
+// its content's top plus the same air alone.
 //
 // THE HORIZONTAL WALK: the buttons of a group TOUCH, and between two groups
 // stand eight Windows px of bare ground with NO SEPARATOR (architect
@@ -1340,15 +1346,18 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
 
-    // THE LANE IS ITS CONTENT (render.h's menu_row_* pair): the icon row's
-    // ground begins on the next pixel row with no margin, border or line
-    // between. THE LANE IS THE ANCHOR (architect 2026-10-01 — render.h's
+    // THE LANE IS THE ANCHOR (architect 2026-10-01 — render.h's
     // kMenuRowHeightPx carries the ruling and its why): the whole lane's
     // height is each anchor's rectangle AND its published hit rect, flush
-    // under the caption with no air above it, and every label on
-    // this row, the anchors' and the legend's, is cap-centred in it. The
+    // under the caption with no air above it; the icon row's ground begins
+    // on the next pixel row with no margin, border or line between. The
     // anchor's foot, the lane's foot and the icon row's first pixel are the
-    // same row — where the dropdown hangs.
+    // same row — where the dropdown hangs. THE LANE IS NOT ITS CONTENT SINCE
+    // 2026-10-05: a one-px foot of ground stands below the content (Windows'
+    // measured 20-px menu band, render.h's kMenuRowFootPx), so every label on
+    // this row, the anchors' and the legend's, is cap-centred in the CONTENT
+    // ALONE (menu_row_content_h_px) rather than the taller lane — the one
+    // place this row reads two different heights for two different things.
 
     cairo_save(cr);
 
@@ -1422,13 +1431,15 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         if (open_anchor)
             paint_cell_rect(cr, GuiRect{x, row.y, btn_w, row.h},
                             palette().selected_fill);
-        // THE LABEL CENTERS IN THE ANCHOR, which IS the lane: Qt's own menu
-        // bar centers an item's text in the item rect, which is where
-        // cap-centring puts ours (redesign_baseline).
+        // THE LABEL CENTERS IN THE ANCHOR'S CONTENT, NOT ITS LANE (the foot
+        // row block above): Qt's own menu bar centers an item's text in the
+        // item rect, which is where cap-centring puts ours (redesign_baseline),
+        // over the content height alone so the foot row cannot nudge a cap
+        // band that already stood at Windows' own position.
         const double label_x = static_cast<double>(x + pad);
         const double label_y =
             redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(row.h));
+                              static_cast<double>(menu_row_content_h_px()));
         if (!face.enabled && !open_anchor) {
             show_embossed_run(cr, run, label_x, label_y);
         } else {
@@ -1450,8 +1461,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // MARGIN — its 8px lead-out, icon_row_pad_x, read rather than restated —
     // so the legend ends where the icon row's content does. The menu's own
     // sans at the redesign size through the shaping
-    // chokepoint, in the theme's label, on the anchors' baseline (the same
-    // lane). THE RULE FOR A ROW TOO NARROW FOR BOTH: the anchors win and the
+    // chokepoint, in the theme's label, on the anchors' own baseline (the
+    // same content band, read with the same call). THE RULE FOR A ROW TOO NARROW FOR BOTH: the anchors win and the
     // legend is clipped at the right. No supported size comes near it — at
     // 100% the anchors end near x 170 and the legend, some 140 px wide, starts
     // past x 480 even on the 640 px floor; the scale-toward-the-ceiling corner
@@ -1466,7 +1477,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(lx),
             redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(row.h)));
+                              static_cast<double>(menu_row_content_h_px())));
     }
 
     cairo_restore(cr);
@@ -1727,12 +1738,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
-    // THE LANE IS ITS CONTENT (render.h's icon_row_* pair): no border row.
+    // THE LANE IS WINDOWS' MENU-BAR-PLUS-TOOLBAR STACK (render.h's icon_row_*
+    // block): no border of its own beyond the foot air before the trim lane.
     cairo_save(cr);
 
     set_palette_source(cr, palette().ground);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
+
+    // THE FIRST ETCHED LINE PAIR, Windows' own menubar/toolbar separator
+    // (architect 2026-10-05): under the (absent) menu row's ground at the
+    // lane's top, spanning the lane's whole width like Windows' own and
+    // painted over the ground fill above. Inert ground for input, like the
+    // air around it. The SECOND pair, after the toolbar's own air below the
+    // case, waits until btn_h is known (below).
+    paint_relief_etched_hline(cr, lane.x, lane.y, lane.w);
 
     // (NO FONT IS SELECTED HERE, and that is the row's own fact since
     // 2026-08-11: this lane paints geometry and icons only. A text face was
@@ -1746,9 +1766,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const int glyph_off = icon_case_lead_px();
     const int group_gap = icon_group_space_px();
 
-    // THE CASE STANDS ON THE ROW'S AIR: five Windows px under the lane's top,
-    // and the lane is the air, the case and the air (icon_row_content_h_px).
-    const int btn_y = lane.y + scaled_px(kIconRowAirPx);
+    // THE CASE STANDS ON THE TOP ETCHED PAIR AND THE TOOLBAR'S OWN AIR
+    // (icon_case_top_offset_px, render.h: the one expression every reader of
+    // the case's seat in the full lane takes), WordPad's three Windows px
+    // under the case, the mirror three below it closing the toolbar band
+    // before the second etched pair.
+    const int btn_y = lane.y + icon_case_top_offset_px();
+
+    // THE SECOND ETCHED LINE PAIR, right after the toolbar's own air below
+    // the case — the foot air (before the trim lane) stands below IT, not
+    // below the case.
+    paint_relief_etched_hline(cr, lane.x,
+                              btn_y + btn_h + scaled_px(kIconRowAirPx),
+                              lane.w);
 
     // THE VIEW GROUP'S PLACE IS RESOLVED FIRST, because it decides where
     // every group to its left may paint (the overflow rule at kIconRowViewGroup):
@@ -2010,9 +2040,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // etc.) as main icon row") — the case and its glyph, the buttons touching
 // within a group, the eight-px gap between groups (icon_group_space_px), the
 // 8px pad at both ends (icon_row_pad_x, paint_handler.h) and the lane's
-// 32-px content height (bottom_row_content_h_px delegating to
-// icon_row_content_h_px, render.h). One source, so a retune of the icon row
-// carries here by construction. (Row 8's kdenlive transport metrics, its
+// 28-px content height — the toolbar's own air, case and air, with neither
+// of the icon row's etched lines nor its foot air (bottom_row_content_h_px
+// delegating to icon_row_content_h_px, render.h). One source, so a retune of
+// the icon row's toolbar band carries here by construction. (Row 8's kdenlive transport metrics, its
 // 26-px boxes and its own ruled separators — the etched slot between the
 // groups, 2026-08-11 to 2026-10-02 — are git history.)
 //
@@ -3843,13 +3874,18 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // half-width scales with it, which enlarges the pixel steps rather than
     // smoothing them: the shape stays the drawing it was transcribed from.
     //
-    // TIP-DOWN ON THE RULER LANE'S BOTTOM ROWS, its tip row the ruler's last
-    // row, so the head's last pixel touches the marker lane's first and head
-    // and flags never share a pixel: both stay whole at all times (architect
-    // 2026-09-23). ITS TOP ROWS OVERLAP THE DIGITS' LOWEST INK ROWS at the
-    // playhead's column (architect 2026-10-02, "a little overlap is fine"):
-    // the head is one Windows px taller than the baseline's distance to the
-    // marker lane (the rule at kRulerBaselineToMarkerPx, render.h).
+    // TIP-DOWN ONE WINDOWS PX INTO THE MARKER LANE (architect 2026-10-05,
+    // moved down from flush on the ruler lane's own bottom row, architect
+    // 2026-09-23): its tip row is the marker lane's FIRST row — the one
+    // Windows px of air above the flag box, marker_lane_air_px — touching the
+    // box's own top edge, rather than the ruler lane's last row. A flag box
+    // still stands whole: the box painter below takes only its own band
+    // (marker_flag_box_band), never the lane's air, so the head's tip and a
+    // flag's top edge meet without either covering the other. ITS TOP ROWS NO
+    // LONGER OVERLAP THE DIGITS' LOWEST INK at the playhead's column (the
+    // rule at kRulerBaselineToMarkerPx, render.h): the head is one Windows px
+    // taller than the baseline's distance to the marker lane, and the move is
+    // that same one Windows px, so the two now exactly cancel.
     //
     // OPAQUE (architect 2026-10-02: "the classic Windows way"): the head
     // paints over whatever this painter already laid down in its band — the
@@ -3914,12 +3950,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // THE ROW COUNT is the head's one height accessor
             // (playhead_head_h_px, render.h).
             const int    rows = playhead_head_h_px();
-            // THE BAND IS THE RULER LANE'S BOTTOM `rows`, its bottom edge the
-            // marker lane's top (the two lanes abut, strip_row_rect): at the
-            // tablet's 275 % the ruler's last 22 of its 50 rows. The lane is
-            // taller than the head at every scale (50 / 22 at 275 %, 27 / 11
-            // at 138 %, 10 / 4 at 50 %), so the band never leaves the lane.
-            const int    head_bottom = marker.y;
+            // THE BAND'S BOTTOM EDGE IS ONE WINDOWS PX INTO THE MARKER LANE
+            // (architect 2026-10-05), not the ruler lane's own bottom: the tip
+            // row now lands on the marker lane's first row — the one Windows
+            // px of air above the flag box (marker_lane_air_px) — touching
+            // the box's top edge, so the band spans the ruler lane's last
+            // (rows - 1) rows plus that one marker-lane row. The seat used to
+            // sit flush on the ruler lane's bottom (kRulerBaselineToMarkerPx's
+            // old rule); the move is this one term, so a playhead's damage
+            // rect must include it (below).
+            const int    head_bottom = marker.y + marker_lane_air_px();
             const int    head_top    = head_bottom - rows;
             // THE HOLD LAMP (architect 2026-09-24): the head takes the STEM'S
             // key while the hold posture stands and its own when it does not,

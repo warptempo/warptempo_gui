@@ -325,8 +325,10 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // paint_ruler_row).
 
 // THE PLAYHEAD (the program's roles, architect 2026-10-03). The HEAD is an
-// aliased shape in the `playhead_head` role, seated on the ruler lane's bottom
-// rows (paint_ruler_row), with a ONE-WINDOWS-PX OUTLINE in the theme's LABEL —
+// aliased shape in the `playhead_head` role, seated tip-down one Windows px
+// into the marker lane's own first row (architect 2026-10-05; the ruler
+// lane's bottom rows carry the rest of it — paint_ruler_row), with a
+// ONE-WINDOWS-PX OUTLINE in the theme's LABEL —
 // the head's own boundary pixels, so the head keeps its size (the Windows 95
 // arrow cursor's edge). THE HEAD IS THE HOLD POSTURE'S LAMP (architect
 // 2026-09-24): while AppState::camera_hold stands it paints in the STEM'S role,
@@ -729,27 +731,37 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
                                int frame_px);
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 1, directly
-// under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). 19 WINDOWS PX,
-// Windows' SM_CYMENU (architect 2026-10-02; it was the kdenlive File item's
-// 30 laptop px until the unit's change), AND THE LANE IS ITS CONTENT: the
-// row stands at that height with
-// the ICON ROW directly under it and no margin, border or line between the
-// two. kdenlive, QEMU and virt-manager draw no border between the menubar and
-// the toolbar, and neither does this row: its ground — the content ground
-// since 2026-10-01, the icon row's own (paint_menu_row) — runs straight on
-// into the icon row's.
+// under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). THE
+// CONTENT IS 19 WINDOWS PX, Windows' SM_CYMENU (architect 2026-10-02; it was
+// the kdenlive File item's 30 laptop px until the unit's change): the
+// anchors' box and the labels' box both, where the anchors, their labels and
+// the battery + clock legend stand, cap-centred in it.
 //
-// THE HEIGHT IS THE ANCHOR'S, AND THE ANCHOR IS THE LANE (architect
-// 2026-09-09: "make the height of the top row based on the thirty pixels of
-// File/Edit ... this way the dropdown will touch the first row, as it does
-// in kdenlive"; the number Windows' menu bar's since 2026-10-02): each
-// anchor's rectangle fills it top to bottom and IS the anchor's published hit
-// rect and the open anchor's highlight (paint_menu_row), the anchors' labels
-// and the battery + clock legend are cap-centred in it, and the anchor's foot
-// is the
-// lane's foot, which is where the dropdown and its damage band hang
-// (top_menu_row_area — paint_dropdown and toggle_dropdown read the same
-// accessor), so the popup touches the icon row's first pixel.
+// THE LANE IS ONE WINDOWS PX TALLER THAN THE CONTENT, A FOOT OF PLAIN GROUND
+// AT THE BOTTOM (architect 2026-10-05, Windows 95 screenshots measured at
+// 100 % — File Manager, Exchange and WordPad agree on a 20-px menu band under
+// the 18-px caption): the content's 19 is kept exactly — Windows' own
+// SM_CYMENU, and the number this row's rulings and the architect's live
+// judgments were made against — and the extra row is added below it rather
+// than folded into it, so EVERY LABEL'S CAP BAND STAYS WHERE IT WAS (the
+// painter cap-centres on the CONTENT height, never the lane's, below). The
+// ICON ROW stands directly under the lane with no margin, border or line of
+// its own (kdenlive, QEMU and virt-manager draw no border between the
+// menubar and the toolbar, and neither does this row): its ground — the
+// content ground since 2026-10-01, the icon row's own (paint_menu_row) —
+// runs straight on into the icon row's.
+//
+// THE ANCHOR IS THE LANE, NOT THE CONTENT (architect 2026-09-09: "make the
+// height of the top row based on the thirty pixels of File/Edit ... this way
+// the dropdown will touch the first row, as it does in kdenlive"; the number
+// Windows' menu bar's since 2026-10-02, the foot row added 2026-10-05): each
+// anchor's rectangle fills the LANE top to bottom and IS the anchor's
+// published hit rect and the open anchor's highlight (paint_menu_row), and
+// the anchor's foot is the lane's foot, which is where the dropdown and its
+// damage band hang (top_menu_row_area — paint_dropdown and toggle_dropdown
+// read the same accessor), so the popup touches the icon row's first pixel —
+// one row lower than before the foot row joined the lane, the dropdown's own
+// unmoved assumption (it hangs off the LANE, never the content).
 //
 // FLUSH UNDER THE CAPTION (the window's top edge until the caption's arrival,
 // 2026-10-05), WITH NO AIR ABOVE THE ANCHORS (architect
@@ -758,20 +770,27 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // more symmetric — because right now, relative to the curved top, both the
 // clock and the File dropdown look too far down").
 //
-// The row sizes on gui_scale_factor() like every other lane in the tree,
+// Both terms size on gui_scale_factor() like every other lane in the tree,
 // rounded with std::nearbyint through scaled_px and floored like every other
-// lane metric: 52 device rows at the tablet's 275 %, 26 at the laptop's
-// 138 %. TWO ACCESSORS FOR ONE
-// NUMBER, deliberately: the lane table reads the LANE and the painter the
-// CONTENT, the vocabulary every other row keeps, and this row's lane simply
-// has no other term in it — the content is the anchors' box and the labels'
-// box both, so there is no third reading.
+// lane metric, EACH ITS OWN ROUNDED PART (the composite rule): the content
+// 52 device rows at the tablet's 275 %, 26 at the laptop's 138 %; the foot
+// row 3 at 275 %, 1 at 138 % — lane totals of 55 and 27. TWO ACCESSORS FOR
+// TWO READERS, deliberately: the lane table and the anchor/hit-rect/dropdown
+// geometry read the LANE (menu_row_h_px), the label's cap-centring reads the
+// CONTENT alone (menu_row_content_h_px, paint_menu_row) — the one place the
+// two now differ.
 inline constexpr int kMenuRowHeightPx = 19;
+// THE FOOT ROW, Windows' measured 20-px band less the content's 19 (architect
+// 2026-10-05).
+inline constexpr int kMenuRowFootPx = 1;
 inline int menu_row_content_h_px() {
     return scaled_px(kMenuRowHeightPx, 5);
 }
+inline int menu_row_foot_h_px() {
+    return scaled_px(kMenuRowFootPx, 1);
+}
 inline int menu_row_h_px() {
-    return menu_row_content_h_px();
+    return menu_row_content_h_px() + menu_row_foot_h_px();
 }
 // (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
 // commit: the labeled Save / Undo / Redo / Render lane, row 2 of the redesign
@@ -783,6 +802,19 @@ inline int menu_row_h_px() {
 // Windows px since 2026-10-02 (32 and 9 / 10 laptop px before) —
 // which used to read row 2's. The row's crop record is git history.)
 
+// THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
+// sunken, status or etched edge in the chrome, and of one cell of the checked
+// dither (architect 2026-10-02: Windows' DrawEdge draws one-pixel lines, two
+// to an edge; the grammar is at the palette head): 3 device px at the
+// tablet's 275 %, 1 at the laptop's 138 %, floored at 1 so it never vanishes
+// at 50 %. The relief helpers (paint_relief_soft_raised and its siblings)
+// paint every line at it; the icon row's two etched pairs below are two
+// lines apiece.
+inline constexpr int kReliefLinePx = 1;
+inline int relief_line_px() {
+    return scaled_px(kReliefLinePx, 1);
+}
+
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, directly
 // under the MENU ROW with nothing between (row 4 of the redesign: TWENTY-SIX
 // view/mode/action buttons — the kIconRowButtons, kIconRowViewGroup and
@@ -790,8 +822,9 @@ inline int menu_row_h_px() {
 // the `h` view and nineteen inside it since 2026-10-05, the swap's one owner
 // being kIconRowHistoryStandIns (paint_handler.cpp);
 // icons::kIconCount is a different number, the GLYPH set, which the row does
-// not exhaust). THIS BLOCK IS ALSO THE BOTTOM ROW'S CONTENT: that lane
-// delegates its content height to icon_row_content_h_px below.
+// not exhaust). THE TOOLBAR BAND — air, case, air — IS ALSO THE BOTTOM ROW'S
+// CONTENT: that lane delegates its content height to icon_row_content_h_px
+// below, so a retune of the band retunes the bottom row's content with it.
 //
 // THE BUTTON IS WINDOWS 95's TOOLBAR BUTTON, AT THE WINDOWS PIXEL (architect
 // 2026-10-02, the AB / AD sets): a CASE 23 wide and 22 tall with the 16 x 16
@@ -805,15 +838,31 @@ inline int menu_row_h_px() {
 // (icons::draw, at the case's (3, 3) offset; the press face's shift is one
 // Windows px further right and down).
 //
-// THE ROW IS THE CASE WITH FIVE WINDOWS PX OF GROUND ABOVE AND BELOW IT
-// (architect 2026-10-02, the judged picture's 14 device rows at 275 %:
-// 5 × 2.75 = 13.75 → 14): 22 + 2 · 5 = 32 Windows px authored, and in device
-// rows 2 · scaled_px(5) + the case's height — 88 at 275 %, 44 at 138 %. THE
-// LANE IS ITS CONTENT, NO BORDER (architect 2026-10-01): the trim lane sits
-// directly under it and its own first row is the boundary. THE ROW IS
-// MODELLED ON KDENLIVE'S SECOND TOOLBAR, the one under its timeline; the
-// first, sharing the menubar's ground, was left out for space (architect
-// 2026-09-09), so nothing sits between the menu row and this one.
+// THE LANE IS WINDOWS' MENU BAR + TOOLBAR STACK, PIXEL FOR PIXEL (architect
+// 2026-10-05, measured on Windows 95 screenshots — their geometry trusted,
+// their colours never sampled): File Manager, Exchange and WordPad agree on
+// an ETCHED LINE PAIR (a Shadow row over a Hilight row, paint_relief_etched_hline,
+// spanning the lane's whole width) under the menu band, then the toolbar's
+// own ground — 2 px, the case, 2 px in File Manager and Exchange; WordPad,
+// which carries a second bar, puts a SECOND etched pair after its toolbar and
+// 3 px of ground before its own next band. This lane folds that whole stack
+// into ONE row since there is no second bar here: TOP ETCHED PAIR, THE
+// TOOLBAR'S OWN AIR ABOVE THE CASE, THE CASE, THE AIR BELOW IT, THE SECOND
+// ETCHED PAIR, then THE FOOT AIR before the trim lane — six terms, each its
+// own rounded part. THE TOOLBAR'S AIR IS WORDPAD'S 3 WINDOWS PX ABOVE AND 3
+// BELOW THE CASE (architect 2026-10-05, superseding the judged picture's 5 /
+// 5 of 2026-10-02 now that the etched pairs carry the separation Windows'
+// screenshots show): kIconRowAirPx, read by both this row's painter and the
+// bottom row's shared content accessor below. THE FOOT AIR, UNCHANGED AT 3
+// (kIconRowFootAirPx), is the ground between the second etched pair and the
+// trim lane's own first row, which is still the boundary — NO BORDER OF ITS
+// OWN (architect 2026-10-01). THE ROW IS MODELLED ON KDENLIVE'S SECOND
+// TOOLBAR, the one under its timeline; the first, sharing the menubar's
+// ground, was left out for space (architect 2026-09-09), so nothing sits
+// between the menu row and this one. THE ETCHED LINES ARE INERT GROUND FOR
+// INPUT, like the air around them (hit nothing, Arrow cursor): painted in
+// paint_icon_row so they repaint with the lane's own damage, in the theme's
+// Shadow and Hilight roles, no new role or literal.
 //
 // THE BUTTONS TOUCH WITHIN A GROUP and EIGHT WINDOWS PX OF BARE GROUND stand
 // between two groups, with NO SEPARATOR anywhere (architect 2026-10-02, the
@@ -828,15 +877,20 @@ inline constexpr int kIconGlyphPx        = 16;   // the glyph, both axes
 inline constexpr int kIconCaseLeadPx     = 3;    // case left of and above the glyph
 inline constexpr int kIconCaseTrailXPx   = 4;    // case right of the glyph
 inline constexpr int kIconCaseTrailYPx   = 3;    // case below the glyph
-inline constexpr int kIconRowAirPx       = 5;    // ground above and below the case
+inline constexpr int kIconRowAirPx       = 3;    // ground above and below the case, within the toolbar band (WordPad's 3 / 3)
+inline constexpr int kIconRowFootAirPx   = 3;    // ground below the second etched pair, before the trim lane
 inline constexpr int kIconGroupSpacePx   = 8;    // bare ground between two groups
 inline constexpr int kIconCaseWidthPx  =
     kIconCaseLeadPx + kIconGlyphPx + kIconCaseTrailXPx;
 inline constexpr int kIconCaseHeightPx =
     kIconCaseLeadPx + kIconGlyphPx + kIconCaseTrailYPx;
-inline constexpr int kIconRowHeightPx = kIconCaseHeightPx + 2 * kIconRowAirPx;
+// The lane's authored total: one relief line pair (2 Windows px) above the
+// toolbar band, one below it, and the foot air — 2 + 3 + 22 + 3 + 2 + 3 = 35.
+inline constexpr int kIconRowHeightPx =
+    2 * kReliefLinePx + kIconRowAirPx + kIconCaseHeightPx + kIconRowAirPx +
+    2 * kReliefLinePx + kIconRowFootAirPx;
 static_assert(kIconCaseWidthPx == 23 && kIconCaseHeightPx == 22 &&
-              kIconRowHeightPx == 32);
+              kIconRowHeightPx == 35);
 inline int icon_glyph_px()        { return scaled_px(kIconGlyphPx); }
 inline int icon_case_lead_px()    { return scaled_px(kIconCaseLeadPx); }
 inline int icon_case_w_px() {
@@ -848,11 +902,29 @@ inline int icon_case_h_px() {
            scaled_px(kIconCaseTrailYPx);
 }
 inline int icon_group_space_px()  { return scaled_px(kIconGroupSpacePx); }
+// THE ETCHED PAIR'S DEVICE HEIGHT IS TWO ROUNDED RELIEF LINES, NEVER
+// scaled_px OF THEIR AUTHORED SUM (the composite rule): paint_relief_etched_hline
+// paints the Shadow row at y and the Hilight row at y + relief_line_px(), so
+// the lane must reserve exactly that, which can differ from scaled_px(2) at
+// a fractional gui_scale.
+inline int icon_row_etched_pair_px() { return 2 * relief_line_px(); }
+// THE TOOLBAR BAND ALONE — air, case, air — with NO etched line and NO foot
+// air in it: the bottom row's own lane has neither, so this is the one
+// number the two rows share (bottom_row_content_h_px, below).
 inline int icon_row_content_h_px() {
     return 2 * scaled_px(kIconRowAirPx) + icon_case_h_px();
 }
+// THE CASE'S TOP, AS AN OFFSET FROM THE LANE'S OWN TOP (not the toolbar
+// band's): the top etched pair, then the band's own air — the one expression
+// every reader of the case's seat in the FULL lane takes (paint_icon_row,
+// hit rects, dropdown anchors, the folder overlay's band, tooltips), so a
+// retune of either term carries everywhere by construction.
+inline int icon_case_top_offset_px() {
+    return icon_row_etched_pair_px() + scaled_px(kIconRowAirPx);
+}
 inline int icon_row_h_px() {
-    return icon_row_content_h_px();
+    return icon_row_etched_pair_px() + icon_row_content_h_px() +
+           icon_row_etched_pair_px() + scaled_px(kIconRowFootAirPx);
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
@@ -950,13 +1022,25 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 //
 // THE BASELINE → MARKER LANE DISTANCE, SEVEN WINDOWS PX (architect
 // 2026-10-02, the U4 mock's "above 6, below 10" laptop rows re-authored at
-// the unit's change as 4 and 7), AND IT OWNS THE OVERLAP: the playhead head
-// is 8 Windows px seated tip-down on the marker lane's top
-// (kPlayheadHeadHeightPx), one taller than this distance, so its widest rows
-// OVERLAP the digits' lowest ink rows at the playhead's column — allowed (his
-// ruling, "a little overlap is fine"), the head painting over the labels:
-// 3 device rows at 275 % (22 against 19), 1 at 138 % (11 against 10), none
-// at 50 % (4 against 4). The head's rows do not enter the lane's height.
+// the unit's change as 4 and 7): the playhead head is 8 Windows px
+// (kPlayheadHeadHeightPx), one taller than this distance, so when it was
+// seated tip-down on the RULER lane's own bottom its widest rows overlapped
+// the digits' lowest ink rows at the playhead's column — allowed (his
+// ruling, "a little overlap is fine"), the head painting over the labels.
+//
+// THE SEAT MOVED ONE WINDOWS PX DOWN, INTO THE MARKER LANE (architect
+// 2026-10-05): the tip row now lands on the marker lane's own first row —
+// its one Windows px of air above the flag box (marker_lane_air_px) —
+// touching the box's top edge, rather than flush on the ruler lane's bottom.
+// THIS DISTANCE PLUS THAT ONE ROW EXACTLY FILLS THE HEAD'S OWN HEIGHT, so the
+// overlap the paragraph above once allowed is gone at every scale this file
+// is checked at — distance + air equal the head's own rows: 11 = 10 + 1 at
+// 138 %, 22 = 19 + 3 at 275 %, 32 = 28 + 4 at 400 % — the head now standing
+// flush against the digits' lowest ink rather than over it. (The two terms
+// still round separately, so an odd gui_scale could leave a one-row mismatch
+// either way; the same "a little overlap is fine" ruling covers it.) The
+// head's rows still do not enter the RULER lane's own authored height — they
+// now spend their last row in the MARKER lane's air instead.
 inline constexpr int kRulerBaselineToMarkerPx = 7;
 inline int trim_lane_h_px() {
     return scaled_px(kTrimLaneHeightPx, 3);
@@ -1257,17 +1341,6 @@ inline int marker_flag_border_px() {
 // baseline). Defined in paint_handler.cpp with the box's height (the rule at
 // marker_lane_h_px's block above).
 int marker_flag_baseline_px();
-// THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
-// sunken, status or etched edge in the chrome, and of one cell of the checked
-// dither (architect 2026-10-02: Windows' DrawEdge draws one-pixel lines, two
-// to an edge; the grammar is at the palette head): 3 device px at the
-// tablet's 275 %, 1 at the laptop's 138 %, floored at 1 so it never vanishes
-// at 50 %. The relief helpers (paint_relief_soft_raised and its siblings)
-// paint every line at it.
-inline constexpr int kReliefLinePx = 1;
-inline int relief_line_px() {
-    return scaled_px(kReliefLinePx, 1);
-}
 // THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because they count relief
 // lines (the slider's block, with its constants, is above): the channel its
 // four lines, the thumb its rows above the channel, the channel and its rows
@@ -1514,9 +1587,12 @@ inline constexpr int kTrimArrowGlyphRows[kTrimArrowGlyphCols] = {1, 3, 5, 7};
 // 2026-10-02, the unit's change; the planner's lean taken: 8 rows paint 22
 // device rows at 275 % — the judged picture's head — and 11 at 138 %, the
 // laptop's head before the change). Its silhouette is a per-row HALF-WIDTH
-// table, not a formula, seated tip-down on the marker lane's top, its top
-// rows overlapping the digits' lowest ink rows at the playhead's column (the
-// overlap rule is kRulerBaselineToMarkerPx's). THE 8-ROW TABLE IS THE
+// table, not a formula, seated tip-down ONE WINDOWS PX INTO THE MARKER LANE
+// (architect 2026-10-05, moved down from the ruler lane's own bottom): its
+// tip row lands on the marker lane's first row — the air above the flag box
+// — touching the box's top edge, and its top rows now stand flush against
+// the digits' lowest ink rather than over them (the seat rule is
+// kRulerBaselineToMarkerPx's). THE 8-ROW TABLE IS THE
 // 11-ROW kdenlive head (row_5_lane_3_playhead.png's 19 x 12 with its widest
 // row dropped: halves 8 7 6 6 5 4 4 3 2 1 1 laptop px) RE-SAMPLED at the
 // tablet: each Windows row takes the mean half of the device rows it covers

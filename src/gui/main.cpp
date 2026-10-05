@@ -146,11 +146,15 @@ namespace {
 // CAPTION (caption_row_h_px(), the window's own title bar, Windows 95's
 // 18-px SM_CYCAPTION, at the window top on both devices — render.h's
 // kCaptionHeightPx), the MENU ROW (menu_row_h_px(), row 1 of the kdenlive
-// redesign, Windows' 19-px menu bar — the anchors' box whole, flush under the
-// caption — render.h's kMenuRowHeightPx),
+// redesign, Windows' 19-px menu bar — the anchors' box — plus a one-px foot
+// of ground (architect 2026-10-05, Windows' measured 20-px band), flush
+// under the caption — render.h's kMenuRowHeightPx and kMenuRowFootPx),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
-// menu row with nothing between and NO BORDER of its own since 2026-10-01 —
-// the trim lane's own first row is the boundary), then FLEXIBLE GAP 1, then
+// menu row with nothing between, Windows' own menu-bar-plus-toolbar stack
+// folded into one lane — an etched line pair, the toolbar's air, the case,
+// its air, a second etched pair and a foot of ground, 35 Windows px whole
+// (architect 2026-10-05) — and NO BORDER beyond that foot: the trim lane's
+// own first row is the boundary), then FLEXIBLE GAP 1, then
 // THE CENTERED BLOCK's three: the TRIM lane (trim_lane_h_px(), the
 // miniaturized scroll bar — the dithered track and the window's thumb), the
 // RULER lane
@@ -222,9 +226,10 @@ namespace {
 // tablet below exactly).
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-05 (the caption's lane added at the top; the Windows pixel: every
-// lane in Windows px, the ruler and the marker lane derived from their faces,
-// the marker lane's air above the box alone since 2026-10-03, its box
+// 2026-10-05 (the caption's lane added at the top, and again the same day for
+// the menu row's foot and the icon row's etched pairs — the Windows pixel:
+// every lane in Windows px, the ruler and the marker lane derived from their
+// faces, the marker lane's air above the box alone since 2026-10-03, its box
 // seated on its label's painted ink with one Windows px of face above and
 // below since 2026-10-05, the rows it gained the waveform's) rather than
 // adjusted, at the
@@ -232,37 +237,51 @@ namespace {
 // re-authored) and at 0, NO MAXIMUM, which both devices run (a device
 // carrying another value moves only W and the gaps). Every lane is its own
 // composite of rounded parts (scaled_px's rule), so the device rows below are
-// read off the lane accessors, never off a Windows total times the factor.
+// read off the lane accessors, never off a Windows total times the factor —
+// in particular the icon lane's two etched pairs are each 2 x relief_line_px(),
+// not scaled_px(2), so they can differ from a naive total at a fractional
+// gui_scale (none of the four scales below hit that case). THE BOTTOM ROW'S
+// CONTENT IS THE ICON ROW'S TOOLBAR BAND (icon_row_content_h_px, shared by
+// construction), so the toolbar air's 5 -> 3 retune on 2026-10-05 shrank the
+// bottom row too, at every scale below.
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
-//   lanes are 25 caption + 26 menu + 44 icon + 22 trim + 27 ruler + 26 marker
-//   = 170 above, of which 95 is the caption and the two toolbar rows above
-//   the gap and 75 the block above the waveform, and 45 below (the bottom
-//   row's 44 content and its 1-px top row); leftover 865.
-//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 119, gap 2 =
-//     244 — 25 caption / 26 menu / 44 icon / 119 blank / 75 block / 502
-//     waveform / 244 blank / 45 row, the waveform spanning y 289..791 about
+//   lanes are 25 caption + 27 menu + 46 icon + 22 trim + 27 ruler + 26 marker
+//   = 173 above, of which 98 is the caption and the two toolbar rows above
+//   the gap and 75 the block above the waveform, and 39 below (the bottom
+//   row's 38 content and its 1-px top row); leftover 868.
+//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 116, gap 2 =
+//     250 — 25 caption / 27 menu / 46 icon / 116 blank / 75 block / 502
+//     waveform / 250 blank / 39 row, the waveform spanning y 289..791 about
 //     the window's midline 540 (the clamp fixes its height and the midpoint
 //     rule its centre, so gap 1 absorbs every row the lanes above it gain or
 //     lose — the caption's 25 among them).
-//     At 0: waveform UNCLAMPED at 865, both gaps 0 (the midpoint rule would
-//     want 540 - 170 - 432 = -62) — 25 / 26 / 44 / 0 / 75 / 865 / 0 / 45.
+//     At 0: waveform UNCLAMPED at 868, both gaps 0 (the midpoint rule would
+//     want 540 - 173 - 434 = -67) — 25 / 27 / 46 / 0 / 75 / 868 / 0 / 39.
 //   2304x1440 AT gui_scale 275, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — the caption across its top): the lanes are 50
-//   caption + 52 menu + 88 icon + 44 trim + 50 ruler + 54 marker = 338 above
+//   caption + 55 menu + 96 icon + 44 trim + 50 ruler + 54 marker = 349 above
 //   (the ruler's and the marker lane's heights derived from their faces,
-//   ruler_lane_h_px and marker_lane_h_px at render.h) and 91 below (88 + its
-//   3-row top row), leftover 1011.
+//   ruler_lane_h_px and marker_lane_h_px at render.h) and 79 below (76 + its
+//   3-row top row), leftover 1012.
 //     At 364: waveform CLAMPED at 1001 (the scaled 364), gap 1 = 0 (the
-//     midpoint rule would want 720 - 338 - 500 = -118), gap 2 = 10
-//     — 50 / 52 / 88 / 0 / 148 / 1001 / 10 / 91.
-//     At 0: waveform UNCLAMPED at 1011, both gaps 0 (the rule would want
-//     720 - 338 - 505 = -123) — 50 / 52 / 88 / 0 / 148 / 1011 / 0 / 91.
+//     midpoint rule would want 720 - 349 - 500 = -129), gap 2 = 11
+//     — 50 / 55 / 96 / 0 / 148 / 1001 / 11 / 79.
+//     At 0: waveform UNCLAMPED at 1012, both gaps 0 (the rule would want
+//     720 - 349 - 506 = -135) — 50 / 55 / 96 / 0 / 148 / 1012 / 0 / 79.
+//   2304x1440 AT gui_scale 400 (the architect's own tablet value since
+//   2026-10-05; same surface, the scale alone different): the lanes are 72
+//   caption + 80 menu + 140 icon + 64 trim + 72 ruler + 68 marker = 496 above
+//   (292 the caption and the two toolbar rows, 204 the block) and 116 below
+//   (112 + its 4-row top row), leftover 828. 364 Windows px scales to 1456,
+//   past the leftover, so BOTH readings are the same: waveform UNCLAMPED at
+//   828, both gaps 0 (the rule would want 720 - 496 - 414 = -190)
+//   — 72 / 80 / 140 / 0 / 204 / 828 / 0 / 116.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
 //   exist for; no host runs this geometry), the same at either value:
-//     leftover 385 -> waveform UNCLAMPED at 385, both gaps 0
-//     — 25 / 26 / 44 / 0 / 75 / 385 / 0 / 45. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = 300 - 170 - 192 = -62), so the
+//     leftover 388 -> waveform UNCLAMPED at 388, both gaps 0
+//     — 25 / 27 / 46 / 0 / 75 / 388 / 0 / 39. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = 300 - 173 - 194 = -67), so the
 //     waveform keeps everything, which is the rule's own floor rather than a
 //     special case.
 //
@@ -292,9 +311,13 @@ namespace {
 // the empty-lane press gate tests — so painted flags and flag hit rects move
 // with the lane by construction and cannot drift from each other.
 //
-// NO ASSET SPANS A SEAM: a marker is a single text-on-flag BOX inside ONE
-// lane, and the playhead's head sits on the ruler lane's bottom rows
-// (paint_ruler_row). Every seam — the window top|caption seam,
+// NO ASSET SPANS A SEAM, WITH ONE DELIBERATE EXCEPTION: a marker is a single
+// text-on-flag BOX inside ONE lane, and the playhead's head sits on the
+// ruler lane's bottom rows — ONE of which, its tip row, is now the marker
+// lane's own first row (architect 2026-10-05, paint_ruler_row), a reach into
+// the neighbour lane's air rather than its box, recorded at the seat's own
+// rule (kRulerBaselineToMarkerPx, render.h). Every OTHER seam — the window
+// top|caption seam,
 // caption|menu, menu|icon (tight and borderless), icon|trim (GAP 1's band;
 // where gap 1 is zero the trim
 // lane's own first row is the boundary), trim|ruler, ruler|marker, and both
@@ -329,13 +352,20 @@ namespace {
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The CAPTION lane is its 18 Windows
 // px whole (render.h's kCaptionHeightPx: the title bar's ground, its icon, its
-// title and its three buttons inside it), the MENU lane is its 19 Windows px
-// whole (the anchors' box and their labels' box both — render.h's
-// kMenuRowHeightPx), the ICON lane is its 32 content whole — the case and
-// its air (NO border since 2026-10-01 — the trim lane's own first row is the
-// boundary under it), and the UNIFIED BOTTOM ROW is its content plus a
-// one-px row of ground on top, the waveform side, where its border-top stood
-// (no line drawn since 2026-10-02).
+// title and its three buttons inside it), the MENU lane is its anchors' 19
+// Windows px PLUS a one-px foot of ground (architect 2026-10-05, Windows'
+// measured 20-px menu band — render.h's kMenuRowHeightPx and kMenuRowFootPx;
+// the anchors, their labels and the dropdown's hang point all read the
+// lane, the label's cap-centring alone reads the content underneath it), the
+// ICON lane is Windows' own menu-bar-plus-toolbar stack folded into one row —
+// an etched line pair, 3 Windows px of air, the 22-px case, 3 more of air, a
+// second etched pair and 3 of foot air, 35 whole (architect 2026-10-05,
+// render.h's kIconRowHeightPx; NO border of its own beyond that foot — the
+// trim lane's own first row is still the boundary under it), and the UNIFIED
+// BOTTOM ROW is its content — the same air-case-air band, with neither the
+// icon row's etched lines nor its foot air — plus a one-px row of ground on
+// top, the waveform side, where its border-top stood (no line drawn since
+// 2026-10-02).
 constexpr int kTopLaneCount    = 6;
 constexpr int kBottomLaneCount = 1;
 // THE LANE GAP 1 OPENS ABOVE — the first top lane whose inset carries the
