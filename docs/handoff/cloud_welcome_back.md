@@ -53,6 +53,14 @@ To settle with him: the assets and their LICENCES (an OTB trace of MS Sans Serif
 bundling), the switch (gui_scale % 100 == 0 -> bitmap mode), the strike sizes (MS Sans Serif 8 pt = the 13-px cell;
 the small 10), the bitmap face's ascent / descent — WORK THE FLAG BOX OUT ON IT (the flag's height is to be settled
 on the period font, not Roboto) — and how the icons map (Chicago95's 16 / 22 px sets vs our 23 x 22 cases).
+- THE FONT ARRIVED (2026-10-05) and is staged as fonts/crox1h.otb + crox1hb.otb (README there). MEASURED: one
+  strike, ppem 11, cell 13 = ascent 11 + descent 2; caps 9, x-height 6; printable-ASCII ink rows 1..12 of the cell
+  ("^{}" top 10 above the baseline, "()[]_gjpqy" 2 below). Roboto's advances match its widths at em ~10.8, i.e.
+  Windows' own 8 pt em of 11 px (the "13 body" is the CELL, today used as Roboto's em: 18 % wide). His rulings:
+  BUNDLE (licence settled); ROBOTO INHERITS MS SANS SERIF'S METRICS, the bitmap face the ONLY metric source, the
+  same for icons and caption glyphs (the X); a DEDICATED HISTORY ICON ROW (reopens closed_questions' 2026-08-14
+  "nothing hides a button"). Put to him with recommendations: Roboto's em, the flag box (16 W px on the ink rule),
+  the small face, the history row's membership (derived from history_mode_disables_button).
 - PENDING (put to him, unanswered; the bitmap font supersedes it for the flag): the flag box's specimen set — all
   printable ASCII (built) vs only what a resting flag shows.
 - AT 400 THE ICON ROW OVERFLOWS (Load in Place, History Newer / Older hidden, History Revert cut). Put to him,

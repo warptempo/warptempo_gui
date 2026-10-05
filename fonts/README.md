@@ -10,3 +10,7 @@ These two files are the product's faces on both devices (architect 2026-10-02): 
 Both are under the SIL Open Font License 1.1, whose text travels beside them, copied from the package: `OFL-Roboto.txt` (`/usr/share/licenses/ttf-roboto/OFL.txt`, which covers Roboto Bold too, the same family under the same licence).
 
 A retune swaps a file and re-measures the table at the head of `src/gui/gui_font_bundled.cpp`, then re-derives every comment that quotes the table's rows.
+
+## Staged for the bitmap mode (not compiled in yet)
+
+`crox1h.otb` and `crox1hb.otb` are the period faces the bitmap mode at whole-hundred scales is to draw with, under discussion (2026-10-05). They come from the architect's upload of X.Org's Cronyx Cyrillic set in OTB form, whose Latin is a pixel trace of MS Sans Serif 8 pt: Cronyx "Helvetica" Regular and Bold, the 5x13 strike (ppem 11, ascent 11, descent 2: MS Sans Serif's 13-px cell at 96 dpi), 168 glyphs (printable ASCII and the full KOI8 Cyrillic). Their name table reads "Copyright (C) 1990, 1991 EWT Consulting, Portions Copyright (C) 1994 Cronyx Ltd., Portions Copyright (C) 1996-1997 by Andrey A. Chernov". They are bundled on his ruling (2026-10-05). The licence text from the laptop's `xorg-fonts-cyrillic` package goes in beside them when they are wired.
