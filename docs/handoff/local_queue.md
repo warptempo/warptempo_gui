@@ -19,8 +19,13 @@ touches THIS FILE. So:
 - The watch's loop is free while waiting; only a WAKE costs (one turn that re-reads the session's context). Start the
   local session fresh (/clear), keep tool output small (tail builds; never cat big files), and answer one REQUEST per
   wake.
-- AT MOST 16 WAKES IN TOTAL until the weekly reset (Tuesday 2026-10-06 ~11 pm ET; raised from 8 by the architect 2026-10-05). After the 16th, or if the session's context passes ~80k tokens, append
-  `## LOCAL PAUSED (<time>): needs a fresh local session` here, commit, push, and stop re-arming the watch.
+- AT MOST 16 WAKES IN TOTAL until the weekly reset (Tuesday 2026-10-06 ~11 pm ET; raised from 8 by the architect
+  2026-10-05). After the 16th, append `## LOCAL PAUSED (<time>): wake budget spent` here, commit, push, and stop
+  re-arming the watch.
+- THE LOCAL SESSION NEVER PAUSES ON ITS CONTEXT ALONE (architect 2026-10-05: work must not stall on a fresh session
+  while he is away): it answers every REQUEST. It is REFRESHED (/clear, then this file and CLAUDE.md) at the moment
+  the cloud planner starts a NEW THREAD — the welcome-back's rewrite is when the two sessions are synchronised — and
+  otherwise only if its context passes ~250k tokens (25 %), at a quiet moment between REQUESTs, never mid-request.
 
 ## Local-only acts (what a REQUEST may ask for)
 - The picker APK: `bash tools/palette/picker/build_picker.sh`; the export `python3 tools/palette/render.py
