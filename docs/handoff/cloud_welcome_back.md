@@ -88,7 +88,7 @@ RULED:
   20 solid colours, each flag kind a dark / bright pair of the 16:
   | role | colour | | role | colour |
   |---|---|---|---|---|
-  | canvas | black #000000 | | ink | LIME #00FF00 (Sound Recorder's green trace on black) |
+  | canvas | black #000000 | | ink | LIME #00FF00 (Sound Recorder's trace, MEASURED on his Windows 98 screenshot 2026-10-05: #00FF00 on #000000) |
   | lit outline | green #008000 | | playhead head / stem | gray #808080 / white #FFFFFF |
   | warp flag / selected | purple #800080 / fuchsia #FF00FF | | phase-reset flag / selected | teal #008080 / aqua #00FFFF |
   | history removed AND invalid / selected | maroon #800000 / red #FF0000 | | history added / selected | olive #808000 / yellow #FFFF00 |
