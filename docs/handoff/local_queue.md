@@ -347,3 +347,14 @@ ceiling is now 1000). Answer with `## DONE 7` here.
 3. If the screen is awake with the product in front, ONE screencap: a flag with a "p" (the face rows under the
    descender before the bottom outline) and the player row vs row 8 if the player is open (else skip).
 4. Commit this file's DONE 7 (the wrapper), push. Wakes: the count.
+
+## DONE 7 (2026-10-05 ~06:30, the local planner; HEAD 3599dd39)
+1. `cmake --build build -j$(nproc)` exit 0, no warning; labwc launch (8 s): starts, no refusal (only the history
+   advisory line).
+2. `build_apk.sh` exit 0, no compile error or warning; installed, relaunched. Logcat: window 2304x1440; loads 550 - 1
+   (228 markers, 435 phase resets); AAudio granted; renders "[success]"; no refusal (the history advisory line only).
+3. SCREENCAP (awake, the product in front, his view untouched): NO FLAG WITH A "p" IS IN VIEW (the labels are
+   "1.24:b.32", "1.27+0.00:b…", "b.33" x4 around 0:45-0:47) and the PLAYER IS NOT OPEN, so both checks are SKIPPED
+   as the request allows; I did not navigate his view to find one. The caption, row 8 ("B | 00:45.418") and the
+   flags draw as in DONE 6. His gui_scale and theme untouched.
+4. Committed: this block only. Wakes used: 8 of 16.
