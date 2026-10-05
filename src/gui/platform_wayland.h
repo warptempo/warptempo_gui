@@ -99,14 +99,13 @@ public:
     // at load, file_loader.cpp — the folder is the project's name, distinct from
     // the audio filename and from the output `title=` settings key).
     //
-    // THE TITLE CARRIES NO DIRTY MARK (architect 2026-09-09: "it should only
-    // show up in the bottom. Otherwise it becomes a duplicate signal, and we
-    // avoid those in this project"): row 8's clock wears the `*` suffix read
-    // straight out of app.dirty, on both backends, and it is the product's ONE
-    // dirty indicator. `set_title_dirty` — the seam member the flag was pushed
-    // through from 2026-08-01 — is deleted on both backends with the mark it
-    // carried, and the title is the project name and the binary name, nothing
-    // else.
+    // THE TITLE CARRIES NO DIRTY MARK (architect 2026-09-09: "Otherwise it
+    // becomes a duplicate signal, and we avoid those in this project"): the
+    // product's ONE dirty indicator is the Save button's grey, on both
+    // backends (architect 2026-10-05, plain_save_actionable, app_state.h).
+    // `set_title_dirty` — the seam member the flag was pushed through from
+    // 2026-08-01 — is deleted on both backends with the mark it carried, and
+    // the title is the project name and the binary name, nothing else.
     //
     // THE TITLE IS COMPOSITOR-SIDE TEXT: labwc shapes and paints the titlebar,
     // so the product's one-face HarfBuzz rule (which governs pixels WE paint)

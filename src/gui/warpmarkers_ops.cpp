@@ -622,8 +622,8 @@ bool tempo_flatten_actionable(const AppState& app, TempoFlattenKind kind) {
 // would hand back the identical render for its trouble.
 //
 // WHAT IT DOES OWE is the MARKER LANE — the flag's painted text is the one
-// thing on screen that moves — and the dirty mark, whose own damage
-// recompute_dirty owns.
+// thing on screen that moves — and the dirty flag, which recompute_dirty
+// derives and Save's face reads.
 void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
     // SILENT, the sibling verbs' shape: the dispatch arm asks this same
     // predicate ahead of the call so it can NAME the refusal on a card, and

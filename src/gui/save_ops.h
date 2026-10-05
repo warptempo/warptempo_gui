@@ -14,13 +14,10 @@
 // target; the phase-reset file is its sibling; the .settings
 // write is required too, so any of the three failures keeps the save dirty.
 //
-// NO Viewport REFERENCE any more (2026-08-01): a save paints nothing of its
-// own. Its one damage request was the bottom row's dirty-mark cell, and that
-// damage now belongs to the derive owner instead: Undo::recompute_dirty (the
-// note_saved tail below) invalidates the row ON THE TRANSITION alone, so a
-// save that actually cleans the flag is repainted by it and one that changes
-// nothing costs no repaint. Row 8's `*` is the mark's one surface (2026-09-09,
-// the window title's second asterisk deleted with it).
+// NO Viewport REFERENCE (2026-08-01): a save paints nothing of its own. Its
+// one picture is the Save button greying as the flag falls (architect
+// 2026-10-05, SAVE IS THE DIRTY MARK: plain_save_actionable, app_state.h),
+// which the roster's per-tick face comparator repaints (main.cpp).
 //
 // ONE REFUSAL IS NOT ABOUT THE DATA (2026-08-08): a save is refused outright
 // while a Save-and-Commit checkpoint is publishing, because that background act
@@ -60,4 +57,18 @@ struct GuiSaveOps {
           notifications(notifications_) {}
 
     bool save();
+
+    // THE KEYS' PLAIN SAVE (architect 2026-10-05, SAVE IS THE DIRTY MARK):
+    // every Ctrl+S road outside the `h` view — on_key's arm, the editors'
+    // two modal arms (route_modal_editor_key) and the picker's router —
+    // reaches the owner through this, which asks plain_save_actionable
+    // (app_state.h, the ruling and its trade-off) first. WITH NOTHING TO
+    // SAVE THE PRESS IS SILENT: no write and no card, the button's grey being
+    // the answer — the `h` view's own Ctrl+S over an empty head delta is the
+    // precedent (notifications.h's one-thing-in-one-place silences). Ctrl+S is
+    // a chord the product binds (chord_is_bound), and this arm consumes it,
+    // so the unbound-key deduction never sees it. A dirty session takes save()
+    // whole, its in-flight card and write cards included. The close prompt's
+    // Save answer and the checkpoint act's prelude call save() itself.
+    void save_from_key();
 };

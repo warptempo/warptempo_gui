@@ -1748,7 +1748,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 open_history_commit_editor();
                 return;
             }
-            save_ops.save();
+            // A CLEAN SESSION'S CTRL+S IS SILENT (architect 2026-10-05): the
+            // `h` view's Ctrl+S over an empty head delta is the precedent,
+            // the greyed Save the answer (GuiSaveOps::save_from_key).
+            save_ops.save_from_key();
             return;
         }
         // SHIFT+S DROPS A PHASE RESET FROM THE WARP COLUMN'S EITHER VIEW

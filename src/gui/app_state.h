@@ -8056,7 +8056,8 @@ struct AppState {
     // app.dirty = warp_dirty || phase_reset_dirty || settings_dirty,
     // recomputed after every persistent push/undo/redo by walking
     // saved_distance against each persistence-affecting entry's op_mode.
-    // Drives both the unsaved-work dialog and the dirty-dot.
+    // Drives both the unsaved-work dialog and Save's face
+    // (plain_save_actionable, architect 2026-10-05: Save is the dirty mark).
     //
     // Authoring-class settings — the six engine-block keys (title, scale,
     // bpm, notes, url, cover; editor commits carry undo history) — participate
@@ -8064,8 +8065,9 @@ struct AppState {
     // (viewport/zoom/playhead per tab, active_audio_view,
     // active_markers_view, active_tab_view, trim,
     // read_only, projects_repo) — do
-    // NOT participate: they are silently persisted on Ctrl+S and not tracked as
-    // dirty, so quitting without saving simply drops them. The DEVICE key
+    // NOT participate: they are persisted only by a save of an authored
+    // change (Save greys without one, plain_save_actionable) and not tracked
+    // as dirty, so quitting without saving simply drops them. The DEVICE key
     // gui_scale is outside this question entirely since
     // 2026-08-27: it is not in the sidecar at all, and its commit writes the
     // device config immediately (device_config.h). Trim is
@@ -11866,10 +11868,8 @@ std::pair<long long, long long> compute_trim_samples(
 // strings are BACK ON THIS ROW as the STATE CELL, right of the clock, under
 // Viewport::invalidate_status_cell_area — which takes the LANE WHOLE, the cell
 // reserving no width of its own to erase inside — after one day on a status
-// bar of their own. THE DIRTY MARK IS ON THIS ROW TOO since 2026-09-09, but
-// not as a tenant: it is `*` inside the CLOCK's run (the clock's suffix, not
-// the state's prefix, so it stands with no state string beside it), damaged
-// through that same lane owner on the flag's transitions alone. And the two
+// bar of their own. (The dirty `*` that rode the clock's run from 2026-09-09
+// retired 2026-10-05, Save's grey being the mark.) And the two
 // families that
 // shared the old owner — the string writers and the dialog editors' repaint
 // sites — are two populations with two owners, each inventoried at its own
@@ -13223,6 +13223,29 @@ inline bool history_github_recheck_actionable(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
            !a.history_checkpoint_in_flight &&
            a.github_status == GuiGitHubStatus::Offline;
+}
+
+// IS THERE ANYTHING TO SAVE? — THE PLAIN SAVE'S ONE PREDICATE, and SAVE IS THE
+// DIRTY MARK (architect 2026-10-05): outside the `h` view the Save button
+// greys exactly when this is false, so the icon itself tells whether the
+// markers or anything else that reaches the render has changed since the
+// last save — the clock's `*` that said so retired the same day (it did not
+// fit the panel). IT IS THE DIRTY FLAG ALONE (AppState::dirty, derived from
+// the undo history against the saved point, so undoing back to the saved
+// state greys Save again): the marker stores and the engine keys light it,
+// and nothing else does. THE ACCEPTED TRADE-OFF (architect 2026-10-05: "trim
+// is transient... disposable; this way I can rely on the save icon to always
+// tell me if markers or anything related to the render changed"): the
+// sidecar's non-undo keys — the per-tab camera and playhead, the active
+// views, the TRIM window and the READ-ONLY lock — never light it, so a
+// trim-only or lock-only change is not saved on its own; it reaches disk
+// only with the next save of an authored change, and a clean quit drops it.
+// TWO READERS: redesign_button_enabled's Save arm (the face) and
+// GuiSaveOps::save_from_key (the keys, which answer a clean session with
+// silence). The close prompt asks the flag itself (GuiPrompt), and the `h`
+// view's Save is the checkpoint act, with predicates of its own above.
+inline bool plain_save_actionable(const AppState& a) {
+    return a.dirty;
 }
 
 // THE WALK'S TWO WALLS, one predicate per direction (architect 2026-08-30):
@@ -15572,7 +15595,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // predicate instead, so the button greys exactly where it always did.
         // OUTSIDE THE VIEW THE TERM IS VACUOUS by construction — the predicate
         // carries the mode bit — the button being the plain disk save there,
-        // which has no delta to ask about.
+        // which has no delta to ask about and asks the dirty flag instead
+        // (below).
         //
         // AND IN THE VIEW THE GITHUB STATUS IS A TERM (architect 2026-09-27):
         // the face is live where the chord would commit, retry the push,
@@ -15580,13 +15604,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // (history_checkpoint_actionable, history_pull_actionable,
         // history_github_recheck_actionable), and grey on Checking, Refused,
         // Diverged and Unchecked, whose cards are the key's.
+        //
+        // AND OUTSIDE THE VIEW SAVE GREYS WITH NOTHING TO SAVE (architect
+        // 2026-10-05, SAVE IS THE DIRTY MARK): plain_save_actionable, the
+        // one predicate the keys read too (the ruling and its trade-off are
+        // there).
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
-                   (!a.history_mode.active ||
-                    history_checkpoint_actionable(a) ||
-                    history_pull_actionable(a) ||
-                    history_github_recheck_actionable(a));
+                   (!a.history_mode.active
+                        ? plain_save_actionable(a)
+                        : (history_checkpoint_actionable(a) ||
+                           history_pull_actionable(a) ||
+                           history_github_recheck_actionable(a)));
         // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-CURRENT-VIEW
         // LAMP (architect 2026-09-04; its question the view since 2026-09-22),
         // and it is the truthful-button rule's own shape: with the lamp lit

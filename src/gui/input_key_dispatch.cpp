@@ -3268,8 +3268,8 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // the architect's own workflow, where the loaded source LIVES in the matched
 // projects/<id>/ and the act's repo write therefore IS the working sidecar set:
 // the bytes on disk were exactly a save's and the session still showed the
-// dirty mark (which rode the window title in that era and is row 8's clock
-// suffix now). So the prelude below is the REAL Ctrl+S, through its one owner
+// dirty mark (which rode the window title in that era and is the Save
+// button's grey now). So the prelude below is the REAL Ctrl+S, through its one owner
 // (GuiSaveOps::save — the same three atomic writes beside the source, the same
 // per-write stderr, the same note_saved tail — the reference move, the
 // coalescing stamp's clear and the dirty refold), never a second
@@ -6685,7 +6685,7 @@ bool GuiInputHandler::route_modal_editor_key(
             return true;
         }
         if (ctrl && !shift && !alt && key == GuiKeys::S) {
-            save_ops.save();
+            save_ops.save_from_key();
             return true;
         }
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
@@ -6724,7 +6724,7 @@ bool GuiInputHandler::route_modal_editor_key(
         return true;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
-        save_ops.save();
+        save_ops.save_from_key();
         return true;
     }
     // CTRL+Q: HAND THE CLOSE ROUTING ON, TEARING NOTHING DOWN HERE. The
@@ -7159,9 +7159,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // since 2026-09-02, and the checkpoint-in-flight arm since 2026-09-24,
     // which this arm asked ahead of the call until the owner carded it
     // itself. The empty-sidecar-path belt keeps its silence, having no
-    // producer.
+    // producer, and so does a clean session (save_from_key, architect
+    // 2026-10-05: nothing to save, Save greyed).
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
-        save_ops.save();
+        save_ops.save_from_key();
         return true;
     }
     // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,

@@ -65,14 +65,14 @@ struct GuiInputHandler;
 // AND A SAVE ENDS THE BURST (architect 2026-09-02): Ctrl+S moves the saved
 // reference onto the burst's LIVE state without touching a stack top, and a
 // merge after it would rewrite that very state with no entry between it and
-// the file — the dot reading clean over a store that differs from disk. So the
+// the file — the flag reading clean over a store that differs from disk. So the
 // save clears the stamp at the owner (Undo::note_saved, the save's one tail)
 // and the next press opens its own entry; the derivation is at note_saved.
 // AND A BURST THAT NETS TO ZERO POPS ITS OWN ENTRY (architect 2026-09-01, the
 // byte-equal pop): a merge skips the push and skipped the push sites' NET
 // CHANGE gate with it, so a tap Right then a tap Left inside the window left an
 // entry byte-equal to the live store — one Ctrl+Z that changed nothing, over a
-// dirty dot that stayed lit. The merge tail now asks the producers' own
+// Save that stayed lit. The merge tail now asks the producers' own
 // question post-mutation and takes the entry back off the stack when the answer
 // is equal. The rule, its reach and what it deliberately does not give back are
 // at Undo::record_gesture.
@@ -307,7 +307,7 @@ struct Undo {
     //     when the burst's surviving entry would restore the marker stores that
     //     are ALREADY LIVE — a tap Right then a tap Left inside kTapCoalesceMs
     //     — the entry comes off the undo stack, the stamp is cleared and the
-    //     dirty dot is re-derived, so the burst dissolves as if it had never
+    //     dirty flag is re-derived, so the burst dissolves as if it had never
     //     happened and the next press opens its own entry. This is the
     //     commit-on-NET-CHANGE principle every PUSH site already gates on
     //     (stated at marker_drag.cpp's commit), extended to the one path that
@@ -350,7 +350,7 @@ struct Undo {
     // the reference staying at the burst's live state while the store walks
     // away from the file, and the byte-equal pop then stepping it onto a redo
     // entry that does not exist. With the stamp cleared the next eligible press
-    // opens its own entry and the dot comes back on. CALLERS, one: GuiSaveOps::
+    // opens its own entry and Save lights again. CALLERS, one: GuiSaveOps::
     // save, on its success path — the Save-and-Commit prelude reaches it
     // through that same owner. THE FILE LOAD NEEDS NO CALL: it resets the
     // history whole (UndoHistory::reset, file_loader.cpp), and the surviving

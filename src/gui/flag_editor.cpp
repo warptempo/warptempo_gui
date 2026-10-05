@@ -713,7 +713,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // 2026-09-18): a commit that only RESPELLS — `1.24` typed as
     // `1.23+0.01` — moves no total and no other field, so without this term
     // the edit would leave the file changed with no undo entry behind it and
-    // no dirty mark on the clock.
+    // no Save lit (the dirty mark).
     const bool canonical_changed =
         m.tempo_inherits != before.tempo_inherits ||
         m.tempo_cents    != before.tempo_cents ||

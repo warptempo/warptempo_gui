@@ -448,8 +448,7 @@ struct Viewport {
     //
     // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-27 —
     // membership is "this route changes what the LANE shows", which is the
-    // progress line's writers and the dirty mark's one transition owner, ten
-    // sites:
+    // progress line's writers, nine sites:
     //   * input_render_dispatch's THREE (the promote, the BATCH'S OWN WRITE at
     //     each cell's dispatch — which took the park's retraction's place in
     //     this list on 2026-09-11, a sweep's line being state — and
@@ -458,16 +457,10 @@ struct Viewport {
     //     clear, the TWO context-ending clears — the target view leaving and
     //     the T->S exit — the render-done failure clear and the completion
     //     tail's guarded one);
-    //   * undo's ONE, Undo::recompute_dirty's tail — THE DIRTY MARK (architect
-    //     2026-09-09), row 8's `*` on the clock's own run, inside the clock
-    //     cell's reserved width — so since the state took its own panel
-    //     (2026-10-02) the lane is a superset of what it moves. It is the one
-    //     member that is not a cell string at all: the painter reads app.dirty
-    //     directly, so the derive-owner owes the damage, and it owes it ONLY
-    //     WHERE THE FLAG MOVED — that body runs after every command, and an
-    //     unconditional call would repaint the row on every keypress. The
-    //     load's own dirty reset is the flag's other transition and is not
-    //     here, being a whole-window route by the rule below.
+    // (Undo::recompute_dirty's tail was the tenth until 2026-10-05, damaging
+    // the lane for row 8's dirty `*` on a transition; the mark retired, SAVE
+    // BEING THE DIRTY MARK — architect, plain_save_actionable — and Save's
+    // face is repainted by the roster's per-tick comparator.)
     // The `h` WALK LINE has no site of its own here and never did: it rides
     // the mode's edges, which invalidate the whole window. The file loader's
     // "Loading..." likewise damages the window whole.
@@ -597,7 +590,7 @@ struct Viewport {
     // the trim commit writers all kept their clock call above and dropped the
     // other one. Nothing on this row pairs with a second surface any more —
     // the STATE CELL that replaced the readout is damaged by the progress
-    // line's writers and the dirty mark's owner (invalidate_status_cell_area
+    // line's writers (invalidate_status_cell_area
     // above, whose inventory is authoritative), and its rect
     // is this row's whole lane, which covers this cell as a superset where a
     // route does spell both.) Routes that damage the

@@ -409,7 +409,7 @@ enum class Icon {
     // architect's desktop paints beside a folder row (pcmanfm-qt and
     // kdenlive's Open dialog alike), and mimetypes/22/audio-x-wav, the glyph
     // pcmanfm-qt paints beside a wav — a bracket-shaped double note, the
-    // file's literal Breeze blue converted to the ink (kIconWav, icons.cpp;
+    // file's literal Breeze blue (kIconWav, icons.cpp;
     // audio-x-generic is never a row glyph, the architect's ruling). Both are painted by
     // folder_overlay rows (paint_handler.cpp) and by nothing else; the names
     // are their Breeze file names, the theme-provenance rule.

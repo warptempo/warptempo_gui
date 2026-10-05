@@ -637,14 +637,9 @@ GuiRect top_marker_row_area(const AppState& a) {
 // walk, the four cardinal arrows and the transport three, at the icon row's
 // boxes, eight Windows px of bare ground between two groups (architect
 // 2026-09-29; the separators retired 2026-10-02).
-// THE DIRTY MARK
-// IS A TENANT HERE, AND IT IS THE ONLY ONE: the clock wears the `*` suffix
-// while app.dirty stands (paint_bottom_row_buttons_and_clock appends it; the
-// transition is the lane's own damage, Undo::recompute_dirty's tail, and
-// paint_handler.cpp carries the ruling). The Wayland title carried a SECOND
-// asterisk until 2026-09-09, when the architect ruled the duplicate signal off
-// — the title is the project name alone now on both backends, and the seam
-// member that pushed the flag is deleted. THE LANE IS THE ICON ROW'S
+// THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
+// 2026-10-05, plain_save_actionable), the clock's `*` suffix retired, and the
+// title is the project name alone on both backends. THE LANE IS THE ICON ROW'S
 // HEIGHT since 2026-08-14, its content and border both delegating to that
 // row's accessors.
 // bottom_row_area is the lane INCLUDING its 1px top row (the waveform side,
@@ -1107,17 +1102,10 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
 // whose rect is the lane WHOLE — see the record just above.
 //
-// THE TAB LETTER AND THE DIRTY MARK ARE INSIDE THIS CELL (architect
-// 2026-10-01): row 8's run is `A | `, the timestamp, then the `*` glued to it
-// while the tab is dirty, and the reserved cell holds the mark's one cell
-// whether or not it is painted, so a per-second tick repaints letter, digits
-// and mark together. The mark changes only when app.dirty moves — the letter
-// before the digits never moves with it — and THAT transition damages the
-// lane whole through Viewport::invalidate_status_cell_area
-// (Undo::recompute_dirty's tail) — a superset, the mark's one cell being
-// inside this cell's reserved width, the run's origin independent of it
-// (centred by half the mark's advance, 2026-10-03) and nothing beside it
-// moving.
+// THE TAB LETTER IS INSIDE THIS CELL (architect 2026-10-01): row 8's run is
+// `A | ` then the timestamp, so a per-second tick repaints letter and digits
+// together. (The cell reserved one more cell for the dirty `*` until the mark
+// retired, architect 2026-10-05, Save's grey being the mark.)
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame

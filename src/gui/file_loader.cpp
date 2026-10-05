@@ -466,15 +466,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // Undo::recompute_dirty (it assigns the four flags outright); that tail is
     // the other transition site, and those two are the whole inventory, since
     // the four flags above have no other writer in the tree.
-    // ROW 8'S `*` — the mark's ONE surface since 2026-09-09, the window
-    // title's own asterisk having been deleted as a duplicate signal — NEEDS
-    // NO DAMAGE CALL HERE, unlike at that tail: the mark is painted from
-    // app.dirty directly, and this body invalidates the WHOLE WINDOW on both
-    // sides of this assignment — at the `Loading...` frame above and again at
-    // the return below — so the lane is covered as a superset (the
-    // whole-window routes are deliberately unlisted in
-    // invalidate_status_cell_area's caller inventory, viewport.h). So this
-    // site pushes nothing at all any more.
+    // The flag's one picture, the Save button's grey (architect 2026-10-05,
+    // plain_save_actionable), needs no damage call here: this body
+    // invalidates the WHOLE WINDOW on both sides of this assignment — at the
+    // `Loading...` frame above and again at the return below.
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
         std::fprintf(stderr,
             "warptempo_gui: Source load aborted: invalid warp markers in "

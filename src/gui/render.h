@@ -156,7 +156,7 @@ struct TrimRange {
 //                 bar: ButtonFace / ButtonText): `clock_ground` fills the
 //                 panel inside its STATUS SUNKEN line, which keeps the
 //                 quartet's Shadow / Hilight, and `clock_text` is the clock's
-//                 run — the tab letter, the digits, the dirty mark
+//                 run — the tab letter and the digits
 //                 (paint_bottom_row_buttons_and_clock). The render player's
 //                 modal clock stands in no panel, on the row's ground, and so
 //                 keeps the label;

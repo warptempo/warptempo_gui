@@ -61,10 +61,8 @@
 // 2026-08-29 and the bar back into row 8's own cell that evening — none of
 // which changed a glyph. Every NOTIFICATION CARD's line is the sans,
 // shaped and painted through the ONE chokepoint like every other redesigned
-// row (paint_notifications, 2026-08-29). (The dirty mark left this row for
-// the WINDOW TITLE on 2026-08-01 — labwc painted it — and is back on the row
-// since 2026-09-09 as `*` inside the CLOCK's own run, the title's asterisk
-// deleted the same day as a duplicate signal.)
+// row (paint_notifications, 2026-08-29). (The dirty mark that rode this row
+// retired 2026-10-05, Save's grey being the mark.)
 //
 // The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen —
 // belongs to the clock and lives at its own metrics, re-derived on the
@@ -146,15 +144,10 @@ static void show_row_text_embossed(cairo_t* cr, cairo_scaled_font_t* font,
 // right-alignment, its tabs-win-by-paint-order collision rule
 // and its `h`-view overlap with the tabs all went with the bar's landing.
 //
-// THE DIRTY MARK IS NOT A TENANT EITHER — it is THE CLOCK'S SUFFIX (architect
-// 2026-09-09): `*` after the timestamp's digits while the tab is dirty,
-// inside the clock's own unclipped run, so it stands with or without a state
-// string beside it and reserves no width of its own. It rode the WINDOW TITLE
-// alone from 2026-08-01 until then — the tablet, which has no titlebar and so
-// had no dirty indicator at all, is why it moved onto the row the two backends
-// share — and the title's own asterisk was DELETED the same day (architect:
-// "otherwise it becomes a duplicate signal, and we avoid those in this
-// project"), so this is the mark's one surface on both machines.
+// THE DIRTY MARK IS NOT A TENANT EITHER: the row carries none since
+// 2026-10-05, SAVE'S GREY BEING THE MARK (architect; plain_save_actionable,
+// app_state.h). It stood here as the clock's `*` suffix from 2026-09-09, and
+// in the window title before that.
 
 // (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
 // DIED 2026-08-12 when the editors became dialogs: the settings, load,
@@ -2190,14 +2183,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // Windows px (2026-10-02, the Windows case; the verb group six since
     // 2026-09-29 evening). In device px, off the painted walk: 17·32 + 3·11 =
     // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, and the
-    // clock cell — fourteen monospace cells since 2026-10-01, the nine of
-    // `00:00.000`, the tab letter's `A | ` and the dirty mark's reserved one,
-    // ~9.9 px each at 16.56 px — spanning 11..~150, its panel 7..~154, the
-    // state line from one group space past it, ~165, clipped one group space
-    // short of the block at 1321 (~1156 px); at the tablet's 275 % 17·63 +
-    // 3·22 = 1137, starting at 2304 − 22 − 1137 = 1145, the clock (~19.8 px
-    // cells) ending at ~300, its panel at ~308, the state line ~330..1123
-    // (~793 device px). THE ROW CARRIES NO
+    // clock cell — thirteen monospace cells since 2026-10-05 (the dirty mark's
+    // reserved fourteenth retired with the mark), the nine of `00:00.000` and
+    // the tab letter's `A | `, ~9.9 px each at 16.56 px — spanning 11..~140,
+    // its panel 7..~144, the state line from one group space past it, ~155,
+    // clipped one group space short of the block at 1321 (~1166 px); at the
+    // tablet's 275 % 17·63 + 3·22 = 1137, starting at 2304 − 22 − 1137 =
+    // 1145, the clock (~19.8 px cells) ending at ~280, its panel at ~288, the
+    // state line ~310..1123 (~813 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 350 ceiling: the block reaches the clock's
@@ -2257,43 +2250,24 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             clock_cell_metrics(font, size_px);
         // THE ACTIVE TAB'S LETTER LEADS THE CELL (architect 2026-10-01, the
         // tab row deleted as "a waste of space"): `A | 00:45.115` — the
-        // letter, a space, the LITERAL pipe, a space, then the timestamp, the
-        // dirty mark glued to the timestamp's end when the tab is dirty
-        // (`A | 00:45.115*`, the block below). IT LED FROM THE SAME NIGHT'S
-        // GLASS PASS: the first order, "timestamp, space, pipe, space, tab",
-        // put the letter after the mark, so every dirty transition moved the
-        // letter one cell over ("whenever the dirty dot is enabled it moves
-        // the letter one character over. Let's swap them back so the tab name
-        // comes before the timestamp"). THE DIGITS STILL NEVER WALK: their
-        // origin is the cell's x plus the prefix's advance, and the prefix is
-        // fixed per tab — monospace, four cells, the letter one of them — so
-        // within a tab the digits stand where they stood, and only the mark,
-        // at the run's far end, comes and goes. THE RESERVED CELL IS THE
-        // PREFIX, THE DIGITS' SPECIMEN AND THE MARK TOGETHER — the mark's
-        // cell reserved whether or not it is painted, so it closes the cell
-        // in both states and the per-tick damage box below repaints it with
-        // the digits; the specimen itself stays the timestamp's alone, which
-        // is what the render player's modal clock reads. Both advances are
+        // letter, a space, the LITERAL pipe, a space, then the timestamp. THE
+        // DIGITS NEVER WALK: their origin is the cell's x plus the prefix's
+        // advance, and the prefix is fixed per tab — monospace, four cells,
+        // the letter one of them. THE RESERVED CELL IS THE PREFIX AND THE
+        // DIGITS' SPECIMEN — the specimen the timestamp's alone, which is
+        // what the render player's modal clock reads. Both advances are
         // measured off the live strings (the letter changes only on a tab
-        // switch, whose clock damage covers the whole cell).
-        // THE RUN IS CENTRED IN THE CELL (architect 2026-10-03, asked twice:
-        // the letter stood tight against the panel's left line while the
-        // reserved mark left a cell of air on the right): the run starts HALF
-        // THE MARK'S ADVANCE after the cell's origin, so the prefix and the
-        // digits stand centred in the fixed cell and, when the tab is dirty,
-        // the mark glued to the digits lands in the right half. mark_w / 2 is
-        // a double and the run is placed at that fractional x, like every
-        // shaped run on this row. NOTHING WIGGLES ON A DIRTY TRANSITION: the
-        // run's origin does not depend on whether the mark is painted. The
-        // cell's origin, its reserved width, the panel and the damage box are
-        // unchanged by the split.
+        // switch, whose clock damage covers the whole cell). THE RUN FILLS
+        // THE CELL from its origin, so the panel's pad stands alike on both
+        // sides of it — centred (architect 2026-10-03). (The cell reserved a
+        // fourteenth cell's width for the dirty mark `*` glued to the digits,
+        // and the run started half of it in, until the mark retired, SAVE
+        // BEING THE DIRTY MARK — architect 2026-10-05, plain_save_actionable.)
         const std::string tab_prefix =
             std::string(1, app.active_tab_view) + " | ";
-        const double mark_w =
-            text_shape::shape_text_run(font, "*").width_px;
         const double prefix_w =
             text_shape::shape_text_run(font, tab_prefix).width_px;
-        const double cell_w = prefix_w + clock_metrics.cell_w + mark_w;
+        const double cell_w = prefix_w + clock_metrics.cell_w;
         // THE CELL STARTS AT THE LANE'S LEFT PAD (architect 2026-09-29, the
         // transport having moved to the row's right end). THE AIR IS A MARGIN
         // MIRROR: the row's last button keeps one lane pad from the lane's
@@ -2316,9 +2290,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //   roles), from
         //   kStatusPanelPadPx left of the reserved cell to as far past its end
         //   (the cell's width ceiled, as its damage box is). Its width is
-        //   fixed per tab — the cell reserves the dirty mark's one cell
-        //   whether or not it is painted, and the letter is one monospace
-        //   cell — so the state line never moves.
+        //   fixed per tab — the letter is one monospace cell — so the state
+        //   line never moves.
         //   THE STATE LINE: on the row's ground, no panel, from one group
         //   space (the eight Windows px of bare ground that stand between
         //   every two groups on this row) right of the panel's right line,
@@ -2398,9 +2371,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // TWO FACES (architect 2026-10-03, superseding the second status
         // panel at the small face of 2026-10-02, which had itself superseded
         // the one monospace run of 2026-08-31, `A | 00:00.100 | Updating...`):
-        //   * THE CLOCK — the tab letter's prefix, the digits and the dirty
-        //     mark, the monospace face at the clock's size, centred in the
-        //     cell (the block above). IT IS NEVER CLIPPED: the row's
+        //   * THE CLOCK — the tab letter's prefix and the digits, the
+        //     monospace face at the clock's size, filling the cell (the block
+        //     above). IT IS NEVER CLIPPED: the row's
         //     crop-at-its-floor allowance (the block above) is what covers the
         //     narrow window where the right block has already walked over this
         //     ground.
@@ -2421,34 +2394,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     the GitHub word before the scale (history_walk_line, architect
         //     2026-09-29). With no span left nothing is shown.
         //
-        // AND THE DIRTY MARK IS THE CLOCK'S SUFFIX (architect 2026-09-09):
-        // `*` immediately after the digits while the tab carries unsaved work,
-        // so the panel reads `A | 00:00.100*`. IT CLOSES UP ON THE CLOCK
-        // (architect 2026-09-10, "remove the space between the timestamp and
-        // the dirty dot"): the mark belongs to the timestamp, and a space read
-        // as a separator between two things rather than as one thing marked.
-        // It is STATE by this product's own split — true right now, replaced
-        // as it changes, never timed out and never cleared by a press — which
-        // is what puts it on row 8; and it rides THE CLOCK'S RUN rather than
-        // state line because it must stand whether or not a state string does.
-        // THE TABLET IS WHY IT MOVED HERE. The mark's only home was the window
-        // title, which labwc paints and a fullscreen NativeActivity has none
-        // of, so the tablet showed unsaved work nowhere at all. THE TITLE'S
-        // ASTERISK WENT the same day (architect 2026-09-09: "it should only
-        // show up in the bottom. Otherwise it becomes a duplicate signal, and
-        // we avoid those in this project"), taking the seam's set_title_dirty
-        // with it, so this suffix is the product's ONE dirty indicator.
-        // ITS DAMAGE IS THE TRANSITION'S, NOT THE FRAME'S: Undo::recompute_dirty
-        // invalidates this lane when and only when app.dirty moves, because
-        // that body runs after every command and an unconditional invalidate
-        // would repaint the row on every keypress for a mark that did not move.
-        // The reserved clock CELL holds the mark's one cell whether or not it
-        // is painted (the cell's head above), so the per-second tick's damage
-        // box covers the mark in both states, and since the run's origin does
-        // not depend on the mark and the state line starts past the fixed
-        // panel, the transition moves nothing else — the lane-whole damage is a
-        // superset (clock_invalidate_rect's record, main.cpp). The letter
-        // leads the run and never moves with the mark (2026-10-01).
+        // THE CLOCK CARRIES NO DIRTY MARK (architect 2026-10-05): the `*` it
+        // carried as its suffix from 2026-09-09 (the window title's asterisk
+        // before that) retired, SAVE'S GREY BEING THE MARK on both machines
+        // (plain_save_actionable, app_state.h).
         // THE ROW YIELDS WHOLE TO A MODAL,
         // so the panel and the line are hidden while a prompt, a dialog editor, the
         // render player or the picker stands
@@ -2468,13 +2417,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // class (it is the only feedback on the loading frame).
             state = app.queue_progress_text;
         }
-        // THE CLOCK, UNCLIPPED — the tab letter's prefix, the digits, then
-        // the dirty mark glued to them, all one run, so the digits stand at
-        // the prefix's advance by construction; the run's origin half the
-        // mark's advance into the cell (the centring rule above).
-        std::string clock = tab_prefix + format_timestamp(seconds);
-        if (app.dirty) clock += "*";
-        show_row_text(cr, font, static_cast<double>(cell_x) + mark_w / 2.0,
+        // THE CLOCK, UNCLIPPED — the tab letter's prefix and the digits, one
+        // run from the cell's origin, so the digits stand at the prefix's
+        // advance by construction.
+        const std::string clock = tab_prefix + format_timestamp(seconds);
+        show_row_text(cr, font, static_cast<double>(cell_x),
                       baseline, clock, palette().clock_text);
         if (state_w > 0 && !state.empty()) {
             // The normal face, selected on the context after the clock's run
@@ -4931,12 +4878,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // restate what that row says in its own vocabulary. THE A / B LETTER IS
     // HERE, though, since 2026-10-01: the tab row that showed it is deleted,
     // and the letter leads the clock cell (paint_bottom_row_buttons_and_clock
-    // owns the rule). The dirty mark's SECTION stays gone —
-    // it has no cell of its own and reserves no width — but the mark itself is
-    // back on this row since 2026-09-09, as the CLOCK'S SUFFIX inside the
-    // clock's run (`*`, the block in paint_bottom_row_buttons_and_clock), and
-    // it is the only dirty indicator the product has: the window title's own
-    // asterisk was deleted the same day as a duplicate signal.
+    // owns the rule). The row carries no dirty mark: Save's grey is the mark
+    // (architect 2026-10-05, plain_save_actionable).
     //
     // The row paints on EVERY frame class (loading, blank, loaded) like the
     // redesigned rows above it: the clock reads 00:00.000 with no source, and

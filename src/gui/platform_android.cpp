@@ -889,11 +889,11 @@ int GuiPlatform::height() const { return height_; }
 // go. The setter is therefore a silent no-op. It is not deleted because the
 // GUI calls it unconditionally from the load path, and the seam's promise is
 // that a consumer compiles against either backend unchanged.
-// UNSAVED WORK IS SHOWN HERE like anywhere else: since 2026-09-09 the dirty
-// mark is ROW 8'S `*`, painted by the portable painter out of app.dirty, and
-// it is the ONE dirty indicator on both backends — the title's own asterisk is
-// deleted, and the seam's set_title_dirty with it, so this backend has no
-// second setter to no-op.
+// UNSAVED WORK IS SHOWN HERE like anywhere else: the dirty mark is the SAVE
+// BUTTON'S GREY (architect 2026-10-05, plain_save_actionable), painted by the
+// portable painter, the ONE dirty indicator on both backends — the title's own
+// asterisk is deleted, and the seam's set_title_dirty with it, so this backend
+// has no second setter to no-op.
 void GuiPlatform::set_project_title(std::string /*project_name*/) {}
 
 // ---------------------------------------------------------------------------

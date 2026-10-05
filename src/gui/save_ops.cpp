@@ -13,8 +13,8 @@ namespace {
 
 // THE SAVE'S OWN FAILURE, one composer for the three write arms (architect
 // 2026-09-02; the two-clause shape the same day): a deliberate Ctrl+S that
-// could not write is answered with words rather than with a dirty dot that
-// simply stays lit, which is what the strictness ruling asks of every refusal
+// could not write is answered with words rather than with a Save button
+// that simply stays lit, which is what the strictness ruling asks of every refusal
 // that has a reason (notifications.h). BOTH CLAUSES ARE COMPOSED HERE
 // (GuiFailure, failure.h): the DIAGNOSTIC is the arm's own stderr line, the
 // tag it always printed and the FULL path after it, and the DISPLAY is ONE
@@ -101,8 +101,8 @@ bool GuiSaveOps::save() {
     const char* lc = std::setlocale(LC_NUMERIC, nullptr);
     if (!lc || std::strcmp(lc, "C") != 0) {
         // A CARD TOO (architect 2026-09-02): the press is deliberate and
-        // nothing else on screen would answer it — the dirty mark simply
-        // stays. The two clauses of the one failure: the stderr line keeps
+        // nothing else on screen would answer it — Save simply stays
+        // lit. The two clauses of the one failure: the stderr line keeps
         // the offending locale, the card is the one clause, the locale
         // itself being no help to the user reading it.
         GuiFailure f;
@@ -133,7 +133,7 @@ bool GuiSaveOps::save() {
     // so the unsaved-work prompt offers retry). A true fix would need one
     // combined project file, a frozen-parser change out of scope for this tool.
     // The write arms are advisory in class: each composes its own GuiFailure
-    // and cards it, the session and its dirty mark standing.
+    // and cards it, the session and its dirty flag standing.
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
         report(notifications,
@@ -181,13 +181,16 @@ bool GuiSaveOps::save() {
     // of merging into the entry the reference now rests on and reading clean
     // over a store that differs from the file.
     //
-    // NO DAMAGE REQUEST HERE (2026-08-01, restated 2026-09-09): the dirty
-    // state's one display is row 8's clock suffix, which the painter reads out
-    // of `app.dirty`, and the DAMAGE for it belongs to the flag's derive owner
-    // — recompute_dirty, note_saved's own tail, which invalidates the bottom
-    // row's cell exactly when the flag transitions. A save that cleans a dirty
-    // store is repainted by that; a save over an already-clean one moves
-    // nothing and rightly repaints nothing.
+    // NO DAMAGE REQUEST HERE: the dirty state's one display is the Save
+    // button's grey (architect 2026-10-05, plain_save_actionable), which the
+    // roster's per-tick face comparator repaints when note_saved's
+    // recompute_dirty drops the flag (main.cpp).
     undo.note_saved();
     return true;
+}
+
+void GuiSaveOps::save_from_key() {
+    // Nothing to save: silent, the header's precedent (save_ops.h).
+    if (!plain_save_actionable(app)) return;
+    save();
 }

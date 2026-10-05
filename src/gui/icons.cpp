@@ -29,8 +29,8 @@ namespace {
 // in the scheme's text class — fill:currentColor under the file's own
 // `.ColorScheme-Text { color: #fcfcfc }` stylesheet, as the three edit icons
 // paint — takes THE THEME'S LABEL (kIconText); every other ink is the value
-// its SVG resolves to in P3 bytes, a hand-listed literal (media-record's own
-// #da4453 is kIconRecord).
+// its SVG resolves to, raw, a hand-listed literal (media-record's own
+// #da4453 is kIconRecord; architect 2026-10-05).
 //
 // A FILLED ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO
 // winding rule — which is the SVG default too, and what makes document-save's
@@ -99,19 +99,23 @@ struct IconDef {
 
 // THE ICON INKS (architect 2026-10-03): the scheme's TEXT CLASS is the
 // theme's LABEL, so a toolbar glyph reads as its row's words do on every
-// theme; EVERY OTHER INK IS A HAND-LISTED P3 BYTE TRIPLE, kept as it stood on
-// 2026-10-03 for the icons arc that follows — each Breeze class or literal
-// colour taken through the two sRGB -> Display-P3 passes the 2026-10-02
-// palette baked in (Breeze's #da4453 -> #BB575A, #d24d57 -> #B65C5D; the white
-// classes are unmoved; the leftover Breeze blues -> #96BFDA, architect
-// 2026-10-01). The hand-list: kIconRecord and kIconNegativeText #BB575A,
-// kIconPreviewOn and kIconLiftCross #B65C5D, kIconAccent and kIconWav
-// #96BFDA, kIconPlainWhite #FFFFFF. (Until 2026-10-03 the red, the accent and
+// theme; EVERY OTHER INK IS A HAND-LISTED LITERAL, THE RAW BREEZE VALUE the
+// committed file (assets/icons/breeze/) writes for that class or path
+// (architect 2026-10-05: "just restore the original icons... they're only
+// temporary anyways" — the 2026-10-01 conversion of the blues to the waveform
+// ink's value and the 2026-10-02 sRGB -> Display-P3 two-pass bytes of the
+// reds both reverted, the pale blue having all but vanished on the light
+// Windows 95 ground; no colour-conflict judgment applies until the icons arc
+// recolours them). The hand-list: kIconRecord and kIconNegativeText #DA4453,
+// kIconPreviewOn and kIconLiftCross #D24D57, kIconAccent #3DAEE9, kIconWav
+// #44AAEB, kIconPlainWhite #FFFFFF. (Until 2026-10-03 the red, the accent and
 // the text inks referenced the palette's hard-coded roles; those roles
 // retired with the theme catalog, and the red and blue glyphs are the icons
 // arc's to recolour.)
 constexpr IconInk  kIconText{true};
-constexpr GuiColor kIconRecord = hex(0xBB575A);
+// media-record's own literal fill, raw Breeze #da4453 (architect 2026-10-05,
+// the ink block above).
+constexpr GuiColor kIconRecord = hex(0xDA4453);
 
 constexpr IconPath kDocumentSavePaths[] = {
     {kIconText,
@@ -151,21 +155,22 @@ constexpr IconPath kMediaRecordPaths[] = {
 // hard-coded to what that file resolves to. Five of the six are pure
 // `.ColorScheme-Text` = #fcfcfc; preview-render-on is TWO paths, the second
 // carrying its own literal #d24d57 (the "on" pip), a Breeze red apart from
-// media-record's #da4453 whose P3 bytes are no role's value.
+// media-record's #da4453 and no role's value.
 
-// #d24d57 through tools/palette's two_pass -> #B65C5D: a literal on the
-// hand-list (the ink block above).
-constexpr GuiColor kIconPreviewOn = hex(0xB65C5D);
+// The pip's raw Breeze #d24d57, a literal on the hand-list (architect
+// 2026-10-05, the ink block above).
+constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
 
 // THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
 // written into its own file: `.ColorScheme-Accent`, which a Breeze file
 // carrying it resolves to the SCHEME'S ACCENT — #3daee9 under stock Breeze —
 // deep-history's curl-back arrow was this tree's first user (2026-08-09) and
 // dialog-information's plate is the one standing since that glyph left with
-// the 2026-09-04 collapse. THE SCHEME'S ACCENT IS #96BFDA (architect
-// 2026-10-01: the leftover Breeze blues convert to the waveform ink's value),
-// a literal on the hand-list since the accent role retired (2026-10-03).
-constexpr GuiColor kIconAccent    = hex(0x96BFDA);
+// the 2026-09-04 collapse. THE SCHEME'S ACCENT IS STOCK BREEZE'S #3DAEE9, the
+// value the committed file's stylesheet writes (architect 2026-10-05: the
+// 2026-10-01 conversion to the waveform ink's value reverted), a literal on
+// the hand-list.
+constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
 
 
 // THE BPM OPENER'S ICON, 2026-08-01 to 2026-08-27 and again since 2026-09-04
@@ -255,9 +260,9 @@ constexpr IconPath kGoJumpPaths[] = {
 //
 // ITS RED IS ITS OWN LITERAL, not a reference to preview-render-on's pip even
 // though both files write #d24d57: the two coincide by shared Breeze ancestry
-// and by nothing else. #d24d57 through tools/palette's two_pass -> #B65C5D: a
-// literal on the hand-list (the ink block above).
-constexpr GuiColor kIconLiftCross = hex(0xB65C5D);
+// and by nothing else. The raw Breeze #d24d57, a literal on the hand-list
+// (architect 2026-10-05, the ink block above).
+constexpr GuiColor kIconLiftCross = hex(0xD24D57);
 
 constexpr IconPath kTimelineLiftPaths[] = {
     {kIconText,
@@ -593,10 +598,10 @@ constexpr IconPath kEditSelectPaths[] = {
 // hollow as the file draws it). Nothing new for the interpreter.
 //
 // AUDIO-X-WAV: one `<path>` in the file's OWN LITERAL `fill:#44aaeb` — Breeze's
-// audio-mimetype blue. kIconWav below is NOT that literal: the file's blue
-// records no relationship to Breeze's #3daee9 beyond being Breeze's blue, so
-// it converts to the ink with every other leftover Breeze blue (architect
-// 2026-10-01) — #96BFDA, kIconAccent's literal, on the hand-list. Absolute
+// audio-mimetype blue. kIconWav below IS that literal (architect 2026-10-05:
+// the 2026-10-01 conversion of the Breeze blues to the waveform ink's value
+// reverted), its own constant and not kIconAccent: the file's blue records no
+// relationship to Breeze's #3daee9 beyond being Breeze's blue. Absolute
 // `M` / `L` and the ARC `A` (the four note-head circles as eight elliptical
 // arcs), the interpreter's existing arm
 // (media-record's precedent, and the retired speedometer's). THE ONE THING WORTH READING
@@ -608,7 +613,7 @@ constexpr IconPath kEditSelectPaths[] = {
 // numbers in the `d` are already viewBox coordinates (every one lands in
 // [3, 19]). A reader comparing this row against the file should expect no
 // transform here and find those two in the file.
-constexpr GuiColor kIconWav = kIconAccent;
+constexpr GuiColor kIconWav = hex(0x44AAEB);
 
 constexpr IconPath kFolderPaths[] = {
     {kIconText,
@@ -856,8 +861,10 @@ constexpr IconPath kZoomOriginalPaths[] = {
 //
 // LIST-REMOVE IS THE SET'S SECOND RESOLVED-COLOR RED: its one path is
 // `.ColorScheme-NegativeText { color: #da4453 }` under fill="currentColor" —
-// kIconNegativeText below is the value that file resolves to, #BB575A in P3
-// bytes, media-record's kIconRecord literal (the hand-list). Command coverage: absolute M/L with one absolute C (the outline's
+// kIconNegativeText below is the value that file resolves to, the raw Breeze
+// #da4453 (architect 2026-10-05, the hand-list), its own literal coinciding
+// with media-record's by shared Breeze ancestry. Command coverage: absolute
+// M/L with one absolute C (the outline's
 // corner easing) and z.
 //
 // VIEW-HIDDEN IS TRANSCRIBED VERBATIM, ARTIFACT AND ALL (architect-ruled
@@ -868,7 +875,7 @@ constexpr IconPath kZoomOriginalPaths[] = {
 // diff-is-a-transcription-bug property. Coverage: absolute M/L/A/C/Z, every
 // family with a committed producer.
 
-constexpr GuiColor kIconNegativeText = kIconRecord;
+constexpr GuiColor kIconNegativeText = hex(0xDA4453);
 
 constexpr IconPath kListAddPaths[] = {
     {kIconText,
@@ -1031,8 +1038,7 @@ constexpr IconPath kSettingsConfigurePaths[] = {
 // rather than edited out — and the second is the X's outline that shows.
 // The cap attribute belongs to stroking, which this table does not do, so
 // it transcribes as nothing.
-// #fff through tools/palette's two_pass -> #FFFFFF (white is unmoved): a
-// literal on the hand-list (the ink block above).
+// The file's #fff: a literal on the hand-list (the ink block above).
 constexpr GuiColor kIconPlainWhite = hex(0xFFFFFF);
 
 constexpr IconPath kDialogInformationPaths[] = {

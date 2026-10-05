@@ -206,8 +206,9 @@
 //     open, the render player's folder-end skips, Backspace at the root and
 //     its idle family (no render loaded, seeking before playback), the
 //     position nudge at its wall in both columns, the `h` view's Ctrl+S over
-//     an empty head delta, and a held Ctrl+Z / Ctrl+Shift+Z whose repeat runs
-//     out of history. THE COUNTER-CLASS IS THE TEST: a command whose effect
+//     an empty head delta and its sibling, a clean session's plain Ctrl+S
+//     (architect 2026-10-05, GuiSaveOps::save_from_key), and a held
+//     Ctrl+Z / Ctrl+Shift+Z whose repeat runs out of history. THE COUNTER-CLASS IS THE TEST: a command whose effect
 //     would have spread across the screen keeps its card even where its
 //     button greys, "because they can be subtle and required me to check the
 //     whole screen" — undo / redo over an empty stack on a deliberate press,
@@ -226,8 +227,8 @@
 //     the misleading thing is fixed where it can be. So: a render's
 //     completion ("that would get annoying") and a cancelled one; THE SAVE,
 //     the dirty mark going out being its answer (architect 2026-08-30: "the
-//     disc writes — there is something that paints, the dirty dot goes
-//     away"), row 8's `*` on both machines since 2026-09-09; a clean
+//     disc writes — there is something that paints"), the Save button
+//     greying since 2026-10-05 (plain_save_actionable); a clean
 //     propagate walk; a landed checkpoint or pull; and the crossed-trim reset
 //     (auto_clear_crossed_trim — the endcaps snapping to the song's edges is
 //     the cue, and a full window changes no output).

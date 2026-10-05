@@ -155,11 +155,11 @@ public:
     // paints nothing. It stays on the API because the GUI calls it from its
     // load path unconditionally (contract and composition rule at
     // platform_wayland.h, which owns it).
-    // THE DIRTY INDICATOR IS ROW 8'S `*` (architect 2026-09-09), the clock's
-    // own suffix in the portable painter, and it is the ONE dirty indicator on
-    // both backends: the title's asterisk is deleted, and `set_title_dirty`
-    // with it, so there is no second surface to keep this backend's no-op in
-    // step with.
+    // THE DIRTY INDICATOR IS THE SAVE BUTTON'S GREY (architect 2026-10-05,
+    // plain_save_actionable), painted by the portable painter, the ONE dirty
+    // indicator on both backends: the title's asterisk is deleted, and
+    // `set_title_dirty` with it, so there is no second surface to keep this
+    // backend's no-op in step with.
     void set_project_title(std::string project_name);
 
     void shutdown();

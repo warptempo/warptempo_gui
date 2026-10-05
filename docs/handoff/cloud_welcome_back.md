@@ -165,4 +165,10 @@ RULED:
   is the truthful upgrade, a local act if he wants it); COPY / PASTE under OLD | NEW (the colour and its exact view;
   a paste is an edit; PASTE greyed until a copy; the copy not persisted). PASTE does not grey when the paste would
   change nothing (as briefed; the product's truthful-button rule would grey it — a picker nicety left for his word).
+- RULED + LANDED 2026-10-05: SAVE GREYS ON THE DIRTY FLAG ALONE (`plain_save_actionable`): trim, the read-only lock
+  and every other non-undo key never light it ("trim is transient"; the trade-off accepted: a trim-only change is not
+  saved on its own); CTRL+S WHEN GREY IS SILENT (the h view's precedent); the clock's `*` retired (the panel one mono
+  cell narrower). THE ICON INKS back to RAW Breeze (#3DAEE9 accent, #44AAEB wav, #DA4453 record and negative,
+  #D24D57 preview pip and lift cross). The mock tool still draws the old icon inks and the `*` cell: a picker-picture
+  follow-up for a later round (it changes picker export bytes).
 

@@ -113,31 +113,20 @@ void Undo::recompute_dirty() {
         for (int i = std::max(0, rs - n); i < rs; ++i)
             light(h.redo_stack[i].op_mode);
     }
-    const bool was_dirty = app.dirty;
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
-    // THE DIRTY MARK HAS ONE SURFACE AND ONE DERIVE-OWNER. This is where
-    // app.dirty is derived, so every mutation, save and undo/redo transition
-    // passes through here.
+    // THE DIRTY FLAG HAS ONE DERIVE-OWNER. This is where app.dirty is derived,
+    // so every mutation, save and undo/redo transition passes through here.
     // EVERY ENTRY COUNTS (architect 2026-09-10): the walks above used to skip
     // the three session-only iteration-bracket entries, because a bracket
-    // never reaches a sidecar and crossing one must not light the dot. The
-    // bracket left the undo domain whole — nothing pushes it and every push
-    // strips it from its snapshot — so nothing about a bracket reaches the
-    // history and nothing about it reaches the mark. There is no class left to
-    // skip.
-    // ROW 8'S `*` (architect 2026-09-09) is that surface on both backends,
-    // and it is READ, never pushed: the painter takes app.dirty straight out of
-    // the state as the clock's own suffix, so what this tail owes it is DAMAGE,
-    // and only ON A TRANSITION. This body runs after every command, and an
-    // unconditional invalidate would repaint the bottom row on every keypress
-    // for a mark that did not move. (The window title carried a second
-    // asterisk until 2026-09-09, pushed from here through a seam setter; the
-    // architect ruled the duplicate signal off and both are deleted, so damage
-    // is the whole of what this tail does for the mark.)
-    // (The load's own four-flag reset is the only other transition, and it
-    // owes no damage of its own: load_file invalidates the whole window on
-    // both sides of that assignment.)
-    if (app.dirty != was_dirty) viewport.invalidate_status_cell_area();
+    // never reaches a sidecar. The bracket left the undo domain whole —
+    // nothing pushes it and every push strips it from its snapshot — so
+    // nothing about a bracket reaches the history and nothing about it
+    // reaches the flag. There is no class left to skip.
+    // ITS ONE PICTURE IS SAVE'S FACE (architect 2026-10-05, SAVE IS THE DIRTY
+    // MARK: plain_save_actionable, app_state.h), which the roster's per-tick
+    // face comparator repaints on a transition (main.cpp), so this body owes
+    // no damage. (Row 8's `*`, whose transition this tail invalidated, is
+    // retired.)
 }
 
 // THE PUSH HELPERS ALL STRIP THE SESSION-ONLY ITERATION BRACKET from
@@ -487,10 +476,10 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // marker there, while one loaded from file, pasted, or authored at another
     // zoom sits OFF the grid and Right+Left lands it ON the grid, up to half a
     // column from where it started — a real change, whose entry then correctly
-    // stays and whose dot correctly stays lit),
+    // stays and whose Save correctly stays lit),
     // which is how a tap Right then a tap Left inside kTapCoalesceMs left the
     // burst's surviving entry byte-equal to the live store: one Ctrl+Z that
-    // changed nothing at all, and a dirty dot lit over a store equal to the
+    // changed nothing at all, and Save lit over a store equal to the
     // file. The same hole stood on all four coalesce-eligible kinds. On the
     // iteration bound step it is what retires a tap up then a tap down on a
     // blank bracket: the step's own [0, 0] clearing rule puts the store back
@@ -539,7 +528,7 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
         entry_restores_live_marker_stores(app, app.history.undo_stack.back())) {
         app.history.pop_undo_top_with_saved_ref();
         last_gesture_kind_ = GestureKind::None;
-        // THE DOT IS RE-DERIVED HERE, by the owner that moved the reference,
+        // THE FLAG IS RE-DERIVED HERE, by the owner that moved the reference,
         // rather than being left to the callers' own recompute_dirty below this
         // call: the pop is what puts a saved baseline back at distance 0, and a
         // net-zero wobble over a saved file must read CLEAN again. The callers'
@@ -579,7 +568,7 @@ void Undo::note_saved() {
     // to, so no caller can move the reference and forget the stamp: the next
     // eligible press finds no burst to merge into and PUSHES the pre-press
     // snapshot — the state the file holds — and the reference steps to −1
-    // under push()'s own arithmetic, the dot coming back on. A synthesized
+    // under push()'s own arithmetic, Save lighting again. A synthesized
     // repeat cannot follow a save inside its own burst at all (the save is a
     // key press, and a key press disarms both hold producers — layer (1) at
     // maybe_fire_repeat and the set_on_key hook the button hold dies on), and
