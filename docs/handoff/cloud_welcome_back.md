@@ -142,4 +142,9 @@ FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag fir
   right-aligns; near-identical at the widest cell). NEXT: brief A+; then a REQUEST (laptop build + APK).
   BUDGET: about $65 of cloud credit left (2026-10-05). HE ASKS FOR TERSE REPLIES: no "holding off / uncommitted"
   status notes.
+- LANDED 2026-10-05 (the A+ commit): the stem crosses the well's top lines between two DkShadow outline columns
+  (fill_stem_flanks, paint_marker_stem_flanks; every marker stem incl. the payload editor's and h's diff flags; a
+  disabled flag none; the playhead and anchor stems bare). The planner's calls: the flanks keep the theme's DkShadow
+  under the open payload editor too (its frame is the literal black; equal on windows-95-standard), and the
+  phase-reset ring paints over the flanks (its corner unbroken). REQUEST 6 out: both product builds + the picker.
 

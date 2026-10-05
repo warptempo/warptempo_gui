@@ -346,7 +346,13 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // top row, its run's closing column and its bottom row, so the box keeps its
 // width and height. THE STEM leaves from the box's LEFTMOST FACE COLUMN (the
 // marker's own frame column) and crosses the bottom outline into the well and
-// the canvas, one same-colour column. The bound cells take the same anatomy,
+// the canvas, one same-colour column. THE OUTLINE IS CARRIED DOWN BOTH SIDES
+// OF THE STEM (architect 2026-10-05, the flag "A+"): one outline-width column
+// in DkShadow immediately left and immediately right of the stem, from the
+// box's bottom outline row through the well's top lines, stopping where the
+// canvas begins, so the stem never touches the well's lines (in the lane the
+// box's own left border and bottom row are those columns; in the well
+// fill_stem_flanks paints them). The bound cells take the same anatomy,
 // each cell's left seam the shared outline column.
 //
 // EACH KIND HAS ITS OWN PAIR (architect 2026-10-04, reopening 2026-10-03's one
@@ -475,7 +481,10 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // and the zoom anchor's run continuous from the lane above into the canvas
 // (waveform_stem_band), and stop at the canvas's foot; a flag box stands on
 // the top lines (architect 2026-10-03, marker_flag_box_band), so a marker's
-// stem leaves its box's bottom row straight into them.
+// stem leaves its box's bottom row straight into them — between its two
+// FLANKS, the box's outline carried down through them (architect 2026-10-05,
+// fill_stem_flanks). The playhead's and the anchor's stems leave no box and
+// cross bare.
 //
 // TAKEN FROM THE AREA, NOT ADDED TO IT: waveform_content_rect is the content
 // and it shrinks by these rows, while waveform_area itself does not move, so
@@ -962,7 +971,8 @@ int ruler_lane_h_px();
 // stands ON the well, touching its upper border line (the waveform area's
 // first row, the next lane down) and never overlapping it, and the marker's
 // stem runs on from the box's bottom straight through the well's top lines
-// (waveform_stem_band). THE AIR ABOVE IS THE MINOR TICKS' (architect
+// (waveform_stem_band), flanked by the box's outline carried down
+// (fill_stem_flanks, 2026-10-05). THE AIR ABOVE IS THE MINOR TICKS' (architect
 // 2026-10-03): the ruler's minor ticks start at the marker lane's top
 // (paint_ruler_row's minor_top), so that one px is where the comb stays
 // visible over a run of flags — "the minor ticks visible above the flags are
@@ -1322,6 +1332,37 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
     const int end = (col + t < area_w) ? col + t : area_w;
     cairo_rectangle(cr, static_cast<double>(area_x + col), y0,
                     static_cast<double>(end - col), y1 - y0);
+    cairo_fill(cr);
+}
+// THE STEM'S FLANKS (architect 2026-10-05, the flag "A+"): a marker's stem
+// crosses the well's top lines between TWO OUTLINE COLUMNS, the flag box's
+// outline carried down both sides of it, so the stem never touches the
+// well's lines. Each flank is the outline's own width
+// (marker_flag_border_px), the left one [col − b, col) and the right one
+// [col + t, col + t + b) beside the stem's [col, col + t); in the caller's
+// source colour (the outline's role, the theme's DkShadow). GATED ON THE
+// STEM'S OWN COLUMN as fill_waveform_line is (no stem, no flanks), each flank
+// CLIPPED to the strip's columns [0, area_w). In the marker lane the flanks
+// are the box's own outline — its left border column and its bottom row —
+// so only the well's rows are painted here (waveform_well_top_band); the
+// canvas below is not touched. One painter, paint_marker_stem_flanks, from
+// the stems' stash, so every flag kind (both live columns, the bound cells'
+// flag, the open payload editor, the `h` diff flags) flanks alike and a
+// DISABLED flag, publishing no stem, has none.
+inline void fill_stem_flanks(cairo_t* cr, int area_x, int area_w, int col,
+                             double y0, double y1) {
+    if (col < 0 || col >= area_w) return;
+    const int t  = waveform_line_px();
+    const int b  = marker_flag_border_px();
+    const int l0 = (col - b > 0) ? col - b : 0;
+    if (col > l0)
+        cairo_rectangle(cr, static_cast<double>(area_x + l0), y0,
+                        static_cast<double>(col - l0), y1 - y0);
+    const int r0 = col + t;
+    const int r1 = (r0 + b < area_w) ? r0 + b : area_w;
+    if (r1 > r0)
+        cairo_rectangle(cr, static_cast<double>(area_x + r0), y0,
+                        static_cast<double>(r1 - r0), y1 - y0);
     cairo_fill(cr);
 }
 // THE SCALE IS THE ONE THING A FLAG CUTS (architect 2026-09-19, replacing the
@@ -1915,6 +1956,15 @@ inline GuiRect waveform_stem_band(GuiRect area) {
     const int b = waveform_border_px();
     if (area.h <= 2 * b) return area;
     return GuiRect{area.x, area.y, area.w, area.h - b};
+}
+// THE WELL'S TOP LINES' ROWS, the band a marker stem's FLANKS paint in
+// (fill_stem_flanks, architect 2026-10-05): from the area's top to where the
+// canvas begins, full width. A degenerate area draws no well
+// (render_canvas), so it has no lines to flank and the band is empty.
+inline GuiRect waveform_well_top_band(GuiRect area) {
+    const int b = waveform_border_px();
+    if (area.h <= 2 * b) return GuiRect{area.x, area.y, area.w, 0};
+    return GuiRect{area.x, area.y, area.w, b};
 }
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
@@ -2567,8 +2617,9 @@ struct FlagLaneRects {
 // the stem under it) and the color its class resolved to. The flag PAINTERS are
 // the only producers — the two live columns', and the `h` view's diff lane,
 // which replaces them wholesale while the mode stands; the readers are the
-// per-frame waveform pass
-// (GuiPaintHandler::paint_marker_stems) and the playhead's stem
+// per-frame waveform passes
+// (GuiPaintHandler::paint_marker_stems and, for the stem's FLANKS in the
+// well's top lines, paint_marker_stem_flanks) and the playhead's stem
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved stem — its FLAG BOX's face:

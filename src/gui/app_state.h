@@ -5941,9 +5941,11 @@ struct AppState {
     // into view from past either edge publishes no stem) — a disabled marker has no stem ever, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode means one
     // per diff flag, that lane's classes all stemming. Since the stems-inert
-    // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its two
+    // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its three
     // readers are the per-frame stem painter (GuiPaintHandler::
-    // paint_marker_stems) and the playhead's stem suppression decider
+    // paint_marker_stems), its flanks' painter (GuiPaintHandler::
+    // paint_marker_stem_flanks, 2026-10-05) and the playhead's stem
+    // suppression decider
     // (GuiPaintHandler::playhead_stem_suppressed — a paint decision, not a
     // surface), the pointer never reads it (hit_test_marker_stem is deleted —
     // the record is at its retired site far below), and only `flag_hit_rects`

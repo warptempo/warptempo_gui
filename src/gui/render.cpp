@@ -165,7 +165,8 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     // the canvas ends — the PLAIN SUNKEN edge's horizontals, full width: on
     // top a Shadow line then a DkShadow line, at the bottom a 3DLight line
     // then a Hilight line, each one relief line. waveform_content_rect reads
-    // the same thickness; the stems cross the top lines (waveform_stem_band)
+    // the same thickness; the stems cross the top lines (waveform_stem_band),
+    // a marker's between its flanks (fill_stem_flanks, 2026-10-05),
     // and no vertical crosses the bottom ones. An area too short to carry both
     // borders draws neither rather than overlapping them.
     const int border = waveform_border_px();
@@ -1524,7 +1525,10 @@ static void paint_flat_flag_box(cairo_t* cr, const GuiRect& lane, int x, int w,
 // paint_marker_stems continues it (waveform_stem_band) — one same-colour
 // column, waveform_line_px() wide like the stem itself. Painted by the box's
 // own painter because those rows are the lane's; a box with no stem (a
-// disabled one) leaves its outline whole.
+// disabled one) leaves its outline whole. THE FLANKS IN THESE ROWS
+// (architect 2026-10-05) are the box's own outline — its left border column
+// and the bottom row beside the stem — so this paints only the stem; the
+// well's rows below are paint_marker_stem_flanks' (fill_stem_flanks).
 static void paint_flag_stem_crossing(cairo_t* cr, const GuiRect& lane, int x,
                                      int edge_h, GuiColor stem) {
     cairo_save(cr);

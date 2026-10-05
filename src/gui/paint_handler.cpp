@@ -4372,6 +4372,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
     // repaint; a palette install damages the whole window.
     const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
+    // OVER THE STEMS' FLANKS (architect 2026-10-05, fill_stem_flanks): the
+    // flanks paint before this pass, so the top side runs on from its stem
+    // unbroken — the flank parts the stem from the well, not from its ring.
     set_palette_source(cr, ring);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
@@ -4559,7 +4562,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // top — through the well's top lines, straight on from the box's bottom row,
 // which is the marker lane's last (architect 2026-10-03: the box stands on
 // the well) — to the canvas's foot, where it stops at the well's bottom
-// lines (waveform_stem_band), as the playhead's stem does.
+// lines (waveform_stem_band), as the playhead's stem does. Across the well's
+// top lines it stands between its FLANKS (architect 2026-10-05), painted
+// before it by paint_marker_stem_flanks, so a stem wins over a neighbour's.
 //
 // Z-ORDER (architect 2026-09-23): the stems paint UNDER the playhead's stem,
 // which follows this pass, and under the flag boxes, so a dense run of stems at
@@ -4590,6 +4595,35 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             stem.x - static_cast<double>(area.x)));
         set_palette_source(cr, stem.color);
         fill_waveform_line(cr, area.x, area.w, col, y0, y1);
+    }
+    cairo_restore(cr);
+}
+
+// -- GuiPaintHandler::paint_marker_stem_flanks ---------------------------
+
+// THE STEMS' FLANKS (the contract at the declaration; the rule at
+// fill_stem_flanks, render.h): the same stash, the same column derivation
+// as paint_marker_stems, so a flank can never stand a pixel away from its
+// stem. DAMAGE is the stems' own: a flank lives and dies with its stem's
+// entry and sits inside the waveform area, which every stash change damages
+// whole (the flag cache's rebuild damages the waveform with the strip,
+// maybe_rebuild_flag_cache); a narrow playhead damage repaints the flanks
+// under its clip like every other pass. Nothing is cached in the well's rows.
+void GuiPaintHandler::paint_marker_stem_flanks(cairo_t* cr,
+                                               const GuiRect& area) {
+    if (area.w <= 0 || area.h <= 0) return;
+    if (app.marker_stems.empty()) return;
+    const GuiRect band = waveform_well_top_band(area);
+    if (band.h <= 0) return;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    set_palette_source(cr, palette().dk_shadow);
+    const double y0 = static_cast<double>(band.y);
+    const double y1 = static_cast<double>(band.y + band.h);
+    for (const MarkerStem& stem : app.marker_stems) {
+        const int col = static_cast<int>(std::nearbyint(
+            stem.x - static_cast<double>(area.x)));
+        fill_stem_flanks(cr, area.x, area.w, col, y0, y1);
     }
     cairo_restore(cr);
 }
@@ -7165,7 +7199,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
-        //   4. waveform plate -> phase-reset overlay ring.
+        //   4. waveform plate -> the marker stems' FLANKS in the well's top
+        //      lines (architect 2026-10-05) -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: the
         //      dithered track and the window's thumb.
         //   6. the MARKER STEMS (waveform).
@@ -7242,6 +7277,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, wave_paint)) {
             paint_waveform_plate(cr, area);
+            // The stems' FLANKS (architect 2026-10-05) over the well's top
+            // lines, ahead of the ring and the stems, so both paint over
+            // them (paint_marker_stem_flanks' declaration).
+            paint_marker_stem_flanks(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top

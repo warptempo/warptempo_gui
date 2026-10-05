@@ -887,6 +887,15 @@ private:
     // outlived this site by a day and died with the whole tunable palette
     // (2026-08-02).
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
+    // THE STEMS' FLANKS (architect 2026-10-05, the flag "A+"): for every
+    // stem in the same stash, the flag outline carried down both sides of
+    // the stem through the well's top lines (fill_stem_flanks, render.h, the
+    // rule; waveform_well_top_band, the rows), in the theme's DkShadow. ITS
+    // OWN PASS, painted right after the plate and BEFORE the phase-reset
+    // ring and the stems: every stem then paints over a neighbour's flank
+    // (the stem wins), and the focused reset's ring, the stem's own unit,
+    // runs its top side on unbroken from the stem rather than notched by it.
+    void paint_marker_stem_flanks(cairo_t* cr, const GuiRect& area);
     // THE COINCIDENT-STEM SUPPRESSION (architect 2026-08-01) — 035e669's model
     // reinstated under row 5's always-on-stem regime, and since 2026-09-23 the
     // stated half of the playhead-over-stems ruling ("where the playhead's
