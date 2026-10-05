@@ -32,21 +32,16 @@
 
 // -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
 //
-// THE BOTTOM ROW IS ONE FACE — THE SANS (architect 2026-10-05, after his
-// ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere"): the
-// clock and the render player's two time fields are Roboto at the body size
-// in their own sunken fields (kTimeFieldHeightPx below), the state line and
-// every modal string the same face. MONOSPACE WAS A NAMED TWO-CELL SET from
-// 2026-08-11 to that day (the architect's reversal of his own 2026-08-01
-// "I wanted to get rid of monospace altogether — the last row should be the
-// same font as the rest"): the row-8 clock and, from 2026-08-28, the render
-// player's modal clock; Roboto Mono, its face since 2026-10-02, retired with
-// it, and the no-wiggle guarantee it was trusted with is the fields' own
-// fixed widths now.
+// THE BOTTOM ROW IS ONE FACE — THE BODY FACE (architect 2026-10-05, after
+// his ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere";
+// gui_font.h): the clock and the render player's two time fields are the
+// body face in their own sunken fields (kTimeFieldHeightPx below), the state
+// line and every modal string the same face. There is no monospace face;
+// the no-wiggle guarantee is the fields' own fixed widths.
 //
 // EVERY STRING THE STATE LINE CARRIES — the queue/render status and the
-// history walk line — IS THE SANS AT THE NORMAL FACE (redesign_font_size_px,
-// 13 Windows px) in the theme's label, on the row's ground a group space right
+// history walk line — IS THE BODY FACE (gui_font(GuiFace::Body)) in the
+// theme's label, on the row's ground a group space right
 // of the clock's field (architect 2026-10-03; the block at the line's painter
 // below and notifications.h are the live record). For 2026-10-02 it stood in
 // a second status panel at the small face; from 2026-08-31 it was the clock's
@@ -64,18 +59,10 @@
 // metrics (time_field_metrics), measured on the face rather than trusted to
 // it.
 
-// The bottom row's ONE sans face, selected on `cr` through the one face owner
-// (gui_font.h). Returns the scaled font every shape and paint that takes it
-// must share — the text_shape precondition is that a run is shown with the same
-// font it was shaped with. Its callers are the MODAL DIALOG (whose labels,
-// field text and button words are the row's only sans left) and, through
-// show_row_text below, the modal's own strings — and, since 2026-10-05, the
-// time fields and the state line.
-static cairo_scaled_font_t* select_bottom_row_face(cairo_t* cr) {
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    return cairo_get_scaled_font(cr);
-}
+// (The bottom row's face is the body face, gui_font(GuiFace::Body), named
+// at each of its sites — the MODAL DIALOG's labels, field text and button
+// words, the time fields and the state line; a run carries the font it was
+// laid out on, so no context state needs selecting first.)
 
 // Shape and paint one run at (x, baseline) in `color`. The row's plain-text
 // tier — the successor of text_display::draw_line, which died with the
@@ -85,7 +72,7 @@ static cairo_scaled_font_t* select_bottom_row_face(cairo_t* cr) {
 // the run's advance is nobody's (it was returned while row 8's state text
 // butted against the clock's run, 2026-08-31 .. 2026-10-02; the clock's
 // panel places it now).
-static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
+static void show_row_text(cairo_t* cr, const GuiFont& font,
                           double x, double baseline,
                           std::string_view text, GuiColor color) {
     if (text.empty()) return;
@@ -96,7 +83,7 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 
 // The same run in THE DISABLED EMBOSS (show_embossed_run, render.h) — the
 // row tier's dead word.
-static void show_row_text_embossed(cairo_t* cr, cairo_scaled_font_t* font,
+static void show_row_text_embossed(cairo_t* cr, const GuiFont& font,
                                    double x, double baseline,
                                    std::string_view text) {
     if (text.empty()) return;
@@ -191,14 +178,10 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 namespace {
 
-// THE KDENLIVE REDESIGN'S SHARED TEXT FACE. The SIZE (kRedesignFontSizePx /
-// redesign_font_size_px) moved to render.h when row 5's marker flags began
-// shaping their own labels inside render.cpp — one design size cannot have two
-// definitions. THE FACE is the one face owner's sans (gui_font.h): Roboto on
-// both devices since 2026-10-02 — the product's own face, no longer the
-// family the kdenlive crops were rendered in (Liberation, which the laptop's
-// fontconfig answered until that day). Every row selects it through that
-// owner.
+// THE SHARED TEXT FACE is the one face owner's body face (gui_font.h):
+// Cronyx Helvetica's strike at a whole-hundred scale, Liberation Sans at its
+// vertically matched em elsewhere (architect 2026-10-05). Every row names it
+// through that owner, gui_font(GuiFace::Body) at the live scale.
 
 // (The authored-length -> device-pixels conversion every dimension below takes
 // is scaled_px, render.h — the ONE conversion the whole scale axis shares.)
@@ -969,27 +952,24 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // the floating surfaces' one box (paint_popup_chrome) and its dim factor lives
 // in render.h.
 //
-// THE TOOLTIP'S TYPE AND SPACING. Two sizes now: the NAME line stays at the
-// redesign's 13 Windows px, and the SHIFT line drops to 11 (architect
-// 2026-07-31 — the hint is subordinate text and should read as such; 12 pt
-// and 10 pt until the unit's change, the same 10/12, architect 2026-10-02).
-// Both go through the one shaping chokepoint, which takes whatever size the
-// context carries.
+// THE TOOLTIP'S TYPE AND SPACING. ONE FACE FOR BOTH LINES, the body
+// (architect 2026-10-05: the period faces have no smaller text face — the
+// SHIFT line's own 11 Windows px, ruled 2026-07-31 to read as subordinate,
+// retired with the outline face it sized). Both go through the one shaping
+// chokepoint.
 //
 // THE VERTICAL LAYOUT IS DERIVED, NOT AUTHORED, and it is SYMMETRIC BY
-// CONSTRUCTION: each line occupies its own face's (ascent + descent) band, the
-// two bands are separated by a real gap, and the SAME padding closes the box
-// above the first band and below the last. So the box height falls out as
-//     pad + band1 [+ gap + band2] + pad
+// CONSTRUCTION: each line occupies the face's (ascent + descent) band — the
+// strike's 13-row cell — the two bands are separated by a real gap, and the
+// SAME padding closes the box above the first band and below the last. So
+// the box height falls out as
+//     pad + band [+ gap + band] + pad
 // and the top and bottom air are equal by the arithmetic rather than by a
-// measured pair that could drift. At the tablet's 275 % on the product's face
-// (Roboto: the 13-px band 34 + 9, the 11-px band 29 + 8) that is 11 + 43 + 11
-// = 65 for one line and 11 + 43 + 8 + 37 + 11 = 110 for two (the old 41px
-// two-line box was read as too tight between the lines and bottom-heavy).
-// The pads and the gap are the laptop pixel's 6, 4 and 5 re-authored at the
-// unit's change (architect 2026-10-02). render.h carries only a BOUND on this
-// for the damage band.
-constexpr double kTooltipShiftFontSizePx = 11.0;   // Windows px
+// measured pair that could drift. At the tablet's 275 % that is 11 + 36 + 11
+// = 58 for one line and 11 + 36 + 8 + 36 + 11 = 102 for two (the band
+// 13 x 2.75 = 35.75 each, the sum rounded once). The pads and the gap are the
+// laptop pixel's 6, 4 and 5 re-authored at the unit's change (architect
+// 2026-10-02). render.h carries only a BOUND on this for the damage band.
 constexpr double kTooltipPadYPx          = 4.0;   // top AND bottom, equal
 constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 constexpr double kTooltipPadXPx      = 4.0;
@@ -1021,8 +1001,8 @@ constexpr double kTooltipPadXPx      = 4.0;
 // IT IS NOT THE TOOLTIP'S INTERIOR: the floating surfaces share their CHROME —
 // one box painter (paint_popup_chrome, its two faces) — and not their heights.
 // The tooltip's box is not authored at all, its height falling out of pad +
-// band [+ gap + band] + pad on the face's own extents (the record at
-// kTooltipShiftFontSizePx); do not re-derive one from the other.
+// band [+ gap + band] + pad on the face's own cell (the record at
+// kTooltipPadYPx); do not re-derive one from the other.
 //
 // THE ITEM'S INSET: the highlight box stands one Windows px inside the frame
 // on every side — the margin Windows leaves between a popup's edge and its
@@ -1070,20 +1050,6 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 constexpr double kPopupPadXPx         = 22.0;
 constexpr double kPopupHotkeyGapPx    = 9.0;
 
-// THE FACE'S CAP HEIGHT AT ITS CURRENT SIZE — the ink height of a capital,
-// asked of the "H", which has no overshoot on either of the product's two
-// faces (measured: the glyph's ink runs exactly to the baseline and its
-// `height` equals `-y_bearing`). It is an INK EXTENT OF ONE GLYPH and not a
-// width, so it is none of the shaping chokepoint's business — text_shape owns
-// the WIDTH of a run, which is what may never be measured twice, and this
-// measures the face. No memo: cairo caches a scaled font's glyph extents, and
-// a frame asks this about thirty times.
-double cap_height_px(cairo_scaled_font_t* font) {
-    cairo_text_extents_t te;
-    cairo_scaled_font_text_extents(font, "H", &te);
-    return te.height;
-}
-
 // THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
 // the face's own CAP BAND in the box, a half-row tie going toward the TOP
 // (architect 2026-09-09, after his pixel pass on two screenshots at 100% and
@@ -1098,28 +1064,15 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
 // LABEL and every time field (Qt's integer box rule fails the crops).
 //
-// THE MEASURED FACES (the product's own, through the one face owner's road —
-// Roboto, 2026-10-02 — hint metrics on, so every extent is a whole pixel):
-//
-//     face / size              ascent  descent  cap "H"  asc+desc
-//     sans 17.94px  (138%)       17       5        13        22
-//     sans 35.75px  (275%)       34       9        25        43
-//     sans 45.5px   (350%)       43      12        33        55
-//
-// (the normal face at 13 Windows px, architect 2026-10-02; the small face,
-// the ruler's, is at render.h's ruler block).
-//
-// THE TABLE HOLDS ON BOTH DEVICES BY CONSTRUCTION: one implementation builds
-// both faces from the same bytes under the same hint style
-// (gui_font_bundled.cpp, whose head owns that ruling and carries the full
-// measurement), so every seat below is one answer rather than two.
+// THE CAP BAND IS THE BODY STRIKE'S AT EVERY SCALE (architect 2026-10-05,
+// gui_font.h): Cronyx's 9 rows times the scale, an unrounded double — 9
+// device rows at 100 %, 12.42 at 138 %, 24.75 at 275 %, 36 at 400 % — so the
+// seat is one answer in the bitmap mode and the fallback alike, Liberation's
+// em being the one that stands its "H" exactly that tall.
 //
 // THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row lane seats at row
-// floor((52 + 25) / 2) = 38, the dropdown's 47-row item at 36; the answer is
-// independent of the box's y by construction rather than by a tie rule. (The
-// kdenlive crops the rule landed on — the 12-row cap at 100 % in a 30-row
-// lane, a 32 box, a 29 item — are git history with the unit they were
-// measured in.)
+// floor((52 + 24.75) / 2) = 38, the dropdown's 47-row item at 35; the answer
+// is independent of the box's y by construction rather than by a tie rule.
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
@@ -1154,15 +1107,17 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // monospace digits gave row 28 and row 63 — exactly where the old proxy plus
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
-// their own box: the 47-row field at 275 % puts Roboto's 25-row cap at row 36
-// (eleven rows above it, eleven below — a 3-row line and 8 of face each
-// side), the 23-row field at 138 % its 13-row cap at row 18 (five and five).
+// their own box: the 68-row field at 400 % puts the strike's 36-row cap at
+// row 52 (sixteen rows above it, sixteen below — a 4-row line and 12 of
+// face each side, Windows' own 3 + 9 + 3 times four), the 47-row field at
+// 275 % its 24.75-row band at row 35, the 23-row field at 138 % its
+// 12.42-row band at row 17.
 // AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop, which is what levels it with OK
 // and Cancel at every scale (the reasoning is at the modal's own site).
-double redesign_baseline(cairo_scaled_font_t* font, double box_y,
+double redesign_baseline(const GuiFont& font, double box_y,
                          double box_h) {
-    return box_y + std::floor((box_h + cap_height_px(font)) * 0.5);
+    return box_y + std::floor((box_h + gui_font_cap_px(font)) * 0.5);
 }
 
 // THE BASELINE FOR A LINE — a band that IS the face's ascent plus its descent,
@@ -1170,10 +1125,8 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 // rule above is not asked. The ceil keeps a seat on a whole pixel; on both
 // backends the hinted ascent is a whole pixel already and it changes
 // nothing.
-double line_baseline(cairo_scaled_font_t* font, double line_y) {
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(font, &fe);
-    return line_y + std::ceil(fe.ascent);
+double line_baseline(const GuiFont& font, double line_y) {
+    return line_y + std::nearbyint(gui_font_ascent_px(font));
 }
 
 // -- THE CAPTION (architect 2026-10-05) ----------------------------------------
@@ -1264,15 +1217,14 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
-    // piece is open. ROBOTO BOLD at the body's size through the shaping
+    // piece is open. THE BOLD FACE (gui_font.h: Cronyx Helvetica Bold, or
+    // Liberation Sans Bold at a fallback scale) through the shaping
     // chokepoint, its cap band centred in the lane, in the caption's text
     // role. TOO LONG FOR THE ROOM — the pen at x 20 to two px short of
     // Minimise — it is CUT AT A CODEPOINT and ends in Windows' "..." (DrawText's
     // end ellipsis), the longest prefix whose own run and the ellipsis's fit;
     // a room too narrow for even the ellipsis paints no title.
-    gui_select_font_face(cr, GuiFontFamily::SansBold);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const GuiFont font = gui_font(GuiFace::Bold);
     const std::string title = app.project_name.empty()
                                   ? std::string("Warptempo")
                                   : app.project_name + " - Warptempo";
@@ -1415,9 +1367,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // same positions and cannot disagree. Shaping a handful of glyphs per paint
     // is deliberate — the chokepoint's own comment defers caching to a profile,
     // and these are the cheapest runs there are.
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const GuiFont font = gui_font(GuiFace::Body);
 
     const int pad    = scaled_px(kMenuLabelPadPx);
 
@@ -1786,8 +1736,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_fill(cr);
 
     // (NO FONT IS SELECTED HERE, and that is the row's own fact since
-    // 2026-08-11: this lane paints geometry and icons only. The sans face and
-    // its scaled font were set for the four view radios' shaped LETTER faces,
+    // 2026-08-11: this lane paints geometry and icons only. A text face was
+    // named here for the four view radios' shaped LETTER faces,
     // which the architect replaced with real Breeze glyphs that day.)
     // THE CASE AND ITS GLYPH, each a composite of its rounded parts
     // (render.h's icon-row block): the glyph at the case's (3, 3).
@@ -2261,14 +2211,13 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // Shadow top and left and Hilight bottom and right, over `clock_ground` under
 // its digits in `clock_text` — kTimeFieldHeightPx tall, VERTICALLY CENTRED in
 // its row's content band (a half-row tie toward the top, the cap rule's own),
-// its run in ROBOTO AT THE BODY SIZE (redesign_font_size_px, 13 Windows px;
-// no period field used a monospace face, ACID's big clock included), its cap
-// band centred in the field by redesign_baseline. Roboto 13 gives the
-// period's 9-px digits with 3 px of face above and below them, and its digits
-// are TABULAR: measured 2026-10-05 through the product's road, every digit one
-// advance (10.078 px at 138 %, 20.094 at 275 %, 25.578 at 350 %) and no
-// kerning between any two of the digits, the colon and the point, so the
-// colon and the point stand still as the time runs.
+// its run in THE BODY FACE (gui_font.h; no period field used a monospace
+// face, ACID's big clock included), its cap band centred in the field by
+// redesign_baseline: the strike's 9-row digits with 3 Windows px of face
+// above and below them. Both faces' digits are TABULAR — Cronyx's every
+// digit 6 strike px, Liberation's every digit 0.556 em with no kerning
+// between the digits, the colon and the point — so the colon and the point
+// stand still as the time runs.
 //
 // EACH FIELD'S WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
@@ -2301,7 +2250,8 @@ constexpr std::string_view kClockTabLetters = "AB";
 // time fields run rows 716..732 of his lossless capture and Vegas Audio's
 // 484..500 — one line, three px of face, the 9-px digits, three px of face,
 // one line. One element, rounded once (scaled_px): 23 device px at 138 %, 47
-// at 275 %, 60 at 350 %, against Roboto 13's caps of 13, 25 and 33.
+// at 275 %, 68 at 400 %, against the body strike's cap band of 12.42, 24.75
+// and 36.
 constexpr double kTimeFieldHeightPx = 17.0;
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
@@ -2323,9 +2273,11 @@ constexpr double kTimeFieldGapPx = 3.0;
 // retired 2026-10-03: the state is a line on the row's ground.)
 constexpr double kStatusPanelPadPx = 3.0;
 
-// The time fields' metrics, MEMOISED ON THE FONT SIZE — thirteen tiny shaping
+// The time fields' metrics, MEMOISED ON THE SCALE — thirteen tiny shaping
 // passes (ten digits, the two letters and the specimen) that answer the same
-// thing on every frame, the face being fixed and the size the only variable.
+// thing on every frame, the face being fixed and the scale the only variable
+// (it also picks the strike or the fallback, gui_font.h: the widths are the
+// live face's own).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -2334,16 +2286,15 @@ constexpr double kStatusPanelPadPx = 3.0;
 // letter_w + the shaped ` | ` + time_w, each player field's time_w, and each
 // cell is its field's damage box too.
 struct TimeFieldMetrics {
-    double px       = -1.0;   // the size this was measured at
+    int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
     double letter_w = 0.0;    // the widest tab letter's shaped width
 };
 static TimeFieldMetrics g_time_field_metrics;
 
-static const TimeFieldMetrics& time_field_metrics(cairo_scaled_font_t* font,
-                                                  double size_px) {
+static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
     TimeFieldMetrics& m = g_time_field_metrics;
-    if (m.px == size_px) return m;
+    if (m.percent == font.percent) return m;
     char widest = '0';
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
@@ -2360,7 +2311,7 @@ static const TimeFieldMetrics& time_field_metrics(cairo_scaled_font_t* font,
         m.letter_w = std::max(m.letter_w,
                               text_shape::shape_text_run(font, one).width_px);
     }
-    m.px = size_px;
+    m.percent = font.percent;
     return m;
 }
 
@@ -2496,12 +2447,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-09-29 evening). In device px, off the painted walk: 17·32 + 3·11 =
     // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, and the
     // clock's time field (kTimeFieldHeightPx, 2026-10-05) — its cell the
-    // widest `A | 00:00.000` in Roboto 13, ~104.6 px at 17.94 px, ceiled to
-    // 105 — spanning 7..120, the state line from one group space past it,
-    // 131, clipped one group space short of the block at 1321 (~1190 px); at
-    // the tablet's 275 % 17·63 + 3·22 = 1137, starting at 2304 − 22 − 1137 =
-    // 1145, the field (its cell ~208.5, ceiled to 209) spanning 14..239, the
-    // state line 261..1123 (~862 device px). THE ROW CARRIES NO
+    // widest `A | 00:00.000` in the body face, Liberation's 107.0 px at 138 %
+    // (2026-10-05) — spanning 7..122, the state line from one group space
+    // past it, 133, clipped one group space short of the block at 1321
+    // (~1188 px); at the tablet's 275 % 17·63 + 3·22 = 1137, starting at
+    // 2304 − 22 − 1137 = 1145, the field (its cell ~213.3, ceiled to 214)
+    // spanning 14..244, the state line 266..1123 (~857 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: the block reaches the field's
@@ -2546,14 +2497,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     // THE CLOCK — the first TIME FIELD (the shape, the face and the
     // fixed-width rule at kTimeFieldHeightPx above, architect 2026-10-05), in
-    // the body face selected through the one face owner (gui_font.h) and
-    // contained by the save/restore this body already opened. The render
+    // the body face named through the one face owner (gui_font.h), inside
+    // the save/restore this body already opened. The render
     // player's two fields share its shape, face and metrics; THE TWO NEVER
     // PAINT IN THE SAME FRAME: the player owns the row whole while it stands.
     {
-        cairo_scaled_font_t* font = select_bottom_row_face(cr);
+        const GuiFont font = gui_font(GuiFace::Body);
         const TimeFieldMetrics& tm =
-            time_field_metrics(font, redesign_font_size_px());
+            time_field_metrics(font);
         // THE ACTIVE TAB'S LETTER LEADS THE CELL (architect 2026-10-01, the
         // tab row deleted as "a waste of space"): `A | 00:45.115` — the
         // letter, a space, the LITERAL pipe, a space, then the timestamp. THE
@@ -2670,8 +2621,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     crop-at-its-floor allowance (the block above) is what covers the
         //     narrow window where the right block has already walked over this
         //     ground.
-        //   * THE STATE — the sans at THE NORMAL FACE (redesign_font_size_px,
-        //     13 Windows px) in the theme's label, painted straight on the row's
+        //   * THE STATE — THE BODY FACE (gui_font(GuiFace::Body)) in the
+        //     theme's label, painted straight on the row's
         //     ground as the menu row's words are, LEFT-ALIGNED a group space
         //     past the clock's field, on the row's solved baseline over the
         //     content band (redesign_baseline). The
@@ -2858,43 +2809,16 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-
-    // TWO SIZES ON ONE CONTEXT, IN TWO PHASES — MEASURE, THEN PAINT — and the
-    // phase split is not tidiness, it is the chokepoint's stated precondition:
-    // show_shaped_run must run with THE SAME scaled font set on `cr` that shaped
-    // the run (text_shape.h). Shaping both lines up front and then painting both
-    // would leave the SECOND size on the context while the FIRST line's glyphs
-    // were emitted — its 13-px-shaped positions rendered at 11, which is a
-    // wrong-size line with mis-spaced glyphs, exactly the mismatch signature the
-    // contract warns about. So each line's size is (re-)set immediately before
-    // its own paint, below.
-    //
-    // The SIZE, not the font POINTER, is what is carried between the phases:
-    // cairo_get_scaled_font returns a borrowed reference that a later
-    // cairo_set_font_size releases, so a pointer held across a size change is not
-    // ours to use. Each phase re-fetches; only plain doubles cross.
-    const double size1 = redesign_font_size_px();
-    const double size2 =
-        kTooltipShiftFontSizePx * gui_scale_factor();
+    const GuiFont font = gui_font(GuiFace::Body);
     const bool two_line = (line2 != nullptr);
-
-    cairo_set_font_size(cr, size1);
-    cairo_scaled_font_t* f1 = cairo_get_scaled_font(cr);
-    const text_shape::ShapedRun r1 = text_shape::shape_text_run(f1, line1);
-    cairo_font_extents_t fe1;
-    cairo_scaled_font_extents(f1, &fe1);
-    const double band1 = fe1.ascent + fe1.descent;
+    const text_shape::ShapedRun r1 = text_shape::shape_text_run(font, line1);
+    const double band1 = gui_font_line_px(font);
 
     double band2 = 0.0, w2 = 0.0;
     text_shape::ShapedRun r2;
     if (two_line) {
-        cairo_set_font_size(cr, size2);
-        cairo_scaled_font_t* f2 = cairo_get_scaled_font(cr);
-        r2 = text_shape::shape_text_run(f2, line2);
-        cairo_font_extents_t fe2;
-        cairo_scaled_font_extents(f2, &fe2);
-        band2 = fe2.ascent + fe2.descent;
+        r2 = text_shape::shape_text_run(font, line2);
+        band2 = gui_font_line_px(font);
         w2 = r2.width_px;
     }
 
@@ -2949,35 +2873,24 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
     paint_popup_chrome(cr, box, PopupFace::Info);
 
-    // THE PAINT PHASE. Each line RE-SETS its own size first, so the context
-    // carries the very font that shaped the run it is about to emit — the
-    // chokepoint's precondition, honored per line. Line 1 is therefore
-    // byte-identical in face, size and paint to the one-line form's line, which
-    // is the whole point: the two forms differ by an added line, not by anything
-    // about the first one.
-    //
-    // EACH LINE SITS ON ITS OWN BAND, and a band IS the face's ascent plus its
-    // descent — a LINE and not a box, so each baseline is line_baseline's, its
-    // own band's ascent. The box solver is not asked here: there are no
-    // margins around a band to centre a cap in, and the two lines' bands are
-    // laid end to end with the authored gap between them, which is what makes
-    // the symmetry above true of the ink and not merely of the arithmetic.
-    cairo_set_font_size(cr, size1);
+    // EACH LINE SITS ON ITS OWN BAND, and a band IS the face's ascent plus
+    // its descent — a LINE and not a box, so each baseline is
+    // line_baseline's, its own band's ascent. The box solver is not asked
+    // here: there are no margins around a band to centre a cap in, and the
+    // two lines' bands are laid end to end with the authored gap between
+    // them, which is what makes the symmetry above true of the ink and not
+    // merely of the arithmetic.
     set_palette_source(cr, palette().card_text);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
-        line_baseline(cairo_get_scaled_font(cr),
-                      static_cast<double>(y + pad_y)));
+        line_baseline(font, static_cast<double>(y + pad_y)));
     if (two_line) {
-        cairo_set_font_size(cr, size2);
         // The hint line takes THE CARD TEXT like the first (architect
-        // 2026-10-03, Windows' ink, no dims: the kdenlive design's dimmed hint
-        // line retired with the luminance rule; the card face's words are
+        // 2026-10-03, Windows' ink, no dims; the card face's words are
         // `card_text` since 2026-10-04, render.h's palette block).
-        set_palette_source(cr, palette().card_text);
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
-            line_baseline(cairo_get_scaled_font(cr),
+            line_baseline(font,
                           static_cast<double>(y + pad_y) + band1 + gap));
     }
 
@@ -2986,15 +2899,12 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
 namespace {
 
-// THE CARD'S LINE SPACING: the sans face's OWN height at the redesign size,
-// asked of the same scaled font the lines are shaped and painted with, so a
-// wrapped card's rows sit exactly as the face intends them to. Read ONCE per
-// paint and handed down — it is the only thing that turns a line count into
-// a card height.
-int notification_line_h_px(cairo_scaled_font_t* font) {
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(font, &fe);
-    return static_cast<int>(std::nearbyint(fe.height));
+// THE CARD'S LINE SPACING: the body face's OWN cell (the strike's ascent
+// plus descent, 13 Windows px) at the live scale, so a wrapped card's rows
+// sit exactly as the face intends them to. Read ONCE per paint and handed
+// down — it is the only thing that turns a line count into a card height.
+int notification_line_h_px(const GuiFont& font) {
+    return static_cast<int>(std::nearbyint(gui_font_line_px(font)));
 }
 
 // THE WRAP, and the ONE place a card's text is broken into lines (architect
@@ -3023,7 +2933,7 @@ int notification_line_h_px(cairo_scaled_font_t* font) {
 // folder overlay's rows already do: cards are at most a handful and their
 // sentences are short, so nothing here is memoized.
 std::vector<text_shape::ShapedRun> notification_text_lines(
-        cairo_scaled_font_t* font, const std::string& text,
+        const GuiFont& font, const std::string& text,
         const text_shape::ShapedRun& whole, double room_px) {
     std::vector<text_shape::ShapedRun> lines;
     if (room_px <= 0.0 || whole.width_px <= room_px) {
@@ -3147,9 +3057,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     if (room.w <= 0 || room.h <= 0) return;
 
     cairo_save(cr);
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const GuiFont font = gui_font(GuiFace::Body);
 
     const int line1_h  = notification_card_h_px();
     const int line_h   = notification_line_h_px(font);
@@ -3371,9 +3279,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const GuiFont font = gui_font(GuiFace::Body);
 
     const int border    = popup_border_px();
     const int item_h    = popup_item_h_px();
@@ -3608,21 +3514,19 @@ constexpr double kRulerMinMinorPitchPx = 9.0;
 // (architect 2026-10-02, the U4 mock's "above 6, below 10" laptop rows,
 // re-authored as 4 and 7 at the unit's change, the labels at the small
 // face). THE LINE'S TOP PAD IS DERIVED, never authored: the label is a LINE
-// (line_baseline), whose baseline sits ceil(ascent) under the line's top, so
-// its cap top sits ceil(ascent) - cap under it, and the pad that lands the
-// cap top at this row is
+// (line_baseline), whose baseline sits nearbyint(ascent) under the line's
+// top, so its cap top sits nearbyint(ascent) - nearbyint(cap) under it, and
+// the pad that lands the cap top at this row is
 //
-//     pad = max(0, scaled_px(4) - (ceil(ascent) - cap))
+//     pad = max(0, scaled_px(4) - (nearbyint(ascent) - nearbyint(cap)))
 //
-// of the label's own face (ruler_label_font_size_px, 10 Windows px), both
-// metrics read through the product's own road (line_baseline's ascent,
-// cap_height_px's "H"). A pad scaled from one authored value cannot hold the
-// row, because the face's ascent-minus-cap does not scale with the face. THE
-// THREE SCALES (the measurements at render.h's kRulerBaselineToMarkerPx
-// block): 275 % pad 5, cap top row 11; 138 % pad 4, cap top row 6; 50 % pad
-// 1, cap top row 2. The rule's one implementation is ruler_label_baseline_px
-// below; the lane's height under the labels is ruler_lane_h_px's arithmetic
-// (render.h).
+// of the label's own face, THE SMALL FACE (gui_font(GuiFace::Small)), both
+// metrics its strike's (gui_font.h). The Small Fonts digits' cell is all cap
+// — ascent 7, cap 7 — so the pad is scaled_px(4) itself at every scale
+// (2026-10-05); the rule stays general because the face's ascent-minus-cap
+// is the face's to change. The rule's one implementation is
+// ruler_label_baseline_px below; the lane's height under the labels is
+// ruler_lane_h_px's arithmetic (render.h).
 constexpr double kRulerLabelCapTopPx   = 4.0;
 // How far a MAJOR tick rises above the marker lane. Minors rise none. 3
 // Windows px (the laptop pixel's 4 re-authored, architect 2026-10-02).
@@ -3672,12 +3576,10 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
 // height (ruler_lane_h_px), each handing in the label face at its painted
 // size, so the digits and the ground beneath them are one measurement and
 // never two.
-int ruler_label_baseline_px(cairo_scaled_font_t* font) {
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(font, &fe);
+int ruler_label_baseline_px(const GuiFont& font) {
     const int ascent_to_cap =
-        static_cast<int>(std::ceil(fe.ascent)) -
-        static_cast<int>(std::nearbyint(cap_height_px(font)));
+        static_cast<int>(std::nearbyint(gui_font_ascent_px(font))) -
+        static_cast<int>(std::nearbyint(gui_font_cap_px(font)));
     const int pad =
         std::max(0, scaled_px(kRulerLabelCapTopPx) - ascent_to_cap);
     return static_cast<int>(line_baseline(font, static_cast<double>(pad)));
@@ -3685,39 +3587,15 @@ int ruler_label_baseline_px(cairo_scaled_font_t* font) {
 
 } // namespace
 
-// THE RULER LANE'S DERIVED HEIGHT (the rule and its three scales at the
+// THE RULER LANE'S DERIVED HEIGHT (the rule and its scales at the
 // declaration, render.h): the labels' baseline, then kRulerBaselineToMarkerPx
-// authored rows to the marker lane. It is read at LAYOUT, outside any paint,
-// so it measures the label face on its own scratch context through the same
-// road the painter takes — gui_select_font_face, then
-// ruler_label_font_size_px — on an image surface like both backends' paint
-// targets, whose font options (hint metrics on) are what make the painter's
-// extents whole pixels; the painter applies no transform to the text, so the
-// two scaled fonts are one. MEMOIZED ON THE SCALE: the lane table asks this
-// on every geometry query, and the answer moves only with gui_scale (its two
-// application points, set_gui_scale_percent), so the percent is the key and a
-// scale commit re-measures on the next query. The faces are installed at the
-// head of GuiPlatform::init on both backends, before the first layout; the
-// assert is the tripwire for a measurement taken on cairo's default face,
-// which would be cached. GUI thread only, like every lane accessor.
+// authored rows to the marker lane. Read at LAYOUT, outside any paint, off
+// the small face's strike metrics (gui_font.h), the very numbers the
+// painter's seat reads, so the digits and the ground beneath them are one
+// measurement. Cheap enough to answer per query.
 int ruler_lane_h_px() {
-    static int cached_percent = -1;
-    static int cached_h       = 0;
-    const int percent = gui_scale_percent();
-    if (percent == cached_percent) return cached_h;
-    cairo_surface_t* surface =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
-    cairo_t* cr = cairo_create(surface);
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    assert(cairo_font_face_get_type(cairo_get_font_face(cr)) ==
-           CAIRO_FONT_TYPE_FT);
-    cairo_set_font_size(cr, ruler_label_font_size_px());
-    const int baseline = ruler_label_baseline_px(cairo_get_scaled_font(cr));
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-    cached_h = baseline + scaled_px(kRulerBaselineToMarkerPx);
-    cached_percent = percent;
-    return cached_h;
+    return ruler_label_baseline_px(gui_font(GuiFace::Small)) +
+           scaled_px(kRulerBaselineToMarkerPx);
 }
 
 // THE MARKER LANE'S DERIVED ROWS (the rule and its scales at render.h's
@@ -3728,80 +3606,36 @@ int ruler_lane_h_px() {
 // top; the lane is the box with one Windows px of air above it and none
 // below (architect 2026-10-03: the box stands on the well).
 //
-// THE INK IS PAINTED, NOT READ OFF A METRIC: the printable ASCII set
-// (0x21..0x7E, one run) is shaped through the one chokepoint
-// and shown on a scratch surface through the painter's own road
-// (gui_select_font_face, then redesign_font_size_px) at a whole-row
-// baseline — the flag labels' own seat is a whole row too — and the rows
-// holding any coverage are counted, so the faint antialiased rows a glyph
-// lays past its outline are counted as ink, as the screen shows them. Read at
-// LAYOUT like the ruler's height and MEMOIZED ON THE SCALE the same way.
+// THE INK IS THE BODY STRIKE'S, READ OFF ITS GLYPHS (architect 2026-10-05):
+// the specimen is THE PRINTABLE ASCII SET MINUS ^ { } — flag labels are an
+// ASCII grammar — and those three are left out because they alone climb a
+// row past the caps' 9 (Cronyx's "^" "{" "}" stand 10 above the baseline),
+// so they may touch the outline. The rest lights 9 rows above the baseline
+// (the caps, the digits, "$" "(" "|") and 2 from the baseline's row down
+// (the descenders, "(" ")"): 11 rows of ink. Each count is a Windows-px
+// element rounded on its own (scaled_px), the box the sum of its rounded
+// parts. MEMOIZED ON THE SCALE: the lane table asks on every geometry query.
 namespace {
 struct MarkerLaneRows {
     int percent   = -1;
     int box_h     = 0;
     int baseline  = 0;   // under the box's top
     int lane_h    = 0;
-    int ink_above = 0;   // the specimen's ink rows above the baseline
-    int ink_below = 0;   // and from the baseline's row down
 };
 const MarkerLaneRows& marker_lane_rows() {
     static MarkerLaneRows rows;
     const int percent = gui_scale_percent();
     if (percent == rows.percent) return rows;
     std::string specimen;
-    for (char c = 0x21; c <= 0x7E; ++c) specimen += c;
-    const double size = redesign_font_size_px();
-    // A surface the run and twice the face's size either side of its
-    // baseline, which no glyph of the face reaches past.
-    const int margin   = static_cast<int>(std::ceil(2.0 * size));
-    const int baseline = margin;
-    cairo_surface_t* probe =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
-    cairo_t* pcr = cairo_create(probe);
-    gui_select_font_face(pcr, GuiFontFamily::Sans);
-    assert(cairo_font_face_get_type(cairo_get_font_face(pcr)) ==
-           CAIRO_FONT_TYPE_FT);
-    cairo_set_font_size(pcr, size);
-    const double run_w =
-        text_shape::shape_text_run(cairo_get_scaled_font(pcr), specimen)
-            .width_px;
-    cairo_destroy(pcr);
-    cairo_surface_destroy(probe);
-    const int w = static_cast<int>(std::ceil(run_w)) + 2 * margin;
-    const int h = 2 * margin;
-    cairo_surface_t* surface =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-    cairo_t* cr = cairo_create(surface);
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, size);
-    const text_shape::ShapedRun run =
-        text_shape::shape_text_run(cairo_get_scaled_font(cr), specimen);
-    cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
-    text_shape::show_shaped_run(cr, run, static_cast<double>(margin),
-                                static_cast<double>(baseline));
-    cairo_destroy(cr);
-    cairo_surface_flush(surface);
-    const unsigned char* data = cairo_image_surface_get_data(surface);
-    const int stride = cairo_image_surface_get_stride(surface);
-    int top = -1, bottom = -1;
-    for (int y = 0; y < h; ++y) {
-        const auto* px = reinterpret_cast<const uint32_t*>(data + y * stride);
-        bool inked = false;
-        for (int x = 0; x < w && !inked; ++x) inked = px[x] != 0;
-        if (!inked) continue;
-        if (top < 0) top = y;
-        bottom = y;
-    }
-    cairo_surface_destroy(surface);
-    assert(top >= 0 && top < baseline && bottom >= baseline);
-    rows.ink_above = baseline - top;
-    rows.ink_below = bottom - baseline + 1;
+    for (char c = 0x21; c <= 0x7E; ++c)
+        if (c != '^' && c != '{' && c != '}') specimen += c;
+    const GuiInkRows ink = gui_strike_ink_rows(GuiFace::Body, specimen);
+    const int above = scaled_px(ink.above, 1);
+    const int below = scaled_px(ink.below);
     const int edge  = marker_flag_edge_h_px();
     const int clear = marker_flag_ink_clear_px();
-    rows.box_h    = edge + clear + rows.ink_above + rows.ink_below + clear +
-                    edge;
-    rows.baseline = edge + clear + rows.ink_above;
+    rows.box_h    = edge + clear + above + below + clear + edge;
+    rows.baseline = edge + clear + above;
     rows.lane_h   = rows.box_h + marker_lane_air_px();
     rows.percent  = percent;
     return rows;
@@ -3862,11 +3696,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int minor_top   = marker.y;                    // no rise
     const int major_top   = marker.y - scaled_px(kRulerMajorRisePx);
 
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, ruler_label_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const GuiFont font = gui_font(GuiFace::Small);
     // THE LABEL IS A LINE, not a box, AT THE SMALL FACE
-    // (ruler_label_font_size_px): the seat is line_baseline's ascent off a top pad DERIVED so the cap top
+    // (gui_font.h, the Small Fonts digits): the seat is line_baseline's ascent off a top pad DERIVED so the cap top
     // lands kRulerLabelCapTopPx authored rows under the lane's top (the rule
     // and its three scales at that constant), through the one seat the lane's
     // height also reads (ruler_label_baseline_px). THE SEAT IS ANCHORED TO THE
@@ -5668,9 +5500,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
 
     cairo_save(cr);
-    cairo_scaled_font_t* font = select_bottom_row_face(cr);
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(font, &fe);
+    const GuiFont font = gui_font(GuiFace::Body);
 
     // The row's own left/right margin — the modal sits on the same pad the
     // tenants it displaced sit on, which since 2026-08-14 is literally the
@@ -6143,9 +5973,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // specimen alone (time_field_metrics, row 8's own memo), so neither
         // field nor anything right of it moves as the position runs or an
         // item of another length loads.
-        cairo_scaled_font_t* cfont = select_bottom_row_face(cr);
+        const GuiFont cfont = gui_font(GuiFace::Body);
         const double cell_w =
-            time_field_metrics(cfont, redesign_font_size_px()).time_w;
+            time_field_metrics(cfont).time_w;
         const int field_pad = scaled_px(kStatusPanelPadPx);
         const int field_w   =
             static_cast<int>(std::ceil(cell_w)) + 2 * field_pad;
@@ -6297,14 +6127,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
                                 clock_right - clock_x0 + 2, content.h};
         }
-        // THE HANDLE RE-TAKEN: a cairo_scaled_font_t* borrowed from the
-        // context is only good until the context's font changes, so the
-        // row's `font` is RE-TAKEN here rather than assumed to have survived
-        // the clock's own select (the same face since 2026-10-05, when the
-        // clock's monospace retired; the walk below is SHARED, its word arm
-        // reads `font`, and this line keeps that arm's precondition a
-        // property of the body rather than of which branch happened to run).
-        font = select_bottom_row_face(cr);
     } else if (picker_up) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
         //    2026-08-29): **Cancel** and NOTHING ELSE — no label, no field,
@@ -6488,9 +6310,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         out.byte_x        = bx_off;
 
         const int band_y =
-            static_cast<int>(std::nearbyint(baseline - fe.ascent));
+            static_cast<int>(std::nearbyint(baseline -
+                                            gui_font_ascent_px(font)));
         const int band_h =
-            static_cast<int>(std::nearbyint(fe.ascent + fe.descent));
+            static_cast<int>(std::nearbyint(gui_font_line_px(font)));
 
         // Everything from here paints CLIPPED TO THE TEXT VIEWPORT — the band
         // between the pads, not the whole interior — so scrolled-out glyphs,
@@ -6812,9 +6635,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // the character caps, the page keys' words and the function keys' words
     // alike — so there is no second way a cap can be drawn. A cap is one to
     // nine glyphs, which are the cheapest runs there are.
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const GuiFont font = gui_font(GuiFace::Body);
 
     onscreen_keyboard::for_each_key(
         app, page,
@@ -6996,9 +6817,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // selection, and this painter selects once and never again — nothing
     // after this call reads a face it did not select, so the borrowed handle
     // stays valid for the whole walk.
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const GuiFont font = gui_font(GuiFace::Body);
 
     const int    glyph  = folder_overlay::row_icon_px();
     const int    gap    = folder_overlay::row_icon_gap_px();

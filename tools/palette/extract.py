@@ -561,9 +561,9 @@ else: mismatch(f'playhead at {ph_col}: no stem visible and no marker stem on its
 
 # ------------------------------------------------------------------ the clock (paint_bottom_row_buttons_and_clock)
 # THE CLOCK'S TEXT IS A PARAMETER AND ITS SEAT IS NOT MEASURED HERE: the captures this reads (a6f53163) painted it in
-# Roboto Mono 11 pt, the face that retired from the repository 2026-10-05 with the app's time fields, so its pixels
-# cannot be re-rendered and are not checked; render.py draws the clock at today's rule (the time field, Roboto at the
-# normal face), whatever the scene records. The baseline and size below are the capture's era's, kept as the scene's
+# a monospace face that left the repository 2026-10-05 with the app's time fields, so its pixels cannot be re-rendered
+# and are not checked; render.py draws the clock at today's rule (the time field at the normal face), whatever the
+# scene records. The baseline and size below are the capture's era's, kept as the scene's
 # record: cap-centred in the content rows at that face's measured 21-row cap (gui_font_bundled.cpp's reference table).
 cb_h = content_bottom[1] - content_bottom[0]
 clock = dict(text=ARGS.clock, x=PAD, baseline=content_bottom[0] + (cb_h + 21) // 2,

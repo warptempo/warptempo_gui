@@ -3,6 +3,7 @@
 #include "phaseresetmarkers.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
+#include "gui_font.h"         // GuiFont, the face owner's face at a scale
 
 #include <cairo/cairo.h>
 #include <cmath>
@@ -547,6 +548,13 @@ int    gui_scale_percent();
 // since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();
 
+// A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
+// asks for its text — the body, the caption's bold or the ruler's small face
+// at the current gui_scale, which also picks the bitmap mode or the fallback.
+inline GuiFont gui_font(GuiFace face) {
+    return GuiFont{face, gui_scale_percent()};
+}
+
 // One authored length in WINDOWS PX -> device pixels, the ONE conversion every
 // scaled dimension in the tree takes: device = std::nearbyint(windows_px ×
 // percent / 100), like every other integer-domain conversion.
@@ -562,10 +570,9 @@ double gui_scale_factor();
 // Every scaled accessor below (and the painters' own lengths in
 // paint_handler.cpp / render.cpp) spells its conversion through this pair
 // rather than open-coding the multiply; the DOUBLE-domain readers — the
-// font sizes (redesign_font_size_px and its siblings: a font size is not a
-// grid point and cairo takes a double) and the ruler's unrounded pitch
-// compare — are a different concept and deliberately do not come through
-// here.
+// face metrics (gui_font.h: a font quantity is not a grid point, rounded at
+// the seat that reads it) and the ruler's unrounded pitch compare — are a
+// different concept and deliberately do not come through here.
 inline int scaled_px(double authored) {
     return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
 }
@@ -585,9 +592,6 @@ inline int scaled_px(double authored, int floor_px) {
     const int v = scaled_px(authored);
     return v < floor_px ? floor_px : v;
 }
-
-// (The former flag_font_size_px() — font_size * 96/72 — is gone with row 7. The
-// shared text size is redesign_font_size_px(), below.)
 
 // (THE MONOSPACE TEXT-BOX PADDING FAMILY IS GONE — row 7, 2026-08-01. It was
 // flag_pad_x_px / flag_pad_y_px, kChipOutlinePx, kTextBoxPadPx /
@@ -668,8 +672,8 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     nothing above or below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
 //     (SM_CXSMICON) at (2, 1) from the lane's top-left;
-//   THE TITLE in ROBOTO BOLD at the body's 13 (GuiFontFamily::SansBold, the
-//     caption font being the body face in bold), its pen at x 20 (two px past
+//   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: Cronyx Helvetica
+//     Bold, the caption font being the body face in bold), its pen at x 20 (two px past
 //     the icon) and its cap band centred in the lane (redesign_baseline), in
 //     the caption's text role, cut before the buttons with Windows' "..."
 //     (paint_caption_row owns the words and the cut);
@@ -922,7 +926,7 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
 // SCALED (architect 2026-10-02). The lane stacks, from its top:
 //
-//     lane = pad + ceil(ascent) + scaled_px(kRulerBaselineToMarkerPx)
+//     lane = pad + nearbyint(ascent) + scaled_px(kRulerBaselineToMarkerPx)
 //
 // — the labels' line seated so their CAP TOP lands kRulerLabelCapTopPx (4)
 // Windows px under the lane's top (the pad, derived from the face's own
@@ -930,17 +934,17 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // to the baseline (line_baseline), then SEVEN WINDOWS PX from the baseline to
 // the marker lane's top (below). ONE HELPER seats the labels for both
 // readers — the painter's baseline and this height (ruler_label_baseline_px,
-// paint_handler.cpp) — so the two cannot disagree, and the face's metrics
-// are read off the product's own road: the Sans face at
-// ruler_label_font_size_px (10 Windows px) through gui_select_font_face,
-// measured through cairo-ft on fonts/Roboto-Regular.ttf, SLIGHT, hint
-// metrics on:
-//   275 % (27.5 px, ascent 26, cap 20; the tablet): pad 11 - 6 = 5, baseline
-//     row 31, cap ink rows 11..30: lane 31 + 19 = 50.
-//   138 % (13.8 px, ascent 13, cap 11; the laptop): pad 6 - 2 = 4, baseline
-//     row 17, ink rows 6..16: lane 17 + 10 = 27.
-//   50 % (5 px, ascent 5, cap 4): pad 2 - 1 = 1, baseline row 6, ink rows
-//     2..5: lane 6 + 4 = 10.
+// paint_handler.cpp) — so the two cannot disagree. The face is THE SMALL
+// FACE, the reconstructed Small Fonts digits (gui_font.h, architect
+// 2026-10-05), whose 7-row cell is all cap (ascent 7, cap 7, descent 0), its
+// strike's metrics times the scale at every scale: 4 + 7 + 7 = 18 Windows px
+// at 100 %;
+//   400 % (k = 4): pad 16, baseline row 44, cap ink rows 16..43: lane
+//     44 + 28 = 72.
+//   275 % (the tablet): pad 11, ascent 19.25 -> 19, baseline row 30, cap
+//     ink rows 11..29: lane 30 + 19 = 49.
+//   138 % (the laptop): pad 6, ascent 9.66 -> 10, baseline row 16, ink
+//     rows 6..15: lane 16 + 10 = 26.
 // The major ticks' rise above the marker lane is the painter's own and does
 // not enter the lane.
 //
@@ -971,24 +975,21 @@ int ruler_lane_h_px();
 //     box  = edge + clear + ink_above + ink_below + clear + edge
 //     lane = scaled_px(kMarkerLaneAirPx) + box
 //
-// THE LABEL INK IS THE PRINTABLE ASCII SET'S (architect 2026-10-05: flag
-// labels are an ASCII grammar, and the editors take ASCII there), PAINTED at
-// the live size and its rows counted (marker_lane_rows, paint_handler.cpp),
-// so ONE WINDOWS PX OF FACE (kMarkerFlagInkClearPx) stands between the
-// outline and the tallest ink above and the deepest ink below, as Windows'
-// own controls leave face round their words. The extremes measured
-// 2026-10-05: "$" the tallest (16, 22, 30 and 39 rows above the baseline at
-// 138, 200, 275 and 350 %; "[" and "]" tie it at 138 %), "(" and ")" the
-// deepest (5, 6, 9 and 11 rows from the baseline's row down; "{" "}" tie at
-// 200 %), against the caps' 13, 19, 25 and 33 and the "p"'s 4, 5, 7 and 9.
-// THE RULE IT REPLACES, edge + ceil(ascent) + ceil(descent), had two faults:
-// its bottom outline is painted INSIDE the box (paint_flat_flag_box,
-// render.cpp), so the band lay over the descent's last rows and a descender
-// ran onto it (the "p" by one row at 275 % and 350 %), and the face's
-// ascent carries leading above any ink (6 rows above the caps at 200 %, 3
-// above the "$"). Every row the box gains or saves is THE WAVEFORM'S (his
-// ruling): the lane stack above it moves and the waveform's leftover takes
-// up the difference (main.cpp's vertical block).
+// THE LABEL INK IS THE BODY STRIKE'S, ITS SPECIMEN THE PRINTABLE ASCII SET
+// MINUS ^ { } (architect 2026-10-05: flag labels are an ASCII grammar, and
+// the editors take ASCII there), read off Cronyx Helvetica's glyphs
+// (marker_lane_rows, paint_handler.cpp; gui_strike_ink_rows): 9 rows above
+// the baseline (the caps, the digits, "$" "(" "|") and 2 from the baseline's
+// row down (the descenders, "(" ")"), so ONE WINDOWS PX OF FACE
+// (kMarkerFlagInkClearPx) stands between the outline and that ink above and
+// below, as Windows' own controls leave face round their words — THE FLAG IS
+// 1 + 1 + 9 + 2 + 1 + 1 = 15 WINDOWS PX. The three left out climb one row
+// past the caps (10 above) and may touch the outline; so may a taller or
+// deeper Liberation glyph at a fallback scale (gui_font.h). The ink counts
+// are the bitmap face's at every scale, each rounded on its own (scaled_px).
+// Every row the box gains or saves is THE WAVEFORM'S (his ruling): the lane
+// stack above it moves and the waveform's leftover takes up the difference
+// (main.cpp's vertical block).
 //
 // THE LANE IS THE BOX WITH ONE WINDOWS PX OF GROUND ABOVE IT AND NONE BELOW
 // IT (architect 2026-10-03): the box's bottom row is the lane's last row,
@@ -1003,13 +1004,10 @@ int ruler_lane_h_px();
 // visible over a run of flags — "the minor ticks visible above the flags are
 // helpful" — which is why the air above is kept while the air below went.
 // The box's label is seated as a LINE under its face band (baseline = box
-// top + edge + clear + ink_above). The face is the redesign's 13 Windows px
-// (redesign_font_size_px), read off the product's own road like the ruler's:
-// 138 % (17.94 px) box 1 + 1 + 16 + 5 + 1 + 1 = 25, lane 26 (was 23 and
-// 24); 200 % (26 px) 2 + 2 + 22 + 6 + 2 + 2 = 36, lane 38 (was 35 and 37);
-// 275 % (35.75 px) 3 + 3 + 30 + 9 + 3 + 3 = 51, lane 54 (was 46 and 49);
-// 350 % (45.5 px) 4 + 4 + 39 + 11 + 4 + 4 = 66, lane 70 (was 60 and 64)
-// (the air, the clear bands and the edges floored at one row). Every box
+// top + edge + clear + ink_above): 138 % box 1 + 1 + 12 + 3 + 1 + 1 = 19,
+// lane 20; 275 % 3 + 3 + 25 + 6 + 3 + 3 = 43, lane 46; 400 % 4 + 4 + 36 +
+// 8 + 4 + 4 = 60, lane 64 (2026-10-05; the air, the clear bands and the
+// edges floored at one row). Every box
 // painter and every flag hit rect takes the BOX's rows
 // (marker_flag_box_band), never the lane's: the box is what is painted and
 // so what is pressed, and with no air under it there is no strip below a box
@@ -1152,49 +1150,13 @@ inline int bottom_row_h_px() {
 // at main.cpp's bottom lane table and in
 // paint_bottom_row_buttons_and_clock (paint_handler.cpp).)
 
-// THE REDESIGN'S SHARED TEXT SIZE, in device pixels — every text's size but
-// the two named exceptions (the ruler timestamps' and the tooltip's second
-// line, each beside its painter's owner) — the time fields included since
-// 2026-10-05. AN EM OF 13
-// WINDOWS PX (architect 2026-10-02): MS Sans Serif 8 pt's 13-px cell, whose
-// capitals are 9 px tall — Roboto's cap of 0.711 em gives 9.2 at 13 px, and
-// the hinted face measures 9 at 100 % — so the product's text stands at
-// Windows' own proportion to its 16-px glyphs. 35.75 device px at 275 %
-// (cap 25), 17.94 at 138 % (cap 13). A FONT SIZE IS NOT A GRID POINT: it is
-// 13 × percent / 100 UNROUNDED, a double cairo takes as it is (scaled_px's
-// rounding rule is for lengths). It lives
-// here rather than in a painter's anonymous namespace because row 5's marker
-// flags shape their labels inside render.cpp while the button rows shape
-// theirs in paint_handler.cpp, and one design size cannot have two definitions.
-//
-// (It was 12 pt — 16 laptop px, measured off kdenlive's row-7 crop — until
-// the unit's change; that measurement is git history.)
-//
-// THE TEXT IS NOT FLOORED (architect 2026-08-10, with the gui_scale floor's
-// move to 50): it scales straight to 6.5 px at 50 %, while the structural
-// lengths keep scaled_px's per-metric floors so no 1 px line rounds to 0.
-inline constexpr double kRedesignFontSizePx = 13.0;   // Windows px
-inline double redesign_font_size_px() {
-    return kRedesignFontSizePx * gui_scale_factor();
-}
-
-// (THE CLOCK'S OWN SIZE RETIRED — architect 2026-10-05, with its face: from
-// 2026-08-14 the clock stood a step under the shared size in the monospace —
-// 12 Windows px against 13 since 2026-10-02 — and the time fields are the
-// shared size in the body face now, the period's own (kTimeFieldHeightPx,
-// paint_handler.cpp).)
-
-// THE RULER TIMESTAMPS' SIZE — an exception to the shared size (architect
-// 2026-10-02, the S4 mock judged on
-// the tablet; 8 pt until the unit's change): THE SMALL FACE, 10 WINDOWS PX
-// of Roboto through the one face owner (gui_select_font_face,
-// GuiFontFamily::Sans), on the ruler lane only — 27.5 device px at 275 %,
-// 13.8 at 138 %. The lane's height is derived from this face
-// (ruler_lane_h_px), so the size is the one constant to move.
-inline constexpr double kRulerLabelFontSizePx = 10.0;   // Windows px
-inline double ruler_label_font_size_px() {
-    return kRulerLabelFontSizePx * gui_scale_factor();
-}
+// (THE TEXT SIZES ARE THE FACES' OWN — architect 2026-10-05. The shared
+// 13-Windows-px size, the ruler labels' 10 and the tooltip hint line's 11
+// retired with the outline face they sized: the body face is Cronyx
+// Helvetica's 13-px cell, the ruler's the Small Fonts digits' 7-px cell, and
+// a fallback scale draws Liberation at the em that matches each strike
+// vertically (gui_font.h). A text surface names its face, gui_font(face),
+// and reads its vertical metrics off the strike.)
 
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
 // (56x20 = a 1px left border plus a 55x20 fill box; the border's own record is
@@ -1219,8 +1181,7 @@ inline double ruler_label_font_size_px() {
 // Sans 16px, the face then) gives an advance of 49.797px with the first
 // glyph's left side bearing at exactly 1.00; against the 55px box that pins
 // the left pad at 2 (2 + 1.00 = column 3, where the crop's ink core starts)
-// and leaves 3 on the right (Roboto, 2026-10-02: 49.953px on the same 1.00
-// bearing, the same two pins). Reproduced faithfully, that extra right pixel READS as slack rather
+// and leaves 3 on the right. Reproduced faithfully, that extra right pixel READS as slack rather
 // than as padding — so the box goes symmetric at 2 and comes out 54 wide where
 // kdenlive's is 55. A measured pixel deliberately given up, recorded here so
 // the next reader does not "fix" it back.
@@ -1499,12 +1460,12 @@ inline double marker_flag_max_width_px(bool iteration_on) {
                           kMarkerLabelTruncationMarker.size();
     const double pads = static_cast<double>(marker_flag_pad_left_px() +
                                             marker_flag_pad_right_px());
-    const double flag = static_cast<double>(glyphs) * redesign_font_size_px() +
+    const double glyph_bound = gui_font_advance_bound_px(gui_font(GuiFace::Body));
+    const double flag = static_cast<double>(glyphs) * glyph_bound +
                         pads +
                         static_cast<double>(marker_flag_border_px());  // closing
     if (!iteration_on) return flag;
-    const double cell = static_cast<double>(kIterCellGlyphs) *
-                            redesign_font_size_px() +
+    const double cell = static_cast<double>(kIterCellGlyphs) * glyph_bound +
                         pads + static_cast<double>(marker_flag_border_px());
     return flag + 2.0 * cell;
 }
@@ -1625,12 +1586,12 @@ inline int playhead_head_half_px(int device_row, double s) {
 // writer (note_tooltip_hover) reads the slop and the two wake-up delays.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
-// from the FACE'S OWN EXTENTS at both type sizes (one line, or 13 over 11
-// Windows px), so the box follows the font instead of a literal that could
-// drift from it; the run loop only needs to know it can never exceed this.
-// 44 Windows px (the laptop pixel's 60 re-authored, architect 2026-10-02)
-// clears the two-line form — 42 at 100 % and 110 device rows against 121 at
-// 275 % in Roboto — with room for a font whose metrics run larger.
+// from the BODY FACE'S OWN CELL (one line, or two 13-px bands), so the box
+// follows the face instead of a literal that could drift from it; the run
+// loop only needs to know it can never exceed this. 44 Windows px (the
+// laptop pixel's 60 re-authored, architect 2026-10-02) clears the two-line
+// form — 4 + 13 + 3 + 13 + 4 = 37 at 100 %, 102 device rows against 121 at
+// 275 % (2026-10-05).
 inline constexpr int     kTooltipDamageHeightPx = 44;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
@@ -1959,7 +1920,7 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 // Hilight one Windows px (relief_line_px) right and down, then in its
 // Shadow at (x, baseline) over it — every disabled word in the product goes
 // through here, as every disabled glyph goes through icons::draw_engraved.
-// `cr` carries the run's scaled font (shape with the font you paint with).
+// The run carries its own font (text_shape.h).
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline);
 
@@ -2812,8 +2773,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // same ladder; the stem is the flag box's, its selected face only while the
 // payload is the bright cell (architect 2026-10-04).
 //
-// `cr`'s scaled font is set by this function (the redesign sans face at
-// redesign_font_size_px) and restored.
+// The labels are the body face (gui_font(GuiFace::Body)); every run
+// carries its font, so `cr`'s font state is not touched.
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted box in PAINT ORDER (so the hit walk reads it backwards to get the

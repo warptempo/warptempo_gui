@@ -36,14 +36,13 @@ struct GuiBattery {
 //   * THE BATTERY: the percentage and "%", a space, then THE GLYPH, which
 //     says whether the device is PLUGGED IN and is always there: U+2191 ↑
 //     plugged, U+2193 ↓ unplugged, U+00D7 × unknown — "a sign that tells me
-//     there's something wrong". The glyphs are the SANS FACE'S OWN (Roboto
-//     carries all three, and it is the face on both hosts — gui_font.h), so
-//     they sit on the text's pixel grid: no second face and no drawn glyph.
-//     THE TWO ARROWS SHARE ONE ADVANCE (5 px at 100 %, 10 at 200 %), as he
-//     asked, and their shafts run two rows below the pipe's foot at both
-//     scales — Roboto's own drawing, accepted (architect 2026-10-02: "let's
-//     stick with the arrow from the Roboto font"). An unreadable level drops
-//     the percentage and keeps the glyph.
+//     there's something wrong". The glyphs are LIBERATION SANS'S at every
+//     scale (gui_font.h, architect 2026-10-05): Cronyx carries none of the
+//     three, so in the bitmap mode they are the outline drawn at its own
+//     advance beside the strike's digits — no drawn glyph. The two arrows
+//     share one advance, as he asked (architect 2026-10-02: "let's stick
+//     with the arrow from the font"). An unreadable level drops the
+//     percentage and keeps the glyph.
 //   * " | " between the battery and the clock — and on a host with NO
 //     battery the clock alone, no pipe.
 //   * THE CLOCK: the wall clock in 12-HOUR LOCAL time with AM / PM and no

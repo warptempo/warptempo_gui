@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Populate the spike's asset staging dir -- the product's two faces (Roboto and
-# Roboto Bold, copied from the repository's fonts/; Roboto Mono until
-# 2026-10-05, when it retired; the spike was built on Liberation) and the
-# audition WAV -- under
+# Populate the spike's asset staging dir -- two outline faces (Liberation Sans
+# Regular and Bold, copied from the repository's fonts/, the product's
+# fallback faces since 2026-10-05) and the audition WAV -- under
 # android/spike/build/assets/.
 #
 # It lands under build/ ON PURPOSE: the repo's .gitignore already ignores
@@ -26,7 +25,7 @@ die() { printf '\033[1;31m==> ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
 mkdir -p "$ASSETS"
 
-for f in Roboto-Regular.ttf Roboto-Bold.ttf; do
+for f in LiberationSans-Regular.ttf LiberationSans-Bold.ttf; do
     [ -f "$FONT_DIR/$f" ] || die "missing $FONT_DIR/$f (the repository's fonts/)"
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"

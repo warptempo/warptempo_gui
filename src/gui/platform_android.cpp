@@ -2432,25 +2432,25 @@ namespace {
 // picker. What this backend still owns of the convention is WHERE the projects
 // are: the template's projects_path, device_config_defaults above.)
 
-// LOAD THE PRODUCT'S TWO FACES OUT OF THE APK, or die. The assets are the
-// repository's own `fonts/Roboto-Regular.ttf` and `fonts/Roboto-Bold.ttf` (the
-// caption's title, 2026-10-05; architect 2026-10-02, gui_font.h; build_apk.sh's
-// asset step copies them). A
-// missing or unreadable asset is a BUILD defect — the packaging step puts both
-// files in and there is no runtime state that removes them — so there is no
+// LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
+// repository's own five font files (gui_font.h's kGuiFontFiles, in its
+// order; architect 2026-10-02 and 2026-10-05; build_apk.sh's asset step
+// copies them). A
+// missing or unreadable asset is a BUILD defect — the packaging step puts every
+// file in and there is no runtime state that removes one — so there is no
 // error arm to design: painting would otherwise silently use cairo's default,
 // which is worse than not starting. This ABORTS instead, and the abort is the
-// CALLER'S: gui_font_bundled.cpp keeps its own log-and-leave-unset arms.
+// CALLER'S: gui_font_bundled.cpp keeps its own log-and-answer-false arms.
 //
 // THE INSTALL IS OBSERVED, not assumed: gui_font_install_bundled answers
-// whether selecting each family actually puts an FT-BACKED face on a context
-// (its probe, gui_font.h), and false aborts here exactly as a missing asset
+// whether every strike read out and each fallback face is FT-backed (its
+// probe, gui_font.h), and false aborts here exactly as a missing asset
 // does — the Wayland backend's GuiPlatform::init asks the same owner the
 // same question of the bytes compiled into its executable.
 //
-// The assets need not stay open for the process's life — unlike the spike,
-// gui_font_install_bundled COPIES the bytes (its LIFETIME comment says so),
-// so the two AAssets are closed as soon as it returns.
+// The assets need not stay open for the process's life:
+// gui_font_install_bundled COPIES the bytes it keeps (its LIFETIME comment
+// says so), so the AAssets are closed as soon as it returns.
 void install_fonts_or_die(android_app* app) {
     AAssetManager* mgr = app->activity ? app->activity->assetManager : nullptr;
     if (!mgr) {
@@ -2459,28 +2459,25 @@ void install_fonts_or_die(android_app* app) {
         abort();
     }
 
-    struct Slot { const char* name; AAsset* asset; const uint8_t* bytes; size_t len; };
-    Slot slots[2] = {
-        {"Roboto-Regular.ttf", nullptr, nullptr, 0},
-        {"Roboto-Bold.ttf",    nullptr, nullptr, 0},
-    };
-    for (Slot& s : slots) {
-        s.asset = AAssetManager_open(mgr, s.name, AASSET_MODE_BUFFER);
-        s.bytes = s.asset ? static_cast<const uint8_t*>(AAsset_getBuffer(s.asset))
-                          : nullptr;
-        s.len   = s.asset ? static_cast<size_t>(AAsset_getLength(s.asset)) : 0;
-        if (!s.bytes || s.len == 0) {
+    AAsset*      assets[kGuiFontFileCount] = {};
+    GuiFontBytes files[kGuiFontFileCount];
+    for (std::size_t i = 0; i < kGuiFontFileCount; ++i) {
+        assets[i] = AAssetManager_open(mgr, kGuiFontFiles[i], AASSET_MODE_BUFFER);
+        files[i].data =
+            assets[i] ? static_cast<const uint8_t*>(AAsset_getBuffer(assets[i]))
+                      : nullptr;
+        files[i].len =
+            assets[i] ? static_cast<size_t>(AAsset_getLength(assets[i])) : 0;
+        if (!files[i].data || files[i].len == 0) {
             __android_log_print(ANDROID_LOG_FATAL, kLogTag,
                                 "bundled font asset %s is missing or empty",
-                                s.name);
+                                kGuiFontFiles[i]);
             abort();
         }
     }
 
-    const bool installed =
-        gui_font_install_bundled(slots[0].bytes, slots[0].len,
-                                 slots[1].bytes, slots[1].len);
-    for (Slot& s : slots) AAsset_close(s.asset);
+    const bool installed = gui_font_install_bundled(files);
+    for (AAsset* a : assets) AAsset_close(a);
     if (!installed) {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,
                             "bundled fonts did not install; refusing to paint "

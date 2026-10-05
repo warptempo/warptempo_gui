@@ -1,6 +1,6 @@
 {
  "name": "ad2",
- "description": "Set AD: the Windows 95 chrome scaled \u00d71.375 (glyph 22, case 30\u00d731 with the glyph at (4,4), 11 px between groups, the trim scroll bar 22 rows, Roboto 17 / 14 px), everything else as set AC trim24 (architect 2026-10-02 ~22:00: 'show me different scales, whatever rounds well; these chunkier buttons without the hover can be a little smaller').",
+ "description": "Set AD: the Windows 95 chrome scaled \u00d71.375 (glyph 22, case 30\u00d731 with the glyph at (4,4), 11 px between groups, the trim scroll bar 22 rows, the sans 17 / 14 px), everything else as set AC trim24 (architect 2026-10-02 ~22:00: 'show me different scales, whatever rounds well; these chunkier buttons without the hover can be a little smaller').",
  "colours": {
   "ground": "#303030",
   "ruler_tick": "@bevel_shadow",

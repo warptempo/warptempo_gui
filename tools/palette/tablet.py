@@ -7,10 +7,12 @@
 #   * a length is scaled_px (render.h): std::nearbyint(windows_px x 2.75), ROUNDED AT THE ELEMENT; a composite is the
 #     sum of its rounded parts (the case = lead + glyph + trail), never one rounding of the sum. Python's round() is
 #     round-half-even, std::nearbyint's default mode;
-#   * a font size is 13 / 10 Windows px x 2.75, an unrounded double (35.75 / 27.5), on the repository's
-#     Roboto through common.py's road (cairo + FreeType, SLIGHT, hint metrics on; HarfBuzz shaping on
-#     the same file), and every seat is the app's: redesign_baseline (box_y + floor((box_h + cap) / 2)) for a box,
-#     line_baseline (line_y + ceil(ascent)) for a line.
+#   * 275 % is a FALLBACK scale (gui_font.h, architect 2026-10-05): the text is Liberation Sans through common.py's
+#     road (cairo + FreeType, SLIGHT, hint metrics on; HarfBuzz shaping on the same file) at the em that matches each
+#     period bitmap face vertically (common.fallback_em: 13.08 Windows px for the body, 9.89 for the small) x 2.75,
+#     an unrounded double; every VERTICAL metric is the strike's (Cronyx Helvetica's ascent 11 / descent 2 / cap 9,
+#     the Small Fonts digits' 7 / 0 / 7) x 2.75, and every seat is the app's: redesign_baseline (box_y +
+#     floor((box_h + cap) / 2)) for a box, line_baseline (line_y + nearbyint(ascent)) for a line.
 # THE STATE IS SCENE 1002's (scene_1002.json, the 2026-10-02 capture): its view in DEVICE px (the ruler's ms per px
 # and start, so every marker, the playhead, the trim bounds and the waveform's columns stand where they stood), its
 # texts (flags, clock, legend), its enabled set and its glyph masks (glyphs/1002/: the app's glyphs are 44 device px
@@ -74,7 +76,7 @@ def read_constants():
                  'kIconRowAirPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagInkClearPx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
-                 'kRedesignFontSizePx', 'kRulerLabelFontSizePx', 'kPlayheadHeadHeightPx',
+                 'kPlayheadHeadHeightPx',
                  'kPlayheadUnitPx', 'kTrimArrowGlyphCols'):
         K[name] = _num(rh, 'render.h', name); own[name] = 'render.h'
     for name in ('kMenuLabelPadPx', 'kStatusPanelPadPx', 'kTimeFieldHeightPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
@@ -109,21 +111,18 @@ def read_constants():
 
 K, OWNER = read_constants()
 
-# the faces at 275 % (render.h: a font size is not a grid point)
-UI_PX = K['kRedesignFontSizePx'] * SCALE         # 35.75, the normal face
-SMALL_PX = K['kRulerLabelFontSizePx'] * SCALE    # 27.5, the ruler's labels
-# the app's measured faces at 275 % (paint_handler.cpp's redesign_baseline table, render.h's ruler block)
-FACE_TABLE = {'sans': (UI_PX, 34, 9, 25), 'small': (SMALL_PX, 26, 7, 20)}
+# the faces at 275 % (gui_font.h: the fallback's em matches the strike vertically; a font size is not a grid point)
+BODY_EM = C.fallback_em(C.BODY_STRIKE, 'H')      # 13.08 Windows px
+SMALL_EM = C.fallback_em(C.SMALL_STRIKE, '0')    # 9.89 Windows px
+UI_PX = BODY_EM * SCALE                          # 35.97, the normal face
+SMALL_PX = SMALL_EM * SCALE                      # 27.19, the ruler's labels
+BODY = C.strike_metrics(C.BODY_STRIKE)
+SMALL = C.strike_metrics(C.SMALL_STRIKE)
 
 
-def verify_faces():
-    """The two faces' ascent / descent / cap through this tool's road equal the app's measured table at 275 %."""
-    for key, (size, asc, desc, cap) in FACE_TABLE.items():
-        fam = C.SANS
-        e = C.font_extents(fam, size); got = (math.ceil(e[0]), math.ceil(e[1]), int(round(C.cap_height(fam, size))))
-        if got != (asc, desc, cap):
-            raise SystemExit(f'tablet.py: the {key} face at {size} px measures ascent/descent/cap {got}, the app\'s table '
-                             f'{(asc, desc, cap)}: the font road has drifted from the app\'s')
+def box_baseline(box_y, box_h):
+    """redesign_baseline on the body strike's cap band."""
+    return box_y + math.floor((box_h + BODY['cap'] * SCALE) * 0.5)
 
 
 def shaped_w(family, size, text): return C.shape(family, size, text)[1]
@@ -142,7 +141,6 @@ def waveform_band(area_y, area_h, inset):
 def build():
     """-> (scene, table): the scene dict render.py draws (the keys of scene_<tag>.json it reads, plus the tablet's own:
     glyph_off, panel_pad, group_space, ui_px, small_px, time_field_h, waveform_map) and the derivation table's rows."""
-    verify_faces()
     base = json.load(open(os.path.join(C.HERE, f'scene_{SCENE_TAG}.json')))
     T = []          # (region, element, windows px, device px, owner, the owner's own 275 % record or None)
     def row(region, element, wpx, dev, owner, record=None):
@@ -177,14 +175,14 @@ def build():
     row('trim lane', 'arrow glyph offset in the button ((b - glyph) // 2)', '-', f'+{(btn - gw) // 2}, +{(btn - gh) // 2}',
         'render.cpp paint_trim_arrow_button', '+16, +11')
     # the ruler: the label LINE seated so its cap top lands kRulerLabelCapTopPx under the lane's top
-    s_asc, s_cap = FACE_TABLE['small'][1], FACE_TABLE['small'][3]
-    rpad = row('ruler', 'label pad = max(0, scaled_px(4) - (ceil(ascent) - cap))', K['kRulerLabelCapTopPx'],
-               max(0, px(K['kRulerLabelCapTopPx']) - (s_asc - s_cap)), 'paint_handler.cpp ruler_label_baseline_px', 5)
-    rbase = row('ruler', 'label baseline under the lane top = pad + ceil(ascent)', '-', rpad + s_asc,
-                'paint_handler.cpp ruler_label_baseline_px', 31)
+    s_asc, s_cap = round(SMALL['ascent'] * SCALE), round(SMALL['cap'] * SCALE)
+    rpad = row('ruler', 'label pad = max(0, scaled_px(4) - (ascent - cap))', K['kRulerLabelCapTopPx'],
+               max(0, px(K['kRulerLabelCapTopPx']) - (s_asc - s_cap)), 'paint_handler.cpp ruler_label_baseline_px', 11)
+    rbase = row('ruler', 'label baseline under the lane top = pad + ascent', '-', rpad + s_asc,
+                'paint_handler.cpp ruler_label_baseline_px', 30)
     to_marker = row('ruler', 'baseline to the marker lane', K['kRulerBaselineToMarkerPx'], px(K['kRulerBaselineToMarkerPx']),
                     'render.h kRulerBaselineToMarkerPx', 19)
-    ruler_h = row('ruler', 'lane = baseline + baseline-to-marker', '-', rbase + to_marker, 'paint_handler.cpp ruler_lane_h_px', 50)
+    ruler_h = row('ruler', 'lane = baseline + baseline-to-marker', '-', rbase + to_marker, 'paint_handler.cpp ruler_lane_h_px', 49)
     rise = row('ruler', 'major tick rise above the marker lane', K['kRulerMajorRisePx'], px(K['kRulerMajorRisePx']),
                'paint_handler.cpp kRulerMajorRisePx', 8)
     lab_air = row('ruler', 'label x past its tick = t + scaled_px(2)', '1 + 2', t + px(K['ruler_label_air']),
@@ -197,22 +195,23 @@ def build():
         halves.append(px(K['kPlayheadHeadHalf'][src], 1))
     row('ruler', 'head widest row = 2 x half(0) + t', f'2 x {K["kPlayheadHeadHalf"][0]} + 1', 2 * halves[0] + t,
         'render.h playhead_head_half_px', 35)
-    # the marker lane: the flag box (edge + clear + the printable ASCII set's painted ink + clear + edge, architect
-    # 2026-10-05) and its air above
-    ink_up, ink_dn = C.label_ink_rows(UI_PX)
+    # the marker lane: the flag box (edge + clear + the body strike's ink of printable ASCII minus ^ { } + clear +
+    # edge, architect 2026-10-05) and its air above
+    ink_w = C.strike_ink_rows(C.BODY_STRIKE, ''.join(chr(c) for c in range(0x21, 0x7F) if chr(c) not in '^{}'))
+    ink_up, ink_dn = px(ink_w[0], 1), px(ink_w[1])
     edge_h = row('marker lane', 'flag edge band (top and bottom outline rows)', K['kMarkerFlagEdgePx'],
                  px(K['kMarkerFlagEdgePx'], 1), 'render.h marker_flag_edge_h_px', 3)
     clear = row('marker lane', 'face between the outline and the label ink (above and below)', K['kMarkerFlagInkClearPx'],
                 px(K['kMarkerFlagInkClearPx'], 1), 'render.h marker_flag_ink_clear_px', 3)
-    row('marker lane', 'label ink above / below the baseline (printable ASCII, painted)', '-', f'{ink_up} / {ink_dn}',
-        'paint_handler.cpp marker_lane_rows', '30 / 9')
+    row('marker lane', 'label ink above / below the baseline (the strike, ASCII minus ^ { })', f'{ink_w[0]} / {ink_w[1]}',
+        f'{ink_up} / {ink_dn}', 'paint_handler.cpp marker_lane_rows', '25 / 6')
     box_h = row('marker lane', 'flag box = edge + clear + ink + clear + edge', '-',
-                2 * edge_h + 2 * clear + ink_up + ink_dn, 'paint_handler.cpp marker_lane_rows', 51)
+                2 * edge_h + 2 * clear + ink_up + ink_dn, 'paint_handler.cpp marker_lane_rows', 43)
     m_air = row('marker lane', 'air above the box', K['kMarkerLaneAirPx'], px(K['kMarkerLaneAirPx'], 1),
                 'render.h marker_lane_air_px', 3)
-    marker_h = row('marker lane', 'lane = air + box', '-', m_air + box_h, 'paint_handler.cpp marker_lane_h_px', 54)
+    marker_h = row('marker lane', 'lane = air + box', '-', m_air + box_h, 'paint_handler.cpp marker_lane_h_px', 46)
     fbase = row('marker lane', 'label baseline under the box top = edge + clear + ink above', '-',
-                edge_h + clear + ink_up, 'paint_handler.cpp marker_flag_baseline_px', 36)
+                edge_h + clear + ink_up, 'paint_handler.cpp marker_flag_baseline_px', 31)
     border_w = row('marker lane', 'flag border (left column, the run\'s closing column)', K['kMarkerFlagBorderPx'],
                    px(K['kMarkerFlagBorderPx'], 1), 'render.h marker_flag_border_px', 3)
     pad_l = row('marker lane', 'flag pad left', K['kMarkerFlagPadLeftPx'], px(K['kMarkerFlagPadLeftPx'], 1),
@@ -223,9 +222,9 @@ def build():
              px(K['kBottomRowBorderPx'], 1), 'render.h bottom_row_border_h_px', 3)
     bottom_h = row('bottom row', 'lane = top row + the icon row\'s content', '1 + 32', bb + icon_h, 'render.h bottom_row_h_px', 91)
     top_h = menu_h + icon_h + trim_h + ruler_h + marker_h
-    row('stack', 'the top lanes whole (menu + icon + trim + ruler + marker)', '-', top_h, 'main.cpp strip_total_h', 288)
+    row('stack', 'the top lanes whole (menu + icon + trim + ruler + marker)', '-', top_h, 'main.cpp strip_total_h', 279)
     wave_h = row('stack', 'waveform area = leftover (max_waveform_height 0: no maximum; both gaps 0)', '-',
-                 H - top_h - bottom_h, 'main.cpp waveform_clamped_h', 1061)
+                 H - top_h - bottom_h, 'main.cpp waveform_clamped_h', 1070)
     border = row('well', 'border a side = 2 relief lines (plain sunken)', '2 x 1', 2 * lw, 'render.h waveform_border_px', 6)
     inset = row('well', 'waveform inset (drawing band) a side', K['kPlayheadUnitPx'], px(K['kPlayheadUnitPx'], 2),
                 'render.h waveform_inset_px', 16)
@@ -248,9 +247,9 @@ def build():
                            ('kPanelPadPx', 'card inset from the window edge and the menu row', 'notification_stack_bound')):
         row('surfaces', el, K[name], px(K[name], 1 if name == 'kModalFocusFramePx' or name == 'kPanelPadPx' else None),
             f'{OWNER[name]} {name} ({own_})')
-    row('fonts', 'normal face (menu, legend, flags, the clock, state line, dialog, card)', K['kRedesignFontSizePx'], UI_PX,
-        'render.h redesign_font_size_px', 35.75)
-    row('fonts', 'small face (ruler labels)', K['kRulerLabelFontSizePx'], SMALL_PX, 'render.h ruler_label_font_size_px', 27.5)
+    row('fonts', 'normal face em (menu, legend, flags, the clock, state line, dialog, card)', round(BODY_EM, 2), UI_PX,
+        'gui_font_bundled.cpp gui_fallback_em_px')
+    row('fonts', 'small face em (ruler labels)', round(SMALL_EM, 2), SMALL_PX, 'gui_font_bundled.cpp gui_fallback_em_px')
 
     # ---- the rows, top to bottom
     y = 0; L = {}
@@ -262,8 +261,8 @@ def build():
     canvas = [area_y + border, area_y + area_h - border]
 
     # ---- the menu row: anchors flush from x 0, nearbyint(shaped) + 2 pads; the legend flush right at the row pad
-    menu_base = C.redesign_baseline(C.SANS, UI_PX, 0, menu_h)
-    row('menu row', 'baseline = floor((52 + cap 25) / 2)', '-', menu_base, 'paint_handler.cpp redesign_baseline', 38)
+    menu_base = box_baseline(0, menu_h)
+    row('menu row', 'baseline = floor((52 + cap 24.75) / 2)', '-', menu_base, 'paint_handler.cpp redesign_baseline', 38)
     menu = {'pad': m_pad, 'items': base['menu']['items'], 'legend': base['menu']['legend'], 'legend_right': W - pad,
             'baseline': menu_base}
 
@@ -357,17 +356,17 @@ def build():
     field_y = content[0] + (content[1] - content[0] - field_h) // 2
     row('bottom row', 'time field top in the 88-row content = (88 - 47) / 2', '-', field_y - content[0],
         'paint_handler.cpp time_field_rect', 20)
-    clock_base = C.redesign_baseline(C.SANS, UI_PX, field_y, field_h)
-    row('bottom row', 'clock baseline in the 47-row field = floor((47 + cap 25) / 2)', '-', clock_base - field_y,
-        'paint_handler.cpp redesign_baseline', 36)
+    clock_base = box_baseline(field_y, field_h)
+    row('bottom row', 'clock baseline in the 47-row field = floor((47 + cap 24.75) / 2)', '-', clock_base - field_y,
+        'paint_handler.cpp redesign_baseline', 35)
     wd = max('0123456789', key=lambda d: shaped_w(C.SANS, UI_PX, d))
     cell = max(shaped_w(C.SANS, UI_PX, l) for l in 'AB') + shaped_w(C.SANS, UI_PX, ' | ') + \
         shaped_w(C.SANS, UI_PX, 'DD:DD.DDD'.replace('D', wd))
     panel_r = pad - panel_pad + math.ceil(cell) + 2 * panel_pad
     row('bottom row', 'time field right edge (cell at the pad, ceiled, + 2 pads)', '-', panel_r,
-        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 239)
+        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 244)
     row('bottom row', 'state line x = field right + group space', '-', panel_r + gap,
-        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 261)
+        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 266)
     row('bottom row', 'state line clip right = block x - group space', '-', block_x - gap,
         'paint_handler.cpp paint_bottom_row_buttons_and_clock', 1123)
     clock = {'text': ck['text'], 'x': pad, 'baseline': clock_base, 'size_px': UI_PX}

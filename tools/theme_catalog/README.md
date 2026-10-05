@@ -181,8 +181,8 @@ RECORDED colour beside the face as Windows 95 recorded a text colour beside ever
 that is WCAG 2.0's contrast math, not Windows'), the scene's flags being warp markers, so the warp pair; the selected
 face and the one selected label; the invalid flag the removed pair under the one label; the playhead's head and stem.
 Only the presets name program colours, so every other crop shows the built-in's: the lime waveform on black with its
-green outline, the warp flag purple / fuchsia, the invalid flag maroon / red, white labels on every face (architect
-2026-10-05), the playhead gray over white.
+green outline, the warp flag purple / fuchsia, the phase-reset flag teal / aqua, the history's added flag green / lime,
+the invalid flag maroon / red, white labels on every face (architect 2026-10-05), the playhead gray over white.
 
 ## The checks (build.py, before the write)
 

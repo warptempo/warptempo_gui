@@ -75,8 +75,8 @@
 
 namespace {
 
-// redesign_font_size_px() (render.h) and icon_row_pad_x() (paint_handler.h)
-// live where paint_handler.cpp can reach them; the constants
+// icon_row_pad_x() (paint_handler.h) lives where paint_handler.cpp can
+// reach it; the constants
 // below are paint-handler-independent and stay file-local.
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from

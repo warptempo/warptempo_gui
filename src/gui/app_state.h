@@ -6656,8 +6656,8 @@ struct AppState {
     // since 2026-09-29, in its time field since 2026-10-05). It is a PAINTER
     // STASH in the roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
-    // a SHAPED specimen at the live size (time_field_metrics,
-    // paint_handler.cpp), which only the painter is holding a scaled font for.
+    // a SHAPED specimen in the live face (time_field_metrics,
+    // paint_handler.cpp), which only the painter measures.
     //
     // ITS ONE CONSUMER IS clock_invalidate_rect, which hands it to every route
     // that moves the playhead or the scanner, so a clock advance dirties the

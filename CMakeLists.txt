@@ -134,7 +134,8 @@ set(WARPTEMPO_GUI_SOURCES
     # harfbuzz/cairo-ft link it implies.
     src/gui/text_shape.cpp
     # GUI-ONLY, like text_shape.cpp: the one face owner (gui_font.h), which
-    # builds the product's two faces through FreeType on both platforms.
+    # reads the product's three strikes and builds its two fallback faces
+    # through FreeType on both platforms.
     src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
     # subset over cairo paths) is a painting concern and exists only here,
@@ -430,17 +431,18 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         set(WARPTEMPO_GIT_LIBRARIES ${LIBGIT2_LIBRARIES})
     endif()
 
-    # THE PRODUCT'S TWO FONT FILES, COMPILED IN (architect 2026-10-02, the
-    # bold one 2026-10-05, Roboto Mono retired that day; the
-    # rule and the mechanism's reasons at gui_font_embedded.cpp's head). Each
-    # file becomes `<name>.ttf.inc` in the build tree — its bytes as a
-    # comma-separated list of hex literals, which that source includes inside
-    # an array's braces. Written at CONFIGURE time, and only when the bytes
-    # changed (file(CONFIGURE) leaves an identical output untouched), and the
-    # two files are configure dependencies, so swapping a font re-runs the
-    # configure and rebuilds that one object.
+    # THE PRODUCT'S FIVE FONT FILES, COMPILED IN (architect 2026-10-02; the
+    # period bitmap faces and Liberation 2026-10-05; the list is gui_font.h's
+    # kGuiFontFiles, the rule and the mechanism's reasons at
+    # gui_font_embedded.cpp's head). Each file becomes `<name>.inc` in the
+    # build tree — its bytes as a comma-separated list of hex literals, which
+    # that source includes inside an array's braces. Written at CONFIGURE
+    # time, and only when the bytes changed (file(CONFIGURE) leaves an
+    # identical output untouched), and the files are configure dependencies,
+    # so swapping a font re-runs the configure and rebuilds that one object.
     set(WARPTEMPO_FONT_INC_DIR ${CMAKE_BINARY_DIR}/fonts-generated)
-    foreach(font Roboto-Regular.ttf Roboto-Bold.ttf)
+    foreach(font crox1h.otb crox1hb.otb small_fonts_digits.otb
+                 LiberationSans-Regular.ttf LiberationSans-Bold.ttf)
         set(font_src ${CMAKE_SOURCE_DIR}/fonts/${font})
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
                      ${font_src})
@@ -456,7 +458,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         # The two per-backend arms, Linux's: the Wayland platform backend and
         # the JACK playback device. The Android library above compiles
         # platform_android.cpp and playback_aaudio.cpp in their places; exactly
-        # one arm of each is ever linked. Beside them, the product's two font
+        # one arm of each is ever linked. Beside them, the product's five font
         # files compiled in (the font step above; the mechanism and why at the
         # file's head): the APK carries the same files as assets instead, and
         # warptempo_cli, which paints nothing, carries neither.

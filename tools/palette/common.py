@@ -3,17 +3,18 @@
 # this file, so the tool runs from any working directory.
 #
 # IMPORT THIS BEFORE `import cairo` ANYWHERE: it points fontconfig at the tool's own fonts.conf,
-# which lists ONLY the repository's fonts/ directory, so cairo's toy face "Roboto" can resolve to
-# nothing but fonts/Roboto-Regular.ttf (the app's one face for every row it paints here; its
-# monospace, Roboto Mono, retired 2026-10-05 with the app's time fields).
-# verify_fonts() proves it (fontconfig's own match, glyph ids against HarfBuzz on the file, and the
-# app's measured metrics table at gui_font_bundled.cpp) and the renderer calls it on every run.
+# which lists ONLY the repository's fonts/ directory, so cairo's toy face "Liberation Sans" can
+# resolve to nothing but fonts/LiberationSans-Regular.ttf — the app's FALLBACK face (gui_font.h,
+# architect 2026-10-05), the one this tool paints every row in: the tablet's 275 % is a fallback
+# scale. Its VERTICAL metrics are the period bitmap faces' (strike_metrics below), as in the app.
+# verify_fonts() proves the resolution (fontconfig's own match, glyph ids against HarfBuzz on the
+# file, and the face's metrics as measured 2026-10-05) and the renderer calls it on every run.
 import os, sys, ctypes
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, '..', '..'))
 FONTS = os.path.join(REPO, 'fonts')
-SANS_FILE = os.path.join(FONTS, 'Roboto-Regular.ttf')
+SANS_FILE = os.path.join(FONTS, 'LiberationSans-Regular.ttf')
 W, H = 2304, 1440
 SCALE = 2                      # gui_scale 200 %: one logical px = 2 device px
 
@@ -42,7 +43,7 @@ def save_png(path, arr):
     write_png(path, arr, [(b'iCCP', ICCP)])
 
 # ------------------------------------------------------------------ fonts: cairo side
-SANS = 'Roboto'
+SANS = 'Liberation Sans'
 def font_options():
     o = cairo.FontOptions()
     o.set_antialias(cairo.ANTIALIAS_GRAY)          # the app: cairo's default GRAY, no subpixel order
@@ -135,13 +136,42 @@ def redesign_baseline(family, size_px, box_y, box_h):        # paint_handler.cpp
 def line_baseline(family, size_px, line_y):
     import math; return line_y + math.ceil(font_extents(family, size_px)[0])
 
-SANS_PX = 12.0 * 96.0 / 72.0 * SCALE        # kRedesignFontSizePt -> 32 px
+SANS_PX = 12.0 * 96.0 / 72.0 * SCALE        # the probe size, 32 px
+
+# ------------------------------------------------------------------ the period bitmap faces (gui_font.h)
+# The app's vertical metrics at every scale are the strikes' (architect 2026-10-05): read here off the same files,
+# as gui_font_bundled.cpp reads them — the strike's ascent / descent, its cap band (the "0"'s rows above the
+# baseline) and a specimen's ink rows (gui_strike_ink_rows).
+BODY_STRIKE = os.path.join(FONTS, 'crox1h.otb')
+SMALL_STRIKE = os.path.join(FONTS, 'small_fonts_digits.otb')
+_STRIKES = {}
+def strike_metrics(path):
+    """-> {'ascent', 'descent', 'cap', 'glyphs': {char: (top, height)}} in Windows px."""
+    if path not in _STRIKES:
+        from fontTools.ttLib import TTFont
+        f = TTFont(path); st = f['EBLC'].strikes[0].bitmapSizeTable.hori; data = f['EBDT'].strikeData[0]
+        glyphs = {chr(cp): (data[g].metrics.BearingY, data[g].metrics.height) for cp, g in f.getBestCmap().items()}
+        _STRIKES[path] = {'ascent': st.ascender, 'descent': -st.descender, 'cap': glyphs['0'][0], 'glyphs': glyphs}
+    return _STRIKES[path]
+
+def strike_ink_rows(path, specimen):
+    """-> (rows above the baseline, rows from the baseline's row down) the specimen lights (gui_strike_ink_rows)."""
+    g = strike_metrics(path)['glyphs']
+    return (max(g[c][0] for c in specimen if c in g and g[c][1]),
+            max(g[c][1] - g[c][0] for c in specimen if c in g and g[c][1]))
+
+def fallback_em(strike_path, band_char):
+    """The fallback's em in Windows px (gui_fallback_em_px): the strike's cap over Liberation's unscaled ink height
+    of `band_char` per em ("H" for the body, "0" for the digits)."""
+    from fontTools.ttLib import TTFont
+    f = TTFont(SANS_FILE); g = f['glyf'][f.getBestCmap()[ord(band_char)]]
+    return strike_metrics(strike_path)['cap'] / ((g.yMax - g.yMin) / f['head'].unitsPerEm)
 
 def verify_fonts(verbose=False):
     """Fail loudly unless the family resolves to the repository's file. Three proofs:
     (1) fontconfig's own FcFontMatch (the call cairo makes) names the file; (2) the glyph ids cairo maps
     for a probe string equal HarfBuzz's on the file; (3) the metrics equal the app's measured table
-    (gui_font_bundled.cpp: sans 32px ascent 30 / descent 8 / cap 22)."""
+    (Liberation Sans at 32 px, SLIGHT, hint metrics on: ascent 29 / descent 7 / cap 22, measured 2026-10-05)."""
     fc = ctypes.CDLL('libfontconfig.so.1')
     fc.FcInitLoadConfigAndFonts.restype = ctypes.c_void_p
     fc.FcNameParse.restype = ctypes.c_void_p; fc.FcNameParse.argtypes = [ctypes.c_char_p]
@@ -151,7 +181,7 @@ def verify_fonts(verbose=False):
     fc.FcPatternGetString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p)]
     cfg = fc.FcInitLoadConfigAndFonts()
     report = []
-    for fam, want, px, metr in ((SANS, SANS_FILE, SANS_PX, (30, 8, 22)),):
+    for fam, want, px, metr in ((SANS, SANS_FILE, SANS_PX, (29, 7, 22)),):
         pat = fc.FcNameParse(fam.encode()); fc.FcConfigSubstitute(cfg, pat, 0); fc.FcDefaultSubstitute(pat)
         res = ctypes.c_int(0); m = fc.FcFontMatch(cfg, pat, ctypes.byref(res))
         f = ctypes.c_char_p(); fc.FcPatternGetString(m, b'file', 0, ctypes.byref(f))

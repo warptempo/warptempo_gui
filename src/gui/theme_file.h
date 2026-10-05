@@ -140,24 +140,23 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // THE PROGRAM'S OWN ELEMENTS — Windows' twenty solid colours: the canvas
     // black under Sound Recorder's lime trace (measured on his Windows 98
     // screenshot 2026-10-05), the lit outline green; each flag kind a dark
-    // face and a selected face — warp purple / fuchsia, phase reset teal /
-    // blue, the history's added olive / green, its removed maroon / red,
-    // which the invalid flag wears too; BOTH FLAG LABELS WHITE (architect
-    // 2026-10-05: "white text for the flags is going to be the most common;
-    // the highlights will generally be chosen so white shows" — so a file
-    // that names flag faces and no labels gets white on both, and every
-    // selected face here is one white reads on: the brighter aqua and yellow
-    // of 2026-10-04 gave way to blue and green); the playhead's head gray,
-    // its stem white.
+    // face and a selected face, each kind a true dark / bright pair of
+    // Windows' sixteen (architect 2026-10-05) — warp purple / fuchsia, phase
+    // reset teal / aqua, the history's added green / lime, its removed
+    // maroon / red, which the invalid flag wears too; BOTH FLAG LABELS WHITE
+    // (architect 2026-10-05: "white text for the flags is going to be the
+    // most common; the highlights will generally be chosen so white shows"
+    // — so a file that names flag faces and no labels gets white on both);
+    // the playhead's head gray, its stem white.
     {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000},
     {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00},
     {"waveform_outline",          &GuiPalette::waveform_outline,          0x008000},
     {"warp_flag",                 &GuiPalette::warp_flag,                 0x800080},
     {"warp_flag_selected",        &GuiPalette::warp_flag_selected,        0xFF00FF},
     {"phase_reset_flag",          &GuiPalette::phase_reset_flag,          0x008080},
-    {"phase_reset_flag_selected", &GuiPalette::phase_reset_flag_selected, 0x0000FF},
-    {"added_flag",                &GuiPalette::added_flag,                0x808000},
-    {"added_flag_selected",       &GuiPalette::added_flag_selected,       0x008000},
+    {"phase_reset_flag_selected", &GuiPalette::phase_reset_flag_selected, 0x00FFFF},
+    {"added_flag",                &GuiPalette::added_flag,                0x008000},
+    {"added_flag_selected",       &GuiPalette::added_flag_selected,       0x00FF00},
     {"removed_flag",              &GuiPalette::removed_flag,              0x800000},
     {"removed_flag_selected",     &GuiPalette::removed_flag_selected,     0xFF0000},
     {"flag_label",                &GuiPalette::flag_label,                0xFFFFFF},

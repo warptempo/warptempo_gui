@@ -236,7 +236,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     const std::string fonts = argv[1], work = argv[2];
-    const std::string sans = slurp(fonts + "/Roboto-Regular.ttf");
+    const std::string sans = slurp(fonts + "/LiberationSans-Regular.ttf");
     if (!fonts_install(reinterpret_cast<const uint8_t*>(sans.data()), sans.size())) {
         std::fprintf(stderr, "fonts did not install\n");
         return 2;

@@ -1404,7 +1404,7 @@ struct IterCellLayout {
     int                   span_w  = 0;   // both seams + both fills, 0 with none
 };
 
-static IterCellLayout measure_iter_cells(cairo_scaled_font_t* font,
+static IterCellLayout measure_iter_cells(const GuiFont& font,
                                          const IterCellText& cells) {
     IterCellLayout l;
     if (!cells.present) return l;
@@ -1543,7 +1543,7 @@ static void paint_flag_stem_crossing(cairo_t* cr, const GuiRect& lane, int x,
 // THE FLAG LABEL — the one body every flag box's text goes through: `run` at
 // (x, baseline) in the face's label ink (the selected label on a selected
 // face), or embossed (show_embossed_run) when the face is disabled and
-// unselected. `cr` carries the label's font.
+// unselected. The run carries its own font.
 static void paint_flag_label(cairo_t* cr, const text_shape::ShapedRun& run,
                              double x, double baseline, const FlagFace& face) {
     if (face.embossed)
@@ -1684,15 +1684,10 @@ void render_flag_boxes_impl(
     // the last column(s). Released by the pass's closing restore.
     clip_to_waveform_columns(cr, top_strip_area.x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
-    // THE REDESIGN'S SANS FACE, set ONCE for the whole pass: every label is
-    // shaped and painted at this one size on this one scaled font, which is the
-    // text_shape precondition (shape with the font you paint with). Nothing
-    // below changes the size, so the borrowed scaled-font pointer stays valid
-    // for the whole loop. What the family resolves to is the backend's, through
-    // the one face owner (gui_font.h).
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    // THE BODY FACE for the whole pass, named once through the one face
+    // owner (gui_font.h); every label is laid out and painted on it, each run
+    // carrying it (text_shape.h).
+    const GuiFont font = gui_font(GuiFace::Body);
 
     const int    pad_l    = marker_flag_pad_left_px();
     const int    pad_r    = marker_flag_pad_right_px();
@@ -2212,12 +2207,9 @@ void render_history_diff_flags(
     // (clip_to_waveform_columns, architect 2026-09-26).
     clip_to_waveform_columns(cr, top_strip_area.x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
-    // The redesign's one sans face, set once for the pass — the text_shape
-    // precondition (shape with the font you paint with), exactly as
-    // render_flag_boxes_impl sets it, through the one face owner (gui_font.h).
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    // The body face for the pass, exactly as render_flag_boxes_impl names it
+    // (gui_font.h).
+    const GuiFont font = gui_font(GuiFace::Body);
 
     const int    pad_l    = marker_flag_pad_left_px();
     const int    pad_r    = marker_flag_pad_right_px();
@@ -2244,7 +2236,7 @@ void render_history_diff_flags(
         if (n > widest_bytes) widest_bytes = n;
     }
     const double cull_width_px =
-        widest_bytes * redesign_font_size_px() +
+        widest_bytes * gui_font_advance_bound_px(font) +
         2.0 * static_cast<double>(pad_l + pad_r) +
         // THREE border columns: the box's own at its left, the SEAM DIVIDER a
         // changed pair carries between its halves (2026-08-20), and the
@@ -2548,7 +2540,7 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // flag's right edge, unreachable because the open asked (enter_iter_bound_edit)
 // and a keyboard-modal editor freezes the mode bit.
 static int committed_cell_seam_off(const AppState& app,
-                                   cairo_scaled_font_t* font, bool phase,
+                                   const GuiFont& font, bool phase,
                                    int idx, MarkerCell side,
                                    bool iteration_on) {
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
@@ -2620,12 +2612,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    // The redesign's sans, set once through the one face owner (gui_font.h) —
-    // shape and paint on ONE scaled font, the text_shape precondition. Nothing
-    // below changes the size.
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    // The body face, named once through the one face owner (gui_font.h).
+    const GuiFont font = gui_font(GuiFace::Body);
 
     // THE FULL, UNTRUNCATED pending — the unroll's whole point. The scale cap
     // is a PAINTED-FLAG rule; an editor shows what it is editing.

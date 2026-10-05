@@ -16,7 +16,7 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the two Roboto TTFs          (manifest + res + assets)
+#   1. assets (the five font files          (manifest + res + assets)
 #      and the bundled theme files)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
@@ -80,22 +80,22 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
-# THE PRODUCT'S TWO FACES: Roboto and Roboto Bold (the caption's title,
-# 2026-10-05), copied from
-# the repository's own fonts/ (architect 2026-10-02, gui_font.h; Roboto Mono
-# retired 2026-10-05) -- the very
-# files the Linux executable compiles in, so both devices paint from the same
-# bytes and the build depends on no installed font package. They are what
-# gui_font_bundled.cpp builds the product's two families from, and android_main
-# ABORTS if either is missing -- a font that failed to install would otherwise
-# paint silently in cairo's default face. They are stored (-0 ttf at aapt2
-# link) so AAsset_getBuffer hands FreeType a pointer straight into the mapped
-# APK.
+# THE PRODUCT'S FIVE FONT FILES: the three period bitmap strikes and the
+# two Liberation Sans fallback faces (architect 2026-10-05; the list is
+# gui_font.h's kGuiFontFiles), copied from the repository's own fonts/
+# (architect 2026-10-02) -- the very files the Linux executable compiles in,
+# so both devices paint from the same bytes and the build depends on no
+# installed font package. They are what gui_font_bundled.cpp builds the
+# product's faces from, and android_main ABORTS if one is missing -- a font
+# that failed to install would otherwise paint silently in cairo's default
+# face. They are stored (-0 ttf and -0 otb at aapt2 link) so
+# AAsset_getBuffer hands FreeType a pointer straight into the mapped APK.
 #
 # The copies land under the build tree, which .gitignore already ignores
 # (`build*/`); the tracked originals are fonts/'s.
 FONT_DIR="$APPDIR/../../fonts"
-for f in Roboto-Regular.ttf Roboto-Bold.ttf; do
+for f in crox1h.otb crox1hb.otb small_fonts_digits.otb \
+         LiberationSans-Regular.ttf LiberationSans-Bold.ttf; do
     [ -f "$FONT_DIR/$f" ] || wt_die "missing $FONT_DIR/$f (the repository's fonts/)"
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
@@ -186,6 +186,7 @@ wt_say "aapt2 link"
     --version-code 1 \
     --version-name "2.0" \
     -0 ttf \
+    -0 otb \
     --auto-add-overlay \
     "$PKGDIR/res.zip"
 

@@ -14,33 +14,43 @@
 // kerning, GPOS mark placement and ligature substitution all change the
 // advance sum in ways no per-character sum reproduces.
 //
-// Shaping runs on the cairo scaled font's OWN FreeType face (hb-ft), so the
-// glyph ids, hinting size and transform are the ones cairo will render with;
-// nothing here selects, substitutes or falls back to a different face. The
-// caller owns font policy entirely and hands in whatever cairo_scaled_font_t
-// it wants shaped.
+// A RUN IS LAID OUT ON A GuiFont, the face owner's face at a scale
+// (gui_font.h), and the run carries it, so show_shaped_run paints with
+// exactly the face that measured it — no caller can hand the painter a
+// different one. Two roads, chosen by the font's scale:
+//   - THE BITMAP MODE (gui_scale a whole multiple of 100, k = gui_scale /
+//     100): each codepoint the strike carries is its strike glyph, advancing
+//     the strike's own advance times k — Windows' own layout, no kerning, no
+//     shaping — and is painted by BLITTING ITS PIXELS, each a k x k block of
+//     device px in the current source, the origin on a whole device px, no
+//     antialias (architect 2026-10-05). A run of codepoints the strike lacks
+//     is shaped by HarfBuzz on Liberation at its own advances, the one place
+//     the bitmap mode meets an outline.
+//   - THE FALLBACK (every other scale): the whole run shaped by HarfBuzz on
+//     Liberation's scaled font (gui_outline_scaled_font), on that font's OWN
+//     FreeType face (hb-ft), full GPOS/GSUB, its own advances — and painted
+//     through cairo_show_glyphs on the same scaled font.
+// Either way the run is seated on the bitmap face's baseline: the caller
+// hands in a baseline its seat derived from the strike's vertical metrics.
 //
 // PRECONDITIONS (stated, not guarded — no error arm without a producer):
-//   - `font` is a FreeType-backed cairo_scaled_font_t in a non-error state.
-//     Every face the product selects is FT-backed on both platforms (the one
-//     face owner builds them so and observes it at install, gui_font.h), so
-//     a non-FT font has no producer here.
+//   - the faces are installed (gui_font_install_bundled, before the first
+//     paint on both backends).
 //   - `utf8` is well-formed UTF-8. Free-text fields and the editors carry real
 //     UTF-8 (architect 2026-08-02); it arrives already filtered
 //     (text_editor::replace_selection is the one incoming boundary) or
-//     verbatim from a hand-edited file, and HarfBuzz consumes arbitrary bytes
-//     safely in any case, so there is no validation here.
-//   - ONE FACE, NO FALLBACK. A codepoint the face does not cover shapes to
-//     .notdef and paints as the empty box — accepted, in the same class as the
-//     no-bidi exclusion below. Roboto covers Latin, Greek and Cyrillic
-//     (2026-10-02), and so does Roboto Bold, the caption title's face
-//     (2026-10-05): the run is shaped on whichever of the three faces the
-//     caller selected (gui_select_font_face, gui_font.h), never across two.
-//   - `show_shaped_run` is called with the SAME scaled font set on `cr` that
-//     the run was shaped with; the glyph ids are that face's, and no other.
+//     verbatim from a hand-edited file. A malformed byte lays out as U+FFFD's
+//     glyph for that one byte; HarfBuzz consumes arbitrary bytes safely.
+//   - NO FURTHER FALLBACK. A codepoint Liberation does not cover either
+//     shapes to .notdef and paints as the empty box — accepted, in the same
+//     class as the no-bidi exclusion below.
+//   - The current cairo PATH is preserved: the blit builds and fills its own
+//     path and puts the caller's back.
 //
 // Runs are single-direction LTR horizontal only: y advances are not modelled,
 // and a run's pen walks x alone.
+
+#include "gui_font.h"
 
 #include <cairo/cairo.h>
 
@@ -50,8 +60,9 @@
 namespace text_shape {
 
 // One positioned glyph of a shaped run, in pixels, relative to the run's pen
-// position. `glyph_index` is a FONT GLYPH ID (post-substitution), never a
-// character codepoint.
+// position. A STRIKE glyph (`strike` non-null) is that bitmap glyph; an
+// OUTLINE glyph's `glyph_index` is a Liberation GLYPH ID (post-substitution),
+// never a character codepoint.
 //
 // `cluster` is HarfBuzz's own cluster value: the BYTE INDEX into the shaped
 // utf8 where this glyph's cluster begins. It is what makes a shaped run
@@ -61,6 +72,7 @@ namespace text_shape {
 // a multibyte character); byte_offsets_px below is the one place that turns
 // either shape into a per-byte answer.
 struct ShapedGlyph {
+    const GuiStrikeGlyph* strike = nullptr;
     unsigned glyph_index = 0;
     unsigned cluster     = 0;
     double   x_offset_px = 0.0;
@@ -68,22 +80,23 @@ struct ShapedGlyph {
     double   x_advance_px = 0.0;
 };
 
-// A shaped run and its measurement. `width_px` is the sum of the x advances —
-// THE width of this text in this font, and the only width any caller should
-// use for it.
+// A shaped run, the font it was laid out on, and its measurement. `width_px`
+// is the sum of the x advances — THE width of this text in this font, and the
+// only width any caller should use for it.
 struct ShapedRun {
+    GuiFont                  font;
     std::vector<ShapedGlyph> glyphs;
     double                   width_px = 0.0;
 };
 
-// Shape `utf8` with `font`'s own FT face: LTR, script and language guessed
-// from the text, full GPOS/GSUB (kerning, ligatures, mark placement) — all of
-// which cairo's toy text API skips. An empty string shapes to an empty run of
-// width 0.
-ShapedRun shape_text_run(cairo_scaled_font_t* font, std::string_view utf8);
+// Lay `utf8` out on `font` by the road its scale picks (above): the strike's
+// advances, or HarfBuzz on Liberation (LTR, script and language guessed from
+// the text, full GPOS/GSUB). An empty string shapes to an empty run of width
+// 0.
+ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 
-// Paint `run` with its baseline origin at (x, y), using cairo's current source
-// and current scaled font. Cairo state is not modified.
+// Paint `run` with its baseline origin at (x, y) in cairo's current source,
+// on the run's own font. Cairo state and the current path are not modified.
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 
 // (A RUN'S INK EDGES — `InkExtents` / `ink_extents_px`, the run's first and last

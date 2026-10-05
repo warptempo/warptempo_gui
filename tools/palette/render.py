@@ -88,8 +88,8 @@ DEFAULTS = {
     # `flag_fill_added` / `flag_fill_added_sel` (added_flag / added_flag_selected), each defaulting to the built-in's
     # (src/gui/theme_file.h); the removed halves wear `flag_fill_red` / `flag_fill_red_sel` above, the removed pair the
     # invalid flag wears
-    'flag_fill_reset': '#008080', 'flag_fill_reset_sel': '#0000FF', 'flag_fill_added': '#808000',
-    'flag_fill_added_sel': '#008000',
+    'flag_fill_reset': '#008080', 'flag_fill_reset_sel': '#00FFFF', 'flag_fill_added': '#008000',
+    'flag_fill_added_sel': '#00FF00',
     'flag_border_edit': '#000000', 'field_ground': '#FFFFFF', 'selected_text': '#FFFFFF',
     # THE FIELD'S TEXT (2026-10-03, step 11), read only by the optional surface `dialog` (draw_dialog): Windows'
     # WindowText. `field_ground` above is the dialog field's ground, and only that since 2026-10-03 (the editing flag
@@ -706,9 +706,8 @@ def seat_flags(sc, th):
     return sc
 
 def seat_clock(sc, th):
-    """The clock at THE APP'S TIME FIELD'S FACE (paint_handler.cpp kTimeFieldHeightPx, architect 2026-10-05): Roboto at
-    the normal face (ui_font_px), whatever the scene measured (the scenes' captures predate the field and were Roboto
-    Mono, retired that day). Its seat is the field's (clock_baseline), derived where it is drawn."""
+    """The clock at THE APP'S TIME FIELD'S FACE (paint_handler.cpp kTimeFieldHeightPx, architect 2026-10-05): the normal
+    face (ui_font_px), whatever the scene measured (the scenes' captures predate the field and its face). Its seat is the field's (clock_baseline), derived where it is drawn."""
     sc = json.loads(json.dumps(sc)); sc['clock']['size_px'] = ui_font_px(th)
     return sc
 
@@ -1586,7 +1585,7 @@ def flat_stem_colour(th, i):
 def face_underline(family, size_px):
     """The face's OWN UNDERLINE at size_px -> (top, thickness), device px as unrounded doubles, the top measured DOWN
     from the baseline: the font file's `post` table underlinePosition and underlineThickness over its `head` table's
-    unitsPerEm (Roboto Regular: -150 and 100 of 2048, so 2.490 and 1.660 at 34 px). underlinePosition is the distance
+    unitsPerEm (Liberation Sans Regular: -67 and 150 of 2048, so 1.112 and 2.490 at 34 px). underlinePosition is the distance
     of the underline's TOP from the baseline, negative below it (the OpenType definition; FreeType's
     FT_Face.underline_position moves it to the stroke's centre, this does not)."""
     import struct
@@ -1599,7 +1598,7 @@ def face_underline(family, size_px):
 
 def flat_underline_rect(th, f):
     """flags.style "flat" with flags.selection "underline": scene flag f's underline (x0, y0, x1, y1), device px
-    end-exclusive: Roboto's own underline at the label's size (face_underline), each term rounded at its element
+    end-exclusive: the face's own underline at the label's size (face_underline), each term rounded at its element
     (std::nearbyint, the app's rule): its top row the baseline + nearbyint(top), its rows nearbyint(thickness) (at
     least one), its columns nearbyint of the shaped run's origin and end (the advance, as the editing band's)."""
     F = SCENE['flags']; px = ui_font_px(th)
@@ -1635,7 +1634,7 @@ def draw_flags_flat(cr, th):
     recolours nothing in the app (the red frame retired, 2026-10-03), so there is no refusal state to draw.
     THE SELECTION'S OTHER FORMS (mock options): "underline" (architect 2026-10-03, late; Windows 95 underlined every
     menu and button accelerator letter) changes SELECTED alone: the label's text UNDERLINED and nothing else -- no
-    nudge, no width or height change -- at Roboto's own underline position and thickness at the label's size
+    nudge, no width or height change -- at the face's own underline position and thickness at the label's size
     (flat_underline_rect), in the label's colour, straight through any descender (no skip-ink, as Windows drew it),
     across the shaped run's advance; "fill" (step 11) the face in the selected pair -- `selected_fill` behind
     (flat_selection_fill, Windows' #000080 where the theme states none), the label in `selected_text` -- the stem the
@@ -1842,7 +1841,7 @@ TIME_FIELD_H = 17
 def clock_cell(th):
     """-> (cell width, the letter slot), device px at the clock's face: the app's reserved cell (time_field_metrics,
     paint_bottom_row_buttons_and_clock) -- the widest tab letter's slot (A, B), the ' | ' and the DD:DD.DDD specimen at
-    the widest digit (Roboto's are tabular), one width on every tab and at every time."""
+    the widest digit (the face's are tabular), one width on every tab and at every time."""
     px = SCENE['clock']['size_px']
     dw = max('0123456789', key=lambda d: C.shape(C.SANS, px, d)[1])
     letter = max(C.shape(C.SANS, px, l)[1] for l in 'AB')
@@ -2080,7 +2079,7 @@ def stamp(cr, th, text):
         base = int(round(y0 + (y1 - y0 - e.height) / 2 - e.y_bearing))
         show(cr, C.SANS, px, text, x, base, th.get('label'))
         return
-    # with the state line on, the stamp as before: Roboto 20 px, `stamp` (140,140,140), its box's top-left at the
+    # with the state line on, the stamp as before: the sans at 20 px, `stamp` (140,140,140), its box's top-left at the
     # scene's label_box (x 300, y 1382 on every scene; buttons.case's 'bottom' shift moves it with the bottom row's
     # content top); x clears what row 8 paints left of it: max(label_box x0, the clock panel's right edge + 16, the
     # state line's painted end + 16 device px)

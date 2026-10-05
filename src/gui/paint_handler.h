@@ -46,9 +46,9 @@ struct GuiTargetRender;
 // Declared here so paint_handler.cpp can reach them. No pointer-side grab
 // tolerance survives (the marker stems' died with their pointer surface,
 // 2026-08-12, the trim endcaps' with the arrow buttons, 2026-10-03);
-// playhead_half_px() lives in render.h. redesign_font_size_px() — the product's
-// ONE text size since row 7 — lives in render.h so render.cpp can reach it
-// without pulling paint_handler.h into the lower-layer include graph.
+// playhead_half_px() lives in render.h, as does gui_font(face), the faces at
+// the live scale, so render.cpp can reach it without pulling paint_handler.h
+// into the lower-layer include graph.
 
 // THE ICON ROW'S LEFT PAD — the row's 8px lead-in, and since 2026-08-14 THE
 // BOTTOM ROW'S PAD TOO, at both ends and for the modal that displaces its
@@ -767,7 +767,7 @@ private:
     // Windows 95 record at render.h's kCaptionHeightPx): the gradient in the
     // caption roles of the window's activation (GuiPlatform::caption_active),
     // the app's icon, the title — "<piece> - Warptempo", or "Warptempo"
-    // where no piece is open — in Roboto Bold cut with "..." before the
+    // where no piece is open — in the bold face cut with "..." before the
     // buttons, and the three caption buttons, whose rects and enabled bits it
     // PUBLISHES into app.caption_buttons (as painted, the roster's coverage
     // gate) for the press claim (claim_caption_press, input_pointer.cpp).

@@ -165,7 +165,7 @@ int32_t on_input(android_app* glue, AInputEvent* ev) {
 
 bool load_fonts(android_app* glue) {
     AAssetManager* mgr = glue->activity->assetManager;
-    AAsset* s = AAssetManager_open(mgr, "Roboto-Regular.ttf", AASSET_MODE_BUFFER);
+    AAsset* s = AAssetManager_open(mgr, "LiberationSans-Regular.ttf", AASSET_MODE_BUFFER);
     const bool ok = s && fonts_install(static_cast<const uint8_t*>(AAsset_getBuffer(s)), size_t(AAsset_getLength(s)));
     if (s) AAsset_close(s);
     return ok;
