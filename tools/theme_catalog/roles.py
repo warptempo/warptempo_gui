@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/roles.py — THE ROLE MAPPING, the one table (architect 2026-10-03): which recorded value (or
 # which value the source's own toolkit computed at import, toolkit_rules.py) fills each catalog role, per family.
-# A role a family has no word for is ABSENT from its row and from every entry of it: the app's own value applies,
+# A role a family has no word for is ABSENT from its row and from every entry of it: the built-in theme's value applies,
 # never a guess. The flags, the red, the waveform ink and canvas are not catalog roles (a theme owns the chrome).
 # The app-specific roles are drawn from these catalog roles, not stored (architect 2026-10-03, late; crops.py
 # theme_for): the ruler label <- label, the ruler ticks and the playhead head <- bevel_shadow, the flag outline <-
@@ -69,6 +69,37 @@ MAPPING = {
 }
 for _fam, _row in MAPPING.items():
     assert set(_row) <= set(ROLES), (_fam, set(_row) - set(ROLES))
+
+
+# THE CHROME AS RECORDED, the one light-roles function (the dark level retired 2026-10-04: a dark look is a theme he
+# designs): one catalog entry -> {name: '#RRGGBB'} over LIGHT_ROLES, read by gen_theme_files.py (the bundled theme
+# files) and crops.py (the crops), so the app's file and the crop read one function. Its names are the renderer's
+# (tools/palette): the ground, the label and the relief quartet as recorded; the emboss's light copy the recorded
+# Hilight (Windows' DSS_DISABLED; the app's emboss reads Hilight, render.h's palette block); the selected pair the
+# entry's selected_fill / selected_text, or for a CDE entry, which records none (Motif selects by inverse video), its
+# title_active under colour set 1's own Motif foreground; the field pair the entry's, recorded on every entry. The
+# info pair, the disabled text and the title bars are not here: the generator names the card from the info pair where
+# an entry records it, and no app role reads the rest.
+LIGHT_ROLES = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow', 'emboss_hilight',
+               'selected_fill', 'selected_text', 'field_ground', 'field_text')
+
+
+def selected_pair(e):
+    """An entry's selected pair (LIGHT_ROLES' rule): its own, or a CDE entry's title_active under set 1's foreground."""
+    r = e['roles']
+    if 'selected_fill' in r: return r['selected_fill'], r['selected_text']
+    return r['title_active'], e['provenance']['rule']['computed']['motif:set1.fg']
+
+
+def light_roles(e):
+    """One catalog entry -> {name: '#RRGGBB'} over LIGHT_ROLES (the rule above)."""
+    r = e['roles']
+    out = {x: r[x] for x in ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')}
+    out['emboss_hilight'] = r['bevel_hilight']
+    out['selected_fill'], out['selected_text'] = selected_pair(e)
+    out['field_ground'], out['field_text'] = r['field_ground'], r['field_text']
+    assert tuple(out) == LIGHT_ROLES, tuple(out)
+    return out
 
 
 def map_roles(family, values):

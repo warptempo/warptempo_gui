@@ -374,14 +374,13 @@ APP_RAW = ('kRedesignContentGround', 'kRedesignLabel', 'kRedesignAccent', 'kRede
 
 
 # THE CHOSEN ENTRY (architect 2026-10-03, the colour loop's mock sets BA..BX): key and display name `warptempo` (all
-# lowercase, one word, his spelling), the app's default theme (device_config.h). CHOSEN, NOT IMPORTED — no desktop of
+# lowercase, one word, his spelling), the app's default theme 2026-10-03..04. CHOSEN, NOT IMPORTED — no desktop of
 # the era recorded it, so it carries no source file: its record is the ruling. Its chrome is set BA03, Windows 95
 # Standard darkened in proportion to a ground of relative luminance 0.010 under white text (the quartet and the field
 # ground scaled with the face, DkShadow black), and its selection the grey of set BM02 under white; each byte below is
-# the ruled one, in levels.py's role order (its LIGHT row; its emboss's light copy is the recorded Hilight there, as
-# for every entry). Its DARK row is whatever levels.py's dark rule makes of these bytes, untuned (architect: "if the
-# user sets this theme and puts dark, it's going to look bad -- that's fine"). The info pair is not ruled (the app
-# carries none: render.h's THE INFO FACE), so it is absent; the flags' rule is the family's.
+# the ruled one, in the catalog's role order (its emboss's light copy the recorded Hilight, roles.light_roles' rule, as
+# for every entry). The info pair is not ruled, so it is absent and its bundled theme file names no card (the
+# built-in's card applies, gen_theme_files.py); the flags' rule is the family's.
 CHOSEN_ROLES = {'ground': '#191919', 'label': '#FFFFFF', 'bevel_hilight': '#212121', 'bevel_light': '#1D1D1D',
                 'bevel_shadow': '#111111', 'bevel_dkshadow': '#000000', 'selected_fill': '#666666',
                 'selected_text': '#FFFFFF', 'field_ground': '#212121', 'field_text': '#FFFFFF'}
@@ -415,11 +414,10 @@ def chosen_entry():
 # ground-family colour, so its text is the label's case (the picker's theme states field_text "@label"). THE SELECTED
 # PAIR the preset's `selected_fill` and `selected_text` when it records them (the picker's Selection and Selected Text,
 # the open-flag round, architect 2026-10-04), else #666666 under white, the picker's starting colours and the pair
-# every preset saved before that round was painted under. The theme's DARK row is levels.py's dark rule over these
-# bytes, whatever the preset picked (the selected fill darkened in proportion, the label and the selected text the
-# level's white). The preset's other elements (the canvas, the ink, the flags, the playhead, the invalid flags -- the
-# invalid-flags round, architect 2026-10-04) are program keys, not theme roles: tools/theme_catalog/preset_keys.py
-# prints their device-config lines. The entries follow presets.json: a
+# every preset saved before that round was painted under. The preset's other elements (the canvas, the ink, the
+# flags, the playhead, the invalid flags -- the invalid-flags round, architect 2026-10-04) are not catalog roles: the
+# preset's bundled theme file names them as the program's roles (tools/theme_catalog/gen_theme_files.py, which owns
+# that mapping). The entries follow presets.json: a
 # new copy adds its new presets on the next run, and a preset's number is never reused (the picker only appends). A
 # colour key the preset names that is neither the chrome, a theme role it picks (PRESET_THEME_KEYS) nor a program key
 # is a hard fail: a newly pickable chrome role changes what a preset's theme is, which is a ruling, not a silent drop.
@@ -443,7 +441,7 @@ def preset_roles(ground, picked={}):
     """A preset's chrome ground and its picked theme elements ('#RRGGBB'; {key: hex}) -> its catalog roles: the chrome
     rule's lines, the picked roles, and the picker's starting colours for the rest."""
     ch = {r: hx(c) for r, c in CL.windows95_chrome(unhex(ground)).items()}
-    # levels.py's LIGHT row takes the emboss's light copy as the recorded Hilight; the chrome rule's is the same
+    # roles.light_roles takes the emboss's light copy as the recorded Hilight; the chrome rule's is the same
     assert ch['emboss_hilight'] == ch['bevel_hilight'], ground
     fixed = preset_fixed(picked)
     return {r: ch[r] if r in ch else fixed[r] for r in ROLES if r in ch or r in fixed}
@@ -483,8 +481,9 @@ def preset_entries():
              'raw': raw, 'roles': roles, 'flag_rule': {'id': FLAG_RULE['warptempo']}}
         e['display_tier'] = display_tier(e['roles'])
         e['notes'] = [f'chosen by the architect on the colour picker, not imported from a desktop of the era: his '
-                      f'Preset {n}\'s chrome at its light level, exactly as the picker painted it (2026-10-04); its '
-                      f'canvas, ink and other elements are program keys (tools/theme_catalog/preset_keys.py)']
+                      f'Preset {n}\'s chrome, exactly as the picker painted it (2026-10-04); its canvas, ink and other '
+                      f'elements are the program\'s roles in its bundled theme file '
+                      f'(tools/theme_catalog/gen_theme_files.py)']
         e['corroborated'] = 0
         out.append(e)
     return out

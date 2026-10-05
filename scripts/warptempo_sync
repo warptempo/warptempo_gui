@@ -150,9 +150,11 @@ shopt -s nocaseglob
 #      into the app's private folder beside its settings file
 #      (files/warptempo_gui/deploy_key, .pub), reachable only through run-as.
 #   5. the tablet's settings file (files/warptempo_gui/config): the projects_repo
-#      line is made to read github.com/warptempo/warptempo_projects and any
-#      sync_path line (a struck key the app refuses to start with) is removed;
-#      every other line is kept.
+#      line is made to read github.com/warptempo/warptempo_projects, and every
+#      line of a retired key the app refuses to start with is removed -- sync_path,
+#      and the thirteen colour keys that left 2026-10-04 when every colour became
+#      a role of a theme file (theme_level and the twelve program colour keys,
+#      RETIRED_KEYS below; src/gui/device_config.h); every other line is kept.
 #   6. the audio, exactly as `warptempo_sync tt all`.
 #   7. the directories adb made are opened to the app (below), and the app started.
 #   Run twice it does the same again: the clone is fresh each time and the tracked
@@ -185,6 +187,17 @@ TABLET_WIRELESS="${WARPTEMPO_TABLET_ADDR:-}"
 GITHUB_CLONE_URL="https://github.com/warptempo/warptempo_projects.git"
 ORIGIN_URL="ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git"
 PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
+# THE RETIRED KEYS setup's correction removes from the tablet's settings file
+# (step 5), each one the app now refuses to start with (unknown-key fatal, no
+# migration; src/gui/device_config.h records each): sync_path, struck; and the
+# thirteen colour keys that left 2026-10-04 when every colour became a role of a
+# theme file -- theme_level (the dropped dark level) and the twelve program
+# colour keys.
+RETIRED_KEYS=(sync_path theme_level
+              waveform_ink waveform_canvas waveform_outline
+              flag_face flag_face_selected flag_label flag_label_selected
+              invalid_face invalid_face_selected invalid_label
+              playhead_head playhead_stem)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
@@ -1054,7 +1067,8 @@ apply_setup() {
         put_as_app "$TABLET_KEY.pub" "$APPCFG/deploy_key.pub" 644 || die "the deploy key's .pub did not arrive intact"
     fi
 
-    # 5. THE SETTINGS FILE: projects_repo made right, sync_path gone, the rest kept.
+    # 5. THE SETTINGS FILE: projects_repo made right, the retired keys' lines gone
+    # (sync_path and the thirteen colour keys, RETIRED_KEYS), the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
     # file), or `warptempo_sync-absent`; a failed or unmarked reading stops setup
@@ -1069,21 +1083,22 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" '
-            /^sync_path=/     { next }
+        awk -v repo="$PROJECTS_REPO_LINE" -v retired="${RETIRED_KEYS[*]}" '
+            BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1 }
             /^projects_repo=/ { print repo; had = 1; next }
+            (substr($0, 1, index($0, "=")) in gone) { next }
                               { print }
             END               { if (had == 0) print repo }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository and has no sync_path"
+            head_step "leave the tablet's settings file: it already names the projects repository and has no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, and no sync_path line"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, and no sync_path line"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, and no line of a retired key"
     fi
     printf '\n'
 

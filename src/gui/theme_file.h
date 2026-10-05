@@ -42,6 +42,24 @@
 // (the built-in alone). A name not ending `.theme` is not a theme and is not
 // read; neither is a directory or any other non-regular entry.
 //
+// THE BUNDLED FILES ARE COPIED IN AT EVERY LAUNCH (architect 2026-10-05):
+// every theme other than the built-in — the imported catalog, `warptempo`,
+// `warptempo-2026-10-03` and his colour-picker presets — SHIPS WITH THE
+// PROGRAM as a `.theme` file (generated into the repository's
+// `assets/themes/` by tools/theme_catalog/gen_theme_files.py, which states
+// what each file names), and each launch, BEFORE THE ONE READ, writes every
+// bundled file into the themes folder (copy_in_bundled_themes, gui_main),
+// creating the folder, overwriting a file of the same name: THE BUNDLE WINS
+// FOR ITS OWN NAMES, so a bundled name edited by hand is overwritten at the
+// next launch, and HIS OWN FILES TAKE OTHER NAMES — a file of any other name
+// is never touched. Then the folder is read once as above, so a bundled file
+// is read exactly like his own. THE SOURCE IS PER DEVICE, behind the seam
+// (GuiPlatform::bundled_theme_files): on the laptop the repository's
+// `assets/themes/`, its absolute path compiled in (the laptop runs from its
+// build tree); on the tablet the APK's `themes/` assets, which build_apk.sh
+// packs. A copy-in that cannot read the bundle or write a file is the
+// launch's hard fail on the read's own road (below).
+//
 // THE GRAMMAR (TEXT IS ASCII IN GRAMMARS): LF-terminated `role=value` lines
 // under the device config's own lexical contract (the shared scanner,
 // warptempo_settings::scan_key_value_file: split at the first '=', no blank
@@ -199,6 +217,14 @@ constexpr bool is_theme_key_spelling(std::string_view v) {
 // path when the config home does not resolve (the config's own load then
 // refuses with its own line).
 std::filesystem::path theme_folder_path();
+
+// THE LAUNCH'S COPY-IN (gui_main, first, before read_theme_folder): every
+// bundled `.theme` file written into the themes folder under the rule above,
+// the folder created, a file already holding the bundle's bytes left as it
+// is. Answers nothing on success (or when the config home does not resolve:
+// there is no folder, and the config's load refuses with its own line) and
+// the failure's whole line otherwise — FATAL at the caller.
+std::optional<std::string> copy_in_bundled_themes();
 
 // THE LAUNCH'S ONE READ of the themes folder (gui_main, before the device
 // config is read): every `*.theme` regular file parsed under the grammar

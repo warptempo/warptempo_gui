@@ -1,0 +1,15 @@
+ground=#4C666D
+label=#FFFFFF
+hilight=#658791
+light_3d=#58767F
+shadow=#334449
+dk_shadow=#000000
+selected_fill=#666666
+selected_text=#FFFFFF
+field_ground=#658791
+field_text=#FFFFFF
+clock_ground=#4C666D
+clock_text=#FFFFFF
+waveform_canvas=#0D0D0D
+waveform_ink=#D2E8DF
+waveform_outline=#9AABA4

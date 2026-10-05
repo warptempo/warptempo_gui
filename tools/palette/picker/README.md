@@ -217,7 +217,7 @@ Everything lives in the app's EXTERNAL files dir, `/sdcard/Android/data/com.warp
 | `picks.txt` | the app, at every commit | one line appended: `<ISO-8601 local time> <key> #RRGGBB <model> <a> <b> <c>` (the element's key; the view the pick was saved under: its model's word, `hsv`, `hsl` or `lch`, and its three numbers) |
 | `state.json` | the app, at every close of the panel, every switch of element or model, a commit at the presets pop-up's opening, a preset load, and the theme strip's opening and close | `{"active": "<key>", "model": "hsv", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {"<key>": [h, s, l], ...}, "lch": {"<key>": [L, C, h], ...}, "entry": {"<key>": N, ...}, "theme": "<theme key>"}`: the active element, the model the panel shows, every element's colour, its view in the map of the view's model (a map written only when some view is in it) and its history cursor (the N of "N of M"; absent with an empty history), and the open theme strip's theme (absent when none), rewritten whole. It is always THE LAST SAVED STATE: while the panel is open the active element is written as the panel's opening (OLD and its cursor), so an unsaved edit never reaches it |
 | `presets.json` | the app, at every save of a preset | `{"presets": [{"number": N, "saved": "<ISO-8601 local time>", "colours": {"<key>": "#RRGGBB", ...}, "hsv": {"<key>": [h, s, v], ...}, "hsl": {...}, "lch": {...}}, ...]}`: the presets oldest first, the numbers ascending (the name is "Preset N"), every colour with its view in its model's map (each map only when some view is in it, so an all-HSV preset is written as before the model switch), the maps together over the colours' keys, rewritten whole |
-| `tools/palette/picker/presets/presets.json` (the repository) | the planner, each session (`adb pull`) | the tablet's `presets.json` copied verbatim into git, so his presets outlive the device and every planner (the cloud's too) can read them; the source of the product's preset themes (`tools/theme_catalog/build.py` preset_entries, architect 2026-10-04) and of their device-config lines (`tools/theme_catalog/preset_keys.py`); the tablet's `picks.txt` and `state.json` copied beside it, and the laptop check loads all three over each new export (Build, the laptop check) |
+| `tools/palette/picker/presets/presets.json` (the repository) | the planner, each session (`adb pull`) | the tablet's `presets.json` copied verbatim into git, so his presets outlive the device and every planner (the cloud's too) can read them; the source of the product's preset themes (`tools/theme_catalog/build.py` preset_entries, architect 2026-10-04) and of their bundled theme files, which name the presets' program colours too (`tools/theme_catalog/gen_theme_files.py`); the tablet's `picks.txt` and `state.json` copied beside it, and the laptop check loads all three over each new export (Build, the laptop check) |
 
 THE VIEW'S NUMBERS are, for HSV, h in degrees 0..360 and s, v in 0..1; for HSL h in degrees, s, l in 0..1; for LCh L
 0..100, C 0..160, h in degrees — written as the shortest decimal that reads back as the
@@ -258,7 +258,7 @@ statement:
   "waveform.base.pgm", "cover": "waveform.cover.bin"}]}`. An ELEMENT: its key (`[a-z][a-z0-9_]*`, its word in
   picks.txt and state.json), its Title Case name, its colour, its scene; 1..32. A ROLE: its name and ONE RULE —
   `{"element": key}` the element's colour; `{"scale": {"of": key, "num": n, "den": d}}` THE CHROME RULE's line, each
-  channel x n / d rounded half to even (levels.py's rounding) and capped at 255 (`src/colour.h` scale_byte;
+  channel x n / d rounded half to even (Python's round) and capped at 255 (`src/colour.h` scale_byte;
   tools/palette/README.md, the chrome rule: Hilight 255, 3DLight 223, Shadow 128 over 192, the field and the emboss
   the Hilight); `{"derive": {"from": key, "over": key or "#rrggbb", "linear_mix": t}}` the linear-light mix of one
   element toward another (the outline over the LIVE canvas) or a literal (colour.py's `lin_mix`, ported in
@@ -272,11 +272,12 @@ statement:
   UN8x4_MUL_UN8 / UN8x4_MUL_UN8_ADD_UN8x4, line for line), so the picture is render.py's byte for byte at any colours.
 - `themes.json`: THE PRODUCT'S THEMES, `{"source": "...", "themes": [{"key": "windows-95-standard", "name": "Windows
   95 Standard", "ground": "#C0C0C0", "colours": [{"hex": "#C0C0C0", "names": ["ground", "Scrollbar", ...]}, ...]},
-  ...]}`: every entry of the product's theme table, LIGHT level, in the table's order (100 on 2026-10-04, the
+  ...]}`: every entry of the theme catalog, as recorded, in the catalog's order (100 on 2026-10-04, the
   architect's presets `warptempo-preset-<n>` last), each with every distinct colour the catalog records for it, the
-  ground first (`render.py` product_themes is the authoritative
-  statement: the source is `docs/themes/catalog.json`, exactly what `tools/theme_catalog/gen_theme_table.py` generates
-  `src/gui/theme_table.h` from, and the table is read too and must agree, so a stale table fails the export). A
+  ground first (`render.py` product_themes is the authoritative statement: the source is `docs/themes/catalog.json`,
+  exactly what `tools/theme_catalog/gen_theme_files.py` writes the product's bundled theme files,
+  `assets/themes/<key>.theme`, from, and those files are read too and must agree — every entry but the built-in
+  `windows-95-standard`, each naming its ground — so a stale bundle fails the export). A
   theme's colours are its catalog roles, every raw value its source records under the source's own key names, and
   every value its toolkit's rule computed at import (KDE 3's relief, CDE's Motif shades of each colour set): 6 to 34
   colours a theme.

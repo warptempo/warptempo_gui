@@ -1,13 +1,16 @@
 #include "theme_file.h"
 
 #include "device_config.h"     // device_config_path, DeviceConfig (the default)
+#include "platform.h"          // GuiPlatform::bundled_theme_files
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
+#include "settings_io.h"       // atomic_write_string_to_path
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
 #include <algorithm>
 #include <cassert>
 #include <expected>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <span>
 #include <system_error>
@@ -79,6 +82,45 @@ std::filesystem::path theme_folder_path() {
     const std::filesystem::path cfg = device_config_path();
     if (cfg.empty()) return {};
     return cfg.parent_path() / "themes";
+}
+
+std::optional<std::string> copy_in_bundled_themes() {
+    const std::filesystem::path folder = theme_folder_path();
+    // No config home: nothing to write into, and the config's own load
+    // refuses with its own line (read_theme_folder reads nothing either).
+    if (folder.empty()) return std::nullopt;
+    auto bundle = GuiPlatform::bundled_theme_files();
+    if (!bundle) {
+        return "could not read the bundled theme files: " + bundle.error();
+    }
+    // AN EMPTY BUNDLE IS A BUILD DEFECT (the generator writes every catalog
+    // theme but the built-in, and both carriers take the whole folder), said
+    // here rather than launching without the themes a config may name.
+    if (bundle->empty()) return std::string("the bundle holds no theme files");
+    std::error_code ec;
+    std::filesystem::create_directories(folder, ec);
+    if (ec) {
+        return "could not create the themes folder '" + folder.string() +
+               "': " + ec.message();
+    }
+    for (const auto& [name, bytes] : *bundle) {
+        const std::filesystem::path p = folder / name;
+        // A file already holding the bundle's bytes is left as it is — the
+        // folder ends the same as if it were written — so a launch rewrites
+        // (and syncs) only what a new build or a hand edit changed.
+        {
+            std::ifstream have(p, std::ios::binary);
+            if (have.is_open() &&
+                std::string{std::istreambuf_iterator<char>(have),
+                            std::istreambuf_iterator<char>()} == bytes)
+                continue;
+        }
+        if (!atomic_write_string_to_path(p.string(), bytes)) {
+            return "could not write the bundled theme file '" + p.string() +
+                   "'";
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> read_theme_folder() {

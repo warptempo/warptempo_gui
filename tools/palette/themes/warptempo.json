@@ -1,6 +1,6 @@
 {
  "name": "warptempo",
- "description": "THE `warptempo` THEME ON THE TABLET (architect 2026-10-03, the colour loop): the catalog's `warptempo` entry (docs/themes/catalog.json; chosen, not imported) at its LIGHT level, the app's default theme (device_config.h), over tablet.json as tools/theme_catalog/crops.py's theme_for writes it: the level row (tools/theme_catalog/levels.py, the generated table's own) over the role mapping, the program's colours the device config's defaults (crops.py APP_KEEP), every option the app's. The base of the check sets from step 16 on; it equals tablet.json's colours while the entry is the app's default.",
+ "description": "THE `warptempo` THEME ON THE TABLET (architect 2026-10-03, the colour loop): the catalog's `warptempo` entry (docs/themes/catalog.json; chosen, not imported), the app's default theme 2026-10-03..04, over tablet.json as tools/theme_catalog/crops.py's theme_for writes it: the entry's chrome as recorded (tools/theme_catalog/roles.py light_roles, its bundled theme file's own) over the role mapping, the program's colours those of 2026-10-03 (crops.py APP_KEEP), every option the app's. The base of the check sets from step 16 on; its colours equal tablet.json's.",
  "geometry": "tablet",
  "colours": {
   "ground": "#191919",

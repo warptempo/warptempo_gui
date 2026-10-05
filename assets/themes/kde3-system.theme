@@ -1,0 +1,12 @@
+ground=#D3D3D3
+label=#000000
+hilight=#ECECEC
+light_3d=#E8E8E8
+shadow=#757575
+dk_shadow=#000000
+selected_fill=#5A2400
+selected_text=#FFFFFF
+field_ground=#FFFFFF
+field_text=#000000
+clock_ground=#D3D3D3
+clock_text=#000000

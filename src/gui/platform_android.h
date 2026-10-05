@@ -6,7 +6,9 @@
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
+#include <expected>
 #include <functional>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -41,7 +43,10 @@
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
-// LAST GREW ON 2026-10-01, by battery_status (the menu row's battery + clock
+// LAST GREW ON 2026-10-05, by bundled_theme_files (the theme files the build
+// ships: the repository's assets/themes/ on the laptop, the APK's assets
+// here — the copy-in at launch, theme_file.h), before that on 2026-10-01 by
+// battery_status (the menu row's battery + clock
 // legend: sysfs on the laptop, the sliver's broadcast here — gui_battery.h
 // carries the type), and before that on 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
 // the contracts are at platform_wayland.h's two declarations, the JNI road at
@@ -55,13 +60,12 @@
 // pair has TWO consumers since 2026-09-17, the render player while it stands
 // and the car transport while it is closed, forked at main.cpp's hook on the
 // player's mode bit. The
-// NINE
-// consumers (re-greped 2026-09-17: main.cpp, viewport.cpp, paint_handler.h,
-// prompt.h, file_loader.h, input_handler.h, onscreen_keyboard.h,
-// render_player.h, car_transport.h — undo.cpp dropped out of the list and
-// car_transport.h joined it, so the count is unchanged and the membership is
-// not) include platform.h and compile against either backend
-// unchanged. WHERE A DOOR'S CONTRACT IS THE SEAM'S rather than this backend's,
+// TEN
+// consumers (re-greped 2026-10-05: main.cpp, viewport.cpp, theme_file.cpp,
+// paint_handler.h, prompt.h, file_loader.h, input_handler.h,
+// onscreen_keyboard.h, render_player.h, car_transport.h — theme_file.cpp
+// joined with the copy-in) include platform.h and compile against either
+// backend unchanged. WHERE A DOOR'S CONTRACT IS THE SEAM'S rather than this backend's,
 // it is stated ONCE at its owner and pointed at from here: the input doors and
 // the capture/cursor policy belong to GuiInputCore (input_core.h), and the
 // window/paint/loop contracts the GUI depends on — the title's composition
@@ -135,6 +139,16 @@ public:
     // private internal directory by android_main before gui_main runs, beside
     // the cache home it has always set.
     static DeviceConfig device_config_defaults();
+
+    // THE BUNDLED THEME FILES, the seam's own member (contract at
+    // platform_wayland.h, which owns it): this backend answers the APK's
+    // `themes/` assets — the repository's `assets/themes/*.theme`, which
+    // build_apk.sh's asset step packs — listed and read through the
+    // activity's AAssetManager, reached off the backend's one file-scope
+    // pointer (g_android_app), which android_main parks before gui_main asks,
+    // the road device_config_defaults takes.
+    static std::expected<std::map<std::string, std::string>, std::string>
+        bundled_theme_files();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-only with no titlebar, so this setter stores nothing and

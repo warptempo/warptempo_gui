@@ -487,6 +487,14 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${JACK_INCLUDE_DIRS}
         ${WARPTEMPO_GIT_INCLUDE_DIRS}
     )
+    # THE BUNDLED THEME FILES' SOURCE ON THE LAPTOP (architect 2026-10-05,
+    # theme_file.h's copy-in): the repository's own assets/themes/, its
+    # absolute path compiled in, since the laptop runs the executable from its
+    # build tree beside this source tree (GuiPlatform::bundled_theme_files,
+    # platform_wayland.cpp). The APK packs the same files as assets instead
+    # (android/app/build_apk.sh), so the Android branch defines nothing.
+    target_compile_definitions(warptempo_gui PRIVATE
+        WARPTEMPO_BUNDLED_THEMES_DIR="${CMAKE_SOURCE_DIR}/assets/themes")
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}

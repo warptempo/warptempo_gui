@@ -3252,7 +3252,18 @@ int gui_main(const char* argument) {
     // and the files loaded here, so the files must be in hand before the
     // config's reader runs. Its failure is the config's own road — a bad
     // theme file is a hand edit, the same adversarial class — one blunt line
-    // naming the file and no window.
+    // naming the file and no window. AHEAD OF THE READ, THE BUNDLED FILES ARE
+    // COPIED IN (architect 2026-10-05, theme_file.h): every theme file this
+    // build ships — the repository's assets/themes/ on the laptop, the APK's
+    // assets on the tablet — written into the folder, the bundle winning for
+    // its own names and his files of other names untouched, so the one read
+    // below takes the bundled files exactly as his own. A copy-in that cannot
+    // read the bundle or write the folder takes the same road: one line, no
+    // window.
+    if (const std::optional<std::string> err = copy_in_bundled_themes()) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        return 1;
+    }
     if (const std::optional<std::string> err = read_theme_folder()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;

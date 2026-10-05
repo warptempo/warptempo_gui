@@ -267,7 +267,7 @@ inline Unit unit_of_view(Model m, const double x[3]) {
 inline Rgb rgb_of_view(Model m, const double x[3]) { return rgb_of_unit(unit_of_view(m, x)); }
 
 // THE CHROME RULE'S CHANNEL (colour.py scale_byte; architect 2026-10-04, Windows 95's proportions): c x num / den
-// rounded to nearest, HALF TO EVEN (levels.py's rounding, Python's round), capped at 255 -- integer arithmetic, so
+// rounded to nearest, HALF TO EVEN (Python's round), capped at 255 -- integer arithmetic, so
 // exact. A tie occurs (32 x 255 / 192 = 42.5 -> 42, 96 x 223 / 192 = 111.5 -> 112).
 inline uint8_t scale_byte(int c, int num, int den) {
     const int p = c * num;

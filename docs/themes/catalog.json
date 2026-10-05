@@ -8429,7 +8429,7 @@
    },
    "display_tier": "high-colour",
    "notes": [
-    "chosen by the architect on the colour picker, not imported from a desktop of the era: his Preset 1's chrome at its light level, exactly as the picker painted it (2026-10-04); its canvas, ink and other elements are program keys (tools/theme_catalog/preset_keys.py)"
+    "chosen by the architect on the colour picker, not imported from a desktop of the era: his Preset 1's chrome, exactly as the picker painted it (2026-10-04); its canvas, ink and other elements are the program's roles in its bundled theme file (tools/theme_catalog/gen_theme_files.py)"
    ]
   },
   {
@@ -8484,7 +8484,7 @@
    },
    "display_tier": "high-colour",
    "notes": [
-    "chosen by the architect on the colour picker, not imported from a desktop of the era: his Preset 2's chrome at its light level, exactly as the picker painted it (2026-10-04); its canvas, ink and other elements are program keys (tools/theme_catalog/preset_keys.py)"
+    "chosen by the architect on the colour picker, not imported from a desktop of the era: his Preset 2's chrome, exactly as the picker painted it (2026-10-04); its canvas, ink and other elements are the program's roles in its bundled theme file (tools/theme_catalog/gen_theme_files.py)"
    ]
   }
  ]

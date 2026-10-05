@@ -246,15 +246,15 @@ below), the numbers and the options below.
 
 THE CHROME RULE (architect 2026-10-04: the chrome is ONE KNOB, the ground): `"chrome": {"ground": colour, "rule":
 "windows95"}` states the ground and fills every other chrome role from it by WINDOWS 95'S PROPORTIONS — Windows 95
-Standard's quartet over its ground 192 (theme_table.h's `windows-95-standard`: #FFFFFF / #DFDFDF / #808080 /
+Standard's quartet over its ground 192 (the catalog's `windows-95-standard`, the app's built-in: #FFFFFF / #DFDFDF / #808080 /
 #000000 over #C0C0C0) carried to any ground, PER CHANNEL: `bevel_hilight` = ground x 255 / 192, `bevel_light` = x
 223 / 192, `bevel_shadow` = x 128 / 192, `bevel_dkshadow` #000000, `field_ground` = the Hilight (Windows 95's field is
-white, its Hilight) and `emboss_hilight` = the Hilight (levels.py's LIGHT rule). THE ROUNDING IS levels.py's: its
-`rgb()` rounds `int(round(v * 255))`, Python's round, HALF TO EVEN; here the exact rational ground x num / 192,
+white, its Hilight) and `emboss_hilight` = the Hilight (`tools/theme_catalog/roles.py` light_roles). THE ROUNDING
+IS Python's round, `int(round(v * 255))`, HALF TO EVEN; here the exact rational ground x num / 192,
 half to even, capped at 255 (`colour.scale_byte`, integer arithmetic; ties exist: 32 x 255 / 192 = 42.5 -> 42,
 96 x 223 / 192 = 111.5 -> 112). A neutral ground reproduces the theme `warptempo` exactly: #191919 -> 25 x 255 / 192
 = 33.20 -> #212121, x 223 / 192 = 29.04 -> #1D1D1D, x 128 / 192 = 16.67 -> #111111, #000000, field and emboss
-#212121 (theme_table.h's light row; `colour.py` asserts it at import, and warptempo.json renders `cmp`-identical
+#212121 (its bundled theme file's chrome; `colour.py` asserts it at import, and warptempo.json renders `cmp`-identical
 stated either way); a tinted ground keeps its hue in every line (#206048 -> #2A8060 / #257054 / #154030). A theme
 with `chrome` states none of those seven roles in `colours`; the label stays its own (fixed). The picker
 (`picker/src/colour.h` scale_byte) repaints every line from the picked ground by the same arithmetic.
@@ -436,10 +436,11 @@ rasterizing on the device (`render.py`'s export section is the authoritative sta
   of the pixel's base) and `<scene>.cover.bin` (the stacks). All the theme's scenes come from one `--export`.
 - THE PRODUCT'S THEMES, `themes.json` (`product_themes`; the picker's presets pop-up lists them and opens one as a
   strip of swatches to adopt from): every entry of `docs/themes/catalog.json` — exactly what
-  `tools/theme_catalog/gen_theme_table.py` generates `src/gui/theme_table.h` from, in its order — at its LIGHT level,
-  with every distinct colour the catalog records for it (its roles, its source's raw values, its toolkit's computed
-  shades) and the names recording each. The generated table is read too and must list the same keys, names and light
-  grounds in the same order, so a stale table fails the export ("regenerate it"). 100 themes on 2026-10-04 (the
+  `tools/theme_catalog/gen_theme_files.py` writes the app's bundled `assets/themes/<key>.theme` from, in its order —
+  as recorded, with every distinct colour the catalog records for it (its roles, its source's raw values, its
+  toolkit's computed shades) and the names recording each. The bundled files are read too: they must be exactly the
+  catalog's entries but the built-in `windows-95-standard`, each naming its entry's ground, so a stale bundle fails
+  the export ("regenerate it"). 100 themes on 2026-10-04 (the
   architect's colour-picker presets join the program's own family), 6 to 34 colours each.
 - THE CHECKS: the record recomposed by cairo's arithmetic (`colour.over_coverage`, pixman's, cited there) equals the
   render byte for byte; the written files read back equal it again; and at every colour set of

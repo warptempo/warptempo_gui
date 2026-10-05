@@ -16,7 +16,8 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the two Roboto TTFs)         (manifest + res + assets)
+#   1. assets (the two Roboto TTFs          (manifest + res + assets)
+#      and the bundled theme files)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
 #   4. javac -> d8 (the Java sliver)    8. apksigner sign  9. verify
@@ -79,7 +80,7 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
-# THE PRODUCT'S TWO FACES AND NOTHING ELSE: Roboto and Roboto Mono, copied from
+# THE PRODUCT'S TWO FACES: Roboto and Roboto Mono, copied from
 # the repository's own fonts/ (architect 2026-10-02, gui_font.h) -- the very
 # files the Linux executable compiles in, so both devices paint from the same
 # bytes and the build depends on no installed font package. They are what
@@ -97,6 +98,21 @@ for f in Roboto-Regular.ttf RobotoMono-Regular.ttf; do
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
+# THE BUNDLED THEME FILES (architect 2026-10-05): the repository's generated
+# assets/themes/*.theme (tools/theme_catalog/gen_theme_files.py), every one,
+# into the package's assets/themes/, which aapt2 link's -A packs as the APK's
+# `themes/` asset directory. The app copies them into its own themes/ folder at
+# every launch before reading it (theme_file.h; GuiPlatform::
+# bundled_theme_files lists and reads them, platform_android.cpp). An empty
+# folder is a build defect and stops the script here, as a missing face does.
+THEME_DIR="$APPDIR/../../assets/themes"
+mkdir -p "$ASSETS/themes"
+shopt -s nullglob
+THEME_FILES=("$THEME_DIR"/*.theme)
+shopt -u nullglob
+[ "${#THEME_FILES[@]}" -gt 0 ] || wt_die "no .theme files under $THEME_DIR (tools/theme_catalog/gen_theme_files.py writes them)"
+cp -f "${THEME_FILES[@]}" "$ASSETS/themes/"
+wt_say "assets: ${#THEME_FILES[@]} theme files"
 
 # --- 2/3. configure + build ----------------------------------------------
 bash "$APPDIR/configure.sh"

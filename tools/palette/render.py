@@ -2270,7 +2270,7 @@ def export_scene(theme_path, out_dir):
     with open(os.path.join(out_dir, 'manifest.json'), 'w') as f: json.dump(man, f, indent=1); f.write('\n')
     themes = product_themes()
     with open(os.path.join(out_dir, 'themes.json'), 'w') as f:
-        json.dump({'source': 'docs/themes/catalog.json, checked against src/gui/theme_table.h; the light level',
+        json.dump({'source': 'docs/themes/catalog.json, checked against the bundled theme files (assets/themes/)',
                    'themes': themes}, f, indent=1); f.write('\n')
     # 4. read back: the files at the manifest's colours are each scene's render; at every check set, a fresh render
     back = picker_read(out_dir)
@@ -2310,31 +2310,31 @@ def export_scene(theme_path, out_dir):
 
 # THE PRODUCT'S THEMES (themes.json; architect 2026-10-04: the product's themes as starting points, a theme OPENED in
 # the picker as a strip of every colour it records, any one adopted as an element's colour). Taken at export time from
-# exactly what generates the product's table, never a hand-kept copy: the entries of docs/themes/catalog.json
-# (tools/theme_catalog/levels.py entries(), which gen_theme_table.py writes src/gui/theme_table.h from), in its order,
-# each at its LIGHT level (the theme as its makers recorded it; the dark level is the app's arithmetic, not a record).
-# The generated table is read too and must list the same keys, names and light grounds in the same order, so a stale
-# table is a hard fail ("regenerate it"), not a silent difference. A theme's COLOURS are every distinct byte triple
+# exactly what generates the product's theme files, never a hand-kept copy: the entries of docs/themes/catalog.json
+# (which tools/theme_catalog/gen_theme_files.py writes the bundled assets/themes/<key>.theme from), in its order, each
+# as its makers recorded it. The bundled files are read too: they must be exactly the catalog's entries but the
+# built-in `windows-95-standard` (compiled into the app, no file), each naming its entry's ground, so a stale bundle is
+# a hard fail ("regenerate it"), not a silent difference. A theme's COLOURS are every distinct byte triple
 # the catalog records for it: its catalog roles (ground first), every raw value its source records under the source's
 # own key names, and every value its toolkit's rule computed at import (provenance.rule.computed: KDE 3's relief, CDE's
 # Motif shades of each colour set); each colour once, in that order of first appearance, with every name that records
 # it.
-THEME_TABLE = os.path.join(C.REPO, 'src', 'gui', 'theme_table.h')
+THEME_FILES = os.path.join(C.REPO, 'assets', 'themes')
+THEME_BUILTIN = 'windows-95-standard'
 THEME_CATALOG = os.path.join(C.REPO, 'docs', 'themes', 'catalog.json')
 
 def product_themes():
     """-> [{"key", "name", "ground", "colours": [{"hex", "names": [...]}, ...]}, ...] (the head above)."""
     import re
     entries = json.load(open(THEME_CATALOG))['entries']
-    text = open(THEME_TABLE).read()
-    count = re.search(r'kGuiThemeCount = (\d+);', text)
-    rows = re.findall(r'^    \{"([^"]*)", "([^"]*)", "[^"]*",\n     \{0x([0-9A-F]{6}),[^\n]*// light$', text, re.M)
-    if not count or int(count.group(1)) != len(rows):
-        raise SystemExit(f'export: {THEME_TABLE}: {len(rows)} entries read, not kGuiThemeCount; the table\'s shape changed')
-    want = [(e['key'], e['name'], e['roles']['ground'].upper()[1:]) for e in entries]
-    if [(k, n, g) for k, n, g in rows] != want:
-        raise SystemExit(f'export: {THEME_TABLE} does not list the catalog\'s entries (keys, names, light grounds) in its '
-                         f'order; regenerate it (tools/theme_catalog/gen_theme_table.py)')
+    files = sorted(f for f in os.listdir(THEME_FILES)) if os.path.isdir(THEME_FILES) else []
+    want = sorted(e['key'] + '.theme' for e in entries if e['key'] != THEME_BUILTIN)
+    grounds = {f: re.search(r'^ground=(#[0-9A-F]{6})$', open(os.path.join(THEME_FILES, f)).read(), re.M) for f in files}
+    if files != want or any(grounds[e['key'] + '.theme'] is None or
+                            grounds[e['key'] + '.theme'].group(1) != e['roles']['ground'].upper()
+                            for e in entries if e['key'] != THEME_BUILTIN):
+        raise SystemExit(f'export: {THEME_FILES} is not the catalog\'s entries but {THEME_BUILTIN}, each naming its '
+                         f'ground; regenerate it (tools/theme_catalog/gen_theme_files.py)')
     out = []
     for e in entries:
         names = {}

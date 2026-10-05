@@ -31,8 +31,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <expected>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -518,6 +520,60 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
     return cfg;
+}
+
+// THE TABLET'S BUNDLE IS THE APK'S `themes/` ASSETS (contract at
+// platform_wayland.h's declaration): build_apk.sh copies the repository's
+// assets/themes/*.theme into the package's assets/themes/, and this lists that
+// asset directory (AAssetManager_openDir lists FILES only) and reads every
+// name ending `.theme` whole. The manager is the activity's, off the file-scope
+// pointer android_main parks before gui_main asks (the road
+// device_config_defaults takes). THE ERROR ARM'S PRODUCERS: an asset listed
+// but not opened or not read whole (IO on the installed APK), and no
+// activity or manager (breach-only: install_fonts_or_die has already
+// aborted on a missing manager before gui_main runs).
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_theme_files() {
+    AAssetManager* mgr = (g_android_app && g_android_app->activity)
+                             ? g_android_app->activity->assetManager
+                             : nullptr;
+    if (!mgr) return std::unexpected(std::string("no AAssetManager"));
+    AAssetDir* dir = AAssetManager_openDir(mgr, "themes");
+    if (!dir) {
+        return std::unexpected(
+            std::string("could not list the APK's themes/ assets"));
+    }
+    std::map<std::string, std::string> out;
+    std::string failure;
+    while (const char* entry = AAssetDir_getNextFileName(dir)) {
+        const std::string name = entry;
+        if (!name.ends_with(".theme")) continue;
+        const std::string path = "themes/" + name;
+        AAsset* asset = AAssetManager_open(mgr, path.c_str(),
+                                           AASSET_MODE_STREAMING);
+        if (!asset) {
+            failure = "could not open the APK asset '" + path + "'";
+            break;
+        }
+        const off_t len = AAsset_getLength(asset);
+        std::string bytes(len > 0 ? static_cast<size_t>(len) : 0, '\0');
+        size_t got = 0;
+        while (got < bytes.size()) {
+            const int n = AAsset_read(asset, bytes.data() + got,
+                                      bytes.size() - got);
+            if (n <= 0) break;
+            got += static_cast<size_t>(n);
+        }
+        AAsset_close(asset);
+        if (got != bytes.size()) {
+            failure = "could not read the APK asset '" + path + "' whole";
+            break;
+        }
+        out.emplace(name, std::move(bytes));
+    }
+    AAssetDir_close(dir);
+    if (!failure.empty()) return std::unexpected(std::move(failure));
+    return out;
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

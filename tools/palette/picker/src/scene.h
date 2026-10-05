@@ -68,8 +68,8 @@ struct Scene {
 };
 
 // THE PRODUCT'S THEMES (themes.json beside the manifest, written by the same export; render.py product_themes is the
-// authoritative statement): every entry of the product's theme table (src/gui/theme_table.h, from
-// docs/themes/catalog.json) at its LIGHT level, in the table's order --
+// authoritative statement): every entry of the product's theme catalog (the bundled theme files' source,
+// docs/themes/catalog.json) as recorded, in the catalog's order --
 //
 //   {"source": "...", "themes": [{"key": "windows-95-standard", "name": "Windows 95 Standard", "ground": "#C0C0C0",
 //                                 "colours": [{"hex": "#C0C0C0", "names": ["ground", "Scrollbar", ...]}, ...]}, ...]}

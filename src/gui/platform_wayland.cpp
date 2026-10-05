@@ -27,6 +27,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <expected>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -658,6 +659,43 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
     return cfg;
+}
+
+// THE LAPTOP'S BUNDLE IS THE REPOSITORY'S OWN assets/themes/ (contract at the
+// declaration): the absolute path CMakeLists.txt compiles in, so the build
+// tree's executable reads the files the generator wrote beside the sources it
+// was built from, every regular file whose name ends `.theme`. A folder that
+// cannot be read (the repository moved or deleted under a built executable)
+// or a file that will not open is the error arm, with the system's words.
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_theme_files() {
+    const std::filesystem::path folder = WARPTEMPO_BUNDLED_THEMES_DIR;
+    std::map<std::string, std::string> out;
+    std::error_code ec;
+    std::filesystem::directory_iterator it(folder, ec);
+    if (ec) {
+        return std::unexpected("could not read '" + folder.string() + "': " +
+                               ec.message());
+    }
+    for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
+        if (ec) break;
+        const std::string name = it->path().filename().string();
+        if (!name.ends_with(".theme")) continue;
+        std::error_code tec;
+        if (!it->is_regular_file(tec)) continue;
+        std::ifstream f(it->path(), std::ios::binary);
+        if (!f.is_open()) {
+            return std::unexpected("could not open '" + it->path().string() +
+                                   "'");
+        }
+        out.emplace(name, std::string{std::istreambuf_iterator<char>(f),
+                                      std::istreambuf_iterator<char>()});
+    }
+    if (ec) {
+        return std::unexpected("could not read '" + folder.string() + "': " +
+                               ec.message());
+    }
+    return out;
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {

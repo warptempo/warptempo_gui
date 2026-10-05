@@ -1,64 +1,63 @@
-# tools/theme_catalog — the imported themes, their provenance and their crops
+# tools/theme_catalog — the imported themes, their provenance, their bundled files and their crops
 
 THE APP CARRIES IMPORTED THEMES ONLY, NO DERIVATION (architect 2026-10-03: "no derived, imported only; derivation
 stays in git history"; "I don't want to be designing my own theme"). This tool turns the era's own theme files into
-`docs/themes/catalog.json` — every colour a recorded byte with its provenance — and renders the app in each one
-(`docs/themes/crops/`, listed in `docs/themes/CATALOG.md`), which is how a theme is chosen. THE ONE FAMILY THAT
-IMPORTS NOTHING is the program's own, `warptempo`, and it derives nothing either: `warptempo-2026-10-03` records the
-app's look of that morning off render.h's constants, and `warptempo` — THE APP'S DEFAULT THEME — is CHOSEN, NOT
-IMPORTED (architect 2026-10-03, the colour loop's mock sets: BA03's chrome, Windows 95 Standard darkened in proportion
-to a ground of relative luminance 0.010 under white text, and BM02's selection grey), its bytes his ruling as recorded
-(build.py `chosen_entry`), because no desktop of the era recorded the look he picked; and each
-`warptempo-preset-<n>` ("Warptempo Preset <n>") is THE ARCHITECT'S PRESET <n> ON THE COLOUR PICKER, chosen, not
-imported either (architect 2026-10-04; build.py `preset_entries`, from `tools/palette/picker/presets/presets.json`):
-the preset's chrome ground through the picker's chrome rule (`tools/palette/colour.py` `windows95_chrome`) applied
-here, at generation, THE LABEL AND THE FIELD TEXT the preset's `label` (the picker's Label element, architect
-2026-10-04: text is a pickable element, never a black / white switch or a contrast rule; white when the preset records
-none, as every preset saved before the Label round was painted), and THE SELECTED PAIR the preset's `selected_fill`
-and `selected_text` (the picker's Selection and Selected Text, the open-flag round, architect 2026-10-04; #666666 under
-white when it records none, the picker's starting colours), so the entry's light level is exactly the chrome the
-picker painted; its dark level is levels.py's dark rule's (the selected fill darkened in proportion, its label and
-selected text white); the preset's other elements are program keys, whose device-config lines `preset_keys.py` prints
-(the label and the selected pair are theme roles, so it prints nothing for them) -- the canvas, the ink and their
-outline, the flags, the playhead and THE INVALID FLAGS (the invalid-flags round, architect 2026-10-04: the Unselected
-Invalid Flag as `invalid_face` with the fixed `invalid_label`, the Selected Invalid Flag as `invalid_face_selected`
-with the fixed `flag_label_selected`, the product's one label on both selected faces). A
-standalone utility: no
-link path from any product target, no CMake, Python 3 + numpy (and `tools/palette/` for the crops).
+`docs/themes/catalog.json` — every colour a recorded byte with its provenance — writes each entry as a THEME FILE the
+app bundles (`assets/themes/<key>.theme`), and renders the app in each one (`docs/themes/crops/`, listed in
+`docs/themes/CATALOG.md`), which is how a theme is chosen. THE ONE FAMILY THAT IMPORTS NOTHING is the program's own,
+`warptempo`, and it derives nothing either: `warptempo-2026-10-03` records the app's look of that morning off
+render.h's constants, and `warptempo` is CHOSEN, NOT IMPORTED (architect 2026-10-03, the colour loop's mock sets:
+BA03's chrome, Windows 95 Standard darkened in proportion to a ground of relative luminance 0.010 under white text, and
+BM02's selection grey), its bytes his ruling as recorded (build.py `chosen_entry`), because no desktop of the era
+recorded the look he picked; and each `warptempo-preset-<n>` ("Warptempo Preset <n>") is THE ARCHITECT'S PRESET <n> ON
+THE COLOUR PICKER, chosen, not imported either (architect 2026-10-04; build.py `preset_entries`, from
+`tools/palette/picker/presets/presets.json`): the preset's chrome ground through the picker's chrome rule
+(`tools/palette/colour.py` `windows95_chrome`) applied here, at generation, THE LABEL AND THE FIELD TEXT the preset's
+`label` (the picker's Label element, architect 2026-10-04: text is a pickable element, never a black / white switch or
+a contrast rule; white when the preset records none, as every preset saved before the Label round was painted), and
+THE SELECTED PAIR the preset's `selected_fill` and `selected_text` (the picker's Selection and Selected Text, the
+open-flag round, architect 2026-10-04; #666666 under white when it records none, the picker's starting colours), so the
+entry's chrome is exactly the chrome the picker painted; the preset's other elements (the canvas, the ink and their
+outline, the flags, the playhead and the invalid flags) are not catalog roles: its theme file names them as the
+program's roles (below). A standalone utility: no link path from any product target, no CMake, Python 3 + numpy
+(and `tools/palette/` for the crops and the presets' program colours).
 
 ```
 python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/theme_sources/ (git-ignored)
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
 python3 tools/theme_catalog/build.py --presets-only  # no sources: the preset entries anew, every other entry carried
-python3 tools/theme_catalog/preset_keys.py [n]     # prints each preset's device-config lines (writes nothing)
-python3 tools/theme_catalog/gen_theme_table.py     # -> src/gui/theme_table.h, the app's generated table (committed)
-python3 tools/theme_catalog/levels.py --verify     # the vectorized ground search against its exhaustive definition
+python3 tools/theme_catalog/gen_theme_files.py     # -> assets/themes/<key>.theme, the app's bundled files (committed)
 python3 tools/theme_catalog/crops.py [key ...]     # -> docs/themes/crops/<key>.png, docs/themes/CATALOG.md
 python3 tools/theme_catalog/crops.py --md          # renders nothing: CATALOG.md from catalog.json, stale crops deleted
 ```
 
-## The app's table and the two levels (architect 2026-10-03)
+## The bundled theme files (architect 2026-10-04, 2026-10-05)
 
-The app carries the catalog as ONE GENERATED, COMMITTED HEADER, `src/gui/theme_table.h` (`gen_theme_table.py`; its
-head says "do not edit"): every entry at TWO LEVELS, LIGHT / DARK, eleven roles a level, so the app does no
-colour arithmetic. A catalog change is `build.py`, then `gen_theme_table.py` and `crops.py`, the outputs committed
-together; the output is byte-stable (the catalog's order, fixed formatting, no timestamp). THE LEVEL ARITHMETIC is one
-module, `levels.py`, read by the generator and by `crops.py` (its head states the rule): LIGHT the entry as
-recorded; DARK the ground's HLS hue and saturation at relative luminance 0.035, all four relief lines'
-HLS lightness scaled by L(new face) / L(base face) (black stays black, a 3DLight equal to the base face becomes the
-new face), the label white, the emboss's light copy Windows' own dialog-rule Hilight of the new face
-(`toolkit_rules.windows_dialog`); the selected pair the entry's (a CDE entry's its `title_active` with colour set 1's
-Motif foreground) and the field pair the entry's — as recorded at LIGHT, and at DARK each of the two grounds
-DARKENED IN PROPORTION with the face
-(architect 2026-10-03, mock sets AS and AT): its recorded luminance x the level's target / L(the recorded ground), its
-hue and HSV saturation kept (`pair_ground_at`), the text on both the level's white. The info pair is imported (the
-role table below) and NOT CARRIED (architect 2026-10-03, mock set AY): the tooltip and the cards are the level's
-ground under its label on both levels, render.h's palette block (THE INFO FACE). The searches are exhaustive
-by definition (`ground_at_exhaustive`, the lightness at every 1 / 100000 step; `pair_ground_at_exhaustive`, the HSV
-value likewise); `ground_at` and `pair_ground_at` are the same searches vectorized with numpy, verified identical on
-every case the table reads (`levels.py --verify`). No level stands between the two (architect 2026-10-03: a middle
-level's proportional field, card and selection fall into a grey zone, and fixing that would need another rule). The app reads the row the device config names (`theme`, `theme_level`; render.h's palette
-block maps the roles onto the painters).
+Every theme but the app's one compiled built-in, `windows-95-standard`, SHIPS WITH THE APP AS A FILE: `gen_theme_files.py`
+writes `assets/themes/<key>.theme` for every catalog entry but that one (a file of the built-in's name is the app's
+launch hard fail), and deletes any other file there, so the folder is exactly the catalog's; the app copies the folder
+into its own `themes/` at every launch and then reads it (`src/gui/theme_file.h`'s head: the bundle wins for its own
+names, his own files take other names; the laptop reads the repository's folder, the APK carries it as assets). A
+catalog change is `build.py`, then `gen_theme_files.py` and `crops.py`, the outputs committed together; the output is
+byte-stable (the role table's order, uppercase `#RRGGBB`, LF, no timestamp). A file names the roles THE ENTRY RECORDS,
+each the recorded byte, and every role it does not name takes the built-in's value in the app (the generator's head is
+the statement):
+
+| app role | from the entry |
+|---|---|
+| `ground`, `label`, `hilight`, `light_3d`, `shadow`, `dk_shadow` | its `ground`, `label` and relief quartet (`bevel_hilight`, `bevel_light`, `bevel_shadow`, `bevel_dkshadow`) |
+| `selected_fill`, `selected_text` | its selected pair; a CDE entry, which records none (Motif selects by inverse video), its `title_active` under colour set 1's Motif foreground |
+| `field_ground`, `field_text` | its field pair |
+| `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule) |
+| `card_ground`, `card_text` | its info pair (Windows' InfoWindow / InfoText) where it records one: the two Windows families and `warptempo-2026-10-03`; KDE 3 and CDE have no tooltip pair |
+| `card_frame` | never named: the built-in's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
+| the program's roles | only where the entry records them: a preset's canvas and ink (`waveform_canvas`, `waveform_ink`), `waveform_outline` the picker's "auto" rule over the two (the 50 % linear-light blend of the ink over the canvas, through `tools/palette/render.py`'s own theme), the playhead's head and stem; the picker's Unselected / Selected Flag onto BOTH the warp and the phase-reset pair, the Unselected / Selected Invalid Flag onto the removed pair (the invalid flag wears it); the flag labels never (the picker has no flag-label element) |
+
+The chrome is the entry AS RECORDED, through ONE light-roles function, `roles.light_roles` (the emboss's light copy
+the recorded Hilight), which `crops.py` reads too, so a file and its crop show one chrome. Before writing a preset's
+file the generator checks its chrome against the chrome the picker paints for it (a stale catalog or a changed picker
+theme is a hard fail). The dark level (2026-10-03..04: a second, computed row per entry) was dropped with the app's
+`theme_level` (architect 2026-10-04: a dark look is a theme he designs).
 
 ## The contract
 
@@ -70,19 +69,19 @@ block maps the roles onto the painters).
   named in the entry's provenance and described once in the catalog's `rules`. That is part of the import, not a
   derivation of ours.
 - THE CHROME IS THE THEME'S; THE WAVEFORM PANE, THE FLAGS AND THE PLAYHEAD ARE THE PROGRAM'S OWN ELEMENTS (architect
-  2026-10-03), their colours the app's device keys. The flags are the FLAT Acid flag, outlined in the theme's DkShadow
+  2026-10-03), their colours ROLES OF THE THEME FILE beside the chrome's (the built-in's where a file names none:
+  `src/gui/theme_file.h`'s role table). The flags are the FLAT Acid flag, outlined in the theme's DkShadow
   and shaded by nothing. Each entry still names the rule its family's desktop shaded a 3D face with (`flag_rule`:
   Windows' Appearance dialog, `windows_dialog`, over shlwapi's 240-scale integer HLS as Wine implements it; KDE 3's;
   Motif's — `toolkit_rules.flag_bevel`), KEPT for tools/palette's "bevelled" flag style, the record of the design the
-  flat flag replaced; the app and the crops read it nowhere. `windows_dialog` is also the levels' emboss copy rule
-  (`levels.py`). These are the only rules in the tool.
+  flat flag replaced; the app and the crops read it nowhere. These are the only rules in the tool.
 - EVERY SOURCE IS PINNED (`sources.py`): a repository at a commit, or a fixed local image, and every entry's
   provenance names the project, the file, the URL and the commit (or the image). Fetched files live in
   `tmp/theme_sources/` and are never committed; only the bytes and their provenance are.
 - NO BACKSTOPS: the inputs are pinned third-party files; a malformed one is a one-line hard fail naming it.
 - A THEME OWNS THE CHROME. The catalog records EVERY raw value its source has, under the source's own key names
   (`raw`), even those no role reads today, so the waveform pane can later inherit from a theme by choice.
-- A role a source has no word for is ABSENT and the app's own value applies; nothing is guessed.
+- A role a source has no word for is ABSENT, its theme file does not name it, and the built-in's value applies; nothing is guessed.
 
 ## An entry
 
@@ -119,7 +118,7 @@ Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts 
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
-| `warptempo` | `src/gui/render.h` at da0b1051 (git show); the architect's ruling of 2026-10-03 | `warptempo-2026-10-03`, the app's own look on the morning of 2026-10-03, so it stays selectable as bytes; `warptempo` (display name `warptempo`, all lowercase, his spelling), the app's default, CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (the app carries none), its dark level whatever levels.py's dark rule makes of them, untuned; `warptempo-preset-<n>` (display name `Warptempo Preset <n>`), one per preset the colour picker saved (`tools/palette/picker/presets/presets.json`, architect 2026-10-04), CHOSEN, NOT IMPORTED: the preset's chrome ground through the picker's chrome rule, the label and the field text the preset's Label (white when it records none), the selected pair the preset's Selection and Selected Text (#666666 / #FFFFFF when it records none), its dark level levels.py's dark rule's |
+| `warptempo` | `src/gui/render.h` at da0b1051 (git show); the architect's ruling of 2026-10-03 | `warptempo-2026-10-03`, the app's own look on the morning of 2026-10-03, so it stays selectable as bytes; `warptempo` (display name `warptempo`, all lowercase, his spelling), CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (not ruled); `warptempo-preset-<n>` (display name `Warptempo Preset <n>`), one per preset the colour picker saved (`tools/palette/picker/presets/presets.json`, architect 2026-10-04), CHOSEN, NOT IMPORTED: the preset's chrome ground through the picker's chrome rule, the label and the field text the preset's Label (white when it records none), the selected pair the preset's Selection and Selected Text (#666666 / #FFFFFF when it records none) |
 
 Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 4 (with the two presets of
 2026-10-04) — 100 entries. A new copy of presets.json adds its new presets on the next run (a preset's number is never
@@ -172,14 +171,14 @@ highlight (text selection is inverse video), no tooltip pair and no disabled col
 THE APP-SPECIFIC ROLES (architect 2026-10-03), drawn from the catalog roles above rather than stored: the ruler label
 and the trim lane's arrow glyph <- `label`; the ruler ticks <- `bevel_shadow`; the flag OUTLINE <- `bevel_dkshadow`
 (round the flag, keeping overlapping flags apart; the stem crosses its bottom line); the playhead head's outline <-
-`label`; THE DISABLED EMBOSS's light copy <- `bevel_hilight` on the light level (`levels.py`). THE PROGRAM'S OWN
-COLOURS, not catalog roles, the app's open device keys (src/gui/device_config.h): the waveform ink, canvas and lit
-outline (#808080 / #000000 / #5C5C5C); the flag's face and its label, a RECORDED colour beside the face as Windows 95
-recorded a text colour beside every face (no luminance rule anywhere: that is WCAG 2.0's contrast math, not
-Windows'): white on the slate violet #666699; the selected flag's brighter face #CCCCFF and the one selected label,
-black; the invalid face and its label, #993333 and white, its selected face #FF6666 (Windows' error-icon pair #FF0000
-/ #FFFFFF was struck, architect 2026-10-03); the playhead's head and stem (#8B8B8B / #FCFCFC) — the defaults of the
-colour loop (architect 2026-10-03).
+`label`; THE DISABLED EMBOSS's light copy <- `bevel_hilight` (`roles.light_roles`). THE PROGRAM'S OWN COLOURS are
+not catalog roles: they are the theme file's program roles, the built-in's (`src/gui/theme_file.h`'s role table)
+wherever a file names none. THE CROPS were rendered 2026-10-03 in the program colours of that day (`crops.py`
+APP_KEEP): the waveform ink, canvas and lit outline (#808080 / #000000 / #5C5C5C); the flag's face and its label, a
+RECORDED colour beside the face as Windows 95 recorded a text colour beside every face (no luminance rule anywhere:
+that is WCAG 2.0's contrast math, not Windows'): white on the slate violet #666699; the selected flag's brighter face
+#CCCCFF and the one selected label, black; the invalid face and its label, #993333 and white, its selected face
+#FF6666; the playhead's head and stem (#8B8B8B / #FCFCFC).
 
 ## The checks (build.py, before the write)
 
@@ -206,8 +205,8 @@ show), and the well's two bottom lines over the bottom row (rows 1343..1440), it
 follow the geometry (`crops.regions()`, from `tablet.SCENE`). Stacked 1152 x 697 px with a 4-row FULLY TRANSPARENT gap
 between them (alpha 0 there, 255 everywhere else, so no join reads as chrome), written as RGBA (indexed with tRNS
 when a crop has at most 256 colours; none has: the antialiased text exceeds it), each with the Display-P3 iCCP chunk.
-On each: THE APP'S FINAL DESIGN AT THE LIGHT LEVEL (architect 2026-10-03; `levels.level_roles`, the generated table's
-own row) with the role mapping above, every option the app's (the tablet geometry fixes them, render.py
+On each: THE APP'S DESIGN IN THE ENTRY'S CHROME AS RECORDED (architect 2026-10-03; `roles.light_roles`, the bundled
+file's own chrome) with the role mapping above, every option the app's (the tablet geometry fixes them, render.py
 `TABLET_FIXED`): the well's two-line PLAIN SUNKEN edge, top and bottom only, full width (`bevel_shadow` then
 `bevel_dkshadow` inward on top, `bevel_light` inward then `bevel_hilight` outward at the bottom); the flat flags left
 to right EDITING (the in-place editor, the selected flag opened for edit: its black frame on the selected face, its

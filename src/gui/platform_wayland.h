@@ -6,7 +6,9 @@
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
+#include <expected>
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -67,6 +69,26 @@ public:
     // the GUI proper free of the `#ifdef` the alternative would need. STATIC because it is asked before any window
     // exists — gui_main resolves the config ahead of init().
     static DeviceConfig device_config_defaults();
+
+    // THE BUNDLED THEME FILES — the `.theme` files that ship WITH THIS BUILD
+    // of the program (the generated `assets/themes/`, every catalog theme but
+    // the compiled built-in; tools/theme_catalog/gen_theme_files.py), as a
+    // map from FILE NAME (`<key>.theme`, no folder) to the file's whole
+    // bytes. Read by the launch's copy-in alone (copy_in_bundled_themes,
+    // theme_file.h, whose head states the rule), which writes each into the
+    // themes folder before the folder is read. A PLATFORM FACT and on the
+    // seam for that reason: where the bundle lives is the backend's answer —
+    // THIS BACKEND reads the repository's own `assets/themes/`, its absolute
+    // path compiled in (WARPTEMPO_BUNDLED_THEMES_DIR, CMakeLists.txt: the
+    // laptop runs from its build tree beside the repository), every regular
+    // file whose name ends `.theme`; the Android backend reads the APK's
+    // `themes/` assets (build_apk.sh packs them). STATIC because it is asked
+    // before any window exists, like the template above. THE ERROR ARM'S
+    // PRODUCER IS IO (here: the folder or a file unreadable, the repository
+    // moved after the build; on the tablet an asset that will not open): the
+    // system's words, which the copy-in carries to the launch's hard fail.
+    static std::expected<std::map<std::string, std::string>, std::string>
+        bundled_theme_files();
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
