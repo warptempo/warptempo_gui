@@ -39,7 +39,11 @@ Read CLAUDE.md first (you are THE PLANNER; it holds every process rule), then th
   over 8 scenes, a two-column chooser (30), Copy / Paste under OLD | NEW, presets, the theme strip, his old flag keys
   read as aliases. His files: `tools/palette/picker/presets/` (copied by the laptop at every picker install).
 
-## NEXT: THE TITLE BAR (ALL RULED 2026-10-05; WAITING ON HIS PLAIN GO — ask once, then brief)
+## THE TITLE BAR — LANDED 6155f29 (2026-10-05), REQUEST 5 out; the record below is what was ruled
+(Built as ruled, plus: the caption buttons SOFT (Windows' DFC_CAPTION, his reference); the dither cell one Windows
+px (his ruling); the matrix read off the reference, Bayer transposed and shifted; an unsized restore returns to a
+remembered 1400x800; a maximised window does not move by its caption. Stale outside the arc: the mock tool's
+`tools/palette/tablet.py` lane sum (283 -> 333 device px) and the scenes / crops, which have no caption.)
 Bumped ahead of everything: "I want the final height before I start finalizing the warp markers and phase reset
 markers". The settled design:
 - A Windows caption painted BY THE APP on both devices, 18 Windows px tall (SM_CYCAPTION), the app's EXISTING icon
@@ -79,6 +83,17 @@ Manual rounds until the Tuesday reset (CLAUDE.md's codex routine, its cloud sent
 with no link path to the product). Unreviewed product code since the last Sol round (04a3fe1): the theme catalog in
 the app (7227c38, 9885509), theme files (3c3575d), the bundle (71acf95), 40623b9, Save as the dirty mark (54ba6b6) —
 FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag first.
+
+## HIS TO-DO LIST (2026-10-05; each a small arc, the timing his)
+- RETIRE `max_waveform_height`: both devices already run 0 (no maximum); the variable, its Settings row and its
+  device-config key go, and the REQUEST that installs it deletes the line on both devices first (an unknown key is
+  fatal). Owner: device_config.{h,cpp} (not frozen), waveform_max_h_px (render.h), main.cpp's vertical rule.
+- REMOVE THE MENU ROW'S BATTERY + CLOCK LEGEND (his ruling; the charger issue is resolved, he has other clocks):
+  compose_menu_legend (gui_battery.h), the battery reads on both platforms, the menu row's paint.
+- ROW 8's CLOCK PANEL PADDING: the tab letter sits tight to the panel's left edge since the panel was made even;
+  keep it even, widen both sides (kStatusPanelPadPx, paint_handler.cpp).
+- RULED OUT 2026-10-05: menus behind the caption icon (the menu row stays); the flags stay as they are (the white
+  outline is to be MOCKED only); removing the well was raised by him and set aside with the rest.
 
 ## AFTER THE TITLE BAR
 1. DISCUSS the picker's NAVIGATION with him (history vs presets; editing a preset): ask; nothing is briefed before.

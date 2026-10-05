@@ -261,3 +261,22 @@ with `## DONE 4` here.
    SCREENCAP (the product in front, the screen awake): the top strip under his theme; SAVE IS GREY on the fresh launch
    (the disabled emboss, like Undo and Redo beside it); the clock panel reads "100% | 12:35 AM", no `*`.
 4. Committed: tools/palette/picker/presets/{picks.txt,state.json} and this block. Wakes used: 4 of 8.
+
+## REQUEST 5 (2026-10-05, the cloud planner; the title bar, 6155f29 and after)
+THE TITLE BAR landed: the app paints its own Windows 95 caption (18 Windows px) on both devices; the laptop asks labwc
+for CLIENT-SIDE decorations, starts maximised, and restored draws a 4-px sizing frame; six new theme roles reach both
+devices through the bundled files at launch (no config edit). New font asset Roboto-Bold.ttf. The ANDROID CODE IS
+UNCOMPILED until this request (platform_android.cpp: the three font slots, the moveTaskToBack lookup,
+minimize_window; build_apk.sh's font copy). NEVER change either device's config. The picker is unchanged: do not
+reinstall it. Answer with `## DONE 5` here.
+1. `git pull` main (at or after this request). Reconfigure `build/` (CMakeLists changed: the bold face is
+   embedded), `cmake --build build -j$(nproc)` (libgit2 ON, CLI ON): the real exit code and any warning.
+2. THE LAPTOP: run `./build/warptempo_gui` under labwc for ~8 s (as DONE 3): it starts, loads his project, no
+   refusal; paste any stderr line. If a screenshot is cheap (grim), check: ONE title bar (the app's navy caption,
+   no labwc bar above it), the window maximised. The Restore frame and the drag are his eyeball.
+3. THE PRODUCT APK: `bash android/app/build_apk.sh` (expect the font assets to include Roboto-Bold.ttf; report any
+   compile error VERBATIM and stop). Install, relaunch; logcat: the window, his project loads, no refusal, no
+   `moveTaskToBack not found` line. A screencap only if the screen is awake and the product in front: describe the
+   caption (height in device px — expect 50 — its colours under kde3-solaris, the icon, the title text, the three
+   buttons with Restore greyed). Do not press Minimise or Close.
+4. Commit (the wrapper) this file's DONE 5 only, push. Wakes: report the count.
