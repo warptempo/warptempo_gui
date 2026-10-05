@@ -76,7 +76,7 @@ struct TrimRange {
 // relief, the time fields' own pair, the cards' three, the selected and field
 // pairs, and the program's own elements (the waveform's canvas, ink and
 // outline, each flag kind's face and selected face, the flag labels, the
-// playhead's head and stem). The roles, their order and THE BUILT-IN's values
+// playhead's stem and the scanner). The roles, their order and THE BUILT-IN's values
 // are the role table (kGuiThemeRoles, theme_file.h); the active theme is the
 // device config's `theme` — the one built-in, `windows-95-standard`, or a
 // `<key>.theme` file read at launch from the `themes/` folder beside the
@@ -180,7 +180,10 @@ struct TrimRange {
 //                 (paint_window_sizing_frame);
 //   the program's the waveform's canvas, ink and outline (ROW 6, below), the
 //                 flag kinds' faces and the flag labels (THE MARKER LANE,
-//                 below), the playhead's head and stem (THE PLAYHEAD, below).
+//                 below), the playhead's stem and the scanner (THE PLAYHEAD,
+//                 below — the head itself is no longer a role: it is
+//                 WordPad's ruler marker, painted in the chrome's own label,
+//                 hilight, shadow and ground).
 // THE CARD FACE IS WINDOWS 95's TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
@@ -268,8 +271,8 @@ struct GuiPalette {
     GuiColor removed_flag_selected;
     GuiColor flag_label;
     GuiColor flag_label_selected;
-    GuiColor playhead_head;
     GuiColor playhead_stem;
+    GuiColor scanner;
 };
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
@@ -324,20 +327,29 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // right over the same rows (architect 2026-10-02, the Sonic Foundry etching;
 // paint_ruler_row).
 
-// THE PLAYHEAD (the program's roles, architect 2026-10-03). The HEAD is an
-// aliased shape in the `playhead_head` role, seated tip-down one Windows px
-// into the marker lane's own first row (architect 2026-10-05; the ruler
-// lane's bottom rows carry the rest of it — paint_ruler_row), with a
-// ONE-WINDOWS-PX OUTLINE in the theme's LABEL —
-// the head's own boundary pixels, so the head keeps its size (the Windows 95
-// arrow cursor's edge). THE HEAD IS THE HOLD POSTURE'S LAMP (architect
-// 2026-09-24): while AppState::camera_hold stands it paints in the STEM'S role,
-// outline kept — a STATE COLOUR, not a class — repainted by the per-tick
-// comparator (main.cpp), since the bit flips with no damage of its own. THE
-// STEM is the `playhead_stem` role, UNIFORM from the head to the canvas's foot
-// (its contrast over the chrome and the canvas is the user's choice), and THE
-// SCANNER — the moving playback line, paint_scanner — is the moving stem and
-// takes the same role, as does the zoom anchor's stem (render_strip_anchor_stem).
+// THE PLAYHEAD. THE HEAD IS NO LONGER A ROLE OF ITS OWN (architect
+// 2026-10-05): it is WordPad's down-pointing ruler indent marker, a FIXED
+// 9 x 8 Windows-px BITMAP (kPlayheadHeadGlyph, below; geometry measured from
+// a Windows 95 screenshot, its colours not trusted), seated tip-down one
+// Windows px into the marker lane's own first row (architect 2026-10-05; the
+// ruler lane's bottom rows carry the rest of it — paint_ruler_row) and
+// painted in four of the CHROME's own roles: the glyph's outline in LABEL
+// (COLOR_BTNTEXT, the role Windows maps a toolbar or ruler bitmap's black
+// to), its bevel in HILIGHT and SHADOW, and its interior in GROUND — a
+// raised chip on the chrome, not a flat silhouette. THE HOLD LAMP (architect
+// 2026-09-24, restated for the glyph): while AppState::camera_hold stands,
+// the glyph's GROUND cells alone take the STEM'S role instead — a STATE
+// COLOUR, not a class — repainted by the per-tick comparator (main.cpp)
+// since the bit flips with no damage of its own; the outline and bevel cells
+// never change. THE STEM is the `playhead_stem` role, UNIFORM from the head
+// to the canvas's foot (its contrast over the chrome and the canvas is the
+// user's choice), and the zoom anchor's stem
+// (render_strip_anchor_stem) takes the same role. THE SCANNER — the moving
+// playback line, paint_scanner — HAS ITS OWN ROLE, `scanner` (architect
+// 2026-10-05, undoing that day's earlier choice to share the stem's role):
+// it is still the moving stem in every other respect (waveform-only, no
+// head, no lane presence), painted in its own colour so it can be told apart
+// from the resting cursor's stem at a glance.
 
 // -- THE MARKER LANE: THE FLAT FLAGS ---------------------------------------------
 //
@@ -1022,25 +1034,33 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 //
 // THE BASELINE → MARKER LANE DISTANCE, SEVEN WINDOWS PX (architect
 // 2026-10-02, the U4 mock's "above 6, below 10" laptop rows re-authored at
-// the unit's change as 4 and 7): the playhead head is 8 Windows px
-// (kPlayheadHeadHeightPx), one taller than this distance, so when it was
-// seated tip-down on the RULER lane's own bottom its widest rows overlapped
-// the digits' lowest ink rows at the playhead's column — allowed (his
-// ruling, "a little overlap is fine"), the head painting over the labels.
+// the unit's change as 4 and 7). ITS SEAT IS ONE WINDOWS PX DOWN, INTO THE
+// MARKER LANE (architect 2026-10-05): the head's tip row lands on the marker
+// lane's own first row — its one Windows px of air above the flag box
+// (marker_lane_air_px) — touching the box's top edge, rather than flush on
+// the ruler lane's bottom; this term is unaffected by the head's own height,
+// so it alone settles constraint (a), that the tip never enters the flag
+// box: it never did, and still does not.
 //
-// THE SEAT MOVED ONE WINDOWS PX DOWN, INTO THE MARKER LANE (architect
-// 2026-10-05): the tip row now lands on the marker lane's own first row —
-// its one Windows px of air above the flag box (marker_lane_air_px) —
-// touching the box's top edge, rather than flush on the ruler lane's bottom.
-// THIS DISTANCE PLUS THAT ONE ROW EXACTLY FILLS THE HEAD'S OWN HEIGHT, so the
-// overlap the paragraph above once allowed is gone at every scale this file
-// is checked at — distance + air equal the head's own rows: 11 = 10 + 1 at
-// 138 %, 22 = 19 + 3 at 275 %, 32 = 28 + 4 at 400 % — the head now standing
-// flush against the digits' lowest ink rather than over it. (The two terms
-// still round separately, so an odd gui_scale could leave a one-row mismatch
-// either way; the same "a little overlap is fine" ruling covers it.) The
-// head's rows still do not enter the RULER lane's own authored height — they
-// now spend their last row in the MARKER lane's air instead.
+// THE HEAD'S HEIGHT NO LONGER MATCHES THIS DISTANCE PLUS THE AIR ROW AT
+// EVERY SCALE (architect 2026-10-05, the WordPad glyph replacing the
+// half-width table): the glyph is 8 Windows-px QUANTA tall
+// (kPlayheadHeadRows * u, u = waveform_line_px(), never scaled_px(8) — the
+// rounding rule's "sum of its rounded parts"), 8 / 24 / 32 device px at
+// 138 / 275 / 400 %, against the distance-plus-air sum of 11 / 22 / 32 the
+// old half-width table matched exactly. The two agree only at 400 %; at
+// 138 % the glyph is 3 rows SHORTER, so its top stands 3 rows below the
+// digits' baseline — no overlap at all, a small gap of ground instead; at
+// 275 % it is 2 rows TALLER, so its top rises 2 rows above the baseline,
+// into the digits' own ink — accepted under the same ruling as the
+// paragraph this one replaces, "a little overlap is fine" (and now, per his
+// 2026-10-05 wording, "whatever else it covers — digits, ticks — is fine").
+// CONSTRAINT (b), that the head's top never rises into the TRIM lane above
+// the ruler lane, holds at every one of the three with room to spare: the
+// ruler lane itself is 26 / 49 / 72 device rows (ruler_lane_h_px,
+// paint_handler.cpp), and the glyph's top row sits 19 / 28 / 44 device rows
+// down from the ruler lane's own top respectively — never within 18 rows of
+// its ceiling, let alone past it.
 inline constexpr int kRulerBaselineToMarkerPx = 7;
 inline int trim_lane_h_px() {
     return scaled_px(kTrimLaneHeightPx, 3);
@@ -1571,8 +1591,8 @@ inline int trim_arrow_button_w_px() {
 // THE ARROW GLYPH, Windows' scroll arrow: FOUR COLUMNS whose heights, from
 // the tip, are 1, 3, 5 and 7 Windows rows, each centred on the glyph's middle
 // row — a 4 x 7 triangle. Painted as INTEGER RECTANGLES, one per column
-// (aliased by construction, the playhead head's precedent at
-// kPlayheadHeadHalf: never a rescaled icon, never a path fill), each column
+// (aliased by construction: never a rescaled icon, never a path fill — the
+// playhead head's glyph below follows the same construction), each column
 // one unit u = scaled_px(1, 1) wide and its rows u tall apiece — a composite
 // of rounded parts — so the glyph is 4u x 7u device px; it is CENTRED IN THE
 // BUTTON in device px, an odd difference flooring toward the top-left (the
@@ -1583,72 +1603,106 @@ inline int trim_arrow_button_w_px() {
 inline constexpr int kTrimArrowGlyphCols = 4;
 inline constexpr int kTrimArrowGlyphRows[kTrimArrowGlyphCols] = {1, 3, 5, 7};
 
-// THE PLAYHEAD HEAD, ALIASED: 8 WINDOWS PX TALL, 13 WIDE (architect
-// 2026-10-02, the unit's change; the planner's lean taken: 8 rows paint 22
-// device rows at 275 % — the judged picture's head — and 11 at 138 %, the
-// laptop's head before the change). Its silhouette is a per-row HALF-WIDTH
-// table, not a formula, seated tip-down ONE WINDOWS PX INTO THE MARKER LANE
-// (architect 2026-10-05, moved down from the ruler lane's own bottom): its
-// tip row lands on the marker lane's first row — the air above the flag box
-// — touching the box's top edge, and its top rows now stand flush against
-// the digits' lowest ink rather than over them (the seat rule is
-// kRulerBaselineToMarkerPx's). THE 8-ROW TABLE IS THE
-// 11-ROW kdenlive head (row_5_lane_3_playhead.png's 19 x 12 with its widest
-// row dropped: halves 8 7 6 6 5 4 4 3 2 1 1 laptop px) RE-SAMPLED at the
-// tablet: each Windows row takes the mean half of the device rows it covers
-// at 275 %, re-authored in Windows px — 6 5 4 3 3 2 1 1, keeping the
-// original's doubled rows as steps. Painting it as integer rectangles keeps it
-// hard-edged at every scale, which a path fill would not. The painted width at
-// any scale is the table's own arithmetic through playhead_head_half_px below
-// (2 x 16 + the stem's 3: 35 at 275 %; 2 x 8 + 1: 17 at 138 %).
-inline constexpr int kPlayheadHeadHeightPx = 8;
-inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
-    6, 5, 4, 3, 3, 2, 1, 1
+// THE PLAYHEAD HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05,
+// retiring the kdenlive-derived half-width table below): a FIXED 9 x 8
+// Windows-px BITMAP measured from a Windows 95 screenshot — geometry only,
+// its own colours were never trusted (below) — seated tip-down ONE WINDOWS
+// PX INTO THE MARKER LANE exactly as before (the seat rule is
+// kRulerBaselineToMarkerPx's; the move itself did not change, only the
+// shape that is moved). Painted as INTEGER RECTANGLES, one per glyph cell,
+// on the TRIM ARROW GLYPH's own precedent above: never a path fill, never a
+// rescaled image, each cell ONE QUANTUM u = scaled_px(1, 1) SQUARE, and the
+// composite's height and width are u SUMMED OVER THE GLYPH'S OWN ROWS AND
+// COLUMNS (kPlayheadHeadRows * u tall, kPlayheadHeadCols * u wide) — never a
+// single rounded whole (scaled_px(8) is RETIRED with the table it served;
+// the rounding rule is "a composite is the sum of its rounded parts").
+//
+// THE TIP COLUMN (column 4 of 9, zero-based — kPlayheadHeadGlyph's row7)
+// CENTRES ON THE STEM'S OWN COLUMNS WITH NO REMAINDER: the stem is
+// waveform_line_px() = t columns wide and t is scaled_px(1, 1) too — the
+// identical expression as u — so the tip cell and the stem are the SAME
+// WIDTH at every scale, and with nine (an odd count) columns the four cells
+// either side are exactly symmetric on the stem with nothing left over to
+// floor, unlike the arrow glyph's even-width centring in its button above.
+//
+// THE GLYPH (K the outline, W the hilight bevel, S the shadow bevel, '.' the
+// chrome ground, '_' TRANSPARENT — left unpainted, so whatever this painter
+// already laid down there, a ruler label or a tick, shows through):
+//     row0  KKKKKKKKK
+//     row1  KWWWWWWSK
+//     row2  KW.....SK
+//     row3  KW.....SK
+//     row4  _KW...SK_
+//     row5  __KW.SK__
+//     row6  ___KSK___
+//     row7  ____K____
+// Rows 0-3 are the glyph's full nine columns, the widest the head ever
+// paints; rows 4-7 taper two columns a row, the same WordPad silhouette, tip
+// row7 a single K cell. K paints in the theme's LABEL role — COLOR_BTNTEXT,
+// the role Windows maps a toolbar or ruler bitmap's black to, the same role
+// the ruler labels and the trim lane's arrow glyph already paint in; W
+// paints in HILIGHT, S in SHADOW (the relief quartet's own two roles, never
+// a literal); '.' paints in GROUND, the chrome's own face colour, so the
+// glyph reads as a small raised chip on the chrome rather than a flat
+// silhouette — OPAQUE (architect 2026-10-02, "the classic Windows way"),
+// painting over whatever this painter already laid down in its band, the
+// labels and the ticks' rise, same as the retired table's shape did.
+//
+// THE HOLD LAMP (architect 2026-09-24, restated for the glyph): while
+// AppState::camera_hold stands, the glyph's '.' CELLS ALONE take the STEM'S
+// role instead of GROUND — a STATE COLOUR, not a class, repainted by the
+// per-tick comparator (main.cpp) since the bit flips with no damage of its
+// own. The K / W / S cells never change: the outline and bevel are the
+// glyph's own, not the lamp's.
+//
+// THE OLD HEIGHT, scaled_px(kPlayheadHeadHeightPx) with the retired
+// kPlayheadHeadHeightPx = 8, does NOT equal the new 8u at every scale: 8, 24
+// and 32 device px at 138 / 275 / 400 % against the old 11, 22 and 32 — the
+// two agree only at 400 %. The seat arithmetic this forces is at
+// kRulerBaselineToMarkerPx's paragraph above; it still holds his two
+// constraints (the tip never enters the flag box, the head's top never
+// rises into the trim lane) at every one of the three.
+//
+// THE FLOOR OF 1 IS NOW UNIFORM, not a two-row special case (the retired
+// table's last two rows alone needed it): every cell shares the one quantum
+// u = scaled_px(1, 1), which is already floored at 1 by construction, so no
+// cell of the glyph can ever collapse to zero at any gui_scale in [50, 1000].
+inline constexpr int kPlayheadHeadRows = 8;
+inline constexpr int kPlayheadHeadCols = 9;
+inline constexpr char kPlayheadHeadGlyph[kPlayheadHeadRows][kPlayheadHeadCols] = {
+    {'K','K','K','K','K','K','K','K','K'},
+    {'K','W','W','W','W','W','W','S','K'},
+    {'K','W','.','.','.','.','.','S','K'},
+    {'K','W','.','.','.','.','.','S','K'},
+    {'_','K','W','.','.','.','S','K','_'},
+    {'_','_','K','W','.','S','K','_','_'},
+    {'_','_','_','K','S','K','_','_','_'},
+    {'_','_','_','_','K','_','_','_','_'},
 };
-// THE HEAD'S HEIGHT IN DEVICE ROWS, the ONE expression of it for the
-// painter's row loop (paint_ruler_row). NO FLOOR: 8 Windows rows reach 4 at
-// the schema's own bottom (gui_scale 50), and only a factor below 1/16 could
-// empty the loop — outside the vocabulary entirely. The per-row HALF-WIDTH is
-// where the floor lives (playhead_head_half_px below).
-inline int playhead_head_h_px() {
-    return scaled_px(kPlayheadHeadHeightPx);
+// THE ONE QUANTUM, shared by every glyph cell and identical to the stem's
+// own width by construction (both are scaled_px(1, 1)) — named here for the
+// painter rather than read as waveform_line_px() twice over, so the two
+// callers (the glyph's own cell size, the stem's column width) read as one
+// fact even though they are, in the end, the same call.
+inline int playhead_head_unit_px() {
+    return scaled_px(1, 1);
 }
-// ONE DEVICE ROW'S HALF-WIDTH, the ONE expression the head's painter
-// (paint_ruler_row, its one reader) fills its rows with. A device row picks
-// its SOURCE row by the inverse scale (so the transcribed shape survives
-// scaling as steps, not slopes) and that row's authored half
-// takes the tree's one conversion. `s` is the caller's gui_scale_factor(); it
-// is passed because the caller already holds it and only the row inverse needs
-// it, the width itself going through scaled_px like every other length.
-//
-// THE FLOOR OF 1 (architect 2026-08-10, with the gui_scale floor 100->50): the
-// table's last two rows are 1 Windows px, which rounds to 0 at s = 0.5, and a
-// half of 0 is a 1px row — the head's tip would collapse onto the stem and
-// stop reading as a tip at all. Floored, the bottom row is 3 px wide there. A
-// FLOOR, NOT A PIN: at 100% and above every scaled half is already >= 1, so
-// nothing above the baseline moves and the tips keep scaling.
-//
-// THE HEAD IS CENTRED ON THE STEM AT EVERY SCALE (architect 2026-09-27): the
-// stem is waveform_line_px() = t columns wide, [col, col + t), so each row
-// takes the stem's parity, [col − half, col + half + t − 1], 2·half + t wide
-// — odd at the laptop's t = 1 and the tablet's t = 3 — integer and aliased,
-// with the same `half` on each side of the stem's own columns.
-//
-// THE ROW INVERSE TRUNCATES, deliberately — the one conversion here off the
-// project's nearbyint rule. `device_row / s` is a POSITION INSIDE the authored
-// table, and source row k covers the device rows [k*s, (k+1)*s), so the row
-// that CONTAINS the position is the floor of it: the same containment reading
-// a screen pixel takes. Rounding would pull the upper half of every device
-// band into the next source row and shift the transcribed shape by half a row
-// at fractional scales. Every caller passes a row index inside the head band
-// and s > 0 by gui_scale's own bracket, so the quotient is non-negative and
-// the cast's toward-zero truncation IS that floor; the two clamps below are
-// the backstop that holds the index inside the table at either end.
-inline int playhead_head_half_px(int device_row, double s) {
-    int src = static_cast<int>(static_cast<double>(device_row) / s);
-    if (src > kPlayheadHeadHeightPx - 1) src = kPlayheadHeadHeightPx - 1;
-    if (src < 0) src = 0;
-    return scaled_px(kPlayheadHeadHalf[src], 1);
+// THE HEAD'S HEIGHT IN DEVICE ROWS, the ONE expression of it for the
+// painter's row loop (paint_ruler_row): kPlayheadHeadRows quanta, summed —
+// never scaled_px(kPlayheadHeadRows) (the rounding rule above). NO FLOOR
+// beyond the quantum's own: the glyph cannot collapse at any gui_scale in
+// [50, 1000].
+inline int playhead_head_h_px() {
+    return kPlayheadHeadRows * playhead_head_unit_px();
+}
+// THE GLYPH'S HALF-WIDTH BEYOND THE STEM, in device px: the four columns
+// either side of the tip column, each one quantum — (kPlayheadHeadCols - 1)
+// / 2 of them — the painter's and the off-screen cull's one width term now
+// that the retired per-row half-width table no longer varies by row: rows
+// 0-3 use the glyph's full width, rows 4-7 taper inward, so this bound
+// (the widest row's half) still covers every row.
+inline int playhead_head_half_w_px() {
+    return (kPlayheadHeadCols - 1) / 2 * playhead_head_unit_px();
 }
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, the
@@ -1833,11 +1887,12 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // requirement, and neither owns the other.
 //
 // RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD on the
-// ruler lane's bottom rows is WIDER than this reach at every scale. The head's
-// widest row is 2 * playhead_head_half_px(0, s) + waveform_line_px() off
-// kPlayheadHeadHalf[0] = 6 (2026-10-02) — 13 px at 100 %, 7 at 50 %, 17 at
-// 138 %, 35 at 275 %, 46 at 350 % and 130 at the 1000 % ceiling — against
-// this ± 15-at-275 % reach, which rides a
+// ruler lane's bottom rows is WIDER than this reach at every scale. The
+// head's widest rows (its own glyph's rows 0-3, kPlayheadHeadGlyph,
+// architect 2026-10-05) are its full kPlayheadHeadCols = 9 columns, 9 *
+// waveform_line_px() off the glyph's own quantum — 9 px at 50 % and at
+// 100 %, 9 at 138 %, 27 at 275 %, 36 at 350 % and 90 at the 1000 % ceiling
+// — against this ± 15-at-275 % reach, which rides a
 // different authored unit. Both scale, and neither is a function of the
 // other, so the gap is a fact at every scale rather than a 100%-only
 // observation. It is harmless as

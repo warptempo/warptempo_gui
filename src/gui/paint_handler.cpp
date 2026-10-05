@@ -3867,12 +3867,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     // -- THE PLAYHEAD HEAD AND ITS MARKER-LANE COLUMN --------------------------
     //
-    // ALIASED BY CONSTRUCTION: the shape is a transcribed per-row HALF-WIDTH
-    // table (kPlayheadHeadHalf), painted as integer rectangles — one per row —
-    // so it has hard edges at every scale, which a path fill would not. At
-    // gui_scale > 100% each source row becomes `s` device rows and each
-    // half-width scales with it, which enlarges the pixel steps rather than
-    // smoothing them: the shape stays the drawing it was transcribed from.
+    // THE HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05, the
+    // glyph and its provenance at kPlayheadHeadGlyph, render.h), a FIXED 9 x 8
+    // Windows-px bitmap — not a per-row half-width table any more — painted as
+    // ALIASED INTEGER RECTANGLES, one per glyph cell, the trim arrow glyph's
+    // own precedent: hard edges at every scale, which a path fill would not.
     //
     // TIP-DOWN ONE WINDOWS PX INTO THE MARKER LANE (architect 2026-10-05,
     // moved down from flush on the ruler lane's own bottom row, architect
@@ -3881,22 +3880,22 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // box's own top edge, rather than the ruler lane's last row. A flag box
     // still stands whole: the box painter below takes only its own band
     // (marker_flag_box_band), never the lane's air, so the head's tip and a
-    // flag's top edge meet without either covering the other. ITS TOP ROWS NO
-    // LONGER OVERLAP THE DIGITS' LOWEST INK at the playhead's column (the
-    // rule at kRulerBaselineToMarkerPx, render.h): the head is one Windows px
-    // taller than the baseline's distance to the marker lane, and the move is
-    // that same one Windows px, so the two now exactly cancel.
+    // flag's top edge meet without either covering the other. THE SEAT TERM
+    // IS UNCHANGED BY THE GLYPH'S OWN HEIGHT (kRulerBaselineToMarkerPx,
+    // render.h, states the new height's effect on how the head's top sits
+    // against the digits at each scale — a small gap at 138 %, a two-row
+    // overlap at 275 %, flush at 400 %, every case within his "a little
+    // overlap is fine" ruling).
     //
-    // OPAQUE (architect 2026-10-02: "the classic Windows way"): the head
-    // paints over whatever this painter already laid down in its band — the
-    // labels and the ticks' rise — painted after them, in the `playhead_head`
-    // key, WITH A ONE-WINDOWS-PX OUTLINE IN THE THEME'S LABEL (architect
-    // 2026-10-03, the Windows 95 arrow cursor's edge): the head's own
-    // boundary pixels — every head pixel with a pixel outside the head within
-    // one Windows px of it straight up, down, left or right — so the head
-    // keeps its size and a one-row stair of its sides is a one-line
-    // staircase; its top row and its tip row are outline across their width.
-    // tools/palette's head_outline_runs is the same rule.
+    // THE GLYPH IS OPAQUE (architect 2026-10-02: "the classic Windows way"):
+    // it paints over whatever this painter already laid down in its band —
+    // the labels and the ticks' rise — painted after them, in FOUR CHROME
+    // ROLES, never a role of its own (render.h's playhead paragraph states
+    // which cell paints which): K in LABEL (the outline, the Windows 95 arrow
+    // cursor's edge), W in HILIGHT and S in SHADOW (the bevel), '.' in GROUND
+    // — or, while AppState::camera_hold stands, in the STEM's role instead
+    // (THE HOLD LAMP, architect 2026-09-24, restated for the glyph at
+    // render.h). '_' cells are never painted at all.
     //
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
     // waveform_line_px()-wide run in the `playhead_stem` role (the waveform
@@ -3941,15 +3940,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const double cursor_px = playhead_pixel_x(
             app, static_cast<int64_t>(basis.vp_start), basis.spp);
         const int col = static_cast<int>(std::nearbyint(cursor_px));
-        const double s     = gui_scale_factor();
-        const int    reach = playhead_head_half_px(0, s);  // the widest row
-        // THE STEM'S WIDTH: the head's rows take its parity so the head stays
-        // centred on the stem's own columns (playhead_head_half_px, render.h).
-        const int    t     = waveform_line_px();
+        // THE GLYPH'S ONE QUANTUM, identical to the stem's own width by
+        // construction (both are scaled_px(1, 1), render.h): `u` sizes every
+        // glyph cell, `t` is kept as its own name because it is the stem's
+        // width in the cull formula below, even though the two are always
+        // the same number.
+        const int u     = playhead_head_unit_px();
+        const int t     = waveform_line_px();
+        const int reach = playhead_head_half_w_px();  // the widest rows' half
         if (col + reach + t - 1 >= 0 && col - reach <= wave_w - 1) {
-            // THE ROW COUNT is the head's one height accessor
-            // (playhead_head_h_px, render.h).
-            const int    rows = playhead_head_h_px();
+            const int rows = playhead_head_h_px();  // kPlayheadHeadRows * u
             // THE BAND'S BOTTOM EDGE IS ONE WINDOWS PX INTO THE MARKER LANE
             // (architect 2026-10-05), not the ruler lane's own bottom: the tip
             // row now lands on the marker lane's first row — the one Windows
@@ -3961,64 +3961,43 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // rect must include it (below).
             const int    head_bottom = marker.y + marker_lane_air_px();
             const int    head_top    = head_bottom - rows;
-            // THE HOLD LAMP (architect 2026-09-24): the head takes the STEM'S
-            // key while the hold posture stands and its own when it does not,
-            // the outline kept (render.h's playhead paragraph). Repainted on
-            // the bit's flip by the per-tick comparator (main.cpp).
-            const GuiColor head = app.camera_hold ? palette().playhead_stem
-                                                  : palette().playhead_head;
+            // THE HOLD LAMP (architect 2026-09-24): the glyph's '.' cells take
+            // the STEM'S role while the hold posture stands and GROUND
+            // otherwise; the K / W / S cells never change (render.h's
+            // playhead paragraph). Repainted on the bit's flip by the
+            // per-tick comparator (main.cpp).
+            const GuiColor ground_cell = app.camera_hold ? palette().playhead_stem
+                                                         : palette().ground;
             // THE CLIP to the waveform's columns (the half-head rule above),
             // over the head's band alone and released before the stem.
             cairo_save(cr);
             cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
             cairo_clip(cr);
-            set_palette_source(cr, head);
-            for (int r = 0; r < rows; ++r) {
-                // Each device row reads its SOURCE row's half-width through the
-                // ONE silhouette accessor (playhead_head_half_px, render.h),
-                // which also owns the tip's floor of 1.
-                const int half = playhead_head_half_px(r, s);
-                cairo_rectangle(cr, lane.x + col - half, head_top + r,
-                                2 * half + t, 1);
-            }
-            // ONE FILL over the disjoint rows.
-            cairo_fill(cr);
-            // THE OUTLINE (the block above): row r's span is
-            // [col - half(r), col + half(r) + t), one run a row, so a pixel is
-            // INNER iff it stands at least one Windows px inside its own row's
-            // two ends and inside the spans of the rows one Windows px above
-            // and below it — a row off the head counting as empty.
-            const int lw = relief_line_px();
-            const auto span_lo = [&](int r) {
-                return col - playhead_head_half_px(r, s);
-            };
-            const auto span_hi = [&](int r) {
-                return col + playhead_head_half_px(r, s) + t;
-            };
-            const auto inside = [&](int r, int x) {
-                return r >= 0 && r < rows && x >= span_lo(r) &&
-                       x < span_hi(r);
-            };
-            set_palette_source(cr, palette().label);
-            for (int r = 0; r < rows; ++r) {
-                int run_x0 = 0;
-                bool in_run = false;
-                for (int x = span_lo(r); x <= span_hi(r); ++x) {
-                    bool edge = false;
-                    if (x < span_hi(r)) {
-                        edge = x - span_lo(r) < lw || span_hi(r) - 1 - x < lw;
-                        for (int k = 1; k <= lw && !edge; ++k)
-                            edge = !inside(r - k, x) || !inside(r + k, x);
-                    }
-                    if (edge && !in_run) { run_x0 = x; in_run = true; }
-                    if (!edge && in_run) {
-                        cairo_rectangle(cr, lane.x + run_x0, head_top + r,
-                                        x - run_x0, 1);
-                        in_run = false;
+            // ONE PASS A CODE, each a single fill over its own disjoint
+            // cells — the glyph is a strict partition of its 9 x 8 cells
+            // (kPlayheadHeadGlyph, render.h), so paint order among the four
+            // codes carries no meaning: no two codes ever share a pixel.
+            // '_' is skipped outright (left unpainted, transparent). Column c
+            // of 9 sits at device x = col + (c - 4) * u, the tip column
+            // (c == 4) landing exactly on the stem's own [col, col + t)
+            // because u and t are the same quantum (render.h).
+            const auto paint_code = [&](char code, GuiColor color) {
+                set_palette_source(cr, color);
+                bool any = false;
+                for (int r = 0; r < kPlayheadHeadRows; ++r) {
+                    for (int c = 0; c < kPlayheadHeadCols; ++c) {
+                        if (kPlayheadHeadGlyph[r][c] != code) continue;
+                        cairo_rectangle(cr, lane.x + col + (c - 4) * u,
+                                        head_top + r * u, u, u);
+                        any = true;
                     }
                 }
-            }
-            cairo_fill(cr);
+                if (any) cairo_fill(cr);
+            };
+            paint_code('.', ground_cell);
+            paint_code('W', palette().hilight);
+            paint_code('S', palette().shadow);
+            paint_code('K', palette().label);
             cairo_restore(cr);
 
             if (!playhead_stem_suppressed()) {
@@ -4797,10 +4776,11 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // deleted. It is the coincident case ALONE that the always-paints clause loses:
 // the playhead still paints everywhere else, unconditionally, and the HEAD
 // paints even here (on the ruler's bottom rows since 2026-09-23, just above
-// the coincident flag, so it stays whole; a ±1 column is invisible against the HEAD, whose widest row is
-// 2 * playhead_head_half_px(0, s) + waveform_line_px() — 7px at the 50% floor,
-// 13 at 100%, 46 at 350% and 130 at the 1000% ceiling, so it is at least
-// seven columns wide anywhere in the schema and the ±1 never approaches half
+// the coincident flag, so it stays whole; a ±1 column is invisible against the HEAD, whose widest rows are
+// 9 * waveform_line_px() (the glyph's own 9 columns, kPlayheadHeadGlyph,
+// render.h) — 9px at the 50% floor, 9 at 100%, 36 at 350% and 90 at the
+// 1000% ceiling, so it is at least nine columns wide anywhere in the schema
+// and the ±1 never approaches half
 // of it. That is
 // exactly what a stem beside another stem is not, at any scale: a stem is
 // waveform_line_px() wide (render.h; 1 column on the laptop, 3 on the tablet —
@@ -5045,8 +5025,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // stems, over the cursor where they overlap, over the plate. Everything it
 // covers is a per-frame repaint anyway.
 //
-// THE SCANNER IS THE MOVING STEM (architect 2026-10-03) and takes the stem's
-// key, `playhead_stem`.
+// THE SCANNER IS THE MOVING STEM, and it HAS ITS OWN ROLE, `scanner`
+// (architect 2026-10-05, undoing 2026-10-03's choice to share the resting
+// cursor's `playhead_stem` key — a yellow scanner reads apart from a white
+// resting stem at a glance).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (the ruling is at paint_ruler_row's head block — render_playhead is shared
@@ -5061,7 +5043,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-    render_playhead(cr, area, scan_px, palette().playhead_stem,
+    render_playhead(cr, area, scan_px, palette().scanner,
                     PlayheadRows::Canvas);
 }
 

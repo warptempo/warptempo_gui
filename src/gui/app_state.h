@@ -4752,10 +4752,11 @@ struct AppState {
     // declaration below): per project, DARK AT EVERY PROJECT OPEN
     // (run_project constructs this AppState fresh), outside undo, not carried
     // by `'`, in no sidecar and no settings vocabulary. THE HOLD'S LAMP IS
-    // THE PLAYHEAD HEAD (architect 2026-09-24): the head paints in the
-    // `playhead_stem` role while the bit stands and in its own `playhead_head`
-    // role when it does not (render.h's playhead paragraph, 2026-10-03),
-    // repainted by the per-tick face
+    // THE PLAYHEAD HEAD (architect 2026-09-24): the head's glyph (WordPad's
+    // ruler marker since 2026-10-05, render.h) paints its GROUND cells in the
+    // `playhead_stem` role while the bit stands and in the theme's GROUND
+    // when it does not — a state colour, never a role of its own (render.h's
+    // playhead paragraph) — repainted by the per-tick face
     // comparator (main.cpp) — no icon, no card when it is armed or cleared;
     // follow wears its icon-row lamp.
     //
