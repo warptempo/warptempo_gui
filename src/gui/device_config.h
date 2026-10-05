@@ -253,9 +253,10 @@ inline constexpr const char* kDefaultProjectsRepo =
 //
 // THE CEILING IS 350 (architect 2026-08-29, taking it down from the 400 that
 // stood from 2026-08-26): 400 was never needed on either host. At the Windows
-// pixel the six lanes paint 364 device rows above the waveform and 116 below
-// at 350 %, 480 in all, so a 1080-tall window keeps 600 px of waveform and
-// gaps under the tallest scale the vocabulary admits.
+// pixel the seven lanes (the caption's among them since 2026-10-05) paint 423
+// device rows above the waveform and 116 below at 350 %, 539 in all, so a
+// 1080-tall window keeps 541 px of waveform and gaps under the tallest scale
+// the vocabulary admits (the arithmetic at waveform_area, main.cpp).
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 662
 // Windows px of window at 100 % the icon row's twenty-six buttons in seven

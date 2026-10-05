@@ -16,7 +16,9 @@
 // and presentation. The Wayland backend opens a window via libwayland-client,
 // paints cairo surfaces directly into wl_shm buffers in response to compositor
 // frame callbacks, drives a separate playback tick on a timerfd, and requests
-// server-side decorations via the xdg-decoration unstable protocol. No
+// CLIENT-SIDE decorations via the xdg-decoration unstable protocol (architect
+// 2026-10-05: the app paints its own Windows 95 caption, top lane 0, and the
+// sizing frame round a restored window, so labwc draws no second bar). No
 // Wayland headers appear here on purpose; member pointer types are spelled
 // `struct foo*` so the compiler treats them as forward declarations and the
 // real interface headers stay private to platform_wayland.cpp.
@@ -107,9 +109,13 @@ public:
     // 2026-08-01 — is deleted on both backends with the mark it carried, and
     // the title is the project name and the binary name, nothing else.
     //
-    // THE TITLE IS COMPOSITOR-SIDE TEXT: labwc shapes and paints the titlebar,
-    // so the product's one-face HarfBuzz rule (which governs pixels WE paint)
-    // does not reach here. The product's own half of the string is ASCII; the
+    // THE TITLE IS COMPOSITOR-SIDE TEXT: labwc draws no title bar since the
+    // app asks for client-side decorations (2026-10-05) and shows this string
+    // where it names windows (the taskbar, the window switcher), shaping it
+    // itself, so the product's one-face HarfBuzz rule (which governs pixels WE
+    // paint) does not reach here. The CAPTION's title — "<piece> - Warptempo",
+    // painted by the app — is a different string with its own owner
+    // (paint_caption_row). The product's own half of the string is ASCII; the
     // project name is a filesystem name taken verbatim, which is what
     // set_title's UTF-8 boundary is for.
     void set_project_title(std::string project_name);
@@ -207,6 +213,40 @@ public:
     // initial configure carries ACTIVATED and flips this before any frame is
     // painted; there is no unfocused flash to design around.
     bool window_activated() const { return window_activated_; }
+
+    // -- THE WINDOW'S OWN CHROME (architect 2026-10-05) ----------------------
+    //
+    // The caption (paint_caption_row) and the sizing frame are the app's; the
+    // window-manager acts behind them are the compositor's, reached through
+    // these verbs, and the states the caption shows through these queries.
+    // Both backends implement the whole set (platform_android.h: the tablet's
+    // window is full screen and always maximised).
+    //
+    // window_maximized: XDG_TOPLEVEL_STATE_MAXIMIZED off the last configure
+    //   — the Maximise / Restore glyph, and no sizing frame while it holds
+    //   (Windows hid the sizable border when maximised). The window STARTS
+    //   maximised (init asks before the first commit).
+    // window_restorable: whether this window can leave the maximised state at
+    //   all — true here; the caption's double click and the Maximise / Restore
+    //   button act only where it holds.
+    // caption_active: whether the caption wears its ACTIVE roles — the
+    //   window's activation here (window_activated), the INACTIVE roles on
+    //   focus loss (Windows' inactive caption).
+    bool window_maximized() const { return window_maximized_; }
+    bool window_restorable() const { return true; }
+    bool caption_active() const { return window_activated_; }
+    // begin_window_move / begin_window_resize: hand the pointer press being
+    // delivered right now to the compositor's interactive move / resize
+    // (xdg_toplevel.move / .resize, under that press's serial) — the caption
+    // drag of a restored window and a frame press, `edges` the GuiWindowEdge
+    // set (input_core.h). Called from inside the press's delivery only.
+    // minimize_window: xdg_toplevel.set_minimized. toggle_window_maximized:
+    // set_maximized from restored, unset_maximized from maximised; the
+    // configure that answers repaints the caption.
+    void begin_window_move();
+    void begin_window_resize(unsigned edges);
+    void minimize_window();
+    void toggle_window_maximized();
 
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
@@ -733,6 +773,38 @@ private:
     bool has_initial_configure_ = false;
     // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading; see window_activated().
     bool window_activated_ = false;
+    // XDG_TOPLEVEL_STATE_MAXIMIZED: read by xdg_toplevel.configure into the
+    // pending half, applied with the size at xdg_surface.configure.
+    bool pending_maximized_ = false;
+    bool window_maximized_  = false;
+    // THE RESTORED SIZE, the whole surface frame included (the rule at
+    // on_xdg_surface_configure, its one owner): what an unsized configure
+    // while not maximised takes.
+    int  restored_w_ = 0;
+    int  restored_h_ = 0;
+    // THE SIZING FRAME'S THICKNESS IN DEVICE PX (architect 2026-10-05): 0
+    // while maximised, else render.h's window_frame_px() (four Windows px), taken
+    // at each configure (a gui_scale commit while restored reaches it at the
+    // next configure). THE CLIENT AREA is the surface inset by it on every
+    // side, and IT IS THE APP'S WHOLE GEOMETRY: the size on_resize carries,
+    // the origin of every pointer and touch position handed to the input core
+    // (the surface position less the frame), of every damage rect the app
+    // declares, and of the on_redraw context (translated by the frame) — so
+    // the frame is a band outside the app's [0, width) x [0, height), painted
+    // here (paint_window_sizing_frame) and recognised by the app as the
+    // points outside its area (window_frame_edges_at, app_state.h). Every
+    // protocol call that takes a surface position adds it back (the pointer
+    // lock's cursor hint).
+    int frame_px_ = 0;
+    int client_w() const { return width_  - 2 * frame_px_; }
+    int client_h() const { return height_ - 2 * frame_px_; }
+    // A COMPOSITOR GRAB TOOK THE PRESS (begin_window_move / _resize): the
+    // compositor owns the pointer until the lift, and nothing guarantees the
+    // lift reaches this surface. Set by those verbs and cleared by the next
+    // button event; if that event is a PRESS, the release it swallowed is
+    // delivered to the input core first (on_pointer_button), so the core's
+    // held bit cannot stand over a button that is up and eat the next click.
+    bool compositor_grab_ = false;
 
     // True only while paint_one_frame is executing the pre-paint hook.
     // invalidate_region() consults this flag and skips its trailing

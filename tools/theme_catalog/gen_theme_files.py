@@ -12,6 +12,11 @@
 #     set 1's Motif foreground, light_roles' rule) and the field pair.
 #   THE CLOCK PANEL, clock_ground / clock_text = the entry's ground and label: Windows' status bar is ButtonFace /
 #     ButtonText, a mapping by Windows' own rule (the built-in's own two roles are the same pair).
+#   THE CAPTION (architect 2026-10-05), the six caption roles = the entry's recorded title colours (roles.caption_roles,
+#     the one caption mapping: Windows' ActiveTitle / GradientActiveTitle / TitleText and the inactive three, KDE 3's
+#     active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds), A
+#     GRADIENT END ONLY WHERE THE ENTRY RECORDS ONE: no end line otherwise, and the app's theme-file rule makes the end
+#     the start (a flat caption, src/gui/theme_file.h's head), which resolved_roles below applies too.
 #   THE CARD, card_ground / card_text = the entry's recorded info pair (roles.py: Windows' InfoWindow / InfoText; the
 #     two Windows families record it, KDE 3 and CDE have no tooltip pair, the chosen `warptempo` and the presets carry
 #     none), unnamed where the entry records none. card_frame is never named: the
@@ -65,6 +70,8 @@ SUFFIX = '.theme'
 # THE ROLE TABLE'S ORDER (kGuiThemeRoles), checked against the header at every run
 ROLE_ORDER = ('ground', 'label', 'hilight', 'light_3d', 'shadow', 'dk_shadow', 'selected_fill', 'selected_text',
               'field_ground', 'field_text', 'clock_ground', 'clock_text', 'card_ground', 'card_text', 'card_frame',
+              'caption_active', 'caption_active_gradient', 'caption_active_text', 'caption_inactive',
+              'caption_inactive_gradient', 'caption_inactive_text',
               'waveform_canvas', 'waveform_ink', 'waveform_outline', 'warp_flag', 'warp_flag_selected',
               'phase_reset_flag', 'phase_reset_flag_selected', 'added_flag', 'added_flag_selected', 'removed_flag',
               'removed_flag_selected', 'flag_label', 'flag_label_selected', 'playhead_head', 'playhead_stem')
@@ -75,6 +82,9 @@ CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight')
           ('clock_ground', 'ground'), ('clock_text', 'label'))
 # the card: theme-file role <- the catalog role (named only when the entry records both)
 CARD = (('card_ground', 'info_ground'), ('card_text', 'info_text'))
+# the flat caption's pairs (kGuiThemeCaptionGradients, src/gui/theme_file.h): a file naming a start and not its end
+# gets the end equal to the start
+CAPTION_GRADIENTS = (('caption_active', 'caption_active_gradient'), ('caption_inactive', 'caption_inactive_gradient'))
 # a preset's picker elements -> the theme-file roles each colours (an older preset's outline is the rule's, below)
 PRESET_ELEMENT_ROLES = (('canvas', ('waveform_canvas',)), ('ink', ('waveform_ink',)),
                         ('waveform_outline', ('waveform_outline',)),
@@ -140,6 +150,7 @@ def file_roles(e, presets, picker):
     """One catalog entry -> {theme-file role: '#RRGGBB'} (the head's rule)."""
     light = roles.light_roles(e)
     out = {role: light[src] for role, src in CHROME}
+    out.update(roles.caption_roles(e))
     if all(src in e['roles'] for _, src in CARD):
         out.update({role: e['roles'][src] for role, src in CARD})
     if e['key'].startswith(PRESET_PREFIX):
@@ -159,7 +170,11 @@ def resolved_roles(e, presets, picker):
     values, overwritten by the roles the entry's file names; the built-in itself, which has no file, its own values.
     Read by crops.py, so a crop paints what the app paints."""
     out = dict(role_table())
-    if e['key'] != BUILTIN: out.update(file_roles(e, presets, picker))
+    if e['key'] != BUILTIN:
+        named = file_roles(e, presets, picker)
+        out.update(named)
+        for start, end in CAPTION_GRADIENTS:
+            if start in named and end not in named: out[end] = named[start]
     return out
 
 

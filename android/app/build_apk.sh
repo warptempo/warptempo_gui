@@ -16,7 +16,7 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the two Roboto TTFs          (manifest + res + assets)
+#   1. assets (the three Roboto TTFs        (manifest + res + assets)
 #      and the bundled theme files)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
@@ -80,12 +80,13 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
-# THE PRODUCT'S TWO FACES: Roboto and Roboto Mono, copied from
+# THE PRODUCT'S THREE FACES: Roboto, Roboto Bold (the caption's title,
+# 2026-10-05) and Roboto Mono, copied from
 # the repository's own fonts/ (architect 2026-10-02, gui_font.h) -- the very
 # files the Linux executable compiles in, so both devices paint from the same
 # bytes and the build depends on no installed font package. They are what
-# gui_font_bundled.cpp builds the product's two families from, and android_main
-# ABORTS if either is missing -- a font that failed to install would otherwise
+# gui_font_bundled.cpp builds the product's three families from, and android_main
+# ABORTS if any is missing -- a font that failed to install would otherwise
 # paint silently in cairo's default face. They are stored (-0 ttf at aapt2
 # link) so AAsset_getBuffer hands FreeType a pointer straight into the mapped
 # APK.
@@ -93,7 +94,7 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 # The copies land under the build tree, which .gitignore already ignores
 # (`build*/`); the tracked originals are fonts/'s.
 FONT_DIR="$APPDIR/../../fonts"
-for f in Roboto-Regular.ttf RobotoMono-Regular.ttf; do
+for f in Roboto-Regular.ttf Roboto-Bold.ttf RobotoMono-Regular.ttf; do
     [ -f "$FONT_DIR/$f" ] || wt_die "missing $FONT_DIR/$f (the repository's fonts/)"
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"

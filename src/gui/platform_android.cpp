@@ -668,8 +668,10 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // failed attach or lookup logs and leaves the id null, and every call
     // then drops or falls back with this line already written.
     //
-    // THE THREE IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
-    // mediaState (2026-08-28) and the clipboard's pair (2026-09-03). Each is
+    // THE FOUR IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
+    // mediaState (2026-08-28), the clipboard's pair (2026-09-03) and
+    // Activity's own moveTaskToBack (the caption's Minimise, 2026-10-05,
+    // inherited by MainActivity, so no Java changes for it). Each is
     // independent — a missing clipboardSet leaves the head unit's display
     // working and vice versa — so each has its own arm and its own line.
     if (app_->activity && app_->activity->vm) {
@@ -714,6 +716,17 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
                              "warptempo_gui: MainActivity.clipboardGet not "
                              "found; pastes read this process's own copies "
                              "only\n");
+            }
+            move_task_to_back_method_ =
+                env->GetMethodID(cls, "moveTaskToBack", "(Z)Z");
+            if (!move_task_to_back_method_) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+                std::fprintf(stderr,
+                             "warptempo_gui: Activity.moveTaskToBack not "
+                             "found; the caption's Minimise does nothing\n");
             }
             env->DeleteLocalRef(cls);
         } else {
@@ -883,10 +896,10 @@ int GuiPlatform::height() const { return height_; }
 // The title — no surface on this platform
 // ---------------------------------------------------------------------------
 
-// A NativeActivity under Theme.NoTitleBar has no titlebar and no
+// A NativeActivity under Theme.NoTitleBar has no system titlebar and no
 // task-switcher string a native app can rewrite, so the classic application
 // form the Wayland backend composes ("K551 - warptempo_gui") has nowhere to
-// go. The setter is therefore a silent no-op. It is not deleted because the
+// go (the app's own caption composes its own title, paint_caption_row). The setter is therefore a silent no-op. It is not deleted because the
 // GUI calls it unconditionally from the load path, and the seam's promise is
 // that a consumer compiles against either backend unchanged.
 // UNSAVED WORK IS SHOWN HERE like anywhere else: the dirty mark is the SAVE
@@ -895,6 +908,25 @@ int GuiPlatform::height() const { return height_; }
 // asterisk is deleted, and the seam's set_title_dirty with it, so this backend
 // has no second setter to no-op.
 void GuiPlatform::set_project_title(std::string /*project_name*/) {}
+
+// THE CAPTION'S MINIMISE (architect 2026-10-05; the contract at the header):
+// the task to the background, nonRoot true so the call does not depend on
+// MainActivity being the task's root. A missing id (its lookup's line already
+// written) or a throw does nothing more than log.
+void GuiPlatform::minimize_window() {
+    if (!jni_env_ || !move_task_to_back_method_ || !app_ || !app_->activity)
+        return;
+    JNIEnv* env = jni_env_;
+    env->CallBooleanMethod(app_->activity->clazz, move_task_to_back_method_,
+                           static_cast<jboolean>(JNI_TRUE));
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        std::fprintf(stderr,
+                     "warptempo_gui: Activity.moveTaskToBack threw; the "
+                     "window stays\n");
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Lifetime
@@ -2400,11 +2432,12 @@ namespace {
 // picker. What this backend still owns of the convention is WHERE the projects
 // are: the template's projects_path, device_config_defaults above.)
 
-// LOAD THE PRODUCT'S TWO FACES OUT OF THE APK, or die. The assets are the
-// repository's own `fonts/Roboto-Regular.ttf` and `fonts/RobotoMono-Regular.ttf`
-// (architect 2026-10-02, gui_font.h; build_apk.sh's asset step copies them). A
-// missing or unreadable asset is a BUILD defect — the packaging step puts both
-// files in and there is no runtime state that removes them — so there is no
+// LOAD THE PRODUCT'S THREE FACES OUT OF THE APK, or die. The assets are the
+// repository's own `fonts/Roboto-Regular.ttf`, `fonts/Roboto-Bold.ttf` (the
+// caption's title, 2026-10-05) and `fonts/RobotoMono-Regular.ttf` (architect
+// 2026-10-02, gui_font.h; build_apk.sh's asset step copies them). A
+// missing or unreadable asset is a BUILD defect — the packaging step puts all
+// three files in and there is no runtime state that removes them — so there is no
 // error arm to design: painting would otherwise silently use cairo's default,
 // which is worse than not starting. This ABORTS instead, and the abort is the
 // CALLER'S: gui_font_bundled.cpp keeps its own log-and-leave-unset arms.
@@ -2417,7 +2450,7 @@ namespace {
 //
 // The assets need not stay open for the process's life — unlike the spike,
 // gui_font_install_bundled COPIES the bytes (its LIFETIME comment says so),
-// so both AAssets are closed as soon as it returns.
+// so the three AAssets are closed as soon as it returns.
 void install_fonts_or_die(android_app* app) {
     AAssetManager* mgr = app->activity ? app->activity->assetManager : nullptr;
     if (!mgr) {
@@ -2427,8 +2460,9 @@ void install_fonts_or_die(android_app* app) {
     }
 
     struct Slot { const char* name; AAsset* asset; const uint8_t* bytes; size_t len; };
-    Slot slots[2] = {
+    Slot slots[3] = {
         {"Roboto-Regular.ttf",     nullptr, nullptr, 0},
+        {"Roboto-Bold.ttf",        nullptr, nullptr, 0},
         {"RobotoMono-Regular.ttf", nullptr, nullptr, 0},
     };
     for (Slot& s : slots) {
@@ -2446,7 +2480,8 @@ void install_fonts_or_die(android_app* app) {
 
     const bool installed =
         gui_font_install_bundled(slots[0].bytes, slots[0].len,
-                                 slots[1].bytes, slots[1].len);
+                                 slots[1].bytes, slots[1].len,
+                                 slots[2].bytes, slots[2].len);
     for (Slot& s : slots) AAsset_close(s.asset);
     if (!installed) {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,

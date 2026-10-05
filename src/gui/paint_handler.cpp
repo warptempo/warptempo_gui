@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -218,7 +219,7 @@ namespace {
 // flat button FILLS ITS WHOLE ROW and no margin or inset exists unless the
 // architect states one. An anchor's rectangle therefore spans the full height
 // of the button's row, the whole lane (kMenuRowHeightPx — render.h carries the
-// ruling), flush under the window's top edge, its label padded this much
+// ruling), flush under the caption, its label padded this much
 // each side, and the icon row's ground begins on the next pixel row. 7
 // WINDOWS PX A SIDE (architect 2026-10-02, the unit's change: the laptop
 // pixel's 10 re-authored to the device width it had on the tablet).
@@ -386,8 +387,9 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // 2026-10-02, the Windows-95 design at the Windows pixel): the face filled,
 // then its two-line edge, and the answer is what the glyph or label must sit
 // on and how far it shifts. TWO FAMILIES (the edge grammar at render.h's
-// palette head): a TOOLBAR button — the two roster rows and the on-screen
-// keyboard's keys — wears the SOFT edges (DrawEdge's BF_SOFT, Windows'
+// palette head): a TOOLBAR button — the two roster rows, the on-screen
+// keyboard's keys and the caption's three buttons (Windows' DFC_CAPTION,
+// 2026-10-05) — wears the SOFT edges (DrawEdge's BF_SOFT, Windows'
 // toolbar), a PUSH button — the dialogs' — the PLAIN ones. Three faces and
 // no hover:
 //   REST     — RAISED on the ground, glyph unshifted. EVERY button rests
@@ -1141,10 +1143,187 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
     return line_y + std::ceil(fe.ascent);
 }
 
+// -- THE CAPTION (architect 2026-10-05) ----------------------------------------
+//
+// THE CAPTION BUTTONS' GLYPHS — Windows' MARLETT characters as its caption
+// buttons draw them at the body size, authored cell by cell off the
+// architect's reference (a Windows 2000 window: the Minimise bar, the
+// Maximise box and the Close X measured there; the Restore pair, which that
+// maximisable window does not show, is Marlett's two overlapping boxes, the
+// back one up and right). Every glyph sits in ONE 9 x 9 Windows-px CELL, the
+// character cell Windows centres in the 16 x 14 button (at (3, 2) at 100 %),
+// and each glyph is a list of rectangles in that cell's Windows px: painted
+// as INTEGER RECTANGLES of unit u = scaled_px(1, 1) per Windows px, the cell
+// CENTRED IN THE BUTTON in device px, an odd difference flooring toward the
+// top-left — the trim lane's scroll-arrow idiom (kTrimArrowGlyphRows) — in
+// the theme's LABEL, the emboss when disabled, one relief line right and down
+// while pushed (paint_button_box's shift).
+struct CaptionGlyphRect {
+    int x, y, w, h;
+};
+constexpr int kCaptionGlyphCellPx = 9;
+constexpr CaptionGlyphRect kCaptionMinimizeGlyph[] = {{1, 7, 6, 2}};
+constexpr CaptionGlyphRect kCaptionMaximizeGlyph[] = {
+    {0, 0, 9, 2}, {0, 2, 1, 6}, {8, 2, 1, 6}, {0, 8, 9, 1}};
+constexpr CaptionGlyphRect kCaptionRestoreGlyph[] = {
+    // the back window: its two-row top, the stub of its left side, its right
+    // side and the end of its foot, the rest behind the front window
+    {2, 0, 6, 2}, {2, 2, 1, 1}, {7, 2, 1, 3}, {6, 5, 2, 1},
+    // the front window, whole
+    {0, 3, 6, 2}, {0, 5, 1, 3}, {5, 5, 1, 3}, {0, 8, 6, 1}};
+constexpr CaptionGlyphRect kCaptionCloseGlyph[] = {
+    {1, 1, 2, 1}, {7, 1, 2, 1}, {2, 2, 2, 1}, {6, 2, 2, 1}, {3, 3, 4, 1},
+    {4, 4, 2, 1}, {3, 5, 4, 1}, {2, 6, 2, 1}, {6, 6, 2, 1}, {1, 7, 2, 1},
+    {7, 7, 2, 1}};
+
+void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
+                         int gx, int gy, int u, GuiColor ink) {
+    for (const CaptionGlyphRect& r : glyph)
+        paint_cell_rect(cr, GuiRect{gx + r.x * u, gy + r.y * u, r.w * u,
+                                    r.h * u},
+                        ink);
+}
+
+// The three buttons' rects in a caption lane, left to right (render.h's
+// caption block): flush right, kCaptionButtonInsetPx right of Close and above
+// all three, Minimise and Maximise touching, kCaptionCloseGapPx before Close —
+// each edge a sum of rounded parts.
+std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
+        const GuiRect& lane) {
+    const int w   = scaled_px(kCaptionButtonWPx, 1);
+    const int h   = scaled_px(kCaptionButtonHPx, 1);
+    const int y   = lane.y + scaled_px(kCaptionButtonInsetPx);
+    const int cx  = lane.x + lane.w - scaled_px(kCaptionButtonInsetPx) - w;
+    const int mx  = cx - scaled_px(kCaptionCloseGapPx) - w;
+    return {GuiRect{mx - w, y, w, h}, GuiRect{mx, y, w, h},
+            GuiRect{cx, y, w, h}};
+}
+
 } // namespace
 
+void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
+    // THE CAPTION (top lane 0; the record at render.h's kCaptionHeightPx and
+    // the declaration). Four passes on the lane: the ground, the icon, the
+    // title and the buttons.
+    const GuiRect row = top_caption_row_area(app);
+    if (row.w <= 0 || row.h <= 0) return;
+    cairo_save(cr);
+
+    // THE GROUND: the active roles while the window has the focus, the
+    // inactive ones without it (GuiPlatform::caption_active — always active
+    // on the tablet), through the one gradient painter.
+    const GuiPalette& pal = palette();
+    const bool active = gui.caption_active();
+    paint_caption_gradient(cr, row,
+                           active ? pal.caption_active : pal.caption_inactive,
+                           active ? pal.caption_active_gradient
+                                  : pal.caption_inactive_gradient);
+
+    // THE APP'S ICON at (2, 1), 16 x 16.
+    icons::draw(cr, icons::Icon::AppIcon,
+                static_cast<double>(row.x + scaled_px(kCaptionIconXPx)),
+                static_cast<double>(row.y + scaled_px(kCaptionIconYPx)),
+                static_cast<double>(scaled_px(kCaptionIconPx, 1)));
+
+    const std::array<GuiRect, kCaptionButtonCount> rects =
+        caption_button_rects(row);
+
+    // THE TITLE, Windows' "Document - Program" convention (architect
+    // 2026-10-05): the open piece's name (AppState::project_name, the
+    // project's folder) and " - Warptempo", or "Warptempo" alone where no
+    // piece is open. ROBOTO BOLD at the body's size through the shaping
+    // chokepoint, its cap band centred in the lane, in the caption's text
+    // role. TOO LONG FOR THE ROOM — the pen at x 20 to two px short of
+    // Minimise — it is CUT AT A CODEPOINT and ends in Windows' "..." (DrawText's
+    // end ellipsis), the longest prefix whose own run and the ellipsis's fit;
+    // a room too narrow for even the ellipsis paints no title.
+    gui_select_font_face(cr, GuiFontFamily::SansBold);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const std::string title = app.project_name.empty()
+                                  ? std::string("Warptempo")
+                                  : app.project_name + " - Warptempo";
+    const int title_x = row.x + scaled_px(kCaptionTitleXPx);
+    const double room = static_cast<double>(
+        rects[static_cast<size_t>(GuiCaptionButton::Minimize)].x -
+        scaled_px(kCaptionButtonInsetPx) - title_x);
+    const double baseline = redesign_baseline(
+        font, static_cast<double>(row.y), static_cast<double>(row.h));
+    set_palette_source(cr, active ? pal.caption_active_text
+                                  : pal.caption_inactive_text);
+    text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
+    if (run.width_px <= room) {
+        text_shape::show_shaped_run(cr, run, title_x, baseline);
+    } else {
+        const text_shape::ShapedRun ellipsis =
+            text_shape::shape_text_run(font, "...");
+        size_t cut = title.size();
+        while (cut > 0) {
+            // Back one codepoint: past any continuation bytes to a lead byte.
+            do { --cut; } while (cut > 0 &&
+                                 (static_cast<unsigned char>(title[cut]) &
+                                  0xC0) == 0x80);
+            run = text_shape::shape_text_run(
+                font, std::string_view(title).substr(0, cut));
+            if (run.width_px + ellipsis.width_px <= room) break;
+        }
+        if (ellipsis.width_px <= room) {
+            text_shape::show_shaped_run(cr, run, title_x, baseline);
+            text_shape::show_shaped_run(cr, ellipsis, title_x + run.width_px,
+                                        baseline);
+        }
+    }
+
+    // THE THREE BUTTONS, published as painted (AppState::caption_buttons):
+    // each rect on every paint, its enabled bit where this frame's clip
+    // covers it (the roster's gate). Maximise wears RESTORE while the window
+    // is maximised, and is disabled where the window cannot be restored
+    // (the tablet). PUSHED while its Caption arm stands with the pointer
+    // inside it.
+    const int u    = scaled_px(1, 1);
+    const int cell = kCaptionGlyphCellPx * u;
+    for (int i = 0; i < kCaptionButtonCount; ++i) {
+        const GuiCaptionButton id = static_cast<GuiCaptionButton>(i);
+        AppState::CaptionButtonFace& face =
+            app.caption_buttons[static_cast<size_t>(i)];
+        const GuiRect& b = rects[static_cast<size_t>(i)];
+        face.rect = b;
+        if (clip_covers_drawable(cr, app, b))
+            face.enabled = id != GuiCaptionButton::Maximize ||
+                           gui.window_restorable();
+        const bool pushed =
+            app.chrome_press.kind == AppState::ChromePress::Kind::Caption &&
+            app.chrome_press.index == i && app.chrome_press.inside;
+        const ButtonBoxFace box =
+            paint_button_box(cr, b, /*lamp=*/false, pushed,
+                             ButtonFamily::Toolbar);
+        std::span<const CaptionGlyphRect> glyph;
+        switch (id) {
+        case GuiCaptionButton::Minimize: glyph = kCaptionMinimizeGlyph; break;
+        case GuiCaptionButton::Maximize:
+            if (gui.window_maximized()) glyph = kCaptionRestoreGlyph;
+            else                        glyph = kCaptionMaximizeGlyph;
+            break;
+        case GuiCaptionButton::Close:    glyph = kCaptionCloseGlyph;    break;
+        }
+        const int gx = b.x + (b.w - cell) / 2 + box.shift;
+        const int gy = b.y + (b.h - cell) / 2 + box.shift;
+        if (face.enabled) {
+            paint_caption_glyph(cr, glyph, gx, gy, u, pal.label);
+        } else {
+            // THE DISABLED EMBOSS (render.h's palette block): Hilight one
+            // Windows px right and down, Shadow at the glyph's place.
+            const int off = relief_line_px();
+            paint_caption_glyph(cr, glyph, gx + off, gy + off, u, pal.hilight);
+            paint_caption_glyph(cr, glyph, gx, gy, u, pal.shadow);
+        }
+    }
+
+    cairo_restore(cr);
+}
+
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
-    // THE MENU ROW (top lane 0, at the window edge): a flat ground — the
+    // THE MENU ROW (top lane 1, directly under the caption): a flat ground — the
     // content ground since 2026-10-01 — carrying ONE FLOAT, "File", "Edit"
     // and "Settings" flush left, and the BATTERY + CLOCK LEGEND flush right
     // (2026-10-01, a label; the block at the body's end). No ring; the
@@ -1182,7 +1361,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // between. THE LANE IS THE ANCHOR (architect 2026-10-01 — render.h's
     // kMenuRowHeightPx carries the ruling and its why): the whole lane's
     // height is each anchor's rectangle AND its published hit rect, flush
-    // under the window's top edge with no air above it, and every label on
+    // under the caption with no air above it, and every label on
     // this row, the anchors' and the legend's, is cap-centred in it. The
     // anchor's foot, the lane's foot and the icon row's first pixel are the
     // same row — where the dropdown hangs.
@@ -1433,7 +1612,7 @@ static std::string history_walk_line(AppState& app) {
 // still stands beside its one caller, which is now that cell.)
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
-    // THE ICON ROW (top lane 1, directly under the menu row; row 4 of the
+    // THE ICON ROW (top lane 2, directly under the menu row; row 4 of the
     // redesign): the ground the menu row above it shares since 2026-10-01,
     // WITH NO BORDER OF ITS OWN (architect 2026-10-01: a line there read as
     // "a double border"; the trim lane under it is FLUSH since 2026-10-02,
@@ -6900,6 +7079,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // it except the floating surfaces, which paint over everything by design.
     {
         const GuiRect exposed{x, y, w, h};
+        // THE CAPTION (top lane 0, 2026-10-05) joins them on the same terms:
+        // audio-independent, its buttons claimed above every veil the File
+        // anchor passes, so it paints on every frame class its lane is
+        // exposed on.
+        if (rects_intersect(exposed, top_caption_row_area(app))) {
+            paint_caption_row(cr);
+        }
         if (rects_intersect(exposed, top_menu_row_area(app))) {
             paint_menu_row(cr);
         }

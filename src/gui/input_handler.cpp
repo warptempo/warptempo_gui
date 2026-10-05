@@ -3382,6 +3382,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // (The toolbar row's band left with its lane, 2026-08-12 — the
             // relayout dissolved row 2 into the icon row, whose band below
             // covers its four buttons now.)
+            top_caption_row_area(app),
             top_menu_row_area(app),  top_icon_row_area(app),
             // GAP 1's band, the ONE non-lane member (between the icon row
             // and the trim lane, window ground): it sits inside the

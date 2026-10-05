@@ -89,6 +89,16 @@
 // every theme that has the shape at all. A flag box the drag cannot act on
 // wears the ARROW, never this — the map's standing rule that a point arming
 // nothing shows the arrow.
+//
+// THE FOUR WINDOW-SIZING KINDS ARE THE NINTH TO TWELFTH (architect 2026-10-05,
+// with the caption): Windows' IDC_SIZENS / IDC_SIZEWE / IDC_SIZENWSE /
+// IDC_SIZENESW, worn over the restored laptop window's SIZING FRAME — the top
+// or bottom edge, the left or right edge, and the two diagonal corner pairs
+// (window_frame_edges_at, app_state.h) — where a press resizes the window
+// through the compositor. Each carries the older X11 spelling as its alt name
+// (`size_ver`, `size_hor`, `size_fdiag`, `size_bdiag`). WindowSizeNS is the
+// same shape as ValueDrag and WindowSizeWE as TrimResize, kept apart because a
+// kind names the gesture, not the image.
 enum class GuiCursorKind {
     Arrow,
     Pan,
@@ -98,10 +108,26 @@ enum class GuiCursorKind {
     TrimBoundEnd,
     Text,
     ValueDrag,
+    WindowSizeNS,
+    WindowSizeWE,
+    WindowSizeNWSE,
+    WindowSizeNESW,
 };
 // Roster size, for the platform's per-kind cursor array. Keep it equal to the
 // enumerator count above.
-inline constexpr int kGuiCursorKindCount = 8;
+inline constexpr int kGuiCursorKindCount = 12;
+
+// THE SIZING FRAME'S EDGES (architect 2026-10-05) — a bit set naming which
+// edges of the window a frame press grabs: one bit for an edge, two adjacent
+// bits for a corner. The values are xdg_toplevel's own resize-edge numbers
+// (the Wayland backend asserts the match), and the seam's resize verb
+// (GuiPlatform::begin_window_resize) takes the set.
+enum GuiWindowEdge : unsigned {
+    kGuiWindowEdgeTop    = 1u,
+    kGuiWindowEdgeBottom = 2u,
+    kGuiWindowEdgeLeft   = 4u,
+    kGuiWindowEdgeRight  = 8u,
+};
 
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop

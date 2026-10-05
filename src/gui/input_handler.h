@@ -1728,6 +1728,48 @@ struct GuiInputHandler {
                                      int x, int y);
     void update_notification_hover(int x, int y);
     void clear_notification_hover();
+    // THE CAPTION AND THE SIZING FRAME'S POINTER HALVES (architect
+    // 2026-10-05; the geometry at render.h's caption block, the window states
+    // and verbs at the platform seam, platform_wayland.h's chrome block). Each
+    // CLAIM takes a LEFT press with no modifier (any other press there is a
+    // consumed nothing). THE FRAME'S ranks above every veil, the on-screen
+    // keyboard's neighbour (a restored window resizes "always"): it hands the
+    // press to the compositor's resize at the frame's edges. THE CAPTION'S
+    // ranks where the File menu's Quit is reachable — below the prompt's
+    // veil, the open dropdown's close and every dialog editor's swallow, but
+    // admitted through the render player's and the picker's veils as their
+    // live menu anchors are: on a CAPTION BUTTON whose painted face is enabled
+    // it ARMS the button
+    // (AppState::ChromePress's Caption kind) for the lift; elsewhere on the
+    // caption, where the window can be restored, a second press inside the
+    // double-click window toggles maximised (DoubleClickSurface::Caption)
+    // and the first starts the compositor's move — on a restored window only,
+    // a maximised Windows 95 window not moving by its caption. THE LIFT is
+    // finish_caption_release: on the
+    // armed button itself (its published rect, re-hit at the lift) and under
+    // no prompt or dialog editor raised mid-hold, Minimise minimises, Maximise
+    // toggles maximised and Close runs the window's close road
+    // (on_window_close); anywhere else it does nothing (taken in
+    // on_button_release above the veils, the press having passed two of
+    // them). Acting at the lift is
+    // the roster's timing (the doctrine block at on_key); touch and the S Pen
+    // reach both halves through the touch translation's press and lift.
+    bool claim_window_frame_press(GuiMouseButton button, int x, int y,
+                                  GuiInputState mods);
+    bool claim_caption_press(GuiMouseButton button, int x, int y,
+                             GuiInputState mods,
+                             const DoubleClickCandidate& dc_at_press);
+    void finish_caption_release(const AppState::ChromePress& arm, int x,
+                                int y);
+    // THE WINDOW'S CLOSE ROAD — the compositor's close request (labwc's
+    // keybinding, the taskbar) through main.cpp's set_on_close, and the
+    // caption's Close button (architect 2026-10-05, "the existing quit act"):
+    // ONE BODY, so the two cannot drift. It ends any live pointer gesture,
+    // drops the tooltip and the open menu, and runs the close owner
+    // (GuiPrompt::request_close with the exit target), which raises the
+    // unsaved-work prompt when the project is dirty and exits otherwise. The
+    // reasoning for each step is at the definition (input_pointer.cpp).
+    void on_window_close();
     // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt
     // through its back-pointer when the LOAD_IN_PLACE_CONFIRM prompt answers
     // OK or Cancel. ONE PROMPT BODY, TWO SUBJECTS since 2026-08-29 (the
@@ -1840,8 +1882,10 @@ struct GuiInputHandler {
     // the whole gesture is deleted, see marker_drag.h.)
     // No-op when nothing is live. Definition beside
     // on_button_release in input_pointer.cpp (same bodies, same order). FOUR
-    // CALLERS: the Ctrl+Q hatch in on_key, main.cpp's WM-close and resize
-    // callbacks (close ends the gestures before raising the prompt, so none is
+    // CALLERS: the Ctrl+Q hatch in on_key, the window's close road
+    // (on_window_close — the compositor's close and the caption's Close) and
+    // main.cpp's resize callback (close ends the gestures before raising the
+    // prompt, so none is
     // left live under it; resize ends them before the geometry rebuild, whose
     // new samples-per-pixel would otherwise make the next motion derive its
     // delta across two coordinate systems), and — since 2026-08-09 —

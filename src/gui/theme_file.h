@@ -21,7 +21,10 @@
 // ButtonFace, ButtonText, the relief quartet, Hilight / HilightText, Window /
 // WindowText; Windows' status bar's ButtonFace / ButtonText for the clock
 // panel; Windows' InfoWindow / InfoText and its tooltip's black border for
-// the cards), and the program's roles are the planner's picks from Windows'
+// the cards; Windows 95's ActiveTitle / TitleText and InactiveTitle /
+// InactiveTitleText for the caption, each with its gradient end equal to its
+// start — Windows 95 drew a flat caption), and the program's roles are the
+// planner's picks from Windows'
 // twenty solid colours (the architect's delegation, 2026-10-04: "the default
 // theme is just a fallback"), each flag kind a face and a selected face of the
 // VGA sixteen under white labels (the role table's program block).
@@ -66,7 +69,15 @@
 // line, no comment, no whitespace tolerance, no duplicate), each role a name
 // of the role table and each value THE ONE COLOUR GRAMMAR (theme_colour_word,
 // below). A FILE MAY NAME ONLY SOME ROLES, in any order: every role it does
-// not name takes the built-in's value. The stem is the theme's KEY, under the
+// not name takes the built-in's value — WITH ONE RULE OF THE FILE'S OWN, THE
+// FLAT CAPTION (architect 2026-10-05): a file that names a caption's START
+// (`caption_active` / `caption_inactive`) and not its GRADIENT END
+// (`caption_active_gradient` / `caption_inactive_gradient`) gets the end
+// EQUAL TO THE START — a flat caption, as a theme recording no gradient
+// (Windows 95's, Plus!'s, KDE 3's, CDE's) drew one — never the built-in's end
+// under the file's start, which would be a gradient no one recorded. The
+// pairs are kGuiThemeCaptionGradients below and the rule is applied once, at
+// the file's read (read_theme_file). The stem is the theme's KEY, under the
 // key grammar (is_theme_key_spelling).
 //
 // EVERY VIOLATION IS THE LAUNCH'S FIRST-ERROR HARD FAIL (NO BACKSTOPS FOR
@@ -86,7 +97,8 @@
 inline constexpr const char* kBuiltinThemeKey = "windows-95-standard";
 
 // THE ROLE TABLE — THE ONE ENUMERATION (architect 2026-10-04), in GuiPalette's
-// order: the chrome's fifteen, then the program's fifteen. The reader's arm,
+// order: the chrome's twenty-one (the caption's six since 2026-10-05), then the
+// program's fifteen. The reader's arm,
 // the built-in, the files' fill and install_palette (render.cpp) all walk it,
 // so a role cannot be read and not painted. What each role paints is
 // render.h's palette block (THE MAPPING).
@@ -112,6 +124,19 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"card_ground",               &GuiPalette::card_ground,               0xFFFFE1},
     {"card_text",                 &GuiPalette::card_text,                 0x000000},
     {"card_frame",                &GuiPalette::card_frame,                0x000000},
+    // THE CAPTION (architect 2026-10-05): the window's title bar, ACTIVE
+    // while the window has the focus and INACTIVE without it (the tablet's is
+    // always active, GuiPlatform::caption_active), each a START at the left,
+    // a GRADIENT END at the right and the title's TEXT — Windows' ActiveTitle
+    // / GradientActiveTitle / TitleText and InactiveTitle /
+    // GradientInactiveTitle / InactiveTitleText. The built-in is Windows 95's
+    // flat navy caption under white and its flat grey one under silver.
+    {"caption_active",            &GuiPalette::caption_active,            0x000080},
+    {"caption_active_gradient",   &GuiPalette::caption_active_gradient,   0x000080},
+    {"caption_active_text",       &GuiPalette::caption_active_text,       0xFFFFFF},
+    {"caption_inactive",          &GuiPalette::caption_inactive,          0x808080},
+    {"caption_inactive_gradient", &GuiPalette::caption_inactive_gradient, 0x808080},
+    {"caption_inactive_text",     &GuiPalette::caption_inactive_text,     0xC0C0C0},
     // THE PROGRAM'S OWN ELEMENTS — Windows' twenty solid colours: the canvas
     // black under Sound Recorder's lime trace (measured on his Windows 98
     // screenshot 2026-10-05), the lit outline green; each flag kind a dark
@@ -155,6 +180,20 @@ constexpr std::size_t theme_role_index(std::string_view name) {
         if (name == kGuiThemeRoles[i].name) return i;
     return kGuiThemeRoleCount;
 }
+
+// THE FLAT CAPTION'S PAIRS — each caption's start and its gradient end, the
+// grammar's one rule of its own (the head): a file naming the first and not
+// the second gets the second equal to the first.
+struct GuiThemeGradientPair {
+    std::size_t start;
+    std::size_t end;
+};
+inline constexpr GuiThemeGradientPair kGuiThemeCaptionGradients[] = {
+    {theme_role_index("caption_active"),
+     theme_role_index("caption_active_gradient")},
+    {theme_role_index("caption_inactive"),
+     theme_role_index("caption_inactive_gradient")},
+};
 
 // THE ONE COLOUR GRAMMAR (architect 2026-10-03; every role's since
 // 2026-10-04): `#` and six hexadecimal digits, either case, OR one of

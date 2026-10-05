@@ -44,7 +44,9 @@
 // subpaths that cut the head and the flag hollow, is a verbatim prefix of the
 // file's in android/app/ic_launcher_foreground.svg, rendered once to the PNG
 // layers under android/app/res/, and in packaging/warptempo_gui.svg, the
-// .desktop's Icon=; the launchers, never this code, read them.
+// .desktop's Icon=; the launchers read those files, and THE CAPTION'S ICON
+// (AppIcon, 2026-10-05) is packaging/warptempo_gui.svg transcribed whole —
+// its plate and its note, the note under the file's own transform.
 //
 // BREEZE IS THE RULED GLYPH SOURCE AND AN AUTHORING-TIME DEPENDENCY ONLY
 // (architect 2026-08-08: the one theme addressing Qt and GTK both, with a
@@ -490,6 +492,13 @@ enum class Icon {
     // actions/22/edit-delete, the waste bin in `.ColorScheme-NegativeText`,
     // the table's red (kIconNegativeText).
     EditDelete,          // Delete a batch folder (the player's modal row)
+    // THE APP'S OWN ICON (architect 2026-10-05: the caption wears "the app's
+    // EXISTING icon"), worn by the caption at 16 x 16 (render.h's caption
+    // block): the desktop launcher's, packaging/warptempo_gui.svg, the
+    // tablet's launcher made whole — the sheet-grey plate under the filled
+    // quaver. Not a Breeze glyph and no roster button's: the one icon of the
+    // product's own, transcribed from its own file.
+    AppIcon,             // the caption's icon
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
@@ -499,8 +508,8 @@ enum class Icon {
 // document-import and chronometer-start came back with the icon row's three
 // view buttons — enumerators, defs and assets together. The count's
 // succession is in git history; a glyph joining or leaving restates this
-// number.
-inline constexpr int kIconCount = 57;
+// number. 58 SINCE THE CAPTION'S ICON (AppIcon, 2026-10-05).
+inline constexpr int kIconCount = 58;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the table's: a path the

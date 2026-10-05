@@ -1746,19 +1746,27 @@ struct TouchNavZoomState {
 // all untouched, the pure audition gesture. NOT the retired plain-drag scrub
 // (61126db) — that one MOVED the cursor playhead per column.)
 
+// THE CAPTION'S THREE BUTTONS (architect 2026-10-05), in painted order left to
+// right — the index of AppState::caption_buttons and of a Caption chrome arm
+// (AppState::ChromePress). Their geometry is render.h's caption block, their
+// acts claim_caption_press / finish_caption_release (input_pointer.cpp).
+enum class GuiCaptionButton { Minimize, Maximize, Close };
+inline constexpr int kCaptionButtonCount = 3;
+
 // The surface a double-click candidate belongs to. The surface tag is what keeps
-// the four double-click surfaces from cross-firing: a candidate seeded on one
+// the five double-click surfaces from cross-firing: a candidate seeded on one
 // surface can only be consumed by a press on the SAME surface (a trim-bar click
 // then a marker click within the window can never consume). None = no candidate.
 enum class DoubleClickSurface {
-    None, TrimBar, Marker, EditorText, EmptyLane
+    None, TrimBar, Marker, EditorText, EmptyLane, Caption
 };
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two plain clicks). A click on a double-click-bearing surface
 // records this candidate AT A MOTIONLESS RELEASE — one seed timing for all
-// four surfaces since 2026-08-15, when the marker click moved to the lift and
-// its press-time seed (the last of them) went with it; the NEXT press on the
+// four canvas surfaces since 2026-08-15, when the marker click moved to the
+// lift and its press-time seed (the last of them) went with it (the CAPTION,
+// 2026-10-05, seeds at its press, the reason at its entry below); the NEXT press on the
 // SAME surface,
 // if it lands within kDoubleClickMs and double_click_slack_px() of the recorded
 // position AND (for Marker) targets the same marker, is consumed as that
@@ -1792,7 +1800,9 @@ enum class DoubleClickSurface {
 //       returns ahead of arm_placement_press, as it always did;
 //   (5) EditorText (the editor field's press arm, over
 //       editor_double_press_at, which the touch layer's DoublePress query
-//       also reads) — the exception above.
+//       also reads) — the exception above;
+//   (6) Caption (claim_caption_press, 2026-10-05) — toggles maximised
+//       and returns, starting no window move.
 // Surfaces:
 //   TrimBar    -> the SPAN-FRAMING command on the trim bar lane, its whole band
 //                 (run_span_framing_command: a proper trim sub-window, else the
@@ -1830,6 +1840,16 @@ enum class DoubleClickSurface {
 //                 nothing, the moved-drag rule, and needs no clear of its own:
 //                 the press's own top-of-frame clear already emptied the field
 //                 and nothing has re-seeded it under the held button.
+//   Caption    -> TOGGLES THE WINDOW MAXIMISED (architect 2026-10-05,
+//                 Windows' double-click on a title bar), on a window that can
+//                 be restored (GuiPlatform::window_restorable — the laptop;
+//                 the tablet's caption takes no double tap). THE ONE SURFACE
+//                 SEEDED AT THE PRESS, not the release: a plain caption press
+//                 on a restored window hands the drag to the compositor
+//                 (begin_window_move), which owns the pointer until the lift
+//                 and may never deliver that lift here, so the press is the
+//                 last event this surface is sure to see. Position-keyed,
+//                 target unused, both axes' slack compared.
 //   EditorText -> selects the clicked character class's RUN (word / punctuation
 //                 / whitespace) in the active text editor (target unused; both
 //                 axes' slack compared).
@@ -3726,9 +3746,10 @@ constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
 // 16 device px at the tablet's 275 % as at its 200 % before).
 constexpr int     kDoubleClickSlackPx = 6;
 
-// The slack in DEVICE pixels at the live gui_scale — the five compare sites'
-// one reader (input_pointer.cpp, all of them `<=` against a Chebyshev distance
-// from the recorded press).
+// The slack in DEVICE pixels at the live gui_scale — the compare sites' one
+// reader (input_pointer.cpp, all of them `<=` against a Chebyshev distance
+// from the recorded press; the caption's double click among them since
+// 2026-10-05, claim_caption_press).
 //
 // IT EQUALS drag_moved_threshold_px() AT EVERY SCALE because the two authored
 // constants are equal and both resolve through the one scaled_px conversion —
@@ -5180,9 +5201,10 @@ struct AppState {
     // string for the picker's "already open" no-op and its opening highlight
     // to hold. ONE PRODUCER, GuiFileLoader::load_file, which is handed the
     // resolved project and assigns it here beside the window title; nothing
-    // else writes it. FOUR READERS, re-derived by grep: the OPEN PROJECT
-    // PICKER (its "already open" no-op and the row its band opens on), FILE →
-    // REVERT (GuiInputHandler::revert_project, which reopens this name), and
+    // else writes it. FIVE READERS, re-derived by grep: THE CAPTION (its
+    // title, "<name> - Warptempo", paint_caption_row, 2026-10-05), the OPEN
+    // PROJECT PICKER (its "already open" no-op and the row its band opens on),
+    // FILE → REVERT (GuiInputHandler::revert_project, which reopens this name), and
     // the two media pushes, where it is the head unit's ALBUM — the console's
     // dim top line: the RENDER PLAYER's, the folder riding ARTIST below it
     // beside the bare name of the playing or highlighted item as the title
@@ -5853,6 +5875,23 @@ struct AppState {
         int     glyph         = 0;
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
+
+    // THE CAPTION'S THREE BUTTONS AS PAINTED (architect 2026-10-05) —
+    // Minimise, Maximise/Restore and Close, indexed by GuiCaptionButton — the
+    // painter-publishes contract on the title bar: paint_caption_row writes
+    // each rect on every paint and its ENABLED bit only on a frame whose clip
+    // covers the button (the roster's coverage gate), and the press claim and
+    // the lift read these and nothing live (ON SCREEN IS AS PAINTED). The one
+    // button that is ever disabled is the tablet's Maximise/Restore (its
+    // window cannot be restored, GuiPlatform::window_restorable), a constant
+    // of the platform, so no comparator replays the bit; the laptop's
+    // Maximise/Restore glyph follows the window's state, which moves only
+    // with a configure that damages the whole window.
+    struct CaptionButtonFace {
+        GuiRect rect{0, 0, 0, 0};
+        bool    enabled = true;
+    };
+    std::array<CaptionButtonFace, kCaptionButtonCount> caption_buttons{};
 
     // (THE ACTIVE TAB'S LOCK RECT IS DELETED — architect 2026-08-14, "we
     // should move the icon out of the tab and into the icon row, then show the
@@ -6826,8 +6865,18 @@ struct AppState {
     //   moves the viewport alone — none of the three can change the undo
     //   subject.
     // The firing body is tick_chrome_press_repeat (input_pointer.cpp).
+    //
+    // THE CAPTION KIND (architect 2026-10-05): a press on one of the title
+    // bar's three buttons arms it, `index` the GuiCaptionButton, and nothing
+    // else of the struct is read — no modifier binds there (a modified press
+    // is a consumed nothing), no shift long press, no burst. Its face is the
+    // pushed caption button while `inside` stands (paint_caption_row; the
+    // walk at recompute_redesign_button_hover keeps the bit), and its act is
+    // the lift's on the same button (finish_caption_release), taken in
+    // on_button_release ABOVE the veils because the press was admitted under
+    // the render player's and the picker's, where the roster's lift is not.
     struct ChromePress {
-        enum class Kind { None, Roster, Card };
+        enum class Kind { None, Roster, Card, Caption };
         Kind     kind          = Kind::None;
         int      index         = -1;
         bool     shift         = false;
@@ -9638,6 +9687,23 @@ GuiRect top_strip_area(const AppState& a);
 // window edge, 0 = edge-most. The named lane accessors below delegate to it.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge);
+// THE CAPTION — top lane 0, the window's title bar (architect 2026-10-05;
+// render.h's caption block, paint_caption_row).
+GuiRect top_caption_row_area(const AppState& a);
+// THE SIZING FRAME'S EDGES AT A POINT (architect 2026-10-05): the GuiWindowEdge
+// bits (input_core.h) of the restored laptop window's frame under (x, y), 0
+// where there is no frame. The frame lies OUTSIDE the app's geometry — the
+// Wayland backend hands the app the client area inside it and delivers pointer
+// positions relative to that area (platform_wayland.cpp) — so a point is on the
+// frame exactly when it lies outside the window's [0, width) x [0, height): a
+// press can land there only while the frame stands (maximised, and on the
+// tablet, the client area is the whole surface). A CORNER reaches one caption
+// height (kCaptionHeightPx) past the frame along each of its two edges, as
+// Windows' sizing hit test reached its caption-button size, so a corner is
+// grabbable from either edge near it. Defined with the lane geometry in
+// main.cpp; read by the press claim (claim_window_frame_press) and the cursor
+// zone map (pointer_cursor_kind). Hit tests are not guards (CLAUDE.md).
+unsigned window_frame_edges_at(const AppState& a, int x, int y);
 GuiRect top_menu_row_area(const AppState& a);
 GuiRect top_icon_row_area(const AppState& a);
 // GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the

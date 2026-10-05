@@ -46,7 +46,8 @@ namespace {
 // back into the viewBox, and dialog-cancel.svg (row 8, 2026-08-11), whose
 // `translate(-1-1)` spells the glued-negative form the SVG grammar admits.
 // `icon_translate` is their producer, named rather than raw so a translate
-// READS as a translate at its site. THE PRODUCT'S OWN MODIFICATION HAS NO
+// READS as a translate at its site. A THIRD, the app icon's note (2026-10-05),
+// carries its file's own translate-and-scale (icon_translate_scale). THE PRODUCT'S OWN MODIFICATION HAS NO
 // WEARER SINCE 2026-09-23: for the hours of that day the hold-column nudges
 // wore snap-nodes-midpoint.svg turned a quarter left and right through an
 // `icon_quarter_turn_about_centre` producer, one matrix on both of the file's
@@ -70,6 +71,15 @@ struct IconTransform {
 
 constexpr IconTransform icon_translate(double tx, double ty) {
     return IconTransform{1.0, 0.0, 0.0, 1.0, tx, ty};
+}
+
+// THE APP ICON'S NOTE (2026-10-05): packaging/warptempo_gui.svg's own
+// `translate(5.75,5.75) scale(2.75)` on its group, the file's transform taken
+// verbatim like the two translates above. A scale moves ink off the grid,
+// which the quarter-turn precedent refuses for a roster GLYPH; this is the
+// product's own launcher picture, drawn as the file draws it.
+constexpr IconTransform icon_translate_scale(double tx, double ty, double s) {
+    return IconTransform{s, 0.0, 0.0, s, tx, ty};
 }
 
 // A PATH'S INK: THE THEME'S LABEL — a path the SVG inks in the scheme's text
@@ -108,7 +118,9 @@ struct IconDef {
 // Windows 95 ground; no colour-conflict judgment applies until the icons arc
 // recolours them). The hand-list: kIconRecord and kIconNegativeText #DA4453,
 // kIconPreviewOn and kIconLiftCross #D24D57, kIconAccent #3DAEE9, kIconWav
-// #44AAEB, kIconPlainWhite #FFFFFF. (Until 2026-10-03 the red, the accent and
+// #44AAEB, kIconPlainWhite #FFFFFF, and the app icon's own two, kIconAppPlate
+// #AAAAAA and kIconAppNote #EAEAEA (2026-10-05, at kAppIconPaths). (Until
+// 2026-10-03 the red, the accent and
 // the text inks referenced the palette's hard-coded roles; those roles
 // retired with the theme catalog, and the red and blue glyphs are the icons
 // arc's to recolour.)
@@ -1131,6 +1143,30 @@ constexpr IconPath kEditDeletePaths[] = {
      "M8 3v2h1V4h4v1h1V3H8M4 6v1h14V6H4m2 2v11h10V8h-1v10H7V8H6"},
 };
 
+// THE APP'S OWN ICON (2026-10-05), packaging/warptempo_gui.svg in its 72-unit
+// viewBox: the PLATE is the file's `<rect width="72" height="72" rx="14">`,
+// spelled as the rounded rectangle SVG defines for that rx (the dialog
+// plates' precedent at the header — no `<rect>` parser), in the file's sheet
+// grey #AAAAAA; the NOTE is the file's d, byte for byte, under its group's own
+// transform (icon_translate_scale). The file inks the note #fff at opacity .75
+// over the plate; the palette composites nothing at paint time, so the ink is
+// that composite taken once here — 0.75 x 255 + 0.25 x 170 = 233.75, #EAEAEA —
+// which is what the file shows wherever the note lies, all of it on the plate.
+constexpr GuiColor kIconAppPlate = hex(0xAAAAAA);
+constexpr GuiColor kIconAppNote  = hex(0xEAEAEA);
+constexpr IconPath kAppIconPaths[] = {
+    {kIconAppPlate,
+     "M14 0h44a14 14 0 0 1 14 14v44a14 14 0 0 1 -14 14H14a14 14 0 0 1 -14 -14"
+     "V14a14 14 0 0 1 14 -14z"},
+    {kIconAppNote,
+     "m 11,3 0,1 0,3 0,1 0,4 0,2.640625 C 10.450691,14.229206 9.7385673,"
+     "14.001104 9,14 7.3431458,14 6,15.119288 6,16.5 6,17.880712 7.3431458,19 "
+     "9,19 c 1.656854,0 3,-1.119288 3,-2.5 L 12,12 12,8.0957031 c 1.473938,"
+     "0.2519592 3.180894,1.3814645 4,2.1485529 L 16,9.5 16,9 16,8.84375 16,5.5 "
+     "16,4.84375 C 14.788541,3.8472864 12.971189,3 11,3 Z",
+     icon_translate_scale(5.75, 5.75, 2.75)},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -1188,6 +1224,7 @@ constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
 constexpr IconDef kHelpWhatsthis      {22.0, kHelpWhatsthisPaths,       1};
 constexpr IconDef kGoJumpDeclaration  {22.0, kGoJumpDeclarationPaths,   1};
 constexpr IconDef kEditDelete         {22.0, kEditDeletePaths,          1};
+constexpr IconDef kAppIcon            {72.0, kAppIconPaths,             2};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -1248,6 +1285,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::HelpWhatsthis:       return kHelpWhatsthis;
         case Icon::GoJumpDeclaration:   return kGoJumpDeclaration;
         case Icon::EditDelete:          return kEditDelete;
+        case Icon::AppIcon:             return kAppIcon;
     }
     return kDialogOkApply;
 }

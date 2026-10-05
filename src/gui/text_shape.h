@@ -33,7 +33,9 @@
 //   - ONE FACE, NO FALLBACK. A codepoint the face does not cover shapes to
 //     .notdef and paints as the empty box — accepted, in the same class as the
 //     no-bidi exclusion below. Roboto covers Latin, Greek and Cyrillic
-//     (2026-10-02).
+//     (2026-10-02), and so does Roboto Bold, the caption title's face
+//     (2026-10-05): the run is shaped on whichever of the three faces the
+//     caller selected (gui_select_font_face, gui_font.h), never across two.
 //   - `show_shaped_run` is called with the SAME scaled font set on `cr` that
 //     the run was shaped with; the glyph ids are that face's, and no other.
 //

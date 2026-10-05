@@ -1892,6 +1892,24 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // card itself is ONE BUTTON since its X retired (2026-10-01), and a
     // button carries no cue anywhere in the product.
     if (notification_card_at(app, x, y) != 0) return GuiCursorKind::Arrow;
+    // THE SIZING FRAME (architect 2026-10-05) names its resize, Windows'
+    // double arrows by edge and corner, under every veil as its press is
+    // claimed above every veil (claim_window_frame_press) — on the hover
+    // alone: a live gesture crossing the frame keeps its own cue, the arms
+    // below answering it.
+    if (const unsigned edges = window_frame_edges_at(app, x, y);
+        edges != 0 && !any_pointer_gesture_active(app)) {
+        const bool top    = (edges & kGuiWindowEdgeTop) != 0;
+        const bool bottom = (edges & kGuiWindowEdgeBottom) != 0;
+        const bool left   = (edges & kGuiWindowEdgeLeft) != 0;
+        const bool right  = (edges & kGuiWindowEdgeRight) != 0;
+        if ((top && left) || (bottom && right))
+            return GuiCursorKind::WindowSizeNWSE;
+        if ((top && right) || (bottom && left))
+            return GuiCursorKind::WindowSizeNESW;
+        return (top || bottom) ? GuiCursorKind::WindowSizeNS
+                               : GuiCursorKind::WindowSizeWE;
+    }
     if (app.prompt.active) return GuiCursorKind::Arrow;
     // THE RENDER PLAYER IS THE ARROW EVERYWHERE (2026-08-28): its three
     // pointer surfaces — the overlay's rows, the scrub, the modal row's
@@ -4675,6 +4693,160 @@ void GuiInputHandler::finish_notification_release(
     else     notifications.dismiss(arm.card_id);
 }
 
+// -- THE CAPTION AND THE SIZING FRAME (architect 2026-10-05) -------------------
+//
+// The contracts are at the declarations (input_handler.h); the geometry is the
+// painter's publication (AppState::caption_buttons) and the frame's hit test
+// (window_frame_edges_at); the window acts are the platform's verbs.
+
+namespace {
+// The caption button under (x, y) as painted, or -1.
+int caption_button_at(const AppState& app, int x, int y) {
+    for (int i = 0; i < kCaptionButtonCount; ++i)
+        if (rect_contains(app.caption_buttons[static_cast<size_t>(i)].rect, x,
+                          y))
+            return i;
+    return -1;
+}
+} // namespace
+
+bool GuiInputHandler::claim_window_frame_press(GuiMouseButton button, int x,
+                                               int y, GuiInputState mods) {
+    const unsigned edges = window_frame_edges_at(app, x, y);
+    if (edges == 0) return false;
+    // Consumed from here, whatever the button and the modifiers: the
+    // window's own chrome binds the bare left press alone.
+    if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
+        !mods.alt)
+        gui.begin_window_resize(edges);
+    return true;
+}
+
+bool GuiInputHandler::claim_caption_press(
+        GuiMouseButton button, int x, int y, GuiInputState mods,
+        const DoubleClickCandidate& dc_at_press) {
+    if (!rect_contains(top_caption_row_area(app), x, y)) return false;
+    // Consumed from here, whatever the button and the modifiers: the
+    // window's own chrome binds the bare left press alone.
+    if (button != GuiMouseButton::Left || mods.ctrl || mods.shift || mods.alt)
+        return true;
+    const int b = caption_button_at(app, x, y);
+    if (b >= 0) {
+        // AS PAINTED: a button painted disabled (the tablet's Restore) takes
+        // its press as a consumed nothing, as a greyed roster button does.
+        if (!app.caption_buttons[static_cast<size_t>(b)].enabled) return true;
+        app.chrome_press = AppState::ChromePress{
+            .kind     = AppState::ChromePress::Kind::Caption,
+            .index    = b,
+            .press_ms = monotonic_ms()};
+        viewport.invalidate_rect(top_caption_row_area(app));
+        return true;
+    }
+    // THE CAPTION'S GROUND: only a window that can leave the maximised state
+    // answers (the tablet's takes no drag and no double tap).
+    if (!gui.window_restorable()) return true;
+    // THE SECOND PRESS OF A DOUBLE CLICK toggles maximised and arms nothing
+    // (the rule at DoubleClickCandidate; the candidate was cleared at the
+    // press's head, dc_at_press keeping it).
+    const int slack = double_click_slack_px();
+    if (dc_at_press.surface == DoubleClickSurface::Caption &&
+        monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
+        std::abs(x - dc_at_press.press_x) <= slack &&
+        std::abs(y - dc_at_press.press_y) <= slack) {
+        gui.toggle_window_maximized();
+        return true;
+    }
+    // THE FIRST PRESS seeds the candidate here, at the press (the reason at
+    // DoubleClickSurface::Caption's entry), then hands the drag to the
+    // compositor — on a restored window only.
+    app.double_click = DoubleClickCandidate{
+        .surface = DoubleClickSurface::Caption,
+        .time_ms = monotonic_ms(),
+        .press_x = x,
+        .press_y = y};
+    if (!gui.window_maximized()) gui.begin_window_move();
+    return true;
+}
+
+void GuiInputHandler::finish_caption_release(const AppState::ChromePress& arm,
+                                             int x, int y) {
+    if (arm.kind != AppState::ChromePress::Kind::Caption) return;
+    // A PROMPT OR A DIALOG EDITOR RAISED UNDER THE HOLD (a key, the
+    // compositor's close) outranks the arm: the lift does nothing, the veil's
+    // rule for every chrome lift (finish_chrome_press_release's head).
+    if (app.prompt.active || modal_dialog_editor_active()) return;
+    if (caption_button_at(app, x, y) != arm.index) return;
+    if (!app.caption_buttons[static_cast<size_t>(arm.index)].enabled) return;
+    switch (static_cast<GuiCaptionButton>(arm.index)) {
+    case GuiCaptionButton::Minimize: gui.minimize_window();         return;
+    case GuiCaptionButton::Maximize: gui.toggle_window_maximized(); return;
+    case GuiCaptionButton::Close:    on_window_close();             return;
+    }
+}
+
+void GuiInputHandler::on_window_close() {
+    // The window close (the compositor's, or the caption's Close) routes
+    // through the unsaved-work dialog when dirty, same as Ctrl+Q. END any
+    // in-flight pointer
+    // gesture before the prompt goes up, matching the Ctrl+Q
+    // hatch: while the prompt is up the pointer handlers swallow motion
+    // and release, so a gesture left alive would commit on the next motion
+    // if the user dismisses the prompt. ENDING IS COMMITTING (pointer
+    // gestures have no cancel — the rule is at the drag-modal gate in
+    // input_handler.cpp): each gesture runs its own release body here.
+    // finalize_active_drags is a no-op when nothing is live, so the clean and
+    // non-gesture close paths are unaffected — the caption's Close among
+    // them, whose lift ended its own press. A live editor text-selection
+    // drag is finalized there too (collapsed to a caret, selection-only,
+    // nothing to revert), so there is no motion-free interval where it would
+    // swallow keys until a later pointer motion noticed the lost button.
+    finalize_active_drags();
+    // THE HINT GOES DOWN WITH IT, and this is the SAME RULE AS THE KEY-PRESS
+    // HIDE rather than a new one: no floating hint stands over a modal. Every
+    // KEYBOARD opener implements it at the top of on_key; the compositor's
+    // close is THE ONE modal opener that arrives asynchronously — it carries
+    // no key and no pointer event to hide with — so the rule needs its call
+    // here (a HARD end) or the hint stands over the prompt until the walk's
+    // no-wait refusal lets its hide grace run out. (The checkpoint worker's
+    // failure report was a second such opener from 2026-08-07 until
+    // 2026-08-09, when it became the bottom row's paint-only critical slot and
+    // stopped raising anything; it is a critical notification card since
+    // 2026-08-29, which raises no modal either.)
+    // Ordered ABOVE request_close so the box's published rect is
+    // damaged before the prompt's own repaint, and beside the popup close for
+    // the reason below — the two floating surfaces go down together.
+    hide_shift_tooltip();
+    // THE POPUP GOES DOWN BEFORE THE PROMPT GOES UP — including its armed
+    // item, both being the one close owner's job. Without this the two would
+    // stand together and ownership would
+    // SPLIT: the prompt takes keys and presses (its gates are tested first),
+    // but motion reaches the DROPDOWN branch, which sits above the prompt's,
+    // and a left RELEASE reaches finish_dropdown_release, which sits above
+    // the prompt gate in on_button_release — so an item pressed and still
+    // HELD when the compositor close arrived would fire on release and raise
+    // the settings editor UNDERNEATH the prompt. Closing here makes "the
+    // prompt outranks the dropdown" structural in all four input channels
+    // instead of an ordering accident in two of them.
+    // THE RESIZE PATH DOES THE EQUIVALENT for the same class of reason (a
+    // popup that cannot stay coherent through what follows), and Ctrl+Q needs
+    // no line of its own: it reaches the popup's own keyboard gate first,
+    // which closes the menu and only then lets the close route run. (The
+    // checkpoint notice's opener owed this same pair from 2026-08-08 until
+    // 2026-08-09; it raises no modal now, so these two routes are again the
+    // whole list.)
+    close_dropdown();
+    // THE RENDER PLAYER, THE PICKER AND EVERY STANDING MODAL EDITOR GO
+    // DOWN INSIDE request_close, not here: the close road owns those
+    // steps for Ctrl+Q and for this road alike, so neither a mode
+    // nor an editor — nor either overlay band — is left standing under
+    // the unsaved-work prompt.
+    prompt.request_close(GuiCloseTarget::Exit);
+    // (The cursor re-resolve this road used to end with is gone for the
+    // same reason the resize path's is — see there. The prompt this may have
+    // just raised is one of the zone map's own refusals, and the map is asked
+    // again at this iteration's tail, past everything above.)
+}
+
 void GuiInputHandler::update_notification_hover(int x, int y) {
     notifications.update_hover(x, y);
 }
@@ -4903,6 +5075,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // gestures underneath, key or gap. (Contract at the declaration; the act
     // runs at the PRESS, inside.)
     if (claim_onscreen_keyboard_press(button, x, y)) return;
+
+    // THE SIZING FRAME, ABOVE EVERY VEIL (architect 2026-10-05: a restored
+    // window resizes "always"): a press on the frame lies outside every
+    // surface the app paints (window_frame_edges_at), so nothing below can
+    // claim it, and the resize it starts is the compositor's — the resize
+    // path closes what cannot stay coherent through it (main.cpp's resize
+    // callback) — so no prompt, menu or dialog editor needs to refuse it.
+    if (claim_window_frame_press(button, x, y, mods)) return;
 
     // Prompt-modal input handling: while a prompt dialog is up, its BUTTONS
     // are the pointer's only targets — and since 2026-08-13 a plain left press
@@ -5137,6 +5317,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // should have swallowed the press whole.
     const bool menu_row_press_admitted =
         press_on_live_menu_anchor(app, x, y);
+    // AND THE CAPTION (architect 2026-10-05): the window's title bar is
+    // reachable wherever the File menu's Quit is, so the two veils let it
+    // through beside the live anchor; the claim stands under the dialog
+    // editors' swallow below (claim_caption_press).
+    const bool caption_press_admitted =
+        rect_contains(top_caption_row_area(app), x, y);
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything
@@ -5157,7 +5343,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // shift press on a button with no twin is a consumed nothing, never the
     // plain act); ctrl and alt spell nothing on any modal row and stay
     // consumed by the veil below.
-    if (app.render_player.active && !menu_row_press_admitted) {
+    if (app.render_player.active && !menu_row_press_admitted &&
+        !caption_press_admitted) {
         if (button != GuiMouseButton::Left) return;
         if (claim_player_scrub_press(x, y, mods)) return;
         if (!mods.ctrl && !mods.alt && modal_dialog_stash_current()) {
@@ -5174,7 +5361,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE OPEN ACT, which is why the row carries no OK beside that Cancel. There is no field
     // and so no caret claim and no text drag — the picker has nothing to
     // type into. The whole rule is stated at picker_active (input_handler.h).
-    if (app.picker.active && !menu_row_press_admitted) {
+    if (app.picker.active && !menu_row_press_admitted &&
+        !caption_press_admitted) {
         if (button != GuiMouseButton::Left) return;
         if (!mods.ctrl && !mods.shift && !mods.alt &&
             modal_dialog_stash_current()) {
@@ -5365,7 +5553,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // editor down through the top-strip flag-edit routine below.
     if (modal_dialog_editor_active()) return;
 
-    // THE FOUR REDESIGNED BUTTON ROWS (top lanes 0..2 plus the bottom strip's
+    // THE CAPTION (architect 2026-10-05), the window's title bar, above
+    // every lane of the app (the rank and the acts at claim_caption_press's
+    // declaration).
+    if (claim_caption_press(button, x, y, mods, dc_at_press)) return;
+
+    // THE FOUR REDESIGNED BUTTON ROWS (top lanes 1..2 plus the bottom strip's
     // transport row, whose claim closes the block — the toolbar row's own
     // claim died with its lane at the 2026-08-12 relayout, its four buttons
     // now inside the icon row's band), claimed ABOVE the
@@ -6711,6 +6904,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // swallows the lift exactly as it swallows every other pointer event.
     AppState::ChromePress chrome{};
     if (button == GuiMouseButton::Left) chrome = take_chrome_press();
+    // THE CAPTION BUTTON'S LIFT (architect 2026-10-05), above the veils below:
+    // its press was admitted under the render player's and the picker's, so
+    // its lift must be too; the prompt and the dialog editors it re-asks
+    // itself (finish_caption_release).
+    if (chrome.kind == AppState::ChromePress::Kind::Caption) {
+        finish_caption_release(chrome, x, y);
+        return;
+    }
     // THE PROMPT DIALOG'S ACT, the press claim's other half (2026-08-13): the
     // lift on the button the press armed activates that response. A lift
     // ANYWHERE ELSE consumes the arm and dispatches nothing, leaving that
@@ -7245,6 +7446,18 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // (2026-10-01): the card paints no pressed face, so the paint-only bit
     // has nothing to serve there, and its slide-away cancel is its lift's
     // own re-hit (finish_notification_release).
+    // THE CAPTION KIND'S BIT (2026-10-05), the same feint over its own
+    // published rect, its face the caption's.
+    if (app.chrome_press.kind == AppState::ChromePress::Kind::Caption) {
+        const bool inside = rect_contains(
+            app.caption_buttons[static_cast<size_t>(
+                                    app.chrome_press.index)].rect,
+            mx, my);
+        if (inside != app.chrome_press.inside) {
+            app.chrome_press.inside = inside;
+            viewport.invalidate_rect(top_caption_row_area(app));
+        }
+    }
     if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster) {
         const bool inside = rect_contains(
             app.redesign_buttons[static_cast<size_t>(
@@ -7662,6 +7875,9 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
         notifications.press_hold_edge(arm.card_id);
         return arm;
     }
+    // A CAPTION ARM'S PUSHED FACE is the caption's to erase.
+    if (arm.kind == AppState::ChromePress::Kind::Caption && arm.inside)
+        viewport.invalidate_rect(top_caption_row_area(app));
     if (arm.kind == AppState::ChromePress::Kind::Roster && arm.inside &&
         roster_index_click_face(arm.index)) {
         // The pressed face is painted; erase it through the row fork.
@@ -7734,6 +7950,10 @@ void GuiInputHandler::finish_chrome_press_release(
         // Never reaches here: the card's lift is taken and dispatched at the
         // head of on_button_release, at its claim's own rank above every
         // veil (finish_notification_release).
+        return;
+    case AppState::ChromePress::Kind::Caption:
+        // Never reaches here either: taken beside the veils in
+        // on_button_release (finish_caption_release).
         return;
     }
     // A HOLD THAT ALREADY FIRED CONSUMES ITS OWN LIFT (architect 2026-08-16):

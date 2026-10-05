@@ -90,7 +90,12 @@ struct TrimRange {
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
-// HOVER FACES: every colour is a solid fill of integer cells.
+// HOVER FACES: every colour is a solid fill of integer cells. THE ONE
+// EXCEPTION IS THE CAPTION'S GRADIENT (architect 2026-10-05), Windows 98 and
+// 2000's title bar where a theme records a gradient end, painted as 15-bit
+// high colour under an ordered dither — still solid cells, each one of the
+// quantised colours, nothing blended at paint time (paint_caption_gradient,
+// the rule's one owner).
 //
 // A HEX HERE IS A DISPLAY-P3 BYTE TRIPLE AND IS WHAT THE TABLET SHOWS
 // (architect 2026-10-02). The tablet's window is a Display-P3 layer
@@ -110,10 +115,11 @@ struct TrimRange {
 // lines a side, and no other role draws a relief line. THE FAMILIES (the
 // painters are paint_relief_soft_raised and its siblings, below), lines given
 // outer then inner, top-left / bottom-right, in the theme's quartet:
-//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a toolbar button
-//                 (EDGE_RAISED | BF_SOFT);
+//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a toolbar button,
+//                 a caption button (EDGE_RAISED | BF_SOFT; Windows'
+//                 DFC_CAPTION, architect 2026-10-05);
 //   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a toolbar button
-//                 checked or pressed;
+//                 checked or pressed, a caption button pressed;
 //   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow — a push button, the
 //                 scroll-bar thumb, a menu's and a dropdown's frame
 //                 (EDGE_RAISED);
@@ -130,7 +136,8 @@ struct TrimRange {
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
-//   ground        every chrome surface: the five lanes, the bottom row, the
+//   ground        every chrome surface: the five lanes under the caption,
+//                 the caption's buttons, the bottom row, the
 //                 dropdowns, the folder overlay and the picker, the on-screen
 //                 keyboard, every button face, a DISABLED flag's face;
 //   label         chrome text and glyphs, the ruler labels, the trim lane's
@@ -162,6 +169,15 @@ struct TrimRange {
 //                 keeps the label;
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
+//   caption six   THE CAPTION (architect 2026-10-05, the window's title
+//                 bar, top lane 0): the active start, gradient end and text
+//                 while the window has the focus, the inactive three without
+//                 it (paint_caption_row, paint_handler.cpp; the gradient at
+//                 paint_caption_gradient). Its three buttons are Windows'
+//                 caption buttons — the SOFT edges on the ground, the glyph
+//                 in the label — and the sizing frame round a
+//                 restored laptop window is the quartet and the ground
+//                 (paint_window_sizing_frame);
 //   the program's the waveform's canvas, ink and outline (ROW 6, below), the
 //                 flag kinds' faces and the flag labels (THE MARKER LANE,
 //                 below), the playhead's head and stem (THE PLAYHEAD, below).
@@ -232,6 +248,12 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK
     GuiColor card_text;       // COLOR_INFOTEXT
     GuiColor card_frame;      // the tooltip's border
+    GuiColor caption_active;             // COLOR_ACTIVECAPTION
+    GuiColor caption_active_gradient;    // COLOR_GRADIENTACTIVECAPTION
+    GuiColor caption_active_text;        // COLOR_CAPTIONTEXT
+    GuiColor caption_inactive;           // COLOR_INACTIVECAPTION
+    GuiColor caption_inactive_gradient;  // COLOR_GRADIENTINACTIVECAPTION
+    GuiColor caption_inactive_text;      // COLOR_INACTIVECAPTIONTEXT
     // THE PROGRAM'S OWN ELEMENTS.
     GuiColor waveform_canvas;
     GuiColor waveform_ink;
@@ -625,8 +647,76 @@ constexpr int kMinWindowHeightPx = 480;
 // 6 × 2.75 = 16.5 → 16 now).
 inline constexpr int kPlayheadUnitPx = 6;
 
-// Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
-// window edge (the kdenlive menu bar, row 1 of the redesign). 19 WINDOWS PX,
+// THE CAPTION — the top strip's lane 0, at the window edge: THE WINDOW'S OWN
+// TITLE BAR, painted by the app on both devices (architect 2026-10-05; the
+// laptop asks labwc for client-side decorations, so labwc draws none, and the
+// tablet's full-screen window has none of its own). WINDOWS 95's CAPTION AT
+// THE WINDOWS PIXEL, every number its own (SM_CYCAPTION and the caption
+// buttons' DrawFrameControl box), measured on the architect's reference — a
+// Windows 2000 window, whose caption metrics are Windows 95's:
+//   THE LANE is 18 Windows px whole (kCaptionHeightPx): the caption's ground
+//     (the active or inactive start-to-end colours, paint_caption_gradient),
+//     nothing above or below it inside the lane;
+//   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
+//     (SM_CXSMICON) at (2, 1) from the lane's top-left;
+//   THE TITLE in ROBOTO BOLD at the body's 13 (GuiFontFamily::SansBold, the
+//     caption font being the body face in bold), its pen at x 20 (two px past
+//     the icon) and its cap band centred in the lane (redesign_baseline), in
+//     the caption's text role, cut before the buttons with Windows' "..."
+//     (paint_caption_row owns the words and the cut);
+//   THE THREE BUTTONS, flush right: each 16 x 14 (kCaptionButtonWPx x
+//     kCaptionButtonHPx) with 2 px of caption above it, Minimise and
+//     Maximise touching, 2 px before Close, and 2 px right of Close
+//     (kCaptionButtonInsetPx, kCaptionCloseGapPx) — Windows' caption
+//     button, DrawFrameControl's DFC_CAPTION: EDGE_RAISED with BF_SOFT, and
+//     EDGE_SUNKEN with BF_SOFT while pressed (paint_button_box's TOOLBAR
+//     family, the SOFT edges; the reference's white outer line and 3DLight
+//     inner one agree), its glyph Windows' Marlett character
+//     drawn as authored cells in the label (paint_handler.cpp's caption glyph
+//     tables), sunken and shifted one px while pressed.
+// Every length is a composite of its rounded parts (scaled_px's rule): 50
+// device rows at the tablet's 275 %, 25 at the laptop's 138 %.
+inline constexpr int kCaptionHeightPx      = 18;
+inline constexpr int kCaptionIconXPx       = 2;
+inline constexpr int kCaptionIconYPx       = 1;
+inline constexpr int kCaptionIconPx        = 16;
+inline constexpr int kCaptionTitleXPx      = 20;
+inline constexpr int kCaptionButtonWPx     = 16;
+inline constexpr int kCaptionButtonHPx     = 14;
+inline constexpr int kCaptionButtonInsetPx = 2;
+inline constexpr int kCaptionCloseGapPx    = 2;
+inline int caption_row_h_px() {
+    return scaled_px(kCaptionHeightPx, 5);
+}
+
+// THE CAPTION'S GRADIENT — THE ONE GRADIENT IN THE PRODUCT (architect
+// 2026-10-05; the palette head's exception), its rule and reason at the
+// definition (render.cpp): `start` at the left of `r`, `end` at its right,
+// linear per channel across the width, quantised to 15-bit high colour under
+// Windows' 4 x 4 ordered dither in one-Windows-px cells; a flat caption (end
+// equal to start) is one solid fill of the exact colour. Opaque.
+void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
+                            GuiColor end);
+
+// THE SIZING FRAME (architect 2026-10-05) — Windows 95's sizable window
+// border, 4 Windows px (SM_CXFRAME, kWindowFramePx), drawn round a RESTORED
+// laptop window and never round a maximised one (Windows hid it when
+// maximised; the tablet's window is always maximised): the window's raised
+// edge on its outer two lines (PLAIN RAISED, DrawEdge's EDGE_RAISED, the
+// quartet) and the ground on the two inside them. Painted by the Wayland
+// backend on the surface's outer `frame_px` device px (the client area inside
+// it is the app's whole geometry, platform_wayland.cpp); its edges and
+// corners are the resize handles (window_frame_edges_at, app_state.h). THE
+// THICKNESS IS A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): two
+// relief lines and two Windows px of ground, window_frame_px — 5 device px at
+// the laptop's 138 % (1 + 1 + 3), 12 at 275 % (3 + 3 + 6).
+inline constexpr int kWindowFramePx = 4;
+int  window_frame_px();
+void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
+                               int frame_px);
+
+// Authored pixel geometry of the MENU ROW — the top strip's lane 1, directly
+// under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). 19 WINDOWS PX,
 // Windows' SM_CYMENU (architect 2026-10-02; it was the kdenlive File item's
 // 30 laptop px until the unit's change), AND THE LANE IS ITS CONTENT: the
 // row stands at that height with
@@ -648,7 +738,8 @@ inline constexpr int kPlayheadUnitPx = 6;
 // (top_menu_row_area — paint_dropdown and toggle_dropdown read the same
 // accessor), so the popup touches the icon row's first pixel.
 //
-// FLUSH UNDER THE WINDOW'S TOP EDGE, WITH NO AIR ABOVE THE ANCHORS (architect
+// FLUSH UNDER THE CAPTION (the window's top edge until the caption's arrival,
+// 2026-10-05), WITH NO AIR ABOVE THE ANCHORS (architect
 // 2026-10-01, on the glass: "Let's remove the six pixel padding up at the
 // top. We'll just let the text be pretty close. I think that's going to seem
 // more symmetric — because right now, relative to the curved top, both the
@@ -679,7 +770,7 @@ inline int menu_row_h_px() {
 // Windows px since 2026-10-02 (32 and 9 / 10 laptop px before) —
 // which used to read row 2's. The row's crop record is git history.)
 
-// Authored pixel geometry of the ICON ROW — the top strip's lane 1, directly
+// Authored pixel geometry of the ICON ROW — the top strip's lane 2, directly
 // under the MENU ROW with nothing between (row 4 of the redesign: TWENTY-SIX
 // view/mode/action buttons — the kIconRowButtons and kIconRowViewGroup tables
 // are the count's one authority, and ALL of them paint on every frame;
@@ -1754,9 +1845,10 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // and its inner ring on the rect inset one line (Windows' DrawEdge).
 //   paint_relief_frame  — one ring, any two colours (the one owner every
 //                         helper below calls).
-//   paint_relief_soft_raised  — SOFT RAISED: a toolbar button at rest.
+//   paint_relief_soft_raised  — SOFT RAISED: a toolbar button at rest, a
+//                         caption button at rest (2026-10-05).
 //   paint_relief_soft_sunken  — SOFT SUNKEN: a toolbar button checked or
-//                         pressed.
+//                         pressed, a caption button pressed.
 //   paint_relief_plain_raised — PLAIN RAISED: a push button, the scroll-bar
 //                         thumb (the trim lane's), the scrub's thumb, a
 //                         menu's and a dropdown's frame, a raised panel.

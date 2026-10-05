@@ -73,6 +73,13 @@ markers". The settled design:
 - Then ONE REQUEST: the laptop build (and an eyeball: no double title bar, the frame on Restore), the APK, his
   glass judges the height.
 
+## CODEX WHILE ON THE CLOUD (architect 2026-10-05)
+Manual rounds until the Tuesday reset (CLAUDE.md's codex routine, its cloud sentence): the brief in the tracked
+`docs/handoff/codex_brief.md`, he runs Sol and uploads the review here. The PICKER's arcs are DEFERRED (a design tool
+with no link path to the product). Unreviewed product code since the last Sol round (04a3fe1): the theme catalog in
+the app (7227c38, 9885509), theme files (3c3575d), the bundle (71acf95), 40623b9, Save as the dirty mark (54ba6b6) —
+FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag first.
+
 ## AFTER THE TITLE BAR
 1. DISCUSS the picker's NAVIGATION with him (history vs presets; editing a preset): ask; nothing is briefed before.
 2. THE ICON ARC, LAST, possibly after the Tuesday reset, WITH FABLE (his go given for it): the icons, a new LOGO; the

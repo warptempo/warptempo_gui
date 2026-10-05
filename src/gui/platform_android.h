@@ -117,7 +117,7 @@ public:
     // init() adopts a live ANativeWindow rather than waiting for one. The
     // width/height arguments are therefore ADVISORY ONLY — the panel's own
     // size wins, since a NativeActivity has no say in its window size — and
-    // the title argument is unused (no titlebar exists to carry it).
+    // the title argument is unused (no system titlebar exists to carry it).
     bool init(int width, int height, const char* title);
 
     // THE DEVICE CONFIG'S FIRST-RUN TEMPLATE, the seam's own member (contract at
@@ -151,8 +151,10 @@ public:
         bundled_theme_files();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
-    // and landscape-only with no titlebar, so this setter stores nothing and
-    // paints nothing. It stays on the API because the GUI calls it from its
+    // and landscape-only with no system titlebar, so this setter stores
+    // nothing and paints nothing (the app's own CAPTION, top lane 0 since
+    // 2026-10-05, composes its title itself from the open piece's name,
+    // paint_caption_row). It stays on the API because the GUI calls it from its
     // load path unconditionally (contract and composition rule at
     // platform_wayland.h, which owns it).
     // THE DIRTY INDICATOR IS THE SAVE BUTTON'S GREY (architect 2026-10-05,
@@ -217,6 +219,26 @@ public:
     // cold answer the Wayland backend gives before its first configure; the
     // launched activity is focused, so the flag flips before any frame paints.
     bool window_activated() const { return window_activated_; }
+
+    // -- THE WINDOW'S OWN CHROME (architect 2026-10-05) ----------------------
+    // The seam's set (contracts at platform_wayland.h's block), answered for
+    // the tablet's full-screen window: it is ALWAYS MAXIMISED and cannot be
+    // restored (the caption's Maximise / Restore shows Restore, greyed, and
+    // its double tap does nothing), its caption is ALWAYS ACTIVE (no other
+    // window shares the screen with it), it has no frame and no drag — the
+    // move and resize verbs and the maximise toggle do nothing, and the
+    // caption never calls them where window_restorable() is false. MINIMISE
+    // SENDS THE TASK TO THE BACKGROUND (Activity.moveTaskToBack(true) over
+    // JNI, the Home button's own road): the window goes, the process and its
+    // project stay, and returning brings the window back through the
+    // ordinary window-loss and window-adoption cycle.
+    bool window_maximized() const { return true; }
+    bool window_restorable() const { return false; }
+    bool caption_active() const { return true; }
+    void begin_window_move() {}
+    void begin_window_resize(unsigned /*edges*/) {}
+    void minimize_window();
+    void toggle_window_maximized() {}
 
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
@@ -612,15 +634,17 @@ private:
     // method ids, looked up once. Null when the attach or the lookup failed,
     // and every push then drops with the line already logged. Spelled as
     // `struct` pointers so no JNI header reaches this file.
-    // THREE IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
-    // independent of the others: the car's mediaState (2026-08-28) and the
+    // FOUR IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
+    // independent of the others: the car's mediaState (2026-08-28), the
     // clipboard's pair (2026-09-03) — clipboard_road_open() is the one
-    // predicate both clipboard roads ask.
+    // predicate both clipboard roads ask — and Activity's own moveTaskToBack,
+    // the caption's Minimise (2026-10-05).
     struct _JNIEnv*   jni_env_            = nullptr;
     bool              jni_attached_       = false;
     struct _jmethodID* media_state_method_   = nullptr;
     struct _jmethodID* clipboard_set_method_ = nullptr;
     struct _jmethodID* clipboard_get_method_ = nullptr;
+    struct _jmethodID* move_task_to_back_method_ = nullptr;
 
     // -- Idle-tick timing --
     // The ONE wakeup: a periodic timerfd (bionic has them), exactly the

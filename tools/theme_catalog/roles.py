@@ -74,6 +74,43 @@ LIGHT_ROLES = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow'
                'selected_fill', 'selected_text', 'field_ground', 'field_text')
 
 
+# THE CAPTION AS RECORDED (architect 2026-10-05): one catalog entry -> {theme-file role: '#RRGGBB'} for the app's six
+# caption roles (src/gui/theme_file.h), read by gen_theme_files.py. Each family names its own title colours, a value
+# being a key of the entry's VALUES (its raw keys, or its toolkit rule's computed keys): Windows' ActiveTitle /
+# GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText; KDE 3's
+# activeBackground / activeForeground and inactiveBackground / inactiveForeground; CDE's colour sets 1 and 2 (the
+# active and the inactive window frame, the sets' roles above) under each set's own Motif foreground. NO DERIVATION:
+# a gradient end is named only where the entry records one (the 18 Windows entries that carry Gradient*Title; Windows
+# 95 Standard, the Plus! themes, KDE 3 and CDE record none), and the app's theme-file rule then makes the end the
+# start, a flat caption. KDE 3's activeBlend / inactiveBlend are not read: a KDE 3 window decoration's own choice,
+# not the scheme's caption. The chosen `warptempo` entry and the presets record no caption: the built-in's applies.
+CAPTION = {
+    'windows': (('caption_active', 'ActiveTitle'), ('caption_active_gradient', 'GradientActiveTitle'),
+                ('caption_active_text', 'TitleText'), ('caption_inactive', 'InactiveTitle'),
+                ('caption_inactive_gradient', 'GradientInactiveTitle'), ('caption_inactive_text', 'InactiveTitleText')),
+    'kde3': (('caption_active', 'activeBackground'), ('caption_active_text', 'activeForeground'),
+             ('caption_inactive', 'inactiveBackground'), ('caption_inactive_text', 'inactiveForeground')),
+    'cde': (('caption_active', 'set1'), ('caption_active_text', 'motif:set1.fg'),
+            ('caption_inactive', 'set2'), ('caption_inactive_text', 'motif:set2.fg')),
+}
+CAPTION['windows-plus'] = CAPTION['windows']
+
+
+def caption_roles(e):
+    """One catalog entry -> {theme-file role: '#RRGGBB'} for the caption (the rule above): each mapped value the entry
+    records; a Windows entry without the Gradient keys (Windows 95 Standard, the Plus! themes) names no end."""
+    row = CAPTION.get(e['family'])
+    if row is None: return {}
+    values = dict(e['raw'])
+    values.update((e['provenance'].get('rule') or {}).get('computed', {}))
+    out = {}
+    for role, k in row:
+        if k in values: out[role] = values[k].upper()
+        elif not role.endswith('_gradient'):
+            raise SystemExit(f'roles: {e["key"]} records no {k!r} for {role}')
+    return out
+
+
 def selected_pair(e):
     """An entry's selected pair (LIGHT_ROLES' rule): its own, or a CDE entry's title_active under set 1's foreground."""
     r = e['roles']

@@ -10,3 +10,7 @@ field_ground=#FFFFFF
 field_text=#000000
 clock_ground=#D4D0C8
 clock_text=#000000
+caption_active=#002468
+caption_active_text=#FFFFFF
+caption_inactive=#DCDCDC
+caption_inactive_text=#000000

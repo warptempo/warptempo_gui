@@ -287,6 +287,161 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
     paint_relief_frame(cr, r, c, c);
 }
 
+// -- THE CAPTION'S GRADIENT (architect 2026-10-05) ---------------------------
+//
+// THE ONE GRADIENT IN THE PRODUCT, and why it is dithered: a theme that
+// records a gradient end (Windows 98's and 2000's GradientActiveTitle /
+// GradientInactiveTitle) draws its caption from the start colour at the left
+// to the end at the right, linear per channel; painted as smooth 24-bit
+// colour that ramp BANDED on the tablet's panel (an earlier gradient, seen
+// there), and Windows itself never showed it smooth on the displays of its
+// day — at 15- and 16-bit high colour the driver dithered it. So the ramp is
+// QUANTISED TO 15-BIT HIGH COLOUR, each channel to five bits and the five
+// bit-replicated back to eight (v5 << 3 | v5 >> 2, so 31 is 255 and 0 is 0),
+// UNDER AN ORDERED DITHER that repeats every 4 cells across and 4 down: the
+// look of the architect's reference, a Windows 2000 window's caption, and the
+// end of the banding.
+//
+// THE MATRIX IS READ OFF THAT REFERENCE (tmp/ref/toastytech_win2000_my_
+// documents.png, measured 2026-10-05): every caption pixel there is a
+// bit-replicated 5-bit value per channel, and the order in which the sixteen
+// cells of each 4 x 4 tile step up as the ramp rises was recovered by
+// comparing every caption pixel with its neighbours over the ramp. The steps
+// group exactly as a recursive Bayer matrix's do — the even-even cells first,
+// then the odd-odd, then the even-column odd-row, then the odd-column
+// even-row — and within each group the diagonal pairs fall as the rows below
+// say, which is the 4 x 4 Bayer matrix transposed and displaced two cells
+// (the order inside each diagonal pair the reference ties, the screenshot's
+// 215-colour palette having merged neighbouring colours; the two readings
+// differ there alone). THE PHASE IS THE SCREEN'S: the reference's caption
+// begins on a screen row of phase 3 and its pattern follows the screen's rows,
+// not the window's, as a display driver's dither does. Here the lattice starts
+// at the caption's top-left cell, which is the window's origin — the
+// screen's own on the tablet and on the maximised laptop window.
+// `kCaptionDitherRank[row & 3][col & 3]` is a cell's rank, 0 stepping first;
+// its threshold is (rank + 0.5) / 16 of one 5-bit step.
+//
+// THE CELL IS ONE WINDOWS PX (architect 2026-10-05): the matrix indexes
+// Windows-px cells, cell k covering device columns [scaled_px(k),
+// scaled_px(k + 1)) from the caption's left edge and its rows likewise —
+// rounded at the element, the unit's rule — so the pattern is the reference's
+// at every gui_scale (about 2.75 device px a cell on the tablet, 1 or 2 on
+// the laptop). The ramp's parameter is the cell's index over the last cell's,
+// so the first cell takes the start colour and the last the end, each then
+// dithered like any other.
+//
+// A FLAT CAPTION (end equal to start — Windows 95's, and every theme that
+// records no gradient end, theme_file.h's flat-caption rule) IS ONE SOLID FILL
+// OF THE EXACT COLOUR, unquantised: Windows 95 drew its caption in the
+// recorded colour, a solid colour needs no dither to show without bands, and
+// the built-in navy stays #000080.
+//
+// OPAQUE AND NOTHING BLENDED: each cell is one of the quantised colours,
+// written as words into an image (argb32_opaque_word's road, the plate's
+// precedent) and laid on the caption whole. The image is kept between paints
+// and rebuilt only when the caption's size, the scale or either colour moves,
+// since the top strip's damage repaints the caption often and its ramp seldom
+// changes.
+namespace {
+constexpr int kCaptionDitherRank[4][4] = {
+    { 3, 15,  0, 12},
+    {11,  7,  8,  4},
+    { 1, 13,  2, 14},
+    { 9,  5, 10,  6},
+};
+
+// One channel's 8-bit value `v` at a cell of rank `rank`: five bits under the
+// dither, bit-replicated back to eight.
+uint32_t caption_dither_channel(double v, int rank) {
+    const double level = v * 31.0 / 255.0 + (rank + 0.5) / 16.0;
+    const int q = std::clamp(static_cast<int>(std::floor(level)), 0, 31);
+    return static_cast<uint32_t>((q << 3) | (q >> 2));
+}
+
+struct CaptionGradientImage {
+    cairo_surface_t* surface = nullptr;
+    int              w = 0, h = 0, percent = 0;
+    uint32_t         start = 0, end = 0;
+};
+CaptionGradientImage g_caption_gradient;
+} // namespace
+
+void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
+                            GuiColor end) {
+    if (r.w <= 0 || r.h <= 0) return;
+    const uint32_t start_word = argb32_opaque_word(start);
+    const uint32_t end_word   = argb32_opaque_word(end);
+    if (start_word == end_word) {
+        paint_cell_rect(cr, r, start);
+        return;
+    }
+    CaptionGradientImage& img = g_caption_gradient;
+    if (!img.surface || img.w != r.w || img.h != r.h ||
+        img.percent != gui_scale_percent() || img.start != start_word ||
+        img.end != end_word) {
+        if (img.surface) cairo_surface_destroy(img.surface);
+        img = CaptionGradientImage{
+            cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h), r.w,
+            r.h, gui_scale_percent(), start_word, end_word};
+        cairo_surface_flush(img.surface);
+        unsigned char* data = cairo_image_surface_get_data(img.surface);
+        const int stride = cairo_image_surface_get_stride(img.surface);
+        int cols = 0;
+        while (scaled_px(cols) < r.w) ++cols;
+        const double s[3] = {start.r * 255.0, start.g * 255.0, start.b * 255.0};
+        const double e[3] = {end.r * 255.0, end.g * 255.0, end.b * 255.0};
+        for (int j = 0; scaled_px(j) < r.h; ++j) {
+            const int y0 = scaled_px(j);
+            const int y1 = std::min(scaled_px(j + 1), r.h);
+            for (int k = 0; k < cols; ++k) {
+                const int x0 = scaled_px(k);
+                const int x1 = std::min(scaled_px(k + 1), r.w);
+                const double t = cols > 1 ? static_cast<double>(k) / (cols - 1)
+                                          : 0.0;
+                const int rank = kCaptionDitherRank[j & 3][k & 3];
+                uint32_t word = UINT32_C(0xFF000000);
+                for (int c = 0; c < 3; ++c)
+                    word |= caption_dither_channel(s[c] + (e[c] - s[c]) * t,
+                                                   rank)
+                            << (16 - 8 * c);
+                for (int y = y0; y < y1; ++y) {
+                    uint32_t* row =
+                        reinterpret_cast<uint32_t*>(data + y * stride);
+                    for (int x = x0; x < x1; ++x) row[x] = word;
+                }
+            }
+        }
+        cairo_surface_mark_dirty(img.surface);
+    }
+    cairo_save(cr);
+    cairo_set_source_surface(cr, img.surface, r.x, r.y);
+    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+// -- THE SIZING FRAME (architect 2026-10-05; the rule at the declaration) ----
+
+int window_frame_px() {
+    return 2 * relief_line_px() +
+           scaled_px(kWindowFramePx - 2 * kReliefLinePx, 0);
+}
+
+void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
+                               int frame_px) {
+    if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
+    const int f = frame_px;
+    // The ground across the band, then the window's raised edge on its outer
+    // two lines.
+    paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, palette().ground);
+    paint_cell_rect(cr, GuiRect{0, surface_h - f, surface_w, f},
+                    palette().ground);
+    paint_cell_rect(cr, GuiRect{0, f, f, surface_h - 2 * f}, palette().ground);
+    paint_cell_rect(cr, GuiRect{surface_w - f, f, f, surface_h - 2 * f},
+                    palette().ground);
+    paint_relief_plain_raised(cr, GuiRect{0, 0, surface_w, surface_h});
+}
+
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
     const int lw = relief_line_px();
     cairo_save(cr);

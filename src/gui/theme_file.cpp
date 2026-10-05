@@ -34,6 +34,11 @@ constexpr bool role_names_unique() {
     return true;
 }
 static_assert(role_names_unique());
+// Every flat-caption pair names two roles of the table.
+static_assert(std::ranges::all_of(kGuiThemeCaptionGradients,
+                                  [](const GuiThemeGradientPair& p) {
+    return p.start < kGuiThemeRoleCount && p.end < kGuiThemeRoleCount;
+}));
 static_assert(is_theme_key_spelling(kBuiltinThemeKey));
 // The device config's default `theme` is the built-in (its initializer spells
 // the key; both templates stamp a default-constructed struct's).
@@ -47,14 +52,17 @@ std::map<std::string, GuiThemeWords, std::less<>> g_loaded_themes;
 constexpr std::string_view kThemeSuffix = ".theme";
 
 // ONE FILE under the grammar (theme_file.h's head), its stem already judged:
-// the built-in's words, each role the file names overwritten.
+// the built-in's words, each role the file names overwritten, then THE FLAT
+// CAPTION's rule over what it named.
 std::expected<GuiThemeWords, std::string> read_theme_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
     if (!f) return std::unexpected(std::string("could not open the file"));
     GuiThemeWords words = kBuiltinWords;
+    std::array<bool, kGuiThemeRoleCount> named{};
     auto scan = warptempo_settings::scan_key_value_file(
-        f, [&words](int ln, const std::string& role, const std::string& value)
+        f, [&words, &named](int ln, const std::string& role,
+                            const std::string& value)
                   -> std::expected<void, std::string> {
         const std::size_t i = theme_role_index(role);
         if (i == kGuiThemeRoleCount) {
@@ -69,10 +77,14 @@ std::expected<GuiThemeWords, std::string> read_theme_file(
                     "names");
         }
         words[i] = *w;
+        named[i] = true;
         return {};
         // NO ROLE IS REQUIRED: a file may name only some (the head).
     }, std::span<const char* const>{});
     if (!scan) return std::unexpected(std::move(scan.error()));
+    // A START WITHOUT ITS END IS A FLAT CAPTION (the head's rule).
+    for (const GuiThemeGradientPair& p : kGuiThemeCaptionGradients)
+        if (named[p.start] && !named[p.end]) words[p.end] = words[p.start];
     return words;
 }
 

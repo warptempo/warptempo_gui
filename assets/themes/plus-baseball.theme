@@ -12,3 +12,7 @@ clock_ground=#D0A870
 clock_text=#000000
 card_ground=#E1E0D2
 card_text=#800000
+caption_active=#FF0000
+caption_active_text=#FFFFFF
+caption_inactive=#A07038
+caption_inactive_text=#D0A870

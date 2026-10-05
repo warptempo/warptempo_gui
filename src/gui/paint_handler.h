@@ -733,13 +733,13 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE RULER LANE (top lane 3): the timestamp ladder and its ticks. Reads the
+    // THE RULER LANE (top lane 4): the timestamp ladder and its ticks. Reads the
     // DISPLAYED plate basis, so it re-derives on every pan/zoom along with the
     // strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);
-    // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
+    // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
     // flat sampled ground, the three menu anchors flush left and the battery +
-    // clock legend flush right), the ICON ROW (top lane 1, row 4: the
+    // clock legend flush right), the ICON ROW (top lane 2, row 4: the
     // twenty-six view/mode/action buttons and their separators, no border of
     // its own since 2026-10-01, every button painted on every frame), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom lane 0, the strip's ONE
@@ -762,6 +762,17 @@ private:
     // after them touches their lanes, the flag cache being transparent there.
     void paint_menu_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
+    // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
+    // Windows 95 record at render.h's kCaptionHeightPx): the gradient in the
+    // caption roles of the window's activation (GuiPlatform::caption_active),
+    // the app's icon, the title — "<piece> - Warptempo", or "Warptempo"
+    // where no piece is open — in Roboto Bold cut with "..." before the
+    // buttons, and the three caption buttons, whose rects and enabled bits it
+    // PUBLISHES into app.caption_buttons (as painted, the roster's coverage
+    // gate) for the press claim (claim_caption_press, input_pointer.cpp).
+    // Audio-independent like the rows above and called beside them, gated on
+    // its own exposure.
+    void paint_caption_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29): the monospace clock at
     // the lane's left pad in a status panel with THE STATE LINE on the ground
