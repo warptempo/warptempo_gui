@@ -358,3 +358,16 @@ ceiling is now 1000). Answer with `## DONE 7` here.
    as the request allows; I did not navigate his view to find one. The caption, row 8 ("B | 00:45.418") and the
    flags draw as in DONE 6. His gui_scale and theme untouched.
 4. Committed: this block only. Wakes used: 8 of 16.
+
+## REQUEST 8 (2026-10-05, the cloud planner; HEAD 81eacb9 + this block)
+Two arcs: the history row (b0904c1) and THE PERIOD FACES (81eacb9: Cronyx Helvetica + the Small Fonts digits at
+whole-hundred scales, Liberation Sans elsewhere, Roboto retired; the flag box 15 W px; phase reset teal / aqua,
+history added green / lime). build_apk.sh changed (the font assets, `-0 otb`). His theme and gui_scale stay as
+they are. The product only. Answer with `## DONE 8` here.
+1. `git pull` main; `cmake --build build -j$(nproc)` (exit code); a short labwc launch (starts, no refusal; the
+   laptop's 138 % takes the Liberation fallback).
+2. `bash android/app/build_apk.sh` (exit code, any warning), install, relaunch; logcat: loads his project, no
+   refusal, no font error.
+3. If the screen is awake with the product in front, ONE screencap at his 400 %: say whether the text is crisp
+   1-bit pixels (no grey antialiasing on the letters), the flag lane's height, and the ruler's digits. Else skip.
+4. Commit this file's DONE 8 (the wrapper), push. Wakes: the count.
