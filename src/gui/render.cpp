@@ -905,22 +905,16 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
 // See render.h for the full rationale (the UNIFIED displayed basis — the
 // painter decides against the committed viewport and the hit sites read what
 // it publishes, the event-sync ruling; the quantized-span denominator; the
-// EOF-wall clamp; and the side-aware bridge sentinels).
+// EOF-wall clamp; and the clip that slides an end off the edge).
 
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
                                   int wave_w) {
     TrimBoundColumn out;
     out.ms = displayed_ms;
-    // The unrounded verdict — both in_viewport AND the offscreen SIDE come from
-    // this one compare, so col_raw's rounding seam (a barely-off-left ms rounding
-    // to col_raw == 0) never decides the side.
-    const bool at_or_past_left = displayed_ms >= static_cast<double>(vp_start);
-    const bool before_right    = displayed_ms <  static_cast<double>(vp_end);
-    out.in_viewport = at_or_past_left && before_right;
-    out.side = out.in_viewport ? TrimBoundSide::InView
-             : (at_or_past_left ? TrimBoundSide::OffRight
-                                : TrimBoundSide::OffLeft);
+    // The unrounded verdict: a bound in [vp_start, vp_end) is in view.
+    out.in_viewport = displayed_ms >= static_cast<double>(vp_start) &&
+                      displayed_ms <  static_cast<double>(vp_end);
     // The painters' quantized-span denominator: (vp_end - vp_start)/wave_w,
     // where vp_end itself was derived as vp_start + wave_w·q
     // (viewport_end_sample), so this is q exactly.
@@ -928,42 +922,26 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
     const double samples_per_pixel = span / static_cast<double>(wave_w);
     // The one rounding, on the caller's UNIFIED displayed basis (this file's
     // header block above): displayed_column_at, warp_frame_map_view.h.
-    out.col_raw = displayed_column_at(displayed_ms,
-                                      static_cast<double>(vp_start),
-                                      samples_per_pixel);
-    out.col = out.col_raw;
-    if (wave_w > 0)
+    out.col = displayed_column_at(displayed_ms,
+                                  static_cast<double>(vp_start),
+                                  samples_per_pixel);
+    // THE EOF-WALL CLAMP, an IN-VIEW bound's alone (render.h): its rounding
+    // can reach grid point wave_w, and the clamp keeps its button whole. An
+    // offscreen bound keeps its own column, so its button stands where the
+    // bound is and the lane's clip cuts it (architect 2026-10-05).
+    if (out.in_viewport && wave_w > 0)
         out.col = std::clamp(out.col, 0, wave_w - 1);
     return out;
 }
 
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
-                              const TrimBoundColumn& end, int endcap_w,
-                              int wave_w) {
-    // Contract (4x2 table) at the declaration. A PAINTED (InView) handle bounds the
-    // gap at its inner edge (inset by endcap_w — the room the handle occupies); an
-    // OFFSCREEN bound paints no handle, so the bar runs FLUSH. The offscreen arms
-    // key on the bound's SIDE (not col_raw, which cannot tell the side across the
-    // rounding seam), and use side-specific SENTINELS so an offscreen edge lands
-    // STRICTLY past the visible range — never col 0 / col wave_w-1 — which is what
-    // makes the flush fill AND the offscreen ring-border clip hold.
+                              const TrimBoundColumn& end, int endcap_w) {
+    // Contract at the declaration: the gap runs between the two buttons'
+    // inner edges, wherever the buttons stand — on screen, part on it, or
+    // past either edge (architect 2026-10-05).
     TrimBridgeGap g;
-    switch (begin.side) {
-        case TrimBoundSide::InView:
-            g.lo = begin.col + endcap_w; break;
-        case TrimBoundSide::OffLeft:
-            g.lo = std::min(begin.col_raw, -1); break;      // strictly < 0
-        case TrimBoundSide::OffRight:
-            g.lo = std::max(begin.col_raw, wave_w); break;  // >= wave_w -> empty
-    }
-    switch (end.side) {
-        case TrimBoundSide::InView:
-            g.hi = end.col - endcap_w + 1; break;
-        case TrimBoundSide::OffRight:
-            g.hi = std::max(end.col_raw + 1, wave_w + 1); break;  // > wave_w
-        case TrimBoundSide::OffLeft:
-            g.hi = std::min(end.col_raw + 1, 0); break;           // <= 0 -> empty
-    }
+    g.lo = begin.col + endcap_w;
+    g.hi = end.col - endcap_w + 1;
     return g;
 }
 
@@ -984,15 +962,19 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
     GuiRect r;
     // Begin left-edge-anchored (rect left ON the begin column); end
     // right-edge-anchored (rightmost pixel ON the end column), so each bound's
-    // button stands on the column the bound occupies — UNLESS BOTH ARE IN
-    // VIEW AND THE DRAWN WIDTH IS UNDER TWO BUTTONS (architect 2026-10-03):
-    // then the begin keeps its column and the end button stands edge to edge
-    // right of it, the right arrow alone overrunning its column by
-    // 2 x btn_w − span. The rect is the BUTTON over the trim lane `row`'s
-    // whole height — the painted face and the hit band at once.
-    const int span = end.col - begin.col + 1;
-    const bool narrow = begin.in_viewport && end.in_viewport &&
-                        span < 2 * btn_w;
+    // button stands on the column the bound occupies — UNLESS THE DRAWN WIDTH
+    // IS UNDER TWO BUTTONS (architect 2026-10-03): then the begin keeps its
+    // column and the end button stands edge to edge right of it, the right
+    // arrow alone overrunning its column by 2 x btn_w − span. THE RULE READS
+    // THE COLUMNS WHEREVER THEY ARE, on screen or off (architect 2026-10-05):
+    // a narrow window panned past an edge keeps its two buttons edge to edge
+    // and slides off whole, never re-seating the end button as the begin
+    // leaves the view. The span is 64-bit: two far offscreen columns on
+    // opposite sides can pass an int's range. The rect is the BUTTON over
+    // the trim lane `row`'s whole height — the painted face and the hit band
+    // at once, before the lane's clip.
+    const int64_t span = static_cast<int64_t>(end.col) - begin.col + 1;
+    const bool narrow = span < 2 * static_cast<int64_t>(btn_w);
     if (is_begin)
         r.x = strip_x + begin.col;
     else
@@ -1058,10 +1040,10 @@ void render_trim_flags(cairo_t* cr,
     if (viewport_end_sample <= viewport_start_sample) return;
     if (waveform_area.w <= 0) return;
 
-    // Both bounds resolve through the ONE shared column owner:
-    // .col is the clamped column, .side the offscreen verdict. The
-    // bar spans between them even when a bound is culled, so the columns are
-    // computed unconditionally.
+    // Both bounds resolve through the ONE shared column owner: .col is the
+    // bound's column, an offscreen one past the lane's edge. The bar spans
+    // between them wherever they stand, so the columns are computed
+    // unconditionally.
     const TrimBoundColumn bc = trim_bound_column(
         static_cast<double>(trim.begin), viewport_start_sample,
         viewport_end_sample, waveform_area.w);
@@ -1088,23 +1070,21 @@ void render_trim_flags(cairo_t* cr,
 
     // THE BODY — the thumb between its two arrow buttons, the ground under a
     // PLAIN RAISED edge, the lane's full height (Windows' scroll-bar thumb;
-    // no grip). An IN-VIEW side stops at its button's inner edge, the
-    // bridge's own interval (trim_bridge_gap, the one owner, so the painted
-    // body and the published bridge are one number) — empty in the narrow
-    // case (architect 2026-10-03). An OFFSCREEN side FOLLOWS ITS BOUND past
-    // that window edge by its whole edge's thickness, so the body's side edge
-    // lands outside the clip above and it reads as running on; the clamped
-    // column stands for the far bound of a window wholly off one side, as it
-    // did for the thumb before the buttons.
+    // no grip). Each side stops at its button's inner edge, the bridge's own
+    // interval (trim_bridge_gap, the one owner, so the painted body and the
+    // published bridge are one number) — empty in the narrow case (architect
+    // 2026-10-03) — WHEREVER THE BUTTON STANDS (architect 2026-10-05): a
+    // button sliding off an edge takes the body's side edge with it, the clip
+    // above cutting both, so the bar never grows into a button's room. A side
+    // whose edge lies farther off than the edge's own thickness (two relief
+    // lines) is held there, outside the clip, which keeps the rect's
+    // coordinates in cairo's range at any zoom; a window wholly off one side
+    // paints no body.
     const int btn_w = trim_arrow_button_w_px();
-    const TrimBridgeGap gap = trim_bridge_gap(bc, ec, btn_w, lane_w);
+    const TrimBridgeGap gap = trim_bridge_gap(bc, ec, btn_w);
     const int run = 2 * relief_line_px();
-    const int body_lo = bc.side == TrimBoundSide::OffLeft ? -run
-                      : bc.side == TrimBoundSide::InView  ? gap.lo
-                                                          : bc.col;
-    const int body_hi = ec.side == TrimBoundSide::OffRight ? lane_w + run
-                      : ec.side == TrimBoundSide::InView   ? gap.hi
-                                                           : ec.col + 1;
+    const int body_lo = std::max(gap.lo, -run);
+    const int body_hi = std::min(gap.hi, lane_w + run);
     if (body_hi > body_lo) {
         const GuiRect body{lane_x + body_lo, lane_y, body_hi - body_lo,
                            lane_h};
@@ -1117,7 +1097,10 @@ void render_trim_flags(cairo_t* cr,
     // published for the hit as painted — each cut to the lane's painted
     // width, the clip the pixels take, so a button overrunning the lane
     // claims its visible columns alone and the inert gutter claims nothing.
-    // A culled bound paints and publishes no button: it is off screen.
+    // A BUTTON SLIDES OFF THE EDGE (architect 2026-10-05): it paints while
+    // any of its columns is on the lane, clipped there, whether or not its
+    // bound is in view, and one the clip empties paints and publishes
+    // nothing.
     const auto lane_cut = [&](GuiRect r) {
         const int lo = std::max(r.x, lane_x);
         const int hi = std::min(r.x + r.w, lane_x + lane_w);
@@ -1125,17 +1108,17 @@ void render_trim_flags(cairo_t* cr,
         r.w = std::max(0, hi - lo);
         return r;
     };
-    if (bc.in_viewport) {
-        const GuiRect r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
-        paint_trim_arrow_button(cr, r, /*points_left=*/true,
+    const GuiRect begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
+    if (lane_cut(begin_r).w > 0) {
+        paint_trim_arrow_button(cr, begin_r, /*points_left=*/true,
                                 pressed == TrimPressedCap::Begin);
-        if (out_hit) out_hit->begin = {true, lane_cut(r)};
+        if (out_hit) out_hit->begin = {true, lane_cut(begin_r)};
     }
-    if (ec.in_viewport) {
-        const GuiRect r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
-        paint_trim_arrow_button(cr, r, /*points_left=*/false,
+    const GuiRect end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
+    if (lane_cut(end_r).w > 0) {
+        paint_trim_arrow_button(cr, end_r, /*points_left=*/false,
                                 pressed == TrimPressedCap::End);
-        if (out_hit) out_hit->end = {true, lane_cut(r)};
+        if (out_hit) out_hit->end = {true, lane_cut(end_r)};
     }
 
     // THE BRIDGE'S PUBLICATION is the body between the two buttons' inner

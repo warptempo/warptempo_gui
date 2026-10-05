@@ -3737,7 +3737,35 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const double t = static_cast<double>(k) * static_cast<double>(step);
         return static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
     };
-    for (int64_t k = first_step; ; ++k) {
+    // A label starts this far right of its major's column: the tick's own
+    // width plus 2 Windows px (the rule at the label's paint below).
+    const int label_dx = waveform_line_px() + scaled_px(2);
+    // THE LABELS SLIDE IN AND OUT AT BOTH EDGES (architect 2026-10-05, "like
+    // the marker flags and their text"): a label is the clip's to cut, never
+    // the walk's to drop. A label runs RIGHTWARD from its major, so a major
+    // LEFT of the view can still reach into it; the walk therefore starts at
+    // the earliest major whose label, measured on the face it is drawn in,
+    // still reaches column 0 (first_step's own major stands at or left of
+    // column 0, so it is always walked). At the RIGHT a major past end_ms has
+    // its label wholly past the view, so the break below drops nothing
+    // visible.
+    int64_t k_first = first_step;
+    while (k_first > 0) {
+        const int64_t prev = k_first - 1;
+        const text_shape::ShapedRun prev_run = text_shape::shape_text_run(
+            font, ruler_label_text(prev * step, step).c_str());
+        if (major_col(prev) + label_dx + prev_run.width_px <= 0.0) break;
+        k_first = prev;
+    }
+    // THE WALK'S CLIP: the waveform's columns [0, wave_w), the flags' own
+    // (render.cpp, clip_to_waveform_columns), over the lane and the ticks'
+    // descent — so a label is cut at the window's left edge and at the last
+    // column exactly as a flag's text is, and the leftover strip a
+    // non-multiple-of-16 window leaves beside wave_w carries no digit.
+    cairo_save(cr);
+    cairo_rectangle(cr, lane.x, lane.y, wave_w, tick_bottom - lane.y);
+    cairo_clip(cr);
+    for (int64_t k = k_first; ; ++k) {
         const double step_ms = static_cast<double>(k) * static_cast<double>(step);
         if (step_ms > end_ms) break;
         const int mx    = major_col(k);
@@ -3745,14 +3773,17 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         for (int i = 0; i < kRulerMinorsPerStep; ++i) {
             // THE INTEGER COMB, and the only culling test there is: a tick is at
             // its distributed column or it is offscreen. The old float-time
-            // pre-filter went with the float positions it filtered.
+            // pre-filter went with the float positions it filtered. THE TEST
+            // CULLS THE TICK ALONE: a major's label paints whether or not its
+            // tick is on the lane (the walk's start above), the clip cutting it.
             const int col = (i == 0)
                 ? mx
                 : mx + static_cast<int>(std::nearbyint(
                       static_cast<double>(i) * static_cast<double>(seg_w) /
                       static_cast<double>(kRulerMinorsPerStep)));
-            if (col < 0 || col >= wave_w) continue;
             const bool major = (i == 0);
+            const bool tick_on_lane = col >= 0 && col < wave_w;
+            if (!tick_on_lane && !major) continue;
             // waveform_line_px() wide (render.h, the class's one inventory),
             // left edge on the tick's own column, clipped at the right edge.
             // EVERY TICK IS ETCHED (architect 2026-10-02, the Sonic Foundry
@@ -3761,11 +3792,15 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // rows, drawn right after it, so the labels, the head, the flags
             // and the stems cover the pair wherever they cover the tick.
             const int tick_top = major ? major_top : minor_top;
-            set_palette_source(cr, palette().shadow);
-            fill_waveform_line(cr, lane.x, wave_w, col, tick_top, tick_bottom);
-            set_palette_source(cr, palette().hilight);
-            fill_waveform_line(cr, lane.x, wave_w, col + waveform_line_px(),
-                               tick_top, tick_bottom);
+            if (tick_on_lane) {
+                set_palette_source(cr, palette().shadow);
+                fill_waveform_line(cr, lane.x, wave_w, col, tick_top,
+                                   tick_bottom);
+                set_palette_source(cr, palette().hilight);
+                fill_waveform_line(cr, lane.x, wave_w,
+                                   col + waveform_line_px(), tick_top,
+                                   tick_bottom);
+            }
             if (!major) continue;
             // The label starts past its major tick's own width plus 2 Windows
             // px — the etched Hilight line beside the tick and one px of air
@@ -3793,11 +3828,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             set_palette_source(cr, palette().label);
             text_shape::show_shaped_run(cr, run,
                                         static_cast<double>(lane.x + col +
-                                                            waveform_line_px() +
-                                                            scaled_px(2)),
+                                                            label_dx),
                                         baseline);
         }
     }
+    cairo_restore(cr);
 
     // -- THE PLAYHEAD HEAD AND ITS MARKER-LANE COLUMN --------------------------
     //
@@ -4498,8 +4533,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     const GuiRect wave_rect{area.x, area.y, basis.area_w, area.h};
 
     // ONE HALF ONLY since 2026-08-01: the waveform stem pass is deleted, so
-    // this is the strip's bar + endcaps (with the side-aware offscreen
-    // sentinels and the effective-width clip inside render_trim_flags).
+    // this is the strip's bar + endcaps (with the effective-width clip that
+    // slides them off the lane's edges inside render_trim_flags).
     //
     // The trim bar lane's y-band is THREADED IN as top_trim_row_area(app)
     // rather than re-derived inside the painter, and the painter publishes the

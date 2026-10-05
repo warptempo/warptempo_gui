@@ -17747,7 +17747,8 @@ enum class TrimHit { None, Begin, End };
 // ONE rect owner render_trim_flags paints and publishes from. THE HIT RECT IS
 // THE BUTTON, with no tolerance, and the two never overlap. Tests both
 // mouse_x and mouse_y, the y against the lane the thumb was painted in. A
-// culled bound published no button and answers nothing; cold (nothing
+// button sliding off an edge answers on its visible columns alone (architect
+// 2026-10-05) and one wholly off the lane published none and answers nothing; cold (nothing
 // painted) answers None. The two buttons and the thumb's body between them
 // (the bridge span) are the ONLY trim grab handles (the waveform stem grab
 // retired).
@@ -17773,8 +17774,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 // paints the bar nor answers true here. Nothing is re-derived on the store's
 // pair.
 //
-// THE ARROW BUTTONS ARE NOT IN IT: trim_bridge_gap insets each in-view end by
-// a painted button's width, so the button rects sit outside the interval and
+// THE ARROW BUTTONS ARE NOT IN IT: trim_bridge_gap insets each end by its
+// button's width, so the button rects sit outside the interval and
 // this needs no reliance on a caller testing the buttons first. Both bounds are always set (the trim window
 // always rests), so there is no pair gate.
 bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);

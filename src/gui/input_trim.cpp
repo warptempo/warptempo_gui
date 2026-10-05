@@ -764,11 +764,14 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // through the last fully-visible pixel) so the drag can't push it
     // offscreen, where its precise location would be hidden. The cursor column
     // is already viewport-bound, but a grab a few pixels off the endcap can
-    // trail the bound past the edge; this makes the bound itself exact. The
-    // grab can only begin on a visible bound (hit_test_trim_endcap tests the
-    // endcaps the painter published, and a culled bound publishes none), so
-    // this is a live tracking clamp, not a
-    // correction for an offscreen grab. The bounds are active-domain while
+    // trail the bound past the edge; this makes the bound itself exact. THE
+    // GRAB CAN BEGIN ON A BOUND JUST OFF SCREEN (architect 2026-10-05): a
+    // button sliding off an edge is grabbed by its visible columns
+    // (hit_test_trim_endcap tests what the painter published), its bound up
+    // to a button's width past that edge — so the clamp's edge on that side
+    // widens to the bound's own resting frame, the drag never pushing it
+    // farther off than it began and never pulling it in by a jump at the
+    // first motion. The bounds are active-domain while
     // src_frame is source, so inverse-translate the edges through the DISPLAYED
     // paint basis (the same map the tracked bound rode above; monotonic, so the
     // source clamp matches the active-pixel one).
@@ -779,14 +782,17 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         map_target_to_source(static_cast<double>(vb.first), dmap));
     const int64_t vp_hi = snap_authored_frame(
         map_target_to_source(static_cast<double>(vb.second), dmap));
-    if (src_frame < vp_lo) src_frame = vp_lo;
-    if (src_frame > vp_hi) src_frame = vp_hi;
+    const int64_t lo = std::min(vp_lo, app.trim_drag.orig_frame);
+    const int64_t hi = std::max(vp_hi, app.trim_drag.orig_frame);
+    if (src_frame < lo) src_frame = lo;
+    if (src_frame > hi) src_frame = hi;
 
     // Structural wall, applied AFTER the viewport clamp so the wall wins
     // where both bind (matching the marker-drag model where structural walls
     // compose with the viewport gate): both bounds clamp to frame EOF-1, the
     // unified authored domain. The floor 0 is already held by the
-    // viewport clamp (the visible strip starts at or after frame 0), so the 0.0
+    // viewport clamp (the visible strip starts at or after frame 0, and a
+    // resting bound is never negative), so the 0.0
     // format-representability floor holds by construction here.
     const int64_t wall_hi = audio.total_frames() - 1;
     if (src_frame > wall_hi) src_frame = wall_hi;

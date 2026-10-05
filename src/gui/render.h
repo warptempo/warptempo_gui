@@ -2356,29 +2356,23 @@ void render_strip_anchor_stem(cairo_t* cr,
 // published stash now carries for free.
 //
 // EOF-WALL CLAMP (the one copy, formerly installed at three sites at once):
-// `col` clamps col_raw into the visible column range [0, wave_w-1]. The
-// inclusive END wall T-1 at full zoom-out rounds to column wave_w (one past the
-// surface); left unclamped, the right-edge-anchored end CAP loses its
+// an IN-VIEW bound's `col` clamps into the visible column range [0, wave_w-1].
+// The inclusive END wall T-1 at full zoom-out rounds to column wave_w (one
+// past the surface); left unclamped, the right-edge-anchored end CAP loses its
 // bound-edge pixel to the lane clip. Clamping lands the wall on the last
 // visible column so the cap stays fully visible on the bar's end.
 // Begin/frame-0 already maps to column 0, unaffected.
-// The bridge interval (trim_bridge_gap) reads an OFFSCREEN bound's SIDE (below)
-// to pick a side-specific flush sentinel past the visible edge, and the painter
-// clips its DRAWN extent to the effective width [0, wave_w) so the bar's runs
-// stop flush at the edge (the inert gutter never paints; col_raw is the
-// sentinel input, not the drawn position).
-// Which side of the viewport an OFFSCREEN bound lies on — meaningful only when
-// !in_viewport. Derived from the SAME unrounded ms compare that sets in_viewport,
-// NOT from col_raw: a bound less than half a pixel off the LEFT rounds to
-// col_raw == 0 yet is off-screen, so col_raw alone cannot tell the side (the
-// rounding seam). trim_bridge_gap needs the true side to flush/empty correctly.
-enum class TrimBoundSide { InView, OffLeft, OffRight };
+// AN OFFSCREEN BOUND KEEPS ITS OWN COLUMN, past the edge (architect
+// 2026-10-05, "it slides off the edge, clipped, like any other content"): its
+// button stands where the bound is and the lane's clip cuts it, so a panned
+// end leaves the view column by column instead of vanishing whole with the
+// body growing into its room. The painter clips everything it draws to the
+// effective width [0, wave_w), so the inert gutter never paints.
 struct TrimBoundColumn {
-    double        ms;          // displayed-domain position (already mapped)
-    bool          in_viewport; // ms in [vp_start, vp_end)
-    TrimBoundSide side;        // InView / OffLeft / OffRight (unrounded)
-    int           col_raw;     // unclamped nearbyint column
-    int           col;         // clamped into [0, wave_w-1] (the EOF-wall clamp)
+    double ms;          // displayed-domain position (already mapped)
+    bool   in_viewport; // ms in [vp_start, vp_end), the unrounded verdict
+    int    col;         // the bound's column; clamped into [0, wave_w-1]
+                        // in view (the EOF-wall clamp), raw off it
 };
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
@@ -2388,54 +2382,28 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // half-open, EMPTY when hi <= lo), the ONE owner of the bridge, run by the
 // painter (render_trim_flags) alone: the clipped interval is what the painter
 // PUBLISHES as the pair drag's handle (TrimBarHit::bridge_lo / bridge_hi,
-// read by point_in_trim_bridge_span) — and the painter's BODY wherever a
-// bound is in view: the thumb's body between its two arrow buttons' inner
-// edges (an offscreen side of the body runs past the window edge as the
-// painter states). Both bounds must be set (callers gate). The
-// offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
-// verdict) — NOT col_raw, which cannot tell the side across the rounding seam
-// (a barely-off-left bound rounds to col_raw == 0). The 4x2 semantics:
-//   BEGIN — the gap's LEFT edge, a left-edge-anchored button:
-//     InView (button painted) -> lo = col + endcap_w         (the drawn button's
-//        inner RIGHT edge; the gap starts just past the button).
-//     OffLeft (no button)   -> lo = min(col_raw, -1)        (a STRICTLY NEGATIVE
-//        flush sentinel: the fill clips flush to column 0 AND the left ring border
-//        lands offscreen — true only via the sentinel; raw col_raw == 0 would
-//        float the border at the edge).
-//     OffRight (no button)  -> lo = max(col_raw, wave_w)     (>= wave_w: nothing
-//        paints in the visible [0, wave_w) and the router's [0, wave_w) gate can
-//        never arm — an empty gap in the visible area).
-//   END — the gap's RIGHT edge, a right-edge-anchored button:
-//     InView (button painted) -> hi = col - endcap_w + 1      (the drawn button's
-//        inner LEFT edge, exclusive; in the NARROW case, where the painter
-//        stands the end button right of the begin's instead, this is under
-//        lo whenever the begin is in view too, so the gap is empty, as the
-//        body is).
-//     OffRight (no button)  -> hi = max(col_raw + 1, wave_w + 1)  (a PAST-THE-EDGE
-//        flush sentinel: the fill clips flush to the right edge AND the right ring
-//        border lands offscreen).
-//     OffLeft (no button)   -> hi = min(col_raw + 1, 0)      (<= 0: empty against
-//        any lo >= 0 — closes the one-pixel bridge a raw col_raw == 0 left, which
-//        gave hi = 1 and painted/accepted a column-0 sliver for a window wholly
-//        left of the viewport).
-// The +endcap_w inset is the ROOM an on-screen bound's arrow button —
-// trim_arrow_button_w_px() wide — occupies; an offscreen bound has no button
-// on screen, so the inset is dropped and the body runs FLUSH. This interval
-// is returned UNCLAMPED (raw sentinels included) — its role is to carry the
-// offscreen-flush and empty semantics past the visible edge; it is NOT a drawn
-// interval. The painter clamps it to the visible range ONCE: it intersects it
-// with the effective width [0, wave_w) and publishes that clipped interval as
-// the bridge's hit span. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
-// paints nor hits. The sentinels earn their strictness here: an offscreen edge
-// lands STRICTLY past the visible range (never at col 0 or col wave_w-1), so a
-// window running off the view yields a flush interior rather than a spurious
-// one-column one.
+// read by point_in_trim_bridge_span) — and the painter's BODY: the thumb's
+// body between its two arrow buttons' inner edges. Both bounds must be set
+// (callers gate). ONE RULE ON EVERY SIDE (architect 2026-10-05): lo is the
+// begin button's inner RIGHT edge (col + endcap_w) and hi the end button's
+// inner LEFT edge, exclusive (col - endcap_w + 1), whether the button is on
+// screen, part on it or wholly past an edge — so the body slides off with its
+// buttons and never takes their room. In the NARROW case, where
+// trim_endcap_rect stands the end button right of the begin's, hi is under
+// lo and the gap is empty, as the body is; a window wholly off one side is
+// empty or wholly past that edge. The +endcap_w inset is the ROOM a button —
+// trim_arrow_button_w_px() wide — occupies. This interval is returned
+// UNCLAMPED, offscreen columns included; it is NOT a drawn interval. The
+// painter clamps it ONCE per use: the published bridge intersects it with the
+// effective width [0, wave_w), so the inert non-multiple-of-16 gutter
+// [wave_w, strip_w) neither paints nor hits, and the body holds a side that
+// lies farther off than its edge's thickness just outside the clip.
 struct TrimBridgeGap {
     int lo;  // inclusive left column
     int hi;  // exclusive right column (empty gap when hi <= lo)
 };
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
-                              const TrimBoundColumn& end, int endcap_w, int wave_w);
+                              const TrimBoundColumn& end, int endcap_w);
 
 // The source-frame -> displayed-domain mapping of the live trim paint pass
 // (GuiPaintHandler::paint_trim), its one caller since the two HIT sites began
@@ -2454,8 +2422,8 @@ double displayed_trim_ms(int64_t frame,
 
 // The ONE trim ARROW-BUTTON screen-rect owner (named for the endcaps the
 // buttons are): the edge-anchoring rule lives here, run by the painter
-// (render_trim_flags), which paints each in-view bound's button on this rect
-// and publishes it for the hit test (hit_test_trim_endcap reads TrimBarHit,
+// (render_trim_flags), which paints each button on this rect, clipped to the
+// lane, and publishes it for the hit test (hit_test_trim_endcap reads TrimBarHit,
 // below), so paint and hit are one rect.
 //
 // A trim bound is an EDGE, not a point: the begin button's LEFT edge sits ON
@@ -2463,8 +2431,9 @@ double displayed_trim_ms(int64_t frame,
 // edge sits on the end column (rightmost pixel = strip_x + end.col).
 // Deliberate asymmetry vs centered marker flags: a bound at frame 0 / EOF has
 // its button fully onscreen. THE NARROW CASE (architect 2026-10-03): when
-// BOTH bounds are in view and the drawn width end.col − begin.col + 1 is
-// under two buttons, the begin button keeps its column and the END button is
+// the drawn width end.col − begin.col + 1 is under two buttons — the columns
+// read wherever they stand, on screen or off (architect 2026-10-05), so a
+// narrow window slides off an edge as one piece — the begin button keeps its column and the END button is
 // placed IMMEDIATELY RIGHT OF IT, edge to edge (rect left = strip_x +
 // begin.col + the button's width), so the right arrow alone overruns its
 // column, by 2 x the button − the width. The two rects therefore never
@@ -2474,8 +2443,9 @@ double displayed_trim_ms(int64_t frame,
 // THE RECT IS THE BUTTON, trim_arrow_button_w_px() wide (16 Windows px) over
 // the trim lane `row`'s whole height (the same 16), and it is THE HIT BAND
 // AS IT IS — no tolerance inflates it (architect 2026-10-03: the button is
-// the target). `is_begin` picks which bound's button; only an in-view
-// bound's is ever asked for.
+// the target). `is_begin` picks which bound's button. The rect may lie part
+// or wholly past the lane's edge (an offscreen bound keeps its own column,
+// TrimBoundColumn); the painter's clip decides what of it is on screen.
 GuiRect trim_endcap_rect(bool is_begin, int strip_x,
                          const TrimBoundColumn& begin,
                          const TrimBoundColumn& end, GuiRect row);
@@ -2499,8 +2469,9 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
 // in, the y-gate of both hits. Each end (a TrimBarHitCap) is its arrow
 // button's rect (trim_endcap_rect: the button over the lane's whole height,
 // clipped to the lane's painted width, and the hit band as it is — no
-// tolerance), and `painted` is false for a bound the viewport culled, whose
-// button is off screen and so answers no hit. The two rects never overlap
+// tolerance) — a button sliding off an edge publishes its visible columns
+// alone (architect 2026-10-05) — and `painted` is false for a button wholly
+// off the lane, which answers no hit. The two rects never overlap
 // (trim_endcap_rect's narrow rule), so nothing arbitrates between them. The
 // bridge is the half-open interval [bridge_lo, bridge_hi) between the two
 // buttons' inner edges — the thumb's body — already clipped to the lane's
@@ -2537,22 +2508,20 @@ struct TrimBarHit {
 // top-left) — then THE THUMB'S BODY, the ground under a PLAIN RAISED edge,
 // the lane's full height, with no grip, then THE ARROW BUTTONS over it. An
 // inverted or degenerate window leaves the track showing.
-// THE THUMB SPANS THE WINDOW ITSELF and FOLLOWS AN OFFSCREEN BOUND rather
-// than stopping short — an out-of-view bound means the window continues past
-// that edge, so the body runs on past it by its whole edge's thickness (two
-// relief lines), its side edge landing outside the clip, and reads as
-// running on rather than ending at the window. It is the one "this is the
+// THE THUMB SPANS THE WINDOW ITSELF and SLIDES OFF AN EDGE like any other
+// content (architect 2026-10-05): buttons and body keep their own columns
+// past the lane's edge and the clip cuts them, so an out-of-view bound reads
+// as the window running on rather than ending at the view. It is the one "this is the
 // trim window" signal and its body the grab of the pair (bridge) drag.
 // THE TWO ARROW BUTTONS ARE THE CAPS (architect 2026-10-03; the rule at
-// kTrimArrowButtonPx): each in-view bound's button, on the rect
+// kTrimArrowButtonPx): each bound's button, on the rect
 // trim_endcap_rect places — EDGE-ANCHORED on the bound columns, the begin's
 // LEFT edge on its column, the end's RIGHT edge on its own, and in the
 // NARROW case the end's standing right of the begin's — the ground under a
 // plain raised edge with the arrow glyph (kTrimArrowGlyphRows) centred in
 // it, the begin's pointing left and the end's right. THE BODY runs between
-// the buttons' inner edges (trim_bridge_gap's interval for an in-view side),
-// empty in the narrow case. A culled bound paints and publishes no button:
-// it is off screen. A bound is an EDGE, not a point — the deliberate
+// the buttons' inner edges (trim_bridge_gap's interval), empty in the narrow
+// case. A button wholly off the lane paints and publishes nothing. A bound is an EDGE, not a point — the deliberate
 // asymmetry vs centered marker flags — so a bound at frame 0 / EOF shows its
 // button fully onscreen. Column placement is on the displayed viewport basis
 // — `trim.begin` / `trim.end` are already in the displayed domain, so no

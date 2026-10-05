@@ -130,8 +130,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     // item basis and the displayed map, through trim_endcap_rect, each
     // published as its painted rect over the lane's whole height — so a press
     // between a trim write and its repaint grabs the button still on screen,
-    // and a bound the viewport culled, having painted no button, answers
-    // nothing. Nothing here reads app.trim or re-runs the owner chain. Cold
+    // a button sliding off an edge by its visible columns alone, and one
+    // wholly off the lane, having painted nothing, answers nothing. Nothing here reads app.trim or re-runs the owner chain. Cold
     // (nothing painted) nothing is grabbable.
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return TrimHit::None;
