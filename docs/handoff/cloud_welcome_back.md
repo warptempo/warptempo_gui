@@ -111,4 +111,12 @@ FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag fir
   BUTTON (EDGE_RAISED + BF_SOFT) with its stem from the far left, beside today's flat flag (tmp/mock/flag_button.py,
   scratch; the bevelled flag was retired 2026-10-03 as "a cut through a 3D surface" — this variant moves the stem
   out of the face to the box's outer left edge). His Sol run launched (manual codex, his terminal).
+- MEASURED 2026-10-05 on his ACID Pro 3.0 (lossless PNG) and Vegas Audio (JPEG) screenshots (copies in tmp/ref/,
+  gitignored): THE TIME FIELDS are a ONE-LINE SUNKEN field (Shadow top / left, Hilight bottom / right) 17 Windows px
+  tall (ACID 716..732; Vegas 484..500), their digits 9 px tall with 3 px of face above and below, right-aligned
+  3 px in; the toolbar cases beside them 22. Ours: the clock panel takes the buttons' 22, its Roboto Mono 12 gives
+  the SAME 9-px cap, but every character one 7-px cell (the colon, dot and bar too — the anachronism he named).
+  Roboto 13 (the body face) also gives a 9-px cap with TABULAR digits (all 7 px) and 3-px punctuation. MOCKS sent:
+  the clock today vs a 17-px field in Roboto 13 (tmp/mock/clock_350.png), and B2 — the flag button floating in the
+  marker lane, the stem only inside the well under its left edge (tmp/mock/flag_button2.py). His Sol run is alive.
 
