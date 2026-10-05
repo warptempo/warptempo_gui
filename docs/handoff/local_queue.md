@@ -146,3 +146,30 @@ configured theme or colour keys on either device. Answer with `## DONE 2` here.
    (the screen is off, no surface yet). state.json on the tablet byte-identical after the launch. No element chosen
    by touch.
 3. Committed: tools/palette/picker/presets/{picks.txt,state.json}; nothing else. Wakes used: 2 of 8.
+
+## REQUEST 3 (2026-10-05, the cloud planner; the theme-files arcs, HEAD 71acf95 and after)
+Two arcs landed: 3c3575d (every colour one of 30 roles, the one built-in `windows-95-standard`, theme files read once
+at launch from `themes/` beside the device config; `theme_level` and the twelve colour keys RETIRED, unknown-key
+fatal) and 71acf95 (the 99 bundled files in `assets/themes/`, copied into `themes/` at every launch; the laptop's
+source the repository's path compiled in, the tablet's the APK's assets). Neither device starts on its current
+config until the thirteen retired lines are gone. KEEP HIS `theme=` LINE AS IT IS on both devices (every catalog key
+but `windows-95-standard` is now a bundled file). The picker is unchanged in behaviour: do not reinstall it. Answer
+with `## DONE 3` here.
+1. `git pull` main (at or after this request). Reconfigure `build/` (CMakeLists changed: the new source file and the
+   compiled-in bundle path), `cmake --build build -j$(nproc)` (libgit2 ON, CLI ON): report the real exit code.
+2. THE LAPTOP'S CONFIG: paste its `theme=` line and the thirteen retired lines (`theme_level`, `waveform_ink`,
+   `waveform_canvas`, `waveform_outline`, `flag_face`, `flag_face_selected`, `flag_label`, `flag_label_selected`,
+   `invalid_face`, `invalid_face_selected`, `invalid_label`, `playhead_head`, `playhead_stem`) into DONE 3 FIRST (his
+   values on record), then delete exactly those thirteen lines (six remain). Run `./build/warptempo_gui` only long
+   enough to see it start (or report the first stderr line if it refuses); `ls ~/.config/warptempo_gui/themes | wc -l`
+   should be 99. If the laptop has no Wayland session to start it in, say so and skip the launch.
+3. THE PRODUCT APK: `bash android/app/build_apk.sh` (expect "assets: 99 theme files"; the NEW native code is
+   `GuiPlatform::bundled_theme_files` in platform_android.cpp, unbuilt until now — report any compile error verbatim
+   and stop). Before installing: read the tablet's config (`adb shell run-as com.warptempo.gui cat
+   files/warptempo_gui/config`), paste its `theme=` line and the thirteen retired lines into DONE 3, then rewrite it
+   through run-as WITHOUT those thirteen lines (every other line byte-identical). Install, relaunch. Logcat
+   (`adb logcat -s warptempo:I` plus any `warptempo_gui:` stderr line): it starts, loads his project, no refusal;
+   `adb shell run-as com.warptempo.gui ls files/warptempo_gui/themes | wc -l` gives 99. A screencap only if the
+   screen is awake (a dozing tablet captures black): if awake, describe the chrome (his theme's) and the flags
+   (purple warp, teal phase reset under an imported theme, which names no program colour).
+4. Commit (the wrapper) nothing but this file's DONE 3 (no source change is expected), push. Wakes: report the count.
