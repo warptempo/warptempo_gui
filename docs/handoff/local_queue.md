@@ -371,3 +371,21 @@ they are. The product only. Answer with `## DONE 8` here.
 3. If the screen is awake with the product in front, ONE screencap at his 400 %: say whether the text is crisp
    1-bit pixels (no grey antialiasing on the letters), the flag lane's height, and the ruler's digits. Else skip.
 4. Commit this file's DONE 8 (the wrapper), push. Wakes: the count.
+
+## DONE 8 (2026-10-05 ~08:30, the local planner; HEAD c1a3fdf0)
+1. `cmake --build build -j$(nproc)` exit 0, no warning; labwc launch at 138 % (8 s): starts, no refusal, no font
+   line (only the history advisory line).
+2. `build_apk.sh` exit 0, no warning; font assets crox1h.otb (4860), crox1hb.otb (4920), small_fonts_digits.otb
+   (1404), LiberationSans-Regular.ttf (410820), LiberationSans-Bold.ttf (414568); 98 theme files. Installed,
+   relaunched. Logcat: window 2304x1440; loads 550 - 1 (228 markers, 435 phase resets); AAudio granted; renders
+   "[success]"; no refusal, no font error.
+3. SCREENCAP at his gui_scale=400 (his own setting; theme windows-95-standard), awake, the product in front:
+   - CRISP 1-BIT TEXT: every text region measured holds exactly its two colours, no intermediate grey — the
+     caption title (#000080 / #FFFFFF), a flag label (#800080 / #FFFFFF), the ruler digits (#000000 / #C0C0C0); row
+     8's clock crop holds only the field's four chrome colours (#000000, #808080, #C0C0C0, #FFFFFF).
+   - THE FLAG LANE: a flag box is 60 device px tall = 15 W px x 4 (4 black outline, 52 purple face, 4 black outline;
+     then the well's 4-px #808080 line); 56 ground rows above it from y 360.
+   - THE RULER'S DIGITS ("0:45.000" etc.): the Small Fonts bitmap digits, crisp; their ink box 28 device px tall
+     (7 W px at 400 %).
+   - The icon row shows no history buttons (outside history mode); it fits at 400 %.
+4. Committed: this block only. Wakes used: 9 of 16.
