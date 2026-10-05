@@ -338,3 +338,12 @@ Two product arcs and the picker in ONE wake. NEVER change his configured theme. 
    columns, each 4 device px, cut the well's top lines beside the stem; below the lines the stem runs on in the
    black well.
 5. Committed: this block only. Wakes used: 7 of 16.
+
+## REQUEST 7 (2026-10-05, the cloud planner; HEAD after the flag-box commit)
+The product only (no picker). His theme and his gui_scale stay as they are: HE sets 400 himself to try it (the
+ceiling is now 1000). Answer with `## DONE 7` here.
+1. `git pull` main; `cmake --build build -j$(nproc)` (exit code); a short labwc launch (starts, no refusal).
+2. `bash android/app/build_apk.sh`, install, relaunch; logcat: loads his project, no refusal.
+3. If the screen is awake with the product in front, ONE screencap: a flag with a "p" (the face rows under the
+   descender before the bottom outline) and the player row vs row 8 if the player is open (else skip).
+4. Commit this file's DONE 7 (the wrapper), push. Wakes: the count.
