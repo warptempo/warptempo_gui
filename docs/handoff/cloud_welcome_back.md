@@ -122,12 +122,6 @@ RULED:
   each ending in one laptop REQUEST. The residue: closed_questions' lines on the card face, the history's colours,
   the dark level; CLAUDE.md's COLOURS rule (the planner's).
 
-## Decisions for you (the cloud planner, 2026-10-05)
-1. WHITE LABELS BREAK ONE CLOSED RULE ON THE BUILT-IN. closed_questions rules that a selected face is a BRIGHTER
-   SHADE OF ITS FLAG'S OWN COLOUR (set BL, 2026-10-03). Under white labels, only three of Windows' sixteen pairs
-   carry white on the bright partner: purple / fuchsia, maroon / red, navy / blue. Teal's partner aqua and olive's
-   partner yellow do not, so the built-in now has teal / BLUE and olive / GREEN: another hue, the rule broken on
-   those two kinds (the closed line is amended to say so, pending your word). The alternative that keeps the rule is
-   phase reset NAVY / blue, whose unselected stem all but vanishes on the black canvas. RECOMMENDED: accept the
-   break on the built-in only (it is the fallback; your own themes follow the rule).
-
+- ANSWERED 2026-10-05: the built-in's teal / blue and olive / green stand ("you can be loose with the term; the
+  Windows theme is just a fallback"); closed_questions' amended line holds. NOTHING IS OPEN FOR HIM; REQUEST 3
+  (amended) waits on a fresh local session.
