@@ -20,8 +20,11 @@
 #   THE PROGRAM'S ROLES only where the entry records them: the imported entries and the chosen `warptempo` name none; HIS PRESETS (`warptempo-preset-<n>`, build.py preset_entries over the picker's presets.json, architect
 #     2026-10-04) name their program colours (PRESET_ELEMENT_ROLES below), each resolved through the picker's own theme
 #     (tools/palette/themes/picker.json with the preset's colours applied, render.picker_apply), so every value is the
-#     colour the picker painted: the canvas, the ink and the outline the picker's "auto" rule over the two (the 50 %
-#     linear-light blend of the ink over the canvas, named only where the preset records both); the playhead's head
+#     colour the picker painted: the canvas, the ink and THE OUTLINE (architect 2026-10-05: the picker's Outline
+#     element, no inherited default) -- the preset's own `waveform_outline` where it records one, else, for a preset
+#     saved before that element, the rule the picker then painted it by (the 50 % linear-light blend of the ink over
+#     the canvas, C.outline_of, named only where the preset records both), so the files of those presets stay as they
+#     were; the playhead's head
 #     and stem; THE FLAGS one to one (architect 2026-10-05: the picker's flag elements follow the product's flag kinds,
 #     keyed by its role names): Warp Flag / Selected Warp Flag onto the warp pair, Phase Reset Flag / Selected Phase
 #     Reset Flag onto the phase-reset pair, Added Flag / Selected Added Flag onto the added pair and Removed Flag /
@@ -72,8 +75,9 @@ CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight')
           ('clock_ground', 'ground'), ('clock_text', 'label'))
 # the card: theme-file role <- the catalog role (named only when the entry records both)
 CARD = (('card_ground', 'info_ground'), ('card_text', 'info_text'))
-# a preset's picker elements -> the theme-file roles each colours (the outline is the rule's, below)
+# a preset's picker elements -> the theme-file roles each colours (an older preset's outline is the rule's, below)
 PRESET_ELEMENT_ROLES = (('canvas', ('waveform_canvas',)), ('ink', ('waveform_ink',)),
+                        ('waveform_outline', ('waveform_outline',)),
                         ('warp_flag', ('warp_flag',)), ('warp_flag_selected', ('warp_flag_selected',)),
                         ('phase_reset_flag', ('phase_reset_flag',)),
                         ('phase_reset_flag_selected', ('phase_reset_flag_selected',)),
@@ -127,9 +131,8 @@ def preset_program_roles(e, preset, picker):
     for el, rs in PRESET_ELEMENT_ROLES:
         if el in cols:
             for r in rs: out[r] = C.hexs(th.get(element_role[el]))
-    if 'ink' in cols and 'canvas' in cols:
-        assert picker['colours']['outline'] == 'auto'
-        out['waveform_outline'] = C.hexs(th.get('outline'))
+    if 'waveform_outline' not in cols and 'ink' in cols and 'canvas' in cols:   # a preset from before the element
+        out['waveform_outline'] = C.hexs(C.outline_of(th.get('ink'), th.get('canvas')))
     return out
 
 

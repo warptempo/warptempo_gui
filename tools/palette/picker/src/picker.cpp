@@ -589,6 +589,20 @@ void Picker::discard_if_open() {
     apply_colours();
 }
 
+void Picker::copy_colour() {
+    clip_ = cs().pick();
+    has_clip_ = true;
+    dirty_ = true;                       // PASTE's word lights
+    plog("picker: copy %s %s", ex_.elements[size_t(active_)].key.c_str(), hex_of(clip_.rgb).c_str());
+}
+
+void Picker::paste_colour() {
+    if (!has_clip_) return;              // greyed: nothing copied
+    cs().restore(clip_);                 // an edit, as a swatch's adoption: the close is the one save
+    apply_colours();
+    plog("picker: paste %s %s", ex_.elements[size_t(active_)].key.c_str(), hex_of(clip_.rgb).c_str());
+}
+
 void Picker::history_step(int dir) {
     if (!(dir < 0 ? back_enabled() : forward_enabled())) return;
     hist().cursor += dir;
@@ -879,6 +893,8 @@ void Picker::press(double x, double y) {
     if (in(lx, ly, kColX, kNameY, kNameX1, kNameY + kNameH)) { target_ = Target::Name; return; }
     if (in(lx, ly, kPresetsX, kNameY, kColX1, kNameY + kNameH)) { target_ = Target::Presets; return; }
     if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { target_ = Target::Old; return; }
+    if (in(lx, ly, kCopyX0, kClipY, kCopyX1, kClipY + kClipH)) { target_ = Target::Copy; return; }
+    if (in(lx, ly, kPasteX0, kClipY, kPasteX1, kClipY + kClipH)) { target_ = Target::Paste; return; }   // greyed: held, nothing
     if (between(ly, kHistY - 12, kHistY + kBtn + 12)) {   // a disabled button still holds the press: it does nothing
         if (between(lx, kBackX - 8, kBackX + kBtn + 8)) { target_ = Target::Back; return; }
         if (between(lx, kFwdX - 8, kFwdX + kBtn + 8)) { target_ = Target::Forward; return; }
@@ -972,6 +988,12 @@ void Picker::release(double x, double y) {
             break;
         case Target::Old:
             if (in(lx, ly, kColX, kSwatchY0, kColX + kSwatchW, kSwatchY1)) { cs() = old_; apply_colours(); }
+            break;
+        case Target::Copy:
+            if (in(lx, ly, kCopyX0, kClipY, kCopyX1, kClipY + kClipH)) copy_colour();
+            break;
+        case Target::Paste:
+            if (in(lx, ly, kPasteX0, kClipY, kPasteX1, kClipY + kClipH)) paste_colour();
             break;
         case Target::Back:
         case Target::Forward: {
@@ -1071,6 +1093,12 @@ void Picker::paint(cairo_surface_t* surf) {
         fr.edge(ox + kColX, oy + kSwatchY0, ox + kColX + kSwatchW, oy + kSwatchY1, kEdge);
         fr.fill(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, c.rgb);
         fr.edge(ox + kNewX, oy + kSwatchY0, ox + kNewX + kSwatchW, oy + kSwatchY1, kEdge);
+        // COPY and PASTE under them, fields as the buttons' (their words below)
+        for (int bx0 : {kCopyX0, kPasteX0}) {
+            const int bx1 = bx0 == kCopyX0 ? kCopyX1 : kPasteX1;
+            fr.fill(ox + bx0, oy + kClipY, ox + bx1, oy + kClipY + kClipH, kField);
+            fr.edge(ox + bx0, oy + kClipY, ox + bx1, oy + kClipY + kClipH, kEdge);
+        }
         // the history: BACK and FORWARD, an arrow each (a solid head and the − / +'s 4-px shaft, 32 px across), dimmed
         // when disabled
         for (int dir : {-1, 1}) {
@@ -1226,6 +1254,9 @@ void Picker::paint(cairo_surface_t* surf) {
              cap_baseline(cr, true, kNumPx, oy + kHistY, kBtn), 1);
         text(cr, false, kWordPx, "Old", ox + kColX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
         text(cr, false, kWordPx, "New", ox + kNewX + kSwatchW / 2.0, oy + kSwatchY0 - 18, 1);
+        text(cr, false, kWordPx, "Copy", ox + (kCopyX0 + kCopyX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kClipY, kClipH), 1);
+        text(cr, false, kWordPx, "Paste", ox + (kPasteX0 + kPasteX1) / 2.0, cap_baseline(cr, false, kWordPx, oy + kClipY, kClipH),
+             1, has_clip_ ? kLabel : kDim);   // greyed while nothing has been copied
         text(cr, false, kWordPx, model_name(c.model), ox + kModelX0 + 18, cap_baseline(cr, false, kWordPx, oy + kModelY, kModelH), 0);
         if (models_)
             for (Model m : kAllModels) {

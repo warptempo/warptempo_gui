@@ -21,8 +21,8 @@
 #                           (rgb_to_hls, hue scaled to degrees) and CIE LCh(ab) over the bytes as Display-P3 (D65, no
 #                           adaptation) by numpy, the matrix solved from the primaries' chromaticities, Lab by CIE's
 #                           epsilon / kappa form (216/24389, 24389/27), every number repr'd (exact doubles)
-#   <dir>/derived/          a SYNTHETIC export exercising the derive rule, which today's scenes do not paint (scene
-#                           1002 has no outline pixels at its zoom): the export's waveform scene with its ink pixels
+#   <dir>/derived/          a SYNTHETIC export exercising the derive rule, which no role of today's theme takes (the
+#                           outline its own element since 2026-10-05): the export's waveform scene with its ink pixels
 #                           from x 1152 to 1727 given to a role derived from the ink over the CANVAS ELEMENT (the
 #                           outline's rule, following the live canvas) and from x 1728 on to one derived over a literal,
 #                           with its expects.txt and references composed by colour.py (render.picker_picture)
@@ -53,8 +53,8 @@ expect = os.path.join(out, 'expect')
 if os.path.isdir(expect): shutil.rmtree(expect)
 os.makedirs(expect)
 lines = export_with_refs(theme, 'scene')
-# THE CHECK THEME: the round's theme (its waveform, flags, playhead, label, open_flag, phase_reset and history scenes;
-# architect 2026-10-05, the flag kinds) plus TEST ELEMENTS filling the chooser to CHOOSER_FIT entries (the chooser's two
+# THE CHECK THEME: the round's theme (its waveform, flags, playhead, label, open_flag, phase_reset, history and magnified
+# scenes; architect 2026-10-05, the flag kinds and the outline) plus TEST ELEMENTS filling the chooser to CHOOSER_FIT entries (the chooser's two
 # columns, 2026-10-05, painted over the wheel and the slider rows it covers), each a role the round does not pick, taken
 # in the order of TEST_ELEMENTS: the icons' inks over the waveform scene, the only fixed roles the scenes paint that no
 # check reads as fixed -- nineteen entries, an ODD count, so the second column's last cell is the empty one the chooser

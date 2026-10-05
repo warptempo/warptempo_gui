@@ -159,4 +159,10 @@ RULED:
   three questions: no lead-in ring in the scene (it needs a sample rate the scene lacks; it changes no element), the
   history scene's disabled walk buttons accepted (a mock limit, no element affected), the check's 19 entries accepted
   (22 computed from the layout).
+- THE OUTLINE + COPY / PASTE ARC LANDED: Outline (`waveform_outline`, starting #7988A3, the old blend's value, then
+  independent) over a new scene `magnified` (the lamp lit by the product's own bar and outline rules; the bar HEIGHTS
+  a stand-in at the leveler's target, since no capture was taken lit — a lit tablet screencap measured into a scene
+  is the truthful upgrade, a local act if he wants it); COPY / PASTE under OLD | NEW (the colour and its exact view;
+  a paste is an edit; PASTE greyed until a copy; the copy not persisted). PASTE does not grey when the paste would
+  change nothing (as briefed; the product's truthful-button rule would grey it — a picker nicety left for his word).
 

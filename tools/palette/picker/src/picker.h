@@ -105,6 +105,16 @@
 // ELEMENT SWITCHES (he adopts for another element by choosing it) and across relaunches (state.json's "theme"), until
 // its close control or another theme opened; it shows while the panel is open.
 //
+// COPY AND PASTE (architect 2026-10-05: "pick the unselected flag, copy-paste its colour into selected, and then just
+// tweak the luminance"): two buttons under OLD | NEW, in the swatches' columns (kCopyX0.., kPasteX0..), acting at the
+// lift. COPY takes the active element's current colour and its exact view (ColourState::pick: the model shown when the
+// colour last changed and its three numbers). PASTE sets the active element to it AS AN EDIT, exactly as a theme
+// swatch's adoption is one: the bytes and the view set (ColourState::restore, the road every stored colour takes back:
+// the copied view shown when the panel shows its model, else re-derived from the bytes), the scene live, NEW showing
+// it, OLD still reverting, the close the one save. PASTE IS GREYED (its word dimmed, its lift doing nothing) while
+// nothing has been copied. The copied colour lives while the app's process does: it is never written to a file. Each
+// logs one line, `picker: copy <key> #RRGGBB` / `picker: paste <key> #RRGGBB`.
+//
 // STATE.JSON IS THE LAST SAVED STATE: written at a close, a switch, a commit at the pop-up's opening, a preset load and
 // the strip's opening and close; while the panel is open the active element is written as the panel's opening (OLD
 // and its cursor, the last saved state), so an unsaved edit never reaches the file.
@@ -235,6 +245,8 @@ public:
     bool back_enabled() const;
     bool forward_enabled() const;
     bool presets_open() const { return presets_; }
+    bool paste_enabled() const { return has_clip_; }   // something has been copied (picker.h's head: COPY AND PASTE)
+    const Pick& clip() const { return clip_; }
     const std::vector<Preset>& presets() const { return presets_list_; }
     std::string save_label() const;      // "Save as Preset N"
     int pop_scroll() const { return pop_.pos; }
@@ -249,7 +261,8 @@ public:
 
 private:
     enum class Target { None, Outside, Ring, Triangle, Track, Minus, Plus, Old, Back, Forward, Name, Row, OffChooser, Picture,
-                        Presets, PopSave, PopList, OffPopup, StripClose, StripList, ModelBtn, ModelRow, OffModels };
+                        Presets, PopSave, PopList, OffPopup, StripClose, StripList, ModelBtn, ModelRow, OffModels, Copy,
+                        Paste };
     // a scrolling list's state: its offset (content px) and the drag that moves it
     struct Scroll {
         int pos = 0, start = 0;
@@ -280,6 +293,8 @@ private:
     int strip_row_at(double y) const;  // the strip's row under the window y, or -1
     int strip_max() const;
     void scroll_move(Scroll& sc, double y, int max);
+    void copy_colour();                // COPY: the active element's colour and view to the clip
+    void paste_colour();               // PASTE: the clip onto the active element, an edit
     void history_step(int dir);        // BACK (-1) / FORWARD (+1) from the cursor's entry, an unsaved edit discarded
     void track_to(int row, double x);
     void step(int row, int dir);
@@ -301,6 +316,8 @@ private:
     int open_cursor_ = -1;             // the cursor then: discard_if_open's return
     bool open_ = false, right_ = false, dirty_ = true, chooser_ = false;
     bool models_ = false;              // the model switch's list is open
+    Pick clip_;                        // the copied colour and view, while has_clip_ (never saved)
+    bool has_clip_ = false;
     Target target_ = Target::None;
     int row_ = -1;                     // the slider row a Track / Minus / Plus press holds, the chooser row a Row press
     double down_x_ = 0, down_y_ = 0;
@@ -355,6 +372,11 @@ constexpr int kSwatchW = 200, kNewX = kColX1 - kSwatchW;
 // switches, its list (the chooser's rows) under it over the tracks
 constexpr int kModelX0 = kPad, kModelX1 = kPad + 180, kModelY = kPad + kWheel + 20, kModelH = kNameH;
 constexpr int kModelListY = kModelY + kModelH + 8;
+// COPY AND PASTE: the model switch's row and height, under the swatches, each a swatch's width in its column (COPY
+// under OLD, PASTE under NEW), so they read as the swatch pair's colour's; the 20 px above them the wheel's gap to the
+// model switch, the slider rows from kRowsY under them
+constexpr int kClipY = kModelY, kClipH = kModelH;
+constexpr int kCopyX0 = kColX, kCopyX1 = kColX + kSwatchW, kPasteX0 = kNewX, kPasteX1 = kColX1;
 constexpr int kRowsY = kModelY + kModelH + 20, kRowStep = 100, kGroupGap = 20, kRowH = 76;
 constexpr int kLabelX = kPad, kMinusX = kPad + 50, kBtn = 76;
 constexpr int kTrackX = kMinusX + kBtn + 14, kTrackL = 642, kTrackH = 56;
@@ -367,6 +389,9 @@ constexpr int kReadoutInset = 14;
 constexpr int kBackX = kColX, kFwdX = kColX1 - kBtn;                      // the history's buttons, kBtn square
 constexpr int row_y(int i) { return kRowsY + i * kRowStep + (i >= 3 ? kGroupGap : 0); }
 static_assert(row_y(5) + kRowH + kPad == kH, "the panel ends kPad under the last row");
+static_assert(kClipY > kSwatchY1 && kClipY + kClipH < row_y(0) - 12 && kCopyX0 > kModelX1 + 12 && kCopyX1 < kPasteX0 &&
+                  kPasteX1 <= kW - kPad,
+              "COPY and PASTE stand clear of the swatches, the model switch, each other and the slider rows' hit bands");
 // THE PRESETS POP-UP, under the two buttons over the whole panel inside its pad (the theme names are long): its fixed
 // save line, then the list's viewport down to the pad; rows the chooser's height
 constexpr int kPopX0 = kPad, kPopX1 = kColX1, kPopY0 = kChooserY, kPopY1 = kH - kPad, kPopRowH = kChooserRowH;

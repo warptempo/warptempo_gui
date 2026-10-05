@@ -1,6 +1,6 @@
 # tools/palette/picker — Warptempo Picker, the colour picker over a true picture of the app
 
-A design tool for picking the app's colours (render.h's palette block: the chrome, the waveform's canvas and ink,
+A design tool for picking the app's colours (render.h's palette block: the chrome, the waveform's canvas, ink and outline,
 each flag kind's face and selected face, the playhead, the chrome's text, the selected pair) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
 exported by the mock tool. A separate APK, package
 `com.warptempo.picker`, label "Warptempo Picker", installed beside the product and never touching
@@ -22,11 +22,21 @@ The SCENE, full screen: a picture of the app in which every pixel is named — t
 antialiased edge, the roles it is blended over (the export, below) — so EVERY ELEMENT'S CURRENT COLOUR IS LIVE IN
 EVERY SCENE, the text and glyph edges re-blended truthfully over whatever they sit on. One ELEMENT is ACTIVE: the one
 the panel edits. Each element is picked over its own scene (several share one); the roles follow the elements by
-their rules — the chrome's every line follows its ground by Windows 95's proportions, the waveform outline follows
-the ink over the canvas — so a mock render and the picker agree by construction.
+their rules — the chrome's every line follows its ground by Windows 95's proportions — so a mock render and the
+picker agree by construction.
 
 THE ELEMENTS (architect 2026-10-04, in his order of importance, the chooser's order): CHROME (the ground, one knob;
-the active element at a fresh start), CANVAS, INK, over the scene `waveform`; then THE FLAG KINDS (architect
+the active element at a fresh start), CANVAS, INK, over the scene `waveform`; then THE OUTLINE (`waveform_outline`,
+the product's role name, as the flag kinds below are keyed; architect 2026-10-05: an element of its own with NO
+INHERITED DEFAULT), the inner bar's one-line outline the lit magnification lamp paints (render_waveform), over the
+scene `magnified` — the waveform scene with the lamp LIT, the only picture the product paints the outline in (every
+capture is the lamp dark, the product's state at every project open, so the `waveform` scene has no outline pixel):
+the mock tool's lit plate at flat scales (tools/palette/README.md, `magnification`), the inks, the line's width (3 px)
+and the erosion the product's, the bars' heights a stand-in for the audio's gains. It starts at #7988A3, the colour its
+earlier rule gave over the theme's canvas and ink (the 50 % linear-light blend of the ink over the canvas), so the
+picture is unchanged at a fresh start, and from then on it is its own: moving the ink or the canvas no longer moves
+it. A file written before it (his presets, `state.json`, `picks.txt`) does not name it, so it starts there with an
+empty history; then THE FLAG KINDS (architect
 2026-10-05: the picker's flag elements follow the product's flag kinds, render.h's flag palette block, KEYED BY THE
 PRODUCT'S ROLE NAMES so a preset maps one to one; each element is its face and its stem, ONE KNOB PER FACE, as the
 product paints a flag's stem in its box's face), each kind's face and selected face in turn:
@@ -180,8 +190,8 @@ show, the added `[+]1.27+0.00:b.33` at 398 and the removed `[-]b.33` at 871 (the
   the model switch and the slider rows, PAINTED OVER EVERYTHING THEY COVER — the wheel, the fields, tracks and handles
   go under its field, and the panel's words (the hex, the count, Old and New, the model's name, a readout) are clipped
   to outside it — so sixteen entries end at y 716, twenty-two at 944 and thirty, the most, at 1248
-  (`panel::kChooserMax`; an export with more is refused at the launch with a message); every name of the flag kinds'
-  round fits its cell (442 px) at the word size. Under an odd count the second column's last cell is empty: a tap
+  (`panel::kChooserMax`; an export with more is refused at the launch with a message); the outline round's seventeen
+  end at 792; every name of the flag kinds' round fits its cell (442 px) at the word size. Under an odd count the second column's last cell is empty: a tap
   there picks nothing and leaves the chooser open. A tap on an
   entry picks it and closes the chooser (a press on one entry lifted on another picks nothing and leaves it open); a
   tap anywhere outside the chooser closes it and changes nothing. CHOOSING ANOTHER ELEMENT IS THE CLOSE FOR THE ONE
@@ -218,6 +228,18 @@ show, the added `[+]1.27+0.00:b.33` at 398 and the removed `[-]b.33` at 871 (the
   marked. THE STRIP STAYS OPEN ACROSS ELEMENT SWITCHES (he adopts for another element by choosing it with the chooser)
   and across relaunches (`state.json`'s `"theme"`), until its close control or another theme opened; it shows while
   the panel is open, and a tap on it is never a tap outside the panel. Opening and closing it log a line each.
+- COPY AND PASTE (architect 2026-10-05: "pick the unselected flag, copy-paste its colour into selected, and then just
+  tweak the luminance"): two buttons under OLD | NEW, at the model switch's row and height (panel x 660..860 and
+  884..1084, y 636..700, the swatches' columns: under the pair they act on, clear of the model switch at 36..216 and of
+  the slider rows from 720; the same place with the panel on either side), each acting at the lift. COPY takes the
+  active element's current colour AND ITS EXACT VIEW (the model shown when the colour last changed and its three
+  numbers, THE VIEW HE DIALLED below). PASTE sets the active element to it AS AN EDIT, exactly as a theme swatch's
+  adoption is one: the bytes and the view set, the scene live, NEW showing it, OLD still reverting, the close the one
+  save; the copied view is shown when the panel shows its model, else the panel's view is re-derived from the bytes
+  (the stored-colour rule below), and switching to the copied model shows it exactly. PASTE IS GREYED — its word in the
+  dimmed grey, its lift doing nothing — while nothing has been copied. The copied colour lives while the app's process
+  lives and is never written to a file: a relaunch starts with nothing copied. One logcat line each, `picker: copy
+  <key> #RRGGBB` and `picker: paste <key> #RRGGBB`.
 - A tap OUTSIDE the panel closes it, and that close is the ONE DELIBERATE SAVE: it COMMITS the pick when the colour
   is edited (the history's rules, below in Use). While closed, a small label at the bottom right shows the active
   element's name, hex and count. Leaving the app with the panel open (home, the cover) saves nothing: the unsaved colour
@@ -289,7 +311,8 @@ statement:
   channel x n / d rounded half to even (Python's round) and capped at 255 (`src/colour.h` scale_byte;
   tools/palette/README.md, the chrome rule: Hilight 255, 3DLight 223, Shadow 128 over 192, the field and the emboss
   the Hilight); `{"derive": {"from": key, "over": key or "#rrggbb", "linear_mix": t}}` the linear-light mix of one
-  element toward another (the outline over the LIVE canvas) or a literal (colour.py's `lin_mix`, ported in
+  element toward another (the outline's rule over the LIVE canvas until it became an element, 2026-10-05; no scene of
+  today's theme derives a role, and the laptop check's synthetic export keeps the rule tested) or a literal (colour.py's `lin_mix`, ported in
   `src/colour.h`, rounded half to even); `{"colour": "#rrggbb"}` fixed. A rule follows elements only; 1..255 roles.
   The width and height must be the window's (2304 x 1440).
 - `<scene>.base.pgm`: binary P5, 8-bit, width x height: each byte the role index of the pixel's BASE.
@@ -372,7 +395,8 @@ alone; its edit committed by the close; both kept by a relaunch with their views
 THE SWITCH'S PICTURE (the round's own export launched at the colours of its all-moved reference: the waveform scene,
 the switch Ink -> Warp Flag and the switch back, and the switch Ink -> Playhead Head each equal the mock tool's
 render byte for byte, the switch on to the Label the label scene's, on to the Selection the open_flag scene's, on to
-the Phase Reset Flag the phase_reset scene's and on to the Added Flag the history scene's); THE
+the Phase Reset Flag the phase_reset scene's, on to the Added Flag the history scene's and on to the Outline the
+magnified scene's); THE
 LABEL (architect 2026-10-04: its role the element, the flag labels fixed #FFFFFF; the panel on the right, the switch to the Label showing
 the label scene, a word's solid pixel repainting and the antialiased edges re-blending over the chrome at one byte's
 move; committed by the close and kept by a relaunch; the playhead head's outline then the new label, the flag labels
@@ -388,7 +412,17 @@ has one (the focused pair's added half has none), the face and its stem repainti
 antialiased edges re-blending over it, the selected face, its edges and the scene's other kind's faces staying;
 committed by the switch to the selected face, which then repaints the same way, the face staying; committed by the
 close; both kept by a relaunch with their views, every other element untouched; THE NAMES' FIT measured in the frame:
-each name on the element button set to end clear of its head, every chooser entry inside its cell); THE RENAMED KEYS
+each name on the element button set to end clear of its head, every chooser entry inside its cell); THE OUTLINE
+(architect 2026-10-05: its role the element's and no role derived, starting at the old rule's colour over the theme's
+ink and canvas; the panel on the left, the switch to it showing the `magnified` scene, the outline repainting alone,
+the ink and the canvas then moved and the outline staying, committed by the switch and kept by a relaunch); COPY AND
+PASTE (architect 2026-10-05: PASTE greyed before any copy, measured in the frame — its word's brightest channel the
+dimmed #555555, COPY's white — its lift doing nothing and writing nothing; a copy of the Warp Flag dialled in HSL; its
+paste on the Selected Warp Flag with the panel in HSV, the bytes and the HSL view arriving exactly, HSV re-derived, NEW
+and the selected face showing it, OLD reverting, the close committing one pick with the copied hex and view, a
+lightness − after it keeping the hue and saturation; the panel on the right, the same two controls pasting onto the
+Phase Reset Flag; their extents printed and clear of the swatches, the model switch and the slider rows; a relaunch
+with nothing copied); THE RENAMED KEYS
 (files naming the old flag keys: colours, an HSL view, entries in two histories in file order, the active element and
 a preset's two old keys onto three new elements; the preset loaded and a new one saved, after which `state.json`,
 `presets.json` and the new `picks.txt` lines name the new keys alone, the old lines kept; a relaunch over them); every element's history, cursor and view independent across switches and relaunches, and the element he
@@ -424,6 +458,8 @@ scene, the panel on the right), `frame_selection_open.png` and `frame_selected_t
 panel on the left), `frame_phase_reset_flag{,_selected}_open.png` (the phase_reset scene) and
 `frame_{added,removed}_flag{,_selected}_open.png` (the history scene), the panel on the left,
 `frame_chooser_kinds_open.png` (the chooser's two columns over the wheel and the slider rows),
+`frame_outline_open.png` (the magnified scene, the panel on the left), `frame_copy_paste_{greyed,left,right}.png` and
+`frame_paste_open.png` (the two controls on both panel sides, PASTE greyed and lit), `frame_switch_magnified_moved.png`,
 `frame_selection_switch_open.png`, `frame_switch_flags_moved.png`, `frame_switch_open_flag_moved.png`,
 `frame_switch_{phase_reset,history}_moved.png`,
 the history's `frame_history_*.png`, `frame_presets_open.png`, `frame_presets_themes.png` (the pop-up scrolled into
@@ -492,7 +528,7 @@ An element's history is every `picks.txt` line under its key, across rounds, unt
 | `src/json.{h,cpp}` | the tiny JSON reader (manifest.json, state.json) |
 | `src/scene.{h,cpp}` | the export: load and validate (`themes.json` too), the roles' rules, the scene's runs and stacks, the whole paint and the live repaint; the Pick (bytes and view); the readers of state.json, picks.txt and presets.json, and the renamed keys they read (`renamed_key`) |
 | `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
-| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus every model's view with its retained hue, a stored view restored, the gamut stop), the model switch, the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, the panel's geometry, painting, touch, the close's save |
+| `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus every model's view with its retained hue, a stored view restored, the gamut stop), the model switch, the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, copy and paste, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |
 | `src/host_check.cpp`, `check_refs.py`, `check_data/` | the laptop check (above; `check_refs.py` also writes the models' independent reference); `check_data/tablet_2026-10-04/` the tablet's `picks.txt` and `state.json` of that morning, `check_data/tablet_2026-10-04_presets/` those at the presets build's install, copied verbatim; `presets/` (the latest copy) read too |
 | `java/com/warptempo/picker/PickerActivity.java` | the full-screen sliver |

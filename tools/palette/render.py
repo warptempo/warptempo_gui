@@ -133,6 +133,7 @@ OPT_DEFAULTS = {'relief': 'flat', 'separators': 'line', 'ruler_tick_relief': 'no
                 'dialog': None, 'card': None,
                 'elements': {'ink': True, 'outline': True, 'stems': True, 'flags': True, 'playhead': True,
                              'state_line': True},
+                'magnification': None,
                 'picker': None}
 LANES3 = ('trim', 'ruler', 'marker')     # the three lane blocks lane_order restacks (top to bottom)
 TRIM_STYLES = ('app', 'acid', 'scrollbar')
@@ -223,7 +224,7 @@ TABLET_FIXED = {
 # what a tablet theme states freely: its colours (the chrome rule's ground among them), the scene's states (the toggled buttons, the held trim cap, the flags'
 # states), the optional surfaces (the state line, the dialog, the card), the element switches and the picker's export
 TABLET_FREE = ('name', 'description', 'geometry', 'colours', 'chrome', 'waveform', 'flags', 'state_text', 'dialog',
-               'card', 'elements', 'picker')
+               'card', 'elements', 'magnification', 'picker')
 TABLET_FREE_SUB = {'buttons': ('down',), 'trim': ('held',)}
 
 def use_tablet(path, t):
@@ -479,6 +480,14 @@ class Theme:
         el = self.opt['elements']
         if not all(isinstance(v, bool) for v in el.values()):
             raise SystemExit(f'theme {path}: elements maps each of {sorted(OPT_DEFAULTS["elements"])} to true or false, not {el!r}')
+        mg = self.opt['magnification']
+        if mg is not None:
+            if not TABLET: raise SystemExit(f'theme {path}: magnification is read only by the tablet geometry')
+            num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
+            if (not isinstance(mg, dict) or set(mg) != {'outer', 'inner'} or not all(num(v) for v in mg.values())
+                    or not 1 <= mg['outer'] <= 16 or not 0 < mg['inner'] <= 0.5):
+                raise SystemExit(f'theme {path}: magnification is null (the lamp dark) or {{"outer": 1..16, "inner": '
+                                 f'0..0.5}} (the lit bars\' flat scales, magnified_columns), not {mg!r}')
         pk = self.opt['picker']
         if pk is not None: picker_key(path, self, pk)
         st = self.opt['state_text']
@@ -1740,14 +1749,69 @@ def waveform_runs(th):
     rel = WAVE['channel_split'] - WAVE['y0']
     return c0, cols, c0 + -(-rel * new_h // old_h)
 
+# THE MAGNIFICATION LAMP LIT (the top-level option `magnification`, architect 2026-10-05: the picker's Outline element
+# needs the lit picture, the only one the product paints the outline in; read only by the tablet geometry). Every
+# captured scene is the lamp DARK, the product's state at every project open (AppState::show_waveform_magnification),
+# so the capture holds the raw bars alone and no outline pixel. Lit, render_waveform (src/gui/render.cpp) paints per
+# column and channel THE OUTER BAR (the raw tips x the leveler's gain x the expander's multiplier, clamped) in the ink,
+# then THE INNER BAR (the raw tips x the compressor's scale x the foreground half x the multiplier) over it, its rows
+# the ink inside an EROSION AT DISTANCE t = waveform_line_px (3 on the tablet) and the outline on the rest: a row is
+# interior iff it lies t rows inside its own bar and inside the bars of the t columns on each side (a column past the
+# plate's side edges counts as inside), the whole bar the outline when no row is. The gains are the audio's, which no
+# scene records, so this draws THE LIT PLATE AT FLAT SCALES: {"outer": G, "inner": S}, every column's raw tips read off
+# the capture's dark bar at row precision (the tip at its end row's centre, so a scale of 1 gives the captured rows back
+# exactly) and scaled by G and S through the product's own bar_rows (the clamp to [-1, 1], the floor, the clamp into the
+# channel's rows). The expander's per-column multiplier is left out (every column taken above its threshold), so a quiet
+# column's two bars stand taller than the product draws them; the geometry is therefore a stand-in, while the inks, the
+# line's width and the erosion are the product's. The picker's theme states the scales of a passage at the leveler's
+# target loudness (-14 dBFS: the gain x1, the compressor's 10^(-5 / 20) on the inner, times its half).
+def magnified_masks(ink_cols, mg):
+    """The dark capture's ink runs (window rows, tablet.waveform_columns) -> (ink mask, outline mask), H x W bools: the
+    lit plate at the flat scales mg (the head above)."""
+    top, split, bottom = SCENE['waveform_map']['new_band']
+    t = FLAG_STEM_W                                     # waveform_line_px: the outline's width
+    ink = np.zeros((C.H, C.W), bool); line = np.zeros((C.H, C.W), bool)
+    for y_lo, y_hi in ((top, split), (split, bottom)):  # each channel's own area, as render_waveform takes it
+        yc = y_lo + (y_hi - y_lo) * 0.5; hh = (y_hi - y_lo) * 0.5
+        def bar(tmin, tmax, s):
+            vmax = min(1.0, max(-1.0, tmax * s)); vmin = min(1.0, max(-1.0, tmin * s))
+            yt = min(max(yc - vmax * hh, y_lo), y_hi); yb = min(max(yc - vmin * hh, y_lo), y_hi)
+            return (min(max(math.floor(yt), y_lo), y_hi - 1), min(max(math.floor(yb), y_lo), y_hi - 1))
+        outer, inner = [], []
+        for x, runs in enumerate(ink_cols):
+            rows = [(max(a, y_lo), min(a + n - 1, y_hi - 1)) for a, n in zip(runs[0::2], runs[1::2])
+                    if a + n - 1 >= y_lo and a < y_hi]
+            if len(rows) != 1:
+                raise SystemExit(f'magnification: column {x} holds {len(rows)} bars in the channel at rows {y_lo}..{y_hi}, '
+                                 f'not the dark plate\'s one')
+            r0, r1 = rows[0]
+            tmax = (yc - (r0 + 0.5)) / hh; tmin = (yc - (r1 + 0.5)) / hh
+            outer.append(bar(tmin, tmax, mg['outer'])); inner.append(bar(tmin, tmax, mg['inner']))
+        for x, (r0, r1) in enumerate(outer): ink[r0:r1 + 1, x] = True
+        for x, (r0, r1) in enumerate(inner):
+            lo, hi = r0 + t, r1 - t
+            for d in range(1, t + 1):
+                for n in (x - d, x + d):
+                    if 0 <= n < C.W: lo = max(lo, inner[n][0]); hi = min(hi, inner[n][1])
+            if lo > hi: line[r0:r1 + 1, x] = True; ink[r0:r1 + 1, x] = False
+            else:
+                line[r0:lo, x] = True; line[hi + 1:r1 + 1, x] = True
+                ink[r0:lo, x] = False; ink[hi + 1:r1 + 1, x] = False; ink[lo:hi + 1, x] = True
+    return ink, line
+
 def draw_waveform(arr, th, record=None):
-    """The capture's runs into the picture's bytes, ink then outline; with a PaintRecord each class is one opaque paint."""
+    """The capture's runs into the picture's bytes, ink then outline; with a PaintRecord each class is one opaque paint.
+    With `magnification` set, the lit plate (magnified_masks) in their place."""
     y0, cols, _ = waveform_runs(th)
+    masks = {}
+    if th.opt['magnification'] is not None: masks['ink'], masks['outline'] = magnified_masks(cols['ink'], th.opt['magnification'])
     for cls in ('ink', 'outline'):
         if not th.opt['elements'][cls]: continue        # elements.ink / elements.outline false: that class unpainted
-        c = th.get(cls); m = np.zeros(arr.shape[:2], bool)
-        for x, runs in enumerate(cols[cls]):
-            for i in range(0, len(runs), 2): m[y0 + runs[i]:y0 + runs[i] + runs[i + 1], x] = True
+        c = th.get(cls); m = masks.get(cls)
+        if m is None:
+            m = np.zeros(arr.shape[:2], bool)
+            for x, runs in enumerate(cols[cls]):
+                for i in range(0, len(runs), 2): m[y0 + runs[i]:y0 + runs[i] + runs[i + 1], x] = True
         arr[m] = np.array(c, np.uint8)
         idx = np.flatnonzero(m)
         if record is not None and idx.size: record.paint(c, idx, np.full(idx.size, 255, np.uint8))
@@ -2071,7 +2135,8 @@ def render_rgb(theme_path, label_text=None, data=None, record=None):
 # THE ROLES: every identity a scene paints becomes one row of the manifest's role table, with its RULE over the
 # elements (picker_roles): an element's own role; a line of the chrome rule (`scale` of the chrome element, the
 # Windows 95 proportion, or DkShadow's fixed #000000); the waveform outline's `derive` (the 50 % linear-light mix of
-# the ink over the canvas, following both live); anything else a fixed `colour`.
+# the ink over the canvas, following both live) where a theme leaves it "auto" with the ink an element (the picker's
+# theme makes it an element of its own since 2026-10-05); anything else a fixed `colour`.
 #
 # THE FILES: manifest.json, and per scene <scene>.base.pgm (binary P5: each byte the role-table index of the pixel's
 # base) and <scene>.cover.bin (the stacks: COVER_MAGIC, a little-endian uint32 count, then per stacked pixel in
@@ -2297,9 +2362,9 @@ def read_cover(path):
 
 # THE CHECK'S COLOUR SETS (picker_check_sets): a chrome element at a TINT whose channels 32 and 96 hit the rule's
 # half-to-even ties (32 x 255 / 192 = 42.5, 96 x 223 / 192 = 111.5) and at a BRIGHT ground whose x 255 / 192 caps at
-# 255; every other element at a probe colour of its own (twenty-one probes: the flag kinds' round's fifteen non-ground
-# elements and the laptop check's six test elements, which fill its chooser to twenty-two entries, each distinct, so
-# the all-moved set tells every element from every other); then all of them moved at once
+# 255; every other element at a probe colour of its own (twenty-one probes: the outline round's sixteen non-ground
+# elements and room for five test elements beside them, each distinct, so the all-moved set tells every element from
+# every other); then all of them moved at once
 CHECK_GROUNDS = ('#206048', '#E6D2B4')
 CHECK_PROBES = ('#CC9966', '#203040', '#3366CC', '#7A2E5C', '#55AA22', '#E0B030', '#30A0A8', '#D0482C', '#8844CC',
                 '#44CC88', '#C0C040', '#6080A0', '#A04070', '#2E7A5C', '#B05A10', '#5C2E7A', '#90D0F0', '#405010',

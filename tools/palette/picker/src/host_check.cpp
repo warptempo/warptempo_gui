@@ -17,7 +17,7 @@
 //     track's range holding P3's most chromatic colour, white and black, the retention; --models: check_refs.py's
 //     independent reference (HSL by colorsys, LCh by numpy over Display-P3) to 1e-9;
 //   - the scripted sessions on the first export (check_refs.py's check theme: Chrome, Canvas and Ink over the scene
-//     waveform, then the flag kinds (architect 2026-10-05) -- Warp Flag and Selected Warp Flag over the scene flags,
+//     waveform, the Outline over the scene magnified (architect 2026-10-05), then the flag kinds (architect 2026-10-05) -- Warp Flag and Selected Warp Flag over the scene flags,
 //     Phase Reset Flag and Selected Phase Reset Flag over the scene phase_reset, Added Flag, Selected Added Flag, Removed
 //     Flag and Selected Removed Flag over the scene history -- Playhead Head and Playhead Stem over the scene playhead,
 //     the Label over the scene label, Selection and Selected Text over the scene open_flag, then test elements filling
@@ -39,15 +39,19 @@
 //     pairs over the scene history, the panel on the left, each face repainting with its stem where it has one, the
 //     fixed labels' antialiased edges re-blending over it, every other face staying, each committed by the switch or
 //     the close and kept by a relaunch; the names' fit, measured in the frame: each set clear of the button's head,
-//     every chooser entry inside its cell); THE RENAMED KEYS (the flag elements' keys before 2026-10-05 read as the
+//     every chooser entry inside its cell); THE OUTLINE (architect 2026-10-05: an element starting at the old rule's
+//     colour, repainting alone over the lit plate, independent of the ink and the canvas, committed and kept); COPY
+//     AND PASTE (architect 2026-10-05: PASTE greyed before a copy, measured in the frame; a copy's colour and view
+//     pasted onto another element as an edit, OLD reverting, the close committing one pick; both panel sides; nothing
+//     copied after a relaunch); THE RENAMED KEYS (the flag elements' keys before 2026-10-05 read as the
 //     elements that replaced them: colours, views, entries, histories in file order, the active element and a preset;
 //     the files rewritten with the new keys alone);
 //   - THE SWITCH'S PICTURE on the round's own export (the one labelled "scene"): launched with every element at the
 //     colours of its "all moved" reference, the waveform scene and, after the chooser's switch Ink -> Warp Flag, the
 //     flags scene equal the mock tool's renders byte for byte, the switch back the waveform's again, and the switch
 //     Ink -> Playhead Head the playhead scene's, then the switch on to the Label the label scene's, on to the Selection
-//     the open_flag scene's, on to the Phase Reset Flag the phase_reset scene's and on to the Added Flag the history
-//     scene's;
+//     the open_flag scene's, on to the Phase Reset Flag the phase_reset scene's, on to the Added Flag the history
+//     scene's and on to the Outline the magnified scene's;
 //   - THE PRESETS (two saves, the edited colour committed by the pop-up's opening; a load committing each changed
 //     element once and an unchanged one never, BACK returning; a relaunch; a scroll and a tap outside that act on
 //     nothing; a preset saved before the flags round, three elements, loading and leaving every other element as it
@@ -497,7 +501,7 @@ int main(int argc, char** argv) {
               rflag = element_of(ex, "removed_flag"), rsel = element_of(ex, "removed_flag_selected"),
               phead = element_of(ex, "playhead_head"), pstem = element_of(ex, "playhead_stem"),
               lbl = element_of(ex, "label"), selfill = element_of(ex, "selected_fill"),
-              seltext = element_of(ex, "selected_text");
+              seltext = element_of(ex, "selected_text"), outl = element_of(ex, "waveform_outline");
     const int n_el = int(ex.elements.size());
     const int last = n_el - 1;   // the chooser's last entry (a check test element, at the second column's foot)
     auto launch = [&]() {
@@ -788,9 +792,10 @@ int main(int argc, char** argv) {
 
     // ---------------------------------------------------------------- THE CHOOSER
     const auto scene_el = [&](int e) { return ex.elements[size_t(e)].scene; };
-    const bool nine = chrome == act0 && chrome == 0 && canvas == 1 && ink == 2 && wflag == 3 && wsel == 4 && pflag == 5 &&
-                      psel == 6 && aflag == 7 && asel == 8 && rflag == 9 && rsel == 10 && phead == 11 && pstem == 12 &&
-                      lbl == 13 && selfill == 14 && seltext == 15 && n_el % 2 == 1 && n_el >= 19 &&
+    const bool nine = chrome == act0 && chrome == 0 && canvas == 1 && ink == 2 && outl == 3 && wflag == 4 && wsel == 5 &&
+                      pflag == 6 && psel == 7 && aflag == 8 && asel == 9 && rflag == 10 && rsel == 11 && phead == 12 &&
+                      pstem == 13 && lbl == 14 && selfill == 15 && seltext == 16 && n_el % 2 == 1 && n_el >= 19 &&
+                      scene_el(outl) != scene_el(chrome) && scene_el(outl) != scene_el(wflag) &&
                       scene_el(wflag) == scene_el(wsel) && scene_el(pflag) == scene_el(psel) &&
                       scene_el(aflag) == scene_el(asel) && scene_el(aflag) == scene_el(rflag) &&
                       scene_el(aflag) == scene_el(rsel) && scene_el(phead) == scene_el(pstem) &&
@@ -807,8 +812,8 @@ int main(int argc, char** argv) {
                       scene_el(selfill) != scene_el(phead) && scene_el(selfill) != scene_el(lbl) &&
                       scene_el(last) != scene_el(selfill) && scene_el(last) != scene_el(wflag);
     if (!nine) {
-        check(false, "the check export lists Chrome (active), Canvas, Ink over one scene, Warp Flag and Selected Warp Flag "
-                     "over a second, Phase Reset Flag and Selected Phase Reset Flag over a third, Added Flag, Selected "
+        check(false, "the check export lists Chrome (active), Canvas, Ink over one scene, the Outline over its own, Warp "
+                     "Flag and Selected Warp Flag over a second, Phase Reset Flag and Selected Phase Reset Flag over a third, Added Flag, Selected "
                      "Added Flag, Removed Flag and Selected Removed Flag over a fourth, Playhead Head and Playhead Stem over "
                      "a fifth, the Label over a sixth, Selection and Selected Text over a seventh, and test elements to an "
                      "odd count of at least nineteen entries, the last over another scene than the Selection's and the "
@@ -1459,6 +1464,191 @@ int main(int argc, char** argv) {
         pair_session(pflag, psel, Rgb{0x66, 0x66, 0x99}, Rgb{0x99, 0x99, 0xCC}, true, true, {}, true);
         pair_session(aflag, asel, Rgb{0x80, 0x80, 0x00}, Rgb{0x00, 0x80, 0x00}, true, false, {rflag, rsel}, false);
         pair_session(rflag, rsel, Rgb{0x99, 0x33, 0x33}, Rgb{0xFF, 0x66, 0x66}, true, true, {aflag, asel}, false);
+    }
+
+    // ---------------------------------------------------------------- THE OUTLINE (architect 2026-10-05)
+    // an element of its own, no inherited default: over the scene `magnified` (the waveform scene with the magnification
+    // lamp lit, render.py magnified_masks: the only picture the product paints the outline in), starting at the colour
+    // the earlier rule gave (the ink over the canvas, 50 % linear light), then independent of both. The panel on the
+    // left; the outline repaints alone, the ink and the canvas move it no more; committed by the switch or the close,
+    // kept by a relaunch
+    if (nine) {
+        fresh();
+        const Rgb ink0 = ex.elements[size_t(ink)].colour, cv0 = ex.elements[size_t(canvas)].colour,
+                  ol0 = ex.elements[size_t(outl)].colour;
+        bool as_element = false, derived = false;
+        for (const Role& R : ex.roles) {
+            derived = derived || R.kind == Role::Kind::Derive;
+            as_element = as_element || (R.kind == Role::Kind::Element && R.el == outl);
+        }
+        const int osc = scene_el(outl);
+        size_t opx = 0;
+        for (size_t r = 0; r < ex.roles.size(); ++r)
+            if (ex.roles[r].kind == Role::Kind::Element && ex.roles[r].el == outl)
+                for (const Run& run : ex.scenes[size_t(osc)].solid[r]) opx += run.len;
+        check(as_element && !derived && ol0 == lin_mix(ink0, cv0, 0.5) && opx > 0 &&
+                  ex.scenes[size_t(osc)].name == "magnified",
+              "the Outline is an element over the scene magnified (" + std::to_string(opx) + " outline px), its role "
+              "the element's and no role derived, starting at " + hex_of(ol0) + ", the ink " + hex_of(ink0) +
+              " over the canvas " + hex_of(cv0) + " by the earlier rule");
+        Picker p = launch();
+        tap(p, 1700, 700);
+        tap(p, name_x, name_y);
+        row_tap(p, outl);                             // the chrome left: its empty history commits it
+        const long ko = element_pixel(p.exp(), osc, outl, kMargin + kW + 10),
+                   ki = element_pixel(p.exp(), osc, ink, kMargin + kW + 10),
+                   kc = element_pixel(p.exp(), osc, canvas, kMargin + kW + 10);
+        p.paint(frame);
+        check(p.active() == outl && count(p) == "0 of 0" && ko >= 0 && ki >= 0 && kc >= 0 &&
+                  p.picture()[size_t(ko)] == word_of(ol0) && frame_word(frame, ko, W) == word_of(ol0) &&
+                  p.picture()[size_t(ki)] == word_of(ink0),
+              "the switch to the Outline shows the lit plate, the outline right of the panel at " + hex_of(ol0));
+        plus(p, 3);
+        const Rgb ol1 = p.colour().rgb;
+        check(ol1 != ol0 && p.picture()[size_t(ko)] == word_of(ol1) && p.picture()[size_t(ki)] == word_of(ink0) &&
+                  p.picture()[size_t(kc)] == word_of(cv0), "the outline repaints live, the ink and the canvas stay");
+        p.paint(frame);
+        png(frame, work + "/frame_outline_open.png");
+        tap(p, name_x, name_y);
+        row_tap(p, ink);
+        plus(p, 4);
+        const Rgb ink1 = p.colour().rgb;
+        tap(p, name_x, name_y);
+        row_tap(p, canvas);
+        plus(p, 5);
+        const Rgb cv1 = p.colour().rgb;
+        tap(p, name_x, name_y);
+        row_tap(p, outl);
+        check(p.element(outl).cs.rgb == ol1 && p.picture()[size_t(ko)] == word_of(ol1) &&
+                  p.picture()[size_t(ki)] == word_of(ink1) && p.picture()[size_t(kc)] == word_of(cv1) &&
+                  lin_mix(ink1, cv1, 0.5) != ol1 && lines_of(work + "/picks.txt") == 4 &&
+                  slurp(work + "/picks.txt").find(" waveform_outline " + hex_of(ol1) + " hsv ") != std::string::npos,
+              "the ink and the canvas moved (" + hex_of(ink1) + ", " + hex_of(cv1) + ", the old rule's outline " +
+                  hex_of(lin_mix(ink1, cv1, 0.5)) + "): the outline stays " + hex_of(ol1) + ", committed by the switch");
+        tap(p, 1700, 700);
+        Picker r = launch();
+        check(r.active() == outl && r.element(outl).cs.rgb == ol1 && r.element(outl).hist.picks.size() == 1 &&
+                  same_view(r.element(outl).cs, p.element(outl).cs) && r.element(ink).cs.rgb == ink1,
+              "a relaunch keeps the outline (1 of 1, its view) beside the moved ink");
+        fresh();
+    }
+
+    // ---------------------------------------------------------------- COPY AND PASTE (architect 2026-10-05)
+    // two buttons under OLD | NEW: COPY takes the active element's colour and view, PASTE sets the active element to it
+    // as an edit (OLD reverting, the close the one save); PASTE greyed until a copy; the copied colour never saved
+    if (nine) {
+        fresh();
+        // the brightest channel inside a button's field (its word's ink: white lit, the dim grey greyed), window px
+        auto brightest = [&](double px0, int x0, int x1) {
+            int m = 0;
+            for (int y = int(ppy) + kClipY + 2; y < int(ppy) + kClipY + kClipH - 2; ++y)
+                for (int x = int(px0) + x0 + 2; x < int(px0) + x1 - 2; ++x) {
+                    const uint32_t w = frame_word(frame, long(y) * W + x, W);
+                    m = std::max({m, int(w >> 16 & 255), int(w >> 8 & 255), int(w & 255)});
+                }
+            return m;
+        };
+        auto copy_at = [&](Picker& q, double px0) { tap(q, px0 + (kCopyX0 + kCopyX1) / 2.0, ppy + kClipY + kClipH / 2.0); };
+        auto paste_at = [&](Picker& q, double px0) { tap(q, px0 + (kPasteX0 + kPasteX1) / 2.0, ppy + kClipY + kClipH / 2.0); };
+        auto model_to = [&](Picker& q, double px0, int m) {
+            tap(q, px0 + kModelX0 + 60, ppy + kModelY + kModelH / 2.0);
+            tap(q, px0 + kModelX0 + 60, ppy + kModelListY + m * kChooserRowH + kChooserRowH / 2.0);
+        };
+        const Rgb sf0 = ex.elements[size_t(wsel)].colour;
+        Picker p = launch();
+        tap(p, 1700, 700);
+        const Rgb c0 = p.colour().rgb;
+        p.paint(frame);
+        const int dim = brightest(ppx, kPasteX0, kPasteX1), lit_copy = brightest(ppx, kCopyX0, kCopyX1);
+        png(frame, work + "/frame_copy_paste_greyed.png");
+        paste_at(p, ppx);
+        check(!p.paste_enabled() && dim == 0x55 && lit_copy == 0xFF && p.colour().rgb == c0 &&
+                  !std::ifstream(work + "/state.json") && !std::ifstream(work + "/picks.txt"),
+              "before any copy PASTE is greyed (its word's brightest channel " + std::to_string(dim) + ", COPY's " +
+                  std::to_string(lit_copy) + ") and its lift does nothing");
+        tap(p, name_x, name_y);
+        row_tap(p, wflag);                            // the chrome's empty history commits it: one line
+        model_to(p, ppx, 1);                          // HSL: the view he dials there is the one copied
+        track(p, 0, 200.4 / 360);
+        track(p, 2, 0.4137);
+        const Pick copied = p.colour().pick();
+        copy_at(p, ppx);
+        p.paint(frame);
+        const int lit = brightest(ppx, kPasteX0, kPasteX1);
+        png(frame, work + "/frame_copy_paste_left.png");
+        check(p.paste_enabled() && lit == 0xFF && p.clip().rgb == copied.rgb && p.clip().model == Model::Hsl &&
+                  p.clip().x[0] == copied.x[0] && p.clip().x[1] == copied.x[1] && p.clip().x[2] == copied.x[2] &&
+                  p.colour().rgb == copied.rgb && p.edited(),
+              "COPY takes the Warp Flag's colour " + hex_of(copied.rgb) + " and its HSL view, the colour unchanged and "
+              "still an unsaved edit; PASTE lit (" + std::to_string(lit) + ")");
+        model_to(p, ppx, 0);                          // the panel in HSV: the paste re-derives HSV, keeps the HSL view
+        tap(p, name_x, name_y);
+        row_tap(p, wsel);                             // the warp face's edit committed: two lines
+        paste_at(p, ppx);
+        ColourState ref;
+        ref.set_rgb(copied.rgb);
+        const std::array<double, 3> hsl = p.colour().view(Model::Hsl);
+        const Pick pasted = p.colour().pick();
+        p.paint(frame);
+        const long knew = long(int(ppy) + kSwatchY0 + 40) * W + int(ppx) + kNewX + 40,
+                   kold = long(int(ppy) + kSwatchY0 + 40) * W + int(ppx) + kColX + 40,
+                   ks = element_pixel(p.exp(), scene_el(wsel), wsel, -1);
+        png(frame, work + "/frame_paste_open.png");
+        check(p.active() == wsel && p.colour().rgb == copied.rgb && hsl[0] == copied.x[0] && hsl[1] == copied.x[1] &&
+                  hsl[2] == copied.x[2] && pasted.model == Model::Hsl && p.colour().h == ref.h && p.colour().s == ref.s &&
+                  p.colour().v == ref.v && p.edited() && frame_word(frame, knew, W) == word_of(copied.rgb) &&
+                  frame_word(frame, kold, W) == word_of(sf0) && ks >= 0 && p.picture()[size_t(ks)] == word_of(copied.rgb) &&
+                  lines_of(work + "/picks.txt") == 2,
+              "PASTE on the Selected Warp Flag: the bytes and the HSL view arrive exactly (the HSV the panel shows "
+              "re-derived from the bytes), an edit, NEW " + hex_of(copied.rgb) + " and the selected face live, OLD " +
+                  hex_of(sf0) + ", nothing written");
+        tap(p, ppx + kColX + 50, ppy + kSwatchY0 + 50);
+        check(p.colour().rgb == sf0 && p.paste_enabled(), "OLD reverts the paste; the copy is still there");
+        paste_at(p, ppx);
+        tap(p, 1700, 700);                            // the close: one pick, the copied colour and view
+        const std::string want = " warp_flag_selected " + hex_of(copied.rgb) + " hsl " + view_number(copied.x[0]) + " " +
+                                 view_number(copied.x[1]) + " " + view_number(copied.x[2]) + "\n";
+        const std::string picks = slurp(work + "/picks.txt");
+        check(!p.open() && lines_of(work + "/picks.txt") == 3 && picks.size() > want.size() &&
+                  picks.compare(picks.size() - want.size(), want.size(), want) == 0 && count(p) == "1 of 1",
+              "the close commits the paste once:" + want.substr(0, want.size() - 1));
+        tap(p, 1700, 700);
+        model_to(p, ppx, 1);
+        minus(p, 2);                                  // then just tweak the lightness
+        const Rgb tweaked = p.colour().rgb;
+        tap(p, 1700, 700);
+        check(lines_of(work + "/picks.txt") == 4 && tweaked != copied.rgb && p.element(wsel).cs.hsl[0] == copied.x[0] &&
+                  p.element(wsel).cs.hsl[1] == copied.x[1], "a lightness − on the pasted colour keeps its hue and "
+                  "saturation exactly, " + hex_of(tweaked) + " committed by the close");
+        // the panel on the right: the same two controls in the same place, pasted onto another element
+        const double rpx = W - kMargin - kW;
+        tap(p, 300, 700);
+        tap(p, rpx + kColX + 100, name_y);
+        tap(p, entry_x(pflag, rpx), entry_y(pflag));
+        paste_at(p, rpx);
+        p.paint(frame);
+        const int rlit = brightest(rpx, kPasteX0, kPasteX1), rcopy = brightest(rpx, kCopyX0, kCopyX1);
+        png(frame, work + "/frame_copy_paste_right.png");
+        check(p.panel_on_right() && p.active() == pflag && p.colour().rgb == copied.rgb && rlit == 0xFF && rcopy == 0xFF,
+              "the panel on the right: COPY and PASTE in the same place, the paste onto the Phase Reset Flag");
+        {
+            char ext[300];
+            std::snprintf(ext, sizeof ext, "COPY at panel x %d..%d and PASTE at %d..%d, y %d..%d (window x %d..%d and "
+                          "%d..%d with the panel on the left, %d..%d and %d..%d on the right): under the swatches (..%d), "
+                          "right of the model switch (..%d), over the slider rows (%d..)", kCopyX0, kCopyX1, kPasteX0,
+                          kPasteX1, kClipY, kClipY + kClipH, int(ppx) + kCopyX0, int(ppx) + kCopyX1, int(ppx) + kPasteX0,
+                          int(ppx) + kPasteX1, int(rpx) + kCopyX0, int(rpx) + kCopyX1, int(rpx) + kPasteX0,
+                          int(rpx) + kPasteX1, kSwatchY1, kModelX1, row_y(0));
+            check(kClipY > kSwatchY1 && kClipY + kClipH + 12 < row_y(0) && kCopyX0 > kModelX1 && kCopyX1 < kPasteX0 &&
+                      kPasteX1 <= kW - kPad && rpx + kPasteX1 <= W, ext);
+        }
+        tap(p, 300, 1300);
+        Picker r = launch();
+        tap(r, 1700, 700);
+        check(!r.paste_enabled() && !std::ifstream(work + "/state.json").fail() &&
+                  slurp(work + "/state.json").find("clip") == std::string::npos,
+              "a relaunch starts with nothing copied (the copy is never saved): PASTE greyed");
+        fresh();
     }
 
     // ---------------------------------------------------------------- THE RENAMED KEYS (architect 2026-10-05)
@@ -2323,7 +2513,8 @@ int main(int argc, char** argv) {
     // switch Ink -> Warp Flag the flags scene, then back, then after the switch Ink -> Playhead Head the playhead scene,
     // then after the switch Playhead Head -> Label the label scene, then after the switch Label -> Selection the
     // open_flag scene, then after the switch Selection -> Phase Reset Flag the phase_reset scene, then after the switch
-    // Phase Reset Flag -> Added Flag the history scene, each the mock tool's render
+    // Phase Reset Flag -> Added Flag the history scene, then after the switch Added Flag -> Outline the magnified scene,
+    // each the mock tool's render
     if (!round_expects.empty()) {
         std::istringstream in(slurp(round_expects));
         std::string line;
@@ -2348,14 +2539,14 @@ int main(int argc, char** argv) {
         const int rn = int(rx.elements.size());
         const int ri = element_of(rx, "ink"), rw = element_of(rx, "warp_flag"), rh = element_of(rx, "playhead_head"),
                   rl = element_of(rx, "label"), rs = element_of(rx, "selected_fill"), rp = element_of(rx, "phase_reset_flag"),
-                  ra = element_of(rx, "added_flag");
-        const char* scenes[] = {"waveform", "flags", "playhead", "label", "open_flag", "phase_reset", "history"};
+                  ra = element_of(rx, "added_flag"), ro = element_of(rx, "waveform_outline");
+        const char* scenes[] = {"waveform", "flags", "playhead", "label", "open_flag", "phase_reset", "history", "magnified"};
         bool all = moved.size() == rx.elements.size() && ri >= 0 && rw >= 0 && rh >= 0 && rl >= 0 && rs >= 0 && rp >= 0 &&
-                   ra >= 0;
+                   ra >= 0 && ro >= 0;
         for (const char* sc : scenes) all = all && ppm_of.count(sc);
         if (!all) {
-            check(false, "the round's export has an all-moved reference of its seven scenes, an ink, a warp flag, a "
-                         "playhead head, a label, a selection, a phase reset flag and an added flag");
+            check(false, "the round's export has an all-moved reference of its eight scenes, an ink, an outline, a warp "
+                         "flag, a playhead head, a label, a selection, a phase reset flag and an added flag");
         } else {
             fresh();
             std::string cols;
@@ -2400,12 +2591,17 @@ int main(int argc, char** argv) {
             const long d7 = diff("history");
             q.paint(frame);
             png(frame, work + "/frame_switch_history_moved.png");
-            check(on && d0 == 0 && d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 && d7 == 0,
+            on = to(ro) && on;
+            const long d8 = diff("magnified");
+            q.paint(frame);
+            png(frame, work + "/frame_switch_magnified_moved.png");
+            check(on && d0 == 0 && d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 && d7 == 0 && d8 == 0,
                   "the round's export at" + said + ": the waveform scene, the switch Ink -> Warp Flag and back, the "
                   "switch Ink -> Playhead Head, the switch on to the Label, on to the Selection, on to the Phase Reset "
-                  "Flag and on to the Added Flag each equal the mock tool's render (" + std::to_string(d0) + ", " +
-                  std::to_string(d1) + ", " + std::to_string(d2) + ", " + std::to_string(d3) + ", " + std::to_string(d4) +
-                  ", " + std::to_string(d5) + ", " + std::to_string(d6) + ", " + std::to_string(d7) + " px differ)");
+                  "Flag, on to the Added Flag and on to the Outline each equal the mock tool's render (" +
+                  std::to_string(d0) + ", " + std::to_string(d1) + ", " + std::to_string(d2) + ", " + std::to_string(d3) +
+                  ", " + std::to_string(d4) + ", " + std::to_string(d5) + ", " + std::to_string(d6) + ", " +
+                  std::to_string(d7) + ", " + std::to_string(d8) + " px differ)");
             fresh();
         }
     }
