@@ -299,3 +299,19 @@ reinstall it. Answer with `## DONE 5` here.
    navy and #C0C0C0 are that theme's. (For the record, the bundled kde3-solaris.theme names caption_active #B24D7A
    with white text.) Config only read; Minimise and Close not pressed.
 4. Committed: this block only. Wakes used: 6 of 16.
+
+## REQUEST 6 (2026-10-05, the cloud planner; HEAD after the A+ commit)
+Two product arcs and the picker in ONE wake. NEVER change his configured theme. Answer with `## DONE 6` here.
+1. `git pull` main. Copy the tablet's picker files into `tools/palette/picker/presets/` first (the standing act).
+2. THE PRODUCT: 3822516 (Roboto Mono retired — `fonts/RobotoMono-Regular.ttf` deleted, CMake and the APK no longer
+   embed it; every time a 17-px one-line sunken TIME FIELD in Roboto 13, fixed width; the player's position and
+   length two fields) and the A+ commit (each marker stem crosses the well's top lines between two DkShadow outline
+   columns). Reconfigure `build/` (CMakeLists changed), `cmake --build build -j$(nproc)` (exit code), a short
+   launch under labwc (it starts, no refusal). `bash android/app/build_apk.sh` (expect the font assets Roboto
+   Regular + Bold only), install, relaunch; logcat: loads his project, no refusal.
+3. THE PICKER (its fonts are Roboto only now, and the mock's clock follows the time field): `bash
+   tools/palette/picker/build_picker.sh --check` ("all checks pass"), the APK, the export, install, push the whole
+   export folder, launch; logcat's launch line. Do not choose an element by touch.
+4. If the screen is awake with the product in front, ONE screencap: describe row 8's clock field (its height in
+   device px, the time's face) and one flag's stem where it enters the well (the two black flank columns).
+5. Commit (the wrapper) any copied presets and this file's DONE 6, push. Wakes: the count.
