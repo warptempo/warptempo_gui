@@ -125,3 +125,9 @@ RULED:
 - ANSWERED 2026-10-05: the built-in's teal / blue and olive / green stand ("you can be loose with the term; the
   Windows theme is just a fallback"); closed_questions' amended line holds. NOTHING IS OPEN FOR HIM; REQUEST 3
   (amended) waits on a fresh local session.
+- DONE 3 (a279373, 2026-10-05): the theme-files build is on both devices, both configs migrated (his thirteen
+  retired values on record in DONE 3; his themes kept: laptop `warptempo`, tablet `kde3-solaris`), 98 bundled
+  files each (the test theme removed, as meant). HIS GLASS: "tablet looks good and theme is as expected". The
+  MediaSession's STOPPED -> PLAYING at launch is by design (car_transport.h: the session says PLAYING always).
+  THE THEME-FILES ARC IS DONE. Local wakes used: 3 of 16.
+
