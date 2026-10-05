@@ -102,9 +102,19 @@ RULED:
   never touched), then reads the folder once. The source: the APK's assets on the tablet; on the laptop the
   repository's `assets/themes/`, its path compiled in (the laptop runs from the build tree). The sync verb stays his
   with the local planner (the ruling above).
-- ARC 1 (theme files, the one built-in `windows-95-standard`, 30 roles, the flag kinds, `theme_level` and the twelve
-  keys retired, the emboss's light copy reading Hilight) was briefed 2026-10-05; arc 2 (the generator writing
-  `assets/themes/`, the copy-in, theme_table.h and its generator retired) follows it.
+- BOTH ARCS LANDED 2026-10-05: 3c3575d (theme files, 30 roles in `kGuiThemeRoles`, the built-in
+  `windows-95-standard`, the flag kinds, `theme_level` and the twelve keys retired, the emboss's light copy Hilight)
+  and 71acf95 (`tools/theme_catalog/gen_theme_files.py` -> the 99 files of `assets/themes/`, the copy-in at every
+  launch, theme_table.h / levels.py / preset_keys.py retired, the sync script's setup dropping the retired keys).
+  REQUEST 3 (the laptop build, both configs migrated with his values recorded first, the APK) is OUT; read DONE 3.
+- OPEN FOR HIM (asked 2026-10-05, no answer yet): (1) each preset's flag LABELS — the picker shows both white, the
+  built-in's selected label is black; presets name no flag label today (none records a flag colour yet): name them
+  white whenever a preset records a flag colour (the planner's recommendation, what preset_keys.py did)? (2) should
+  `warptempo-2026-10-03.theme` also name that day's recorded program colours (the catalog keeps them) so it
+  reproduces the old look whole? (3) the crops (`docs/themes/crops/`) still paint 2026-10-03's program colours: keep,
+  or take each file's program roles (else the built-in's) at the next re-render?
+- THE PICKER'S FLAG ELEMENTS follow the four kinds in a later picker round (his ruling); a preset's one flag pair
+  goes onto both warp and phase reset until then.
 - NOTHING ELSE IS OPEN FOR HIM ON THIS ARC. The original plan: likely two arcs, (1) theme files, the one
   built-in, every colour a role (the clock's two, the card's three, the flag kinds, the twelve device keys retired,
   `theme_level` retired), (2) the generator writing the catalog and his presets as bundled files, plus the sync verb;
