@@ -12,7 +12,7 @@
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
 // piece (architect 2026-08-27). Six keys live here and nowhere else:
 //
-//   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
+//   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
 //                            an integer [0, 9999], 0 meaning no maximum
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -247,31 +247,37 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE PERCENT IS DEVICE PX PER WINDOWS-95 PX since 2026-10-02 (architect; the
 // unit's statement is at render.h's scaled_px): the laptop runs 138 (a
 // 16-px glyph at 22 device px) and the tablet 275 (44); 100 is Windows' own
-// 96-dpi size; 350 is the fine-panel ceiling; 50 is the half-size floor,
+// 96-dpi size; 1000 is the ceiling; 50 is the half-size floor,
 // which is where every structural dimension in render.h's scaled_px
 // accessors still has a floor holding it above zero.
 //
-// THE CEILING IS 350 (architect 2026-08-29, taking it down from the 400 that
-// stood from 2026-08-26): 400 was never needed on either host. At the Windows
-// pixel the seven lanes (the caption's among them since 2026-10-05) paint 423
-// device rows above the waveform and 116 below at 350 %, 539 in all, so a
-// 1080-tall window keeps 541 px of waveform and gaps under the tallest scale
-// the vocabulary admits (the arithmetic at waveform_area, main.cpp).
+// THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
+// stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
+// 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
+// pixel the seven lanes (the caption's among them) paint 488 device rows
+// above the waveform and 132 below at 400 %, 620 in all, leaving the
+// tablet's 1440 rows 820 of waveform; they pass 1440 near 930 %, past
+// which the waveform is the zero height waveform_area's floor answers (the
+// arithmetic and the guard at waveform_area, main.cpp).
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 662
 // Windows px of window at 100 % the icon row's twenty-six buttons in seven
 // groups no longer fit, and its flush-right view group covers the groups to
 // its left (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The
-// tablet's 2304-px panel holds the row at EVERY scale of the vocabulary —
-// 1814 device px at 275 %, exactly 2304 at 348 % to 350 % (the arithmetic is
-// at paint_icon_row, paint_handler.cpp; the laptop-pixel unit's 245 % fit
-// ceiling and its succession are git history) — and the redesign carries no
+// tablet's 2304-px panel holds the row whole up to 350 % — 1814 device px
+// at 275 %, exactly 2304 at 348 % to 350 % (the arithmetic is at
+// paint_icon_row, paint_handler.cpp; the laptop-pixel unit's 245 % fit
+// ceiling and its succession are git history) — and past it the overflow
+// rule answers: at 400 % the left walk ends at 2308 against the view
+// group's gap at 1964, so Load in Place, History Newer and History Older
+// are covered whole and History Revert cut to its first 24 columns. The
+// redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A
 // scale is a VOCABULARY; which of its values lays out well is the
 // architect's call on his own panel, not a validator's.
 inline constexpr bool is_gui_scale_percent(int64_t v) {
-    return v >= 50 && v <= 350;
+    return v >= 50 && v <= 1000;
 }
 
 // THE max_waveform_height RANGE — the ONE owner (architect 2026-09-13), asked
@@ -290,7 +296,7 @@ inline constexpr bool is_max_waveform_height(int64_t v) {
 // The scale's and the cap's reasons, spelled once for their two readers each
 // (the config reader's `bad_value` line and the settings editor's card).
 inline constexpr const char* kGuiScaleGrammarReason =
-    "must be an integer in [50, 350] in canonical spelling";
+    "must be an integer in [50, 1000] in canonical spelling";
 inline constexpr const char* kMaxWaveformHeightGrammarReason =
     "must be an integer in [0, 9999] in canonical spelling";
 

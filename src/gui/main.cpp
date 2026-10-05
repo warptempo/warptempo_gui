@@ -224,7 +224,9 @@ namespace {
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
 // 2026-10-05 (the caption's lane added at the top; the Windows pixel: every
 // lane in Windows px, the ruler and the marker lane derived from their faces,
-// the marker lane's air above the box alone since 2026-10-03) rather than
+// the marker lane's air above the box alone since 2026-10-03, its box
+// seated on its label's painted ink with one Windows px of face above and
+// below since 2026-10-05, the rows it gained the waveform's) rather than
 // adjusted, at the
 // templates' default max_waveform_height OF 364 (the laptop pixel's 500
 // re-authored) and at 0, NO MAXIMUM, which both devices run (a device
@@ -232,35 +234,35 @@ namespace {
 // composite of rounded parts (scaled_px's rule), so the device rows below are
 // read off the lane accessors, never off a Windows total times the factor.
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
-//   lanes are 25 caption + 26 menu + 44 icon + 22 trim + 27 ruler + 24 marker
-//   = 168 above, of which 95 is the caption and the two toolbar rows above
-//   the gap and 73 the block above the waveform, and 45 below (the bottom
-//   row's 44 content and its 1-px top row); leftover 867.
-//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 121, gap 2 =
-//     244 — 25 caption / 26 menu / 44 icon / 121 blank / 73 block / 502
+//   lanes are 25 caption + 26 menu + 44 icon + 22 trim + 27 ruler + 26 marker
+//   = 170 above, of which 95 is the caption and the two toolbar rows above
+//   the gap and 75 the block above the waveform, and 45 below (the bottom
+//   row's 44 content and its 1-px top row); leftover 865.
+//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 119, gap 2 =
+//     244 — 25 caption / 26 menu / 44 icon / 119 blank / 75 block / 502
 //     waveform / 244 blank / 45 row, the waveform spanning y 289..791 about
 //     the window's midline 540 (the clamp fixes its height and the midpoint
 //     rule its centre, so gap 1 absorbs every row the lanes above it gain or
 //     lose — the caption's 25 among them).
-//     At 0: waveform UNCLAMPED at 867, both gaps 0 (the midpoint rule would
-//     want 540 - 168 - 433 = -61) — 25 / 26 / 44 / 0 / 73 / 867 / 0 / 45.
+//     At 0: waveform UNCLAMPED at 865, both gaps 0 (the midpoint rule would
+//     want 540 - 170 - 432 = -62) — 25 / 26 / 44 / 0 / 75 / 865 / 0 / 45.
 //   2304x1440 AT gui_scale 275, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — the caption across its top): the lanes are 50
-//   caption + 52 menu + 88 icon + 44 trim + 50 ruler + 49 marker = 333 above
+//   caption + 52 menu + 88 icon + 44 trim + 50 ruler + 54 marker = 338 above
 //   (the ruler's and the marker lane's heights derived from their faces,
 //   ruler_lane_h_px and marker_lane_h_px at render.h) and 91 below (88 + its
-//   3-row top row), leftover 1016.
+//   3-row top row), leftover 1011.
 //     At 364: waveform CLAMPED at 1001 (the scaled 364), gap 1 = 0 (the
-//     midpoint rule would want 720 - 333 - 500 = -113), gap 2 = 15
-//     — 50 / 52 / 88 / 0 / 143 / 1001 / 15 / 91.
-//     At 0: waveform UNCLAMPED at 1016, both gaps 0 (the rule would want
-//     720 - 333 - 508 = -121) — 50 / 52 / 88 / 0 / 143 / 1016 / 0 / 91.
+//     midpoint rule would want 720 - 338 - 500 = -118), gap 2 = 10
+//     — 50 / 52 / 88 / 0 / 148 / 1001 / 10 / 91.
+//     At 0: waveform UNCLAMPED at 1011, both gaps 0 (the rule would want
+//     720 - 338 - 505 = -123) — 50 / 52 / 88 / 0 / 148 / 1011 / 0 / 91.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
 //   exist for; no host runs this geometry), the same at either value:
-//     leftover 387 -> waveform UNCLAMPED at 387, both gaps 0
-//     — 25 / 26 / 44 / 0 / 73 / 387 / 0 / 45. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = 300 - 168 - 193 = -61), so the
+//     leftover 385 -> waveform UNCLAMPED at 385, both gaps 0
+//     — 25 / 26 / 44 / 0 / 75 / 385 / 0 / 45. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = 300 - 170 - 192 = -62), so the
 //     waveform keeps everything, which is the rule's own floor rather than a
 //     special case.
 //
@@ -319,9 +321,9 @@ namespace {
 // trim lane and bottom_row_h_px()); THE RULER LANE and THE MARKER LANE are sized from
 // their faces — the ruler's from the label face's seat plus the authored
 // rows from the labels' baseline to the marker lane, the marker lane's from
-// the flag box (edge, ascent, descent) plus its air (architect 2026-10-02;
-// ruler_lane_h_px and marker_lane_h_px, render.h), faces that themselves
-// ride gui_scale. The lanes' rulings are at those accessors' declarations in
+// the flag box (edge, face, label ink, face, edge) plus its air
+// (architect 2026-10-02; ruler_lane_h_px and marker_lane_h_px, render.h),
+// faces that themselves ride gui_scale. The lanes' rulings are at those accessors' declarations in
 // render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
@@ -502,19 +504,21 @@ GuiRect waveform_area(const AppState& a) {
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, a constructive DOMAIN INVARIANT
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
-    // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and at today's ceiling
-    // it fits: gui_scale's 350 takes the seven lanes — 156 Windows px at 100 %,
-    // the top strip's 123 plus the bottom row's 33 (re-derived 2026-10-05,
-    // the caption's 18 added) — to 539 device px on a
-    // supported 1080-tall window (lane by lane through scaled_px and each
-    // lane from its rounded parts, which is not one multiply of the sum: 63
-    // caption + 66 menu + 112 icon + 56 trim + 63 ruler + 63 marker = 423
-    // above, and 116 row), leaving 541 for the waveform and its gaps. (No host
-    // runs anything near it: the laptop is 138 % on 1080, where the seven lanes
-    // take 213, and the tablet 275 % on its 1440-tall surface, where they take
-    // 424.) The guard
+    // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
+    // the vocabulary reaches it: the seven lanes are 156 Windows px at 100 %,
+    // the top strip's 123 plus the bottom row's 33 (lane by lane through
+    // scaled_px and each lane from its rounded parts, which is not one
+    // multiply of the sum). At 350 % they take 546 device px (63 caption +
+    // 66 menu + 112 icon + 56 trim + 63 ruler + 70 marker = 430 above, and 116
+    // row), leaving a 1080-tall window 534; at 400 %, the value the ceiling
+    // was raised to try, 620 (488 + 132), leaving the tablet's 1440 rows 820;
+    // and they pass 1440 near 930 %, short of the 1000 % ceiling (architect
+    // 2026-10-05), so the top of the vocabulary lands on this floor. (The
+    // hosts run far below it: the laptop is 138 % on 1080, where the seven
+    // lanes take 215, and the tablet 275 % on its 1440-tall surface, where
+    // they take 429.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
-    // architect moves — it has now moved three times — and the lane set is one
+    // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
     // A negative-height rect is a silent-wrong input to every consumer
@@ -531,8 +535,8 @@ GuiRect waveform_area(const AppState& a) {
     // A positive floor would instead invent a strip of waveform that has nowhere
     // to live. THE VOCABULARY QUESTION WAS ANSWERED SEPARATELY — gui_scale's
     // ceiling came down to 200 (architect 2026-07-31) and went back up to 400
-    // (architect approval 2026-08-26, for a 280 dpi tablet panel), and
-    // font_size, the other
+    // (architect approval 2026-08-26, for a 280 dpi tablet panel), down to
+    // 350 (2026-08-29) and up to 1000 (2026-10-05), and font_size, the other
     // half of the cross-product this guard was written against, left the schema
     // entirely in row 7 — and the guard STAYS regardless, the ceiling's return
     // being exactly why: it costs one compare

@@ -1106,9 +1106,11 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // THE MARKER LANE IS A LINE SEAT TOO, and stays out of the box solver: the
 // live flag pass, the history-diff flag pass and the marker-lane editor each
 // seat their label at the flag box's top plus marker_flag_baseline_px() — its
-// edge band, then the face's ceiled ascent (architect 2026-10-02, the AC /
-// AD sets' flag_seat; the box is exactly edge + ascent + descent, so there is
-// no margin to centre in). The owner and the arithmetic are at render.h's
+// edge band, one Windows px of face, then the printable ASCII set's painted
+// ink above the baseline (architect 2026-10-05; the face's ceiled ascent
+// from 2026-10-02, the AC / AD sets' flag_seat, until then): the box is
+// exactly outline, face, ink, face, outline, so there is no margin to centre
+// in. The owner and the arithmetic are at render.h's
 // marker_lane_h_px block.
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
@@ -2201,11 +2203,16 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // "DD:DD.DDD" (kTimeShape) and, on row 8, the widest TAB LETTER in the
 // letter's slot (kClockTabLetters) — shaped through the one chokepoint at the
 // live size, so nothing is trusted to the face. The field is that cell plus
-// kStatusPanelPadPx of face either side, its width ceiled. THE RUN STARTS AT
-// THE CELL'S LEFT, the digits at a fixed offset from it: row 8's letter is
-// painted in its slot and the ` | ` and the timestamp from the slot's end, so
-// switching tab (A is 1 px wider than B at 275 %) moves the letter's own ink
-// and nothing after it.
+// kStatusPanelPadPx of face either side, its width ceiled.
+//
+// THE RUN IS RIGHT-ALIGNED (architect 2026-10-05, the period's ACID / Vegas
+// fields): it ENDS AT THE CELL'S RIGHT PAD — the cell's ceiled width past its
+// x, kStatusPanelPadPx inside the field's right line — and the fixed width is
+// unchanged, so nothing moves as the time changes. On row 8 the pipe and the
+// digits are ONE RUN, ` | ` and the timestamp, ending there, and the tab
+// letter is painted RIGHT-ALIGNED AGAINST THAT RUN'S START: switching tab (A
+// is 1 px wider than B at 275 %) moves the letter's own left edge and nothing
+// else — no letter's kerning can reach the pipe, the two being shaped apart.
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2283,6 +2290,36 @@ static const TimeFieldMetrics& time_field_metrics(cairo_scaled_font_t* font,
     return m;
 }
 
+// THE BOTTOM ROW'S SEATS — ROW 8 AND THE RENDER PLAYER'S ROW ARE ONE ROW
+// (architect 2026-10-05, on his 350 % screenshots, the player's Close 4 px
+// left of and 2 rows under row 8's last button): both painters take their
+// edges from this one owner, so the shared edges cannot drift. The LEFT PAD
+// is where the left-aligned run starts (row 8's clock cell, the player's
+// transport), the RIGHT PAD where the right-aligned block ends (row 8's
+// transport three, the player's Load in place · Close) — the lane's one pad
+// (icon_row_pad_x) from each edge, with no other reserve: a focused player
+// button's frame (kModalFocusFramePx) paints in the pad's first line rather
+// than pushing the block in. Every BUTTON on either row is THE TOOLBAR CASE
+// (render.h's icon-row block, icon_case_w_px x icon_case_h_px) at the row's
+// AIR under the content's top (kIconRowAirPx), the icon row's own seat on
+// its own height; the faces differ (row 8 the toolbar family, the player
+// the push-button family), the boxes do not. What lies between the two
+// runs is each row's own: row 8's state line, the player's scrub, which
+// fills it.
+struct BottomRowSeats {
+    int left_x  = 0;   // the left pad: the left-aligned run's first column
+    int right_x = 0;   // the right pad: one past the right block's last column
+    int case_y  = 0;   // the case's top: the content's top plus the row's air
+    int case_w  = 0;   // the toolbar case, both rows' every button
+    int case_h  = 0;
+};
+static BottomRowSeats bottom_row_seats(const GuiRect& content) {
+    const int pad = icon_row_pad_x();
+    return BottomRowSeats{content.x + pad, content.x + content.w - pad,
+                          content.y + scaled_px(kIconRowAirPx),
+                          icon_case_w_px(), icon_case_h_px()};
+}
+
 // ONE TIME FIELD'S RECT round a reserved cell starting at `cell_x`, centred
 // in the content band [band_y, band_y + band_h).
 static GuiRect time_field_rect(int cell_x, double cell_w, int band_y,
@@ -2308,15 +2345,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     cairo_save(cr);
 
-    const int btn_w     = icon_case_w_px();
-    const int btn_h     = icon_case_h_px();
-    const int pad       = icon_row_pad_x();
+    // The row's seats, shared with the render player's row (bottom_row_seats):
+    // the case on the row's five-px air, the icon row's own arithmetic on the
+    // icon row's own height (render.h's icon-row block), and the two pads.
+    const BottomRowSeats seats = bottom_row_seats(content);
+    const int btn_w     = seats.case_w;
+    const int btn_h     = seats.case_h;
     const int glyph_px  = icon_glyph_px();
     const int glyph_off = icon_case_lead_px();
     const int group_gap = icon_group_space_px();
-    // The case on the row's five-px air, the icon row's own arithmetic on the
-    // icon row's own height (render.h's icon-row block).
-    const int btn_y = content_y + scaled_px(kIconRowAirPx);
+    const int btn_y     = seats.case_y;
 
     // One button, the icon row's face logic verbatim (paint_button_box's
     // toolbar family, its three faces). THE CHECKED FACE'S SUBJECT ON THIS
@@ -2392,12 +2430,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // state line 261..1123 (~862 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
-    // scale driven toward the 350 ceiling: the block reaches the field's
+    // scale driven toward the 1000 ceiling: the block reaches the field's
     // right edge once the window falls below about 510 Windows px (8 − 3 +
     // ~76 + 6 + 415 + 8). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
     // group space short of the block, so a long line is cut rather than
     // colliding.
-    int right_block_x = lane.x + lane.w - pad;
+    int right_block_x = seats.right_x;
     {
         // Each group's count read off its own table, so a box joining or
         // leaving moves this width with no second edit.
@@ -2407,7 +2445,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const int trans_n  = static_cast<int>(std::size(kTransportGroup));
         const int block_w  =
             (verbs_n + walk_n + arrows_n + trans_n) * btn_w + 3 * group_gap;
-        int ax = lane.x + lane.w - pad - block_w;
+        int ax = seats.right_x - block_w;
         // THE STATE LINE'S RIGHT BOUND (below) is this block's own left
         // edge, published out of the scope so the line cannot guess it.
         right_block_x = ax;
@@ -2446,9 +2484,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // tab row deleted as "a waste of space"): `A | 00:45.115` — the
         // letter, a space, the LITERAL pipe, a space, then the timestamp. THE
         // RESERVED CELL IS THE WIDEST LETTER'S SLOT, THE ` | ` AND THE
-        // DIGITS' SPECIMEN, so it is ONE WIDTH ON EVERY TAB AND AT EVERY TIME:
-        // the letter paints at the cell's x and the rest at the slot's end,
-        // which no tab switch and no tick moves. (The cell reserved a
+        // DIGITS' SPECIMEN, so it is ONE WIDTH ON EVERY TAB AND AT EVERY TIME;
+        // the ` | ` and the digits end at the cell's right pad and the letter
+        // stands right-aligned against them (the right-alignment rule at
+        // kTimeShape's block), so no tab switch moves the pipe or the
+        // digits. (The cell reserved a
         // fourteenth monospace cell for the dirty mark `*` glued to the
         // digits until the mark retired, SAVE BEING THE DIRTY MARK —
         // architect 2026-10-05, plain_save_actionable.)
@@ -2463,7 +2503,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // digits offset carried while the cell sat behind a separator, which
         // at a bare margin is the pad itself. It is also where the modal row's
         // prompt message starts.
-        const int cell_x = lane.x + pad;
+        const int cell_x = seats.left_x;
         // THE LEFT OF THE ROW IS ONE FIELD AND A LINE (architect 2026-10-02
         // for the panel, 2026-10-03 for the line, 2026-10-05 for the field's
         // height and face) — the Vegas / ACID pattern: a time in a sunken
@@ -2596,15 +2636,21 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // class (it is the only feedback on the loading frame).
             state = app.queue_progress_text;
         }
-        // THE CLOCK, UNCLIPPED — the tab letter at the cell's origin, then
-        // ` | ` and the digits as one run from the letter slot's end, so the
-        // digits stand at a fixed offset whatever the letter.
-        show_row_text(cr, font, static_cast<double>(cell_x), baseline,
-                      std::string(1, app.active_tab_view),
-                      palette().clock_text);
-        show_row_text(cr, font, static_cast<double>(cell_x) + tm.letter_w,
-                      baseline, sep + format_timestamp(seconds),
-                      palette().clock_text);
+        // THE CLOCK, UNCLIPPED AND RIGHT-ALIGNED — ` | ` and the digits as
+        // one run ending at the cell's right pad, then the tab letter ending
+        // where that run starts, so the pipe and the digits stand still
+        // whatever the letter.
+        const text_shape::ShapedRun time_run =
+            text_shape::shape_text_run(font, sep + format_timestamp(seconds));
+        const text_shape::ShapedRun letter_run = text_shape::shape_text_run(
+            font, std::string(1, app.active_tab_view));
+        const double run_x =
+            static_cast<double>(cell_x + static_cast<int>(std::ceil(cell_w))) -
+            time_run.width_px;
+        set_palette_source(cr, palette().clock_text);
+        text_shape::show_shaped_run(cr, letter_run,
+                                    run_x - letter_run.width_px, baseline);
+        text_shape::show_shaped_run(cr, time_run, run_x, baseline);
         if (state_w > 0 && !state.empty()) {
             // The same face as the clock's run, on the content band's seat.
             const double state_baseline =
@@ -3600,41 +3646,88 @@ int ruler_lane_h_px() {
     return cached_h;
 }
 
-// THE MARKER LANE'S DERIVED ROWS (the rule and its three scales at
-// render.h's marker_lane_h_px block): the flag box is its edge band, the
-// normal face's ceiled ascent and its ceiled descent; the label's baseline is
-// the band plus the ascent under the box's top; the lane is the box with one
-// Windows px of air above it and none below (architect 2026-10-03: the box
-// stands on the well). Read at LAYOUT like the ruler's height,
-// on a scratch context through the painter's own road (gui_select_font_face,
-// then redesign_font_size_px), and MEMOIZED ON THE SCALE the same way.
+// THE MARKER LANE'S DERIVED ROWS (the rule and its scales at render.h's
+// marker_lane_h_px block): the flag box is its top edge band, one clear band
+// of face, the LABEL INK's rows above the baseline and below it, a second
+// clear band and its bottom edge band (architect 2026-10-05); the label's
+// baseline is the edge, the clear band and the ink above under the box's
+// top; the lane is the box with one Windows px of air above it and none
+// below (architect 2026-10-03: the box stands on the well).
+//
+// THE INK IS PAINTED, NOT READ OFF A METRIC: the printable ASCII set
+// (0x21..0x7E, one run) is shaped through the one chokepoint
+// and shown on a scratch surface through the painter's own road
+// (gui_select_font_face, then redesign_font_size_px) at a whole-row
+// baseline — the flag labels' own seat is a whole row too — and the rows
+// holding any coverage are counted, so the faint antialiased rows a glyph
+// lays past its outline are counted as ink, as the screen shows them. Read at
+// LAYOUT like the ruler's height and MEMOIZED ON THE SCALE the same way.
 namespace {
 struct MarkerLaneRows {
-    int percent  = -1;
-    int box_h    = 0;
-    int baseline = 0;   // under the box's top
-    int lane_h   = 0;
+    int percent   = -1;
+    int box_h     = 0;
+    int baseline  = 0;   // under the box's top
+    int lane_h    = 0;
+    int ink_above = 0;   // the specimen's ink rows above the baseline
+    int ink_below = 0;   // and from the baseline's row down
 };
 const MarkerLaneRows& marker_lane_rows() {
     static MarkerLaneRows rows;
     const int percent = gui_scale_percent();
     if (percent == rows.percent) return rows;
-    cairo_surface_t* surface =
+    std::string specimen;
+    for (char c = 0x21; c <= 0x7E; ++c) specimen += c;
+    const double size = redesign_font_size_px();
+    // A surface the run and twice the face's size either side of its
+    // baseline, which no glyph of the face reaches past.
+    const int margin   = static_cast<int>(std::ceil(2.0 * size));
+    const int baseline = margin;
+    cairo_surface_t* probe =
         cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* pcr = cairo_create(probe);
+    gui_select_font_face(pcr, GuiFontFamily::Sans);
+    assert(cairo_font_face_get_type(cairo_get_font_face(pcr)) ==
+           CAIRO_FONT_TYPE_FT);
+    cairo_set_font_size(pcr, size);
+    const double run_w =
+        text_shape::shape_text_run(cairo_get_scaled_font(pcr), specimen)
+            .width_px;
+    cairo_destroy(pcr);
+    cairo_surface_destroy(probe);
+    const int w = static_cast<int>(std::ceil(run_w)) + 2 * margin;
+    const int h = 2 * margin;
+    cairo_surface_t* surface =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
     cairo_t* cr = cairo_create(surface);
     gui_select_font_face(cr, GuiFontFamily::Sans);
-    assert(cairo_font_face_get_type(cairo_get_font_face(cr)) ==
-           CAIRO_FONT_TYPE_FT);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(cairo_get_scaled_font(cr), &fe);
+    cairo_set_font_size(cr, size);
+    const text_shape::ShapedRun run =
+        text_shape::shape_text_run(cairo_get_scaled_font(cr), specimen);
+    cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+    text_shape::show_shaped_run(cr, run, static_cast<double>(margin),
+                                static_cast<double>(baseline));
     cairo_destroy(cr);
+    cairo_surface_flush(surface);
+    const unsigned char* data = cairo_image_surface_get_data(surface);
+    const int stride = cairo_image_surface_get_stride(surface);
+    int top = -1, bottom = -1;
+    for (int y = 0; y < h; ++y) {
+        const auto* px = reinterpret_cast<const uint32_t*>(data + y * stride);
+        bool inked = false;
+        for (int x = 0; x < w && !inked; ++x) inked = px[x] != 0;
+        if (!inked) continue;
+        if (top < 0) top = y;
+        bottom = y;
+    }
     cairo_surface_destroy(surface);
-    const int ascent  = static_cast<int>(std::ceil(fe.ascent));
-    const int descent = static_cast<int>(std::ceil(fe.descent));
-    const int edge    = marker_flag_edge_h_px();
-    rows.box_h    = edge + ascent + descent;
-    rows.baseline = edge + ascent;
+    assert(top >= 0 && top < baseline && bottom >= baseline);
+    rows.ink_above = baseline - top;
+    rows.ink_below = bottom - baseline + 1;
+    const int edge  = marker_flag_edge_h_px();
+    const int clear = marker_flag_ink_clear_px();
+    rows.box_h    = edge + clear + rows.ink_above + rows.ink_below + clear +
+                    edge;
+    rows.baseline = edge + clear + rows.ink_above;
     rows.lane_h   = rows.box_h + marker_lane_air_px();
     rows.percent  = percent;
     return rows;
@@ -4733,9 +4826,10 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // the playhead still paints everywhere else, unconditionally, and the HEAD
 // paints even here (on the ruler's bottom rows since 2026-09-23, just above
 // the coincident flag, so it stays whole; a ±1 column is invisible against the HEAD, whose widest row is
-// 2 * playhead_head_half_px(0, s) + waveform_line_px() — 9px at the 50% floor,
-// 19 at 100%, 68 at the 350% ceiling, so it is at least nine columns wide
-// anywhere in the schema and the ±1 never approaches half of it. That is
+// 2 * playhead_head_half_px(0, s) + waveform_line_px() — 7px at the 50% floor,
+// 13 at 100%, 46 at 350% and 130 at the 1000% ceiling, so it is at least
+// seven columns wide anywhere in the schema and the ±1 never approaches half
+// of it. That is
 // exactly what a stem beside another stem is not, at any scale: a stem is
 // waveform_line_px() wide (render.h; 1 column on the laptop, 3 on the tablet —
 // the line scales with gui_scale since 2026-09-27), so there the same ±1 is
@@ -5347,8 +5441,9 @@ constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
 // Every word button the product draws fits 75 (re-greped 2026-10-02: OK,
 // Cancel, Yes, Save, Discard, Retry, Reload, Keep, Delete — Discard the
 // widest at about 56 with its pads at the 13-px face), so the row reads as
-// Windows' row of equal buttons. A glyph button stays the box's own square
-// (the render player's seven, 23 x 23).
+// Windows' row of equal buttons. A glyph button is not this box: the render
+// player's seven are row 8's toolbar case, 23 x 22 (architect 2026-10-05,
+// bottom_row_seats).
 constexpr double kModalBtnBoxPx       = 23.0;
 constexpr double kModalBtnMinWidthPx  = 75.0;
 constexpr double kModalBtnPadLeftPx   = 7.0;
@@ -5359,6 +5454,8 @@ constexpr double kModalBtnPadRightPx  = 7.0;
 // below). RESERVED FOR EVERY BUTTON AND PAINTED FOR ONE, which is what makes
 // moving the focus reflow nothing: the cluster's right anchor and the
 // content's right bound both spend it, and the buttons themselves never move.
+// THE RENDER PLAYER'S RIGHT PAIR SPENDS NONE (architect 2026-10-05): it ends
+// at row 8's right pad (bottom_row_seats), so its frame paints in the pad.
 // One relief line (relief_line_px), so it fits at every scale by
 // construction: the vertical margin is (32 - 23)/2 Windows px against its 1,
 // and the 6-px inter-button gap absorbs one frame from each neighbour.
@@ -5508,8 +5605,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int bgap  = scaled_px(kModalButtonGapPx);
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (kModalBtnBoxPx — 32 = row 2's 44 content minus its
-    // two 6px margins, the derivation frozen at the constant).
-    const int btn_h = scaled_px(kModalBtnBoxPx);
+    // two 6px margins, the derivation frozen at the constant) — on every
+    // owner's row but THE PLAYER'S, whose buttons are row 8's TOOLBAR CASE
+    // at row 8's seat (architect 2026-10-05, bottom_row_seats: the two rows
+    // are one row). `btn_y` and `btn_h` are the one band the walk, the scrub
+    // and the editor's label all read.
+    const BottomRowSeats seats = bottom_row_seats(content);
+    const int btn_h = player_up ? seats.case_h : scaled_px(kModalBtnBoxPx);
     const int btn_pad_l = scaled_px(kModalBtnPadLeftPx);
     const int btn_pad_r = scaled_px(kModalBtnPadRightPx);
     // The focus frame's reserved band (kModalFocusFramePx, above): spent by
@@ -5768,8 +5870,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     int buttons_w = 0;
     for (size_t i = 0; i < plan.size(); ++i) {
         if (plan[i].glyph) {
-            // A glyph button is the box's own square.
-            plan[i].w = btn_h;
+            // A glyph button is the TOOLBAR CASE (the player's alone, its
+            // seven being the plan's only glyph buttons): row 8's width.
+            plan[i].w = seats.case_w;
         } else {
             const double lw =
                 text_shape::shape_text_run(font, plan[i].label).width_px;
@@ -5852,12 +5955,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // one frame line inside the right pad so the last button's cannot touch
     // the window edge, one inside the left clearance so the first button's
     // cannot touch the message or the field. Between neighbours the 8px gap
-    // absorbs both (kModalFocusFramePx). So the focus can move anywhere on
-    // the row without reflowing it, which is the whole point of reserving.
-    const int cx0 = content.x + pad;                    // content left
-    const int cx1 = content.x + content.w - pad;        // the row's right pad
+    // absorbs both (kModalFocusFramePx). (The player's row is row 8's and
+    // reserves no ring at its right pad — its branch below.) So the focus can
+    // move anywhere on the row without reflowing it, which is the whole point
+    // of reserving.
+    const int cx0 = seats.left_x;                       // content left
+    const int cx1 = seats.right_x;                      // the row's right pad
     const int buttons_x_max = std::max(cx0, cx1 - ring - buttons_w);
-    const int btn_y = content.y + (content.h - btn_h) / 2;
+    // Centred in the content band on every owner's row but the player's,
+    // which takes row 8's case seat (above).
+    const int btn_y = player_up ? seats.case_y
+                                : content.y + (content.h - btn_h) / 2;
     int buttons_x0 = cx0;   // set by whichever branch runs, below
 
     if (prompt_up) {
@@ -5927,10 +6035,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    carries TWO glyph boxes now and the plan is seven items — and
         //    LATER THAT DAY THE PAIR ITSELF BECAME GLYPHS, so every one of the
         //    seven is a box of the same width and the whole row is fixed
-        //    except the scrub. THE BOXES ARE PLAIN RAISED PUSH BUTTONS, 23 x 23
-        //    Windows px (kModalBtnBoxPx square — the laptop pixel's 32 x 32
-        //    re-authored, architect 2026-10-02), Sound Recorder's push-button
-        //    face over the roster's 16-px glyph.
+        //    except the scrub. THE BOXES ARE PLAIN RAISED PUSH BUTTONS on
+        //    ROW 8'S TOOLBAR CASE, 23 x 22 Windows px at row 8's seat
+        //    (architect 2026-10-05, bottom_row_seats: they were the modal
+        //    box's 23 x 23 square centred in the band, which stood them 2
+        //    rows lower at 350 %), Sound Recorder's push-button face over the
+        //    roster's 16-px glyph at the case's own (3, 3).
+        //
+        //    THE ROW IS ROW 8'S (architect 2026-10-05): the transport starts
+        //    at row 8's left pad, the right-flushed pair ends at its right
+        //    pad (no focus-frame reserve inside it, which stood the pair one
+        //    relief line left of row 8's block), the buttons stand in row 8's
+        //    band, and the scrub fills whatever lies between.
         //
         //    THIS BRANCH LAYS OUT AND PAINTS EVERYTHING BUT THE BUTTONS: it
         //    writes each button's own x (the walk below paints where it is
@@ -5965,19 +6081,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // -- The walk: the fixed left run, the right-flushed PAIR (word
         //    buttons until 2026-09-01, glyph boxes since), and the scrub
         //    taking what is between them. --
+        const int bw = seats.case_w;
         int px = cx0;
-        plan[0].x = px; px += btn_h + ggap;      // Home (skip back)
-        plan[1].x = px; px += btn_h + ggap;      // Play / Pause
-        plan[2].x = px; px += btn_h;             // End (skip forward)
+        plan[0].x = px; px += bw + ggap;         // Home (skip back)
+        plan[1].x = px; px += bw + ggap;         // Play / Pause
+        plan[2].x = px; px += bw;                // End (skip forward)
         const int scrub_x0 = px + group;
 
         // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
         // was Load in place · Close as WORDS, measured runs in label boxes):
         // both are the box's own square now, so the cluster is two boxes and
-        // the GLYPH GAP between them — right-flushed inside the reserved ring
-        // exactly as the single cluster's cap is on every other owner.
-        const int words_w  = btn_h + ggap + btn_h;
-        const int words_x0 = std::max(cx0, cx1 - ring - words_w);
+        // the GLYPH GAP between them — right-flushed at ROW 8'S RIGHT PAD,
+        // the last box's right edge row 8's last button's (architect
+        // 2026-10-05; the other owners' clusters keep the reserved ring).
+        const int words_w  = bw + ggap + bw;
+        const int words_x0 = std::max(cx0, cx1 - words_w);
         // What the row owes AFTER the scrub: the group space, the clock
         // cell, the group space, the lamp, THE UP BUTTON with the glyph gap
         // between them, and the GAP BEFORE THE RIGHT-FLUSHED PAIR, which is
@@ -5990,7 +6108,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // word-button gap left on this row to win: every gap between two
         // boxes on it is the row's one glyph gap (kPlayerGlyphGapPx).
         const int after_scrub =
-            group + clock_w + group + btn_h + ggap + btn_h + ggap;
+            group + clock_w + group + bw + ggap + bw + ggap;
         // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
         // at each end is not a track (28 Windows px since the unit's change).
         int scrub_w = words_x0 - after_scrub - scrub_x0;
@@ -5999,9 +6117,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + group : 0);
         const int clock_end = clock_x0 + clock_w;
         plan[3].x = clock_end + group;              // Repeat one
-        plan[4].x = plan[3].x + btn_h + ggap;       // Up
+        plan[4].x = plan[3].x + bw + ggap;          // Up
         plan[5].x = words_x0;                       // Load in place
-        plan[6].x = words_x0 + btn_h + ggap;        // Close
+        plan[6].x = words_x0 + bw + ggap;           // Close
 
         // -- THE PLAY-SCRUB, SOUND RECORDER'S SLIDER (architect 2026-10-02;
         //    the look and its owners at render.h's scrub block). The ITEM is
@@ -6088,12 +6206,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 const GuiRect field =
                     time_field_rect(cell_x, cell_w, content.y, content.h);
                 paint_time_field(cr, field);
-                show_row_text(cr, cfont, static_cast<double>(cell_x),
-                              redesign_baseline(
-                                  cfont, static_cast<double>(field.y),
-                                  static_cast<double>(field.h)),
-                              format_timestamp(seconds_of(shown[i])),
-                              palette().clock_text);
+                // RIGHT-ALIGNED, ending at the cell's right pad (the rule at
+                // kTimeShape's block).
+                const text_shape::ShapedRun run = text_shape::shape_text_run(
+                    cfont, format_timestamp(seconds_of(shown[i])));
+                set_palette_source(cr, palette().clock_text);
+                text_shape::show_shaped_run(
+                    cr, run,
+                    static_cast<double>(
+                        cell_x + static_cast<int>(std::ceil(cell_w))) -
+                        run.width_px,
+                    redesign_baseline(cfont, static_cast<double>(field.y),
+                                      static_cast<double>(field.h)));
             }
             cairo_restore(cr);
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
@@ -6447,14 +6571,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const ButtonBoxFace box = paint_button_box(
             cr, r, plan[i].lit, pressed, ButtonFamily::Push);
         if (plan[i].glyph) {
-            // THE GLYPH, the icon row's own draw: the roster's 16-px glyph
-            // centred in the button's box, each path in its own colour, or
+            // THE GLYPH, the icon row's own draw: the roster's 16-px glyph at
+            // the toolbar case's (3, 3) — the box is that case
+            // (bottom_row_seats), so each glyph stands where row 8's does
+            // (architect 2026-10-05) — each path in its own colour, or
             // engraved when the button is disabled.
-            const int glyph_px = icon_glyph_px();
+            const int glyph_px  = icon_glyph_px();
+            const int glyph_off = icon_case_lead_px();
             const double gx =
-                static_cast<double>(r.x + (r.w - glyph_px) / 2 + box.shift);
+                static_cast<double>(r.x + glyph_off + box.shift);
             const double gy =
-                static_cast<double>(r.y + (r.h - glyph_px) / 2 + box.shift);
+                static_cast<double>(r.y + glyph_off + box.shift);
             if (enabled)
                 icons::draw(cr, plan[i].icon, gx, gy,
                             static_cast<double>(glyph_px));

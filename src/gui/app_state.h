@@ -273,8 +273,8 @@ constexpr double kNavZoomPxPerLevel = 145.0;
 // rate is the authored 145 Windows px exactly; the laptop's 138 % gives
 // 200.1 device px, the laptop pixel's 200 it had before the unit's change.
 // The floor keeps the divisor away from zero at any factor the schema could
-// ever admit; inside the live [50, 350] bracket the value rests in
-// [72.5, 507.5] and the floor cannot fire.
+// ever admit; inside the live [50, 1000] bracket the value rests in
+// [72.5, 1450] and the floor cannot fire.
 inline double nav_zoom_px_per_level() {
     const double rate = kNavZoomPxPerLevel * gui_scale_factor();
     return rate < 1.0 ? 1.0 : rate;
@@ -5130,7 +5130,7 @@ struct AppState {
     // the value any more — a sidecar still holding it is load-fatal as an
     // unknown key, by the architect's explicit no-legacy instruction.)
 
-    // GUI rendering scale in PERCENT (the gui_scale preference; [50, 350]).
+    // GUI rendering scale in PERCENT (the gui_scale preference; [50, 1000]).
     // is_gui_scale_percent (device_config.h) is the domain's ONE owner and
     // spells the bracket's four landmarks; this is a retell.
     //

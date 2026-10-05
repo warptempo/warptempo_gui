@@ -514,7 +514,7 @@ WaveformPlateInks waveform_plate_inks();
 //
 // THE PRODUCT'S ONE SCALE AXIS since row 7 (it was the redesign's own, beside a
 // font axis that is now deleted). The gui_scale setting is an integer PERCENT in
-// [50, 350] — the RANGE's one owner is is_gui_scale_percent (device_config.h),
+// [50, 1000] — the RANGE's one owner is is_gui_scale_percent (device_config.h),
 // where the bracket and its four landmarks are spelled once. It is a PER-DEVICE
 // preference since 2026-08-27, read out of the device config rather than out of
 // a source's `.settings`; the current value lives as file-scope
@@ -862,7 +862,8 @@ inline int icon_row_h_px() {
 //     kScrubChannelLines relief lines tall, top to bottom Shadow, DkShadow,
 //     3DLight, Hilight (the edge's two rings on a rect four lines tall, its
 //     end columns the same rings' sides), spanning the slider's track and
-//     centred in the button box's band. Its height is the sum of its rounded
+//     centred in the buttons' band (row 8's toolbar case band since
+//     2026-10-05, bottom_row_seats in paint_handler.cpp). Its height is the sum of its rounded
 //     lines, 4 × relief_line_px (12 device rows at 275 %, 4 at 138 %).
 //   THE THUMB — kScrubThumbWidthPx wide, PLAIN RAISED with the ground for its
 //     face, centred on the position and standing on the channel with
@@ -959,17 +960,39 @@ inline int trim_lane_h_px() {
 int ruler_lane_h_px();
 
 // THE MARKER LANE'S HEIGHT IS DERIVED FROM THE FLAG BOX, NOT AUTHORED
-// (architect 2026-10-02, the AC / AD sets' rule, tools/palette's flag_seat):
-// the flag box is its top edge band (marker_flag_edge_h_px), the normal
-// face's ascent and its descent, every term a whole device row —
+// (architect 2026-10-02, the AC / AD sets' rule, tools/palette's flag_seat;
+// the box re-ruled on its label's real ink 2026-10-05): the flag box is its
+// top edge band (marker_flag_edge_h_px), ONE WINDOWS PX OF FACE, the label
+// ink's rows above and below the baseline, ONE WINDOWS PX OF FACE and its
+// bottom edge band, every term a whole device row —
 //
-//     box  = edge + ceil(ascent) + ceil(descent)
+//     box  = edge + clear + ink_above + ink_below + clear + edge
 //     lane = scaled_px(kMarkerLaneAirPx) + box
 //
-// — ONE WINDOWS PX OF GROUND ABOVE THE BOX AND NONE BELOW IT (architect
-// 2026-10-03): the box's bottom row is the lane's last row, so the flag
-// stands ON the well, touching its upper border line (the waveform area's
-// first row, the next lane down) and never overlapping it, and the marker's
+// THE LABEL INK IS THE PRINTABLE ASCII SET'S (architect 2026-10-05: flag
+// labels are an ASCII grammar, and the editors take ASCII there), PAINTED at
+// the live size and its rows counted (marker_lane_rows, paint_handler.cpp),
+// so ONE WINDOWS PX OF FACE (kMarkerFlagInkClearPx) stands between the
+// outline and the tallest ink above and the deepest ink below, as Windows'
+// own controls leave face round their words. The extremes measured
+// 2026-10-05: "$" the tallest (16, 22, 30 and 39 rows above the baseline at
+// 138, 200, 275 and 350 %; "[" and "]" tie it at 138 %), "(" and ")" the
+// deepest (5, 6, 9 and 11 rows from the baseline's row down; "{" "}" tie at
+// 200 %), against the caps' 13, 19, 25 and 33 and the "p"'s 4, 5, 7 and 9.
+// THE RULE IT REPLACES, edge + ceil(ascent) + ceil(descent), had two faults:
+// its bottom outline is painted INSIDE the box (paint_flat_flag_box,
+// render.cpp), so the band lay over the descent's last rows and a descender
+// ran onto it (the "p" by one row at 275 % and 350 %), and the face's
+// ascent carries leading above any ink (6 rows above the caps at 200 %, 3
+// above the "$"). Every row the box gains or saves is THE WAVEFORM'S (his
+// ruling): the lane stack above it moves and the waveform's leftover takes
+// up the difference (main.cpp's vertical block).
+//
+// THE LANE IS THE BOX WITH ONE WINDOWS PX OF GROUND ABOVE IT AND NONE BELOW
+// IT (architect 2026-10-03): the box's bottom row is the lane's last row,
+// so the flag stands ON the well, touching its upper border line (the
+// waveform area's first row, the next lane down) and never overlapping it,
+// and the marker's
 // stem runs on from the box's bottom straight through the well's top lines
 // (waveform_stem_band), flanked by the box's outline carried down
 // (fill_stem_flanks, 2026-10-05). THE AIR ABOVE IS THE MINOR TICKS' (architect
@@ -977,13 +1000,15 @@ int ruler_lane_h_px();
 // (paint_ruler_row's minor_top), so that one px is where the comb stays
 // visible over a run of flags — "the minor ticks visible above the flags are
 // helpful" — which is why the air above is kept while the air below went.
-// The box's label is seated as a LINE under its edge band (baseline = box
-// top + edge + ceil(ascent)). The face is the redesign's 13 Windows px
-// (redesign_font_size_px), read off the product's own road like the
-// ruler's: 275 % (35.75 px, ascent 34, descent 9) box 3 + 34 + 9 = 46, lane
-// 3 + 46 = 49; 138 % (17.94 px, 17 and 5) box 1 + 17 + 5 = 23, lane 24; 50 %
-// (6.5 px, 7 and 2) box 1 + 7 + 2 = 10, lane 11 (the air floored at one
-// row). Every box painter and every flag hit rect takes the BOX's rows
+// The box's label is seated as a LINE under its face band (baseline = box
+// top + edge + clear + ink_above). The face is the redesign's 13 Windows px
+// (redesign_font_size_px), read off the product's own road like the ruler's:
+// 138 % (17.94 px) box 1 + 1 + 16 + 5 + 1 + 1 = 25, lane 26 (was 23 and
+// 24); 200 % (26 px) 2 + 2 + 22 + 6 + 2 + 2 = 36, lane 38 (was 35 and 37);
+// 275 % (35.75 px) 3 + 3 + 30 + 9 + 3 + 3 = 51, lane 54 (was 46 and 49);
+// 350 % (45.5 px) 4 + 4 + 39 + 11 + 4 + 4 = 66, lane 70 (was 60 and 64)
+// (the air, the clear bands and the edges floored at one row). Every box
+// painter and every flag hit rect takes the BOX's rows
 // (marker_flag_box_band), never the lane's: the box is what is painted and
 // so what is pressed, and with no air under it there is no strip below a box
 // to press. THE THREE ARE DEFINED IN paint_handler.cpp beside the ruler's,
@@ -991,6 +1016,12 @@ int ruler_lane_h_px();
 inline constexpr int kMarkerLaneAirPx = 1;
 inline int marker_lane_air_px() {
     return scaled_px(kMarkerLaneAirPx, 1);
+}
+// The face between the box's outline and the label's ink, above it and
+// below it (the rule above, architect 2026-10-05).
+inline constexpr int kMarkerFlagInkClearPx = 1;
+inline int marker_flag_ink_clear_px() {
+    return scaled_px(kMarkerFlagInkClearPx, 1);
 }
 int marker_flag_box_h_px();
 int marker_lane_h_px();
@@ -1259,10 +1290,10 @@ inline int marker_flag_border_px() {
     return scaled_px(kMarkerFlagBorderPx, 1);
 }
 // The label BASELINE, in device rows under the BOX's top (marker_flag_box_band,
-// never the lane's): the box's edge band, then the face's ceiled ascent — the
-// label is a LINE under the band (architect 2026-10-02, the AC / AD sets'
-// flag_seat; it was the kdenlive crop's authored row 16 until the box became
-// the face's own). Defined in paint_handler.cpp with the box's height (the
+// never the lane's): the box's edge band, one Windows px of face, then the
+// label ink's rows above the baseline (architect 2026-10-05; the face's
+// ceiled ascent from 2026-10-02, the AC / AD sets' flag_seat, and the
+// kdenlive crop's authored row 16 before that). Defined in paint_handler.cpp with the box's height (the
 // rule at marker_lane_h_px's block above).
 int marker_flag_baseline_px();
 // THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
@@ -1724,7 +1755,7 @@ inline int popup_item_margin_y_px() {
 // — the unit re-authored as 6 Windows px since 2026-10-02, 16 device px at
 // 275 % (16 at the tablet's 200 % before) and 8 at 138 %. The floor of 2 was
 // the triangle's own ("always a tip row below a top row") and survives only to
-// hold the value; it cannot fire while gui_scale rests in [50, 350] (6 px
+// hold the value; it cannot fire while gui_scale rests in [50, 1000] (6 px
 // reaches 2 only below 25 %).
 inline int waveform_inset_px() {
     return scaled_px(kPlayheadUnitPx, 2);
@@ -1752,8 +1783,8 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // off-screen cull and its narrow invalidation strip — the single definition
 // shared by render.cpp (cull) and main.cpp (invalidation). 15 at 275 %, 7 at
 // 138 %. It covers the scanner's waveform_line_px()-wide line [c, c + t) at
-// every gui_scale: t − 1 is 0 to 3 across [50, 350] % while this reach is 2
-// to 20.
+// every gui_scale: t − 1 is 0 to 9 across [50, 1000] % while this reach is
+// 2 to 59.
 //
 // PROVENANCE (2026-08-02): it was the horizontal footprint of the tip-down
 // triangle (the mask was 2H-1 wide and centered, so H-1 either side), read
@@ -1768,8 +1799,8 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // ruler lane's bottom rows is WIDER than this reach at every scale. The head's
 // widest row is 2 * playhead_head_half_px(0, s) + waveform_line_px() off
 // kPlayheadHeadHalf[0] = 6 (2026-10-02) — 13 px at 100 %, 7 at 50 %, 17 at
-// 138 %, 35 at 275 % and 46 at the 350 % ceiling — against this ± 15-at-275 %
-// reach, which rides a
+// 138 %, 35 at 275 %, 46 at 350 % and 130 at the 1000 % ceiling — against
+// this ± 15-at-275 % reach, which rides a
 // different authored unit. Both scale, and neither is a function of the
 // other, so the gap is a fact at every scale rather than a 100%-only
 // observation. It is harmless as

@@ -151,4 +151,10 @@ FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag fir
   device px (17 W), Roboto, "B | 00:45.418"; a stem enters the well between two 4-px black flank columns. Local
   wakes 7 of 16. NOTHING IS IN FLIGHT. Open for him: labels on the player's fields, right-aligned digits (both
   optional); the picker's navigation discussion; the icon arc (Fable, after the reset); the accelerators (low).
+- LANDED 2026-10-05 (the flag-box commit): the flag box = edge + 1 W of face + the printable-ASCII ink + 1 W + edge
+  (kMarkerFlagInkClearPx; "$" the tallest, "(" ")" the deepest), so no descender meets the outline — TALLER, not
+  shorter: 350 % 60 -> 66 device px, 275 % 46 -> 51 (the waveform pays); open for him: the specimen set (all ASCII
+  vs the characters a resting flag shows). The player row now seats exactly as row 8 (bottom_row_seats). The time
+  fields' digits right-aligned. THE gui_scale CEILING IS 1000 (at 400 the icon row overflows: Load in Place, History
+  Newer and Older hidden, History Revert cut). REQUEST 7 out so he can try 400 on the glass.
 

@@ -73,7 +73,7 @@ def read_constants():
     for name in ('kMenuRowHeightPx', 'kIconGlyphPx', 'kIconCaseLeadPx', 'kIconCaseTrailXPx', 'kIconCaseTrailYPx',
                  'kIconRowAirPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
-                 'kMarkerFlagEdgePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
+                 'kMarkerFlagEdgePx', 'kMarkerFlagInkClearPx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
                  'kRedesignFontSizePx', 'kRulerLabelFontSizePx', 'kPlayheadHeadHeightPx',
                  'kPlayheadUnitPx', 'kTrimArrowGlyphCols'):
         K[name] = _num(rh, 'render.h', name); own[name] = 'render.h'
@@ -197,17 +197,22 @@ def build():
         halves.append(px(K['kPlayheadHeadHalf'][src], 1))
     row('ruler', 'head widest row = 2 x half(0) + t', f'2 x {K["kPlayheadHeadHalf"][0]} + 1', 2 * halves[0] + t,
         'render.h playhead_head_half_px', 35)
-    # the marker lane: the flag box (edge + ceil(ascent) + ceil(descent)) and its air above
-    u_asc, u_desc = FACE_TABLE['sans'][1], FACE_TABLE['sans'][2]
+    # the marker lane: the flag box (edge + clear + the printable ASCII set's painted ink + clear + edge, architect
+    # 2026-10-05) and its air above
+    ink_up, ink_dn = C.label_ink_rows(UI_PX)
     edge_h = row('marker lane', 'flag edge band (top and bottom outline rows)', K['kMarkerFlagEdgePx'],
                  px(K['kMarkerFlagEdgePx'], 1), 'render.h marker_flag_edge_h_px', 3)
-    box_h = row('marker lane', 'flag box = edge + ceil(ascent) + ceil(descent)', '-', edge_h + u_asc + u_desc,
-                'paint_handler.cpp marker_lane_rows', 46)
+    clear = row('marker lane', 'face between the outline and the label ink (above and below)', K['kMarkerFlagInkClearPx'],
+                px(K['kMarkerFlagInkClearPx'], 1), 'render.h marker_flag_ink_clear_px', 3)
+    row('marker lane', 'label ink above / below the baseline (printable ASCII, painted)', '-', f'{ink_up} / {ink_dn}',
+        'paint_handler.cpp marker_lane_rows', '30 / 9')
+    box_h = row('marker lane', 'flag box = edge + clear + ink + clear + edge', '-',
+                2 * edge_h + 2 * clear + ink_up + ink_dn, 'paint_handler.cpp marker_lane_rows', 51)
     m_air = row('marker lane', 'air above the box', K['kMarkerLaneAirPx'], px(K['kMarkerLaneAirPx'], 1),
                 'render.h marker_lane_air_px', 3)
-    marker_h = row('marker lane', 'lane = air + box', '-', m_air + box_h, 'paint_handler.cpp marker_lane_h_px', 49)
-    fbase = row('marker lane', 'label baseline under the box top = edge + ceil(ascent)', '-', edge_h + u_asc,
-                'paint_handler.cpp marker_flag_baseline_px', 37)
+    marker_h = row('marker lane', 'lane = air + box', '-', m_air + box_h, 'paint_handler.cpp marker_lane_h_px', 54)
+    fbase = row('marker lane', 'label baseline under the box top = edge + clear + ink above', '-',
+                edge_h + clear + ink_up, 'paint_handler.cpp marker_flag_baseline_px', 36)
     border_w = row('marker lane', 'flag border (left column, the run\'s closing column)', K['kMarkerFlagBorderPx'],
                    px(K['kMarkerFlagBorderPx'], 1), 'render.h marker_flag_border_px', 3)
     pad_l = row('marker lane', 'flag pad left', K['kMarkerFlagPadLeftPx'], px(K['kMarkerFlagPadLeftPx'], 1),
@@ -218,9 +223,9 @@ def build():
              px(K['kBottomRowBorderPx'], 1), 'render.h bottom_row_border_h_px', 3)
     bottom_h = row('bottom row', 'lane = top row + the icon row\'s content', '1 + 32', bb + icon_h, 'render.h bottom_row_h_px', 91)
     top_h = menu_h + icon_h + trim_h + ruler_h + marker_h
-    row('stack', 'the top lanes whole (menu + icon + trim + ruler + marker)', '-', top_h, 'main.cpp strip_total_h', 283)
+    row('stack', 'the top lanes whole (menu + icon + trim + ruler + marker)', '-', top_h, 'main.cpp strip_total_h', 288)
     wave_h = row('stack', 'waveform area = leftover (max_waveform_height 0: no maximum; both gaps 0)', '-',
-                 H - top_h - bottom_h, 'main.cpp waveform_clamped_h', 1066)
+                 H - top_h - bottom_h, 'main.cpp waveform_clamped_h', 1061)
     border = row('well', 'border a side = 2 relief lines (plain sunken)', '2 x 1', 2 * lw, 'render.h waveform_border_px', 6)
     inset = row('well', 'waveform inset (drawing band) a side', K['kPlayheadUnitPx'], px(K['kPlayheadUnitPx'], 2),
                 'render.h waveform_inset_px', 16)

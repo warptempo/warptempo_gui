@@ -669,18 +669,19 @@ def flag_seat(th):
     """fonts.ui_px -> None (null: the scene's flags as measured, the app of the scenes' commit) or (box_h, lane_h,
     edge+ascent): the flag box's height, the marker lane's height and the label's baseline offset under the box's top,
     device rows. THE APP'S RULE (render.h's marker-lane block at kMarkerLaneAirPx, paint_handler.cpp's
-    marker_lane_rows): box = edge_h + ceil(ascent) + ceil(descent) at the normal face, every term a whole device row
-    and nothing rounded further; lane = the air + box, THE AIR ONE PX OF GROUND ABOVE THE BOX AND NONE BELOW IT, so the
+    marker_lane_rows, architect 2026-10-05): box = edge_h + clear + the printable ASCII set's painted ink above and
+    below the baseline (common.label_ink_rows) + clear + edge_h at the normal face, the clear one Windows px of face
+    like the edge, every term a whole device row and nothing rounded further; lane = the air + box, THE AIR ONE PX OF GROUND ABOVE THE BOX AND NONE BELOW IT, so the
     box's bottom row is the lane's last row and the flag stands on the well (seat_flags; its stem runs on through the
-    well's top lines, draw_stems). The air is the scene's edge_h, the box's top band: the app sizes both as one
-    Windows px (kMarkerLaneAirPx and kMarkerFlagEdgePx, scaled_px(1, 1)), here one logical px. The lane's difference
-    from the measured one is opened (or closed, negative) at its bottom (shift_scene 'marker'): 228 + 2 + 43 = 273 on
-    1002 at ui_px 17 (34 px: ascent 32, descent 9)."""
+    well's top lines, draw_stems). The air and the clear are the scene's edge_h, the box's top band: the app sizes
+    all three as one Windows px (kMarkerLaneAirPx, kMarkerFlagInkClearPx and kMarkerFlagEdgePx, scaled_px(1, 1)),
+    here one logical px. The lane's difference from the measured one is opened (or closed, negative) at its bottom
+    (shift_scene 'marker')."""
     if th.opt['fonts']['ui_px'] is None: return None
     F = BASE_SCENE['flags']; px = ui_font_px(th)
-    asc, desc = C.font_extents(C.SANS, px)[:2]
-    off = F['edge_h'] + math.ceil(asc); box = off + math.ceil(desc)
-    return box, F['edge_h'] + box, off
+    up, dn = C.label_ink_rows(px); e = F['edge_h']
+    off = e + e + up; box = off + dn + e + e
+    return box, e + box, off
 
 def flags_on_well(th):
     """True when the flags stand on the well (flag_seat's rule, fonts.ui_px set): the stems then run from the well's
@@ -1922,11 +1923,12 @@ def draw_bottom(cr, th):
         # and right, the BR pair last); "sunken": relief_lines 'sunken' at the theme's relief
         lines = [(th.get('bevel_shadow'), th.get('bevel_hilight'))] if th.opt['clock_panel'] == 'status' else relief_lines(th, 'sunken')
         edge(cr, x0, y0, x1, y1, lines)
-    # THE RUN FROM THE CELL'S LEFT (the app, 2026-10-05): the tab letter at the cell's x, the rest of the text (' | '
-    # and the digits) from the letter slot's end, so nothing after the letter moves with it
-    base = clock_baseline(th)
-    show(cr, C.SANS, ck['size_px'], ck['text'][:1], ck['x'], base, th.get('clock'))
-    show(cr, C.SANS, ck['size_px'], ck['text'][1:], ck['x'] + clock_cell(th)[1], base, th.get('clock'))
+    # THE RUN RIGHT-ALIGNED (the app, 2026-10-05): ' | ' and the digits end at the cell's right pad (its ceiled
+    # width past its x), the tab letter right-aligned against them, so the pipe and the digits never move with it
+    base = clock_baseline(th); px = ck['size_px']
+    run_x = ck['x'] + int(math.ceil(clock_cell(th)[0])) - C.shape(C.SANS, px, ck['text'][1:])[1]
+    show(cr, C.SANS, px, ck['text'][:1], run_x - C.shape(C.SANS, px, ck['text'][:1])[1], base, th.get('clock'))
+    show(cr, C.SANS, px, ck['text'][1:], run_x, base, th.get('clock'))
     sl = state_line(th)
     if sl is not None:      # the state line, clipped (never ellipsised) one group space short of the button block
         x, right, base, px, text = sl; bc = SCENE['bottom_content']
