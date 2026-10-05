@@ -280,3 +280,22 @@ reinstall it. Answer with `## DONE 5` here.
    caption (height in device px — expect 50 — its colours under kde3-solaris, the icon, the title text, the three
    buttons with Restore greyed). Do not press Minimise or Close.
 4. Commit (the wrapper) this file's DONE 5 only, push. Wakes: report the count.
+
+## DONE 5 (2026-10-05 ~03:15, the local planner; HEAD 22f2255f)
+1. Reconfigured `build/` (exit 0); `cmake --build build -j$(nproc)` (libgit2 ON, CLI ON): exit 0, no warning.
+2. THE LAPTOP under labwc (8 s): starts, loads 550 - 1 (228 markers, 435 phase resets), JACK direct, renders; no
+   refusal. Stderr beyond the load lines: only the advisory `History hid 68 commits whose sidecars refuse the strict
+   load`. GRIM SCREENSHOT (1920x1080): ONE title bar — the app's navy caption at y 0, "550 - 1 - Warptempo" in bold
+   white beside the note icon, Minimise / Restore (the maximised glyph) / Close at the right; NO labwc bar above it;
+   the window spans the whole screen (maximised). The Restore frame and the drag are his eyeball.
+3. THE PRODUCT APK: exit 0, no compile error or warning in the log; the font assets Roboto-Regular.ttf (463712),
+   Roboto-Bold.ttf (465944), RobotoMono-Regular.ttf (125748); "assets: 98 theme files". Installed, relaunched.
+   Logcat: window 2304x1440, tick 5 ms; loads 550 - 1 (228 markers, 435 phase resets); AAudio granted; renders
+   ("[success]"); NO `moveTaskToBack not found` line; no refusal (the same history advisory line only).
+   SCREENCAP (screen awake, the product in front): the caption is EXACTLY 50 device px (rows 0-49 #000080, row 50
+   the #C0C0C0 ground); the note icon, "550 - 1 - Warptempo" in bold white; Minimise and Close black glyphs on grey
+   faces, RESTORE GREYED (the disabled emboss). THE TABLET'S THEME IS NOW `windows-95-standard`, NOT kde3-solaris:
+   DONE 3's rewrite kept `theme=kde3-solaris` (verified byte-exact then), so he changed it on the glass since; the
+   navy and #C0C0C0 are that theme's. (For the record, the bundled kde3-solaris.theme names caption_active #B24D7A
+   with white text.) Config only read; Minimise and Close not pressed.
+4. Committed: this block only. Wakes used: 6 of 16.
