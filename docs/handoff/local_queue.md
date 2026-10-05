@@ -232,7 +232,7 @@ with `## DONE 4` here.
    on his NEWLY copied files only, report the failing line and still install, as DONE 2 did), the APK, the export
    (`python3 tools/palette/render.py tools/palette/themes/picker.json --export tools/palette/out/picker`), install,
    push THE WHOLE export folder (delete the tablet's old `invalid_flags.*` there first), launch. Logcat: the launch
-   line (expect 17 elements, 9 scenes, his active element restored through the alias if it was an old flag key).
+   line (expect 17 elements, 8 scenes, his active element restored through the alias if it was an old flag key).
    Do not choose an element by touch.
 3. THE PRODUCT (54ba6b6: Save greys unless the undo-tracked dirty flag is set, Ctrl+S silent when grey, the clock's
    `*` gone; the icon inks raw Breeze): `cmake --build build -j$(nproc)` (exit code), then `bash
