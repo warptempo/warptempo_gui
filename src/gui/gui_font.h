@@ -40,8 +40,8 @@
 // keeps its own true advances, so Liberation text runs wider than Cronyx
 // would at the same scale, and a taller or deeper Liberation glyph ("$", a
 // descender) may poke past a box sized off the bitmap face's rows — both
-// accepted, as Cronyx's own ^ { } may touch the flag outline ("Cronyx /
-// Small Fonts primary; Liberation can spill over here and there"). IN BITMAP
+// accepted ("Cronyx / Small Fonts primary; Liberation can spill over here
+// and there"). IN BITMAP
 // MODE a codepoint the strike lacks (free text is UTF-8; Cronyx carries
 // ASCII and KOI8 Cyrillic) is drawn from Liberation at its own advance — the
 // one place the bitmap mode meets an outline.
@@ -132,16 +132,6 @@ struct GuiStrikeMetrics {
     int cap     = 0;
 };
 const GuiStrikeMetrics& gui_strike_metrics(GuiFace face);
-
-// THE INK ROWS OF A SPECIMEN, in Windows px: the most rows any of its
-// glyphs lights above the baseline, and the most from the baseline's row
-// down. Read off the strike, so it is the bitmap face's at every scale (the
-// flag box's owner, render.h's marker_lane_h_px block, names its specimen).
-struct GuiInkRows {
-    int above = 0;
-    int below = 0;
-};
-GuiInkRows gui_strike_ink_rows(GuiFace face, std::string_view specimen);
 
 // The vertical metrics in DEVICE px at the font's scale: the strike's
 // Windows px times the scale, unrounded.

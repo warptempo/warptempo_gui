@@ -669,17 +669,19 @@ def flag_seat(th):
     """fonts.ui_px -> None (null: the scene's flags as measured, the app of the scenes' commit) or (box_h, lane_h,
     edge+ascent): the flag box's height, the marker lane's height and the label's baseline offset under the box's top,
     device rows. THE APP'S RULE (render.h's marker-lane block at kMarkerLaneAirPx, paint_handler.cpp's
-    marker_lane_rows, architect 2026-10-05): box = edge_h + clear + the printable ASCII set's painted ink above and
-    below the baseline (common.label_ink_rows) + clear + edge_h at the normal face, the clear one Windows px of face
-    like the edge, every term a whole device row and nothing rounded further; lane = the air + box, THE AIR ONE PX OF GROUND ABOVE THE BOX AND NONE BELOW IT, so the
-    box's bottom row is the lane's last row and the flag stands on the well (seat_flags; its stem runs on through the
-    well's top lines, draw_stems). The air and the clear are the scene's edge_h, the box's top band: the app sizes
-    all three as one Windows px (kMarkerLaneAirPx, kMarkerFlagInkClearPx and kMarkerFlagEdgePx, scaled_px(1, 1)),
-    here one logical px. The lane's difference from the measured one is opened (or closed, negative) at its bottom
+    marker_lane_rows, architect 2026-10-05): box = edge_h + face + the body strike's whole cell (its ascent above the
+    baseline and its descent below, each the face's px times its share of the cell, rounded on its own) + face +
+    edge_h, the face one Windows px like the edge, every term a whole device row and nothing rounded further; lane =
+    the air + box, THE AIR ONE PX OF GROUND ABOVE THE BOX AND NONE BELOW IT, so the box's bottom row is the lane's last
+    row and the flag stands on the well (seat_flags; its stem runs on through the well's top lines, draw_stems). The
+    air and the face are the scene's edge_h, the box's top band: the app sizes all three as one Windows px
+    (kMarkerLaneAirPx, kMarkerFlagFacePx and kMarkerFlagEdgePx, scaled_px(1, 1)), here one logical px. The lane's
+    difference from the measured one is opened (or closed, negative) at its bottom
     (shift_scene 'marker')."""
     if th.opt['fonts']['ui_px'] is None: return None
     F = BASE_SCENE['flags']; px = ui_font_px(th)
-    up, dn = C.label_ink_rows(px); e = F['edge_h']
+    b = C.strike_metrics(C.BODY_STRIKE); cell = b['ascent'] + b['descent']
+    up, dn = round(px * b['ascent'] / cell), round(px * b['descent'] / cell); e = F['edge_h']
     off = e + e + up; box = off + dn + e + e
     return box, e + box, off
 

@@ -1094,12 +1094,11 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // THE MARKER LANE IS A LINE SEAT TOO, and stays out of the box solver: the
 // live flag pass, the history-diff flag pass and the marker-lane editor each
 // seat their label at the flag box's top plus marker_flag_baseline_px() — its
-// edge band, one Windows px of face, then the printable ASCII set's painted
-// ink above the baseline (architect 2026-10-05; the face's ceiled ascent
-// from 2026-10-02, the AC / AD sets' flag_seat, until then): the box is
-// exactly outline, face, ink, face, outline, so there is no margin to centre
-// in. The owner and the arithmetic are at render.h's
-// marker_lane_h_px block.
+// edge band, one Windows px of face, then the body strike's ascent
+// (architect 2026-10-05): the box is exactly outline, face, the strike's
+// whole cell, face, outline, so there is no margin to centre in — the caps
+// fall centred by the cell itself. The owner and the arithmetic are at
+// render.h's marker_lane_h_px block.
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
@@ -3599,22 +3598,17 @@ int ruler_lane_h_px() {
 }
 
 // THE MARKER LANE'S DERIVED ROWS (the rule and its scales at render.h's
-// marker_lane_h_px block): the flag box is its top edge band, one clear band
-// of face, the LABEL INK's rows above the baseline and below it, a second
-// clear band and its bottom edge band (architect 2026-10-05); the label's
-// baseline is the edge, the clear band and the ink above under the box's
-// top; the lane is the box with one Windows px of air above it and none
-// below (architect 2026-10-03: the box stands on the well).
-//
-// THE INK IS THE BODY STRIKE'S, READ OFF ITS GLYPHS (architect 2026-10-05):
-// the specimen is THE PRINTABLE ASCII SET MINUS ^ { } — flag labels are an
-// ASCII grammar — and those three are left out because they alone climb a
-// row past the caps' 9 (Cronyx's "^" "{" "}" stand 10 above the baseline),
-// so they may touch the outline. The rest lights 9 rows above the baseline
-// (the caps, the digits, "$" "(" "|") and 2 from the baseline's row down
-// (the descenders, "(" ")"): 11 rows of ink. Each count is a Windows-px
-// element rounded on its own (scaled_px), the box the sum of its rounded
-// parts. MEMOIZED ON THE SCALE: the lane table asks on every geometry query.
+// marker_lane_h_px block): the flag box is its top edge band, one Windows px
+// of face, the BODY STRIKE'S WHOLE CELL (its ascent above the baseline, its
+// descent from the baseline's row down), a second Windows px of face and its
+// bottom edge band (architect 2026-10-05: 17 Windows px, the period's
+// one-line field); the label's baseline is the edge, the face and the ascent
+// under the box's top, at every scale and in either face; the lane is the
+// box with one Windows px of air above it and none below (architect
+// 2026-10-03: the box stands on the well). The ascent and the descent are
+// Windows-px elements each rounded on its own (scaled_px), the box the sum
+// of its rounded parts. MEMOIZED ON THE SCALE: the lane table asks on every
+// geometry query.
 namespace {
 struct MarkerLaneRows {
     int percent   = -1;
@@ -3626,16 +3620,13 @@ const MarkerLaneRows& marker_lane_rows() {
     static MarkerLaneRows rows;
     const int percent = gui_scale_percent();
     if (percent == rows.percent) return rows;
-    std::string specimen;
-    for (char c = 0x21; c <= 0x7E; ++c)
-        if (c != '^' && c != '{' && c != '}') specimen += c;
-    const GuiInkRows ink = gui_strike_ink_rows(GuiFace::Body, specimen);
-    const int above = scaled_px(ink.above, 1);
-    const int below = scaled_px(ink.below);
+    const GuiStrikeMetrics& cell = gui_strike_metrics(GuiFace::Body);
+    const int above = scaled_px(cell.ascent, 1);
+    const int below = scaled_px(cell.descent);
     const int edge  = marker_flag_edge_h_px();
-    const int clear = marker_flag_ink_clear_px();
-    rows.box_h    = edge + clear + above + below + clear + edge;
-    rows.baseline = edge + clear + above;
+    const int face  = marker_flag_face_px();
+    rows.box_h    = edge + face + above + below + face + edge;
+    rows.baseline = edge + face + above;
     rows.lane_h   = rows.box_h + marker_lane_air_px();
     rows.percent  = percent;
     return rows;

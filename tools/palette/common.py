@@ -118,19 +118,6 @@ def font_extents(family, size_px):
     s = cairo.ImageSurface(cairo.FORMAT_RGB24, 4, 4); cr = cairo.Context(s)
     return set_font(cr, family, size_px).extents()
 
-def label_ink_rows(size_px):
-    """-> (rows above the baseline, rows from the baseline's row down) holding any coverage when the printable ASCII
-    set (0x21..0x7E, one shaped run) is painted at a whole-row baseline: the app's flag-label ink (marker_lane_rows,
-    paint_handler.cpp, architect 2026-10-05), painted rather than read off a metric."""
-    import math
-    txt = ''.join(chr(c) for c in range(0x21, 0x7F)); m = int(math.ceil(2.0 * size_px))
-    w = int(math.ceil(shape(SANS, size_px, txt)[1])) + 2 * m
-    s = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, 2 * m); cr = cairo.Context(s)
-    cr.set_source_rgb(0, 0, 0); show_text(cr, SANS, size_px, txt, m, m); s.flush()
-    a = np.ndarray((2 * m, s.get_stride() // 4), np.uint32, s.get_data())[:, :w]
-    rows = np.where(a.max(axis=1) > 0)[0]
-    return m - int(rows[0]), int(rows[-1]) - m + 1
-
 def redesign_baseline(family, size_px, box_y, box_h):        # paint_handler.cpp
     import math; return box_y + math.floor((box_h + cap_height(family, size_px)) * 0.5)
 def line_baseline(family, size_px, line_y):
@@ -141,7 +128,7 @@ SANS_PX = 12.0 * 96.0 / 72.0 * SCALE        # the probe size, 32 px
 # ------------------------------------------------------------------ the period bitmap faces (gui_font.h)
 # The app's vertical metrics at every scale are the strikes' (architect 2026-10-05): read here off the same files,
 # as gui_font_bundled.cpp reads them — the strike's ascent / descent, its cap band (the "0"'s rows above the
-# baseline) and a specimen's ink rows (gui_strike_ink_rows).
+# baseline).
 BODY_STRIKE = os.path.join(FONTS, 'crox1h.otb')
 SMALL_STRIKE = os.path.join(FONTS, 'small_fonts_digits.otb')
 _STRIKES = {}
@@ -153,12 +140,6 @@ def strike_metrics(path):
         glyphs = {chr(cp): (data[g].metrics.BearingY, data[g].metrics.height) for cp, g in f.getBestCmap().items()}
         _STRIKES[path] = {'ascent': st.ascender, 'descent': -st.descender, 'cap': glyphs['0'][0], 'glyphs': glyphs}
     return _STRIKES[path]
-
-def strike_ink_rows(path, specimen):
-    """-> (rows above the baseline, rows from the baseline's row down) the specimen lights (gui_strike_ink_rows)."""
-    g = strike_metrics(path)['glyphs']
-    return (max(g[c][0] for c in specimen if c in g and g[c][1]),
-            max(g[c][1] - g[c][0] for c in specimen if c in g and g[c][1]))
 
 def fallback_em(strike_path, band_char):
     """The fallback's em in Windows px (gui_fallback_em_px): the strike's cap over Liberation's unscaled ink height

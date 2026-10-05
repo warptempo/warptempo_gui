@@ -48,18 +48,20 @@ settled before horizontal warp-marker placement work). Brief in flight / landed 
   from his ACID 3.0 / Vegas Audio screenshots: 7 rows, tabular advance 5, '.' ':' advance 2; tools/small_fonts/),
   each strike pixel a k x k block. Elsewhere LIBERATION SANS 2.1.5 (OFL, bundled; Roboto RETIRED) at the
   em that matches the bitmap face's HEIGHT (body: Cronyx's 9-px cap, ~13.1 W px; small: Small Fonts' 7-px digit),
-  each face its own true widths; Liberation's occasional glyph poking past a box is accepted, like Cronyx's ^ { }. THE BITMAP FACES ARE THE ONLY
+  each face its own true widths; Liberation's occasional glyph poking past a box is accepted. THE BITMAP FACES ARE THE ONLY
   VERTICAL METRIC SOURCE at every scale (the height is what stays constant); HORIZONTALLY the live face measures
   itself (his amendment: widths flexible). The ruler stays.
-- THE FLAG BOX: the ink specimen is printable ASCII minus ^ { } (they may touch the outline): 9 + 2 = 11 rows, the
-  flag 15 W px (60 device px at 400).
+- THE FLAG BOX (2026-10-05, after the tablet look): the WHOLE CELL — edge + face + Cronyx's 13 + face + edge =
+  17 W px (64 device px at 400; the caps centred, 3 above and 3 below); the waveform gave up the 2 W px.
 - FLAG COLOURS: phase reset teal / AQUA (selected); history added GREEN / LIME; warp purple / fuchsia and removed
   maroon / red stay. All four are true dark / bright pairs of Windows' 16.
 - History row (b0904c1): his yes to the `h` shift and the slot order (not yet seen on glass). Not installed yet.
-- ICONS WAIT (Chicago95 and the xfwm4 title-bar pixmaps; his uploads are not in a fresh container). Bundling is his
-  ruling (one-user project); record Chicago95's GPL-3.0 provenance beside the assets when they come in.
-
-## LATER (each on his word)
+- THE ICON PASS (opened by him 2026-10-05): a mock on his 400 % screenshot (tmp/mock/chicago_mock.py: 22 Chicago95
+  16-px icons x4 in the 23 x 22 cases, fits one-to-one; colour icons beside mono Breeze look unfinished, so the pass
+  is all-or-nothing). PUT TO HIM: start the button -> Chicago95 name table (candidates where loose, a full mock for
+  his picks, then one brief recording Chicago95's GPL-3.0 provenance); the disabled rule (emboss the icon's DARK
+  pixels, Windows' toolbar way, vs the whole silhouette). Bitmap mode only; Breeze elsewhere. His uploads (icons,
+  xfwm4) live only in tmp/ref/ of this container.
 - THE ICON ARC with Fable after the reset (now tied to the bitmap mode above); a new LOGO.
 - The Alt-key menu accelerators (File / Edit / Settings; the bare `E` binding freed) — low, after the reset.
 - The picker's navigation: deferred ("moving down in importance").

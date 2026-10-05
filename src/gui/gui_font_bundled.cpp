@@ -216,18 +216,6 @@ const GuiStrikeMetrics& gui_strike_metrics(GuiFace face) {
     return g_strikes[face_index(face)].metrics;
 }
 
-GuiInkRows gui_strike_ink_rows(GuiFace face, std::string_view specimen) {
-    GuiInkRows rows;
-    for (char c : specimen) {
-        const GuiStrikeGlyph* g =
-            gui_strike_glyph(face, static_cast<unsigned char>(c));
-        if (g == nullptr || g->height == 0) continue;
-        rows.above = std::max(rows.above, g->top);
-        rows.below = std::max(rows.below, g->height - g->top);
-    }
-    return rows;
-}
-
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     // One per face, rebuilt when the scale moves (its two application
     // points, set_gui_scale_percent): a paint asks for it per run.

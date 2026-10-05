@@ -321,7 +321,7 @@ namespace {
 // trim lane and bottom_row_h_px()); THE RULER LANE and THE MARKER LANE are sized from
 // their faces — the ruler's from the label face's seat plus the authored
 // rows from the labels' baseline to the marker lane, the marker lane's from
-// the flag box (edge, face, label ink, face, edge) plus its air
+// the flag box (edge, face, the body strike's cell, face, edge) plus its air
 // (architect 2026-10-02; ruler_lane_h_px and marker_lane_h_px, render.h),
 // faces that themselves ride gui_scale. The lanes' rulings are at those accessors' declarations in
 // render.h.

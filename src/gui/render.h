@@ -967,29 +967,28 @@ int ruler_lane_h_px();
 
 // THE MARKER LANE'S HEIGHT IS DERIVED FROM THE FLAG BOX, NOT AUTHORED
 // (architect 2026-10-02, the AC / AD sets' rule, tools/palette's flag_seat;
-// the box re-ruled on its label's real ink 2026-10-05): the flag box is its
-// top edge band (marker_flag_edge_h_px), ONE WINDOWS PX OF FACE, the label
-// ink's rows above and below the baseline, ONE WINDOWS PX OF FACE and its
-// bottom edge band, every term a whole device row —
+// the box re-ruled on the body strike's whole cell 2026-10-05): the flag box
+// is its top edge band (marker_flag_edge_h_px), ONE WINDOWS PX OF FACE, the
+// body strike's CELL (its ascent above the baseline, its descent from the
+// baseline's row down), ONE WINDOWS PX OF FACE and its bottom edge band,
+// every term a whole device row —
 //
-//     box  = edge + clear + ink_above + ink_below + clear + edge
+//     box  = edge + face + ascent + descent + face + edge
 //     lane = scaled_px(kMarkerLaneAirPx) + box
 //
-// THE LABEL INK IS THE BODY STRIKE'S, ITS SPECIMEN THE PRINTABLE ASCII SET
-// MINUS ^ { } (architect 2026-10-05: flag labels are an ASCII grammar, and
-// the editors take ASCII there), read off Cronyx Helvetica's glyphs
-// (marker_lane_rows, paint_handler.cpp; gui_strike_ink_rows): 9 rows above
-// the baseline (the caps, the digits, "$" "(" "|") and 2 from the baseline's
-// row down (the descenders, "(" ")"), so ONE WINDOWS PX OF FACE
-// (kMarkerFlagInkClearPx) stands between the outline and that ink above and
-// below, as Windows' own controls leave face round their words — THE FLAG IS
-// 1 + 1 + 9 + 2 + 1 + 1 = 15 WINDOWS PX. The three left out climb one row
-// past the caps (10 above) and may touch the outline; so may a taller or
-// deeper Liberation glyph at a fallback scale (gui_font.h). The ink counts
-// are the bitmap face's at every scale, each rounded on its own (scaled_px).
-// Every row the box gains or saves is THE WAVEFORM'S (his ruling): the lane
-// stack above it moves and the waveform's leftover takes up the difference
-// (main.cpp's vertical block).
+// THE CELL IS CRONYX HELVETICA'S WHOLE 13 (ascent 11 + descent 2; gui_font.h's
+// strike metrics, read in marker_lane_rows, paint_handler.cpp), not the
+// label's ink (architect 2026-10-05) — THE FLAG IS 1 + 1 + 11 + 2 + 1 + 1 =
+// 17 WINDOWS PX, the period's one-line field (kTimeFieldHeightPx, the list
+// row), so the label's caps (9 rows) get 3 Windows px above them (the cell's
+// top row, the row "^" climbs into, and the face) and 3 below (the descent
+// and the face), centred. The label sits on the cell's baseline at every
+// scale: Liberation at a fallback scale seats on the same baseline, and a
+// glyph of it poking past the cell or the box is accepted (gui_font.h). The
+// ascent and the descent are each rounded on their own (scaled_px), the box
+// the sum of its rounded parts. Every row the box gains or saves is THE
+// WAVEFORM'S (his ruling): the lane stack above it moves and the waveform's
+// leftover takes up the difference (main.cpp's vertical block).
 //
 // THE LANE IS THE BOX WITH ONE WINDOWS PX OF GROUND ABOVE IT AND NONE BELOW
 // IT (architect 2026-10-03): the box's bottom row is the lane's last row,
@@ -1004,9 +1003,9 @@ int ruler_lane_h_px();
 // visible over a run of flags — "the minor ticks visible above the flags are
 // helpful" — which is why the air above is kept while the air below went.
 // The box's label is seated as a LINE under its face band (baseline = box
-// top + edge + clear + ink_above): 138 % box 1 + 1 + 12 + 3 + 1 + 1 = 19,
-// lane 20; 275 % 3 + 3 + 25 + 6 + 3 + 3 = 43, lane 46; 400 % 4 + 4 + 36 +
-// 8 + 4 + 4 = 60, lane 64 (2026-10-05; the air, the clear bands and the
+// top + edge + face + ascent): 138 % box 1 + 1 + 15 + 3 + 1 + 1 = 22,
+// lane 23; 275 % 3 + 3 + 30 + 6 + 3 + 3 = 48, lane 51; 400 % 4 + 4 + 44 +
+// 8 + 4 + 4 = 64, lane 68 (2026-10-05; the air, the face bands and the
 // edges floored at one row). Every box
 // painter and every flag hit rect takes the BOX's rows
 // (marker_flag_box_band), never the lane's: the box is what is painted and
@@ -1017,11 +1016,11 @@ inline constexpr int kMarkerLaneAirPx = 1;
 inline int marker_lane_air_px() {
     return scaled_px(kMarkerLaneAirPx, 1);
 }
-// The face between the box's outline and the label's ink, above it and
+// The face between the box's outline and the strike's cell, above it and
 // below it (the rule above, architect 2026-10-05).
-inline constexpr int kMarkerFlagInkClearPx = 1;
-inline int marker_flag_ink_clear_px() {
-    return scaled_px(kMarkerFlagInkClearPx, 1);
+inline constexpr int kMarkerFlagFacePx = 1;
+inline int marker_flag_face_px() {
+    return scaled_px(kMarkerFlagFacePx, 1);
 }
 int marker_flag_box_h_px();
 int marker_lane_h_px();
@@ -1254,10 +1253,9 @@ inline int marker_flag_border_px() {
 }
 // The label BASELINE, in device rows under the BOX's top (marker_flag_box_band,
 // never the lane's): the box's edge band, one Windows px of face, then the
-// label ink's rows above the baseline (architect 2026-10-05; the face's
-// ceiled ascent from 2026-10-02, the AC / AD sets' flag_seat, and the
-// kdenlive crop's authored row 16 before that). Defined in paint_handler.cpp with the box's height (the
-// rule at marker_lane_h_px's block above).
+// body strike's ascent (architect 2026-10-05: the label sits on the cell's
+// baseline). Defined in paint_handler.cpp with the box's height (the rule at
+// marker_lane_h_px's block above).
 int marker_flag_baseline_px();
 // THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
 // sunken, status or etched edge in the chrome, and of one cell of the checked
