@@ -22,9 +22,14 @@
 #     (tools/palette/themes/picker.json with the preset's colours applied, render.picker_apply), so every value is the
 #     colour the picker painted: the canvas, the ink and the outline the picker's "auto" rule over the two (the 50 %
 #     linear-light blend of the ink over the canvas, named only where the preset records both); the playhead's head
-#     and stem; THE FLAGS, the picker's Unselected / Selected Flag onto BOTH the warp and the phase-reset pair (when he
-#     picked, one flag colour painted every authored kind, so this reproduces what the picker showed him), and the
-#     Unselected / Selected Invalid Flag onto the removed pair (the invalid flag wears the removed pair). THE LABELS:
+#     and stem; THE FLAGS one to one (architect 2026-10-05: the picker's flag elements follow the product's flag kinds,
+#     keyed by its role names): Warp Flag / Selected Warp Flag onto the warp pair, Phase Reset Flag / Selected Phase
+#     Reset Flag onto the phase-reset pair, Added Flag / Selected Added Flag onto the added pair and Removed Flag /
+#     Selected Removed Flag onto the removed pair (the invalid flag wears it). A PRESET SAVED BEFORE THAT ROUND names
+#     the old keys (OLD_PRESET_KEYS), read as the picker reads them: its Unselected / Selected Flag onto BOTH the warp
+#     and the phase-reset pair (when he picked, one flag colour painted every authored kind, so this reproduces what the
+#     picker showed him), its Unselected / Selected Invalid Flag onto the removed pair; a new key the preset names
+#     itself wins over an old one. THE LABELS:
 #     label and field_text the preset's label as build.py's preset rule gives them (the chrome above); the flag labels
 #     are never named, the picker having no flag-label element (it shows them fixed white), so a preset records none and
 #     the built-in's apply, white on both (architect 2026-10-05), as the picker painted them.
@@ -69,11 +74,27 @@ CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight')
 CARD = (('card_ground', 'info_ground'), ('card_text', 'info_text'))
 # a preset's picker elements -> the theme-file roles each colours (the outline is the rule's, below)
 PRESET_ELEMENT_ROLES = (('canvas', ('waveform_canvas',)), ('ink', ('waveform_ink',)),
-                        ('unselected_flag', ('warp_flag', 'phase_reset_flag')),
-                        ('selected_flag', ('warp_flag_selected', 'phase_reset_flag_selected')),
-                        ('unselected_invalid_flag', ('removed_flag',)),
-                        ('selected_invalid_flag', ('removed_flag_selected',)),
+                        ('warp_flag', ('warp_flag',)), ('warp_flag_selected', ('warp_flag_selected',)),
+                        ('phase_reset_flag', ('phase_reset_flag',)),
+                        ('phase_reset_flag_selected', ('phase_reset_flag_selected',)),
+                        ('added_flag', ('added_flag',)), ('added_flag_selected', ('added_flag_selected',)),
+                        ('removed_flag', ('removed_flag',)), ('removed_flag_selected', ('removed_flag_selected',)),
                         ('playhead_head', ('playhead_head',)), ('playhead_stem', ('playhead_stem',)))
+# the flag elements' keys before 2026-10-05 -> the elements that replaced them (the picker's renamed_key,
+# tools/palette/picker/src/scene.h, the same table)
+OLD_PRESET_KEYS = {'unselected_flag': ('warp_flag', 'phase_reset_flag'),
+                   'selected_flag': ('warp_flag_selected', 'phase_reset_flag_selected'),
+                   'unselected_invalid_flag': ('removed_flag',), 'selected_invalid_flag': ('removed_flag_selected',)}
+
+
+def renamed(cols):
+    """A preset's colours {key: '#RRGGBB'} under the picker's keys: each old key's colour to every new key the preset
+    does not name itself (the head's rule)."""
+    out = {k: v for k, v in cols.items() if k not in OLD_PRESET_KEYS}
+    for old, new in OLD_PRESET_KEYS.items():
+        if old in cols:
+            for k in new: out.setdefault(k, cols[old])
+    return out
 
 
 def role_table():
@@ -93,7 +114,7 @@ def role_table_names():
 def preset_program_roles(e, preset, picker):
     """One preset entry and its presets.json record -> {theme-file role: '#RRGGBB'} for the program colours it records
     (the head's rule), after checking the entry's chrome is the chrome the picker paints for it."""
-    n, cols = preset['number'], preset['colours']
+    n, cols = preset['number'], renamed(preset['colours'])
     th = render.Theme(PICKER_THEME, data=render.picker_apply(picker, picker['picker']['elements'], cols))
     light = roles.light_roles(e)
     painted = {r: C.hexs(th.get(r)) for r in roles.LIGHT_ROLES}

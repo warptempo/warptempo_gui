@@ -392,8 +392,12 @@ PRESET_FIXED = {'label': '#FFFFFF', 'selected_fill': '#666666', 'selected_text':
 # the picker's theme elements -> the roles each gives its colour (the label also the field text)
 PRESET_THEME_KEYS = {'label': ('label', 'field_text'), 'selected_fill': ('selected_fill',),
                      'selected_text': ('selected_text',)}
-PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'unselected_flag', 'selected_flag', 'playhead_head', 'playhead_stem',
-                       'unselected_invalid_flag', 'selected_invalid_flag')
+# (the flag kinds' keys since 2026-10-05, and the four a preset saved before then names, which
+# gen_theme_files.py's OLD_PRESET_KEYS reads as the picker does)
+PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'warp_flag', 'warp_flag_selected', 'phase_reset_flag', 'phase_reset_flag_selected',
+                       'added_flag', 'added_flag_selected', 'removed_flag', 'removed_flag_selected', 'playhead_head',
+                       'playhead_stem', 'unselected_flag', 'selected_flag', 'unselected_invalid_flag',
+                       'selected_invalid_flag')
 
 
 def preset_fixed(picked):

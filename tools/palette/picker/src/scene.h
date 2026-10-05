@@ -139,6 +139,18 @@ bool view_holds(const Pick& p);
 // "0.34671532846715331"), so the view round-trips exactly
 std::string view_number(double x);
 
+// THE RENAMED KEYS (architect 2026-10-05: the flag elements follow the product's flag kinds, keyed by its role names):
+// the keys the flag elements carried before that round, which every reader below takes as the elements that replaced
+// them, so his files survive -- `unselected_flag` as warp_flag AND phase_reset_flag (one flag pair painted every
+// authored kind until then), `selected_flag` as warp_flag_selected and phase_reset_flag_selected,
+// `unselected_invalid_flag` as removed_flag and `selected_invalid_flag` as removed_flag_selected (the invalid flag
+// wears the removed pair). state.json's colour, view and entry and a preset's colour under an old key go to each new
+// key the same file or preset does not name itself; a picks.txt line under an old key goes to each new key's history
+// in its place in the file, so a history keeps its order; state.json's "active" naming an old key is its first new
+// element. The app writes the new keys alone, so a file it rewrites never names an old key again; picks.txt is never
+// rewritten, and its old lines read so for good. The new keys, or null for a key that was never renamed.
+const std::vector<std::string>* renamed_key(const std::string& old);
+
 // THE PICKER'S STATE FILE, <data dir>/state.json, rewritten whole at every close of the panel and every switch of
 // element or model:
 //

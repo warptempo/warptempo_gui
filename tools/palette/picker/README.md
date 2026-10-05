@@ -1,7 +1,7 @@
 # tools/palette/picker — Warptempo Picker, the colour picker over a true picture of the app
 
 A design tool for picking the app's colours (render.h's palette block: the chrome, the waveform's canvas and ink,
-the flags, the playhead, the chrome's text, the selected pair, the invalid flags) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
+each flag kind's face and selected face, the playhead, the chrome's text, the selected pair) by hand on the tablet's glass, one ELEMENT at a time, choosing which, over a picture of the app
 exported by the mock tool. A separate APK, package
 `com.warptempo.picker`, label "Warptempo Picker", installed beside the product and never touching
 `com.warptempo.gui` or its files. NO LINK PATH TO OR FROM THE PRODUCT: nothing in `src/`, `android/app/` or
@@ -26,15 +26,40 @@ their rules — the chrome's every line follows its ground by Windows 95's propo
 the ink over the canvas — so a mock render and the picker agree by construction.
 
 THE ELEMENTS (architect 2026-10-04, in his order of importance, the chooser's order): CHROME (the ground, one knob;
-the active element at a fresh start), CANVAS, INK, over the scene `waveform`; then UNSELECTED FLAG (the flag's face
-and its stem, starting #666699) and SELECTED FLAG (the selected face and its stem, starting #9999CC: the current
-design for now, CE01), over the scene `flags` — the waveform scene with the marker stems and the flags on, the fourth
-flag from the left (x 1816) SELECTED with its payload box the addressed cell, so its stem is bright, the state he
-meets a selected flag in most (with a bound cell addressed the stem keeps the resting face). Both flag labels are
-FIXED white (his ruling: consistency; the product's own keys `flag_label` and `flag_label_selected`, not the theme's
-label, so the Label element below never moves them), fixed roles re-blended over the live faces; the flag outline
-is a fixed role too. The flags round added the elements and the scene in the theme and no app code but one fit: the
-element button sets a name too long for it (Unselected Flag) smaller, so it ends clear of the chooser's head. Then
+the active element at a fresh start), CANVAS, INK, over the scene `waveform`; then THE FLAG KINDS (architect
+2026-10-05: the picker's flag elements follow the product's flag kinds, render.h's flag palette block, KEYED BY THE
+PRODUCT'S ROLE NAMES so a preset maps one to one; each element is its face and its stem, ONE KNOB PER FACE, as the
+product paints a flag's stem in its box's face), each kind's face and selected face in turn:
+  - WARP FLAG / SELECTED WARP FLAG (`warp_flag`, `warp_flag_selected`; the renderer's `flag_fill` / `flag_fill_sel`,
+    starting #666699 / #9999CC, the flags round's design CE01), over the scene `flags` — the waveform scene with the
+    marker stems and the warp column's flags on, the fourth flag from the left (x 1816) SELECTED with its payload box
+    the addressed cell, so its stem is bright, the state he meets a selected flag in most (with a bound cell addressed
+    the stem keeps the resting face);
+  - PHASE RESET FLAG / SELECTED PHASE RESET FLAG (`phase_reset_flag`, `phase_reset_flag_selected`; `flag_fill_reset` /
+    `flag_fill_reset_sel`, starting at the warp pair's colours, since until this round one flag pair showed for every
+    authored kind), over the scene `phase_reset` — the phase-reset column as the app paints it (the target + P view,
+    its view button down; render_phase_reset_flags): the same five flags in the phase-reset pair, each labelled the lane
+    token `reset` (kPhaseResetLaneToken) and sized by it, the fourth selected as the flags scene selects it. The
+    lead-in ring a focused reset shows on the waveform (paint_phase_reset_overlay_ring, the stem's colour) is not
+    drawn: its width is the scene's lead-in at a sample rate the scene does not record;
+  - ADDED FLAG / SELECTED ADDED FLAG (`added_flag`, `added_flag_selected`; `flag_fill_added` / `flag_fill_added_sel`,
+    starting at the built-in's #808000 / #008000) and REMOVED FLAG / SELECTED REMOVED FLAG (`removed_flag`,
+    `removed_flag_selected`; `flag_fill_red` / `flag_fill_red_sel`, starting at the invalid pair's #993333 / #FF6666 —
+    THE INVALID FLAG WEARS THE REMOVED PAIR in the product, one red for both, the context telling them apart, so these
+    two are the invalid flag's colours too), all four over the scene `history` — the `h` view's diff lane as the app
+    paints it (render_history_diff_flags; the warp column, its History button down, the walk buttons keeping the
+    scene's measured disabled faces, the mock's buttons having no enable option): an added flag `[+]1.27+0.00:b.33`,
+    a removed `[-]b.33`, an added `[+]b.33`, then the fourth a CHANGED PAIR `[-]b.33` | `[+]1.25` (the removed half then
+    the added half on one seam column) that is the view's FOCUS, so both its halves wear their selected faces and the
+    selected label (the planner's choice: the focus is the one selection the view always has, and the pair shows both
+    selected faces in the flags scene's place), its stem the removed half's selected face (the stem is the face of the
+    half it leaves from), and a removed `[-]b.33` clipped at the edge. Each label spells the sign as history mode does
+    (history_diff_label).
+The flag labels stay FIXED white (his ruling: consistency; the product's own keys `flag_label` on a face and
+`flag_label_selected` on a selected face, one pair for every kind, not the theme's label, so the Label element below
+never moves them), fixed roles re-blended over the live faces; the flag outline is a fixed role too. The flags round
+added the warp pair (then Unselected and Selected Flag) and the element button's fit: a name too long for it is set
+smaller, so it ends clear of the chooser's head. Then
 PLAYHEAD HEAD and PLAYHEAD STEM (architect 2026-10-04: the program's two playhead keys, render.h's THE PLAYHEAD block,
 starting at the product's defaults #8B8B8B and #FCFCFC), over the scene `playhead` — the flags scene's stems and flags
 with NO flag selected (in the app a marker click lands the playhead on it, and a playhead standing on a marker
@@ -58,29 +83,19 @@ theme's element and scene, a new export (`waveform`, `flags` and `playhead` byte
 and SELECTED TEXT (architect 2026-10-04: the theme's SELECTED PAIR, `selected_fill` and `selected_text`, Windows'
 Hilight / HilightText — render.h's mapping: every text field's selection band and selected substring, a dropdown's lit
 row, the open menu anchor — starting #666666 and #FFFFFF, the colours the app's `warptempo` theme records; the planner named the band
-"Selection", not "Selected Fill", so it does not read as the Selected Flag in the chooser), over the scene
+"Selection", not "Selected Fill", so it does not read as a selected flag in the chooser), over the scene
 `open_flag` — the flags scene's stems and flags with NO flag selected and the FOURTH flag's EDITOR OPEN, its whole text
 selected, as he meets it (opening a flag's editor selects its whole text): the face the selected face (the Selected
-Flag's), the black frame (the flag editor's, the product's one named literal, fixed), the band the Selection under the
+Warp Flag's), the black frame (the flag editor's, the product's one named literal, fixed), the band the Selection under the
 glyphs in the Selected Text, their antialiased edges re-blended over the band, the stem the selected face. The open-flag
 round added the theme's elements and scene, a new export (`waveform`, `flags`, `playhead` and `label` byte for byte as
 before), and one fit in the app: THE CHOOSER now runs down over the slider rows (below), its ten entries ending at
-panel y 868. Then UNSELECTED INVALID FLAG (the invalid face and its stem: the role `flag_fill_red`, the product's
-`invalid_face`, starting #993333) and SELECTED INVALID FLAG (the invalid selected face and its stem: `flag_fill_red_sel`,
-the product's `invalid_face_selected`, starting #FF6666) (architect 2026-10-04, the invalid flags; each starting at the
-colour picker.json held, the product's default; built as the flags round's two), over the scene
-`invalid_flags` — the flags scene's stems and flags with the THIRD and FOURTH flags INVALID (the red-flag class, render.h's
-THE STATES) and the fourth SELECTED with its payload box the addressed cell, as the flags scene selects it, so its stem
-is bright: one selected invalid flag beside one unselected, the first, second and fifth flags valid. ONE KNOB PER
-FACE: the product paints an invalid flag's stem in its face (the selected face's when its payload is the bright cell),
-so each element moves its face and its stem together, as the flags' do. THE LABELS STAY FIXED WHITE: the invalid
-label (`invalid_label`, the picker's `flag_label_red`, #FFFFFF) under the unselected invalid face, and over the
-selected invalid face THE ONE SELECTED LABEL (`flag_label_selected`, the picker's `flag_label_sel`, #FFFFFF), the
-product's one label on both selected faces (render.cpp resolve_flag_face), each re-blended over the live face. The
-round added the theme's elements and scene, a new export (the five earlier scenes byte for byte as before), and one
-fit in the app: a chooser entry too long for the list ("Unselected Invalid Flag", 369 px at 36 px where 342 fit) is
-set smaller to end inside it, as the element button sets a name too long for it (both new names, there); the twelve
-entries end at panel y 1020.
+panel y 868. The invalid flags round (2026-10-04) added Unselected and Selected Invalid Flag over a scene of their
+own, `invalid_flags`; THE FLAG KINDS' ROUND (architect 2026-10-05) gave their colours to the removed pair, which the
+invalid flag wears, and retired that scene: the history scene shows the removed pair with the added pair beside it,
+one scene for the four faces, and an invalid flag in the warp column is the same face, label and stem. That round
+added the theme's elements and two scenes, a new export (`waveform`, `flags`, `playhead`, `label` and `open_flag` byte
+for byte as before), and one fit in the app: THE CHOOSER in two columns (below).
 
 WHERE THE FLAGS SHOW: a tap on the right half opens the panel on the left (x 16..1136), leaving the flags at x 1343
 (unselected), 1816 (SELECTED) and 2289 (unselected, clipped at the window's edge) in view, the selected one and the
@@ -94,12 +109,12 @@ clock and the state line in view. WHERE THE OPEN FLAG SHOWS: the fourth flag, x 
 open (x 1148..1508); the panel on the right covers it. No flag stays in view on both halves (the two panels leave only
 x 1136..1168 between them uncovered), so the open flag is one the strip leaves in view too, on the side the flags
 round's selected flag is seen from (the first flag, x 398, is the only other a strip leaves in view). WHERE THE
-INVALID FLAGS SHOW: the third flag, x 1343 (invalid), and the fourth, x 1816 (invalid, SELECTED), both in view with the
-panel on the LEFT (a tap on the right half); the theme strip, when open (x 1148..1508), covers the third and leaves the
-selected one in view, as in the flags scene. The first two flags (x 398 and 871, the panel on the right) would show a
-pair too, but the strip then leaves only the first, and the fifth is clipped at the window's edge; the pair on the
-left keeps the selected one in view with the strip open and stands where the flags scene selects, so a switch
-between the Selected Flag and the Selected Invalid Flag keeps the bright flag in one place (the planner's choice).
+FLAG KINDS SHOW: in each kind's scene the flags stand where the flags scene's do, so a switch between the kinds keeps
+the bright flag in one place. With the panel on the LEFT (a tap on the right half) the phase-reset faces show at
+x 1343 and 2289 and the selected one at 1816; the history scene's added flag at 1343, the focused pair at 1816 (its
+added half from x 1930) and a removed flag at 2289 (clipped at the window's edge); the theme strip, when open, covers
+x 1343 and leaves the rest. With the panel on the RIGHT (a tap on the left half) the history scene's first two flags
+show, the added `[+]1.27+0.00:b.33` at 398 and the removed `[-]b.33` at 871 (the strip leaving only the first).
 
 - A TAP on the picture opens the PANEL on the half of the screen opposite the tap, so the place tapped stays in view.
 - The panel (GTK's colour selector and GIMP's colour dialog, their common ground, no CMYK): the hue RING with
@@ -155,15 +170,19 @@ between the Selected Flag and the Selected Invalid Flag keeps the bright flag in
   input: the R / G / B tracks and their − / +, a theme's swatch, and a pick saved before views were stored. The ring,
   the triangle and the model's tracks and − / + set the view directly. The bytes stay the colour's truth (what is
   painted, what the product takes); the view always gives them.
-- THE CHOOSER: a tap on the element's name (at the lift, as every panel control) opens a vertical list of the
-  elements in manifest order over the panel's right column, the active one marked by a white square, each name in
-  the word size or, too long for the list, smaller to end 22 px inside its right edge (`fit_px`, as the element
-  button sets its name to end clear of its head). ITS FIT
-  (2026-10-04: room for the elements to come, the invalid flags among them): its rows keep the pop-up's and the model list's 76 px and run down
-  from under the button (panel y 108) over the slider rows as far as the panel's pad, PAINTED OVER EVERYTHING THEY COVER
-  — the fields, tracks and handles go under its field, and the panel's words (the hex, the count, Old and New, a
-  readout) are clipped to outside it — so twelve entries end at y 1020, fourteen at 1172 and fifteen, the most, at 1248
-  (`panel::kChooserMax`; an export with more is refused at the launch with a message). A tap on an
+- THE CHOOSER: a tap on the element's name (at the lift, as every panel control) opens a list of the elements in
+  manifest order, the active one marked by a white square, each name in the word size or, too long for its cell,
+  smaller to end 22 px inside the cell's right edge (`fit_px`, as the element button sets its name to end clear of its
+  head). ITS FIT (architect 2026-10-05: the flag kinds made sixteen elements, and the clock's and the card's roles may
+  join them): TWO COLUMNS over the panel's whole width inside its pad (x 36..1084, each 524 px), as the presets pop-up
+  lies under the two buttons, READ DOWN THE FIRST COLUMN AND THEN THE SECOND (Windows 95's list view in its List mode),
+  each ceil(n / 2) rows of the pop-up's and the model list's 76 px, from under the button (panel y 108) over the wheel,
+  the model switch and the slider rows, PAINTED OVER EVERYTHING THEY COVER — the wheel, the fields, tracks and handles
+  go under its field, and the panel's words (the hex, the count, Old and New, the model's name, a readout) are clipped
+  to outside it — so sixteen entries end at y 716, twenty-two at 944 and thirty, the most, at 1248
+  (`panel::kChooserMax`; an export with more is refused at the launch with a message); every name of the flag kinds'
+  round fits its cell (442 px) at the word size. Under an odd count the second column's last cell is empty: a tap
+  there picks nothing and leaves the chooser open. A tap on an
   entry picks it and closes the chooser (a press on one entry lifted on another picks nothing and leaves it open); a
   tap anywhere outside the chooser closes it and changes nothing. CHOOSING ANOTHER ELEMENT IS THE CLOSE FOR THE ONE
   BEING LEFT (the history's rules, below in Use); choosing the active element again is a no-op.
@@ -231,7 +250,16 @@ from its bytes as before (the lines are never rewritten; a new commit appends th
 no `"active"` (the single-layer builds', such as the ink round's `{"colours": {"ink": "#A6B9DE"}, "entry": {"ink":
 58}}`) starts every other element at the manifest's colour, on the manifest's active element. A key that is no element
 of the export (an earlier round's layer) is read and never used; so is a `"theme"` the export does not list, and a
-preset's key that is no element. An element a file does not name (the flags in every file written before the flags
+preset's key that is no element. THE RENAMED KEYS (architect 2026-10-05, `renamed_key`, src/scene.h): the flag
+elements' keys before the flag kinds' round read as the elements that replaced them — `unselected_flag` as the Warp
+Flag AND the Phase Reset Flag (one flag pair painted every authored kind until then), `selected_flag` as both their
+selected faces, `unselected_invalid_flag` as the Removed Flag and `selected_invalid_flag` as the Selected Removed Flag
+(the invalid flag wears the removed pair): `state.json`'s colour, view and entry and a preset's colour under an old
+key go to each new key the same file or preset does not name itself, a `picks.txt` line under an old key to each new
+key's history in its place in the file (so the Phase Reset Flag's history is his old flag picks, then its own), and a
+`state.json` `"active"` naming an old key is its first new element. The app writes the new keys alone, so the first
+close, switch or save rewrites `state.json` and `presets.json` without them; `picks.txt` keeps its old lines, which
+read so for good. An element a file does not name (the flags in every file written before the flags
 round) starts at the manifest's colour with an empty history, and a preset that does not name it (one saved with three
 elements) leaves it as it is at a load. `presets.json` is read as strictly as the
 others: a number not above the one before, a colour without its view, or a view not giving its hex fails the load.
@@ -305,8 +333,9 @@ LOAD segments, DT_NEEDED exactly libc / libdl / libm / libandroid / libnativewin
 
 The LAPTOP CHECK builds the portable core (`json`, `scene`, `fonts`, `picker`) with the host's g++, cairo and
 FreeType into `build/check/host_check`; `check_refs.py` exports `themes/picker.json` afresh (`build/check/scene/`) and
-THE CHECK THEME (`build/check/multi/`: the round's theme plus test elements filling the chooser to fourteen entries —
-the icons' inks over the waveform scene, where the invalid faces stood as test elements before their round), and renders
+THE CHECK THEME (`build/check/multi/`: the round's theme plus test elements filling the chooser to nineteen entries —
+the icons' inks over the waveform scene, the only fixed roles the scenes paint that no check reads as fixed; an odd
+count, so the second column ends in the empty cell), and renders
 their references with the mock tool's own code. It
 checks: every scene of both at the manifest's colours and at every colour set of `render.picker_check_sets` (each
 element moved, each other element to a probe colour of its own, the chrome to the tint #206048 whose 32 and 96 hit the rule's half-to-even ties and to the bright
@@ -328,21 +357,22 @@ committed and restored by a relaunch, BACK and FORWARD; an HSL pick met by BACK 
 triangle in LCh; a preset over three models restored exactly; a grey saved in HSV keeping its hue in HSL; the new
 forms' refusals); the readouts show one decimal rounded to nearest
 (247.27 -> 247.3, 0.4714 -> 47.1, 0.99999 -> 100.0) and the widest, measured in the mono face, fits its field; the scripted sessions on the active element (the panel,
-the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; ITS FIT: fourteen entries inside the panel's
-pad and the screen, its rectangle the same picture at two colours while the hex, the swatch and the readouts, tracks
-and handles of the slider rows under it changed; a tap outside it closes it alone, writing
-nothing; a press lifted on another entry picks nothing; the active entry again is a no-op; the edited chrome
-committed by the switch to the Ink; the switch Ink -> Unselected Flag showing the flags scene with both faces, the
-chrome's tint and the ink's colour live in it, the unselected face repainting alone; the switches on to the Selected
-Flag, the Selection's scene and the chooser's last entry, over the slider rows, each committing the element left); THE PLAYHEAD (architect 2026-10-04: the panel
+the pick history, the HSV he dialled: as before); THE CHOOSER (it opens; ITS FIT: nineteen entries in two columns of
+ten and nine inside the panel's pad and the screen, the extents at sixteen and twenty-two printed, its rectangle the
+same picture at two colours while the wheel, the hex, the swatch and the readouts, tracks and handles of the slider
+rows under it changed; a tap outside it closes it alone, writing nothing; a press lifted on another entry picks
+nothing; the empty cell picks nothing; the active entry again is a no-op; the edited chrome committed by the switch to
+the Ink; the switch Ink -> Warp Flag showing the flags scene with both warp faces, the chrome's tint and the ink's
+colour live in it, the warp face repainting alone; the switches on to the Selected Warp Flag, the Selection's scene and
+the chooser's last entry, the second column's foot, each committing the element left); THE PLAYHEAD (architect 2026-10-04: the panel
 on the right, the playhead left of it; the switch to the Playhead Head showing the playhead scene, the head, its
 outline the Label's #FFFFFF and the stem at the manifest's colours, in the picture and the frame; the head repainting
 alone, its outline and the stem staying; its edit committed by the switch to the Playhead Stem; the stem repainting
 alone; its edit committed by the close; both kept by a relaunch with their views, every other element untouched);
 THE SWITCH'S PICTURE (the round's own export launched at the colours of its all-moved reference: the waveform scene,
-the switch Ink -> Unselected Flag and the switch back, and the switch Ink -> Playhead Head each equal the mock tool's
-render byte for byte, the switch on to the Label the label scene's, on to the Selection the open_flag scene's and on to
-the Unselected Invalid Flag the invalid_flags scene's); THE
+the switch Ink -> Warp Flag and the switch back, and the switch Ink -> Playhead Head each equal the mock tool's
+render byte for byte, the switch on to the Label the label scene's, on to the Selection the open_flag scene's, on to
+the Phase Reset Flag the phase_reset scene's and on to the Added Flag the history scene's); THE
 LABEL (architect 2026-10-04: its role the element, the flag labels fixed #FFFFFF; the panel on the right, the switch to the Label showing
 the label scene, a word's solid pixel repainting and the antialiased edges re-blending over the chrome at one byte's
 move; committed by the close and kept by a relaunch; the playhead head's outline then the new label, the flag labels
@@ -350,14 +380,18 @@ still white); THE OPEN FLAG (the open-flag round, architect 2026-10-04; both rol
 on the left, the open flag right of it and of the strip's column; the switch to the Selection showing the open_flag
 scene, the band repainting and the selected text's antialiased edges re-blending over it, the text, the face and the
 frame staying; committed by the switch to the Selected Text, whose glyphs and edges then repaint, the band staying;
-committed by the close; both kept by a relaunch with their views, every other element untouched); THE INVALID FLAGS
-(architect 2026-10-04; both faces their elements, the invalid label and the selected label fixed #FFFFFF; the panel on
-the left, both invalid flags right of it; the switch to the Unselected Invalid Flag showing the invalid_flags scene,
-its face and stem repainting together and the invalid label's antialiased edges re-blending over it, the selected
-face, its stem and the valid faces staying; committed by the switch to the Selected Invalid Flag, whose face and stem
-then repaint with the selected label's edges re-blending, the unselected face staying; committed by the close; both
-kept by a relaunch with their views, every other element untouched; THE NAMES' FIT measured in the frame: each name
-on the element button set to end clear of its head, every chooser entry inside the list); every element's history, cursor and view independent across switches and relaunches, and the element he
+committed by the close; both kept by a relaunch with their views, every other element untouched); THE FLAG KINDS
+(architect 2026-10-05; each face its element, the flag label and the selected label fixed #FFFFFF; the panel on the
+left; for the phase-reset pair over the phase_reset scene and for the added and the removed pairs over the history
+scene: the switch to the face showing its scene, the face and the selected face right of the panel, each stem where it
+has one (the focused pair's added half has none), the face and its stem repainting together and its labels'
+antialiased edges re-blending over it, the selected face, its edges and the scene's other kind's faces staying;
+committed by the switch to the selected face, which then repaints the same way, the face staying; committed by the
+close; both kept by a relaunch with their views, every other element untouched; THE NAMES' FIT measured in the frame:
+each name on the element button set to end clear of its head, every chooser entry inside its cell); THE RENAMED KEYS
+(files naming the old flag keys: colours, an HSL view, entries in two histories in file order, the active element and
+a preset's two old keys onto three new elements; the preset loaded and a new one saved, after which `state.json`,
+`presets.json` and the new `picks.txt` lines name the new keys alone, the old lines kept; a relaunch over them); every element's history, cursor and view independent across switches and relaunches, and the element he
 left returned to; today's `picks.txt` (58 ink lines, 15 of the first build's form and 43 with a view, the last
 #A6B9DE) and `state.json` (`{"colours": {"ink": "#A6B9DE"}, "entry": {"ink": 58}}`) loading unchanged; THE PRESETS
 (the export's themes, their count the data's, the program's own family last with its presets after `warptempo`; two
@@ -365,32 +399,33 @@ saves named Preset 1 and Preset 2, the edited panel colour committed by the pop-
 opening; a load giving each changed element one pick and an unchanged one none, OLD the loaded colour, BACK returning;
 a relaunch keeping the presets and their views; a drag that scrolls and acts on nothing; a tap outside that changes
 nothing; a malformed `presets.json` refused; a three-element preset, saved before the flags round, loading and
-committing the chrome, canvas and ink while both flags, both playhead elements, the Label, the selected pair and both
-invalid flags stay as they were, no pick for any); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
+committing the chrome, canvas and ink while every other element stays as it was, no pick for any); THE THEME STRIP (Windows 95 Standard opened, its #C0C0C0 adopted into
 the chrome as an edit giving its own quartet #FFFFFF / #DFDFDF / #808080 / #000000 exactly, OLD reverting it, the
 switch to the canvas committing it with the strip still open, another swatch adopted into the canvas, the strip
 surviving a relaunch; Brick's ground giving the rule's lines and not its own; CDE Alpine's strip scrolled by a drag
 that adopts nothing; the close control, `state.json` never holding an unsaved adoption); THE TABLET'S FILES OF
 2026-10-04 (`check_data/tablet_2026-10-04/`: 110 `picks.txt` lines over three elements and its `state.json`) loading
-unchanged, every view exact, HSV shown, the flags, the playhead, the Label, the selected pair and the invalid flags at the manifest's colours with empty histories, and
+unchanged, every view exact, HSV shown, every other element at the manifest's colour with an empty history, and
 a preset saved and loaded over them appending nothing; the repository's `presets/presets.json` reading unchanged;
 those of the presets build's install (`check_data/tablet_2026-10-04_presets/`, 136 lines, the ink active, chrome 12
 of 12, canvas 34 of 34, ink 90 of 90) loading unchanged the same way; THE REPOSITORY'S COPY OF THE TABLET'S FILES
 (`presets/`'s `picks.txt`, `state.json` and `presets.json`, whatever the latest copy holds; architect 2026-10-04, the
 playhead round's install) loading over the round's own export: every element `state.json` names at its colour, its
-model, active element and open theme, every element the files never name at the manifest's colour with an empty
-history, and each of his presets loaded over them setting the elements it names (`picks.txt` gaining exactly one
+model, active element and open theme — an old flag key's colour on each element that replaced it and its
+`picks.txt` lines that element's history, read from the files' own text (THE RENAMED KEYS, above) — every element the
+files never name at the manifest's colour with an empty history, and each of his presets loaded over them setting the elements it names (`picks.txt` gaining exactly one
 commit for each whose colour or view changes and nothing else) and leaving every other at the colour it had, with no
 pick — every expectation read from the files, so a later copy keeps the check; and THE PER-FRAME COST
-of a pen drag on the ink, the chrome and the unselected flag, and on the chrome's h track in LCh (printed). Its frames are written as PNGs in
+of a pen drag on the ink, the chrome and the warp flag, and on the chrome's h track in LCh (printed). Its frames are written as PNGs in
 `build/check/work/` for the eye (`frame_chooser_open.png`, `frame_chrome_tint{,_open}.png`,
-`frame_{unselected,selected}_flag_open.png` (the flags scene, the panel on the left),
+`frame_warp_flag{,_selected}_open.png` (the flags scene, the panel on the left),
 `frame_playhead_{head,stem}_open.png` (the playhead scene, the panel on the right), `frame_label_open.png` (the label
 scene, the panel on the right), `frame_selection_open.png` and `frame_selected_text_open.png` (the open_flag scene, the
-panel on the left), `frame_{unselected,selected}_invalid_flag_open.png` (the invalid_flags scene, the panel on the
-left), `frame_chooser_invalid_open.png` (the chooser with its twelve entries over the slider rows),
+panel on the left), `frame_phase_reset_flag{,_selected}_open.png` (the phase_reset scene) and
+`frame_{added,removed}_flag{,_selected}_open.png` (the history scene), the panel on the left,
+`frame_chooser_kinds_open.png` (the chooser's two columns over the wheel and the slider rows),
 `frame_selection_switch_open.png`, `frame_switch_flags_moved.png`, `frame_switch_open_flag_moved.png`,
-`frame_switch_invalid_flags_moved.png`,
+`frame_switch_{phase_reset,history}_moved.png`,
 the history's `frame_history_*.png`, `frame_presets_open.png`, `frame_presets_themes.png` (the pop-up scrolled into
 the themes), `frame_strip_{open,adopted,scrolled}.png`, `frame_model_list_open.png`, `frame_model_hsl_open.png` and
 `frame_model_lch_open.png` (the C track's out-of-gamut stretch and h's).
@@ -455,7 +490,7 @@ An element's history is every `picks.txt` line under its key, across rounds, unt
 |---|---|
 | `src/colour.h` | the byte triple, hex, the frame's pixel word, `lin_mix` (colour.py's, step for step), `scale_byte` (the chrome rule), `over_n_8` (pixman's blend, line for line), THE MODELS: HSV, HSL and LCh over Display-P3 (D65) to and from the bytes, the gamut test |
 | `src/json.{h,cpp}` | the tiny JSON reader (manifest.json, state.json) |
-| `src/scene.{h,cpp}` | the export: load and validate (`themes.json` too), the roles' rules, the scene's runs and stacks, the whole paint and the live repaint; the Pick (bytes and view); the readers of state.json, picks.txt and presets.json |
+| `src/scene.{h,cpp}` | the export: load and validate (`themes.json` too), the roles' rules, the scene's runs and stacks, the whole paint and the live repaint; the Pick (bytes and view); the readers of state.json, picks.txt and presets.json, and the renamed keys they read (`renamed_key`) |
 | `src/fonts.{h,cpp}` | Roboto and Roboto Mono from memory, as `src/gui/gui_font_bundled.cpp` builds them (SLIGHT hinting) |
 | `src/picker.{h,cpp}` | the picker: ColourState (the bytes plus every model's view with its retained hue, a stored view restored, the gamut stop), the model switch, the launch state (`picker_load`), every element's state and pick history, the chooser, the presets pop-up, the theme strip, the panel's geometry, painting, touch, the close's save |
 | `src/main_android.cpp` | the glue's lifecycle, the window set-up, one-pointer touch, the R<->B blit |

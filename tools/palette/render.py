@@ -82,6 +82,14 @@ DEFAULTS = {
     # `flag_label_sel`, the selected substring's glyphs `selected_text` (HilightText) over `selected_fill` (Hilight;
     # flat_edit_colours, which falls back to Windows' #000080 when the theme does not state it)
     'flag_fill_red_sel': '#FF6666', 'flag_label_sel': '#000000',
+    # THE OTHER FLAG KINDS' PAIRS, read only by flags.lane (architect 2026-10-05, the picker's flag kinds; render.h's
+    # flag palette block: each kind a face and a selected face): the phase-reset column's `flag_fill_reset` /
+    # `flag_fill_reset_sel` (phase_reset_flag / phase_reset_flag_selected) and the `h` view's added halves'
+    # `flag_fill_added` / `flag_fill_added_sel` (added_flag / added_flag_selected), each defaulting to the built-in's
+    # (src/gui/theme_file.h); the removed halves wear `flag_fill_red` / `flag_fill_red_sel` above, the removed pair the
+    # invalid flag wears
+    'flag_fill_reset': '#008080', 'flag_fill_reset_sel': '#0000FF', 'flag_fill_added': '#808000',
+    'flag_fill_added_sel': '#008000',
     'flag_border_edit': '#000000', 'field_ground': '#FFFFFF', 'selected_text': '#FFFFFF',
     # THE FIELD'S TEXT (2026-10-03, step 11), read only by the optional surface `dialog` (draw_dialog): Windows'
     # WindowText. `field_ground` above is the dialog field's ground, and only that since 2026-10-03 (the editing flag
@@ -149,7 +157,24 @@ FLAG_STATES = ('selected', 'invalid', 'disabled', 'editing')
 FLAG_SELECTIONS = ('face', 'underline', 'fill')
 # the flags section's keys beside its colour aliases; flags.editing_selected (read only by flags.style "flat" with an
 # editing flag): how many of the editing flag's leading characters are selected, null for all (the editor as it opens)
-FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection', 'editing_selected')
+FLAG_OPTIONS = ('relief', 'style', 'rule', 'states', 'selection', 'editing_selected', 'lane', 'diff')
+# flags.lane (architect 2026-10-05, the picker's flag kinds; read only by the tablet geometry): WHICH LANE the marker
+# lane shows, so each flag kind is painted as the app paints it, the scene's flags at their measured columns --
+# "warp" (the default: the scene's warp flags, the pair `flag_fill` / `flag_fill_sel`), "phase_reset" (the phase-reset
+# column, render_phase_reset_flags: every flag the phase-reset pair `flag_fill_reset` / `flag_fill_reset_sel`, its
+# label the lane token PHASE_RESET_TOKEN, its box the app's pad + nearbyint(shaped) + pad over it; an invalid flag the
+# removed pair, as on the warp column) and "history" (the `h` view's diff flags, render_history_diff_flags: flags.diff).
+# flags.diff (with lane "history" alone): one entry per scene flag, left to right, {"removed": token} for a removed
+# line, {"added": token} for an added one, both for a CHANGED pair -- each half labelled its sign and the token against
+# it (DIFF_SIGNS, history_diff_label: `[-]b.33`), sized pad + nearbyint(shaped) + pad, a pair the removed half then the
+# added half on one outline column between them (the seam), the whole one box: the removed half the removed pair
+# (`flag_fill_red` / `flag_fill_red_sel`), the added half the added pair (`flag_fill_added` / `flag_fill_added_sel`),
+# both labels `flag_label` (the selected face's `flag_label_sel`), the stem the face of the half it leaves from (the
+# removed half's on a pair). flags.states there names "selected" alone (the view's focus or selection, both halves'
+# selected faces): a diff line carries no red class, and its disabled half is not drawn here.
+FLAG_LANES = ('warp', 'phase_reset', 'history')
+PHASE_RESET_TOKEN = 'reset'                             # kPhaseResetLaneToken (render.h)
+DIFF_SIGNS = (('removed', '[-]'), ('added', '[+]'))     # history_diff_label (paint_handler.h): the sign, then the token
 # trim.held (trim.style "scrollbar" only): one arrow button HELD, as a single-bound drag holds it -- "flat" the app's
 # face (render.cpp paint_trim_arrow_button: Windows' DFCS_PUSHED | DFCS_FLAT, one Shadow line round the face), "sunken"
 # the push button's pressed face (the plain sunken edge); the glyph one line right and down in both (step 11). Its
@@ -310,6 +335,21 @@ class Theme:
                 raise SystemExit(f'theme {path}: flags.relief and flags.rule are not read by flags.style "flat" (no bevel)')
         elif 'rule' in fl or 'states' in fl:
             raise SystemExit(f'theme {path}: flags.rule and flags.states are read only by flags.style "bevelled" / "flat"')
+        self.flag_lane = fl.get('lane', 'warp'); self.flag_diff = fl.get('diff')
+        if self.flag_lane not in FLAG_LANES: raise SystemExit(f'theme {path}: flags.lane must be one of {FLAG_LANES}')
+        if 'lane' in fl and not TABLET: raise SystemExit(f'theme {path}: flags.lane is read only by the tablet geometry')
+        if ('diff' in fl) != (self.flag_lane == 'history'):
+            raise SystemExit(f'theme {path}: flags.diff is given with flags.lane "history" and only then')
+        if self.flag_lane == 'history':
+            n = len(BASE_SCENE['flags']['flags']); d = self.flag_diff
+            if (not isinstance(d, list) or len(d) != n
+                    or not all(isinstance(e, dict) and e and set(e) <= {'removed', 'added'}
+                               and all(isinstance(v, str) and v and v.isascii() and ' ' not in v for v in e.values())
+                               for e in d)):
+                raise SystemExit(f'theme {path}: flags.diff is one {{"removed": token, "added": token}} (either or both) per '
+                                 f'scene flag, {n} left to right, not {d!r}')
+            if set(fl.get('states', {})) - {'selected'}:
+                raise SystemExit(f'theme {path}: flags.states names "selected" alone with flags.lane "history"')
         unknown = set(raw) - set(DEFAULTS)
         if unknown: raise SystemExit(f'theme {path}: unknown colour roles {sorted(unknown)}')
         for role in BEVELS:
@@ -1383,6 +1423,50 @@ def draw_flags(cr, th):
         fill(cr, bx + bw, F['y0'], bx + bw + F['border_w'], F['y1'], th.get('flag_border'))
         show(cr, C.SANS, px, f['text'], bx + F['pad_l'], F['baseline'], th.get('flag_label'))
 
+def lane_scene(sc, th):
+    """flags.lane -> the scene with its flags' labels and widths as that lane paints them (the head at FLAG_LANES): a
+    phase reset's label the lane token, a diff flag's `halves` [{"kind", "text", "w"}, ...] and its whole fill width
+    (the halves and the seam column between them); each box the app's pad_l + nearbyint(shaped) + pad_r, pad_r read off
+    the scene's first flag as tablet.py sized it. "warp" returns the scene itself."""
+    if th.flag_lane == 'warp': return sc
+    sc = json.loads(json.dumps(sc)); F = sc['flags']; px = ui_font_px(th)
+    f0 = BASE_SCENE['flags']['flags'][0]
+    pad_r = f0['w'] - F['pad_l'] - int(round(C.shape(C.SANS, px, f0['text'])[1]))
+    box_w = lambda t: F['pad_l'] + int(round(C.shape(C.SANS, px, t)[1])) + pad_r
+    for i, f in enumerate(F['flags']):
+        if th.flag_lane == 'phase_reset':
+            f['text'] = PHASE_RESET_TOKEN; f['w'] = box_w(f['text'])
+        else:
+            f['halves'] = [{'kind': k, 'text': sign + th.flag_diff[i][k], 'w': box_w(sign + th.flag_diff[i][k])}
+                           for k, sign in DIFF_SIGNS if k in th.flag_diff[i]]
+            f['w'] = sum(h['w'] for h in f['halves']) + LW * (len(f['halves']) - 1)
+    return sc
+
+def kind_face(th, selected):
+    """flags.lane "warp" / "phase_reset": the lane's kind's face role, or its selected face's."""
+    return ('flag_fill_reset' if th.flag_lane == 'phase_reset' else 'flag_fill') + ('_sel' if selected else '')
+
+def diff_face(th, kind, selected):
+    """flags.lane "history": a diff half's face, the removed pair's or the added pair's (render_history_diff_flags)."""
+    return th.get(('flag_fill_red' if kind == 'removed' else 'flag_fill_added') + ('_sel' if selected else ''))
+
+def draw_diff_flag(cr, th, i, f):
+    """flags.lane "history": scene flag i as the `h` view's diff flag (render_history_diff_flags): the one-LW
+    `flag_border` outline round the whole box, each half's face in its kind's pair (selected: the selected face), the
+    seam column between a pair's halves the outline's, the stem over the bottom outline in the first half's face, each
+    half's label at pad_l past its own left edge in `flag_label` (`flag_label_sel` on the selected faces)."""
+    F = SCENE['flags']; px = ui_font_px(th); sel = th.flag_states[i][0]
+    x0, y0, x1, y1 = flat_flag_box(th, f)
+    fill(cr, x0, y0, x1, y1, th.get('flag_border'))
+    hx = f['x']
+    for h in f['halves']:
+        fill(cr, hx, y0 + LW, hx + h['w'], y1 - LW, diff_face(th, h['kind'], sel)); hx += h['w'] + LW
+    fill(cr, f['x'], y1 - LW, f['x'] + FLAG_STEM_W, y1, flat_stem_colour(th, i))
+    hx = f['x']
+    for h in f['halves']:
+        show(cr, C.SANS, px, h['text'], hx + F['pad_l'], F['baseline'], th.get('flag_label_sel' if sel else 'flag_label'))
+        hx += h['w'] + LW
+
 def flag_fill_w(th, f):
     """A flag's fill width between its two border columns, device px: the measured one, or with fonts.ui_px the text
     at the face + the measured side pads when it no longer fits (draw_flags' docstring)."""
@@ -1475,7 +1559,7 @@ def flat_selected_face(th, i):
     `flag_fill_red_sel` over an invalid flag ("bright red means selected and error"), else `flag_fill_sel` -- a
     selected disabled flag's too (the provisional arm)."""
     sel, red, dis, ed = th.flag_states[i]
-    return th.get('flag_fill_red_sel' if red and not dis else 'flag_fill_sel')
+    return th.get('flag_fill_red_sel' if red and not dis else kind_face(th, True))
 
 def flat_edit_colours(th, i):
     """flags.style "flat": the EDITING flag i's (face, text, selection fill, selected text), the app's in-place editor
@@ -1492,9 +1576,10 @@ def flat_stem_colour(th, i):
     when invalid; the "underline" and "fill" mock forms keep the marker's own); a disabled flag none, selected or
     not."""
     sel, red, dis, ed = th.flag_states[i]
+    if th.flag_lane == 'history': return diff_face(th, SCENE['flags']['flags'][i]['halves'][0]['kind'], sel)
     if dis: return None
     if ed or (sel and th.flag_selection == 'face'): return flat_selected_face(th, i)
-    return th.get('flag_fill_red' if red else 'flag_fill')
+    return th.get('flag_fill_red' if red else kind_face(th, False))
 
 def face_underline(family, size_px):
     """The face's OWN UNDERLINE at size_px -> (top, thickness), device px as unrounded doubles, the top measured DOWN
@@ -1555,6 +1640,7 @@ def draw_flags_flat(cr, th):
     marker's own (flat_stem_colour). Neither applies to a disabled flag, which shows only the "face" form's arm."""
     F = SCENE['flags']; px = ui_font_px(th)
     for i, f in enumerate(F['flags']):
+        if th.flag_lane == 'history': draw_diff_flag(cr, th, i, f); continue
         x0, y0, x1, y1 = flat_flag_box(th, f); sel, red, dis, ed = th.flag_states[i]
         sface = sel and th.flag_selection == 'face'
         sf = sel and not dis and th.flag_selection == 'fill'
@@ -1563,7 +1649,7 @@ def draw_flags_flat(cr, th):
         elif sface: face = flat_selected_face(th, i)
         elif dis: face = th.get('ground')
         elif sf: face = flat_selection_fill(th)
-        else: face = th.get('flag_fill_red' if red else 'flag_fill')
+        else: face = th.get('flag_fill_red' if red else kind_face(th, False))
         border = th.get('flag_border_edit' if ed else 'flag_border')
         fill(cr, x0, y0, x1, y1, border)                                   # the outline (the face covers its inside)
         fill(cr, x0 + LW, y0 + LW, x1 - LW, y1 - LW, face)
@@ -1938,7 +2024,7 @@ def render_rgb(theme_path, label_text=None, data=None, record=None):
     di, db = case_delta(th)
     global SCENE; SCENE = shift_scene(shift_scene(shift_scene(BASE_SCENE, di, 'icon'), lane_shift(th), 'trim'), pad_shift(th), 'ruler')
     SCENE = order_scene(seat_flags(shift_scene(SCENE, marker_shift(th), 'marker'), th), th.opt['lane_order'])
-    SCENE = seat_clock(shift_scene(SCENE, db, 'bottom'), th)
+    SCENE = lane_scene(seat_clock(shift_scene(SCENE, db, 'bottom'), th), th)
     surf = cairo.ImageSurface(cairo.FORMAT_RGB24, C.W, C.H); cr = cairo.Context(surf)
     if record is not None: cr = TeeContext(cr, record)
     cr.set_antialias(cairo.ANTIALIAS_DEFAULT)
@@ -2211,12 +2297,13 @@ def read_cover(path):
 
 # THE CHECK'S COLOUR SETS (picker_check_sets): a chrome element at a TINT whose channels 32 and 96 hit the rule's
 # half-to-even ties (32 x 255 / 192 = 42.5, 96 x 223 / 192 = 111.5) and at a BRIGHT ground whose x 255 / 192 caps at
-# 255; every other element at a probe colour of its own (thirteen probes: the invalid-flags round's eleven non-ground
-# elements and the laptop check's two test elements, which fill its chooser to fourteen entries, each distinct, so the
-# all-moved set tells every element from every other); then all of them moved at once
+# 255; every other element at a probe colour of its own (twenty-one probes: the flag kinds' round's fifteen non-ground
+# elements and the laptop check's six test elements, which fill its chooser to twenty-two entries, each distinct, so
+# the all-moved set tells every element from every other); then all of them moved at once
 CHECK_GROUNDS = ('#206048', '#E6D2B4')
 CHECK_PROBES = ('#CC9966', '#203040', '#3366CC', '#7A2E5C', '#55AA22', '#E0B030', '#30A0A8', '#D0482C', '#8844CC',
-                '#44CC88', '#C0C040', '#6080A0', '#A04070')
+                '#44CC88', '#C0C040', '#6080A0', '#A04070', '#2E7A5C', '#B05A10', '#5C2E7A', '#90D0F0', '#405010',
+                '#F070A0', '#107090', '#A0A0E0')
 
 def picker_check_sets(elements):
     """-> [{key: '#RRGGBB'}, ...]: the export's and the laptop check's colour sets (above)."""

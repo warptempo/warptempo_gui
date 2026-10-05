@@ -80,8 +80,8 @@ double cap_baseline(cairo_t* cr, bool mono, double px, double y0, double h) {
 }
 
 // the largest size up to px at which s is no wider than width: the element button's name, which must clear the
-// chooser's head at the button's right (the flags round's "Unselected Flag" is 256 px at 36 px where 186 fit), and a
-// chooser entry's, which must end inside the list (kChooserNameX1)
+// chooser's head at the button's right (186 px at 36 px: a flag kind's name, "Selected Phase Reset Flag" the longest, is
+// set smaller), and a chooser entry's, which must end inside its cell (kChooserNameW)
 double fit_px(cairo_t* cr, bool mono, double px, const std::string& s, double width) {
     fonts_select(cr, mono, px);
     cairo_text_extents_t e;
@@ -136,6 +136,19 @@ std::string count_of(const History& h) {
 }
 
 bool in(double x, double y, double x0, double y0, double x1, double y1) { return x >= x0 && x < x1 && y >= y0 && y < y1; }
+
+// the chooser's rectangle for n entries (its two columns' full rows), panel px
+bool in_chooser(double lx, double ly, int n) {
+    return in(lx, ly, kChooserX0, kChooserY, kChooserX1, kChooserY + chooser_rows(n) * kChooserRowH);
+}
+
+// the chooser's entry under the panel point, or -1 (outside it, or the second column's empty cell under an odd n)
+int chooser_at(double lx, double ly, int n) {
+    if (!in_chooser(lx, ly, n)) return -1;
+    const int col = std::min(kChooserCols - 1, int((lx - kChooserX0) / kChooserColW));
+    const int e = col * chooser_rows(n) + int((ly - kChooserY) / kChooserRowH);
+    return e < n ? e : -1;
+}
 bool between(double v, double a, double b) { return v >= a && v < b; }
 
 std::string now_iso8601() {
@@ -819,11 +832,11 @@ void Picker::press(double x, double y) {
     pop_.dragging = strip_.dragging = false;
     if (!open_) { target_ = Target::Picture; return; }
     const double ox = panel_x(), oy = panel_y(), lx = x - ox, ly = y - oy;
-    if (chooser_) {   // the chooser is modal: a press on a row holds it, any other press is outside it
+    if (chooser_) {   // the chooser is modal: a press on an entry holds it, any other press is outside it
         const int n = int(ex_.elements.size());
-        if (in(lx, ly, kColX, kChooserY, kColX1, kChooserY + n * kChooserRowH)) {
+        if (in_chooser(lx, ly, n)) {
             target_ = Target::Row;
-            row_ = int((ly - kChooserY) / kChooserRowH);
+            row_ = chooser_at(lx, ly, n);   // -1 on the empty cell: held, lifted on nothing
         } else {
             target_ = Target::OffChooser;
         }
@@ -912,7 +925,7 @@ void Picker::release(double x, double y) {
             if (in(lx, ly, kPresetsX, kNameY, kColX1, kNameY + kNameH)) open_presets();
             break;
         case Target::Row:          // an entry, lifted on the same entry: chosen
-            if (in(lx, ly, kColX, kChooserY + row_ * kChooserRowH, kColX1, kChooserY + (row_ + 1) * kChooserRowH)) choose(row_);
+            if (row_ >= 0 && chooser_at(lx, ly, int(ex_.elements.size())) == row_) choose(row_);
             break;
         case Target::OffChooser:   // a tap outside the chooser: it closes, nothing else
             chooser_ = false;
@@ -1094,16 +1107,6 @@ void Picker::paint(cairo_surface_t* surf) {
             fr.fill(hx - 6, ty - 10, hx + 7, ty + kTrackH + 10, kEdge);
             fr.fill(hx - 3, ty - 7, hx + 4, ty + kTrackH + 7, kLabel);
         }
-        // the chooser, over the column and the slider rows it runs down over (painted after them, so their fields,
-        // tracks and handles are under it): a field per element in manifest order, the active one's marked by a square
-        if (chooser_) {
-            const int y0 = oy + kChooserY, y1 = y0 + n * kChooserRowH;
-            fr.fill(ox + kColX, y0, ox + kColX1, y1, kField);
-            fr.edge(ox + kColX, y0, ox + kColX1, y1, kEdge);
-            for (int i = 1; i < n; ++i) fr.fill(ox + kColX, y0 + i * kChooserRowH, ox + kColX1, y0 + i * kChooserRowH + 1, kEdge);
-            const int my = y0 + active_ * kChooserRowH + kChooserRowH / 2;
-            fr.fill(ox + kColX + 22, my - 8, ox + kColX + 38, my + 8, kLabel);
-        }
         // the model switch: a field with the model's name and the chooser's head; its list under it when open, the
         // shown model's entry marked as the chooser marks the active element
         fr.fill(ox + kModelX0, oy + kModelY, ox + kModelX1, oy + kModelY + kModelH, kField);
@@ -1119,6 +1122,19 @@ void Picker::paint(cairo_surface_t* surf) {
             for (int i = 1; i < 3; ++i) fr.fill(x0, y0 + i * kChooserRowH, x1, y0 + i * kChooserRowH + 1, kEdge);
             const int my = y0 + int(c.model) * kChooserRowH + kChooserRowH / 2;
             fr.fill(x0 + 22, my - 8, x0 + 38, my + 8, kLabel);
+        }
+        // the chooser, over the wheel, the model switch and the slider rows it runs down over (painted after them, so
+        // they are under it): a cell per element in manifest order, down the first column and then the second, the rows
+        // ruled across both and the columns parted by one rule, the active one's marked by a square
+        if (chooser_) {
+            const int rows = chooser_rows(n), x0 = ox + kChooserX0, x1 = ox + kChooserX1, y0 = oy + kChooserY,
+                      y1 = y0 + rows * kChooserRowH;
+            fr.fill(x0, y0, x1, y1, kField);
+            fr.edge(x0, y0, x1, y1, kEdge);
+            for (int i = 1; i < rows; ++i) fr.fill(x0, y0 + i * kChooserRowH, x1, y0 + i * kChooserRowH + 1, kEdge);
+            for (int k = 1; k < kChooserCols; ++k) fr.fill(x0 + k * kChooserColW, y0, x0 + k * kChooserColW + 1, y1, kEdge);
+            const int mx = ox + chooser_x(active_, n) + kChooserMarkX, my = oy + chooser_y(active_, n) + kChooserRowH / 2;
+            fr.fill(mx, my - 8, mx + 16, my + 8, kLabel);
         }
     } else {
         // THE PRESETS POP-UP over the panel: the save line, then the list clipped to its viewport (the presets with a
@@ -1202,7 +1218,7 @@ void Picker::paint(cairo_surface_t* surf) {
             cairo_save(cr);
             cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
             cairo_rectangle(cr, 0, 0, fr.w, fr.h);
-            cairo_rectangle(cr, ox + kColX, oy + kChooserY, kColX1 - kColX, n * kChooserRowH);
+            cairo_rectangle(cr, ox + kChooserX0, oy + kChooserY, kChooserX1 - kChooserX0, chooser_rows(n) * kChooserRowH);
             cairo_clip(cr);
         }
         text(cr, true, kHexPx, hex_of(c.rgb), ox + kColX, oy + kPad + 150, 0);
@@ -1225,13 +1241,13 @@ void Picker::paint(cairo_surface_t* surf) {
         }
         if (chooser_) {
             cairo_restore(cr);
-            // each name in the word size, or smaller to end as far inside the list's right edge as the active mark
-            // stands inside its left (22 px; "Unselected Invalid Flag" is 369 px at 36 px where 342 fit)
+            // each name in the word size, or smaller to end as far inside its cell's right edge as the active mark
+            // stands inside its left (22 px: kChooserNameW, 442 px, holds every name of the flag kinds' round at 36 px)
             for (int i = 0; i < n; ++i) {
-                const int ry = oy + kChooserY + i * kChooserRowH;
+                const int ry = oy + chooser_y(i, n);
                 const std::string& nm = ex_.elements[size_t(i)].name;
-                const double npx = fit_px(cr, false, kWordPx, nm, kChooserNameX1 - kChooserNameX);
-                text(cr, false, npx, nm, ox + kChooserNameX, cap_baseline(cr, false, npx, ry, kChooserRowH), 0);
+                const double npx = fit_px(cr, false, kWordPx, nm, kChooserNameW);
+                text(cr, false, npx, nm, ox + chooser_x(i, n) + kChooserNameDX, cap_baseline(cr, false, npx, ry, kChooserRowH), 0);
             }
         }
     } else {

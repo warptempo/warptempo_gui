@@ -131,3 +131,32 @@ RULED:
   MediaSession's STOPPED -> PLAYING at launch is by design (car_transport.h: the session says PLAYING always).
   THE THEME-FILES ARC IS DONE. Local wakes used: 3 of 16.
 
+## THE ROADMAP (architect 2026-10-05)
+1. THE PICKER'S FLAG ELEMENTS BY KIND (in progress): eight elements keyed by the product's roles (warp, phase reset,
+   the history's added and removed, each a face and a selected face; the invalid flag wears removed), scenes per
+   kind, the chooser widened to hold 22, his files' old flag keys read as aliases.
+2. THEN DISCUSS the picker's NAVIGATION (history vs presets; editing a preset): ask him; nothing is briefed before.
+3. THE ICON ARC LAST, possibly after the Tuesday 2026-10-06 ~11 pm ET reset, WITH FABLE (his word given for it).
+- ADDED 2026-10-05 (his words): THE OUTLINE becomes a picker element of its own with NO inherited default (the
+  built-in's green #008000 stays: "it shows up quite well"); the picker gains COPY / PASTE of a colour between
+  elements (pick the unselected flag, paste into the selected, tweak the luminance) instead of defaults inherited
+  from another field. Next picker arc after the flag kinds; both installed in one REQUEST.
+- THE ICON ACCENT (a fix now, before the icon arc): `kIconAccent` #96BFDA (icons.cpp; "the leftover Breeze blues
+  convert to the waveform ink's value", 2026-10-01, landed in 18bb5fc) was an experiment; the player's icons vanish on
+  the light Windows 95 ground. Restore the Breeze originals: the values before that conversion are in git history
+  (18bb5fc^), the laptop's breeze-dark install the source of truth if they disagree.
+- THE ICON ARC (last, with Fable) ALSO: a new LOGO for the app; and the laptop's TASKBAR ICON is missing again (it
+  was fixed once, then stopped showing) — not a priority, when budget allows.
+- THE DIRTY DOT -> SAVE (agreed earlier with the local planner, not yet built; parked here as "deferred product
+  coding, brief on his code"): Save greys when there is nothing to save (view-only changes never warrant a save),
+  so the Save icon is the dirty mark (the dot does not fit the lower-left box) and the dot retires.
+- GO 2026-10-05 ("okay to code"): the icon accent restore and Save as the dirty mark, briefed after the picker's
+  Outline + copy / paste arc; then ONE REQUEST (the picker install, both product builds, the APK).
+- THE FLAG-KINDS PICKER ARC LANDED (the commit after 2142e5a's line): sixteen elements (Warp, Phase Reset, Added,
+  Removed, each face + selected; the invalid flag wears Removed), scenes `phase_reset` and `history` (the changed pair
+  the focus, all four history faces in view), `invalid_flags` retired, the chooser two columns holding 30, his old
+  flag keys read as aliases (his #7D81BF / #9C9BD0 land on warp AND phase reset). The planner's calls on the coder's
+  three questions: no lead-in ring in the scene (it needs a sample rate the scene lacks; it changes no element), the
+  history scene's disabled walk buttons accepted (a mock limit, no element affected), the check's 19 entries accepted
+  (22 computed from the layout).
+

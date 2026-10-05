@@ -6,9 +6,9 @@
 #
 #   <dir>/scene/            the theme exported (render.py --export): the picker's export as the tablet receives it
 #   <dir>/multi/            THE CHECK THEME exported (<dir>/picker_check.json: the theme plus test elements filling the
-#                           chooser to fourteen entries, below), which the sessions drive: the switches of scene, stacks
-#                           over a picked base (the flag labels over the flag faces, the invalid ones over the invalid
-#                           faces, the selected text over the selection), the chooser's fit
+#                           chooser to nineteen entries, below), which the sessions drive: the switches of scene, stacks
+#                           over a picked base (the flag labels over each kind's faces, the selected text over the
+#                           selection), the chooser's fit
 #   <dir>/expect/*.ppm      every scene of both rendered by render.py at the manifest's colours and at every colour set
 #                           of render.picker_check_sets (each element moved, the chrome to a tint whose 32 and 96 hit
 #                           the rule's half-to-even ties and to a bright ground whose lines cap, all at once)
@@ -53,13 +53,14 @@ expect = os.path.join(out, 'expect')
 if os.path.isdir(expect): shutil.rmtree(expect)
 os.makedirs(expect)
 lines = export_with_refs(theme, 'scene')
-# THE CHECK THEME: the round's theme (its waveform, flags, playhead, label, open_flag and invalid_flags scenes; architect
-# 2026-10-04) plus TEST ELEMENTS filling the chooser to CHOOSER_FIT entries (the chooser's fit, 2026-10-04, painted over
-# the slider rows it covers), each a role the round does not pick, taken in the order of TEST_ELEMENTS: the icons' inks
-# over the waveform scene -- the invalid flags' two faces, which held test places before their round, are the round's
-# own elements now (Unselected Invalid Flag, Selected Invalid Flag) -- so the chooser's last entries lie over the slider
-# rows and the last walks to another scene than the one before it; never exported for the tablet
-CHOOSER_FIT = 14
+# THE CHECK THEME: the round's theme (its waveform, flags, playhead, label, open_flag, phase_reset and history scenes;
+# architect 2026-10-05, the flag kinds) plus TEST ELEMENTS filling the chooser to CHOOSER_FIT entries (the chooser's two
+# columns, 2026-10-05, painted over the wheel and the slider rows it covers), each a role the round does not pick, taken
+# in the order of TEST_ELEMENTS: the icons' inks over the waveform scene, the only fixed roles the scenes paint that no
+# check reads as fixed -- nineteen entries, an ODD count, so the second column's last cell is the empty one the chooser
+# must hold and act on nothing, and the last entry, at the second column's foot, walks to another scene than the one
+# before it; never exported for the tablet
+CHOOSER_FIT = 19
 TEST_ELEMENTS = (('icon_record', 'Record Test', 'waveform'), ('icon_preview_on', 'Preview Test', 'waveform'),
                  ('icon_lift_cross', 'Lift Test', 'waveform'))
 ct = json.load(open(theme)); cpk = ct['picker']

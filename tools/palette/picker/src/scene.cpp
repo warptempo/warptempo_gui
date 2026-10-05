@@ -419,6 +419,28 @@ std::string view_number(double x) {
     return buf;
 }
 
+const std::vector<std::string>* renamed_key(const std::string& old) {
+    static const std::map<std::string, std::vector<std::string>> renamed = {
+        {"unselected_flag", {"warp_flag", "phase_reset_flag"}},
+        {"selected_flag", {"warp_flag_selected", "phase_reset_flag_selected"}},
+        {"unselected_invalid_flag", {"removed_flag"}},
+        {"selected_invalid_flag", {"removed_flag_selected"}}};
+    const auto r = renamed.find(old);
+    return r == renamed.end() ? nullptr : &r->second;
+}
+
+namespace {
+// a map read under the file's keys -> under the export's: each old key's value to every new key the map does not name
+template <class V> void rename_keys(std::map<std::string, V>& m) {
+    for (auto it = m.begin(); it != m.end();) {
+        const std::vector<std::string>* to = renamed_key(it->first);
+        if (!to) { ++it; continue; }
+        for (const std::string& k : *to) m.emplace(k, it->second);   // emplace: a key the map names keeps its own
+        it = m.erase(it);
+    }
+}
+} // namespace
+
 bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::map<std::string, int>& entries,
                 std::string& active, std::string& theme, Model& model, std::string& err) {
     out.clear();
@@ -439,6 +461,7 @@ bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::
             if (!kv.second.is_string() || !parse_hex(kv.second.str, p.rgb)) { err = "state.json: " + kv.first + " is not #rrggbb"; return false; }
             out[kv.first] = p;
         }
+        rename_keys(out);
         return true;
     }
     const Json* ent = st.get("entry");
@@ -485,6 +508,9 @@ bool state_load(const std::string& path, std::map<std::string, Pick>& out, std::
         }
         entries[kv.first] = int(n);
     }
+    rename_keys(out);
+    rename_keys(entries);
+    if (const std::vector<std::string>* to = renamed_key(active)) active = to->front();
     return true;
 }
 
@@ -522,7 +548,10 @@ bool picks_load(const std::string& path, std::map<std::string, std::vector<Pick>
             err = where + "'s " + model_word(p.model) + " is not a view giving " + hex_of(p.rgb) + " (" + view_ranges(p.model) + ")";
             return false;
         }
-        out[name].push_back(p);
+        if (const std::vector<std::string>* to = renamed_key(name))
+            for (const std::string& k : *to) out[k].push_back(p);
+        else
+            out[name].push_back(p);
     }
     return true;
 }
@@ -579,6 +608,7 @@ bool presets_load(const std::string& path, std::vector<Preset>& out, std::string
             }
             P.colours[kv.first] = pk;
         }
+        rename_keys(P.colours);
         out.push_back(std::move(P));
     }
     return true;

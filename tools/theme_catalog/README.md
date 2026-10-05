@@ -17,7 +17,7 @@ a contrast rule; white when the preset records none, as every preset saved befor
 THE SELECTED PAIR the preset's `selected_fill` and `selected_text` (the picker's Selection and Selected Text, the
 open-flag round, architect 2026-10-04; #666666 under white when it records none, the picker's starting colours), so the
 entry's chrome is exactly the chrome the picker painted; the preset's other elements (the canvas, the ink and their
-outline, the flags, the playhead and the invalid flags) are not catalog roles: its theme file names them as the
+outline, each flag kind's pair, the playhead) are not catalog roles: its theme file names them as the
 program's roles (below). A standalone utility: no link path from any product target, no CMake, Python 3 + numpy
 (and `tools/palette/` for the crops and the presets' program colours).
 
@@ -50,7 +50,7 @@ the statement):
 | `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule) |
 | `card_ground`, `card_text` | its info pair (Windows' InfoWindow / InfoText) where it records one: the two Windows families; KDE 3 and CDE have no tooltip pair |
 | `card_frame` | never named: the built-in's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
-| the program's roles | only where the entry records them: a preset's canvas and ink (`waveform_canvas`, `waveform_ink`), `waveform_outline` the picker's "auto" rule over the two (the 50 % linear-light blend of the ink over the canvas, through `tools/palette/render.py`'s own theme), the playhead's head and stem; the picker's Unselected / Selected Flag onto BOTH the warp and the phase-reset pair, the Unselected / Selected Invalid Flag onto the removed pair (the invalid flag wears it); the flag labels never (the picker has no flag-label element; it paints both white, as the built-in's are) |
+| the program's roles | only where the entry records them: a preset's canvas and ink (`waveform_canvas`, `waveform_ink`), `waveform_outline` the picker's "auto" rule over the two (the 50 % linear-light blend of the ink over the canvas, through `tools/palette/render.py`'s own theme), the playhead's head and stem; each flag kind's face and selected face one to one (architect 2026-10-05: the picker's Warp, Phase Reset, Added and Removed Flag pairs keyed by the product's role names; the invalid flag wears the removed pair), and a preset saved before that round by its old keys, the picker's Unselected / Selected Flag onto BOTH the warp and the phase-reset pair and the Unselected / Selected Invalid Flag onto the removed pair (gen_theme_files.py OLD_PRESET_KEYS); the flag labels never (the picker has no flag-label element; it paints both white, as the built-in's are) |
 
 The chrome is the entry AS RECORDED, through ONE light-roles function, `roles.light_roles` (the emboss's light copy
 the recorded Hilight), which `crops.py` reads too, so a file and its crop show one chrome. Before writing a preset's

@@ -4,14 +4,15 @@
 // host_check.cpp drives it on the laptop.
 //
 // THE ELEMENTS (architect 2026-10-04, the chrome round: he picks the chrome and its neighbours as he picked the ink,
-// one element at a time, choosing which; the flags round added the unselected and the selected flag over a scene of
-// their own, in the theme alone): the export's elements (scene.h), each with its own colour, view, pick
+// one element at a time, choosing which; the later rounds added theirs over scenes of their own, in the theme alone,
+// the flag kinds' round of 2026-10-05 each flag kind's face and selected face, keyed by the product's role names):
+// the export's elements (scene.h), each with its own colour, view, pick
 // history and cursor (ElementState), ONE ACTIVE -- the one the panel edits. Each element is picked over its own
 // scene; EVERY ELEMENT'S CURRENT COLOUR IS LIVE IN EVERY SCENE (picking the chrome shows the ink at its saved colour).
 //
 // THE CHOOSER: the active element's NAME at the panel's top is a button; a tap on it (at the lift, as every panel
-// control) opens the chooser, a vertical list of the elements in manifest order, the active one marked, running down
-// over the slider rows and painted over all it covers (panel::kChooserMax, its fit). A tap on an
+// control) opens the chooser, a list of the elements in manifest order in two columns, the active one marked, running
+// down over the wheel and the slider rows and painted over all it covers (panel::kChooserMax, its fit). A tap on an
 // entry picks it and closes the chooser; a tap outside the chooser closes it and changes nothing. CHOOSING ANOTHER
 // ELEMENT IS THE CLOSE FOR THE ONE BEING LEFT (the planner's ruling, confirmed by the architect 2026-10-04): an
 // edited colour is committed exactly as a close commits it (one picks.txt line, the logcat line, state.json), then
@@ -329,15 +330,24 @@ constexpr int kNameY = kPad, kNameH = 64;                                 // the
 constexpr int kNameX1 = kColX + 264;                                      // the element button kColX..kNameX1
 constexpr int kPresetsX = kNameX1 + 12;                                   // the presets button kPresetsX..kColX1
 constexpr int kChooserY = kNameY + kNameH + 8, kChooserRowH = 76;         // the chooser's rows, under the button
-// a chooser entry's name from kChooserNameX, past the active mark (kColX + 22..38), ending by kChooserNameX1, as far
-// inside the list's right edge as the mark stands inside its left; a longer name is set smaller (fit_px)
-constexpr int kChooserNameX = kColX + 60, kChooserNameX1 = kColX1 - 22;
-// THE CHOOSER'S FIT (2026-10-04: room for the elements to come, the invalid flags among them): its rows, the pop-up's and the model list's
-// height, run down the column from under the button over the slider rows as far as the panel's pad, painted over
-// everything they cover (a readout, a handle, a field; Picker::paint); kChooserMax entries fit (15: 108..1248 of the
-// panel's 1352), and picker_load refuses an export with more
-constexpr int kChooserMax = (kH - kPad - kChooserY) / kChooserRowH;
-static_assert(kChooserMax >= 14, "the chooser holds at least fourteen entries inside the panel");
+// THE CHOOSER'S FIT (architect 2026-10-05: the flag kinds made sixteen elements, and the clock's and the card's roles
+// may join them): TWO COLUMNS over the panel's whole width inside its pad, as the presets pop-up lies under the two
+// buttons, read down the first column and then the second (Windows 95's list view in its List mode), each column
+// ceil(n / 2) rows of the pop-up's and the model list's height running down from under the button over the wheel and
+// the slider rows as far as the panel's pad, painted over everything they cover (the wheel, a readout, a handle, a
+// field; Picker::paint). kChooserMax entries fit (30: 15 rows, 108..1248 of the panel's 1352), and picker_load refuses
+// an export with more; sixteen end at 716, twenty-two at 944
+constexpr int kChooserX0 = kPad, kChooserX1 = kColX1, kChooserCols = 2;
+constexpr int kChooserColW = (kChooserX1 - kChooserX0) / kChooserCols;   // 524
+constexpr int kChooserMax = kChooserCols * ((kH - kPad - kChooserY) / kChooserRowH);
+static_assert(kChooserMax >= 22, "the chooser holds at least twenty-two entries inside the panel");
+// an entry's cell: its column's left edge and its row's top, panel px, for n entries
+constexpr int chooser_rows(int n) { return (n + kChooserCols - 1) / kChooserCols; }
+constexpr int chooser_x(int e, int n) { return kChooserX0 + e / chooser_rows(n) * kChooserColW; }
+constexpr int chooser_y(int e, int n) { return kChooserY + e % chooser_rows(n) * kChooserRowH; }
+// in a cell: the active mark kChooserMarkX..+16 inside its left edge, the name from kChooserNameDX, ending as far
+// inside the cell's right edge as the mark stands inside its left; a longer name is set smaller (fit_px)
+constexpr int kChooserMarkX = 22, kChooserNameDX = 60, kChooserNameW = kChooserColW - kChooserNameDX - kChooserMarkX;
 constexpr int kHistY = kPad + 176;                                        // BACK | N of M | FORWARD, under the hex
 constexpr int kSwatchY0 = kPad + 324, kSwatchY1 = kPad + kWheel;
 constexpr int kSwatchW = 200, kNewX = kColX1 - kSwatchW;
