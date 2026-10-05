@@ -39,7 +39,8 @@ Read CLAUDE.md first (you are THE PLANNER; it holds every process rule), then th
   over 8 scenes, a two-column chooser (30), Copy / Paste under OLD | NEW, presets, the theme strip, his old flag keys
   read as aliases. His files: `tools/palette/picker/presets/` (copied by the laptop at every picker install).
 
-## THE TITLE BAR — LANDED 6155f29 (2026-10-05), REQUEST 5 out; the record below is what was ruled
+## THE TITLE BAR — LANDED 6155f29, INSTALLED ON BOTH DEVICES (DONE 5: one bar on labwc, the tablet's caption 50
+device px; the Restore frame, the drag and the height are his to judge); the record below is what was ruled
 (Built as ruled, plus: the caption buttons SOFT (Windows' DFC_CAPTION, his reference); the dither cell one Windows
 px (his ruling); the matrix read off the reference, Bayer transposed and shifted; an unsized restore returns to a
 remembered 1400x800; a maximised window does not move by its caption. Stale outside the arc: the mock tool's
