@@ -104,3 +104,11 @@ FOLDED INTO THE TITLE BAR'S ROUND (his yes, 2026-10-05), the Save dirty flag fir
    screencap measured into the picker's `magnified` scene (its bar heights are a stand-in today).
 - LONG TERM (his): the picker editing imported themes (the Windows 95 chrome rule then one option); a protocol for
   him to move themes onto the devices himself (a sync-script verb, worked out with the local planner).
+- 2026-10-05 (his glass at gui_scale 350, the maximum): "everything looks good", the icons' aliased bitmap style
+  included. Raised: the CLOCK's mono (12 Windows px) a little large at 350 — the body (13) and the ruler (10, too
+  small to go to) stay; a decision put to him: the clock at 11. The CLOSE glyph's X sits off-centre at 350 by
+  rounding (correct, the icon arc's to fix with scalable glyphs, Fable). A MOCK sent of the FLAG AS A RAISED PUSH
+  BUTTON (EDGE_RAISED + BF_SOFT) with its stem from the far left, beside today's flat flag (tmp/mock/flag_button.py,
+  scratch; the bevelled flag was retired 2026-10-03 as "a cut through a 3D surface" — this variant moves the stem
+  out of the face to the box's outer left edge). His Sol run launched (manual codex, his terminal).
+
