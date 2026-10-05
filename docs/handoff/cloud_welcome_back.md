@@ -171,4 +171,9 @@ RULED:
   cell narrower). THE ICON INKS back to RAW Breeze (#3DAEE9 accent, #44AAEB wav, #DA4453 record and negative,
   #D24D57 preview pip and lift cross). The mock tool still draws the old icon inks and the `*` cell: a picker-picture
   follow-up for a later round (it changes picker export bytes).
+- DONE 4 (e11fa1b, 2026-10-05): the picker (17 elements, 28 roles, 8 scenes) and the product (Save grey on a fresh
+  launch, no `*`, 98 themes) installed on both devices; his picker files copied in. The advisory "History hid 68
+  commits whose sidecars refuse the strict load" is the history prefetch's standing counted line (history_prefetch.cpp,
+  in the code since the repository's first commit; old commits whose sidecars carry retired keys), not this build's.
+  Local wakes used: 4 of 16. NEXT: DISCUSS the picker's navigation with him; then the icon arc (Fable, after the reset).
 
