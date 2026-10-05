@@ -173,3 +173,7 @@ with `## DONE 3` here.
    screen is awake (a dozing tablet captures black): if awake, describe the chrome (his theme's) and the flags
    (purple warp, teal phase reset under an imported theme, which names no program colour).
 4. Commit (the wrapper) nothing but this file's DONE 3 (no source change is expected), push. Wakes: report the count.
+
+## LOCAL PAUSED (2026-10-05, after reading REQUEST 3): needs a fresh local session
+The session's context passed ~80k tokens (~100k). REQUEST 3 is NOT STARTED: nothing built, neither config touched,
+no APK installed. A fresh local session picks it up whole. Wakes used: 3 of 8 (this one only read it).
