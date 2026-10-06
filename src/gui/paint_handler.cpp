@@ -3903,9 +3903,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // ROLES, never a role of its own (render.h's playhead paragraph states
     // which cell paints which): K in LABEL (the outline, the Windows 95 arrow
     // cursor's edge), W in HILIGHT and S in SHADOW (the bevel), '.' in GROUND
-    // — or, while AppState::camera_hold stands, in the STEM's role instead
-    // (THE HOLD LAMP, architect 2026-09-24, restated for the glyph at
-    // render.h). '_' cells are never painted at all.
+    // at every time: the hold posture (AppState::camera_hold) has no visible
+    // lamp for now (architect 2026-10-05: a white centre is not Windows'
+    // marker; a visible hold cue is a later discussion). '_' cells are never
+    // painted at all.
     //
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
     // waveform_line_px()-wide run in the `playhead_stem` role (the waveform
@@ -3971,13 +3972,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // rect must include it (below).
             const int    head_bottom = marker.y + marker_lane_air_px();
             const int    head_top    = head_bottom - rows;
-            // THE HOLD LAMP (architect 2026-09-24): the glyph's '.' cells take
-            // the STEM'S role while the hold posture stands and GROUND
-            // otherwise; the K / W / S cells never change (render.h's
-            // playhead paragraph). Repainted on the bit's flip by the
-            // per-tick comparator (main.cpp).
-            const GuiColor ground_cell = app.camera_hold ? palette().playhead_stem
-                                                         : palette().ground;
+            // NO HOLD LAMP (architect 2026-10-05): the glyph's '.' cells are
+            // GROUND whether or not the hold posture stands; a visible hold
+            // cue is a later discussion.
+            const GuiColor ground_cell = palette().ground;
             // THE CLIP to the waveform's columns (the half-head rule above),
             // over the head's band alone and released before the stem.
             cairo_save(cr);
