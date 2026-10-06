@@ -1,55 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture is Chicago95's status/audio-volume-high.png
-     (architect 2026-10-05, the icon pass's caption pick; the caption's
-     AppIcon is the product's own vector redrawing of it, icons.h),
-     scaled NEAREST-NEIGHBOUR (the Chicago95 artwork is period-pixel art, so
-     no smoothing) and centred on a transparent canvas: no plate, no sheet
-     grey, the icon's own transparent corners carrying through. An ADAPTIVE
-     icon, the whole of it: minSdk is 30, so no legacy ic_launcher.png set
-     exists beside it.
+     recents card). Its picture is the product's own scalable speaker,
+     assets/icons/warptempo/AppIcon.svg, the drawing the caption wears
+     (architect 2026-10-06: Sound Recorder's isometric loudspeaker with three
+     straight rays), rasterised ANTIALIASED by rsvg-convert (librsvg 2.62 on
+     the laptop; a vector now, not pixel art) and centred on a transparent
+     canvas: no plate, no sheet grey, the drawing's own transparent corners
+     carrying through. An ADAPTIVE icon, the whole of it: minSdk is 30, so no
+     legacy ic_launcher.png set exists beside it.
 
-     Two layers per density under res/mipmap-<density>/, BOTH generated from
-     the one source (assets/icons/chicago95/16/audio-volume-high.png):
+     Two layers per density under res/mipmap-<density>/, BOTH written by
+     tools/app_icon/gen_app_icon.sh (which also writes the Linux desktop icon,
+     packaging/warptempo_gui.svg, the same paths verbatim):
        ic_launcher_background.png  fully transparent, the canvas size alone;
-       ic_launcher_foreground.png  the 16-px icon scaled by an integer
-                                   factor k with CAIRO_FILTER_NEAREST's ImageMagick
-                                   equivalent (-filter point), centred on a
-                                   transparent canvas of the density's full
-                                   108 dp.
+       ic_launcher_foreground.png  AppIcon.svg rendered at the 64 dp art size,
+                                   centred on a transparent canvas of the
+                                   density's full 108 dp.
 
      THE 66 dp SAFE ZONE: an adaptive foreground's art must sit inside the
      mask's guaranteed-visible inner zone, Android's own 66 dp of the 108 dp
-     canvas. k = 4 puts the scaled icon at 64 dp square (16 * 4), just inside
-     that zone, the same k at every density (the per-density PNG pixel size
-     scales with the density factor f alone, never with k):
+     canvas. The 16-unit drawing at 64 dp square (4 dp a unit) sits just
+     inside that zone, the same 64 dp at every density (the per-density PNG
+     pixel size scales with the density factor f alone):
 
-       density  f    canvas C=108f  icon 64f  offset (C-64f)/2  resize factor
-       mdpi     1    108            64        22                 400% (k=4)
-       hdpi     1.5  162            96        33                 600% (k=6)
-       xhdpi    2    216            128       44                 800% (k=8)
-       xxhdpi   3    324            192       66                 1200% (k=12)
-       xxxhdpi  4    432            256       88                 1600% (k=16)
-
-     (The per-density ImageMagick resize factor is k*100 scaled by f again,
-     since -resize's percentage multiplies the 16 px source directly to the
-     density's own pixel count — 400% * f, e.g. 1600% at xxxhdpi for the same
-     64 dp.) THE RECIPE, from the repo root (ImageMagick 7), for each
-     density's resize percentage P and canvas C above:
-
-       magick assets/icons/chicago95/16/audio-volume-high.png \
-           -filter point -resize P% -background none -gravity center \
-           -extent CxC -strip -define png:compression-level=9 \
-           -define png:compression-filter=5 \
-           PNG32:android/app/res/mipmap-<density>/ic_launcher_foreground.png
-       magick -size CxC xc:none -strip \
-           PNG32:android/app/res/mipmap-<density>/ic_launcher_background.png
+       density  f    canvas C=108f  art 64f  offset (C-64f)/2
+       mdpi     1    108            64       22
+       hdpi     1.5  162            96       33
+       xhdpi    2    216            128      44
+       xxhdpi   3    324            192      66
+       xxxhdpi  4    432            256      88
 
      A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop
-     and committed; a retouch is a re-run of this recipe, never a build step
-     (build_apk.sh only compiles res/). The Linux desktop's launcher icon
-     (packaging/warptempo_gui.svg, the .desktop's Icon=) is the same picture,
-     one rect per pixel, written by tools/desktop_icon/gen_desktop_icon.py. -->
+     and committed; a retouch of AppIcon.svg is a re-run of the generator
+     (bash tools/app_icon/gen_app_icon.sh, byte-stable), never a build step
+     (build_apk.sh only compiles res/). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

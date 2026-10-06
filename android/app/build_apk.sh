@@ -155,10 +155,10 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, Chicago95's speaker (assets/icons/chicago95/16/
-# audio-volume-high.png) scaled nearest-neighbour onto a transparent canvas,
-# rendered once and committed (that XML's head comment is the recipe; nothing
-# here renders). Every GUI pixel is painted by cairo, the roster's icons
+# layers per density, the product's own speaker (assets/icons/warptempo/
+# AppIcon.svg, the caption's drawing) rasterised onto a transparent canvas by
+# tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
+# comment states the sizes; nothing here renders). Every GUI pixel is painted by cairo, the roster's icons
 # included (the product's own vector set, compiled-in paths, icons.cpp);
 # the app declares no
 # @string, no style, no res/values. aapt2 compile turns the

@@ -29,14 +29,13 @@
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-  <!-- android:icon is the launcher and recents icon: Chicago95's
-       status/audio-volume-high.png (architect 2026-10-05, the icon pass's
-       caption pick; the caption's AppIcon is the product's own vector
-       redrawing of it, icons.h),
-       scaled nearest-neighbour onto a transparent adaptive-icon canvas
-       (res/mipmap-anydpi-v26/ic_launcher.xml holds the recipe). The Linux
-       desktop's launcher icon (packaging/warptempo_gui.svg) is the same
-       picture, one rect per pixel (tools/desktop_icon/gen_desktop_icon.py). -->
+  <!-- android:icon is the launcher and recents icon: the product's own
+       scalable speaker, assets/icons/warptempo/AppIcon.svg, the drawing the
+       caption wears (architect 2026-10-06), rasterised antialiased onto a
+       transparent adaptive-icon canvas (res/mipmap-anydpi-v26/ic_launcher.xml
+       holds the sizes). The Linux desktop's launcher icon
+       (packaging/warptempo_gui.svg) is the same paths verbatim; both are
+       written by tools/app_icon/gen_app_icon.sh. -->
   <application
       android:label="Warptempo"
       android:icon="@mipmap/ic_launcher"
