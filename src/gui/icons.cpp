@@ -1085,10 +1085,24 @@ bool icon_paths_valid(Icon icon, const IconDef& def) {
 // number of device px (4 at 400 %) — those edges land on device-pixel
 // boundaries and antialias nothing; at a fractional scale they cover pixels
 // partially, like every other scaled length's edge.
+//
+// A DRAWING IS CLIPPED TO ITS 16-UNIT CELL, AS AN SVG VIEWBOX CLIPS
+// (architect 2026-10-06, his row-8 capture of Inherit's chain spilling into
+// its neighbours): a path may run past the cell (InsertLink's outer links
+// reach x -2 and x 23, meant to be cut by the cell's edges, as the author's
+// SVG viewer showed them), and the box (x, y, w_px, h_px) in device px is
+// clipped before the first fill. Every site passes through here — draw, and
+// both passes of the disabled mask (emboss_through_disabled_mask, below, for
+// draw_engraved_in_box and draw_in_ink) — so each pass is cut at its own
+// box: the emboss's Hilight copy one px right and down at its offset cell,
+// as Windows' DSS_DISABLED of a bitmap cannot paint outside the bitmap.
 template <typename PaintOf>
 void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
                      double w_px, double h_px, PaintOf paint_of) {
     cairo_save(cr);
+    cairo_new_path(cr);
+    cairo_rectangle(cr, x, y, w_px, h_px);
+    cairo_clip(cr);
     cairo_translate(cr, x, y);
     cairo_scale(cr, w_px / kIconViewBox, h_px / kIconViewBox);
     for (int i = 0; i < def.path_count; ++i) {
