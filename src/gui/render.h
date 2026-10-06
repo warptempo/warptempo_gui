@@ -86,7 +86,13 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette(), or the one named literal beside them (the in-place
 // editor's frame, kFlagEditorFrame below), or one of icons.cpp's hand-listed
-// inks. TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
+// inks. THE ONE FURTHER EXCEPTION IS A CHICAGO95 ICON'S OWN PIXELS (architect
+// 2026-10-05, the icon pass): at a bitmap gui_scale a roster glyph is a
+// decoded PNG blitted verbatim (icons::draw_cased et al., icons.h) — period
+// artwork, not a role, so its pixels are never recoloured, composited against
+// a role or embossed in anything but their own opaque mask (draw_cased's
+// disabled face masks OUT the white/silver ground and embosses what is left,
+// never the theme's colours). TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
@@ -2051,8 +2057,10 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 // DSS_DISABLED; the rule at the palette block): `run` painted in the theme's
 // Hilight one Windows px (relief_line_px) right and down, then in its
 // Shadow at (x, baseline) over it — every disabled word in the product goes
-// through here, as every disabled glyph goes through icons::draw_engraved.
-// The run carries its own font (text_shape.h).
+// through here, as every disabled glyph goes through icons::draw_engraved
+// (a vector glyph, or a bitmap scale's own mono-mask sibling,
+// icons::draw_cased_disabled, architect 2026-10-05) by the same two-pass
+// rule. The run carries its own font (text_shape.h).
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline);
 

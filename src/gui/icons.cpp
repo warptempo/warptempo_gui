@@ -1779,6 +1779,14 @@ struct Chicago95Icon {
     int w = 0, h = 0;         // always 16 x 16 for an installed icon
     int ink_l = 0, ink_t = 0; // the ink box's top-left, icon px
     int ink_w = 0, ink_h = 0; // the ink box's size, icon px
+    // THE DISABLED MASK (ruling 3), one bit per pixel, bit x of row y set iff
+    // the pixel is FULLY opaque (alpha 255 — premultiplied equals straight at
+    // that one alpha value, so the word's low three bytes ARE the
+    // unpremultiplied colour with no division) and that colour is neither
+    // white (#FFFFFF) nor Windows' button-face silver (#C0C0C0). Computed
+    // once here, alongside the ink box, for the same reason: a hand-kept
+    // second table could drift from the picture it describes.
+    uint16_t mask_rows[16] = {};
 };
 
 Chicago95Icon g_chicago95[kChicago95FileCount];
@@ -1915,13 +1923,27 @@ bool install_chicago95_bitmaps(const Chicago95Pixels (&files)[kChicago95FileCoun
         // ink box comes out the whole 16 x 16 square with no special case
         // here — mapping.md's own recorded row.
         int l = 16, t = 16, r = -1, b = -1;
+        uint16_t mask_rows[16] = {};
         for (int y = 0; y < 16; ++y) {
             const uint32_t* row =
                 reinterpret_cast<const uint32_t*>(data + y * 16 * 4);
             for (int x = 0; x < 16; ++x) {
-                if (((row[x] >> 24) & 0xFF) < 128) continue;
+                const uint32_t px = row[x];
+                const uint32_t a = (px >> 24) & 0xFF;
+                if (a < 128) continue;
                 l = std::min(l, x); r = std::max(r, x);
                 t = std::min(t, y); b = std::max(b, y);
+                // THE DISABLED MASK (ruling 3): fully opaque only (alpha 255,
+                // premultiplied == straight there, so px's low bytes are the
+                // colour with no division) and neither white nor silver.
+                if (a == 255) {
+                    const uint32_t rr = (px >> 16) & 0xFF;
+                    const uint32_t gg = (px >> 8) & 0xFF;
+                    const uint32_t bb = px & 0xFF;
+                    const bool white  = rr == 0xFF && gg == 0xFF && bb == 0xFF;
+                    const bool silver = rr == 0xC0 && gg == 0xC0 && bb == 0xC0;
+                    if (!white && !silver) mask_rows[y] |= static_cast<uint16_t>(1u << x);
+                }
             }
         }
         if (r < 0) {
@@ -1932,7 +1954,8 @@ bool install_chicago95_bitmaps(const Chicago95Pixels (&files)[kChicago95FileCoun
             ok = false;
             continue;
         }
-        g_chicago95[i] = Chicago95Icon{surf, 16, 16, l, t, r - l + 1, b - t + 1};
+        g_chicago95[i] = Chicago95Icon{surf, 16, 16, l, t, r - l + 1, b - t + 1, {}};
+        std::memcpy(g_chicago95[i].mask_rows, mask_rows, sizeof(mask_rows));
     }
     g_chicago95_installed = ok;
     return ok;
@@ -1977,6 +2000,88 @@ void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
     cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
     cairo_paint(cr);
     cairo_restore(cr);
+}
+
+void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
+                         double size_px, int button_shift_px,
+                         double offset_px) {
+    const Chicago95Icon* bmp =
+        gui_scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
+    if (!bmp) {
+        // NOT A BITMAP SCALE, OR NO CHICAGO95 PICTURE: draw_engraved
+        // unchanged, at the vector's own (3, 3)-in-the-case placement —
+        // draw_cased's own fallback, repeated here rather than shared,
+        // because the two draws differ (draw vs. draw_engraved).
+        const double x = case_x + icon_case_lead_px() + button_shift_px;
+        const double y = case_y + icon_case_lead_px() + button_shift_px;
+        draw_engraved(cr, icon, x, y, size_px, offset_px);
+        return;
+    }
+    // THE SAME k AND THE SAME INK-CENTRED ORIGIN AS draw_cased (ruling 2):
+    // a disabled face sits exactly where the live one would, the emboss
+    // being the only difference.
+    const int k = gui_scale_percent() / 100;
+    const int ix = (23 - bmp->ink_w) / 2;
+    const int iy = (22 - bmp->ink_h) / 2;
+    const double ox = case_x + (ix - bmp->ink_l) * k + button_shift_px;
+    const double oy = case_y + (iy - bmp->ink_t) * k + button_shift_px;
+    // THE MASK, TWICE (ruling 3, draw_engraved's own two-pass emboss): every
+    // set mask bit becomes one k x k device-px block, all of one pass's
+    // blocks gathered into a single fill (cairo_rectangle accumulates
+    // subpaths; nothing is painted until the fill after the loop) — first
+    // the Hilight copy `offset_px` right and down, then the Shadow copy at
+    // the glyph's own place, so the second paints over the first wherever
+    // they would overlap, exactly as draw_engraved's two fill_icon_paths
+    // calls do for a vector glyph.
+    const auto paint_mask = [&](GuiColor c, double dx, double dy) {
+        set_palette_source(cr, c);
+        for (int y = 0; y < 16; ++y) {
+            const uint16_t row = bmp->mask_rows[y];
+            if (!row) continue;
+            for (int x = 0; x < 16; ++x) {
+                if (!((row >> x) & 1)) continue;
+                cairo_rectangle(cr, ox + x * k + dx, oy + y * k + dy, k, k);
+            }
+        }
+        cairo_fill(cr);
+    };
+    paint_mask(palette().hilight, offset_px, offset_px);
+    paint_mask(palette().shadow, 0.0, 0.0);
+}
+
+void draw_bitmap(cairo_t* cr, Icon icon, double x, double y, double size_px) {
+    const Chicago95Icon* bmp =
+        gui_scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
+    if (!bmp) {
+        draw(cr, icon, x, y, size_px);
+        return;
+    }
+    // NO CASE TO CENTRE IN (icons.h's head): the whole 16 x 16 picture fills
+    // (x, y, size_px, size_px) exactly, the same nearest-neighbour blit
+    // draw_cased uses once it has its own origin.
+    const int k = gui_scale_percent() / 100;
+    cairo_save(cr);
+    cairo_translate(cr, x, y);
+    cairo_scale(cr, k, k);
+    cairo_set_source_surface(cr, bmp->surface, 0, 0);
+    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
+    cairo_paint(cr);
+    cairo_restore(cr);
+}
+
+void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
+                        double size_px, GuiColor ink) {
+    const Chicago95Icon* bmp =
+        gui_scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
+    if (!bmp) {
+        draw_in_ink(cr, icon, x, y, size_px, ink);
+        return;
+    }
+    // `ink` IS IGNORED AT A BITMAP SCALE (icons.h's head): the Chicago95
+    // picture is unrecolourable period artwork, so a lit row still shows it
+    // in its own colours rather than vanishing into a single-colour
+    // silhouette the way a recoloured vector glyph would.
+    draw_bitmap(cr, icon, x, y, size_px);
 }
 
 } // namespace icons

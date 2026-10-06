@@ -583,6 +583,56 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
                 double size_px, int button_shift_px);
 
+// THE DISABLED CASED GLYPH (architect 2026-10-05, ruling 3): draw_cased's
+// own road for a DEAD roster button — same case corner, same ink-centred
+// placement and the same pressed/checked `button_shift_px` — but instead of
+// the Chicago95 picture's own colours it draws WINDOWS' DSS_DISABLED EMBOSS
+// of a MONO MASK of it: the icon's fully opaque pixels (alpha 255; a
+// partially-transparent edge pixel is never masked, Chicago95 having no such
+// pixels at 16 px) whose own colour is neither white (#FFFFFF) nor Windows'
+// button-face silver (#C0C0C0) — the toolbar's own ground and the metal the
+// WordPad reference shows surviving a greyed glyph — read off the alpha and
+// colour bytes ONCE AT INSTALL (chicago95_for's Chicago95Icon::mask_rows, a
+// row of 16 bits, the mask's one source — mapping.md's columns describe the
+// ink box; this predicate has no table of its own for the same reason ruling
+// 2's ink box does not). Each mask pixel is a k x k device-px block, painted
+// TWICE exactly as draw_engraved paints a vector glyph's whole shape: the
+// theme's Hilight at `offset_px` (one Windows px, the caller's
+// relief_line_px) right and down, then the theme's Shadow at the glyph's own
+// place — so a dead glyph is cut into the face in the colours every other
+// disabled face already wears, the Chicago95 artwork itself never appearing
+// (render.h's palette block: the one further exception there). At every
+// other scale, or for a glyph the mapping does not carry (AppIcon), this is
+// draw_engraved at draw()'s own (3, 3)-in-the-case vector placement,
+// unchanged — the Breeze glyph's own disabled face, draw_cased's own
+// fallback precedent.
+void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
+                         double size_px, int button_shift_px,
+                         double offset_px);
+
+// THE BARE BITMAP GLYPH, NO CASE (architect 2026-10-05, ruling 1's four
+// non-button glyphs: the folder overlay's folder and wav row glyphs, and a
+// notification card's NORMAL / CRITICAL glyph): at a bitmap gui_scale the
+// whole 16 x 16 Chicago95 picture is blitted nearest-neighbour into
+// (x, y, size_px, size_px) exactly, IN ITS OWN COLOURS — none of these sites
+// owns a Windows CASE to ink-centre inside the way a toolbar button does
+// (there is no (23, 22) box around a list row's or a card's glyph slot), so
+// there is nothing to re-centre against and the site's own existing (x, y)
+// placement stands unchanged. At every other scale, or for a glyph the
+// mapping does not carry, this is draw() unchanged.
+void draw_bitmap(cairo_t* cr, Icon icon, double x, double y, double size_px);
+
+// draw_bitmap's sibling for a site that recolours a vector glyph when its
+// row is lit (icons::draw_in_ink — the folder overlay's selected row, text
+// over a fill taking the fill's own pair): AT A BITMAP SCALE `ink` IS
+// IGNORED, the Chicago95 picture being unrecolourable period artwork (render
+// .h's palette block, the one further exception) blitted exactly as
+// draw_bitmap above; at every other scale this is draw_in_ink(ink)
+// unchanged, so a lit row's vector glyph still takes the selected text as it
+// always has.
+void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
+                        double size_px, GuiColor ink);
+
 // THE FIVE-FILES INSTALL, Chicago95's own: one PNG per distinct picture the
 // mapping table names (assets/icons/chicago95/16/*.png — the directory IS
 // the inventory; kChicago95Files lists its basenames, no extension, THE

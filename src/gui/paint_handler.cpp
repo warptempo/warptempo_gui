@@ -1766,7 +1766,6 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const int btn_w     = icon_case_w_px();
     const int btn_h     = icon_case_h_px();
     const int glyph_px  = icon_glyph_px();
-    const int glyph_off = icon_case_lead_px();
     const int group_gap = icon_group_space_px();
 
     // THE CASE STANDS ON THE TOP ETCHED PAIR AND THE TOOLBAR'S OWN AIR
@@ -1895,20 +1894,23 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // two faces", and the architect made it one button with two faces
         // that day.)
         const icons::Icon glyph = redesign_button_icon(app, def.id, def.icon);
-        const double gx = static_cast<double>(bx + glyph_off + box.shift);
-        const double gy = static_cast<double>(btn_y + glyph_off + box.shift);
         if (face.enabled)
             // THE CHICAGO95 BITMAP PASS (architect 2026-10-05): draw_cased
-            // takes the CASE's own corner, not the (3, 3)-offset glyph
-            // origin above (it re-derives that placement itself at every
-            // non-bitmap scale, and ink-centres a Chicago95 picture in the
-            // whole case at a bitmap one) — icons.h's placement rule.
+            // takes the CASE's own corner, not a (3, 3)-offset glyph origin
+            // (it re-derives that placement itself at every non-bitmap
+            // scale, and ink-centres a Chicago95 picture in the whole case
+            // at a bitmap one) — icons.h's placement rule.
             icons::draw_cased(cr, glyph, bx, btn_y,
                               static_cast<double>(glyph_px), box.shift);
         else
-            icons::draw_engraved(cr, glyph, gx, gy,
-                                 static_cast<double>(glyph_px),
-                                 static_cast<double>(relief_line_px()));
+            // PART B, RULING 3: draw_cased's own disabled sibling — the
+            // Chicago95 picture's mono-mask DSS_DISABLED emboss at a bitmap
+            // scale, draw_engraved at its own (3, 3) vector placement
+            // otherwise (icons.h's head).
+            icons::draw_cased_disabled(cr, glyph, bx, btn_y,
+                                       static_cast<double>(glyph_px),
+                                       box.shift,
+                                       static_cast<double>(relief_line_px()));
     };
 
     // THE LEFT GROUPS' WALK: one left-to-right accumulation, every member
@@ -2417,7 +2419,6 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_w     = seats.case_w;
     const int btn_h     = seats.case_h;
     const int glyph_px  = icon_glyph_px();
-    const int glyph_off = icon_case_lead_px();
     const int group_gap = icon_group_space_px();
     const int btn_y     = seats.case_y;
 
@@ -2452,18 +2453,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // rather than one button with two faces", which was exactly true until
         // the architect made it one button with two faces.)
         const icons::Icon glyph = redesign_button_icon(app, def.id, def.icon);
-        const double gx = static_cast<double>(x + glyph_off + box.shift);
-        const double gy = static_cast<double>(btn_y + glyph_off + box.shift);
         if (face.enabled)
             // THE CHICAGO95 BITMAP PASS (architect 2026-10-05): draw_cased's
-            // own placement rule, icons.h's head; the case's corner, not the
-            // (3, 3) glyph origin above.
+            // own placement rule, icons.h's head; the case's corner, not a
+            // (3, 3) glyph origin.
             icons::draw_cased(cr, glyph, x, btn_y,
                               static_cast<double>(glyph_px), box.shift);
         else
-            icons::draw_engraved(cr, glyph, gx, gy,
-                                 static_cast<double>(glyph_px),
-                                 static_cast<double>(relief_line_px()));
+            // PART B, RULING 3: draw_cased_disabled's mono-mask emboss at a
+            // bitmap scale, draw_engraved's own vector placement otherwise.
+            icons::draw_cased_disabled(cr, glyph, x, btn_y,
+                                       static_cast<double>(glyph_px),
+                                       box.shift,
+                                       static_cast<double>(relief_line_px()));
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
@@ -3219,7 +3221,12 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         paint_popup_chrome(cr, card, PopupFace::Info);
 
         const int box_y = card.y + pad;
-        icons::draw(cr,
+        // PART B, RULING 1 (architect 2026-10-05): the card's own glyph is
+        // one of the four non-button Chicago95 picks — no Windows case
+        // around this slot to ink-centre inside, so draw_bitmap blits the
+        // whole 16 x 16 picture at the card's own placement, unchanged at
+        // every other scale (icons.h's head).
+        icons::draw_bitmap(cr,
                     n.cls == AppState::NotificationClass::Critical
                         ? icons::Icon::DialogError
                         : icons::Icon::DialogInformation,
@@ -6534,24 +6541,23 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // the toolbar case's (3, 3) — the box is that case
             // (bottom_row_seats), so each glyph stands where row 8's does
             // (architect 2026-10-05) — each path in its own colour, or
-            // engraved when the button is disabled.
+            // engraved (or, at a bitmap scale, mask-embossed) when the
+            // button is disabled.
             const int glyph_px  = icon_glyph_px();
-            const int glyph_off = icon_case_lead_px();
-            const double gx =
-                static_cast<double>(r.x + glyph_off + box.shift);
-            const double gy =
-                static_cast<double>(r.y + glyph_off + box.shift);
             if (enabled)
                 // THE CHICAGO95 BITMAP PASS (architect 2026-10-05):
                 // draw_cased's own placement rule, icons.h's head; the
-                // case's corner (r.x, r.y), not the (3, 3) glyph origin gx/
-                // gy above.
+                // case's corner (r.x, r.y), not a (3, 3) glyph origin.
                 icons::draw_cased(cr, plan[i].icon, r.x, r.y,
                                   static_cast<double>(glyph_px), box.shift);
             else
-                icons::draw_engraved(cr, plan[i].icon, gx, gy,
-                                     static_cast<double>(glyph_px),
-                                     static_cast<double>(relief_line_px()));
+                // PART B, RULING 3: the mono-mask DSS_DISABLED emboss at a
+                // bitmap scale, draw_engraved's own vector placement
+                // otherwise.
+                icons::draw_cased_disabled(cr, plan[i].icon, r.x, r.y,
+                                           static_cast<double>(glyph_px),
+                                           box.shift,
+                                           static_cast<double>(relief_line_px()));
         } else {
             // CENTRED, Windows' push-button text (kModalBtnMinWidthPx); a
             // label that set its button's width lands on its left pad. A
@@ -6939,16 +6945,22 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // fill's recorded pair, and a glyph inked in the label is chrome
             // text's sibling — the label-inked folder would vanish on a dark
             // selected fill as the name would). On a resting row it keeps its
-            // own inks.
+            // own inks. PART B, RULING 1 (architect 2026-10-05): the folder
+            // and wav rows are two of the four non-button Chicago95 picks —
+            // no case here either, so draw_bitmap / draw_bitmap_in_ink blit
+            // the whole picture at this row's own placement at a bitmap
+            // scale, `ink` dropped there (the artwork is unrecolourable,
+            // icons.h's head) — unchanged at every other scale, where a lit
+            // row's vector glyph still takes the selected text as before.
             if (lit)
-                icons::draw_in_ink(cr, icon, static_cast<double>(gx),
-                                   static_cast<double>(gy),
-                                   static_cast<double>(glyph),
-                                   pal.selected_text);
+                icons::draw_bitmap_in_ink(cr, icon, static_cast<double>(gx),
+                                         static_cast<double>(gy),
+                                         static_cast<double>(glyph),
+                                         pal.selected_text);
             else
-                icons::draw(cr, icon, static_cast<double>(gx),
-                            static_cast<double>(gy),
-                            static_cast<double>(glyph));
+                icons::draw_bitmap(cr, icon, static_cast<double>(gx),
+                                   static_cast<double>(gy),
+                                   static_cast<double>(glyph));
             const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
