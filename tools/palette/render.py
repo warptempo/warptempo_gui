@@ -6,6 +6,9 @@
 # sets every colour and the relief. pycairo draws into an RGB24 surface, numpy takes the bytes, and pngrw writes them
 # with the Display-P3 iCCP chunk (display_p3.iccp) and nothing else: THE BYTES WRITTEN ARE WHAT THE GLASS SHOWS.
 # Deterministic: the same theme and scene give the same bytes.
+# THE RELIEF HERE JOINS SQUARELY (edge(), BR owning the top-right and bottom-left corners): the app MITRES those two
+# corners since 2026-10-06 (paint_relief_frame, render.cpp; architect's ruling). This tool is deprioritised and is not
+# ported: its corners are the retired square join.
 import os, sys, json, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common as C            # before cairo: FONTCONFIG_FILE

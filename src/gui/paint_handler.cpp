@@ -2805,16 +2805,24 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     //          the rule is render.h's palette block): `card_ground` with a
     //          THIN flat line of `card_frame`, ONE Windows px, on the BOTTOM
     //          AND THE RIGHT ONLY (architect 2026-10-06, the one period
-    //          capture's) — one ring whose top-left pair is the face itself,
-    //          the frame painting last so it owns both far corners as the
-    //          capture's black does — the tooltip and every notification
-    //          card, whose words their painters set in `card_text`.
+    //          capture's) — the bottom row and the right column laid on the
+    //          face as two square cell rects, so the frame owns both far
+    //          corners whole as the capture's black does (a flat line, no
+    //          bevel: the relief's mitre, paint_relief_frame, is not drawn
+    //          here) — the tooltip and every notification card, whose words
+    //          their painters set in `card_text`.
     if (face == PopupFace::Menu) {
         paint_cell_rect(cr, r, palette().ground);
         paint_relief_plain_raised(cr, r);
     } else {
+        const int lw = relief_line_px();
         paint_cell_rect(cr, r, palette().card_ground);
-        paint_relief_frame(cr, r, palette().card_ground, palette().card_frame);
+        paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - std::min(lw, r.h), r.w,
+                                    std::min(lw, r.h)},
+                        palette().card_frame);
+        paint_cell_rect(cr, GuiRect{r.x + r.w - std::min(lw, r.w), r.y,
+                                    std::min(lw, r.w), r.h},
+                        palette().card_frame);
     }
 }
 

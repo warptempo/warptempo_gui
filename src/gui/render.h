@@ -125,9 +125,10 @@ struct TrimRange {
 // THE GRAMMAR IS WINDOWS 95's DrawEdge, AT THE WINDOWS PIXEL (architect
 // 2026-10-02): every raised or sunken edge is TWO lines a side, each one
 // Windows px (relief_line_px, below), the outer pair first and the inner pair
-// inset one line, and in each pair the top-left line first and the
-// bottom-right line last so it owns the top-right and bottom-left corner
-// pixels. RELIEF COLOURS ARE SET IN ONE PLACE (architect 2026-10-04): every
+// inset one line, each pair's two tones MITRED where they meet (architect
+// 2026-10-06, overruling Windows' square join: the top-right and bottom-left
+// corner blocks split along the 45-degree diagonal, the rule and its words at
+// paint_relief_frame, render.cpp). RELIEF COLOURS ARE SET IN ONE PLACE (architect 2026-10-04): every
 // edge below takes the theme's quartet by Windows 95's scheme of how many
 // lines a side, and no other role draws a relief line. THE FAMILIES (the
 // painters are paint_relief_soft_raised and its siblings, below), lines given
@@ -216,9 +217,11 @@ struct TrimRange {
 // one period capture there is, ToastyTech's win95toolbar.png (Explorer's
 // "Up One Level" tooltip: black at the bottom row and the right column, the
 // two meeting at both far corners, the top row and the left column the
-// yellow; Wine's all-round WS_BORDER is not Windows 95's), painted as one
-// ring whose top-left pair is `card_ground` (paint_popup_chrome's Info
-// face). THIS PARAGRAPH IS THE RULE'S ONE STATEMENT.
+// yellow; Wine's all-round WS_BORDER is not Windows 95's), painted as the
+// bottom row and the right column on the face, square, owning both far
+// corners whole — a flat line, not a bevel, so the relief's mitre is not
+// drawn on it (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE RULE'S
+// ONE STATEMENT.
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD AND GLYPH (architect 2026-10-03,
@@ -2084,10 +2087,13 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // edge grammar (architect 2026-10-02; the grammar and the family table at the
 // palette head). Every line is relief_line_px() wide and is an integer rect
 // of cells, never a stroke. A RING is drawn ON the rect's outermost cells:
-// its top and left in `top_left`, then its bottom and right in
-// `bottom_right`, the second pair painted last so it owns the top-right and
-// bottom-left corner pixels; a TWO-LINE EDGE is its outer ring on the rect
-// and its inner ring on the rect inset one line (Windows' DrawEdge).
+// its top and left in `top_left`, its bottom and right in `bottom_right`,
+// the two MITRED at the top-right and bottom-left corner blocks (architect
+// 2026-10-06; the rule at paint_relief_frame, render.cpp: each block split
+// along its 45-degree diagonal, antialiased; the top-left and bottom-right
+// corners square); a TWO-LINE EDGE is its outer ring on the rect and its
+// inner ring on the rect inset one line (Windows' DrawEdge), the two rings'
+// diagonals one line.
 //   paint_relief_frame  — one ring, any two colours (the one owner every
 //                         helper below calls).
 //   paint_relief_soft_raised  — SOFT RAISED: a toolbar button at rest, a
@@ -2103,11 +2109,13 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         (the well is render_canvas's own fill of the same
 //                         lines, full width).
 //   paint_relief_status_sunken — STATUS SUNKEN, ONE ring: a status-bar panel.
-//   paint_relief_line_frame — one colour all round: the dialog's
-//                         default-button frame and the list's focus frame.
-//   (The CARD FRAME — the tooltip's and the cards' — is no relief:
-//   paint_relief_frame with `card_ground` top and left and `card_frame`
-//   bottom and right, at paint_popup_chrome.)
+//   paint_relief_line_frame — one colour all round, square (no mitre
+//                         between one tone and itself): the dialog's
+//                         default-button frame, the list's focus frame and
+//                         the trim lane's pressed arrow button.
+//   (The CARD FRAME — the tooltip's and the cards' — is no relief: its
+//   bottom row and right column in `card_frame`, square, at
+//   paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
 //                         [x, x + w) (the dropdown's separator). (Its

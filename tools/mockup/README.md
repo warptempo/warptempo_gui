@@ -91,6 +91,11 @@ well's top lines, the emboss's offset structure for a disabled glyph). WHAT IT C
 - THE CAPTION'S CLOSE X is the set's WindowClose drawing, antialiased since effd544f: its solid interior is the
   label role and recolours, its edge blends are no role's value and stay as captured (counted as unclaimed);
   `--icons` repaints case glyphs only and does not reach the caption;
+- THE RELIEF'S MITRES (since 2026-10-06, paint_relief_frame): every raised or sunken edge's top-right and bottom-left
+  corner blocks are split along the diagonal, antialiased; the pixels on the diagonal blend the two relief tones,
+  are no role's value and stay as captured (counted as unclaimed) — one pixel a corner block at 138 %, a
+  diagonal of relief_line_px pixels a block at the tablet's scale; a capture from before the ruling has square
+  corners and no such pixels;
 - a value two roles share inside one region goes to that region's owner (e.g. a black glyph pixel touching a relief
   line reads as DkShadow);
 - anything the capture does not show — the inactive caption, a pressed face, a role whose element is off screen

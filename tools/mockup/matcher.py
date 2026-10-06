@@ -3,7 +3,10 @@
 # and written out in another theme's roles.
 #
 # The app paints every chrome pixel as one of the 36 roles (theme_file.h) and every glyph in its drawing's own inks,
-# with no antialias at a whole-multiple gui_scale on the faces the capture was painted in. So a pixel's role is the
+# with no antialias at a whole-multiple gui_scale on the faces the capture was painted in — but for the relief's
+# MITRES (since 2026-10-06, paint_relief_frame, render.cpp: each raised or sunken edge's top-right and bottom-left
+# corner blocks split along the diagonal, antialiased, so the pixels on the diagonal blend the two tones; the
+# corner, below, under WHAT IT CANNOT RECOVER). So a pixel's role is the
 # capture theme's role whose value it equals — where two roles share a value, the REGION decides (the scene's lanes),
 # and inside a region a few adjacency rules decide what the value alone cannot:
 #   - DkShadow and the label ink (both black in the built-in): a black pixel with Shadow one Windows px beside it in
@@ -25,7 +28,10 @@
 # before effd544f painted both in Windows-px cells: mock.py's --legacy-dither reads it at that cell (dither_cell = U).
 # WHAT IT CANNOT RECOVER: a glyph ink equal to the background (a silver pixel of an enabled glyph on the face, a
 # white one on a lit cell) becomes the new background; a value two roles share inside one region goes to the region's
-# owner (README.md, The matcher and its limits). Pixels no rule claims are left as captured and counted.
+# owner; a MITRED CORNER's diagonal pixels (a capture taken since 2026-10-06), a blend of the two relief tones that
+# equals no role, stay as captured in the capture theme's blend (README.md, The matcher and its limits) — the exact
+# pixels either side of the diagonal still read by value and the DkShadow adjacency rule, and find_cases' reading row
+# lies below the corner blocks. Pixels no rule claims are left as captured and counted.
 import os, re
 import numpy as np
 

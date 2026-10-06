@@ -192,21 +192,81 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
     cairo_fill(cr);
 }
 
+namespace {
+// A ring with SQUARE JOINS: the top and left in `top_left`, then the bottom
+// and right in `bottom_right` over them, owning the top-right and bottom-left
+// corner blocks — the one-colour frames' ring (no mitre to draw between one
+// tone and itself) and the mitre's fallback on a ring narrower or shorter
+// than two lines, whose two sides overlap (a thumb at its five-device-px
+// floor).
+void paint_square_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
+                       GuiColor bottom_right) {
+    const int lw = relief_line_px();
+    if (r.w <= 0 || r.h <= 0) return;
+    const int lx = std::min(lw, r.w);
+    const int ly = std::min(lw, r.h);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{r.x, r.y, r.w, ly}, top_left);
+    paint_cell_rect(cr, GuiRect{r.x, r.y, lx, r.h}, top_left);
+    paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - ly, r.w, ly}, bottom_right);
+    paint_cell_rect(cr, GuiRect{r.x + r.w - lx, r.y, lx, r.h}, bottom_right);
+    cairo_restore(cr);
+}
+} // namespace
+
+// THE MITRE (architect 2026-10-06, overruling the planner's reading that
+// Windows' DrawEdge joins its edges squarely, the dark side owning the corner,
+// at every DPI: "Buttons don't have corners like that in real life. A perfect
+// square button, like a keyboard key with a relief and bevels, would have a
+// smooth straight corner, not a pixelated corner. ... Anything the original
+// designers would have drawn with a diagonal if they could, we should." — THE
+// CHROME IS SCALABLE). At the TOP-RIGHT and BOTTOM-LEFT corner blocks, where
+// the top-left tone meets the bottom-right tone, each relief_line_px() square
+// is split along its diagonal from the ring's outer corner to its inner
+// corner, the top-left tone on the half toward the top and left edges, the
+// bottom-right tone on the half toward the bottom and right; the two-line
+// edges' two rings nest, so their diagonals run on as one 45-degree line from
+// the outer corner to the innermost. The top-left and bottom-right corners
+// are one tone already and stay square. THE FILLS: the top-left tone is ONE
+// square L (the top row and the left column, both corner blocks whole),
+// unantialiased; the bottom-right tone ONE mitred L over it (the bottom row
+// and the right column, each end cut along the diagonal), antialiased by
+// cairo — so every pixel on the diagonal is that tone at its coverage over
+// the other, exactly the two tones' blend with no ground in it (two abutting
+// antialiased fills would let the ground through their shared seam). The
+// anti-aliasing is the renderer's, not a colour (the palette head).
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right) {
     const int lw = relief_line_px();
     if (r.w <= 0 || r.h <= 0) return;
+    if (r.w < 2 * lw || r.h < 2 * lw) {
+        paint_square_ring(cr, r, top_left, bottom_right);
+        return;
+    }
+    const double x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h;
     cairo_save(cr);
+    cairo_new_path(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{r.x, r.y, r.w, std::min(lw, r.h)}, top_left);
-    paint_cell_rect(cr, GuiRect{r.x, r.y, std::min(lw, r.w), r.h}, top_left);
-    // The dark pair LAST: it owns the top-right and bottom-left corners.
-    paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - std::min(lw, r.h), r.w,
-                                std::min(lw, r.h)},
-                    bottom_right);
-    paint_cell_rect(cr, GuiRect{r.x + r.w - std::min(lw, r.w), r.y,
-                                std::min(lw, r.w), r.h},
-                    bottom_right);
+    cairo_move_to(cr, x0, y0);
+    cairo_line_to(cr, x1, y0);
+    cairo_line_to(cr, x1, y0 + lw);
+    cairo_line_to(cr, x0 + lw, y0 + lw);
+    cairo_line_to(cr, x0 + lw, y1);
+    cairo_line_to(cr, x0, y1);
+    cairo_close_path(cr);
+    set_palette_source(cr, top_left);
+    cairo_fill(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_move_to(cr, x1, y0);
+    cairo_line_to(cr, x1, y1);
+    cairo_line_to(cr, x0, y1);
+    cairo_line_to(cr, x0 + lw, y1 - lw);
+    cairo_line_to(cr, x1 - lw, y1 - lw);
+    cairo_line_to(cr, x1 - lw, y0 + lw);
+    cairo_close_path(cr);
+    set_palette_source(cr, bottom_right);
+    cairo_fill(cr);
     cairo_restore(cr);
 }
 
@@ -289,7 +349,7 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 }
 
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
-    paint_relief_frame(cr, r, c, c);
+    paint_square_ring(cr, r, c, c);
 }
 
 // -- THE CAPTION'S GRADIENT (architect 2026-10-05) ---------------------------
