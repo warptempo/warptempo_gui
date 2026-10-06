@@ -51,6 +51,9 @@ struct OutlineFace {
 // The em per face, in Windows px (gui_face_em_px).
 double g_face_em[kGuiFaceCount] = {};
 
+// The four math signs' glyph ids and lifts per face (gui_sign_axis).
+GuiSignAxis g_sign_axis[kGuiFaceCount] = {};
+
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
 OutlineFace           g_outline_regular;
@@ -98,6 +101,38 @@ double outline_ink_em(const OutlineFace& f, char32_t cp) {
            static_cast<double>(f.ft->units_per_EM);
 }
 
+// THE OUTLINE'S INK CENTRE OF ONE GLYPH, in font units up from the baseline,
+// off the same unscaled, unhinted bounding box as outline_ink_em; `gid` 0
+// when the face lacks the glyph.
+struct InkCentre {
+    FT_UInt gid    = 0;
+    double  centre = 0.0;
+};
+InkCentre outline_ink_centre(const OutlineFace& f, char32_t cp) {
+    if (f.ft == nullptr) return {};
+    const FT_UInt gid = FT_Get_Char_Index(f.ft, cp);
+    if (gid == 0 || FT_Load_Glyph(f.ft, gid, FT_LOAD_NO_SCALE) != 0) return {};
+    const FT_Glyph_Metrics& m = f.ft->glyph->metrics;
+    return {gid, static_cast<double>(m.horiBearingY) -
+                     static_cast<double>(m.height) / 2.0};
+}
+
+// THE SIGN AXIS OF ONE FACE (gui_font.h, gui_sign_axis): each math sign's
+// lift is the hyphen's ink centre less its own, per em. False when the face
+// lacks the hyphen or a sign.
+bool measure_sign_axis(const OutlineFace& f, GuiSignAxis& out) {
+    const InkCentre hyphen = outline_ink_centre(f, U'-');
+    if (hyphen.gid == 0) return false;
+    for (std::size_t i = 0; i < kGuiSignCount; ++i) {
+        const InkCentre sign = outline_ink_centre(f, kGuiMathSigns[i]);
+        if (sign.gid == 0) return false;
+        out.signs[i].glyph   = sign.gid;
+        out.signs[i].lift_em = (hyphen.centre - sign.centre) /
+                               static_cast<double>(f.ft->units_per_EM);
+    }
+    return true;
+}
+
 bool outline_ft_backed(const OutlineFace& f) {
     return f.face != nullptr &&
            cairo_font_face_get_type(f.face) == CAIRO_FONT_TYPE_FT;
@@ -128,6 +163,10 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
         if (ink <= 0.0) { ok = false; continue; }
         g_face_em[i] =
             static_cast<double>(kGuiFaceMetrics[i].cap) / ink;
+        // THE FOUR MATH SIGNS' LIFTS ONTO THE HYPHEN'S AXIS (gui_font.h).
+        if (!measure_sign_axis(outline_of(static_cast<GuiFace>(i)),
+                               g_sign_axis[i]))
+            ok = false;
     }
     return ok && outline_ft_backed(g_outline_regular) &&
            outline_ft_backed(g_outline_bold);
@@ -135,6 +174,10 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
 
 double gui_face_em_px(GuiFace face) {
     return g_face_em[face_index(face)];
+}
+
+const GuiSignAxis& gui_sign_axis(GuiFace face) {
+    return g_sign_axis[face_index(face)];
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {

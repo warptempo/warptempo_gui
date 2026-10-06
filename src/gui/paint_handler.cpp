@@ -1834,7 +1834,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         //
         // THE FACE IS THE GLYPH'S ALONE, ENGRAVED (architect 2026-10-02, the
         // AB set; Windows' DSS_DISABLED, icons::draw_engraved): the glyph's
-        // whole shape in Hilight one Windows px right and down, then in
+        // disabled mask in Hilight one Windows px right and down, then in
         // Shadow at its place, and the box keeps its edge whole (a disabled
         // button keeps its raised edge). A dead CHECKED button (the
         // cumulative reading, say) stays checked: the mode cannot change that

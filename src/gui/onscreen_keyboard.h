@@ -395,8 +395,12 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // until the same evening's ruling closed the one act-named cap out (it named
 // what the key DOES to the editor standing over it, the button convention);
 // Shift, Tab and Space Qt spells the same as this keyboard always did.
-// BACKSPACE IS "Bksp" (architect 2026-10-06): the whole word overflows the
-// symbol pages' one-unit key, and the cap keeps one spelling on every page.
+// BACKSPACE IS "Backsp" (architect 2026-10-06), a spelling compact keyboards
+// print, and the cap keeps one spelling on every page. MEASURED in Nimbus
+// with the tracking against the symbol pages' one-standard-key box (about 54
+// Windows px at 400 %): "Backsp" is 39.4 Windows px, 7 clear each side;
+// the whole "Backspace" (58.7) overflows it, and "Backspc" (45.3) reads as a
+// typo.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the roster's own CHECKED face,
@@ -407,7 +411,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {
         case Role::Shift:       return "Shift";
-        case Role::Backspace:   return "Bksp";
+        case Role::Backspace:   return "Backsp";
         case Role::Enter:       return "Return";
         case Role::Escape:      return "Esc";
         case Role::Tab:         return "Tab";

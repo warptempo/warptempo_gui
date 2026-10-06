@@ -35,7 +35,9 @@ inline constexpr double kIconViewBox = 16.0;
 // is the emboss, draw_engraved, which is where the theme's roles enter). The
 // fills are Windows' twenty always-solid colours (theme_file.h's
 // kNamedThemeColours, the same names), the thirteen of them the set uses;
-// a literal here is a file's value, never a judgment.
+// a literal here is a file's value, never a judgment. WHITE AND SILVER are
+// the disabled mask's two background inks (Windows' white and button face;
+// draw_engraved): every other ink is the mask's ink.
 constexpr GuiColor kIconBlack  = hex(0x000000);
 constexpr GuiColor kIconMaroon = hex(0x800000);
 constexpr GuiColor kIconGreen  = hex(0x008000);
@@ -1040,8 +1042,9 @@ bool icon_paths_valid(Icon icon, const IconDef& def) {
 }
 
 // THE ONE FILL WALK every draw shares: the 16-unit viewBox mapped onto the
-// square (x, y, size_px, size_px), each path filled in `color_of(path)`, in
-// table order (the layering).
+// square (x, y, size_px, size_px), each path filled after `paint_of(cr,
+// path)` sets its paint (a source, or the disabled mask's operator), in table
+// order (the layering).
 //
 // CAIRO'S DEFAULT ANTIALIAS STAYS (architect 2026-10-06): the curves need it
 // (the discs, the swoops, the rounded corners), and every straight edge sits
@@ -1049,9 +1052,9 @@ bool icon_paths_valid(Icon icon, const IconDef& def) {
 // number of device px (4 at 400 %) — those edges land on device-pixel
 // boundaries and antialias nothing; at a fractional scale they cover pixels
 // partially, like every other scaled length's edge.
-template <typename ColorOf>
+template <typename PaintOf>
 void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
-                     double size_px, ColorOf color_of) {
+                     double size_px, PaintOf paint_of) {
     cairo_save(cr);
     cairo_translate(cr, x, y);
     cairo_scale(cr, size_px / kIconViewBox, size_px / kIconViewBox);
@@ -1063,10 +1066,46 @@ void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
         // and the strings are compile-time constants that cannot change between
         // the walks.
         append_path(cr, p.d);
-        set_palette_source(cr, color_of(p));
+        paint_of(cr, p);
         cairo_fill(cr);
     }
     cairo_restore(cr);
+}
+
+// A background ink of the disabled mask (draw_engraved): White or Silver.
+bool disabled_mask_background(GuiColor ink) {
+    const auto same = [](GuiColor a, GuiColor b) {
+        return a.r == b.r && a.g == b.g && a.b == b.b;
+    };
+    return same(ink, kIconWhite) || same(ink, kIconSilver);
+}
+
+// ONE PASS OF THE EMBOSS: the disabled mask built at (x, y) in an alpha group
+// — each ink path filled opaque, each White or Silver path CLEARED, in table
+// order, so an inset carved out of a silhouette stays a hole and a later ink
+// path drawn over an inset is ink again — then `ink` painted through it.
+// Each pass builds its own group at its own place, so the light copy's
+// offset never shifts a mask cut at the group's clip.
+void emboss_through_disabled_mask(cairo_t* cr, const IconDef& def, double x,
+                                  double y, double size_px, GuiColor ink) {
+    cairo_push_group_with_content(cr, CAIRO_CONTENT_ALPHA);
+    fill_icon_paths(cr, def, x, y, size_px,
+                    [](cairo_t* c, const IconPath& p) {
+                        if (disabled_mask_background(p.ink)) {
+                            cairo_set_operator(c, CAIRO_OPERATOR_CLEAR);
+                        } else {
+                            cairo_set_operator(c, CAIRO_OPERATOR_OVER);
+                            // Opaque, so the mask's alpha is whole; the
+                            // colour itself is never seen.
+                            set_palette_source(c, kIconBlack);
+                        }
+                    });
+    cairo_pattern_t* mask = cairo_pop_group(cr);
+    cairo_save(cr);
+    set_palette_source(cr, ink);
+    cairo_mask(cr, mask);
+    cairo_restore(cr);
+    cairo_pattern_destroy(mask);
 }
 
 } // namespace
@@ -1076,7 +1115,9 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px) {
     const IconDef def = icon_def(icon);
     if (!icon_paths_valid(icon, def)) return;
     fill_icon_paths(cr, def, x, y, size_px,
-                    [](const IconPath& p) { return p.ink; });
+                    [](cairo_t* c, const IconPath& p) {
+                        set_palette_source(c, p.ink);
+                    });
 }
 
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
@@ -1084,13 +1125,12 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
     if (size_px <= 0.0) return;
     const IconDef def = icon_def(icon);
     if (!icon_paths_valid(icon, def)) return;
-    // The whole shape twice, every path in one ink: the emboss's light copy,
-    // the theme's Hilight, one offset right and down beneath, then Shadow at
-    // the glyph's own place.
-    fill_icon_paths(cr, def, x + offset_px, y + offset_px, size_px,
-                    [](const IconPath&) { return palette().hilight; });
-    fill_icon_paths(cr, def, x, y, size_px,
-                    [](const IconPath&) { return palette().shadow; });
+    // THE DISABLED MASK TWICE (icons.h): the emboss's light copy, the
+    // theme's Hilight, one offset right and down beneath, then Shadow at the
+    // glyph's own place.
+    emboss_through_disabled_mask(cr, def, x + offset_px, y + offset_px,
+                                 size_px, palette().hilight);
+    emboss_through_disabled_mask(cr, def, x, y, size_px, palette().shadow);
 }
 
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,

@@ -20,7 +20,8 @@
 // different one. ONE ROAD AT EVERY SCALE (architect 2026-10-06): the whole
 // run shaped by HarfBuzz on Nimbus's scaled font (gui_outline_scaled_font),
 // on that font's OWN FreeType face (hb-ft), full GPOS/GSUB, its own advances
-// less the tracking (kGuiTrackingPx, gui_font.h) — and painted
+// less the tracking (kGuiTrackingPx, gui_font.h), the four math signs
+// lifted onto the hyphen's axis (gui_sign_axis, gui_font.h) — and painted
 // through cairo_show_glyphs on the same scaled font. The run is seated on a
 // baseline the caller hands in, which its seat derived from the face's
 // recorded vertical metrics (gui_face_metrics).

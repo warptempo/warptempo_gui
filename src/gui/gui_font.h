@@ -50,7 +50,9 @@
 // box is ever read off the outline: the recorded metrics seat every run.
 // HORIZONTALLY THE FACE IS ITS OWN: every width used for layout is the
 // shaped run's (text_shape), Nimbus's own advances at the live size less the
-// tracking.
+// tracking. VERTICALLY THE ONE EXCEPTION IS THE FOUR MATH SIGNS ("+", "=",
+// "<", ">"), each lifted onto the hyphen's axis as MS Sans Serif drew them
+// (gui_sign_axis below, architect 2026-10-06).
 
 #include <cairo/cairo.h>
 
@@ -82,7 +84,8 @@ struct GuiFontBytes {
 //
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each face
 // selects as an FT-BACKED cairo face, which is what text_shape requires, and
-// carries the glyph its em is measured on. Its producer is breach-only (the
+// carries the glyph its em is measured on and the five its sign axis is
+// measured on (the hyphen and the four math signs, gui_sign_axis). Its producer is breach-only (the
 // bytes are the repository's own, so a face that fails to build is a build
 // defect), and each caller dies on false.
 bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
@@ -139,6 +142,48 @@ inline double gui_font_cap_px(const GuiFont& f) {
 // recorded cap over Nimbus's own ink height of the glyph named above ("H", or
 // "0" for the small), per em, read off the bundled file at the install.
 double gui_face_em_px(GuiFace face);
+
+// THE FOUR MATH SIGNS SIT ON THE HYPHEN'S AXIS (architect 2026-10-06, "as
+// MS Sans Serif had them"): "+" (U+002B), "=" (U+003D), "<" (U+003C) and ">"
+// (U+003E) each rise by the hyphen's ink centre less its own, in every face
+// and every run; the hyphen and every other glyph stay where Nimbus drew
+// them. WHY: MS Sans Serif put the five marks on ONE axis — "-", "+", "=",
+// "<" and ">" all centred at 0.389 of its 9-row cap — while Nimbus keeps its
+// hyphen near there (240..312 of 729, centre 0.379) but draws the four signs
+// on Helvetica's math axis, 0.318 ("+" -10..474, "=" 111..353, "<" ">"
+// -9..474), so its plus sat visibly low beside the digits it signs; every
+// letter and digit is within 0.35 Windows px of MS Sans Serif's. One rule:
+// Helvetica's math axis is seated on its hyphen's, the period's one axis for
+// the five. THE LIFTS ARE DERIVED at the install, like the em, from the
+// face's own unscaled outline bounds (gui_font_bundled.cpp), in em units: the
+// regular file's 0.044 ("+", "=") and 0.0435 ("<", ">"), the bold's 0.043
+// and 0.0425 — the plus rising, at 400 %, 2.17 device px in the body, 2.12 in
+// the bold and 1.65 in the small. THE MATCH IS BY GLYPH ID after substitution (text_shape compares
+// a shaped glyph's id against `glyph`), never by codepoint: a cluster is not
+// a glyph. The lift moves the ink alone — every advance, the run's width and
+// the tracking are untouched.
+inline constexpr std::size_t kGuiSignCount = 4;
+inline constexpr char32_t kGuiMathSigns[kGuiSignCount] = {U'+', U'=', U'<',
+                                                          U'>'};
+struct GuiSignLift {
+    unsigned glyph   = 0;    // the face's glyph id for the sign
+    double   lift_em = 0.0;  // up-positive, in em
+};
+struct GuiSignAxis {
+    GuiSignLift signs[kGuiSignCount] = {};
+};
+const GuiSignAxis& gui_sign_axis(GuiFace face);
+
+// The lift of one shaped glyph in DEVICE px at the font's scale, HarfBuzz's
+// sense (up-positive), unrounded: the sign's lift times the em times the
+// scale, 0 for every glyph that is not one of the four signs.
+inline double gui_sign_lift_px(const GuiFont& f, unsigned glyph) {
+    for (const GuiSignLift& s : gui_sign_axis(f.face).signs) {
+        if (s.glyph == glyph)
+            return s.lift_em * gui_face_em_px(f.face) * gui_font_scale(f);
+    }
+    return 0.0;
+}
 
 // THE FACE'S CAIRO SCALED FONT at this scale (Nimbus at its em times the
 // scale, SLIGHT): borrowed, owned by the face owner and cached on the scale;

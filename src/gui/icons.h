@@ -160,14 +160,21 @@ inline constexpr int kIconCount = 58;
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 
 // THE ENGRAVED GLYPH — a disabled button's face (architect 2026-10-02, the AB
-// set; Windows' DrawState DSS_DISABLED): the glyph's whole shape, every path
-// in one ink, painted TWICE — first in the theme's HILIGHT `offset_px` right
-// and down (the caller passes one Windows px, relief_line_px), then in its
-// Shadow at (x, y) — so the dead glyph reads as cut into the face. THE GLYPH
-// HALF OF THE DISABLED EMBOSS and the set's one disabled face (architect
-// 2026-10-03; the word half is show_embossed_run, render.h, the rule at the
-// palette block). Same square, same validation and the same one-stderr rule
-// as draw above.
+// set; Windows' DrawState DSS_DISABLED): the glyph's DISABLED MASK painted
+// TWICE — first in the theme's HILIGHT `offset_px` right and down (the caller
+// passes one Windows px, relief_line_px), then in its Shadow at (x, y) — so
+// the dead glyph reads as cut into the face. THE MASK IS WINDOWS 95'S
+// (architect 2026-10-06, the faithful reading of the DSS_DISABLED ruling):
+// its toolbar turned the colour bitmap into a mono mask in which WHITE and
+// the BUTTON FACE (silver) are background and every other pixel is ink, and
+// drew that mask; here it is the union of the drawing's paths whose fill is
+// neither White nor Silver, the White and Silver paths cutting it in file
+// order — so a layered drawing (a black silhouette with white and silver
+// insets: the pages, the padlocks, the music player) keeps its outlines and
+// insets dead, never a grey slab. THE GLYPH HALF OF THE DISABLED EMBOSS and
+// the set's one disabled face (architect 2026-10-03; the word half is
+// show_embossed_run, render.h, the rule at the palette block). Same square,
+// same validation and the same one-stderr rule as draw above.
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
                    double offset_px);
 

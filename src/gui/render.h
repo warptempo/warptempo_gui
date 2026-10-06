@@ -89,7 +89,8 @@ struct TrimRange {
 // ICON SET'S OWN FILLS (architect 2026-10-06), Windows' solids as each
 // drawing names them: period artwork, not roles, so a glyph is never
 // recoloured by a theme. A DISABLED icon paints none of its own inks: its
-// whole shape is Windows' DSS_DISABLED emboss in the theme's roles, the
+// disabled mask (every ink but White and Silver, Windows' toolbar rule) is
+// Windows' DSS_DISABLED emboss in the theme's roles, the
 // Hilight copy one line right and down, then the Shadow copy in place
 // (icons::draw_engraved). TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
