@@ -217,7 +217,7 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **Follow as a one-shot (`follow_armed` / `follow_engaged`, `spend_follow_lamp`)** — superseded, 2026-09-23: follow is one plain per-project lamp, lit until `f` puts it out. Owner: `AppState::follow`, `GuiPlaybackLifecycle::toggle_follow`.
 - **The chase posture (`camera_chase`) and Shift+C** — deleted, 2026-09-23 (it did not earn its keep): Shift+C is unbound. Owner: `AppState::follow`, `chord_is_bound` (gui_input.h).
 - **The Ctrl+Left / Ctrl+Right hold-column chord and its two buttons** — deleted, 2026-09-23: the nudge's camera is the hold posture's. Owner: `nudge_camera` (app_state.h).
-- **A placement click during a play suspending follow** — dropped, 2026-09-23: it moves the playhead, not the camera, and the play pages on from it. Owner: `AppState::follow_suspended`.
+- **A placement click during a play suspending follow** — dropped, 2026-09-23: a placement stops the play (2026-10-06), so no play is left to suspend. Owner: `AppState::follow_suspended`.
 - **Deriving Follow from the zoom** — rejected, 2026-09-16: follow is wanted in cases no zoom level predicts, so it is a lamp. Owner: `AppState::follow`.
 - **The placement-instrument principle (the zoom deciding the nudge's held column and the walk's framing)** — retired, 2026-09-22: no picture derives from the zoom level, while a landing may read it at a discrete act. Owner: the LANDING MAY READ THE ZOOM paragraph in app_state.h, `Viewport::land_subject`.
 - **Follow's page-in 10 % lead, or a 2.5 % edge margin** — settled, 2026-09-22, at 5 % of the window ("it starts way too late"); a flag clipping at the right edge is accepted and not designed around. Owner: `kViewportEdgeMarginFraction` (app_state.h).

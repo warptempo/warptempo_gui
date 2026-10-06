@@ -1260,7 +1260,7 @@ struct GuiInputHandler {
     // finger's DOWN point, forking on the `h` history mode exactly as the
     // shift press does: LIVE = the one placement body
     // (place_playhead_and_arm_region — deselect-all, playhead seated at the
-    // down column, live-session reseek, the drag arm); the
+    // down column after the play's stop, the drag arm); the
     // MODE = the view-local former's recipe (clear the mode focus +
     // selection through the pair clearer, the shared placement body, the
     // same arm) — EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS,
@@ -1956,8 +1956,10 @@ struct GuiInputHandler {
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
     // and the `h` history mode's own have in common: drop the
-    // playhead at the clicked column, reseek a live scanner to it (keeping the
-    // session alive; a following play pages on from there, AppState::follow).
+    // playhead at the clicked column, stopping a live play first (architect
+    // 2026-10-06: a pointer or touch placement stops playback, the class at
+    // stop_playback_if_playing's declaration; the stop sits past the gutter
+    // refusal, ahead of the write — the ONE site for every placement route).
     // NO selection, NO
     // drag arm — each caller owns those, which is what lets the
     // mode reuse this recipe without inheriting a sweep it must not have.
@@ -1970,22 +1972,8 @@ struct GuiInputHandler {
     // former's own body).
     // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
     // [0, area.w)) seats nothing and returns -1, a value no seated frame can
-    // take (the clamp's floor is 0). `was_playing` / `playhead_at_entry` are
-    // the caller's readings from AHEAD of its own acts — the formers
-    // capture at their press/begin entry, the deferred click act reads at the
-    // release
-    // (equivalent, its press having touched nothing, and honest about a
-    // session that ended under the hold).
-    // Neither is a pre-stop reading: the playback stops are claim-keyed and sit
-    // at the branches that claim a gesture, and every route reaching this body
-    // is a stop-free one, so no stop stands between the capture and either
-    // reader. What each parameter really predates is a write of its own —
-    // playhead_at_entry predates move_playhead_to's cursor write, and
-    // was_playing predates the stop that reseek_keeping_alive may run internally
-    // on an out-of-range position — and together they fire the reseek only on a
-    // real move of a live session.
-    int64_t place_playhead_at_click_column(int click_rel_x, bool was_playing,
-                                           int64_t playhead_at_entry);
+    // take (the clamp's floor is 0).
+    int64_t place_playhead_at_click_column(int click_rel_x);
 
     // THE SWEEP'S LIVE PRESS HALF — TWO call sites since the touch
     // half (2026-08-12): the shift-exact press on the navigation surface
@@ -1996,9 +1984,7 @@ struct GuiInputHandler {
     // the body's gutter return, so an inert-gutter click still deselects but
     // seats no playhead and arms no drag. (The plain presses that shared this
     // body left it 2026-08-12 for the pending pan — the eighth glass ruling.)
-    void place_playhead_and_arm_region(int click_rel_x, int x, int y,
-                                       bool was_playing,
-                                       int64_t playhead_at_entry);
+    void place_playhead_and_arm_region(int click_rel_x, int x, int y);
 
     // ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click that
     // becomes the grab-pan at the 8px crossing (contract at ScrollDragState,
@@ -3327,7 +3313,8 @@ private:
     // deselects and places the cursor, and this one does neither.
     // Playback stays alive from the press to the act (the press claims nothing
     // and stops nothing, and the drag-modal gate swallows every chord while the
-    // pending stands); since the scrub always plays (architect 2026-09-21),
+    // pending stands; the upper half's placement, by contrast, stops the play,
+    // architect 2026-10-06); since the scrub always plays (architect 2026-09-21),
     // what the act finds decides only whether it pays the stop's fence.
     void scrub_press_at(int click_rel_x);
 

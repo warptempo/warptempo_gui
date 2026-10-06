@@ -3201,19 +3201,16 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
             // shift arm's own shape.
             viewport.invalidate_all();
         }
-        const int64_t sample = place_playhead_at_click_column(
-            x - area.x, playback.is_playing(), app.playhead_cursor_sample);
+        const int64_t sample = place_playhead_at_click_column(x - area.x);
         if (sample >= 0) arm_region_drag_at(x - area.x, x, y);
         return;
     }
     // THE LIVE FORMER — the shift press's own body whole (deselect-all,
-    // playhead at the down column, live-session reseek, the drag arm).
-    // The playback readings are taken here at the begin, the
-    // formers' press-entry capture (the placement body's contract). THE HOLD IS
+    // playhead at the down column with the placement's playback stop, the drag
+    // arm). THE HOLD IS
     // THE FINGER'S ONLY ROUTE TO A SWEEP — a finger has no modifier — and it
     // survives in full for that reason (architect 2026-08-18).
-    place_playhead_and_arm_region(x - area.x, x, y, playback.is_playing(),
-                                  app.playhead_cursor_sample);
+    place_playhead_and_arm_region(x - area.x, x, y);
 }
 
 void GuiInputHandler::update_touch_region(int x, int y) {
@@ -5954,28 +5951,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // SHIFT-exact trim-bar press (trim is transparent to shift),
         // every empty marker-text-lane spot, and the inter-lane gaps — all
         // of which end at the inert top-strip return far below.
-        // The EMPTY MARKER LANE's PLAIN press is the one ACTING press
-        // that still does not stop: it is the waveform-upper-half's twin (the
-        // empty-lane parity press, architect 2026-07-23), and a
-        // live session RESEEKS there rather than dying — through the pending's
-        // own DEFERRED CLICK ACT (arm_placement_press since the lane became a
-        // placement surface, 2026-09-25; arm_nav_press from the pan-primary
-        // ruling of 2026-08-12; the claim that this branch
-        // acts "through place_playhead_and_arm_region" outlived that change and
-        // is corrected here 2026-08-15 — that body is the SHIFT former's, whose
-        // y-gate left this lane 2026-09-25; a shift press here is the same
-        // placement pending since, which is why shift is NOT in the inert list
-        // above: it acts here, and it too only reseeks).
-        // Waveform clicks keep playback alive as ever — the per-press reseek to
-        // the click sample happens inside the deferred click act's placement
-        // body (run_nav_click_act -> place_playhead_at_click_column; it was the
-        // playhead-drag PRESS site until the eighth glass ruling deferred it),
-        // gated
-        // on was_playing && sample != playhead_at_entry. Capture the entry
-        // state up front, AHEAD OF EVERY STOP below, so all the downstream
-        // branches see the same snapshot.
-        const bool was_playing = playback.is_playing();
-        const int64_t playhead_at_entry = app.playhead_cursor_sample;
+        // The plain presses on the EMPTY MARKER LANE, the ruler and the waveform
+        // are PLACEMENT presses that stop nothing AT THE PRESS: each arms a
+        // pending whose DEFERRED CLICK ACT (arm_placement_press since the lane
+        // became a placement surface, 2026-09-25; arm_nav_press from the
+        // pan-primary ruling of 2026-08-12) places the playhead at the lift,
+        // and the stop is the PLACEMENT BODY's own
+        // (place_playhead_at_click_column, architect 2026-10-06, the class at
+        // stop_playback_if_playing's declaration), so a pan or a gutter click
+        // stops nothing. A SHIFT press there is the same placement pending,
+        // which is why shift is NOT in the inert list above: it acts here.
 
         // Clicks in iter/BPM mode route through the unified marker
         // hit-test below.
@@ -6242,8 +6227,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // seed: the shift click was never the create's first half.
         if (shift && !(inside_top && mh_index >= 0)) {
             if (point_on_nav_surface(app, x, y)) {
-                place_playhead_and_arm_region(x - area.x, x, y,
-                                              was_playing, playhead_at_entry);
+                place_playhead_and_arm_region(x - area.x, x, y);
             } else if (point_on_placement_lanes(app, audio, x, y)) {
                 arm_placement_press(x, y, /*history=*/false,
                                     /*seed_empty_lane=*/false);
@@ -6650,13 +6634,11 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
 // was a click until the release said so, and a pan must move no playhead and
 // clear nothing, so everything the old press-time placement did moved here
 // whole). Runs at the PRESS column — sub-threshold travel is jitter, and the
-// press point is what the user aimed at. Playback state is read HERE, at the
-// act: the press touched nothing, so the readings agree with a press-time
-// capture, and a session that ended naturally under the hold reads honestly
-// (the drag-modal keyboard gate swallows every chord while the pending
-// stands, so no command can change the state in between).
+// press point is what the user aimed at. A live play is stopped HERE, inside
+// the placement body, never at the press (the press touched nothing, so a
+// pan or a gutter click leaves the play running; architect 2026-10-06).
 //   LIVE arm: deselect-all, then the placement body — playhead to the column,
-//   live-session reseek (place_playhead_at_click_column).
+//   the play stopped first (place_playhead_at_click_column).
 //   The placement writes through the movement owner move_playhead_to, which
 //   ends an A/B audition (a placement moves the playhead's position in the
 //   music). A GUTTER column deselects and seats nothing.
@@ -6690,18 +6672,14 @@ void GuiInputHandler::run_nav_click_act(int press_x, bool history,
             // mode's placement-press shape.
             viewport.invalidate_all();
         }
-        place_playhead_at_click_column(press_x - area.x,
-                                       playback.is_playing(),
-                                       app.playhead_cursor_sample);
+        place_playhead_at_click_column(press_x - area.x);
         return;
     }
     selection.clear_selection();
-    place_playhead_at_click_column(press_x - area.x, playback.is_playing(),
-                                   app.playhead_cursor_sample);
+    place_playhead_at_click_column(press_x - area.x);
 }
 
-int64_t GuiInputHandler::place_playhead_at_click_column(
-        int click_rel_x, bool was_playing, int64_t playhead_at_entry) {
+int64_t GuiInputHandler::place_playhead_at_click_column(int click_rel_x) {
     // THE PLACEMENT PRESS'S PLAYHEAD HALF — the column-to-cursor recipe alone,
     // with no selection and no region in it, so the `h` history mode can seat a
     // playhead by exactly the arithmetic and exactly the playback regime the
@@ -6729,19 +6707,19 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     // them; cold, the live viewport by the basis's own contract.
     const int64_t sample = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+    // A POINTER OR TOUCH PLACEMENT STOPS A LIVE PLAY (architect 2026-10-06; the
+    // class is stated at stop_playback_if_playing's declaration): past the
+    // gutter refusal above and ahead of the first write, so a click that seats
+    // nothing stops nothing. This is the ONE site for every placement route
+    // (the click act and both sweep formers); the sweep's motion then carries
+    // the cursor with the play already stopped.
+    playback_lifecycle.stop_playback_if_playing();
     viewport.move_playhead_to(sample);
-    if (was_playing && sample != playhead_at_entry)
-        playback_lifecycle.reseek_keeping_alive(sample);
-    // FOLLOW IS UNTOUCHED (architect 2026-09-23): the follow lamp is a lamp,
-    // not a posture, and the click moves the playhead, not the camera, so a
-    // following play pages on from the placed position (AppState::follow,
-    // follow_suspended).
     return sample;
 }
 
 void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
-                                                    int y, bool was_playing,
-                                                    int64_t playhead_at_entry) {
+                                                    int y) {
     // THE REGION FORMER'S LIVE PRESS HALF — TWO CALLERS, re-derived by grep
     // 2026-08-12 at the touch half (the eighth glass ruling made the plain
     // presses the pending
@@ -6760,8 +6738,7 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
     // crossing on (apply_region_drag_motion). A gutter press seats nothing and
     // arms nothing.
     selection.clear_selection();
-    const int64_t sample = place_playhead_at_click_column(
-        click_rel_x, was_playing, playhead_at_entry);
+    const int64_t sample = place_playhead_at_click_column(click_rel_x);
     if (sample < 0) return;
     arm_region_drag_at(click_rel_x, x, y);
 }
@@ -7078,7 +7055,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // next absolute event resolves it.
         // A MOTIONLESS press is THE DEFERRED CLICK — run_nav_click_act at the
         // press column, running THE PRESSED HALF'S OWN ACT: the upper half's
-        // placement (deselect / mode-land, playhead, reseek)
+        // placement (deselect / mode-land, play stop, playhead)
         // or the lower half's audition SCRUB (2026-08-13),
         // plus the EmptyLane double-click seed when the press was the marker
         // lane's empty stretch (release-side seeding, the TrimBar pattern: only
@@ -8511,7 +8488,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // audition the view never needed. Playback removal is whole: Space left the
 // keyboard allowlist in the same ruling, and the entry owner stops a session
 // that was already running. (The mode's deferred click act runs the shared
-// placement body, whose reseek arm is structurally dead in here.)
+// placement body, whose play stop is a no-op in here.)
 //
 // WHAT PASSES THROUGH, the whole list — the mode's navigation vocabulary, the
 // pointer half of what history_mode_key_blocked admits on the keyboard:
@@ -8533,8 +8510,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     press; a motionless release runs THE MODE'S LAND — clear the mode focus
 //     + selection (the deselect's mode analog, through the one pair clearer),
 //     seat the playhead at the press column (run_nav_click_act's history arm — the
-//     live recipe through the shared placement body, whose reseek cannot fire
-//     in the silent view); a crossed drag is the captured pan, which moves no
+//     live recipe through the shared placement body, whose play stop has
+//     nothing to stop in the silent view); a crossed drag is the captured pan, which moves no
 //     playhead and clears nothing. The ruler and the empty lane stretches
 //     take the same pending as PLACEMENT SURFACES (arm_placement_press,
 //     2026-09-25), so their motionless clicks land the playhead and a drag
@@ -8676,8 +8653,7 @@ bool GuiInputHandler::handle_history_mode_press(
             // the same shape the focus click emits on a move.
             viewport.invalidate_all();
         }
-        const int64_t sample = place_playhead_at_click_column(
-            x - area.x, playback.is_playing(), app.playhead_cursor_sample);
+        const int64_t sample = place_playhead_at_click_column(x - area.x);
         if (sample >= 0) arm_region_drag_at(x - area.x, x, y);
         return true;
     }
@@ -9596,10 +9572,10 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // DIRECT CURSOR WRITE, not move_playhead_to: a keep-visible edge-align
     // would scroll the viewport out from under a live gesture, and the span's
     // endpoints are painted against the viewport the drag started in.
-    // PLAYBACK IS UNTOUCHED per motion by THIS body: the press/begin's at-entry
-    // reseek-keeping-alive and the trim write's own first-accepted-change STOP
-    // are the whole playback story of this gesture, and a per-column reseek
-    // would re-cue the audio on every pixel.
+    // PLAYBACK IS UNTOUCHED per motion by THIS body: the press/begin's
+    // placement stop (place_playhead_at_click_column) and the trim write's own
+    // first-accepted-change STOP are the whole playback story of this gesture,
+    // so no motion event stops anything.
     // The waveform invalidate below repaints the cursor's
     // HEAD AND STEM with the ground — its rect runs from the window top
     // down through the waveform, so the ruler-lane head is inside it (the

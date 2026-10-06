@@ -11,7 +11,7 @@
 // (both stop edges and every gesture stop), the modal-open stop that names it,
 // toggle play/stop, the audition launch, the bounded audition the A/B sequence
 // plays (its sequencing is GuiAbAudition's, ab_audition.h — this cluster owns
-// the one play), the keep-alive reseek and the follow lamp's toggle.
+// the one play) and the follow lamp's toggle.
 // AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
 // (No GuiPlatform& member. The only direct platform reach this cluster ever had
@@ -126,6 +126,18 @@ struct GuiPlaybackLifecycle {
     //     song's end and never ran against the bounds being moved. The stop stays
     //     there because every trim write parks the playhead at the new trim start
     //     (input_trim.cpp), which is a cursor-moving command by any other name.
+    //   * A POINTER OR TOUCH PLAYHEAD PLACEMENT STOPS (architect 2026-10-06):
+    //     a press, click, drag or hold on the main view that places the
+    //     playhead (the waveform's upper-half click act, the ruler's and the
+    //     marker lane's empty-stretch placement clicks, the shift sweep's press
+    //     and the touch region hold's begin) is the one way to stop a play
+    //     without the Stop button, since no other waveform-area act stops it.
+    //     It pays once, at the placement body (place_playhead_at_click_column),
+    //     past the gutter refusal and ahead of the first write; a sweep's motion
+    //     then carries the cursor and stops nothing again. NOT in the class: the
+    //     audition scrub (the lower half's click act and the render player's
+    //     scrub — "play from here" restarts the audio itself), pans and zooms
+    //     (they move no playhead), and the car transport.
     // Every stop in the rule is REFUSAL-GATED (the standing 2026-07-28 rule): it
     // sits past its route's refusals and immediately ahead of that route's first
     // write, so a press that writes nothing stops nothing.
@@ -295,8 +307,7 @@ struct GuiPlaybackLifecycle {
     //
     // THE LOOP IS A PROPERTY OF THIS LAUNCH, NOT A LAMP: any GUI act that
     // stops (Space, Home / End, a marker touch, a modal open, the S/T flip)
-    // or relaunches (the placement click's reseek_keeping_alive, which calls
-    // play() once-through; a scrub) ends it, and every GUI launch plays once
+    // or relaunches (a scrub) ends it, and every GUI launch plays once
     // as it always has. The head unit's Previous / Next are Undo / Redo whole
     // (GuiCarTransport), so a restore stops the loop exactly as Ctrl+Z does
     // (the restore body's own stop) — and since 2026-09-18 a restore that RAN
@@ -367,20 +378,6 @@ struct GuiPlaybackLifecycle {
     // always arrives stopped — the tick's natural end or the act's own tab
     // switch precede every call).
     bool launch_bounded_audition(int64_t start, int64_t span);
-
-    // Reseek the active playback session to a new starting sample, keeping
-    // audio alive. The sample is expressed in the active playhead domain
-    // (source-domain in source view; target-domain in target view). Handles
-    // the target-view target_buffer translation internally. Caller is
-    // responsible for the entry-state check — playback alive AND the position
-    // actually moving (place_playhead_at_click_column, the ONE caller,
-    // compares the sample against the entry playhead); this function
-    // unconditionally reseeks when called. The scrub paths no longer come
-    // here — a scrub act stops and relaunches (scrub_act_at). Samples outside
-    // the active view's range — the song in source view, the target buffer's
-    // domain in target view — fall back to playback.stop(): keep-alive intent is
-    // well-defined for in-range positions only.
-    void reseek_keeping_alive(int64_t sample);
 
     // THE FOLLOW KEY'S ONE CHOKEPOINT (architect 2026-09-23), shared by bare
     // `f` and the icon-row button that synthesizes that chord — the lamp

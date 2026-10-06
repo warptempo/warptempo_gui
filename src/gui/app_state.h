@@ -837,7 +837,7 @@ struct UndoHistory {
 // arms the placement pending, never this drag — point_on_placement_lanes;
 // a shift press on a FLAG stays the range click) —
 // does its press-time work (deselect-all, playhead
-// placement, live-playback reseek — it never SELECTS a marker) and arms this
+// placement with the play's stop — it never SELECTS a marker) and arms this
 // drag; motion past the shared press-becomes-drag threshold
 // (drag_moved_threshold_px()) writes the trim from the press frame to the pointer
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
@@ -855,7 +855,7 @@ struct UndoHistory {
 // deselect-all through release, and the trim writes deselect again on their own
 // setter rule. THE DRAG CARRIES THE PLAYHEAD (architect 2026-07-30): each
 // changed column writes the cursor to the MOVING endpoint, with no viewport
-// scroll and no playback reseek per motion — and the RELEASE then parks it at
+// scroll and no playback stop per motion (the press stopped it) — and the RELEASE then parks it at
 // the committed trim start, every trim write's own tail.
 //
 // THREE ARMS REACH arm_region_drag_at (membership re-derived 2026-08-18): the
@@ -1245,7 +1245,7 @@ struct TrimDragState {
 //     CLICK ACT at the press column, forked on the pressed half
 //     (run_nav_click_act, input_pointer.cpp). UPPER half — everything the old
 //     press-time placement did: deselect-all (the mode-focus clear in the `h`
-//     view), playhead to the column, live-playback reseek,
+//     view), the play's stop (architect 2026-10-06), playhead to the column,
 //     follow override. LOWER half — ONE AUDITION SCRUB ACT at the column (stop
 //     a live session, then launch — the scrub always plays, 2026-09-21),
 //     which touches no selection, no
@@ -4690,14 +4690,10 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         which writes app.playhead_cursor_sample direct) do not — and the act
 //         needs both of those exemptions, its own two tab switches being
 //         restores and its own advance running strictly after them.
-//         THIS SUBSUMES the placement's live reseek, which was owner (4) until
-//         this ruling: reseek_keeping_alive re-launches through playback.play()
-//         directly and so reaches neither the stop body nor the launch body,
-//         but its ONE caller (place_playhead_at_click_column) runs
-//         move_playhead_to unconditionally first, so the movement owner already
-//         answers it — for a click that lands during a REST as well as one that
-//         lands during a play, which the reseek arm never could (it fires on
-//         `was_playing`).
+//         THE PLACEMENT CLICK'S STOP (architect 2026-10-06,
+//         place_playhead_at_click_column) runs ahead of move_playhead_to, so
+//         the movement owner answers a click that lands during a REST and the
+//         stop body answers one that lands during a play.
 //         THE ACT'S OWN `c` PASSES THROUGH THIS OWNER whenever a marker is
 //         focused (run_center_command lands on it), and through owner (1),
 //         the stop body, at every call (the command stops playback before it
@@ -4967,8 +4963,8 @@ struct AppState {
     //     touchpad scroll, the grab-pan), the pointer zooms, `0`,
     //     the undo restore's camera, the tab and view switches, a resize that
     //     moves the camera. A PLACEMENT CLICK DURING A PLAY DOES NOT SET IT:
-    //     the click moves the playhead, not the camera, and the play pages on
-    //     from where it was placed.
+    //     the click moves the playhead, not the camera, and it stops the play
+    //     (architect 2026-10-06), so there is no play left to suspend.
     //   * KEPT AS IT STOOD by follow's own page-in (follow_scroll_if_needed)
     //     and by the movement owners' keep-visible edge-align
     //     (reseat_playhead_to), each restoring it behind its clamp. Bare `c`
