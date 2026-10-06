@@ -396,11 +396,13 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // what the key DOES to the editor standing over it, the button convention);
 // Shift, Tab and Space Qt spells the same as this keyboard always did.
 // BACKSPACE IS "Backsp" (architect 2026-10-06), a spelling compact keyboards
-// print, and the cap keeps one spelling on every page. MEASURED in Nimbus
-// with the tracking against the symbol pages' one-standard-key box (about 54
-// Windows px at 400 %): "Backsp" is 39.4 Windows px, 7 clear each side;
-// the whole "Backspace" (58.7) overflows it, and "Backspc" (45.3) reads as a
-// typo.
+// print, and the cap keeps one spelling on every page. MEASURED with the
+// tracking against the symbol pages' one-standard-key box (about 54 Windows
+// px at 400 %): in Nimbus (the win95 set) "Backsp" is 39.4 Windows px, 7
+// clear each side, the whole "Backspace" (58.7) overflows it, and "Backspc"
+// (45.3) reads as a typo; in the live set's Tahoma "Backsp" is 33.6, 10
+// clear each side, and "Backspace" (50.0) would fit with 2 (measured
+// 2026-10-06).
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the roster's own CHECKED face,

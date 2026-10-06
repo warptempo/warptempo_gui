@@ -179,8 +179,9 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 namespace {
 
-// THE SHARED TEXT FACE is the one face owner's body face (gui_font.h):
-// Nimbus Sans at its vertically matched em at every scale (architect
+// THE SHARED TEXT FACE is the one face owner's body face (gui_font.h): the
+// live face set's body file — Tahoma in the ReactOS set, Nimbus Sans in the
+// win95 set — at its vertically matched em at every scale (architect
 // 2026-10-06). Every row names it through that owner, gui_font(GuiFace::Body)
 // at the live scale.
 
@@ -1084,15 +1085,16 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // LABEL and every time field (Qt's integer box rule fails the crops).
 //
 // THE CAP BAND IS THE BODY FACE'S RECORDED ONE AT EVERY SCALE (architect
-// 2026-10-05, gui_font.h): 9 rows times the scale, an unrounded double — 9
-// device rows at 100 %, 12.42 at 138 %, 24.75 at 275 %, 36 at 400 % —
-// Nimbus's em being the one that stands its "H" exactly that tall.
+// 2026-10-05, gui_font.h): the live set's cap times the scale, an unrounded
+// double — the ReactOS set's 8 rows: 8 device rows at 100 %, 11.04 at
+// 138 %, 22 at 275 %, 32 at 400 % (the win95 set's 9: 9, 12.42, 24.75, 36)
+// — the face's em being the one that stands its "H" exactly that tall.
 //
 // THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row CONTENT band (not
 // its 55-row lane, which carries a foot the label never centres in since
-// 2026-10-05) seats at row floor((52 + 24.75) / 2) = 38, the dropdown's
-// 47-row item at 35; the answer is independent of the box's y by
-// construction rather than by a tie rule.
+// 2026-10-05) seats at row floor((52 + 22) / 2) = 37, the dropdown's 47-row
+// item at 34; the answer is independent of the box's y by construction
+// rather than by a tie rule.
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
@@ -1127,11 +1129,12 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // monospace digits gave row 28 and row 63 — exactly where the old proxy plus
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
-// their own box: the 68-row field at 400 % puts the body's 36-row cap at
-// row 52 (sixteen rows above it, sixteen below — a 4-row line and 12 of
-// face each side, Windows' own 3 + 9 + 3 times four), the 47-row field at
-// 275 % its 24.75-row band at row 35, the 23-row field at 138 % its
-// 12.42-row band at row 17.
+// their own box: the 68-row field at 400 % puts the body's 32-row cap at
+// row 50 (eighteen rows above it, eighteen below — a 4-row line and 14 of
+// face each side), the 47-row field at 275 % its 22-row band at row 34, the
+// 23-row field at 138 % its 11.04-row band at row 17 (the win95 set's 9-row
+// cap: rows 52, 35 and 17, Windows' own 3 + 9 + 3 of face times the
+// scale).
 // AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop, which is what levels it with OK
 // and Cancel at every scale (the reasoning is at the modal's own site).
@@ -1353,7 +1356,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
-    // piece is open. THE BOLD FACE (gui_font.h: Nimbus Sans Bold) through
+    // piece is open. THE BOLD FACE (gui_font.h: the live set's bold —
+    // Tahoma Bold, or Nimbus Sans Bold in the win95 set) through
     // the shaping
     // chokepoint, its cap band centred in the lane, in the caption's text
     // role. TOO LONG FOR THE ROOM — the pen at x 20 to two px short of
@@ -2321,9 +2325,11 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // its row's content band (a half-row tie toward the top, the cap rule's own),
 // its run in THE BODY FACE (gui_font.h; no period field used a monospace
 // face, ACID's big clock included), its cap band centred in the field by
-// redesign_baseline: the recorded 9-row digits with 3 Windows px of face
-// above and below them. The digits are TABULAR — Nimbus's every digit 0.556
-// em less the one tracking (kGuiTrackingPx, gui_font.h, which every
+// redesign_baseline: the recorded digits with the field's face split about
+// them, a half-row tie toward the top — the ReactOS set's 8 rows with 3
+// Windows px of face above and 4 below at 100 % (the win95 set's 9 rows,
+// 3 and 3). The digits are TABULAR — Tahoma's every digit 0.545 em (Nimbus's
+// 0.556) less the one tracking (kGuiTrackingPx, gui_font.h, which every
 // glyph takes alike), with no kerning between the digits, the colon and the
 // point — so the colon and the point stand still as the time runs.
 //
@@ -2343,9 +2349,10 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // digits are ONE RUN, ` | ` and the timestamp, ending there, and the tab
 // letter is painted RIGHT-ALIGNED AGAINST THAT RUN'S START: switching tab
 // moves at most the letter's own left edge and nothing else — no letter's
-// kerning can reach the pipe, the two being shaped apart. (A and B are one
-// advance today, Nimbus's 0.667 em less the tracking, measured 2026-10-06;
-// the slot is the widest so a face where they differ changes nothing.)
+// kerning can reach the pipe, the two being shaped apart. (Tahoma's A is
+// 0.600 em and its B 0.589, Nimbus's both 0.667, less the tracking, measured
+// 2026-10-06; the slot is the widest, so where they differ the narrower
+// letter stands right-aligned in A's room and nothing else moves.)
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2557,18 +2564,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-09-29 evening). In device px, off the painted walk: 17·32 + 3·11 =
     // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, and the
     // clock's time field (kTimeFieldHeightPx, 2026-10-05) — its cell the
-    // widest `A | 00:00.000` in the body face, Nimbus's ~97.6 px at 138 %
-    // (2026-10-06, its 13 glyphs tracked, ceiled to 98) — spanning 7..113,
-    // the state line from one field pad past it (2026-10-06), 117, clipped
-    // one group space short of the block at 1321 (~1204 px); at the tablet's
+    // widest `A | 00:00.000` in the body face, Tahoma's ~91.5 px at 138 %
+    // (2026-10-06, its 13 glyphs tracked, ceiled to 92) — spanning 7..107,
+    // the state line from one field pad past it (2026-10-06), 111, clipped
+    // one group space short of the block at 1321 (~1210 px); at the tablet's
     // 275 % 17·63 + 3·22 = 1137, starting at 2304 − 22 − 1137 = 1145, the
-    // field (its cell ~194.6, ceiled to 195) spanning 14..225, the state line
-    // 233..1123 (~890 device px). THE ROW CARRIES NO
+    // field (its cell ~182.3, ceiled to 183) spanning 14..213, the state line
+    // 221..1123 (~902 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: the block reaches the field's
-    // right edge once the window falls below about 505 Windows px
-    // (8 − 3 + ~71 + 6 + 415 + 8). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
+    // right edge once the window falls below about 500 Windows px
+    // (8 − 3 + ~66 + 6 + 415 + 8). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
     // group space short of the block, so a long line is cut rather than
     // colliding.
     int right_block_x = seats.right_x;
@@ -3630,10 +3637,11 @@ constexpr double kRulerMinMinorPitchPx = 9.0;
 //     pad = max(0, scaled_px(4) - (nearbyint(ascent) - nearbyint(cap)))
 //
 // of the label's own face, THE SMALL FACE (gui_font(GuiFace::Small)), both
-// metrics its recorded ones (gui_font.h). Its cell is all cap — ascent 7,
-// cap 7, Small Fonts' digit — so the pad is scaled_px(4) itself at every
-// scale (2026-10-05); the rule stays general because the face's ascent-minus-cap
-// is the face's to change. The rule's one implementation is
+// metrics its recorded ones (gui_font.h). Its cell is all cap in either set
+// — ascent 6, cap 6, the ReactOS set's WordPad ruler digit; ascent 7, cap 7,
+// the win95 set's Small Fonts digit — so the pad is scaled_px(4) itself at
+// every scale (2026-10-05); the rule stays general because the face's
+// ascent-minus-cap is the face's to change. The rule's one implementation is
 // ruler_label_baseline_px below; the lane's height under the labels is
 // ruler_lane_h_px's arithmetic (render.h).
 constexpr double kRulerLabelCapTopPx   = 4.0;

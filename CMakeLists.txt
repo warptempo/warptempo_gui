@@ -134,8 +134,8 @@ set(WARPTEMPO_GUI_SOURCES
     # harfbuzz/cairo-ft link it implies.
     src/gui/text_shape.cpp
     # GUI-ONLY, like text_shape.cpp: the one face owner (gui_font.h), which
-    # builds the product's two Nimbus Sans faces through FreeType on both
-    # platforms.
+    # builds the product's four faces (Nimbus Sans and Tahoma, each in two
+    # weights) through FreeType on both platforms.
     src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the in-tree icon path renderer (an SVG d-string subset over
     # cairo paths, the product's own Windows 95 set) is a painting concern and exists only here,
@@ -431,8 +431,9 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         set(WARPTEMPO_GIT_LIBRARIES ${LIBGIT2_LIBRARIES})
     endif()
 
-    # THE PRODUCT'S TWO FONT FILES, COMPILED IN (architect 2026-10-02; Nimbus
-    # Sans 2026-10-06; the list is gui_font.h's kGuiFontFiles, the rule and the mechanism's reasons at
+    # THE PRODUCT'S FOUR FONT FILES, COMPILED IN (architect 2026-10-02; Nimbus
+    # Sans and Tahoma 2026-10-06; the list and its order are gui_font.h's
+    # kGuiFontFiles, the rule and the mechanism's reasons at
     # gui_font_embedded.cpp's head). Each file becomes `<name>.inc` in the
     # build tree — its bytes as a comma-separated list of hex literals, which
     # that source includes inside an array's braces. Written at CONFIGURE
@@ -440,7 +441,8 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # identical output untouched), and the files are configure dependencies,
     # so swapping a font re-runs the configure and rebuilds that one object.
     set(WARPTEMPO_FONT_INC_DIR ${CMAKE_BINARY_DIR}/fonts-generated)
-    foreach(font NimbusSans-Regular.otf NimbusSans-Bold.otf)
+    foreach(font NimbusSans-Regular.otf NimbusSans-Bold.otf tahoma.ttf
+                 tahomabd.ttf)
         set(font_src ${CMAKE_SOURCE_DIR}/fonts/${font})
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
                      ${font_src})

@@ -1,27 +1,51 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the two
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the four
 // files handed in once through gui_font_install_bundled — the Linux
 // executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become the two Nimbus Sans faces, and no site below the seam learns which
-// device handed the bytes in.
+// become four FT faces, the live set (gui_font.h's kGuiLiveFaceSet) picks
+// its three uses among them, and no site below the seam learns which device
+// handed the bytes in.
 //
-// THE FACES (Nimbus Sans Regular and Bold — OpenType CFF, which FreeType
-// opens and cairo-ft wraps exactly as it does a TrueType face) are FT faces
-// wrapped as cairo font faces — the FT-backed shape text_shape requires,
-// since it shapes on the scaled font's own FT face through hb-ft. THE
-// PRODUCT'S HINTER IS SLIGHT (architect 2026-10-02, kept with Nimbus
-// 2026-10-06): FreeType's LIGHT mode, which for a CFF face runs the face's
-// own hints through FreeType's CFF engine — a light hinter by declaration,
-// so the face is not handed to the autohinter as a TrueType face would be —
-// and grid-fits the VERTICAL direction alone, so the advances stay unhinted
-// (text_shape's come off hb-ft, which loads its own glyphs unhinted) and
-// both devices measure one set of widths. The vertical metrics are the
-// recorded constants anyway (gui_font.h), so the hinter only decides how the
-// ink sits on the baseline. ANTIALIASING AND SUBPIXEL ORDER STAY AT CAIRO'S
-// DEFAULTS on both devices: GRAY, no subpixel order (a tablet ROTATES, so a
-// subpixel order is not a face fact there). HINT METRICS stay at cairo's
-// default too, ON for the image surfaces both backends paint to.
+// THE FACES (Nimbus Sans Regular and Bold, OpenType CFF; Tahoma and Tahoma
+// Bold, TrueType) are FT faces wrapped as cairo font faces — the FT-backed
+// shape text_shape requires, since it shapes on the scaled font's own FT
+// face through hb-ft.
+//
+// OUTLINES ONLY, NEVER A STRIKE (architect 2026-10-06; gui_font.h's head).
+// Tahoma carries bitmap strikes (8–16 ppem, the bold 9–13), and FreeType
+// reads a strike on two roads, both closed here: (1) SIZE SELECTION — a
+// TrueType face with strikes answers a size request whose ppem ROUNDS to a
+// strike's by SELECTING the strike, scaling even the outline at the strike's
+// whole ppem (the laptop's 138 % asked Tahoma for 15.19 ppem and got 15.00,
+// its small face 10.95 and got 11, measured 2026-10-06 on FreeType 2.14), so
+// build_outline hides the strikes from FreeType (the face's fixed-sizes flag
+// cleared and its count zeroed, the file's bytes untouched) and every size
+// is the outline's own scale; (2) GLYPH LOADING — every load road passes
+// FT_LOAD_NO_BITMAP: cairo's, as the cairo face's load flags; hb-ft's, set
+// on each hb font (text_shape.cpp); the install's measurement loads take
+// FT_LOAD_NO_SCALE, which implies it. Nimbus carries no strikes, so neither
+// changes a pixel the win95 set paints.
+//
+// THE PRODUCT'S HINTER IS SLIGHT (architect 2026-10-02, kept 2026-10-06):
+// cairo's SLIGHT is FreeType's light target, which grid-fits the VERTICAL
+// direction alone. What runs depends on the outline format (measured
+// 2026-10-06, FreeType 2.14): for Nimbus's CFF, the face's own hints through
+// FreeType's CFF engine, a light hinter by declaration, every x within 1/64
+// px of the unhinted outline; for Tahoma's TrueType, the AUTOHINTER in its
+// light mode — FreeType's TrueType driver does not hint lightly, so it hands
+// the light target to the autohinter rather than to the bytecode
+// interpreter (the load equals a forced autohint's; Wine Tahoma's glyphs
+// carry no instructions anyway, maxp's maxSizeOfInstructions 0), and every x
+// equals the unhinted outline's exactly. Either way the advances stay
+// unhinted (text_shape's come off hb-ft, which loads its own glyphs
+// unhinted) and both devices measure one set of widths. The vertical
+// metrics are the recorded constants anyway (gui_font.h), so the hinter
+// only decides how the ink sits on the pixel rows. ANTIALIASING AND SUBPIXEL
+// ORDER STAY AT CAIRO'S DEFAULTS on both devices: GRAY, no subpixel order (a
+// tablet ROTATES, so a subpixel order is not a face fact there). HINT
+// METRICS stay at cairo's default too, ON for the image surfaces both
+// backends paint to.
 //
 // LIFETIME: the library, the faces and the font options are created once
 // and never destroyed — the process's exit reclaims them, and there is no
@@ -56,13 +80,14 @@ GuiSignAxis g_sign_axis[kGuiFaceCount] = {};
 
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
-OutlineFace           g_outline_regular;
-OutlineFace           g_outline_bold;
+// The four files' faces, in kGuiFontFiles' order.
+OutlineFace           g_outline[kGuiFontFileCount];
 
 std::size_t face_index(GuiFace face) { return static_cast<std::size_t>(face); }
 
+// The face a use is drawn from: the live set's file for it.
 const OutlineFace& outline_of(GuiFace face) {
-    return face == GuiFace::Bold ? g_outline_bold : g_outline_regular;
+    return g_outline[kGuiLiveFaceSet.file[face_index(face)]];
 }
 
 // Build one face from a copy of `bytes`. A failure leaves `out`
@@ -80,9 +105,15 @@ void build_outline(OutlineFace& out, const GuiFontBytes& bytes,
         out.ft = nullptr;
         return;
     }
+    // THE STRIKES HIDDEN FROM SIZE SELECTION (the head's road 1): with the
+    // flag clear, a size request never matches a strike, so the size is the
+    // outline's own scale and no strike is ever selected for a load.
+    out.ft->face_flags &= ~static_cast<FT_Long>(FT_FACE_FLAG_FIXED_SIZES);
+    out.ft->num_fixed_sizes = 0;
     out.max_advance_em = static_cast<double>(out.ft->max_advance_width) /
                          static_cast<double>(out.ft->units_per_EM);
-    out.face = cairo_ft_font_face_create_for_ft_face(out.ft, 0);
+    // Cairo's loads (the head's road 2).
+    out.face = cairo_ft_font_face_create_for_ft_face(out.ft, FT_LOAD_NO_BITMAP);
     if (cairo_font_face_status(out.face) != CAIRO_STATUS_SUCCESS) {
         std::fprintf(stderr, "warptempo_gui: bundled %s unusable\n", what);
         cairo_font_face_destroy(out.face);
@@ -91,8 +122,9 @@ void build_outline(OutlineFace& out, const GuiFontBytes& bytes,
 }
 
 // THE OUTLINE'S INK HEIGHT OF ONE GLYPH, per em: the unscaled, unhinted
-// outline's bounding box (FT_LOAD_NO_SCALE), so the answer is the design's
-// and no hinter's. 0 when the face lacks the glyph.
+// outline's bounding box (FT_LOAD_NO_SCALE, which implies FT_LOAD_NO_HINTING
+// and FT_LOAD_NO_BITMAP), so the answer is the design's and no hinter's or
+// strike's. 0 when the face lacks the glyph.
 double outline_ink_em(const OutlineFace& f, char32_t cp) {
     if (f.ft == nullptr) return 0.0;
     const FT_UInt gid = FT_Get_Char_Index(f.ft, cp);
@@ -151,11 +183,12 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     g_options = cairo_font_options_create();
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     bool ok = true;
-    build_outline(g_outline_regular, files[0], kGuiFontFiles[0]);
-    build_outline(g_outline_bold, files[1], kGuiFontFiles[1]);
-    // THE EMS MATCH THE RECORDED METRICS VERTICALLY (gui_font.h): the
-    // recorded cap over the outline's ink height of the same band — the "H"
-    // for the two text faces, the "0" for the digits.
+    // ALL FOUR FILES BUILD, whichever set is live (gui_font.h's head).
+    for (std::size_t i = 0; i < kGuiFontFileCount; ++i)
+        build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
+    // THE EMS MATCH THE LIVE SET'S RECORDED METRICS VERTICALLY (gui_font.h):
+    // the recorded cap over the outline's ink height of the same band — the
+    // "H" for the two text faces, the "0" for the digits.
     const char32_t band_glyph[kGuiFaceCount] = {U'H', U'H', U'0'};
     for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
         const double ink = outline_ink_em(outline_of(static_cast<GuiFace>(i)),
@@ -163,13 +196,16 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
         if (ink <= 0.0) { ok = false; continue; }
         g_face_em[i] =
             static_cast<double>(kGuiFaceMetrics[i].cap) / ink;
-        // THE FOUR MATH SIGNS' LIFTS ONTO THE HYPHEN'S AXIS (gui_font.h).
-        if (!measure_sign_axis(outline_of(static_cast<GuiFace>(i)),
+        // THE FOUR MATH SIGNS' LIFTS ONTO THE HYPHEN'S AXIS (gui_font.h),
+        // where the set lifts them; otherwise every lift stays 0.
+        if (kGuiLiveFaceSet.sign_lift &&
+            !measure_sign_axis(outline_of(static_cast<GuiFace>(i)),
                                g_sign_axis[i]))
             ok = false;
     }
-    return ok && outline_ft_backed(g_outline_regular) &&
-           outline_ft_backed(g_outline_bold);
+    for (const OutlineFace& f : g_outline)
+        if (!outline_ft_backed(f)) ok = false;
+    return ok;
 }
 
 double gui_face_em_px(GuiFace face) {

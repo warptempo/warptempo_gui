@@ -31,9 +31,15 @@ private:
     FT_Face              face_;
 };
 
+// THE HB FONT LOADS OUTLINES ONLY (gui_font_bundled.cpp's head, the strike
+// rule's glyph-load road): hb-ft's own default, unhinted, plus
+// FT_LOAD_NO_BITMAP, so no advance is ever read off an embedded strike.
 class HbFont {
 public:
-    explicit HbFont(FT_Face face) : font_(hb_ft_font_create(face, nullptr)) {}
+    explicit HbFont(FT_Face face) : font_(hb_ft_font_create(face, nullptr)) {
+        hb_ft_font_set_load_flags(
+            font_, FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP);
+    }
     ~HbFont() { hb_font_destroy(font_); }
     HbFont(const HbFont&) = delete;
     HbFont& operator=(const HbFont&) = delete;

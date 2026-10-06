@@ -705,10 +705,11 @@ inline std::string lowercase_initial(std::string_view s) {
 // 272, so the clamp still answers the floor for both and they still paint
 // at one width; the width rule was not part of either ruling and the floor
 // keeps the number it was measured at. NOR DID THE FACES' CHANGES: under
-// today's body face (Nimbus Sans at the recorded Windows metrics less the
-// tracking, gui_font.h; 2026-10-06) the pair shapes through the live
-// chokepoint to 128 and 125 Windows px at every gui_scale, which with the 40
-// px of chrome below is 168 and 165, both under the floor, which still
+// the body face at the recorded Windows metrics less the tracking
+// (gui_font.h; 2026-10-06) the pair shapes through the live chokepoint to
+// 118.7 and 116.1 Windows px in the live set's Tahoma (128 and 125 in the
+// win95 set's Nimbus) at every gui_scale, which with the 40 px of chrome
+// below is 159 and 156 (168 and 165), all under the floor, which still
 // answers for both (measured 2026-10-06). AUTHORED (WINDOWS) PX, so the
 // relation holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px.

@@ -716,8 +716,9 @@ inline constexpr int kPlayheadUnitPx = 6;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
 //     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's
 //     sixteenth note (icons::draw);
-//   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: Nimbus Sans
-//     Bold, the caption font being the body face in bold), its pen at x 20
+//   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: the live set's
+//     bold, Tahoma Bold — Nimbus Sans Bold in the win95 set — the caption
+//     font being the body face in bold), its pen at x 20
 //     (two px past the icon) and its cap band centred in the lane (redesign_baseline), in
 //     the caption's text role, cut before the buttons with Windows' "..."
 //     (paint_caption_row owns the words and the cut);
@@ -1053,15 +1054,18 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // the marker lane's top (below). ONE HELPER seats the labels for both
 // readers — the painter's baseline and this height (ruler_label_baseline_px,
 // paint_handler.cpp) — so the two cannot disagree. The face is THE SMALL
-// FACE (gui_font.h, architect 2026-10-05), whose recorded 7-row cell — Small
-// Fonts' digit — is all cap (ascent 7, cap 7, descent 0), times the scale at
-// every scale: 4 + 7 + 7 = 18 Windows px at 100 %;
-//   400 % (k = 4): pad 16, baseline row 44, cap ink rows 16..43: lane
-//     44 + 28 = 72.
-//   275 % (the tablet): pad 11, ascent 19.25 -> 19, baseline row 30, cap
-//     ink rows 11..29: lane 30 + 19 = 49.
-//   138 % (the laptop): pad 6, ascent 9.66 -> 10, baseline row 16, ink
-//     rows 6..15: lane 16 + 10 = 26.
+// FACE (gui_font.h, architect 2026-10-05), whose recorded cell is all cap —
+// the live ReactOS set's 6-row digit, WordPad's ruler's (ascent 6, cap 6,
+// descent 0; the win95 set's is Small Fonts' 7) — times the scale at every
+// scale: 4 + 6 + 7 = 17 Windows px at 100 %;
+//   400 % (k = 4): pad 16, ascent 24, baseline row 40, cap ink rows
+//     16..39: lane 40 + 28 = 68.
+//   275 % (the tablet): pad 11, ascent 16.5 -> 16 (the tie to even),
+//     baseline row 27, cap ink rows 11..26: lane 27 + 19 = 46.
+//   138 % (the laptop): pad 6, ascent 8.28 -> 8, baseline row 14, ink
+//     rows 6..13: lane 14 + 10 = 24.
+// (The win95 set's 7-row digit: 18 Windows px at 100 %, lanes 72, 49 and
+// 26.)
 // The major ticks' rise above the marker lane is the painter's own and does
 // not enter the lane.
 //
@@ -1113,15 +1117,16 @@ int ruler_lane_h_px();
 //     box  = edge + face + ascent + descent + face + edge
 //     lane = scaled_px(kMarkerLaneAirPx) + box
 //
-// THE CELL IS MS SANS SERIF 8'S WHOLE 13 (ascent 11 + descent 2; gui_font.h's
-// recorded metrics, read in marker_lane_rows, paint_handler.cpp), not the
-// label's ink (architect 2026-10-05) — THE FLAG IS 1 + 1 + 11 + 2 + 1 + 1 =
-// 17 WINDOWS PX, the period's one-line field (kTimeFieldHeightPx, the list
-// row), so the label's caps (9 rows) get 3 Windows px above them (the cell's
-// top row, the row "^" climbs into, and the face) and 3 below (the descent
-// and the face), centred. The label sits on the cell's baseline at every
-// scale, and a Nimbus glyph poking past the cell or the box is accepted
-// (gui_font.h). The
+// THE CELL IS THE BODY FACE'S WHOLE 13 (ascent 11 + descent 2, Tahoma 8's
+// cell and MS Sans Serif 8's alike; gui_font.h's recorded metrics, read in
+// marker_lane_rows, paint_handler.cpp), not the label's ink (architect
+// 2026-10-05) — THE FLAG IS 1 + 1 + 11 + 2 + 1 + 1 = 17 WINDOWS PX, the
+// period's one-line field (kTimeFieldHeightPx, the list row), so the
+// label's caps — 8 rows in the live ReactOS set — get 4 Windows px above
+// them (the cell's top rows, the row "^" climbs into, and the face) and 3
+// below (the descent and the face); the win95 set's 9-row caps get 3 and 3,
+// centred. The label sits on the cell's baseline at every scale, and a
+// glyph poking past the cell or the box is accepted (gui_font.h). The
 // ascent and the descent are each rounded on their own (scaled_px), the box
 // the sum of its rounded parts. Every row the box gains or saves is THE
 // WAVEFORM'S (his ruling): the lane stack above it moves and the waveform's
@@ -1291,8 +1296,9 @@ inline int bottom_row_h_px() {
 
 // (THE TEXT SIZES ARE THE FACES' OWN — architect 2026-10-05. The shared
 // 13-Windows-px size, the ruler labels' 10 and the tooltip hint line's 11
-// retired: each face's size is the em at which Nimbus matches its recorded
-// cell vertically — the body's 13-px cell, the ruler's 7-px (gui_font.h). A
+// retired: each face's size is the em at which the live set's file matches
+// its recorded cell vertically — the body's 13-px cell, the ruler's digit
+// (gui_font.h). A
 // text surface names its face, gui_font(face), and reads its vertical
 // metrics off the recorded constants.)
 

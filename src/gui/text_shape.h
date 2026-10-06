@@ -18,10 +18,11 @@
 // (gui_font.h), and the run carries it, so show_shaped_run paints with
 // exactly the face that measured it — no caller can hand the painter a
 // different one. ONE ROAD AT EVERY SCALE (architect 2026-10-06): the whole
-// run shaped by HarfBuzz on Nimbus's scaled font (gui_outline_scaled_font),
-// on that font's OWN FreeType face (hb-ft), full GPOS/GSUB, its own advances
-// less the tracking (kGuiTrackingPx, gui_font.h), the four math signs
-// lifted onto the hyphen's axis (gui_sign_axis, gui_font.h) — and painted
+// run shaped by HarfBuzz on the face's scaled font (gui_outline_scaled_font:
+// the live face set's file for the use, outlines only), on that font's OWN
+// FreeType face (hb-ft), full GPOS/GSUB, its own advances less the tracking
+// (kGuiTrackingPx, gui_font.h), the four math signs set onto the hyphen's
+// axis (gui_sign_axis, gui_font.h) — and painted
 // through cairo_show_glyphs on the same scaled font. The run is seated on a
 // baseline the caller hands in, which its seat derived from the face's
 // recorded vertical metrics (gui_face_metrics).
@@ -34,7 +35,7 @@
 //     (text_editor::replace_selection is the one incoming boundary) or
 //     verbatim from a hand-edited file. A malformed byte lays out as U+FFFD's
 //     glyph for that one byte; HarfBuzz consumes arbitrary bytes safely.
-//   - NO FALLBACK FACE. A codepoint Nimbus does not cover either
+//   - NO FALLBACK FACE. A codepoint the face does not cover either
 //     shapes to .notdef and paints as the empty box — accepted, in the same
 //     class as the no-bidi exclusion below.
 //   - The current cairo PATH is preserved: cairo_show_glyphs neither reads
@@ -53,7 +54,7 @@
 namespace text_shape {
 
 // One positioned glyph of a shaped run, in pixels, relative to the run's pen
-// position. `glyph_index` is a Nimbus GLYPH ID (post-substitution), never a
+// position. `glyph_index` is the face's GLYPH ID (post-substitution), never a
 // character codepoint.
 //
 // `cluster` is HarfBuzz's own cluster value: the BYTE INDEX into the shaped
@@ -80,7 +81,7 @@ struct ShapedRun {
     double                   width_px = 0.0;
 };
 
-// Lay `utf8` out on `font`: HarfBuzz on Nimbus less the tracking (LTR,
+// Lay `utf8` out on `font`: HarfBuzz on its face less the tracking (LTR,
 // script and language guessed from the text, full GPOS/GSUB). An empty
 // string shapes to an empty run of width 0.
 ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
