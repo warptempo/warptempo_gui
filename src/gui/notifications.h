@@ -4,7 +4,7 @@
 // RULING WHOLE — the split, the two classes, the inventory of what is and is
 // not notified, and the words on a card). The product's surface for EVENTS:
 // something happened that answers an act, or that the user was not watching.
-// A small card stacked top-right under row 1's view radios, newest on
+// A small card stacked top-right in the icon row's toolbar band, newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, a class glyph at the left naming the class
 // (icons::Icon::DialogInformation / DialogError), and ONE PAD around both
@@ -808,10 +808,12 @@ int notification_pad_px();
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
-// right-aligned at kPanelPadPx from the window's right edge, from that same
-// kPanelPadPx of air below row 1 (architect 2026-08-29: the two margins are
-// one number; the right one was the icon row's 8 px pad for the cards' first
-// day) DOWN TO THE SAME AIR ABOVE THE BOTTOM ROW'S LANE.
+// right-aligned at kPanelPadPx from the window's right edge (architect
+// 2026-08-29; the right one was the icon row's 8 px pad for the cards' first
+// day), from the foot of the icon row's TOP ETCHED PAIR, so a one-line card
+// fills the toolbar band between the two pairs (architect's glass
+// 2026-10-06, the reasoning at the definition), DOWN TO THE SAME kPanelPadPx
+// OF AIR ABOVE THE BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
 // was "three cards of one line each", which a wrapped card outgrows, and no
@@ -826,8 +828,8 @@ int notification_card_max_w_px(const AppState& a);
 // Every change to the stack damages this rect whole (the rect
 // Viewport::invalidate_notification_stack takes): the painted cards lie
 // inside the room by construction, so it erases what stood and admits what
-// comes without shaping a single glyph off the paint clock. A window with no room between row 1 and the
-// bottom row answers a zero height and paints nothing — a window with no
+// comes without shaping a single glyph off the paint clock. A window with no
+// room between the icon row's top pair and the bottom row answers a zero height and paints nothing — a window with no
 // waveform at all, in the contrived class.
 GuiRect notification_stack_bound(const AppState& a);
 
@@ -844,10 +846,11 @@ GuiRect notification_stack_bound(const AppState& a);
 // painter's clip is what answers that, exactly as it answers a stack of
 // criticals that will not be bumped.
 //
-// A pure function of the window and the scale, like the room. At the
-// laptop's 1080 px window and 138 % it is 22 (a 1007 px room over 44 + 1, the
-// card's own gap, kNotificationGapPx); on the tablet at 275 % it is 14 (1291
-// over 88 + 3), its window being the whole 1440-tall
+// A pure function of the window and the scale, like the room. Re-derived
+// 2026-10-06 with the stack seated on the icon row's top etched pair: in a
+// 1920 x 1080 window at 138 % it is 25 (a 986 px room over 38 + 1, the
+// card's own gap, kNotificationGapPx); on the tablet at 400 % it is 10 (1160
+// over 112 + 4), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are
 // recorded at main.cpp's vertical-stack owner). Every window this product
 // runs in holds more cards than the architect will ever stack.

@@ -989,15 +989,16 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
 
 namespace {
 
-// ONE ARROW BUTTON (the rule at kTrimArrowButtonPx and kTrimArrowGlyphRows,
-// render.h): the ground under the plain raised edge, then the scroll arrow's
-// four columns as integer rectangles in the theme's LABEL (a chrome glyph on a
-// chrome face, architect 2026-10-03), centred in device px (an odd difference
-// flooring toward the top-left), its tip LEFT on the begin button and RIGHT on
-// the end button. PRESSED (a single-bound grab holds it, render_trim_flags'
-// declaration): the ground under one Shadow ring instead of the raised edge,
-// the glyph one Windows px right and down. The caller's clip (the lane's) cuts
-// a button that overruns the lane.
+// ONE ARROW BUTTON (the rule at kTrimArrowButtonPx and kTrimArrowGlyphWPx,
+// render.h): the ground under the plain raised edge, then the scroll arrow
+// as ONE FILLED TRIANGLE in the theme's LABEL (a chrome glyph on a chrome
+// face, architect 2026-10-03; a triangle since 2026-10-06), antialiased,
+// centred in device px (an odd difference flooring toward the top-left), its
+// tip LEFT on the begin button and RIGHT on the end button. PRESSED (a
+// single-bound grab holds it, render_trim_flags' declaration): the ground
+// under one Shadow ring instead of the raised edge, the glyph one Windows px
+// right and down. The caller's clip (the lane's) cuts a button that overruns
+// the lane.
 void paint_trim_arrow_button(cairo_t* cr, const GuiRect& b, bool points_left,
                              bool pressed) {
     paint_cell_rect(cr, b, palette().ground);
@@ -1006,20 +1007,23 @@ void paint_trim_arrow_button(cairo_t* cr, const GuiRect& b, bool points_left,
     else
         paint_relief_plain_raised(cr, b);
     const int u = scaled_px(1, 1);
-    const int glyph_w = kTrimArrowGlyphCols * u;
-    const int glyph_h = kTrimArrowGlyphRows[kTrimArrowGlyphCols - 1] * u;
+    const int glyph_w = kTrimArrowGlyphWPx * u;
+    const int glyph_h = kTrimArrowGlyphHPx * u;
     const int push = pressed ? relief_line_px() : 0;
-    const int gx = b.x + (b.w - glyph_w) / 2 + push;
-    const int gy = b.y + (b.h - glyph_h) / 2 + push;
-    for (int i = 0; i < kTrimArrowGlyphCols; ++i) {   // i = 0 is the tip
-        const int rows = kTrimArrowGlyphRows[i];
-        const int slot = points_left ? i : kTrimArrowGlyphCols - 1 - i;
-        const int top_rows =
-            (kTrimArrowGlyphRows[kTrimArrowGlyphCols - 1] - rows) / 2;
-        paint_cell_rect(cr, GuiRect{gx + slot * u, gy + top_rows * u, u,
-                                    rows * u},
-                        palette().label);
-    }
+    const double gx = b.x + (b.w - glyph_w) / 2 + push;
+    const double gy = b.y + (b.h - glyph_h) / 2 + push;
+    const double tip_x  = points_left ? gx : gx + glyph_w;
+    const double base_x = points_left ? gx + glyph_w : gx;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    cairo_move_to(cr, tip_x, gy + glyph_h / 2.0);
+    cairo_line_to(cr, base_x, gy);
+    cairo_line_to(cr, base_x, gy + glyph_h);
+    cairo_close_path(cr);
+    set_palette_source(cr, palette().label);
+    cairo_fill(cr);
+    cairo_restore(cr);
 }
 
 } // namespace

@@ -1148,30 +1148,43 @@ double line_baseline(const GuiFont& font, double line_y) {
 // measured there; the Restore pair, which that maximisable window does not
 // show, is Marlett's two overlapping boxes, the back one up and right).
 // Every glyph sits in ONE 9 x 9 Windows-px CELL, the character cell Windows
-// centres in the 16 x 14 button (at (3, 2) at 100 %), of unit u =
-// scaled_px(1, 1) per Windows px, the cell CENTRED IN THE BUTTON in device
-// px, an odd difference flooring toward the top-left — the trim lane's
-// scroll-arrow idiom (kTrimArrowGlyphRows) — in the theme's LABEL, the
-// emboss when disabled, one relief line right and down while pushed
-// (paint_button_box's shift). THE GLYPHS ARE CHROME, NOT THE ICON SET'S
-// BITMAPS: Windows drew them in the button text, so they wear the label role
-// and never a drawing's literal inks.
+// places in the 16 x 14 button at (3, 2), of unit u = scaled_px(1, 1) per
+// Windows px, in the theme's LABEL, the emboss when disabled, one relief
+// line right and down while pushed (paint_button_box's shift). THE GLYPHS
+// ARE CHROME, NOT THE ICON SET'S BITMAPS: Windows drew them in the button
+// text, so they wear the label role and never a drawing's literal inks.
+//
+// THE CELL STANDS ON ITS OWN UNIT GRID (architect's glass 2026-10-06, the
+// disabled Restore at 400 %): centred in the button in device px, the offset
+// FLOORED TO A WHOLE UNIT u, so at every whole-multiple gui_scale it lands on
+// Windows' own (3, 2) — Windows centres the 9-cell in its 16 x 14 button and
+// floors the odd difference in ITS pixels, which device-px centring alone
+// did not (at 400 % it put the cell at (3.5, 2.5) Windows px, and the
+// disabled emboss's Hilight copy then covered the top half of the bevel's
+// Shadow line). Checked pixel for pixel against Chicago95's xfwm4 caption
+// buttons (maximize-toggled-*.xpm, close-*.xpm), whose glyphs are Marlett's.
 //
 // MINIMISE, MAXIMISE AND RESTORE ARE RECTANGLES and stay authored cells, a
 // list of rectangles in the cell's Windows px painted as INTEGER RECTANGLES
 // of u: they are rectangles at every scale, and a vector would draw the same
 // pixels.
 //
-// CLOSE IS THE ICON SET'S WindowClose DRAWING (architect 2026-10-06, the
-// whole chrome made scalable: "the X is part of the chrome"): Marlett's close
-// X as a vector, its diagonals smooth at any scale as Windows draws Marlett at
-// any DPI, worn as chrome (icons::draw_in_ink in the label, its disabled
-// face icons::draw_engraved_in_box — the roster's mask road). ITS INK IS
-// FITTED TO THE MARLETT CELL'S INK: the drawing's own ink box
-// (icons::ink_box, 11 x 9 units) mapped onto the extent the reference's X
-// inks, 8 x 7 Windows px at (1, 1) of the cell (kCaptionCloseInk) — the same
-// box and centre at every scale, each axis on its own scale (8/11 across,
-// 7/9 down; the two differ by 7 %).
+// CLOSE IS TWO BARS (architect's glass 2026-10-06: "off-centre, noticeably,
+// and too thin"): Marlett's close X as a vector, smooth at any scale as
+// Windows draws Marlett at any DPI, painted here as TWO FILLED BARS AT 45
+// DEGREES, kCaptionCloseStrokePx = 2 Windows px thick with SQUARE ENDS, the
+// pair's bounding square 7 x 7 Windows px CENTRED ON THE REFERENCE'S INK
+// CENTRE, (5, 4.5) of the cell: Marlett's X inks 8 x 7 at (1, 1) of the cell
+// (kCaptionCloseInk; Chicago95's close-active.xpm inks the same 8 x 7 at
+// (4, 3) of its 16 x 14 button, centre (8, 6.5)), and a 45-degree pair with
+// square ends is square, so it takes the box's height and stands centred in
+// its width — the staircase's two outer half-columns are the pixel glyph's
+// own corners. ONE PATH, ONE FILL (the bars' crossing is covered once, so its
+// antialiased edges never double), antialiased like the icon set's diagonals.
+// The icon set's WindowClose drawing (the render player's Close) was worn
+// here before: its two-unit bars are one Windows px of cross-section at the
+// cell's 8 x 7, and fitting its 11 x 9 ink cannot give both the stroke and
+// the extent.
 struct CaptionGlyphRect {
     int x, y, w, h;
 };
@@ -1186,6 +1199,7 @@ constexpr CaptionGlyphRect kCaptionRestoreGlyph[] = {
     // the front window, whole
     {0, 3, 6, 2}, {0, 5, 1, 3}, {5, 5, 1, 3}, {0, 8, 6, 1}};
 constexpr CaptionGlyphRect kCaptionCloseInk = {1, 1, 8, 7};
+constexpr double kCaptionCloseStrokePx = 2.0;
 
 void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
                          int gx, int gy, int u, GuiColor ink) {
@@ -1195,31 +1209,63 @@ void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
                         ink);
 }
 
+// The Close X (the rule above) in the cell at (gx, gy), unit u, in `ink`:
+// each bar the rectangle touching the bounding square's four edges, its
+// corners on the edges `d` = stroke / sqrt(2) from the two corners its axis
+// runs between — so its ends are square to the bar and it is `stroke` thick.
+void paint_caption_close_x(cairo_t* cr, double gx, double gy, double u,
+                           GuiColor ink) {
+    const double cx = kCaptionCloseInk.x + kCaptionCloseInk.w / 2.0;
+    const double cy = kCaptionCloseInk.y + kCaptionCloseInk.h / 2.0;
+    const double h  = std::min(kCaptionCloseInk.w, kCaptionCloseInk.h) / 2.0;
+    const double d  = kCaptionCloseStrokePx / std::sqrt(2.0);
+    const auto at = [&](double x, double y) {
+        cairo_line_to(cr, gx + x * u, gy + y * u);
+    };
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    // The falling bar clockwise, then the rising one (its mirror) walked
+    // backwards so it is clockwise too: under the winding rule the crossing
+    // then counts twice and stays ink, never a hole.
+    cairo_new_sub_path(cr);
+    at(cx - (h - d), cy - h);
+    at(cx + h,       cy + h - d);
+    at(cx + (h - d), cy + h);
+    at(cx - h,       cy - h + d);
+    cairo_close_path(cr);
+    cairo_new_sub_path(cr);
+    at(cx + h,       cy - h + d);
+    at(cx - (h - d), cy + h);
+    at(cx - h,       cy + h - d);
+    at(cx + (h - d), cy - h);
+    cairo_close_path(cr);
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+    set_palette_source(cr, ink);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
 // One caption button's glyph on its box `b` (already painted,
-// paint_button_box; `shift` its answer): the cell centred, the glyph by `id`
-// (Restore for Maximise while `maximized`), in the label or embossed.
+// paint_button_box; `shift` its answer): the cell on its unit grid, the
+// glyph by `id` (Restore for Maximise while `maximized`), in the label or
+// embossed.
 void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
                                 GuiCaptionButton id, bool maximized,
                                 bool enabled, int shift) {
     const GuiPalette& pal = palette();
     const int u    = scaled_px(1, 1);
     const int cell = kCaptionGlyphCellPx * u;
-    const int gx   = b.x + (b.w - cell) / 2 + shift;
-    const int gy   = b.y + (b.h - cell) / 2 + shift;
+    const int gx   = b.x + (b.w - cell) / 2 / u * u + shift;
+    const int gy   = b.y + (b.h - cell) / 2 / u * u + shift;
     const int off  = relief_line_px();
+    // THE DISABLED EMBOSS (render.h's palette block): Hilight one Windows px
+    // right and down, Shadow at the glyph's place.
     if (id == GuiCaptionButton::Close) {
-        static const icons::InkBox ink = icons::ink_box(icons::Icon::WindowClose);
-        const double sx = kCaptionCloseInk.w * u / (ink.x1 - ink.x0);
-        const double sy = kCaptionCloseInk.h * u / (ink.y1 - ink.y0);
-        const double x  = gx + kCaptionCloseInk.x * u - ink.x0 * sx;
-        const double y  = gy + kCaptionCloseInk.y * u - ink.y0 * sy;
-        const double w  = 16.0 * sx, h = 16.0 * sy;
-        if (enabled)
-            icons::draw_in_ink(cr, icons::Icon::WindowClose, x, y, w, h,
-                               pal.label);
-        else
-            icons::draw_engraved_in_box(cr, icons::Icon::WindowClose, x, y, w,
-                                        h, off);
+        if (!enabled)
+            paint_caption_close_x(cr, gx + off, gy + off, u, pal.hilight);
+        paint_caption_close_x(cr, gx, gy, u,
+                              enabled ? pal.label : pal.shadow);
         return;
     }
     const std::span<const CaptionGlyphRect> glyph =
@@ -1227,14 +1273,10 @@ void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
                                                kCaptionMinimizeGlyph)
         : maximized ? std::span<const CaptionGlyphRect>(kCaptionRestoreGlyph)
                     : std::span<const CaptionGlyphRect>(kCaptionMaximizeGlyph);
-    if (enabled) {
-        paint_caption_glyph(cr, glyph, gx, gy, u, pal.label);
-    } else {
-        // THE DISABLED EMBOSS (render.h's palette block): Hilight one
-        // Windows px right and down, Shadow at the glyph's place.
+    if (!enabled)
         paint_caption_glyph(cr, glyph, gx + off, gy + off, u, pal.hilight);
-        paint_caption_glyph(cr, glyph, gx, gy, u, pal.shadow);
-    }
+    paint_caption_glyph(cr, glyph, gx, gy, u,
+                        enabled ? pal.label : pal.shadow);
 }
 
 // The three buttons' rects in a caption lane, left to right (render.h's
@@ -3035,10 +3077,10 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
 // classes, the hit rule and the inventory at notifications.h). THE WHOLE
 // STACK — AppState::Notifications::cards, newest first, every one of them on
-// screen since the queue retired 2026-08-30 — painted top-right under ROW 1,
-// right-aligned
-// at kPanelPadPx from the window's edge and the same kPanelPadPx below row 1
-// (the stack's margins are one number, notification_stack_bound), growing
+// screen since the queue retired 2026-08-30 — painted top-right, right-aligned
+// at kPanelPadPx from the window's edge, its first card filling the icon
+// row's toolbar band between the two etched pairs (the margins at
+// notification_stack_bound), growing
 // DOWN over whatever lies there (the icon row's empty right, the thin lanes,
 // the waveform), the cards kNotificationGapPx apart (the card's own 1 px
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
@@ -3889,8 +3931,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05, the
     // glyph and its provenance at kPlayheadHeadGlyph, render.h), a FIXED 9 x 8
     // Windows-px bitmap — not a per-row half-width table any more — painted as
-    // ALIASED INTEGER RECTANGLES, one per glyph cell, the trim arrow glyph's
-    // own precedent: hard edges at every scale, which a path fill would not.
+    // ALIASED INTEGER RECTANGLES, one per glyph cell: a bevelled chip in
+    // three roles whose every edge lies on the unit, hard at every scale.
     //
     // TIP-DOWN ONE WINDOWS PX INTO THE MARKER LANE (architect 2026-10-05,
     // moved down from flush on the ruler lane's own bottom row, architect

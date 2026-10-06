@@ -78,7 +78,7 @@ def read_constants():
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagFacePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
                  'kPlayheadHeadRows', 'kPlayheadHeadCols',
-                 'kPlayheadUnitPx', 'kTrimArrowGlyphCols'):
+                 'kPlayheadUnitPx', 'kTrimArrowGlyphWPx', 'kTrimArrowGlyphHPx'):
         K[name] = _num(rh, 'render.h', name); own[name] = 'render.h'
     for name in ('kMenuLabelPadPx', 'kStatusPanelPadPx', 'kTimeFieldHeightPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
                  'kRulerMinorsPerStep', 'kRulerMinMinorPitchPx', 'kModalButtonGapPx', 'kModalFieldHeightPx',
@@ -95,7 +95,6 @@ def read_constants():
     if not m: raise SystemExit('tablet.py: the glyph kPlayheadHeadGlyph not found in src/gui/render.h')
     K['kPlayheadHeadGlyph'] = [sum(c != '_' for c in re.findall(r"'(.)'", r)) for r in re.findall(r'\{([^}]*)\}', m.group(1))]
     own['kPlayheadHeadGlyph'] = 'render.h'
-    K['kTrimArrowGlyphRows'] = _array(rh, 'render.h', 'kTrimArrowGlyphRows'); own['kTrimArrowGlyphRows'] = 'render.h'
     K['kRulerLadderMs'] = _array(ph, 'paint_handler.cpp', 'kRulerLadderMs'); own['kRulerLadderMs'] = 'paint_handler.cpp'
     # the two inline lengths: the row pad (icon_row_pad_x, paint_handler.h) and the ruler label's air past its tick's
     # etched pair (paint_ruler_row: label_dx = waveform_line_px() + scaled_px(2))
@@ -175,9 +174,9 @@ def build():
     trim_h = row('trim lane', 'lane', K['kTrimLaneHeightPx'], px(K['kTrimLaneHeightPx'], 3), 'render.h trim_lane_h_px', 44)
     btn = row('trim lane', 'arrow button (square)', K['kTrimArrowButtonPx'], px(K['kTrimArrowButtonPx'], 3),
               'render.h trim_arrow_button_w_px', 44)
-    u = px(1, 1); rows_ = K['kTrimArrowGlyphRows']
-    gw, gh = K['kTrimArrowGlyphCols'] * u, rows_[-1] * u
-    row('trim lane', 'arrow glyph (4u x 7u, u = scaled_px(1))', '4 x 7', f'{gw} x {gh}', 'render.h kTrimArrowGlyphRows', '12 x 21')
+    u = px(1, 1)
+    gw, gh = K['kTrimArrowGlyphWPx'] * u, K['kTrimArrowGlyphHPx'] * u
+    row('trim lane', 'arrow glyph (4u x 7u, u = scaled_px(1))', '4 x 7', f'{gw} x {gh}', 'render.h kTrimArrowGlyphWPx', '12 x 21')
     row('trim lane', 'arrow glyph offset in the button ((b - glyph) // 2)', '-', f'+{(btn - gw) // 2}, +{(btn - gh) // 2}',
         'render.cpp paint_trim_arrow_button', '+16, +11')
     # the ruler: the label LINE seated so its cap top lands kRulerLabelCapTopPx under the lane's top

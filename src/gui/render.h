@@ -721,8 +721,9 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     family, the SOFT edges; the reference's white outer line and 3DLight
 //     inner one agree), its glyph Windows' Marlett character in the label
 //     (paint_handler.cpp's caption glyph block: Minimise, Maximise and
-//     Restore authored cells, Close the icon set's WindowClose X), sunken
-//     and shifted one px while pressed.
+//     Restore authored cells, Close two 45-degree bars, the cell on its
+//     unit grid at Windows' (3, 2)), sunken and shifted one px while
+//     pressed.
 // Every length is a composite of its rounded parts (scaled_px's rule): 50
 // device rows at the tablet's 275 %, 25 at the laptop's 138 %.
 inline constexpr int kCaptionHeightPx      = 18;
@@ -1613,20 +1614,23 @@ inline constexpr int kTrimArrowButtonPx = 16;
 inline int trim_arrow_button_w_px() {
     return scaled_px(kTrimArrowButtonPx, 3);
 }
-// THE ARROW GLYPH, Windows' scroll arrow: FOUR COLUMNS whose heights, from
-// the tip, are 1, 3, 5 and 7 Windows rows, each centred on the glyph's middle
-// row — a 4 x 7 triangle. Painted as INTEGER RECTANGLES, one per column
-// (aliased by construction: never a rescaled icon, never a path fill — the
-// playhead head's glyph below follows the same construction), each column
-// one unit u = scaled_px(1, 1) wide and its rows u tall apiece — a composite
-// of rounded parts — so the glyph is 4u x 7u device px; it is CENTRED IN THE
-// BUTTON in device px, an odd difference flooring toward the top-left (the
-// extra pixel right of or below the glyph). At 275 % (u 3): 12 x 21 in the
-// 44 x 44 case, at (+16, +11), the columns 3 x 3, 3 x 9, 3 x 15 and 3 x 21
-// with tops +20, +17, +14 and +11; at 138 % (u 1): 4 x 7 in 22 x 22 at
-// (+9, +7).
-inline constexpr int kTrimArrowGlyphCols = 4;
-inline constexpr int kTrimArrowGlyphRows[kTrimArrowGlyphCols] = {1, 3, 5, 7};
+// THE ARROW GLYPH, Windows' scroll arrow: its pixel form is four columns
+// 1, 3, 5 and 7 Windows rows tall from the tip, each centred on the middle
+// row — a 4 x 7 triangle. THE CHROME IS SCALABLE (architect 2026-10-06, his
+// glass: "still the pixelated icon versions"), so it is drawn as ONE FILLED
+// TRIANGLE over that outline, smooth at any scale as Marlett's scroll arrows
+// are at high DPI: the BASE the far column's outer edge, the full 7 rows
+// tall, the TIP the tip column's outer edge at the middle row's centre —
+// kTrimArrowGlyphWPx x kTrimArrowGlyphHPx Windows px, the pixel glyph's own
+// width and height. Its coordinates are in the unit u = scaled_px(1, 1),
+// the glyph 4u x 7u device px; it is CENTRED IN THE BUTTON in device px, an
+// odd difference flooring toward the top-left (the extra pixel right of or
+// below the glyph). Antialiased (the lane paints aliased; the triangle alone
+// takes cairo's default). At 400 % (u 4): 16 x 28 in the 64 x 64 case, at
+// (+24, +18); at 138 % (u 1): 4 x 7 in 22 x 22 at (+9, +7). The arrows have
+// no disabled face: the trim lane has no state that greys them.
+inline constexpr int kTrimArrowGlyphWPx = 4;
+inline constexpr int kTrimArrowGlyphHPx = 7;
 
 // THE PLAYHEAD HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05,
 // retiring the kdenlive-derived half-width table below): a FIXED 9 x 8
@@ -1634,9 +1638,10 @@ inline constexpr int kTrimArrowGlyphRows[kTrimArrowGlyphCols] = {1, 3, 5, 7};
 // its own colours were never trusted (below) — seated tip-down ONE WINDOWS
 // PX INTO THE MARKER LANE exactly as before (the seat rule is
 // kRulerBaselineToMarkerPx's; the move itself did not change, only the
-// shape that is moved). Painted as INTEGER RECTANGLES, one per glyph cell,
-// on the TRIM ARROW GLYPH's own precedent above: never a path fill, never a
-// rescaled image, each cell ONE QUANTUM u = scaled_px(1, 1) SQUARE, and the
+// shape that is moved). Painted as INTEGER RECTANGLES, one per glyph cell:
+// never a path fill, never a rescaled image — its cells are a bevelled chip
+// in three roles, every edge on the unit — each cell ONE QUANTUM
+// u = scaled_px(1, 1) SQUARE, and the
 // composite's height and width are u SUMMED OVER THE GLYPH'S OWN ROWS AND
 // COLUMNS (kPlayheadHeadRows * u tall, kPlayheadHeadCols * u wide) — never a
 // single rounded whole (scaled_px(8) is RETIRED with the table it served;
@@ -2678,7 +2683,7 @@ struct TrimBarHit {
 // trim_endcap_rect places — EDGE-ANCHORED on the bound columns, the begin's
 // LEFT edge on its column, the end's RIGHT edge on its own, and in the
 // NARROW case the end's standing right of the begin's — the ground under a
-// plain raised edge with the arrow glyph (kTrimArrowGlyphRows) centred in
+// plain raised edge with the arrow glyph (kTrimArrowGlyphWPx) centred in
 // it, the begin's pointing left and the end's right. THE BODY runs between
 // the buttons' inner edges (trim_bridge_gap's interval), empty in the narrow
 // case. A button wholly off the lane paints and publishes nothing. A bound is an EDGE, not a point — the deliberate

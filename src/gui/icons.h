@@ -28,19 +28,17 @@
 // THE INKS ARE THE DRAWINGS' OWN (architect 2026-10-06): every path wears its
 // file's fill, black included, on every theme — period pixel art, as Windows'
 // own toolbar bitmaps were. No path takes a theme role. A DISABLED glyph is
-// the emboss (draw_engraved below), where the theme's roles enter, and so
-// is a drawing WORN AS CHROME (draw_in_ink below: the caption's Close X, a
-// window-frame glyph Windows drew in the button text, not a bitmap).
+// the emboss (draw_engraved below), where the theme's roles enter. The
+// window-frame glyphs Windows drew in the button text — the caption's —
+// are not drawings of this set (paint_handler.cpp's caption glyph block).
 //
 // THE PLACEMENT IS FIXED: in a toolbar case the cell sits at (3, 3) Windows
 // px from the case's corner (kIconCaseLeadPx, render.h — Windows' own 16-px
 // bitmap seat in its 23 x 22 button), plus the pressed/checked shift
 // (draw_cased below). Nothing is centred on its ink: Windows never did (12 of
 // the 15 STD strip cells with odd ink dimensions sit at the fixed offset).
-// The sites with no case — the list rows, the cards, the caption, the
-// player's row — keep their own placements and draw the same cell; the
-// caption's Close alone fits the drawing's ink to an extent of its own
-// (draw_in_ink).
+// The sites with no case — the list rows, the cards, the caption's icon, the
+// player's row — keep their own placements and draw the same cell.
 //
 // NO CURSOR IS AN ICON: every cursor the product shows is a NAMED
 // CURSOR FROM THE USER'S OWN XCURSOR THEME (architect 2026-08-03), so the
@@ -142,8 +140,7 @@ enum class Icon {
     // THE NOTIFICATION CARDS' CLASS GLYPHS (notifications.h).
     DialogInformation,   // a NORMAL card's glyph — the balloon with an i
     DialogError,         // a CRITICAL card's glyph — the red disc with an X
-    WindowClose,         // Close (the render player; the caption's Close in
-                         // the label, draw_in_ink) — Marlett's close
+    WindowClose,         // Close (the render player) — Marlett's close
     EditCopy,            // Copy Resolved Value (Ctrl+C) — STD_COPY
     HelpWhatsthis,       // Toggle Tooltips (bare backslash) — STD_HELP
     GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J) — the jump arc
@@ -186,30 +183,6 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // same validation and the same one-stderr rule as draw above.
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
                    double offset_px);
-
-// THE BOXED FORMS, for the one wearer whose box is not square (the caption's
-// Close, paint_handler.cpp's caption glyph block): the 16-unit cell mapped
-// onto (x, y, w_px, h_px), each axis on its own scale.
-// draw_engraved_in_box is draw_engraved over that box (draw_engraved is its
-// square case). DRAW_IN_INK IS A DRAWING WORN AS CHROME (architect
-// 2026-10-06, the whole chrome made scalable): the same disabled mask the
-// emboss paints, in ONE theme role `ink` — the drawing's shape in the
-// chrome's own colour, its literal inks unread — so its disabled face is
-// draw_engraved_in_box and nothing else differs.
-void draw_engraved_in_box(cairo_t* cr, Icon icon, double x, double y,
-                          double w_px, double h_px, double offset_px);
-void draw_in_ink(cairo_t* cr, Icon icon, double x, double y, double w_px,
-                 double h_px, GuiColor ink);
-
-// THE INK BOX of `icon`'s disabled mask, in units of its 16-unit cell: the
-// union of the extents of every path that is neither White nor Silver (the
-// path's own bounds, read off the table). What a wearer fits to an extent of
-// its own reads; a malformed drawing (the one-stderr rule above) gives the
-// empty box.
-struct InkBox {
-    double x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = 0.0;
-};
-InkBox ink_box(Icon icon);
 
 // THE CASED GLYPH, a toolbar button's: the cell at the case's fixed (3, 3)
 // Windows px (icon_case_lead_px — Windows' own seat, the head's PLACEMENT)
