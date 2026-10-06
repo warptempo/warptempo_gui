@@ -461,14 +461,15 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     endforeach()
 
     # THE CHICAGO95 ICON BITMAPS (architect 2026-10-05, the icon pass), THE
-    # FONT STEP'S OWN MECHANISM: the 51 PNGs under assets/icons/chicago95/16/
+    # FONT STEP'S OWN MECHANISM: the 52 PNGs under assets/icons/chicago95/16/
     # (icons.h's kChicago95Files and icons_chicago95_embedded.cpp's #include
     # list, both hand-kept in that directory's sorted order, the font files'
     # own convention) each become `<name>.png.inc` in the build tree at
     # CONFIGURE time — the bytes as hex literals, a configure dependency, so a
     # swapped icon rebuilds the one object that includes it.
     set(WARPTEMPO_ICON_INC_DIR ${CMAKE_BINARY_DIR}/icons-generated)
-    foreach(icon action-unavailable audio-x-wav clock dialog-cancel dialog-error
+    foreach(icon action-unavailable audio-volume-high audio-x-wav clock
+                 dialog-cancel dialog-error
                  dialog-information dialog-ok-apply document-export
                  document-import document-open-recent document-revert
                  document-save document-send edit-copy edit-delete edit-redo

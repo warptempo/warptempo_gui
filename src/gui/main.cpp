@@ -653,8 +653,10 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // the app's icon, the title and the three caption buttons, painted by
 // paint_caption_row on both devices), at the window's top. Lane 1 is the MENU
 // row (the kdenlive menu bar: a flat ground carrying the
-// three menu anchors flush left and the battery + clock legend flush right),
-// directly under the caption. Lane 2 is the ICON row (the twenty-six
+// three menu anchors flush left; the battery + clock legend that used to
+// stand flush right stopped painting 2026-10-05, cosmetic — the polling and
+// composing plumbing, gui_battery.h and refresh_menu_legend below, is still
+// live, just unread by paint_menu_row now), directly under the caption. Lane 2 is the ICON row (the twenty-six
 // view/mode/action buttons — kIconRowButtons, kIconRowViewGroup and the
 // history stand-ins, paint_handler.cpp, are the count's authority; twenty
 // stand outside the `h` view and nineteen inside it), directly under the menu row

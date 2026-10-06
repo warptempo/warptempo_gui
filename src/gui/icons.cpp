@@ -1744,7 +1744,7 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
 // Icon's file by NAME below, so this list may be sorted however the
 // directory sorts without touching the Icon table.
 const char* const kChicago95Files[kChicago95FileCount] = {
-    "action-unavailable",  "audio-x-wav",      "clock",
+    "action-unavailable",  "audio-volume-high","audio-x-wav",      "clock",
     "dialog-cancel",       "dialog-error",     "dialog-information",
     "dialog-ok-apply",     "document-export",  "document-import",
     "document-open-recent","document-revert",  "document-save",
@@ -1793,10 +1793,13 @@ Chicago95Icon g_chicago95[kChicago95FileCount];
 bool          g_chicago95_installed = false;
 
 // THE ICON -> FILE TABLE (mapping.md is the authoring record; this is its
-// code form, one row per roster glyph that wears a Chicago95 picture today).
-// AppIcon carries none — the caption's own picture, not a roster button's
-// and not in that table — so it is absent here and draw_cased falls back to
-// draw() for it at every scale.
+// code form, one row per roster glyph that wears a Chicago95 picture today),
+// PLUS AppIcon (architect 2026-10-05): the caption's own picture, not a
+// roster button's and never cased, but it shares this lookup because
+// draw_bitmap calls the same chicago95_for as draw_cased — its row here
+// just names audio-volume-high, the ink box chicago95_for computes for it
+// going unused (draw_bitmap blits the whole 16 x 16 surface, no case to
+// centre in).
 struct IconFile { Icon icon; const char* file; };
 constexpr IconFile kIconFile[] = {
     {Icon::DocumentSave, "document-save"},
@@ -1860,12 +1863,13 @@ constexpr IconFile kIconFile[] = {
     {Icon::HelpWhatsthis, "help-hint"},
     {Icon::GoJumpDeclaration, "go-jump"},
     {Icon::EditDelete, "edit-delete"},
+    {Icon::AppIcon, "audio-volume-high"},
 };
 
-// The Chicago95 entry for `icon`, or nullptr (not installed, or no entry —
-// AppIcon today): resolved by a linear scan of the ~57-row table above, paid
-// once per DRAW rather than cached per icon, which is cheap enough at this
-// roster's size that no second lookup table is worth the bug surface.
+// The Chicago95 entry for `icon`, or nullptr (not installed, or no entry):
+// resolved by a linear scan of the ~58-row table above, paid once per DRAW
+// rather than cached per icon, which is cheap enough at this roster's size
+// that no second lookup table is worth the bug surface.
 const Chicago95Icon* chicago95_for(Icon icon) {
     if (!g_chicago95_installed) return nullptr;
     for (const IconFile& row : kIconFile) {

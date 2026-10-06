@@ -64,3 +64,4 @@ Ink box (w x h) and its margins in icon px (L, T, R, B); dx, dy = the ink centre
 | [non-button] wav row | a wav (folder overlay / player) | folder overlay list row | audio-x-wav | mimes/audio-x-wav | 16x16 | 0 | 0 | 0 | 0 | 0.0 | 0.0 |  |
 | [non-button] NORMAL card | card glyph | notification card | dialog-information | status/dialog-information | 16x16 | 0 | 0 | 0 | 0 | 0.0 | 0.0 |  |
 | [non-button] CRITICAL card | card glyph | notification card | dialog-error | status/dialog-error | 16x16 | 0 | 0 | 0 | 0 | 0.0 | 0.0 |  |
+| AppIcon | (caption, no tooltip) | caption, left of the title | (the product's own SVG) | status/audio-volume-high | 15x14 | 1 | 1 | 0 | 1 | -0.5 | 0.0 | drawn by draw_bitmap (no case; this ink box is informational only, unused by the blit) |

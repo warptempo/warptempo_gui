@@ -1,85 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its glyph is Breeze's music-note-16th, the flagged
-     quaver the BPM button wears (assets/icons/breeze/music-note-16th.svg,
-     the 22 px action icon, transcribed for the roster as
-     Icon::MusicNote16th), with its head and flag FILLED, painted as Breeze's
-     audio-x-generic paints its note, white at .75 opacity, and centred on
-     that file's sheet grey (vendored verbatim as
-     assets/icons/breeze/audio-x-generic.svg, never transcribed; the
-     packaging/warptempo_gui.desktop's Icon= until 2026-09-30). Its desktop
-     twin is packaging/warptempo_gui.svg, the same picture with the plate
-     drawn in, carrying the same d, so a change to one is a change to both
-     (architect
-     2026-09-30, his pick between two mock-ups: "Music note 16th ...
-     definitely use the white color, the filled-in note head, the same style
-     as the original icon"). Its two earlier renderings that night: the note
-     of audio-x-generic alone, centred on the same grey (c8ae868e), stood an
-     hour and gave way at his look to the notes on a staff of Breeze's
-     minuet-scales in their own dark ink (fd1160df), which stood an hour in
-     turn; the whole audio-x-generic file rendered at fit stood one evening,
-     2026-09-29. An ADAPTIVE icon, the whole of it: minSdk is 30, so no
-     legacy ic_launcher.png set exists beside it.
+     recents card). Its picture is Chicago95's status/audio-volume-high.png
+     (architect 2026-10-05, the icon pass's caption pick — the same 16-px
+     file the caption wears at a bitmap gui_scale, icons.h's AppIcon head),
+     scaled NEAREST-NEIGHBOUR (the Chicago95 artwork is period-pixel art, so
+     no smoothing) and centred on a transparent canvas: no plate, no sheet
+     grey, the icon's own transparent corners carrying through. An ADAPTIVE
+     icon, the whole of it: minSdk is 30, so no legacy ic_launcher.png set
+     exists beside it.
 
-     Two layers per density under res/mipmap-<density>/:
-       ic_launcher_background.png  solid opaque #aaaaaa, the sheet's own fill
-                                   in audio-x-generic (fill="#aaa"): the
-                                   platter IS the sheet, its edges gone;
-       ic_launcher_foreground.png  the filled quaver, RGBA, #ffffff at alpha
-                                   .75 (audio-x-generic's note: its group's
-                                   fill #fff, its path's opacity .75), on a
-                                   transparent surround.
+     Two layers per density under res/mipmap-<density>/, BOTH generated from
+     the one source (assets/icons/chicago95/16/audio-volume-high.png):
+       ic_launcher_background.png  fully transparent, the canvas size alone;
+       ic_launcher_foreground.png  the 16-px icon scaled by an integer
+                                   factor k with CAIRO_FILTER_NEAREST's ImageMagick
+                                   equivalent (-filter point), centred on a
+                                   transparent canvas of the density's full
+                                   108 dp.
 
-     THE 44-OF-72 RULE. Every mask (circle, squircle, rounded square: the
-     launcher's choice) is drawn within the central 72 dp viewport of the
-     108 dp canvas; the glyph's bounding box is 44 dp on its longer side
-     there, the ordinary launcher-glyph proportion, and centred on the
-     canvas. The box, measured by rendering the filled path alone and
-     trimming it, is x 6..16, y 3..19 in the file's 22-unit frame (the
-     vendored path carries no transform): 10 by 16 units, so the height is
-     the longer side, H = 44 dp, and the width follows the aspect,
-     W = H·10/16 rounded to a whole pixel by nearbyint (a tie to even).
+     THE 66 dp SAFE ZONE: an adaptive foreground's art must sit inside the
+     mask's guaranteed-visible inner zone, Android's own 66 dp of the 108 dp
+     canvas. k = 4 puts the scaled icon at 64 dp square (16 * 4), just inside
+     that zone, the same k at every density (the per-density PNG pixel size
+     scales with the density factor f alone, never with k):
 
-     THE DERIVED SVG. The recipe's input is android/app/ic_launcher_foreground.svg,
-     beside the manifest and outside res/ (aapt2 compiles res/ whole and
-     refuses an unknown file there): one path whose d is the vendored
-     music-note-16th.svg's d TRUNCATED before its second subpath, the outer
-     contour byte for byte through its own closing Z (a verbatim prefix of
-     the file's d, so a diff between the two is a transcription bug). The
-     dropped second and third subpaths (from "m 1,1.0957031" and from
-     "M 9,15") are the two that cut the flag and the head hollow in Breeze's
-     outline drawing; without them both are solid. Fill #fff at opacity .75,
-     no transform, in a viewBox that is the glyph's box, so the file renders
-     the glyph edge to edge.
+       density  f    canvas C=108f  icon 64f  offset (C-64f)/2  resize factor
+       mdpi     1    108            64        22                 400% (k=4)
+       hdpi     1.5  162            96        33                 600% (k=6)
+       xhdpi    2    216            128       44                 800% (k=8)
+       xxhdpi   3    324            192       66                 1200% (k=12)
+       xxxhdpi  4    432            256       88                 1600% (k=16)
 
-     A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop and
-     committed; a retouch is a re-run of this recipe, never a build step
-     (build_apk.sh only compiles res/). The recipe, from the repo root
-     (rsvg-convert 2.62, ImageMagick 7), for each density n at factor f
-     (mdpi 1, hdpi 1.5, xhdpi 2, xxhdpi 3, xxxhdpi 4) with C = 108·f,
-     H = 44·f, W = nearbyint(H·10/16), and the page offsets
-     L = (C − W) / 2 (a half pixel where C − W is odd) and T = (C − H) / 2
-     = 32·f:
+     (The per-density ImageMagick resize factor is k*100 scaled by f again,
+     since -resize's percentage multiplies the 16 px source directly to the
+     density's own pixel count — 400% * f, e.g. 1600% at xxxhdpi for the same
+     64 dp.) THE RECIPE, from the repo root (ImageMagick 7), for each
+     density's resize percentage P and canvas C above:
 
-       mdpi     C=108 H=44  W=28  L=40    T=32
-       hdpi     C=162 H=66  W=41  L=60.5  T=48
-       xhdpi    C=216 H=88  W=55  L=80.5  T=64
-       xxhdpi   C=324 H=132 W=82  L=121   T=96
-       xxxhdpi  C=432 H=176 W=110 L=161   T=128
-
-       rsvg-convert -w W -h H \
-           - -page-width C - -page-height C - -left L - -top T \
-           android/app/ic_launcher_foreground.svg -o fg.png
-       magick fg.png -strip -define png:compression-level=9 \
+       magick assets/icons/chicago95/16/audio-volume-high.png \
+           -filter point -resize P% -background none -gravity center \
+           -extent CxC -strip -define png:compression-level=9 \
            -define png:compression-filter=5 \
-           PNG32:android/app/res/mipmap-n/ic_launcher_foreground.png
-       magick -size CxC xc:'#aaaaaa' -strip \
-           PNG8:android/app/res/mipmap-n/ic_launcher_background.png
+           PNG32:android/app/res/mipmap-<density>/ic_launcher_foreground.png
+       magick -size CxC xc:none -strip \
+           PNG32:android/app/res/mipmap-<density>/ic_launcher_background.png
 
-     (The long options are spelt "- -" above only because an XML comment may
-     not hold two adjacent hyphens: type them as the usual double hyphen.)
-     The foreground stays RGBA: a palette encoding of it is not lossless (its
-     antialiased alpha edges), while the one-colour background is. -->
+     A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop
+     and committed; a retouch is a re-run of this recipe, never a build step
+     (build_apk.sh only compiles res/). The desktop launcher icon
+     (packaging/warptempo_gui.svg, the .desktop's Icon=) is untouched by this
+     pass — still Breeze's music-note-16th on its grey plate, README.md's own
+     account — the architect's cosmetic pick covering only the caption and
+     this launcher. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

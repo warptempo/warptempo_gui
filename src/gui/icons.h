@@ -500,7 +500,12 @@ enum class Icon {
     // block): the desktop launcher's, packaging/warptempo_gui.svg, the
     // tablet's launcher made whole — the sheet-grey plate under the filled
     // quaver. Not a Breeze glyph and no roster button's: the one icon of the
-    // product's own, transcribed from its own file.
+    // product's own, transcribed from its own file. AT A BITMAP gui_scale
+    // (architect 2026-10-05, the icon pass's own caption pick) it instead
+    // wears Chicago95's status/audio-volume-high.png (icons.h's
+    // kChicago95Files, draw_bitmap's plain blit at the spot the caption
+    // already paints it — paint_caption_row), the vector form above standing
+    // at every other scale.
     AppIcon,             // the caption's icon
 };
 
@@ -562,9 +567,9 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
 // of device px (k = gui_scale/100) blitted with cairo's own nearest-neighbour
 // scaling (CAIRO_FILTER_NEAREST on an integer scale leaves every block's
 // edges on whole device px, so no hand block loop is needed). AT EVERY OTHER
-// SCALE, or for a glyph the table does not carry (today: AppIcon alone, the
-// caption's own picture, no roster button's and not in the mapping), this is
-// draw() unchanged.
+// SCALE, or for a glyph the table does not carry, this is draw() unchanged
+// (AppIcon is never cased — it wears its Chicago95 picture through
+// draw_bitmap instead, render.h's caption block).
 //
 // PLACEMENT (ruling 2): draw() seats a 16-px bitmap toolbar icon at the
 // case's (3, 3) as Windows always does; THIS CALL THEN RE-CENTRES ON THE
@@ -602,7 +607,7 @@ void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
 // place — so a dead glyph is cut into the face in the colours every other
 // disabled face already wears, the Chicago95 artwork itself never appearing
 // (render.h's palette block: the one further exception there). At every
-// other scale, or for a glyph the mapping does not carry (AppIcon), this is
+// other scale, or for a glyph the mapping does not carry, this is
 // draw_engraved at draw()'s own (3, 3)-in-the-case vector placement,
 // unchanged — the Breeze glyph's own disabled face, draw_cased's own
 // fallback precedent.
@@ -639,7 +644,7 @@ void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
 // LAPTOP'S CONFIGURE-TIME GLOB'S OWN ORDER, same contract as
 // kGuiFontFiles — see gui_font.h's head for why the order is shared between
 // the two backends' install calls).
-inline constexpr std::size_t kChicago95FileCount = 51;
+inline constexpr std::size_t kChicago95FileCount = 52;
 extern const char* const kChicago95Files[kChicago95FileCount];
 
 // A DECODED ICON, both backends' common currency (architect 2026-10-05,

@@ -691,7 +691,9 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     (the active or inactive start-to-end colours, paint_caption_gradient),
 //     nothing above or below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
-//     (SM_CXSMICON) at (2, 1) from the lane's top-left;
+//     (SM_CXSMICON) at (2, 1) from the lane's top-left — at a bitmap
+//     gui_scale (architect 2026-10-05) Chicago95's status/audio-volume-high
+//     picture through draw_bitmap, the vector form at every other scale;
 //   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: Cronyx Helvetica
 //     Bold, the caption font being the body face in bold), its pen at x 20 (two px past
 //     the icon) and its cap band centred in the lane (redesign_baseline), in
@@ -752,8 +754,11 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). THE
 // CONTENT IS 19 WINDOWS PX, Windows' SM_CYMENU (architect 2026-10-02; it was
 // the kdenlive File item's 30 laptop px until the unit's change): the
-// anchors' box and the labels' box both, where the anchors, their labels and
-// the battery + clock legend stand, cap-centred in it.
+// anchors' box and the labels' box both, where the anchors and their labels
+// stand, cap-centred in it (the battery + clock legend stood here too until
+// it stopped painting, architect 2026-10-05, cosmetic — AppState::
+// menu_legend is still composed each tick, gui_battery.h, just not read by
+// any paint site now).
 //
 // THE LANE IS ONE WINDOWS PX TALLER THAN THE CONTENT, A FOOT OF PLAIN GROUND
 // AT THE BOTTOM (architect 2026-10-05, Windows 95 screenshots measured at

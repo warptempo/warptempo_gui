@@ -1085,9 +1085,11 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. FOURTEEN BOX SEATS (re-grepped 2026-10-05): the
+// rule is not asked. THIRTEEN BOX SEATS (re-grepped 2026-10-05, the
+// battery + clock legend's own seat gone with its paint — the legend no
+// longer draws, cosmetic only, paint_menu_row's head): the
 // caption's title, the menu row's
-// anchors and its battery + clock legend (both in the row's CONTENT alone
+// anchors (in the row's CONTENT alone
 // since 2026-10-05, render.h's menu_row_content_h_px, never the taller
 // lane), the row-8 clock (in its time field) and the
 // state line beside it (in the row's content band), the notification
@@ -1213,8 +1215,11 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                            active ? pal.caption_active_gradient
                                   : pal.caption_inactive_gradient);
 
-    // THE APP'S ICON at (2, 1), 16 x 16.
-    icons::draw(cr, icons::Icon::AppIcon,
+    // THE APP'S ICON at (2, 1), 16 x 16: the vector transcription, or, at a
+    // bitmap gui_scale (architect 2026-10-05, the icon pass), Chicago95's
+    // status/audio-volume-high.png through draw_bitmap — the plain blit, no
+    // case to centre in, at this same placement (icons.h's AppIcon head).
+    icons::draw_bitmap(cr, icons::Icon::AppIcon,
                 static_cast<double>(row.x + scaled_px(kCaptionIconXPx)),
                 static_cast<double>(row.y + scaled_px(kCaptionIconYPx)),
                 static_cast<double>(scaled_px(kCaptionIconPx, 1)));
@@ -1454,34 +1459,17 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         x += btn_w;
     }
 
-    // THE BATTERY + CLOCK LEGEND, FLUSH RIGHT (architect 2026-10-01): A LABEL,
-    // NOT A BUTTON — no rect is published, nothing hovers it, no tooltip
-    // names it, and a press on it is the row's consumed nothing. Its text is
-    // AppState::menu_legend's, composed by compose_menu_legend (gui_battery.h,
-    // which owns the glyph rule), seeded before the session's first paint and
-    // refreshed by main.cpp's tick, whose damage is this row
-    // (refresh_menu_legend). THE RIGHT EDGE IS THE ICON ROW'S RIGHT CONTENT
-    // MARGIN — its 8px lead-out, icon_row_pad_x, read rather than restated —
-    // so the legend ends where the icon row's content does. The menu's own
-    // sans at the redesign size through the shaping
-    // chokepoint, in the theme's label, on the anchors' own baseline (the
-    // same content band, read with the same call). THE RULE FOR A ROW TOO NARROW FOR BOTH: the anchors win and the
-    // legend is clipped at the right. No supported size comes near it — at
-    // 100% the anchors end near x 170 and the legend, some 140 px wide, starts
-    // past x 480 even on the 640 px floor; the scale-toward-the-ceiling corner
-    // is the crop-at-the-floor allowance kMinWindowWidthPx records — so no
-    // code stands for it (the no-backstops rule).
-    if (!app.menu_legend.text.empty()) {
-        const text_shape::ShapedRun run =
-            text_shape::shape_text_run(font, app.menu_legend.text);
-        const int right = row.x + row.w - icon_row_pad_x();
-        const int lx = right - static_cast<int>(std::nearbyint(run.width_px));
-        set_palette_source(cr, palette().label);
-        text_shape::show_shaped_run(
-            cr, run, static_cast<double>(lx),
-            redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(menu_row_content_h_px())));
-    }
+    // THE BATTERY + CLOCK LEGEND IS NOT PAINTED (architect 2026-10-05,
+    // cosmetic): it was a flush-right LABEL over the row's own ground, no
+    // rect published and no space of its own ever reserved (the anchors are
+    // flush left, independently laid out), so hiding it gives back nothing
+    // to lay out — the ground already shows through where it used to sit.
+    // AppState::menu_legend, compose_menu_legend (gui_battery.h) and
+    // refresh_menu_legend (main.cpp, run every tick) are left wired and
+    // still compute the text each minute; only this paint site stopped
+    // reading it. GuiPlatform::battery_status and its two backends
+    // (platform_wayland.cpp, platform_android.cpp) keep polling too — all
+    // dormant plumbing for a later cleanup pass, not touched here.
 
     cairo_restore(cr);
 }
@@ -3032,8 +3020,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
 // classes, the hit rule and the inventory at notifications.h). THE WHOLE
 // STACK — AppState::Notifications::cards, newest first, every one of them on
-// screen since the queue retired 2026-08-30 — painted top-right under ROW 1's
-// battery + clock legend, right-aligned
+// screen since the queue retired 2026-08-30 — painted top-right under ROW 1
+// (whose battery + clock legend stopped painting 2026-10-05, cosmetic;
+// unaffected here, the stack's own margins never referenced it), right-aligned
 // at kPanelPadPx from the window's edge and the same kPanelPadPx below row 1
 // (the stack's margins are one number, notification_stack_bound), growing
 // DOWN over whatever lies there (the icon row's empty right, the thin lanes,
@@ -7291,9 +7280,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. render_canvas — the waveform area's ground AND THE WELL, its
         //      two lines top and bottom (above, unconditional).
-        //   3. the two redesigned top button rows (the menu row with its
-        //      battery + clock legend) and the unified bottom
-        //      row (its chrome, buttons, clock AND state cell in one painter),
+        //   3. the two redesigned top button rows (the menu row, its
+        //      battery + clock legend retired from paint 2026-10-05) and the
+        //      unified bottom row (its chrome, buttons, clock AND state cell
+        //      in one painter),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).

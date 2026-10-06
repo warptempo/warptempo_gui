@@ -1,7 +1,7 @@
 #include "icons.h"
 
 // THE LINUX BINARY CARRIES ITS OWN CHICAGO95 BITMAPS (architect 2026-10-05,
-// the icon pass), gui_font_embedded.cpp's own mechanism exactly: the 51 PNGs
+// the icon pass), gui_font_embedded.cpp's own mechanism exactly: the 52 PNGs
 // under assets/icons/chicago95/16/ (icons.h's kChicago95Files, in its order)
 // are compiled into the executable here, so the laptop depends on no
 // installed icon theme. The Wayland backend hands these to
@@ -26,6 +26,9 @@ namespace {
 
 const uint8_t k_action_unavailable[] = {
 #include "action-unavailable.png.inc"
+};
+const uint8_t k_audio_volume_high[] = {
+#include "audio-volume-high.png.inc"
 };
 const uint8_t k_audio_x_wav[] = {
 #include "audio-x-wav.png.inc"
@@ -182,6 +185,7 @@ const uint8_t k_zoom_original[] = {
 
 const Chicago95Bytes chicago95_embedded_files[kChicago95FileCount] = {
     {k_action_unavailable, sizeof(k_action_unavailable)},
+    {k_audio_volume_high, sizeof(k_audio_volume_high)},
     {k_audio_x_wav, sizeof(k_audio_x_wav)},
     {k_clock, sizeof(k_clock)},
     {k_dialog_cancel, sizeof(k_dialog_cancel)},
