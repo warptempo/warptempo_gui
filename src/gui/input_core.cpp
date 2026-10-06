@@ -1369,9 +1369,10 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     is the one term clean_release still decides here: the lift passes
     //     TouchLift, the hard end OrdinaryLeave. The hover tooltip is the
     //     consumer that tells them apart — a lift is a release under a
-    //     pointer that has not moved, so the wait's button and anchor stand
-    //     across it and the S Pen hovering back at the lift point starts no
-    //     wait (the rule is at AppState::RedesignTooltip) — while a contact
+    //     pointer that has not moved, so the wait's button, its anchor and
+    //     its spent state stand across it and the S Pen hovering back on that
+    //     button starts no wait until it has left it (the rule is at
+    //     AppState::RedesignTooltip) — while a contact
     //     the window system took ends the tooltip's hover as a mouse leaving
     //     the window does (GuiPointerLeaveReason carries both).
     // The mods are current_mods() at delivery: the touch bit is already down

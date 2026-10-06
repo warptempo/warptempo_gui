@@ -6933,6 +6933,21 @@ struct AppState {
     //   * LEAVING THE BUTTON HIDES AT ONCE: the walk handing in any other
     //     owner, or none, takes a standing box down in that same call (no
     //     grace) — onto a neighbour, its wait then starting at the reshow.
+    //   * A SPENT BUTTON WAITS FOR THE LEAVE (architect 2026-10-06, Windows'
+    //     rule: comctl32 does not show a tool's hint again until the pointer
+    //     has left the tool and arrived again): a box gone down by its LIFE's
+    //     end, or A PRESS (the press is the hard end whether a box stood or a
+    //     wait was running), leaves the button under the pointer SPENT
+    //     (`spent`): on it a motion past the slop re-anchors and starts no
+    //     wait. It clears when the walk reads no button or another one — the
+    //     leave of the tool — and with every hard leave, which forgets the
+    //     button; an arrival from a spent button onto another is an ordinary
+    //     arrival, the reshow judged as for any. THE OTHER HARD ENDS SPEND
+    //     NOTHING (a release, a wheel, a menu or a modal opening, the
+    //     activation flip): they leave `spent` as they found it, and what
+    //     takes the button away after them — a walk finding no owner under a
+    //     raised modal, a dead dialog owner, the lamp's dark edge, a leave —
+    //     clears it as the leave it is.
     //   * A HARD END hides at once and clears `reshow`: any pointer press or
     //     release (a click hides the hint), any wheel (Windows 95 had none;
     //     the dismissal stands), a menu opening (the dropdown's open edge), a
@@ -6945,22 +6960,27 @@ struct AppState {
     //     (TTM_RELAYEVENT). A key that raises a modal takes it down through
     //     the roster walk, which finds no owner under one (the no-wait rule at
     //     recompute_redesign_button_hover). The pointer still resting on the
-    //     button re-arms nothing: only a motion past the slop does.
+    //     button starts nothing: only a motion past the slop does, and on a
+    //     spent button not even that (above).
     //   * NO TOOLTIP UNDER A HELD PRESS, on both devices: while the logical
     //     primary button is held (the physical left, bare `e`'s synthesized
     //     hold, a finger or the pen in contact) no wait starts, the anchor
-    //     following the pointer, so a finger never raises a hint and a hint
-    //     comes back after a release only on a motion past the slop. The
-    //     other two buttons bind nothing in this product and are not terms.
+    //     following the pointer, so a finger never raises a hint; after the
+    //     release the button the press landed on is spent, and a button the
+    //     held pointer slid onto (an arrival, so not spent) waits for a
+    //     motion past the slop. The other two buttons bind nothing in this
+    //     product and are not terms (a press of either still spends, as a
+    //     click of any button hides Windows' hint).
     //   * A TRANSLATED CONTACT'S LIFT IS NOT THE POINTER GOING AWAY (architect
     //     2026-09-29): the touch translation ends a finger's or the S Pen's
     //     contact with a release and then a leave (TouchLift), and that leave
     //     keeps the wait's button, its anchor and the seen position at the
-    //     lift point (GuiInputHandler::end_tooltip_hover), so the pen's hover
-    //     coming back within the slop of that point is stillness after a
-    //     release and starts no wait, exactly as a still mouse after a click;
-    //     a re-entry farther than the slop, or onto another button, is a
-    //     motion. Every other leave forgets them.
+    //     lift point (GuiInputHandler::end_tooltip_hover), and with the button
+    //     its spent state: the tap's press spent it, so the pen's hover on
+    //     that button starts no wait however it moves, and the hint comes back
+    //     only once the hover leaves the button and arrives again — exactly
+    //     Windows' rule on a mouse after a click; a re-entry onto another
+    //     button is an arrival. Every other leave forgets them.
     // No timer object and no callback: GuiInputHandler::tick_tooltip reads the
     // two deadlines on the run loop's existing tick and damages once per edge;
     // note_tooltip_hover is the one writer of the wait.
@@ -6987,6 +7007,13 @@ struct AppState {
     // test; kTooltipUnseen after a leave, so a re-entry is a motion — the
     // contact's lift excepted, which keeps it), and
     // `wake_due_ms` the wait's deadline (0 = no wait runs).
+    // `spent` is the spent button (above; no owner = none is spent). It is
+    // an Owner compared whole rather than a bool beside `hovered` so that the
+    // leave which clears it is the same whole-owner test that tells an
+    // arrival (note_tooltip_hover's first term, for every arm alike): a held
+    // pointer sliding off the pressed button under the press, which the held
+    // arm records with no arrival edge, clears it with no line of its own.
+    // It is only ever no owner or `hovered`.
     // `reshow` arms the reshow (above), and
     // `button_held` is the logical primary button's state as the last pointer
     // event delivered it.
@@ -7044,6 +7071,7 @@ struct AppState {
         int     seen_x         = kTooltipUnseen;
         int     seen_y         = kTooltipUnseen;
         int64_t wake_due_ms    = 0;
+        Owner   spent{};
         // The reshow and the held button.
         bool    reshow         = false;
         bool    button_held    = false;

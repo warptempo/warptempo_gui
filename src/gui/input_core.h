@@ -174,9 +174,10 @@ enum GuiWindowEdge : unsigned {
 //     release, the fork being the same one. An ordinary leave in every
 //     respect but one: THE CONTACT LIFTING IS NOT THE POINTER GOING AWAY for
 //     the hover tooltip (architect 2026-09-29), which keeps its button, its
-//     slop anchor and its seen position across it exactly as it keeps them
-//     across a mouse's release, so the S Pen's hover coming back within the
-//     slop of the lift point is stillness and starts no wait (the rule is at
+//     slop anchor, its seen position and the button's spent state across it
+//     exactly as it keeps them across a mouse's release, so after a tap the
+//     S Pen's hover starts no wait on that button until it has left it and
+//     arrived again — Windows' rule after a click (2026-10-06; the rule is at
 //     AppState::RedesignTooltip). Every other consumer reads it as it reads
 //     OrdinaryLeave.
 // The distinction is read in one place, main.cpp's hook body, by exactly one

@@ -1545,10 +1545,11 @@ struct GuiInputHandler {
 
     // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
     // hides the box at once, stops the wait and disarms the reshow, leaving
-    // the button under the pointer and the slop's anchor where they are, so
-    // a resting pointer re-arms nothing. Its callers, re-derived by grep
-    // 2026-10-06: every pointer press and every release, every wheel, the
-    // dropdown's open edge, on_key's modal-opening end (a key that raised a
+    // the button under the pointer, the slop's anchor and the spent button
+    // where they are, so a resting pointer starts nothing (the press spends
+    // the button at its own site, after this call). Its callers, re-derived
+    // by grep 2026-10-06: every pointer press and every release, every
+    // wheel, the dropdown's open edge, on_key's modal-opening end (a key that raised a
     // modal under a roster hint — keys themselves do not hide it), the
     // compositor close (the one modal opener no key or press reaches), the
     // roster walk's tail for a dialog owner whose surface closed or was
@@ -1568,14 +1569,15 @@ struct GuiInputHandler {
     // every reason, and the tooltip lamp's dark edge (set_show_tooltips).
     // HARD (the ordinary leave, capability loss, the pen's hover leaving the
     // plane, the lamp going dark) means the pointer is on no button: the box
-    // goes down at once (leaving the tool), the wait stops, its button and
-    // the seen position are forgotten, and the next arrival is a motion.
+    // goes down at once (leaving the tool), the wait stops, its button, the
+    // spent button and the seen position are forgotten, and the next arrival
+    // is a motion.
     // CONTACT LIFT (TouchLift, a translated contact's own lift) is NOT the
     // pointer going away (architect 2026-09-29): it ends nothing, so the
-    // button, the anchor and the seen position stand at the lift point as a
-    // mouse's release leaves them, and the S Pen's hover coming back within
-    // the slop of that point is stillness. The rule is at
-    // AppState::RedesignTooltip.
+    // button, the anchor, the seen position and the spent button (the tap's
+    // press spent it) stand at the lift point as a mouse's release leaves
+    // them, and the S Pen's hover on that button starts no wait until it has
+    // left the button. The rule is at AppState::RedesignTooltip.
     enum class TooltipHoverEnd { Hard, ContactLift };
     void end_tooltip_hover(TooltipHoverEnd end);
 
@@ -3714,10 +3716,11 @@ private:
     // per-project session posture, dark at every project open, never
     // serialized and never in the undo domain. THE DARK EDGE ENDS THE MODEL
     // WHOLE: a standing box goes down (the hard end's own body), the wait
-    // stops and the hovered owner is forgotten, so nothing is left to ripen;
-    // from then on note_tooltip_hover keeps that state clear. THE LIT EDGE
-    // STARTS NOTHING: the pointer resting on the button re-arms only on a
-    // motion past the slop, the model's own rule. The lamp's face rides the
+    // stops and the hovered and spent owners are forgotten, so nothing is
+    // left to ripen; from then on note_tooltip_hover keeps that state clear.
+    // THE LIT EDGE STARTS NOTHING: the pointer resting on the button starts
+    // a wait only on a motion past the slop, the model's own rule (no button
+    // is spent then: the dark edge forgot it). The lamp's face rides the
     // per-tick comparator. History-less; silent.
     void set_show_tooltips(bool desired);
 

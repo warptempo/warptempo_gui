@@ -1840,7 +1840,9 @@ inline int tooltip_flip_gap_px() {
 //
 // TTDT_INITIAL: 500 ms (the double-click time) of rest on a tooltip-bearing
 // button before its hint shows, restarted by every motion past the slop
-// below. Its own number: no hold and no beat reads it, and it reads neither
+// below — on a button not SPENT (a hint gone down there by this life's end
+// or a press does not come back until the pointer has left the button,
+// Windows' rule, stated at the model). Its own number: no hold and no beat reads it, and it reads neither
 // (the chrome shift long press is timed by kHoldDelayMs alone and has no
 // visual announcement).
 inline constexpr int64_t kTooltipInitialMs = 500;
@@ -1851,15 +1853,16 @@ inline constexpr int64_t kTooltipInitialMs = 500;
 // new tooltip immediately").
 inline constexpr int64_t kTooltipReshowMs = 100;
 // TTDT_AUTOPOP: 5000 ms (ten times it) — a box standing this long goes down,
-// the life restarted by motion on its own button.
+// spending its button, the life restarted by motion on its own button.
 inline constexpr int64_t kTooltipAutoPopMs = 5000;
 
 // THE HOVER SLOP (architect 2026-09-29: the wait counts from STILLNESS WITH
 // HYSTERESIS) — A RECORDED DEPARTURE from Windows 95
-// (docs/engineering/windows95_deviations.md): the wait re-anchors, restarting,
-// and a standing box's life restarts, only when the pointer moves MORE than
-// this from where it was anchored on EITHER axis, so a hovering pen's jitter
-// can neither starve the wait nor keep a box alive. Windows counts every
+// (docs/engineering/windows95_deviations.md): the wait re-anchors, restarting
+// (on a spent button re-anchoring alone), and a standing box's life restarts,
+// only when the pointer moves MORE than this from where it was anchored on
+// EITHER axis, so a hovering pen's jitter can neither starve the wait nor
+// keep a box alive. Windows counts every
 // mouse move — a mouse at rest does not jitter — so the number is ANDROID'S
 // OWN for the same job: AOSP View's hover tooltip ignores a HOVER_MOVE
 // within ViewConfiguration.getScaledHoverSlop() of its anchor on both axes

@@ -1931,10 +1931,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // damages the box's own published rect as well as the strip (the box
     // hangs outside the strip). A TRANSLATED CONTACT'S LIFT (TouchLift) is NO
     // LEAVE FOR THE TOOLTIP at all (architect 2026-09-29): it is the release
-    // of a press that already hard-ended the hint, so the wait's button, its
-    // anchor and the seen position stand at the lift point as a mouse's
-    // release leaves them, and the S Pen hovering back within the slop of
-    // that point starts no wait (end_tooltip_hover). Every other effect here
+    // of a press that already hard-ended the hint and spent its button, so
+    // the wait's button, its anchor, the seen position and the spent state
+    // stand at the lift point as a mouse's release leaves them, and the S Pen
+    // hovering back on that button starts no wait until it has left it
+    // (end_tooltip_hover). Every other effect here
     // reads every reason alike.
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
         app.pointer_in_window = false;

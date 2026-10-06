@@ -571,7 +571,7 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **A one-shot "arm a region sweep" button** — moot, not built, 2026-09-25: the region hold stays. Owner: `kTouchRegionHoldMs` (input_core.cpp).
 - **Reading `AXIS_DISTANCE` 0 as touching, or trusting a `HOVER_EXIT`'s height** — ruled out, 2026-09-27: the driver writes 0 when the pen leaves range and the platform sends an exit before every tip down; on-glass is keyed on the contact actions. Owner: `pen_report_in_plane` (platform_android.cpp).
 - **The pen's hover leave keeping the menu row's hovered face** — ruled out, 2026-09-27: the pen has no titlebar to step onto, so its leave keeps nothing. Owner: `GuiPointerLeaveReason` (input_core.h), `GuiPlatform::end_pen_hover` (platform_android.cpp).
-- **A pen tap re-arming the tooltip** — ruled out, 2026-09-29: for the tooltip a contact's lift is no leave, so a hint returns only after a motion past the slop. Owner: `GuiPointerLeaveReason::TouchLift` (input_core.h).
+- **A pen tap re-arming the tooltip** — ruled out, 2026-09-29 (revised 2026-10-06 to Windows' rule): for the tooltip a contact's lift is no leave and the tap's press spends the button, so a hint returns only after the pointer leaves the tool and arrives again. Owner: `GuiPointerLeaveReason::TouchLift` (input_core.h), the spent button at `AppState::RedesignTooltip`.
 
 ## The folder overlay, the render player and the car
 
