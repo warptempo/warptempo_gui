@@ -71,7 +71,8 @@ enum class Icon {
     MediaRecord,         // Render (and the iteration sweep: the tooltip
                          // alone forks) — Sound Recorder's maroon dot
     VcsCommit,           // Save's face in the history view and while the
-                         // checkpoint publishes — a node on a line
+                         // checkpoint publishes — Save's floppy with a
+                         // check in its label
     VcsPull,             // Save's face in the history view while GitHub is
                          // ahead — the cyan arrow onto a bar
     // THE VIEW GROUP (bare 1 / 2 / 3): the page family, its arrow leaving
@@ -91,7 +92,8 @@ enum class Icon {
     InsertLink,          // Toggle Inherit (`Ctrl+N`) — the chain
     Merge,               // Flatten (`Ctrl+F`) — two tracks joining
     BlackSum,            // Toggle Cumulative (`u`) — the sigma
-    GoJump,              // Toggle Follow (`f`) — an arrow crossing a sheet
+    GoJump,              // Toggle Follow (`f`) — an arrow crossing the
+                         // view group's page
     TimelineLift,        // Toggle Restrict Undo (`z`) — the push-pin
     MusicNote16th,       // BPM Iterations (Ctrl+B) — the music player
     Mathmode,            // Toggle Grid Iterations (bare `i`) — the grid
@@ -126,7 +128,8 @@ enum class Icon {
     // THE MARKER WALK AND THE TAB SWITCH.
     BboxPrev,            // Previous Marker (Shift+Tab) — GoPrevious's
     BboxNext,            // Next Marker (Tab) — GoNext's
-    TabDetach,           // Switch Tab (Ctrl+Tab) — two overlapping pages
+    TabDetach,           // Switch Tab (Ctrl+Tab) — Windows 95's tab
+                         // control
     SettingsConfigure,   // Settings (bare `;`) — STD_PROPERTIES
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
     Folder,              // a folder row — the shell's closed folder

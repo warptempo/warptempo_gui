@@ -19,7 +19,7 @@ so a theme's `#rrggbb` is a P3 byte triple exactly as the app paints it.
 ```
 python3 tools/mockup/mock.py --capture <png | fragment> --theme <file.theme | builtin> -o <out.png>
         [--capture-theme <file.theme | builtin>] [--chrome win95|motif] [--separator]
-        [--icons <dir of <Enumerator>.svg>] [--scene <json>] [--extra key=value ...]
+        [--icons <dir of <Enumerator>.svg>] [--scene <json>] [--extra key=value ...] [--legacy-dither]
 tools/mockup/push.sh <png...>            # the planner's: onto /sdcard/Download in name order
 tools/mockup/push.sh --delete <name...>  # the superseded ones off it
 ```
@@ -40,6 +40,12 @@ tools/mockup/push.sh --delete <name...>  # the superseded ones off it
   hard-fails unknown keys). motif: `trough` (the scroll bar's trough, Motif's select colour of the ground's set),
   `frame_ts` / `frame_bs` (the frame's shadows, the active title set's); one not given is Motif's own rule on its
   role's 8-bit value (stated on stderr), which can sit one step off a .dp palette's 16-bit values.
+- `--legacy-dither`: the capture predates effd544f. The app paints its two dithers — the lit case's checker
+  (paint_checker_rect, Windows' 2x2 pattern brush) and the caption gradient (paint_caption_gradient's 4x4 matrix) —
+  ONE DEVICE PX A CELL since effd544f, and the matcher reads (and `--icons` repaints the face) at that cell; an
+  older capture painted them in Windows-px cells, so without the switch its lit cases' checker reads as glyph (the
+  emboss on a lit disabled case is then missed, the case taken as enabled and kept as captured — the identity
+  still holds, a recolour does not). Every scene below today is such a capture: pass the switch for them.
 - `--icons`: every case the scene lists takes `<Enumerator>.svg` from the folder, rasterised at the app's size
   (16 units, 4 device px a unit at 400 %), seated at the case's fixed (3, 3) Windows px plus the lit case's one-line
   shift (icons.h's PLACEMENT), over the case's face in the target theme; a disabled case gets draw_engraved's emboss
@@ -69,7 +75,8 @@ length is whole device px; a half Windows px is allowed where the app's own cent
 The caption's icon seat and button boxes and the case's glyph seat are not in a scene: they are read off
 `src/gui/render.h` on every run.
 
-Scenes today, all of the 2026-10-06 captures of APK 7c6c0d8b (the Chicago95 glyphs and the period bitmap faces):
+Scenes today, all of the 2026-10-06 captures of APK 7c6c0d8b (the Chicago95 glyphs and the period bitmap faces;
+before effd544f, so Windows-px dithers: `--legacy-dither`):
 `main.json` (062542: icon row 20 cases, row 8 17), `history.json` (062603: 19, 17), `player.json` (062555: 20, 7).
 
 ## The matcher and its limits
@@ -81,6 +88,9 @@ well's top lines, the emboss's offset structure for a disabled glyph). WHAT IT C
 - an ENABLED glyph's ink equal to its background — a silver pixel on the face, a white one on a lit cell — turns
   into the target's background (use `--icons` to repaint glyphs whole);
 - an antialiased enabled glyph edge keeps the capture's ground in its blend (only the emboss's mixes are remapped);
+- THE CAPTION'S CLOSE X is the set's WindowClose drawing, antialiased since effd544f: its solid interior is the
+  label role and recolours, its edge blends are no role's value and stay as captured (counted as unclaimed);
+  `--icons` repaints case glyphs only and does not reach the caption;
 - a value two roles share inside one region goes to that region's owner (e.g. a black glyph pixel touching a relief
   line reads as DkShadow);
 - anything the capture does not show — the inactive caption, a pressed face, a role whose element is off screen
@@ -96,11 +106,12 @@ model: it calls chrome_win95.recolour for the role swap and only moves strips an
 
 ## Validation (2026-10-06)
 
-- Identity: each of the three captures through `--theme builtin` reproduces itself, 0 differing px.
-- Round trip: 062542 to `assets/themes/warptempo.theme` and back (`--capture-theme` that file, `--theme builtin`):
-  0 differing px.
-- CDE: `--capture 062542 --theme examples/cde-solaris9-default-calc.theme --chrome motif --separator --extra
-  trough=#9397A5` against the theme author's tmp/theme_author/mock_CD3_solaris9-default-calc-canvas.png differs
+- Identity: each of the three captures through `--theme builtin` reproduces itself, 0 differing px, with and
+  without `--legacy-dither` (2026-10-06, after effd544f); without it 062555's lit disabled case reads as enabled.
+- Round trip: 062542 to `assets/themes/warptempo.theme` and back (`--capture-theme` that file, `--theme builtin`),
+  both legs `--legacy-dither`: 0 differing px.
+- CDE: `--capture 062542 --theme examples/cde-solaris9-default-calc.theme --chrome motif --separator --legacy-dither
+  --extra trough=#9397A5` against the theme author's tmp/theme_author/mock_CD3_solaris9-default-calc-canvas.png differs
   where the prototype was wrong or drew from other inputs, nowhere else: the toolbar's and row 8's air (the
   prototype left them the caption colour), the right frame (the prototype's strips overwrote it), `frame_bs` one
   step off (Motif's rule on #B24D7A gives #57253C, the .dp's 16-bit value #57253B), the glyph cells (the checker

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- The wav row from Chicago95's mimetypes/audio-x-wav (the Wave Sound document): the page with the speaker drawn over its left edge at the pick's own small geometry (bell rows 3-12, a 3-wide cylinder, short rays), the overlap resolved by layering; whole-unit lines, no scaling. -->
+  <!-- The wav row from Chicago95's mimetypes/audio-x-wav (the Wave Sound document): the page with the speaker drawn over its left edge at the pick's own small geometry (bell rows 3-12, short rays), its back ONE rounded capsule 3 wide (grey silhouette, silver lit rim, white body, dark lens ends) with the cone's crescent setting the bell in front; whole-unit lines, no scaling. -->
   <path fill="#808080" d="M4,0 L13,0 L16,3 L16,16 L4,16 Z"/>
   <path fill="#FFFFFF" d="M5,1 H12 V4 H5 Z M5,4 H14 V14 H5 Z"/>
   <path fill="#C0C0C0" d="M14,4 H15 V15 H14 Z M5,14 H15 V15 H5 Z"/>
@@ -15,10 +15,10 @@
   <path fill="#808080" d="M2,8 H3 V9 H2 Z"/>
   <path fill="#808080" d="M5,5 H6 V6 H5 Z"/>
   <path fill="#000000" d="M5,6 H6 V11 H5 Z"/>
-  <path fill="#808080" d="M7,3 H8 A1,1 0 0 1 9,4 V12 A1,1 0 0 1 8,13 H7 A1,1 0 0 1 6,12 V4 A1,1 0 0 1 7,3 Z"/>
-  <path fill="#000000" d="M6.5,4 A1,1 0 0 1 8.5,4 Z"/>
-  <path fill="#000000" d="M6.5,12 A1,1 0 0 0 8.5,12 Z"/>
-  <path fill="#C0C0C0" d="M6,4 H7 V12 H6 Z"/>
-  <path fill="#FFFFFF" d="M7,4 H8 V12 H7 Z"/>
+  <path fill="#808080" d="M7.5,3 A1.5,1.5 0 0 1 9,4.5 V11.5 A1.5,1.5 0 0 1 7.5,13 A1.5,1.5 0 0 1 6,11.5 V4.5 A1.5,1.5 0 0 1 7.5,3 Z"/>
+  <path fill="#C0C0C0" d="M7,3.5 A1,1 0 0 1 8,4.5 V11.5 A1,1 0 0 1 7,12.5 A1,1 0 0 1 6,11.5 V4.5 A1,1 0 0 1 7,3.5 Z"/>
+  <path fill="#FFFFFF" d="M7.5,4 A0.5,0.5 0 0 1 8,4.5 V11.5 A0.5,0.5 0 0 1 7.5,12 A0.5,0.5 0 0 1 7,11.5 V4.5 A0.5,0.5 0 0 1 7.5,4 Z"/>
+  <path fill="#000000" d="M6.3,3.6 A1.5,1.5 0 0 1 8.7,3.6 A4.875,4.875 0 0 0 6.3,3.6 Z M6.3,12.4 A1.5,1.5 0 0 0 8.7,12.4 A4.875,4.875 0 0 1 6.3,12.4 Z"/>
+  <path fill="#000000" d="M6.078,6.408 L6.615,6.515 L7.137,6.863 L7.485,7.385 L7.608,8 L7.485,8.615 L7.137,9.137 L6.615,9.485 L6.078,9.592 L5.922,8.808 L6.303,8.732 L6.56,8.56 L6.732,8.303 L6.792,8 L6.732,7.697 L6.56,7.44 L6.303,7.268 L5.922,7.192 Z"/>
   <path fill="#808080" d="M10,6 L11,5 L12,5 L12,6 L11,7 L10,7 Z M10,8 H13 V9 H10 Z M10,10 L11,10 L12,11 L12,12 L11,12 L10,11 Z"/>
 </svg>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Next Marker / Right: the exact mirror. -->
-  <path fill="#000000" d="M 15,8 L 8,1 V 5 H 1 V 11 H 8 V 15 Z"/>
-  <path fill="#00FFFF" d="M 13.586,8 L 9,3.414 V 6 H 2 V 10 H 9 V 12.586 Z"/>
+  <!-- Next Marker / Right: the exact mirror about x 8.5 — the same 15x14 at (1,1). -->
+  <path fill="#000000" d="M 16,8 L 9,1 V 5 H 1 V 11 H 9 V 15 Z"/>
+  <path fill="#00FFFF" d="M 14.586,8 L 10,3.414 V 6 H 2 V 10 H 10 V 12.586 Z"/>
 </svg>

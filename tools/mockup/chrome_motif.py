@@ -19,7 +19,7 @@
 # when they are known.
 import os, sys
 import numpy as np
-from chrome_win95 import recolour
+from chrome_win95 import recolour, dither_cell
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'theme_catalog'))
 import toolkit_rules                                       # noqa: E402  Motif's CalculateColorsRGB
@@ -35,7 +35,7 @@ def motif_rule(c8):
 
 
 def compose(img, scene, CT, TT_rgb, extras, rc, args):
-    rec, mt, cases, stem = recolour(img, scene, CT, TT_rgb, rc)
+    rec, mt, cases, stem = recolour(img, scene, CT, TT_rgb, rc, dither_cell(scene, args))
     T = mt.TT
     U = scene.U
     H, W = mt.H, mt.W

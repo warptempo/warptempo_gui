@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Toggle Add to Selection: Windows' arrow pointer with a plus at its lower right (add to the selection), 15x14 at (0,1). -->
-  <path fill="#000000" d="M0,1 L8,9 H4.7 L7,14 L5,15 L2.6,10.2 L0,12.6 Z"/>
-  <path fill="#000000" d="M11,8 H13 V14 H11 Z M9,10 H15 V12 H9 Z"/>
+  <!-- Toggle Add to Selection: Windows' arrow pointer with a plus at its lower right (add to the selection), 15x14 at (1,1) — the odd width centred on the case's own centre (cell x 8.5). -->
+  <path fill="#000000" d="M1,1 L9,9 H5.7 L8,14 L6,15 L3.6,10.2 L1,12.6 Z"/>
+  <path fill="#000000" d="M12,8 H14 V14 H12 Z M10,10 H16 V12 H10 Z"/>
 </svg>

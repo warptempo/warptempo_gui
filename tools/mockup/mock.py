@@ -30,6 +30,8 @@ def main(argv=None):
                     help='the theme the capture was painted in: "builtin" (the default) or a .theme file')
     ap.add_argument('--chrome', default='win95', choices=vocabularies())
     ap.add_argument('--separator', action='store_true', help="the vocabulary's separator under the toolbar")
+    ap.add_argument('--legacy-dither', action='store_true',
+                    help='the capture predates effd544f: its checker and caption gradient are in Windows-px cells')
     ap.add_argument('--icons', help='a folder of <Enumerator>.svg: every case the scene lists takes its glyph')
     ap.add_argument('--scene', help="the scene JSON (default: the one in scenes/ naming the capture)")
     ap.add_argument('--extra', nargs='*', default=[], metavar='KEY=VALUE',

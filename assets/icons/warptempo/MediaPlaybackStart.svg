@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Play Renders: the transport's play triangle, 9x9 at (3,3), Media Player's idiom. -->
-  <path fill="#000000" d="M3,3 L12,7.5 L3,12 Z"/>
+  <!-- Play: the transport's play triangle, 9x9 at (4,3), Media Player's idiom — the odd width centred on the case's own centre (cell x 8.5). -->
+  <path fill="#000000" d="M4,3 L13,7.5 L4,12 Z"/>
 </svg>

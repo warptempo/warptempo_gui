@@ -19,20 +19,36 @@
 #     background is the glyph — DISABLED when it is the emboss (Hilight and Shadow, or mixes of them and the
 #     ground, in draw_engraved's offset structure: those roles are rewritten, a mix as the same mix), ENABLED
 #     otherwise (the drawing's own inks, kept as captured).
+# THE DITHERS' CELL IS ONE DEVICE PX (since effd544f, render.cpp): the lit case's checker is paint_checker_rect's
+# 2x2 pattern brush of device px, the caption gradient's matrix indexes device columns and rows — both forms are
+# checked against render.cpp at import, so a painter change hard-fails here instead of mis-reading. A capture taken
+# before effd544f painted both in Windows-px cells: mock.py's --legacy-dither reads it at that cell (dither_cell = U).
 # WHAT IT CANNOT RECOVER: a glyph ink equal to the background (a silver pixel of an enabled glyph on the face, a
 # white one on a lit cell) becomes the new background; a value two roles share inside one region goes to the region's
 # owner (README.md, The matcher and its limits). Pixels no rule claims are left as captured and counted.
 import os, re
 import numpy as np
 
-# The caption gradient's ordered dither, read off render.cpp at import (paint_caption_gradient's own matrix).
+# The caption gradient's ordered dither, read off render.cpp at import (paint_caption_gradient's own matrix), and
+# the two painters' device-px form checked there.
 _RENDER_CPP = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'src', 'gui', 'render.cpp')
-_m = re.search(r'kCaptionDitherRank\[4\]\[4\] = \{(.*?)\};', open(_RENDER_CPP).read(), re.S)
+_SRC = open(_RENDER_CPP).read()
+_m = re.search(r'kCaptionDitherRank\[4\]\[4\] = \{(.*?)\};', _SRC, re.S)
 if not _m:
     raise SystemExit(f'tools/mockup: {_RENDER_CPP}: no kCaptionDitherRank (the source moved)')
 DITHER_RANK = np.array([int(v) for v in re.findall(r'\d+', _m.group(1))]).reshape(4, 4)
 if sorted(DITHER_RANK.ravel()) != list(range(16)):
     raise SystemExit(f'tools/mockup: {_RENDER_CPP}: kCaptionDitherRank is not a 4x4 rank matrix')
+# paint_checker_rect: a 2x2 tile, lit where (x + y) is even, repeated from the case's corner one device px a cell;
+# paint_caption_gradient: the rank at [row & 3][column & 3] of device px, the ramp the column over the last.
+for _what, _pat in (('the checker tile', r'cairo_image_surface_create\(CAIRO_FORMAT_ARGB32, 2, 2\)'),
+                    ("the checker's lit cells", r'\(x \+ y\) % 2 == 0 \? lit_word'),
+                    ("the gradient's device columns", r'kCaptionDitherRank\[p\]\[x & 3\]'),
+                    ("the gradient's device rows", r'\(y & 3\) \* r\.w'),
+                    ("the gradient's ramp", r'static_cast<double>\(x\) / \(r\.w - 1\)')):
+    if not re.search(_pat, _SRC):
+        raise SystemExit(f'tools/mockup: {_RENDER_CPP}: {_what} is not the device-px form matcher.py mirrors '
+                         f'(the source moved)')
 
 FACE_ROLES = ('warp_flag', 'phase_reset_flag', 'added_flag', 'removed_flag',
               'warp_flag_selected', 'phase_reset_flag_selected', 'added_flag_selected', 'removed_flag_selected')
@@ -55,18 +71,18 @@ def dilate(m, r):
     return o
 
 
-def caption_gradient(width, height, U, start, end):
-    """paint_caption_gradient's picture, (height, width, 3): start to end per channel across the Windows-px cells,
-    each channel quantised to five bits under the 4x4 ordered dither and bit-replicated; equal ends are one flat
-    fill of the exact colour."""
+def caption_gradient(width, height, cell, start, end):
+    """paint_caption_gradient's picture, (height, width, 3): start to end per channel across `cell`-px cells (1, the
+    device px, since effd544f; U for a legacy capture), each channel quantised to five bits under the 4x4 ordered
+    dither and bit-replicated; equal ends are one flat fill of the exact colour."""
     if tuple(start) == tuple(end):
         out = np.empty((height, width, 3), np.uint8); out[:] = start
         return out
     cols = 0
-    while cols * U < width:
+    while cols * cell < width:
         cols += 1
-    k = np.minimum(np.arange(width) // U, cols - 1)
-    j = np.arange(height) // U
+    k = np.minimum(np.arange(width) // cell, cols - 1)
+    j = np.arange(height) // cell
     t = k / (cols - 1) if cols > 1 else np.zeros(width)
     rank = DITHER_RANK[(j & 3)[:, None], (k & 3)[None, :]]
     out = np.empty((height, width, 3), np.uint8)
@@ -91,12 +107,13 @@ class Case:
 
 
 class Matcher:
-    def __init__(self, img, capture_theme, target_theme, U):
+    def __init__(self, img, capture_theme, target_theme, U, dither_cell=1):
         self.img = img
         self.H, self.W = img.shape[:2]
         self.CT = {k: np.array(v, np.uint8) for k, v in capture_theme.items()}
         self.TT = {k: np.array(v, np.uint8) for k, v in target_theme.items()}
         self.U = U
+        self.dither_cell = dither_cell      # the checker's and the gradient's cell in device px (the head)
         self.rec = img.copy()
         self.claimed = np.zeros((self.H, self.W), bool)
         self._masks = {}
@@ -158,7 +175,7 @@ class Matcher:
         U, (y0, y1) = self.U, rows
         reg = (slice(y0, y1), slice(0, self.W))
         grad = np.zeros((self.H, self.W, 3), np.uint8)
-        grad[y0:y1] = caption_gradient(self.W, y1 - y0, U, self.TT['caption_active'],
+        grad[y0:y1] = caption_gradient(self.W, y1 - y0, self.dither_cell, self.TT['caption_active'],
                                        self.TT['caption_active_gradient'])
         cap = self.m('caption_active')
         sel = np.zeros((self.H, self.W), bool); sel[reg] = cap[reg]
@@ -207,8 +224,8 @@ class Matcher:
         ix0, iy0, ix1, iy1 = case.x0 + 2 * U, case.y0 + 2 * U, case.x1 - 2 * U, case.y1 - 2 * U
         bg = np.empty((iy1 - iy0, ix1 - ix0, 3), np.uint8); bg[:] = T['ground']
         if case.checked:                                  # paint_checker_rect anchored at the case's corner
-            yy = (np.arange(iy0, iy1) - case.y0) // U
-            xx = (np.arange(ix0, ix1) - case.x0) // U
+            yy = (np.arange(iy0, iy1) - case.y0) // self.dither_cell
+            xx = (np.arange(ix0, ix1) - case.x0) // self.dither_cell
             lit = ((yy[:, None] + xx[None, :]) % 2) == 0
             bg[lit] = T['hilight']
         return bg, (slice(iy0, iy1), slice(ix0, ix1))

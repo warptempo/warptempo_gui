@@ -9,10 +9,15 @@ NAME = 'win95'
 EXTRAS = {}                     # the 36 roles carry this vocabulary whole
 
 
-def recolour(img, scene, capture_theme, target_theme, rc):
+def dither_cell(scene, args):
+    """The capture's dither cell in device px: 1 (the app since effd544f), U under --legacy-dither (matcher.py)."""
+    return scene.U if getattr(args, 'legacy_dither', False) else 1
+
+
+def recolour(img, scene, capture_theme, target_theme, rc, cell=1):
     """-> (the recoloured capture, the Matcher (its masks and counts), {lane: [Case]}, stem columns or None)."""
     U = scene.U
-    mt = Matcher(img, capture_theme, target_theme, U)
+    mt = Matcher(img, capture_theme, target_theme, U, cell)
     H, W = mt.H, mt.W
     full = (slice(0, H), slice(0, W))
     mt.chrome(full)
@@ -47,6 +52,6 @@ def recolour(img, scene, capture_theme, target_theme, rc):
 
 
 def compose(img, scene, capture_theme, target_theme, extras, rc, args):
-    rec, mt, cases, stem = recolour(img, scene, capture_theme, target_theme, rc)
+    rec, mt, cases, stem = recolour(img, scene, capture_theme, target_theme, rc, dither_cell(scene, args))
     placed = {lane: [(c, c.x0, c.y0) for c in cs] for lane, cs in cases.items()}
     return rec, mt, placed
