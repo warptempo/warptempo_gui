@@ -1,0 +1,48 @@
+{
+  "capture": "Screenshot_20261006_062603.png",
+  "capture_path": "tmp/research/screenshots_his/2026-10-06/Screenshot_20261006_062603.png",
+  "build": "7c6c0d8b",
+  "notes": "The `h` history view over the same tab: the stand-in groups in Undo's and the iteration group's slots (kIconRowHistoryStandIns), Save wearing VcsCommit (the commit face; the state line reads 27/27 | GitHub, so VcsPull's Behind face is taken as absent), the history opener lit, no flags in the marker lane. Measured 2026-10-06 off the capture; rosters as main.json's.",
+  "gui_scale": 400,
+  "size_px": [2304, 1440],
+  "body": "wave",
+  "rows": {
+    "caption": [0, 18],
+    "menu": [18, 38],
+    "trim": [73, 89],
+    "ruler": [93, 107],
+    "marker": [107, 125],
+    "well": [125, 331],
+    "bottom": [335, 357]
+  },
+  "fields": [
+    {
+      "what": "row 8's clock",
+      "rows": [337.5, 354.5],
+      "cols": [5, 74]
+    }
+  ],
+  "lanes": {
+    "icon_row": {
+      "rows": [43, 65],
+      "groups": [
+        ["VcsCommit"],
+        ["KeyframePrevious", "KeyframeNext", "DocumentRevert", "DialogOkApply"],
+        ["ZoomFitBest", "ZoomInY", "GoJump", "TimelineLift"],
+        ["ShallowHistory", "BlackSum"],
+        ["PreviewRenderOn", "Unlock", "SettingsConfigure", "HelpWhatsthis"],
+        ["VcsDiff"],
+        ["DocumentExport", "DocumentImport", "ChronometerStart"]
+      ]
+    },
+    "bottom_row": {
+      "rows": [335, 357],
+      "groups": [
+        ["ListAdd", "ListRemove", "ViewHidden", "InsertLink", "GoJumpDeclaration", "EditSelect"],
+        ["BboxPrev", "BboxNext", "ZoomOriginal", "TabDetach"],
+        ["GoDown", "GoUp", "GoPrevious", "GoNext"],
+        ["MediaSkipBackward", "MediaPlaybackStart", "MediaSkipForward"]
+      ]
+    }
+  }
+}
