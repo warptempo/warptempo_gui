@@ -24,12 +24,14 @@
 //     shaping — and is painted by BLITTING ITS PIXELS, each a k x k block of
 //     device px in the current source, the origin on a whole device px, no
 //     antialias (architect 2026-10-05). A run of codepoints the strike lacks
-//     is shaped by HarfBuzz on Nimbus at its own advances, the one place
-//     the bitmap mode meets an outline.
+//     is shaped by HarfBuzz on Nimbus at its own advances less the tracking
+//     (kGuiFallbackTrackingPx, gui_font.h), the one place the bitmap mode
+//     meets an outline.
 //   - THE FALLBACK (every other scale): the whole run shaped by HarfBuzz on
 //     Nimbus's scaled font (gui_outline_scaled_font), on that font's OWN
-//     FreeType face (hb-ft), full GPOS/GSUB, its own advances — and painted
-//     through cairo_show_glyphs on the same scaled font.
+//     FreeType face (hb-ft), full GPOS/GSUB, its own advances less the same
+//     tracking (architect 2026-10-06) — and painted through cairo_show_glyphs
+//     on the same scaled font.
 // Either way the run is seated on the bitmap face's baseline: the caller
 // hands in a baseline its seat derived from the strike's vertical metrics.
 //
@@ -90,9 +92,9 @@ struct ShapedRun {
 };
 
 // Lay `utf8` out on `font` by the road its scale picks (above): the strike's
-// advances, or HarfBuzz on Nimbus (LTR, script and language guessed from
-// the text, full GPOS/GSUB). An empty string shapes to an empty run of width
-// 0.
+// advances, or HarfBuzz on Nimbus less the tracking (LTR, script and
+// language guessed from the text, full GPOS/GSUB). An empty string shapes to
+// an empty run of width 0.
 ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 
 // Paint `run` with its baseline origin at (x, y) in cairo's current source,

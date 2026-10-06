@@ -58,17 +58,21 @@ private:
 };
 
 // THE OUTLINE ROAD: shape `utf8`'s bytes [offset, offset + length) with
-// HarfBuzz on `font`'s own FT face and append the glyphs to `run`. The
-// buffer is handed the WHOLE string with the item window, so each glyph's
-// cluster is its byte index into the whole string — the fallback shapes the
-// whole run in one window, the bitmap mode each stretch the strike lacks.
+// HarfBuzz on `font`'s fallback scaled font's own FT face and append the
+// glyphs to `run`. The buffer is handed the WHOLE string with the item
+// window, so each glyph's cluster is its byte index into the whole string —
+// the fallback shapes the whole run in one window, the bitmap mode each
+// stretch the strike lacks. EVERY GLYPH'S ADVANCE TAKES THE TRACKING
+// (kGuiFallbackTrackingPx, gui_font.h) after the 26.6 conversion, the last
+// included, so both callers share the one rule for a Nimbus advance.
 //
 // The hb font is built per call, and stays that way deliberately: the
 // build is a face wrap plus a scale read, and a cache would have to be
 // keyed on the scaled font's identity and invalidated with it.
-void append_outline_glyphs(cairo_scaled_font_t* font, std::string_view utf8,
+void append_outline_glyphs(const GuiFont& font, std::string_view utf8,
                            size_t offset, size_t length, ShapedRun& run) {
-    ScaledFontFace locked(font);
+    const double   tracking = gui_fallback_tracking_px(font);
+    ScaledFontFace locked(gui_outline_scaled_font(font));
     HbFont         hb_font(locked.face());
     HbBuffer       buffer;
 
@@ -97,7 +101,7 @@ void append_outline_glyphs(cairo_scaled_font_t* font, std::string_view utf8,
         glyph.cluster      = infos[i].cluster;
         glyph.x_offset_px  = positions[i].x_offset / k26Dot6;
         glyph.y_offset_px  = positions[i].y_offset / k26Dot6;
-        glyph.x_advance_px = positions[i].x_advance / k26Dot6;
+        glyph.x_advance_px = positions[i].x_advance / k26Dot6 + tracking;
         run.width_px += glyph.x_advance_px;
         run.glyphs.push_back(glyph);
     }
@@ -136,8 +140,7 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
     if (utf8.empty()) return run;
 
     if (!gui_font_is_bitmap(font)) {
-        append_outline_glyphs(gui_outline_scaled_font(font), utf8, 0,
-                              utf8.size(), run);
+        append_outline_glyphs(font, utf8, 0, utf8.size(), run);
         return run;
     }
 
@@ -167,8 +170,7 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
             if (gui_strike_glyph(font.face, next) != nullptr) break;
             end += next_len;
         }
-        append_outline_glyphs(gui_outline_scaled_font(font), utf8, pos,
-                              end - pos, run);
+        append_outline_glyphs(font, utf8, pos, end - pos, run);
         pos = end;
     }
     return run;

@@ -31,25 +31,29 @@
 // THE FALLBACK, AT EVERY OTHER SCALE: NIMBUS SANS (architect 2026-10-06;
 // Regular for the body and the small face, Bold for the caption), URW's
 // Helvetica of the base35 set — the genre MS Sans Serif was drawn from — an
-// outline face (OpenType CFF) shaped by HarfBuzz with ITS OWN ADVANCES,
-// under SLIGHT hinting (gui_font_bundled.cpp's head), seated on the bitmap
-// face's baseline. ITS EM MATCHES THE BITMAP FACE VERTICALLY (architect
+// outline face (OpenType CFF) shaped by HarfBuzz with ITS OWN ADVANCES LESS
+// THE TRACKING (kGuiFallbackTrackingPx below: its 100 % width, its letters
+// pulled together toward the strike's fitting, architect 2026-10-06), under
+// SLIGHT hinting (gui_font_bundled.cpp's head), seated on the bitmap face's
+// baseline. ITS EM MATCHES THE BITMAP FACE VERTICALLY (architect
 // 2026-10-05), derived at the install from the two faces' measured values
 // (gui_fallback_em_px): the body's is the em at which Nimbus's "H" stands as
 // tall as Cronyx's 9-row cap, the bold's Nimbus Bold's "H" against Cronyx
 // Bold's, the small's Nimbus's "0" ink against Small Fonts' 7-row digit
-// (12.35, 12.35 and 9.38 Windows px, measured 2026-10-06). Each face keeps
-// its own true advances, so Nimbus text runs wider than Cronyx would at the
-// same scale, and a taller or deeper Nimbus glyph ("$", a descender) may poke
-// past a box sized off the bitmap face's rows — both accepted (architect
-// 2026-10-05: the strikes are primary and the fallback may spill over here
-// and there). NIMBUS SITS HIGH IN AN APP THAT TRUSTS A FONT'S LINE BOX (its
+// (12.35, 12.35 and 9.38 Windows px, measured 2026-10-06). The em is
+// vertical alone: horizontally the strike keeps its own advances and Nimbus
+// its own less the tracking, so Nimbus text may still run a little wider or
+// narrower than Cronyx would at the same scale, and a taller or deeper Nimbus
+// glyph ("$", a descender) may poke past a box sized off the bitmap face's
+// rows — both accepted (architect 2026-10-05: the strikes are primary and the
+// fallback may spill over here and there). NIMBUS SITS HIGH IN AN APP THAT TRUSTS A FONT'S LINE BOX (its
 // hhea ascent, 729 of 1000, is its "H"'s own height, so a line seated on it
 // puts the caps at the box's top); the fault is moot here because no line
 // box is ever read off the outline: the strikes' metrics below seat every
 // run. IN BITMAP MODE a codepoint the strike lacks (free text is UTF-8;
 // Cronyx carries ASCII and KOI8 Cyrillic) is drawn from Nimbus at its own
-// advance — the one place the bitmap mode meets an outline.
+// advance less the same tracking — the one place the bitmap mode meets an
+// outline, and one rule for every Nimbus advance wherever it is shaped.
 //
 // THE BITMAP FACES ARE THE ONLY SOURCE OF VERTICAL METRICS, AT EVERY SCALE
 // (architect 2026-10-05): ascent, descent, the line band, the cap band
@@ -59,7 +63,7 @@
 // element by the seat that reads them. HORIZONTALLY THE LIVE FACE IS ITS
 // OWN: every width used for layout is the shaped run's (text_shape), the
 // strike's advances times k in bitmap mode, Nimbus's own at the live size
-// otherwise.
+// less the tracking otherwise.
 
 #include <cairo/cairo.h>
 
@@ -173,10 +177,32 @@ double gui_fallback_em_px(GuiFace face);
 // outline glyph on it.
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f);
 
+// THE FALLBACK'S TRACKING, in WINDOWS PX per glyph (architect 2026-10-06):
+// Nimbus keeps its 100 % width but its letters are PULLED TOGETHER — every
+// advance HarfBuzz returns for an outline glyph is shortened by 3/16 of a
+// Windows px, the last glyph of a run included, so a run's width stays the
+// plain sum of its advances (text_shape.h) and a right-aligned run's right
+// edge stays honest. It scales with the font like every chrome length and is
+// NOT ROUNDED — it is an advance, not a grid point: -0.26 device px at the
+// laptop's 138 %, -0.52 at the tablet's 275 %, -0.75 at 400 %. Judged at 400
+// on the tablet against the body strike drawn x4: -0.75 device px there was
+// "almost an identical match", -1 brought his long line exactly to the
+// strike's width and was a touch tight. ONE CONSTANT FOR THE THREE FACES (the
+// body, the caption's bold, the ruler's small) and for every outline advance
+// wherever it is shaped — the fallback's whole run and the bitmap mode's
+// stretches of codepoints the strike lacks. THE STRIKES' ADVANCES ARE
+// UNTOUCHED. The font files themselves are unmodified (fonts/README.md).
+inline constexpr double kGuiFallbackTrackingPx = -0.1875;
+// The tracking in DEVICE px at the font's scale, unrounded.
+inline double gui_fallback_tracking_px(const GuiFont& f) {
+    return kGuiFallbackTrackingPx * gui_font_scale(f);
+}
+
 // AN UPPER BOUND ON ONE GLYPH'S ADVANCE at the font's scale, in device px:
 // the larger of the strike's widest advance and Nimbus's widest (its
 // hhea maximum) at its em. A cull bound over-estimates by design; no layout
-// reads this.
+// reads this. The tracking is not subtracted: being negative, it only
+// shortens a real advance, so the untracked figure stays an upper bound.
 double gui_font_advance_bound_px(const GuiFont& f);
 
 // THE LINUX BINARY'S COPY OF THE FIVE FILES, in kGuiFontFiles' order,

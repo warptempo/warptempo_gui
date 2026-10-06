@@ -2259,9 +2259,10 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // face, ACID's big clock included), its cap band centred in the field by
 // redesign_baseline: the strike's 9-row digits with 3 Windows px of face
 // above and below them. Both faces' digits are TABULAR — Cronyx's every
-// digit 6 strike px, Nimbus's every digit 0.556 em with no kerning
-// between the digits, the colon and the point — so the colon and the point
-// stand still as the time runs.
+// digit 6 strike px, Nimbus's every digit 0.556 em less the one tracking
+// (kGuiFallbackTrackingPx, gui_font.h, which every Nimbus glyph takes alike),
+// with no kerning between the digits, the colon and the point — so the colon
+// and the point stand still as the time runs.
 //
 // EACH FIELD'S WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
@@ -2280,8 +2281,8 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // letter is painted RIGHT-ALIGNED AGAINST THAT RUN'S START: switching tab
 // moves at most the letter's own left edge and nothing else — no letter's
 // kerning can reach the pipe, the two being shaped apart. (A and B are one
-// advance in both faces today, Cronyx's 7 strike px and Nimbus's 0.667 em,
-// measured 2026-10-06; the slot is the widest so a face where they differ
+// advance in both faces today, Cronyx's 7 strike px and Nimbus's 0.667 em
+// less the tracking, measured 2026-10-06; the slot is the widest so a face where they differ
 // changes nothing.)
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
@@ -2499,17 +2500,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-09-29 evening). In device px, off the painted walk: 17·32 + 3·11 =
     // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, and the
     // clock's time field (kTimeFieldHeightPx, 2026-10-05) — its cell the
-    // widest `A | 00:00.000` in the body face, Nimbus's 101.0 px at 138 %
-    // (2026-10-06) — spanning 7..116, the state line from one field pad
-    // past it (2026-10-06), 120, clipped one group space short of the block
-    // at 1321 (~1201 px); at the tablet's 275 % 17·63 + 3·22 = 1137, starting
-    // at 2304 − 22 − 1137 = 1145, the field (its cell ~201.3, ceiled to 202)
-    // spanning 14..232, the state line 240..1123 (~883 device px). THE ROW CARRIES NO
+    // widest `A | 00:00.000` in the body face, Nimbus's ~97.6 px at 138 %
+    // (2026-10-06, its 13 glyphs tracked, ceiled to 98) — spanning 7..113,
+    // the state line from one field pad past it (2026-10-06), 117, clipped
+    // one group space short of the block at 1321 (~1204 px); at the tablet's
+    // 275 % 17·63 + 3·22 = 1137, starting at 2304 − 22 − 1137 = 1145, the
+    // field (its cell ~194.6, ceiled to 195) spanning 14..225, the state line
+    // 233..1123 (~890 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: the block reaches the field's
-    // right edge once the window falls below about 507 Windows px at a
-    // fallback scale (8 − 3 + ~73 + 6 + 415 + 8; 497 at a bitmap scale, the
+    // right edge once the window falls below about 505 Windows px at a
+    // fallback scale (8 − 3 + ~71 + 6 + 415 + 8; 497 at a bitmap scale, the
     // strike's cell 63). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
     // group space short of the block, so a long line is cut rather than
     // colliding.
