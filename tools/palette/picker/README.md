@@ -245,7 +245,7 @@ show, the added `[+]1.27+0.00:b.33` at 398 and the removed `[-]b.33` at 871 (the
   element's name, hex and count. Leaving the app with the panel open (home, the cover) saves nothing: the unsaved colour
   is discarded and the app comes back on the last saved state.
 - The panel's chrome is the app's own greys: the ground #191919, the label #FFFFFF, fields #212121, flat 1-px #000000
-  edges; no relief, no alpha. Text in Nimbus Sans (its digits tabular), FreeType + cairo as the product does its fallback.
+  edges; no relief, no alpha. Text in Nimbus Sans (its digits tabular), FreeType + cairo as the product draws its face.
 
 ## Files on the tablet
 

@@ -43,8 +43,8 @@
 // roster's MusicNote16th row carries the whole).
 //
 // TWO ROADS DRAW THE GLYPHS (architect 2026-10-05, the icon pass): AT A
-// BITMAP gui_scale (a whole multiple of 100, gui_font.h's
-// gui_scale_is_bitmap) the roster, the list rows, the cards and the caption
+// BITMAP gui_scale (a whole multiple of 100, scale_is_bitmap below) the
+// roster, the list rows, the cards and the caption
 // draw CHICAGO95'S 16-px PNGs (assets/icons/chicago95/16/, each pick
 // recorded at assets/icons/chicago95/mapping.md), compiled into the Linux
 // binary and packed as the APK's assets, decoded once at launch
@@ -564,10 +564,16 @@ void draw_in_ink(cairo_t* cr, Icon icon, double x, double y, double size_px,
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
                    double offset_px);
 
+// THE BITMAP SWITCH, ON THE SCALE ALONE (architect 2026-10-05): a whole
+// multiple of 100 draws the Chicago95 pictures, every other scale the Breeze
+// vectors. THE ICONS' OWN: the text is Nimbus at every scale (gui_font.h,
+// architect 2026-10-06), so the pass below (icons.cpp) is its one reader,
+// and the scalable icon set's arc deletes it.
+inline bool scale_is_bitmap(int percent) { return percent % 100 == 0; }
+
 // THE CHICAGO95 BITMAP PASS (architect 2026-10-05): AT A BITMAP gui_scale (a
-// whole multiple of 100 — gui_font.h's gui_scale_is_bitmap, read here on
-// gui_scale_percent() so the icons turn bitmap in the same breath as the
-// text) every ROSTER BUTTON'S glyph this product paints through draw_cased
+// whole multiple of 100 — scale_is_bitmap above, read on gui_scale_percent())
+// every ROSTER BUTTON'S glyph this product paints through draw_cased
 // below comes from its period Chicago95 16-px picture
 // (assets/icons/chicago95/16/, one pick per glyph recorded at
 // assets/icons/chicago95/mapping.md) instead of its Breeze vector: decoded

@@ -4,9 +4,9 @@
 #
 # IMPORT THIS BEFORE `import cairo` ANYWHERE: it points fontconfig at the tool's own fonts.conf,
 # which lists ONLY the repository's fonts/ directory, so cairo's toy face "Nimbus Sans" can
-# resolve to nothing but fonts/NimbusSans-Regular.otf — the app's FALLBACK face (gui_font.h,
-# architect 2026-10-06), the one this tool paints every row in: the tablet's 275 % is a fallback
-# scale. Its VERTICAL metrics are the period bitmap faces' (strike_metrics below), as in the app.
+# resolve to nothing but fonts/NimbusSans-Regular.otf — the app's face (gui_font.h, architect
+# 2026-10-06), the one this tool paints every row in. Its VERTICAL metrics are the recorded
+# constants (face_metrics below), as in the app.
 # verify_fonts() proves the resolution (fontconfig's own match, glyph ids against HarfBuzz on the
 # file, and the face's metrics as measured 2026-10-06) and the renderer calls it on every run.
 import os, sys, ctypes
@@ -125,31 +125,30 @@ def line_baseline(family, size_px, line_y):
 
 SANS_PX = 12.0 * 96.0 / 72.0 * SCALE        # the probe size, 32 px
 
-# ------------------------------------------------------------------ the period bitmap faces (gui_font.h)
-# The app's vertical metrics at every scale are the strikes' (architect 2026-10-05): read here off the same files,
-# as gui_font_bundled.cpp reads them — the strike's ascent / descent, its cap band (the "0"'s rows above the
-# baseline).
-BODY_STRIKE = os.path.join(FONTS, 'crox1h.otb')
-SMALL_STRIKE = os.path.join(FONTS, 'small_fonts_digits.otb')
-_STRIKES = {}
-def strike_metrics(path):
-    """-> {'ascent', 'descent', 'cap', 'glyphs': {char: (top, height)}} in Windows px."""
-    if path not in _STRIKES:
-        from fontTools.ttLib import TTFont
-        f = TTFont(path); st = f['EBLC'].strikes[0].bitmapSizeTable.hori; data = f['EBDT'].strikeData[0]
-        glyphs = {chr(cp): (data[g].metrics.BearingY, data[g].metrics.height) for cp, g in f.getBestCmap().items()}
-        _STRIKES[path] = {'ascent': st.ascender, 'descent': -st.descender, 'cap': glyphs['0'][0], 'glyphs': glyphs}
-    return _STRIKES[path]
+# ------------------------------------------------------------------ the recorded vertical metrics (gui_font.h)
+# The app's vertical metrics at every scale are recorded constants (kGuiFaceMetrics, architect 2026-10-06): read
+# here off that owner in the working tree, so the tool cannot drift from it — each face's ascent / descent and its cap
+# band, in Windows px.
+_FACE_METRICS = {}
+def face_metrics(face):
+    """face 'Body' | 'Bold' | 'Small' -> {'ascent', 'descent', 'cap'} in Windows px, kGuiFaceMetrics' row."""
+    if not _FACE_METRICS:
+        import re
+        src = open(os.path.join(REPO, 'src', 'gui', 'gui_font.h')).read()
+        table = re.search(r'kGuiFaceMetrics\[kGuiFaceCount\] = \{(.*?)\n\};', src, re.S).group(1)
+        for asc, desc, cap, name in re.findall(r'\{(\d+), (\d+), (\d+)\},\s*// (\w+)', table):
+            _FACE_METRICS[name] = {'ascent': int(asc), 'descent': int(desc), 'cap': int(cap)}
+    return _FACE_METRICS[face]
 
-def fallback_em(strike_path, band_char):
-    """The fallback's em in Windows px (gui_fallback_em_px): the strike's cap over Nimbus's unscaled ink height
+def face_em(face, band_char):
+    """The face's em in Windows px (gui_face_em_px): the recorded cap over Nimbus's unscaled ink height
     of `band_char` per em ("H" for the body, "0" for the digits) — the outline's control box, as FreeType's
     FT_LOAD_NO_SCALE metrics read it off the CFF outline."""
     from fontTools.ttLib import TTFont
     from fontTools.pens.boundsPen import ControlBoundsPen
     f = TTFont(SANS_FILE); gs = f.getGlyphSet(); pen = ControlBoundsPen(gs)
     gs[f.getBestCmap()[ord(band_char)]].draw(pen); _, y_min, _, y_max = pen.bounds
-    return strike_metrics(strike_path)['cap'] / ((y_max - y_min) / f['head'].unitsPerEm)
+    return face_metrics(face)['cap'] / ((y_max - y_min) / f['head'].unitsPerEm)
 
 def verify_fonts(verbose=False):
     """Fail loudly unless the family resolves to the repository's file. Three proofs:

@@ -1,7 +1,5 @@
 #include "icons.h"
 
-#include "gui_font.h"   // gui_scale_is_bitmap, the font strikes' own switch
-
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -1969,7 +1967,7 @@ bool install_chicago95_bitmaps(const Chicago95Pixels (&files)[kChicago95FileCoun
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
                double size_px, int button_shift_px) {
     const Chicago95Icon* bmp =
-        gui_scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
+        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
     if (!bmp) {
         // NOT A BITMAP SCALE, OR NO CHICAGO95 PICTURE (AppIcon): draw()
         // unchanged, at the vector's own (3, 3)-in-the-case placement.
@@ -1978,7 +1976,7 @@ void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
         draw(cr, icon, x, y, size_px);
         return;
     }
-    // k, THE ONE INTEGER THIS WHOLE PLACEMENT RIDES: gui_scale_is_bitmap
+    // k, THE ONE INTEGER THIS WHOLE PLACEMENT RIDES: scale_is_bitmap
     // already proved gui_scale_percent() is a whole multiple of 100, so k is
     // exact and icon_case_w_px()/icon_case_h_px() (each scaled_px of its own
     // authored term, the composite rule) equal 23k and 22k on the nose, the
@@ -2011,7 +2009,7 @@ void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
                          double size_px, int button_shift_px,
                          double offset_px) {
     const Chicago95Icon* bmp =
-        gui_scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
+        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
     if (!bmp) {
         // NOT A BITMAP SCALE, OR NO CHICAGO95 PICTURE: draw_engraved
         // unchanged, at the vector's own (3, 3)-in-the-case placement —
@@ -2056,7 +2054,7 @@ void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
 
 void draw_bitmap(cairo_t* cr, Icon icon, double x, double y, double size_px) {
     const Chicago95Icon* bmp =
-        gui_scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
+        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
     if (!bmp) {
         draw(cr, icon, x, y, size_px);
         return;
@@ -2077,7 +2075,7 @@ void draw_bitmap(cairo_t* cr, Icon icon, double x, double y, double size_px) {
 void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
                         double size_px, GuiColor ink) {
     const Chicago95Icon* bmp =
-        gui_scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
+        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
     if (!bmp) {
         draw_in_ink(cr, icon, x, y, size_px, ink);
         return;
@@ -2091,7 +2089,7 @@ void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
 
 void draw_bitmap_on_text_ink(cairo_t* cr, Icon icon, double x, double y,
                              double size_px, GuiColor text_ink) {
-    if (gui_scale_is_bitmap(gui_scale_percent()) && chicago95_for(icon)) {
+    if (scale_is_bitmap(gui_scale_percent()) && chicago95_for(icon)) {
         draw_bitmap(cr, icon, x, y, size_px);
         return;
     }

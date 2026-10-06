@@ -573,7 +573,7 @@ double gui_scale_factor();
 
 // A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
 // asks for its text — the body, the caption's bold or the ruler's small face
-// at the current gui_scale, which also picks the bitmap mode or the fallback.
+// at the current gui_scale.
 inline GuiFont gui_font(GuiFace face) {
     return GuiFont{face, gui_scale_percent()};
 }
@@ -697,9 +697,9 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     (SM_CXSMICON) at (2, 1) from the lane's top-left — at a bitmap
 //     gui_scale (architect 2026-10-05) Chicago95's status/audio-volume-high
 //     picture through draw_bitmap, the vector form at every other scale;
-//   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: Cronyx Helvetica
-//     Bold, the caption font being the body face in bold), its pen at x 20 (two px past
-//     the icon) and its cap band centred in the lane (redesign_baseline), in
+//   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: Nimbus Sans
+//     Bold, the caption font being the body face in bold), its pen at x 20
+//     (two px past the icon) and its cap band centred in the lane (redesign_baseline), in
 //     the caption's text role, cut before the buttons with Windows' "..."
 //     (paint_caption_row owns the words and the cut);
 //   THE THREE BUTTONS, flush right: each 16 x 14 (kCaptionButtonWPx x
@@ -1030,10 +1030,9 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // the marker lane's top (below). ONE HELPER seats the labels for both
 // readers — the painter's baseline and this height (ruler_label_baseline_px,
 // paint_handler.cpp) — so the two cannot disagree. The face is THE SMALL
-// FACE, the reconstructed Small Fonts digits (gui_font.h, architect
-// 2026-10-05), whose 7-row cell is all cap (ascent 7, cap 7, descent 0), its
-// strike's metrics times the scale at every scale: 4 + 7 + 7 = 18 Windows px
-// at 100 %;
+// FACE (gui_font.h, architect 2026-10-05), whose recorded 7-row cell — Small
+// Fonts' digit — is all cap (ascent 7, cap 7, descent 0), times the scale at
+// every scale: 4 + 7 + 7 = 18 Windows px at 100 %;
 //   400 % (k = 4): pad 16, baseline row 44, cap ink rows 16..43: lane
 //     44 + 28 = 72.
 //   275 % (the tablet): pad 11, ascent 19.25 -> 19, baseline row 30, cap
@@ -1082,24 +1081,24 @@ int ruler_lane_h_px();
 
 // THE MARKER LANE'S HEIGHT IS DERIVED FROM THE FLAG BOX, NOT AUTHORED
 // (architect 2026-10-02, the AC / AD sets' rule, tools/palette's flag_seat;
-// the box re-ruled on the body strike's whole cell 2026-10-05): the flag box
+// the box re-ruled on the body face's whole cell 2026-10-05): the flag box
 // is its top edge band (marker_flag_edge_h_px), ONE WINDOWS PX OF FACE, the
-// body strike's CELL (its ascent above the baseline, its descent from the
-// baseline's row down), ONE WINDOWS PX OF FACE and its bottom edge band,
+// body face's recorded CELL (its ascent above the baseline, its descent from
+// the baseline's row down), ONE WINDOWS PX OF FACE and its bottom edge band,
 // every term a whole device row —
 //
 //     box  = edge + face + ascent + descent + face + edge
 //     lane = scaled_px(kMarkerLaneAirPx) + box
 //
-// THE CELL IS CRONYX HELVETICA'S WHOLE 13 (ascent 11 + descent 2; gui_font.h's
-// strike metrics, read in marker_lane_rows, paint_handler.cpp), not the
+// THE CELL IS MS SANS SERIF 8'S WHOLE 13 (ascent 11 + descent 2; gui_font.h's
+// recorded metrics, read in marker_lane_rows, paint_handler.cpp), not the
 // label's ink (architect 2026-10-05) — THE FLAG IS 1 + 1 + 11 + 2 + 1 + 1 =
 // 17 WINDOWS PX, the period's one-line field (kTimeFieldHeightPx, the list
 // row), so the label's caps (9 rows) get 3 Windows px above them (the cell's
 // top row, the row "^" climbs into, and the face) and 3 below (the descent
 // and the face), centred. The label sits on the cell's baseline at every
-// scale: Nimbus at a fallback scale seats on the same baseline, and a
-// glyph of it poking past the cell or the box is accepted (gui_font.h). The
+// scale, and a Nimbus glyph poking past the cell or the box is accepted
+// (gui_font.h). The
 // ascent and the descent are each rounded on their own (scaled_px), the box
 // the sum of its rounded parts. Every row the box gains or saves is THE
 // WAVEFORM'S (his ruling): the lane stack above it moves and the waveform's
@@ -1131,7 +1130,7 @@ inline constexpr int kMarkerLaneAirPx = 1;
 inline int marker_lane_air_px() {
     return scaled_px(kMarkerLaneAirPx, 1);
 }
-// The face between the box's outline and the strike's cell, above it and
+// The face between the box's outline and the body's cell, above it and
 // below it (the rule above, architect 2026-10-05).
 inline constexpr int kMarkerFlagFacePx = 1;
 inline int marker_flag_face_px() {
@@ -1269,11 +1268,10 @@ inline int bottom_row_h_px() {
 
 // (THE TEXT SIZES ARE THE FACES' OWN — architect 2026-10-05. The shared
 // 13-Windows-px size, the ruler labels' 10 and the tooltip hint line's 11
-// retired with the outline face they sized: the body face is Cronyx
-// Helvetica's 13-px cell, the ruler's the Small Fonts digits' 7-px cell, and
-// a fallback scale draws Nimbus at the em that matches each strike
-// vertically (gui_font.h). A text surface names its face, gui_font(face),
-// and reads its vertical metrics off the strike.)
+// retired: each face's size is the em at which Nimbus matches its recorded
+// cell vertically — the body's 13-px cell, the ruler's 7-px (gui_font.h). A
+// text surface names its face, gui_font(face), and reads its vertical
+// metrics off the recorded constants.)
 
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
 // (56x20 = a 1px left border plus a 55x20 fill box; the border's own record is
@@ -1371,8 +1369,8 @@ inline int marker_flag_border_px() {
 }
 // The label BASELINE, in device rows under the BOX's top (marker_flag_box_band,
 // never the lane's): the box's edge band, one Windows px of face, then the
-// body strike's ascent (architect 2026-10-05: the label sits on the cell's
-// baseline). Defined in paint_handler.cpp with the box's height (the rule at
+// body face's recorded ascent (architect 2026-10-05: the label sits on the
+// cell's baseline). Defined in paint_handler.cpp with the box's height (the rule at
 // marker_lane_h_px's block above).
 int marker_flag_baseline_px();
 // THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because they count relief

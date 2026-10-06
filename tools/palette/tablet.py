@@ -7,12 +7,12 @@
 #   * a length is scaled_px (render.h): std::nearbyint(windows_px x 2.75), ROUNDED AT THE ELEMENT; a composite is the
 #     sum of its rounded parts (the case = lead + glyph + trail), never one rounding of the sum. Python's round() is
 #     round-half-even, std::nearbyint's default mode;
-#   * 275 % is a FALLBACK scale (gui_font.h, architect 2026-10-05): the text is Nimbus Sans (2026-10-06) through
-#     common.py's road (cairo + FreeType, SLIGHT, hint metrics on; HarfBuzz shaping on the same file) at the em that
-#     matches each period bitmap face vertically (common.fallback_em: 12.35 Windows px for the body, 9.38 for the
-#     small) x 2.75,
-#     an unrounded double; every VERTICAL metric is the strike's (Cronyx Helvetica's ascent 11 / descent 2 / cap 9,
-#     the Small Fonts digits' 7 / 0 / 7) x 2.75, and every seat is the app's: redesign_baseline (box_y +
+#   * the text is Nimbus Sans (gui_font.h, architect 2026-10-06) through common.py's road (cairo + FreeType,
+#     SLIGHT, hint metrics on; HarfBuzz shaping on the same file) at the em that matches each face's recorded
+#     metrics vertically (common.face_em: 12.35 Windows px for the body, 9.38 for the small) x 2.75, an
+#     unrounded double; every VERTICAL metric is the recorded one (kGuiFaceMetrics: the body's ascent 11 /
+#     descent 2 / cap 9, MS Sans Serif 8's cell, the small's 7 / 0 / 7, Small Fonts' digit) x 2.75, and every
+#     seat is the app's: redesign_baseline (box_y +
 #     floor((box_h + cap) / 2)) for a box, line_baseline (line_y + nearbyint(ascent)) for a line.
 # THE STATE IS SCENE 1002's (scene_1002.json, the 2026-10-02 capture): its view in DEVICE px (the ruler's ms per px
 # and start, so every marker, the playhead, the trim bounds and the waveform's columns stand where they stood), its
@@ -117,17 +117,17 @@ def read_constants():
 
 K, OWNER = read_constants()
 
-# the faces at 275 % (gui_font.h: the fallback's em matches the strike vertically; a font size is not a grid point)
-BODY_EM = C.fallback_em(C.BODY_STRIKE, 'H')      # 12.35 Windows px
-SMALL_EM = C.fallback_em(C.SMALL_STRIKE, '0')    # 9.38 Windows px
+# the faces at 275 % (gui_font.h: the em matches the recorded metrics vertically; a font size is not a grid point)
+BODY_EM = C.face_em('Body', 'H')                 # 12.35 Windows px
+SMALL_EM = C.face_em('Small', '0')               # 9.38 Windows px
 UI_PX = BODY_EM * SCALE                          # 33.95, the normal face
 SMALL_PX = SMALL_EM * SCALE                      # 25.80, the ruler's labels
-BODY = C.strike_metrics(C.BODY_STRIKE)
-SMALL = C.strike_metrics(C.SMALL_STRIKE)
+BODY = C.face_metrics('Body')
+SMALL = C.face_metrics('Small')
 
 
 def box_baseline(box_y, box_h):
-    """redesign_baseline on the body strike's cap band."""
+    """redesign_baseline on the body face's cap band."""
     return box_y + math.floor((box_h + BODY['cap'] * SCALE) * 0.5)
 
 
@@ -200,14 +200,14 @@ def build():
     halves = [(n - 1) // 2 * t for n in K['kPlayheadHeadGlyph'] for _ in range(t)]
     row('ruler', 'head widest row = cols x u', f'{K["kPlayheadHeadCols"]} x 1', K['kPlayheadHeadCols'] * t,
         'render.h playhead_head_half_w_px', 27)
-    # the marker lane: the flag box (edge + face + the body strike's whole cell + face + edge, architect
+    # the marker lane: the flag box (edge + face + the body face's whole cell + face + edge, architect
     # 2026-10-05: 17 Windows px, the period's one-line field) and its air above
     cell_up, cell_dn = px(BODY['ascent'], 1), px(BODY['descent'])
     edge_h = row('marker lane', 'flag edge band (top and bottom outline rows)', K['kMarkerFlagEdgePx'],
                  px(K['kMarkerFlagEdgePx'], 1), 'render.h marker_flag_edge_h_px', 3)
     face = row('marker lane', 'face between the outline and the cell (above and below)', K['kMarkerFlagFacePx'],
                px(K['kMarkerFlagFacePx'], 1), 'render.h marker_flag_face_px', 3)
-    row('marker lane', 'cell: the body strike\'s ascent / descent', f'{BODY["ascent"]} / {BODY["descent"]}',
+    row('marker lane', 'cell: the body face\'s ascent / descent', f'{BODY["ascent"]} / {BODY["descent"]}',
         f'{cell_up} / {cell_dn}', 'paint_handler.cpp marker_lane_rows', '30 / 6')
     box_h = row('marker lane', 'flag box = edge + face + cell + face + edge', '-',
                 2 * edge_h + 2 * face + cell_up + cell_dn, 'paint_handler.cpp marker_lane_rows', 48)
@@ -252,8 +252,8 @@ def build():
         row('surfaces', el, K[name], px(K[name], 1 if name == 'kModalFocusFramePx' or name == 'kPanelPadPx' else None),
             f'{OWNER[name]} {name} ({own_})')
     row('fonts', 'normal face em (menu, legend, flags, the clock, state line, dialog, card)', round(BODY_EM, 2), UI_PX,
-        'gui_font_bundled.cpp gui_fallback_em_px')
-    row('fonts', 'small face em (ruler labels)', round(SMALL_EM, 2), SMALL_PX, 'gui_font_bundled.cpp gui_fallback_em_px')
+        'gui_font_bundled.cpp gui_face_em_px')
+    row('fonts', 'small face em (ruler labels)', round(SMALL_EM, 2), SMALL_PX, 'gui_font_bundled.cpp gui_face_em_px')
 
     # ---- the rows, top to bottom
     y = 0; L = {}

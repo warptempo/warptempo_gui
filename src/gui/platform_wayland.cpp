@@ -704,8 +704,8 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     // (gui_font_embedded.cpp) go to the one face owner once, ahead of the
     // window and so of the first paint — init() runs once per process (the
     // loop contract, platform.h) and nothing selects a face before it. THE
-    // INSTALL IS OBSERVED, not assumed: its return is the probe that every
-    // strike read out and each fallback face is FT-backed, and false fails
+    // INSTALL IS OBSERVED, not assumed: its return is the probe that each
+    // face is FT-backed and carries its em's glyph, and false fails
     // the launch rather than painting in cairo's default face — the Android backend's
     // install_fonts_or_die asks the same question of the same owner.
     if (!gui_font_install_bundled(gui_font_embedded_files)) {

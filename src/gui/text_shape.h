@@ -17,23 +17,13 @@
 // A RUN IS LAID OUT ON A GuiFont, the face owner's face at a scale
 // (gui_font.h), and the run carries it, so show_shaped_run paints with
 // exactly the face that measured it — no caller can hand the painter a
-// different one. Two roads, chosen by the font's scale:
-//   - THE BITMAP MODE (gui_scale a whole multiple of 100, k = gui_scale /
-//     100): each codepoint the strike carries is its strike glyph, advancing
-//     the strike's own advance times k — Windows' own layout, no kerning, no
-//     shaping — and is painted by BLITTING ITS PIXELS, each a k x k block of
-//     device px in the current source, the origin on a whole device px, no
-//     antialias (architect 2026-10-05). A run of codepoints the strike lacks
-//     is shaped by HarfBuzz on Nimbus at its own advances less the tracking
-//     (kGuiFallbackTrackingPx, gui_font.h), the one place the bitmap mode
-//     meets an outline.
-//   - THE FALLBACK (every other scale): the whole run shaped by HarfBuzz on
-//     Nimbus's scaled font (gui_outline_scaled_font), on that font's OWN
-//     FreeType face (hb-ft), full GPOS/GSUB, its own advances less the same
-//     tracking (architect 2026-10-06) — and painted through cairo_show_glyphs
-//     on the same scaled font.
-// Either way the run is seated on the bitmap face's baseline: the caller
-// hands in a baseline its seat derived from the strike's vertical metrics.
+// different one. ONE ROAD AT EVERY SCALE (architect 2026-10-06): the whole
+// run shaped by HarfBuzz on Nimbus's scaled font (gui_outline_scaled_font),
+// on that font's OWN FreeType face (hb-ft), full GPOS/GSUB, its own advances
+// less the tracking (kGuiTrackingPx, gui_font.h) — and painted
+// through cairo_show_glyphs on the same scaled font. The run is seated on a
+// baseline the caller hands in, which its seat derived from the face's
+// recorded vertical metrics (gui_face_metrics).
 //
 // PRECONDITIONS (stated, not guarded — no error arm without a producer):
 //   - the faces are installed (gui_font_install_bundled, before the first
@@ -43,11 +33,11 @@
 //     (text_editor::replace_selection is the one incoming boundary) or
 //     verbatim from a hand-edited file. A malformed byte lays out as U+FFFD's
 //     glyph for that one byte; HarfBuzz consumes arbitrary bytes safely.
-//   - NO FURTHER FALLBACK. A codepoint Nimbus does not cover either
+//   - NO FALLBACK FACE. A codepoint Nimbus does not cover either
 //     shapes to .notdef and paints as the empty box — accepted, in the same
 //     class as the no-bidi exclusion below.
-//   - The current cairo PATH is preserved: the blit builds and fills its own
-//     path and puts the caller's back.
+//   - The current cairo PATH is preserved: cairo_show_glyphs neither reads
+//     nor touches it.
 //
 // Runs are single-direction LTR horizontal only: y advances are not modelled,
 // and a run's pen walks x alone.
@@ -62,9 +52,8 @@
 namespace text_shape {
 
 // One positioned glyph of a shaped run, in pixels, relative to the run's pen
-// position. A STRIKE glyph (`strike` non-null) is that bitmap glyph; an
-// OUTLINE glyph's `glyph_index` is a Nimbus GLYPH ID (post-substitution),
-// never a character codepoint.
+// position. `glyph_index` is a Nimbus GLYPH ID (post-substitution), never a
+// character codepoint.
 //
 // `cluster` is HarfBuzz's own cluster value: the BYTE INDEX into the shaped
 // utf8 where this glyph's cluster begins. It is what makes a shaped run
@@ -74,7 +63,6 @@ namespace text_shape {
 // a multibyte character); byte_offsets_px below is the one place that turns
 // either shape into a per-byte answer.
 struct ShapedGlyph {
-    const GuiStrikeGlyph* strike = nullptr;
     unsigned glyph_index = 0;
     unsigned cluster     = 0;
     double   x_offset_px = 0.0;
@@ -91,10 +79,9 @@ struct ShapedRun {
     double                   width_px = 0.0;
 };
 
-// Lay `utf8` out on `font` by the road its scale picks (above): the strike's
-// advances, or HarfBuzz on Nimbus less the tracking (LTR, script and
-// language guessed from the text, full GPOS/GSUB). An empty string shapes to
-// an empty run of width 0.
+// Lay `utf8` out on `font`: HarfBuzz on Nimbus less the tracking (LTR,
+// script and language guessed from the text, full GPOS/GSUB). An empty
+// string shapes to an empty run of width 0.
 ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 
 // Paint `run` with its baseline origin at (x, y) in cairo's current source,

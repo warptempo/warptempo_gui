@@ -38,7 +38,7 @@ sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config git fftw-devel \
     libxkbcommon-devel pipewire-jack-audio-connection-kit-devel libgit2-devel
 ```
 
-The tablet side adds adb and the Android build's host tools; its fonts — the period bitmap faces (Cronyx Helvetica and its bold, the reconstructed Small Fonts digits) and Nimbus Sans Regular and Bold beneath them — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
+The tablet side adds adb and the Android build's host tools; its fonts — Nimbus Sans Regular and Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
 
 ```bash
 sudo pacman -S --needed android-tools meson ninja zip unzip

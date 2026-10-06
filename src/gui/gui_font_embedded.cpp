@@ -1,7 +1,7 @@
 #include "gui_font.h"
 
 // THE LINUX BINARY CARRIES ITS OWN FACES (architect 2026-10-02, "bundle it for
-// both"): the five files under the repository's `fonts/` (gui_font.h's
+// both"): the two files under the repository's `fonts/` (gui_font.h's
 // kGuiFontFiles) are compiled into the executable here, so the laptop depends
 // on no installed font package and asks fontconfig nothing. The Wayland
 // backend hands these to gui_font_install_bundled (gui_font.h) once, at the
@@ -26,28 +26,16 @@
 
 namespace {
 
-const uint8_t kBodyStrike[] = {
-#include "crox1h.otb.inc"
-};
-const uint8_t kBoldStrike[] = {
-#include "crox1hb.otb.inc"
-};
-const uint8_t kSmallStrike[] = {
-#include "small_fonts_digits.otb.inc"
-};
-const uint8_t kFallback[] = {
+const uint8_t kRegular[] = {
 #include "NimbusSans-Regular.otf.inc"
 };
-const uint8_t kFallbackBold[] = {
+const uint8_t kBold[] = {
 #include "NimbusSans-Bold.otf.inc"
 };
 
 } // namespace
 
 const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount] = {
-    {kBodyStrike, sizeof(kBodyStrike)},
-    {kBoldStrike, sizeof(kBoldStrike)},
-    {kSmallStrike, sizeof(kSmallStrike)},
-    {kFallback, sizeof(kFallback)},
-    {kFallbackBold, sizeof(kFallbackBold)},
+    {kRegular, sizeof(kRegular)},
+    {kBold, sizeof(kBold)},
 };

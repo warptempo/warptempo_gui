@@ -179,9 +179,9 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 namespace {
 
 // THE SHARED TEXT FACE is the one face owner's body face (gui_font.h):
-// Cronyx Helvetica's strike at a whole-hundred scale, Nimbus Sans at its
-// vertically matched em elsewhere (architect 2026-10-05). Every row names it
-// through that owner, gui_font(GuiFace::Body) at the live scale.
+// Nimbus Sans at its vertically matched em at every scale (architect
+// 2026-10-06). Every row names it through that owner, gui_font(GuiFace::Body)
+// at the live scale.
 
 // (The authored-length -> device-pixels conversion every dimension below takes
 // is scaled_px, render.h — the ONE conversion the whole scale axis shares.)
@@ -984,7 +984,7 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 //
 // THE VERTICAL LAYOUT IS DERIVED, NOT AUTHORED, and it is SYMMETRIC BY
 // CONSTRUCTION: each line occupies the face's (ascent + descent) band — the
-// strike's 13-row cell — the two bands are separated by a real gap, and the
+// recorded 13-row cell — the two bands are separated by a real gap, and the
 // SAME padding closes the box above the first band and below the last. So
 // the box height falls out as
 //     pad + band [+ gap + band] + pad
@@ -1088,11 +1088,10 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
 // LABEL and every time field (Qt's integer box rule fails the crops).
 //
-// THE CAP BAND IS THE BODY STRIKE'S AT EVERY SCALE (architect 2026-10-05,
-// gui_font.h): Cronyx's 9 rows times the scale, an unrounded double — 9
-// device rows at 100 %, 12.42 at 138 %, 24.75 at 275 %, 36 at 400 % — so the
-// seat is one answer in the bitmap mode and the fallback alike, Nimbus's
-// em being the one that stands its "H" exactly that tall.
+// THE CAP BAND IS THE BODY FACE'S RECORDED ONE AT EVERY SCALE (architect
+// 2026-10-05, gui_font.h): 9 rows times the scale, an unrounded double — 9
+// device rows at 100 %, 12.42 at 138 %, 24.75 at 275 %, 36 at 400 % —
+// Nimbus's em being the one that stands its "H" exactly that tall.
 //
 // THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row CONTENT band (not
 // its 55-row lane, which carries a foot the label never centres in since
@@ -1121,8 +1120,8 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // THE MARKER LANE IS A LINE SEAT TOO, and stays out of the box solver: the
 // live flag pass, the history-diff flag pass and the marker-lane editor each
 // seat their label at the flag box's top plus marker_flag_baseline_px() — its
-// edge band, one Windows px of face, then the body strike's ascent
-// (architect 2026-10-05): the box is exactly outline, face, the strike's
+// edge band, one Windows px of face, then the body face's recorded ascent
+// (architect 2026-10-05): the box is exactly outline, face, the body's
 // whole cell, face, outline, so there is no margin to centre in — the caps
 // fall centred by the cell itself. The owner and the arithmetic are at
 // render.h's marker_lane_h_px block.
@@ -1133,7 +1132,7 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // monospace digits gave row 28 and row 63 — exactly where the old proxy plus
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
-// their own box: the 68-row field at 400 % puts the strike's 36-row cap at
+// their own box: the 68-row field at 400 % puts the body's 36-row cap at
 // row 52 (sixteen rows above it, sixteen below — a 4-row line and 12 of
 // face each side, Windows' own 3 + 9 + 3 times four), the 47-row field at
 // 275 % its 24.75-row band at row 35, the 23-row field at 138 % its
@@ -1246,8 +1245,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
-    // piece is open. THE BOLD FACE (gui_font.h: Cronyx Helvetica Bold, or
-    // Nimbus Sans Bold at a fallback scale) through the shaping
+    // piece is open. THE BOLD FACE (gui_font.h: Nimbus Sans Bold) through
+    // the shaping
     // chokepoint, its cap band centred in the lane, in the caption's text
     // role. TOO LONG FOR THE ROOM — the pen at x 20 to two px short of
     // Minimise — it is CUT AT A CODEPOINT and ends in Windows' "..." (DrawText's
@@ -2257,12 +2256,11 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // its row's content band (a half-row tie toward the top, the cap rule's own),
 // its run in THE BODY FACE (gui_font.h; no period field used a monospace
 // face, ACID's big clock included), its cap band centred in the field by
-// redesign_baseline: the strike's 9-row digits with 3 Windows px of face
-// above and below them. Both faces' digits are TABULAR — Cronyx's every
-// digit 6 strike px, Nimbus's every digit 0.556 em less the one tracking
-// (kGuiFallbackTrackingPx, gui_font.h, which every Nimbus glyph takes alike),
-// with no kerning between the digits, the colon and the point — so the colon
-// and the point stand still as the time runs.
+// redesign_baseline: the recorded 9-row digits with 3 Windows px of face
+// above and below them. The digits are TABULAR — Nimbus's every digit 0.556
+// em less the one tracking (kGuiTrackingPx, gui_font.h, which every
+// glyph takes alike), with no kerning between the digits, the colon and the
+// point — so the colon and the point stand still as the time runs.
 //
 // EACH FIELD'S WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
@@ -2281,9 +2279,8 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // letter is painted RIGHT-ALIGNED AGAINST THAT RUN'S START: switching tab
 // moves at most the letter's own left edge and nothing else — no letter's
 // kerning can reach the pipe, the two being shaped apart. (A and B are one
-// advance in both faces today, Cronyx's 7 strike px and Nimbus's 0.667 em
-// less the tracking, measured 2026-10-06; the slot is the widest so a face where they differ
-// changes nothing.)
+// advance today, Nimbus's 0.667 em less the tracking, measured 2026-10-06;
+// the slot is the widest so a face where they differ changes nothing.)
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2298,8 +2295,8 @@ constexpr std::string_view kClockTabLetters = "AB";
 // time fields run rows 716..732 of his lossless capture and Vegas Audio's
 // 484..500 — one line, three px of face, the 9-px digits, three px of face,
 // one line. One element, rounded once (scaled_px): 23 device px at 138 %, 47
-// at 275 %, 68 at 400 %, against the body strike's cap band of 12.42, 24.75
-// and 36.
+// at 275 %, 68 at 400 %, against the body face's recorded cap band of
+// 12.42, 24.75 and 36.
 constexpr double kTimeFieldHeightPx = 17.0;
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
@@ -2324,8 +2321,7 @@ constexpr double kStatusPanelPadPx = 3.0;
 // The time fields' metrics, MEMOISED ON THE SCALE — thirteen tiny shaping
 // passes (ten digits, the two letters and the specimen) that answer the same
 // thing on every frame, the face being fixed and the scale the only variable
-// (it also picks the strike or the fallback, gui_font.h: the widths are the
-// live face's own).
+// (the widths are the live face's own, gui_font.h).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -2510,9 +2506,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: the block reaches the field's
-    // right edge once the window falls below about 505 Windows px at a
-    // fallback scale (8 − 3 + ~71 + 6 + 415 + 8; 497 at a bitmap scale, the
-    // strike's cell 63). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
+    // right edge once the window falls below about 505 Windows px
+    // (8 − 3 + ~71 + 6 + 415 + 8). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
     // group space short of the block, so a long line is cut rather than
     // colliding.
     int right_block_x = seats.right_x;
@@ -2960,7 +2955,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
 namespace {
 
-// THE CARD'S LINE SPACING: the body face's OWN cell (the strike's ascent
+// THE CARD'S LINE SPACING: the body face's OWN cell (its recorded ascent
 // plus descent, 13 Windows px) at the live scale, so a wrapped card's rows
 // sit exactly as the face intends them to. Read ONCE per paint and handed
 // down — it is the only thing that turns a line count into a card height.
@@ -3587,9 +3582,9 @@ constexpr double kRulerMinMinorPitchPx = 9.0;
 //     pad = max(0, scaled_px(4) - (nearbyint(ascent) - nearbyint(cap)))
 //
 // of the label's own face, THE SMALL FACE (gui_font(GuiFace::Small)), both
-// metrics its strike's (gui_font.h). The Small Fonts digits' cell is all cap
-// — ascent 7, cap 7 — so the pad is scaled_px(4) itself at every scale
-// (2026-10-05); the rule stays general because the face's ascent-minus-cap
+// metrics its recorded ones (gui_font.h). Its cell is all cap — ascent 7,
+// cap 7, Small Fonts' digit — so the pad is scaled_px(4) itself at every
+// scale (2026-10-05); the rule stays general because the face's ascent-minus-cap
 // is the face's to change. The rule's one implementation is
 // ruler_label_baseline_px below; the lane's height under the labels is
 // ruler_lane_h_px's arithmetic (render.h).
@@ -3656,7 +3651,7 @@ int ruler_label_baseline_px(const GuiFont& font) {
 // THE RULER LANE'S DERIVED HEIGHT (the rule and its scales at the
 // declaration, render.h): the labels' baseline, then kRulerBaselineToMarkerPx
 // authored rows to the marker lane. Read at LAYOUT, outside any paint, off
-// the small face's strike metrics (gui_font.h), the very numbers the
+// the small face's recorded metrics (gui_font.h), the very numbers the
 // painter's seat reads, so the digits and the ground beneath them are one
 // measurement. Cheap enough to answer per query.
 int ruler_lane_h_px() {
@@ -3666,8 +3661,8 @@ int ruler_lane_h_px() {
 
 // THE MARKER LANE'S DERIVED ROWS (the rule and its scales at render.h's
 // marker_lane_h_px block): the flag box is its top edge band, one Windows px
-// of face, the BODY STRIKE'S WHOLE CELL (its ascent above the baseline, its
-// descent from the baseline's row down), a second Windows px of face and its
+// of face, the BODY FACE'S WHOLE RECORDED CELL (its ascent above the
+// baseline, its descent from the baseline's row down), a second Windows px of face and its
 // bottom edge band (architect 2026-10-05: 17 Windows px, the period's
 // one-line field); the label's baseline is the edge, the face and the ascent
 // under the box's top, at every scale and in either face; the lane is the
@@ -3687,7 +3682,7 @@ const MarkerLaneRows& marker_lane_rows() {
     static MarkerLaneRows rows;
     const int percent = gui_scale_percent();
     if (percent == rows.percent) return rows;
-    const GuiStrikeMetrics& cell = gui_strike_metrics(GuiFace::Body);
+    const GuiFaceMetrics& cell = gui_face_metrics(GuiFace::Body);
     const int above = scaled_px(cell.ascent, 1);
     const int below = scaled_px(cell.descent);
     const int edge  = marker_flag_edge_h_px();
@@ -3756,7 +3751,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     const GuiFont font = gui_font(GuiFace::Small);
     // THE LABEL IS A LINE, not a box, AT THE SMALL FACE
-    // (gui_font.h, the Small Fonts digits): the seat is line_baseline's ascent off a top pad DERIVED so the cap top
+    // (gui_font.h): the seat is line_baseline's ascent off a top pad DERIVED so the cap top
     // lands kRulerLabelCapTopPx authored rows under the lane's top (the rule
     // and its three scales at that constant), through the one seat the lane's
     // height also reads (ruler_label_baseline_px). THE SEAT IS ANCHORED TO THE

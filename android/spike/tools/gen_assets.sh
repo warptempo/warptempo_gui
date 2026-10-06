@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Populate the spike's asset staging dir -- two outline faces (Nimbus Sans
 # Regular and Bold, copied from the repository's fonts/, the product's
-# fallback faces since 2026-10-06) and the audition WAV -- under
+# faces since 2026-10-06) and the audition WAV -- under
 # android/spike/build/assets/.
 #
 # It lands under build/ ON PURPOSE: the repo's .gitignore already ignores
