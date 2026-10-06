@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Pause: two 2x8 bars, 6x8 at (5,4). -->
-  <path fill="#000000" d="M5,4 H7 V12 H5 Z M9,4 H11 V12 H9 Z"/>
+  <!-- Pause: two 2x9 bars, 6x9 at (5,3) — Play's own rows (y 3..12), since the one button wears both faces. -->
+  <path fill="#000000" d="M5,3 H7 V12 H5 Z M9,3 H11 V12 H9 Z"/>
 </svg>

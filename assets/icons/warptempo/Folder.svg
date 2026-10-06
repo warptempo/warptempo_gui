@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- The folder row: the shell's closed folder; the tab Explorer's own (top edge y 1..2 over x 2..7, one interior row, corners mitred), the body y 3..14, the drop shadow to 16. Ink 16x14 at (0,1). -->
+  <!-- The folder row: the family's folder (the shell's closed folder as Chicago95 places/folder composes it: grey outline, Explorer's tab — top edge y 1..2 over x 2..7, one interior row — yellow face, white light edge, olive dark edge, black drop shadow; ink 16x14 at (0,1)), bare. -->
   <path fill="#000000" d="M1,14 H16 V15 H1 Z M15,4 H16 V15 H15 Z"/>
   <path fill="#808080" d="M2,1 L7,1 L8,2 L8,3 L15,3 L15,14 L0,14 L0,3 L1,3 L1,2 Z"/>
   <path fill="#FFFF00" d="M2,2 H7 V4 H14 V13 H1 V4 H2 Z"/>

@@ -100,8 +100,8 @@ enum class Icon {
     PreviewRenderOn,     // Play Renders — Media Player's window with a play
     DialogOkApply,       // Load in Place (the icon row and the render
                          // player's row) — Marlett's check
-    VcsDiff,             // Toggle History View (`h`) — the folder with a
-                         // sundial
+    VcsDiff,             // Toggle History View (`h`) — Windows 98's
+                         // History, the folder with the clock
     ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
                          // the clock face
     EditSelect,          // Toggle Add to Selection — the pointer with a plus
@@ -128,8 +128,8 @@ enum class Icon {
     // THE MARKER WALK AND THE TAB SWITCH.
     BboxPrev,            // Previous Marker (Shift+Tab) — GoPrevious's
     BboxNext,            // Next Marker (Tab) — GoNext's
-    TabDetach,           // Switch Tab (Ctrl+Tab) — Windows 95's tab
-                         // control
+    TabDetach,           // Switch Tab (Ctrl+Tab) — the tabs A and B
+                         // swapped by arrows
     SettingsConfigure,   // Settings (bare `;`) — STD_PROPERTIES
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
     Folder,              // a folder row — the shell's closed folder
@@ -137,7 +137,8 @@ enum class Icon {
     // THE RENDER PLAYER'S ROW.
     MediaRepeatSingle,   // Toggle Repeat One — one glyph in both states,
                          // the lamp carrying the state
-    GoParentFolder,      // Up a Folder — Explorer 95's VIEW_PARENTFOLDER
+    GoParentFolder,      // Up a Folder — the folder row's folder with
+                         // Explorer 95's VIEW_PARENTFOLDER bent arrow
     // THE NOTIFICATION CARDS' CLASS GLYPHS (notifications.h).
     DialogInformation,   // a NORMAL card's glyph — the balloon with an i
     DialogError,         // a CRITICAL card's glyph — the red disc with an X

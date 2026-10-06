@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Save and Commit, candidate A: Save's floppy (STD_FILESAVE) with a black CHECK MARK (a bent stroke 1.5 wide, Marlett's idiom) in its label window — saved and confirmed; the check is also Load in Place's, an accepted ambiguity. -->
+  <!-- Save and Commit (the architect's pick A, 2026-10-06): Save's floppy (STD_FILESAVE) with a black CHECK MARK (a bent stroke 1.5 wide, Marlett's idiom) in its label window — saved and confirmed; the check is also Load in Place's, an accepted ambiguity. -->
   <path fill="#000000" d="M1,1 H15 V15 H2 L1,14 Z M2,2 V13.5 L2.5,14 H14 V2 Z"/>
   <path fill="#808000" d="M2,2 H3 V9 H13 V4 H14 V14 H13 V10 H4 V14 H2.5 L2,13.5 Z"/>
   <path fill="#000000" d="M3,2 H4 V8 H12 V2 H13 V9 H3 Z"/>
