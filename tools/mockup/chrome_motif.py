@@ -2,10 +2,15 @@
 # tools/mockup/chrome_motif.py — THE MOTIF VOCABULARY: CDE's stack (dtwm's frame and title bar, Motif's menu bar,
 # dtmail's toolbar, an XmScrollBar for the trim lane, an XmScale slider for the playhead's head) re-laid over the
 # capture recoloured by chrome_win95 (every role swapped first, then moved). Each length and its source are the
-# theme author's 2026-10-06 report (tmp/theme_author/report_CD1.md, CHROME STRUCTURE), in Windows px:
-#   frame 5 + title 17 + menu 25 + toolbar 28 [+ separator 2] + scroll bar 16 + ruler 14/16 + marker 18 = 125
-# — THE RULER IS THE FLEX LANE: 14 with the separator, 16 without, so the marker lane and the waveform's well stand
-# where the capture has them (rows 125.. untouched) — and the bottom keeps 1 air + 22 case + 1 air + the frame's 5.
+# CDE research report of 2026-10-06 (tmp/cde/report_B1.md §1, correcting tmp/theme_author/report_CD1.md's menu bar
+# and scroll bar), in Windows px:
+#   frame 5 + title 17 + menu 27 + toolbar 28 [+ separator 2] + scroll bar 13 + ruler 15/17 + marker 18 = 125
+# — the frame dtwm's resizeBorderWidth 5; the title the font's 13-px line + WM_TITLE_BAR_PADDING 4; the menu bar
+# Solaris's measured 29 screen px less the additive 2 of the 15 -> 13 cell transposition (Motif sizes are the font's
+# height plus fixed margins); the toolbar dtmail's 3 air + 22 case + 3 air; the scroll bar Solaris's measured
+# 1 + 11 + 1 — THE RULER IS THE FLEX LANE: 15 with the separator, 17 without, so the marker lane and the waveform's
+# well stand where the capture has them (rows 125.. untouched) — and the bottom keeps 1 air + 22 case + 1 air + the
+# frame's 5.
 # The content stands 5 Windows px in from the left frame; what a real 10-px-narrower layout would reflow is cut by
 # the right frame. A LIST BODY (the render player) is the capture's sunken list, its top and bottom edges kept and
 # the interior rows and columns its new height and width lose cut from its bottom and right.
@@ -90,15 +95,20 @@ def compose(img, scene, CT, TT_rgb, extras, rc, args):
         out[y:y + h, x:x + w2] = arr[:, :w2]
 
     # ---- 2. THE TITLE BAR: 17 W = the font's 13-px line + WM_TITLE_BAR_PADDING 4; four abutting boxes with 1-W
-    # shadows: the window-menu button, the title, Minimize, Maximize (mwm has no Close).
+    # shadows: the window-menu button, the title, Minimize, Maximize (mwm has no Close). The gadgets' glyphs, each
+    # centred in its box with 1-W shadows (dtwm draws them in code): the window-menu button's bar (TB - 8) x 4 = 9 x 4
+    # raised, Minimize a 4 x 4 raised square, Maximize a (TB - 8) = 9 x 9 square drawn SUNKEN — the window is
+    # maximised, and dtwm's painter swaps the Maximize glyph's bevel to sunken in that state (WmCDecor.c 951-961).
     TB = 17 * U; Y_T = F
     fill(Y_T, H - F, X0, X1, T['ground'])          # the client's ground under every lane
     def tbox(x0, x1): fill(Y_T, Y_T + TB, x0, x1, ACT); bevel(Y_T, Y_T + TB, x0, x1, U, FRAME_TS, FRAME_BS)
     tbox(X0, X0 + TB); tbox(X0 + TB, X1 - 2 * TB); tbox(X1 - 2 * TB, X1 - TB); tbox(X1 - TB, X1)
-    def glyph(x0, y0, w, h): fill(y0, y0 + h, x0, x0 + w, ACT); bevel(y0, y0 + h, x0, x0 + w, U, FRAME_TS, FRAME_BS)
+    def glyph(x0, y0, w, h, sunk=False):
+        fill(y0, y0 + h, x0, x0 + w, ACT)
+        bevel(y0, y0 + h, x0, x0 + w, U, *((FRAME_BS, FRAME_TS) if sunk else (FRAME_TS, FRAME_BS)))
     glyph(X0 + 4 * U, Y_T + (TB - 4 * U) // 2, TB - 8 * U, 4 * U)
     glyph(X1 - 2 * TB + (TB - 4 * U) // 2, Y_T + (TB - 4 * U) // 2, 4 * U, 4 * U)
-    glyph(X1 - TB + 3 * U, Y_T + 3 * U, TB - 6 * U, TB - 6 * U)
+    glyph(X1 - TB + 4 * U, Y_T + 4 * U, TB - 8 * U, TB - 8 * U, sunk=True)
     # the title text: the capture's own caption glyphs, centred in the title box as dtwm centres it
     cy0, cy1 = scene.rows['caption']
     tx_from = (rc['kCaptionIconXPx'] + rc['kCaptionIconPx']) * U
@@ -113,8 +123,8 @@ def compose(img, scene, CT, TT_rgb, extras, rc, args):
         region = out[dst_y:dst_y + (cy1 - cy0), dst_x:dst_x + (tx1 - tx0)]
         region[tm[:, tx0:tx1]] = T['caption_active_text']
 
-    # ---- 3. THE MENU BAR: 25 W, a 1-W raised band across the client.
-    MB = 25 * U; Y_M = Y_T + TB
+    # ---- 3. THE MENU BAR: 27 W, a 1-W raised band across the client.
+    MB = 27 * U; Y_M = Y_T + TB
     fill(Y_M, Y_M + MB, X0, X1, T['ground']); bevel(Y_M, Y_M + MB, X0, X1, U, T['hilight'], T['shadow'])
     m0, m1 = scene.rows['menu']
     put(rec[m0:m1], Y_M + U + (MB - 2 * U - (m1 - m0)) // 2)
@@ -131,17 +141,19 @@ def compose(img, scene, CT, TT_rgb, extras, rc, args):
 
     if scene.body == 'wave':
         R = scene.rows
-        # ---- 5. THE SCROLL BAR (the trim lane, 16 W): a 2-W sunken border round a trough in the select colour,
-        # the slider a 2-W raised box, the two handles Motif's shaded arrows at the slider's ends.
+        # ---- 5. THE SCROLL BAR (the trim lane, 13 W): a 1-W sunken border (Solaris draws shadowThickness 1 on
+        # the scroll bar) round an 11-W trough in the select colour, the slider a 1-W raised box filling the trough's
+        # height, the two handles Motif's shaded arrows (9 W, vertically centred: they fill the slider's 9-W
+        # interior) at the slider's ends, 1 W in from its bevel.
         tr0 = R['trim'][0]
         row = img[tr0 + 7 * U]
         l3 = np.flatnonzero(np.all(row == mt.CT['light_3d'], axis=1))
         bk = np.flatnonzero(np.all(row == mt.CT['dk_shadow'], axis=1))
         THUMB = (int(l3[0]), int(bk[-1]) + 1)
-        SB = 16 * U
-        fill(Y_S, Y_S + SB, X0, X1, TROUGH); sunken(Y_S, Y_S + SB, X0, X1)
-        sx0, sx1 = THUMB[0] + DX, min(THUMB[1] + DX, X1 - 2 * U)
-        fill(Y_S + 2 * U, Y_S + SB - 2 * U, sx0, sx1, T['ground']); raised(Y_S + 2 * U, Y_S + SB - 2 * U, sx0, sx1)
+        SB = 13 * U
+        fill(Y_S, Y_S + SB, X0, X1, TROUGH); sunken(Y_S, Y_S + SB, X0, X1, U)
+        sx0, sx1 = THUMB[0] + DX, min(THUMB[1] + DX, X1 - U)
+        fill(Y_S + U, Y_S + SB - U, sx0, sx1, T['ground']); raised(Y_S + U, Y_S + SB - U, sx0, sx1, U)
 
         def arrow(xa, ya, size, direction):
             """XmArrowButton's picture: a triangle of the ground, a light edge on its upper side and a dark edge
@@ -157,13 +169,13 @@ def compose(img, scene, CT, TT_rgb, extras, rc, args):
             back = T['shadow'] if direction < 0 else T['hilight']
             xb = xa + size - U if direction < 0 else xa
             out[ya:ya + size, xb:xb + U] = back
-        AR = 10 * U; ay = Y_S + (SB - AR) // 2
-        arrow(sx0 + 3 * U, ay, AR, -1); arrow(sx1 - 3 * U - AR, ay, AR, +1)
+        AR = 9 * U; ay = Y_S + (SB - AR) // 2
+        arrow(sx0 + 2 * U, ay, AR, -1); arrow(sx1 - 2 * U - AR, ay, AR, +1)
 
-        # ---- 6. THE RULER: 14 W with the separator, 16 W without — the labels' cap band seated at the lane's
+        # ---- 6. THE RULER: 15 W with the separator, 17 W without — the labels' cap band seated at the lane's
         # top, the ticks as captured; the head replaced by XmScale's slider with its ETCHED_LINE mark, 15 x 7 W, its
         # etched centre line at the time.
-        Y_R = Y_S + SB; RL = (14 if SEP else 16) * U
+        Y_R = Y_S + SB; RL = (15 if SEP else 17) * U
         r0, r1 = R['ruler']
         ruler = rec[r0:r1].copy()
         if stem:

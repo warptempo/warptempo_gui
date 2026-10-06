@@ -34,8 +34,8 @@ tools/mockup/push.sh --delete <name...>  # the superseded ones off it
   of the twenty names, a role not named takes the built-in's value, a caption start without its end is a flat
   caption; anything the app refuses is refused in the app's words (first error only).
 - `--chrome`: `win95` is the capture's own stack recoloured, every role swapped, the geometry untouched; `motif`
-  re-lays it as CDE's (chrome_motif.py's head: frame 5 + title 17 + menu 25 + toolbar 28 [+ `--separator` 2] +
-  scroll bar 16 + ruler 14/16 + marker 18 = 125 Windows px, the ruler the flex lane).
+  re-lays it as CDE's (chrome_motif.py's head, Solaris 9's measurements: frame 5 + title 17 + menu 27 + toolbar 28
+  [+ `--separator` 2] + scroll bar 13 + ruler 15/17 + marker 18 = 125 Windows px, the ruler the flex lane).
 - `--extra`: the colours a vocabulary needs beyond the 36 roles — never a 37th role in a theme file (the app
   hard-fails unknown keys). motif: `trough` (the scroll bar's trough, Motif's select colour of the ground's set),
   `frame_ts` / `frame_bs` (the frame's shadows, the active title set's); one not given is Motif's own rule on its
@@ -122,7 +122,9 @@ model: it calls chrome_win95.recolour for the role swap and only moves strips an
   step off (Motif's rule on #B24D7A gives #57253C, the .dp's 16-bit value #57253B), the glyph cells (the checker
   and the emboss in the target's Hilight, the enabled glyphs' own greys kept, the one touching case it missed),
   the ruler ticks in the marker lane (Hilight, not the flag label), the well's top lines (the flanks DkShadow, the
-  stems in their faces).
+  stems in their faces). That comparison ran on CD1's stack (menu 25, scroll bar 16, ruler 14/16); the stack now
+  carries Solaris 9's measured lengths (tmp/cde/report_B1.md §1), so the menu bar, the scroll bar, the ruler and the
+  Maximize glyph (9 x 9, sunken on the maximised window) differ from the prototype by design.
 
 ## Examples (`examples/`)
 
