@@ -382,7 +382,11 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
 // begins on a screen row of phase 3 and its pattern follows the screen's rows,
 // not the window's, as a display driver's dither does. Here the lattice starts
 // at the caption's top-left pixel, which is the window's origin — the
-// screen's own on the tablet and on the maximised laptop window.
+// screen's own on the tablet and on the maximised laptop window, the two
+// surfaces that matter. On a restored laptop window the phase is the
+// window's BY NECESSITY, not by choice: a Wayland client never learns its
+// window's position on the screen (xdg-shell gives it no global
+// coordinates), so the screen's phase cannot be read there.
 // `kCaptionDitherRank[row & 3][col & 3]` is a cell's rank, 0 stepping first;
 // its threshold is (rank + 0.5) / 16 of one 5-bit step.
 //

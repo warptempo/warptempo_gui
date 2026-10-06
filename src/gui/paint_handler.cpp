@@ -1163,15 +1163,29 @@ double line_baseline(const GuiFont& font, double line_y) {
 // ARE CHROME, NOT THE ICON SET'S BITMAPS: Windows drew them in the button
 // text, so they wear the label role and never a drawing's literal inks.
 //
-// THE CELL STANDS ON ITS OWN UNIT GRID (architect's glass 2026-10-06, the
-// disabled Restore at 400 %): centred in the button in device px, the offset
-// FLOORED TO A WHOLE UNIT u, so at every whole-multiple gui_scale it lands on
-// Windows' own (3, 2) — Windows centres the 9-cell in its 16 x 14 button and
-// floors the odd difference in ITS pixels, which device-px centring alone
-// did not (at 400 % it put the cell at (3.5, 2.5) Windows px, and the
-// disabled emboss's Hilight copy then covered the top half of the bevel's
-// Shadow line). Checked pixel for pixel against Chicago95's xfwm4 caption
-// buttons (maximize-toggled-*.xpm, close-*.xpm), whose glyphs are Marlett's.
+// THE CELL STANDS AT WINDOWS' AUTHORED SEAT (3, 2) THROUGH scaled_px (Sol's
+// finding 2026-10-06): the seat is the rounding doctrine's composite, offset
+// + glyph + offset, each part rounded at the element — gx = b.x +
+// scaled_px(3), gy = b.y + scaled_px(2), plus the pushed shift. At every
+// whole-multiple gui_scale it is Windows' own (3, 2): (3, 2) at 100 %,
+// (12, 8) at 400 %. The road it replaced centred the 9-cell in the button in
+// device px with the offset floored to a whole unit u (the architect's glass
+// 2026-10-06, the disabled Restore at 400 %, where device-px centring alone
+// had put the cell at (3.5, 2.5) Windows px and the emboss's Hilight copy
+// over the top half of the bevel's Shadow line); right at whole multiples, it
+// was wrong at 275 %, the committed default — a 44 x 38 box, u = 3, a 27-px
+// cell put at (6, 3), the glyph's top three rows inside the inner bevel (the
+// two relief lines of 3 device px take rows 0..5). The authored seat puts it
+// at (8, 6), exactly after the bevel. AT A NON-WHOLE SCALE the cell (9u)
+// is not the scaled 9 Windows px and stands at the authored seat rather than
+// centred in the button: smaller where u rounds down — accepted (the
+// laptop's 138 % puts its 9-px cell at (4, 3) of a 22 x 19 box) — and larger
+// where it rounds up (275 %: 27 against 24.75, one row more than the 26 the
+// bevels leave inside the box, so a glyph inked on the cell's last row,
+// Minimise, Maximise and Restore, lays that row on the inner bottom
+// bevel's first). Checked pixel for pixel, at a whole
+// multiple, against Chicago95's xfwm4 caption buttons
+// (maximize-toggled-*.xpm, close-*.xpm), whose glyphs are Marlett's.
 //
 // MINIMISE, MAXIMISE AND RESTORE ARE RECTANGLES and stay authored cells, a
 // list of rectangles in the cell's Windows px painted as INTEGER RECTANGLES
@@ -1198,6 +1212,10 @@ struct CaptionGlyphRect {
     int x, y, w, h;
 };
 constexpr int kCaptionGlyphCellPx = 9;
+constexpr int kCaptionGlyphSeatXPx = 3;
+constexpr int kCaptionGlyphSeatYPx = 2;
+static_assert(kCaptionGlyphSeatXPx + kCaptionGlyphCellPx <= kCaptionButtonWPx &&
+              kCaptionGlyphSeatYPx + kCaptionGlyphCellPx <= kCaptionButtonHPx);
 constexpr CaptionGlyphRect kCaptionMinimizeGlyph[] = {{1, 7, 6, 2}};
 constexpr CaptionGlyphRect kCaptionMaximizeGlyph[] = {
     {0, 0, 9, 2}, {0, 2, 1, 6}, {8, 2, 1, 6}, {0, 8, 9, 1}};
@@ -1264,9 +1282,8 @@ void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
                                 bool enabled, int shift) {
     const GuiPalette& pal = palette();
     const int u    = scaled_px(1, 1);
-    const int cell = kCaptionGlyphCellPx * u;
-    const int gx   = b.x + (b.w - cell) / 2 / u * u + shift;
-    const int gy   = b.y + (b.h - cell) / 2 / u * u + shift;
+    const int gx   = b.x + scaled_px(kCaptionGlyphSeatXPx) + shift;
+    const int gy   = b.y + scaled_px(kCaptionGlyphSeatYPx) + shift;
     const int off  = relief_line_px();
     // THE DISABLED EMBOSS (render.h's palette block): Hilight one Windows px
     // right and down, Shadow at the glyph's place.

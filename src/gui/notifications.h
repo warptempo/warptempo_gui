@@ -704,10 +704,13 @@ inline std::string lowercase_initial(std::string_view s) {
 // paint_notifications), which put the pair at 231 px and 228 px, both under
 // 272, so the clamp still answers the floor for both and they still paint
 // at one width; the width rule was not part of either ruling and the floor
-// keeps the number it was measured at. NOR DID THE FACES' CHANGES: the
-// floor still answers for both under the period body face (architect
-// 2026-10-05). AUTHORED (WINDOWS) PX, so the relation
-// holds at every gui_scale — the sentence and the floor scale together
+// keeps the number it was measured at. NOR DID THE FACES' CHANGES: under
+// today's body face (Nimbus Sans at the recorded Windows metrics less the
+// tracking, gui_font.h; 2026-10-06) the pair shapes through the live
+// chokepoint to 128 and 125 Windows px at every gui_scale, which with the 40
+// px of chrome below is 168 and 165, both under the floor, which still
+// answers for both (measured 2026-10-06). AUTHORED (WINDOWS) PX, so the
+// relation holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px.
 //
 // IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 465 Windows px and
@@ -716,10 +719,10 @@ inline std::string lowercase_initial(std::string_view s) {
 // window too narrow for the floor keeps overhanging exactly as before.
 // 198 WINDOWS PX SINCE THE UNIT'S CHANGE (architect 2026-10-02): the laptop
 // pixel's 272 re-authored to the width it had on the tablet; the figures
-// above are that unit's. At the Windows pixel the pair shapes to about 140
-// and 137 px at the 13-px face, and the chrome — three 5-px pads, the 3-px
-// inset and the 22-px box — puts them near 180, the floor still answering
-// for both.
+// above are that unit's. At the Windows pixel the pair shaped to about 140
+// and 137 px at that day's 13-px face, and the chrome — three 5-px pads, the
+// 3-px inset and the 22-px box, 40 px — put them near 180, the floor
+// answering for both.
 inline constexpr double kNotificationMinWidthPx = 198.0;
 
 // THE CARD'S CEILING IS THE LAPTOP'S OWN WIDTH, AUTHORED AND SCALED (architect
