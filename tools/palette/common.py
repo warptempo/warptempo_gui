@@ -3,18 +3,18 @@
 # this file, so the tool runs from any working directory.
 #
 # IMPORT THIS BEFORE `import cairo` ANYWHERE: it points fontconfig at the tool's own fonts.conf,
-# which lists ONLY the repository's fonts/ directory, so cairo's toy face "Liberation Sans" can
-# resolve to nothing but fonts/LiberationSans-Regular.ttf — the app's FALLBACK face (gui_font.h,
-# architect 2026-10-05), the one this tool paints every row in: the tablet's 275 % is a fallback
+# which lists ONLY the repository's fonts/ directory, so cairo's toy face "Nimbus Sans" can
+# resolve to nothing but fonts/NimbusSans-Regular.otf — the app's FALLBACK face (gui_font.h,
+# architect 2026-10-06), the one this tool paints every row in: the tablet's 275 % is a fallback
 # scale. Its VERTICAL metrics are the period bitmap faces' (strike_metrics below), as in the app.
 # verify_fonts() proves the resolution (fontconfig's own match, glyph ids against HarfBuzz on the
-# file, and the face's metrics as measured 2026-10-05) and the renderer calls it on every run.
+# file, and the face's metrics as measured 2026-10-06) and the renderer calls it on every run.
 import os, sys, ctypes
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, '..', '..'))
 FONTS = os.path.join(REPO, 'fonts')
-SANS_FILE = os.path.join(FONTS, 'LiberationSans-Regular.ttf')
+SANS_FILE = os.path.join(FONTS, 'NimbusSans-Regular.otf')
 W, H = 2304, 1440
 SCALE = 2                      # gui_scale 200 %: one logical px = 2 device px
 
@@ -43,7 +43,7 @@ def save_png(path, arr):
     write_png(path, arr, [(b'iCCP', ICCP)])
 
 # ------------------------------------------------------------------ fonts: cairo side
-SANS = 'Liberation Sans'
+SANS = 'Nimbus Sans'
 def font_options():
     o = cairo.FontOptions()
     o.set_antialias(cairo.ANTIALIAS_GRAY)          # the app: cairo's default GRAY, no subpixel order
@@ -142,17 +142,20 @@ def strike_metrics(path):
     return _STRIKES[path]
 
 def fallback_em(strike_path, band_char):
-    """The fallback's em in Windows px (gui_fallback_em_px): the strike's cap over Liberation's unscaled ink height
-    of `band_char` per em ("H" for the body, "0" for the digits)."""
+    """The fallback's em in Windows px (gui_fallback_em_px): the strike's cap over Nimbus's unscaled ink height
+    of `band_char` per em ("H" for the body, "0" for the digits) — the outline's control box, as FreeType's
+    FT_LOAD_NO_SCALE metrics read it off the CFF outline."""
     from fontTools.ttLib import TTFont
-    f = TTFont(SANS_FILE); g = f['glyf'][f.getBestCmap()[ord(band_char)]]
-    return strike_metrics(strike_path)['cap'] / ((g.yMax - g.yMin) / f['head'].unitsPerEm)
+    from fontTools.pens.boundsPen import ControlBoundsPen
+    f = TTFont(SANS_FILE); gs = f.getGlyphSet(); pen = ControlBoundsPen(gs)
+    gs[f.getBestCmap()[ord(band_char)]].draw(pen); _, y_min, _, y_max = pen.bounds
+    return strike_metrics(strike_path)['cap'] / ((y_max - y_min) / f['head'].unitsPerEm)
 
 def verify_fonts(verbose=False):
     """Fail loudly unless the family resolves to the repository's file. Three proofs:
     (1) fontconfig's own FcFontMatch (the call cairo makes) names the file; (2) the glyph ids cairo maps
     for a probe string equal HarfBuzz's on the file; (3) the metrics equal the app's measured table
-    (Liberation Sans at 32 px, SLIGHT, hint metrics on: ascent 29 / descent 7 / cap 22, measured 2026-10-05)."""
+    (Nimbus Sans at 32 px, SLIGHT, hint metrics on: ascent 24 / descent 9 / cap 23, measured 2026-10-06)."""
     fc = ctypes.CDLL('libfontconfig.so.1')
     fc.FcInitLoadConfigAndFonts.restype = ctypes.c_void_p
     fc.FcNameParse.restype = ctypes.c_void_p; fc.FcNameParse.argtypes = [ctypes.c_char_p]
@@ -162,7 +165,7 @@ def verify_fonts(verbose=False):
     fc.FcPatternGetString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p)]
     cfg = fc.FcInitLoadConfigAndFonts()
     report = []
-    for fam, want, px, metr in ((SANS, SANS_FILE, SANS_PX, (29, 7, 22)),):
+    for fam, want, px, metr in ((SANS, SANS_FILE, SANS_PX, (24, 9, 23)),):
         pat = fc.FcNameParse(fam.encode()); fc.FcConfigSubstitute(cfg, pat, 0); fc.FcDefaultSubstitute(pat)
         res = ctypes.c_int(0); m = fc.FcFontMatch(cfg, pat, ctypes.byref(res))
         f = ctypes.c_char_p(); fc.FcPatternGetString(m, b'file', 0, ctypes.byref(f))

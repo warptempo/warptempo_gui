@@ -13,14 +13,17 @@
 // descent are the strike's own line metrics, the cap band its "0". After the
 // install nothing reads the files again: text_shape blits from the table.
 //
-// THE FALLBACK FACES (Liberation Sans Regular and Bold) are FT faces wrapped
-// as cairo font faces — the FT-backed shape text_shape requires, since it
-// shapes on the scaled font's own FT face through hb-ft. THE PRODUCT'S HINTER
-// IS SLIGHT — FreeType's light autohinter (architect 2026-10-02, kept with
-// the fallback face 2026-10-05): it grid-fits the VERTICAL direction alone,
-// so the advances stay unhinted (text_shape's come off hb-ft, which loads its
-// own glyphs unhinted) and both devices measure one set of widths; the
-// native TrueType bytecode would move the outline's ink by device. The
+// THE FALLBACK FACES (Nimbus Sans Regular and Bold — OpenType CFF, which
+// FreeType opens and cairo-ft wraps exactly as it does a TrueType face) are
+// FT faces wrapped as cairo font faces — the FT-backed shape text_shape
+// requires, since it shapes on the scaled font's own FT face through hb-ft.
+// THE PRODUCT'S HINTER IS SLIGHT (architect 2026-10-02, kept with the
+// fallback face 2026-10-05 and 2026-10-06): FreeType's LIGHT mode, which
+// for a CFF face runs the face's own hints through FreeType's CFF engine — a
+// light hinter by declaration, so the face is not handed to the autohinter
+// as a TrueType face would be — and grid-fits the VERTICAL direction alone,
+// so the advances stay unhinted (text_shape's come off hb-ft, which loads
+// its own glyphs unhinted) and both devices measure one set of widths. The
 // vertical metrics are the strikes' anyway (gui_font.h), so the hinter only
 // decides how the fallback's ink sits on the bitmap face's baseline.
 // ANTIALIASING AND SUBPIXEL ORDER STAY AT CAIRO'S DEFAULTS on both devices:

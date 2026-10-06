@@ -802,3 +802,4 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **An in-app clone** — none: the app never clones; `scripts/warptempo_sync setup` places the clone, its storage config, the identity and the deploy key. Owner: the head of git_repo.h.
 - **The tablet's `current` file and `resolve_source_path`** — retired, 2026-08-27, with the project model: `startup_source` opens `last_project` or the first valid project, and a stale `current` is never read. Owner: `startup_source` (project_model.h).
 - **Roboto as the sans face** — retired 2026-10-05 (Liberation Sans the fallback beneath the period bitmap faces). Owner: `src/gui/gui_font.h`.
+- **Liberation Sans as the fallback face** — retired 2026-10-06 (Nimbus Sans, URW's Helvetica, the genre MS Sans Serif was drawn from). Owner: `src/gui/gui_font.h`.

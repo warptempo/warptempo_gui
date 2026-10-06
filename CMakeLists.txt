@@ -439,7 +439,8 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     endif()
 
     # THE PRODUCT'S FIVE FONT FILES, COMPILED IN (architect 2026-10-02; the
-    # period bitmap faces and Liberation 2026-10-05; the list is gui_font.h's
+    # period bitmap faces 2026-10-05, the Nimbus Sans fallback 2026-10-06;
+    # the list is gui_font.h's
     # kGuiFontFiles, the rule and the mechanism's reasons at
     # gui_font_embedded.cpp's head). Each file becomes `<name>.inc` in the
     # build tree — its bytes as a comma-separated list of hex literals, which
@@ -449,7 +450,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # so swapping a font re-runs the configure and rebuilds that one object.
     set(WARPTEMPO_FONT_INC_DIR ${CMAKE_BINARY_DIR}/fonts-generated)
     foreach(font crox1h.otb crox1hb.otb small_fonts_digits.otb
-                 LiberationSans-Regular.ttf LiberationSans-Bold.ttf)
+                 NimbusSans-Regular.otf NimbusSans-Bold.otf)
         set(font_src ${CMAKE_SOURCE_DIR}/fonts/${font})
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
                      ${font_src})

@@ -1587,7 +1587,7 @@ def flat_stem_colour(th, i):
 def face_underline(family, size_px):
     """The face's OWN UNDERLINE at size_px -> (top, thickness), device px as unrounded doubles, the top measured DOWN
     from the baseline: the font file's `post` table underlinePosition and underlineThickness over its `head` table's
-    unitsPerEm (Liberation Sans Regular: -67 and 150 of 2048, so 1.112 and 2.490 at 34 px). underlinePosition is the distance
+    unitsPerEm (Nimbus Sans Regular: -126 and 50 of 1000, so 4.284 and 1.700 at 34 px). underlinePosition is the distance
     of the underline's TOP from the baseline, negative below it (the OpenType definition; FreeType's
     FT_Face.underline_position moves it to the stroke's centre, this does not)."""
     import struct

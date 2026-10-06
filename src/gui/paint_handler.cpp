@@ -179,7 +179,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 namespace {
 
 // THE SHARED TEXT FACE is the one face owner's body face (gui_font.h):
-// Cronyx Helvetica's strike at a whole-hundred scale, Liberation Sans at its
+// Cronyx Helvetica's strike at a whole-hundred scale, Nimbus Sans at its
 // vertically matched em elsewhere (architect 2026-10-05). Every row names it
 // through that owner, gui_font(GuiFace::Body) at the live scale.
 
@@ -1091,7 +1091,7 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // THE CAP BAND IS THE BODY STRIKE'S AT EVERY SCALE (architect 2026-10-05,
 // gui_font.h): Cronyx's 9 rows times the scale, an unrounded double — 9
 // device rows at 100 %, 12.42 at 138 %, 24.75 at 275 %, 36 at 400 % — so the
-// seat is one answer in the bitmap mode and the fallback alike, Liberation's
+// seat is one answer in the bitmap mode and the fallback alike, Nimbus's
 // em being the one that stands its "H" exactly that tall.
 //
 // THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row CONTENT band (not
@@ -1247,7 +1247,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
     // piece is open. THE BOLD FACE (gui_font.h: Cronyx Helvetica Bold, or
-    // Liberation Sans Bold at a fallback scale) through the shaping
+    // Nimbus Sans Bold at a fallback scale) through the shaping
     // chokepoint, its cap band centred in the lane, in the caption's text
     // role. TOO LONG FOR THE ROOM — the pen at x 20 to two px short of
     // Minimise — it is CUT AT A CODEPOINT and ends in Windows' "..." (DrawText's
@@ -2259,7 +2259,7 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // face, ACID's big clock included), its cap band centred in the field by
 // redesign_baseline: the strike's 9-row digits with 3 Windows px of face
 // above and below them. Both faces' digits are TABULAR — Cronyx's every
-// digit 6 strike px, Liberation's every digit 0.556 em with no kerning
+// digit 6 strike px, Nimbus's every digit 0.556 em with no kerning
 // between the digits, the colon and the point — so the colon and the point
 // stand still as the time runs.
 //
@@ -2277,9 +2277,12 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // x, kStatusPanelPadPx inside the field's right line — and the fixed width is
 // unchanged, so nothing moves as the time changes. On row 8 the pipe and the
 // digits are ONE RUN, ` | ` and the timestamp, ending there, and the tab
-// letter is painted RIGHT-ALIGNED AGAINST THAT RUN'S START: switching tab (A
-// is 1 px wider than B at 275 %) moves the letter's own left edge and nothing
-// else — no letter's kerning can reach the pipe, the two being shaped apart.
+// letter is painted RIGHT-ALIGNED AGAINST THAT RUN'S START: switching tab
+// moves at most the letter's own left edge and nothing else — no letter's
+// kerning can reach the pipe, the two being shaped apart. (A and B are one
+// advance in both faces today, Cronyx's 7 strike px and Nimbus's 0.667 em,
+// measured 2026-10-06; the slot is the widest so a face where they differ
+// changes nothing.)
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2496,17 +2499,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-09-29 evening). In device px, off the painted walk: 17·32 + 3·11 =
     // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, and the
     // clock's time field (kTimeFieldHeightPx, 2026-10-05) — its cell the
-    // widest `A | 00:00.000` in the body face, Liberation's 107.0 px at 138 %
-    // (2026-10-05) — spanning 7..122, the state line from one field pad
-    // past it (2026-10-06), 126, clipped one group space short of the block
-    // at 1321 (~1195 px); at the tablet's 275 % 17·63 + 3·22 = 1137, starting
-    // at 2304 − 22 − 1137 = 1145, the field (its cell ~213.3, ceiled to 214)
-    // spanning 14..244, the state line 252..1123 (~871 device px). THE ROW CARRIES NO
+    // widest `A | 00:00.000` in the body face, Nimbus's 101.0 px at 138 %
+    // (2026-10-06) — spanning 7..116, the state line from one field pad
+    // past it (2026-10-06), 120, clipped one group space short of the block
+    // at 1321 (~1201 px); at the tablet's 275 % 17·63 + 3·22 = 1137, starting
+    // at 2304 − 22 − 1137 = 1145, the field (its cell ~201.3, ceiled to 202)
+    // spanning 14..232, the state line 240..1123 (~883 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: the block reaches the field's
-    // right edge once the window falls below about 510 Windows px (8 − 3 +
-    // ~76 + 6 + 415 + 8). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
+    // right edge once the window falls below about 507 Windows px at a
+    // fallback scale (8 − 3 + ~73 + 6 + 415 + 8; 497 at a bitmap scale, the
+    // strike's cell 63). THE STATE LINE CANNOT PUSH ANYTHING: it is clipped one
     // group space short of the block, so a long line is cut rather than
     // colliding.
     int right_block_x = seats.right_x;

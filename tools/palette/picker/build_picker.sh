@@ -6,10 +6,10 @@
 #
 # A STRIPPED VARIANT OF android/app/build_apk.sh, reusing its pieces rather than forking them: the toolchain and SDK
 # paths and wt_say / wt_die from android/toolchain/00_env.sh, the static cairo / pixman / FreeType / HarfBuzz of
-# android/prebuilt/arm64-v8a, the Liberation Sans face of fonts/, and the product's debug keystore. No CMake: a handful of
+# android/prebuilt/arm64-v8a, the Nimbus Sans face of fonts/, and the product's debug keystore. No CMake: a handful of
 # clang++ calls through the NDK. The device is not involved; there is no adb step here.
 #
-# Pipeline: 0. the keystore (present, never minted)   1. assets (the Liberation TTF)   2. compile + link the .so
+# Pipeline: 0. the keystore (present, never minted)   1. assets (the Nimbus OTF)   2. compile + link the .so
 #           3. javac -> d8 (PickerActivity)   4. aapt2 link (manifest + assets; no res/)   5. zip the .so (-0) and
 #           classes.dex in   6. zipalign -P 16   7. apksigner sign   8. verify
 #
@@ -74,11 +74,11 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$OBJ" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets: the one face ------------------------------------------------
-for f in LiberationSans-Regular.ttf; do
+for f in NimbusSans-Regular.otf; do
     [ -f "$REPO/fonts/$f" ] || wt_die "missing $REPO/fonts/$f"
     cp -f "$REPO/fonts/$f" "$ASSETS/$f"
 done
-wt_say "assets: the Liberation Sans face"
+wt_say "assets: the Nimbus Sans face"
 
 # --- 2. compile + link ------------------------------------------------------
 [ -f "$WT_PREFIX/lib/libcairo.a" ] || wt_die "missing $WT_PREFIX/lib/libcairo.a (android/deps/build_all.sh)"
@@ -123,7 +123,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
     --target-sdk-version "$WT_TARGET_SDK" \
     --version-code 1 \
     --version-name "1.0" \
-    -0 ttf
+    -0 otf
 
 # --- 5. the .so stored, classes.dex at the root ----------------------------
 cp "$PKGDIR/base.apk" "$PKGDIR/unaligned.apk"

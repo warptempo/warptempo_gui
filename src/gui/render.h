@@ -1098,7 +1098,7 @@ int ruler_lane_h_px();
 // row), so the label's caps (9 rows) get 3 Windows px above them (the cell's
 // top row, the row "^" climbs into, and the face) and 3 below (the descent
 // and the face), centred. The label sits on the cell's baseline at every
-// scale: Liberation at a fallback scale seats on the same baseline, and a
+// scale: Nimbus at a fallback scale seats on the same baseline, and a
 // glyph of it poking past the cell or the box is accepted (gui_font.h). The
 // ascent and the descent are each rounded on their own (scaled_px), the box
 // the sum of its rounded parts. Every row the box gains or saves is THE
@@ -1271,7 +1271,7 @@ inline int bottom_row_h_px() {
 // 13-Windows-px size, the ruler labels' 10 and the tooltip hint line's 11
 // retired with the outline face they sized: the body face is Cronyx
 // Helvetica's 13-px cell, the ruler's the Small Fonts digits' 7-px cell, and
-// a fallback scale draws Liberation at the em that matches each strike
+// a fallback scale draws Nimbus at the em that matches each strike
 // vertically (gui_font.h). A text surface names its face, gui_font(face),
 // and reads its vertical metrics off the strike.)
 

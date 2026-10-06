@@ -36,10 +36,10 @@ const uint8_t kSmallStrike[] = {
 #include "small_fonts_digits.otb.inc"
 };
 const uint8_t kFallback[] = {
-#include "LiberationSans-Regular.ttf.inc"
+#include "NimbusSans-Regular.otf.inc"
 };
 const uint8_t kFallbackBold[] = {
-#include "LiberationSans-Bold.ttf.inc"
+#include "NimbusSans-Bold.otf.inc"
 };
 
 } // namespace

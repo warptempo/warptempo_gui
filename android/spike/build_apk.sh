@@ -114,7 +114,7 @@ wt_say "aapt2 link"
     --target-sdk-version "$WT_TARGET_SDK" \
     --version-code 1 \
     --version-name "0.1-spike" \
-    -0 ttf -0 wav \
+    -0 otf -0 wav \
     --auto-add-overlay
 
 # --- 5. store the .so -----------------------------------------------------

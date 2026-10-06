@@ -24,10 +24,10 @@
 //     shaping — and is painted by BLITTING ITS PIXELS, each a k x k block of
 //     device px in the current source, the origin on a whole device px, no
 //     antialias (architect 2026-10-05). A run of codepoints the strike lacks
-//     is shaped by HarfBuzz on Liberation at its own advances, the one place
+//     is shaped by HarfBuzz on Nimbus at its own advances, the one place
 //     the bitmap mode meets an outline.
 //   - THE FALLBACK (every other scale): the whole run shaped by HarfBuzz on
-//     Liberation's scaled font (gui_outline_scaled_font), on that font's OWN
+//     Nimbus's scaled font (gui_outline_scaled_font), on that font's OWN
 //     FreeType face (hb-ft), full GPOS/GSUB, its own advances — and painted
 //     through cairo_show_glyphs on the same scaled font.
 // Either way the run is seated on the bitmap face's baseline: the caller
@@ -41,7 +41,7 @@
 //     (text_editor::replace_selection is the one incoming boundary) or
 //     verbatim from a hand-edited file. A malformed byte lays out as U+FFFD's
 //     glyph for that one byte; HarfBuzz consumes arbitrary bytes safely.
-//   - NO FURTHER FALLBACK. A codepoint Liberation does not cover either
+//   - NO FURTHER FALLBACK. A codepoint Nimbus does not cover either
 //     shapes to .notdef and paints as the empty box — accepted, in the same
 //     class as the no-bidi exclusion below.
 //   - The current cairo PATH is preserved: the blit builds and fills its own
@@ -61,7 +61,7 @@ namespace text_shape {
 
 // One positioned glyph of a shaped run, in pixels, relative to the run's pen
 // position. A STRIKE glyph (`strike` non-null) is that bitmap glyph; an
-// OUTLINE glyph's `glyph_index` is a Liberation GLYPH ID (post-substitution),
+// OUTLINE glyph's `glyph_index` is a Nimbus GLYPH ID (post-substitution),
 // never a character codepoint.
 //
 // `cluster` is HarfBuzz's own cluster value: the BYTE INDEX into the shaped
@@ -90,7 +90,7 @@ struct ShapedRun {
 };
 
 // Lay `utf8` out on `font` by the road its scale picks (above): the strike's
-// advances, or HarfBuzz on Liberation (LTR, script and language guessed from
+// advances, or HarfBuzz on Nimbus (LTR, script and language guessed from
 // the text, full GPOS/GSUB). An empty string shapes to an empty run of width
 // 0.
 ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);

@@ -7,9 +7,10 @@
 #   * a length is scaled_px (render.h): std::nearbyint(windows_px x 2.75), ROUNDED AT THE ELEMENT; a composite is the
 #     sum of its rounded parts (the case = lead + glyph + trail), never one rounding of the sum. Python's round() is
 #     round-half-even, std::nearbyint's default mode;
-#   * 275 % is a FALLBACK scale (gui_font.h, architect 2026-10-05): the text is Liberation Sans through common.py's
-#     road (cairo + FreeType, SLIGHT, hint metrics on; HarfBuzz shaping on the same file) at the em that matches each
-#     period bitmap face vertically (common.fallback_em: 13.08 Windows px for the body, 9.89 for the small) x 2.75,
+#   * 275 % is a FALLBACK scale (gui_font.h, architect 2026-10-05): the text is Nimbus Sans (2026-10-06) through
+#     common.py's road (cairo + FreeType, SLIGHT, hint metrics on; HarfBuzz shaping on the same file) at the em that
+#     matches each period bitmap face vertically (common.fallback_em: 12.35 Windows px for the body, 9.38 for the
+#     small) x 2.75,
 #     an unrounded double; every VERTICAL metric is the strike's (Cronyx Helvetica's ascent 11 / descent 2 / cap 9,
 #     the Small Fonts digits' 7 / 0 / 7) x 2.75, and every seat is the app's: redesign_baseline (box_y +
 #     floor((box_h + cap) / 2)) for a box, line_baseline (line_y + nearbyint(ascent)) for a line.
@@ -117,10 +118,10 @@ def read_constants():
 K, OWNER = read_constants()
 
 # the faces at 275 % (gui_font.h: the fallback's em matches the strike vertically; a font size is not a grid point)
-BODY_EM = C.fallback_em(C.BODY_STRIKE, 'H')      # 13.08 Windows px
-SMALL_EM = C.fallback_em(C.SMALL_STRIKE, '0')    # 9.89 Windows px
-UI_PX = BODY_EM * SCALE                          # 35.97, the normal face
-SMALL_PX = SMALL_EM * SCALE                      # 27.19, the ruler's labels
+BODY_EM = C.fallback_em(C.BODY_STRIKE, 'H')      # 12.35 Windows px
+SMALL_EM = C.fallback_em(C.SMALL_STRIKE, '0')    # 9.38 Windows px
+UI_PX = BODY_EM * SCALE                          # 33.95, the normal face
+SMALL_PX = SMALL_EM * SCALE                      # 25.80, the ruler's labels
 BODY = C.strike_metrics(C.BODY_STRIKE)
 SMALL = C.strike_metrics(C.SMALL_STRIKE)
 
@@ -367,9 +368,9 @@ def build():
         shaped_w(C.SANS, UI_PX, 'DD:DD.DDD'.replace('D', wd))
     panel_r = pad - panel_pad + math.ceil(cell) + 2 * panel_pad
     row('bottom row', 'time field right edge (cell at the pad, ceiled, + 2 pads)', '-', panel_r,
-        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 244)
-    row('bottom row', 'state line x = field right + group space', '-', panel_r + gap,
-        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 266)
+        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 232)
+    row('bottom row', 'state line x = field right + field pad', '-', panel_r + panel_pad,
+        'paint_handler.cpp paint_bottom_row_buttons_and_clock', 240)
     row('bottom row', 'state line clip right = block x - group space', '-', block_x - gap,
         'paint_handler.cpp paint_bottom_row_buttons_and_clock', 1123)
     clock = {'text': ck['text'], 'x': pad, 'baseline': clock_base, 'size_px': UI_PX}

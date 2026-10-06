@@ -43,7 +43,7 @@ python3 tools/palette/extract.py <dir>/tablet_base_<tag>.png --first-label M:SS.
 ## Dependencies
 
 - Python 3, numpy, pycairo >= 1.29 (cairo with its FreeType and fontconfig backends).
-- The repository's `fonts/` (Liberation Sans, the app's fallback face): the tool's private `fonts.conf` lists only that directory.
+- The repository's `fonts/` (Nimbus Sans, the app's fallback face): the tool's private `fonts.conf` lists only that directory.
 - HarfBuzz through ctypes: `libharfbuzz.so.0`, loaded when `common.py` is imported. When it is absent the tool exits
   at import with one line naming the library; there is no fallback shaper, because the text must be shaped exactly as
   the app shapes it. `verify_fonts()` also loads `libfontconfig.so.1` (the library cairo itself resolves faces with).
@@ -185,12 +185,12 @@ The only conversion is the one a theme asks for: a colour written `"srgb:#303030
 
 ## Text: the app's own road
 
-The face is the repository's `fonts/LiberationSans-Regular.ttf`, the app's fallback face (`src/gui/gui_font.h`,
-2026-10-05; 12pt x 2 = 32 px in the scenes' geometry; THE CLOCK TOO, the app's time field at the normal face, so the
+The face is the repository's `fonts/NimbusSans-Regular.otf`, the app's fallback face (`src/gui/gui_font.h`,
+2026-10-06; 12pt x 2 = 32 px in the scenes' geometry; THE CLOCK TOO, the app's time field at the normal face, so the
 scenes' captured clock pixels are not reproduced). The tablet geometry (`tablet.py`) takes its sizes and every vertical
 metric from the period bitmap faces as the app does: the em that matches each strike's cap, the strikes' ascent,
 descent and ink rows (`common.strike_metrics`, `common.fallback_em`). `common.py` writes `fonts.conf` (a `<dir>` for `fonts/` and a private cachedir)
-and sets `FONTCONFIG_FILE` before `import cairo`, so `select_font_face("Liberation Sans")` can only resolve to that file.
+and sets `FONTCONFIG_FILE` before `import cairo`, so `select_font_face("Nimbus Sans")` can only resolve to that file.
 Font options as the app (`src/gui/gui_font.h`, `gui_font_bundled.cpp`): antialias GRAY, hint style SLIGHT, hint
 metrics ON. Text is shaped like `text_shape::shape_text_run` (HarfBuzz on the same file at scale size*64: unhinted
 advances, GPOS kerning; libharfbuzz through ctypes) and painted with `show_glyphs` at pen + offset.

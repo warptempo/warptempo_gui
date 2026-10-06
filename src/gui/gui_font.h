@@ -28,23 +28,28 @@
 // (text_shape's show_shaped_run blits the strike itself: cairo-ft would
 // scale a strike through a filtered pattern).
 //
-// THE FALLBACK, AT EVERY OTHER SCALE: LIBERATION SANS 2.1.5 (Regular for
-// the body and the small face, Bold for the caption), an outline face shaped
-// by HarfBuzz with ITS OWN ADVANCES, under SLIGHT hinting
-// (gui_font_bundled.cpp's head), seated on the bitmap face's baseline. ITS
-// EM MATCHES THE BITMAP FACE VERTICALLY (architect 2026-10-05), derived at
-// the install from the two faces' measured values (gui_fallback_em_px): the
-// body's is the em at which Liberation's "H" stands as tall as Cronyx's
-// 9-row cap, the bold's Liberation Bold's "H" against Cronyx Bold's, the
-// small's Liberation's "0" ink against Small Fonts' 7-row digit. Each face
-// keeps its own true advances, so Liberation text runs wider than Cronyx
-// would at the same scale, and a taller or deeper Liberation glyph ("$", a
-// descender) may poke past a box sized off the bitmap face's rows — both
-// accepted ("Cronyx / Small Fonts primary; Liberation can spill over here
-// and there"). IN BITMAP
-// MODE a codepoint the strike lacks (free text is UTF-8; Cronyx carries
-// ASCII and KOI8 Cyrillic) is drawn from Liberation at its own advance — the
-// one place the bitmap mode meets an outline.
+// THE FALLBACK, AT EVERY OTHER SCALE: NIMBUS SANS (architect 2026-10-06;
+// Regular for the body and the small face, Bold for the caption), URW's
+// Helvetica of the base35 set — the genre MS Sans Serif was drawn from — an
+// outline face (OpenType CFF) shaped by HarfBuzz with ITS OWN ADVANCES,
+// under SLIGHT hinting (gui_font_bundled.cpp's head), seated on the bitmap
+// face's baseline. ITS EM MATCHES THE BITMAP FACE VERTICALLY (architect
+// 2026-10-05), derived at the install from the two faces' measured values
+// (gui_fallback_em_px): the body's is the em at which Nimbus's "H" stands as
+// tall as Cronyx's 9-row cap, the bold's Nimbus Bold's "H" against Cronyx
+// Bold's, the small's Nimbus's "0" ink against Small Fonts' 7-row digit
+// (12.35, 12.35 and 9.38 Windows px, measured 2026-10-06). Each face keeps
+// its own true advances, so Nimbus text runs wider than Cronyx would at the
+// same scale, and a taller or deeper Nimbus glyph ("$", a descender) may poke
+// past a box sized off the bitmap face's rows — both accepted (architect
+// 2026-10-05: the strikes are primary and the fallback may spill over here
+// and there). NIMBUS SITS HIGH IN AN APP THAT TRUSTS A FONT'S LINE BOX (its
+// hhea ascent, 729 of 1000, is its "H"'s own height, so a line seated on it
+// puts the caps at the box's top); the fault is moot here because no line
+// box is ever read off the outline: the strikes' metrics below seat every
+// run. IN BITMAP MODE a codepoint the strike lacks (free text is UTF-8;
+// Cronyx carries ASCII and KOI8 Cyrillic) is drawn from Nimbus at its own
+// advance — the one place the bitmap mode meets an outline.
 //
 // THE BITMAP FACES ARE THE ONLY SOURCE OF VERTICAL METRICS, AT EVERY SCALE
 // (architect 2026-10-05): ascent, descent, the line band, the cap band
@@ -53,8 +58,8 @@
 // unrounded doubles (a font quantity is not a grid point), rounded at the
 // element by the seat that reads them. HORIZONTALLY THE LIVE FACE IS ITS
 // OWN: every width used for layout is the shaped run's (text_shape), the
-// strike's advances times k in bitmap mode, Liberation's own at the live
-// size otherwise.
+// strike's advances times k in bitmap mode, Nimbus's own at the live size
+// otherwise.
 
 #include <cairo/cairo.h>
 
@@ -74,8 +79,8 @@ inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "crox1h.otb",                 // the body strike
     "crox1hb.otb",                // the bold strike
     "small_fonts_digits.otb",     // the small strike
-    "LiberationSans-Regular.ttf", // the fallback for the body and the small
-    "LiberationSans-Bold.ttf",    // the fallback for the bold
+    "NimbusSans-Regular.otf",     // the fallback for the body and the small
+    "NimbusSans-Bold.otf",        // the fallback for the bold
 };
 
 struct GuiFontBytes {
@@ -158,18 +163,18 @@ inline double gui_font_cap_px(const GuiFont& f) {
 }
 
 // THE FALLBACK'S EM for this face, in Windows px: the strike's cap (its
-// "0"'s rows) over Liberation's own ink height of the glyph named above, per
+// "0"'s rows) over Nimbus's own ink height of the glyph named above, per
 // em, both read off the bundled files at the install.
 double gui_fallback_em_px(GuiFace face);
 
-// THE FALLBACK'S CAIRO SCALED FONT for this face at this scale (Liberation
-// at its em times the scale, SLIGHT): borrowed, owned by the face owner and
+// THE FALLBACK'S CAIRO SCALED FONT for this face at this scale (Nimbus at
+// its em times the scale, SLIGHT): borrowed, owned by the face owner and
 // cached on the scale; GUI thread only. text_shape shapes and paints every
 // outline glyph on it.
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f);
 
 // AN UPPER BOUND ON ONE GLYPH'S ADVANCE at the font's scale, in device px:
-// the larger of the strike's widest advance and Liberation's widest (its
+// the larger of the strike's widest advance and Nimbus's widest (its
 // hhea maximum) at its em. A cull bound over-estimates by design; no layout
 // reads this.
 double gui_font_advance_bound_px(const GuiFont& f);

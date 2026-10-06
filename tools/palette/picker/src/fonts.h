@@ -1,5 +1,5 @@
 #pragma once
-// tools/palette/picker — the one face, Liberation Sans (the product's fallback face, src/gui/gui_font.h), from the
+// tools/palette/picker — the one face, Nimbus Sans (the product's fallback face, src/gui/gui_font.h), from the
 // repository's fonts/ (the APK's asset, the laptop check's file), built as the product builds its fallback
 // (src/gui/gui_font_bundled.cpp, the reference): a FreeType memory face under cairo-ft, hint style SLIGHT. The panel's
 // words and numbers use it (its digits tabular, so a readout's digits stand still); no picture pixel is text drawn

@@ -320,8 +320,9 @@ means exactly what a first run means.
    gaps 1…6 px plus eight 1-px horizontals (any scaling between backbuffer and
    panel shows up here long before it shows up in text), and two harfbuzz-shaped
    lines at a fixed 48 px — one in the sans, one in the monospace (Liberation
-   Sans and Liberation Mono when the spike ran; Liberation Sans and its Bold,
-   from the repository's `fonts/`, since 2026-10-05).
+   Sans and Liberation Mono when the spike ran; the product's fallback face
+   and its Bold, from the repository's `fonts/` — Nimbus Sans since
+   2026-10-06).
 2. **Live touch echo** — a ring + dot per active finger labelled with its POINTER
    ID and coordinates, tracked by id (never by index).
 3. **PLAY WAV / STOP WAV** — a tap region running the bundled 3 s 44.1 kHz stereo
@@ -749,7 +750,8 @@ Two things the backend does that are not on the Wayland side at all:
 
 Font install failure is a **hard abort**, not a fallback: `install_fonts_or_die`
 opens the font assets — the five files of gui_font.h's kGuiFontFiles since
-2026-10-05 (the period bitmap strikes and Liberation Sans beneath them),
+2026-10-05 (the period bitmap strikes and the fallback beneath them, Nimbus
+Sans since 2026-10-06),
 copied by `build_apk.sh` from the repository's `fonts/` (since 2026-10-02;
 Liberation from the host's package before) — installs them, and the install
 ANSWERS whether every strike read out and each fallback face is FT-backed (the probe moved from this
