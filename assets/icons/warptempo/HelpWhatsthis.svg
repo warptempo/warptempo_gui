@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Toggle Tooltips, candidate A: Windows' STD_HELP — the pointer at Add to Selection's place (from (1,1), the pair's one pointer) and the navy three-unit question mark in Windows' form on Windows' columns (x 7..16): a rounded arch (outer radius 3) whose right arm flows through a fillet into the 45-degree fall onto the stem, the dot below; no corner in the bowl. Ink 15x14 at (1,1). -->
+  <!-- Toggle Tooltips (the architect's pick A, 2026-10-06): Windows' STD_HELP — the pointer at Add to Selection's place (from (1,1), the pair's one pointer) and the navy three-unit question mark in Windows' form on Windows' columns (x 7..16): a rounded arch (outer radius 3) whose right arm flows through a fillet into the 45-degree fall onto the stem, the dot below; no corner in the bowl. Ink 15x14 at (1,1). -->
   <path fill="#000000" d="M1,1 L9,9 H5.7 L8,14 L6,15 L3.6,10.2 L1,12.6 Z"/>
   <path fill="#000080" d="M7,6 V4 A3,3 0 0 1 10,1 H13 A3,3 0 0 1 16,4 V5.172 A2,2 0 0 1 15.414,6.586 L13,9 V10 H10 V9 L12.561,6.439 A1.5,1.5 0 0 0 13,5.379 V4 A1,1 0 0 0 12,3 H11 A1,1 0 0 0 10,4 V6 Z M10,11 H13 V13 H10 Z"/>
 </svg>

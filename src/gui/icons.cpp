@@ -165,9 +165,7 @@ constexpr IconPath kZoomOriginalPaths[] = {
     {kIconBlack,
      "M6,0 A6,6 0 0 1 6,12 A6,6 0 0 1 6,0 Z M6,1 A5,5 0 0 0 6,11 A5,5 0 0 0 "
      "6,1 Z"},
-    {kIconNavy,
-     "M5,3 H7 V9 H5 Z M4,8 H8 V9 H4 Z M5.2,3 C4.5,3.05 3.95,3.5 3.6,4.2 "
-     "L4.35,4.75 C4.6,4.25 5,3.95 5.5,3.9 L5.5,3 Z"},
+    {kIconNavy, "M5,3 H7 V9 H5 Z M4,4 H5 V5 H4 Z M4,8 H8 V9 H4 Z"},
 };
 
 // Toggle Waveform Magnification — CHICAGO95.
@@ -317,7 +315,7 @@ constexpr IconPath kVcsDiffPaths[] = {
      "M7.5,5 A3.5,3.5 0 0 1 7.5,12 A3.5,3.5 0 0 1 7.5,5 Z M7.5,6 A2.5,2.5 0 "
      "0 0 7.5,11 A2.5,2.5 0 0 0 7.5,6 Z"},
     {kIconWhite, "M7.5,6 A2.5,2.5 0 0 1 7.5,11 A2.5,2.5 0 0 1 7.5,6 Z"},
-    {kIconBlack, "M7,6 H8 V9 H7 Z M7,8 H10 V9 H7 Z"},
+    {kIconBlack, "M7,6 H8 V9 H7 Z M7,8 H9 V9 H7 Z"},
 };
 
 // Toggle History Walk — ORIGINAL.
@@ -326,7 +324,7 @@ constexpr IconPath kShallowHistoryPaths[] = {
      "M8,1.5 A6.5,6.5 0 0 1 8,14.5 A6.5,6.5 0 0 1 8,1.5 Z M8,2.5 A5.5,5.5 0 "
      "0 0 8,13.5 A5.5,5.5 0 0 0 8,2.5 Z"},
     {kIconWhite, "M8,2.5 A5.5,5.5 0 0 1 8,13.5 A5.5,5.5 0 0 1 8,2.5 Z"},
-    {kIconBlack, "M7.5,4 H8.5 V8.5 H7.5 Z M7.5,7.5 H11 V8.5 H7.5 Z"},
+    {kIconBlack, "M7.5,2.5 H8.5 V8.5 H7.5 Z M7.5,7.5 H11 V8.5 H7.5 Z"},
 };
 
 // Toggle Add to Selection — CHICAGO95.
@@ -337,14 +335,14 @@ constexpr IconPath kEditSelectPaths[] = {
 
 // Left (row 8's arrow) and Previous Marker — CHICAGO95.
 constexpr IconPath kGoPreviousPaths[] = {
-    {kIconBlack, "M1,8 L8,1 V5 H16 V11 H8 V15 Z"},
-    {kIconAqua, "M2.414,8 L7,3.414 V6 H15 V10 H7 V12.586 Z"},
+    {kIconBlack, "M0,8 L7,1 V5 H16 V11 H7 V15 Z"},
+    {kIconAqua, "M1.414,8 L6,3.414 V6 H15 V10 H6 V12.586 Z"},
 };
 
 // Right (row 8's arrow) and Next Marker — CHICAGO95.
 constexpr IconPath kGoNextPaths[] = {
-    {kIconBlack, "M 16,8 L 9,1 V 5 H 1 V 11 H 9 V 15 Z"},
-    {kIconAqua, "M 14.586,8 L 10,3.414 V 6 H 2 V 10 H 10 V 12.586 Z"},
+    {kIconBlack, "M 16,8 L 9,1 V 5 H 0 V 11 H 9 V 15 Z"},
+    {kIconAqua, "M 14.586,8 L 10,3.414 V 6 H 1 V 10 H 10 V 12.586 Z"},
 };
 
 // Revert — CHICAGO95.
@@ -383,14 +381,14 @@ constexpr IconPath kMediaSkipForwardPaths[] = {
 
 // Down (row 8's arrow) — CHICAGO95.
 constexpr IconPath kGoDownPaths[] = {
-    {kIconBlack, "M8,15 L1,8 H5 V1 H11 V8 H15 Z"},
-    {kIconAqua, "M8,13.586 L3.414,9 H6 V2 H10 V9 H12.586 Z"},
+    {kIconBlack, "M8,15 L1,8 H5 V0 H11 V8 H15 Z"},
+    {kIconAqua, "M8,13.586 L3.414,9 H6 V1 H10 V9 H12.586 Z"},
 };
 
 // Up (row 8's arrow) — CHICAGO95.
 constexpr IconPath kGoUpPaths[] = {
-    {kIconBlack, "M8,1 L15,8 H11 V15 H5 V8 H1 Z"},
-    {kIconAqua, "M8,2.414 L12.586,7 H10 V14 H6 V7 H3.414 Z"},
+    {kIconBlack, "M8,0 L15,7 H11 V15 H5 V7 H1 Z"},
+    {kIconAqua, "M8,1.414 L12.586,6 H10 V14 H6 V6 H3.414 Z"},
 };
 
 // Toggle Read-Only (locked) — CHICAGO95.
@@ -424,12 +422,11 @@ constexpr IconPath kUnlockPaths[] = {
 // Switch Tab — ORIGINAL.
 constexpr IconPath kTabDetachPaths[] = {
     {kIconBlack,
-     "M3.9,1 H5.1 C5.4,1 5.55,1.15 5.65,1.4 L8,7 H6 L5.375,5.5 H3.625 L3,7 "
-     "H1 L3.35,1.4 C3.45,1.15 3.6,1 3.9,1 Z M4.042,4.5 L4.958,4.5 L4.5,3.4 Z"},
+     "M3,1 H6 V2 H3 Z M2,2 H4 V4 H2 Z M5,2 H7 V4 H5 Z M1,4 H3 V5 H1 Z M6,4 "
+     "H8 V5 H6 Z M1,5 H8 V6 H1 Z M1,6 H3 V7 H1 Z M6,6 H8 V7 H6 Z"},
     {kIconBlack,
-     "M9,9 H12.5 A2,1.5 0 0 1 12.5,12 A2.5,1.5 0 0 1 12.5,15 H9 Z M11,11.5 "
-     "H12.25 A1.25,0.75 0 0 0 12.25,10 H11 Z M11,14 H12.25 A1.75,0.75 0 0 0 "
-     "12.25,12.5 H11 Z"},
+     "M9,9 H14 V10 H9 Z M9,9 H11 V15 H9 Z M14,10 H15 V11 H14 Z M9,11 H14 "
+     "V12 H9 Z M14,12 H15 V14 H14 Z M9,14 H14 V15 H9 Z"},
     {kIconBlack, "M8,3 H13 V4 H8 Z M13,2 L15,3.5 L13,5 Z"},
     {kIconBlack, "M3,12 H8 V13 H3 Z M3,14 L1,12.5 L3,11 Z"},
 };
