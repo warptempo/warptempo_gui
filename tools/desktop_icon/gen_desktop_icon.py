@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # tools/desktop_icon/gen_desktop_icon.py — assets/icons/chicago95/16/audio-volume-high.png -> packaging/warptempo_gui.svg,
 # THE LINUX DESKTOP ICON (the .desktop's Icon=warptempo_gui; docs/INSTALL.md installs it into hicolor's scalable/apps).
-# The picture is the program icon of 2026-10-05 (architect: Chicago95's speaker, which the caption wears at a bitmap
-# gui_scale and the tablet's launcher wears scaled nearest-neighbour), drawn as ONE RECT PER OPAQUE PIXEL in a
+# The picture is the program icon of 2026-10-05 (architect: Chicago95's speaker, which the tablet's launcher wears
+# scaled nearest-neighbour; the caption's AppIcon is the product's own vector redrawing of it, icons.h), drawn as ONE RECT PER OPAQUE PIXEL in a
 # 16 x 16 viewBox under shape-rendering crispEdges, so any size the desktop asks for is the same pixel art, never
 # smoothed. The source's alpha is 0 or 255 only; anything else is a hard fail (a new upstream file is a ruling).
 # Pure Python (zlib, struct): the PNG must be 8-bit RGBA, non-interlaced, as the committed file is.

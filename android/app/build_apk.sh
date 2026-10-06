@@ -114,22 +114,6 @@ shopt -u nullglob
 cp -f "${THEME_FILES[@]}" "$ASSETS/themes/"
 wt_say "assets: ${#THEME_FILES[@]} theme files"
 
-# THE CHICAGO95 ICON BITMAPS (architect 2026-10-05, the icon pass): the
-# PNGs under the repository's assets/icons/chicago95/16/ (icons.h's
-# kChicago95Files), copied under the package's icons/chicago95/16/ -- the
-# very files the Linux executable compiles in (CMakeLists.txt's icon step),
-# so both devices paint the same bitmaps at a bitmap gui_scale. The path
-# mirrors the repository's own, since install_chicago95_bitmaps_or_die
-# (platform_android.cpp) opens each asset by that same relative path.
-ICON_DIR="$APPDIR/../../assets/icons/chicago95/16"
-mkdir -p "$ASSETS/icons/chicago95/16"
-shopt -s nullglob
-ICON_FILES=("$ICON_DIR"/*.png)
-shopt -u nullglob
-[ "${#ICON_FILES[@]}" -gt 0 ] || wt_die "no .png files under $ICON_DIR"
-cp -f "${ICON_FILES[@]}" "$ASSETS/icons/chicago95/16/"
-wt_say "assets: ${#ICON_FILES[@]} Chicago95 icon files"
-
 # --- 2/3. configure + build ----------------------------------------------
 bash "$APPDIR/configure.sh"
 wt_say "building $LIBNAME"
@@ -175,8 +159,8 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # audio-volume-high.png) scaled nearest-neighbour onto a transparent canvas,
 # rendered once and committed (that XML's head comment is the recipe; nothing
 # here renders). Every GUI pixel is painted by cairo, the roster's icons
-# included (the Chicago95 PNGs under assets/, step above, at a bitmap
-# gui_scale; the in-tree Breeze paths at every other); the app declares no
+# included (the product's own vector set, compiled-in paths, icons.cpp);
+# the app declares no
 # @string, no style, no res/values. aapt2 compile turns the
 # directory into res.zip, which link takes as a positional input.
 # (targetSdk stays 34 rather than opting out of Android 15's edge-to-edge
@@ -249,14 +233,10 @@ wt_say "VERIFY 4/5 -- DT_NEEDED is exactly the NDK stable-ABI set (nothing that 
 # records how it was measured): an extra entry or a missing one fails the
 # build. libnativewindow is in it since the frame-rate pin
 # (ANativeWindow_setFrameRate lives there, not in libandroid); the git stack
-# added nothing, zlib being libgit2's bundled copy. libjnigraphics joined
-# 2026-10-05 (the icon pass's Android PNG decode, platform_android.cpp's
-# install_chicago95_bitmaps_or_die): every <android/imagedecoder.h> symbol
-# lives there, not in libandroid -- the NDK's own stable-ABI library for it,
-# same footing as libnativewindow above.
+# added nothing, zlib being libgit2's bundled copy.
 wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" \
     libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so \
-    libjnigraphics.so liblog.so \
+    liblog.so \
     || wt_die "DT_NEEDED of $LIBNAME is not the allowlist (above)"
 "$READELF" -d "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -E "SONAME" || true
 

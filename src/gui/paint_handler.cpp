@@ -547,8 +547,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // it too since 2026-08-14.
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id and its content,
-// a breeze ICON (the 22-px source files, rasterized at the case's 16 Windows
-// px). The press claim's chord table (input_pointer.cpp) is the
+// an ICON of the product's own set (icons.h: the 16-unit cell, drawn at the
+// case's 16 Windows px). The press claim's chord table (input_pointer.cpp) is the
 // other half; both key off the same ids.
 //
 // WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
@@ -561,9 +561,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // EVERY BUTTON IN THIS ROW IS AN ICON BUTTON since 2026-08-11. The struct
 // carried a `glyph` string too — a shaped sans LETTER centered on both axes,
 // selected by being non-null — for the four view radios, which were the row's
-// only letter faces from its first day. The architect gave them real Breeze
-// glyphs that day (the picks and their runners-up are at icons.h's enum), which
-// left the letter arm with no producer, so the field and the painter's shaped
+// only letter faces from its first day. The architect gave them glyphs that
+// day, which left the letter arm with no producer, so the field and the painter's shaped
 // branch below went with it rather than standing as a facility nothing uses.
 struct IconRowDef {
     RedesignButton id;
@@ -576,7 +575,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // the row's left, the SAME chords, gates, disabled derivations and
     // stateful faces the labeled buttons carried — only the FACE is a glyph
     // in the toolbar case now (Save's VcsCommit swap and Render's DialogCancel
-    // swap ride redesign_button_icon below; media-record serves BOTH plain
+    // swap ride redesign_button_icon below; MediaRecord serves BOTH plain
     // render and the iteration sweep by the architect's same-day ruling, the
     // tooltip alone forking). The old labels are the tooltips. SINCE
     // 2026-09-29 THE FOUR ARE TWO GROUPS (architect, after his accidental
@@ -665,9 +664,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // this walk, no separator moving.
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     // WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
-    // lamp, after Full zoom out in the same group: Breeze's zoom-in-y (since the
-    // lamp's reversal 2026-09-24; zoom-out-y before), the magnifier with a
-    // ruler on its dial beside a plus — the picture's vertical scale grown.
+    // lamp, after Full zoom out in the same group: ZoomInY, the magnifier
+    // with a plus — the picture's vertical scale grown.
     // It joins the group rather than opening one, so it adds one box and one
     // 2px gap to the walk and no separator.
     {RedesignButton::IconWaveformMagnification, icons::Icon::ZoomInY},
@@ -696,10 +694,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // above rather than standing alone behind a divider. THE TWO BUTTONS AND
     // BOTH GLYPHS CAME BACK ON 2026-09-04 in a group of their own, further
     // down this table; the mass-marker group itself did not.)
-    // FOLLOW (bare `f`), wearing go-jump — the architect's chevron-and-dot of
-    // 2026-08-01, after the provisional "F" letter and media-seek-forward: the
-    // playing scanner's page reads as GOING to a place rather than as a
-    // transport control. Out for the hours of 2026-09-23 the Shift+C chase
+    // FOLLOW (bare `f`), wearing GoJump — an arrow crossing a sheet: the
+    // view follows the playing scanner rather than reading as a transport
+    // control. Out for the hours of 2026-09-23 the Shift+C chase
     // posture replaced it, and back that evening with its glyph: one box and
     // one 2px gap onto the walk, no separator moving.
     {RedesignButton::IconFollow, icons::Icon::GoJump},
@@ -708,9 +705,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // gesture" being the architect's own reason for moving it here from the
     // toolbar group, where it had stood between Redo and Render for the hours
     // of its first day. What it decides is whether an undo or redo may SWITCH
-    // THE VIEW — the tab, the audio view or the marker column. Breeze's timeline-lift, a clip's two end brackets
-    // with a red cross between them — a stretch of timeline the editor declines
-    // to travel. It joins the group rather than opening one, so the move adds
+    // THE VIEW — the tab, the audio view or the marker column. It wears
+    // TimelineLift, the push-pin: the view pinned where it stands. It joins the group rather than opening one, so the move adds
     // no box and no gap; what the same ruling took off the walk is one
     // separator, the view lamps' own.
     {RedesignButton::IconRestrictUndo, icons::Icon::TimelineLift},
@@ -723,14 +719,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // two boxes, one 2px gap and ONE separator, so the group count moves too
     // (the leader is IconBpm, redesign_button_opens_icon_group).
     //
-    // THE GLYPHS ARE THE ONES THAT LEFT WITH THE BUTTONS: music-note-16th,
-    // Breeze's flagged quaver, for the BPM opener — a tempo in beats per
-    // minute asks for a note — and mathmode, an italic f beside a
-    // multiplication cross reading as f(x), for the mode lamp, whose slot has
-    // kept a MATH SYMBOL since 2026-08-18 (it took the summation sigma's place
-    // when that glyph moved to the CUMULATIVE toggle). Both files came back
-    // verbatim from the installed 22px set with their provenance assets, so
-    // neither is a fresh pick and neither metaphor was re-argued.
+    // THE GLYPHS: MusicNote16th, the music player, for the BPM opener, and
+    // Mathmode, the grid, for the mode lamp (icons.h).
     {RedesignButton::IconBpm,  icons::Icon::MusicNote16th},
     {RedesignButton::IconIter, icons::Icon::Mathmode},
     // FLATTEN CLOSES THE GROUP (architect 2026-09-19), up from the bottom
@@ -741,9 +731,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // Ctrl+F is the one road that takes those terms off again, so the act
     // stands beside the mode that produces what it removes (the reasoning in
     // full, and what is deliberately NOT claimed for it, is at the roster
-    // entry, app_state.h). The glyph is BREEZE'S MERGE, three offset boxes
-    // reading as two — what a deviation chain does under the act — and it
-    // came up from the bottom row with the button, its one consumer.
+    // entry, app_state.h). The glyph is Merge, two tracks joining into one —
+    // what a deviation chain does under the act.
     {RedesignButton::IconFlatten, icons::Icon::Merge},
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): "make the last section of
     // the icon row: listen, load-in-place, readonly, history". The render-entry
@@ -756,22 +745,21 @@ constexpr IconRowDef kIconRowButtons[] = {
     // outside the `h` view having been Play renders' own; the two that stay
     // keep his order and Listen still opens the group.
     {RedesignButton::IconListen, icons::Icon::PreviewRenderOn},
-    // The padlock, Breeze's object-locked / object-unlocked pair, the very
-    // glyphs the tab slots drew. The TABLE entry is the closed lock and the
+    // The padlock pair, Lock and Unlock. The TABLE entry is the closed lock and the
     // resolver (redesign_button_icon, above) is what swaps it for the open one
     // on a writable tab — every button goes through that resolver, so this
     // constant is the fallback rather than the painted truth.
     {RedesignButton::IconReadOnly,       icons::Icon::Lock},
     // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
-    // `;`, the settings prompt, wearing Breeze's settings-configure — the
-    // typed road's pointer spelling, one box and one 2px gap onto the walk
+    // `;`, the settings prompt, wearing SettingsConfigure (STD_PROPERTIES) —
+    // the typed road's pointer spelling, one box and one 2px gap onto the walk
     // and no separator moving.
     {RedesignButton::IconSettings,       icons::Icon::SettingsConfigure},
     // ENABLE TOOLTIPS (architect 2026-09-29, evening), CLOSING the
     // render-entry group behind Settings since 2026-10-01 (architect: help
-    // comes after settings): the bare backslash's LAMP, wearing Breeze's
-    // help-whatsthis. Dark at every open, and while dark no tooltip shows
+    // comes after settings): the bare backslash's LAMP, wearing HelpWhatsthis
+    // (STD_HELP). Dark at every open, and while dark no tooltip shows
     // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
     // walk, no separator moving.
     {RedesignButton::IconTooltips,       icons::Icon::HelpWhatsthis},
@@ -812,11 +800,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // further left there than outside. The history opener and the view group
 // are right-anchored and do not move (kIconRowHistoryOpener).
 //
-// THE COMPANIONS' GLYPHS came back with them on 2026-08-18 unchanged but for
-// one: the CUMULATIVE toggle wears BLACK_SUM, the summation sigma (a
-// cumulative delta is a sum over the walk's members), where it wore Breeze's
-// two-colour deep-history from 2026-08-09 — and that glyph dressed the Git
-// walk radio until the 2026-09-04 collapse retired that half.
+// THE COMPANIONS' GLYPHS: the CUMULATIVE toggle wears BlackSum, the
+// summation sigma (a cumulative delta is a sum over the walk's members).
 //
 // THE REPAINT: the mode's two edges, open_history_mode_fresh and
 // close_history_mode (input_key_dispatch.cpp), each end in full-window
@@ -940,9 +925,8 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
             return redesign_button_glyph(app, b) == 2 ? icons::Icon::VcsPull
                                                       : icons::Icon::VcsCommit;
         // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph
-        // while a render or sweep is live — dialog-cancel, the circle-slash,
-        // transcribed for row 8's short-lived Esc button and kept for exactly
-        // this face when that button was deleted. The condition and its
+        // while a render or sweep is live — DialogCancel, Marlett's close X
+        // (WindowClose's drawing, icons.h). The condition and its
         // contract are at redesign_button_glyph_swapped's Render arm, the
         // click's divergence at finish_chrome_press_release's Render arm.
         case RedesignButton::Render: return icons::Icon::DialogCancel;
@@ -1230,11 +1214,9 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                            active ? pal.caption_active_gradient
                                   : pal.caption_inactive_gradient);
 
-    // THE APP'S ICON at (2, 1), 16 x 16: the vector transcription, or, at a
-    // bitmap gui_scale (architect 2026-10-05, the icon pass), Chicago95's
-    // status/audio-volume-high.png through draw_bitmap — the plain blit, no
-    // case to centre in, at this same placement (icons.h's AppIcon head).
-    icons::draw_bitmap(cr, icons::Icon::AppIcon,
+    // THE APP'S ICON at (2, 1), 16 x 16: the set's speaker (icons.h), no
+    // case, at the caption's own placement.
+    icons::draw(cr, icons::Icon::AppIcon,
                 static_cast<double>(row.x + scaled_px(kCaptionIconXPx)),
                 static_cast<double>(row.y + scaled_px(kCaptionIconYPx)),
                 static_cast<double>(scaled_px(kCaptionIconPx, 1)));
@@ -1754,7 +1736,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (NO FONT IS SELECTED HERE, and that is the row's own fact since
     // 2026-08-11: this lane paints geometry and icons only. A text face was
     // named here for the four view radios' shaped LETTER faces,
-    // which the architect replaced with real Breeze glyphs that day.)
+    // which the architect replaced with glyphs that day.)
     // THE CASE AND ITS GLYPH, each a composite of its rounded parts
     // (render.h's icon-row block): the glyph at the case's (3, 3).
     const int btn_w     = icon_case_w_px();
@@ -1870,10 +1852,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // THE 16-px GLYPH at the case's (3, 3), each path in its own color
         // from the icon table — or, dead, engraved.
         //
-        // EVERY BUTTON TAKES THIS ARM since 2026-08-11 — the four view radios'
-        // shaped LETTER faces were the only other kind, and they took real
-        // Breeze glyphs that day (kIconRowButtons carries the record). The row
-        // paints no text at all now, which is why nothing here selects a font.
+        // EVERY BUTTON TAKES THIS ARM since 2026-08-11, when the four view
+        // radios' shaped LETTER faces, the only other kind, took glyphs. The
+        // row paints no text at all, which is why nothing here selects a font.
         //
         // THE GLYPH IS THE STATE RESOLVER'S, not the table's
         // (redesign_button_icon, above): this row hosts the TOOLBAR PAIR since
@@ -1892,19 +1873,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // two faces", and the architect made it one button with two faces
         // that day.)
         const icons::Icon glyph = redesign_button_icon(app, def.id, def.icon);
+        // draw_cased takes the CASE's own corner, not a (3, 3)-offset glyph
+        // origin: the seat is its own (icons.h's PLACEMENT).
         if (face.enabled)
-            // THE CHICAGO95 BITMAP PASS (architect 2026-10-05): draw_cased
-            // takes the CASE's own corner, not a (3, 3)-offset glyph origin
-            // (it re-derives that placement itself at every non-bitmap
-            // scale, and ink-centres a Chicago95 picture in the whole case
-            // at a bitmap one) — icons.h's placement rule.
             icons::draw_cased(cr, glyph, bx, btn_y,
                               static_cast<double>(glyph_px), box.shift);
         else
-            // PART B, RULING 3: draw_cased's own disabled sibling — the
-            // Chicago95 picture's mono-mask DSS_DISABLED emboss at a bitmap
-            // scale, draw_engraved at its own (3, 3) vector placement
-            // otherwise (icons.h's head).
             icons::draw_cased_disabled(cr, glyph, bx, btn_y,
                                        static_cast<double>(glyph_px),
                                        box.shift,
@@ -2150,17 +2124,17 @@ constexpr TransportRowDef kTransportGroup[] = {
 };
 // THE SINGLE-MARKER VERBS (architect 2026-08-18, "move drop/delete/disable/
 // toggle inherit to bottom right row"), the RIGHT BLOCK'S FIRST GROUP: drop
-// (bare `s`, list-add), delete (`Delete`, Breeze's RED list-remove — the
-// resolved color recorded at the icons.cpp table), the disable toggle
-// (`Ctrl+D`, view-hidden's crossed-out eye) and inherit/collapse (`Ctrl+N`,
-// insert-link — a pass marker links its tempo to its neighbor). They opened
+// (bare `s`, ListAdd's plus), delete (`Delete`, ListRemove's minus), the
+// disable toggle (`Ctrl+D`, ViewHidden's no-sign) and inherit/collapse
+// (`Ctrl+N`, InsertLink's chain — a pass marker links its tempo to its
+// neighbor). They opened
 // their own separator-led group in the ICON ROW from 2026-08-12 until this
 // move and brought their four glyphs down unchanged.
 //
 // THE GROUP IS FIVE since later the same day, the architect seating ADD TO
 // SELECTION himself — "add group selection icon ('Add to Selection') after
 // toggle inherit, before the separator". It is the group's one MODE (bare `k`,
-// edit-select: the pointer arrow over a marquee corner) and therefore the only
+// EditSelect: the pointer with a plus) and therefore the only
 // member of this table that ever wears the lit fill; the four verbs above are
 // acts that complete.
 //
@@ -2174,7 +2148,7 @@ constexpr TransportRowDef kTransportGroup[] = {
 // RESOLVED VALUE went up to the icon row (Copy's record is at
 // kIconRowButtons; Edit Flag was deleted later that evening), and JUMP TO
 // DEFINING MARKER — Ctrl+J,
-// Breeze's go-jump-declaration, a flag with a return arrow — took the seat
+// GoJumpDeclaration's jump arc — took the seat
 // after Toggle Inherit, Add to Selection closing the group behind it. The jump
 // was Copy Value's shifted twin until that day; it is a dedicated button now
 // under the dissolved shift-twin rule (closed_questions.md). It is an act, wears no
@@ -2183,7 +2157,7 @@ constexpr TransportRowDef kTransportGroup[] = {
 //
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
-// (architect), taking Breeze's merge with it — its only consumer.)
+// (architect), taking its glyph with it — its only consumer.)
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
@@ -2194,30 +2168,18 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's second
 // group between the verbs and the arrows — FOUR SINCE 2026-09-29 (architect),
-// in this order: PREVIOUS MARKER (Shift+Tab, bboxprev back from git history;
-// its ctrl press is the paired march), NEXT MARKER (the walk: Tab, its
-// shifted press Shift+Tab; its camera the audio view's), CENTER (bare `c`,
-// zoom-original, moved down from the icon row's zoom group) and SWITCH TAB
-// (Ctrl+Tab, Breeze's tab-detach; its shifted press is the paired march).
+// in this order: PREVIOUS MARKER (Shift+Tab, BboxPrev; its ctrl press is the
+// paired march), NEXT MARKER (the walk: Tab, its shifted press Shift+Tab;
+// its camera the audio view's; BboxNext), CENTER (bare `c`, ZoomOriginal,
+// moved down from the icon row's zoom group) and SWITCH TAB (Ctrl+Tab,
+// TabDetach; its shifted press is the paired march).
 // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON since
 // that day (architect: "an artificial constraint; the tablet is the only
 // real development surface now") — Previous Marker is Next Marker's Shift
 // form and Switch Tab its Ctrl form; Previous Marker had merged into the walk
 // on 2026-09-22 under the rule that it could not, and the walk's modified
-// presses stay. THE BBOX PAIR
-// is his pick from a rendered candidate sheet (2026-08-15; the reasons are
-// at the icons.h entry — an arrow meeting a bar, the Tab key's own shape).
-// (The two HOLD-COLUMN NUDGES, Ctrl+Left and
-// Ctrl+Right, stood behind it from 2026-09-22 until their deletion
-// 2026-09-23, wearing go-previous-context / go-next-context and then, for
-// their last hours, snap-nodes-midpoint turned a quarter left and right; the
-// glyphs left with them. Walk both tabs stood third on boost, a
-// two-arrow cycle, until the button and its glyph were deleted on
-// 2026-09-14; bboxprev left with Previous marker 2026-09-22 and came back
-// with it 2026-09-29. The
-// least-movement walk stood beside the walk from 2026-09-22 until it was
-// deleted 2026-09-23, the two walks wearing snap-orthogonal and snap-node
-// for that day, deleted with it; the walk wears bboxnext again.)
+// presses stay. THE WALK PAIR WEARS THE ARROWS' OWN DRAWINGS (BboxPrev and
+// BboxNext are GoPrevious's and GoNext's, icons.h's shared pairs).
 constexpr TransportRowDef kTransportWalkGroup[] = {
     {RedesignButton::TransportWalkPrevious, icons::Icon::BboxPrev},
     {RedesignButton::TransportWalk,         icons::Icon::BboxNext},
@@ -2226,12 +2188,9 @@ constexpr TransportRowDef kTransportWalkGroup[] = {
 };
 // DOWN, UP, LEFT, RIGHT — the architect's order, 2026-08-14, superseding the
 // row's original vim order (h j k l = left / down / up / right) with no
-// reasoning offered and none needed. All four are Breeze's chevron family —
-// GoDown / GoUp for the verticals, GoPrevious / GoNext for the horizontals —
-// so the group is one construction. The horizontal pair was SHARED with the
-// icon row's walk arrows for a few hours on 2026-08-11 (an icon is a glyph,
-// not a button) and is this row's alone since the walk took the keyframe dials
-// that afternoon.
+// reasoning offered and none needed. All four are one construction, the
+// set's cyan arrow — GoDown / GoUp for the verticals, GoPrevious / GoNext for
+// the horizontals (the last two shared with the marker walk's pair).
 constexpr TransportRowDef kTransportArrowGroup[] = {
     {RedesignButton::TransportDown,        icons::Icon::GoDown},
     {RedesignButton::TransportUp,          icons::Icon::GoUp},
@@ -2456,15 +2415,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // rather than one button with two faces", which was exactly true until
         // the architect made it one button with two faces.)
         const icons::Icon glyph = redesign_button_icon(app, def.id, def.icon);
+        // The case's corner, not a (3, 3) glyph origin (icons.h's PLACEMENT).
         if (face.enabled)
-            // THE CHICAGO95 BITMAP PASS (architect 2026-10-05): draw_cased's
-            // own placement rule, icons.h's head; the case's corner, not a
-            // (3, 3) glyph origin.
             icons::draw_cased(cr, glyph, x, btn_y,
                               static_cast<double>(glyph_px), box.shift);
         else
-            // PART B, RULING 3: draw_cased_disabled's mono-mask emboss at a
-            // bitmap scale, draw_engraved's own vector placement otherwise.
             icons::draw_cased_disabled(cr, glyph, x, btn_y,
                                        static_cast<double>(glyph_px),
                                        box.shift,
@@ -3059,11 +3014,10 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
 // declaration: the box's own vertical margin, read for all five) — a square
 // box the toolbar case's height with the CLASS GLYPH centred at the box's
-// own inset (dialog-information for a normal card, dialog-error for a
-// critical one, each in its file's own colours: the roster paints every
-// path in the table's ink and colours nothing here — the two files are a
-// blue or red plate under a white glyph, and that plate is what tells the
-// classes apart at a glance), that pad, THE SENTENCE
+// own inset (DialogInformation for a normal card, the balloon with its blue
+// i, DialogError for a critical one, the red disc with its white X — each
+// in its drawing's own colours, nothing coloured here), that pad, THE
+// SENTENCE
 // of the one sans in the info text, and that pad PLUS THE GLYPH'S INSET to
 // the right edge (architect 2026-10-01: the air the eye sees left of the
 // text, from the glyph's ink, repeated after it — the ruling at
@@ -3231,12 +3185,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         paint_popup_chrome(cr, card, PopupFace::Info);
 
         const int box_y = card.y + pad;
-        // PART B, RULING 1 (architect 2026-10-05): the card's own glyph is
-        // one of the four non-button Chicago95 picks — no Windows case
-        // around this slot to ink-centre inside, so draw_bitmap blits the
-        // whole 16 x 16 picture at the card's own placement, unchanged at
-        // every other scale (icons.h's head).
-        icons::draw_bitmap(cr,
+        // The card's class glyph, no case, at the card's own placement.
+        icons::draw(cr,
                     n.cls == AppState::NotificationClass::Critical
                         ? icons::Icon::DialogError
                         : icons::Icon::DialogInformation,
@@ -5788,11 +5738,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // UP, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — beside the lamp,
-        // ahead of the right-flushed pair, on Breeze's own GO-PARENT-FOLDER, the
-        // open folder with an arrow rising out of it (architect, later the same
-        // day: it wore the roster's `go-up` chevron for the button's first
-        // hours, and a chevron says "up" about a NUMBER while the act here is
-        // leaving a DIRECTORY). GoUp is untouched — the roster's bare-Up
+        // ahead of the right-flushed pair, on GoParentFolder, Explorer 95's
+        // VIEW_PARENTFOLDER — the folder with the bent arrow (an arrow alone
+        // says "up" about a NUMBER while the act here is leaving a
+        // DIRECTORY). GoUp is untouched — the roster's bare-Up
         // transport button still wears it, a def being a glyph and several
         // buttons being free to wear one. It greys at the root through the
         // act's own wall.
@@ -5802,9 +5751,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // row's Load in place moving to the history group): "the media player
         // button should get the checkmark glyph then. Close should then get a
         // glyph also, to avoid being the odd one out: window-close.svg". So
-        // the LOAD wears DIALOG-OK-APPLY — the very checkmark the icon row's
+        // the LOAD wears DialogOkApply — the very checkmark the icon row's
         // button wears for the same act one surface over — and CLOSE wears
-        // Breeze's WINDOW-CLOSE X, the roster's existing entry (the
+        // WindowClose, Marlett's close X (the
         // notification cards' dismiss was its other reader until the card's X
         // retired, 2026-10-01; a def is a glyph and several buttons are free
         // to wear one). The row is SEVEN GLYPH
@@ -5813,7 +5762,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // their acts, their keys and their hints unchanged.
         // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
         // listing is batch folders, where a load has nothing to name, so the
-        // sixth button deletes — Breeze's edit-delete, the red bin — the
+        // sixth button deletes — EditDelete, STD_DELETE's X — the
         // highlighted folder, and its shift press every folder listed; its
         // shift line stands only where "all" is more than the highlighted one.
         // Inside a batch folder the slot is Load in Place, unchanged.
@@ -6554,19 +6503,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // the toolbar case's (3, 3) — the box is that case
             // (bottom_row_seats), so each glyph stands where row 8's does
             // (architect 2026-10-05) — each path in its own colour, or
-            // engraved (or, at a bitmap scale, mask-embossed) when the
-            // button is disabled.
+            // engraved when the button is disabled; draw_cased takes the
+            // case's corner (r.x, r.y), not a (3, 3) glyph origin.
             const int glyph_px  = icon_glyph_px();
             if (enabled)
-                // THE CHICAGO95 BITMAP PASS (architect 2026-10-05):
-                // draw_cased's own placement rule, icons.h's head; the
-                // case's corner (r.x, r.y), not a (3, 3) glyph origin.
                 icons::draw_cased(cr, plan[i].icon, r.x, r.y,
                                   static_cast<double>(glyph_px), box.shift);
             else
-                // PART B, RULING 3: the mono-mask DSS_DISABLED emboss at a
-                // bitmap scale, draw_engraved's own vector placement
-                // otherwise.
                 icons::draw_cased_disabled(cr, plan[i].icon, r.x, r.y,
                                            static_cast<double>(glyph_px),
                                            box.shift,
@@ -6957,30 +6900,12 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                            : icons::Icon::AudioXWav;
             }
             const int gy = r.y + (r.h - glyph) / 2;
-            // ON A LIT ROW THE GLYPH TAKES THE SELECTED TEXT, every path, as
-            // the name does (architect 2026-10-03: text over a fill is the
-            // fill's recorded pair, and a glyph inked in the label is chrome
-            // text's sibling — the label-inked folder would vanish on a dark
-            // selected fill as the name would). On a resting row it keeps its
-            // own inks, its text-class paths in the FIELD TEXT (architect
-            // 2026-10-06: the field's text, as the name; the label is the
-            // chrome's). PART B, RULING 1 (architect 2026-10-05): the folder
-            // and wav rows are two of the four non-button Chicago95 picks —
-            // no case here either, so draw_bitmap / draw_bitmap_in_ink blit
-            // the whole picture at this row's own placement at a bitmap
-            // scale, `ink` dropped there (the artwork is unrecolourable,
-            // icons.h's head) — unchanged at every other scale, where a lit
-            // row's vector glyph still takes the selected text as before.
-            if (lit)
-                icons::draw_bitmap_in_ink(cr, icon, static_cast<double>(gx),
-                                         static_cast<double>(gy),
-                                         static_cast<double>(glyph),
-                                         pal.selected_text);
-            else
-                icons::draw_bitmap_on_text_ink(cr, icon, static_cast<double>(gx),
-                                               static_cast<double>(gy),
-                                               static_cast<double>(glyph),
-                                               pal.field_text);
+            // THE GLYPH KEEPS ITS OWN COLOURS ON EVERY ROW, lit or resting
+            // (architect 2026-10-06: every icon's inks are the drawing's
+            // own, period pixel art no ground recolours — icons.h's head);
+            // only the name takes the row's text pair.
+            icons::draw(cr, icon, static_cast<double>(gx),
+                        static_cast<double>(gy), static_cast<double>(glyph));
             const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —

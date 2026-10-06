@@ -18,14 +18,9 @@
 # termux both hard-code png+zlib enabled -- so it is the first thing to revert
 # (to -Dpng=enabled plus a staged libpng, ~200 KB) if anything here bites.
 #
-# IT BIT ONCE (architect 2026-10-05, the icon pass's Chicago95 PNGs): not
-# reverted -- the NDK's own AImageDecoder (<android/imagedecoder.h>, API 30,
-# this product's floor) decodes them instead, so the Android backend still
-# asks cairo for nothing but the image surface and cairo-ft. Owner:
-# platform_android.cpp's install_chicago95_bitmaps_or_die; the Linux backend
-# keeps cairo's own PNG stream reader, isolated to
-# icons_chicago95_decode_linux.cpp so the symbol never reaches a TU this
-# target compiles.
+# Nothing in the product decodes a PNG: the icons are compiled-in vector
+# paths (icons.cpp, architect 2026-10-06), so the Android backend asks cairo
+# for nothing but the image surface and cairo-ft.
 #
 # There is no -Dxml and no -Dwin32 option in 1.18.x; meson hard-errors on an
 # unknown option, so a recipe carried over from 1.16/autotools must drop them.

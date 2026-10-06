@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Commit: Breeze vcs-commit, a node on the line. -->
+  <path fill="#000000" d="M7.5,0 H8.5 V16 H7.5 Z M8,4.5 A3.5,3.5 0 0 1 8,11.5 A3.5,3.5 0 0 1 8,4.5 Z M8,5.5 A2.5,2.5 0 0 0 8,10.5 A2.5,2.5 0 0 0 8,5.5 Z"/>
+  <path fill="#FFFFFF" d="M8,5.5 A2.5,2.5 0 0 1 8,10.5 A2.5,2.5 0 0 1 8,5.5 Z"/>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Down: Up flipped about y = 8. -->
+  <path fill="#000000" d="M8,15 L1,8 H5 V1 H11 V8 H15 Z"/>
+  <path fill="#00FFFF" d="M8,13.586 L3.414,9 H6 V2 H10 V9 H12.586 Z"/>
+</svg>

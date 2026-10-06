@@ -137,8 +137,8 @@ set(WARPTEMPO_GUI_SOURCES
     # builds the product's two Nimbus Sans faces through FreeType on both
     # platforms.
     src/gui/gui_font_bundled.cpp
-    # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
-    # subset over cairo paths) is a painting concern and exists only here,
+    # GUI-ONLY: the in-tree icon path renderer (an SVG d-string subset over
+    # cairo paths, the product's own Windows 95 set) is a painting concern and exists only here,
     # so like text_shape.cpp it is deliberately in none of the four shared
     # per-directory source lists — warptempo_cli must never carry it. It
     # needs no dependency cairo does not already bring.
@@ -354,13 +354,6 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         # and --no-undefined turns its absence into the build failure it should
         # be rather than a launch-time surprise.
         nativewindow
-        # libjnigraphics: AImageDecoder's own library (architect 2026-10-05,
-        # the icon pass's Android decode, platform_android.cpp's
-        # install_chicago95_bitmaps_or_die) — <android/imagedecoder.h>'s
-        # every symbol lives here, not in libandroid, and --no-undefined
-        # would otherwise turn its absence into a launch-time surprise
-        # exactly as nativewindow's own comment above describes.
-        jnigraphics
         log
         m
         dl
@@ -458,53 +451,18 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
              CONTENT "${font_bytes}\n")
     endforeach()
 
-    # THE CHICAGO95 ICON BITMAPS (architect 2026-10-05, the icon pass), THE
-    # FONT STEP'S OWN MECHANISM: the 52 PNGs under assets/icons/chicago95/16/
-    # (icons.h's kChicago95Files and icons_chicago95_embedded.cpp's #include
-    # list, both hand-kept in that directory's sorted order, the font files'
-    # own convention) each become `<name>.png.inc` in the build tree at
-    # CONFIGURE time — the bytes as hex literals, a configure dependency, so a
-    # swapped icon rebuilds the one object that includes it.
-    set(WARPTEMPO_ICON_INC_DIR ${CMAKE_BINARY_DIR}/icons-generated)
-    foreach(icon action-unavailable audio-volume-high audio-x-wav clock
-                 dialog-cancel dialog-error
-                 dialog-information dialog-ok-apply document-export
-                 document-import document-open-recent document-revert
-                 document-save document-send edit-copy edit-delete edit-redo
-                 edit-select edit-undo emblem-system folder go-bottom go-down
-                 go-jump go-next go-previous go-up help-hint insert-link
-                 list-add list-remove lock media-playback-pause
-                 media-playback-start media-playback-stop
-                 media-playlist-repeat media-record media-skip-backward
-                 media-skip-forward music-player object-group
-                 stock_lock-open view-dual view-grid view-paged view-pin
-                 view-refresh view-sort-ascending window-close
-                 zoom-fit-best zoom-in zoom-original)
-        set(icon_src ${CMAKE_SOURCE_DIR}/assets/icons/chicago95/16/${icon}.png)
-        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-                     ${icon_src})
-        file(READ ${icon_src} icon_hex HEX)
-        string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," icon_bytes
-               "${icon_hex}")
-        file(CONFIGURE OUTPUT ${WARPTEMPO_ICON_INC_DIR}/${icon}.png.inc
-             CONTENT "${icon_bytes}\n")
-    endforeach()
-
     add_executable(warptempo_gui
         ${WARPTEMPO_GUI_SOURCES}
         # The two per-backend arms, Linux's: the Wayland platform backend and
         # the JACK playback device. The Android library above compiles
         # platform_android.cpp and playback_aaudio.cpp in their places; exactly
-        # one arm of each is ever linked. Beside them, the product's five font
-        # files and the Chicago95 icon bitmaps compiled in (the two steps
-        # above; each mechanism and why at its own file's head): the APK
-        # carries the same files as assets instead, and warptempo_cli, which
-        # paints nothing, carries neither.
+        # one arm of each is ever linked. Beside them, the product's font
+        # files compiled in (the step above; the mechanism and why at its own
+        # file's head): the APK carries the same files as assets instead, and
+        # warptempo_cli, which paints nothing, carries none.
         src/gui/platform_wayland.cpp
         src/gui/playback.cpp
         src/gui/gui_font_embedded.cpp
-        src/gui/icons_chicago95_embedded.cpp
-        src/gui/icons_chicago95_decode_linux.cpp
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}
@@ -520,7 +478,6 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${CMAKE_SOURCE_DIR}/src/gui
         ${CMAKE_BINARY_DIR}/wayland-generated
         ${WARPTEMPO_FONT_INC_DIR}
-        ${WARPTEMPO_ICON_INC_DIR}
         ${FFTW3_INCLUDE_DIRS}
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${WAYLAND_CURSOR_INCLUDE_DIRS}

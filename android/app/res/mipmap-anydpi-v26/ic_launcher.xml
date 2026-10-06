@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
      recents card). Its picture is Chicago95's status/audio-volume-high.png
-     (architect 2026-10-05, the icon pass's caption pick — the same 16-px
-     file the caption wears at a bitmap gui_scale, icons.h's AppIcon head),
+     (architect 2026-10-05, the icon pass's caption pick; the caption's
+     AppIcon is the product's own vector redrawing of it, icons.h),
      scaled NEAREST-NEIGHBOUR (the Chicago95 artwork is period-pixel art, so
      no smoothing) and centred on a transparent canvas: no plate, no sheet
      grey, the icon's own transparent corners carrying through. An ADAPTIVE

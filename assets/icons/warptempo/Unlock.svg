@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Read-Only, unlocked: the shackle swung left, its legs reaching the body's top at y 6. -->
+  <path fill="#808000" d="M1,6 V4 A4,4 0 0 1 9,4 V6 H7.5 V4 A2.5,2.5 0 0 0 2.5,4 V6 Z"/>
+  <path fill="#000000" d="M5,0 A4,4 0 0 1 9,4 V6 H8 V4 A3,3 0 0 0 5,1 Z"/>
+  <path fill="#000000" d="M3,6 H15 V15 H3 Z"/>
+  <path fill="#808000" d="M3,6 H14 V14 H3 Z"/>
+  <path fill="#FFFFFF" d="M4,7 H13 V8 H4 Z M4,7 H5 V13 H4 Z"/>
+  <path fill="#FFFF00" d="M5,8 H13 V13 H5 Z"/>
+  <path fill="#808000" d="M5,9 H12 V10 H5 Z M5,11 H12 V12 H5 Z"/>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Toggle Tooltips: Windows' STD_HELP; the question mark now ONE continuous three-unit stroke from its left arm over the top and down to the stem, plus the dot. -->
+  <path fill="#000000" d="M0,1 L8,9 H4.7 L7,14 L5,15 L2.6,10.2 L0,12.6 Z"/>
+  <path fill="#000080" d="M7.019,4.761 L7.185,3.736 L7.776,2.6 L8.695,1.707 L9.847,1.149 L11.117,0.982 L12.375,1.223 L13.493,1.847 L14.358,2.791 L14.882,3.96 L15.013,5.234 L14.735,6.484 L14.19,7.398 L13,9.242 L13,10 L10,10 L10,8.358 L11.641,5.816 L11.911,5.362 L11.979,5.057 L11.947,4.746 L11.819,4.461 L11.608,4.231 L11.335,4.079 L11.029,4.02 L10.719,4.061 L10.438,4.197 L10.213,4.414 L10.069,4.692 L9.981,5.239 Z M10,11 H13 V13 H10 Z"/>
+</svg>

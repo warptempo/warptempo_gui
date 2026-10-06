@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Toggle Follow: a sheet of paper with a green arrow crossing it rightwards (the view follows), Windows' page construction; no cycle, since follow does not loop. -->
+  <path fill="#000000" d="M1,0 H10 L13,3 V16 H1 Z"/>
+  <path fill="#FFFFFF" d="M2,1 H9 V4 H12 V15 H2 Z"/>
+  <path fill="#FFFFFF" d="M10,1.5 L11.5,3 H10 Z"/>
+  <path fill="#008000" d="M3,7 H8 V9 H3 Z M8,4.5 L12,8 L8,11.5 Z"/>
+</svg>

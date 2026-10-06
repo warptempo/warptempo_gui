@@ -1,7 +1,7 @@
 #include "icons.h"
 
-#include <algorithm>
 #include <charconv>
+#include <cstddef>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -12,1312 +12,695 @@ namespace {
 
 // -- The icon table ---------------------------------------------------------
 //
-// One row per committed SVG (assets/icons/breeze/; audio-x-generic.svg, the
-// launcher icon's colour source, excepted — icons.h's PROVENANCE), each
-// holding that file's path elements in file order. `d` is copied VERBATIM
-// from the file; `ink` is the color the file resolves to, and every path is
-// FILLED in it.
+// ONE ROW PER FILE under assets/icons/warptempo/ (the product's own set,
+// architect 2026-10-06; icons.h's head), each holding that file's `<path>`
+// elements IN FILE ORDER: `d` copied VERBATIM and `ink` the path's own
+// `fill`, so a diff between this table and the file is a transcription bug
+// and nothing else. Every file is viewBox 0 0 16 16 (kIconViewBox), fills
+// only, no transform, no stroke, no group: a row is its paths and nothing
+// more. THE FIVE SHARED DRAWINGS (the README's list) are one row each, worn
+// by both their enumerators through icon_def below: the two files of a pair
+// are byte-identical.
 //
-// THERE IS NO STROKED FILE since 2026-09-22, and so no stroked arm:
-// tool-rect-selection (the Show trim region button's marching-ants rectangle,
-// 2026-08-16) was the last, and it left with its button, taking the per-path
-// stroke width and dash it had been the only producer of. The arm had lived
-// for distortionfx (part of 2026-08-11) and for boost (2026-08-15 to
-// 2026-09-14) before it; a future stroked file brings it back, its record in
-// git history.
-//
-// THE INKS (the ink block below, architect 2026-10-03): a path the SVG inks
-// in the scheme's text class — fill:currentColor under the file's own
-// `.ColorScheme-Text { color: #fcfcfc }` stylesheet, as the three edit icons
-// paint — takes THE THEME'S LABEL (kIconText); every other ink is the value
-// its SVG resolves to, raw, a hand-listed literal (media-record's own
-// #da4453 is kIconRecord; architect 2026-10-05).
-//
-// A FILLED ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO
-// winding rule — which is the SVG default too, and what makes document-save's
-// holes (the body cutout and the lid slot) come out as holes: its subpaths wind
-// against the outline. Filling subpath-by-subpath would flood them.
-//
-// `xform` carries a transform applied around the path so `d` can stay
-// VERBATIM — baking a transform into the numbers by hand would destroy the
-// property that a diff between this table and the file is a transcription bug
-// and nothing else. Two icons' rows carry a non-identity one, both the
-// FILE'S OWN `transform` attribute, both TRANSLATES: dialog-ok-apply.svg, whose
-// author drew the check mark at its document coordinates and translated it
-// back into the viewBox, and dialog-cancel.svg (row 8, 2026-08-11), whose
-// `translate(-1-1)` spells the glued-negative form the SVG grammar admits.
-// `icon_translate` is their producer, named rather than raw so a translate
-// READS as a translate at its site. A THIRD, the app icon's note (2026-10-05),
-// carries its file's own translate-and-scale (icon_translate_scale). THE PRODUCT'S OWN MODIFICATION HAS NO
-// WEARER SINCE 2026-09-23: for the hours of that day the hold-column nudges
-// wore snap-nodes-midpoint.svg turned a quarter left and right through an
-// `icon_quarter_turn_about_centre` producer, one matrix on both of the file's
-// paths, the `d` strings byte-verbatim — deleted with the two buttons, the
-// asset and the producer. Its precedent stands for a future wearer: the RIGID
-// QUARTER TURN about the 22-grid's centre (+1: matrix(0 1 -1 0 22 0), -1:
-// matrix(0 -1 1 0 0 22), both determinant +1 so a hole stays a hole) maps
-// every integer coordinate to an integer coordinate, so the pixel grid and
-// the Breeze provenance both survive; anything that would move ink off the
-// grid (a scale, a skew, a non-right angle) is not admitted by it. (A general `icon_matrix`
-// constructor lived here for part of 2026-08-11, for distortionfx's
-// rotate-and-scale; it went with that file. The field holds cairo's six
-// components — each producer writes all six and draw() hands them to
-// cairo_matrix_init — so a file's future `matrix(...)` needs that constructor
-// back and nothing else.)
-struct IconTransform {
-    // Cairo's matrix components, which take SVG's matrix(a b c d e f) in that
-    // exact argument order (a=xx, b=yx, c=xy, d=yy, e=x0, f=y0 in both).
-    double xx = 1.0, yx = 0.0, xy = 0.0, yy = 1.0, x0 = 0.0, y0 = 0.0;
-};
+// A PATH IS FILLED WHOLE with cairo's default NONZERO winding rule — the SVG
+// default too — so a subpath wound against its outline is a hole (the
+// author's rings, DocumentSave's frame), and the paths are LAYERED: each is
+// filled over the ones before it, a silhouette first and its insets on top,
+// which is how the drawings are built.
+inline constexpr double kIconViewBox = 16.0;
 
-constexpr IconTransform icon_translate(double tx, double ty) {
-    return IconTransform{1.0, 0.0, 0.0, 1.0, tx, ty};
-}
-
-// THE APP ICON'S NOTE (2026-10-05): `translate(5.75,5.75) scale(2.75)`, the
-// transform the vector AppIcon's note was drawn under in its 72-unit picture
-// (kAppIconPaths below), taken verbatim like the two translates above. A
-// scale moves ink off the grid, which the quarter-turn precedent refuses for
-// a roster GLYPH; this is the product's own picture, drawn as it was drawn.
-constexpr IconTransform icon_translate_scale(double tx, double ty, double s) {
-    return IconTransform{s, 0.0, 0.0, s, tx, ty};
-}
-
-// A PATH'S INK: THE THEME'S LABEL — a path the SVG inks in the scheme's text
-// class, a chrome glyph like the chrome's words (architect 2026-10-03: the
-// glyphs inked in the label follow the theme's label) — or a FIXED byte
-// triple, the hand-listed inks below. A GuiColor converts to a fixed ink, so a
-// row names either kind the same way.
-struct IconInk {
-    bool     is_label = false;
-    GuiColor fixed{};
-    constexpr IconInk(GuiColor c) : is_label(false), fixed(c) {}
-    constexpr explicit IconInk(bool label) : is_label(label), fixed{} {}
-    GuiColor resolve() const { return is_label ? palette().label : fixed; }
-};
+// THE INKS (architect 2026-10-06): EVERY PATH WEARS ITS OWN FILL, black
+// included — none takes a theme role, so a glyph is the same period pixel
+// art on every theme, as Windows' own toolbar bitmaps were (a disabled glyph
+// is the emboss, draw_engraved, which is where the theme's roles enter). The
+// fills are Windows' twenty always-solid colours (theme_file.h's
+// kNamedThemeColours, the same names), the thirteen of them the set uses;
+// a literal here is a file's value, never a judgment.
+constexpr GuiColor kIconBlack  = hex(0x000000);
+constexpr GuiColor kIconMaroon = hex(0x800000);
+constexpr GuiColor kIconGreen  = hex(0x008000);
+constexpr GuiColor kIconOlive  = hex(0x808000);
+constexpr GuiColor kIconNavy   = hex(0x000080);
+constexpr GuiColor kIconTeal   = hex(0x008080);
+constexpr GuiColor kIconSilver = hex(0xC0C0C0);
+constexpr GuiColor kIconGray   = hex(0x808080);
+constexpr GuiColor kIconRed    = hex(0xFF0000);
+constexpr GuiColor kIconYellow = hex(0xFFFF00);
+constexpr GuiColor kIconBlue   = hex(0x0000FF);
+constexpr GuiColor kIconAqua   = hex(0x00FFFF);
+constexpr GuiColor kIconWhite  = hex(0xFFFFFF);
 
 struct IconPath {
-    IconInk       ink;      // fill source
-    const char*   d;
-    IconTransform xform{};  // identity unless the row carries a transform
+    GuiColor    ink;   // the file's fill
+    const char* d;     // the file's d, verbatim
 };
 
 struct IconDef {
-    double         view_box;   // square; 22 for every Breeze icon here
-    const IconPath* paths;
-    int            path_count;
+    const IconPath* paths      = nullptr;
+    int             path_count = 0;
 };
 
-// THE ICON INKS (architect 2026-10-03): the scheme's TEXT CLASS is the
-// theme's LABEL, so a toolbar glyph reads as its row's words do on every
-// theme; EVERY OTHER INK IS A HAND-LISTED LITERAL, THE RAW BREEZE VALUE the
-// committed file (assets/icons/breeze/) writes for that class or path
-// (architect 2026-10-05: "just restore the original icons... they're only
-// temporary anyways" — the 2026-10-01 conversion of the blues to the waveform
-// ink's value and the 2026-10-02 sRGB -> Display-P3 two-pass bytes of the
-// reds both reverted, the pale blue having all but vanished on the light
-// Windows 95 ground; no colour-conflict judgment applies until the icons arc
-// recolours them). The hand-list: kIconRecord and kIconNegativeText #DA4453,
-// kIconPreviewOn and kIconLiftCross #D24D57, kIconAccent #3DAEE9, kIconWav
-// #44AAEB, kIconPlainWhite #FFFFFF, and the app icon's own two, kIconAppPlate
-// #AAAAAA and kIconAppNote #EAEAEA (2026-10-05, at kAppIconPaths). (Until
-// 2026-10-03 the red, the accent and
-// the text inks referenced the palette's hard-coded roles; those roles
-// retired with the theme catalog, and the red and blue glyphs are the icons
-// arc's to recolour.)
-constexpr IconInk  kIconText{true};
-// media-record's own literal fill, raw Breeze #da4453 (architect 2026-10-05,
-// the ink block above).
-constexpr GuiColor kIconRecord = hex(0xDA4453);
+template <std::size_t N>
+constexpr IconDef icon_def_of(const IconPath (&paths)[N]) {
+    return IconDef{paths, static_cast<int>(N)};
+}
 
+// Save — MICROSOFT.
 constexpr IconPath kDocumentSavePaths[] = {
-    {kIconText,
-     "M 3 2.9980469 L 3 3 L 3 4 L 3 19 L 4 19 L 19 19 L 19 18 L 19 7 L 19 "
-     "6.3007812 L 18.992188 6.3007812 L 19 6.2910156 L 15.707031 2.9980469 L "
-     "15.699219 3.0078125 L 15.699219 2.9980469 L 15 2.9980469 L 3 2.9980469 z "
-     "M 4 4 L 7 4 L 7 8 L 7 9 L 15 9 L 15 8 L 15 4 L 15.292969 4 L 18 6.7070312 "
-     "L 18 7 L 18 18 L 16 18 L 16 11 L 15 11 L 7 11 L 6 11 L 6 18 L 4 18 L 4 4 z "
-     "M 8 4 L 11.900391 4 L 11.900391 8 L 8 8 L 8 4 z M 7 12 L 15 12 L 15 18 L 7 "
-     "18 L 7 12 z "},
+    {kIconBlack, "M1,1 H15 V15 H2 L1,14 Z M2,2 V13.5 L2.5,14 H14 V2 Z"},
+    {kIconOlive, "M2,2 H3 V9 H13 V4 H14 V14 H13 V10 H4 V14 H2.5 L2,13.5 Z"},
+    {kIconBlack, "M3,2 H4 V8 H12 V2 H13 V9 H3 Z"},
+    {kIconBlack, "M13,3 H14 V4 H13 Z"},
+    {kIconBlack, "M4,10 H13 V14 H12 V11 H10 V14 H4 Z"},
 };
 
+// Undo — MICROSOFT.
 constexpr IconPath kEditUndoPaths[] = {
-    {kIconText,
-     "m8.300781 3l-3.292969 3.292969-.207031.207031.207031.207031 3.292969 "
-     "3.292969.707031-.707031-2.292969-2.292969h2.285156 1.00781.492188c3.047 0 "
-     "5.5 2.453 5.5 5.5 0 3.047-2.453 5.5-5.5 5.5h-1.5v1h1.5c3.601 0 6.5-2.899 "
-     "6.5-6.5 0-3.601-2.899-6.5-6.5-6.5h-.492188-1.00781-2.285156l2.292969-2.292969-.707031-.707031"},
+    {kIconNavy, "M2,4.5 V9.5 H7 Z"},
+    {kIconNavy,
+     "M2.9,7.958 C4.795,6.26 7.089,4.541 9.659,4.09 C11.199,3.82 12.93,4.19 "
+     "13.658,5.716 C14.441,7.358 13.79,9.352 12.991,10.855 L12.109,10.385 "
+     "C12.749,9.181 13.393,7.484 12.755,6.146 C12.227,5.039 10.92,4.884 "
+     "9.832,5.075 C7.452,5.493 5.318,7.134 3.567,8.703 Z"},
 };
 
+// Redo — MICROSOFT.
 constexpr IconPath kEditRedoPaths[] = {
-    {kIconText,
-     "m13.699219 3l-.707031.707031 2.292968 2.292969h-2.285156-1.00781-.492188c-3.601 "
-     "0-6.5 2.899-6.5 6.5 0 3.601 2.899 6.5 6.5 6.5h1.5v-1h-1.5c-3.047 "
-     "0-5.5-2.453-5.5-5.5 0-3.047 2.453-5.5 5.5-5.5h.492188 1.00781 "
-     "2.285156l-2.292968 2.292969.707031.707031 3.292969-3.292969.207031-.207031-.207031-.207031-3.292969-3.292969"},
+    {kIconNavy, "M 14,4.5 V 9.5 H 9 Z"},
+    {kIconNavy,
+     "M 13.1,7.958 C 11.205,6.26 8.911,4.541 6.341,4.09 C 4.801,3.82 "
+     "3.07,4.19 2.342,5.716 C 1.559,7.358 2.21,9.352 3.009,10.855 L "
+     "3.891,10.385 C 3.251,9.181 2.607,7.484 3.245,6.146 C 3.773,5.039 "
+     "5.08,4.884 6.168,5.075 C 8.548,5.493 10.682,7.134 12.433,8.703 Z"},
 };
 
+// Render — MICROSOFT.
 constexpr IconPath kMediaRecordPaths[] = {
-    {kIconRecord,
-     "m19 11a8 8 0 0 1 -8 8 8 8 0 0 1 -8-8 8 8 0 0 1 8-8 8 8 0 0 1 8 8z"},
+    {kIconMaroon, "M8,3 A5,5 0 0 1 8,13 A5,5 0 0 1 8,3 Z"},
 };
 
-// -- Row 4's six --------------------------------------------------------------
-//
-// Same rules as the four above: `d` verbatim from the committed file, the fill
-// hard-coded to what that file resolves to. Five of the six are pure
-// `.ColorScheme-Text` = #fcfcfc; preview-render-on is TWO paths, the second
-// carrying its own literal #d24d57 (the "on" pip), a Breeze red apart from
-// media-record's #da4453 and no role's value.
-
-// The pip's raw Breeze #d24d57, a literal on the hand-list (architect
-// 2026-10-05, the ink block above).
-constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
-
-// THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
-// written into its own file: `.ColorScheme-Accent`, which a Breeze file
-// carrying it resolves to the SCHEME'S ACCENT — #3daee9 under stock Breeze —
-// deep-history's curl-back arrow was this tree's first user (2026-08-09) and
-// dialog-information's plate is the one standing since that glyph left with
-// the 2026-09-04 collapse. THE SCHEME'S ACCENT IS STOCK BREEZE'S #3DAEE9, the
-// value the committed file's stylesheet writes (architect 2026-10-05: the
-// 2026-10-01 conversion to the waveform ink's value reverted), a literal on
-// the hand-list.
-constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
-
-
-// THE BPM OPENER'S ICON, 2026-08-01 to 2026-08-27 and again since 2026-09-04
-// (architect, deleting the Iterations dropdown once the icon row had room):
-// Breeze's music-note-16th, the flagged quaver — a tempo in beats per minute
-// asks for a note, and this is the family's own. It left with the button at
-// the 2026-08-27 Series relocation, a menu row carrying text and an
-// accelerator rather than a glyph, and comes back with it verbatim from the
-// installed 22px file; the provenance asset is re-committed beside it.
-// Command coverage: relative m/l/c and absolute L/Z with implicit repetition,
-// every family already committed here many times over.
-constexpr IconPath kMusicNote16thPaths[] = {
-    {kIconText,
-     "m 11,3 0,1 0,3 0,1 0,4 0,2.640625 C 10.450691,14.229206 9.7385673,"
-     "14.001104 9,14 7.3431458,14 6,15.119288 6,16.5 6,17.880712 7.3431458,19 "
-     "9,19 c 1.656854,0 3,-1.119288 3,-2.5 L 12,12 12,8.0957031 c 1.473938,"
-     "0.2519592 3.180894,1.3814645 4,2.1485529 L 16,9.5 16,9 16,8.84375 16,5.5 "
-     "16,4.84375 C 14.788541,3.8472864 12.971189,3 11,3 Z m 1,1.0957031 c "
-     "1.132773,0.1936395 2.194743,0.6800469 3,1.2460938 l 0,2.8046875 C "
-     "14.137786,7.634143 13.107988,7.23782 12,7.0800781 Z M 9,15 c 1.104569,0 "
-     "2,0.671573 2,1.5 C 11,17.328427 10.104569,18 9,18 7.8954305,18 7,"
-     "17.328427 7,16.5 7,15.671573 7.8954305,15 9,15 Z"},
-};
-
-// THE CUMULATIVE READING'S ICON SINCE 2026-08-18 (architect, with the roster
-// relayout): black_sum, the summation sigma — a CUMULATIVE delta is a sum over
-// the walk's members, against the iterative reading's one step at a time, and
-// the Σ says so outright where the deep-history clock it replaced only
-// implied it (that glyph went to the Git walk radio and left the roster with
-// it on 2026-09-04).
-// (It dressed ITERATION MODE from 2026-08-01, architect-picked then over
-// media-playlist-repeat on the same reading — an iteration sweep is also a sum
-// over cells. That slot took mathmode below in the same ruling and the sigma
-// moved rather than being duplicated, so no two buttons wear one math symbol.)
-constexpr IconPath kBlackSumPaths[] = {
-    {kIconText,
-     "M 3 3 L 7 11 L 3 19 L 3.5 19 L 4 19 L 4.0625 19 L 4.5 19 L 19 19 L 19 16 "
-     "L 19 15 L 18 15 L 18 18 L 14 18 L 13 18 L 12 18 L 5.65625 18 L 4.9375 18 "
-     "L 8.25 11 L 4.8125 4 L 5.71875 4 L 12 4 L 16 4 L 18 4 L 18 6 L 18 7 L 19 "
-     "7 L 19 6 L 19 3 L 4.5 3 L 4.0625 3 L 4 3 L 3.5 3 L 3 3 z "},
-};
-
-// GRID ITERATION MODE's icon since 2026-08-18 (architect, with the roster
-// relayout, taking the slot the summation sigma left for the cumulative
-// reading), away with its button 2026-08-27 to 2026-09-04 and back with it:
-// mathmode — an italic f beside a multiplication cross, which reads as f(x).
-// THE SLOT KEEPS A MATH SYMBOL and this one names the OPERATION: a render as a
-// function of a variable swept across a bracket, which is what a grid
-// iteration sweep is. Command coverage: absolute M / C / L / z with implicit
-// absolute-lineto repetition, every family already committed here many times
-// over.
-constexpr IconPath kMathmodePaths[] = {
-    {kIconText,
-     "M 9 3 C 7.34315 3 6 4.3431 6 6 L 6 8 L 4 8 L 4 9 L 6 9 L 6 10 L 6 19 L "
-     "7 19 L 7 9 L 8 9 L 9 9 L 9 8 L 8 8 L 7 8 L 7 6 C 7 4.89543 7.89543 4 9 4 "
-     "L 10 4 L 10 3 L 9 3 z M 12.742188 13 L 12 13.732422 L 14.292969 16 L 12 "
-     "18.267578 L 12.742188 19 L 15.035156 16.732422 L 17.257812 18.931641 L "
-     "18 18.199219 L 15.775391 16 L 18 13.800781 L 17.257812 13.068359 L "
-     "15.035156 15.267578 L 12.742188 13 z "},
-};
-
-
-// FOLLOW MODE's icon since 2026-08-01 (architect-picked, replacing
-// media-seek-forward): go-jump, the chevron with its destination dot — the
-// playhead's page reads as GOING somewhere, not as fast-forwarding a
-// transport. (Out for the hours of 2026-09-23 the lamp was deleted.)
-constexpr IconPath kGoJumpPaths[] = {
-    {kIconText,
-     "M 5.7070312 3 L 5 3.7070312 L 11.125 9.8320312 L 12.292969 11 L 11.125 "
-     "12.167969 L 5 18.292969 L 5.7070312 19 L 11.832031 12.875 L 13.707031 11 "
-     "L 11.832031 9.125 L 5.7070312 3 z M 16 10 C 15.446 10 15 10.446 15 11 C "
-     "15 11.554 15.446 12 16 12 C 16.554 12 17 11.554 17 11 C 17 10.446 16.554 "
-     "10 16 10 z "},
-};
-
-// THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP's icon (2026-09-04, the architect's
-// pick, kept through the 2026-09-22 rename): timeline-lift, a clip's two end
-// brackets with a red cross standing between them — a place the editor
-// declines to leave, which is what the lamp does to an undo whose restore
-// would switch the view on screen. THREE paths in file order, TWO COLOURS: the brackets and
-// their two tick marks are the scheme's #fcfcfc, the cross carries its own
-// literal #d24d57. Command coverage: relative `m` with implicit repetition,
-// absolute `M` with `H` / `V`, absolute `M` with implicit absolute linetos, and
-// `z` — every one of them an arm the interpreter already reads. The first
-// path's two rectangles wind alike and nest in nothing, so the nonzero fill
-// leaves both solid.
-//
-// ITS RED IS ITS OWN LITERAL, not a reference to preview-render-on's pip even
-// though both files write #d24d57: the two coincide by shared Breeze ancestry
-// and by nothing else. The raw Breeze #d24d57, a literal on the hand-list
-// (architect 2026-10-05, the ink block above).
-constexpr GuiColor kIconLiftCross = hex(0xD24D57);
-
-constexpr IconPath kTimelineLiftPaths[] = {
-    {kIconText,
-     "m 3,11 0,4 4,0 0,-4 -4,0 z m 12,0 0,4 4,0 0,-4 -4,0 z"},
-    {kIconText,
-     "M6 10H7V11H6zM15 10H16V11H15z"},
-    {kIconLiftCross,
-     "M 9.207,10.5 8.5,11.207 10.293,13 8.5,14.793 9.207,15.5 11,13.707 "
-     "12.793,15.5 13.5,14.793 11.707,13 13.5,11.207 12.793,10.5 11,12.293 "
-     "9.207,10.5 Z"},
-};
-
-constexpr IconPath kPreviewRenderOnPaths[] = {
-    {kIconText,
-     "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 15.432 19 19 "
-     "15.432 19 11 C 19 6.568 15.432 3 11 3 z M 11 4 C 14.878 4 18 7.122 18 11 "
-     "C 18 14.878 14.878 18 11 18 C 7.122 18 4 14.878 4 11 C 4 7.122 7.122 4 11 "
-     "4 z M 11 8 L 11 14 L 15 11 L 11 8 z "},
-    {kIconPreviewOn,
-     "m 10,8 a 3,3 0 0 0 -3,3 3,3 0 0 0 3,3 l 0,-6 z"},
-};
-
-// THE SET'S FIRST TRANSLATED PATH — the file's own
-// transform="translate(-364.57143 -525.79075)", carried as data so the `d`
-// string stays byte-identical to dialog-ok-apply.svg.
-constexpr IconPath kDialogOkApplyPaths[] = {
-    {kIconText,
-     "m382.8643 530.79077l-10.43876 10.56644-4.14699-4.19772-.70712.71578 "
-     "4.14699 4.1977-.002.002.70713.71577.002-.002.002.002.70711-.71577-.002-.002 "
-     "10.43877-10.56645-.70712-.71576z",
-     icon_translate(-364.57143, -525.79075)},
-};
-
-// -- ROW 4'S VIEW GROUP (architect 2026-10-01; the glyphs his 2026-08-11 picks) --
-//
-// The three absolute view selectors, flush right in the icon row since the
-// row-1 view bar's deletion — Source+Warp, Target+Warp, Target+Phase — wear
-// these three, RESTORED VERBATIM from git with their enumerators and assets
-// (icons.h's enum carries the architect's metaphors and the runners-up). Same
-// rules as every entry above: `d` verbatim from the committed file, the colour
-// hard-coded to what that file resolves to — all three are
-// `.ColorScheme-Text` = #fcfcfc.
-//
-// CHRONOMETER-START'S STYLE BLOCK DEFINES `.ColorScheme-Accent` TOO and its one
-// path never uses it (the path is `.ColorScheme-Text`), so nothing accent-
-// coloured is missing from the entry below — stated here so a future diff
-// against the file does not read the absence as a transcription bug. It is the
-// only committed file that declares a class it does not use.
-//
-// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED: document-export and
-// document-import are absolute M/L/Z only; chronometer-start is absolute M/L/C
-// with lowercase `z` (and its trailing space, kept like document-save's), so
-// the strings need nothing new from the parser.
-constexpr IconPath kDocumentExportPaths[] = {
-    {kIconText,
-     "M 11 16 L 16.293 16 L 14 18.293 L 14.707 19 L 18.207 15.5 L 14.707 12 "
-     "L 14 12.707 L 16.293 15 L 11 15 L 11 16 Z M 5 18 L 5 4 L 13 4 L 13 8 L "
-     "17 8 L 17 13 L 18 13 L 18 7 L 14 3 L 4 3 L 4 19 L 13 19 L 13 18 L 5 18 "
-     "Z"},
-};
-
-constexpr IconPath kDocumentImportPaths[] = {
-    {kIconText,
-     "M 4 3 L 4 19 L 11 19 L 11 18 L 5 18 L 5 4 L 13 4 L 13 8 L 17 8 L 17 15 "
-     "L 12.707 15 L 15 12.707 L 14.293 12 L 10.793 15.5 L 14.293 19 L 15 "
-     "18.293 L 12.707 16 L 18 16 L 18 7 L 14 3 L 4 3 Z"},
-};
-
-constexpr IconPath kChronometerStartPaths[] = {
-    {kIconText,
-     "M 6.8769531 3 C 5.2125198 3.8561715 3.8561715 5.2125198 3 6.8769531 L "
-     "3 7 L 3.921875 7.3066406 C 4.6764786 5.8567461 5.8567461 4.6764786 "
-     "7.3066406 3.921875 L 7 3 L 6.8769531 3 z M 15.005859 3 L 14.699219 "
-     "3.921875 C 16.149109 4.676485 17.329374 5.8567506 18.083984 7.3066406 "
-     "L 19.005859 7 L 19.005859 6.8769531 C 18.149689 5.2125231 16.793336 "
-     "3.85617 15.128906 3 L 15.005859 3 z M 11 5 C 7.1220048 5 4 8.1220048 4 "
-     "12 C 4 15.877995 7.1220048 19 11 19 C 14.877995 19 18 15.877995 18 12 "
-     "C 18 8.1220048 14.877995 5 11 5 z M 11 6 C 14.323996 6 17 8.676004 17 "
-     "12 C 17 15.323996 14.323996 18 11 18 C 7.676004 18 5 15.323996 5 12 C "
-     "5 8.676004 7.676004 6 11 6 z M 9 9 L 9 15 L 14 12 L 9 9 z "},
-};
-
-// THE READ-ONLY TAB'S PADLOCK, from track-head/lock.svg — one path, currentColor
-// (the scheme's #fcfcfc, which is kIconText). Transcribed verbatim like every
-// other entry; the file is committed beside it under assets/icons/breeze.
-constexpr IconPath kLockPaths[] = {
-    {kIconText,
-     "M 11,3 C 8.784,3 7,4.784 7,7 l 0,4 -2,0 c 0,2.666667 0,5.333333 0,8 4,0 "
-     "8,0 12,0 l 0,-8 c -0.666667,0 -1.333333,0 -2,0 L 15,7 C 15,4.784 13.216,3 "
-     "11,3 m 0,1 c 1.662,0 3,1.561 3,3.5 L 14,11 8,11 8,7.5 C 8,5.561 9.338,4 "
-     "11,4"},
-};
-
-// The OPEN padlock, the read-only toggle's unlocked state —
-// actions/22/unlock.svg. Its
-// shackle stands open to the left where lock.svg's closes over the body; the
-// two are the same body, which is what makes them read as one control in two
-// states rather than as two icons.
-constexpr IconPath kUnlockPaths[] = {
-    {kIconText,
-     "m11 3c-2.216 0-4 1.784-4 4v1h1v-.5c0-1.939 1.338-3.5 3-3.5 1.662 0 3 "
-     "1.561 3 3.5v3.5h-5-1-1-1-1v1 7h1 10 1v-8h-1-1v-4c0-2.216-1.784-4-4-4m-5 "
-     "9h10v6h-10v-6"},
-};
-
-// -- THE TWO VCS ICONS (2026-08-04) --------------------------------------------
-//
-// vcs-commit is the RENDER BUTTON's face while the history mode stands (the
-// chord commits a checkpoint there instead of rendering) and vcs-diff is the
-// history button's own, the icon row's twelfth. Same rules as every entry above:
-// `d` verbatim from the committed file, the fill hard-coded to what that file
-// resolves to.
-//
-// BOTH FILES WRAP THEIR PATHS DIFFERENTLY AND IT MAKES NO DIFFERENCE HERE:
-// vcs-diff carries `class="ColorScheme-Text" fill="currentColor"` on each path
-// element, vcs-commit carries the identical pair ONCE on a `<g>` that encloses
-// all three of its paths. A group attribute is inherited by the children and
-// nothing else, so both resolve to the same #fcfcfc per path — the `<g>` is a
-// spelling, not a transform, and there is nothing about it to model (the rows
-// that DO carry one are inventoried at IconTransform, above).
+// Save and Commit (Save's face in the history view) — ORIGINAL.
 constexpr IconPath kVcsCommitPaths[] = {
-    {kIconText, "m10 4h1v5h-1z"},
-    {kIconText, "m10 14h1v5h-1z"},
-    {kIconText,
-     "m10.5 8a3.5 3.5 0 0 0 -3.5 3.5 3.5 3.5 0 0 0 3.5 3.5 3.5 3.5 0 0 0 "
-     "3.5-3.5 3.5 3.5 0 0 0 -3.5-3.5zm0 1a2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1 "
-     "-2.5 2.5 2.5 2.5 0 0 1 -2.5-2.5 2.5 2.5 0 0 1 2.5-2.5z"},
+    {kIconBlack,
+     "M7.5,0 H8.5 V16 H7.5 Z M8,4.5 A3.5,3.5 0 0 1 8,11.5 A3.5,3.5 0 0 1 "
+     "8,4.5 Z M8,5.5 A2.5,2.5 0 0 0 8,10.5 A2.5,2.5 0 0 0 8,5.5 Z"},
+    {kIconWhite, "M8,5.5 A2.5,2.5 0 0 1 8,10.5 A2.5,2.5 0 0 1 8,5.5 Z"},
 };
 
-// vcs-pull (2026-09-27), Save's face while the GitHub status reads Behind:
-// three sibling paths, each carrying the class and fill itself, so each
-// resolves to #fcfcfc like the pair above.
+// Pull (Save's face while GitHub is ahead) — CHICAGO95.
 constexpr IconPath kVcsPullPaths[] = {
-    {kIconText, "m6 16h9v3h-9z"},
-    {kIconText, "m10 3h1v11h-1z"},
-    {kIconText,
-     "m6.5 9.7929688-0.7070312 0.7070312 0.3535156 0.353516 4.3535156 "
-     "4.353515 4.353516-4.353515 0.353515-0.353516-0.707031-0.7070312"
-     "-0.353516 0.3535152-3.646484 3.646485-3.6464844-3.646485-0.3535156"
-     "-0.3535152z"},
+    {kIconBlack, "M5,0 H10 V6 H14 V6.5 L7.5,13 L1,6.5 V6 H5 Z"},
+    {kIconAqua, "M6,1 H9 V7 H12 L7.5,11.5 L3,7 H6 Z"},
+    {kIconBlack, "M1,13 H14 V16 H1 Z"},
+    {kIconAqua, "M2,14 H13 V15 H2 Z"},
 };
 
-constexpr IconPath kVcsDiffPaths[] = {
-    {kIconText,
-     "m5.5 4a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 "
-     "2.5-2.5 2.5 2.5 0 0 0-2.5-2.5zm0 1a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 "
-     "1-1.5 1.5 1.5 1.5 0 0 1-1.5-1.5 1.5 1.5 0 0 1 1.5-1.5z"},
-    {kIconText,
-     "m5 8v6a2 2 0 0 0 1.9511719 2 2 2 0 0 0 0.0488281 0h4v-1h-4a1 1 0 0 "
-     "1-1-1v-6z"},
-    {kIconText,
-     "m8.5 11.792969-0.7070312 0.707031 0.3535156 0.353516 2.6464846 "
-     "2.646484-2.6464846 2.646484-0.3535156 0.353516 0.7070312 0.707031 "
-     "0.3535156-0.353515 3.3535154-3.353516-3.3535154-3.353516-0.3535156-0.353515z"},
-    {kIconText,
-     "m15.5 18a2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5 2.5 2.5 0 0 0-2.5 "
-     "2.5 2.5 2.5 0 0 0 2.5 2.5zm0-1a1.5 1.5 0 0 1-1.5-1.5 1.5 1.5 0 0 1 "
-     "1.5-1.5 1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1-1.5 1.5z"},
-    {kIconText,
-     "m16 14v-6.0000002a2 2 0 0 0-1.951172-2 2 2 0 0 0-0.04883 "
-     "0h-3.9999981v1h4.0000001a1 1 0 0 1 1 1v6.0000002z"},
-    {kIconText,
-     "M 12.5 2.7929688 L 12.146484 3.1464844 L 8.7929688 6.5 L 12.146484 "
-     "9.8535156 L 12.5 10.207031 L 13.207031 9.5 L 12.853516 9.1464844 L "
-     "10.207031 6.5 L 12.853516 3.8535156 L 13.207031 3.5 L 12.5 2.7929688 z "},
+// Source+Warp — CHICAGO95.
+constexpr IconPath kDocumentExportPaths[] = {
+    {kIconBlack, "M1,0 H14 V15 H1 Z"},
+    {kIconWhite, "M2,1 H13 V14 H2 Z"},
+    {kIconNavy, "M3,3 H12 V4 H3 Z"},
+    {kIconMaroon, "M5,7 H9 V8 H5 Z M5,5 H6 V8 H5 Z M12,7.5 L9,5 L9,10 Z"},
 };
 
-// -- THE WALK'S TWO CHEVRONS (2026-08-05) --------------------------------------
-//
-// go-previous and go-next, the icon row's older / newer checkpoint buttons.
-// Transcribed verbatim like every entry above, from the committed
-// go-previous.svg / go-next.svg, and both resolve to the scheme's #fcfcfc.
-//
-// EACH IS ONE OUTLINE PATH, not a stroked line: Breeze draws the chevron as a
-// closed shape whose two limbs are one unit thick at the viewBox's own scale,
-// exactly as go-jump's does (they are the same drawing, go-jump's carrying
-// its destination dot as a second subpath). So the line weight scales with
-// gui_scale like every other geometry in this table, with no stroke width to
-// set and nothing that could fatten at 200%.
-//
-// THEY ARE MIRROR IMAGES and their `d` strings are NOT mirrors of each other:
-// each file walks its own outline from its own start point, so neither is
-// derived from the other here — both are copied, which is what keeps a diff
-// against the files a transcription bug and nothing else.
-constexpr IconPath kGoPreviousPaths[] = {
-    {kIconText,
-     "m14.292969 3l-6.125 6.125-1.875 1.875 1.875 1.875 6.125 "
-     "6.125.707031-.707031-6.125-6.125-1.167969-1.167969 1.167969-1.167969 "
-     "6.125-6.125-.707031-.707031"},
+// Target+Warp — CHICAGO95.
+constexpr IconPath kDocumentImportPaths[] = {
+    {kIconBlack, "M1,0 H14 V15 H1 Z"},
+    {kIconWhite, "M2,1 H13 V14 H2 Z"},
+    {kIconNavy, "M3,3 H12 V4 H3 Z"},
+    {kIconMaroon, "M8,6 H12 V7 H8 Z M11,6 H12 V9 H11 Z M5,6.5 L8,4 L8,9 Z"},
 };
 
-constexpr IconPath kGoNextPaths[] = {
-    {kIconText,
-     "m7.707031 3l-.707031.707031 6.125 6.125 1.167969 1.167969-1.167969 "
-     "1.167969-6.125 6.125.707031.707031 6.125-6.125 1.875-1.875-1.875-1.875-6.125-6.125"},
+// Target+Phase — ORIGINAL.
+constexpr IconPath kChronometerStartPaths[] = {
+    {kIconBlack, "M1,0 H14 V15 H1 Z"},
+    {kIconWhite, "M2,1 H13 V14 H2 Z"},
+    {kIconNavy, "M3,3 H12 V4 H3 Z"},
+    {kIconMaroon,
+     "M4,6 H5 V12 H4 Z M8,8.5 H12 V9.5 H8 Z M5,9 L8,6.5 L8,11.5 Z"},
 };
 
-// -- THE WALK'S TWO ARROWS, SINCE 2026-08-11 -----------------------------------
-//
-// keyframe-previous and keyframe-next, the icon row's older / newer checkpoint
-// buttons. Transcribed verbatim from the committed keyframe-previous.svg /
-// keyframe-next.svg, and both resolve to the scheme's #fcfcfc.
-//
-// THEY TOOK THE PAIR OVER FROM go-previous / go-next, which the walk had worn
-// since 2026-08-05 and which now serve row 8's left and right arrows alone (an
-// Icon is a GLYPH, not a button — the two entries above are unchanged and
-// simply have one consumer each again). The architect's reason is the group's
-// own vocabulary: its neighbour Deep-History is a CLOCK, so the walk's steps
-// should read as clock steps rather than as bare direction. Breeze's
-// keyframe-previous / keyframe-next are exactly that — a stopwatch dial with a
-// solid triangle pointing into the past or the future — and they are the
-// theme's ONLY DIRECTIONAL CLOCK PAIR (planner survey; the runners-up were
-// chronometer-start / chronometer-reset, document-open-recent and
-// edit-undo-history, and none of them is directional as a pair, which is what
-// an older / newer step needs above everything else).
-//
-// ONE PATH EACH, dial and triangle together, so both are single-colour like
-// every entry above and unlike Deep-History's two. Their `d` uses m/v/h/c/s/l
-// (the lineto implicit after `m`) and `z` — all of it already in the
-// interpreter, document-revert having been the `s` that grew it, so neither
-// string was flattened by hand.
-constexpr IconPath kKeyframePreviousPaths[] = {
-    {kIconText,
-     "m11 5v1h2v1.0507812c-2.237959 0.2537455-4 2.1467332-4 4.4492188 0 "
-     "2.473437 2.026563 4.5 4.5 4.5s4.5-2.026563 "
-     "4.5-4.5c0-1.059095-0.385401-2.0209801-1.005859-2.7871094l0.755859-0.755859 "
-     "0.396484 0.396484 0.707031-0.7089844-1.501953-1.4980469-0.705078 "
-     "0.7070313 0.396485 0.396485-0.751953 "
-     "0.7519525c-0.646025-0.510828-1.432052-0.8537803-2.291016-0.9511719v-1.0507812h2v-1zm-4 "
-     "1-4 5 4 5zm6.5 2c1.932997 0 3.5 1.5670034 3.5 3.5 0 1.932997-1.567003 "
-     "3.5-3.5 3.5s-3.5-1.567003-3.5-3.5c0-1.9329966 1.567003-3.5 3.5-3.5z"},
-};
-
-constexpr IconPath kKeyframeNextPaths[] = {
-    {kIconText,
-     "m5 5v1h2v1.0507812c-2.2379593 0.2537455-4 2.1467332-4 4.4492188 0 "
-     "2.473437 2.0265633 4.5 4.5 4.5 2.473437 0 4.5-2.026563 4.5-4.5 "
-     "0-1.059095-0.385401-2.0209801-1.005859-2.7871094l0.754297-0.7542968 "
-     "0.398046 0.3949218 0.707031-0.7089844-1.501953-1.4980469-0.705078 "
-     "0.7070313 0.394922 0.3980469-0.75039 "
-     "0.7503906c-0.6460254-0.510828-1.432052-0.8537803-2.291016-0.9511719v-1.0507812h2v-1zm10 "
-     "1v10l4-5zm-7.5 2c1.932997 0 3.5 1.5670034 3.5 3.5 0 1.932997-1.567003 "
-     "3.5-3.5 3.5-1.9329966 0-3.5-1.567003-3.5-3.5 0-1.9329966 1.5670034-3.5 "
-     "3.5-3.5z"},
-};
-
-// -- THE REVERT ACT'S GLYPH (2026-08-05) ---------------------------------------
-//
-// document-revert, the history group's third button: the checkpoint's own
-// differences applied backwards into the live state. Transcribed verbatim from
-// the committed document-revert.svg like every entry above, and it resolves to
-// the scheme's #fcfcfc.
-//
-// ONE PATH, and it is the FIRST committed file to use the SMOOTH CUBIC (`s`) —
-// twice, for the two lobes of the arrow's return curve. The interpreter grew
-// that command for this file rather than the string being flattened to plain
-// `c` here: a hand-computed reflection would put numbers in this table that are
-// in no file, which is exactly the transcription-bug-and-nothing-else property
-// the table's contract rests on.
-constexpr IconPath kDocumentRevertPaths[] = {
-    {kIconText,
-     "m4 3v16h11c1.662 0 3-1.338 3-3s-1.338-3-3-3h-1.292969l1.5-1.5-.707031-.707031-2.707031 "
-     "2.707031 2.707031 2.707031.707031-.707031-1.5-1.5h1.292969c1.108 0 2 .892 "
-     "2 2s-.892 2-2 2h-10v-14h8v4h4v4h1v-5l-4-4z"},
-};
-
-// -- THE SESSION WALK'S GLYPH (2026-08-18) ------------------------------------
-//
-// shallow-history: a clock face and hands with NO sweep arrow at all — the
-// session's own undo/redo timeline reaches back no further than this run.
-//
-// IT IS THE WALK LAMP'S WHOLE FACE since 2026-09-04, when the architect
-// collapsed the row's three radio pairs into three lamps: the lamp lights AWAY
-// FROM HOME, so this is the LIT state's glyph and the Git half's deep-history
-// left the roster with that half. deep-history was Breeze's clock face with a
-// curl-back ARROW sweeping around it, the set's one two-class file — path 1
-// `.ColorScheme-Text`, path 2 `.ColorScheme-Accent` — and it dressed the
-// CUMULATIVE reading's toggle from 2026-08-09 until that toggle took the
-// summation sigma on 2026-08-18. Its candidate succession is recorded because
-// none of it is to be re-proposed without a new ruling: office-chart-area
-// (rejected — its rising area is two paths, the second at fill-opacity 0.5, and
-// this product composites nothing), view-sort-ascending (licensed but
-// untranscribable — a `transform="matrix(...)"` the interpreter models translate
-// only), an AUTHORED three-bars glyph (written and reverted the same day,
-// 2026-08-08, the architect preferring a real Breeze file), and
-// office-chart-line-forecast (shipped, retired 2026-08-09 as choppy at row
-// size). PIN and LAYER-VISIBLE-ON were the runners-up on the sheet he picked
-// deep-history from.
-//
-// SINGLE-COLOUR: the file has ONE `.ColorScheme-Text` path and no
-// `.ColorScheme-Accent` at all. Command coverage: relative `m` with `c`, `v`
-// and `h` plus implicit repetition and no closing `z` — a fill closes the
-// subpath implicitly, in cairo as in SVG, which six committed files already
-// rely on (edit-undo, edit-redo, go-next, go-previous, lock, unlock).
-
-constexpr IconPath kShallowHistoryPaths[] = {
-    {kIconText,
-     "m11 3c-4.431998 0-8 3.568002-8 8 0 4.431998 3.568002 8 8 8 4.431998 "
-     "0 8-3.568002 8-8 0-4.431998-3.568002-8-8-8m0 1c3.877999 0 7 3.122001 7 "
-     "7 0 3.877999-3.122001 7-7 7-3.877999 0-7-3.122001-7-7 0-3.877999 "
-     "3.122001-7 7-7m-1 1v7h1 5v-1h-5v-6h-1"},
-};
-
-// THE ADD-TO-SELECTION ACT'S GLYPH (2026-08-18): edit-select, the pointer
-// arrow with its own grab dot — picking one more thing up, which is what the
-// act does to a standing selection.
-//
-// Command coverage: absolute `M` / `A` / `L` with implicit repetition on both
-// the arc run (four quarter-arcs spelling the dot) and the lineto run, and no
-// closing `z` on either subpath — the fill closes implicitly, six committed
-// files' precedent. Arcs are implemented generally here, so the four circular
-// ones cost nothing new.
-constexpr IconPath kEditSelectPaths[] = {
-    {kIconText,
-     "M6 3A1 1 0 0 0 5 4 1 1 0 0 0 6 5 1 1 0 0 0 7 4 1 1 0 0 0 6 3M7 6L7.00586 "
-     "19 10.900391 14.300781 17 14 7 6"},
-};
-
-// -- THE FOLDER OVERLAY'S TWO ROW GLYPHS (2026-08-28, the render player) ------
-//
-// PROVENANCE, per the theme-provenance rule: breeze-dark's places/22/folder.svg
-// and mimetypes/22/audio-x-wav.svg, both REAL FILES and not symlinks on this
-// host; the committed assets/icons/breeze/folder.svg and audio-x-wav.svg are
-// those installs' bytes verbatim, so a diff between this table's PATHS and
-// either asset is a transcription bug and nothing else (the wav's fill is
-// the one ruled departure, below).
-//
-// FOLDER: one `<path>` with `fill:currentColor` under the file's own
-// `.ColorScheme-Text { color: #fcfcfc }` stylesheet, so kIconText is what it
-// resolves to — the three edit icons' shape exactly. Absolute `M` / `L` with
-// a closing `z` on three subpaths (the outer outline, the tab's cutout and the
-// body's cutout, which wind against it so the nonzero rule leaves the folder
-// hollow as the file draws it). Nothing new for the interpreter.
-//
-// AUDIO-X-WAV: one `<path>` in the file's OWN LITERAL `fill:#44aaeb` — Breeze's
-// audio-mimetype blue. kIconWav below IS that literal (architect 2026-10-05:
-// the 2026-10-01 conversion of the Breeze blues to the waveform ink's value
-// reverted), its own constant and not kIconAccent: the file's blue records no
-// relationship to Breeze's #3daee9 beyond being Breeze's blue. Absolute
-// `M` / `L` and the ARC `A` (the four note-head circles as eight elliptical
-// arcs), the interpreter's existing arm
-// (media-record's precedent, and the retired speedometer's). THE ONE THING WORTH READING
-// TWICE: the file wraps the path in a layer group carrying
-// `transform="matrix(1 0 0 1 -326 -534.3622)"` and the path itself carries
-// `transform="matrix(1 0 0 1 326 534.3622)"` — Inkscape's document-offset
-// pair, whose composition is EXACTLY THE IDENTITY (a translate and its
-// inverse), so the row takes no `xform` and the `d` stays byte-verbatim: the
-// numbers in the `d` are already viewBox coordinates (every one lands in
-// [3, 19]). A reader comparing this row against the file should expect no
-// transform here and find those two in the file.
-constexpr GuiColor kIconWav = hex(0x44AAEB);
-
-constexpr IconPath kFolderPaths[] = {
-    {kIconText,
-     "M 3 3 L 3 4 L 3 19 L 4 19 L 19 19 L 19 18 L 19 5 L 12 5 L 10 3 L 10 3 L "
-     "10 3 L 4 3 L 3 3 z M 4 4 L 7 4 L 9.6 4 L 10.6 5 L 6.6 9 L 6.6 9 L 4 9 L "
-     "4 4 z M 9 8 L 18 8 L 18 18 L 4 18 L 4 10 L 5.6 10 L 7 10 L 7 10 L 7 10 "
-     "L 9 8 z "},
-};
-
-constexpr IconPath kAudioXWavPaths[] = {
-    {kIconWav,
-     "M 7 3 L 7 4 L 7 14.503906 A 2.5 2.5 0 0 0 5.5 14 A 2.5 2.5 0 0 0 3 16.5 "
-     "A 2.5 2.5 0 0 0 5.5 19 A 2.5 2.5 0 0 0 8 16.5 L 8 7 L 18 7 L 18 "
-     "12.503906 A 2.5 2.5 0 0 0 16.5 12 A 2.5 2.5 0 0 0 14 14.5 A 2.5 2.5 0 0 "
-     "0 16.5 17 A 2.5 2.5 0 0 0 19 14.5 L 19 4 L 19 3.5 L 19 3 L 8 3 L 7 3 z "
-     "M 8 4 L 18 4 L 18 6 L 8 6 L 8 4 z "},
-};
-
-// -- THE PLAYER ROW'S REPEAT TOGGLE (architect 2026-08-28) --------------------
-//
-// PROVENANCE, per the theme-provenance rule: breeze-dark's
-// actions/22/media-repeat-single.svg, a real file on this host; the committed
-// assets/icons/breeze/media-repeat-single.svg is that install's bytes
-// verbatim. THREE `<path>` elements in one `class="ColorScheme-Text"
-// fill="currentColor"` group under the file's own `.ColorScheme-Text { color:
-// #fcfcfc }` stylesheet, so all three resolve to kIconText — the lower arrow,
-// the upper arrow with its two corner curves, and the numeral 1. Relative
-// `m` / `l` / `h` / `v` / `c` with implicit repetition and a closing `z` on
-// each, all of it the interpreter's oldest arms (edit-undo's own spelling,
-// compact numbers included).
-//
-// THE FILE'S ONE `fill-rule="evenodd"`, on the numeral, NEEDS NO FIELD and
-// that is a transcription decision rather than an omission: the numeral is a
-// SINGLE non-self-intersecting subpath, on which even-odd and the nonzero
-// default fill identically, so an IconPath fill-rule flag would have exactly
-// one producer and no observable consequence. (The rule the table follows is
-// the `d` stays verbatim; an attribute that changes no pixel does not become a
-// row.)
-//
-// ONE GLYPH FOR BOTH STATES (architect 2026-08-28, "a plain toggle: off is
-// the unpressed face, on is the pressed/lit face"), so there is no second
-// file here and no glyph swap at the painter — the modal row's lamp carries
-// the state.
-constexpr IconPath kMediaRepeatSinglePaths[] = {
-    {kIconText, "m6 12-3 2.5 3 2.5v-2h9v-1h-9z"},
-    {kIconText,
-     "m16 5v2h-10c-1.662 0-3 1.338-3 3v1h1v-1c0-1.108.892-2 2-2h10v2l3-2.5z"},
-    {kIconText,
-     "m17.29296875 11-1.5 1.5.70703125.70703125.5-.5v3.29296875h-1v1h3v-1h-1v"
-     "-5z"},
-};
-
-// -- THE PLAYER ROW'S UP BUTTON (architect 2026-09-01) ------------------------
-//
-// PROVENANCE, per the theme-provenance rule: breeze-dark's
-// actions/22/go-parent-folder.svg, a real file on this host (not a symlink);
-// the committed assets/icons/breeze/go-parent-folder.svg is that install's
-// bytes verbatim. ONE `<path>` under the file's own `.ColorScheme-Text
-// { color: #fcfcfc }` stylesheet, so it resolves to kIconText like every
-// arrow in this table.
-//
-// IT REPLACES `go-up` ON THAT BUTTON AND ONLY THERE (the button landed
-// 2026-09-01 wearing the roster's chevron; the roster's own bare-Up transport
-// button keeps it): the act is LEAVING A FOLDER, not stepping a value up, and
-// this is Breeze's folder-semantic glyph for exactly that — an open folder
-// with an arrow rising out of it. The chevron said "up" about a number; this
-// says "up" about a directory, which is what the button does.
-//
-// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, per the deep-history
-// precedent: absolute `M` / `L` with an explicit command letter before every
-// pair (no implicit repetition to read) and a `z` closing each of the two
-// subpaths — the folder outline and the arrow — which is the interpreter's
-// oldest arm and the same subset the `folder` row glyph above already spends.
-// The file names no fill-rule, so cairo's nonzero default is SVG's own.
-constexpr IconPath kGoParentFolderPaths[] = {
-    {kIconText,
-     "M 3 3 L 3 4 L 3 19 L 4 19 L 12 19 L 12 18 L 4 18 L 4 10 L 7 10 L 7 "
-     "9.9921875 L 7.0078125 10 L 9.0078125 8 L 18 8 L 18 12 L 19 12 L 19 5 L "
-     "12.007812 5 L 10.007812 3 L 10 3.0078125 L 10 3 L 4 3 L 3 3 z M 15.5 "
-     "11.792969 L 14.792969 12.5 L 12 15.292969 L 12.707031 16 L 15 13.707031 "
-     "L 15 19 L 16 19 L 16 18 L 16 17 L 16 13.707031 L 18.292969 16 L 19 "
-     "15.292969 L 16.207031 12.5 L 15.5 11.792969 z "},
-};
-
-// -- Row 8's seven (2026-08-11, the transport row) -----------------------------
-//
-// Same rules as every entry above: `d` verbatim from the committed file, the
-// fill hard-coded to what that file resolves to — all seven are pure
-// `.ColorScheme-Text` = #fcfcfc. The four cardinal arrows are completed by
-// GoUp / GoDown below plus the REUSED kGoPrevious / kGoNext already in this
-// table (left and right — a def is a glyph, and several buttons may wear one).
-//
-// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, per the deep-history
-// precedent, each path against the subset below: the three media-skip /
-// playback-start strings are m/v/h/l with implicit lineto after m and
-// implicit repetition ("m2 8 10 8" is a moveto and a relative lineto);
-// media-playback-stop is m/h/v and media-playback-pause (2026-08-28) is that
-// same subset twice, its second subpath opened by a relative `m`;
-// dialog-cancel is m/c/l with long implicit
-// cubic runs and chained leading-dot decimals (".22478-.375" splits on the
-// second dot — the parser's own rule, with committed producers since
-// edit-undo); go-down is m/l relative; go-up is absolute M/L with implicit
-// absolute-lineto repetition ("L11 7.707 9.832 8.875 3.707 15" is three
-// linetos). go-down, go-up and dialog-cancel close no subpath with `z` —
-// the fill closes implicitly, six committed files' precedent.
-//
-// DIALOG-CANCEL IS THE SECOND TRANSLATED PATH in the set (dialog-ok-apply is
-// the first): the file's own transform="translate(-1-1)" — the SVG grammar
-// admits the glued negative — carried as tx/ty data so the `d` stays
-// byte-identical to the committed file.
-
-constexpr IconPath kMediaSkipBackwardPaths[] = {
-    {kIconText,
-     "m0 3v16h2v-16zm2 8 10 8v-16zm10 0 10 8v-16z"},
-};
-
-constexpr IconPath kMediaPlaybackStartPaths[] = {
-    {kIconText,
-     "m3 3v16l16-8z"},
-};
-
-constexpr IconPath kMediaPlaybackStopPaths[] = {
-    {kIconText,
-     "m3 3h16v16h-16z"},
-};
-
-// THE PLAYER ROW'S PAUSE FACE (2026-08-28). Same rules: the `d` verbatim
-// from the committed file, the fill the file's own `.ColorScheme-Text`
-// #fcfcfc. TWO SUBPATHS IN ONE STRING — m/v/h/z twice, the second `m`
-// relative — which the interpreter's oldest arms already cover (the two
-// media-skip strings carry three subpaths each).
-constexpr IconPath kMediaPlaybackPausePaths[] = {
-    {kIconText,
-     "m3 3v16h6v-16zm10 0v16h6v-16z"},
-};
-
-constexpr IconPath kMediaSkipForwardPaths[] = {
-    {kIconText,
-     "m0 3v16l10-8zm10 8v8l10-8-10-8zm10 0v8h2v-16h-2z"},
-};
-
-constexpr IconPath kDialogCancelPaths[] = {
-    {kIconText,
-     "m12 4c-2.027598 0-3.87132.756694-5.28125 2-.126239.11132-.25603.22478"
-     "-.375.34375l-.34375.375c-1.243306 1.40993-2 3.253652-2 5.28125 0 4.41828 "
-     "3.58172 8 8 8 2.027598 0 3.87132-.756694 5.28125-2l.375-.34375c.11897"
-     "-.11897.23243-.248761.34375-.375 1.243306-1.40993 2-3.253652 2-5.28125 "
-     "0-4.41828-3.58172-8-8-8m0 1c3.86599 0 7 3.13401 7 7 0 1.75366-.653215 "
-     "3.334268-1.71875 4.5625l-9.84375-9.84375c1.228231-1.065535 2.80884"
-     "-1.71875 4.5625-1.71875m-5.28125 2.4375l9.84375 9.84375c-1.228232 "
-     "1.065535-2.80884 1.71875-4.5625 1.71875-3.86599 0-7-3.13401-7-7 "
-     "0-1.75366.653215-3.334269 1.71875-4.5625",
-     icon_translate(-1.0, -1.0)},
-};
-
-constexpr IconPath kGoDownPaths[] = {
-    {kIconText,
-     "m3.707031 7l-.707031.707031 6.125 6.125 1.875 1.875 1.875-1.875 6.125"
-     "-6.125-.707031-.707031-6.125 6.125-1.167969 1.167969-1.167969-1.167969"
-     "-6.125-6.125"},
-};
-
-constexpr IconPath kGoUpPaths[] = {
-    {kIconText,
-     "M3.707 15L3 14.293l6.125-6.125L11 6.293l1.875 1.875L19 14.293l-.707.707"
-     "-6.125-6.125L11 7.707 9.832 8.875 3.707 15"},
-};
-
-// (EDIT-CUT, THE TRIM SCISSORS, IS DELETED — 2026-08-18, with its button:
-// the architect's roster relayout retired the "set trim from region" BUTTON,
-// the CHORD bare `x` untouched, which left this row with no consumer at all.
-// The enumerator, this transcription and assets/icons/breeze/edit-cut.svg went
-// together rather than the table carrying an unpainted glyph. It served the
-// trim button from 2026-08-11 and was the architect's own pick over the first
-// cut's planner-picked transform-crop; both are git history.)
-
-// -- THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's roster
-// commit) ---------------------------------------------------------------------
-//
-// Breeze's magnifier family, transcribed byte-verbatim from breeze-dark's
-// actions/22/: zoom-fit-best and zoom-original share one magnifier
-// construction (the 8/7 double circle ring — media-record's nonzero hole
-// idiom — plus the handle's rounded 1x1 arc stub) and differ in the dial's
-// content: the fit frame and the 1:1 corner-arrow dial. Both are single `.ColorScheme-Text` paths resolving to #fcfcfc,
-// relative m/l/h/v with `a` arcs, glued negative-after-flag arc arguments
-// ("0 0-8 8" — a flag is one digit, media-record's own producer form) and
-// implicit repetition; every family has a committed producer already, so
-// nothing here asked the interpreter for anything new. (The plus and minus
-// magnifiers, zoom-in and zoom-out, left with the Zoom In / Zoom Out buttons
-// on 2026-09-25, zoom being on every surface; zoom-in-y
-// left with the per-marker Magnification button on 2026-09-15 — each asset
-// deleted with the button it was drawn for, enumerators, defs and assets
-// together. This is the roster's record of which files came and went
-// and makes no claim about what magnification does; that rule lives at
-// waveform_magnified.) ZOOM-IN-Y, the vertical magnifier's plus, is
-// the Waveform Magnification lamp's glyph (architect 2026-09-24, when the
-// lamp was reversed to show the magnification): the same magnifier with the
-// HANDLE STUB ONE UNIT SHORTER (2.400391 where the family carries 3.400391) and
-// a Y-AXIS RULER — the run of tick pairs inside the ring — beside the plus,
-// transcribed byte-verbatim from breeze-dark's actions/22/
-// labplot-zoom-in-y.svg (a symlink to y-zoom-in.svg in the installed theme,
-// so the committed asset assets/icons/breeze/zoom-in-y.svg holds the
-// resolved bytes; they are identical to the zoom-in-y asset of 2026-08-26,
-// which left with the per-marker Magnification button). Its twin
-// zoom-out-y, the minus, wore the lamp from 2026-09-22 until the reversal
-// and left with that sense — enumerator, def and asset together.
-
+// Full Zoom Out — CHICAGO95.
 constexpr IconPath kZoomFitBestPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
-     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
-     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
-     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
-     "7-7zm-4 3v1 6 1h8v-1-6-1h-8zm1 1h6v6h-6v-6z"},
+    {kIconNavy, "M8.939,11.061 L13.539,15.661 L15.661,13.539 L11.061,8.939 Z"},
+    {kIconBlack, "M9.646,10.354 L14.246,14.954 L14.954,14.246 L10.354,9.646 Z"},
+    {kIconBlack,
+     "M6,0 A6,6 0 0 1 6,12 A6,6 0 0 1 6,0 Z M6,1 A5,5 0 0 0 6,11 A5,5 0 0 0 "
+     "6,1 Z"},
+    {kIconNavy,
+     "M3,3 H5 V4 H3 Z M3,3 H4 V5 H3 Z M7,3 H9 V4 H7 Z M8,3 H9 V5 H8 Z M3,8 "
+     "H5 V9 H3 Z M3,7 H4 V9 H3 Z M7,8 H9 V9 H7 Z M8,7 H9 V9 H8 Z"},
 };
 
-constexpr IconPath kZoomInYPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
-     "4.892578-1.693359l2.400391 2.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
-     "0-1.414062l-2.40039-2.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
-     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-2-0.302734v-4.697266"
-     "h-1-1v1h1v1h-1v1h1v1h-0.5644531a7 7 0 0 1-3.4355469-6 7 7 0 0 1 "
-     "3.4355469-6h0.5644531v1h-1v1h1v1h-1v1h1 1v-4.6972656a7 7 0 0 1 "
-     "2-0.3027344zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
-};
-
+// Center on Focus — CHICAGO95.
 constexpr IconPath kZoomOriginalPaths[] = {
-    {kIconText,
-     "m3 3v6h0.2695312 1.0332032 4.6972656l-2.9394531-2.9394531a7 7 0 0 1 "
-     "4.9394531-2.0605469 7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 "
-     "1-7-7h-1a8 8 0 0 0 8 8 8 8 0 0 0 4.892578-1.693359l3.400391 "
-     "3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
-     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
-     "0-8-8 8 8 0 0 0-5.6347656 2.3652344l-2.3652344-2.3652344z"},
+    {kIconNavy, "M8.939,11.061 L13.539,15.661 L15.661,13.539 L11.061,8.939 Z"},
+    {kIconBlack, "M9.646,10.354 L14.246,14.954 L14.954,14.246 L10.354,9.646 Z"},
+    {kIconBlack,
+     "M6,0 A6,6 0 0 1 6,12 A6,6 0 0 1 6,0 Z M6,1 A5,5 0 0 0 6,11 A5,5 0 0 0 "
+     "6,1 Z"},
+    {kIconNavy, "M5,3 H7 V9 H5 Z M4,4 H5 V5 H4 Z M4,8 H8 V9 H4 Z"},
 };
 
-// -- THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
-// sheets) ---------------------------------------------------------------------
-//
-// list-add (the plus — drop a marker), list-remove (the X — delete),
-// view-hidden (the crossed-out eye — the disable toggle) and insert-link (the
-// chain — a pass marker LINKS its tempo to its neighbor, Ctrl+N's
-// inherit/collapse). Transcribed byte-verbatim like every entry above.
-//
-// LIST-REMOVE IS THE SET'S SECOND RESOLVED-COLOR RED: its one path is
-// `.ColorScheme-NegativeText { color: #da4453 }` under fill="currentColor" —
-// kIconNegativeText below is the value that file resolves to, the raw Breeze
-// #da4453 (architect 2026-10-05, the hand-list), its own literal coinciding
-// with media-record's by shared Breeze ancestry. Command coverage: absolute
-// M/L with one absolute C (the outline's
-// corner easing) and z.
-//
-// VIEW-HIDDEN IS TRANSCRIBED VERBATIM, ARTIFACT AND ALL (architect-ruled
-// 2026-08-12, at the pick): the file's last subpath — "M 1 13 C 0.33333333 19
-// 0.66666667 16 1 13 z" — is a degenerate editing artifact whose fill covers
-// (next to) nothing, and the architect ruled the verbatim copy fine rather
-// than editing Breeze's file by hand, which would have broken the
-// diff-is-a-transcription-bug property. Coverage: absolute M/L/A/C/Z, every
-// family with a committed producer.
+// Toggle Waveform Magnification — CHICAGO95.
+constexpr IconPath kZoomInYPaths[] = {
+    {kIconNavy, "M8.939,11.061 L13.539,15.661 L15.661,13.539 L11.061,8.939 Z"},
+    {kIconBlack, "M9.646,10.354 L14.246,14.954 L14.954,14.246 L10.354,9.646 Z"},
+    {kIconBlack,
+     "M6,0 A6,6 0 0 1 6,12 A6,6 0 0 1 6,0 Z M6,1 A5,5 0 0 0 6,11 A5,5 0 0 0 "
+     "6,1 Z"},
+    {kIconNavy, "M5,3 H7 V9 H5 Z M3,5 H9 V7 H3 Z"},
+};
 
-constexpr GuiColor kIconNegativeText = hex(0xDA4453);
-
+// Drop Marker — CHICAGO95.
 constexpr IconPath kListAddPaths[] = {
-    {kIconText,
-     "M 10 4 L 10 11 L 3 11 L 3 12 L 10 12 L 10 19 L 11 19 L 11 12 L 18 12 "
-     "L 18 11 L 11 11 L 11 4 L 10 4 z "},
+    {kIconBlack, "M7,3 H9 V13 H7 Z M3,7 H13 V9 H3 Z"},
 };
 
+// Delete Markers — CHICAGO95.
 constexpr IconPath kListRemovePaths[] = {
-    {kIconNegativeText,
-     "M 3.6992188 3 L 3 3.6992188 L 10.300781 11 L 3 18.300781 C 3 "
-     "18.300781 3.7112147 18.993333 3.6992188 19 L 11 11.699219 L 18.300781 "
-     "19 C 18.288781 18.9933 19 18.300781 19 18.300781 L 11.699219 "
-     "11.001953 L 19 3.6992188 L 18.300781 3 L 11 10.300781 L 3.6992188 3 z "},
+    {kIconBlack, "M3,7 H13 V9 H3 Z"},
 };
 
+// Toggle Disabled — CHICAGO95.
 constexpr IconPath kViewHiddenPaths[] = {
-    {kIconText,
-     "M 18.292969 3 L 3 18.292969 L 3.7070312 19 L 19 3.7070312 L 18.292969 "
-     "3 z M 11 6 A 10 9.9999781 0 0 0 2.2871094 11.119141 C 2.4663699 "
-     "11.420241 2.7209984 11.668644 3.0273438 11.839844 A 9 8.99998 0 0 1 "
-     "11 7 A 4 4 0 0 0 7 11 A 4 4 0 0 0 7.3574219 12.642578 L 8.1308594 "
-     "11.869141 A 3 3 0 0 1 8 11 A 3 3 0 0 1 11 8 A 3 3 0 0 1 11.869141 "
-     "8.1308594 L 12.640625 7.359375 A 4 4 0 0 0 11.34375 7.0175781 A 9 "
-     "8.99998 0 0 1 12.796875 7.203125 L 13.640625 6.359375 A 10 9.9999781 "
-     "0 0 0 11 6 z M 16.404297 7.5957031 L 15.675781 8.3242188 A 9 8.99998 "
-     "0 0 1 18.974609 11.837891 C 19.282742 11.665091 19.539718 11.415428 "
-     "19.71875 11.111328 A 10 9.9999781 0 0 0 16.404297 7.5957031 z M 11 9 "
-     "A 2 2 0 0 0 9 11 L 11 9 z M 14.642578 9.3574219 L 13.869141 "
-     "10.130859 A 3 3 0 0 1 14 11 A 3 3 0 0 1 11 14 A 3 3 0 0 1 10.130859 "
-     "13.869141 L 9.3574219 14.642578 A 4 4 0 0 0 11 15 A 4 4 0 0 0 15 11 "
-     "A 4 4 0 0 0 14.642578 9.3574219 z M 13 11 L 11 13 A 2 2 0 0 0 13 11 "
-     "z M 1 13 C 0.33333333 19 0.66666667 16 1 13 z "},
+    {kIconBlack,
+     "M8,1 A7,7 0 0 1 8,15 A7,7 0 0 1 8,1 Z M8,2 A6,6 0 0 0 8,14 A6,6 0 0 0 "
+     "8,2 Z"},
+    {kIconRed, "M8,2 A6,6 0 0 1 8,14 A6,6 0 0 1 8,2 Z"},
+    {kIconWhite,
+     "M4.422,5.978 L10.022,11.578 L11.578,10.022 L5.978,4.422 Z "
+     "M10.022,4.422 L4.422,10.022 L5.978,11.578 L11.578,5.978 Z"},
 };
 
+// Toggle Inherit — CHICAGO95.
 constexpr IconPath kInsertLinkPaths[] = {
-    {kIconText,
-     "M 6 3 L 6 5 L 3 5 L 3 6 L 6 6 L 6 8 L 10 8 L 10 7 L 7 7 L 7 4 L 10 4 "
-     "L 10 3 L 6 3 z M 12 3 L 12 4 L 15 4 L 15 7 L 12 7 L 12 8 L 16 8 L 16 "
-     "6 L 19 6 L 19 5 L 16 5 L 16 3 L 12 3 z M 10 5 L 10 6 L 12 6 L 12 5 L "
-     "10 5 z M 16 14 L 16 16 L 14 16 L 14 17 L 16 17 L 16 19 L 17 19 L 17 "
-     "17 L 19 17 L 19 16 L 17 16 L 17 14 L 16 14 z "},
+    {kIconBlack,
+     "M0,0 H4 A4,4 0 0 1 8,4 V6 A4,4 0 0 1 4,10 H0 Z M0,1 V9 H4 A3,3 0 0 0 "
+     "7,6 V4 A3,3 0 0 0 4,1 Z"},
+    {kIconSilver,
+     "M0,1 H4 A3,3 0 0 1 7,4 V6 A3,3 0 0 1 4,9 H0 Z M0,2 V8 H4 A2,2 0 0 0 "
+     "6,6 V4 A2,2 0 0 0 4,2 Z"},
+    {kIconBlack,
+     "M0,2 H4 A2,2 0 0 1 6,4 V6 A2,2 0 0 1 4,8 H0 Z M0,3 V7 H4 A1,1 0 0 0 "
+     "5,6 V4 A1,1 0 0 0 4,3 Z"},
+    {kIconBlack,
+     "M16,10 H12 A4,4 0 0 1 8,6 V4 A4,4 0 0 1 12,0 H16 Z M16,9 V1 H12 A3,3 "
+     "0 0 0 9,4 V6 A3,3 0 0 0 12,9 Z"},
+    {kIconSilver,
+     "M16,9 H12 A3,3 0 0 1 9,6 V4 A3,3 0 0 1 12,1 H16 Z M16,8 V2 H12 A2,2 0 "
+     "0 0 10,4 V6 A2,2 0 0 0 12,8 Z"},
+    {kIconBlack,
+     "M16,8 H12 A2,2 0 0 1 10,6 V4 A2,2 0 0 1 12,2 H16 Z M16,7 V3 H12 A1,1 "
+     "0 0 0 11,4 V6 A1,1 0 0 0 12,7 Z"},
+    {kIconBlack,
+     "M6,2 H13 A3,3 0 0 1 16,5 V5 A3,3 0 0 1 13,8 H6 A3,3 0 0 1 3,5 V5 A3,3 "
+     "0 0 1 6,2 Z M6,3 A2,2 0 0 0 4,5 V5 A2,2 0 0 0 6,7 H13 A2,2 0 0 0 15,5 "
+     "V5 A2,2 0 0 0 13,3 Z"},
+    {kIconSilver,
+     "M6,3 H13 A2,2 0 0 1 15,5 V5 A2,2 0 0 1 13,7 H6 A2,2 0 0 1 4,5 V5 A2,2 "
+     "0 0 1 6,3 Z M6,4 A1,1 0 0 0 5,5 V5 A1,1 0 0 0 6,6 H13 A1,1 0 0 0 14,5 "
+     "V5 A1,1 0 0 0 13,4 Z"},
+    {kIconBlack,
+     "M6,4 H13 A1,1 0 0 1 14,5 V5 A1,1 0 0 1 13,6 H6 A1,1 0 0 1 5,5 V5 A1,1 "
+     "0 0 1 6,4 Z M6.4,4.6 A0.4,0.4 0 0 0 6,5 V5 A0.4,0.4 0 0 0 6.4,5.4 "
+     "H12.6 A0.4,0.4 0 0 0 13,5 V5 A0.4,0.4 0 0 0 12.6,4.6 Z"},
+    {kIconMaroon, "M12,10 H13 V13 H12 Z M10,13 L15,13 L12.5,16 Z"},
 };
 
-// MERGE — the FLATTEN pair's glyph (Ctrl+F and Ctrl+Shift+F), the 22px
-// Breeze file's one `d` transcribed VERBATIM. Its two 1-unit dots between the
-// boxes are the two subpaths of absolute `C` curves below, which the renderer
-// takes as ordinary cubics (the command's own arm in draw_path).
+// Flatten — ORIGINAL.
 constexpr IconPath kMergePaths[] = {
-    {kIconText,
-     "M 3 3 L 3 7 L 9 7 L 10 7 L 11 7 L 11 15 L 10 15 L 9 15 L 3 15 L 3 19 "
-     "L 12 19 L 12 15 L 12 13 L 19 13 L 19 9 L 12 9 L 12 7 L 12 3 L 3 3 z "
-     "M 4 4 L 11 4 L 11 6 L 4 6 L 4 4 z M 7.5 8 C 7.223 8 7 8.223 7 8.5 C 7 "
-     "8.777 7.223 9 7.5 9 C 7.777 9 8 8.777 8 8.5 C 8 8.223 7.777 8 7.5 8 z "
-     "M 12 10 L 13 10 L 14 10 L 18 10 L 18 12 L 14 12 L 13 12 L 12 12 L 12 "
-     "10 z M 7.5 13 C 7.223 13 7 13.223 7 13.5 C 7 13.777 7.223 14 7.5 14 C "
-     "7.777 14 8 13.777 8 13.5 C 8 13.223 7.777 13 7.5 13 z M 4 16 L 11 16 "
-     "L 11 18 L 4 18 L 4 16 z "},
+    {kIconBlack,
+     "M1,3.5 L7.5,3.5 L7.5,12.5 L1,12.5 L1,11.5 L6.5,11.5 L6.5,4.5 L1,4.5 Z "
+     "M7,7.5 L15,7.5 L15,8.5 L7,8.5 Z M11,5 L15,8 L11,11 Z"},
 };
 
-// -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15) --------
-//
-// bboxprev (Previous Marker: Shift+Tab, its ctrl press the paired march) and
-// bboxnext (Next Marker: Tab, and Shift+Tab on its shifted press), then
-// tab-detach (Switch Tab: Ctrl+Tab, its shifted press the march) — the
-// group's four since 2026-09-29, Center wearing zoom-original among them.
-// The architect's reasons for the bbox picks are at the enum entry in
-// icons.h — they are about this row's crowding, which is a roster fact
-// rather than a transcription one.
-//
-// THE TWO BBOX FILES ARE ORDINARY FILLED PATHS, one `.ColorScheme-Text`
-// each, their `d` verbatim. Command coverage: relative `m` with implicit
-// relative-lineto repetition (comma-separated pairs — "0,1 -2,0 0,14" is
-// three linetos), one absolute `M` and one relative `l` in bboxprev, one
-// relative `m` and one absolute `L` in bboxnext, and NO `z` at all — the
-// fill closes each subpath implicitly, six committed files' precedent.
-// bboxprev spells its x-coordinates as 7.9999995 and 9.9999995 and they are
-// copied AS THEY STAND: a hand-rounded 8 and 10 would read better and would
-// break the property that a diff against the committed file is a
-// transcription bug and nothing else. BBOXPREV CAME BACK BYTE-VERBATIM
-// (2026-09-29), its row and its asset restored from git history, having left
-// with the first Previous marker button on 2026-09-22.
-//
-// TAB-DETACH is one compact `.ColorScheme-Text` path: absolute and relative
-// moves, `h` / `v` runs with implicit repetition ("v1 14 1" is three
-// verticals), two `z` closes and an outer outline left to the fill's implicit
-// close — the interpreter's oldest arms.
-//
-// (BOOST, the group's third file for Walk Both Tabs — the set's first
-// STROKED one, whose two arrowhead paths were the only producers of a
-// per-path LINE CAP — was deleted with its button 2026-09-14. SNAP-ORTHOGONAL
-// and SNAP-NODE, the two walks' glyphs from 2026-09-22, were deleted
-// 2026-09-23 with the least-movement walk, the walk wearing bboxnext again.)
-constexpr IconPath kBboxPrevPaths[] = {
-    {kIconText,
-     "m 7.9999995,3 0,1 -2,0 0,14 2,0 0,1 -5,0 0,-1 2,0 0,-14 -2,0 0,-1 5,0 "
-     "M 19,7 l 0,3 0,2 0,3 -1,0 0,-3 -4,0 0,2 L 9.9999995,11 14,8 l 0,2 4,0 "
-     "0,-3 1,0"},
+// Toggle Cumulative — ORIGINAL.
+constexpr IconPath kBlackSumPaths[] = {
+    {kIconBlack,
+     "M3,2 L13,2 L13,3 L3,3 Z M3,12 L13,12 L13,13 L3,13 Z M3.743,2.236 "
+     "L9.329,7.5 L3.743,12.764 L3.057,12.036 L7.871,7.5 L3.057,2.964 Z"},
 };
 
-constexpr IconPath kBboxNextPaths[] = {
-    {kIconText,
-     "m 14,3 0,1 2,0 0,14 -2,0 0,1 5,0 0,-1 -2,0 0,-14 2,0 0,-1 -5,0 m -11,4 "
-     "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
+// Toggle Follow — ORIGINAL.
+constexpr IconPath kGoJumpPaths[] = {
+    {kIconBlack, "M1,0 H10 L13,3 V16 H1 Z"},
+    {kIconWhite, "M2,1 H9 V4 H12 V15 H2 Z"},
+    {kIconWhite, "M10,1.5 L11.5,3 H10 Z"},
+    {kIconGreen, "M3,7 H8 V9 H3 Z M8,4.5 L12,8 L8,11.5 Z"},
 };
 
+// Toggle Restrict Undo — CHICAGO95.
+constexpr IconPath kTimelineLiftPaths[] = {
+    {kIconGray, "M2,7 H3 V8 H2 Z"},
+    {kIconBlack, "M3,7 H6 V8 H3 Z"},
+    {kIconBlack, "M9,5 H12 A1,1 0 0 1 13,6 V9 A1,1 0 0 1 12,10 H9 Z"},
+    {kIconTeal, "M9,6 H12 V9 H9 Z"},
+    {kIconAqua, "M10,6 H11 V7 H10 Z"},
+    {kIconBlack, "M7.5,4 A2.5,3.5 0 0 1 7.5,11 A2.5,3.5 0 0 1 7.5,4 Z"},
+    {kIconTeal, "M7.5,5 A1.5,2.5 0 0 1 7.5,10 A1.5,2.5 0 0 1 7.5,5 Z"},
+    {kIconAqua,
+     "M7.5,5 A1.5,2.5 0 0 0 6,7.5 L7.5,7.5 Z M7.5,5 A1.5,2.5 0 0 1 8.56,6.0 "
+     "L7.5,7.5 Z"},
+    {kIconBlack,
+     "M8.4,5.6 A1.5,2.5 0 0 1 8.4,9.4 L7.9,8.9 A0.9,1.9 0 0 0 7.9,6.1 Z"},
+};
+
+// BPM Iterations — CHICAGO95.
+constexpr IconPath kMusicNote16thPaths[] = {
+    {kIconBlack, "M0,0 H16 V16 H0 Z"},
+    {kIconTeal, "M0,0 H15 V15 H0 Z"},
+    {kIconWhite, "M0,0 H15 V1 H0 Z M0,0 H1 V15 H0 Z"},
+    {kIconBlack, "M3,3 H13 V10 H3 Z"},
+    {kIconNavy, "M4,4 H12 V9 H4 Z"},
+    {kIconWhite, "M4,6 H12 V7 H4 Z"},
+    {kIconSilver, "M5,7 H6 V8 H5 Z M8,7 H9 V8 H8 Z M10,5 H11 V6 H10 Z"},
+    {kIconWhite, "M3,11 H4 V13 H3 Z M7,11 H8 V13 H7 Z M10,11 H11 V13 H10 Z"},
+    {kIconBlack, "M4,11 H5 V13 H4 Z M8,11 H9 V13 H8 Z M11,11 H12 V13 H11 Z"},
+};
+
+// Toggle Grid Iterations — CHICAGO95.
+constexpr IconPath kMathmodePaths[] = {
+    {kIconNavy, "M1,2 H15 V14 H1 Z M2,4 V13 H14 V4 Z"},
+    {kIconWhite, "M2,4 H14 V13 H2 Z"},
+    {kIconBlack,
+     "M3,5 H5 V7 H3 Z M7,5 H9 V7 H7 Z M11,5 H13 V7 H11 Z M3,9 H5 V11 H3 Z "
+     "M7,9 H9 V11 H7 Z M11,9 H13 V11 H11 Z"},
+};
+
+// Play Renders — ORIGINAL.
+constexpr IconPath kPreviewRenderOnPaths[] = {
+    {kIconNavy, "M0,1 H16 V15 H0 Z M1,4 V14 H15 V4 Z"},
+    {kIconWhite, "M1,4 H15 V14 H1 Z"},
+    {kIconBlack, "M5,5.5 L12,9 L5,12.5 Z"},
+};
+
+// Load in Place — MICROSOFT.
+constexpr IconPath kDialogOkApplyPaths[] = {
+    {kIconBlack,
+     "M1.785,9.069 L4.773,14.049 L14.251,3.887 L12.349,2.113 L5.227,9.751 "
+     "L4.015,7.731 Z"},
+};
+
+// Toggle History View — CHICAGO95.
+constexpr IconPath kVcsDiffPaths[] = {
+    {kIconBlack, "M1,13 H15 V14 H1 Z M14,4 H15 V14 H14 Z"},
+    {kIconGray, "M2,0 L7,0 L8,1 L8,3 L14,3 L14,13 L0,13 L0,3 L1,3 L1,1 Z"},
+    {kIconYellow, "M2,1 H7 V4 H13 V12 H1 V4 H2 Z"},
+    {kIconWhite, "M1,4 H13 V5 H1 Z M1,4 H2 V12 H1 Z"},
+    {kIconBlack,
+     "M7.5,5 A3.5,3.5 0 0 1 7.5,12 A3.5,3.5 0 0 1 7.5,5 Z M7.5,6 A2.5,2.5 0 "
+     "0 0 7.5,11 A2.5,2.5 0 0 0 7.5,6 Z"},
+    {kIconWhite, "M7.5,6 A2.5,2.5 0 0 1 7.5,11 A2.5,2.5 0 0 1 7.5,6 Z"},
+    {kIconBlack, "M7.5,8.5 L7.5,4.6 L11.4,8.5 Z"},
+    {kIconOlive, "M8.2,8 L8.2,6.3 L9.9,8 Z"},
+};
+
+// Toggle History Walk — ORIGINAL.
+constexpr IconPath kShallowHistoryPaths[] = {
+    {kIconBlack,
+     "M8,1.5 A6.5,6.5 0 0 1 8,14.5 A6.5,6.5 0 0 1 8,1.5 Z M8,2.5 A5.5,5.5 0 "
+     "0 0 8,13.5 A5.5,5.5 0 0 0 8,2.5 Z"},
+    {kIconWhite, "M8,2.5 A5.5,5.5 0 0 1 8,13.5 A5.5,5.5 0 0 1 8,2.5 Z"},
+    {kIconBlack, "M7.5,4 H8.5 V8.5 H7.5 Z M7.5,7.5 H11 V8.5 H7.5 Z"},
+};
+
+// Toggle Add to Selection — CHICAGO95.
+constexpr IconPath kEditSelectPaths[] = {
+    {kIconBlack, "M0,1 L8,9 H4.7 L7,14 L5,15 L2.6,10.2 L0,12.6 Z"},
+    {kIconBlack, "M11,8 H13 V14 H11 Z M9,10 H15 V12 H9 Z"},
+};
+
+// Left (row 8's arrow) and Previous Marker — CHICAGO95.
+constexpr IconPath kGoPreviousPaths[] = {
+    {kIconBlack, "M1,8 L8,1 V5 H15 V11 H8 V15 Z"},
+    {kIconAqua, "M2.414,8 L7,3.414 V6 H14 V10 H7 V12.586 Z"},
+};
+
+// Right (row 8's arrow) and Next Marker — CHICAGO95.
+constexpr IconPath kGoNextPaths[] = {
+    {kIconBlack, "M 15,8 L 8,1 V 5 H 1 V 11 H 8 V 15 Z"},
+    {kIconAqua, "M 13.586,8 L 9,3.414 V 6 H 2 V 10 H 9 V 12.586 Z"},
+};
+
+// Revert — CHICAGO95.
+constexpr IconPath kDocumentRevertPaths[] = {
+    {kIconBlack, "M1,0 H14 V15 H1 Z"},
+    {kIconWhite, "M2,1 H13 V14 H2 Z"},
+    {kIconNavy, "M3,3 H12 V4 H3 Z"},
+    {kIconMaroon, "M7,7 H12 V8 H7 Z M11,5 H12 V8 H11 Z M5,7.5 L8,5 L8,10 Z"},
+};
+
+// Go to Start and Older (the history step) — MICROSOFT.
+constexpr IconPath kMediaSkipBackwardPaths[] = {
+    {kIconBlack, "M2,3 H4 V12 H2 Z M9,3 L4,7.5 L9,12 Z M14,3 L9,7.5 L14,12 Z"},
+};
+
+// Play — MICROSOFT.
+constexpr IconPath kMediaPlaybackStartPaths[] = {
+    {kIconBlack, "M3,3 L12,7.5 L3,12 Z"},
+};
+
+// Stop — MICROSOFT.
+constexpr IconPath kMediaPlaybackStopPaths[] = {
+    {kIconBlack, "M4,4 H12 V12 H4 Z"},
+};
+
+// Pause (the render player) — MICROSOFT.
+constexpr IconPath kMediaPlaybackPausePaths[] = {
+    {kIconBlack, "M5,4 H7 V12 H5 Z M9,4 H11 V12 H9 Z"},
+};
+
+// Go to End and Newer (the history step) — MICROSOFT.
+constexpr IconPath kMediaSkipForwardPaths[] = {
+    {kIconBlack,
+     "M 14,3 H 12 V 12 H 14 Z M 7,3 L 12,7.5 L 7,12 Z M 2,3 L 7,7.5 L 2,12 Z"},
+};
+
+// Down (row 8's arrow) — CHICAGO95.
+constexpr IconPath kGoDownPaths[] = {
+    {kIconBlack, "M8,15 L1,8 H5 V1 H11 V8 H15 Z"},
+    {kIconAqua, "M8,13.586 L3.414,9 H6 V2 H10 V9 H12.586 Z"},
+};
+
+// Up (row 8's arrow) — CHICAGO95.
+constexpr IconPath kGoUpPaths[] = {
+    {kIconBlack, "M8,1 L15,8 H11 V15 H5 V8 H1 Z"},
+    {kIconAqua, "M8,2.414 L12.586,7 H10 V14 H6 V7 H3.414 Z"},
+};
+
+// Toggle Read-Only (locked) — CHICAGO95.
+constexpr IconPath kLockPaths[] = {
+    {kIconOlive,
+     "M4,6.5 V4 A4,4 0 0 1 12,4 V6.5 H10.5 V4 A2.5,2.5 0 0 0 5.5,4 V6.5 Z"},
+    {kIconBlack, "M8,0 A4,4 0 0 1 12,4 V6.5 H11 V4 A3,3 0 0 0 8,1 Z"},
+    {kIconBlack, "M2,6 H14 V15 H2 Z"},
+    {kIconOlive, "M2,6 H13 V14 H2 Z"},
+    {kIconWhite, "M3,7 H12 V8 H3 Z M3,7 H4 V13 H3 Z"},
+    {kIconYellow, "M4,8 H12 V13 H4 Z"},
+    {kIconOlive, "M4,9 H11 V10 H4 Z M4,11 H11 V12 H4 Z"},
+};
+
+// Toggle Read-Only (unlocked) — CHICAGO95.
+constexpr IconPath kUnlockPaths[] = {
+    {kIconOlive, "M1,6 V4 A4,4 0 0 1 9,4 V6 H7.5 V4 A2.5,2.5 0 0 0 2.5,4 V6 Z"},
+    {kIconBlack, "M5,0 A4,4 0 0 1 9,4 V6 H8 V4 A3,3 0 0 0 5,1 Z"},
+    {kIconBlack, "M3,6 H15 V15 H3 Z"},
+    {kIconOlive, "M3,6 H14 V14 H3 Z"},
+    {kIconWhite, "M4,7 H13 V8 H4 Z M4,7 H5 V13 H4 Z"},
+    {kIconYellow, "M5,8 H13 V13 H5 Z"},
+    {kIconOlive, "M5,9 H12 V10 H5 Z M5,11 H12 V12 H5 Z"},
+};
+
+// Switch Tab — CHICAGO95.
 constexpr IconPath kTabDetachPaths[] = {
-    {kIconText,
-     "m3 3v1 14 1h16v-1-12h-1-2-7v-1-2h-1-4m6 0v2h8v-2zm-6 1h4v3h8 2v11h-14z"},
+    {kIconBlack, "M1,0 H7 L10,3 V11 H1 Z"},
+    {kIconWhite, "M2,1 H6 V4 H9 V10 H2 Z"},
+    {kIconWhite, "M7,1.5 L8.5,3 H7 Z"},
+    {kIconBlack, "M6,5 H12 L15,8 V16 H6 Z"},
+    {kIconWhite, "M7,6 H11 V9 H14 V15 H7 Z"},
+    {kIconWhite, "M12,6.5 L13.5,8 H12 Z"},
 };
 
-// -- THE ICON ROW'S SETTINGS BUTTON (architect 2026-09-29) --------------------
-//
-// settings-configure, Breeze Dark's actions/22 name for configure.svg (a
-// symlink in the theme, the asset committed resolved under the name it was
-// picked by): two sliders, one `.ColorScheme-Text` path of absolute M / L /
-// C / z, its `d` verbatim.
+// Settings — MICROSOFT.
 constexpr IconPath kSettingsConfigurePaths[] = {
-    {kIconText,
-     "M 11.5 3 C 10.286139 3 9.2809778 3.8559279 9.0507812 5 L 3 5 L 3 6 L "
-     "9.0507812 6 C 9.2809778 7.1440721 10.286139 8 11.5 8 C 12.713861 8 "
-     "13.719022 7.1440721 13.949219 6 L 19 6 L 19 5 L 13.949219 5 C 13.719022 "
-     "3.8559279 12.713861 3 11.5 3 z M 5.5 14 C 4.1149999 14 3 15.115 3 16.5 "
-     "C 3 17.885 4.1149999 19 5.5 19 C 6.7138604 19 7.7190223 18.144072 "
-     "7.9492188 17 L 19 17 L 19 16 L 7.9492188 16 C 7.7190223 14.855928 "
-     "6.7138604 14 5.5 14 z M 5.5 15 C 6.3310001 15 7 15.669 7 16.5 C 7 "
-     "17.331 6.3310001 18 5.5 18 C 4.6689999 18 4 17.331 4 16.5 C 4 15.669 "
-     "4.6689999 15 5.5 15 z "},
+    {kIconBlack, "M0,4 H12 V15 H0 Z"},
+    {kIconWhite, "M1,5 H11 V14 H1 Z"},
+    {kIconBlack,
+     "M2,10 H4 V11 H2 Z M5,10 H10 V11 H5 Z M2,12 H4 V13 H2 Z M5,12 H10 V13 "
+     "H5 Z"},
+    {kIconBlack,
+     "M6.5,1 H7.5 A1.5,1.5 0 0 1 9,2.5 V7.5 A1.5,1.5 0 0 1 7.5,9 H6.5 "
+     "A1.5,1.5 0 0 1 5,7.5 V2.5 A1.5,1.5 0 0 1 6.5,1 Z M4.5,6 H10.5 "
+     "A1.5,1.5 0 0 1 12,7.5 V8.5 A1.5,1.5 0 0 1 10.5,10 H4.5 A1.5,1.5 0 0 1 "
+     "3,8.5 V7.5 A1.5,1.5 0 0 1 4.5,6 Z"},
+    {kIconWhite,
+     "M6.9,2 H7.1 A0.9,0.9 0 0 1 8,2.9 V7.1 A0.9,0.9 0 0 1 7.1,8 H6.9 "
+     "A0.9,0.9 0 0 1 6,7.1 V2.9 A0.9,0.9 0 0 1 6.9,2 Z M4.9,7 H10.1 "
+     "A0.9,0.9 0 0 1 11,7.9 V8.1 A0.9,0.9 0 0 1 10.1,9 H4.9 A0.9,0.9 0 0 1 "
+     "4,8.1 V7.9 A0.9,0.9 0 0 1 4.9,7 Z"},
 };
 
-// (THE HOLD-COLUMN NUDGES' snap-nodes-midpoint, turned a quarter left and
-// right, stood here for the hours of 2026-09-23 and was deleted with the two
-// buttons; the rotation's precedent is recorded at IconTransform.)
+// a folder row (the folder overlay, the project picker) — CHICAGO95.
+constexpr IconPath kFolderPaths[] = {
+    {kIconBlack, "M1,14 H16 V15 H1 Z M15,4 H16 V15 H15 Z"},
+    {kIconGray, "M2,0 L7,0 L8,1 L8,3 L15,3 L15,14 L0,14 L0,3 L1,3 L1,1 Z"},
+    {kIconYellow, "M2,1 H7 V4 H14 V13 H1 V4 H2 Z"},
+    {kIconOlive, "M14,4 H15 V14 H14 Z M1,13 H15 V14 H1 Z"},
+    {kIconWhite, "M1,4 H14 V5 H1 Z M1,4 H2 V13 H1 Z"},
+};
 
-// -- THE NOTIFICATION CARDS' THREE (2026-08-29) -------------------------------
-//
-// Same rules: every `d` verbatim from the committed file, every fill the
-// value the file resolves to. TWO OF THE THREE ARE TWO-COLOUR — the first
-// since media-record — and the second colour is NEW TO THE TABLE: both
-// dialog files paint a rounded plate (`<rect ... rx="2">` in a scheme class)
-// under a glyph filled with the literal `#fff`. The PLATE is transcribed as
-// the four-number derivation tool-rect-selection established (the table's
-// first `<rect>` file, deleted 2026-09-22: there is no `d` to copy), spelled as the
-// rounded rectangle SVG defines for rx = ry = 2 — four straight edges and
-// four quarter arcs, `a2 2 0 0 1` — so the plate's pixels are the file's; the
-// GLYPH's `d` is copied verbatim. #fff is NOT the text class: the file says
-// #fff, so the table says #fff — a fixed white that stays white on a dark
-// label theme and a light one alike — and it gets its own ink below.
-//
-// dialog-information's plate is `.ColorScheme-Accent` (kIconAccent, the
-// value the file resolves to, recorded at that constant) and
-// dialog-error's is `.ColorScheme-NegativeText` (kIconNegativeText, the
-// value list-remove's cross resolves to, recorded above it). So the two
-// class glyphs are Breeze's own blue and red, and a card names its class by
-// them alone — the card's painter colours nothing (paint_notifications).
-//
-// window-close is an ordinary `.ColorScheme-Text` X in TWO paths inside one
-// group with `stroke-linecap="square"`: the first, "m6 6 10 10m-10 0 10-10",
-// is two zero-area line segments FILLED (the group carries no stroke), so it
-// draws nothing — view-hidden's artifact precedent, transcribed verbatim
-// rather than edited out — and the second is the X's outline that shows.
-// The cap attribute belongs to stroking, which this table does not do, so
-// it transcribes as nothing.
-// The file's #fff: a literal on the hand-list (the ink block above).
-constexpr GuiColor kIconPlainWhite = hex(0xFFFFFF);
+// a wav row — CHICAGO95.
+constexpr IconPath kAudioXWavPaths[] = {
+    {kIconGray, "M4,0 L13,0 L16,3 L16,16 L4,16 Z"},
+    {kIconWhite, "M5,1 H12 V4 H5 Z M5,4 H14 V14 H5 Z"},
+    {kIconSilver, "M14,4 H15 V15 H14 Z M5,14 H15 V15 H5 Z"},
+    {kIconSilver, "M12,1 H13 V3 H12 Z"},
+    {kIconWhite, "M15,3 L13,3 L13,1 Z"},
+    {kIconBlack, "M12,3 H16 V4 H12 Z M15,3 H16 V16 H15 Z M4,15 H16 V16 H4 Z"},
+    {kIconOlive, "M7,3 L7,13 L6,13 L4,11 L0,9 L0,7 L4,5 L6,3 Z"},
+    {kIconBlack, "M4,10 L6,12 L7,12 L7,13 L6,13 L4,11 L0,9 L0,8 Z"},
+    {kIconYellow, "M7,4 L7,11 L6,11 L4,9 L1,9 L1,7 L4,6 L6,4 Z"},
+    {kIconWhite, "M7,5 L4,7 L2,8 L2,7 L4,6 L7,4 Z M4,7 H5 V9 H4 Z"},
+    {kIconWhite, "M1,7 H2 V8 H1 Z"},
+    {kIconSilver, "M2,7 H3 V8 H2 Z"},
+    {kIconGray, "M2,8 H3 V9 H2 Z"},
+    {kIconGray, "M5,5 H6 V6 H5 Z"},
+    {kIconBlack, "M5,6 H6 V11 H5 Z"},
+    {kIconGray,
+     "M7,3 H8 A1,1 0 0 1 9,4 V12 A1,1 0 0 1 8,13 H7 A1,1 0 0 1 6,12 V4 A1,1 "
+     "0 0 1 7,3 Z"},
+    {kIconBlack, "M6.5,4 A1,1 0 0 1 8.5,4 Z"},
+    {kIconBlack, "M6.5,12 A1,1 0 0 0 8.5,12 Z"},
+    {kIconSilver, "M6,4 H7 V12 H6 Z"},
+    {kIconWhite, "M7,4 H8 V12 H7 Z"},
+    {kIconGray,
+     "M10,6 L11,5 L12,5 L12,6 L11,7 L10,7 Z M10,8 H13 V9 H10 Z M10,10 "
+     "L11,10 L12,11 L12,12 L11,12 L10,11 Z"},
+};
 
+// Toggle Repeat One (the render player) — CHICAGO95.
+constexpr IconPath kMediaRepeatSinglePaths[] = {
+    {kIconNavy,
+     "M4.402,9.99 L3.54,9.819 L2.725,9.275 L2.181,8.46 L2,7.549 L2,5.451 "
+     "L2.181,4.54 L2.725,3.725 L3.54,3.181 L4.451,3 L11.549,3 L12.46,3.181 "
+     "L13.275,3.725 L13.819,4.54 L14,5.451 L14,7.549 L13.819,8.46 "
+     "L13.275,9.275 L12.46,9.819 L11.549,10 L10,10 L10,9 L11.451,9 "
+     "L12.07,8.877 L12.554,8.554 L12.877,8.07 L13,7.451 L13,5.549 "
+     "L12.877,4.93 L12.554,4.446 L12.07,4.123 L11.451,4 L4.549,4 "
+     "L3.93,4.123 L3.446,4.446 L3.123,4.93 L3,5.549 L3,7.451 L3.123,8.07 "
+     "L3.446,8.554 L3.93,8.877 L4.598,9.01 Z M7,9.5 L10,7 L10,12 Z"},
+};
+
+// Up a Folder (the render player) — MICROSOFT.
+constexpr IconPath kGoParentFolderPaths[] = {
+    {kIconBlack, "M2,0 L7,0 L8,1 L8,3 L15,3 L15,14 L0,14 L0,3 L1,3 L1,1 Z"},
+    {kIconYellow, "M2,1 H7 V4 H14 V13 H1 V4 H2 Z"},
+    {kIconBlack, "M5.5,5 L8,8 L6,8 L6,10 L11,10 L11,11 L5,11 L5,8 L3,8 Z"},
+};
+
+// a NORMAL card's glyph — CHICAGO95.
 constexpr IconPath kDialogInformationPaths[] = {
-    {kIconAccent,
-     "M5 3h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2z"},
-    {kIconPlainWhite,
-     "m10 6v2h2v-2zm0 4v6h2v-6z"},
+    {kIconGray,
+     "M8.5,1 A6.5,6.5 0 0 1 8.5,14 A6.5,6.5 0 0 1 8.5,1 Z M6.5,12.5 "
+     "L11.5,12.5 L9.5,16.5 Z"},
+    {kIconBlack,
+     "M7.5,0 A6.5,6.5 0 0 1 7.5,13 A6.5,6.5 0 0 1 7.5,0 Z M5.5,11.5 "
+     "L10.5,11.5 L8.5,15.5 Z"},
+    {kIconGray,
+     "M6.9,-0.6 A6.5,6.5 0 0 1 6.9,12.4 A6.5,6.5 0 0 1 6.9,-0.6 Z M4.9,10.9 "
+     "L9.9,10.9 L7.9,14.9 Z"},
+    {kIconWhite,
+     "M7.5,1 A5.5,5.5 0 0 1 7.5,12 A5.5,5.5 0 0 1 7.5,1 Z M6,11.2 L10,11.2 "
+     "L8.5,14.2 Z"},
+    {kIconBlue, "M6,2 H9 V4 H6 Z M6,5 H9 V9 H6 Z M5,9 H10 V10 H5 Z"},
 };
 
+// a CRITICAL card's glyph — CHICAGO95.
 constexpr IconPath kDialogErrorPaths[] = {
-    {kIconNegativeText,
-     "M5 3h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2z"},
-    {kIconPlainWhite,
-     "M 6.414,5 5,6.414 9.586,11 5,15.586 6.414,17 11,12.414 15.586,17 17,15.586 12.414,11 17,6.414 15.586,5 11,9.586 Z"},
+    {kIconGray, "M8.5,1 A7.5,7.5 0 0 1 8.5,16 A7.5,7.5 0 0 1 8.5,1 Z"},
+    {kIconMaroon,
+     "M7.5,0 A7.5,7.5 0 0 1 7.5,15 A7.5,7.5 0 0 1 7.5,0 Z M7.5,1 A6.5,6.5 0 "
+     "0 0 7.5,14 A6.5,6.5 0 0 0 7.5,1 Z"},
+    {kIconRed, "M7.5,1 A6.5,6.5 0 0 1 7.5,14 A6.5,6.5 0 0 1 7.5,1 Z"},
+    {kIconWhite,
+     "M4.649,2.951 L12.049,10.351 L10.351,12.049 L2.951,4.649 Z "
+     "M12.049,4.649 L4.649,12.049 L2.951,10.351 L10.351,2.951 Z"},
 };
 
+// Close (the render player) and Cancel (Render's mid-render face) — MICROSOFT.
 constexpr IconPath kWindowClosePaths[] = {
-    {kIconText,
-     "m6 6 10 10m-10 0 10-10"},
-    {kIconText,
-     "M 6,5.1523437 5.1523437,6 10.152344,11 5.1523437,16 6,16.847656 l 5,-5 5,5 L 16.847656,16 l -5,-5 5,-5 L 16,5.1523437 11,10.152344 Z"},
+    {kIconBlack,
+     "M2.5,3 L4.5,3 L13.5,12 L11.5,12 Z M4.5,12 L2.5,12 L11.5,3 L13.5,3 Z"},
 };
 
-// EDIT-COPY (2026-08-29), the Copy resolved value button's two stacked
-// sheets: ONE `.ColorScheme-Text` path under `fill:currentColor`, so it
-// resolves to
-// kIconText like every other single-colour Breeze action here, and its `d` is
-// copied verbatim — absolute M/L/Z, the interpreter's oldest arms. THREE
-// SUBPATHS, and the two inner ones wind OPPOSITE the outline, which is how
-// the file cuts the sheets' interiors out: the file names no fill-rule, so
-// SVG's nonzero default applies, and cairo_fill's own default IS nonzero, so
-// the verbatim `d` fills identically with no field to carry (media-repeat-
-// single's evenodd note is the same decision from the other side).
-//
-// It is the file the RETIRED IconCopy button wore from 2026-08-12 until the
-// 2026-08-20 propagate relocation deleted button, def and asset together; the
-// def is written fresh here rather than recovered, and the act it serves is a
-// different one — the marker VALUE onto the system clipboard, not a propagate
-// copy.
+// Copy Resolved Value — MICROSOFT.
 constexpr IconPath kEditCopyPaths[] = {
-    {kIconText,
-     "M 3 3 L 3 17 L 7 17 L 7 19 L 17 19 L 17 10 L 13 6 L 12 6 L 9 3 L 3 3 Z "
-     "M 4 4 L 8 4 L 8 6 L 7 6 L 7 16 L 4 16 L 4 4 Z "
-     "M 8 7 L 12 7 L 12 11 L 16 11 L 16 18 L 8 18 L 8 7 Z"},
+    {kIconBlack, "M0,1 H6 L8,3 V11 H0 Z"},
+    {kIconWhite, "M1,2 H5 V5 H7 V10 H1 Z"},
+    {kIconWhite, "M6,2.5 L7.5,4 H6 Z"},
+    {kIconBlack, "M2,4 H4 V5 H2 Z M2,6 H6 V7 H2 Z M2,8 H6 V9 H2 Z"},
+    {kIconNavy, "M6,4 H12 L15,7 V14 H6 Z"},
+    {kIconWhite, "M7,5 H11 V8 H14 V13 H7 Z"},
+    {kIconWhite, "M12,5.5 L13.5,7 H12 Z"},
+    {kIconBlack, "M8,7 H10 V8 H8 Z M8,9 H13 V10 H8 Z M8,11 H13 V12 H8 Z"},
 };
 
-// -- THE ROSTER MOVES' THREE (architect 2026-09-29, evening) -----------------
-//
-// Three fresh verbatim transcriptions from /usr/share/icons/breeze-dark/
-// actions/22/, committed under assets/icons/breeze/ unmodified, every `d`
-// copied as it stands.
-//
-// HELP-WHATSTHIS (the Enable Tooltips lamp): one `.ColorScheme-Text` path of
-// absolute M / L / C / z — the ring, the `i` in two bars and the pointer
-// arrow at the lower right.
-//
-// GO-JUMP-DECLARATION (Jump to Defining Marker): one `.ColorScheme-Text`
-// path of absolute M / L / C / z — the flag on its staff and the return
-// arrow's arc.
-//
-// EDIT-DELETE (the render player's Delete): one path in
-// `.ColorScheme-NegativeText`, so its fill is kIconNegativeText — the value
-// list-remove's cross resolves to — and its `d` is the compact spelling:
-// absolute M with `v` / `h` / `H` / `V` runs and implicit repetition, the
-// interpreter's oldest arms (tab-detach's precedent), no `z` (the fill closes
-// each subpath implicitly).
+// Toggle Tooltips — MICROSOFT.
 constexpr IconPath kHelpWhatsthisPaths[] = {
-    {kIconText,
-     "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 11.339463 19 "
-     "11.67189 18.972289 12 18.931641 L 12 17.921875 C 11.672498 17.968487 "
-     "11.340784 18 11 18 C 7.122 18 4 14.878 4 11 C 4 7.122 7.122 4 11 4 C "
-     "14.878 4 18 7.122 18 11 C 18 11.696167 17.894565 12.366247 17.707031 13 "
-     "L 18.740234 13 C 18.903948 12.360349 19 11.692084 19 11 C 19 6.568 "
-     "15.432 3 11 3 z M 10 6 L 10 8 L 12 8 L 12 6 L 10 6 z M 10 9 L 10 16 L "
-     "12 16 L 12 9 L 10 9 z M 13 11 L 13.003906 20.099609 L 15.730469 "
-     "16.810547 L 20 16.599609 L 13 11 z "},
+    {kIconBlack, "M0,1 L8,9 H4.7 L7,14 L5,15 L2.6,10.2 L0,12.6 Z"},
+    {kIconNavy,
+     "M7.019,4.761 L7.185,3.736 L7.776,2.6 L8.695,1.707 L9.847,1.149 "
+     "L11.117,0.982 L12.375,1.223 L13.493,1.847 L14.358,2.791 L14.882,3.96 "
+     "L15.013,5.234 L14.735,6.484 L14.19,7.398 L13,9.242 L13,10 L10,10 "
+     "L10,8.358 L11.641,5.816 L11.911,5.362 L11.979,5.057 L11.947,4.746 "
+     "L11.819,4.461 L11.608,4.231 L11.335,4.079 L11.029,4.02 L10.719,4.061 "
+     "L10.438,4.197 L10.213,4.414 L10.069,4.692 L9.981,5.239 Z M10,11 H13 "
+     "V13 H10 Z"},
 };
 
+// Jump to Defining Marker — ORIGINAL.
 constexpr IconPath kGoJumpDeclarationPaths[] = {
-    {kIconText,
-     "M 3 3 L 3 19 L 4 19 L 4 11 L 9 11 L 9 12 L 14 12 L 14 5 L 9 5 L 9 4 L 4 "
-     "4 L 4 3 L 3 3 z M 17 6 L 16 7 L 15 8 L 17 10 L 17 8.7148438 C 17.624415 "
-     "9.6579187 18 10.778652 18 12 C 18 15.324 15.324 18 12 18 L 12 19 C "
-     "15.878 19 19 15.878 19 12 C 19 10.090887 18.232299 8.3761254 17 "
-     "7.1171875 L 17 6 z "},
+    {kIconBlack,
+     "M2.407,8.906 L2.667,7.267 L3.463,5.704 L4.704,4.463 L6.267,3.667 "
+     "L8,3.393 L9.733,3.667 L11.296,4.463 L12.537,5.704 L13.333,7.267 "
+     "L13.593,8.906 L12.407,9.094 L12.178,7.643 L11.554,6.418 L10.582,5.446 "
+     "L9.357,4.822 L8,4.607 L6.643,4.822 L5.418,5.446 L4.446,6.418 "
+     "L3.822,7.643 L3.593,9.094 Z M10.5,8.5 L15.5,8.5 L13,12.5 Z M2.4,9 "
+     "H3.6 V13 H2.4 Z"},
 };
 
+// Delete Folder (the render player) — MICROSOFT.
 constexpr IconPath kEditDeletePaths[] = {
-    {kIconNegativeText,
-     "M8 3v2h1V4h4v1h1V3H8M4 6v1h14V6H4m2 2v11h10V8h-1v10H7V8H6"},
+    {kIconBlack,
+     "M4.342,0.879 L14.521,12.885 L13.879,13.515 L2.058,3.121 Z "
+     "M2.095,10.843 L13.889,1.174 L14.511,1.826 L4.305,13.157 Z"},
 };
 
-// THE APP'S OWN ICON, VECTOR FORM (2026-10-05; the bitmap scales wear
-// Chicago95's speaker instead, icons.h's AppIcon), a 72-unit viewBox: the
-// PLATE is a `<rect width="72" height="72" rx="14">`, spelled as the rounded
-// rectangle SVG defines for that rx (the dialog plates' precedent at the
-// header — no `<rect>` parser), in audio-x-generic's sheet grey #AAAAAA; the
-// NOTE is music-note-16th's outer contour (assets/icons/breeze/, its d a
-// verbatim prefix of the file's) under icon_translate_scale. The note was
-// inked #fff at opacity .75 over the plate; the palette composites nothing
-// at paint time, so the ink is that composite taken once here — 0.75 x 255 +
-// 0.25 x 170 = 233.75, #EAEAEA — all of the note lying on the plate.
-constexpr GuiColor kIconAppPlate = hex(0xAAAAAA);
-constexpr GuiColor kIconAppNote  = hex(0xEAEAEA);
+// the caption's icon — CHICAGO95.
 constexpr IconPath kAppIconPaths[] = {
-    {kIconAppPlate,
-     "M14 0h44a14 14 0 0 1 14 14v44a14 14 0 0 1 -14 14H14a14 14 0 0 1 -14 -14"
-     "V14a14 14 0 0 1 14 -14z"},
-    {kIconAppNote,
-     "m 11,3 0,1 0,3 0,1 0,4 0,2.640625 C 10.450691,14.229206 9.7385673,"
-     "14.001104 9,14 7.3431458,14 6,15.119288 6,16.5 6,17.880712 7.3431458,19 "
-     "9,19 c 1.656854,0 3,-1.119288 3,-2.5 L 12,12 12,8.0957031 c 1.473938,"
-     "0.2519592 3.180894,1.3814645 4,2.1485529 L 16,9.5 16,9 16,8.84375 16,5.5 "
-     "16,4.84375 C 14.788541,3.8472864 12.971189,3 11,3 Z",
-     icon_translate_scale(5.75, 5.75, 2.75)},
+    {kIconOlive, "M8,1 L8,15 L7,15 L3,11 L1,11 L0,10 L0,6 L1,5 L3,5 L7,1 Z"},
+    {kIconBlack,
+     "M1,10 L3,10 L7,14 L8,14 L8,15 L7,15 L3,11 L1,11 L0,10 L0,9 Z"},
+    {kIconYellow, "M8,2 L8,13 L7,13 L3,9 L1,9 L1,6 L3,6 L7,2 Z"},
+    {kIconWhite, "M8,4 L3,9 L3,8 L8,3 Z"},
+    {kIconWhite, "M1,6 H2 V7 H1 Z"},
+    {kIconSilver, "M2,6 H3 V9 H2 Z"},
+    {kIconGray, "M2,9 H3 V10 H2 Z"},
+    {kIconGray, "M6,3 H7 V4 H6 Z M6,12 H7 V13 H6 Z"},
+    {kIconBlack, "M6,4 H7 V12 H6 Z"},
+    {kIconGray,
+     "M9,0 A2,2 0 0 1 11,2 V14 A2,2 0 0 1 9,16 A2,2 0 0 1 7,14 V2 A2,2 0 0 "
+     "1 9,0 Z"},
+    {kIconBlack, "M7.5,2 A1.5,1.5 0 0 1 10.5,2 Z"},
+    {kIconBlack, "M7.5,14 A1.5,1.5 0 0 0 10.5,14 Z"},
+    {kIconSilver, "M7,2 H11 V3 H7 Z M7,13 H11 V14 H7 Z M7,3 H8 V13 H7 Z"},
+    {kIconWhite, "M8,3 H10 V13 H8 Z"},
+    {kIconBlack,
+     "M7.098,5.91 L7.807,6.051 L8.492,6.508 L8.949,7.193 L9.11,8 "
+     "L8.949,8.807 L8.492,9.492 L7.807,9.949 L7.098,10.09 L6.902,9.11 "
+     "L7.417,9.007 L7.771,8.771 L8.007,8.417 L8.09,8 L8.007,7.583 "
+     "L7.771,7.229 L7.417,6.993 L6.902,6.89 Z"},
+    {kIconGray,
+     "M12,5 L14,3 L15,3 L15,4 L13,6 L12,6 Z M12,8 H16 V9 H12 Z M12,11 "
+     "L13,11 L15,13 L15,14 L14,14 L12,12 Z"},
 };
 
-constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
-constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
-constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
-constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
-constexpr IconDef kDocumentExport     {22.0, kDocumentExportPaths,      1};
-constexpr IconDef kDocumentImport     {22.0, kDocumentImportPaths,      1};
-constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
-constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
-constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
-constexpr IconDef kTimelineLift       {22.0, kTimelineLiftPaths,        3};
-constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
-constexpr IconDef kMathmode           {22.0, kMathmodePaths,            1};
-constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
-constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
-constexpr IconDef kLock               {22.0, kLockPaths,                1};
-constexpr IconDef kUnlock             {22.0, kUnlockPaths,              1};
-constexpr IconDef kVcsCommit          {22.0, kVcsCommitPaths,           3};
-constexpr IconDef kVcsPull            {22.0, kVcsPullPaths,             3};
-constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
-constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
-constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
-constexpr IconDef kKeyframePrevious   {22.0, kKeyframePreviousPaths,    1};
-constexpr IconDef kKeyframeNext       {22.0, kKeyframeNextPaths,        1};
-constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
-constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
-constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
-constexpr IconDef kFolder             {22.0, kFolderPaths,              1};
-constexpr IconDef kAudioXWav          {22.0, kAudioXWavPaths,           1};
-constexpr IconDef kMediaRepeatSingle  {22.0, kMediaRepeatSinglePaths,   3};
-constexpr IconDef kGoParentFolder     {22.0, kGoParentFolderPaths,      1};
-constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
-constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
-constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
-constexpr IconDef kMediaPlaybackPause {22.0, kMediaPlaybackPausePaths,  1};
-constexpr IconDef kMediaSkipForward   {22.0, kMediaSkipForwardPaths,    1};
-constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
-constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
-constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
-constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
-constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
-constexpr IconDef kZoomInY            {22.0, kZoomInYPaths,             1};
-constexpr IconDef kListAdd            {22.0, kListAddPaths,             1};
-constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
-constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
-constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
-constexpr IconDef kMerge              {22.0, kMergePaths,               1};
-constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
-constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
-constexpr IconDef kTabDetach          {22.0, kTabDetachPaths,           1};
-constexpr IconDef kSettingsConfigure  {22.0, kSettingsConfigurePaths,   1};
-constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
-constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
-constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
-constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
-constexpr IconDef kHelpWhatsthis      {22.0, kHelpWhatsthisPaths,       1};
-constexpr IconDef kGoJumpDeclaration  {22.0, kGoJumpDeclarationPaths,   1};
-constexpr IconDef kEditDelete         {22.0, kEditDeletePaths,          1};
-constexpr IconDef kAppIcon            {72.0, kAppIconPaths,             2};
-
-const IconDef& icon_def(Icon icon) {
+// EACH ENUMERATOR'S ROW — its own file's, the five shared drawings' second
+// wearers (DialogCancel, KeyframePrevious, KeyframeNext, BboxPrev, BboxNext)
+// on the row of their twin, whose file is byte-identical.
+IconDef icon_def(Icon icon) {
     switch (icon) {
-        case Icon::DocumentSave:        return kDocumentSave;
-        case Icon::EditUndo:            return kEditUndo;
-        case Icon::EditRedo:            return kEditRedo;
-        case Icon::MediaRecord:         return kMediaRecord;
-        case Icon::DocumentExport:      return kDocumentExport;
-        case Icon::DocumentImport:      return kDocumentImport;
-        case Icon::ChronometerStart:    return kChronometerStart;
-        case Icon::BlackSum:            return kBlackSum;
-        case Icon::GoJump:              return kGoJump;
-        case Icon::TimelineLift:        return kTimelineLift;
-        case Icon::MusicNote16th:       return kMusicNote16th;
-        case Icon::Mathmode:            return kMathmode;
-        case Icon::PreviewRenderOn:     return kPreviewRenderOn;
-        case Icon::Lock:                return kLock;
-        case Icon::Unlock:              return kUnlock;
-        case Icon::VcsCommit:           return kVcsCommit;
-        case Icon::VcsPull:             return kVcsPull;
-        case Icon::VcsDiff:             return kVcsDiff;
-        case Icon::GoPrevious:          return kGoPrevious;
-        case Icon::GoNext:              return kGoNext;
-        case Icon::KeyframePrevious:    return kKeyframePrevious;
-        case Icon::KeyframeNext:        return kKeyframeNext;
-        case Icon::DocumentRevert:      return kDocumentRevert;
-        case Icon::ShallowHistory:      return kShallowHistory;
-        case Icon::EditSelect:          return kEditSelect;
-        case Icon::Folder:              return kFolder;
-        case Icon::AudioXWav:           return kAudioXWav;
-        case Icon::MediaRepeatSingle:   return kMediaRepeatSingle;
-        case Icon::GoParentFolder:      return kGoParentFolder;
-        case Icon::MediaSkipBackward:   return kMediaSkipBackward;
-        case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
-        case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;
-        case Icon::MediaPlaybackPause:  return kMediaPlaybackPause;
-        case Icon::MediaSkipForward:    return kMediaSkipForward;
-        case Icon::DialogCancel:        return kDialogCancel;
-        case Icon::GoDown:              return kGoDown;
-        case Icon::GoUp:                return kGoUp;
-        case Icon::ZoomFitBest:         return kZoomFitBest;
-        case Icon::ZoomOriginal:        return kZoomOriginal;
-        case Icon::ZoomInY:             return kZoomInY;
-        case Icon::ListAdd:             return kListAdd;
-        case Icon::ListRemove:          return kListRemove;
-        case Icon::ViewHidden:          return kViewHidden;
-        case Icon::InsertLink:          return kInsertLink;
-        case Icon::Merge:               return kMerge;
-        case Icon::BboxPrev:            return kBboxPrev;
-        case Icon::BboxNext:            return kBboxNext;
-        case Icon::TabDetach:           return kTabDetach;
-        case Icon::SettingsConfigure:   return kSettingsConfigure;
-        case Icon::DialogOkApply:       break;
-        case Icon::DialogInformation:   return kDialogInformation;
-        case Icon::DialogError:         return kDialogError;
-        case Icon::WindowClose:         return kWindowClose;
-        case Icon::EditCopy:            return kEditCopy;
-        case Icon::HelpWhatsthis:       return kHelpWhatsthis;
-        case Icon::GoJumpDeclaration:   return kGoJumpDeclaration;
-        case Icon::EditDelete:          return kEditDelete;
-        case Icon::AppIcon:             return kAppIcon;
+        case Icon::DocumentSave: return icon_def_of(kDocumentSavePaths);
+        case Icon::EditUndo: return icon_def_of(kEditUndoPaths);
+        case Icon::EditRedo: return icon_def_of(kEditRedoPaths);
+        case Icon::MediaRecord: return icon_def_of(kMediaRecordPaths);
+        case Icon::VcsCommit: return icon_def_of(kVcsCommitPaths);
+        case Icon::VcsPull: return icon_def_of(kVcsPullPaths);
+        case Icon::DocumentExport: return icon_def_of(kDocumentExportPaths);
+        case Icon::DocumentImport: return icon_def_of(kDocumentImportPaths);
+        case Icon::ChronometerStart: return icon_def_of(kChronometerStartPaths);
+        case Icon::ZoomFitBest: return icon_def_of(kZoomFitBestPaths);
+        case Icon::ZoomOriginal: return icon_def_of(kZoomOriginalPaths);
+        case Icon::ZoomInY: return icon_def_of(kZoomInYPaths);
+        case Icon::ListAdd: return icon_def_of(kListAddPaths);
+        case Icon::ListRemove: return icon_def_of(kListRemovePaths);
+        case Icon::ViewHidden: return icon_def_of(kViewHiddenPaths);
+        case Icon::InsertLink: return icon_def_of(kInsertLinkPaths);
+        case Icon::Merge: return icon_def_of(kMergePaths);
+        case Icon::BlackSum: return icon_def_of(kBlackSumPaths);
+        case Icon::GoJump: return icon_def_of(kGoJumpPaths);
+        case Icon::TimelineLift: return icon_def_of(kTimelineLiftPaths);
+        case Icon::MusicNote16th: return icon_def_of(kMusicNote16thPaths);
+        case Icon::Mathmode: return icon_def_of(kMathmodePaths);
+        case Icon::PreviewRenderOn: return icon_def_of(kPreviewRenderOnPaths);
+        case Icon::DialogOkApply: return icon_def_of(kDialogOkApplyPaths);
+        case Icon::VcsDiff: return icon_def_of(kVcsDiffPaths);
+        case Icon::ShallowHistory: return icon_def_of(kShallowHistoryPaths);
+        case Icon::EditSelect: return icon_def_of(kEditSelectPaths);
+        case Icon::KeyframePrevious:
+            return icon_def_of(kMediaSkipBackwardPaths);
+        case Icon::KeyframeNext: return icon_def_of(kMediaSkipForwardPaths);
+        case Icon::GoPrevious: return icon_def_of(kGoPreviousPaths);
+        case Icon::GoNext: return icon_def_of(kGoNextPaths);
+        case Icon::DocumentRevert: return icon_def_of(kDocumentRevertPaths);
+        case Icon::MediaSkipBackward:
+            return icon_def_of(kMediaSkipBackwardPaths);
+        case Icon::MediaPlaybackStart:
+            return icon_def_of(kMediaPlaybackStartPaths);
+        case Icon::MediaPlaybackStop:
+            return icon_def_of(kMediaPlaybackStopPaths);
+        case Icon::MediaPlaybackPause:
+            return icon_def_of(kMediaPlaybackPausePaths);
+        case Icon::MediaSkipForward: return icon_def_of(kMediaSkipForwardPaths);
+        case Icon::DialogCancel: return icon_def_of(kWindowClosePaths);
+        case Icon::GoDown: return icon_def_of(kGoDownPaths);
+        case Icon::GoUp: return icon_def_of(kGoUpPaths);
+        case Icon::Lock: return icon_def_of(kLockPaths);
+        case Icon::Unlock: return icon_def_of(kUnlockPaths);
+        case Icon::BboxPrev: return icon_def_of(kGoPreviousPaths);
+        case Icon::BboxNext: return icon_def_of(kGoNextPaths);
+        case Icon::TabDetach: return icon_def_of(kTabDetachPaths);
+        case Icon::SettingsConfigure:
+            return icon_def_of(kSettingsConfigurePaths);
+        case Icon::Folder: return icon_def_of(kFolderPaths);
+        case Icon::AudioXWav: return icon_def_of(kAudioXWavPaths);
+        case Icon::MediaRepeatSingle:
+            return icon_def_of(kMediaRepeatSinglePaths);
+        case Icon::GoParentFolder: return icon_def_of(kGoParentFolderPaths);
+        case Icon::DialogInformation:
+            return icon_def_of(kDialogInformationPaths);
+        case Icon::DialogError: return icon_def_of(kDialogErrorPaths);
+        case Icon::WindowClose: return icon_def_of(kWindowClosePaths);
+        case Icon::EditCopy: return icon_def_of(kEditCopyPaths);
+        case Icon::HelpWhatsthis: return icon_def_of(kHelpWhatsthisPaths);
+        case Icon::GoJumpDeclaration:
+            return icon_def_of(kGoJumpDeclarationPaths);
+        case Icon::EditDelete: return icon_def_of(kEditDeletePaths);
+        case Icon::AppIcon: return icon_def_of(kAppIconPaths);
     }
-    return kDialogOkApply;
+    return IconDef{};
 }
 
 // -- The `d` interpreter ----------------------------------------------------
 //
-// THE SUBSET, and it is exactly what the committed files use (verified by
-// reading them): M/m, L/l, H/h, V/v, C/c, S/s, A/a, Z/z, implicit command
+// THE SUBSET: M/m, L/l, H/h, V/v, C/c, S/s, A/a, Z/z, implicit command
 // repetition (a bare argument set repeats the previous command; after M/m the
 // repeat is L/l, per SVG), comma-or-whitespace separation with both optional,
-// negative numbers as their own separator ("5-5"), and leading-dot decimals
+// negative numbers as their own separator ("5-5"), leading-dot decimals
 // chained without separators (".207031.207031" is two numbers — a second '.'
-// ends the first). S/s JOINED 2026-08-05 WITH ITS FIRST PRODUCER,
-// document-revert.svg, whose arrow lobes are smooth cubics; the alternative was
-// to flatten them into plain `c` in the table by hand, which would have put
-// numbers there that appear in no file. EXPONENT NOTATION JOINED 2026-08-20 THE
-// SAME WAY (the scanner's own comment at parse_number carries the record; its
-// one producer, minuet-scales.svg, left the roster 2026-09-16 with the
-// measures feature, and the scanner stays — the subset grows with a producer
-// and is not shrunk when one leaves). No Q/q, T/t: absent from every
-// committed file, so they have no producer here and the parser refuses them
-// loudly rather than guessing. Elliptical 'a' is implemented
-// GENERALLY (endpoint->center conversion plus a quarter-arc bezier split) even
-// though media-record's four arcs are circular: arcs recur in this icon set and
-// a circle-only shortcut would be a trap for the next icon.
+// ends the first) and the exponent (parse_number). THE COMMITTED SET SPELLS
+// ONLY THE ABSOLUTE M, L, H, V, C, A AND Z (assets/icons/warptempo/, read
+// 2026-10-06); the relative forms, the smooth cubic and the exponent each
+// joined with a producer an earlier set carried, and the subset grows with a
+// producer and is not shrunk when one leaves. No Q/q, T/t: never spelled by
+// any committed file, so the parser refuses them loudly rather than
+// guessing. Elliptical `A` is implemented GENERALLY (endpoint->center
+// conversion plus a quarter-arc bezier split) — the set's discs, rings,
+// ellipses and rounded corners are all arcs.
 //
-// THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE. The interpreter's other
-// grown feature is the PATH ELEMENT's, not the string's, and lives where it is
-// used: the per-path transform at IconPath's `xform`. It cannot reach this
-// walk, which appends geometry in the path's own units either way.
+// THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE: a path element carries its
+// fill and its `d` and no transform (no file in the set has one).
 struct PathCursor {
     const char* p;
     const char* end;
@@ -1339,17 +722,12 @@ void skip_separators(PathCursor& c) {
 // optional EXPONENT. The single-point rule is what splits ".207031.207031" into
 // two numbers.
 //
-// THE EXPONENT JOINED 2026-08-20 WITH ITS FIRST PRODUCER, a Breeze file
-// whose author's editor wrote small offsets as `8e-3` and `2e-3` — the S/s
-// precedent exactly (a grammar feature enters this subset when a committed file
-// spells it, never ahead of one). The alternative was to re-spell those
-// numbers as decimals in the table, which would have put numbers there that
-// appear in no file and broken the one invariant this whole table rests on: the
-// `d` string is the committed asset's, byte for byte, so a diff between them is
-// a transcription bug and nothing else. THAT PRODUCER LEFT 2026-09-16
-// (minuet-scales, with the measures feature) and no committed file spells an
-// exponent today; the scanner stays, the subset growing with a producer and
-// not shrinking when one leaves.
+// THE EXPONENT JOINED 2026-08-20 WITH ITS FIRST PRODUCER, a file whose
+// author's editor wrote small offsets as `8e-3` (a grammar feature enters this
+// subset when a committed file spells it, never ahead of one: re-spelling the
+// numbers in the table would break the verbatim rule at the table's head). No
+// committed file spells an exponent today; the scanner stays, the subset
+// growing with a producer and not shrinking when one leaves.
 //
 // IT IS SCANNED STRICTLY: the `e` is consumed only when an optional sign and at
 // least ONE digit follow it, so a trailing `e` ends the number instead of
@@ -1661,30 +1039,24 @@ bool icon_paths_valid(Icon icon, const IconDef& def) {
     return true;
 }
 
-// THE ONE FILL WALK both draws share: the viewBox mapped onto the square
-// (x, y, size_px, size_px), each path filled in `color_of(path)`.
+// THE ONE FILL WALK every draw shares: the 16-unit viewBox mapped onto the
+// square (x, y, size_px, size_px), each path filled in `color_of(path)`, in
+// table order (the layering).
+//
+// CAIRO'S DEFAULT ANTIALIAS STAYS (architect 2026-10-06): the curves need it
+// (the discs, the swoops, the rounded corners), and every straight edge sits
+// on a whole unit, so at a whole-multiple gui_scale — a unit then a whole
+// number of device px (4 at 400 %) — those edges land on device-pixel
+// boundaries and antialias nothing; at a fractional scale they cover pixels
+// partially, like every other scaled length's edge.
 template <typename ColorOf>
 void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
                      double size_px, ColorOf color_of) {
     cairo_save(cr);
     cairo_translate(cr, x, y);
-    cairo_scale(cr, size_px / def.view_box, size_px / def.view_box);
+    cairo_scale(cr, size_px / kIconViewBox, size_px / kIconViewBox);
     for (int i = 0; i < def.path_count; ++i) {
         const IconPath& p = def.paths[i];
-        // The row's transform, applied INSIDE cairo's CTM (on top
-        // of the viewBox mapping above) and saved/restored around the path so it
-        // cannot leak into a sibling — three icons' rows carry one (inventory
-        // at IconTransform), and a per-path transform that escaped its path
-        // would be a silent bug. Applied
-        // UNCONDITIONALLY, identity included: multiplying by the identity is
-        // exact in doubles, so an untransformed path's pixels are exactly what
-        // they would be with no matrix at all, and there is no "has a transform"
-        // branch to get wrong.
-        cairo_save(cr);
-        cairo_matrix_t m;
-        cairo_matrix_init(&m, p.xform.xx, p.xform.yx, p.xform.xy, p.xform.yy,
-                          p.xform.x0, p.xform.y0);
-        cairo_transform(cr, &m);
         cairo_new_path(cr);
         // Cannot fail: the dry run proved every path in this icon parses (on
         // this call, or on the earlier call whose pass `validated` latched),
@@ -1693,7 +1065,6 @@ void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
         append_path(cr, p.d);
         set_palette_source(cr, color_of(p));
         cairo_fill(cr);
-        cairo_restore(cr);
     }
     cairo_restore(cr);
 }
@@ -1702,29 +1073,16 @@ void fill_icon_paths(cairo_t* cr, const IconDef& def, double x, double y,
 
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px) {
     if (size_px <= 0.0) return;
-    const IconDef& def = icon_def(icon);
-    if (def.view_box <= 0.0) return;
-    if (!icon_paths_valid(icon, def)) return;
-    // The path's own ink: the theme's label or its fixed byte triple.
-    fill_icon_paths(cr, def, x, y, size_px,
-                    [](const IconPath& p) { return p.ink.resolve(); });
-}
-
-void draw_in_ink(cairo_t* cr, Icon icon, double x, double y, double size_px,
-                 GuiColor ink) {
-    if (size_px <= 0.0) return;
-    const IconDef& def = icon_def(icon);
-    if (def.view_box <= 0.0) return;
+    const IconDef def = icon_def(icon);
     if (!icon_paths_valid(icon, def)) return;
     fill_icon_paths(cr, def, x, y, size_px,
-                    [&](const IconPath&) { return ink; });
+                    [](const IconPath& p) { return p.ink; });
 }
 
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
                    double offset_px) {
     if (size_px <= 0.0) return;
-    const IconDef& def = icon_def(icon);
-    if (def.view_box <= 0.0) return;
+    const IconDef def = icon_def(icon);
     if (!icon_paths_valid(icon, def)) return;
     // The whole shape twice, every path in one ink: the emboss's light copy,
     // the theme's Hilight, one offset right and down beneath, then Shadow at
@@ -1735,372 +1093,19 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
                     [](const IconPath&) { return palette().shadow; });
 }
 
-// -- THE CHICAGO95 BITMAP PASS (architect 2026-10-05) -----------------------
-//
-// kChicago95Files' ORDER is the embed order (icons_chicago95_embedded.cpp's
-// #include list, CMakeLists.txt's foreach, the Android asset step) and
-// nothing else depends on it — install_chicago95_bitmaps resolves every
-// Icon's file by NAME below, so this list may be sorted however the
-// directory sorts without touching the Icon table.
-const char* const kChicago95Files[kChicago95FileCount] = {
-    "action-unavailable",  "audio-volume-high","audio-x-wav",      "clock",
-    "dialog-cancel",       "dialog-error",     "dialog-information",
-    "dialog-ok-apply",     "document-export",  "document-import",
-    "document-open-recent","document-revert",  "document-save",
-    "document-send",       "edit-copy",        "edit-delete",
-    "edit-redo",           "edit-select",      "edit-undo",
-    "emblem-system",       "folder",           "go-bottom",
-    "go-down",             "go-jump",          "go-next",
-    "go-previous",         "go-up",            "help-hint",
-    "insert-link",         "list-add",         "list-remove",
-    "lock",                "media-playback-pause",
-    "media-playback-start","media-playback-stop",
-    "media-playlist-repeat","media-record",    "media-skip-backward",
-    "media-skip-forward",  "music-player",     "object-group",
-    "stock_lock-open",     "view-dual",        "view-grid",
-    "view-paged",          "view-pin",         "view-refresh",
-    "view-sort-ascending", "window-close",     "zoom-fit-best",
-    "zoom-in",             "zoom-original",
-};
-
-namespace {
-
-// ONE ICON, INSTALLED: its own cairo ARGB32 surface (16 x 16, this
-// function's one allocation, the decoded pixels copied in — icons.h's
-// Chicago95Pixels head) and its ink box in icon px — L/T/R/B, the opaque
-// margins mapping.md's columns document, computed HERE FROM THE ALPHA
-// CHANNEL AND NOWHERE ELSE (ruling 2: "one function, no hand table" — a
-// PNG's own pixels are its ink box's one source, so a transcription of that
-// box into a second, hand-kept table cannot drift from the picture it
-// describes).
-struct Chicago95Icon {
-    cairo_surface_t* surface = nullptr;
-    int w = 0, h = 0;         // always 16 x 16 for an installed icon
-    int ink_l = 0, ink_t = 0; // the ink box's top-left, icon px
-    int ink_w = 0, ink_h = 0; // the ink box's size, icon px
-    // THE DISABLED MASK (ruling 3), one bit per pixel, bit x of row y set iff
-    // the pixel is FULLY opaque (alpha 255 — premultiplied equals straight at
-    // that one alpha value, so the word's low three bytes ARE the
-    // unpremultiplied colour with no division) and that colour is neither
-    // white (#FFFFFF) nor Windows' button-face silver (#C0C0C0). Computed
-    // once here, alongside the ink box, for the same reason: a hand-kept
-    // second table could drift from the picture it describes.
-    uint16_t mask_rows[16] = {};
-};
-
-Chicago95Icon g_chicago95[kChicago95FileCount];
-bool          g_chicago95_installed = false;
-
-// THE ICON -> FILE TABLE (mapping.md is the authoring record; this is its
-// code form, one row per roster glyph that wears a Chicago95 picture today),
-// PLUS AppIcon (architect 2026-10-05): the caption's own picture, not a
-// roster button's and never cased, but it shares this lookup because
-// draw_bitmap calls the same chicago95_for as draw_cased — its row here
-// just names audio-volume-high, the ink box chicago95_for computes for it
-// going unused (draw_bitmap blits the whole 16 x 16 surface, no case to
-// centre in).
-struct IconFile { Icon icon; const char* file; };
-constexpr IconFile kIconFile[] = {
-    {Icon::DocumentSave, "document-save"},
-    {Icon::EditUndo, "edit-undo"},
-    {Icon::EditRedo, "edit-redo"},
-    {Icon::MediaRecord, "media-record"},
-    {Icon::VcsCommit, "document-send"},
-    {Icon::VcsPull, "go-bottom"},
-    {Icon::DocumentExport, "document-export"},
-    {Icon::DocumentImport, "document-import"},
-    {Icon::ChronometerStart, "clock"},
-    {Icon::ZoomFitBest, "zoom-fit-best"},
-    {Icon::ZoomOriginal, "zoom-original"},
-    {Icon::ZoomInY, "zoom-in"},
-    {Icon::ListAdd, "list-add"},
-    {Icon::ListRemove, "list-remove"},
-    {Icon::ViewHidden, "action-unavailable"},
-    {Icon::InsertLink, "insert-link"},
-    // RULING 0 (architect 2026-10-05): Flatten took object-group (candidate
-    // 2 — object-merge carried no 16-px art) and Toggle Cumulative took the
-    // freed file's successor, view-sort-ascending (mapping.md's rows carry
-    // the full account).
-    {Icon::Merge, "object-group"},
-    {Icon::BlackSum, "view-sort-ascending"},
-    {Icon::GoJump, "view-refresh"},
-    {Icon::TimelineLift, "view-pin"},
-    {Icon::MusicNote16th, "music-player"},
-    {Icon::Mathmode, "view-grid"},
-    {Icon::PreviewRenderOn, "media-playback-start"},
-    {Icon::DialogOkApply, "dialog-ok-apply"},
-    {Icon::VcsDiff, "document-open-recent"},
-    {Icon::ShallowHistory, "view-dual"},
-    {Icon::EditSelect, "edit-select"},
-    {Icon::KeyframePrevious, "media-skip-backward"},
-    {Icon::KeyframeNext, "media-skip-forward"},
-    {Icon::GoPrevious, "go-previous"},
-    {Icon::GoNext, "go-next"},
-    {Icon::DocumentRevert, "document-revert"},
-    {Icon::MediaSkipBackward, "media-skip-backward"},
-    {Icon::MediaPlaybackStart, "media-playback-start"},
-    {Icon::MediaPlaybackStop, "media-playback-stop"},
-    {Icon::MediaPlaybackPause, "media-playback-pause"},
-    {Icon::MediaSkipForward, "media-skip-forward"},
-    {Icon::DialogCancel, "dialog-cancel"},
-    {Icon::GoDown, "go-down"},
-    {Icon::GoUp, "go-up"},
-    {Icon::Lock, "lock"},
-    {Icon::Unlock, "stock_lock-open"},
-    {Icon::BboxPrev, "go-previous"},
-    {Icon::BboxNext, "go-next"},
-    {Icon::TabDetach, "view-paged"},
-    {Icon::SettingsConfigure, "emblem-system"},
-    {Icon::Folder, "folder"},
-    {Icon::AudioXWav, "audio-x-wav"},
-    {Icon::MediaRepeatSingle, "media-playlist-repeat"},
-    {Icon::GoParentFolder, "go-up"},
-    {Icon::DialogInformation, "dialog-information"},
-    {Icon::DialogError, "dialog-error"},
-    {Icon::WindowClose, "window-close"},
-    {Icon::EditCopy, "edit-copy"},
-    {Icon::HelpWhatsthis, "help-hint"},
-    {Icon::GoJumpDeclaration, "go-jump"},
-    {Icon::EditDelete, "edit-delete"},
-    {Icon::AppIcon, "audio-volume-high"},
-};
-
-// The Chicago95 entry for `icon`, or nullptr (not installed, or no entry):
-// resolved by a linear scan of the ~58-row table above, paid once per DRAW
-// rather than cached per icon, which is cheap enough at this roster's size
-// that no second lookup table is worth the bug surface.
-const Chicago95Icon* chicago95_for(Icon icon) {
-    if (!g_chicago95_installed) return nullptr;
-    for (const IconFile& row : kIconFile) {
-        if (row.icon != icon) continue;
-        for (std::size_t i = 0; i < kChicago95FileCount; ++i) {
-            if (std::strcmp(kChicago95Files[i], row.file) == 0)
-                return &g_chicago95[i];
-        }
-        return nullptr; // a table typo: the file name names nothing installed
-    }
-    return nullptr;
-}
-
-} // namespace
-
-bool install_chicago95_bitmaps(const Chicago95Pixels (&files)[kChicago95FileCount]) {
-    bool ok = true;
-    for (std::size_t i = 0; i < kChicago95FileCount; ++i) {
-        if (!files[i].argb32) {
-            std::fprintf(stderr,
-                         "icons: Chicago95 icon \"%s\" decoded to no pixels\n",
-                         kChicago95Files[i]);
-            ok = false;
-            continue;
-        }
-        // THE ICON'S OWN SURFACE, the pixels COPIED into cairo's own
-        // allocation: cairo_image_surface_create's stride for a 16-wide
-        // ARGB32 surface is exactly 16 * 4 (already a multiple of cairo's
-        // 4-byte row alignment), so one memcpy covers the whole picture.
-        cairo_surface_t* surf =
-            cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 16, 16);
-        if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
-            std::fprintf(stderr,
-                         "icons: Chicago95 icon \"%s\" surface allocation "
-                         "failed\n",
-                         kChicago95Files[i]);
-            cairo_surface_destroy(surf);
-            ok = false;
-            continue;
-        }
-        std::memcpy(cairo_image_surface_get_data(surf), files[i].argb32,
-                    kChicago95PixelBytes);
-        cairo_surface_mark_dirty(surf);
-        const uint8_t* data = cairo_image_surface_get_data(surf);
-        // THE INK BOX, FROM THE ALPHA CHANNEL ALONE (ruling 2's one
-        // function): ARGB32 is premultiplied, native-endian, so the alpha
-        // byte of pixel (x, y) is the top byte of its 32-bit word on this
-        // little-endian target. >= 128 matches the Breeze glyphs' own
-        // "opaque enough to count" threshold (icon_paths_valid's sibling
-        // rule has no such test — a filled vector path has no partial
-        // pixels to threshold — so this is the one new predicate the
-        // bitmap pass needed). A source PNG with no alpha channel at all
-        // (music-player.png) normalizes to full alpha at every pixel
-        // upstream of this call (icons.h's Chicago95Pixels head), so its
-        // ink box comes out the whole 16 x 16 square with no special case
-        // here — mapping.md's own recorded row.
-        int l = 16, t = 16, r = -1, b = -1;
-        uint16_t mask_rows[16] = {};
-        for (int y = 0; y < 16; ++y) {
-            const uint32_t* row =
-                reinterpret_cast<const uint32_t*>(data + y * 16 * 4);
-            for (int x = 0; x < 16; ++x) {
-                const uint32_t px = row[x];
-                const uint32_t a = (px >> 24) & 0xFF;
-                if (a < 128) continue;
-                l = std::min(l, x); r = std::max(r, x);
-                t = std::min(t, y); b = std::max(b, y);
-                // THE DISABLED MASK (ruling 3): fully opaque only (alpha 255,
-                // premultiplied == straight there, so px's low bytes are the
-                // colour with no division) and neither white nor silver.
-                if (a == 255) {
-                    const uint32_t rr = (px >> 16) & 0xFF;
-                    const uint32_t gg = (px >> 8) & 0xFF;
-                    const uint32_t bb = px & 0xFF;
-                    const bool white  = rr == 0xFF && gg == 0xFF && bb == 0xFF;
-                    const bool silver = rr == 0xC0 && gg == 0xC0 && bb == 0xC0;
-                    if (!white && !silver) mask_rows[y] |= static_cast<uint16_t>(1u << x);
-                }
-            }
-        }
-        if (r < 0) {
-            std::fprintf(stderr,
-                         "icons: Chicago95 icon \"%s\" has no opaque pixel\n",
-                         kChicago95Files[i]);
-            cairo_surface_destroy(surf);
-            ok = false;
-            continue;
-        }
-        g_chicago95[i] = Chicago95Icon{surf, 16, 16, l, t, r - l + 1, b - t + 1, {}};
-        std::memcpy(g_chicago95[i].mask_rows, mask_rows, sizeof(mask_rows));
-    }
-    g_chicago95_installed = ok;
-    return ok;
-}
-
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
-               double size_px, int button_shift_px) {
-    const Chicago95Icon* bmp =
-        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
-    if (!bmp) {
-        // NOT A BITMAP SCALE, OR NO CHICAGO95 PICTURE (AppIcon): draw()
-        // unchanged, at the vector's own (3, 3)-in-the-case placement.
-        const double x = case_x + icon_case_lead_px() + button_shift_px;
-        const double y = case_y + icon_case_lead_px() + button_shift_px;
-        draw(cr, icon, x, y, size_px);
-        return;
-    }
-    // k, THE ONE INTEGER THIS WHOLE PLACEMENT RIDES: scale_is_bitmap
-    // already proved gui_scale_percent() is a whole multiple of 100, so k is
-    // exact and icon_case_w_px()/icon_case_h_px() (each scaled_px of its own
-    // authored term, the composite rule) equal 23k and 22k on the nose, the
-    // span this centres the ink box inside.
-    const int k = gui_scale_percent() / 100;
-    // THEN CENTRE ON THE INK (ruling 2): the ink box as centred in the whole
-    // 23 x 22 case as whole Windows px allow, a half-pixel tie resolving UP
-    // and LEFT — plain integer division floors, which is exactly that tie
-    // (tmp/icon_mock/compose.py's own arithmetic, matched here).
-    const int ix = (23 - bmp->ink_w) / 2;
-    const int iy = (22 - bmp->ink_h) / 2;
-    // The icon's own (0, 0) in case px, then the button's own pressed/
-    // checked shift (ruling 4 — the existing +1,+1 Windows px move, applied
-    // identically on top of the ink-centred placement) in device px.
-    const double ox = case_x + (ix - bmp->ink_l) * k + button_shift_px;
-    const double oy = case_y + (iy - bmp->ink_t) * k + button_shift_px;
-    cairo_save(cr);
-    cairo_translate(cr, ox, oy);
-    cairo_scale(cr, k, k);
-    cairo_set_source_surface(cr, bmp->surface, 0, 0);
-    // NEAREST, NO FILTERING (ruling 1): with an exact integer scale this
-    // places every source pixel's whole k x k block on whole device px with
-    // no blending at its edges — the one filter mode that makes that true.
-    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
-    cairo_paint(cr);
-    cairo_restore(cr);
+                double size_px, int button_shift_px) {
+    const double x = case_x + icon_case_lead_px() + button_shift_px;
+    const double y = case_y + icon_case_lead_px() + button_shift_px;
+    draw(cr, icon, x, y, size_px);
 }
 
 void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
                          double size_px, int button_shift_px,
                          double offset_px) {
-    const Chicago95Icon* bmp =
-        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
-    if (!bmp) {
-        // NOT A BITMAP SCALE, OR NO CHICAGO95 PICTURE: draw_engraved
-        // unchanged, at the vector's own (3, 3)-in-the-case placement —
-        // draw_cased's own fallback, repeated here rather than shared,
-        // because the two draws differ (draw vs. draw_engraved).
-        const double x = case_x + icon_case_lead_px() + button_shift_px;
-        const double y = case_y + icon_case_lead_px() + button_shift_px;
-        draw_engraved(cr, icon, x, y, size_px, offset_px);
-        return;
-    }
-    // THE SAME k AND THE SAME INK-CENTRED ORIGIN AS draw_cased (ruling 2):
-    // a disabled face sits exactly where the live one would, the emboss
-    // being the only difference.
-    const int k = gui_scale_percent() / 100;
-    const int ix = (23 - bmp->ink_w) / 2;
-    const int iy = (22 - bmp->ink_h) / 2;
-    const double ox = case_x + (ix - bmp->ink_l) * k + button_shift_px;
-    const double oy = case_y + (iy - bmp->ink_t) * k + button_shift_px;
-    // THE MASK, TWICE (ruling 3, draw_engraved's own two-pass emboss): every
-    // set mask bit becomes one k x k device-px block, all of one pass's
-    // blocks gathered into a single fill (cairo_rectangle accumulates
-    // subpaths; nothing is painted until the fill after the loop) — first
-    // the Hilight copy `offset_px` right and down, then the Shadow copy at
-    // the glyph's own place, so the second paints over the first wherever
-    // they would overlap, exactly as draw_engraved's two fill_icon_paths
-    // calls do for a vector glyph.
-    const auto paint_mask = [&](GuiColor c, double dx, double dy) {
-        set_palette_source(cr, c);
-        for (int y = 0; y < 16; ++y) {
-            const uint16_t row = bmp->mask_rows[y];
-            if (!row) continue;
-            for (int x = 0; x < 16; ++x) {
-                if (!((row >> x) & 1)) continue;
-                cairo_rectangle(cr, ox + x * k + dx, oy + y * k + dy, k, k);
-            }
-        }
-        cairo_fill(cr);
-    };
-    paint_mask(palette().hilight, offset_px, offset_px);
-    paint_mask(palette().shadow, 0.0, 0.0);
-}
-
-void draw_bitmap(cairo_t* cr, Icon icon, double x, double y, double size_px) {
-    const Chicago95Icon* bmp =
-        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
-    if (!bmp) {
-        draw(cr, icon, x, y, size_px);
-        return;
-    }
-    // NO CASE TO CENTRE IN (icons.h's head): the whole 16 x 16 picture fills
-    // (x, y, size_px, size_px) exactly, the same nearest-neighbour blit
-    // draw_cased uses once it has its own origin.
-    const int k = gui_scale_percent() / 100;
-    cairo_save(cr);
-    cairo_translate(cr, x, y);
-    cairo_scale(cr, k, k);
-    cairo_set_source_surface(cr, bmp->surface, 0, 0);
-    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
-    cairo_paint(cr);
-    cairo_restore(cr);
-}
-
-void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
-                        double size_px, GuiColor ink) {
-    const Chicago95Icon* bmp =
-        scale_is_bitmap(gui_scale_percent()) ? chicago95_for(icon) : nullptr;
-    if (!bmp) {
-        draw_in_ink(cr, icon, x, y, size_px, ink);
-        return;
-    }
-    // `ink` IS IGNORED AT A BITMAP SCALE (icons.h's head): the Chicago95
-    // picture is unrecolourable period artwork, so a lit row still shows it
-    // in its own colours rather than vanishing into a single-colour
-    // silhouette the way a recoloured vector glyph would.
-    draw_bitmap(cr, icon, x, y, size_px);
-}
-
-void draw_bitmap_on_text_ink(cairo_t* cr, Icon icon, double x, double y,
-                             double size_px, GuiColor text_ink) {
-    if (scale_is_bitmap(gui_scale_percent()) && chicago95_for(icon)) {
-        draw_bitmap(cr, icon, x, y, size_px);
-        return;
-    }
-    if (size_px <= 0.0) return;
-    const IconDef& def = icon_def(icon);
-    if (def.view_box <= 0.0) return;
-    if (!icon_paths_valid(icon, def)) return;
-    // The text class takes the ground's own text (icons.h); a fixed ink stays.
-    fill_icon_paths(cr, def, x, y, size_px, [&](const IconPath& p) {
-        return p.ink.is_label ? text_ink : p.ink.fixed;
-    });
+    const double x = case_x + icon_case_lead_px() + button_shift_px;
+    const double y = case_y + icon_case_lead_px() + button_shift_px;
+    draw_engraved(cr, icon, x, y, size_px, offset_px);
 }
 
 } // namespace icons

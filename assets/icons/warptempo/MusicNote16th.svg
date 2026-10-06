@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- BPM Iterations: a teal music player with a navy display carrying a white trace and three keys (no Windows 95 original; the pick's off-palette greys replaced by the 20 solids). -->
+  <path fill="#000000" d="M0,0 H16 V16 H0 Z"/>
+  <path fill="#008080" d="M0,0 H15 V15 H0 Z"/>
+  <path fill="#FFFFFF" d="M0,0 H15 V1 H0 Z M0,0 H1 V15 H0 Z"/>
+  <path fill="#000000" d="M3,3 H13 V10 H3 Z"/>
+  <path fill="#000080" d="M4,4 H12 V9 H4 Z"/>
+  <path fill="#FFFFFF" d="M4,6 H12 V7 H4 Z"/>
+  <path fill="#C0C0C0" d="M5,7 H6 V8 H5 Z M8,7 H9 V8 H8 Z M10,5 H11 V6 H10 Z"/>
+  <path fill="#FFFFFF" d="M3,11 H4 V13 H3 Z M7,11 H8 V13 H7 Z M10,11 H11 V13 H10 Z"/>
+  <path fill="#000000" d="M4,11 H5 V13 H4 Z M8,11 H9 V13 H8 Z M11,11 H12 V13 H11 Z"/>
+</svg>

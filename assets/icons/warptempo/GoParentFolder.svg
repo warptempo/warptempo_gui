@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Up a Folder: Explorer 95's VIEW_PARENTFOLDER, the folder with the bent arrow; the tab two interior rows (y 0..3); the arrow ONE polygon. -->
+  <path fill="#000000" d="M2,0 L7,0 L8,1 L8,3 L15,3 L15,14 L0,14 L0,3 L1,3 L1,1 Z"/>
+  <path fill="#FFFF00" d="M2,1 H7 V4 H14 V13 H1 V4 H2 Z"/>
+  <path fill="#000000" d="M5.5,5 L8,8 L6,8 L6,10 L11,10 L11,11 L5,11 L5,8 L3,8 Z"/>
+</svg>

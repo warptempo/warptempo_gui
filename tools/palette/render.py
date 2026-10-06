@@ -2018,7 +2018,8 @@ def draw_dialog(cr, th):
         show(cr, C.SANS, px, word, bx0 + (bx1 - bx0 - lw) // 2, C.redesign_baseline(C.SANS, px, by0, by1 - by0), th.get('label'))
 
 def draw_info_glyph(cr, x, y, size):
-    """Breeze's dialog-information (icons.cpp kDialogInformationPaths, the 22-unit view box) at (x, y), size device px
+    """Breeze's dialog-information as the app drew it until 2026-10-06 (its 22-unit view box; the app's own set replaced
+    it that day, assets/icons/warptempo/DialogInformation.svg -- this mock keeps the older glyph) at (x, y), size device px
     square: the rounded plate (3, 3)..(19, 19), corner radius 2, in kIconAccent #96BFDA, and the white 'i' -- the dot
     (10, 6)..(12, 8) and the stem (10, 10)..(12, 16) -- cairo's default antialiasing, as the app fills its paths."""
     k = size / 22.0

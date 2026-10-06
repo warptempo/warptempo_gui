@@ -1,7 +1,6 @@
 #include "platform_wayland.h"
 
 #include "gui_font.h"
-#include "icons.h"
 #include "render.h"          // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
@@ -712,24 +711,6 @@ bool GuiPlatform::init(int width, int height, const char* title) {
         std::fprintf(stderr,
                      "warptempo_gui: the bundled fonts did not install; "
                      "refusing to paint with cairo's default face\n");
-        return false;
-    }
-    // THE ROSTER'S CHICAGO95 BITMAPS, installed the same way, right beside
-    // the faces (architect 2026-10-05, the icon pass): the bytes compiled
-    // into this executable (icons_chicago95_embedded.cpp) are decoded by
-    // this backend's own road (icons_chicago95_decode_linux.cpp — cairo's
-    // PNG reader, unavailable on Android's cairo build, so it cannot live
-    // in icons.cpp, which both targets compile) and installed once, ahead
-    // of the first paint — the Android backend's
-    // install_chicago95_bitmaps_or_die asks the same shared owner
-    // (icons::install_chicago95_bitmaps) the same question of its own
-    // decode (AImageDecoder) of the APK's assets.
-    if (!icons::install_chicago95_bitmaps_from_png_linux(
-            icons::chicago95_embedded_files)) {
-        std::fprintf(stderr,
-                     "warptempo_gui: the Chicago95 icon bitmaps did not "
-                     "install; refusing to paint a bitmap scale with a hole "
-                     "in the roster\n");
         return false;
     }
 

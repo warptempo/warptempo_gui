@@ -2309,8 +2309,7 @@ enum class RedesignButton {
     // out ("we should card the exit, because it is still one button
     // automatically affecting the other"), and it is refused with the lock's
     // own card now. Its glyph is
-    // Breeze's music-note-16th, the flagged quaver, back from the deletion
-    // with the button.
+    // MusicNote16th, the music player (icons.h).
     //
     // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
@@ -2333,8 +2332,7 @@ enum class RedesignButton {
     // THE MODE LIVES IN TARGET VIEW ALONE since 2026-09-13: pressed
     // in source view the ON edge crosses to target first, a refused entry
     // stopping the whole press (the record is at the `i` arm,
-    // input_key_dispatch.cpp). Its glyph is mathmode, the italic f beside a
-    // multiplication cross.
+    // input_key_dispatch.cpp). Its glyph is Mathmode, the grid (icons.h).
     //
     // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
     // hand-listed, which is what their chord rows buy: Ctrl+B and bare `i`
@@ -2457,8 +2455,8 @@ enum class RedesignButton {
     IconReadOnly,
     // SETTINGS (architect 2026-09-29), right after the padlock and AHEAD of
     // the tooltip lamp (architect 2026-10-01: help comes after settings):
-    // bare `;`, the bare settings prompt, wearing Breeze's
-    // settings-configure. The button IS the key, so it greys exactly where
+    // bare `;`, the bare settings prompt, wearing SettingsConfigure
+    // (STD_PROPERTIES). The button IS the key, so it greys exactly where
     // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
     // allowlist), grid iterations (the iteration lock's gate inherits that
     // refusal; iteration_lock_greys names it) and the `h` view (off that
@@ -2470,7 +2468,7 @@ enum class RedesignButton {
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
     // since 2026-10-01 (architect: help comes after settings): THE TOOLTIP
-    // LAMP on bare backslash, wearing Breeze's help-whatsthis. A per-project session lamp in the magnification lamp's
+    // LAMP on bare backslash, wearing HelpWhatsthis (STD_HELP). A per-project session lamp in the magnification lamp's
     // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
     // settings vocabulary and not carried by `'` — and while it is DARK NO
     // TOOLTIP SHOWS ANYWHERE: the tooltip model's one wait writer
@@ -2525,8 +2523,7 @@ enum class RedesignButton {
     //
     // The lamp lights AWAY FROM HOME, which is the collapse's own rule across
     // all three: Git is the walk's default reading, so the lamp is LIT IN
-    // SESSION and it wears the Session glyph, shallow-history. Deep-history
-    // left the icon roster with the Git half.
+    // SESSION and it wears the Session glyph, ShallowHistory's clock face.
     //
     // It STANDS ONLY IN THE `h` VIEW since 2026-10-05 (the stand-ins) and
     // its arm still answers DEAD outside it, the same answer its neighbours
@@ -2799,7 +2796,7 @@ enum class RedesignButton {
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // JUMP TO DEFINING MARKER (architect 2026-09-29) — the verb group's FIFTH
     // member, after Toggle Inherit and ahead of Add to Selection, wearing
-    // Breeze's go-jump-declaration. ITS CHORD IS CTRL+J (Shift+J until that
+    // GoJumpDeclaration's jump arc. ITS CHORD IS CTRL+J (Shift+J until that
     // day, when it rode Copy Value's shift-click and long press; Shift+J binds
     // nothing now), and its act is that key's exactly — the existing jump
     // body (jump_to_value_source): a `c` on the tab it leaves, the switch to
@@ -2959,7 +2956,7 @@ enum class RedesignButton {
     IconZoomOriginal,
     // SWITCH TAB (architect 2026-09-29), the group's last: CTRL+TAB, the
     // one-shot other-tab act, its table row carrying the ctrl, wearing
-    // Breeze's tab-detach. It ADMITS SHIFT and nothing else: the shift-click
+    // TabDetach's two pages. It ADMITS SHIFT and nothing else: the shift-click
     // and the long press OR the shift into the row's ctrl and dispatch
     // CTRL+SHIFT+TAB, the paired march (so the tab switch has two pointer
     // roads since the tab row's deletion on 2026-10-01: the walk's ctrl-click
@@ -6138,7 +6135,7 @@ struct AppState {
     // Close (the order of 2026-08-28; that day's Stop sat after the two-faced
     // button until it retired 2026-09-01, and Up took its place beside the lamp
     // — the pair were WORD buttons until later that same day, when the
-    // architect gave them the checkmark and Breeze's window-close X and the row
+    // architect gave them the checkmark and the window-close X and the row
     // became seven glyphs) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt

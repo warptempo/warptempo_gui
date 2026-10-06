@@ -31,7 +31,8 @@
 
   <!-- android:icon is the launcher and recents icon: Chicago95's
        status/audio-volume-high.png (architect 2026-10-05, the icon pass's
-       caption pick — the caption's own picture at a bitmap gui_scale too),
+       caption pick; the caption's AppIcon is the product's own vector
+       redrawing of it, icons.h),
        scaled nearest-neighbour onto a transparent adaptive-icon canvas
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the recipe). The Linux
        desktop's launcher icon (packaging/warptempo_gui.svg) is the same

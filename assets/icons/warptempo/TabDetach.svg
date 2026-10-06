@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Switch Tab: two overlapping dog-eared pages, black one-unit frames, 14x16 at (1,0). -->
+  <path fill="#000000" d="M1,0 H7 L10,3 V11 H1 Z"/>
+  <path fill="#FFFFFF" d="M2,1 H6 V4 H9 V10 H2 Z"/>
+  <path fill="#FFFFFF" d="M7,1.5 L8.5,3 H7 Z"/>
+  <path fill="#000000" d="M6,5 H12 L15,8 V16 H6 Z"/>
+  <path fill="#FFFFFF" d="M7,6 H11 V9 H14 V15 H7 Z"/>
+  <path fill="#FFFFFF" d="M12,6.5 L13.5,8 H12 Z"/>
+</svg>

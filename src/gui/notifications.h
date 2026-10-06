@@ -6,8 +6,8 @@
 // something happened that answers an act, or that the user was not watching.
 // A small card stacked top-right under row 1's view radios, newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
-// the one sans, a Breeze glyph at the left naming the class
-// (dialog-information / dialog-error), and ONE PAD around both
+// the one sans, a class glyph at the left naming the class
+// (icons::Icon::DialogInformation / DialogError), and ONE PAD around both
 // (notification_pad_px below — the card's chrome reads one number on all
 // five of its distances, the text's right air adding the glyph's own inset
 // so it matches the air the eye sees left of the text, 2026-10-01), ON THE

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Play Renders B: Media Player's window (navy title bar) with a play triangle. -->
+  <path fill="#000080" d="M0,1 H16 V15 H0 Z M1,4 V14 H15 V4 Z"/>
+  <path fill="#FFFFFF" d="M1,4 H15 V14 H1 Z"/>
+  <path fill="#000000" d="M5,5.5 L12,9 L5,12.5 Z"/>
+</svg>

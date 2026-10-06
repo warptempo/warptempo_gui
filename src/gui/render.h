@@ -85,16 +85,13 @@ struct TrimRange {
 // (architect 2026-10-04). The app computes no colour.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette(), or the one named literal beside them (the in-place
-// editor's frame, kFlagEditorFrame below), or one of icons.cpp's hand-listed
-// inks. THE ONE FURTHER EXCEPTION IS A CHICAGO95 ICON'S OWN PIXELS (architect
-// 2026-10-05, the icon pass): at a bitmap gui_scale a roster glyph is a
-// decoded PNG blitted verbatim (icons::draw_cased et al., icons.h) — period
-// artwork, not a role, so its pixels are never recoloured or composited
-// against a role. A DISABLED icon paints none of its own pixels: its MASK
-// (the opaque pixels that are neither white nor silver) is Windows'
-// DSS_DISABLED emboss in the theme's roles, the Hilight copy one line right
-// and down, then the Shadow copy in place (draw_cased_disabled, icons.cpp),
-// as a vector glyph's (draw_engraved). TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
+// editor's frame, kFlagEditorFrame below), or one of icons.cpp's inks — THE
+// ICON SET'S OWN FILLS (architect 2026-10-06), Windows' solids as each
+// drawing names them: period artwork, not roles, so a glyph is never
+// recoloured by a theme. A DISABLED icon paints none of its own inks: its
+// whole shape is Windows' DSS_DISABLED emboss in the theme's roles, the
+// Hilight copy one line right and down, then the Shadow copy in place
+// (icons::draw_engraved). TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
@@ -158,8 +155,8 @@ struct TrimRange {
 //                 outline (on every flag, selected or not) and the dialog
 //                 focus frame;
 //   selected pair a dropdown's lit row, the open menu anchor, the folder
-//                 overlay's and the picker's highlighted row (its glyph in
-//                 the selected text too, icons::draw_in_ink), the selection
+//                 overlay's and the picker's highlighted row (its name; the
+//                 glyph keeps its own inks, icons.h), the selection
 //                 band and selected substring of every text field, the flag
 //                 editor's included — ONE PAIR, FOCUSED OR NOT (the 2026-09-02
 //                 inactive selection face retired, architect 2026-10-03, on
@@ -694,9 +691,8 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     (the active or inactive start-to-end colours, paint_caption_gradient),
 //     nothing above or below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
-//     (SM_CXSMICON) at (2, 1) from the lane's top-left — at a bitmap
-//     gui_scale (architect 2026-10-05) Chicago95's status/audio-volume-high
-//     picture through draw_bitmap, the vector form at every other scale;
+//     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's speaker
+//     (icons::draw);
 //   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: Nimbus Sans
 //     Bold, the caption font being the body face in bold), its pen at x 20
 //     (two px past the icon) and its cap band centred in the lane (redesign_baseline), in
@@ -858,8 +854,9 @@ inline int relief_line_px() {
 // height scaled_px(3) + scaled_px(16) + scaled_px(3) — 63 x 60 device px at
 // the tablet's 275 % and 32 x 30 at the laptop's 138 %, the glyph 44 and 22,
 // today's glyph sizes on both devices. THE GLYPH RASTERIZES AT scaled_px(16)
-// (icons::draw, at the case's (3, 3) offset; the press face's shift is one
-// Windows px further right and down).
+// (icons::draw_cased, at the case's (3, 3) offset, never centred on the
+// glyph's ink; the press face's shift is one Windows px further right and
+// down).
 //
 // THE LANE IS WINDOWS' MENU BAR + TOOLBAR STACK, PIXEL FOR PIXEL (architect
 // 2026-10-05, measured on Windows 95 screenshots — their geometry trusted,
@@ -2059,9 +2056,7 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 // Hilight one Windows px (relief_line_px) right and down, then in its
 // Shadow at (x, baseline) over it — every disabled word in the product goes
 // through here, as every disabled glyph goes through icons::draw_engraved
-// (a vector glyph, or a bitmap scale's own mono-mask sibling,
-// icons::draw_cased_disabled, architect 2026-10-05) by the same two-pass
-// rule. The run carries its own font (text_shape.h).
+// by the same two-pass rule. The run carries its own font (text_shape.h).
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline);
 

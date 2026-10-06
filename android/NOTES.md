@@ -1540,7 +1540,8 @@ lamp bit — the stateful-glyph shape Save and Render already wear),
 `keyboard-enter`, `keyboard-spacebar` and `edit-clear-locationbar-rtl`
 (BACKSPACE — the left-pointing tag with an X, which is what Plasma's own virtual
 keyboard puts there). ESC wears the already-committed `dialog-cancel`. All five
-are unmodified breeze-dark files, committed under `assets/icons/breeze/` with
+are unmodified breeze-dark files, committed under `assets/icons/breeze/` (the
+Breeze set retired 2026-10-06 for the product's own, `assets/icons/warptempo/`) with
 their `d` strings transcribed verbatim (checked byte-for-byte against the
 assets), and every one is a single `<path>` the interpreter's oldest arms already
 cover — no departures, no new grammar. `kIconCount` 48 → 53.

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Save, Windows 95's STD_FILESAVE: label, write-protect window and shutter slot show the button face (unpainted). -->
+  <path fill="#000000" d="M1,1 H15 V15 H2 L1,14 Z M2,2 V13.5 L2.5,14 H14 V2 Z"/>
+  <path fill="#808000" d="M2,2 H3 V9 H13 V4 H14 V14 H13 V10 H4 V14 H2.5 L2,13.5 Z"/>
+  <path fill="#000000" d="M3,2 H4 V8 H12 V2 H13 V9 H3 Z"/>
+  <path fill="#000000" d="M13,3 H14 V4 H13 Z"/>
+  <path fill="#000000" d="M4,10 H13 V14 H12 V11 H10 V14 H4 Z"/>
+</svg>

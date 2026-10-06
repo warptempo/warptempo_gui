@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- Read-Only, locked: the shackle's black now a band curving with the gold over the right half. -->
+  <path fill="#808000" d="M4,6.5 V4 A4,4 0 0 1 12,4 V6.5 H10.5 V4 A2.5,2.5 0 0 0 5.5,4 V6.5 Z"/>
+  <path fill="#000000" d="M8,0 A4,4 0 0 1 12,4 V6.5 H11 V4 A3,3 0 0 0 8,1 Z"/>
+  <path fill="#000000" d="M2,6 H14 V15 H2 Z"/>
+  <path fill="#808000" d="M2,6 H13 V14 H2 Z"/>
+  <path fill="#FFFFFF" d="M3,7 H12 V8 H3 Z M3,7 H4 V13 H3 Z"/>
+  <path fill="#FFFF00" d="M4,8 H12 V13 H4 Z"/>
+  <path fill="#808000" d="M4,9 H11 V10 H4 Z M4,11 H11 V12 H4 Z"/>
+</svg>

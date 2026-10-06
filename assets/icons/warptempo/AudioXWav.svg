@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
+  <!-- The wav row from Chicago95's mimetypes/audio-x-wav (the Wave Sound document): the page with the speaker drawn over its left edge at the pick's own small geometry (bell rows 3-12, a 3-wide cylinder, short rays), the overlap resolved by layering; whole-unit lines, no scaling. -->
+  <path fill="#808080" d="M4,0 L13,0 L16,3 L16,16 L4,16 Z"/>
+  <path fill="#FFFFFF" d="M5,1 H12 V4 H5 Z M5,4 H14 V14 H5 Z"/>
+  <path fill="#C0C0C0" d="M14,4 H15 V15 H14 Z M5,14 H15 V15 H5 Z"/>
+  <path fill="#C0C0C0" d="M12,1 H13 V3 H12 Z"/>
+  <path fill="#FFFFFF" d="M15,3 L13,3 L13,1 Z"/>
+  <path fill="#000000" d="M12,3 H16 V4 H12 Z M15,3 H16 V16 H15 Z M4,15 H16 V16 H4 Z"/>
+  <path fill="#808000" d="M7,3 L7,13 L6,13 L4,11 L0,9 L0,7 L4,5 L6,3 Z"/>
+  <path fill="#000000" d="M4,10 L6,12 L7,12 L7,13 L6,13 L4,11 L0,9 L0,8 Z"/>
+  <path fill="#FFFF00" d="M7,4 L7,11 L6,11 L4,9 L1,9 L1,7 L4,6 L6,4 Z"/>
+  <path fill="#FFFFFF" d="M7,5 L4,7 L2,8 L2,7 L4,6 L7,4 Z M4,7 H5 V9 H4 Z"/>
+  <path fill="#FFFFFF" d="M1,7 H2 V8 H1 Z"/>
+  <path fill="#C0C0C0" d="M2,7 H3 V8 H2 Z"/>
+  <path fill="#808080" d="M2,8 H3 V9 H2 Z"/>
+  <path fill="#808080" d="M5,5 H6 V6 H5 Z"/>
+  <path fill="#000000" d="M5,6 H6 V11 H5 Z"/>
+  <path fill="#808080" d="M7,3 H8 A1,1 0 0 1 9,4 V12 A1,1 0 0 1 8,13 H7 A1,1 0 0 1 6,12 V4 A1,1 0 0 1 7,3 Z"/>
+  <path fill="#000000" d="M6.5,4 A1,1 0 0 1 8.5,4 Z"/>
+  <path fill="#000000" d="M6.5,12 A1,1 0 0 0 8.5,12 Z"/>
+  <path fill="#C0C0C0" d="M6,4 H7 V12 H6 Z"/>
+  <path fill="#FFFFFF" d="M7,4 H8 V12 H7 Z"/>
+  <path fill="#808080" d="M10,6 L11,5 L12,5 L12,6 L11,7 L10,7 Z M10,8 H13 V9 H10 Z M10,10 L11,10 L12,11 L12,12 L11,12 L10,11 Z"/>
+</svg>
