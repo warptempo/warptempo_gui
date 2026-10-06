@@ -147,8 +147,8 @@ struct TrimRange {
 // paints:
 //   ground        every chrome surface: the five lanes under the caption,
 //                 the caption's buttons, the bottom row, the
-//                 dropdowns, the folder overlay and the picker, the on-screen
-//                 keyboard, every button face, a DISABLED flag's face;
+//                 dropdowns, the on-screen keyboard, every button face, a
+//                 DISABLED flag's face;
 //   label         chrome text and glyphs, the ruler labels, the trim lane's
 //                 arrow glyph, the playhead head's outline;
 //   the quartet   every relief line, the families unchanged; Hilight also the
@@ -166,7 +166,11 @@ struct TrimRange {
 //                 Windows 95's Network Neighborhood, where a selection keeps
 //                 Hilight / HilightText in a window that has lost the focus);
 //   field pair    the modal dialogs' fields, the caret its field's text
-//                 (architect 2026-10-03); the flag editor is the selected flag
+//                 (architect 2026-10-03); THE LIST — the folder overlay's
+//                 band under the player and the picker, Windows 95's list
+//                 view, its resting names and its glyphs' text-class paths
+//                 in the field text (architect 2026-10-06,
+//                 paint_folder_overlay); the flag editor is the selected flag
 //                 opened for edit and takes no field colour (EDITING, below);
 //   clock pair    THE TIME FIELDS (architect 2026-10-04, Windows' status
 //                 bar: ButtonFace / ButtonText; every time field since
@@ -2009,8 +2013,10 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         pressed, a caption button pressed.
 //   paint_relief_plain_raised — PLAIN RAISED: a push button, the scroll-bar
 //                         thumb (the trim lane's), the scrub's thumb, a
-//                         menu's and a dropdown's frame, a raised panel.
-//   paint_relief_plain_sunken — PLAIN SUNKEN: a field, the scrub's channel
+//                         menu's and a dropdown's frame, the restored
+//                         window's sizing frame.
+//   paint_relief_plain_sunken — PLAIN SUNKEN: a field, the list (the folder
+//                         overlay's band, 2026-10-06), the scrub's channel
 //                         (the well is render_canvas's own fill of the same
 //                         lines, full width).
 //   paint_relief_status_sunken — STATUS SUNKEN, ONE ring: a status-bar panel.

@@ -646,6 +646,17 @@ void draw_bitmap(cairo_t* cr, Icon icon, double x, double y, double size_px);
 void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
                         double size_px, GuiColor ink);
 
+// draw_bitmap's sibling for a glyph standing on a ground whose text is not
+// the chrome's (architect 2026-10-06: the folder overlay's resting row on the
+// list's FIELD, whose text is `field_text`): AT A BITMAP SCALE this is
+// draw_bitmap, the Chicago95 picture keeping its own colours; at every other
+// scale it is draw() with the paths the SVG inks in the scheme's text class
+// taking `text_ink` in place of the theme's label — the glyph is that
+// ground's text's sibling as a chrome glyph is the label's (text over a fill
+// is the fill's recorded pair) — and every fixed ink (the wav's blue) kept.
+void draw_bitmap_on_text_ink(cairo_t* cr, Icon icon, double x, double y,
+                             double size_px, GuiColor text_ink);
+
 // THE BITMAPS' INSTALL, on the fonts' pattern (gui_font.h): one PNG per
 // distinct picture the mapping table names
 // (assets/icons/chicago95/16/*.png — the directory IS

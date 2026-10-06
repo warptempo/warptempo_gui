@@ -2089,4 +2089,20 @@ void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
     draw_bitmap(cr, icon, x, y, size_px);
 }
 
+void draw_bitmap_on_text_ink(cairo_t* cr, Icon icon, double x, double y,
+                             double size_px, GuiColor text_ink) {
+    if (gui_scale_is_bitmap(gui_scale_percent()) && chicago95_for(icon)) {
+        draw_bitmap(cr, icon, x, y, size_px);
+        return;
+    }
+    if (size_px <= 0.0) return;
+    const IconDef& def = icon_def(icon);
+    if (def.view_box <= 0.0) return;
+    if (!icon_paths_valid(icon, def)) return;
+    // The text class takes the ground's own text (icons.h); a fixed ink stays.
+    fill_icon_paths(cr, def, x, y, size_px, [&](const IconPath& p) {
+        return p.ink.is_label ? text_ink : p.ink.fixed;
+    });
+}
+
 } // namespace icons

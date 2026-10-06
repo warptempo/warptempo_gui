@@ -971,8 +971,8 @@ private:
     void paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed);
 
     // THE FOLDER OVERLAY (2026-08-28, the render player): the keyboard-slot
-    // list panel — folder / wav / up rows with their Breeze glyphs, the
-    // highlight band, the pressed face, the ring's focus outline,
+    // list panel, Windows' list view on a sunken field (2026-10-06) — folder
+    // and wav rows with their glyphs, the highlight band, the pressed face, the ring's focus outline,
     // and the transport glyph on the playing item's row, all under the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
     // and then on its own exposure per row, as the keyboard is. It publishes

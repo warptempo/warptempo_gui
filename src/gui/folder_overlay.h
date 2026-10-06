@@ -101,12 +101,19 @@
 //     panel's deletion on 2026-09-30.)
 // The panel's own authored numbers are the four below.
 //
-// THE FACES ARE WINDOWS' LIST (architect 2026-10-02, the ladder at the
-// painter): the band is the ground inside the plain raised edge
-// (content_rect below spends the frame), a resting row paints no fill at all,
-// and the highlighted row is a flat fill in the theme's selected pair
-// (render.h's palette block), focused or not. No hover face and
-// NO ALTERNATING ROWS.
+// THE FACES ARE WINDOWS' LIST VIEW (architect 2026-10-02, the ladder at the
+// painter; the field 2026-10-06): the band is a SUNKEN WHITE FIELD, Windows
+// 95 Explorer's list — the theme's field pair inside the PLAIN SUNKEN edge
+// (content_rect below spends the edge), "like a file explorer, not popping
+// out like a rising bevel", over the 2026-10-02 ground inside the plain
+// raised edge, which it replaced on the same two lines a side, so no row and
+// no band edge moved. IT COVERS BOTH CONTENTS, this one widget being every
+// Windows list in the product (the player's folders and wavs, the project
+// picker's projects); the modal row under it — the transport, the scrub, the
+// buttons — keeps the chrome, as Explorer's toolbar and status bar do. A
+// resting row paints no fill at all, and the highlighted row is a flat fill
+// in the theme's selected pair (render.h's palette block), focused or not.
+// No hover face and NO ALTERNATING ROWS.
 //
 // THE ROWS ARE CHROME (the timing doctrine at GuiInputHandler::on_key): a
 // row press ARMS —
@@ -243,12 +250,13 @@ inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
 
-// The rows' band: THE SURFACE INSIDE ITS RAISED FRAME (architect 2026-10-02:
-// the panel is the ground inside the PLAIN RAISED edge, two relief lines a
-// side, relief_line_px each). Every geometry below reads this and not the surface — the
-// rows, the scroll ceiling, the keep-visible walk, the painter's row-walk clip
-// and row_at's containment — so the frame is spelled here once and a row can
-// never paint over it or be pressed through it.
+// The rows' band: THE SURFACE INSIDE ITS SUNKEN EDGE (architect 2026-10-06:
+// the list is the field inside the PLAIN SUNKEN edge, two relief lines a
+// side, relief_line_px each — the 2026-10-02 raised frame's own lines). Every
+// geometry below reads this and not the surface — the rows, the scroll
+// ceiling, the keep-visible walk, the painter's row-walk clip and row_at's
+// containment — so the edge is spelled here once and a row can never paint
+// over it or be pressed through it.
 inline GuiRect content_rect(const AppState& a) {
     const GuiRect s  = surface_rect(a);
     const int     lw = 2 * relief_line_px();

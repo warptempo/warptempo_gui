@@ -6837,11 +6837,14 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // monospace TEXT rows, at a line's pitch, were a second row class from
 // 2026-09-03 to 2026-09-30 and went with the panel.)
 //
-// THE BAND IS A RAISED PANEL AND ITS ROWS ARE WINDOWS' LIST ROWS (architect
-// 2026-10-02, the Windows-95 list): the ground inside the PLAIN RAISED edge
-// round the band, each row 17 Windows px with the roster's 16-px glyph
+// THE BAND IS WINDOWS 95'S LIST VIEW, A SUNKEN FIELD (architect 2026-10-06,
+// over the 2026-10-02 raised panel on the chrome ground — "like a file
+// explorer, not popping out like a rising bevel"): the theme's FIELD GROUND
+// inside the PLAIN SUNKEN two-line edge round the band (the dialog field's
+// and the well's edge), the names and the text-class glyph paths in the
+// FIELD TEXT, each row 17 Windows px with the roster's 16-px glyph
 // (folder_overlay.h's row box), and the faces Windows' list:
-//   a RESTING row         -> NO FILL AT ALL: the ground shows through
+//   a RESTING row         -> NO FILL AT ALL: the field shows through
 //   the HIGHLIGHT         -> a FLAT FILL in the theme's SELECTED PAIR, the
 //                            selection, which is also the list's keyboard
 //                            focus — ONE PAIR FOCUSED OR NOT (architect
@@ -6876,16 +6879,17 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     const AppState::RenderPlayer&  rp = app.render_player;
 
     cairo_save(cr);
-    // The band's ground and its PLAIN RAISED edge; then EVERYTHING ELSE UNDER
-    // THE CONTENT RECT'S CLIP, because a scrolled listing's first and last
-    // rows straddle the content's edges and must not paint into the waveform
-    // above, the bottom row below, or the band's own frame.
-    paint_cell_rect(cr, surf, palette().ground);
-    paint_relief_plain_raised(cr, surf);
+    // The band's FIELD and its PLAIN SUNKEN edge on the surface's outer two
+    // lines (the block above); then EVERYTHING ELSE UNDER THE CONTENT RECT'S
+    // CLIP, because a scrolled listing's first and last rows straddle the
+    // content's edges and must not paint into the waveform above, the bottom
+    // row below, or the band's own edge.
+    paint_cell_rect(cr, surf, palette().field_ground);
+    paint_relief_plain_sunken(cr, surf);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
-    // SAME RECT (folder_overlay.h) — the surface inside its frame — so paint
+    // SAME RECT (folder_overlay.h) — the surface inside its edge — so paint
     // and hit agree about every pixel at any scroll offset. The surface stays
-    // the ground, the damage and the band's outer claim.
+    // the field, the damage and the band's outer claim.
     const GuiRect content = folder_overlay::content_rect(app);
     cairo_rectangle(cr, content.x, content.y, content.w, content.h);
     cairo_clip(cr);
@@ -6925,7 +6929,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                                      ov.press.inside && !ov.press.scrolling;
             // THE FACE (the block above): LIT — the highlight, or a live
             // press arm promising it — is the flat selected fill; a row that
-            // is neither takes NO FILL and the band's ground shows through it.
+            // is neither takes NO FILL and the band's field shows through it.
             const bool lit = pressed || highlighted;
             if (lit) paint_cell_rect(cr, r, pal.selected_fill);
             // THE LIST'S FOCUS: the focus frame one line outside the
@@ -6957,7 +6961,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // fill's recorded pair, and a glyph inked in the label is chrome
             // text's sibling — the label-inked folder would vanish on a dark
             // selected fill as the name would). On a resting row it keeps its
-            // own inks. PART B, RULING 1 (architect 2026-10-05): the folder
+            // own inks, its text-class paths in the FIELD TEXT (architect
+            // 2026-10-06: the field's text, as the name; the label is the
+            // chrome's). PART B, RULING 1 (architect 2026-10-05): the folder
             // and wav rows are two of the four non-button Chicago95 picks —
             // no case here either, so draw_bitmap / draw_bitmap_in_ink blit
             // the whole picture at this row's own placement at a bitmap
@@ -6970,14 +6976,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                                          static_cast<double>(glyph),
                                          pal.selected_text);
             else
-                icons::draw_bitmap(cr, icon, static_cast<double>(gx),
-                                   static_cast<double>(gy),
-                                   static_cast<double>(glyph));
+                icons::draw_bitmap_on_text_ink(cr, icon, static_cast<double>(gx),
+                                               static_cast<double>(gy),
+                                               static_cast<double>(glyph),
+                                               pal.field_text);
             const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
-            // the theme's label on a resting row and the selected text on a
-            // lit one (the dropdown's rule).
+            // the field text on a resting row (architect 2026-10-06, the
+            // field pair) and the selected text on a lit one.
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
             // THE SEAT: a row is a box, so its label takes the box solver's
@@ -6993,7 +7000,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            set_palette_source(cr, lit ? pal.selected_text : pal.label);
+            set_palette_source(cr, lit ? pal.selected_text : pal.field_text);
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);
