@@ -1,6 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- History Walk: Breeze shallow-history, a clock face — black ring (diameter 13), white dial, one-unit hands at twelve and three: the MINUTE hand reaching the rim (y 2.5..8.5), the HOUR hand to about half the radius (x 7.5..11) — History View's hands by the same rule (architect 2026-10-06). -->
-  <path fill="#000000" d="M8,1.5 A6.5,6.5 0 0 1 8,14.5 A6.5,6.5 0 0 1 8,1.5 Z M8,2.5 A5.5,5.5 0 0 0 8,13.5 A5.5,5.5 0 0 0 8,2.5 Z"/>
-  <path fill="#FFFFFF" d="M8,2.5 A5.5,5.5 0 0 1 8,13.5 A5.5,5.5 0 0 1 8,2.5 Z"/>
-  <path fill="#000000" d="M7.5,2.5 H8.5 V8.5 H7.5 Z M7.5,7.5 H11 V8.5 H7.5 Z"/>
+  <!-- History Walk, candidate A (architect 2026-10-06: the two clocks one clock): the page family's sheet (black frame 13x15 at (1,0), white face, no title line) carrying HISTORY VIEW'S CLOCK byte for byte in shape — a black ring (diameter 7, one unit) at (4,4), white dial, the MINUTE hand up to twelve reaching the rim (x 7..8, y 5..8), the HOUR hand right to three one unit short (x 7..9, y 7..8) — the same dial, hands and weight as the folder's. -->
+  <path fill="#000000" d="M1,0 H14 V15 H1 Z"/>
+  <path fill="#FFFFFF" d="M2,1 H13 V14 H2 Z"/>
+  <path fill="#000000" d="M7.5,4 A3.5,3.5 0 0 1 7.5,11 A3.5,3.5 0 0 1 7.5,4 Z M7.5,5 A2.5,2.5 0 0 0 7.5,10 A2.5,2.5 0 0 0 7.5,5 Z"/>
+  <path fill="#FFFFFF" d="M7.5,5 A2.5,2.5 0 0 1 7.5,10 A2.5,2.5 0 0 1 7.5,5 Z"/>
+  <path fill="#000000" d="M7,5 H8 V8 H7 Z M7,7 H9 V8 H7 Z"/>
 </svg>

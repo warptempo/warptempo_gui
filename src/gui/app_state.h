@@ -2326,7 +2326,7 @@ enum class RedesignButton {
     // out ("we should card the exit, because it is still one button
     // automatically affecting the other"), and it is refused with the lock's
     // own card now. Its glyph is
-    // MusicNote16th, the music player (icons.h).
+    // MusicNote16th, the metronome (icons.h).
     //
     // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
@@ -2540,7 +2540,8 @@ enum class RedesignButton {
     //
     // The lamp lights AWAY FROM HOME, which is the collapse's own rule across
     // all three: Git is the walk's default reading, so the lamp is LIT IN
-    // SESSION and it wears the Session glyph, ShallowHistory's clock face.
+    // SESSION and it wears the Session glyph, ShallowHistory's clock on its
+    // sheet.
     //
     // It STANDS ONLY IN THE `h` VIEW since 2026-10-05 (the stand-ins) and
     // its arm still answers DEAD outside it, the same answer its neighbours
@@ -2973,7 +2974,7 @@ enum class RedesignButton {
     IconZoomOriginal,
     // SWITCH TAB (architect 2026-09-29), the group's last: CTRL+TAB, the
     // one-shot other-tab act, its table row carrying the ctrl, wearing
-    // TabDetach's two pages. It ADMITS SHIFT and nothing else: the shift-click
+    // TabDetach's two tabs. It ADMITS SHIFT and nothing else: the shift-click
     // and the long press OR the shift into the row's ctrl and dispatch
     // CTRL+SHIFT+TAB, the paired march (so the tab switch has two pointer
     // roads since the tab row's deletion on 2026-10-01: the walk's ctrl-click

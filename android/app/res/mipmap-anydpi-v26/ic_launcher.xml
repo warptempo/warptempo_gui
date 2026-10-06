@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture is the product's own scalable speaker,
+     recents card). Its picture is the product's own scalable sixteenth note,
      assets/icons/warptempo/AppIcon.svg, the drawing the caption wears
-     (architect 2026-10-06: Sound Recorder's isometric loudspeaker with three
-     straight rays), rasterised ANTIALIASED by rsvg-convert (librsvg 2.62 on
-     the laptop; a vector now, not pixel art) and centred on a transparent
-     canvas: no plate, no sheet grey, the drawing's own transparent corners
-     carrying through. An ADAPTIVE icon, the whole of it: minSdk is 30, so no
-     legacy ic_launcher.png set exists beside it.
+     (architect 2026-10-06: the note in silver), rasterised ANTIALIASED by
+     rsvg-convert (librsvg 2.62 on the laptop; a vector, not pixel art) and
+     centred over THE CAPTION'S NAVY GROUND, #000080 (2026-10-07): Windows
+     95's active caption colour, one of the twenty solids, the bar the note
+     lives on in the app — a silver note on a transparent canvas vanishes on a
+     light launcher, so the mask shows a navy shape carrying the note, the
+     caption in miniature. An ADAPTIVE icon, the whole of it: minSdk is 30, so
+     no legacy ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/, BOTH written by
      tools/app_icon/gen_app_icon.sh (which also writes the Linux desktop icon,
      packaging/warptempo_gui.svg, the same paths verbatim):
-       ic_launcher_background.png  fully transparent, the canvas size alone;
+       ic_launcher_background.png  the full 108 dp canvas in solid navy;
        ic_launcher_foreground.png  AppIcon.svg rendered at the 64 dp art size,
                                    centred on a transparent canvas of the
                                    density's full 108 dp.

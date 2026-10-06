@@ -714,8 +714,8 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     (the active or inactive start-to-end colours, paint_caption_gradient),
 //     nothing above or below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
-//     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's speaker
-//     (icons::draw);
+//     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's
+//     sixteenth note (icons::draw);
 //   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: Nimbus Sans
 //     Bold, the caption font being the body face in bold), its pen at x 20
 //     (two px past the icon) and its cap band centred in the lane (redesign_baseline), in

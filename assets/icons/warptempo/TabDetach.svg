@@ -1,7 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Switch Tab (the architect's pick B, 2026-10-06): the two tabs by their own names, A (7x6 at (1,1)) and B (6x6 at (9,9)), each sent to the other by a one-unit arrow; the letters in Zoom Original's figure one's bitmap idiom (architect 2026-10-06: aliased, no curves) — cap six, two-unit stems, one-unit bars, the A's apex three units wide, its shoulders held one unit clear of the arrow's shaft for two rows, its bar at row 5; the B's bowls squared with their corners knocked off, the lower bowl the taller. Ink 14x14 at (1,1). -->
-  <path fill="#000000" d="M3,1 H6 V2 H3 Z M2,2 H4 V4 H2 Z M5,2 H7 V4 H5 Z M1,4 H3 V5 H1 Z M6,4 H8 V5 H6 Z M1,5 H8 V6 H1 Z M1,6 H3 V7 H1 Z M6,6 H8 V7 H6 Z"/>
-  <path fill="#000000" d="M9,9 H14 V10 H9 Z M9,9 H11 V15 H9 Z M14,10 H15 V11 H14 Z M9,11 H14 V12 H9 Z M14,12 H15 V14 H14 Z M9,14 H14 V15 H9 Z"/>
-  <path fill="#000000" d="M8,3 H13 V4 H8 Z M13,2 L15,3.5 L13,5 Z"/>
-  <path fill="#000000" d="M3,12 H8 V13 H3 Z M3,14 L1,12.5 L3,11 Z"/>
+  <!-- Switch Tab (the architect's pick B, 2026-10-06: 'zoom in on two folder tabs'; the same height for both, 2026-10-06): a close-up of the folder family's tab — TWO TABS OVERLAPPING AS A TAB CONTROL'S, both three units tall (tops x 3..7 and x 10..14 at y 5, feet on the body's line at y 8) with the family's 45-degree slopes, grey outline, a white light row under the top, yellow faces: the front tab open into the body (its face runs over the body's grey line) and standing over the back tab, which the body's line closes off — the states differ by the line, not the height; the pair centred on the case (the tops' centres x 5 and 12). The body's line (y 8), white light row and yellow face run off the cell's bottom and sides, the feet at x 0 and 17 (the painter clips to the cell). Ink 16x11 at (0,5) by design. -->
+  <path fill="#808080" d="M0,8 H16 V9 H0 Z"/>
+  <path fill="#808080" d="M7,8 L10,5 L14,5 L17,8 Z"/>
+  <path fill="#FFFF00" d="M10,6 L14,6 L16,8 L8,8 Z"/>
+  <path fill="#FFFFFF" d="M10,6 H14 V7 H10 Z"/>
+  <path fill="#808080" d="M0,8 L3,5 L7,5 L10,8 Z"/>
+  <path fill="#FFFF00" d="M3,6 L7,6 L10,9 L0,9 Z"/>
+  <path fill="#FFFFFF" d="M0,9 H16 V10 H0 Z"/>
+  <path fill="#FFFF00" d="M0,10 H16 V16 H0 Z"/>
+  <path fill="#FFFFFF" d="M3,6 H7 V7 H3 Z"/>
 </svg>

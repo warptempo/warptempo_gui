@@ -709,7 +709,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // toolbar group, where it had stood between Redo and Render for the hours
     // of its first day. What it decides is whether an undo or redo may SWITCH
     // THE VIEW — the tab, the audio view or the marker column. It wears
-    // TimelineLift, the push-pin: the view pinned where it stands. It joins the group rather than opening one, so the move adds
+    // TimelineLift, the sheaf under its clip (icons.h): the view held where it stands. It joins the group rather than opening one, so the move adds
     // no box and no gap; what the same ruling took off the walk is one
     // separator, the view lamps' own.
     {RedesignButton::IconRestrictUndo, icons::Icon::TimelineLift},
@@ -722,7 +722,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // two boxes, one 2px gap and ONE separator, so the group count moves too
     // (the leader is IconBpm, redesign_button_opens_icon_group).
     //
-    // THE GLYPHS: MusicNote16th, the music player, for the BPM opener, and
+    // THE GLYPHS: MusicNote16th, the metronome, for the BPM opener, and
     // Mathmode, the grid, for the mode lamp (icons.h).
     {RedesignButton::IconBpm,  icons::Icon::MusicNote16th},
     {RedesignButton::IconIter, icons::Icon::Mathmode},
@@ -1323,8 +1323,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                            active ? pal.caption_active_gradient
                                   : pal.caption_inactive_gradient);
 
-    // THE APP'S ICON at (2, 1), 16 x 16: the set's speaker (icons.h), no
-    // case, at the caption's own placement.
+    // THE APP'S ICON at (2, 1), 16 x 16: the set's sixteenth note
+    // (icons.h), no case, at the caption's own placement.
     icons::draw(cr, icons::Icon::AppIcon,
                 static_cast<double>(row.x + scaled_px(kCaptionIconXPx)),
                 static_cast<double>(row.y + scaled_px(kCaptionIconYPx)),

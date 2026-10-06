@@ -92,8 +92,10 @@ enum class Icon {
     BlackSum,            // Toggle Cumulative (`u`) — the sigma
     GoJump,              // Toggle Follow (`f`) — an arrow crossing the
                          // view group's page
-    TimelineLift,        // Toggle Restrict Undo (`z`) — the push-pin
-    MusicNote16th,       // BPM Iterations (Ctrl+B) — the music player
+    TimelineLift,        // Toggle Restrict Undo (`z`) — the sheaf: the
+                         // page family's sheet and a second behind it
+                         // under a binder clip
+    MusicNote16th,       // BPM Iterations (Ctrl+B) — the metronome
     Mathmode,            // Toggle Grid Iterations (bare `i`) — the grid
     PreviewRenderOn,     // Play Renders — Media Player's window with a play
     DialogOkApply,       // Load in Place (the icon row and the render
@@ -101,7 +103,7 @@ enum class Icon {
     VcsDiff,             // Toggle History View (`h`) — Windows 98's
                          // History, the folder with the clock
     ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
-                         // the clock face
+                         // History View's clock on the page family's sheet
     EditSelect,          // Toggle Add to Selection — the pointer with a plus
     KeyframePrevious,    // Older checkpoint (`,`) — MediaSkipBackward's
     KeyframeNext,        // Newer checkpoint (`.`) — MediaSkipForward's
@@ -126,11 +128,13 @@ enum class Icon {
     // THE MARKER WALK AND THE TAB SWITCH.
     BboxPrev,            // Previous Marker (Shift+Tab) — GoPrevious's
     BboxNext,            // Next Marker (Tab) — GoNext's
-    TabDetach,           // Switch Tab (Ctrl+Tab) — the tabs A and B
-                         // swapped by arrows
+    TabDetach,           // Switch Tab (Ctrl+Tab) — two overlapping folder
+                         // tabs of one height, a close-up of the folder's
+                         // tab, the body cropped by the cell
     SettingsConfigure,   // Settings (bare `;`) — STD_PROPERTIES
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
-    Folder,              // a folder row — the shell's closed folder
+    Folder,              // a folder row — the shell's closed folder, its
+                         // tab angled
     AudioXWav,           // a wav row — the Wave Sound page
     // THE RENDER PLAYER'S ROW.
     MediaRepeatSingle,   // Toggle Repeat One — one glyph in both states,
@@ -145,7 +149,8 @@ enum class Icon {
     HelpWhatsthis,       // Toggle Tooltips (bare backslash) — STD_HELP
     GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J) — the jump arc
     EditDelete,          // Delete Folder (the render player) — STD_DELETE
-    AppIcon,             // the caption's icon — Sound Recorder's speaker
+    AppIcon,             // the caption's icon and the program icon — the
+                         // sixteenth note, in silver
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
@@ -176,7 +181,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // drew that mask; here it is the union of the drawing's paths whose fill is
 // neither White nor Silver, the White and Silver paths cutting it in file
 // order — so a layered drawing (a black silhouette with white and silver
-// insets: the pages, the padlocks, the music player) keeps its outlines and
+// insets: the pages, the padlocks, the metronome) keeps its outlines and
 // insets dead, never a grey slab. THE GLYPH HALF OF THE DISABLED EMBOSS and
 // the set's one disabled face (architect 2026-10-03; the word half is
 // show_embossed_run, render.h, the rule at the palette block). Same square,
