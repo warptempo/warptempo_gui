@@ -1766,14 +1766,14 @@ const char* const kChicago95Files[kChicago95FileCount] = {
 
 namespace {
 
-// ONE ICON, DECODED: the surface cairo's own PNG reader built (16 x 16,
-// ARGB32 or RGB24 — a file with no alpha channel decodes RGB24, every pixel
-// opaque) and its ink box in icon px — L/T/R/B, the opaque margins
-// mapping.md's columns document, computed HERE FROM THE ALPHA CHANNEL AND
-// NOWHERE ELSE (ruling 2: "one function, no hand table" — a PNG's own pixels
-// are its ink box's one source, so a transcription of that box into a
-// second, hand-kept table cannot drift from the picture it describes). An
-// RGB24 file carries no alpha to read, so its ink box is the whole square.
+// ONE ICON, INSTALLED: its own cairo ARGB32 surface (16 x 16, this
+// function's one allocation, the decoded pixels copied in — icons.h's
+// Chicago95Pixels head) and its ink box in icon px — L/T/R/B, the opaque
+// margins mapping.md's columns document, computed HERE FROM THE ALPHA
+// CHANNEL AND NOWHERE ELSE (ruling 2: "one function, no hand table" — a
+// PNG's own pixels are its ink box's one source, so a transcription of that
+// box into a second, hand-kept table cannot drift from the picture it
+// describes).
 struct Chicago95Icon {
     cairo_surface_t* surface = nullptr;
     int w = 0, h = 0;         // always 16 x 16 for an installed icon
@@ -1873,77 +1873,64 @@ const Chicago95Icon* chicago95_for(Icon icon) {
 
 } // namespace
 
-bool install_chicago95_bitmaps(const Chicago95Bytes (&files)[kChicago95FileCount]) {
+bool install_chicago95_bitmaps(const Chicago95Pixels (&files)[kChicago95FileCount]) {
     bool ok = true;
     for (std::size_t i = 0; i < kChicago95FileCount; ++i) {
-        struct Reader { const uint8_t* p; size_t left; };
-        Reader reader{files[i].data, files[i].len};
-        cairo_surface_t* surf = cairo_image_surface_create_from_png_stream(
-            [](void* closure, unsigned char* data, unsigned int length) {
-                Reader* r = static_cast<Reader*>(closure);
-                if (length > r->left) return CAIRO_STATUS_READ_ERROR;
-                std::memcpy(data, r->p, length);
-                r->p += length;
-                r->left -= length;
-                return CAIRO_STATUS_SUCCESS;
-            },
-            &reader);
-        const int w = cairo_image_surface_get_width(surf);
-        const int h = cairo_image_surface_get_height(surf);
-        const cairo_format_t fmt = cairo_image_surface_get_format(surf);
-        // RGB24 IS ADMITTED BESIDE ARGB32 (architect 2026-10-05, after the
-        // launch check caught music-player.png): a PNG with no alpha
-        // channel at all decodes to cairo's CAIRO_FORMAT_RGB24, every pixel
-        // opaque by construction — tmp/icon_mock/compose.py's own road,
-        // which reads every file through `magick ... rgba:-`, a conversion
-        // that fills a missing alpha channel with 255 rather than refusing
-        // the file. RGB24's own top byte is UNDEFINED (cairo's own
-        // contract), so it is never read as an alpha value below; the ink
-        // box for an RGB24 icon is the whole 16 x 16 square, matching
-        // mapping.md's recorded box for music-player (16x16, L0 T0 R0 B0).
-        if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS || w != 16 ||
-            h != 16 ||
-            (fmt != CAIRO_FORMAT_ARGB32 && fmt != CAIRO_FORMAT_RGB24)) {
+        if (!files[i].argb32) {
             std::fprintf(stderr,
-                         "icons: Chicago95 icon \"%s\" did not decode as a "
-                         "16x16 ARGB32 or RGB24 PNG\n",
+                         "icons: Chicago95 icon \"%s\" decoded to no pixels\n",
+                         kChicago95Files[i]);
+            ok = false;
+            continue;
+        }
+        // THE ICON'S OWN SURFACE, the pixels COPIED into cairo's own
+        // allocation: cairo_image_surface_create's stride for a 16-wide
+        // ARGB32 surface is exactly 16 * 4 (already a multiple of cairo's
+        // 4-byte row alignment), so one memcpy covers the whole picture.
+        cairo_surface_t* surf =
+            cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 16, 16);
+        if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
+            std::fprintf(stderr,
+                         "icons: Chicago95 icon \"%s\" surface allocation "
+                         "failed\n",
                          kChicago95Files[i]);
             cairo_surface_destroy(surf);
             ok = false;
             continue;
         }
-        int l = 0, t = 0, r = 15, b = 15;
-        if (fmt == CAIRO_FORMAT_ARGB32) {
-            cairo_surface_flush(surf);
-            const uint8_t* data = cairo_image_surface_get_data(surf);
-            const int stride = cairo_image_surface_get_stride(surf);
-            // THE INK BOX, FROM THE ALPHA CHANNEL ALONE (ruling 2's one
-            // function): ARGB32 is premultiplied, native-endian, so the
-            // alpha byte of pixel (x, y) is the top byte of its 32-bit word
-            // on this little-endian target. >= 128 matches the Breeze
-            // glyphs' own "opaque enough to count" threshold
-            // (icon_paths_valid's sibling rule has no such test — a filled
-            // vector path has no partial pixels to threshold — so this is
-            // the one new predicate the bitmap pass needed).
-            l = 16; t = 16; r = -1; b = -1;
-            for (int y = 0; y < 16; ++y) {
-                const uint32_t* row =
-                    reinterpret_cast<const uint32_t*>(data + y * stride);
-                for (int x = 0; x < 16; ++x) {
-                    if (((row[x] >> 24) & 0xFF) < 128) continue;
-                    l = std::min(l, x); r = std::max(r, x);
-                    t = std::min(t, y); b = std::max(b, y);
-                }
+        std::memcpy(cairo_image_surface_get_data(surf), files[i].argb32,
+                    kChicago95PixelBytes);
+        cairo_surface_mark_dirty(surf);
+        const uint8_t* data = cairo_image_surface_get_data(surf);
+        // THE INK BOX, FROM THE ALPHA CHANNEL ALONE (ruling 2's one
+        // function): ARGB32 is premultiplied, native-endian, so the alpha
+        // byte of pixel (x, y) is the top byte of its 32-bit word on this
+        // little-endian target. >= 128 matches the Breeze glyphs' own
+        // "opaque enough to count" threshold (icon_paths_valid's sibling
+        // rule has no such test — a filled vector path has no partial
+        // pixels to threshold — so this is the one new predicate the
+        // bitmap pass needed). A source PNG with no alpha channel at all
+        // (music-player.png) normalizes to full alpha at every pixel
+        // upstream of this call (icons.h's Chicago95Pixels head), so its
+        // ink box comes out the whole 16 x 16 square with no special case
+        // here — mapping.md's own recorded row.
+        int l = 16, t = 16, r = -1, b = -1;
+        for (int y = 0; y < 16; ++y) {
+            const uint32_t* row =
+                reinterpret_cast<const uint32_t*>(data + y * 16 * 4);
+            for (int x = 0; x < 16; ++x) {
+                if (((row[x] >> 24) & 0xFF) < 128) continue;
+                l = std::min(l, x); r = std::max(r, x);
+                t = std::min(t, y); b = std::max(b, y);
             }
-            if (r < 0) {
-                std::fprintf(stderr,
-                             "icons: Chicago95 icon \"%s\" has no opaque "
-                             "pixel\n",
-                             kChicago95Files[i]);
-                cairo_surface_destroy(surf);
-                ok = false;
-                continue;
-            }
+        }
+        if (r < 0) {
+            std::fprintf(stderr,
+                         "icons: Chicago95 icon \"%s\" has no opaque pixel\n",
+                         kChicago95Files[i]);
+            cairo_surface_destroy(surf);
+            ok = false;
+            continue;
         }
         g_chicago95[i] = Chicago95Icon{surf, 16, 16, l, t, r - l + 1, b - t + 1};
     }

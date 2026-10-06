@@ -588,27 +588,69 @@ void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
 // the inventory; kChicago95Files lists its basenames, no extension, THE
 // LAPTOP'S CONFIGURE-TIME GLOB'S OWN ORDER, same contract as
 // kGuiFontFiles — see gui_font.h's head for why the order is shared between
-// the two backends' install calls). The bytes are COPIED, like the fonts':
-// the caller may free or unmap them the moment this returns.
+// the two backends' install calls).
+inline constexpr std::size_t kChicago95FileCount = 51;
+extern const char* const kChicago95Files[kChicago95FileCount];
+
+// A DECODED ICON, both backends' common currency (architect 2026-10-05,
+// after the APK build caught the gap: Android's cairo is built with
+// -Dpng=disabled, android/deps/50_cairo.sh's own choice, so cairo's PNG
+// stream reader cannot appear in any TU the Android target compiles, and
+// icons.cpp IS one — WARPTEMPO_GUI_SOURCES is shared). Sixteen Windows px
+// square, cairo's own ARGB32 layout: PREMULTIPLIED, 32-bit words, native-
+// endian (0xAARRGGBB — on this little-endian target, bytes B, G, R, A in
+// memory order), no padding (stride exactly 16 * 4). Each backend's own
+// decoder is responsible for landing in exactly this shape — a source PNG
+// with no alpha channel normalizes to it fully opaque (alpha 255 at every
+// pixel), which is music-player.png's case and why its ink box is the whole
+// 16 x 16 square (mapping.md's own recorded row).
+struct Chicago95Pixels {
+    const uint8_t* argb32 = nullptr; // kChicago95PixelBytes bytes
+};
+inline constexpr std::size_t kChicago95PixelBytes = 16 * 16 * 4;
+
+// THE ONE SHARED INSTALL, decoded pixels in: builds each icon's OWN cairo
+// ARGB32 surface (the bytes above COPIED into it — the fonts' own lifetime
+// contract, the caller may free its buffer the moment this returns) and
+// computes its ink box FROM THE ALPHA CHANNEL ALONE (ruling 2's "one
+// function, no hand table"). BREACH-ONLY, the fonts' own contract
+// (gui_font_install_bundled): the files are the repository's own, so a
+// decode failure upstream of this call is a build defect, and this call's
+// own failure (no opaque pixel) is one too.
+bool install_chicago95_bitmaps(const Chicago95Pixels (&files)[kChicago95FileCount]);
+
+// THE FIVE-FILES' RAW BYTES, Chicago95's own: one PNG per distinct picture,
+// as committed (assets/icons/chicago95/16/<name>.png), UNDECODED — each
+// backend decodes its own copy, below. The bytes are COPIED, like the
+// fonts': the caller may free or unmap them the moment the decode call
+// returns.
 struct Chicago95Bytes {
     const uint8_t* data = nullptr;
     size_t         len  = 0;
 };
-inline constexpr std::size_t kChicago95FileCount = 51;
-extern const char* const kChicago95Files[kChicago95FileCount];
-
-// Decodes every file (cairo's own PNG reader, already linked for nothing
-// else until now) and computes each one's ink box once. BREACH-ONLY: the
-// files are the repository's own committed PNGs, so a decode failure (a
-// malformed PNG, or one that is not 16 x 16) is a build defect, not a
-// runtime state, and the return says so for the caller to die on — the
-// fonts' own install contract (gui_font_install_bundled).
-bool install_chicago95_bitmaps(const Chicago95Bytes (&files)[kChicago95FileCount]);
 
 // THE LINUX BINARY'S COPY, in kChicago95Files' order, defined by
 // icons_chicago95_embedded.cpp (generated at configure time, CMakeLists.txt
 // — the fonts' own mechanism, gui_font_embedded.cpp's). The APK carries the
-// same files as assets instead (android/app/build_apk.sh).
+// same files as assets instead (android/app/build_apk.sh), decoded by
+// platform_android.cpp's own road (AImageDecoder, below).
 extern const Chicago95Bytes chicago95_embedded_files[kChicago95FileCount];
+
+// THE LINUX DECODE, cairo's own PNG stream reader — THE ONE CALLER OF IT IN
+// THIS PRODUCT, and the reason it lives in icons_chicago95_decode_linux.cpp
+// rather than icons.cpp: that reader is unavailable on Android's cairo
+// build (its header comment, above), so no TU the Android target compiles
+// may name it, and icons.cpp is compiled into both. Each PNG decodes to
+// whatever format cairo's loader picks (ARGB32 for one with an alpha
+// channel, RGB24 — no alpha at all — for music-player.png) and is then
+// NORMALIZED to ARGB32 by painting it onto a fresh transparent ARGB32
+// canvas (an opaque RGB24 source paints OVER at alpha 255 throughout), so
+// install_chicago95_bitmaps above is handed exactly one pixel shape
+// regardless of which format a source PNG triggers. Declared here (a
+// platform-neutral header) but DEFINED ONLY IN THE LINUX TARGET; the one
+// caller is platform_wayland.cpp's GuiPlatform::init, which is itself
+// Linux-only, so there is no Android link-time reference to resolve.
+bool install_chicago95_bitmaps_from_png_linux(
+    const Chicago95Bytes (&files)[kChicago95FileCount]);
 
 } // namespace icons

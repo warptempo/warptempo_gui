@@ -5,8 +5,10 @@
 #include "icons.h"
 
 #include <android/asset_manager.h>
+#include <android/bitmap.h>
 #include <android/configuration.h>
 #include <android/data_space.h>
+#include <android/imagedecoder.h>
 #include <android/input.h>
 #include <android/log.h>
 #include <android/looper.h>
@@ -2491,9 +2493,25 @@ void install_fonts_or_die(android_app* app) {
 // 2026-10-05, the icon pass): install_fonts_or_die's own contract and shape,
 // for icons::kChicago95Files (in its order) under the package's
 // icons/chicago95/16/ (build_apk.sh's asset step copies them there). A
-// missing or unreadable asset is a BUILD defect exactly as a missing font
-// is — the packaging step puts every file in — so this aborts rather than
-// painting a bitmap scale with a hole in its roster.
+// missing, unreadable or malformed asset is a BUILD defect exactly as a
+// missing font is — the packaging step puts every file in — so this aborts
+// rather than painting a bitmap scale with a hole in its roster.
+//
+// THIS BACKEND DECODES ITS OWN PNGS (architect 2026-10-05, after the APK
+// build caught the gap left by the first pass, which called cairo's PNG
+// stream reader from icons.cpp — a TU both backends compile — and the
+// Android cairo build carries no PNG reader at all, android/deps/
+// 50_cairo.sh's -Dpng=disabled): the NDK's AImageDecoder
+// (<android/imagedecoder.h>, API 30 — this product's own floor, so no
+// version guard is needed), decoding straight out of each AAsset's mapped
+// buffer into RGBA_8888, PREMULTIPLIED (AImageDecoder's own default — it is
+// cairo's own requirement too, so nothing here asks it to change). RGBA_8888
+// and cairo's ARGB32 hold the same four bytes per pixel in a DIFFERENT
+// ORDER: RGBA_8888 is R, G, B, A in memory; ARGB32 (native-endian 32-bit
+// words, this a little-endian target) is B, G, R, A — so R and B swap below
+// and G/A stand. icons::install_chicago95_bitmaps (icons.cpp, the one
+// shared owner) is handed exactly the pixel shape
+// icons_chicago95_decode_linux.cpp's cairo road hands it on the laptop.
 void install_chicago95_bitmaps_or_die(android_app* app) {
     AAssetManager* mgr = app->activity ? app->activity->assetManager : nullptr;
     if (!mgr) {
@@ -2502,27 +2520,72 @@ void install_chicago95_bitmaps_or_die(android_app* app) {
         abort();
     }
 
-    AAsset*              assets[icons::kChicago95FileCount] = {};
-    icons::Chicago95Bytes files[icons::kChicago95FileCount];
+    // Owns every decoded icon's bytes until install_chicago95_bitmaps has
+    // copied them (its own lifetime contract, icons.h): one vector, sized
+    // once, each icon's slice handed out by pointer below.
+    std::vector<uint8_t> storage(icons::kChicago95FileCount *
+                                 icons::kChicago95PixelBytes);
+    icons::Chicago95Pixels pixels[icons::kChicago95FileCount];
+
     for (std::size_t i = 0; i < icons::kChicago95FileCount; ++i) {
         const std::string path =
             std::string("icons/chicago95/16/") + icons::kChicago95Files[i] + ".png";
-        assets[i] = AAssetManager_open(mgr, path.c_str(), AASSET_MODE_BUFFER);
-        files[i].data =
-            assets[i] ? static_cast<const uint8_t*>(AAsset_getBuffer(assets[i]))
-                      : nullptr;
-        files[i].len =
-            assets[i] ? static_cast<size_t>(AAsset_getLength(assets[i])) : 0;
-        if (!files[i].data || files[i].len == 0) {
+        AAsset* asset = AAssetManager_open(mgr, path.c_str(), AASSET_MODE_BUFFER);
+        const void* buf = asset ? AAsset_getBuffer(asset) : nullptr;
+        const size_t len = asset ? static_cast<size_t>(AAsset_getLength(asset)) : 0;
+        if (!buf || len == 0) {
             __android_log_print(ANDROID_LOG_FATAL, kLogTag,
                                 "bundled icon asset %s is missing or empty",
                                 path.c_str());
             abort();
         }
+        AImageDecoder* decoder = nullptr;
+        int rc = AImageDecoder_createFromBuffer(buf, len, &decoder);
+        if (rc != ANDROID_IMAGE_DECODER_SUCCESS || !decoder) {
+            __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                                "icon asset %s: AImageDecoder_createFromBuffer "
+                                "failed (%d)",
+                                path.c_str(), rc);
+            abort();
+        }
+        const AImageDecoderHeaderInfo* info = AImageDecoder_getHeaderInfo(decoder);
+        const int32_t w = AImageDecoderHeaderInfo_getWidth(info);
+        const int32_t h = AImageDecoderHeaderInfo_getHeight(info);
+        if (w != 16 || h != 16) {
+            __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                                "icon asset %s decoded as %dx%d, not 16x16",
+                                path.c_str(), w, h);
+            abort();
+        }
+        AImageDecoder_setAndroidBitmapFormat(decoder, ANDROID_BITMAP_FORMAT_RGBA_8888);
+        const size_t stride = AImageDecoder_getMinimumStride(decoder);
+        std::vector<uint8_t> raw(stride * 16);
+        rc = AImageDecoder_decodeImage(decoder, raw.data(), stride, raw.size());
+        AImageDecoder_delete(decoder);
+        AAsset_close(asset);
+        if (rc != ANDROID_IMAGE_DECODER_SUCCESS) {
+            __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                                "icon asset %s: AImageDecoder_decodeImage "
+                                "failed (%d)",
+                                path.c_str(), rc);
+            abort();
+        }
+        uint8_t* out = &storage[i * icons::kChicago95PixelBytes];
+        for (int y = 0; y < 16; ++y) {
+            const uint8_t* row = raw.data() + y * stride;
+            for (int x = 0; x < 16; ++x) {
+                const uint8_t* px = row + x * 4; // R, G, B, A
+                uint8_t* o = out + (y * 16 + x) * 4; // B, G, R, A (ARGB32)
+                o[0] = px[2];
+                o[1] = px[1];
+                o[2] = px[0];
+                o[3] = px[3];
+            }
+        }
+        pixels[i].argb32 = out;
     }
 
-    const bool installed = icons::install_chicago95_bitmaps(files);
-    for (AAsset* a : assets) AAsset_close(a);
+    const bool installed = icons::install_chicago95_bitmaps(pixels);
     if (!installed) {
         __android_log_write(ANDROID_LOG_FATAL, kLogTag,
                             "Chicago95 icon bitmaps did not install; refusing "

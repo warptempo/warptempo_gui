@@ -354,6 +354,13 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         # and --no-undefined turns its absence into the build failure it should
         # be rather than a launch-time surprise.
         nativewindow
+        # libjnigraphics: AImageDecoder's own library (architect 2026-10-05,
+        # the icon pass's Android decode, platform_android.cpp's
+        # install_chicago95_bitmaps_or_die) — <android/imagedecoder.h>'s
+        # every symbol lives here, not in libandroid, and --no-undefined
+        # would otherwise turn its absence into a launch-time surprise
+        # exactly as nativewindow's own comment above describes.
+        jnigraphics
         log
         m
         dl
@@ -498,6 +505,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         src/gui/playback.cpp
         src/gui/gui_font_embedded.cpp
         src/gui/icons_chicago95_embedded.cpp
+        src/gui/icons_chicago95_decode_linux.cpp
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}

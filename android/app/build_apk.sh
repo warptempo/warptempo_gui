@@ -250,9 +250,14 @@ wt_say "VERIFY 4/5 -- DT_NEEDED is exactly the NDK stable-ABI set (nothing that 
 # records how it was measured): an extra entry or a missing one fails the
 # build. libnativewindow is in it since the frame-rate pin
 # (ANativeWindow_setFrameRate lives there, not in libandroid); the git stack
-# added nothing, zlib being libgit2's bundled copy.
+# added nothing, zlib being libgit2's bundled copy. libjnigraphics joined
+# 2026-10-05 (the icon pass's Android PNG decode, platform_android.cpp's
+# install_chicago95_bitmaps_or_die): every <android/imagedecoder.h> symbol
+# lives there, not in libandroid -- the NDK's own stable-ABI library for it,
+# same footing as libnativewindow above.
 wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" \
-    libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so liblog.so \
+    libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so \
+    libjnigraphics.so liblog.so \
     || wt_die "DT_NEEDED of $LIBNAME is not the allowlist (above)"
 "$READELF" -d "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -E "SONAME" || true
 
