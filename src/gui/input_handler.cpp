@@ -103,6 +103,14 @@ struct HeldRepeatDispatchScope {
     }
 };
 
+// A body run at every return of the scope it is declared in (on_key's
+// modal-tooltip end below, whose body's many early returns are the reason).
+template <typename F>
+struct AtScopeExit {
+    F f;
+    ~AtScopeExit() { f(); }
+};
+
 } // namespace
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
@@ -122,20 +130,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
     // (the same clear at its own entry).
     app.double_click = DoubleClickCandidate{};
-    // ANY KEY PRESS IS THE HOVER TOOLTIP'S HARD END, the keyboard half of the
-    // rule the pointer press and the wheel already carry: the hint says what
-    // the button under the pointer would do, and once the user has acted — by
-    // any means — it is stale advice left floating. (Qt hides it at a key on
-    // macOS alone and lets it age out on Linux; here it goes on both devices,
-    // architect 2026-09-29, because a key may raise a card or a modal under
-    // the box.) It is what keeps a hint from standing over a MODAL the key
-    // just opened, advertising a chord that modal's gate now swallows, and it
-    // covers the reverse timing too by stopping the wait, so a wait still
-    // counting when `;` opened the settings editor never comes due. (The
-    // tooltip cannot come BACK under that modal: the roster walk refuses to
-    // start a wait while a prompt or a keyboard-modal editor is up — the rule
-    // is at recompute_redesign_button_hover.)
-    hide_shift_tooltip();
+    // KEYS DO NOT HIDE THE HOVER TOOLTIP (architect 2026-10-06, Windows 95's
+    // tooltip control, which processes mouse messages alone — the model is at
+    // AppState::RedesignTooltip): a hint standing while the user types stays.
+    // A KEY THAT RAISES A MODAL TAKES A ROSTER HINT DOWN WITH IT, at every
+    // return of this body: Windows shows a tooltip only while its window is
+    // active, and a modal takes the activation. The test is the roster walk's
+    // own no-wait rule (tooltip_dwell_suppressed — a prompt, a keyboard-modal
+    // editor, the render player, the picker), asked after the key has run,
+    // so a hint never stands over the modal the key just opened, advertising
+    // a chord that modal's gate now swallows, for the frames before the
+    // tick's walk would find no owner (the walk then also stops a wait still
+    // counting, so it never comes due under the modal). A DIALOG owner needs
+    // no term: a surface raised over its row replaces the stash, and the
+    // painter refuses a box whose stamp differs (paint_shift_tooltip).
+    const AtScopeExit modal_tooltip_end{[this] {
+        const AppState::RedesignTooltip& t = app.redesign_tooltip;
+        if (t.visible &&
+            t.owner.surface == AppState::RedesignTooltip::Surface::Roster &&
+            tooltip_dwell_suppressed())
+            hide_shift_tooltip();
+    }};
     // (THE HELD ARROW BUTTONS' REPEAT BURST is NOT disarmed here, and its
     // key-press disarm deliberately does not live in this body: since the
     // burst's own fires dispatch THROUGH on_key — the tick's opener goes out

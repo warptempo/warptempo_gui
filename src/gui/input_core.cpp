@@ -588,7 +588,7 @@ void GuiInputCore::pointer_enter(double x, double y) {
     deliver_motion(pointer_x_, pointer_y_);
 }
 
-void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
+void GuiInputCore::pointer_leave() {
     pointer_focused_ = false;
     // Fire the leave hook: no motion arrives WHILE the pointer stays outside, so
     // without this a redesigned row's button would keep its lit face for that
@@ -666,8 +666,9 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // OrdinaryLeave is the argument, the same reason the capability loss
     // passes (architect 2026-10-01): the stream continues here, but no
     // consumer keeps anything across either edge. The Android pen's hover
-    // ending passes PenHoverEnd instead (the enum carries the rule).
-    if (pointer_left_hook_) pointer_left_hook_(reason);
+    // ending is the same leave (the enum carries the rule).
+    if (pointer_left_hook_)
+        pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because
     // a drag that briefly skids outside the surface and returns

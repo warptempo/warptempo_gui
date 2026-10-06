@@ -2475,7 +2475,7 @@ enum class RedesignButton {
     // (note_tooltip_hover) keeps its state clear and starts no wait, so the
     // roster, the modal row and the render player's row never raise a hint
     // (GuiInputHandler::set_show_tooltips puts a standing box down at the dark
-    // edge). Lit, the model is Qt's QToolTip exactly as before. It is chrome,
+    // edge). Lit, the model runs as AppState::RedesignTooltip states it. It is chrome,
     // not authoring: LIVE on a locked tab, under the grid-iterations lock and
     // in the `h` view (bare backslash is on all three allowlists), so it greys
     // only with the WHOLE ROSTER at redesign_button_enabled's head gates — no
@@ -3834,8 +3834,8 @@ inline int double_click_slack_px() {
 //
 // THE HOLD HAS NO VISUAL ANNOUNCEMENT (architect 2026-09-29): nothing on
 // screen marks the moment it is crossed. The hover tooltip reads neither this
-// value nor the beat, and no tooltip rises under a held press at all (Qt's
-// model, AppState::RedesignTooltip); the ruling's home is the read site.
+// value nor the beat, and no tooltip rises under a held press at all
+// (AppState::RedesignTooltip); the ruling's home is the read site.
 //
 // A NAMED READER OF THE ONE CONSTANT: the three read sites say which hold
 // they measure while the value itself has one owner (kHoldDelayMs,
@@ -6780,8 +6780,8 @@ struct AppState {
     // dispatch rather than two dispatches. The
     // elapsed span is measured at the RELEASE, so nothing polls and nothing
     // ticks FOR THE HOLD, and nothing on screen marks the crossing: a held
-    // press raises no tooltip (Qt's model, architect 2026-09-29 — the rule is
-    // at AppState::RedesignTooltip).
+    // press raises no tooltip (architect 2026-09-29 — the rule is at
+    // AppState::RedesignTooltip).
     // The rule is stated at the read sites (finish_chrome_press_release,
     // finish_notification_release).
     //
@@ -6906,39 +6906,46 @@ struct AppState {
     ChromePress chrome_press;
 
     // THE HOVER TOOLTIP — THE WHOLE OF ITS STATE, AND THE MODEL'S ONE STATEMENT.
-    // THE MODEL IS QT'S QToolTip (architect 2026-09-29), kdenlive's toolbar's
-    // own; the numbers are at render.h's tooltip block, hard-coded:
-    //   * THE WAIT (Qt's wake-up) counts from STILLNESS WITH HYSTERESIS: it is
-    //     anchored where the pointer stood and restarts only when a motion
-    //     carries it MORE than the hover slop from that anchor on either axis
-    //     (re-anchoring there) or onto another tooltip-bearing button, so a
-    //     hovering pen's jitter cannot starve it. It runs kTooltipWakeUpMs
-    //     (700), or kTooltipAwakeWakeUpMs (20) while the product is AWAKE —
-    //     the delay chosen when the wait starts, as Qt's is. A change of owner
-    //     with no motion (a relayout, a key making a tab hoverable, a surface
-    //     closing under a resting pointer) re-anchors and starts nothing: Qt
-    //     wakes on motion alone.
-    //   * THE SHOW: the wait ripening shows its button's hint — reusing a
-    //     standing box IN PLACE when one is up (the neighbour's hint takes the
-    //     box over with no hide frame, Qt's reuseTip), or re-showing the same
-    //     hint unchanged — and every show or re-show opens the AWAKE WINDOW
-    //     (kTooltipFallAsleepMs, 2000) and restarts the box's EXPIRY
-    //     (kTooltipExpireMs, 10 s).
-    //   * A SOFT END keeps the box up for the HIDE GRACE (kTooltipHideGraceMs,
-    //     300), started once: the pointer leaving the box's button (into a gap
-    //     or onto a neighbour) and the pen leaving the plane (PenHoverEnd).
-    //     The pointer coming back to the box's own button cancels the grace; a
-    //     neighbour's ripened wait takes the box over; otherwise the grace runs
-    //     out and the box goes down while the awake window runs on.
-    //   * A HARD END hides at once and puts the product to sleep: any pointer
-    //     press, any key press, any wheel, a menu opening (the dropdown's open
-    //     edge), a modal opening with no key or press to carry it (the
-    //     compositor close), the pointer leaving the window (the ordinary
-    //     leave and capability loss), the window's activation flipping either
-    //     way (focus loss or gain, Qt's WindowDeactivate / WindowActivate),
-    //     and a dialog owner whose surface closed or was replaced. The pointer still
-    //     resting on the button re-arms nothing: only a motion past the slop
-    //     does.
+    // THE MODEL IS WINDOWS 95's TOOLTIP CONTROL (architect 2026-10-06):
+    // comctl32's TTM_SETDELAYTIME
+    // defaults, the Windows Interface Guidelines' rules for it, and "About
+    // Tooltip Controls"' hide list; the numbers are at render.h's tooltip
+    // block, hard-coded:
+    //   * THE WAIT (TTDT_INITIAL, kTooltipInitialMs, 500) counts from
+    //     STILLNESS WITH HYSTERESIS: it is anchored where the pointer stood
+    //     and restarts only when a motion carries it MORE than the hover slop
+    //     from that anchor on either axis (re-anchoring there), so a hovering
+    //     pen's jitter cannot starve it — the slop a recorded departure
+    //     (windows95_deviations.md). A change of owner with no motion (a
+    //     relayout, a surface closing under a resting pointer) re-anchors and
+    //     starts nothing: the wait is a resting pointer's.
+    //   * THE RESHOW (TTDT_RESHOW, kTooltipReshowMs, 100): an ARRIVAL with
+    //     motion STRAIGHT FROM ONE TOOLTIP-BEARING BUTTON ONTO ANOTHER waits
+    //     this instead, once a hint has shown since the pointer last stood on
+    //     no button — `reshow`, set by every show, cleared by a gap of no
+    //     button and by every hard end. Any other start waits the full 500.
+    //   * THE SHOW: the wait ripening shows its button's hint, the box SEATED
+    //     UNDER THE POINTER as it stands at that moment (`shown_x/y`;
+    //     tooltip_box_rect, app_state.h, the placement's one statement), and
+    //     starts its LIFE (TTDT_AUTOPOP, kTooltipAutoPopMs, 5000): a box
+    //     standing that long goes down. A motion past the slop on the box's
+    //     own button restarts the life, re-anchoring, and moves nothing.
+    //   * LEAVING THE BUTTON HIDES AT ONCE: the walk handing in any other
+    //     owner, or none, takes a standing box down in that same call (no
+    //     grace) — onto a neighbour, its wait then starting at the reshow.
+    //   * A HARD END hides at once and clears `reshow`: any pointer press or
+    //     release (a click hides the hint), any wheel (Windows 95 had none;
+    //     the dismissal stands), a menu opening (the dropdown's open edge), a
+    //     modal opening with no press to carry it (the compositor close), the
+    //     pointer leaving the window or the pen's hover leaving the plane
+    //     (both leaving the tool), the window's activation flipping either way
+    //     (Windows shows a tooltip only while its window is active), and a
+    //     dialog owner whose surface closed or was replaced. KEYS DO NOT HIDE
+    //     IT: the tooltip control processes mouse messages alone
+    //     (TTM_RELAYEVENT). A key that raises a modal takes it down through
+    //     the roster walk, which finds no owner under one (the no-wait rule at
+    //     recompute_redesign_button_hover). The pointer still resting on the
+    //     button re-arms nothing: only a motion past the slop does.
     //   * NO TOOLTIP UNDER A HELD PRESS, on both devices: while the logical
     //     primary button is held (the physical left, bare `e`'s synthesized
     //     hold, a finger or the pen in contact) no wait starts, the anchor
@@ -6955,13 +6962,14 @@ struct AppState {
     //     a re-entry farther than the slop, or onto another button, is a
     //     motion. Every other leave forgets them.
     // No timer object and no callback: GuiInputHandler::tick_tooltip reads the
-    // three deadlines on the run loop's existing tick and damages once per edge;
+    // two deadlines on the run loop's existing tick and damages once per edge;
     // note_tooltip_hover is the one writer of the wait.
     //
     // THE BOX: `owner` is the button whose hint is painted, `visible` is what
     // the painter draws, `rect` the painter's published box (damage only —
-    // nothing hit-tests a tooltip), `grace_due_ms` the hide grace's deadline
-    // and `expire_due_ms` the expiry's (0 = not running). `rect` and the
+    // nothing hit-tests a tooltip), `shown_x/y` the pointer at the show (the
+    // box's seat) and `expire_due_ms` the life's deadline (0 = not running).
+    // `rect` and the
     // two `painted_line` strings are AS PAINTED (2026-09-29):
     // the painter runs on every frame, under whatever clip that frame's
     // damage gave it, so a frame whose clip does not cover the new box
@@ -6974,13 +6982,13 @@ struct AppState {
     // either can move with state under a still pointer.
     //
     // THE WAIT: `hovered` is the tooltip-bearing button under the pointer
-    // (Qt's toolTipWidget; no owner off every such button), `anchor_x/y` the
+    // (no owner off every such button), `anchor_x/y` the
     // slop's centre, `seen_x/y` the position the last walk read (the motion
     // test; kTooltipUnseen after a leave, so a re-entry is a motion — the
     // contact's lift excepted, which keeps it), and
     // `wake_due_ms` the wait's deadline (0 = no wait runs).
-    // `awake_until_ms` is the awake window's end (0 = asleep), and
-    // `button_held` the logical primary button's state as the last pointer
+    // `reshow` arms the reshow (above), and
+    // `button_held` is the logical primary button's state as the last pointer
     // event delivered it.
     //
     // AN OWNER NAMES ONE OF TWO SURFACES since 2026-08-13, when the modal's
@@ -7026,7 +7034,8 @@ struct AppState {
         GuiRect rect{0, 0, 0, 0};
         std::string painted_line1;
         std::string painted_line2;
-        int64_t grace_due_ms   = 0;
+        int     shown_x        = 0;
+        int     shown_y        = 0;
         int64_t expire_due_ms  = 0;
         // The wait.
         Owner   hovered{};
@@ -7035,8 +7044,8 @@ struct AppState {
         int     seen_x         = kTooltipUnseen;
         int     seen_y         = kTooltipUnseen;
         int64_t wake_due_ms    = 0;
-        // The awake window and the held button.
-        int64_t awake_until_ms = 0;
+        // The reshow and the held button.
+        bool    reshow         = false;
         bool    button_held    = false;
     };
     RedesignTooltip redesign_tooltip;
@@ -9746,6 +9755,31 @@ GuiRect top_marker_row_area(const AppState& a);
 // strip geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
+
+// THE HOVER TOOLTIP'S SEAT AND THE BAND IT CAN HANG INTO (architect
+// 2026-10-06, Windows 95's seat; the measurement and its source are at
+// render.h's kTooltipPointerDropPx, the model at AppState::RedesignTooltip).
+// tooltip_box_rect IS THE PLACEMENT'S ONE STATEMENT, the painter's
+// (paint_shift_tooltip): a w x h box with its left edge at the pointer's x
+// and its top tooltip_pointer_drop_px() below the pointer's y, the pointer
+// as it stood at the show (RedesignTooltip::shown_x/y); where that box would
+// cross the window's foot, ABOVE `btn` (the owner's painted button) with
+// tooltip_flip_gap_px() between them; then shifted left to fit the window's
+// right edge, never past its left or top. The box never shrinks.
+// tooltip_hang_bands is the DAMAGE twin, read by the three owners that must
+// damage a box before its rect is published (the show edge, tick_tooltip;
+// main.cpp's roster words comparator; Viewport::invalidate_modal_dialog_area
+// for a dialog owner): the full-width band of tooltip_damage_h_px() rows
+// under the pointer, and the band above the owner's button whenever a box
+// that tall would cross the foot — so either seat, at any width and either
+// line count, lies inside one of the two rects. `above` is empty when the
+// box cannot flip or the owner has no painted button.
+GuiRect tooltip_box_rect(const AppState& a, const GuiRect& btn, int w, int h);
+struct TooltipHangBands {
+    GuiRect below{0, 0, 0, 0};
+    GuiRect above{0, 0, 0, 0};
+};
+TooltipHangBands tooltip_hang_bands(const AppState& a);
 
 // -- THE KEYBOARD SLOT'S SHARED BAND (2026-08-28) ----------------------------
 //

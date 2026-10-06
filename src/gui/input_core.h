@@ -132,8 +132,9 @@ enum GuiWindowEdge : unsigned {
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop
 // may leave standing (2026-08-08).
-//   * OrdinaryLeave is the pointer focus dropping, for either of two reasons
-//     every consumer reads the same (architect 2026-10-01):
+//   * OrdinaryLeave is the pointer focus dropping, for any of three reasons
+//     every consumer reads the same (architect 2026-10-01; the third
+//     2026-10-06):
 //     THE LEAVE — pointer_leave (wl_pointer.leave on Wayland) and, since
 //     touch phase 1 (2026-08-11), a touch POINTER TRANSLATION's ABNORMAL end
 //     WITH NO PHYSICAL POINTER FOCUSED: the window system took the contact
@@ -154,7 +155,13 @@ enum GuiWindowEdge : unsigned {
 //     motion, no release will ever arrive on that object again, so nothing
 //     may be KEPT DELIBERATELY across it — a keep would have no event left
 //     to redeem it; no consumer keeps anything across either edge, which is
-//     why one enumerator serves both. WHAT THE CAPABILITY LOSS PROMISES IS
+//     why one enumerator serves both.
+//     THE PEN'S HOVER ENDING — the Android backend's S Pen hover ending
+//     (GuiPlatform::end_pen_hover: a HOVER_EXIT, a report above the GUI's
+//     plane, any first down, focus loss — architect 2026-09-27, every pen
+//     hover effect acts only within the plane): the pen has no titlebar to
+//     step onto, so its leave keeps nothing, and the tooltip goes at once as
+//     on leaving any tool (architect 2026-10-06). WHAT THE CAPABILITY LOSS PROMISES IS
 //     BOUNDED, and no more than its fire site does: the logical left hold
 //     ends in both its sources, the popup's claim drops, and every face
 //     clears ONCE. It does not promise a cold stream at a later capability
@@ -172,20 +179,12 @@ enum GuiWindowEdge : unsigned {
 //     slop of the lift point is stillness and starts no wait (the rule is at
 //     AppState::RedesignTooltip). Every other consumer reads it as it reads
 //     OrdinaryLeave.
-//   * PenHoverEnd is the Android backend's S Pen HOVER ENDING
-//     (GuiPlatform::end_pen_hover: a HOVER_EXIT, a report above the GUI's
-//     plane, any first down, focus loss — architect 2026-09-27, every pen
-//     hover effect acts only within the plane). An ordinary leave in every
-//     respect but one: a standing tooltip takes its hide grace rather than
-//     going down at once. The Wayland backend never passes it.
 // The distinction is read in one place, main.cpp's hook body, by exactly one
-// consumer: the tooltip's leave (end_tooltip_hover), which the pen's hover
-// ending (PenHoverEnd) makes soft and the contact's lift (TouchLift) makes no
-// leave at all, OrdinaryLeave being its hard end. Every other clear the hook
-// performs is unconditional and reads this not at all.
+// consumer: the tooltip's leave (end_tooltip_hover), which the contact's lift
+// (TouchLift) makes no leave at all, OrdinaryLeave being its hard end. Every
+// other clear the hook performs is unconditional and reads this not at all.
 enum class GuiPointerLeaveReason {
     OrdinaryLeave,
-    PenHoverEnd,
     TouchLift,
 };
 
@@ -342,13 +341,11 @@ public:
     void forget_keyboard_state();
 
     void pointer_enter(double x, double y);
-    // `reason` tells the Android pen's hover ending (PenHoverEnd, its one
-    // other caller) from the ordinary leave (OrdinaryLeave: every Wayland
-    // call, the default); never TouchLift, which is
-    // deliver_touch_translation_end's alone (GuiPointerLeaveReason, above
-    // the class).
-    void pointer_leave(
-        GuiPointerLeaveReason reason = GuiPointerLeaveReason::OrdinaryLeave);
+    // Always the ordinary leave (OrdinaryLeave: every Wayland call and the
+    // Android pen's hover ending); TouchLift is
+    // deliver_touch_translation_end's alone and does not come through here
+    // (GuiPointerLeaveReason, above the class).
+    void pointer_leave();
     void pointer_motion(double x, double y);
     void pointer_button(GuiMouseButton button, bool pressed);
     // THE SIGN IS THE SEAM'S CONTRACT AND BOTH DOORS SHARE IT: POSITIVE MEANS

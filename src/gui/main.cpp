@@ -752,6 +752,44 @@ GuiRect bottom_row_content_area(const AppState& a) {
     return GuiRect{lane.x, lane.y + b, lane.w, lane.h - b};
 }
 
+// THE HOVER TOOLTIP'S SEAT AND ITS DAMAGE BAND (the contract at the
+// declaration, app_state.h).
+GuiRect tooltip_box_rect(const AppState& a, const GuiRect& btn, int w, int h) {
+    const AppState::RedesignTooltip& t = a.redesign_tooltip;
+    int x = t.shown_x;
+    int y = t.shown_y + tooltip_pointer_drop_px();
+    if (y + h > a.height) y = btn.y - tooltip_flip_gap_px() - h;
+    if (x + w > a.width) x = a.width - w;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    return GuiRect{x, y, w, h};
+}
+
+TooltipHangBands tooltip_hang_bands(const AppState& a) {
+    const AppState::RedesignTooltip& t = a.redesign_tooltip;
+    const int band_h = tooltip_damage_h_px();
+    TooltipHangBands bands;
+    const int below_y = t.shown_y + tooltip_pointer_drop_px();
+    bands.below = GuiRect{0, below_y, a.width,
+                          std::max(0, std::min(band_h, a.height - below_y))};
+    if (below_y + band_h <= a.height) return bands;
+    // The owner's painted button, read as the painter reads it.
+    GuiRect btn{0, 0, 0, 0};
+    const AppState::RedesignTooltip::Owner& o = t.owner;
+    if (o.surface == AppState::RedesignTooltip::Surface::Dialog) {
+        if (a.modal_dialog.valid && o.index >= 0 &&
+            o.index < static_cast<int>(a.modal_dialog.buttons.size()))
+            btn = a.modal_dialog.buttons[static_cast<size_t>(o.index)].rect;
+    } else if (o.index >= 0 && o.index < kRedesignButtonCount) {
+        btn = a.redesign_buttons[static_cast<size_t>(o.index)].rect;
+    }
+    if (btn.w <= 0 || btn.h <= 0) return bands;
+    const int above_bottom = btn.y - tooltip_flip_gap_px();
+    const int above_y      = std::max(0, above_bottom - band_h);
+    bands.above = GuiRect{0, above_y, a.width, band_h};
+    return bands;
+}
+
 // (THE STATUS BAR'S LANE IS DELETED — architect 2026-08-29, the evening of the
 // day it landed. A tenth lane stood on the window's foot for one day, carrying
 // the process line and the `h` walk line at its left and the resolved readout
@@ -1829,9 +1867,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // site in input_core.cpp).
     // THE TWO EDGES ARE NOT THE SAME EDGE (2026-08-03), but the body reads
     // them alike: both hand in OrdinaryLeave (architect 2026-10-01). The
-    // GuiPointerLeaveReason it is handed tells only the pen's hover ending and
-    // a translated contact's lift from that leave, for the one effect below
-    // that differs — the tooltip's end, read last in this account.
+    // GuiPointerLeaveReason it is handed tells only a translated contact's
+    // lift from that leave (the pen's hover ending is that leave too), for
+    // the one effect below that differs — the tooltip's end, read last in
+    // this account.
     // (SINCE TOUCH PHASE 1, 2026-08-11, a touch pointer translation's end
     // fires this hook too — as TouchLift for the contact's own lift and as
     // OrdinaryLeave for the hard end, and ONLY on its no-focus arm:
@@ -1884,16 +1923,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // ITSELF STAYS UP, because leaving the window is not a dismissal.
     // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
     // must end HERE rather than be left to the tick's hover recompute, which
-    // refuses outright while the pointer is outside. THE REASON FORKS IT (Qt's
-    // model, architect 2026-09-29): the ORDINARY leave and capability loss
-    // (both OrdinaryLeave) are HARD ends — the box goes down in this same
-    // event, through the one hide that damages the box's own published rect
-    // as well as the strip (the box hangs outside the strip) — while the pen leaving the plane (PenHoverEnd) is SOFT: the
-    // box keeps its owner and stays painted for the hide grace, so a pen
-    // hovering at the plane's edge, or lost by the platform inside it, does not
-    // blink the hint; coming back onto the same button within the grace keeps
-    // it, and the grace running out takes it down through the tooltip's clock
-    // with the same damage. A TRANSLATED CONTACT'S LIFT (TouchLift) is NO
+    // refuses outright while the pointer is outside. THE REASON FORKS IT: the
+    // ORDINARY leave, capability loss and the pen's hover leaving the plane
+    // (all OrdinaryLeave) are HARD ends (architect
+    // 2026-10-06, Windows 95's: leaving the tool hides a tooltip at once) —
+    // the box goes down in this same event, through the one hide that
+    // damages the box's own published rect as well as the strip (the box
+    // hangs outside the strip). A TRANSLATED CONTACT'S LIFT (TouchLift) is NO
     // LEAVE FOR THE TOOLTIP at all (architect 2026-09-29): it is the release
     // of a press that already hard-ended the hint, so the wait's button, its
     // anchor and the seen position stand at the lift point as a mouse's
@@ -1906,8 +1942,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.end_tooltip_hover(
             reason == GuiPointerLeaveReason::TouchLift
                 ? TooltipHoverEnd::ContactLift
-            : reason == GuiPointerLeaveReason::PenHoverEnd
-                ? TooltipHoverEnd::Soft
                 : TooltipHoverEnd::Hard);
         // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end:
         // they also die at the BUTTON-LOST edge, an unheld
@@ -1940,11 +1974,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.clear_notification_hover();
     });
 
-    // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (Qt's model,
-    // architect 2026-09-29: QTipLabel hides at once on WindowActivate and
-    // WindowDeactivate, and QApplication puts the wake-up to sleep on
-    // ActivationChange): focus leaving or arriving is the user acting
-    // elsewhere, not a pointer grazing a gap. hide_shift_tooltip carries its
+    // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (architect 2026-09-29;
+    // Windows 95's too, 2026-10-06: a tooltip control without TTS_ALWAYSTIP
+    // shows only while its window is active): focus leaving or arriving is
+    // the user acting elsewhere, not a pointer grazing a gap. hide_shift_tooltip carries its
     // own damage. The hook fires only when the window's activation actually
     // flips (the platform owns the edge test). NOTHING ELSE TAKES AN
     // UNFOCUSED LOOK (architect 2026-10-03: one selected pair, focused or not,
@@ -2324,10 +2357,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
-        // THE HOVER TOOLTIP'S CLOCK — the whole timer, three deadline compares
-        // on a tick that already runs (Qt's model, architect 2026-09-29: the
-        // wait's ripening, the hide grace and the expiry; the awake window is
-        // read where a wait starts). No timer object, no callback, no
+        // THE HOVER TOOLTIP'S CLOCK — the whole timer, two deadline compares
+        // on a tick that already runs (comctl32's model, architect 2026-10-06:
+        // the wait's ripening and the life's end; the reshow is read where a
+        // wait starts). No timer object, no callback, no
         // per-frame damage: each edge damages once, inside the owner
         // (GuiInputHandler::tick_tooltip, whose body carries the damage rule).
         input_handler.tick_tooltip();
@@ -2405,20 +2438,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // box's words are published AS PAINTED (AppState::RedesignTooltip,
             // paint_shift_tooltip), so live words that have moved past the
             // painted pair are a box standing stale: this damages the old
-            // box's published rect, the owner's strip and the band the new one
-            // hangs into — the show edge's own set (tick_tooltip), whose rects
-            // together cover every pixel of the new box whatever it measures
-            // (viewport.h's floating-surface damage rule). A TOP-ROW box lies
-            // inside the strip, so one rect covers it and its words publish in
-            // that frame. A BOTTOM-ROW box straddles the band and the lane,
-            // and the painter publishes words only under a clip that covers
-            // the box whole (paint_shift_tooltip), so that frame paints the
-            // box and publishes the union of the old and new rects with the
-            // old words; the next tick's compare damages that published rect,
-            // a rect of its own covering the box, and the second frame
-            // publishes the words. Two frames at most, once per words change,
-            // never a standing per-tick damage. Asked outside the walk, which
-            // stops once both strips have drifted.
+            // box's published rect, the owner's strip (its glyph, below) and
+            // the band the new one hangs into — the show edge's own pair
+            // (tooltip_hang_bands), one of which holds the new box whole
+            // whatever it measures (viewport.h's floating-surface damage
+            // rule), so the frame that paints it publishes its words (the
+            // painter publishes only under a clip that covers the box,
+            // paint_shift_tooltip). Should a frame's clip still miss it, the
+            // painter publishes the union of the old and new rects with the
+            // old words, and the next tick's compare damages that rect whole:
+            // two frames at most, once per words change, never a standing
+            // per-tick damage. Asked outside the walk, which stops once both
+            // strips have drifted.
             //
             // THE OWNER'S GLYPH DRIFT IS THE SAME TEST ONE TICK EARLIER: two
             // hints read the button's PAINTED glyph rather than live state —
@@ -2450,18 +2481,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                          (live.line2 != nullptr ? live.line2 : ""));
                 if (glyph_drift || words_drift) {
                     viewport.invalidate_rect(app.redesign_tooltip.rect);
-                    if (redesign_button_in_transport_row(tip_id)) {
-                        const GuiRect tr = bottom_row_area(app);
-                        viewport.invalidate_rect(tr);
-                        viewport.invalidate_rect(GuiRect{
-                            0, tr.y - tooltip_damage_h_px(), app.width,
-                            tooltip_damage_h_px()});
-                    } else {
+                    if (redesign_button_in_transport_row(tip_id))
+                        viewport.invalidate_rect(bottom_row_area(app));
+                    else
                         invalidate_top_strip();
-                        const GuiRect ts = top_strip_area(app);
-                        viewport.invalidate_rect(GuiRect{
-                            0, ts.y + ts.h, app.width, tooltip_damage_h_px()});
-                    }
+                    const TooltipHangBands bands = tooltip_hang_bands(app);
+                    viewport.invalidate_rect(bands.below);
+                    viewport.invalidate_rect(bands.above);
                 }
             }
         }

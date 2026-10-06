@@ -1733,10 +1733,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // 2026-09-27: every pen hover effect acts only within the plane,
             // pen_report_in_plane): it takes the EXIT's arm whole — a
             // standing hover ENDS through the core's leave (the roster's
-            // outline, the menu row's fill and mode and the tooltip's wait all
-            // go, and a standing tooltip box takes its hide grace rather than
-            // blinking — the leave hook's own list, main.cpp; the reason
-            // is PenHoverEnd, end_pen_hover) and the Ctrl bit drops — and no
+            // outline, the menu row's fill and mode, the tooltip's wait and
+            // a standing tooltip box all go — the leave hook's own list,
+            // main.cpp; end_pen_hover) and the Ctrl bit drops — and no
             // enter or motion is delivered. Back within the plane (at or
             // under the ENTER threshold, the latch's rule) the first report
             // is a fresh enter. Neither the exit nor a report
@@ -1961,10 +1960,10 @@ void GuiPlatform::set_pen_ctrl(bool held) {
 void GuiPlatform::end_pen_hover() {
     if (!pen_hovering_) return;
     pen_hovering_ = false;
-    // PenHoverEnd, not OrdinaryLeave: the pen's hover ending is the tooltip's
-    // SOFT end, its box taking the hide grace (the rule is at
+    // The ordinary leave: the pen has left the tool as a mouse leaving the
+    // window has, and keeps nothing across it (the rule is at
     // GuiPointerLeaveReason, input_core.h).
-    input_.pointer_leave(GuiPointerLeaveReason::PenHoverEnd);
+    input_.pointer_leave();
     input_.pointer_frame();
 }
 

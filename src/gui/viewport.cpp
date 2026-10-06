@@ -160,14 +160,15 @@ void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
-    // published rect and the full-width band above the lane, the show edge's
-    // own pair, so the rect (above) and these two cover the recomposed box.
+    // published rect and the band it can hang into, the show edge's own pair
+    // (tooltip_hang_bands), one of which holds the recomposed box whole.
     const AppState::RedesignTooltip& tip = app.redesign_tooltip;
     if (tip.visible &&
         tip.owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
         invalidate_rect(tip.rect);
-        const int band_h = tooltip_damage_h_px();
-        invalidate_rect(GuiRect{0, t.y - band_h, app.width, band_h});
+        const TooltipHangBands bands = tooltip_hang_bands(app);
+        invalidate_rect(bands.below);
+        invalidate_rect(bands.above);
     }
 }
 

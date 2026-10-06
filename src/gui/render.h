@@ -146,8 +146,9 @@ struct TrimRange {
 //                 field (row 8's clock, the render player's two);
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
 //                 the ruler's ticks, a menu separator.
-// THE CARD FRAME is no relief: ONE flat line a side in the `card_frame` role,
-// Windows 95's tooltip border (THE CARD FACE, below).
+// THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on the
+// bottom and the right only, Windows 95's tooltip border (THE CARD FACE,
+// below).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
 // ground in one-device-px cells (paint_checker_rect, below; the dither rule
 // above).
@@ -208,11 +209,16 @@ struct TrimRange {
 // THE CARD FACE IS WINDOWS 95's TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
-// `card_ground` under `card_text` inside a THIN FRAME of `card_frame`, ONE
-// Windows px a side (relief_line_px) and no relief line — the built-in's
-// #FFFFE1 (InfoWindow) under black (InfoText) inside a black border
-// (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE RULE'S ONE
-// STATEMENT.
+// `card_ground` under `card_text` with a THIN LINE of `card_frame`, ONE
+// Windows px (relief_line_px) and no relief line, on the BOTTOM AND THE
+// RIGHT ONLY, the top and left rows being the face (architect 2026-10-06) —
+// the built-in's #FFFFE1 (InfoWindow) under black (InfoText) — read off the
+// one period capture there is, ToastyTech's win95toolbar.png (Explorer's
+// "Up One Level" tooltip: black at the bottom row and the right column, the
+// two meeting at both far corners, the top row and the left column the
+// yellow; Wine's all-round WS_BORDER is not Windows 95's), painted as one
+// ring whose top-left pair is `card_ground` (paint_popup_chrome's Info
+// face). THIS PARAGRAPH IS THE RULE'S ONE STATEMENT.
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD AND GLYPH (architect 2026-10-03,
@@ -273,7 +279,7 @@ struct GuiPalette {
     GuiColor clock_text;      // the status bar's ButtonText
     GuiColor card_ground;     // COLOR_INFOBK
     GuiColor card_text;       // COLOR_INFOTEXT
-    GuiColor card_frame;      // the tooltip's border
+    GuiColor card_frame;      // the tooltip's border, bottom and right
     GuiColor caption_active;             // COLOR_ACTIVECAPTION
     GuiColor caption_active_gradient;    // COLOR_GRADIENTACTIVECAPTION
     GuiColor caption_active_text;        // COLOR_CAPTIONTEXT
@@ -1634,26 +1640,47 @@ inline constexpr int kTrimArrowGlyphHPx = 7;
 
 // THE PLAYHEAD HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05,
 // retiring the kdenlive-derived half-width table below): a FIXED 9 x 8
-// Windows-px BITMAP measured from a Windows 95 screenshot — geometry only,
+// Windows-px marker measured from a Windows 95 screenshot — geometry only,
 // its own colours were never trusted (below) — seated tip-down ONE WINDOWS
 // PX INTO THE MARKER LANE exactly as before (the seat rule is
 // kRulerBaselineToMarkerPx's; the move itself did not change, only the
-// shape that is moved). Painted as INTEGER RECTANGLES, one per glyph cell:
-// never a path fill, never a rescaled image — its cells are a bevelled chip
-// in three roles, every edge on the unit — each cell ONE QUANTUM
-// u = scaled_px(1, 1) SQUARE, and the
-// composite's height and width are u SUMMED OVER THE GLYPH'S OWN ROWS AND
-// COLUMNS (kPlayheadHeadRows * u tall, kPlayheadHeadCols * u wide) — never a
-// single rounded whole (scaled_px(8) is RETIRED with the table it served;
-// the rounding rule is "a composite is the sum of its rounded parts").
+// shape that is moved). The composite's height and width are the quantum
+// u = scaled_px(1, 1) SUMMED OVER THE GLYPH'S OWN ROWS AND COLUMNS
+// (kPlayheadHeadRows * u tall, kPlayheadHeadCols * u wide) — never a single
+// rounded whole (scaled_px(8) is RETIRED with the table it served; the
+// rounding rule is "a composite is the sum of its rounded parts").
+//
+// THE CHROME IS SCALABLE (architect 2026-10-06: anti-aliasing is not a
+// colour), so the marker is DRAWN AS NESTED OUTLINES in the glyph's Windows
+// px, its diagonals true diagonals, smooth at 400 % as the trim lane's
+// scroll arrows and the caption's Close X are — no longer one integer
+// rectangle per cell. THE BITMAP BELOW STAYS AS THE MEASURE: it is the
+// marker's pixel form at 100 %, the mock tool reads its silhouette
+// (tools/palette/tablet.py), and the outlines are derived from it by one
+// rule, checked against it at compile time (playhead_head_glyph_is_rings).
+// THE RINGS: ring k (k = 0 the silhouette, 1 the bevel's outer edge, 2 the
+// face) is the pentagon
+//     (k, k) (9 - k, k) (9 - k, 4) (4.5, 8 - k) (k, 4)
+// — its TOP and its VERTICALS as the bitmap has them (the full rows' outer
+// edges, the verticals ending at row 4's top, y = 4), its TIP the ring's
+// tip cell's outer edge at that cell's centre (the scroll arrows' own
+// construction: the base the far column's outer edge, the tip the tip
+// column's outer edge at the middle). The outline is ring 0 less ring 1, in
+// K's role; the bevel is ring 1 less ring 2, W's role on its top and left,
+// S's on its right — S OWNS THE TOP-RIGHT CORNER as the bitmap's column 7
+// does (the split leaves the ring along x = 7 between y = 1 and 2) — and
+// the two meet at the tip on the axis, x = 4.5; the face is ring 2, in
+// '.''s role. The four are ONE PARTITION painted in one group by addition,
+// so their shared antialiased edges sum to whole pixels and no colour
+// bleeds between them, then the group over the ruler (paint_ruler_row).
 //
 // THE TIP COLUMN (column 4 of 9, zero-based — kPlayheadHeadGlyph's row7)
 // CENTRES ON THE STEM'S OWN COLUMNS WITH NO REMAINDER: the stem is
 // waveform_line_px() = t columns wide and t is scaled_px(1, 1) too — the
 // identical expression as u — so the tip cell and the stem are the SAME
-// WIDTH at every scale, and with nine (an odd count) columns the four cells
-// either side are exactly symmetric on the stem with nothing left over to
-// floor, unlike the arrow glyph's even-width centring in its button above.
+// WIDTH at every scale, the drawn tip (4.5u in) lands on the stem's centre,
+// and with nine (an odd count) columns the four either side are exactly
+// symmetric on the stem with nothing left over to floor.
 //
 // THE GLYPH (K the outline, W the hilight bevel, S the shadow bevel, '.' the
 // chrome ground, '_' TRANSPARENT — left unpainted, so whatever this painter
@@ -1678,7 +1705,7 @@ inline constexpr int kTrimArrowGlyphHPx = 7;
 // painting over whatever this painter already laid down in its band, the
 // labels and the ticks' rise, same as the retired table's shape did.
 //
-// NO HOLD LAMP (architect 2026-10-05): every cell keeps its code's role
+// NO HOLD LAMP (architect 2026-10-05): every region keeps its code's role
 // whether or not AppState::camera_hold stands.
 //
 // THE OLD HEIGHT, scaled_px(kPlayheadHeadHeightPx) with the retired
@@ -1689,10 +1716,9 @@ inline constexpr int kTrimArrowGlyphHPx = 7;
 // constraints (the tip never enters the flag box, the head's top never
 // rises into the trim lane) at every one of the three.
 //
-// THE FLOOR OF 1 IS NOW UNIFORM, not a two-row special case (the retired
-// table's last two rows alone needed it): every cell shares the one quantum
-// u = scaled_px(1, 1), which is already floored at 1 by construction, so no
-// cell of the glyph can ever collapse to zero at any gui_scale in [50, 1000].
+// THE FLOOR OF 1 IS UNIFORM: the quantum u = scaled_px(1, 1) is floored at 1
+// by construction, so the marker can never collapse to zero at any gui_scale
+// in [50, 1000].
 inline constexpr int kPlayheadHeadRows = 8;
 inline constexpr int kPlayheadHeadCols = 9;
 inline constexpr char kPlayheadHeadGlyph[kPlayheadHeadRows][kPlayheadHeadCols] = {
@@ -1705,16 +1731,44 @@ inline constexpr char kPlayheadHeadGlyph[kPlayheadHeadRows][kPlayheadHeadCols] =
     {'_','_','_','K','S','K','_','_','_'},
     {'_','_','_','_','K','_','_','_','_'},
 };
-// THE ONE QUANTUM, shared by every glyph cell and identical to the stem's
+// THE RINGS' RULE, CHECKED AGAINST THE BITMAP: a cell's depth is its distance
+// in cells from the silhouette's nearest side — the top (its row), the left
+// and the right (its column from each vertical in rows 0-3, from each
+// diagonal's staircase in rows 4-7) — and the bitmap is K at depth 0, '.' at
+// 2 and over, '_' outside, and at depth 1 S where the right side is nearest
+// (a tie included: the top-right corner and the tip) and W elsewhere. So the
+// pentagons above, which follow those sides, are the bitmap's own rings.
+inline constexpr bool playhead_head_glyph_is_rings() {
+    constexpr int mid = kPlayheadHeadCols / 2;   // the tip column, 4
+    for (int r = 0; r < kPlayheadHeadRows; ++r) {
+        const int taper = r < mid ? 0 : r - (mid - 1);   // rows 4-7: 1..4
+        for (int c = 0; c < kPlayheadHeadCols; ++c) {
+            const int left  = c - taper;
+            const int right = (kPlayheadHeadCols - 1 - taper) - c;
+            char want = '_';
+            if (left >= 0 && right >= 0) {
+                int d = r < left ? r : left;
+                if (right < d) d = right;
+                want = d == 0 ? 'K' : d >= 2 ? '.' : right == 1 ? 'S' : 'W';
+            }
+            if (kPlayheadHeadGlyph[r][c] != want) return false;
+        }
+    }
+    return true;
+}
+static_assert(playhead_head_glyph_is_rings(),
+              "kPlayheadHeadGlyph must be the rasterized rings of the "
+              "pentagon rule (render.h's head paragraph)");
+// THE ONE QUANTUM, shared by every glyph unit and identical to the stem's
 // own width by construction (both are scaled_px(1, 1)) — named here for the
 // painter rather than read as waveform_line_px() twice over, so the two
-// callers (the glyph's own cell size, the stem's column width) read as one
+// callers (the glyph's own unit, the stem's column width) read as one
 // fact even though they are, in the end, the same call.
 inline int playhead_head_unit_px() {
     return scaled_px(1, 1);
 }
 // THE HEAD'S HEIGHT IN DEVICE ROWS, the ONE expression of it for the
-// painter's row loop (paint_ruler_row): kPlayheadHeadRows quanta, summed —
+// painter's band (paint_ruler_row): kPlayheadHeadRows quanta, summed —
 // never scaled_px(kPlayheadHeadRows) (the rounding rule above). NO FLOOR
 // beyond the quantum's own: the glyph cannot collapse at any gui_scale in
 // [50, 1000].
@@ -1723,76 +1777,89 @@ inline int playhead_head_h_px() {
 }
 // THE GLYPH'S HALF-WIDTH BEYOND THE STEM, in device px: the four columns
 // either side of the tip column, each one quantum — (kPlayheadHeadCols - 1)
-// / 2 of them — the painter's and the off-screen cull's one width term now
-// that the retired per-row half-width table no longer varies by row: rows
-// 0-3 use the glyph's full width, rows 4-7 taper inward, so this bound
-// (the widest row's half) still covers every row.
+// / 2 of them — the painter's and the off-screen cull's one width term:
+// rows 0-3 use the glyph's full width, rows 4-7 taper inward, so this bound
+// (the widest row's half) still covers every row, and the drawn rings lie
+// inside the bitmap's box, their antialiased edges included.
 inline int playhead_head_half_w_px() {
     return (kPlayheadHeadCols - 1) / 2 * playhead_head_unit_px();
 }
 
-// THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, the
-// five durations of its life and the slop of its wait. They live out here,
-// rather than with the rest of the tooltip's anatomy in paint_handler.cpp,
-// because both the RUN LOOP and the input side read them: the timer owner
-// (GuiInputHandler::tick_tooltip) runs on the tick and damages a band beside
-// the owner's strip to cover whatever the box overhangs, and the one wait
-// writer (note_tooltip_hover) reads the slop and the two wake-up delays.
+// THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
+// seat under the pointer, the three durations of its life and the slop of its
+// wait. They live out here, rather than with the rest of the tooltip's
+// anatomy in paint_handler.cpp, because both the RUN LOOP and the input side
+// read them: the timer owner (GuiInputHandler::tick_tooltip) runs on the tick
+// and damages the band the box can hang into (tooltip_hang_bands,
+// app_state.h), and the one wait writer (note_tooltip_hover) reads the slop
+// and the two delays.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from the BODY FACE'S OWN CELL (one line, or two 13-px bands), so the box
 // follows the face instead of a literal that could drift from it; the run
 // loop only needs to know it can never exceed this. 44 Windows px (the
 // laptop pixel's 60 re-authored, architect 2026-10-02) clears the two-line
-// form — 4 + 13 + 3 + 13 + 4 = 37 at 100 %, 102 device rows against 121 at
-// 275 % (2026-10-05).
+// form — 2 + 13 + 3 + 13 + 2 = 33 at 100 %, 92 device rows against 121 at
+// 275 % (2026-10-06).
 inline constexpr int     kTooltipDamageHeightPx = 44;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
 
-// THE TIMING IS QT'S QToolTip MODEL (architect 2026-09-29), the one kdenlive's
-// toolbar runs on this laptop — Breeze 6.7.5, KStyle and qt6ct override none
-// of it — taken at Qt 6.11.2's own numbers. The model is stated once, at
-// AppState::RedesignTooltip; these are its constants, hard-coded, no keys.
-// Durations ride no scale.
+// THE SEAT IS THE POINTER'S, WINDOWS 95's (architect 2026-10-06; the Windows
+// Interface Guidelines, 1995, ch. 7: a tooltip is "usually displayed at the
+// lower right of the pointer, but is automatically adjusted if this location
+// is offscreen"): the box's LEFT EDGE at the pointer's x and its TOP
+// kTooltipPointerDropPx below the pointer's y, the pointer where it stood when
+// the box was shown (on the tablet the S Pen's hover point, which is the
+// pointer). 18 Windows px is MEASURED, ToastyTech's win95toolbar.png
+// (Explorer's "Up One Level"): the arrow's tip at (16, 17), the box's
+// top-left at (16, 35), just under the cursor's tail. Where the box would
+// cross the window's foot it stands ABOVE THE TOOL instead, its bottom
+// kTooltipFlipGapPx above the owner button's top (comctl32's own fallback, as
+// Wine reimplements it) — which every bottom-row owner meets, the row being
+// 29 Windows px on the foot; past the right edge it shifts left to fit (the
+// clamp, the box never shrinking). The placement's one statement is
+// tooltip_box_rect (app_state.h).
+inline constexpr int kTooltipPointerDropPx = 18;
+inline constexpr int kTooltipFlipGapPx     = 2;
+inline int tooltip_pointer_drop_px() {
+    return scaled_px(kTooltipPointerDropPx);
+}
+inline int tooltip_flip_gap_px() {
+    return scaled_px(kTooltipFlipGapPx);
+}
+
+// THE TIMING IS COMCTL32's (architect 2026-10-06), the tooltip control's
+// defaults as TTM_SETDELAYTIME documents them over GetDoubleClickTime's
+// 500 ms. The model is stated once, at AppState::RedesignTooltip; these are
+// its constants, hard-coded, no keys. Durations ride no scale.
 //
-// THE WAKE-UP: 700 ms of REST on a tooltip-bearing button before its hint
-// shows — SH_ToolTip_WakeUpDelay (qcommonstyle.cpp), restarted by every
-// motion past the slop below. Its own number: no hold and no beat reads it,
-// and it reads neither (the chrome shift long press is timed by
-// kHoldDelayMs alone and has no visual announcement).
-inline constexpr int64_t kTooltipWakeUpMs = 700;
-// THE AWAKE WAKE-UP: 20 ms instead, while the product is awake (below) —
-// QApplication::notify's `toolTipFallAsleep.isActive() ? 20 : wakeDelay`
-// (qapplication.cpp) — which is what makes a neighbouring button's hint
-// follow at once and take the standing box over in place.
-inline constexpr int64_t kTooltipAwakeWakeUpMs = 20;
-// THE AWAKE WINDOW: 2000 ms from every show — SH_ToolTip_FallAsleepDelay
-// (qcommonstyle.cpp), restarted by each show or re-show
-// (QApplication::event's ToolTip arm). Rest on one hint longer and the
-// product falls asleep: the next button waits the full wake-up again.
-inline constexpr int64_t kTooltipFallAsleepMs = 2000;
-// THE HIDE GRACE: a SOFT end leaves the box up this long — QTipLabel::hideTip
-// (qtooltip.cpp), started once and never restarted by a second soft end —
-// and the pointer coming back to the box's own button, or a neighbour's hint
-// taking the box over, cancels it (QTipLabel::restartExpireTimer's
-// hideTimer.stop()).
-inline constexpr int64_t kTooltipHideGraceMs = 300;
-// THE EXPIRY: a box standing this long after its last show or re-show goes
-// down — QTipLabel::restartExpireTimer's 10 s (qtooltip.cpp). Qt adds 40 ms
-// per character past 100; the one hint that long (the walk's two lines, 108
-// characters) would stand 0.32 s longer there, and that term is not carried.
-inline constexpr int64_t kTooltipExpireMs = 10000;
+// TTDT_INITIAL: 500 ms (the double-click time) of rest on a tooltip-bearing
+// button before its hint shows, restarted by every motion past the slop
+// below. Its own number: no hold and no beat reads it, and it reads neither
+// (the chrome shift long press is timed by kHoldDelayMs alone and has no
+// visual announcement).
+inline constexpr int64_t kTooltipInitialMs = 500;
+// TTDT_RESHOW: 100 ms (a fifth of it) instead, for the "subsequent tooltip"
+// — an ARRIVAL straight from one tooltip-bearing button onto the next after a
+// hint has shown, with no gap of no button between (the Guidelines, ch. 12:
+// "if the user moves the pointer directly to another control … display the
+// new tooltip immediately").
+inline constexpr int64_t kTooltipReshowMs = 100;
+// TTDT_AUTOPOP: 5000 ms (ten times it) — a box standing this long goes down,
+// the life restarted by motion on its own button.
+inline constexpr int64_t kTooltipAutoPopMs = 5000;
 
 // THE HOVER SLOP (architect 2026-09-29: the wait counts from STILLNESS WITH
-// HYSTERESIS): the wait re-anchors, restarting, only when the pointer moves
-// MORE than this from where it was anchored on EITHER axis, so a hovering
-// pen's jitter cannot starve it. Qt has no such tolerance — QApplication
-// restarts the wake-up on every motion and its Android plugin forwards the
-// pen's hover as plain moves — so the number is ANDROID'S OWN for the same
-// job: AOSP View's hover tooltip ignores a HOVER_MOVE within
-// ViewConfiguration.getScaledHoverSlop() of its anchor on both axes
+// HYSTERESIS) — A RECORDED DEPARTURE from Windows 95
+// (docs/engineering/windows95_deviations.md): the wait re-anchors, restarting,
+// and a standing box's life restarts, only when the pointer moves MORE than
+// this from where it was anchored on EITHER axis, so a hovering pen's jitter
+// can neither starve the wait nor keep a box alive. Windows counts every
+// mouse move — a mouse at rest does not jitter — so the number is ANDROID'S
+// OWN for the same job: AOSP View's hover tooltip ignores a HOVER_MOVE
+// within ViewConfiguration.getScaledHoverSlop() of its anchor on both axes
 // (View.TooltipInfo.updateAnchorPos, "filters out the jitter which is
 // typical for such input sources as stylus"), and that slop is
 // `config_viewConfigurationHoverSlop` = 4dp (core/res/values/config.xml),
@@ -1912,7 +1979,7 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // directly rather than the inset: the two are equal by inheritance, not by
 // requirement, and neither owns the other.
 //
-// RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD on the
+// RECORDED MISMATCH, live and deliberate: the cursor's HEAD on the
 // ruler lane's bottom rows is WIDER than this reach at every scale. The
 // head's widest rows (its own glyph's rows 0-3, kPlayheadHeadGlyph,
 // architect 2026-10-05) are its full kPlayheadHeadCols = 9 columns, 9 *
@@ -2037,10 +2104,10 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         lines, full width).
 //   paint_relief_status_sunken — STATUS SUNKEN, ONE ring: a status-bar panel.
 //   paint_relief_line_frame — one colour all round: the dialog's
-//                         default-button frame, the list's focus frame and the
-//                         card frame.
+//                         default-button frame and the list's focus frame.
 //   (The CARD FRAME — the tooltip's and the cards' — is no relief:
-//   paint_relief_line_frame in the `card_frame` role, at paint_popup_chrome.)
+//   paint_relief_frame with `card_ground` top and left and `card_frame`
+//   bottom and right, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
 //                         [x, x + w) (the dropdown's separator). (Its

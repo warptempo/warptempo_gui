@@ -1544,16 +1544,17 @@ struct GuiInputHandler {
     void clear_dropdown_pointer_state();
 
     // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
-    // hides the box at once, stops the wait and puts the product to sleep,
-    // leaving the button under the pointer and the slop's anchor where they
-    // are, so a resting pointer re-arms nothing. Its callers, re-derived by
-    // grep: every pointer press, every KEY press, every wheel, the dropdown's
-    // open edge, the roster walk's tail for a dialog owner whose surface
-    // closed or was replaced, end_tooltip_hover's hard arm, and two main.cpp
-    // hooks — the compositor close, the key-press hide's own
-    // no-hint-over-a-modal rule at the one modal opener no key press reaches,
-    // and the activation edge. Damages the strip and the box's last painted
-    // rect (the box hangs outside the strip; the argument is at the
+    // hides the box at once, stops the wait and disarms the reshow, leaving
+    // the button under the pointer and the slop's anchor where they are, so
+    // a resting pointer re-arms nothing. Its callers, re-derived by grep
+    // 2026-10-06: every pointer press and every release, every wheel, the
+    // dropdown's open edge, on_key's modal-opening end (a key that raised a
+    // modal under a roster hint — keys themselves do not hide it), the
+    // compositor close (the one modal opener no key or press reaches), the
+    // roster walk's tail for a dialog owner whose surface closed or was
+    // replaced, end_tooltip_hover, the lamp's dark edge through it, and
+    // main.cpp's activation edge. Damages the strip and the box's last
+    // painted rect (the box hangs outside the strip; the argument is at the
     // definition).
     // NO ROSTER WAIT RUNS UNDER A MODAL SURFACE: the roster's walk refuses one
     // while a prompt, a keyboard-modal editor or one of the two list owners
@@ -1565,10 +1566,9 @@ struct GuiInputHandler {
 
     // THE POINTER LEAVING — the pointer-leave hook's one call (main.cpp), for
     // every reason, and the tooltip lamp's dark edge (set_show_tooltips).
-    // HARD (the ordinary leave, capability loss, the lamp going dark) and
-    // SOFT (the pen leaving the plane, PenHoverEnd, which starts the hide
-    // grace so a pen hovering at the plane's edge does not blink the hint)
-    // both mean the pointer is on no button: the wait stops, its button and
+    // HARD (the ordinary leave, capability loss, the pen's hover leaving the
+    // plane, the lamp going dark) means the pointer is on no button: the box
+    // goes down at once (leaving the tool), the wait stops, its button and
     // the seen position are forgotten, and the next arrival is a motion.
     // CONTACT LIFT (TouchLift, a translated contact's own lift) is NOT the
     // pointer going away (architect 2026-09-29): it ends nothing, so the
@@ -1576,30 +1576,31 @@ struct GuiInputHandler {
     // mouse's release leaves them, and the S Pen's hover coming back within
     // the slop of that point is stillness. The rule is at
     // AppState::RedesignTooltip.
-    enum class TooltipHoverEnd { Hard, Soft, ContactLift };
+    enum class TooltipHoverEnd { Hard, ContactLift };
     void end_tooltip_hover(TooltipHoverEnd end);
 
     // THE WAIT'S ONE WRITER, for both hover walks (the roster's and the modal
     // dialog's), handed the tooltip-bearing button under the pointer (index
-    // < 0: none) and reading the pointer at app.last_mouse_x/y: it starts,
-    // restarts or stops the wait by the slop and the held button, and starts
-    // or cancels the hide grace as the pointer leaves or regains the box's
-    // own button. The owner's two-surface encoding and the model are at
+    // < 0: none) and reading the pointer at app.last_mouse_x/y: it starts
+    // (at the full wait or the reshow), restarts or stops the wait by the
+    // slop and the held button, restarts a standing box's life on its own
+    // button and takes the box down as the pointer leaves that button. The
+    // owner's two-surface encoding and the model are at
     // AppState::RedesignTooltip.
     void note_tooltip_hover(AppState::RedesignTooltip::Owner o);
 
     // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the wait's
-    // ripening shows (or re-shows, or takes a standing box over in place),
-    // the hide grace and the expiry hide. Each edge damages once — a show the
-    // owner's strip and the band the box can hang into, a hide the box's
-    // published rect.
+    // ripening shows the box under the pointer, and the life's end hides it.
+    // Each edge damages once — a show the band the box can hang into
+    // (tooltip_hang_bands), a hide the box's published rect.
     void tick_tooltip();
 
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's
     // ONE expression, asked by the roster's pointer walk
     // (recompute_redesign_button_hover), the only route that starts a roster
-    // wait. The full rationale is at the walk's tail; the predicate names
-    // the rule's membership in one place.
+    // wait, and by on_key's modal-opening end, which takes a standing roster
+    // hint down under a modal the key raised. The full rationale is at the
+    // walk's tail; the predicate names the rule's membership in one place.
     bool tooltip_dwell_suppressed() const;
 
     // THE CHROME ACT'S TWO HALVES (architect 2026-08-13, act-at-release — the

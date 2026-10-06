@@ -109,8 +109,9 @@ constexpr int kHoldDelayMs = 300;
 // A CADENCE measures the gap between presses or the pace of a stream of
 // repeats, and none is a hand resting on a thing until it crosses into a held
 // meaning, which is what the hold delay times. (THE HOVER TOOLTIP reads
-// neither: its wait is Qt's own 700 ms wake-up, kTooltipWakeUpMs in render.h,
-// with the rest of Qt's QToolTip model beside it — architect 2026-09-29.)
+// neither: its wait is comctl32's own 500 ms, kTooltipInitialMs in render.h —
+// Windows' default double-click time, not this product's beat — with the
+// rest of Windows 95's tooltip timing beside it, architect 2026-10-06.)
 // FOUR READERS:
 //   * THE DOUBLE-CLICK WINDOW (kDoubleClickMs, app_state.h), since
 //     2026-08-27 — the interval a deliberate SECOND TAP has to arrive inside;

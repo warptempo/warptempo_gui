@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <initializer_list>
 #include <span>
 #include <string>
 #include <string_view>
@@ -958,9 +959,10 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 
 // -- THE FLOATING SURFACES: the hover tooltip and the menu row's dropdowns --
 //
-// The tooltip's metrics were measured off kdenlive's hover crops; its chrome is
-// the floating surfaces' one box (paint_popup_chrome) and its dim factor lives
-// in render.h.
+// The tooltip's metrics are Windows 95's, measured off the one period capture
+// (ToastyTech's win95toolbar.png, Explorer's "Up One Level"); its chrome is the
+// floating surfaces' one box (paint_popup_chrome), and its seat, its timing and
+// its damage bound live in render.h.
 //
 // THE TOOLTIP'S TYPE AND SPACING. ONE FACE FOR BOTH LINES, the body
 // (architect 2026-10-05: the period faces have no smaller text face — the
@@ -975,12 +977,19 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // the box height falls out as
 //     pad + band [+ gap + band] + pad
 // and the top and bottom air are equal by the arithmetic rather than by a
-// measured pair that could drift. At the tablet's 275 % that is 11 + 36 + 11
-// = 58 for one line and 11 + 36 + 8 + 36 + 11 = 102 for two (the band
-// 13 x 2.75 = 35.75 each, the sum rounded once). The pads and the gap are the
-// laptop pixel's 6, 4 and 5 re-authored at the unit's change (architect
-// 2026-10-02). render.h carries only a BOUND on this for the damage band.
-constexpr double kTooltipPadYPx          = 4.0;   // top AND bottom, equal
+// measured pair that could drift. THE PAD IS WINDOWS 95's (architect
+// 2026-10-06): the capture's one-line box is 17 rows, 2 + 13 + 2 — above
+// the 13-row cell the unlined top row and one more, below it one face row and
+// the black line — so the pad is 2 and the frame's one line counts inside it.
+// At the tablet's 275 % that is
+// 6 + 36 + 6 = 48 for one line and 6 + 36 + 8 + 36 + 6 = 92 for two (the
+// band 13 x 2.75 = 35.75 each, the sum rounded once). THE HORIZONTAL PAD
+// stays 4 (the laptop pixel's 5 re-authored at the unit's change, architect
+// 2026-10-02), within a pixel of the capture's: the unlined left column and
+// three face columns before the first ink, three after the last before the
+// black line. The gap is the laptop pixel's 4 re-authored the same day.
+// render.h carries only a BOUND on this for the damage band.
+constexpr double kTooltipPadYPx          = 2.0;   // top AND bottom, equal
 constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 constexpr double kTooltipPadXPx      = 4.0;
 // (The damage BOUND on the height and the timing constants live in render.h —
@@ -2793,21 +2802,24 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     //   MENU — the ground inside the PLAIN RAISED two-line edge: a dropdown
     //          (Windows drew menus as raised panels, EDGE_RAISED);
     //   INFO — THE CARD FACE, Windows 95's tooltip (architect 2026-10-04;
-    //          the rule is render.h's palette block): `card_ground` inside a
-    //          THIN flat frame of `card_frame`, ONE Windows px a side and no
-    //          relief line — the tooltip and every notification card, whose
-    //          words their painters set in `card_text`.
+    //          the rule is render.h's palette block): `card_ground` with a
+    //          THIN flat line of `card_frame`, ONE Windows px, on the BOTTOM
+    //          AND THE RIGHT ONLY (architect 2026-10-06, the one period
+    //          capture's) — one ring whose top-left pair is the face itself,
+    //          the frame painting last so it owns both far corners as the
+    //          capture's black does — the tooltip and every notification
+    //          card, whose words their painters set in `card_text`.
     if (face == PopupFace::Menu) {
         paint_cell_rect(cr, r, palette().ground);
         paint_relief_plain_raised(cr, r);
     } else {
         paint_cell_rect(cr, r, palette().card_ground);
-        paint_relief_line_frame(cr, r, palette().card_frame);
+        paint_relief_frame(cr, r, palette().card_ground, palette().card_frame);
     }
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
-    // THE HOVER TOOLTIP, on the box's own button — at most one box. The
+    // THE HOVER TOOLTIP, for the box's own button — at most one box. The
     // tooltip's clock (tick_tooltip) owns WHEN it shows and goes; this owns
     // only what it looks like, and publishes the rect it painted so the hide
     // edge can damage it — AS PAINTED (the rule is at AppState::
@@ -2819,8 +2831,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // THE BOX'S OWN OWNER IS THE SUBJECT, read rather than re-derived: the
     // clock set it from the wait that ripened (the two hover walks writing
     // that wait, one per surface), and `visible` is only ever set with an
-    // owner, so one is always standing here — through the hide grace too,
-    // when the pointer is already elsewhere or out of the plane. Re-walking
+    // owner, so one is always standing here. Re-walking
     // for a hovered button would be a SECOND membership rule to keep in step
     // with that one — and since 2026-08-07 it could not be the same rule
     // anyway: A DISABLED BUTTON SHOWS ITS HINT (the architect's
@@ -2833,12 +2844,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // the roster's constant/stateful hint table and the roster's painted rect;
     // a DIALOG owner reads the modal stash the painter itself publishes — its
     // composed hint and its button rect, both written by paint_modal_dialog,
-    // which runs BEFORE this body precisely so the rect this hangs off is the
-    // one this frame draws.
+    // which runs BEFORE this body precisely so the rect a flipped box stands
+    // above is the one this frame draws.
     const char* line1 = nullptr;
     const char* line2 = nullptr;
     GuiRect     btn{0, 0, 0, 0};
-    bool        flip_above = false;
     if (owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
         const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
         if (!dlg.valid ||
@@ -2866,13 +2876,6 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         // modal button's words are the painter's to compose.
         if (!b.tooltip2.empty()) line2 = b.tooltip2.c_str();
         btn   = b.rect;
-        // The modal is the BOTTOM ROW, so its hints always hang UPWARD — the
-        // same flip the row's own tenants take, for the same reason (the lane
-        // rests on the window's foot, so there is nothing below it for a hint
-        // to hang in); their membership is
-        // redesign_button_in_transport_row, which the roster branch below
-        // reads.
-        flip_above = true;
     } else {
         if (owner.index >= kRedesignButtonCount) return;
         const RedesignButton id = static_cast<RedesignButton>(owner.index);
@@ -2892,10 +2895,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         // than as a state guard, and it keeps the painter honest against the
         // owner without knowing which arms are null.
         if (text.line1 == nullptr) return;
-        line1      = text.line1;
-        line2      = text.line2;
-        btn        = app.redesign_buttons[owner.index].rect;
-        flip_above = redesign_button_in_transport_row(id);
+        line1 = text.line1;
+        line2 = text.line2;
+        btn   = app.redesign_buttons[owner.index].rect;
     }
     if (btn.w <= 0 || btn.h <= 0) return;
 
@@ -2924,27 +2926,17 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const int h = static_cast<int>(std::nearbyint(band1 + band2)) + gap +
                   2 * pad_y;
 
-    // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for every BOTTOM-ROW
-    // owner, whose lane rests ON the foot of the window (since the relayout's
-    // commit B, apart from the one day a STATUS BAR stood under it; the blank
-    // foot's own band, zero on a short window, before that): there is nothing
-    // below them at all, so a hint dropped there would fall off the window and
-    // it hangs upward instead, the
-    // same box flipped about the button. That covers BOTH bottom-row surfaces —
-    // the row's seventeen roster buttons and, since 2026-08-13, the modal's own,
-    // which paint in the same lane (the fork was resolved with the owner,
-    // above). Then CLAMPED
-    // FULLY ON-WINDOW so a
-    // button near an edge cannot push it off. The clamp is a pure position fix —
-    // the box never shrinks, because a truncated hint would be worse than one
-    // that shifted.
-    int x = btn.x;
-    int y = flip_above ? btn.y - h : btn.y + btn.h;
-    if (x + w > app.width)  x = app.width - w;
-    if (x < 0) x = 0;
-    if (y + h > app.height) y = app.height - h;
-    if (y < 0) y = 0;
-    const GuiRect box{x, y, w, h};
+    // UNDER THE POINTER, WINDOWS 95's SEAT (architect 2026-10-06): the left
+    // edge at the pointer's x and the top 18 Windows px below it, the pointer
+    // where it stood at the show; ABOVE THE OWNER'S BUTTON where that would
+    // cross the window's foot — every bottom-row owner, the roster's and the
+    // modal's alike, the lane resting on the foot — and shifted left at the
+    // right edge, the box never shrinking (a truncated hint would be worse
+    // than one that shifted). The rule's one statement is tooltip_box_rect
+    // (app_state.h); the measurement is at render.h's kTooltipPointerDropPx.
+    const GuiRect box = tooltip_box_rect(app, btn, w, h);
+    const int x = box.x;
+    const int y = box.y;
     // PUBLISHED AS PAINTED: a clip that covers the box draws it whole, so the
     // rect and the words are exactly this frame's; a clip that does not (the
     // player's clock and scrub cells at scanner cadence, which recompose a
@@ -3086,8 +3078,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
 // THE LOOK (architect 2026-10-02, the Windows-95 chrome; its colours
-// 2026-10-04): THE CARD FACE — Windows 95's tooltip, `card_ground` inside a
-// thin `card_frame` line, its words `card_text` (render.h's palette block) —
+// 2026-10-04): THE CARD FACE — Windows 95's tooltip, `card_ground` with a
+// thin `card_frame` line on its bottom and right, its words `card_text`
+// (render.h's palette block) —
 // square, NO DROP SHADOW, through the one popup box painter
 // (paint_popup_chrome's Info face, the tooltip's own);
 // a row of the icon row's own height, holding — left to right, EVERY
@@ -3930,9 +3923,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05, the
     // glyph and its provenance at kPlayheadHeadGlyph, render.h), a FIXED 9 x 8
-    // Windows-px bitmap — not a per-row half-width table any more — painted as
-    // ALIASED INTEGER RECTANGLES, one per glyph cell: a bevelled chip in
-    // three roles whose every edge lies on the unit, hard at every scale.
+    // Windows-px marker DRAWN AS NESTED OUTLINES (architect 2026-10-06: the
+    // chrome is scalable) — the silhouette, the bevel's outer edge and the
+    // face, the rings render.h derives from the bitmap — antialiased, its
+    // diagonals smooth at every scale: a bevelled chip in four chrome roles.
     //
     // TIP-DOWN ONE WINDOWS PX INTO THE MARKER LANE (architect 2026-10-05,
     // moved down from flush on the ruler lane's own bottom row, architect
@@ -3952,12 +3946,13 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // it paints over whatever this painter already laid down in its band —
     // the labels and the ticks' rise — painted after them, in FOUR CHROME
     // ROLES, never a role of its own (render.h's playhead paragraph states
-    // which cell paints which): K in LABEL (the outline, the Windows 95 arrow
-    // cursor's edge), W in HILIGHT and S in SHADOW (the bevel), '.' in GROUND
-    // at every time: the hold posture (AppState::camera_hold) has no visible
-    // lamp for now (architect 2026-10-05: a white centre is not Windows'
-    // marker; a visible hold cue is a later discussion). '_' cells are never
-    // painted at all.
+    // which region paints which): K in LABEL (the outline, the Windows 95
+    // arrow cursor's edge), W in HILIGHT and S in SHADOW (the bevel), '.' in
+    // GROUND at every time: the hold posture (AppState::camera_hold) has no
+    // visible lamp for now (architect 2026-10-05: a white centre is not
+    // Windows' marker; a visible hold cue is a later discussion). Outside the
+    // silhouette nothing is painted, its antialiased edge blending into what
+    // lies beneath.
     //
     // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
     // waveform_line_px()-wide run in the `playhead_stem` role (the waveform
@@ -4004,7 +3999,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int col = static_cast<int>(std::nearbyint(cursor_px));
         // THE GLYPH'S ONE QUANTUM, identical to the stem's own width by
         // construction (both are scaled_px(1, 1), render.h): `u` sizes every
-        // glyph cell, `t` is kept as its own name because it is the stem's
+        // glyph unit, `t` is kept as its own name because it is the stem's
         // width in the cull formula below, even though the two are always
         // the same number.
         const int u     = playhead_head_unit_px();
@@ -4023,40 +4018,78 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // rect must include it (below).
             const int    head_bottom = marker.y + marker_lane_air_px();
             const int    head_top    = head_bottom - rows;
-            // NO HOLD LAMP (architect 2026-10-05): the glyph's '.' cells are
+            // NO HOLD LAMP (architect 2026-10-05): the glyph's '.' region is
             // GROUND whether or not the hold posture stands; a visible hold
             // cue is a later discussion.
-            const GuiColor ground_cell = palette().ground;
+            //
+            // THE FOUR REGIONS, ONE PARTITION IN ONE GROUP (render.h's head
+            // paragraph): the outline (ring 0 less ring 1), the bevel's two
+            // halves (ring 1 less ring 2, split at the top-right corner along
+            // x = 7 and at the tip along the axis) and the face (ring 2), in
+            // the glyph's Windows px from its top-left (gx, gy), u device px
+            // each. Each is filled ADDED into a cleared group, so where two
+            // regions share an antialiased edge their coverages sum to the
+            // whole pixel and no colour bleeds through the seam, then the
+            // group is painted over the ruler once. Column 4's cell (the tip
+            // column) sits on the stem's own [col, col + t) because u and t
+            // are the same quantum (render.h), so the tip, 4.5 units in,
+            // lands on the stem's centre.
+            const double gx = lane.x + col - 4.0 * u;
+            const double gy = head_top;
+            const auto ring = [&](double k) {
+                cairo_move_to(cr, gx + k * u,         gy + k * u);
+                cairo_line_to(cr, gx + (9.0 - k) * u, gy + k * u);
+                cairo_line_to(cr, gx + (9.0 - k) * u, gy + 4.0 * u);
+                cairo_line_to(cr, gx + 4.5 * u,       gy + (8.0 - k) * u);
+                cairo_line_to(cr, gx + k * u,         gy + 4.0 * u);
+                cairo_close_path(cr);
+            };
+            const auto poly = [&](std::initializer_list<std::pair<double, double>>
+                                      pts) {
+                bool first = true;
+                for (const auto& [px, py] : pts) {
+                    if (first) cairo_move_to(cr, gx + px * u, gy + py * u);
+                    else       cairo_line_to(cr, gx + px * u, gy + py * u);
+                    first = false;
+                }
+                cairo_close_path(cr);
+            };
             // THE CLIP to the waveform's columns (the half-head rule above),
             // over the head's band alone and released before the stem.
             cairo_save(cr);
             cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
             cairo_clip(cr);
-            // ONE PASS A CODE, each a single fill over its own disjoint
-            // cells — the glyph is a strict partition of its 9 x 8 cells
-            // (kPlayheadHeadGlyph, render.h), so paint order among the four
-            // codes carries no meaning: no two codes ever share a pixel.
-            // '_' is skipped outright (left unpainted, transparent). Column c
-            // of 9 sits at device x = col + (c - 4) * u, the tip column
-            // (c == 4) landing exactly on the stem's own [col, col + t)
-            // because u and t are the same quantum (render.h).
-            const auto paint_code = [&](char code, GuiColor color) {
-                set_palette_source(cr, color);
-                bool any = false;
-                for (int r = 0; r < kPlayheadHeadRows; ++r) {
-                    for (int c = 0; c < kPlayheadHeadCols; ++c) {
-                        if (kPlayheadHeadGlyph[r][c] != code) continue;
-                        cairo_rectangle(cr, lane.x + col + (c - 4) * u,
-                                        head_top + r * u, u, u);
-                        any = true;
-                    }
-                }
-                if (any) cairo_fill(cr);
-            };
-            paint_code('.', ground_cell);
-            paint_code('W', palette().hilight);
-            paint_code('S', palette().shadow);
-            paint_code('K', palette().label);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+            cairo_push_group(cr);
+            cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
+            cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+            // K: the outline, ring 0 with ring 1 cut out.
+            cairo_new_path(cr);
+            ring(0.0);
+            ring(1.0);
+            set_palette_source(cr, palette().label);
+            cairo_fill(cr);
+            // W: the bevel's top and left, ring 1's top-left half less ring 2.
+            cairo_new_path(cr);
+            poly({{1.0, 1.0}, {7.0, 1.0}, {7.0, 2.0}, {2.0, 2.0}, {2.0, 4.0},
+                  {4.5, 6.0}, {4.5, 7.0}, {1.0, 4.0}});
+            set_palette_source(cr, palette().hilight);
+            cairo_fill(cr);
+            // S: the bevel's right, the top-right corner and the tip's right
+            // half.
+            cairo_new_path(cr);
+            poly({{7.0, 1.0}, {8.0, 1.0}, {8.0, 4.0}, {4.5, 7.0}, {4.5, 6.0},
+                  {7.0, 4.0}});
+            set_palette_source(cr, palette().shadow);
+            cairo_fill(cr);
+            // '.': the face, ring 2.
+            cairo_new_path(cr);
+            ring(2.0);
+            set_palette_source(cr, palette().ground);
+            cairo_fill(cr);
+            cairo_pop_group_to_source(cr);
+            cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+            cairo_paint(cr);
             cairo_restore(cr);
 
             if (!playhead_stem_suppressed()) {
@@ -7516,8 +7549,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     paint_keyboard_slot(cr, GuiRect{x, y, w, h});
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
-    // the waveform, because both hang below the top strip and overlap whatever
-    // is under them. They are NOT exposure-gated the way the rows are: each
+    // the waveform, because both hang outside their strips (the dropdown below
+    // the top strip, the tooltip under the pointer) and overlap whatever is
+    // under them. They are NOT exposure-gated the way the rows are: each
     // writes the rect it painted (or a zero rect) on every run, and a run that
     // skipped would strand a stale rect for the hit tests and the damage to
     // read. Hidden, each costs one boolean. THE NOTIFICATION CARDS (2026-08-29)

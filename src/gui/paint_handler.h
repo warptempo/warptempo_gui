@@ -818,8 +818,9 @@ private:
     // The shared box every floating surface draws, one of TWO FACES
     // (architect 2026-10-02): MENU — the ground inside the PLAIN RAISED edge
     // (the dropdown) — or INFO — THE CARD FACE, Windows 95's tooltip:
-    // `card_ground` inside a thin `card_frame` line (the tooltip and the
-    // notification cards, architect 2026-10-04; render.h's palette block).
+    // `card_ground` with a thin `card_frame` line on its bottom and right
+    // (the tooltip and the notification cards, architect 2026-10-04; the
+    // two-sided line 2026-10-06; render.h's palette block).
     enum class PopupFace { Menu, Info };
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r, PopupFace face);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under

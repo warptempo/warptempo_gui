@@ -521,13 +521,15 @@ struct Viewport {
     // A STANDING DIALOG TOOLTIP RIDES THIS DAMAGE (2026-09-29):
     // a modal button's hint is composed by the row's own paint
     // (paint_modal_dialog publishes it on the stash) and its box hangs ABOVE
-    // the lane, outside this rect — so a row repaint alone would recompose
+    // the lane (the lane rests on the window's foot, so the box seated under
+    // the pointer flips above its button), outside this rect — so a row
+    // repaint alone would recompose
     // the words (the Play/Pause face's "Pause" becoming "Play" at a folder's
     // end, "Resume" at a pause) and leave the old box's pixels standing.
     // While a tooltip stands on a Dialog owner this owner also damages the
     // box's published rect (erasing the old words, which may measure wider)
     // and the band the recomputed box can hang into — the show edge's own
-    // band (tick_tooltip) — so the frame that repaints the row repaints the
+    // pair (tooltip_hang_bands) — so the frame that repaints the row repaints the
     // hint from the same composition. Every caller above inherits it, the
     // player's three included; the per-tick comparator in main.cpp calls here
     // for the hint changes no row damage carries (the previous-track window's
@@ -632,11 +634,14 @@ struct Viewport {
     void invalidate_all();
 
     // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
-    // tooltip and the menu row's dropdown): both hang BELOW the top strip, so
-    // invalidate_top_strip alone would leave their overhang stale. Show and hide
-    // edges damage the strip AND the surface's own published rect — two cheap
-    // calls the platform coalesces — rather than growing a union helper that
-    // only these two callers would ever use. Since row 8 (2026-08-11) it is
+    // tooltip and the menu row's dropdown): both hang outside the strip that
+    // owns them — the dropdown below the top strip, the tooltip under the
+    // pointer or above the bottom row — so invalidate_top_strip alone would
+    // leave their overhang stale. Hide edges damage the strip AND the
+    // surface's own published rect — two cheap calls the platform coalesces —
+    // and a show edge the room the surface will stand in (the dropdown's
+    // derivable box, the tooltip's tooltip_hang_bands), rather than growing a
+    // union helper that only these two callers would ever use. Since row 8 (2026-08-11) it is
     // also the BOTTOM ROW'S button-face damage entry: the transport/arrow
     // faces live in the bottom strip, so every face writer's damage fork
     // passes bottom_row_area here where the top rows call
