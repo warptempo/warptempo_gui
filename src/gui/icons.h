@@ -72,6 +72,9 @@
 
 #include <cairo/cairo.h>
 
+#include <cstddef>
+#include <cstdint>
+
 namespace icons {
 
 // The icon set, one entry per committed SVG.
@@ -547,5 +550,65 @@ void draw_in_ink(cairo_t* cr, Icon icon, double x, double y, double size_px,
 // as draw above.
 void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
                    double offset_px);
+
+// THE CHICAGO95 BITMAP PASS (architect 2026-10-05): AT A BITMAP gui_scale (a
+// whole multiple of 100 — gui_font.h's gui_scale_is_bitmap, read here on
+// gui_scale_percent() so the icons turn bitmap in the same breath as the
+// text) every ROSTER BUTTON'S glyph this product paints through draw_cased
+// below comes from its period Chicago95 16-px picture
+// (assets/icons/chicago95/16/, one pick per glyph recorded at
+// assets/icons/chicago95/mapping.md) instead of its Breeze vector: decoded
+// once at launch (install_chicago95_bitmaps), each icon pixel a k x k block
+// of device px (k = gui_scale/100) blitted with cairo's own nearest-neighbour
+// scaling (CAIRO_FILTER_NEAREST on an integer scale leaves every block's
+// edges on whole device px, so no hand block loop is needed). AT EVERY OTHER
+// SCALE, or for a glyph the table does not carry (today: AppIcon alone, the
+// caption's own picture, no roster button's and not in the mapping), this is
+// draw() unchanged.
+//
+// PLACEMENT (ruling 2): draw() seats a 16-px bitmap toolbar icon at the
+// case's (3, 3) as Windows always does; THIS CALL THEN RE-CENTRES ON THE
+// INK — the icon's own opaque pixels, alpha >= 128, read off the decoded
+// surface ONCE AT INSTALL (chicago95_ink_box below, "one function, no hand
+// table": no L/T/R/B is authored here, mapping.md's columns are the
+// documentation of what that function already computes, not its source) —
+// so the ink box sits as centred in the WHOLE 23 x 22 CASE as whole Windows
+// px allow, a half-pixel tie resolving UP and LEFT (the optical centre, not
+// the arithmetic one). `case_x`/`case_y` are the case's own top-left corner
+// (NOT the (3, 3)-offset glyph origin draw() takes) and `button_shift_px` is
+// the button's own pressed/checked shift (paint_button_box's `ButtonBoxFace
+// ::shift` — ruling 4: the glyph keeps its existing +1,+1 Windows px move,
+// applied on top of the ink-centred placement precisely as it is applied to
+// draw()'s (3, 3) placement today).
+void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
+                double size_px, int button_shift_px);
+
+// THE FIVE-FILES INSTALL, Chicago95's own: one PNG per distinct picture the
+// mapping table names (assets/icons/chicago95/16/*.png — the directory IS
+// the inventory; kChicago95Files lists its basenames, no extension, THE
+// LAPTOP'S CONFIGURE-TIME GLOB'S OWN ORDER, same contract as
+// kGuiFontFiles — see gui_font.h's head for why the order is shared between
+// the two backends' install calls). The bytes are COPIED, like the fonts':
+// the caller may free or unmap them the moment this returns.
+struct Chicago95Bytes {
+    const uint8_t* data = nullptr;
+    size_t         len  = 0;
+};
+inline constexpr std::size_t kChicago95FileCount = 51;
+extern const char* const kChicago95Files[kChicago95FileCount];
+
+// Decodes every file (cairo's own PNG reader, already linked for nothing
+// else until now) and computes each one's ink box once. BREACH-ONLY: the
+// files are the repository's own committed PNGs, so a decode failure (a
+// malformed PNG, or one that is not 16 x 16) is a build defect, not a
+// runtime state, and the return says so for the caller to die on — the
+// fonts' own install contract (gui_font_install_bundled).
+bool install_chicago95_bitmaps(const Chicago95Bytes (&files)[kChicago95FileCount]);
+
+// THE LINUX BINARY'S COPY, in kChicago95Files' order, defined by
+// icons_chicago95_embedded.cpp (generated at configure time, CMakeLists.txt
+// — the fonts' own mechanism, gui_font_embedded.cpp's). The APK carries the
+// same files as assets instead (android/app/build_apk.sh).
+extern const Chicago95Bytes chicago95_embedded_files[kChicago95FileCount];
 
 } // namespace icons

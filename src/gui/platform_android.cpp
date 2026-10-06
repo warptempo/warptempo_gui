@@ -2,6 +2,7 @@
 
 #include "gui_font.h"
 #include "gui_main.h"
+#include "icons.h"
 
 #include <android/asset_manager.h>
 #include <android/configuration.h>
@@ -2486,6 +2487,50 @@ void install_fonts_or_die(android_app* app) {
     }
 }
 
+// LOAD THE PRODUCT'S CHICAGO95 ICON BITMAPS OUT OF THE APK, or die (architect
+// 2026-10-05, the icon pass): install_fonts_or_die's own contract and shape,
+// for icons::kChicago95Files (in its order) under the package's
+// icons/chicago95/16/ (build_apk.sh's asset step copies them there). A
+// missing or unreadable asset is a BUILD defect exactly as a missing font
+// is — the packaging step puts every file in — so this aborts rather than
+// painting a bitmap scale with a hole in its roster.
+void install_chicago95_bitmaps_or_die(android_app* app) {
+    AAssetManager* mgr = app->activity ? app->activity->assetManager : nullptr;
+    if (!mgr) {
+        __android_log_write(ANDROID_LOG_FATAL, kLogTag,
+                            "no AAssetManager; cannot load the Chicago95 icons");
+        abort();
+    }
+
+    AAsset*              assets[icons::kChicago95FileCount] = {};
+    icons::Chicago95Bytes files[icons::kChicago95FileCount];
+    for (std::size_t i = 0; i < icons::kChicago95FileCount; ++i) {
+        const std::string path =
+            std::string("icons/chicago95/16/") + icons::kChicago95Files[i] + ".png";
+        assets[i] = AAssetManager_open(mgr, path.c_str(), AASSET_MODE_BUFFER);
+        files[i].data =
+            assets[i] ? static_cast<const uint8_t*>(AAsset_getBuffer(assets[i]))
+                      : nullptr;
+        files[i].len =
+            assets[i] ? static_cast<size_t>(AAsset_getLength(assets[i])) : 0;
+        if (!files[i].data || files[i].len == 0) {
+            __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                                "bundled icon asset %s is missing or empty",
+                                path.c_str());
+            abort();
+        }
+    }
+
+    const bool installed = icons::install_chicago95_bitmaps(files);
+    for (AAsset* a : assets) AAsset_close(a);
+    if (!installed) {
+        __android_log_write(ANDROID_LOG_FATAL, kLogTag,
+                            "Chicago95 icon bitmaps did not install; refusing "
+                            "to paint a bitmap scale with a hole in the roster");
+        abort();
+    }
+}
+
 // SERVICING THE GLUE, ONE SHAPE FOR BOTH WAITS. android_main brackets the GUI
 // with two stretches in which this thread has nothing of its own to run and
 // must still answer the glue: the HEAD waits for the first window, the TAIL
@@ -2565,6 +2610,7 @@ void android_main(android_app* app) {
     g_activity_finish_asked = false;
 
     install_fonts_or_die(app);
+    install_chicago95_bitmaps_or_die(app);
 
     // WAIT FOR THE WINDOW before handing over. gui_main constructs its
     // GuiPlatform and expects init() to have geometry — the whole GUI layout

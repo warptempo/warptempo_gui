@@ -116,6 +116,22 @@ shopt -u nullglob
 cp -f "${THEME_FILES[@]}" "$ASSETS/themes/"
 wt_say "assets: ${#THEME_FILES[@]} theme files"
 
+# THE CHICAGO95 ICON BITMAPS (architect 2026-10-05, the icon pass): the 51
+# PNGs under the repository's assets/icons/chicago95/16/ (icons.h's
+# kChicago95Files), copied under the package's icons/chicago95/16/ -- the
+# very files the Linux executable compiles in (CMakeLists.txt's icon step),
+# so both devices paint the same bitmaps at a bitmap gui_scale. The path
+# mirrors the repository's own, since install_chicago95_bitmaps_or_die
+# (platform_android.cpp) opens each asset by that same relative path.
+ICON_DIR="$APPDIR/../../assets/icons/chicago95/16"
+mkdir -p "$ASSETS/icons/chicago95/16"
+shopt -s nullglob
+ICON_FILES=("$ICON_DIR"/*.png)
+shopt -u nullglob
+[ "${#ICON_FILES[@]}" -gt 0 ] || wt_die "no .png files under $ICON_DIR"
+cp -f "${ICON_FILES[@]}" "$ASSETS/icons/chicago95/16/"
+wt_say "assets: ${#ICON_FILES[@]} Chicago95 icon files"
+
 # --- 2/3. configure + build ----------------------------------------------
 bash "$APPDIR/configure.sh"
 wt_say "building $LIBNAME"

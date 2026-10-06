@@ -1898,7 +1898,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const double gx = static_cast<double>(bx + glyph_off + box.shift);
         const double gy = static_cast<double>(btn_y + glyph_off + box.shift);
         if (face.enabled)
-            icons::draw(cr, glyph, gx, gy, static_cast<double>(glyph_px));
+            // THE CHICAGO95 BITMAP PASS (architect 2026-10-05): draw_cased
+            // takes the CASE's own corner, not the (3, 3)-offset glyph
+            // origin above (it re-derives that placement itself at every
+            // non-bitmap scale, and ink-centres a Chicago95 picture in the
+            // whole case at a bitmap one) — icons.h's placement rule.
+            icons::draw_cased(cr, glyph, bx, btn_y,
+                              static_cast<double>(glyph_px), box.shift);
         else
             icons::draw_engraved(cr, glyph, gx, gy,
                                  static_cast<double>(glyph_px),
@@ -2449,7 +2455,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double gx = static_cast<double>(x + glyph_off + box.shift);
         const double gy = static_cast<double>(btn_y + glyph_off + box.shift);
         if (face.enabled)
-            icons::draw(cr, glyph, gx, gy, static_cast<double>(glyph_px));
+            // THE CHICAGO95 BITMAP PASS (architect 2026-10-05): draw_cased's
+            // own placement rule, icons.h's head; the case's corner, not the
+            // (3, 3) glyph origin above.
+            icons::draw_cased(cr, glyph, x, btn_y,
+                              static_cast<double>(glyph_px), box.shift);
         else
             icons::draw_engraved(cr, glyph, gx, gy,
                                  static_cast<double>(glyph_px),
@@ -6532,8 +6542,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const double gy =
                 static_cast<double>(r.y + glyph_off + box.shift);
             if (enabled)
-                icons::draw(cr, plan[i].icon, gx, gy,
-                            static_cast<double>(glyph_px));
+                // THE CHICAGO95 BITMAP PASS (architect 2026-10-05):
+                // draw_cased's own placement rule, icons.h's head; the
+                // case's corner (r.x, r.y), not the (3, 3) glyph origin gx/
+                // gy above.
+                icons::draw_cased(cr, plan[i].icon, r.x, r.y,
+                                  static_cast<double>(glyph_px), box.shift);
             else
                 icons::draw_engraved(cr, plan[i].icon, gx, gy,
                                      static_cast<double>(glyph_px),

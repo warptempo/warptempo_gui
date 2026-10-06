@@ -18,7 +18,7 @@ Ink box (w x h) and its margins in icon px (L, T, R, B); dx, dy = the ink centre
 | IconRestrictUndo | Toggle Restrict Undo to Current View | icon row (zoom group) | timeline-lift | actions/view-pin | 11x7 | 2 | 4 | 3 | 5 | -0.5 | -0.5 |  |
 | IconBpm | BPM Iterations | icon row (iteration group) | music-note-16th | devices/music-player | 16x16 | 0 | 0 | 0 | 0 | 0.0 | 0.0 |  |
 | IconIter | Toggle Grid Iterations | icon row (iteration group) | mathmode | actions/view-grid | 14x12 | 1 | 2 | 1 | 2 | 0.0 | 0.0 |  |
-| IconFlatten | Flatten | icon row (own group) | merge | actions/object-merge | 13x13 | 10 | 10 | 9 | 9 | 0.5 | 0.5 | NOT 16 PX (32x32) |
+| IconFlatten | Flatten | icon row (own group) | merge | actions/object-group | 14x14 | 1 | 1 | 1 | 1 | 0.0 | 0.0 |  |
 | IconListen | Play Renders | icon row (own group) | preview-render-on | actions/media-playback-start | 9x9 | 3 | 3 | 4 | 4 | -0.5 | -0.5 |  |
 | IconReadOnly (locked) | Toggle Read-Only | icon row (own group) | lock | actions/lock | 12x15 | 2 | 0 | 2 | 1 | 0.0 | -0.5 |  |
 | IconReadOnly (unlocked face) | Toggle Read-Only | icon row, lock released | unlock | status/stock_lock-open | 14x15 | 1 | 0 | 1 | 1 | 0.0 | -0.5 |  |
@@ -30,7 +30,7 @@ Ink box (w x h) and its margins in icon px (L, T, R, B); dx, dy = the ink centre
 | HistoryRevert | Revert | icon row, history step group | document-revert | actions/document-revert | 13x15 | 1 | 0 | 2 | 1 | -0.5 | -0.5 |  |
 | IconLoadInPlace | Load in Place | icon row, history step group | dialog-ok-apply | actions/dialog-ok-apply | 12x12 | 2 | 2 | 2 | 2 | 0.0 | 0.0 |  |
 | HistoryWalk | Toggle History Walk | icon row, history reading group (stands in for BPM/Iter) | shallow-history | actions/view-dual | 14x12 | 1 | 2 | 1 | 2 | 0.0 | 0.0 |  |
-| HistoryCumulative | Toggle Cumulative | icon row, history reading group | black_sum | actions/object-group | 14x14 | 1 | 1 | 1 | 1 | 0.0 | 0.0 |  |
+| HistoryCumulative | Toggle Cumulative | icon row, history reading group | black_sum | actions/view-sort-ascending | 16x14 | 0 | 1 | 0 | 1 | 0.0 | 0.0 | 2026-10-05: object-group went to Flatten (candidate 2; object-merge has no 16-px art), so Cumulative took this fresh pick ("one picture per act, pick something that even remotely resembles cumulative"); a placeholder, a Fable redraw pending |
 | ViewSW | Source+Warp | icon row, view group (flush right) | document-export | actions/document-export | 13x15 | 1 | 0 | 2 | 1 | -0.5 | -0.5 |  |
 | ViewTW | Target+Warp | icon row, view group | document-import | actions/document-import | 13x15 | 1 | 0 | 2 | 1 | -0.5 | -0.5 |  |
 | ViewTP | Target+Phase | icon row, view group | chronometer-start | apps/clock | 16x16 | 0 | 0 | 0 | 0 | 0.0 | 0.0 |  |

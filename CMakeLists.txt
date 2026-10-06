@@ -453,18 +453,51 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
              CONTENT "${font_bytes}\n")
     endforeach()
 
+    # THE CHICAGO95 ICON BITMAPS (architect 2026-10-05, the icon pass), THE
+    # FONT STEP'S OWN MECHANISM: the 51 PNGs under assets/icons/chicago95/16/
+    # (icons.h's kChicago95Files and icons_chicago95_embedded.cpp's #include
+    # list, both hand-kept in that directory's sorted order, the font files'
+    # own convention) each become `<name>.png.inc` in the build tree at
+    # CONFIGURE time — the bytes as hex literals, a configure dependency, so a
+    # swapped icon rebuilds the one object that includes it.
+    set(WARPTEMPO_ICON_INC_DIR ${CMAKE_BINARY_DIR}/icons-generated)
+    foreach(icon action-unavailable audio-x-wav clock dialog-cancel dialog-error
+                 dialog-information dialog-ok-apply document-export
+                 document-import document-open-recent document-revert
+                 document-save document-send edit-copy edit-delete edit-redo
+                 edit-select edit-undo emblem-system folder go-bottom go-down
+                 go-jump go-next go-previous go-up help-hint insert-link
+                 list-add list-remove lock media-playback-pause
+                 media-playback-start media-playback-stop
+                 media-playlist-repeat media-record media-skip-backward
+                 media-skip-forward music-player object-group
+                 stock_lock-open view-dual view-grid view-paged view-pin
+                 view-refresh view-sort-ascending window-close
+                 zoom-fit-best zoom-in zoom-original)
+        set(icon_src ${CMAKE_SOURCE_DIR}/assets/icons/chicago95/16/${icon}.png)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                     ${icon_src})
+        file(READ ${icon_src} icon_hex HEX)
+        string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," icon_bytes
+               "${icon_hex}")
+        file(CONFIGURE OUTPUT ${WARPTEMPO_ICON_INC_DIR}/${icon}.png.inc
+             CONTENT "${icon_bytes}\n")
+    endforeach()
+
     add_executable(warptempo_gui
         ${WARPTEMPO_GUI_SOURCES}
         # The two per-backend arms, Linux's: the Wayland platform backend and
         # the JACK playback device. The Android library above compiles
         # platform_android.cpp and playback_aaudio.cpp in their places; exactly
         # one arm of each is ever linked. Beside them, the product's five font
-        # files compiled in (the font step above; the mechanism and why at the
-        # file's head): the APK carries the same files as assets instead, and
-        # warptempo_cli, which paints nothing, carries neither.
+        # files and the Chicago95 icon bitmaps compiled in (the two steps
+        # above; each mechanism and why at its own file's head): the APK
+        # carries the same files as assets instead, and warptempo_cli, which
+        # paints nothing, carries neither.
         src/gui/platform_wayland.cpp
         src/gui/playback.cpp
         src/gui/gui_font_embedded.cpp
+        src/gui/icons_chicago95_embedded.cpp
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}
@@ -480,6 +513,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${CMAKE_SOURCE_DIR}/src/gui
         ${CMAKE_BINARY_DIR}/wayland-generated
         ${WARPTEMPO_FONT_INC_DIR}
+        ${WARPTEMPO_ICON_INC_DIR}
         ${FFTW3_INCLUDE_DIRS}
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${WAYLAND_CURSOR_INCLUDE_DIRS}

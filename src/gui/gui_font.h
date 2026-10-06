@@ -103,7 +103,16 @@ struct GuiFont {
     GuiFace face    = GuiFace::Body;
     int     percent = 100;
 };
-inline bool gui_font_is_bitmap(const GuiFont& f) { return f.percent % 100 == 0; }
+// THE BITMAP SWITCH, ON THE SCALE ALONE (architect 2026-10-05): a whole
+// multiple of 100 is a bitmap scale for every bitmap-faced thing the product
+// draws, not the fonts alone — the icon pass (icons.h's draw_cased) reads
+// this same predicate on gui_scale_percent() so a scale that turns the text
+// bitmap turns the Chicago95 glyphs bitmap with it, with no second switch to
+// drift out of step.
+inline bool gui_scale_is_bitmap(int percent) { return percent % 100 == 0; }
+inline bool gui_font_is_bitmap(const GuiFont& f) {
+    return gui_scale_is_bitmap(f.percent);
+}
 inline double gui_font_scale(const GuiFont& f) {
     return static_cast<double>(f.percent) / 100.0;
 }

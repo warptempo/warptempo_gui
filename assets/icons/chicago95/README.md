@@ -8,5 +8,7 @@ for Linux desktops. Licence: GPL-3.0 per upstream (the archive the architect upl
 the local planner copies upstream's COPYING here when it has network). Bundling is the architect's ruling for this
 one-user program (2026-10-05).
 
-`object-merge.png` (Flatten's first pick) is 32 x 32 in Chicago95's own 16-px folder; see the welcome-back.
-Do not edit these files: a new pick is a new copy from upstream, recorded in `mapping.md`.
+`object-merge.png`, Flatten's first pick, was 32 x 32 in Chicago95's own 16-px folder — no real 16-px art — and is
+deleted (architect 2026-10-05, ruling 0): Flatten took `object-group.png` instead and Toggle Cumulative, which had
+worn that file, took a fresh pick, `view-sort-ascending.png` (`mapping.md`'s HistoryCumulative row carries the
+account). Do not edit these files: a new pick is a new copy from upstream, recorded in `mapping.md`.
