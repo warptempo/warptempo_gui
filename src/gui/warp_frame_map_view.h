@@ -295,7 +295,7 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 // every window size shares one grid, and a hand resize never moves a landing
 // at a held zoom. The LEVEL→spp map is device-relative since 2026-09-27
 // (spp = working column × 2^(level − 2), samples_per_pixel_at), and the
-// working column is fixed per process from the held width, so within a
+// working column is fixed per process from the held display width, so within a
 // device every level, whole or fractional (every rest a Ctrl-drag, pinch or
 // pen zoom leaves), has one grid; across devices the same level is the same
 // RELATIVE zoom and a different grid, the cross-device promise withdrawn.

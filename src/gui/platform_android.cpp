@@ -848,6 +848,8 @@ void GuiPlatform::destroy_backbuffer() {
 
 int GuiPlatform::width()  const { return width_; }
 int GuiPlatform::height() const { return height_; }
+// The surface is the display (the contract at the header).
+int GuiPlatform::display_width_px() const { return width_; }
 
 // ---------------------------------------------------------------------------
 // The title — no surface on this platform

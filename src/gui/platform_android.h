@@ -42,7 +42,10 @@
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
-// LAST GREW ON 2026-10-05, by bundled_theme_files (the theme files the build
+// LAST GREW ON 2026-10-06, by display_width_px (the display's horizontal
+// resolution, the working column's held width — working_column_frames,
+// app_state.h: the output's current mode on the laptop, the surface here),
+// before that on 2026-10-05 by bundled_theme_files (the theme files the build
 // ships: the repository's assets/themes/ on the laptop, the APK's assets
 // here — the copy-in at launch, theme_file.h), and before that on
 // 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
@@ -210,6 +213,14 @@ public:
     int width()  const;
     int height() const;
     bool has_initial_configure() const { return has_initial_configure_; }
+
+    // THE DISPLAY'S HORIZONTAL RESOLUTION, the seam's own member (contract at
+    // platform_wayland.h, which owns it): this backend answers the surface's
+    // width, width_ — the activity is full screen and landscape-only, so the
+    // surface IS the display (the rule at width_), 2304 on the tablet. Known
+    // from init() on, since init adopts a live window, so it is never 0 by
+    // the first load.
+    int display_width_px() const;
 
     // WINDOW ACTIVATION (keyboard focus), driven by APP_CMD_GAINED_FOCUS /
     // APP_CMD_LOST_FOCUS. FALSE UNTIL THE FIRST GAINED_FOCUS, the same honest

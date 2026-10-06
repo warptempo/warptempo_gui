@@ -92,7 +92,8 @@ namespace {
 
 // Samples-per-pixel is a continuous function of the zoom level (a real-valued
 // exponent): spp(level) = column × 2^(level − 2), the column this device's
-// working column (working_column_frames, app_state.h), computed directly in
+// working column (working_column_frames, app_state.h: 2.4 s across the
+// display's width, never the strip's), computed directly in
 // samples_per_pixel_at. The level rests anywhere in the one continuous domain
 // [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest zoom-in (half a
 // working column per pixel) unless the floor raises it
@@ -914,8 +915,8 @@ double effective_min_zoom_level(int64_t column_frames) {
 // clamp_viewport_start's visible >= total branch owns that start = 0
 // display. Because kMaxZoom is derived from audio_io's
 // structural source caps (see settings_file.h), fit_level is below kMaxZoom
-// for every loadable file, so the clamp's upper edge is never the binding one
-// in practice.
+// for every loadable file at every window size on the deployed displays, so
+// the clamp's upper edge is never the binding one in practice.
 double effective_max_zoom_level(int waveform_width_px,
                                 int64_t total_frames,
                                 int64_t column_frames) {
@@ -1284,11 +1285,11 @@ struct GuiProjectOutcome {
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
 // contract is at platform.h; gui_main below is the loop). The window, the
-// input core, the device config, the held waveform width and the render cache
+// input core, the device config, the held display width and the render cache
 // are the caller's and outlive every call.
 GuiProjectOutcome run_project(GuiPlatform&            gui,
                               DeviceConfig&           device_config,
-                              int&                    held_waveform_width_px,
+                              int&                    held_display_width_px,
                               RenderCache&            render_cache,
                               const GuiProjectSource& project,
                               bool&                   window_up) {
@@ -2157,7 +2158,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // takes the project's NAME from here rather than deriving one from
             // the source's parent folder (the rule is at
             // GuiFileLoader::load_file).
-            if (!file_loader.load_file(project, held_waveform_width_px)) {
+            if (!file_loader.load_file(project, held_display_width_px)) {
                 // A project is opened by rebuilding this whole object set
                 // around it and there is no in-session replacement surface,
                 // so every load refusal is terminal. It is also the
@@ -3324,13 +3325,14 @@ int gui_main(const char* argument) {
     RenderCache render_cache;
     render_cache.init();
 
-    // THE HELD WAVEFORM WIDTH, ONCE PER PROCESS, beside the device config (the
+    // THE HELD DISPLAY WIDTH, ONCE PER PROCESS, beside the device config (the
     // working column's rule is at working_column_frames, app_state.h): 0 until
-    // the first project's load writes waveform_area(app).w into it
-    // (GuiFileLoader::load_file); every project the loop opens computes its
-    // own rate's working column from it, so the zoom map's column never
-    // re-derives on a resize or a later open.
-    int held_waveform_width_px = 0;
+    // the first project's load writes the display's width into it
+    // (gui.display_width_px(), GuiFileLoader::load_file); every project the
+    // loop opens computes its own rate's working column from it, so the zoom
+    // map's column never re-derives on a resize, a mode change or a later
+    // open.
+    int held_display_width_px = 0;
 
     // THE PROJECT LOOP. Everything ONE PER PROCESS is above; everything ONE PER
     // PROJECT is run_project's, built around the session's source and torn
@@ -3359,7 +3361,7 @@ int gui_main(const char* argument) {
     int  exit_status = 0;
     for (;;) {
         const GuiProjectOutcome outcome =
-            run_project(gui, device_config, held_waveform_width_px,
+            run_project(gui, device_config, held_display_width_px,
                         render_cache, project, window_up);
         if (outcome.reopen.empty()) {
             exit_status = outcome.exit_status;

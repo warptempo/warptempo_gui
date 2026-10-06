@@ -84,7 +84,7 @@
 // convention the persisted viewport/playhead values follow. The level→scale
 // map is GUI-side and DEVICE-RELATIVE (architect approval 2026-09-27):
 // samples-per-pixel(level) = column * 2^(level-2), the column the device's
-// working column in whole source frames, nearbyint(2.4 s * rate / waveform
+// working column in whole source frames, nearbyint(2.4 s * rate / display
 // width) (working_column_frames in app_state.h, read by main.cpp's
 // samples_per_pixel_at), so level 2 is exactly one working column per pixel,
 // each whole step is 2x, a persisted level means the same RELATIVE zoom on any
@@ -98,16 +98,21 @@ constexpr double kMinZoom = 1.0;
 // (~4 GiB of PCM); the binding case is 24-bit stereo (6 bytes/frame) at the
 // 44100 Hz rate floor -> 4294967295 / 6 ~= 715.8 M frames ~= 16232 s. Under
 // the device-relative map (architect approval 2026-09-27) the visible span at
-// a level is width * column * 2^(level-2) frames, about 2.4 s * 2^(level-2)
-// whatever the width: level 17 spans about 78600 s (at least 77395 s over
-// every multiple-of-16 width from the 640 px minimum window to 3840 px, at
-// every standard rate), so 17 covers the worst case with a wide margin. It is
-// no longer the MINIMAL covering level (15 would cover, at least 19349 s);
-// the vocabulary stays [1, 17] because it is persisted (architect approval
+// a level is width * column * 2^(level-2) frames, the column 2.4 s across the
+// DISPLAY's width (architect 2026-10-06), so about 2.4 s * 2^(level-2) *
+// strip / display: level 17 spans about 78600 s across a strip as wide as its
+// display, so 17 covers the worst case whenever the strip is at least about
+// 21 % of the display's width — at every window size from the 640 px minimum
+// on a display up to 2560 px wide, the deployed 1920 and 2304 among them
+// (at least 19497 s at 44.1 kHz, the binding rate). Only a near-minimum
+// window on a display of about 3000 px or more, over a source of several
+// hours, leaves the ceiling at kMaxZoom short of the whole song, a state
+// outside the two devices. It is not the MINIMAL covering level; the
+// vocabulary stays [1, 17] because it is persisted (architect approval
 // 2026-09-13 for 17 under the retired absolute 0.625 ms/px ladder, where 17
 // was minimal at 640 px).
-// Consequence: for EVERY loadable file the fit level is below kMaxZoom by
-// construction, so full zoom-out always rests at whole-song-visible.
+// Consequence: on the deployed displays, for EVERY loadable file the fit
+// level is below kMaxZoom, so full zoom-out rests at whole-song-visible.
 constexpr double kMaxZoom = 17.0;  // (architect approval 2026-09-13)
 
 // One tab's trim in the .settings schema. Positions are whole source frames

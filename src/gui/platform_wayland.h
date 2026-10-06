@@ -201,6 +201,25 @@ public:
     int height() const;
     bool has_initial_configure() const { return has_initial_configure_; }
 
+    // THE DISPLAY'S HORIZONTAL RESOLUTION in device px, the seam's own member
+    // (architect 2026-10-06), and its one reader is the working column's
+    // per-process hold (working_column_frames, app_state.h; read once at the
+    // first project's load, file_loader.cpp): the zoom grid is the device's,
+    // never the window's, so a resize or a theme's frame never moves it. Here
+    // it is the CURRENT MODE width of the output the window is on — the
+    // selected record's (the selection rule at `outputs_`), kept by
+    // select_window_output beside the refresh. The modes arrive in init()'s
+    // second roundtrip, before the surface exists, so the figure is known by
+    // the first load whenever an output reported a current mode; before the
+    // first wl_surface.enter it is the seed's (the first output bound), which
+    // on a one-panel laptop is the panel. 0 means no output has reported one
+    // (the hold then falls back to the window's width). The mode is in the
+    // output's own orientation and physical pixels, and neither a transform
+    // nor an output scale is read: the backend is scaling-unaware by design
+    // (output_scale, platform_wayland.cpp) and the laptop's panel is
+    // unrotated at scale 1, where the mode's pixels are the surface's.
+    int display_width_px() const;
+
     // WINDOW ACTIVATION (keyboard focus), straight off xdg_toplevel.configure's
     // state array: true while the compositor lists XDG_TOPLEVEL_STATE_ACTIVATED.
     // Its one consumer is the activation EDGE below (the tooltip's hard end,
@@ -651,9 +670,10 @@ private:
 
     // -- Outputs: every wl_output, and THE ONE THE WINDOW IS ON --
     // One record per advertised wl_output (bound at up to v3; the MODE event
-    // is the one thing read, by the tick), kept while the global stands and
-    // destroyed at its registry removal. `refresh_mhz` is that output's
-    // latest CURRENT mode, 0 until one arrives. `entered` mirrors
+    // is the one thing read: its refresh by the tick, its width by
+    // display_width_px), kept while the global stands and destroyed at its
+    // registry removal. `refresh_mhz` and `width_px` are that output's latest
+    // CURRENT mode, 0 until one arrives. `entered` mirrors
     // wl_surface.enter/leave for the main surface: true while the compositor
     // says the window is (at least partly) on this output. `version` is what
     // this proxy was bound at, and its one reader is the teardown: v3 gave
@@ -671,8 +691,9 @@ private:
     // output leaves the selection the same way. Before the first enter (the
     // initial configure and the first paint precede it) the selection is
     // seeded with the first output bound, exactly the old rule, so the tick
-    // starts on a real figure. `output_refresh_mhz_` below is always the
-    // selected output's refresh, re-derived by `select_window_output` at every
+    // starts on a real figure. `output_refresh_mhz_` and `output_width_px_`
+    // below are always the selected output's, re-derived by
+    // `select_window_output` at every
     // edge — enter, leave, a mode change on the selected output, a removal —
     // and every change re-arms the tick. THE SEED IS SPENT AT THE FIRST ENTER
     // (`surface_entered_ever_` below): once the compositor has named an output
@@ -685,6 +706,7 @@ private:
         uint32_t          global_name = 0;
         uint32_t          version     = 0;
         int               refresh_mhz = 0;
+        int               width_px    = 0;
         bool              entered     = false;
     };
     std::vector<OutputRecord> outputs_;
@@ -793,6 +815,10 @@ private:
     // output edge by select_window_output. Zero means no output has reported
     // a usable mode yet; detect_refresh_rate_ms() then falls back to 60 Hz.
     int  output_refresh_mhz_ = 0;
+    // THE WINDOW'S OUTPUT'S latest CURRENT mode width, in device px, the same
+    // selected record's (display_width_px, the contract); 0 until a usable
+    // mode has arrived.
+    int  output_width_px_ = 0;
 
     // -- Idle-tick timing --
     int  playback_tick_ms_ = 8;
@@ -997,9 +1023,9 @@ private:
     // bound (a cursor surface's output events never reach here; the main
     // surface's enter names only outputs the registry named).
     OutputRecord* find_output(struct wl_output* output);
-    // THE ONE WRITER of output_refresh_mhz_: apply the selection rule (at
-    // `outputs_`) to `window_output_` and, when the figure moved, re-arm the
-    // tick. Called at every output edge.
+    // THE ONE WRITER of output_refresh_mhz_ and output_width_px_: apply the
+    // selection rule (at `outputs_`) to `window_output_` and, when the
+    // refresh moved, re-arm the tick. Called at every output edge.
     void select_window_output();
 
     // -- Clipboard helpers --

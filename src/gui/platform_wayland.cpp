@@ -207,7 +207,8 @@ struct WaylandListeners {
     // (opcode 3) follow it, so do-nothing stubs are mandatory. `name` and
     // `description` are v4+ and aren't dispatched at our bind version,
     // but stubs cost nothing and forward-compatibility is one less foot-
-    // gun if the bind version is ever raised. Only the MODE is read.
+    // gun if the bind version is ever raised. Only the MODE is read (its
+    // refresh and its width).
     static void output_geometry(void*, struct wl_output*,
                                 int32_t, int32_t, int32_t, int32_t, int32_t,
                                 const char*, const char*, int32_t) {}
@@ -731,7 +732,9 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     // Two roundtrips: first surfaces the registry advertisements, second
     // drains any output-mode events that follow the wl_output bind. Without
-    // the second roundtrip the refresh rate can be missing on first use.
+    // the second roundtrip the refresh rate can be missing on first use, and
+    // the display width the working column's hold reads at the first load
+    // (display_width_px) with it.
     wl_display_roundtrip(wl_display_);
     wl_display_roundtrip(wl_display_);
 
@@ -1983,7 +1986,7 @@ void GuiPlatform::on_registry_global_remove(uint32_t name) {
 }
 
 void GuiPlatform::on_output_mode(struct wl_output* output, uint32_t flags,
-                                 int32_t /*width*/, int32_t /*height*/,
+                                 int32_t width, int32_t /*height*/,
                                  int32_t refresh_mhz) {
     // WL_OUTPUT_MODE_CURRENT (bit 0) marks the active mode. The protocol makes
     // the most recently reported CURRENT mode authoritative, including a
@@ -1992,8 +1995,11 @@ void GuiPlatform::on_output_mode(struct wl_output* output, uint32_t flags,
     OutputRecord* rec = find_output(output);
     if (!rec) return;
     rec->refresh_mhz = refresh_mhz;
+    rec->width_px    = width;
     // A mode change on any output other than the window's changes nothing
-    // here; on the window's it re-derives the figure and re-arms the tick.
+    // here; on the window's it re-derives the figures and, when the refresh
+    // moved, re-arms the tick. (The working column's hold has read the width
+    // once already by then and never re-reads it: display_width_px.)
     if (output == window_output_) select_window_output();
 }
 
@@ -2021,6 +2027,7 @@ void GuiPlatform::select_window_output() {
     const OutputRecord* rec = window_output_ ? find_output(window_output_)
                                              : nullptr;
     if (!rec) return;
+    output_width_px_ = rec->width_px;
     if (rec->refresh_mhz == output_refresh_mhz_) return;
     output_refresh_mhz_ = rec->refresh_mhz;
     // The initial mode burst precedes timerfd creation (init arms the timer
@@ -3161,6 +3168,8 @@ void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void(
 // The CLIENT area's (frame_px_, the header): the app's geometry.
 int GuiPlatform::width()  const { return client_w(); }
 int GuiPlatform::height() const { return client_h(); }
+// The selected output's current mode width (the contract at the header).
+int GuiPlatform::display_width_px() const { return output_width_px_; }
 
 // -- The window's own chrome (architect 2026-10-05; contracts at the header) --
 

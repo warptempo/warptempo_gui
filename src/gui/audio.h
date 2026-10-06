@@ -48,7 +48,7 @@ public:
     // published and returns without waiting for it (gain_curve_ready below).
     // `working_column` is the device's working column for this source's rate
     // (working_column_frames, app_state.h, computed by the loader from the
-    // process's held waveform width): load() publishes it beside the rate and
+    // process's held display width): load() publishes it beside the rate and
     // hands it to the gain derivation, whose analysis column it is.
     bool load(const std::string& path, int64_t working_column,
               const ProgressCallback& on_progress);

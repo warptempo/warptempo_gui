@@ -207,7 +207,7 @@ std::optional<GuiFailure> source_load_dry_run(
 }
 
 bool GuiFileLoader::load_file(const GuiProjectSource& project,
-                              int& held_waveform_width_px) {
+                              int& held_display_width_px) {
     const std::string path = project.source.string();
     // NO EXTENSION REFUSAL STANDS HERE, and none is wanted (2026-09-02): the
     // `.peaks` cache refusal that opened this body — from the era when a path
@@ -270,18 +270,35 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     gui.paint_now();
 
     // THE WORKING COLUMN (working_column_frames, app_state.h, the rule): the
-    // process holds the WAVEFORM WIDTH, read here once at its first project's
-    // load — the window is mapped at its first configure's size by now (the
-    // startup tick waits on has_initial_configure) — and every load computes
-    // its own rate's column from that held width, published on the audio and
-    // handed to the gain derivation. One stderr line per load, which the
+    // process holds THE DISPLAY'S WIDTH (gui.display_width_px(), the contract
+    // at platform_wayland.h), read here once at its first project's load, and
+    // every load computes its own rate's column from that held width,
+    // published on the audio and handed to the gain derivation. The figure is
+    // known by now on both backends: Wayland's output modes arrive in init()'s
+    // second roundtrip, before the surface exists and so before the first
+    // configure the startup tick waits on (has_initial_configure); Android's
+    // is the surface init() adopted. Only a compositor reporting no current
+    // mode leaves it 0, and the hold then takes the window's width, with a
+    // stderr line — the same figure on both deployed devices under the
+    // Windows theme (the laptop maximised, the tablet full screen). One
+    // stderr line per load names the column and the held width, which the
     // tablet reads in logcat.
-    if (held_waveform_width_px <= 0) held_waveform_width_px = waveform_area(app).w;
-    assert(held_waveform_width_px > 0);
+    if (held_display_width_px <= 0) {
+        held_display_width_px = gui.display_width_px();
+        if (held_display_width_px <= 0) {
+            held_display_width_px = app.width;
+            std::fprintf(stderr,
+                         "warptempo_gui: no display width reported; the "
+                         "working column holds the window's %d px\n",
+                         held_display_width_px);
+        }
+    }
+    assert(held_display_width_px > 0);
     const int64_t working_column = working_column_frames(
-        source_info->sample_rate, held_waveform_width_px);
-    std::fprintf(stderr, "warptempo_gui: working_column=%lld (W=%d, %d Hz)\n",
-                 static_cast<long long>(working_column), held_waveform_width_px,
+        source_info->sample_rate, held_display_width_px);
+    std::fprintf(stderr,
+                 "warptempo_gui: working_column=%lld (display_w=%d, %d Hz)\n",
+                 static_cast<long long>(working_column), held_display_width_px,
                  source_info->sample_rate);
 
     GuiAudio next;

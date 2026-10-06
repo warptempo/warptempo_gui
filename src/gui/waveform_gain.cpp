@@ -14,7 +14,7 @@ namespace {
 // --- the column: the caller's, not chosen here ----------------------------
 // The measure reads the picture at WORKING ZOOM, the placement-instrument
 // zoom, so its column is the device's WORKING COLUMN in source frames,
-// nearbyint(2.4 s × rate ÷ the held waveform width) (working_column_frames,
+// nearbyint(2.4 s × rate ÷ the held display width) (working_column_frames,
 // app_state.h, its one owner), handed in by GuiAudio::load: 55 on the laptop's
 // 1920 px at 44.1 kHz (as before the device-relative map of 2026-09-27, when
 // it was floor(55.125)), 46 on the tablet's 2304 px, 60 / 50 at 48 kHz. At

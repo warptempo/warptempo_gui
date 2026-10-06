@@ -68,7 +68,8 @@ struct GuiTargetRender;
 // THE ZOOM MAP IS DEVICE-RELATIVE (architect 2026-09-27: "level 2 is the
 // working level on this device; everything works off it"): spp(level) =
 // column × 2^(level − 2) frames per pixel, the column this device's WORKING
-// COLUMN (working_column_frames below), so level 2 paints exactly one working
+// COLUMN (working_column_frames below: 2.4 s across the DISPLAY's width, not
+// the strip's, architect 2026-10-06), so level 2 paints exactly one working
 // column per pixel, level 1 half of one, level 3 two, and so on. The column is
 // the map's one parameter; every site that solves or evaluates the map reads
 // it (samples_per_pixel_at, fit_zoom_level and effective_max_zoom_level in
@@ -81,7 +82,7 @@ constexpr double kWorkingZoomLevel = 2.0;  // spp = the working column exactly;
                                            // step deeper, to the floor below
 // THE DEEPEST-ZOOM FLOOR (architect 2026-09-27): the finest step the zoom may
 // paint, in source frames per pixel. Level 1 paints half the working column,
-// and on a wide enough strip that is too fine for two guarantees:
+// and on a wide enough display that is too fine for two guarantees:
 //   * THE ONE-COLUMN NUDGE (position_nudge.h): at the value brackets' extreme
 //     stretch the phase nudge's target home carries q / 16 source frames per
 //     target pixel, so its whole-frame rounding error, 8 / q px, stays under
@@ -94,10 +95,10 @@ constexpr double kWorkingZoomLevel = 2.0;  // spp = the working column exactly;
 // whole number of frames, so it sits on the sixteenth-frame grid and the
 // floor paints q = 20 exactly (painter_quantized_spp). It binds only where
 // level 1 would paint finer, a working column under 40 frames, which no
-// deployed device has (level 1's q: laptop 27.5 and tablet 23 at 44.1 kHz,
-// 30 / 25 at 48 kHz, 60 / 50 at 96 kHz); a 3840 px strip at 44.1 kHz
-// (column 28) floors at 20 frames per pixel, about 1.74 s across against the
-// working zoom's 2.44 s. The persisted zoom vocabulary [kMinZoom, kMaxZoom] is
+// deployed device has (level 1's q: the laptop's 1920 px display 27.5 and
+// the tablet's 2304 px 23 at 44.1 kHz, 30 / 25 at 48 kHz, 60 / 50 at 96 kHz);
+// a 3840 px display at 44.1 kHz (column 28) floors at 20 frames per pixel,
+// about 1.74 s across its full width against the working zoom's 2.44 s. The persisted zoom vocabulary [kMinZoom, kMaxZoom] is
 // unchanged: a saved level under the floor clamps where it goes live, at
 // clamp_zoom_level.
 constexpr int64_t kDeepestZoomMinFramesPerPx = 20;
@@ -107,25 +108,41 @@ constexpr int64_t kDeepestZoomMinFramesPerPx = 20;
 constexpr double kUnloadedZoomLevel = 2.0;
 
 // THE WORKING COLUMN, the one owner: the whole number of source frames one
-// waveform pixel spans at the working zoom on a strip `waveform_width_px`
-// wide, nearbyint(2.4 s × sample_rate ÷ width) — the working zoom shows 2.4 s
-// of source across the strip on every device (1920 px at 44.1 kHz: 55; the
-// tablet's 2304: 46; at 48 kHz 60 and 50). Spelled (24·sr)/(10·W): both
-// operands are exact integers in a double and the one divide is correctly
-// rounded, so a true .5 tie (2016 px at 44.1 kHz, 52.5) is exact and takes
-// banker's rounding; `2.4 * sr / W` would round 2.4 first and is never the
-// spelling. A WHOLE column sits on the sixteenth-frame grid at every rate
-// (painter_quantized_spp), so `c` lands on q = column exactly and the viewport
-// grid points are its exact multiples. THE WIDTH IS HELD PER PROCESS
-// (gui_main): the first project's load reads waveform_area(app).w once and
-// every later load in the process computes its own rate's column from that
-// held width, so nothing re-derives it on a resize or a later open. The
-// column lives on the loaded audio (GuiAudio::working_column, set by
-// GuiAudio::load, its one writer), and its readers assert it positive.
-inline int64_t working_column_frames(int sample_rate, int waveform_width_px) {
+// waveform pixel spans at the working zoom, nearbyint(2.4 s × sample_rate ÷
+// W), W THE DISPLAY'S HORIZONTAL RESOLUTION in device px (architect
+// 2026-10-06: "the zoom level should be based on the RESOLUTION, not on the
+// visible space: on a window resize the level is 2.4 seconds at the maximum
+// resolution of the device, the closest whole number of frames"). The
+// working zoom shows 2.4 s of source across the device's full width — the
+// laptop's 1920 at 44.1 kHz: 55; the tablet's 2304: 46; at 48 kHz 60 and 50
+// — and a strip narrower than the display (a restored laptop window, a
+// theme's visible frame or other chrome inside the window) keeps that same
+// column and so shows a little less than 2.4 s: a resize or a theme never
+// moves the grid. On both deployed devices under the Windows theme (the
+// laptop maximised, the tablet full screen) the strip IS the display's width,
+// so the column is the one the strip's width gave before the rule moved to
+// the resolution. W is GuiPlatform::display_width_px (the output's current
+// mode on Wayland, the surface on Android; the contract at platform_wayland.h).
+// Spelled (24·sr)/(10·W): both operands are exact integers in a double and
+// the one divide is correctly rounded, so a true .5 tie (2016 px at 44.1 kHz,
+// 52.5) is exact and takes banker's rounding; `2.4 * sr / W` would round 2.4
+// first and is never the spelling. A WHOLE column sits on the sixteenth-frame
+// grid at every rate (painter_quantized_spp), so `c` lands on q = column
+// exactly and the viewport grid points are its exact multiples. THE WIDTH IS
+// HELD PER PROCESS (gui_main): the first project's load reads the display's
+// width once (GuiFileLoader::load_file, which falls back to the window's
+// width, with a stderr line, when the platform has no figure yet) and every
+// later load in the process computes its own rate's column from that held
+// width, so nothing re-derives it on a resize, a mode change, a hot-plug or a
+// later open. The visible strip keeps its own jobs (the covering question at
+// fit_zoom_level and effective_max_zoom_level, the sixteenth gutter, the
+// landings); only the column's W is the display's. The column lives on the
+// loaded audio (GuiAudio::working_column, set by GuiAudio::load, its one
+// writer), and its readers assert it positive.
+inline int64_t working_column_frames(int sample_rate, int display_width_px) {
     return static_cast<int64_t>(std::nearbyint(
         (24.0 * static_cast<double>(sample_rate)) /
-        (10.0 * static_cast<double>(waveform_width_px))));
+        (10.0 * static_cast<double>(display_width_px))));
 }
 
 // THE STEPPED PAN'S STRIDE, as a divisor of the visible span: one plain wheel
