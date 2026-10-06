@@ -1,6 +1,7 @@
 #include "render.h"
 #include "app_state.h"
 #include "audio.h"
+#include "chrome_spec.h"
 #include "device_config.h"
 #include "gui_display_context.h"
 #include "gui_font.h"
@@ -354,13 +355,31 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
 
 // -- THE CAPTION'S GRADIENT (architect 2026-10-05) ---------------------------
 //
-// THE ONE GRADIENT IN THE PRODUCT, and why it is dithered: a theme that
-// records a gradient end (Windows 98's and 2000's GradientActiveTitle /
-// GradientInactiveTitle) draws its caption from the start colour at the left
-// to the end at the right, linear per channel; painted as smooth 24-bit
+// THE ONE GRADIENT IN THE PRODUCT: a theme that records a gradient end
+// (Windows 98's and 2000's GradientActiveTitle / GradientInactiveTitle) draws
+// its caption from the start colour at the left to the end at the right,
+// linear per channel, across the whole caption rect the painter hands in —
+// under the icon and the buttons too, ReactOS's span (painting.c's
+// GRADIENT_FILL_RECT_H over the full caption), where Windows 2000 holds the
+// icon cell at the start colour and the buttons' stretch at the end (the
+// win2000 vocabulary's recorded departure, chrome_spec.h). TWO ROADS, THE LIVE
+// VOCABULARY'S (kLiveChromeSpec.caption_gradient):
+//
+// SMOOTH 24-BIT (win2000, architect 2026-10-06): each channel of each device
+// column x is round(s + (e - s) * x / (w - 1)) — the start at the first
+// column, the end at the last — every row alike, no dither and no
+// quantisation: ReactOS's caption on the architect's capture, GreGradientFill
+// at 32-bit colour (rounded linear ramps matched 589 of its 592 columns, the
+// other three one level off), as Windows 2000 itself drew at 24 and 32 bits
+// ("Dithering is performed in 16-, 8-, 4-, and 1-bpp mode", GradientFill's
+// documentation). The cell is the device px, the scalable chrome's.
+//
+// DITHERED 15-BIT (win95, architect 2026-10-05): painted as smooth 24-bit
 // colour that ramp BANDED on the tablet's panel (an earlier gradient, seen
-// there), and Windows itself never showed it smooth on the displays of its
-// day — at 15- and 16-bit high colour the driver dithered it. So the ramp is
+// there; the win2000 vocabulary takes ReactOS's smooth ramp regardless, the
+// captures being its law), and Windows itself never showed it smooth on the
+// displays of Windows 95's day — at 15- and 16-bit high colour the driver
+// dithered it. So the ramp is
 // QUANTISED TO 15-BIT HIGH COLOUR, each channel to five bits and the five
 // bit-replicated back to eight (v5 << 3 | v5 >> 2, so 31 is 255 and 0 is 0),
 // UNDER AN ORDERED DITHER that repeats every 4 cells across and 4 down: the
@@ -406,12 +425,13 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
 // recorded colour, a solid colour needs no dither to show without bands, and
 // the built-in navy stays #000080.
 //
-// OPAQUE AND NOTHING BLENDED: each cell is one of the quantised colours,
-// written as words into an image (argb32_opaque_word's road, the plate's
-// precedent) and laid on the caption whole. The image is kept between paints
-// and rebuilt only when the caption's size or either colour moves (the
-// picture reads nothing else; a gui_scale change moves the size), since the
-// top strip's damage repaints the caption often and its ramp seldom changes.
+// OPAQUE AND NOTHING BLENDED AT PAINT TIME: each cell is one opaque colour
+// (a rounded ramp value, or one of the quantised colours), written as words
+// into an image (argb32_opaque_word's road, the plate's precedent) and laid
+// on the caption whole. The image is kept between paints and rebuilt only
+// when the caption's size, either colour or the road moves (the picture reads
+// nothing else; a gui_scale change moves the size), since the top strip's
+// damage repaints the caption often and its ramp seldom changes.
 namespace {
 constexpr int kCaptionDitherRank[4][4] = {
     { 3, 15,  0, 12},
@@ -429,9 +449,10 @@ uint32_t caption_dither_channel(double v, int rank) {
 }
 
 struct CaptionGradientImage {
-    cairo_surface_t* surface = nullptr;
-    int              w = 0, h = 0;
-    uint32_t         start = 0, end = 0;
+    cairo_surface_t*   surface = nullptr;
+    int                w = 0, h = 0;
+    uint32_t           start = 0, end = 0;
+    GuiCaptionGradient road = GuiCaptionGradient::Dithered15Bit;
 };
 CaptionGradientImage g_caption_gradient;
 } // namespace
@@ -445,39 +466,62 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
         paint_cell_rect(cr, r, start);
         return;
     }
+    const GuiCaptionGradient road = kLiveChromeSpec.caption_gradient;
     CaptionGradientImage& img = g_caption_gradient;
     if (!img.surface || img.w != r.w || img.h != r.h ||
-        img.start != start_word || img.end != end_word) {
+        img.start != start_word || img.end != end_word || img.road != road) {
         if (img.surface) cairo_surface_destroy(img.surface);
         img = CaptionGradientImage{
             cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h), r.w,
-            r.h, start_word, end_word};
+            r.h, start_word, end_word, road};
         cairo_surface_flush(img.surface);
         unsigned char* data = cairo_image_surface_get_data(img.surface);
         const int stride = cairo_image_surface_get_stride(img.surface);
         const double s[3] = {start.r * 255.0, start.g * 255.0, start.b * 255.0};
         const double e[3] = {end.r * 255.0, end.g * 255.0, end.b * 255.0};
-        // The four rows of the matrix's period, each column's word under
-        // each: every caption row is one of them, by its row's phase.
-        std::vector<uint32_t> phase_rows(static_cast<size_t>(4) * r.w);
-        for (int x = 0; x < r.w; ++x) {
-            const double t = r.w > 1 ? static_cast<double>(x) / (r.w - 1)
-                                     : 0.0;
-            for (int p = 0; p < 4; ++p) {
-                const int rank = kCaptionDitherRank[p][x & 3];
+        if (road == GuiCaptionGradient::Smooth24Bit) {
+            // One row of rounded ramp words, then every row a copy of it.
+            std::vector<uint32_t> row(static_cast<size_t>(r.w));
+            for (int x = 0; x < r.w; ++x) {
+                const double t = r.w > 1 ? static_cast<double>(x) / (r.w - 1)
+                                         : 0.0;
                 uint32_t word = UINT32_C(0xFF000000);
-                for (int c = 0; c < 3; ++c)
-                    word |= caption_dither_channel(s[c] + (e[c] - s[c]) * t,
-                                                   rank)
+                for (int c = 0; c < 3; ++c) {
+                    const long v = std::lround(s[c] + (e[c] - s[c]) * t);
+                    word |= static_cast<uint32_t>(std::clamp(v, 0L, 255L))
                             << (16 - 8 * c);
-                phase_rows[static_cast<size_t>(p) * r.w + x] = word;
+                }
+                row[static_cast<size_t>(x)] = word;
             }
+            for (int y = 0; y < r.h; ++y)
+                std::memcpy(data + y * stride, row.data(),
+                            static_cast<size_t>(r.w) * sizeof(uint32_t));
+            cairo_surface_mark_dirty(img.surface);
+        } else {
+            // The four rows of the matrix's period, each column's word under
+            // each: every caption row is one of them, by its row's phase.
+            std::vector<uint32_t> phase_rows(static_cast<size_t>(4) * r.w);
+            for (int x = 0; x < r.w; ++x) {
+                const double t = r.w > 1 ? static_cast<double>(x) / (r.w - 1)
+                                         : 0.0;
+                for (int p = 0; p < 4; ++p) {
+                    const int rank = kCaptionDitherRank[p][x & 3];
+                    uint32_t word = UINT32_C(0xFF000000);
+                    for (int c = 0; c < 3; ++c) {
+                        const double v = s[c] + (e[c] - s[c]) * t;
+                        word |= caption_dither_channel(v, rank)
+                                << (16 - 8 * c);
+                    }
+                    phase_rows[static_cast<size_t>(p) * r.w + x] = word;
+                }
+            }
+            for (int y = 0; y < r.h; ++y)
+                std::memcpy(data + y * stride,
+                            phase_rows.data() +
+                                static_cast<size_t>(y & 3) * r.w,
+                            static_cast<size_t>(r.w) * sizeof(uint32_t));
+            cairo_surface_mark_dirty(img.surface);
         }
-        for (int y = 0; y < r.h; ++y)
-            std::memcpy(data + y * stride,
-                        phase_rows.data() + static_cast<size_t>(y & 3) * r.w,
-                        static_cast<size_t>(r.w) * sizeof(uint32_t));
-        cairo_surface_mark_dirty(img.surface);
     }
     cairo_save(cr);
     cairo_set_source_surface(cr, img.surface, r.x, r.y);

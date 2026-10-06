@@ -14,9 +14,11 @@
 // TWO FACE SETS, ONE LIVE (architect 2026-10-06): a set is one chrome
 // vocabulary's text — which file each of the three uses (GuiFace) is drawn
 // from, its recorded vertical metrics, its tracking and whether its four math
-// signs are lifted (GuiFaceSet below). All four files are installed on both
-// devices; the live set's three uses pick among them.
-//   - THE REACTOS SET, LIVE: WINE TAHOMA as ReactOS 0.4.16 ships it
+// signs are lifted (GuiFaceSet below) — and each vocabulary names its set
+// (chrome_spec.h's ChromeSpec), so the live set is the live vocabulary's.
+// All four files are installed on both devices; the live set's three uses
+// pick among them.
+//   - THE WIN2000 SET, LIVE: WINE TAHOMA as ReactOS 0.4.16 ships it
 //     (tahoma.ttf, tahomabd.ttf; TrueType outlines on a Bitstream Vera base),
 //     the face the ReactOS captures are set in — its 11-ppem strike equals
 //     tmp/reactos.png's menu and title pixels exactly (measured 2026-10-06).
@@ -51,7 +53,7 @@
 // the install from the face's own measured ink (gui_face_em_px): the body's
 // is the em at which the body file's "H" stands as tall as the recorded cap,
 // the bold's the bold file's "H" against the same cap, the small's the body
-// file's "0" ink against the recorded digit. Measured 2026-10-06: the ReactOS
+// file's "0" ink against the recorded digit. Measured 2026-10-06: the win2000
 // set 11.003, 10.996 and 7.943 Windows px (Tahoma's "H" 1489 of 2048, Tahoma
 // Bold's 1490, Tahoma's "0" 1547 — 8 pt at GDI's 11 ppem, Tahoma's own 8-pt
 // size); the win95 set 12.35, 12.35 and 9.38 (Nimbus's "H" 729 of 1000 in
@@ -83,8 +85,8 @@ inline constexpr std::size_t kGuiFontFileCount = 4;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "NimbusSans-Regular.otf",     // 0: the win95 set's body and small
     "NimbusSans-Bold.otf",        // 1: the win95 set's bold
-    "tahoma.ttf",                 // 2: the ReactOS set's body and small
-    "tahomabd.ttf",               // 3: the ReactOS set's bold
+    "tahoma.ttf",                 // 2: the win2000 set's body and small
+    "tahomabd.ttf",               // 3: the win2000 set's bold
 };
 
 struct GuiFontBytes {
@@ -138,7 +140,7 @@ struct GuiFaceSet {
     bool           sign_lift              = false;
 };
 
-// THE REACTOS SET (architect 2026-10-06), live.
+// THE WIN2000 SET (architect 2026-10-06), the `win2000` vocabulary's, live.
 //   METRICS: the body and the bold are Tahoma 8 at 96 dpi (GDI's LOGFONT
 //   -11, 11 ppem), its 13-px cell — ascent 11 + descent 2 — with caps and
 //   digits 8 rows, the cell Windows 95's MS Sans Serif 8 also drew, so every
@@ -151,7 +153,7 @@ struct GuiFaceSet {
 //   are pulled together by that much: -0.07 device px at the laptop's
 //   138 %, -0.14 at the tablet's 275 %, -0.15 at 300 %, -0.2 at 400 %.
 //   SIGNS: lifted as derived, which comes to nearly nothing (gui_sign_axis).
-inline constexpr GuiFaceSet kGuiFaceSetReactOS = {
+inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
     .file        = {2, 3, 2},
     .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
     .tracking_px = -0.05,
@@ -178,9 +180,11 @@ inline constexpr GuiFaceSet kGuiFaceSetWin95 = {
     .sign_lift   = true,
 };
 
-// THE LIVE SET: the ReactOS set (architect 2026-10-06). One constexpr for
-// now; the ChromeSpec step reads it off the `chrome=` vocabulary instead.
-inline constexpr const GuiFaceSet& kGuiLiveFaceSet = kGuiFaceSetReactOS;
+// THE LIVE SET IS THE LIVE VOCABULARY'S (chrome_spec.h's kLiveChromeSpec,
+// win2000 since 2026-10-06), which names its set by address. The include
+// stands here, after the sets it names and before the first reader.
+#include "chrome_spec.h"
+inline constexpr const GuiFaceSet& kGuiLiveFaceSet = *kLiveChromeSpec.face_set;
 
 // THE LIVE SET'S RECORDED VERTICAL METRICS, per GuiFace — the only vertical
 // metric source (the head).
@@ -226,7 +230,7 @@ double gui_face_em_px(GuiFace face);
 //   Sans Serif's. The lifts: the regular file's 0.044 em ("+", "=") and
 //   0.0435 ("<", ">"), the bold's 0.043 and 0.0425 — the plus rising, at
 //   400 %, 2.17 device px in the body, 2.12 in the bold and 1.65 in the small.
-//   THE REACTOS SET: Tahoma already draws the five on one axis. Its 11-ppem
+//   THE WIN2000 SET: Tahoma already draws the five on one axis. Its 11-ppem
 //   strike centres "-" (row 3 above the baseline), "+", "<", ">" (rows 0..6)
 //   and "=" (rows 2..4) all on row 3 of the 8-row cap, and Tahoma Bold's
 //   strike the same but for its "=" (rows 2..5, half a row higher); the

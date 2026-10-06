@@ -11,14 +11,14 @@ These four files are the product's faces on both devices (the rules at `src/gui/
 
 ## The two sets
 
-A face set is one chrome vocabulary's text: which file each of the three uses is drawn from, its recorded metrics (ascent, descent, cap in Windows px), its tracking and whether its four math signs are set onto the hyphen's axis (`GuiFaceSet` in `gui_font.h`).
+A face set is one chrome vocabulary's text: which file each of the three uses is drawn from, its recorded metrics (ascent, descent, cap in Windows px), its tracking and whether its four math signs are set onto the hyphen's axis (`GuiFaceSet` in `gui_font.h`), named by its vocabulary's `ChromeSpec` (`src/gui/chrome_spec.h`).
 
 | Set | Body | Bold (the caption's title) | Small (the ruler's labels) | Metrics body / bold / small | Tracking per glyph |
 |---|---|---|---|---|---|
-| **ReactOS (live)** | `tahoma.ttf` | `tahomabd.ttf` | `tahoma.ttf` | {11, 2, 8} / {11, 2, 8} / {6, 0, 6} | −1/20 Windows px |
+| **win2000 (live)** | `tahoma.ttf` | `tahomabd.ttf` | `tahoma.ttf` | {11, 2, 8} / {11, 2, 8} / {6, 0, 6} | −1/20 Windows px |
 | win95 | `NimbusSans-Regular.otf` | `NimbusSans-Bold.otf` | `NimbusSans-Regular.otf` | {11, 2, 9} / {11, 2, 9} / {7, 0, 7} | −3/16 Windows px |
 
-The ReactOS set is live (architect 2026-10-06), selected by `kGuiLiveFaceSet` in `gui_font.h`. The win95 set keeps the look of 2026-10-06's morning byte for byte. The ems are read off the files at the install (`src/gui/gui_font_bundled.cpp`): the ReactOS set's body, bold and small come to 11.003, 10.996 and 7.943 Windows px, the win95 set's to 12.35, 12.35 and 9.38. A retune swaps a file; only the comments that quote these numbers re-derive.
+The win2000 set is live (architect 2026-10-06): each chrome vocabulary names its set (`ChromeSpec` in `src/gui/chrome_spec.h`), and the live vocabulary, `win2000`, names this one (`kGuiLiveFaceSet` in `gui_font.h`). The win95 set keeps the look of 2026-10-06's morning byte for byte. The ems are read off the files at the install (`src/gui/gui_font_bundled.cpp`): the win2000 set's body, bold and small come to 11.003, 10.996 and 7.943 Windows px, the win95 set's to 12.35, 12.35 and 9.38. A retune swaps a file; only the comments that quote these numbers re-derive.
 
 ## Provenance and licences
 

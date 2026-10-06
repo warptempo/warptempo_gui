@@ -15,11 +15,21 @@ SOURCES_DIR = os.path.join(REPO, 'tmp', 'theme_sources')
 GH = 'github'          # raw.githubusercontent.com/<repo>/<commit>/<path>; listing by the git trees API
 TDE = 'tde-gitea'      # mirror.git.trinitydesktop.org/gitea/<repo>/raw/commit/<commit>/<path>; listing by its contents API
 SF = 'sourceforge'     # sourceforge.net/p/<repo>/ci/<commit>/tree/<path>?format=raw
+IA = 'archive.org'     # archive.org/download/<item>/<image>/<path, each '/' as %2F>: one file read out of a disc image
 
 SOURCES = {
     # ---- the colour data
     'reactos': dict(host=GH, project='ReactOS', repo='reactos/reactos',
                     commit='d004b2c119ef54a8cd292801d35654cec49195ca', files=['boot/bootdata/hivedef.inf']),
+    # Windows 2000's own default-user hive (architect 2026-10-06, the `win2000` chrome vocabulary): its
+    # [Control Panel\Colors] is Windows 2000's default scheme, "Windows Standard" (the hive's Appearance\Schemes blob
+    # of that name carries the same 29 colours).
+    'win2000_hivedef': dict(host=IA, project='Windows 2000 Professional SP3 (Microsoft), the setup\'s default-user '
+                            'hive, read as data from the retail disc image',
+                            item='win_2000_professional_sp3_english_202605', image='Windows2000ProfessionalSP3.iso',
+                            image_sha1='51b9a010af4b6243ff1ccbc4b4fb41725240f17c',
+                            files=['I386/HIVEDEF.INF'],
+                            sha1={'I386/HIVEDEF.INF': '4cd963825ea971ae1d667c593071c1d62964d050'}),
     'xp_classic_zkedem': dict(host=GH, project='windows10-classic-themes (Ziv Kedem): the Windows XP (WEPOS 2009) '
                               'classic schemes saved from Display Properties as .theme files',
                               repo='zkedem/windows10-classic-themes',
@@ -62,6 +72,7 @@ def file_url(src, path):
     s = SOURCES[src]; q = path.replace(' ', '%20')
     if s['host'] == GH: return f"https://raw.githubusercontent.com/{s['repo']}/{s['commit']}/{q}"
     if s['host'] == TDE: return f"https://mirror.git.trinitydesktop.org/gitea/{s['repo']}/raw/commit/{s['commit']}/{q}"
+    if s['host'] == IA: return f"https://archive.org/download/{s['item']}/{s['image']}/{q.replace('/', '%2F')}"
     assert s['host'] == SF, src
     return f"https://sourceforge.net/p/{s['repo']}/ci/{s['commit']}/tree/{q}?format=raw"
 
@@ -72,7 +83,11 @@ def local_path(src, path):
 
 
 def provenance(src, path):
-    """The provenance record of one file: project, file path, repository, commit and URL."""
+    """The provenance record of one file: project, file path, repository, commit and URL (a disc image's file: its item,
+    image, the image's SHA-1 and the file's own in place of the repository and the commit)."""
     s = SOURCES[src]
+    if s['host'] == IA:
+        return {'project': s['project'], 'file': path, 'item': s['item'], 'image': s['image'],
+                'image_sha1': s['image_sha1'], 'sha1': s['sha1'][path], 'url': file_url(src, path)}
     return {'project': s['project'], 'file': path, 'repository': s['repo'], 'commit': s['commit'],
             'url': file_url(src, path)}

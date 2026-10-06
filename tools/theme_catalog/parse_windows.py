@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# tools/theme_catalog/parse_windows.py — the Windows scheme formats: ReactOS's hivedef.inf "New Schemes" and a
-# .theme file's [Control Panel\Colors]. Both come out under Windows' own key names (the .theme spelling, which is
+# tools/theme_catalog/parse_windows.py — the Windows scheme formats: ReactOS's hivedef.inf "New Schemes", a Windows
+# setup hive's own default colours (its HKCU "Control Panel\Colors" lines) and a .theme file's [Control Panel\Colors]. Both come out under Windows' own key names (the .theme spelling, which is
 # also the name the registry's Control Panel\Colors uses), each value an (r, g, b) byte triple. A malformed file is a
 # one-line hard fail naming it (NO BACKSTOPS: the inputs are pinned third-party files).
 import re
@@ -34,6 +34,21 @@ def parse_hivedef(path):
     for name, cols in out.items():
         if len(cols) != len(COLOR_NAMES): die(path, f'scheme {name!r} records {len(cols)} of {len(COLOR_NAMES)} colours')
     return out
+
+
+def parse_hive_colors(path):
+    """-> {key: rgb}: a Windows setup hive's (HIVEDEF.INF) default colours, its `HKCU,"Control Panel\\Colors","Key",
+    <type>,"R G B"` lines, every key as written (Windows 2000 spells one "AppWorkSpace"). Read as latin-1."""
+    txt = open(path, encoding='latin-1').read()
+    cols = {}
+    for k, r, g, b in re.findall(r'^HKCU,"Control Panel\\Colors","(\w+)",0x[0-9a-fA-F]{8},"(\d+) (\d+) (\d+)"\s*$',
+                                 txt, re.M):
+        if k in cols: die(path, f'colour {k!r} recorded twice')
+        rgb = (int(r), int(g), int(b))
+        if max(rgb) > 255: die(path, f'colour {k!r} out of range')
+        cols[k] = rgb
+    if not cols: die(path, 'no Control Panel\\Colors lines')
+    return cols
 
 
 def parse_theme(path):

@@ -171,7 +171,8 @@ def write_png(path, arr):
 
 FAMILY_HEAD = {
     'windows': 'Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes '
-               'saved as .theme files; Windows 95 Standard hand-recorded)',
+               'saved as .theme files; Windows 2000 Standard from Windows 2000\'s own setup hive; Windows 95 Standard '
+               'hand-recorded)',
     'windows-plus': 'Windows 98 / Plus! desktop themes (the shipped .theme files)',
     'kde3': 'KDE 3.5 colour schemes, as Trinity\'s tdebase carries them (relief by KDE 3\'s own rule at each scheme\'s contrast)',
     'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',

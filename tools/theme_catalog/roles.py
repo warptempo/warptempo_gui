@@ -80,7 +80,7 @@ LIGHT_ROLES = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow'
 # GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText; KDE 3's
 # activeBackground / activeForeground and inactiveBackground / inactiveForeground; CDE's colour sets 1 and 2 (the
 # active and the inactive window frame, the sets' roles above) under each set's own Motif foreground. NO DERIVATION:
-# a gradient end is named only where the entry records one (the 18 Windows entries that carry Gradient*Title; Windows
+# a gradient end is named only where the entry records one (the 19 Windows entries that carry Gradient*Title; Windows
 # 95 Standard, the Plus! themes, KDE 3 and CDE record none), and the app's theme-file rule then makes the end the
 # start, a flat caption. KDE 3's activeBlend / inactiveBlend are not read: a KDE 3 window decoration's own choice,
 # not the scheme's caption. The chosen `warptempo` entry and the presets record no caption: the built-in's applies.

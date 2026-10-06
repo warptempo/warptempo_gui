@@ -30,8 +30,11 @@
 // VGA sixteen under white labels (the role table's program block).
 //
 // ONE THEME IS BUILT IN, compiled: `windows-95-standard` (kBuiltinThemeKey),
-// the role table's values, the device config's default `theme`. Every other
-// theme is a FILE.
+// the role table's values. Every other theme is a FILE — THE DEVICE CONFIG'S
+// DEFAULT `theme` among them since 2026-10-06 (kDefaultThemeKey): the bundled
+// `windows-2000-standard`, Windows 2000's own "Windows Standard" scheme, the
+// live win2000 chrome vocabulary's (chrome_spec.h), with the built-in's
+// program roles.
 //
 // THE FILES: `<key>.theme` in the `themes/` folder BESIDE THE DEVICE CONFIG
 // (theme_folder_path: device_config_path()'s own folder, on both devices — on
@@ -91,10 +94,16 @@
 // taken whole or the program does not start. The files are taken in name
 // order, so the first error is the same one on every launch.
 
-// The built-in's key — the one theme compiled into the program, and the
-// device config's default `theme` (DeviceConfig::theme, whose initializer
-// spells it; theme_file.cpp's static_assert keeps the two in step).
+// The built-in's key — the one theme compiled into the program.
 inline constexpr const char* kBuiltinThemeKey = "windows-95-standard";
+// THE DEVICE CONFIG'S DEFAULT `theme` (architect 2026-10-06): the bundled
+// file of Windows 2000's scheme (tools/theme_catalog's
+// `windows-2000-standard`), the win2000 chrome vocabulary's colours — what a
+// first-run config names (DeviceConfig::theme, whose initializer spells it;
+// theme_file.cpp's static_assert keeps the two in step). A bundled file is
+// copied in before the one read at every launch, so the default always
+// resolves.
+inline constexpr const char* kDefaultThemeKey = "windows-2000-standard";
 
 // THE ROLE TABLE — THE ONE ENUMERATION (architect 2026-10-04), in GuiPalette's
 // order: the chrome's twenty-one (the caption's six since 2026-10-05), then the

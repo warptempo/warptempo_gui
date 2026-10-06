@@ -23,7 +23,8 @@
 //                            successful open; blank until the first
 //   theme=<key>              THE THEME every colour is painted in: the
 //                            built-in `windows-95-standard` or a theme file
-//                            read at launch (is_theme_key, theme_file.h)
+//                            read at launch (is_theme_key, theme_file.h);
+//                            first run `windows-2000-standard`
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // max_waveform_height, 2026-09-13, placed right after gui_scale;
@@ -198,7 +199,8 @@
 // fallbacks: every key is required, so a successful read always assigns all
 // six. THE THEME'S DEFAULT IS ALSO THE TEMPLATES' — both backends stamp a
 // default-constructed struct's `theme` (GuiPlatform::device_config_defaults),
-// so the first-run file of either device names the built-in.
+// so the first-run file of either device names the default theme,
+// `windows-2000-standard`.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -217,11 +219,13 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE THEME DEFAULT (architect 2026-10-04): THE BUILT-IN, Windows 95
-    // Standard's chrome with the program's elements in Windows' twenty solid
-    // colours — kBuiltinThemeKey (theme_file.h, whose static_assert keeps
-    // this spelling and that key one).
-    std::string theme = "windows-95-standard";
+    // THE THEME DEFAULT (architect 2026-10-06): Windows 2000's "Windows
+    // Standard" scheme, the bundled `windows-2000-standard` file, the live
+    // win2000 chrome vocabulary's colours, with the built-in's program
+    // elements in Windows' twenty solid colours — kDefaultThemeKey
+    // (theme_file.h, whose static_assert keeps this spelling and that key
+    // one).
+    std::string theme = "windows-2000-standard";
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -517,7 +521,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 275 % and its external files dir's `projects/`;
-// both stamp a max_waveform_height of 364, the built-in theme,
+// both stamp a max_waveform_height of 364, the default theme (kDefaultThemeKey),
 // kDefaultProjectsRepo and a blank
 // last_project),
 // so a first run on either device lands a

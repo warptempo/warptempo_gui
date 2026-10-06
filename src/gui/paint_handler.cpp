@@ -1,6 +1,7 @@
 #include "paint_handler.h"
 #include "target_render.h"
 #include "notifications.h"
+#include "chrome_spec.h"
 
 #include "gui_font.h"
 #include "folder_overlay.h"
@@ -180,7 +181,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 namespace {
 
 // THE SHARED TEXT FACE is the one face owner's body face (gui_font.h): the
-// live face set's body file — Tahoma in the ReactOS set, Nimbus Sans in the
+// live face set's body file — Tahoma in the win2000 set, Nimbus Sans in the
 // win95 set — at its vertically matched em at every scale (architect
 // 2026-10-06). Every row names it through that owner, gui_font(GuiFace::Body)
 // at the live scale.
@@ -960,10 +961,12 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 
 // -- THE FLOATING SURFACES: the hover tooltip and the menu row's dropdowns --
 //
-// The tooltip's metrics are Windows 95's, measured off the one period capture
-// (ToastyTech's win95toolbar.png, Explorer's "Up One Level"); its chrome is the
-// floating surfaces' one box (paint_popup_chrome), and its seat, its timing and
-// its damage bound live in render.h.
+// The tooltip's metrics are the live chrome vocabulary's (chrome_spec.h),
+// each measured off its period capture — win2000's off ReactOS's "Views"
+// (tmp/reactos-tooltips.png), win95's off ToastyTech's win95toolbar.png
+// (Explorer's "Up One Level"); its chrome is the floating surfaces' one box
+// (paint_popup_chrome), and its seat, its timing and its damage bound live in
+// render.h.
 //
 // THE TOOLTIP'S TYPE AND SPACING. ONE FACE FOR BOTH LINES, the body
 // (architect 2026-10-05: the period faces have no smaller text face — the
@@ -978,21 +981,27 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // the box height falls out as
 //     pad + band [+ gap + band] + pad
 // and the top and bottom air are equal by the arithmetic rather than by a
-// measured pair that could drift. THE PAD IS WINDOWS 95's (architect
-// 2026-10-06): the capture's one-line box is 17 rows, 2 + 13 + 2 — above
-// the 13-row cell the unlined top row and one more, below it one face row and
-// the black line — so the pad is 2 and the frame's one line counts inside it.
-// At the tablet's 275 % that is
-// 6 + 36 + 6 = 48 for one line and 6 + 36 + 8 + 36 + 6 = 92 for two (the
-// band 13 x 2.75 = 35.75 each, the sum rounded once). THE HORIZONTAL PAD
-// stays 4 (the laptop pixel's 5 re-authored at the unit's change, architect
-// 2026-10-02), within a pixel of the capture's: the unlined left column and
-// three face columns before the first ink, three after the last before the
-// black line. The gap is the laptop pixel's 4 re-authored the same day.
-// render.h carries only a BOUND on this for the damage band.
-constexpr double kTooltipPadYPx          = 2.0;   // top AND bottom, equal
+// measured pair that could drift. THE PADS ARE THE VOCABULARY'S
+// (kLiveChromeSpec.tooltip_pad_x_px / tooltip_pad_y_px, the frame's line
+// counted by its card_frame):
+//   WIN2000 (architect 2026-10-06): the capture's one-line box is 19 rows,
+//     1 + 2 + 13 + 2 + 1 — the black line, two rows of face, the 13-row cell,
+//     two rows, the line — and two face columns stand between the left line
+//     and the V, so the pad is 2 each way INSIDE the four-sided frame, whose
+//     line is its own rounded part (relief_line_px): at the tablet's 275 %,
+//     3 + 6 + 36 + 6 + 3 = 54 for one line.
+//   WIN95 (architect 2026-10-06): the capture's one-line box is 17 rows,
+//     2 + 13 + 2 — above the 13-row cell the unlined top row and one more,
+//     below it one face row and the black line — so the pad is 2 and the
+//     frame's one line counts inside it: 6 + 36 + 6 = 48 at 275 % for one
+//     line and 6 + 36 + 8 + 36 + 6 = 92 for two (the band 13 x 2.75 = 35.75
+//     each, the sum rounded once). THE HORIZONTAL PAD 4 (the laptop pixel's 5
+//     re-authored at the unit's change, architect 2026-10-02), within a pixel
+//     of the capture's: the unlined left column and three face columns before
+//     the first ink, three after the last before the black line.
+// The gap is the laptop pixel's 4 re-authored at the unit's change. render.h
+// carries only a BOUND on this for the damage band.
 constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
-constexpr double kTooltipPadXPx      = 4.0;
 // (The damage BOUND on the height and the timing constants live in render.h —
 // the tooltip's clock reads them, for the deadlines and for the band beside
 // the strip.)
@@ -1022,7 +1031,7 @@ constexpr double kTooltipPadXPx      = 4.0;
 // one box painter (paint_popup_chrome, its two faces) — and not their heights.
 // The tooltip's box is not authored at all, its height falling out of pad +
 // band [+ gap + band] + pad on the face's own cell (the record at
-// kTooltipPadYPx); do not re-derive one from the other.
+// kTooltipLineGapPx); do not re-derive one from the other.
 //
 // THE ITEM'S INSET: the highlight box stands one Windows px inside the frame
 // on every side — the margin Windows leaves between a popup's edge and its
@@ -1086,7 +1095,7 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 //
 // THE CAP BAND IS THE BODY FACE'S RECORDED ONE AT EVERY SCALE (architect
 // 2026-10-05, gui_font.h): the live set's cap times the scale, an unrounded
-// double — the ReactOS set's 8 rows: 8 device rows at 100 %, 11.04 at
+// double — the win2000 set's 8 rows: 8 device rows at 100 %, 11.04 at
 // 138 %, 22 at 275 %, 32 at 400 % (the win95 set's 9: 9, 12.42, 24.75, 36)
 // — the face's em being the one that stands its "H" exactly that tall.
 //
@@ -1154,11 +1163,21 @@ double line_baseline(const GuiFont& font, double line_y) {
 
 // -- THE CAPTION (architect 2026-10-05) ----------------------------------------
 //
-// THE CAPTION BUTTONS' GLYPHS — Windows' MARLETT characters as its caption
-// buttons draw them at the body size, off the architect's reference (a
-// Windows 2000 window: the Minimise bar, the Maximise box and the Close X
-// measured there; the Restore pair, which that maximisable window does not
-// show, is Marlett's two overlapping boxes, the back one up and right).
+// THE CAPTION BUTTONS' GLYPHS — MARLETT's characters as the caption buttons
+// draw them at the body size, ONE SET PER CHROME VOCABULARY
+// (kLiveChromeSpec.caption_glyphs, chrome_spec.h):
+//   WIN95 — Windows' own Marlett at 10 ppem, off the architect's reference (a
+//     Windows 2000 window: the Minimise bar, the Maximise box and the Close X
+//     measured there; the Restore pair, which that maximisable window does
+//     not show, is Marlett's two overlapping boxes, the back one up and
+//     right): Minimise 6 x 2, Restore's windows 6 wide, Close two bars.
+//   WIN2000 (architect 2026-10-06) — ReactOS's own Marlett at 12 ppem, read
+//     off its captures and its font (report: the 12-ppem strikes of the ISO's
+//     Marlett.ttf equal the capture): Minimise 7 x 2 at the cell's (0, 7)
+//     and Restore's two windows 7 wide — ReactOS's departure from Windows
+//     2000's 6-wide pair, followed on purpose — Maximise Windows' own, and
+//     Close THE SMOOTH OUTLINE OF MARLETT'S STAIRCASE (below), the
+//     architect's pick of the mocks (variant (a)).
 // Every glyph sits in ONE 9 x 9 Windows-px CELL, the character cell Windows
 // places in the 16 x 14 button at (3, 2), of unit u = scaled_px(1, 1) per
 // Windows px, in the theme's LABEL, the emboss when disabled, one relief
@@ -1195,11 +1214,25 @@ double line_baseline(const GuiFont& font, double line_y) {
 // of u: they are rectangles at every scale, and a vector would draw the same
 // pixels.
 //
-// CLOSE IS TWO BARS (architect's glass 2026-10-06: "off-centre, noticeably,
-// and too thin"): Marlett's close X as a vector, smooth at any scale as
-// Windows draws Marlett at any DPI, painted here as TWO FILLED BARS AT 45
-// DEGREES, kCaptionCloseStrokePx = 2 Windows px thick with SQUARE ENDS, the
-// pair's bounding square 7 x 7 Windows px CENTRED ON THE REFERENCE'S INK
+// WIN2000'S CLOSE IS THE STAIRCASE'S OUTLINE (architect 2026-10-06, the
+// mocks' variant (a)): Marlett's close X inks an 8 x 7 staircase at (1, 1) of
+// the cell — rows of two-px runs, (0, 2)(6, 2) / (1, 2)(5, 2) / (2, 4) /
+// (3, 2) / (2, 4) / (1, 2)(5, 2) / (0, 2)(6, 2) — and the glyph is that
+// footprint drawn as TWO PARALLELOGRAMS, one per diagonal, each with its ends
+// cut along the rows (horizontal) and 2 Windows px wide along a row, so the
+// four corners are the staircase's full 2-px runs and the bar is 2 x 7 /
+// sqrt(85) = 1.52 Windows px across (the footprint is steeper than 45
+// degrees). The vertices are authored in the cell's Windows px
+// (kCaptionCloseOutlineWin2000) and stand on the cell's unit grid, as the
+// rectangles do; ONE PATH, ONE FILL, the two parallelograms wound alike so
+// their crossing is ink, never a hole, antialiased; in the label, the
+// emboss's two copies the same outline.
+//
+// WIN95'S CLOSE IS TWO BARS (architect's glass 2026-10-06: "off-centre,
+// noticeably, and too thin"): Marlett's close X as a vector, smooth at any
+// scale as Windows draws Marlett at any DPI, painted here as TWO FILLED BARS
+// AT 45 DEGREES, kCaptionCloseStrokePx = 2 Windows px thick with SQUARE ENDS,
+// the pair's bounding square 7 x 7 Windows px CENTRED ON THE REFERENCE'S INK
 // CENTRE, (5, 4.5) of the cell: Marlett's X inks 8 x 7 at (1, 1) of the cell
 // (kCaptionCloseInk; Chicago95's close-active.xpm inks the same 8 x 7 at
 // (4, 3) of its 16 x 14 button, centre (8, 6.5)), and a 45-degree pair with
@@ -1214,22 +1247,37 @@ double line_baseline(const GuiFont& font, double line_y) {
 struct CaptionGlyphRect {
     int x, y, w, h;
 };
+struct CaptionGlyphPoint {
+    int x, y;
+};
 constexpr int kCaptionGlyphCellPx = 9;
 constexpr int kCaptionGlyphSeatXPx = 3;
 constexpr int kCaptionGlyphSeatYPx = 2;
 static_assert(kCaptionGlyphSeatXPx + kCaptionGlyphCellPx <= kCaptionButtonWPx &&
               kCaptionGlyphSeatYPx + kCaptionGlyphCellPx <= kCaptionButtonHPx);
-constexpr CaptionGlyphRect kCaptionMinimizeGlyph[] = {{1, 7, 6, 2}};
+constexpr CaptionGlyphRect kCaptionMinimizeGlyphWin95[] = {{1, 7, 6, 2}};
+constexpr CaptionGlyphRect kCaptionMinimizeGlyphWin2000[] = {{0, 7, 7, 2}};
 constexpr CaptionGlyphRect kCaptionMaximizeGlyph[] = {
     {0, 0, 9, 2}, {0, 2, 1, 6}, {8, 2, 1, 6}, {0, 8, 9, 1}};
-constexpr CaptionGlyphRect kCaptionRestoreGlyph[] = {
+constexpr CaptionGlyphRect kCaptionRestoreGlyphWin95[] = {
     // the back window: its two-row top, the stub of its left side, its right
     // side and the end of its foot, the rest behind the front window
     {2, 0, 6, 2}, {2, 2, 1, 1}, {7, 2, 1, 3}, {6, 5, 2, 1},
     // the front window, whole
     {0, 3, 6, 2}, {0, 5, 1, 3}, {5, 5, 1, 3}, {0, 8, 6, 1}};
+constexpr CaptionGlyphRect kCaptionRestoreGlyphWin2000[] = {
+    // the back window, as above, one column wider
+    {2, 0, 7, 2}, {2, 2, 1, 1}, {8, 2, 1, 3}, {7, 5, 2, 1},
+    // the front window, whole
+    {0, 3, 7, 2}, {0, 5, 1, 3}, {6, 5, 1, 3}, {0, 8, 7, 1}};
 constexpr CaptionGlyphRect kCaptionCloseInk = {1, 1, 8, 7};
 constexpr double kCaptionCloseStrokePx = 2.0;
+// Win2000's Close (the rule above): the falling bar, then the rising one,
+// each clockwise on screen (y down), in the cell's Windows px — the
+// staircase's footprint kCaptionCloseInk, 2 Windows px wide along a row.
+constexpr CaptionGlyphPoint kCaptionCloseOutlineWin2000[2][4] = {
+    {{1, 1}, {3, 1}, {9, 8}, {7, 8}},
+    {{7, 1}, {9, 1}, {3, 8}, {1, 8}}};
 
 void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
                          int gx, int gy, int u, GuiColor ink) {
@@ -1239,7 +1287,7 @@ void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
                         ink);
 }
 
-// The Close X (the rule above) in the cell at (gx, gy), unit u, in `ink`:
+// Win95's Close X (the rule above) in the cell at (gx, gy), unit u, in `ink`:
 // each bar the rectangle touching the bounding square's four edges, its
 // corners on the edges `d` = stroke / sqrt(2) from the two corners its axis
 // runs between — so its ends are square to the bar and it is `stroke` thick.
@@ -1276,6 +1324,25 @@ void paint_caption_close_x(cairo_t* cr, double gx, double gy, double u,
     cairo_restore(cr);
 }
 
+// Win2000's Close (the rule above) in the cell at (gx, gy), unit u, in
+// `ink`: the two parallelograms as one path, one antialiased fill.
+void paint_caption_close_outline(cairo_t* cr, int gx, int gy, int u,
+                                 GuiColor ink) {
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    for (const auto& bar : kCaptionCloseOutlineWin2000) {
+        cairo_new_sub_path(cr);
+        for (const CaptionGlyphPoint& p : bar)
+            cairo_line_to(cr, gx + p.x * u, gy + p.y * u);
+        cairo_close_path(cr);
+    }
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+    set_palette_source(cr, ink);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
 // One caption button's glyph on its box `b` (already painted,
 // paint_button_box; `shift` its answer): the cell on its unit grid, the
 // glyph by `id` (Restore for Maximise while `maximized`), in the label or
@@ -1288,20 +1355,30 @@ void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
     const int gx   = b.x + scaled_px(kCaptionGlyphSeatXPx) + shift;
     const int gy   = b.y + scaled_px(kCaptionGlyphSeatYPx) + shift;
     const int off  = relief_line_px();
+    // THE LIVE VOCABULARY'S SET (the rule above).
+    const bool win2000 =
+        kLiveChromeSpec.caption_glyphs == GuiCaptionGlyphs::Win2000;
     // THE DISABLED EMBOSS (render.h's palette block): Hilight one Windows px
     // right and down, Shadow at the glyph's place.
     if (id == GuiCaptionButton::Close) {
-        if (!enabled)
-            paint_caption_close_x(cr, gx + off, gy + off, u, pal.hilight);
-        paint_caption_close_x(cr, gx, gy, u,
-                              enabled ? pal.label : pal.shadow);
+        const auto close = [&](int x, int y, GuiColor ink) {
+            if (win2000)
+                paint_caption_close_outline(cr, x, y, u, ink);
+            else
+                paint_caption_close_x(cr, x, y, u, ink);
+        };
+        if (!enabled) close(gx + off, gy + off, pal.hilight);
+        close(gx, gy, enabled ? pal.label : pal.shadow);
         return;
     }
-    const std::span<const CaptionGlyphRect> glyph =
-        id == GuiCaptionButton::Minimize ? std::span<const CaptionGlyphRect>(
-                                               kCaptionMinimizeGlyph)
-        : maximized ? std::span<const CaptionGlyphRect>(kCaptionRestoreGlyph)
-                    : std::span<const CaptionGlyphRect>(kCaptionMaximizeGlyph);
+    using Glyph = std::span<const CaptionGlyphRect>;
+    const Glyph glyph =
+        id == GuiCaptionButton::Minimize
+            ? (win2000 ? Glyph(kCaptionMinimizeGlyphWin2000)
+                       : Glyph(kCaptionMinimizeGlyphWin95))
+        : maximized ? (win2000 ? Glyph(kCaptionRestoreGlyphWin2000)
+                               : Glyph(kCaptionRestoreGlyphWin95))
+                    : Glyph(kCaptionMaximizeGlyph);
     if (!enabled)
         paint_caption_glyph(cr, glyph, gx + off, gy + off, u, pal.hilight);
     paint_caption_glyph(cr, glyph, gx, gy, u,
@@ -1357,13 +1434,14 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
     // piece is open. THE BOLD FACE (gui_font.h: the live set's bold —
-    // Tahoma Bold, or Nimbus Sans Bold in the win95 set) through
-    // the shaping
-    // chokepoint, its cap band centred in the lane, in the caption's text
-    // role. TOO LONG FOR THE ROOM — the pen at x 20 to two px short of
-    // Minimise — it is CUT AT A CODEPOINT and ends in Windows' "..." (DrawText's
-    // end ellipsis), the longest prefix whose own run and the ellipsis's fit;
-    // a room too narrow for even the ellipsis paints no title.
+    // Tahoma Bold, or Nimbus Sans Bold in the win95 set) through the
+    // shaping chokepoint, its cap band centred in the lane — Tahoma Bold's
+    // 8-row cap on rows 5..12 of the 18 at 100 %, ReactOS's own seat on its
+    // captures (2026-10-06) — in the caption's text role. TOO LONG FOR THE
+    // ROOM — the pen at x 20 to two px short of Minimise — it is CUT AT A
+    // CODEPOINT and ends in Windows' "..." (DrawText's end ellipsis), the
+    // longest prefix whose own run and the ellipsis's fit; a room too narrow
+    // for even the ellipsis paints no title.
     const GuiFont font = gui_font(GuiFace::Bold);
     const std::string title = app.project_name.empty()
                                   ? std::string("Warptempo")
@@ -1434,17 +1512,28 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // 2026-10-05: the battery + clock legend is not shown). No ring; the
     // kdenlive bar is flat.
     //
-    // THE LEFT FLOAT'S FACES (architect 2026-10-02, the Windows-95 menu bar):
+    // THE LEFT FLOAT'S FACES (architect 2026-10-02, the period menu bar):
     // COLD, nothing is drawn — the label bare on the ground; OPEN, the anchor
-    // whose menu is down is Windows 95's open menu title — its rectangle
-    // filled with the theme's SELECTED fill (the dropdown's lit row's own)
-    // under its selected text, the recorded pair (render.h's palette block);
-    // DEAD (the history view greys every anchor but File, the partition being
+    // whose menu is down is the live chrome vocabulary's open menu title
+    // (kLiveChromeSpec.menu_open_title, chrome_spec.h): WIN2000's (architect
+    // 2026-10-06, ReactOS's non-flat menu bar, menu.c) the ground with a
+    // ONE-LINE SUNKEN BOX round the item's content rect — BDR_SUNKENOUTER,
+    // Shadow on the top and left, Hilight on the bottom and right, the
+    // status panel's own line (paint_relief_status_sunken, mitred like every
+    // two-tone ring) — and the label in the label role PUSHED IN one Windows
+    // px right and down (menu.c offsets the open item's text rect by (1, 1);
+    // measured on the captures, chrome_spec.h's kChromeSpecWin2000); WIN95's
+    // (architect 2026-10-02) the anchor's rectangle filled with the theme's
+    // SELECTED fill (the dropdown's lit row's own) under its selected text,
+    // the recorded pair (render.h's palette block); DEAD (the history view
+    // greys every anchor but File, the partition being
     // history_mode_disables_button's), the label alone takes THE DISABLED
-    // EMBOSS (show_embossed_run). NO HOVER FACE
-    // (architect 2026-10-02: "hover is awkward with pen and sometimes
-    // flickers"; Windows 98's hot-tracked raised title is not adopted) and no
-    // press face: a press opens the menu, whose highlight is the cue.
+    // EMBOSS (show_embossed_run). NO HOVER FACE (architect 2026-10-02: "hover
+    // is awkward with pen and sometimes flickers"; Windows 98's hot-tracked
+    // raised title is not adopted, and ReactOS draws none) and no press face:
+    // a press opens the menu, whose open title is the cue. NO MNEMONIC
+    // UNDERLINES in either vocabulary (ReactOS always draws them; Windows
+    // 2000 hides them until Alt).
     //
     // EVERY ACTION ON THE FLOAT IS THE SAME KIND since 2026-08-13: each button
     // TOGGLES A DROPDOWN — the roster's three non-chord actions, since no
@@ -1468,11 +1557,13 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // on the next pixel row with no margin, border or line between. The
     // anchor's foot, the lane's foot and the icon row's first pixel are the
     // same row — where the dropdown hangs. THE LANE IS NOT ITS CONTENT SINCE
-    // 2026-10-05: a one-px foot of ground stands below the content (Windows'
-    // measured 20-px menu band, render.h's kMenuRowFootPx), so every label on
-    // this row is cap-centred in the CONTENT
-    // ALONE (menu_row_content_h_px) rather than the taller lane — the one
-    // place this row reads two different heights for two different things.
+    // 2026-10-05: one row of ground stands beside the content, ABOVE it in
+    // the win2000 vocabulary (ReactOS: caption, face row, menu) and BELOW it
+    // in the win95 one (Windows 95's measured 20-px menu band) — render.h's
+    // kMenuRowFootPx, its place kLiveChromeSpec.menu_face_row — so every
+    // label on this row is cap-centred in the CONTENT ALONE
+    // (menu_row_content_rect) rather than the taller lane — the one place
+    // this row reads two different heights for two different things.
 
     cairo_save(cr);
 
@@ -1493,6 +1584,12 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     const GuiFont font = gui_font(GuiFace::Body);
 
     const int pad    = scaled_px(kMenuLabelPadPx);
+    // THE CONTENT ROWS (the face row's place, above) and the open title's
+    // push (the faces' block, above), the live vocabulary's.
+    const GuiRect content = menu_row_content_rect(row);
+    const ChromeSpec& spec = kLiveChromeSpec;
+    const bool sunken_title =
+        spec.menu_open_title == GuiMenuOpenTitle::SunkenBox;
 
     // THE WALK: flush from the row's left edge, ADJACENT WITH NO GAP. Row 2
     // inserts a 2px invisible separator between its adjacent buttons because the
@@ -1543,23 +1640,34 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         const bool open_anchor =
             app.dropdown.open() &&
             def.id == dropdown_anchor_button(app.dropdown.menu);
-        if (open_anchor)
+        int push = 0;
+        if (open_anchor && sunken_title) {
+            paint_relief_status_sunken(
+                cr, GuiRect{x, content.y, btn_w, content.h});
+            push = scaled_px(spec.menu_open_text_shift_px,
+                             spec.menu_open_text_shift_px);
+        } else if (open_anchor) {
             paint_cell_rect(cr, GuiRect{x, row.y, btn_w, row.h},
                             palette().selected_fill);
-        // THE LABEL CENTERS IN THE ANCHOR'S CONTENT, NOT ITS LANE (the foot
+        }
+        // THE LABEL CENTERS IN THE ANCHOR'S CONTENT, NOT ITS LANE (the face
         // row block above): Qt's own menu bar centers an item's text in the
         // item rect, which is where cap-centring puts ours (redesign_baseline),
-        // over the content height alone so the foot row cannot nudge a cap
-        // band that already stood at Windows' own position.
-        const double label_x = static_cast<double>(x + pad);
+        // over the content rows alone so the face row cannot nudge a cap
+        // band that already stood at Windows' own position — the cap's top 5
+        // Windows px under the content's, as ReactOS's WordPad draws its menu
+        // bar (tmp/reactos-wordpad.png, rows 51 and 56).
+        const double label_x = static_cast<double>(x + pad + push);
         const double label_y =
-            redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(menu_row_content_h_px()));
+            redesign_baseline(font, static_cast<double>(content.y),
+                              static_cast<double>(content.h)) +
+            push;
         if (!face.enabled && !open_anchor) {
             show_embossed_run(cr, run, label_x, label_y);
         } else {
-            set_palette_source(cr, open_anchor ? palette().selected_text
-                                               : palette().label);
+            set_palette_source(cr, open_anchor && !sunken_title
+                                       ? palette().selected_text
+                                       : palette().label);
             text_shape::show_shaped_run(cr, run, label_x, label_y);
         }
 
@@ -2326,7 +2434,7 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // its run in THE BODY FACE (gui_font.h; no period field used a monospace
 // face, ACID's big clock included), its cap band centred in the field by
 // redesign_baseline: the recorded digits with the field's face split about
-// them, a half-row tie toward the top — the ReactOS set's 8 rows with 3
+// them, a half-row tie toward the top — the win2000 set's 8 rows with 3
 // Windows px of face above and 4 below at 100 % (the win95 set's 9 rows,
 // 3 and 3). The digits are TABULAR — Tahoma's every digit 0.545 em (Nimbus's
 // 0.556) less the one tracking (kGuiTrackingPx, gui_font.h, which every
@@ -2825,27 +2933,35 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     // 2026-10-02, the Windows-95 chrome), each a square fill then its frame:
     //   MENU — the ground inside the PLAIN RAISED two-line edge: a dropdown
     //          (Windows drew menus as raised panels, EDGE_RAISED);
-    //   INFO — THE CARD FACE, Windows 95's tooltip (architect 2026-10-04;
+    //   INFO — THE CARD FACE, the period's tooltip (architect 2026-10-04;
     //          the rule is render.h's palette block): `card_ground` with a
-    //          THIN flat line of `card_frame`, ONE Windows px, on the BOTTOM
-    //          AND THE RIGHT ONLY (architect 2026-10-06, the one period
-    //          capture's) — the bottom row and the right column laid on the
-    //          face as two square cell rects, so the frame owns both far
-    //          corners whole as the capture's black does (a flat line, no
-    //          bevel: the relief's mitre, paint_relief_frame, is not drawn
-    //          here) — the tooltip and every notification card, whose words
-    //          their painters set in `card_text`.
+    //          THIN flat line of `card_frame`, ONE Windows px, on the sides
+    //          the live chrome vocabulary draws (kLiveChromeSpec.card_frame:
+    //          all four in win2000, architect 2026-10-06; the BOTTOM AND THE
+    //          RIGHT ONLY in win95, the one Windows 95 capture's) — each side
+    //          laid on the face as a square cell rect, the bottom row and the
+    //          right column last, so they own their corners whole as the
+    //          captures' black does (a flat line, no bevel: the relief's
+    //          mitre, paint_relief_frame, is not drawn here) — the tooltip
+    //          and every notification card, whose words their painters set in
+    //          `card_text`. A card keeps its own height rule: the four-sided
+    //          line is drawn on its outer rows as the two-sided one was.
     if (face == PopupFace::Menu) {
         paint_cell_rect(cr, r, palette().ground);
         paint_relief_plain_raised(cr, r);
     } else {
-        const int lw = relief_line_px();
+        const int lx = std::min(relief_line_px(), r.w);
+        const int ly = std::min(relief_line_px(), r.h);
         paint_cell_rect(cr, r, palette().card_ground);
-        paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - std::min(lw, r.h), r.w,
-                                    std::min(lw, r.h)},
+        if (kLiveChromeSpec.card_frame == GuiCardFrame::AllSides) {
+            paint_cell_rect(cr, GuiRect{r.x, r.y, r.w, ly},
+                            palette().card_frame);
+            paint_cell_rect(cr, GuiRect{r.x, r.y, lx, r.h},
+                            palette().card_frame);
+        }
+        paint_cell_rect(cr, GuiRect{r.x, r.y + r.h - ly, r.w, ly},
                         palette().card_frame);
-        paint_cell_rect(cr, GuiRect{r.x + r.w - std::min(lw, r.w), r.y,
-                                    std::min(lw, r.w), r.h},
+        paint_cell_rect(cr, GuiRect{r.x + r.w - lx, r.y, lx, r.h},
                         palette().card_frame);
     }
 }
@@ -2947,8 +3063,13 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         w2 = r2.width_px;
     }
 
-    const int pad_x = scaled_px(kTooltipPadXPx);
-    const int pad_y = scaled_px(kTooltipPadYPx);
+    // THE PADS FROM THE BOX'S EDGE: the vocabulary's air, and outside it the
+    // frame's line where the frame runs on every side (the record above).
+    const ChromeSpec& spec = kLiveChromeSpec;
+    const int frame =
+        spec.card_frame == GuiCardFrame::AllSides ? relief_line_px() : 0;
+    const int pad_x = frame + scaled_px(spec.tooltip_pad_x_px);
+    const int pad_y = frame + scaled_px(spec.tooltip_pad_y_px);
     const int gap   = two_line ? scaled_px(kTooltipLineGapPx) : 0;
     const int w = static_cast<int>(std::nearbyint(std::max(r1.width_px, w2))) +
                   2 * pad_x;
@@ -3110,9 +3231,11 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
 // THE LOOK (architect 2026-10-02, the Windows-95 chrome; its colours
-// 2026-10-04): THE CARD FACE — Windows 95's tooltip, `card_ground` with a
-// thin `card_frame` line on its bottom and right, its words `card_text`
-// (render.h's palette block) —
+// 2026-10-04): THE CARD FACE — the tooltip's own look, `card_ground` with a
+// thin `card_frame` line on all four sides in the win2000 chrome vocabulary
+// (architect 2026-10-06, his word: the cards take the tooltip's look) and on
+// its bottom and right in win95, its words `card_text` (render.h's palette
+// block) —
 // square, NO DROP SHADOW, through the one popup box painter
 // (paint_popup_chrome's Info face, the tooltip's own);
 // a row of the icon row's own height, holding — left to right, EVERY
@@ -3638,7 +3761,7 @@ constexpr double kRulerMinMinorPitchPx = 9.0;
 //
 // of the label's own face, THE SMALL FACE (gui_font(GuiFace::Small)), both
 // metrics its recorded ones (gui_font.h). Its cell is all cap in either set
-// — ascent 6, cap 6, the ReactOS set's WordPad ruler digit; ascent 7, cap 7,
+// — ascent 6, cap 6, the win2000 set's WordPad ruler digit; ascent 7, cap 7,
 // the win95 set's Small Fonts digit — so the pad is scaled_px(4) itself at
 // every scale (2026-10-05); the rule stays general because the face's
 // ascent-minus-cap is the face's to change. The rule's one implementation is

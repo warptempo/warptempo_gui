@@ -2,9 +2,9 @@
 
 Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, imported only"): its colours are the bytes its source records, each with its provenance in [catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the relief at run time (KDE 3, CDE / Motif), that toolkit's rule ran once at import and is named. The one family that imports nothing is the program's own, Warptempo: `warptempo`, CHOSEN, NOT IMPORTED (the architect's pick of the colour loop, 2026-10-03; its provenance is his ruling), and each `warptempo-preset-<n>`, his Preset <n> saved on the colour picker, chosen, not imported either (2026-10-04: the preset's chrome ground through the picker's chrome rule, the roles the picker shows fixed). The KEY is the name of the theme's file, `<key>.theme`, bundled with the app and copied into its `themes/` folder at every launch (`windows-95-standard` is the one built-in theme and takes no file), and what to type in Settings' Theme row to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet geometry: the tablet's 2304 x 1440 at gui_scale 275, every length derived from the app's own constants; cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well's bottom lines and the bottom row, transparent between them. The chrome is the theme's as recorded; the waveform pane, the flags and the playhead are the program's own elements in the theme's program colours as the app resolves them: each program role the theme's file names, else the built-in's (`windows-95-standard`: the lime waveform on black with its green outline, the warp flag purple #800080 and its selected face fuchsia #FF00FF, the phase-reset flag teal #008080 and its selected face aqua #00FFFF, the history's added flag green #008000 and its selected face lime #00FF00, the invalid flag maroon #800000 and its selected face red #FF0000, white labels on every face, the playhead's white stem); only the colour-picker presets name their own (the crops draw the playhead's head as the renderer's older grey head, not the app's WordPad ruler marker in the theme's chrome). The well keeps the app's two-line sunken edge (the theme's Shadow and DkShadow above, its 3DLight and Hilight below); the flags are the flat Acid flag (the scene's flags are warp markers, so the warp pair), the face with a one-px outline in the theme's DkShadow, the stem leaving the face across the bottom outline, shown left to right editing (the in-place editor: the selected face under a black frame, its text in the selected pair), selected (the selected face under the selected label, the stem with it), invalid (the removed pair), disabled (the ground, the label embossed) and unselected; the playhead's head carries a one-px outline in the theme's label; disabled words and glyphs are Windows' emboss; the ruler label and the trim arrow are the theme's label, the ruler ticks its Shadow. The DISPLAY TIER is the smallest period colour set holding every colour the entry's roles use: vga (the 16 VGA colours), windows-20 (those and Windows' four static extras #C0DCC0, #A6CAF0, #FFFBF0, #A0A0A4, always solid on a 256-colour display), else high-colour. Not imported: catalog.json's `not_imported`. Built by `tools/theme_catalog/` (fetch.py, build.py, crops.py; the theme files by gen_theme_files.py).
 
-## Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes saved as .theme files; Windows 95 Standard hand-recorded)
+## Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes saved as .theme files; Windows 2000 Standard from Windows 2000's own setup hive; Windows 95 Standard hand-recorded)
 
-19 entries, darkest ground first.
+20 entries, darkest ground first.
 
 ### `windows-rainy-day`
 
@@ -133,6 +133,14 @@ Display tier: high-colour
 Display tier: high-colour
 
 ![windows-classic](crops/windows-classic.png)
+
+### `windows-2000-standard`
+
+**Windows 2000 Standard** · ground #D4D0C8 · Windows2000ProfessionalSP3.iso `I386/HIVEDEF.INF` + 1 more
+
+Display tier: high-colour
+
+![windows-2000-standard](crops/windows-2000-standard.png)
 
 ### `windows-pumpkin`
 

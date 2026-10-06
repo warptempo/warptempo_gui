@@ -146,9 +146,10 @@ namespace {
 // CAPTION (caption_row_h_px(), the window's own title bar, Windows 95's
 // 18-px SM_CYCAPTION, at the window top on both devices — render.h's
 // kCaptionHeightPx), the MENU ROW (menu_row_h_px(), row 1 of the kdenlive
-// redesign, Windows' 19-px menu bar — the anchors' box — plus a one-px foot
-// of ground (architect 2026-10-05, Windows' measured 20-px band), flush
-// under the caption — render.h's kMenuRowHeightPx and kMenuRowFootPx),
+// redesign, Windows' 19-px menu bar — the anchors' box — plus a one-px row
+// of ground (architect 2026-10-05, Windows' measured 20-px band; above the
+// content in the win2000 chrome vocabulary, below it in win95), flush under
+// the caption — render.h's kMenuRowHeightPx and kMenuRowFootPx),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
 // menu row with nothing between, Windows' own menu-bar-plus-toolbar stack
 // folded into one lane — an etched line pair, the toolbar's air, the case,
@@ -353,10 +354,11 @@ namespace {
 // and the lane owns every pixel it paints. The CAPTION lane is its 18 Windows
 // px whole (render.h's kCaptionHeightPx: the title bar's ground, its icon, its
 // title and its three buttons inside it), the MENU lane is its anchors' 19
-// Windows px PLUS a one-px foot of ground (architect 2026-10-05, Windows'
-// measured 20-px menu band — render.h's kMenuRowHeightPx and kMenuRowFootPx;
-// the anchors, their labels and the dropdown's hang point all read the
-// lane, the label's cap-centring alone reads the content underneath it), the
+// Windows px PLUS a one-px row of ground (architect 2026-10-05, Windows'
+// measured 20-px menu band — render.h's kMenuRowHeightPx and kMenuRowFootPx,
+// the row's place the live chrome vocabulary's; the anchors and the
+// dropdown's hang point read the lane, the label's cap-centring alone reads
+// the content beside the row), the
 // ICON lane is Windows' own menu-bar-plus-toolbar stack folded into one row —
 // an etched line pair, 3 Windows px of air, the 22-px case, 3 more of air, a
 // second etched pair and 3 of foot air, 35 whole (architect 2026-10-05,

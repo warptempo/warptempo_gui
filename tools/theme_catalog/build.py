@@ -28,7 +28,7 @@ sys.path.insert(0, HERE)
 from sources import SOURCES, REPO, local_path, provenance
 sys.path.insert(0, os.path.join(REPO, 'tools', 'palette'))
 import colour as CL      # the picker's chrome rule (windows95_chrome), the one the picker paints with
-from parse_windows import parse_hivedef, parse_theme
+from parse_windows import parse_hivedef, parse_hive_colors, parse_theme
 from parse_kde import parse_kcsrc
 from parse_cde import parse_dp
 import toolkit_rules as T
@@ -239,6 +239,29 @@ def windows_entries():
         'Windows Default.theme and the Windows 2000 / XP "Windows Standard" record C0C0C0 (the face), and the early '
         'Windows 95 beta captures draw no 3DLight line. The entry is the retail Windows 95 picture.']))
     out[-1]['corroborated'] = 0
+
+    # WINDOWS 2000 STANDARD (architect 2026-10-06, the `win2000` chrome vocabulary's theme): Windows 2000's own default
+    # colours, its setup hive's HKCU "Control Panel\Colors" (the hive's Appearance\Schemes blob "Windows Standard"
+    # carries the same 29), read off the retail disc image (sources.py win2000_hivedef). ReactOS's "ReactOS Standard"
+    # scheme corroborates it on every role key (ReactOS ships Windows 2000's scheme under its own name). Its bytes are
+    # the catalog's `windows-classic` entry's on every role (asserted in checks): that entry is named by the reading
+    # above that zkedem's two labels are swapped, while Windows 2000's own hive names these bytes "Windows Standard";
+    # both entries stand, this one carrying the Windows 2000 provenance the chrome vocabulary is named for.
+    hv2k = 'I386/HIVEDEF.INF'
+    cols = parse_hive_colors(local_path('win2000_hivedef', hv2k))
+    notes = ['Windows 2000\'s default scheme as its own setup hive records it (HKCU "Control Panel\\Colors"); the hive '
+             'names the scheme "Windows Standard" (Appearance\\Schemes)']
+    d = diff_keys(cols, ros['ReactOS Standard'])
+    assert not set(d) & role_keys, d
+    notes.append('ReactOS records it as "ReactOS Standard"' + ('' if not d else ', differing on ' + ', '.join(
+        f'{k} {hx(ros["ReactOS Standard"][k])} (here {hx(cols[k])})' for k in d)))
+    notes.append('role-identical to windows-classic (whose bytes zkedem\'s standard.theme labels "Windows Standard" and '
+                 'classicthemes8 "Windows XP Classic"); kept as its own entry for the Windows 2000 provenance (architect '
+                 '2026-10-06)')
+    out.append(entry('windows', 'Windows 2000 Standard', 'Windows 2000 Standard',
+                     [provenance('win2000_hivedef', hv2k), provenance('reactos', hv) | {'scheme': 'ReactOS Standard'}],
+                     cols, notes=notes))
+    out[-1]['corroborated'] = 1
 
     # THE WINDOWS 98 / PLUS! DESKTOP THEMES (one source each: 1j01/98's copies of the shipped files).
     dup = 'Copy of Dangerous Creatures (256 color)'
@@ -480,6 +503,13 @@ def checks(entries):
         T.flag_bevel(e['flag_rule'], (0x8A, 0x5E, 0xAC))
     assert T.windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)
     assert T.windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))
+    # Windows 2000 Standard is the hive's bytes (the `win2000` vocabulary's theme, report: the chrome roles of the
+    # ReactOS captures) and role-identical to windows-classic (windows_entries' note)
+    w2k = by['windows-2000-standard']['roles']
+    assert [w2k[x] for x in ('ground', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow', 'selected_fill',
+                             'info_ground', 'title_active', 'title_inactive')] == \
+        ['#D4D0C8', '#FFFFFF', '#D4D0C8', '#808080', '#404040', '#0A246A', '#FFFFE1', '#0A246A', '#808080']
+    assert w2k == by['windows-classic']['roles']
     for d in DUPLICATES: assert d not in by, d
     assert sum(1 for e in entries if e['family'] == 'kde3') == KDE3_ENTRIES
     assert len(KDE_NOT_35['tde_kcs']) == 21
@@ -597,7 +627,7 @@ def main():
         srcs = set()
         for e in es:
             for q in e['provenance']['sources']:
-                srcs.add(q.get('repository', q.get('project')) + '@' + str(q.get('commit', '')))
+                srcs.add(q.get('repository', q.get('item', q.get('project'))) + '@' + str(q.get('commit', q.get('image_sha1', ''))))
         print(f'{fam:13s} entries {len(es):3d}  corroborated {sum(1 for e in es if e["corroborated"]):3d}  '
               f'sources {len(srcs)}: ' + ', '.join(sorted(s.split("@")[0] for s in srcs)))
     print('display tiers: ' + ', '.join(f'{t} {sum(1 for e in entries if e["display_tier"] == t)}' for t, _ in DISPLAY_TIERS))

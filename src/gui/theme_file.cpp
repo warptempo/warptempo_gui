@@ -40,9 +40,10 @@ static_assert(std::ranges::all_of(kGuiThemeCaptionGradients,
     return p.start < kGuiThemeRoleCount && p.end < kGuiThemeRoleCount;
 }));
 static_assert(is_theme_key_spelling(kBuiltinThemeKey));
-// The device config's default `theme` is the built-in (its initializer spells
-// the key; both templates stamp a default-constructed struct's).
-static_assert(DeviceConfig{}.theme == kBuiltinThemeKey);
+static_assert(is_theme_key_spelling(kDefaultThemeKey));
+// The device config's default `theme` is kDefaultThemeKey (its initializer
+// spells the key; both templates stamp a default-constructed struct's).
+static_assert(DeviceConfig{}.theme == kDefaultThemeKey);
 
 // THE THEMES READ AT LAUNCH, by key — written once by read_theme_folder, read
 // by is_theme_key and theme_words for the process's life. Single-threaded:

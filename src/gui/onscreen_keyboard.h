@@ -48,6 +48,7 @@
 // backspace and retyping cover a one-line field.
 
 #include "app_state.h"
+#include "chrome_spec.h"
 // THE SLOT'S OTHER TENANT (2026-08-28): this header reads the folder
 // overlay's own rect in waveform_paint_area, the one gate and clip both
 // tenants share, so the include runs THIS way — the panel borrows nothing
@@ -395,14 +396,17 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // until the same evening's ruling closed the one act-named cap out (it named
 // what the key DOES to the editor standing over it, the button convention);
 // Shift, Tab and Space Qt spells the same as this keyboard always did.
-// BACKSPACE IS "Backsp" (architect 2026-10-06), a spelling compact keyboards
-// print, and the cap keeps one spelling on every page. MEASURED with the
-// tracking against the symbol pages' one-standard-key box (about 54 Windows
-// px at 400 %): in Nimbus (the win95 set) "Backsp" is 39.4 Windows px, 7
-// clear each side, the whole "Backspace" (58.7) overflows it, and "Backspc"
-// (45.3) reads as a typo; in the live set's Tahoma "Backsp" is 33.6, 10
-// clear each side, and "Backspace" (50.0) would fit with 2 (measured
-// 2026-10-06).
+// BACKSPACE'S WORD IS THE LIVE CHROME VOCABULARY'S (kLiveChromeSpec.
+// backspace_cap, chrome_spec.h), the keyboard being a surface either
+// vocabulary paints and the two faces measuring apart: "Backspace" in
+// win2000 (architect 2026-10-06: in Tahoma the whole word fits the key with 2
+// clear each side) and "Backsp" in win95 (architect 2026-10-06), a spelling
+// compact keyboards print; the cap keeps one spelling on every page. MEASURED
+// with the tracking against the symbol pages' one-standard-key box (about 54
+// Windows px at 400 %): in the win2000 set's Tahoma "Backspace" is 50.0
+// Windows px, 2 clear each side ("Backsp" 33.6); in Nimbus (the win95 set)
+// "Backsp" is 39.4, 7 clear each side, the whole "Backspace" (58.7)
+// overflows it, and "Backspc" (45.3) reads as a typo (measured 2026-10-06).
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the roster's own CHECKED face,
@@ -413,7 +417,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {
         case Role::Shift:       return "Shift";
-        case Role::Backspace:   return "Backsp";
+        case Role::Backspace:   return kLiveChromeSpec.backspace_cap;
         case Role::Enter:       return "Return";
         case Role::Escape:      return "Esc";
         case Role::Tab:         return "Tab";

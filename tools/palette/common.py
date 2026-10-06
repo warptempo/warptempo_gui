@@ -126,17 +126,19 @@ def line_baseline(family, size_px, line_y):
 SANS_PX = 12.0 * 96.0 / 72.0 * SCALE        # the probe size, 32 px
 
 # ------------------------------------------------------------------ the recorded vertical metrics (gui_font.h)
-# The app's vertical metrics at every scale are recorded constants (kGuiFaceMetrics, architect 2026-10-06): read
+# The app's vertical metrics at every scale are recorded constants (a face set's metrics, architect 2026-10-06): read
 # here off that owner in the working tree, so the tool cannot drift from it — each face's ascent / descent and its cap
-# band, in Windows px.
+# band, in Windows px. THE WIN95 SET'S (kGuiFaceSetWin95): this tool draws Nimbus Sans, that set's face; its three rows
+# are in GuiFace's order, Body, Bold, Small.
 _FACE_METRICS = {}
 def face_metrics(face):
-    """face 'Body' | 'Bold' | 'Small' -> {'ascent', 'descent', 'cap'} in Windows px, kGuiFaceMetrics' row."""
+    """face 'Body' | 'Bold' | 'Small' -> {'ascent', 'descent', 'cap'} in Windows px, kGuiFaceSetWin95's row."""
     if not _FACE_METRICS:
         import re
         src = open(os.path.join(REPO, 'src', 'gui', 'gui_font.h')).read()
-        table = re.search(r'kGuiFaceMetrics\[kGuiFaceCount\] = \{(.*?)\n\};', src, re.S).group(1)
-        for asc, desc, cap, name in re.findall(r'\{(\d+), (\d+), (\d+)\},\s*// (\w+)', table):
+        rows = re.search(r'kGuiFaceSetWin95 = \{.*?\.metrics\s*=\s*\{(\{\d+, \d+, \d+\}, \{\d+, \d+, \d+\}, '
+                         r'\{\d+, \d+, \d+\})\}', src, re.S).group(1)
+        for name, (asc, desc, cap) in zip(('Body', 'Bold', 'Small'), re.findall(r'\{(\d+), (\d+), (\d+)\}', rows)):
             _FACE_METRICS[name] = {'ascent': int(asc), 'descent': int(desc), 'cap': int(cap)}
     return _FACE_METRICS[face]
 

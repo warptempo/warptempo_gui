@@ -5,9 +5,9 @@
 # again. Any failure is one line naming the file and exit 1: the inputs are pinned third-party files, no recovery.
 #
 #   python3 tools/theme_catalog/fetch.py [--refresh]
-import json, os, sys, urllib.request
+import hashlib, json, os, sys, urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sources import SOURCES, SOURCES_DIR, GH, TDE, file_url, local_path
+from sources import SOURCES, SOURCES_DIR, GH, TDE, IA, file_url, local_path
 
 
 def die(msg):
@@ -50,10 +50,14 @@ def main():
             if os.path.exists(dst) and not refresh: continue
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             data = get(file_url(src, f))
+            # a disc image's file is pinned by its own SHA-1 (sources.py's head): a different byte is a hard fail
+            if s['host'] == IA and hashlib.sha1(data).hexdigest() != s['sha1'][f]:
+                die(f'{file_url(src, f)}: SHA-1 {hashlib.sha1(data).hexdigest()}, not the pinned {s["sha1"][f]}')
             open(dst, 'wb').write(data)
-        json.dump({'source': src, 'commit': s['commit'], 'files': files},
+        pin = s['image_sha1'] if s['host'] == IA else s['commit']
+        json.dump({'source': src, 'commit': pin, 'files': files},
                   open(os.path.join(d, 'MANIFEST.json'), 'w'), indent=1)
-        print(f'{src:18s} {len(files):3d} files  {s["commit"]}')
+        print(f'{src:18s} {len(files):3d} files  {pin}')
 
 
 if __name__ == '__main__':

@@ -50,7 +50,7 @@ the statement):
 | `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule) |
 | `card_ground`, `card_text` | its info pair (Windows' InfoWindow / InfoText) where it records one: the two Windows families; KDE 3 and CDE have no tooltip pair |
 | `card_frame` | never named: the built-in's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
-| `caption_active`, `caption_active_gradient`, `caption_active_text`, `caption_inactive`, `caption_inactive_gradient`, `caption_inactive_text` | its recorded title colours (architect 2026-10-05, `roles.caption_roles`): Windows' ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText, KDE 3's active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds; a gradient end only where the entry records one (the 18 Windows entries with Gradient*Title), the app's flat-caption rule making the end the start otherwise; the chosen `warptempo` and the presets name none |
+| `caption_active`, `caption_active_gradient`, `caption_active_text`, `caption_inactive`, `caption_inactive_gradient`, `caption_inactive_text` | its recorded title colours (architect 2026-10-05, `roles.caption_roles`): Windows' ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText, KDE 3's active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds; a gradient end only where the entry records one (the 19 Windows entries with Gradient*Title), the app's flat-caption rule making the end the start otherwise; the chosen `warptempo` and the presets name none |
 | the program's roles | only where the entry records them: a preset's canvas and ink (`waveform_canvas`, `waveform_ink`), `waveform_outline` the picker's "auto" rule over the two (the 50 % linear-light blend of the ink over the canvas, through `tools/palette/render.py`'s own theme), the playhead's head and stem; each flag kind's face and selected face one to one (architect 2026-10-05: the picker's Warp, Phase Reset, Added and Removed Flag pairs keyed by the product's role names; the invalid flag wears the removed pair), and a preset saved before that round by its old keys, the picker's Unselected / Selected Flag onto BOTH the warp and the phase-reset pair and the Unselected / Selected Invalid Flag onto the removed pair (gen_theme_files.py OLD_PRESET_KEYS); the flag labels never (the picker has no flag-label element; it paints both white, as the built-in's are) |
 
 The chrome is the entry AS RECORDED, through ONE light-roles function, `roles.light_roles` (the emboss's light copy
@@ -75,8 +75,9 @@ theme is a hard fail). The dark level (2026-10-03..04: a second, computed row pe
   Windows' Appearance dialog, `windows_dialog`, over shlwapi's 240-scale integer HLS as Wine implements it; KDE 3's;
   Motif's — `toolkit_rules.flag_bevel`), KEPT for tools/palette's "bevelled" flag style, the record of the design the
   flat flag replaced; the app and the crops read it nowhere. These are the only rules in the tool.
-- EVERY SOURCE IS PINNED (`sources.py`): a repository at a commit, or a fixed local image, and every entry's
-  provenance names the project, the file, the URL and the commit (or the image). Fetched files live in
+- EVERY SOURCE IS PINNED (`sources.py`): a repository at a commit, or a file inside a disc image on archive.org (the
+  item, the image's SHA-1 and the file's own, which fetch.py checks), and every entry's provenance names the project,
+  the file, the URL and the commit (or the image and its SHA-1s). Fetched files live in
   `tmp/theme_sources/` and are never committed; only the bytes and their provenance are.
 - NO BACKSTOPS: the inputs are pinned third-party files; a malformed one is a one-line hard fail naming it.
 - A THEME OWNS THE CHROME. The catalog records EVERY raw value its source has, under the source's own key names
@@ -107,21 +108,21 @@ the sets are also catalog.json's `display_tiers`, and each entry's CATALOG.md bl
 | `high-colour` | anything else |
 
 Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts the list), `windows-20` 0,
-`high-colour` 95. Windows Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and its
+`high-colour` 97. Windows Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and its
 3DLight DFDFDF (asserted for Windows Standard).
 
 ## Families and sources
 
 | family | source | what |
 |---|---|---|
-| `windows` | ReactOS `boot/bootdata/hivedef.inf` ("New Schemes", COLOR_* indices, 0x00BBGGRR, English names from the first [Strings] block), corroborated by the Windows XP classic schemes saved as .theme files (zkedem/windows10-classic-themes; 1j01/98 `desktop/Themes/classicthemes8`) and Windows 98's `Windows Default.theme`; Windows 95 Standard hand-recorded | a hivedef.inf scheme is imported only when a second, independent source records it with equal bytes on every role key (the rest: Not imported, below); Desert and Spruce (absent from ReactOS) come from the two XP records; ReactOS's "ReactOS Standard" and "ReactOS Classic" are Windows Classic and Windows Standard under ReactOS names and are folded into those entries |
+| `windows` | ReactOS `boot/bootdata/hivedef.inf` ("New Schemes", COLOR_* indices, 0x00BBGGRR, English names from the first [Strings] block), corroborated by the Windows XP classic schemes saved as .theme files (zkedem/windows10-classic-themes; 1j01/98 `desktop/Themes/classicthemes8`) and Windows 98's `Windows Default.theme`; Windows 2000 Standard from Windows 2000's own setup hive, `I386/HIVEDEF.INF` of the Windows 2000 Professional SP3 disc image on archive.org (its HKCU `Control Panel\Colors`, the scheme the hive names "Windows Standard"; architect 2026-10-06, the `win2000` chrome vocabulary's theme); Windows 95 Standard hand-recorded | a hivedef.inf scheme is imported only when a second, independent source records it with equal bytes on every role key (the rest: Not imported, below); Desert and Spruce (absent from ReactOS) come from the two XP records; ReactOS's "ReactOS Standard" and "ReactOS Classic" are Windows Classic and Windows Standard under ReactOS names and are folded into those entries; `windows-2000-standard` is role-identical to `windows-classic` (build.py asserts it) and stands as its own entry for its Windows 2000 provenance |
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
 | `warptempo` | the architect's ruling of 2026-10-03; his colour-picker presets | `warptempo` (display name `warptempo`, all lowercase, his spelling), CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (not ruled); `warptempo-preset-<n>` (display name `Warptempo Preset <n>`), one per preset the colour picker saved (`tools/palette/picker/presets/presets.json`, architect 2026-10-04), CHOSEN, NOT IMPORTED: the preset's chrome ground through the picker's chrome rule, the label and the field text the preset's Label (white when it records none), the selected pair the preset's Selection and Selected Text (#666666 / #FFFFFF when it records none) |
 
-Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, warptempo 3 (with the two presets of
-2026-10-04) — 99 entries (`warptempo-2026-10-03`, the app's look of that morning off render.h, left the catalog
+Every family's line in the build: windows 20, windows-plus 16, kde3 25, cde 36, warptempo 3 (with the two presets of
+2026-10-04) — 100 entries (`warptempo-2026-10-03`, the app's look of that morning off render.h, left the catalog
 2026-10-05: "that theme was just testing"). A new copy of presets.json adds its new presets on the next run (a preset's number is never
 reused: the picker only appends). Where the pinned sources cannot be fetched (the cloud: the Trinity mirror lies
 outside its egress), `build.py --presets-only` writes the program's own family (the chosen entry recomputed and
@@ -219,4 +220,4 @@ selected label, the outline still DkShadow; architect 2026-10-03, the colour loo
 INVALID, DISABLED (the ground, the label embossed, no stem) and unselected; the playhead head outlined in the label; the disabled menu word
 and buttons engraved over `emboss_hilight`; the trim arrow in the label (`trim_arrow`). The waveform, the flags' face
 and label, the invalid pair and the playhead are the program's colours (above), the icons' fixed inks icons.cpp's.
-99 crops, 5.49 MB (re-rendered 2026-10-05 in each theme's program colours). Its head states which roles come from the entry and which are the program's.
+100 crops, 5.54 MB (re-rendered 2026-10-05 in each theme's program colours; `windows-2000-standard` added 2026-10-06). Its head states which roles come from the entry and which are the program's.
