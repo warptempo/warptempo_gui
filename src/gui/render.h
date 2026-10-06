@@ -2066,9 +2066,9 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // lines at its top and its bottom (waveform_border_px). Every pass that fills
 // a BAND inside the area clips to this — the plate blit — and the SCANNER, the moving
 // playback line, which belongs to the picture alone, spans it (render_playhead).
-// THE PHASE-RESET OVERLAY RING alone reads the full area: its horizontals ride
-// the area's OUTERMOST rows deliberately (the ruling is at
-// paint_phase_reset_overlay_ring). Degenerate areas (too short to carry both
+// THE PHASE-RESET OVERLAY RING stands on it too since 2026-10-06, its
+// horizontals on the band's first and last rows inside the well's edge (the
+// ruling is at paint_phase_reset_overlay_ring). Degenerate areas (too short to carry both
 // borders) pass through unshrunk rather than inverting.
 inline GuiRect waveform_content_rect(GuiRect area) {
     const int b = waveform_border_px();

@@ -1181,8 +1181,8 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // painter last drew it, at the lane's left pad (AppState::clock_cell_rect,
 // whose stash contract is at the field). Narrow by construction: on_redraw
 // clips to the damage region, so paint_bottom_strip runs but its buttons, the
-// clock field's two vertical lines and the whole state line — a group space
-// right of the field — fall outside the
+// clock field's two vertical lines and the whole state line — a field pad
+// (kStatusPanelPadPx) right of the field — fall outside the
 // clip and cost nothing (the field's top and bottom lines and the ground
 // round them cross the box and are repainted identically under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. The

@@ -775,20 +775,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
     // walk, no separator moving.
     {RedesignButton::IconTooltips,       icons::Icon::HelpWhatsthis},
-    // THE HISTORY GROUP — the row's last, a group of its own since 2026-08-18
-    // ("place a separator before the history button, and place cumulative/etc
-    // after the history button"), and SINCE 2026-10-05 THE OPENER ALONE in
-    // this table: bare `h`, the one history button that stands in every
-    // state, the toggle's same press entering and leaving the view. Its six
-    // companions stand in the slots of the authoring groups the view greys
-    // whole, and only while the view stands — kIconRowHistoryStandIns below
-    // owns that rule. The companions' glyphs came back with them on
-    // 2026-08-18 unchanged but for one: the CUMULATIVE toggle wears
-    // BLACK_SUM, the summation sigma (a cumulative delta is a sum over the
-    // walk's members), where it wore Breeze's two-colour deep-history from
-    // 2026-08-09 — and that glyph dressed the Git walk radio until the
-    // 2026-09-04 collapse retired that half.
-    {RedesignButton::IconHistory,       icons::Icon::VcsDiff},
+    // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
+    // right-anchored since, kIconRowHistoryOpener below.)
 };
 
 // THE HISTORY STAND-INS — THE ICON ROW'S ONE MODE SWAP (architect
@@ -820,9 +808,15 @@ constexpr IconRowDef kIconRowButtons[] = {
 // own back and forward stand), then Revert and Load in Place; THE ITERATION
 // GROUP'S THREE take the two reading lamps, the walk source and the
 // cumulative reading, so that group stands one case narrower in the view
-// and everything right of it — the render-entry group and the opener — sits
-// one case (23 Windows px) further left there than outside. The view group
-// is flush right and does not move.
+// and the render-entry group right of it sits one case (23 Windows px)
+// further left there than outside. The history opener and the view group
+// are right-anchored and do not move (kIconRowHistoryOpener).
+//
+// THE COMPANIONS' GLYPHS came back with them on 2026-08-18 unchanged but for
+// one: the CUMULATIVE toggle wears BLACK_SUM, the summation sigma (a
+// cumulative delta is a sum over the walk's members), where it wore Breeze's
+// two-colour deep-history from 2026-08-09 — and that glyph dressed the Git
+// walk radio until the 2026-09-04 collapse retired that half.
 //
 // THE REPAINT: the mode's two edges, open_history_mode_fresh and
 // close_history_mode (input_key_dispatch.cpp), each end in full-window
@@ -859,6 +853,26 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
     {RedesignButton::IconBpm, kIconRowHistoryReadingGroup},
 };
 
+// THE HISTORY OPENER — RIGHT-ANCHORED (architect 2026-10-06): bare `h`, the
+// one history button that stands in every state, the toggle's same press
+// entering and leaving the view. A group of its own since 2026-08-18 ("place
+// a separator before the history button, and place cumulative/etc after the
+// history button") and alone since 2026-10-05, when its six companions went
+// to the stand-in slots above. IT TAKES NO PART IN THE LEFT WALK: it seats
+// flush against the view group's left, its right edge one 8-px group gap
+// short of view_x0, and the left groups' limit stands one gap further left
+// again (paint_icon_row). THE REASON IS THE PEN: while the opener closed the
+// left walk, the stand-in swap's one-case-narrower iteration group put its x
+// 23 Windows px further left inside the view than outside, so the button
+// that toggles the view moved out from under the pen at its own press;
+// anchored to the lane's right edge, which no state moves, it stands at one x
+// in both. It paints whole beside the view group under the same overflow
+// rule (kIconRowViewGroup), the left groups yielding to both. Its seat is
+// the same in both states, and the mode's two edges damage the whole window
+// anyway (THE REPAINT, above).
+constexpr IconRowDef kIconRowHistoryOpener =
+    {RedesignButton::IconHistory, icons::Icon::VcsDiff};
+
 // THE VIEW GROUP — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
 // 2026-10-01): the three ABSOLUTE VIEW SELECTORS, Source+Warp, Target+Warp and
 // Target+Phase on bare 1 / 2 / 3, in their keys' order. THE ACTS CAME FROM
@@ -876,14 +890,18 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // kToolbarChords).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
-// CANNOT HOLD EVERY GROUP, THE VIEW GROUP WINS. It paints LAST, whole, at its
-// flush-right place; the groups to its left yield, clipped where the view
-// group's eight-px gap begins, and each yielding member PUBLISHES ONLY WHAT IT
-// PAINTED — its box cut at that column, or an empty rect when the view group
-// covers it whole — so a press, a hover and a tooltip land on exactly the
-// pixels on screen (on screen is as painted; paint_icon_row's two walks).
-// The row fits whole down to 524 Windows px of window at 100 % outside the
-// `h` view and 501 inside it (the width math at paint_icon_row), so neither
+// CANNOT HOLD EVERY GROUP, THE VIEW GROUP WINS — and since 2026-10-06 the
+// history opener seated against its left with it (kIconRowHistoryOpener).
+// Both paint LAST, whole, at their right-anchored places; the groups to
+// their left yield, clipped where the opener's eight-px gap begins, and each
+// yielding member PUBLISHES ONLY WHAT IT
+// PAINTED — its box cut at that column, or an empty rect when the opener and
+// the view group cover it whole — so a press, a hover and a tooltip land on
+// exactly the pixels on screen (on screen is as painted; paint_icon_row's
+// walks). The row fits whole down to 524 Windows px of window at 100 %
+// outside the `h` view and 501 inside it (the width math at paint_icon_row,
+// re-derived 2026-10-06 for the opener's seat and unchanged: the move trades
+// one case and one gap of the left walk for the same two on the right), so neither
 // host reaches the rule at its scale: the tablet's 2304 device px hold the
 // row in both states up to 440 % and the laptop's 1920 up to 365 %.
 constexpr IconRowDef kIconRowViewGroup[] = {
@@ -1616,10 +1634,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (listen and the READ-ONLY toggle, the architect's own order on
     // 2026-08-14 less the load-in-place, which left for the history group on
     // 2026-09-01, and SETTINGS and ENABLE TOOLTIPS at its tail since
-    // 2026-09-29, help after settings since 2026-10-01), THE HISTORY
-    // OPENER alone in its group — and, FLUSH AT THE ROW'S RIGHT EDGE since
-    // 2026-10-01, THE VIEW GROUP (kIconRowViewGroup, where its provenance and
-    // the overflow rule are stated). IN THE `h` VIEW the history group's six
+    // 2026-09-29, help after settings since 2026-10-01) — then, RIGHT-ANCHORED
+    // since 2026-10-06, THE HISTORY OPENER alone in its group
+    // (kIconRowHistoryOpener, where the reason is stated) one group gap left
+    // of THE VIEW GROUP, FLUSH AT THE ROW'S RIGHT EDGE since 2026-10-01
+    // (kIconRowViewGroup, where its provenance and the overflow rule are
+    // stated). IN THE `h` VIEW the history group's six
     // companions stand in the slots of the toolbar group behind Save and of
     // the iteration group (kIconRowHistoryStandIns, the swap's one owner).
     //
@@ -1637,29 +1657,30 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // whose one fork is the stand-in table's.
     //
     // THE WIDTH MATH, RE-DERIVED from the roster after each move (architect
-    // 2026-10-02, the Windows case): in Windows px, the 8-px pad + 23-px
-    // cases touching + an 8-px gap between groups (groups minus one of them —
-    // the view group's own included). Outside the `h` view (2026-10-05) the
-    // LEFT WALK is seventeen members in six groups from the left pad,
-    //   8 + 17·23 + (6−1)·8 = 8 + 391 + 40 = 439,
-    // and inside it sixteen in six (the iteration group's three slots holding
-    // the two reading lamps),
-    //   8 + 16·23 + (6−1)·8 = 8 + 368 + 40 = 416;
-    // the VIEW GROUP's span from the right edge — its gap, three cases and
-    // the 8-px lead-out — is
-    //   8 + 3·23 + 8 = 85,
+    // 2026-10-02, the Windows case; restated 2026-10-06 for the opener's
+    // right-anchored seat): in Windows px, the 8-px pad + 23-px cases
+    // touching + an 8-px gap between groups (groups minus one of them — the
+    // opener's and the view group's own included). Outside the `h` view the
+    // LEFT WALK is sixteen members in five groups from the left pad,
+    //   8 + 16·23 + (5−1)·8 = 8 + 368 + 32 = 408,
+    // and inside it fifteen in five (the iteration group's three slots
+    // holding the two reading lamps),
+    //   8 + 15·23 + (5−1)·8 = 8 + 345 + 32 = 385;
+    // the RIGHT-ANCHORED span from the right edge — the opener's gap and
+    // case, the view group's gap and three cases, and the 8-px lead-out — is
+    //   8 + 23 + 8 + 3·23 + 8 = 116,
     // so the row holds every group, with the full gap on both sides of the
-    // view group's, in any window at least 439 + 85 = 524 Windows px wide
-    // outside the view and 416 + 85 = 501 inside it.
+    // opener's, in any window at least 408 + 116 = 524 Windows px wide
+    // outside the view and 385 + 116 = 501 inside it.
     //
     // THE DEVICE WIDTHS are taken off THE PAINTED WALKS, not off 524·factor:
     // every element is its own scaled_px (render.h's composite rule), so the
     // device width is 2·[8s] + N·([3s] + [16s] + [4s]) + 6·[8s] with each
     // bracket a banker's rounding and N the members standing (20 outside,
-    // 19 inside). The laptop's 138 % paints 610 + 118 = 728 of its 1920
-    // (578 + 118 = 696 in the view); the tablet's 275 % paints 1203 + 233 =
-    // 1436 of its 2304 (1373 in the view), and its 400 % 1756 + 340 = 2096
-    // (1664 + 340 = 2004 in the view), clearing the panel by 208. THE FIT
+    // 19 inside). The laptop's 138 % paints 567 + 161 = 728 of its 1920
+    // (535 + 161 = 696 in the view); the tablet's 275 % paints 1118 + 318 =
+    // 1436 of its 2304 (1055 + 318 = 1373 in the view), and its 400 % 1632 +
+    // 464 = 2096 (1540 + 464 = 2004 in the view), clearing the panel by 208. THE FIT
     // CEILINGS, every scale below each one fitting too: the tablet's 2304
     // holds the row in both states up to 440 % (the view's own up to 459 %),
     // the laptop's 1920 up to 365 % (384 %). The row's width succession is
@@ -1756,18 +1777,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
                               btn_y + btn_h + scaled_px(kIconRowAirPx),
                               lane.w);
 
-    // THE VIEW GROUP'S PLACE IS RESOLVED FIRST, because it decides where
-    // every group to its left may paint (the overflow rule at kIconRowViewGroup):
-    // its last button's right edge sits one row pad (icon_row_pad_x, the row's
-    // own 8px lead-in, read as the lead-out) in from the lane's right edge, its
-    // members touching, and its eight-px group gap on its left. THE LEFT
-    // GROUPS' LIMIT IS WHERE THAT GAP BEGINS: they paint under a clip ending
-    // there and publish only the columns they painted, so a window too narrow
-    // for the row covers them and never the view group.
+    // THE RIGHT-ANCHORED PLACES ARE RESOLVED FIRST, because they decide where
+    // every group to their left may paint (the overflow rule at
+    // kIconRowViewGroup): the view group's last button's right edge sits one
+    // row pad (icon_row_pad_x, the row's own 8px lead-in, read as the
+    // lead-out) in from the lane's right edge, its members touching, and its
+    // eight-px group gap on its left; the HISTORY OPENER's case stands just
+    // left of that gap (kIconRowHistoryOpener, architect 2026-10-06), with
+    // its own eight-px gap on its left. THE LEFT GROUPS' LIMIT IS WHERE THE
+    // OPENER'S GAP BEGINS: they paint under a clip ending there and publish
+    // only the columns they painted, so a window too narrow for the row
+    // covers them and never the opener or the view group.
     const int view_n = static_cast<int>(std::size(kIconRowViewGroup));
     const int view_w = view_n * btn_w;
     const int view_x0 = lane.x + lane.w - icon_row_pad_x() - view_w;
-    const int left_limit = view_x0 - group_gap;
+    const int history_x = view_x0 - group_gap - btn_w;
+    const int left_limit = history_x - group_gap;
 
     // ONE MEMBER'S PAINT, shared by both walks: publish what is painted, then
     // the face and the glyph at the member's full box — the clip, when
@@ -1896,11 +1921,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // carried an OWED separator across them is deleted, 2026-08-14; the one
     // membership fork left is the history stand-ins', 2026-10-05.) Everything
     // here paints under the
-    // clip that ends at the view group's separator column, and each member
+    // clip that ends where the history opener's gap begins, and each member
     // PUBLISHES ITS RECT CUT AT THAT COLUMN — whole at every width the row
     // fits (the laptop's and the tablet's included), its painted columns
-    // alone when the view group covers part of it, and an empty rect when it
-    // covers it whole, which contains no point and refreshes its bits
+    // alone when the right-anchored pair covers part of it, and an empty rect
+    // when it covers it whole, which contains no point and refreshes its bits
     // unconditionally (publish_button_face).
     cairo_save(cr);
     cairo_rectangle(cr, lane.x, lane.y,
@@ -1953,9 +1978,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     }
     cairo_restore(cr);
 
-    // THE VIEW GROUP'S WALK, PAINTED LAST AND WHOLE: its three members from
-    // view_x0 (its leader Source+Warp's gap is the one left of view_x0 the
-    // left groups stop at), each publishing the full case it paints.
+    // THE RIGHT-ANCHORED PAIR, PAINTED LAST AND WHOLE, each member publishing
+    // the full case it paints: the history opener at history_x, at one x in
+    // both states (its gap is the one the left groups stop at), then the view
+    // group's three members from view_x0 (its leader Source+Warp's gap
+    // standing between the two).
+    paint_member(kIconRowHistoryOpener, history_x,
+                 GuiRect{history_x, btn_y, btn_w, btn_h});
     int vx = view_x0;
     for (const IconRowDef& def : kIconRowViewGroup) {
         paint_member(def, vx, GuiRect{vx, btn_y, btn_w, btn_h});
@@ -2468,11 +2497,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 577 at the laptop's 138 %, starting at 1920 − 11 − 577 = 1332, and the
     // clock's time field (kTimeFieldHeightPx, 2026-10-05) — its cell the
     // widest `A | 00:00.000` in the body face, Liberation's 107.0 px at 138 %
-    // (2026-10-05) — spanning 7..122, the state line from one group space
-    // past it, 133, clipped one group space short of the block at 1321
-    // (~1188 px); at the tablet's 275 % 17·63 + 3·22 = 1137, starting at
-    // 2304 − 22 − 1137 = 1145, the field (its cell ~213.3, ceiled to 214)
-    // spanning 14..244, the state line 266..1123 (~857 device px). THE ROW CARRIES NO
+    // (2026-10-05) — spanning 7..122, the state line from one field pad
+    // past it (2026-10-06), 126, clipped one group space short of the block
+    // at 1321 (~1195 px); at the tablet's 275 % 17·63 + 3·22 = 1137, starting
+    // at 2304 − 22 − 1137 = 1145, the field (its cell ~213.3, ceiled to 214)
+    // spanning 14..244, the state line 252..1123 (~871 device px). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: the block reaches the field's
@@ -2556,24 +2585,30 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //   THE CLOCK'S FIELD: time_field_rect round the reserved cell,
         //   centred in the content band, painted by paint_time_field. Its
         //   width is fixed (the cell's), so the state line never moves.
-        //   THE STATE LINE: on the row's ground, no panel, from one group
-        //   space (the eight Windows px of bare ground that stand between
-        //   every two groups on this row) right of the field's right line,
-        //   clipped one group space short of the right block; a window too
-        //   narrow to leave that span positive paints no state text — the
+        //   THE STATE LINE: on the row's ground, no panel, starting
+        //   kStatusPanelPadPx (3 Windows px) right of the field's right line
+        //   (architect 2026-10-06, "matching the field"): THE SAME NUMBER
+        //   the field's own run stands inside that line, so the time's run
+        //   ends and the state's starts the same 3 px from the field's outer
+        //   edge, inside and out. It stood one group space (8) out until that
+        //   ruling. Its
+        //   RIGHT CLIP KEEPS ITS OWN RULE, one group space short of the right
+        //   block — that edge faces a button group, not the field; a window
+        //   too narrow to leave that span positive paints no state text — the
         //   row's crop-at-the-floor allowance (the block above).
         // THE CLOCK'S PER-TICK DAMAGE BOX (app.clock_cell_rect, below: the
         // cell ± 1 px over the content rows) CROSSES THE FIELD'S TOP AND
         // BOTTOM LINES and the ground above and below them, which a tick
         // repaints identically under its clip; the field's two vertical lines
-        // and the whole state line — which starts a group space right of the
-        // field — fall outside it. Every state change damages the lane whole
+        // and the whole state line — which starts a field pad right of the
+        // field, past the box's one px of slack — fall outside it. Every state change damages the lane whole
         // (Viewport::invalidate_status_cell_area), which repaints the field
         // and the line.
         const GuiRect clock_field =
             time_field_rect(cell_x, cell_w, content_y, content_h);
         paint_time_field(cr, clock_field);
-        const int state_x = clock_field.x + clock_field.w + group_gap;
+        const int state_x =
+            clock_field.x + clock_field.w + scaled_px(kStatusPanelPadPx);
         const int state_w = (right_block_x - group_gap) - state_x;
         // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the
         // period field's 3 px of face above and below its digits, by the one
@@ -4372,15 +4407,14 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // with no fill inside it the band now READS as the two edges of a span rather
 // than as a tinted region.
 //
-// THE HORIZONTALS RIDE THE BORDER'S OUTERMOST ROWS (architect 2026-08-01,
-// GIMP-verified at the row-6 live look). They sat on the CONTENT band, one row
-// inside each 2px border — which put them where the marker and playhead stems
-// cross, so the ring read as broken by every stem. The top run moved UP 2px onto
-// the top border's FIRST row and the bottom run DOWN 2px onto the bottom
-// border's LAST row, and the verticals extend to meet them. This pass is
-// therefore the ONE band-filling pass that deliberately does NOT clip to
-// waveform_content_rect (the inventory at that helper says so): the ring is not
-// content, it is a frame drawn ON the frame.
+// THE RING STANDS INSIDE THE WELL'S EDGE (architect 2026-10-06): its top run
+// on the content band's first row and its bottom run on its last
+// (waveform_content_rect), the verticals spanning the band between them, so
+// the well's two-line sunken edge at the top and the bottom stays whole under
+// a reset's span. The ring rode the area's outermost rows from 2026-08-01
+// until this ruling — a frame drawn on the frame — which was settled under
+// the earlier flat border, before the well had a Windows edge for the ring to
+// break.
 //
 // A vertical side is drawn only where the band's own edge
 // is the true edge — both x0 and x1 come back already clipped to the area, so a
@@ -4409,22 +4443,28 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
     // repaint; a palette install damages the whole window.
     const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
-    // OVER THE STEMS' FLANKS (architect 2026-10-05, fill_stem_flanks): the
-    // flanks paint before this pass, so the top side runs on from its stem
-    // unbroken — the flank parts the stem from the well, not from its ring.
+    // BELOW THE STEMS' FLANKS (architect 2026-10-05, fill_stem_flanks): the
+    // flanks stand in the well's top lines alone, which the ring no longer
+    // enters, so the reset's stem leaves its flanks straight onto the ring's
+    // top run and its left side.
     set_palette_source(cr, ring);
-    // THE FULL AREA, not the content band: the top run lands on row area.y (the
-    // top border's first row) and the bottom on row area.y + area.h - 1 (the
-    // bottom border's last), with the verticals spanning every row between them.
-    // EVERY SIDE IS waveform_line_px() THICK (render.h, the class's one
+    // THE CONTENT BAND, not the full area (architect 2026-10-06): the top run
+    // lands on the canvas's first row (content.y, just under the well's top
+    // lines) and the bottom on its last (content.y + content.h - 1, just
+    // above the bottom lines), with the verticals spanning every row between
+    // them. No other reader takes the ring's rows: it is no hit target, and
+    // its damage is the whole waveform area's (the flag cache's rebuild and
+    // Selection::damage_overlay_on_subject_change), which holds it at any
+    // inset. EVERY SIDE IS waveform_line_px() THICK (render.h, the class's one
     // inventory), inward from the band's edges, so the left side's columns
     // [x0, x0 + t) are the stem's own; a side is never wider than the band
     // (both verticals then cover it), and the band is already clipped to the
     // waveform's columns, so no side reaches past them.
+    const GuiRect content = waveform_content_rect(area);
     const double t  = static_cast<double>(waveform_line_px());
     const double sw = std::min(t, w);
-    const double y0 = static_cast<double>(area.y);
-    const double h  = static_cast<double>(area.h);
+    const double y0 = static_cast<double>(content.y);
+    const double h  = static_cast<double>(content.h);
     cairo_rectangle(cr, band.x0, y0, w, t);              // top
     cairo_rectangle(cr, band.x0, y0 + h - t, w, t);      // bottom
     cairo_rectangle(cr, band.x0, y0, sw, h);             // left

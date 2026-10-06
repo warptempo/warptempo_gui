@@ -401,7 +401,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // dispatches on both edges because the icon row's band claim sits ABOVE the
     // mode's pointer gate (the rows' presses are covered by the KEYBOARD gate
     // instead, which admits `h` through handle_history_mode_key one line before
-    // the allowlist). It closes the row since 2026-08-14.
+    // the allowlist). It stands right-anchored, one group gap left of the
+    // view group, since 2026-10-06 (kIconRowHistoryOpener, paint_handler.cpp).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false},     // bare h
     // THE WALK LAMP (architect 2026-08-18 as a radio pair, one button since the
     // 2026-09-04 collapse) — which walk the `h` view's lane reads: Git is the

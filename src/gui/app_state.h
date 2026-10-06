@@ -2088,10 +2088,13 @@ enum class RedesignButton {
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
     // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
-    // 2026-10-01: help comes after settings) — and THE ROW'S LAST GROUP —
-    // the HISTORY OPENER leading its WALK LAMP, its four companions and
-    // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
-    // for it.
+    // 2026-10-01: help comes after settings) — and THE HISTORY GROUP — the
+    // HISTORY OPENER leading its WALK LAMP, its four companions and (since
+    // 2026-09-01) the LOAD IN PLACE, which left the render-entry group for
+    // it; since 2026-10-05 the six behind the opener stand only in the `h`
+    // view, in two greyed groups' slots, and since 2026-10-06 the opener
+    // stands right-anchored against the view group
+    // (kIconRowHistoryOpener, paint_handler.cpp).
     //
     // (THE TWO VIEW LAMPS — IconAudioView and IconMarkerColumn — stood as
     // their own group here from 2026-09-04 to 2026-09-15, one button per
@@ -2123,9 +2126,12 @@ enum class RedesignButton {
     // button can travel out from under the pointer that pressed it. The
     // two-level collapse rule of 2026-08-12..13 (redesign_button_collapsed,
     // redesign_button_mode_companion and the group-span walk that served it)
-    // is DELETED WHOLE with that ruling, and the argument the 2026-08-13
-    // group order was built on — keeping the history opener's x fixed across
-    // the toggle — is answered by construction now rather than by placement.
+    // is DELETED WHOLE with that ruling. The argument the 2026-08-13 group
+    // order was built on — keeping the history opener's x fixed across the
+    // toggle — came back with the 2026-10-05 stand-ins, which move what
+    // stands right of the iteration group by one case, and is answered by
+    // PLACEMENT since 2026-10-06: the opener is right-anchored
+    // (kIconRowHistoryOpener, paint_handler.cpp).
     //
     // SAVE STANDS ALONE BEHIND A SEPARATOR (architect 2026-09-29, after his
     // accidental Save presses at the tablet's 200 %): UNDO opens a group of
@@ -2480,7 +2486,7 @@ enum class RedesignButton {
     // routers each answer bare backslash through the same setter (architect 2026-09-29), so the player row's hints can be lit and
     // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
-    // THE HISTORY GROUP — the row's LAST, and its own again since 2026-08-18
+    // THE HISTORY GROUP — its own again since 2026-08-18
     // (architect: "place a separator before the history button, and place
     // cumulative/etc after the history button"). The OPENER leads it: bare
     // `h`, ruled with the mode itself on 2026-08-04 and landed with the commit
@@ -2496,7 +2502,9 @@ enum class RedesignButton {
     // tablet at gui_scale 400) ONLY THE OPENER STANDS IN EVERY STATE: the six
     // behind it stand only in the view, in the slots of the two authoring
     // groups the view greys whole (kIconRowHistoryStandIns, paint_handler.cpp,
-    // the swap's one owner, which also says which slot each takes). This
+    // the swap's one owner, which also says which slot each takes), and
+    // since 2026-10-06 the opener stands right-anchored, one group gap left
+    // of the view group (kIconRowHistoryOpener, paint_handler.cpp). This
     // enum keeps the group's order; the painted order is the painter's.
     IconHistory,
     // The walk lamp, between the opener and the cumulative toggle, which is
@@ -3113,8 +3121,11 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // 2026-10-01 — the load-in-place left it on
 // 2026-09-01) and THE
 // HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
-// load-in-place at the tail — and, FLUSH AT THE ROW'S RIGHT EDGE, THE VIEW
-// GROUP: Source+Warp leading Target+Warp and Target+Phase.
+// load-in-place at the tail (the six standing only in the `h` view, in two
+// greyed groups' slots, since 2026-10-05; the opener alone right-anchored
+// one group gap left of the view group since 2026-10-06) — and, FLUSH AT THE
+// ROW'S RIGHT EDGE, THE VIEW GROUP: Source+Warp leading Target+Warp and
+// Target+Phase.
 //
 // SEVEN SINCE 2026-10-01, UP FROM SIX: the row-1 view bar's three acts came
 // down as the view group, its own separator-led group at the row's right

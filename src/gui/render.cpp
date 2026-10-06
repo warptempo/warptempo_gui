@@ -1100,7 +1100,16 @@ void render_trim_flags(cairo_t* cr,
     // A BUTTON SLIDES OFF THE EDGE (architect 2026-10-05): it paints while
     // any of its columns is on the lane, clipped there, whether or not its
     // bound is in view, and one the clip empties paints and publishes
-    // nothing.
+    // nothing. A PARTLY VISIBLE BUTTON IS HITTABLE IN EXACTLY ITS VISIBLE
+    // COLUMNS (architect 2026-10-06): the rect published is lane_cut's, the
+    // same columns the clip lets paint, over the lane's whole height, and
+    // hit_test_trim_endcap tests that rect as it is — so no painted pixel of
+    // a button is ever unclickable, and no unpainted one answers.
+    // A TRIM WINDOW WHOLLY OFF ONE SIDE PAINTS NOTHING AND GETS NO CUE
+    // (architect 2026-10-06): no button, no body, an empty bridge. The
+    // dithered lane already says "everything in view is trimmed off", no
+    // period idiom shows which side the window lies on, and the framing
+    // double-click brings it back.
     const auto lane_cut = [&](GuiRect r) {
         const int lo = std::max(r.x, lane_x);
         const int hi = std::min(r.x + r.w, lane_x + lane_w);
