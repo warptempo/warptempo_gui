@@ -393,7 +393,8 @@ PRESET_FIXED = {'label': '#FFFFFF', 'selected_fill': '#666666', 'selected_text':
 PRESET_THEME_KEYS = {'label': ('label', 'field_text'), 'selected_fill': ('selected_fill',),
                      'selected_text': ('selected_text',)}
 # (the Outline's and the flag kinds' keys since 2026-10-05, and the four a preset saved before then names, which
-# gen_theme_files.py's OLD_PRESET_KEYS reads as the picker does)
+# gen_theme_files.py's OLD_PRESET_KEYS reads as the picker does; `playhead_head` the picker's own element, colouring no
+# product role since 2026-10-05, accepted here and dropped by gen_theme_files.py's IGNORED_PRESET_KEYS)
 PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'waveform_outline', 'warp_flag', 'warp_flag_selected', 'phase_reset_flag',
                        'phase_reset_flag_selected', 'added_flag', 'added_flag_selected', 'removed_flag', 'removed_flag_selected', 'playhead_head',
                        'playhead_stem', 'unselected_flag', 'selected_flag', 'unselected_invalid_flag',

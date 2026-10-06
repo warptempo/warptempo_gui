@@ -89,10 +89,12 @@ struct TrimRange {
 // inks. THE ONE FURTHER EXCEPTION IS A CHICAGO95 ICON'S OWN PIXELS (architect
 // 2026-10-05, the icon pass): at a bitmap gui_scale a roster glyph is a
 // decoded PNG blitted verbatim (icons::draw_cased et al., icons.h) — period
-// artwork, not a role, so its pixels are never recoloured, composited against
-// a role or embossed in anything but their own opaque mask (draw_cased's
-// disabled face masks OUT the white/silver ground and embosses what is left,
-// never the theme's colours). TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
+// artwork, not a role, so its pixels are never recoloured or composited
+// against a role. A DISABLED icon paints none of its own pixels: its MASK
+// (the opaque pixels that are neither white nor silver) is Windows'
+// DSS_DISABLED emboss in the theme's roles, the Hilight copy one line right
+// and down, then the Shadow copy in place (draw_cased_disabled, icons.cpp),
+// as a vector glyph's (draw_engraved). TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
@@ -342,12 +344,9 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // painted in four of the CHROME's own roles: the glyph's outline in LABEL
 // (COLOR_BTNTEXT, the role Windows maps a toolbar or ruler bitmap's black
 // to), its bevel in HILIGHT and SHADOW, and its interior in GROUND — a
-// raised chip on the chrome, not a flat silhouette. THE HOLD LAMP (architect
-// 2026-09-24, restated for the glyph): while AppState::camera_hold stands,
-// the glyph's GROUND cells alone take the STEM'S role instead — a STATE
-// COLOUR, not a class — repainted by the per-tick comparator (main.cpp)
-// since the bit flips with no damage of its own; the outline and bevel cells
-// never change. THE STEM is the `playhead_stem` role, UNIFORM from the head
+// raised chip on the chrome, not a flat silhouette. NO HOLD LAMP (architect
+// 2026-10-05): the glyph paints the same face whether or not
+// AppState::camera_hold stands. THE STEM is the `playhead_stem` role, UNIFORM from the head
 // to the canvas's foot (its contrast over the chrome and the canvas is the
 // user's choice), and the zoom anchor's stem
 // (render_strip_anchor_stem) takes the same role. THE SCANNER — the moving
@@ -755,10 +754,7 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // CONTENT IS 19 WINDOWS PX, Windows' SM_CYMENU (architect 2026-10-02; it was
 // the kdenlive File item's 30 laptop px until the unit's change): the
 // anchors' box and the labels' box both, where the anchors and their labels
-// stand, cap-centred in it (the battery + clock legend stood here too until
-// it stopped painting, architect 2026-10-05, cosmetic — AppState::
-// menu_legend is still composed each tick, gui_battery.h, just not read by
-// any paint site now).
+// stand, cap-centred in it.
 //
 // THE LANE IS ONE WINDOWS PX TALLER THAN THE CONTENT, A FOOT OF PLAIN GROUND
 // AT THE BOTTOM (architect 2026-10-05, Windows 95 screenshots measured at
@@ -1662,12 +1658,8 @@ inline constexpr int kTrimArrowGlyphRows[kTrimArrowGlyphCols] = {1, 3, 5, 7};
 // painting over whatever this painter already laid down in its band, the
 // labels and the ticks' rise, same as the retired table's shape did.
 //
-// THE HOLD LAMP (architect 2026-09-24, restated for the glyph): while
-// AppState::camera_hold stands, the glyph's '.' CELLS ALONE take the STEM'S
-// role instead of GROUND — a STATE COLOUR, not a class, repainted by the
-// per-tick comparator (main.cpp) since the bit flips with no damage of its
-// own. The K / W / S cells never change: the outline and bevel are the
-// glyph's own, not the lamp's.
+// NO HOLD LAMP (architect 2026-10-05): every cell keeps its code's role
+// whether or not AppState::camera_hold stands.
 //
 // THE OLD HEIGHT, scaled_px(kPlayheadHeadHeightPx) with the retired
 // kPlayheadHeadHeightPx = 8, does NOT equal the new 8u at every scale: 8, 24

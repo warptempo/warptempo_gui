@@ -35,18 +35,26 @@
 // assets/icons/breeze/. They are the record of what this code draws; the
 // d-strings here are copied from them VERBATIM, so a diff between the two is a
 // transcription bug and nothing else — with the two `<rect>` plates'
-// derivations as the stated exception just above. They are read by no code at runtime — the
-// product reads no icon files. The one committed SVG with no table row is
-// audio-x-generic.svg (the 64 px mimetype rendition), which lends the launcher
-// icon on both devices its sheet grey and its note's ink (white at .75). The
-// launcher's glyph is music-note-16th's outer contour, which IS transcribed
-// here for the roster (MusicNote16th): its d, truncated before the two
-// subpaths that cut the head and the flag hollow, is a verbatim prefix of the
-// file's in android/app/ic_launcher_foreground.svg, rendered once to the PNG
-// layers under android/app/res/, and in packaging/warptempo_gui.svg, the
-// .desktop's Icon=; the launchers read those files, and THE CAPTION'S ICON
-// (AppIcon, 2026-10-05) is packaging/warptempo_gui.svg transcribed whole —
-// its plate and its note, the note under the file's own transform.
+// derivations as the stated exception just above. No code reads them at
+// runtime. The one committed SVG with no table row is audio-x-generic.svg (the
+// 64 px mimetype rendition), which lends the vector caption icon (AppIcon) its
+// sheet grey and its note's ink (white at .75); that note is
+// music-note-16th's outer contour, its d a verbatim prefix of the file's (the
+// roster's MusicNote16th row carries the whole).
+//
+// TWO ROADS DRAW THE GLYPHS (architect 2026-10-05, the icon pass): AT A
+// BITMAP gui_scale (a whole multiple of 100, gui_font.h's
+// gui_scale_is_bitmap) the roster, the list rows, the cards and the caption
+// draw CHICAGO95'S 16-px PNGs (assets/icons/chicago95/16/, each pick
+// recorded at assets/icons/chicago95/mapping.md), compiled into the Linux
+// binary and packed as the APK's assets, decoded once at launch
+// (install_chicago95_bitmaps, the bitmap block below; a missing or
+// undecodable file is the launch's hard fail); AT EVERY OTHER SCALE the
+// Breeze paths transcribed here draw. The program icon outside the window is
+// Chicago95's speaker too: the tablet's launcher
+// (android/app/res/mipmap-anydpi-v26/ic_launcher.xml holds the recipe) and
+// the Linux desktop's packaging/warptempo_gui.svg
+// (tools/desktop_icon/gen_desktop_icon.py writes it).
 //
 // BREEZE IS THE RULED GLYPH SOURCE AND AN AUTHORING-TIME DEPENDENCY ONLY
 // (architect 2026-08-08: the one theme addressing Qt and GTK both, with a
@@ -497,10 +505,10 @@ enum class Icon {
     EditDelete,          // Delete a batch folder (the player's modal row)
     // THE APP'S OWN ICON (architect 2026-10-05: the caption wears "the app's
     // EXISTING icon"), worn by the caption at 16 x 16 (render.h's caption
-    // block): the desktop launcher's, packaging/warptempo_gui.svg, the
-    // tablet's launcher made whole — the sheet-grey plate under the filled
-    // quaver. Not a Breeze glyph and no roster button's: the one icon of the
-    // product's own, transcribed from its own file. AT A BITMAP gui_scale
+    // block): its VECTOR form is the launcher picture the product wore
+    // before the icon pass — the sheet-grey plate under the filled quaver
+    // (kAppIconPaths, icons.cpp, records it whole). Not a Breeze glyph and
+    // no roster button's: the one icon of the product's own. AT A BITMAP gui_scale
     // (architect 2026-10-05, the icon pass's own caption pick) it instead
     // wears Chicago95's status/audio-volume-high.png (icons.h's
     // kChicago95Files, draw_bitmap's plain blit at the spot the caption
@@ -638,8 +646,9 @@ void draw_bitmap(cairo_t* cr, Icon icon, double x, double y, double size_px);
 void draw_bitmap_in_ink(cairo_t* cr, Icon icon, double x, double y,
                         double size_px, GuiColor ink);
 
-// THE FIVE-FILES INSTALL, Chicago95's own: one PNG per distinct picture the
-// mapping table names (assets/icons/chicago95/16/*.png — the directory IS
+// THE BITMAPS' INSTALL, on the fonts' pattern (gui_font.h): one PNG per
+// distinct picture the mapping table names
+// (assets/icons/chicago95/16/*.png — the directory IS
 // the inventory; kChicago95Files lists its basenames, no extension, THE
 // LAPTOP'S CONFIGURE-TIME GLOB'S OWN ORDER, same contract as
 // kGuiFontFiles — see gui_font.h's head for why the order is shared between
@@ -674,7 +683,7 @@ inline constexpr std::size_t kChicago95PixelBytes = 16 * 16 * 4;
 // own failure (no opaque pixel) is one too.
 bool install_chicago95_bitmaps(const Chicago95Pixels (&files)[kChicago95FileCount]);
 
-// THE FIVE-FILES' RAW BYTES, Chicago95's own: one PNG per distinct picture,
+// THE BITMAPS' RAW BYTES, on the fonts' pattern: one PNG per distinct picture,
 // as committed (assets/icons/chicago95/16/<name>.png), UNDECODED — each
 // backend decodes its own copy, below. The bytes are COPIED, like the
 // fonts': the caller may free or unmap them the moment the decode call

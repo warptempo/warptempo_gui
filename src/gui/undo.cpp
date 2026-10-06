@@ -1087,11 +1087,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // (architect 2026-09-29): a restore that crosses the tab arrives with the
     // hold that tab's picture says (hold_derived_on_arrival), the switch's
     // answer and not the restore's; one that crosses the audio view arrives
-    // dark, the S/T switch deriving nothing. The playhead head's lamp shows
-    // which posture stands. (From 2026-09-23 to 2026-09-25 the restore kept
-    // the bit across its land and let the landing owner decide, so an
-    // on-screen singleton left the cursor off the held column with the lamp
-    // still white.)
+    // dark, the S/T switch deriving nothing. (From 2026-09-23 to 2026-09-25
+    // the restore kept the bit across its land and let the landing owner
+    // decide, so an on-screen singleton left the cursor off the held column
+    // with the hold still standing.)
     //
     // Runs AFTER sanitize_selection_after_restore so the land sees the final
     // membership, after the tab / data / column / audio-view restores so it

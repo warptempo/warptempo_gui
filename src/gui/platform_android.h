@@ -1,6 +1,5 @@
 #pragma once
 #include "device_config.h"
-#include "gui_battery.h"
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
@@ -29,7 +28,7 @@
 // for member and signature for signature, and there is NO ANDROID-ONLY MEMBER:
 // where the two machines differ, both sides declare the member and each
 // answers its own way (the on-screen keyboard's pair, device_config_defaults,
-// the car's pair, the pen's pair and battery_status are of that shape).
+// the car's pair and the pen's pair are of that shape).
 // THE PROOF IS A DIFF, never a carried count: strip `//` comments and blank
 // lines from each header's `public:` section and the two come out line for
 // line equal but for the pen pair's two inline bodies — re-derive it at every
@@ -45,10 +44,8 @@
 // is the one portable body driving either (the loop contract, platform.h). IT
 // LAST GREW ON 2026-10-05, by bundled_theme_files (the theme files the build
 // ships: the repository's assets/themes/ on the laptop, the APK's assets
-// here — the copy-in at launch, theme_file.h), before that on 2026-10-01 by
-// battery_status (the menu row's battery + clock
-// legend: sysfs on the laptop, the sliver's broadcast here — gui_battery.h
-// carries the type), and before that on 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
+// here — the copy-in at launch, theme_file.h), and before that on
+// 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
 // the contracts are at platform_wayland.h's two declarations, the JNI road at
 // this backend's definitions and MainActivity.java): set_on_media_command, the
 // hook the loop fires with each head-unit button the Java sliver's
@@ -481,23 +478,6 @@ public:
     // setActive(false) is reached only by the activity's onDestroy.
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
     void publish_media_state(const GuiMediaState& state);
-
-    // THE HOST'S BATTERY (architect 2026-10-01; the seam's contract — called
-    // on every tick, answered cheaply — is at platform_wayland.h's
-    // declaration). ON THIS BACKEND IT IS THE SLIVER'S LAST BROADCAST:
-    // MainActivity registers for the sticky ACTION_BATTERY_CHANGED (no
-    // permission; the registration hands back the sticky intent at once and
-    // the receiver keeps it current) and pushes each one down through
-    // nativeBatteryState — ONE JAVA->NATIVE CALL PER CHANGE, the car's road
-    // (nativeMediaCommand) rather than a native->Java read at each refresh,
-    // because the broadcast IS the change: the legend follows it within a
-    // tick, with no binder call on the loop's thread. The push stores one
-    // atomic word and needs no wake, the tick reading it on its own cadence
-    // (the word and its packing are at g_battery_word, platform_android.cpp).
-    // Before the first push it answers a battery whose level and plug state
-    // are unknown — the honest cold answer, which the receiver's
-    // registration in onCreate replaces at once.
-    GuiBattery battery_status();
 
 private:
     // The glue's callback tables are C function pointers taking `android_app*`,

@@ -27,7 +27,6 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <atomic>
 #include <cerrno>
 #include <clocale>
 #include <cstdint>
@@ -412,48 +411,6 @@ Java_com_warptempo_gui_MainActivity_nativeMediaCommand(JNIEnv* /*env*/,
     cmd.kind        = static_cast<GuiMediaCommand::Kind>(kind);
     cmd.position_ms = static_cast<int64_t>(position_ms);
     AndroidCallbacks::media_command(cmd);
-}
-
-// THE HOST'S BATTERY, the sliver's last ACTION_BATTERY_CHANGED broadcast
-// (architect 2026-10-01; the road's reasoning is at battery_status's
-// declaration). ONE ATOMIC WORD, written by the JNI entry below on the UI
-// thread and read by battery_status on the loop's thread, so neither side
-// takes a lock and no wake is owed — the tick reads it on its own cadence.
-// THE PACKING: bit 16 has_battery, bits 8-9 GuiBattery::Plugged's value,
-// bits 0-7 the percentage plus one (0 = the level is unknown). PROCESS-WIDE,
-// unlike the media sink: it is a reading, not a queue, so it outlives every
-// project and a push before init() or after shutdown() is simply the newest
-// reading. The initial word is a battery whose level and plug state are
-// unknown (the declaration's cold answer).
-namespace {
-constexpr uint32_t pack_battery(const GuiBattery& b) {
-    return (b.has_battery ? 1u << 16 : 0u) |
-           (static_cast<uint32_t>(b.plugged) << 8) |
-           static_cast<uint32_t>(b.percent + 1);
-}
-std::atomic<uint32_t> g_battery_word{
-    pack_battery(GuiBattery{true, -1, GuiBattery::Plugged::Unknown})};
-} // namespace
-
-// THE JNI ENTRY for the battery (name-based resolution, as the car's):
-// MainActivity's `private static native void nativeBatteryState(boolean
-// present, int percent, int plugged)`. `percent` is 0..100 or -1 for a level
-// the broadcast did not carry; `plugged` is EXTRA_PLUGGED as the broadcast
-// carried it — 0 unplugged, any positive source plugged (AC, USB, wireless,
-// dock), and -1 for an extra that was missing: the glyph's Unknown.
-extern "C" JNIEXPORT void JNICALL
-Java_com_warptempo_gui_MainActivity_nativeBatteryState(JNIEnv* /*env*/,
-                                                        jclass /*clazz*/,
-                                                        jboolean present,
-                                                        jint percent,
-                                                        jint plugged) {
-    GuiBattery b;
-    b.has_battery = present == JNI_TRUE;
-    b.percent     = percent;
-    b.plugged     = plugged < 0  ? GuiBattery::Plugged::Unknown
-                  : plugged == 0 ? GuiBattery::Plugged::Unplugged
-                                 : GuiBattery::Plugged::Plugged;
-    g_battery_word.store(pack_battery(b), std::memory_order_relaxed);
 }
 
 // ---------------------------------------------------------------------------
@@ -2151,15 +2108,6 @@ void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) 
 // otherwise hold every string until detach. A Java exception out of the call
 // is described, cleared and logged, never propagated: the head unit's display
 // is not worth the process.
-GuiBattery GuiPlatform::battery_status() {
-    const uint32_t w = g_battery_word.load(std::memory_order_relaxed);
-    GuiBattery b;
-    b.has_battery = (w >> 16) & 1u;
-    b.plugged     = static_cast<GuiBattery::Plugged>((w >> 8) & 0x3u);
-    b.percent     = static_cast<int>(w & 0xFFu) - 1;
-    return b;
-}
-
 void GuiPlatform::publish_media_state(const GuiMediaState& state) {
     if (!app_ || !app_->activity || !jni_env_ || !media_state_method_) return;
     JNIEnv* env = jni_env_;

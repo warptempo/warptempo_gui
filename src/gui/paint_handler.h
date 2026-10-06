@@ -738,8 +738,8 @@ private:
     // strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);
     // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
-    // flat sampled ground, the three menu anchors flush left and the battery +
-    // clock legend flush right), the ICON ROW (top lane 2, row 4: the
+    // flat sampled ground, the three menu anchors flush left and nothing
+    // flush right), the ICON ROW (top lane 2, row 4: the
     // twenty-six view/mode/action buttons, no border of its own since
     // 2026-10-01, twenty standing outside the `h` view and nineteen inside it
     // since 2026-10-05 — kIconRowHistoryStandIns), and the

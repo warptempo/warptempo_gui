@@ -76,7 +76,7 @@ def read_constants():
                  'kIconRowAirPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagFacePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
-                 'kPlayheadHeadHeightPx',
+                 'kPlayheadHeadRows', 'kPlayheadHeadCols',
                  'kPlayheadUnitPx', 'kTrimArrowGlyphCols'):
         K[name] = _num(rh, 'render.h', name); own[name] = 'render.h'
     for name in ('kMenuLabelPadPx', 'kStatusPanelPadPx', 'kTimeFieldHeightPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
@@ -88,15 +88,20 @@ def read_constants():
     for name in ('kNotificationMinWidthPx', 'kNotificationMaxWidthPx'):
         K[name] = _num(nh, 'notifications.h', name); own[name] = 'notifications.h'
     K['kPanelPadPx'] = _num(fo, 'folder_overlay.h', 'kPanelPadPx'); own['kPanelPadPx'] = 'folder_overlay.h'
-    K['kPlayheadHeadHalf'] = _array(rh, 'render.h', 'kPlayheadHeadHalf'); own['kPlayheadHeadHalf'] = 'render.h'
+    # the head's glyph (WordPad's ruler marker, architect 2026-10-05): per row the painted cells' count ('_' is
+    # transparent), the silhouette the renderer draws as one centred run per row
+    m = re.search(r'kPlayheadHeadGlyph\[[^\]]*\]\[[^\]]*\]\s*=\s*\{(.*?)\n\};', rh, re.S)
+    if not m: raise SystemExit('tablet.py: the glyph kPlayheadHeadGlyph not found in src/gui/render.h')
+    K['kPlayheadHeadGlyph'] = [sum(c != '_' for c in re.findall(r"'(.)'", r)) for r in re.findall(r'\{([^}]*)\}', m.group(1))]
+    own['kPlayheadHeadGlyph'] = 'render.h'
     K['kTrimArrowGlyphRows'] = _array(rh, 'render.h', 'kTrimArrowGlyphRows'); own['kTrimArrowGlyphRows'] = 'render.h'
     K['kRulerLadderMs'] = _array(ph, 'paint_handler.cpp', 'kRulerLadderMs'); own['kRulerLadderMs'] = 'paint_handler.cpp'
     # the two inline lengths: the row pad (icon_row_pad_x, paint_handler.h) and the ruler label's air past its tick's
-    # etched pair (paint_ruler_row: col + waveform_line_px() + scaled_px(2))
+    # etched pair (paint_ruler_row: label_dx = waveform_line_px() + scaled_px(2))
     m = re.search(r'inline int icon_row_pad_x\(\)\s*\{\s*return scaled_px\(([0-9.]+)\)', ph_h)
     if not m: raise SystemExit('tablet.py: icon_row_pad_x\'s scaled_px(N) not found in src/gui/paint_handler.h')
     K['icon_row_pad_x'] = float(m.group(1)); own['icon_row_pad_x'] = 'paint_handler.h'
-    m = re.search(r'col \+\s*waveform_line_px\(\) \+\s*scaled_px\((\d+)\)', ph)
+    m = re.search(r'label_dx = waveform_line_px\(\) \+\s*scaled_px\((\d+)\)', ph)
     if not m: raise SystemExit('tablet.py: the ruler label\'s scaled_px(N) air not found in paint_ruler_row')
     K['ruler_label_air'] = int(m.group(1)); own['ruler_label_air'] = 'paint_handler.cpp (paint_ruler_row)'
     # THE ROSTERS, in walk order, and the icon row's group leaders
@@ -187,14 +192,13 @@ def build():
                'paint_handler.cpp kRulerMajorRisePx', 8)
     lab_air = row('ruler', 'label x past its tick = t + scaled_px(2)', '1 + 2', t + px(K['ruler_label_air']),
                   'paint_handler.cpp paint_ruler_row', 9)
-    head_rows = row('ruler', 'playhead head rows', K['kPlayheadHeadHeightPx'], px(K['kPlayheadHeadHeightPx']),
-                    'render.h playhead_head_h_px', 22)
-    halves = []
-    for r in range(head_rows):          # playhead_head_half_px: the source row by the truncating inverse
-        src = min(max(int(r / SCALE), 0), K['kPlayheadHeadHeightPx'] - 1)
-        halves.append(px(K['kPlayheadHeadHalf'][src], 1))
-    row('ruler', 'head widest row = 2 x half(0) + t', f'2 x {K["kPlayheadHeadHalf"][0]} + 1', 2 * halves[0] + t,
-        'render.h playhead_head_half_px', 35)
+    # the head: kPlayheadHeadRows x kPlayheadHeadCols cells of one quantum u = t (playhead_head_unit_px), its tip row
+    # the marker lane's air row (the seat below); the renderer draws its silhouette, one centred run per glyph row
+    head_rows = row('ruler', 'playhead head rows = rows x u', f'{K["kPlayheadHeadRows"]} x 1',
+                    K['kPlayheadHeadRows'] * t, 'render.h playhead_head_h_px', 24)
+    halves = [(n - 1) // 2 * t for n in K['kPlayheadHeadGlyph'] for _ in range(t)]
+    row('ruler', 'head widest row = cols x u', f'{K["kPlayheadHeadCols"]} x 1', K['kPlayheadHeadCols'] * t,
+        'render.h playhead_head_half_w_px', 27)
     # the marker lane: the flag box (edge + face + the body strike's whole cell + face + edge, architect
     # 2026-10-05: 17 Windows px, the period's one-line field) and its air above
     cell_up, cell_dn = px(BODY['ascent'], 1), px(BODY['descent'])
@@ -335,7 +339,7 @@ def build():
              'tick_bottom': L['marker'][1], 'tick_w': t, 'baseline': L['ruler'][0] + rbase, 'ms_per_px': ms_per_px,
              'vp_ms': vp_ms, 'step_ms': step, 'ticks': ticks, 'labels': labels}
     P0 = base['playhead']
-    playhead = {'col': P0['col'], 'w': t, 'head_top': marker_y - head_rows, 'head_rows': head_rows, 'head_half': halves,
+    playhead = {'col': P0['col'], 'w': t, 'head_top': marker_y + m_air - head_rows, 'head_rows': head_rows, 'head_half': halves,
                 'head_alpha': 1.0, 'stem_y0': area_y, 'stem_y1': area_y + area_h - border,
                 'stem_suppressed': P0.get('stem_suppressed', False)}
 

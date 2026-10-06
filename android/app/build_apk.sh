@@ -116,7 +116,7 @@ shopt -u nullglob
 cp -f "${THEME_FILES[@]}" "$ASSETS/themes/"
 wt_say "assets: ${#THEME_FILES[@]} theme files"
 
-# THE CHICAGO95 ICON BITMAPS (architect 2026-10-05, the icon pass): the 51
+# THE CHICAGO95 ICON BITMAPS (architect 2026-10-05, the icon pass): the
 # PNGs under the repository's assets/icons/chicago95/16/ (icons.h's
 # kChicago95Files), copied under the package's icons/chicago95/16/ -- the
 # very files the Linux executable compiles in (CMakeLists.txt's icon step),
@@ -145,8 +145,8 @@ wt_say "linked: $(stat -c%s "$STAGING/lib/$WT_ABI/$LIBNAME") bytes (stripped)"
 
 # --- 4. the Java sliver: javac -> d8 --------------------------------------
 # ONE class, com.warptempo.gui.MainActivity: the full-screen window (both
-# system bars hidden, architect 2026-10-01), the car's MediaSession, the system
-# clipboard and the battery broadcast -- the Java-only needs, each with no NDK
+# system bars hidden, architect 2026-10-01), the car's MediaSession and the
+# system clipboard -- the Java-only needs, each with no NDK
 # surface (the class's head comment carries each one's reasoning). Every later
 # Java need joins that class as a method, so this step is built to compile a
 # TREE, not a file.
@@ -173,11 +173,13 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, rendered once from Breeze's music-note-16th, filled
-# (android/app/ic_launcher_foreground.svg, outside res/) and committed (that
-# XML's head comment is the recipe; nothing here renders). Every GUI pixel
-# is still painted by cairo and every roster icon is still an in-tree path; the
-# app declares no @string, no style, no res/values. aapt2 compile turns the
+# layers per density, Chicago95's speaker (assets/icons/chicago95/16/
+# audio-volume-high.png) scaled nearest-neighbour onto a transparent canvas,
+# rendered once and committed (that XML's head comment is the recipe; nothing
+# here renders). Every GUI pixel is painted by cairo, the roster's icons
+# included (the Chicago95 PNGs under assets/, step above, at a bitmap
+# gui_scale; the in-tree Breeze paths at every other); the app declares no
+# @string, no style, no res/values. aapt2 compile turns the
 # directory into res.zip, which link takes as a positional input.
 # (targetSdk stays 34 rather than opting out of Android 15's edge-to-edge
 # enforcement with the windowOptOutEdgeToEdgeEnforcement theme attribute: the

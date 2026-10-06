@@ -25,7 +25,7 @@
 # (gen_theme_files.resolved_roles over the role table read off theme_file.h), so a crop paints what the app paints
 # under that theme: the waveform's canvas, ink and outline, the flag's face, selected face and label (the scene's flags
 # are warp markers, so the WARP pair), the one selected label, the invalid flag the removed pair under the one label,
-# the playhead's head and stem; the icons' fixed inks are icons.cpp's (tablet.json).
+# the playhead's stem (its head the renderer's own, PROGRAM_KEYS); the icons' fixed inks are icons.cpp's (tablet.json).
 #
 # THE CROP: four regions of the 2304 x 1440 render stacked top to bottom, 1152 px wide, a 4-row FULLY TRANSPARENT gap
 # between them (alpha 0 there, 255 everywhere else, so no join reads as chrome): the top strip's left half (menu, the
@@ -63,7 +63,10 @@ PROGRAM_KEYS = (('canvas', 'waveform_canvas'), ('ink', 'waveform_ink'), ('outlin
                 ('flag_fill', 'warp_flag'), ('flag_fill_sel', 'warp_flag_selected'), ('flag_label', 'flag_label'),
                 ('flag_label_sel', 'flag_label_selected'), ('flag_fill_red', 'removed_flag'),
                 ('flag_fill_red_sel', 'removed_flag_selected'), ('flag_label_red', 'flag_label'),
-                ('playhead_head', 'playhead_head'), ('playhead_stem', 'playhead_stem'))
+                ('playhead_stem', 'playhead_stem'))
+# (the renderer's `playhead_head` is no app role since 2026-10-05 — the app's head is WordPad's ruler marker in chrome
+# roles, render.h's THE PLAYHEAD block, which the renderer does not draw — so a crop keeps the renderer's own head at
+# tablet.json's grey)
 PRESETS, PICKER = G.inputs()
 
 
@@ -209,7 +212,8 @@ def write_md(cat, sizes):
          '#FF00FF, the phase-reset flag teal #008080 and its selected face aqua #00FFFF, the history\'s added flag '
          'green #008000 and its selected face lime #00FF00, the invalid flag maroon #800000 and its selected face red '
          '#FF0000, white labels on every face, the '
-         'playhead\'s head gray #808080 over its white stem); only the colour-picker presets name their own. The well '
+         'playhead\'s white stem); only the colour-picker presets name their own (the crops draw the playhead\'s head '
+         'as the renderer\'s older grey head, not the app\'s WordPad ruler marker in the theme\'s chrome). The well '
          'keeps the app\'s two-line sunken edge (the theme\'s Shadow and DkShadow above, its 3DLight and Hilight below); '
          'the flags are the flat Acid flag (the scene\'s flags are warp markers, so the warp pair), the face with a '
          'one-px outline in the theme\'s DkShadow, the stem leaving the face across the bottom outline, shown left to '

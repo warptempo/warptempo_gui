@@ -47,11 +47,9 @@
 
      A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop
      and committed; a retouch is a re-run of this recipe, never a build step
-     (build_apk.sh only compiles res/). The desktop launcher icon
-     (packaging/warptempo_gui.svg, the .desktop's Icon=) is untouched by this
-     pass — still Breeze's music-note-16th on its grey plate, README.md's own
-     account — the architect's cosmetic pick covering only the caption and
-     this launcher. -->
+     (build_apk.sh only compiles res/). The Linux desktop's launcher icon
+     (packaging/warptempo_gui.svg, the .desktop's Icon=) is the same picture,
+     one rect per pixel, written by tools/desktop_icon/gen_desktop_icon.py. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

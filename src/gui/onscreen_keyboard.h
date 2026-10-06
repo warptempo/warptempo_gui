@@ -394,8 +394,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // plastic, which this cap read until that day — and "Esc", which read "Cancel"
 // until the same evening's ruling closed the one act-named cap out (it named
 // what the key DOES to the editor standing over it, the button convention);
-// Shift, Backspace, Tab and Space Qt spells the same as this keyboard always
-// did.
+// Shift, Tab and Space Qt spells the same as this keyboard always did.
+// BACKSPACE IS "Bksp" (architect 2026-10-06): the whole word overflows the
+// symbol pages' one-unit key, and the cap keeps one spelling on every page.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the roster's own CHECKED face,
@@ -406,7 +407,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {
         case Role::Shift:       return "Shift";
-        case Role::Backspace:   return "Backspace";
+        case Role::Backspace:   return "Bksp";
         case Role::Enter:       return "Return";
         case Role::Escape:      return "Esc";
         case Role::Tab:         return "Tab";

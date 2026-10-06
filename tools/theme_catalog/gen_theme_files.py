@@ -29,8 +29,8 @@
 #     element, no inherited default) -- the preset's own `waveform_outline` where it records one, else, for a preset
 #     saved before that element, the rule the picker then painted it by (the 50 % linear-light blend of the ink over
 #     the canvas, C.outline_of, named only where the preset records both), so the files of those presets stay as they
-#     were; the playhead's head
-#     and stem; THE FLAGS one to one (architect 2026-10-05: the picker's flag elements follow the product's flag kinds,
+#     were; the playhead's stem (its head is no role since 2026-10-05: IGNORED_PRESET_KEYS); THE FLAGS one to one
+#     (architect 2026-10-05: the picker's flag elements follow the product's flag kinds,
 #     keyed by its role names): Warp Flag / Selected Warp Flag onto the warp pair, Phase Reset Flag / Selected Phase
 #     Reset Flag onto the phase-reset pair, Added Flag / Selected Added Flag onto the added pair and Removed Flag /
 #     Selected Removed Flag onto the removed pair (the invalid flag wears it). A PRESET SAVED BEFORE THAT ROUND names
@@ -74,7 +74,7 @@ ROLE_ORDER = ('ground', 'label', 'hilight', 'light_3d', 'shadow', 'dk_shadow', '
               'caption_inactive_gradient', 'caption_inactive_text',
               'waveform_canvas', 'waveform_ink', 'waveform_outline', 'warp_flag', 'warp_flag_selected',
               'phase_reset_flag', 'phase_reset_flag_selected', 'added_flag', 'added_flag_selected', 'removed_flag',
-              'removed_flag_selected', 'flag_label', 'flag_label_selected', 'playhead_head', 'playhead_stem')
+              'removed_flag_selected', 'flag_label', 'flag_label_selected', 'playhead_stem', 'scanner')
 # the chrome: theme-file role <- roles.light_roles' name
 CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight'), ('light_3d', 'bevel_light'),
           ('shadow', 'bevel_shadow'), ('dk_shadow', 'bevel_dkshadow'), ('selected_fill', 'selected_fill'),
@@ -93,7 +93,11 @@ PRESET_ELEMENT_ROLES = (('canvas', ('waveform_canvas',)), ('ink', ('waveform_ink
                         ('phase_reset_flag_selected', ('phase_reset_flag_selected',)),
                         ('added_flag', ('added_flag',)), ('added_flag_selected', ('added_flag_selected',)),
                         ('removed_flag', ('removed_flag',)), ('removed_flag_selected', ('removed_flag_selected',)),
-                        ('playhead_head', ('playhead_head',)), ('playhead_stem', ('playhead_stem',)))
+                        ('playhead_stem', ('playhead_stem',)))
+# a preset's picker elements that colour no product role, ignored: the Playhead Head (the product's head is WordPad's
+# ruler marker in chrome roles since 2026-10-05, render.h's THE PLAYHEAD block; the picker keeps the element for its
+# own picture). The picker has no Scanner element, so a preset never names `scanner` and the built-in's applies.
+IGNORED_PRESET_KEYS = ('playhead_head',)
 # the flag elements' keys before 2026-10-05 -> the elements that replaced them (the picker's renamed_key,
 # tools/palette/picker/src/scene.h, the same table)
 OLD_PRESET_KEYS = {'unselected_flag': ('warp_flag', 'phase_reset_flag'),
@@ -103,8 +107,8 @@ OLD_PRESET_KEYS = {'unselected_flag': ('warp_flag', 'phase_reset_flag'),
 
 def renamed(cols):
     """A preset's colours {key: '#RRGGBB'} under the picker's keys: each old key's colour to every new key the preset
-    does not name itself (the head's rule)."""
-    out = {k: v for k, v in cols.items() if k not in OLD_PRESET_KEYS}
+    does not name itself (the head's rule); an ignored key dropped."""
+    out = {k: v for k, v in cols.items() if k not in OLD_PRESET_KEYS and k not in IGNORED_PRESET_KEYS}
     for old, new in OLD_PRESET_KEYS.items():
         if old in cols:
             for k in new: out.setdefault(k, cols[old])

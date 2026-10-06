@@ -1013,9 +1013,12 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     if (rp.transport == Transport::Idle) return;
     const int64_t target = std::clamp<int64_t>(frame, 0, rp.frames);
     if (rp.transport == Transport::Live) {
-        // A LIVE RESEEK is the engine's own keep-alive shape (play() over a
-        // live session, the reseek body's precedent): the window stays the
-        // item and only the resume point moves. A target inside the last
+        // A LIVE RESEEK IS play() OVER THE LIVE SESSION — the program's one
+        // such site since the main view's placement stops instead (architect
+        // 2026-10-06, stop_playback_if_playing): play() on a running session
+        // moves its resume point without tearing the session down, so the
+        // seek costs no stop-and-restart glitch; the window stays the item
+        // and only the resume point moves. A target inside the last
         // frame would be a one-frame impulse and a play() over an empty range
         // returns without lowering the session word's playing bit, so the end of the item
         // is reached by letting it play out — the seek stops one frame short

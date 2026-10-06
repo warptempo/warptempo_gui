@@ -6414,13 +6414,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // EmptyLane candidate there (the release-side owner; a
                     // crossed press seeds nothing) — and NOTHING past the
                     // threshold: a drag on the lane does nothing.
-                    // NO STOP anywhere on this path, deliberately: a live
-                    // session RESEEKS to the placed playhead at the deferred
-                    // click (run_nav_click_act's placement body) exactly as it
-                    // does on the waveform upper half, so a double-click drop
-                    // lands over a live session without cutting it off. Do not
-                    // add a stop to make this branch look like its siblings —
-                    // the omission IS the ruling.
+                    // THE STOP IS THE PLACEMENT BODY'S, NOT THIS BRANCH'S
+                    // (architect 2026-10-06): the deferred click act runs
+                    // place_playhead_at_click_column, which stops a live play
+                    // before it seats the playhead — the one stop on every
+                    // pointer and touch placement, as on the waveform's upper
+                    // half — so a double-click drop's first click has already
+                    // stopped any play by its second press. The press itself
+                    // stops nothing (a pan or a crossed press leaves the play
+                    // running); the audition scrub on the waveform's lower
+                    // half keeps play-from-here.
                     const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::EmptyLane &&
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&

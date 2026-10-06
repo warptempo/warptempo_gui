@@ -76,11 +76,11 @@ constexpr IconTransform icon_translate(double tx, double ty) {
     return IconTransform{1.0, 0.0, 0.0, 1.0, tx, ty};
 }
 
-// THE APP ICON'S NOTE (2026-10-05): packaging/warptempo_gui.svg's own
-// `translate(5.75,5.75) scale(2.75)` on its group, the file's transform taken
-// verbatim like the two translates above. A scale moves ink off the grid,
-// which the quarter-turn precedent refuses for a roster GLYPH; this is the
-// product's own launcher picture, drawn as the file draws it.
+// THE APP ICON'S NOTE (2026-10-05): `translate(5.75,5.75) scale(2.75)`, the
+// transform the vector AppIcon's note was drawn under in its 72-unit picture
+// (kAppIconPaths below), taken verbatim like the two translates above. A
+// scale moves ink off the grid, which the quarter-turn precedent refuses for
+// a roster GLYPH; this is the product's own picture, drawn as it was drawn.
 constexpr IconTransform icon_translate_scale(double tx, double ty, double s) {
     return IconTransform{s, 0.0, 0.0, s, tx, ty};
 }
@@ -1146,15 +1146,16 @@ constexpr IconPath kEditDeletePaths[] = {
      "M8 3v2h1V4h4v1h1V3H8M4 6v1h14V6H4m2 2v11h10V8h-1v10H7V8H6"},
 };
 
-// THE APP'S OWN ICON (2026-10-05), packaging/warptempo_gui.svg in its 72-unit
-// viewBox: the PLATE is the file's `<rect width="72" height="72" rx="14">`,
-// spelled as the rounded rectangle SVG defines for that rx (the dialog
-// plates' precedent at the header — no `<rect>` parser), in the file's sheet
-// grey #AAAAAA; the NOTE is the file's d, byte for byte, under its group's own
-// transform (icon_translate_scale). The file inks the note #fff at opacity .75
-// over the plate; the palette composites nothing at paint time, so the ink is
-// that composite taken once here — 0.75 x 255 + 0.25 x 170 = 233.75, #EAEAEA —
-// which is what the file shows wherever the note lies, all of it on the plate.
+// THE APP'S OWN ICON, VECTOR FORM (2026-10-05; the bitmap scales wear
+// Chicago95's speaker instead, icons.h's AppIcon), a 72-unit viewBox: the
+// PLATE is a `<rect width="72" height="72" rx="14">`, spelled as the rounded
+// rectangle SVG defines for that rx (the dialog plates' precedent at the
+// header — no `<rect>` parser), in audio-x-generic's sheet grey #AAAAAA; the
+// NOTE is music-note-16th's outer contour (assets/icons/breeze/, its d a
+// verbatim prefix of the file's) under icon_translate_scale. The note was
+// inked #fff at opacity .75 over the plate; the palette composites nothing
+// at paint time, so the ink is that composite taken once here — 0.75 x 255 +
+// 0.25 x 170 = 233.75, #EAEAEA — all of the note lying on the plate.
 constexpr GuiColor kIconAppPlate = hex(0xAAAAAA);
 constexpr GuiColor kIconAppNote  = hex(0xEAEAEA);
 constexpr IconPath kAppIconPaths[] = {

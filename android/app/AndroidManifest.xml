@@ -10,9 +10,8 @@
      the rule is at the class's head) — so the native surface, which is the
      whole panel whatever this or the theme says, is the window the Android
      backend hands the GUI whole (src/gui/platform_android.cpp). The port's
-     other Java needs join THAT class as methods: the car's MediaSession, the
-     system clipboard and the battery broadcast have; SAF's onActivityResult
-     would.
+     other Java needs join THAT class as methods: the car's MediaSession and
+     the system clipboard have; SAF's onActivityResult would.
 
      Not the spike's package: com.warptempo.gui is the product's own name, so
      installing or removing either one leaves the other alone. -->
@@ -34,9 +33,9 @@
        status/audio-volume-high.png (architect 2026-10-05, the icon pass's
        caption pick — the caption's own picture at a bitmap gui_scale too),
        scaled nearest-neighbour onto a transparent adaptive-icon canvas
-       (res/mipmap-anydpi-v26/ic_launcher.xml holds the recipe). The desktop
-       launcher (packaging/warptempo_gui.svg / .desktop) is untouched by this
-       pass and still wears the earlier Breeze pick. -->
+       (res/mipmap-anydpi-v26/ic_launcher.xml holds the recipe). The Linux
+       desktop's launcher icon (packaging/warptempo_gui.svg) is the same
+       picture, one rect per pixel (tools/desktop_icon/gen_desktop_icon.py). -->
   <application
       android:label="Warptempo"
       android:icon="@mipmap/ic_launcher"

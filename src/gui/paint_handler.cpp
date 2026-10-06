@@ -1085,9 +1085,7 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. THIRTEEN BOX SEATS (re-grepped 2026-10-05, the
-// battery + clock legend's own seat gone with its paint — the legend no
-// longer draws, cosmetic only, paint_menu_row's head): the
+// rule is not asked. THIRTEEN BOX SEATS (re-grepped 2026-10-05): the
 // caption's title, the menu row's
 // anchors (in the row's CONTENT alone
 // since 2026-10-05, render.h's menu_row_content_h_px, never the taller
@@ -1323,8 +1321,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 1, directly under the caption): a flat ground — the
     // content ground since 2026-10-01 — carrying ONE FLOAT, "File", "Edit"
-    // and "Settings" flush left, and the BATTERY + CLOCK LEGEND flush right
-    // (2026-10-01, a label; the block at the body's end). No ring; the
+    // and "Settings" flush left, and nothing flush right (architect
+    // 2026-10-05: the battery + clock legend is not shown). No ring; the
     // kdenlive bar is flat.
     //
     // THE LEFT FLOAT'S FACES (architect 2026-10-02, the Windows-95 menu bar):
@@ -1363,7 +1361,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // same row — where the dropdown hangs. THE LANE IS NOT ITS CONTENT SINCE
     // 2026-10-05: a one-px foot of ground stands below the content (Windows'
     // measured 20-px menu band, render.h's kMenuRowFootPx), so every label on
-    // this row, the anchors' and the legend's, is cap-centred in the CONTENT
+    // this row is cap-centred in the CONTENT
     // ALONE (menu_row_content_h_px) rather than the taller lane — the one
     // place this row reads two different heights for two different things.
 
@@ -1458,18 +1456,6 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 
         x += btn_w;
     }
-
-    // THE BATTERY + CLOCK LEGEND IS NOT PAINTED (architect 2026-10-05,
-    // cosmetic): it was a flush-right LABEL over the row's own ground, no
-    // rect published and no space of its own ever reserved (the anchors are
-    // flush left, independently laid out), so hiding it gives back nothing
-    // to lay out — the ground already shows through where it used to sit.
-    // AppState::menu_legend, compose_menu_legend (gui_battery.h) and
-    // refresh_menu_legend (main.cpp, run every tick) are left wired and
-    // still compute the text each minute; only this paint site stopped
-    // reading it. GuiPlatform::battery_status and its two backends
-    // (platform_wayland.cpp, platform_android.cpp) keep polling too — all
-    // dormant plumbing for a later cleanup pass, not touched here.
 
     cairo_restore(cr);
 }
@@ -3020,9 +3006,8 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
 // classes, the hit rule and the inventory at notifications.h). THE WHOLE
 // STACK — AppState::Notifications::cards, newest first, every one of them on
-// screen since the queue retired 2026-08-30 — painted top-right under ROW 1
-// (whose battery + clock legend stopped painting 2026-10-05, cosmetic;
-// unaffected here, the stack's own margins never referenced it), right-aligned
+// screen since the queue retired 2026-08-30 — painted top-right under ROW 1,
+// right-aligned
 // at kPanelPadPx from the window's edge and the same kPanelPadPx below row 1
 // (the stack's margins are one number, notification_stack_bound), growing
 // DOWN over whatever lies there (the icon row's empty right, the thin lanes,
@@ -7278,8 +7263,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. render_canvas — the waveform area's ground AND THE WELL, its
         //      two lines top and bottom (above, unconditional).
-        //   3. the two redesigned top button rows (the menu row, its
-        //      battery + clock legend retired from paint 2026-10-05) and the
+        //   3. the two redesigned top button rows and the
         //      unified bottom row (its chrome, buttons, clock AND state cell
         //      in one painter),
         //      each on its own

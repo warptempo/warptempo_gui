@@ -3,7 +3,6 @@
 #include "device_config.h"
 #include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lead-in's one quantity
 #include "engine_settings.h"
-#include "gui_battery.h"
 #include "gui_input.h"
 #include "history_diff.h"
 #include "playback.h"
@@ -4747,14 +4746,12 @@ struct AppState {
     // state in the add_to_selection family (the family's record is at that
     // declaration below): per project, DARK AT EVERY PROJECT OPEN
     // (run_project constructs this AppState fresh), outside undo, not carried
-    // by `'`, in no sidecar and no settings vocabulary. THE HOLD'S LAMP IS
-    // THE PLAYHEAD HEAD (architect 2026-09-24): the head's glyph (WordPad's
-    // ruler marker since 2026-10-05, render.h) paints its GROUND cells in the
-    // `playhead_stem` role while the bit stands and in the theme's GROUND
-    // when it does not — a state colour, never a role of its own (render.h's
-    // playhead paragraph) — repainted by the per-tick face
-    // comparator (main.cpp) — no icon, no card when it is armed or cleared;
-    // follow wears its icon-row lamp.
+    // by `'`, in no sidecar and no settings vocabulary. THE HOLD HAS NO LAMP
+    // (architect 2026-10-05): the playhead head's glyph (WordPad's ruler
+    // marker, render.h) paints one face whether or not the bit stands, and
+    // nothing else shows it — no icon, no card when it is armed or cleared;
+    // a visible hold cue is a later discussion. Follow wears its icon-row
+    // lamp.
     //
     // THE CLEARS ARE SEATED AT CHOKEPOINTS, NOT IN A HAND-KEPT LIST. Every
     // viewport write — every writer of viewport_start_sample or zoom_level on
@@ -4856,7 +4853,7 @@ struct AppState {
     //     happened to reach the middle; `c` then nudging means "I'm looking
     //     for a place to drop a marker" and wants the hold, `c` then panning
     //     means "I want the working zoom but my own viewport" and the pan
-    //     clears it. The head's lamp tells the two postures apart. A TAB
+    //     clears it. A TAB
     //     SWITCH IS DIFFERENT (architect 2026-09-29): it is a discrete arrival
     //     at a tab the user last left, not a run of nudges reaching the
     //     middle, so its derivation answers what that tab's picture already
@@ -4925,12 +4922,6 @@ struct AppState {
     //     offscreen cursor, a shrunken domain's wall) is a camera change like
     //     any other at the chokepoint.
     bool    camera_hold            = false;
-    // THE HOLD LAMP'S LAST-SEEN BIT (architect 2026-09-24): the value of
-    // camera_hold the per-tick face comparator (main.cpp) last damaged the
-    // ruler lane for, so the playhead head (paint_ruler_row) repaints white
-    // or grey on every flip of the bit — which the writers above spell no
-    // damage for. Written by that comparator alone; read by nothing else.
-    bool    camera_hold_lamp_last  = false;
 
     // FOLLOW — THE `f` LAMP (architect 2026-09-23, reinstated the evening
     // the Shift+C chase posture that had replaced it that morning was
@@ -8061,23 +8052,6 @@ struct AppState {
     // face retired with ONE SELECTED PAIR, FOCUSED OR NOT — render.h's
     // palette block. The platform's activation edge still ends the tooltip,
     // main.cpp's hook.)
-
-    // THE MENU ROW'S BATTERY + CLOCK LEGEND (architect 2026-10-01): `text` is
-    // what paint_menu_row paints flush right — the composer is
-    // compose_menu_legend (gui_battery.h) — and `minute` and `battery` are the
-    // two inputs it was last composed from. ONE WRITER, refresh_menu_legend
-    // (main.cpp), which asks the platform's battery_status and the wall clock,
-    // recomposes only when the minute or the battery changed, and reports
-    // whether the TEXT changed. Its callers are run_project's one seeding call
-    // before the session's first paint (a fresh AppState per project, so every
-    // session seeds its own) and the tick, the refresh owner, which damages
-    // the menu row only when the text changed.
-    struct MenuLegend {
-        std::string text;
-        int64_t     minute  = -1;
-        GuiBattery  battery {};
-    };
-    MenuLegend menu_legend;
 
     // THE REMEMBERED POINTER POSITION, from the last on_motion event, and the
     // source every pointer-derived answer re-reads when it has to re-resolve with
@@ -12641,8 +12615,7 @@ enum class MarkerLandingFrame { Center, Land };
 // read — HoldColumn while AppState::camera_hold stands (an explicit centring
 // armed it: bare `c`, the paired march, the A/B audition's centrings, Ctrl+J
 // or the walk's centring; or a tab switch derived it on arrival,
-// hold_derived_on_arrival below; the playhead head's white is its lamp),
-// FollowEdge otherwise. Asked by the two nudge dispatch sites (the
+// hold_derived_on_arrival below), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
 // marker lane's arm, input_handler.cpp, and the waveform lane's step,
 // run_waveform_lane_playhead_step) and by the undo / redo singleton restore
 // (restore_history_entry's visual tail, undo.cpp, where FollowEdge means the

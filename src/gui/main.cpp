@@ -67,7 +67,6 @@
 #include <cmath>
 #include <csignal>
 #include <cstdint>
-#include <ctime>
 #include <cstdio>
 #include <filesystem>
 #include <string>
@@ -653,10 +652,8 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // the app's icon, the title and the three caption buttons, painted by
 // paint_caption_row on both devices), at the window's top. Lane 1 is the MENU
 // row (the kdenlive menu bar: a flat ground carrying the
-// three menu anchors flush left; the battery + clock legend that used to
-// stand flush right stopped painting 2026-10-05, cosmetic — the polling and
-// composing plumbing, gui_battery.h and refresh_menu_legend below, is still
-// live, just unread by paint_menu_row now), directly under the caption. Lane 2 is the ICON row (the twenty-six
+// three menu anchors flush left and nothing flush right, architect
+// 2026-10-05), directly under the caption. Lane 2 is the ICON row (the twenty-six
 // view/mode/action buttons — kIconRowButtons, kIconRowViewGroup and the
 // history stand-ins, paint_handler.cpp, are the count's authority; twenty
 // stand outside the `h` view and nineteen inside it), directly under the menu row
@@ -1245,31 +1242,6 @@ struct GuiProjectOutcome {
     int         exit_status = 0;
     std::string reopen;
 };
-
-// THE MENU ROW'S LEGEND, REFRESHED (architect 2026-10-01; the composer and the
-// glyph rule are at compose_menu_legend, gui_battery.h): the minute and the
-// platform's answer are read on every call — both cheap by the seam's contract
-// (GuiPlatform::battery_status) — the text is recomposed only when one of them
-// changed, and the answer is whether the TEXT did, so the caller damages the
-// row only then. The minute is time() / 60: every real time zone sits a whole
-// number of minutes off UTC, so it turns over with the local clock. TWO
-// CALLERS: the tick, the refresh owner, and run_project's one seeding call
-// before the initial full-window invalidation, so the session's first
-// committed frame already carries the legend (on Wayland the first
-// configure's paint runs before the first tick).
-bool refresh_menu_legend(AppState& app, GuiPlatform& gui) {
-    const std::time_t now     = std::time(nullptr);
-    const int64_t     minute  = static_cast<int64_t>(now) / 60;
-    const GuiBattery  battery = gui.battery_status();
-    AppState::MenuLegend& legend = app.menu_legend;
-    if (minute == legend.minute && battery == legend.battery) return false;
-    legend.minute  = minute;
-    legend.battery = battery;
-    std::string text = compose_menu_legend(battery, now);
-    if (text == legend.text) return false;
-    legend.text = std::move(text);
-    return true;
-}
 
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
@@ -2141,15 +2113,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // pointer pauses.
         notifications.fire_if_due();
 
-        // THE MENU ROW'S LEGEND, THE TICK'S SECOND TENANT and, like the cards,
-        // ahead of every early return: the battery and the wall clock move in
-        // every mode the window has, a blank window and a standing render
-        // player included (architect 2026-10-01). The tick is the refresh
-        // owner (refresh_menu_legend, which carries the read-and-recompose
-        // rule); the row is damaged only when the text changed.
-        if (refresh_menu_legend(app, gui))
-            viewport.invalidate_rect(top_menu_row_area(app));
-
         // Startup file load, deferred out of pre-run() so the window maps and
         // paints first (the compositor's initial configure / first frame only
         // land once run() is pumping). Gated on has_initial_configure() so the
@@ -2357,9 +2320,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // answer. `f` and `i` are the pure cases (a bare flag flip and nothing
         // else); `t` and `p` happen to damage anyway and still go through here
         // rather than being trusted to. WHAT IT WATCHES, per roster button:
-        // the enabled bit, the selected bit and the glyph; and, in its own
-        // block after the walk, one face outside the roster — the playhead
-        // head's hold lamp (AppState::camera_hold).
+        // the enabled bit, the selected bit and the glyph.
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
@@ -2583,24 +2544,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 (b.tooltip != app.redesign_tooltip.painted_line1 ||
                  b.tooltip2 != app.redesign_tooltip.painted_line2))
                 viewport.invalidate_modal_dialog_area();
-        }
-
-        // THE HOLD LAMP ON THE PLAYHEAD HEAD (architect 2026-09-24), the
-        // roster comparator's own mechanism for one more stateful face: the
-        // head paints white while AppState::camera_hold stands and grey when
-        // it does not (paint_ruler_row), and the bit flips inside camera
-        // writes that do not always damage the ruler lane — bare `c` on an
-        // already-centred playhead arms it and moves nothing, the nudge
-        // keeps it, the chokepoint clears it on writes that may not touch the
-        // lane. So this watches the bit against the one it last damaged for
-        // (AppState::camera_hold_lamp_last) and on a drift invalidates the
-        // RULER LANE (top_ruler_row_area, the rect the head's painter
-        // computes; the head sits on its bottom rows). No writer of the bit
-        // spells the damage. Above the loading return, so a flip during a
-        // load is paid too.
-        if (app.camera_hold != app.camera_hold_lamp_last) {
-            app.camera_hold_lamp_last = app.camera_hold;
-            viewport.invalidate_rect(top_ruler_row_area(app));
         }
 
         // THE ON-SCREEN KEYBOARD'S SHOW AND HIDE (2026-08-27), the roster
@@ -3139,17 +3082,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
     });
-
-    // THE LEGEND IS SEEDED BEFORE THE FIRST PAINT (architect 2026-10-01): the
-    // session's first frame paints ahead of its first tick on both backends —
-    // Wayland's at the first configure, Android's at the drain below (whose
-    // body is paint_one_frame; android_main has the window before any
-    // session starts) — so without this call the first committed frame would
-    // show the menu row with no legend and the text would arrive a frame
-    // later. One road for both backends; the
-    // whole-window invalidation below is its damage, and the tick refreshes
-    // it from here on (refresh_menu_legend).
-    refresh_menu_legend(app, gui);
 
     // THE GEOMETRY, REDELIVERED: a reopened set's window sends no configure
     // for a size that did not change, so the platform fires on_resize with
