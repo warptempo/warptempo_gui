@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <optional>
 #include <string>
@@ -248,40 +249,43 @@ void paint_relief_status_sunken(cairo_t* cr, const GuiRect& r) {
 }
 
 void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
-                        int phase_y, GuiColor lit) {
+                        int phase_y, GuiColor lit, GuiColor ground) {
     if (r.w <= 0 || r.h <= 0) return;
-    const int cell = relief_line_px();
-    // Only the cells the current clip can show: the rect cut to the clip's
-    // extents, widened out to whole cells of the phase's lattice.
-    double cx1 = 0.0, cy1 = 0.0, cx2 = 0.0, cy2 = 0.0;
-    cairo_clip_extents(cr, &cx1, &cy1, &cx2, &cy2);
-    const int x0 = std::max(r.x, static_cast<int>(std::floor(cx1)));
-    const int y0 = std::max(r.y, static_cast<int>(std::floor(cy1)));
-    const int x1 = std::min(r.x + r.w, static_cast<int>(std::ceil(cx2)));
-    const int y1 = std::min(r.y + r.h, static_cast<int>(std::ceil(cy2)));
-    if (x1 <= x0 || y1 <= y0) return;
-    // The lattice index of a coordinate, floored on either side of the phase.
-    const auto index = [cell](int v, int phase) {
-        const int d = v - phase;
-        return d >= 0 ? d / cell : -((-d + cell - 1) / cell);
-    };
-    const int i0 = index(x0, phase_x), i1 = index(x1 - 1, phase_x);
-    const int j0 = index(y0, phase_y), j1 = index(y1 - 1, phase_y);
+    // THE TILE, Windows' pattern brush: 2 x 2 device px, lit at (0, 0) and
+    // (1, 1), the ground at the other two — both cells theme roles handed in,
+    // written as words (argb32_opaque_word), so every pixel the fill lays is
+    // one of the two and the fill is opaque.
+    cairo_surface_t* tile =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2, 2);
+    cairo_surface_flush(tile);
+    unsigned char* data = cairo_image_surface_get_data(tile);
+    const int stride = cairo_image_surface_get_stride(tile);
+    const uint32_t lit_word    = argb32_opaque_word(lit);
+    const uint32_t ground_word = argb32_opaque_word(ground);
+    for (int y = 0; y < 2; ++y) {
+        uint32_t* row = reinterpret_cast<uint32_t*>(data + y * stride);
+        for (int x = 0; x < 2; ++x)
+            row[x] = (x + y) % 2 == 0 ? lit_word : ground_word;
+    }
+    cairo_surface_mark_dirty(tile);
+    // REPEATED, NEAREST, ITS ORIGIN AT THE PHASE: the pattern's (0, 0) lies on
+    // (phase_x, phase_y), so that pixel is lit and the lattice runs on from
+    // it either way; one fill of the rect, cairo cutting it to the clip.
+    cairo_pattern_t* brush = cairo_pattern_create_for_surface(tile);
+    cairo_pattern_set_extend(brush, CAIRO_EXTEND_REPEAT);
+    cairo_pattern_set_filter(brush, CAIRO_FILTER_NEAREST);
+    cairo_matrix_t to_tile;
+    cairo_matrix_init_translate(&to_tile, -static_cast<double>(phase_x),
+                                -static_cast<double>(phase_y));
+    cairo_pattern_set_matrix(brush, &to_tile);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source(cr, brush);
     cairo_rectangle(cr, r.x, r.y, r.w, r.h);
-    cairo_clip(cr);
-    set_palette_source(cr, lit);
-    for (int j = j0; j <= j1; ++j) {
-        // The first lit column of this row: i + j even.
-        int i = i0;
-        if (((i + j) % 2 + 2) % 2 != 0) ++i;
-        for (; i <= i1; i += 2)
-            cairo_rectangle(cr, phase_x + i * cell, phase_y + j * cell, cell,
-                            cell);
-    }
     cairo_fill(cr);
     cairo_restore(cr);
+    cairo_pattern_destroy(brush);
+    cairo_surface_destroy(tile);
 }
 
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
@@ -317,18 +321,19 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
 // differ there alone). THE PHASE IS THE SCREEN'S: the reference's caption
 // begins on a screen row of phase 3 and its pattern follows the screen's rows,
 // not the window's, as a display driver's dither does. Here the lattice starts
-// at the caption's top-left cell, which is the window's origin — the
+// at the caption's top-left pixel, which is the window's origin — the
 // screen's own on the tablet and on the maximised laptop window.
 // `kCaptionDitherRank[row & 3][col & 3]` is a cell's rank, 0 stepping first;
 // its threshold is (rank + 0.5) / 16 of one 5-bit step.
 //
-// THE CELL IS ONE WINDOWS PX (architect 2026-10-05): the matrix indexes
-// Windows-px cells, cell k covering device columns [scaled_px(k),
-// scaled_px(k + 1)) from the caption's left edge and its rows likewise —
-// rounded at the element, the unit's rule — so the pattern is the reference's
-// at every gui_scale (about 2.75 device px a cell on the tablet, 1 or 2 on
-// the laptop). The ramp's parameter is the cell's index over the last cell's,
-// so the first cell takes the start colour and the last the end, each then
+// THE CELL IS ONE DEVICE PX (architect 2026-10-06, the whole chrome made
+// scalable: "dithering gets translated into whatever it perceptually
+// becomes" — the palette head's dither rule): the matrix indexes the
+// caption's device columns and rows from its top-left pixel, so the pattern
+// is the reference's technique at the panel's own resolution, four times
+// finer than a 96-dpi screen's at 400 %, and the eye blends it as it blended
+// the original. The ramp's parameter is the device column over the last, so
+// the first column takes the start colour and the last the end, each then
 // dithered like any other.
 //
 // A FLAT CAPTION (end equal to start — Windows 95's, and every theme that
@@ -340,9 +345,9 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
 // OPAQUE AND NOTHING BLENDED: each cell is one of the quantised colours,
 // written as words into an image (argb32_opaque_word's road, the plate's
 // precedent) and laid on the caption whole. The image is kept between paints
-// and rebuilt only when the caption's size, the scale or either colour moves,
-// since the top strip's damage repaints the caption often and its ramp seldom
-// changes.
+// and rebuilt only when the caption's size or either colour moves (the
+// picture reads nothing else; a gui_scale change moves the size), since the
+// top strip's damage repaints the caption often and its ramp seldom changes.
 namespace {
 constexpr int kCaptionDitherRank[4][4] = {
     { 3, 15,  0, 12},
@@ -361,7 +366,7 @@ uint32_t caption_dither_channel(double v, int rank) {
 
 struct CaptionGradientImage {
     cairo_surface_t* surface = nullptr;
-    int              w = 0, h = 0, percent = 0;
+    int              w = 0, h = 0;
     uint32_t         start = 0, end = 0;
 };
 CaptionGradientImage g_caption_gradient;
@@ -378,40 +383,36 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
     }
     CaptionGradientImage& img = g_caption_gradient;
     if (!img.surface || img.w != r.w || img.h != r.h ||
-        img.percent != gui_scale_percent() || img.start != start_word ||
-        img.end != end_word) {
+        img.start != start_word || img.end != end_word) {
         if (img.surface) cairo_surface_destroy(img.surface);
         img = CaptionGradientImage{
             cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h), r.w,
-            r.h, gui_scale_percent(), start_word, end_word};
+            r.h, start_word, end_word};
         cairo_surface_flush(img.surface);
         unsigned char* data = cairo_image_surface_get_data(img.surface);
         const int stride = cairo_image_surface_get_stride(img.surface);
-        int cols = 0;
-        while (scaled_px(cols) < r.w) ++cols;
         const double s[3] = {start.r * 255.0, start.g * 255.0, start.b * 255.0};
         const double e[3] = {end.r * 255.0, end.g * 255.0, end.b * 255.0};
-        for (int j = 0; scaled_px(j) < r.h; ++j) {
-            const int y0 = scaled_px(j);
-            const int y1 = std::min(scaled_px(j + 1), r.h);
-            for (int k = 0; k < cols; ++k) {
-                const int x0 = scaled_px(k);
-                const int x1 = std::min(scaled_px(k + 1), r.w);
-                const double t = cols > 1 ? static_cast<double>(k) / (cols - 1)
-                                          : 0.0;
-                const int rank = kCaptionDitherRank[j & 3][k & 3];
+        // The four rows of the matrix's period, each column's word under
+        // each: every caption row is one of them, by its row's phase.
+        std::vector<uint32_t> phase_rows(static_cast<size_t>(4) * r.w);
+        for (int x = 0; x < r.w; ++x) {
+            const double t = r.w > 1 ? static_cast<double>(x) / (r.w - 1)
+                                     : 0.0;
+            for (int p = 0; p < 4; ++p) {
+                const int rank = kCaptionDitherRank[p][x & 3];
                 uint32_t word = UINT32_C(0xFF000000);
                 for (int c = 0; c < 3; ++c)
                     word |= caption_dither_channel(s[c] + (e[c] - s[c]) * t,
                                                    rank)
                             << (16 - 8 * c);
-                for (int y = y0; y < y1; ++y) {
-                    uint32_t* row =
-                        reinterpret_cast<uint32_t*>(data + y * stride);
-                    for (int x = x0; x < x1; ++x) row[x] = word;
-                }
+                phase_rows[static_cast<size_t>(p) * r.w + x] = word;
             }
         }
+        for (int y = 0; y < r.h; ++y)
+            std::memcpy(data + y * stride,
+                        phase_rows.data() + static_cast<size_t>(y & 3) * r.w,
+                        static_cast<size_t>(r.w) * sizeof(uint32_t));
         cairo_surface_mark_dirty(img.surface);
     }
     cairo_save(cr);
@@ -1066,7 +1067,8 @@ void render_trim_flags(cairo_t* cr,
     // (architect 2026-10-02, the AC set).
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
     paint_cell_rect(cr, lane, palette().ground);
-    paint_checker_rect(cr, lane, lane_x, lane_y, palette().hilight);
+    paint_checker_rect(cr, lane, lane_x, lane_y, palette().hilight,
+                       palette().ground);
 
     // THE BODY — the thumb between its two arrow buttons, the ground under a
     // PLAIN RAISED edge, the lane's full height (Windows' scroll-bar thumb;

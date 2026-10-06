@@ -103,6 +103,16 @@ struct TrimRange {
 // high colour under an ordered dither — still solid cells, each one of the
 // quantised colours, nothing blended at paint time (paint_caption_gradient,
 // the rule's one owner).
+// A DITHER'S CELL IS ONE DEVICE PX (architect 2026-10-06, the whole chrome
+// made scalable: "all colours used are period-authentic; dithering gets
+// translated into whatever it perceptually becomes"): a dither stays a
+// dither — no blended colour is ever computed in its place — but its cell is
+// the panel's own pixel, the period technique at native resolution, so at
+// 400 % the pattern is four times finer than a 96-dpi screen's and the eye
+// blends it as it blended the original. THE TWO DITHERS are the checked face
+// (paint_checker_rect) and the caption's gradient (paint_caption_gradient).
+// THIS PARAGRAPH IS THE RULE'S ONE STATEMENT; every other chrome length stays
+// in Windows px (scaled_px).
 //
 // A HEX HERE IS A DISPLAY-P3 BYTE TRIPLE AND IS WHAT THE TABLET SHOWS
 // (architect 2026-10-02). The tablet's window is a Display-P3 layer
@@ -139,7 +149,8 @@ struct TrimRange {
 // THE CARD FRAME is no relief: ONE flat line a side in the `card_frame` role,
 // Windows 95's tooltip border (THE CARD FACE, below).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
-// ground in one-Windows-px cells (paint_checker_rect, below).
+// ground in one-device-px cells (paint_checker_rect, below; the dither rule
+// above).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
@@ -234,7 +245,9 @@ struct TrimRange {
 // render.cpp's two bodies): set_palette_source for the chrome and
 // set_waveform_source for the waveform's one cairo fill, the canvas
 // (render_canvas). Each is a plain hand-over; the plate's own pixels are
-// written as words (argb32_opaque_word), not through cairo.
+// written as words (argb32_opaque_word), not through cairo, as are the
+// caption gradient's (paint_caption_gradient) and the checked dither's tile
+// (paint_checker_rect).
 void set_palette_source(cairo_t* cr, GuiColor c);
 void set_waveform_source(cairo_t* cr, GuiColor c);
 
@@ -706,9 +719,10 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     button, DrawFrameControl's DFC_CAPTION: EDGE_RAISED with BF_SOFT, and
 //     EDGE_SUNKEN with BF_SOFT while pressed (paint_button_box's TOOLBAR
 //     family, the SOFT edges; the reference's white outer line and 3DLight
-//     inner one agree), its glyph Windows' Marlett character
-//     drawn as authored cells in the label (paint_handler.cpp's caption glyph
-//     tables), sunken and shifted one px while pressed.
+//     inner one agree), its glyph Windows' Marlett character in the label
+//     (paint_handler.cpp's caption glyph block: Minimise, Maximise and
+//     Restore authored cells, Close the icon set's WindowClose X), sunken
+//     and shifted one px while pressed.
 // Every length is a composite of its rounded parts (scaled_px's rule): 50
 // device rows at the tablet's 275 %, 25 at the laptop's 138 %.
 inline constexpr int kCaptionHeightPx      = 18;
@@ -728,7 +742,8 @@ inline int caption_row_h_px() {
 // 2026-10-05; the palette head's exception), its rule and reason at the
 // definition (render.cpp): `start` at the left of `r`, `end` at its right,
 // linear per channel across the width, quantised to 15-bit high colour under
-// Windows' 4 x 4 ordered dither in one-Windows-px cells; a flat caption (end
+// Windows' 4 x 4 ordered dither in one-device-px cells (the palette head's
+// dither rule); a flat caption (end
 // equal to start) is one solid fill of the exact colour. Opaque.
 void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
                             GuiColor end);
@@ -1005,7 +1020,7 @@ inline int scrub_handle_box_px() {
 // very miniaturized scroll bar"): FLUSH on the lane, no trough and no border;
 // the TRACK, the trimmed-off stretches either side of the kept region out to
 // the window's edges, is the CHECKED dither (Hilight over the ground in one
-// Windows px cells, phase anchored at the lane's top-left); the THUMB is the
+// device px cells, phase anchored at the lane's top-left); the THUMB is the
 // kept region: a 16 x 16 Windows-px ARROW BUTTON at each bound — Windows'
 // scroll-bar arrow buttons, the begin's pointing left and the end's right
 // (architect 2026-10-03, the rule at kTrimArrowButtonPx) — and between their
@@ -2042,15 +2057,19 @@ void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
 // One flat cell rect in `c` — the face fill every relief caller lays first.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // THE CHECKED DITHER (architect 2026-10-02, Windows' checked toolbar button
-// and its scroll-bar track): the cells of `r` lit in `lit` over whatever the
-// caller filled first, in square cells relief_line_px() on a side, the cell
-// at (phase_x, phase_y) lit and its neighbours alternating — a cell is lit
-// when its column index plus its row index, counted from the phase, is even —
-// so two surfaces sharing a phase dither alike. Only the cells inside the
-// current clip are emitted (a dither is thousands of cells), each an integer
-// rect through the palette's chokepoint.
+// and its scroll-bar track): `r` filled as a checkerboard of `lit` and
+// `ground`, both theme roles the caller passes (Hilight and the ground at
+// both sites), in square cells ONE DEVICE PX on a side (architect
+// 2026-10-06, the palette head's dither rule), the pixel at (phase_x,
+// phase_y) lit and its neighbours alternating — a pixel is lit when its
+// column plus its row, counted from the phase, is even — so two surfaces
+// sharing a phase dither alike. Drawn as WINDOWS' OWN PATTERN BRUSH: a 2 x 2
+// image (lit / ground / ground / lit) repeated, nearest-filtered and offset to
+// the phase, one opaque fill of the rect — nothing blended, every pixel one
+// of the two roles. The callers still lay the ground first, as every face
+// does.
 void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
-                        int phase_y, GuiColor lit);
+                        int phase_y, GuiColor lit, GuiColor ground);
 
 // THE DISABLED EMBOSS, THE WORD HALF (architect 2026-10-03, Windows' DrawState
 // DSS_DISABLED; the rule at the palette block): `run` painted in the theme's
@@ -2142,7 +2161,9 @@ struct WaveformBasis {
 // PREMULTIPLIED, as ARGB32 requires; at full alpha that is the colour itself.
 // The channel bytes round with std::nearbyint, the project's rule — vacuous for
 // the exact n/255 hex palette, decisive only if a mixed colour ever ties. The
-// one word owner for the plate's writer (render_waveform).
+// one word owner for every image the painters write as words: the plate
+// (render_waveform), the caption's gradient (paint_caption_gradient) and the
+// checked dither's tile (paint_checker_rect).
 inline uint32_t argb32_opaque_word(GuiColor c) {
     return (UINT32_C(255) << 24) |
            (static_cast<uint32_t>(std::nearbyint(c.r * 255.0)) << 16) |

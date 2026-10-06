@@ -377,7 +377,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
 //              show_embossed_run — Windows' DSS_DISABLED for both).
 //   CHECKED  — a toggled-on button (the roster's `selected`, the player's
 //              Repeat One, the keyboard's armed keys): SUNKEN over Windows'
-//              checked face — the ground dithered with Hilight in one Windows
+//              checked face — the ground dithered with Hilight in one device
 //              px cells (paint_checker_rect), its phase at the button's
 //              top-left so two checked neighbours tile alike — the glyph one
 //              Windows px down and right.
@@ -393,7 +393,9 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
                                bool pressed, ButtonFamily family) {
     const bool down = lamp || pressed;
     paint_cell_rect(cr, r, palette().ground);
-    if (lamp && !pressed) paint_checker_rect(cr, r, r.x, r.y, palette().hilight);
+    if (lamp && !pressed)
+        paint_checker_rect(cr, r, r.x, r.y, palette().hilight,
+                           palette().ground);
     if (family == ButtonFamily::Toolbar) {
         if (down) paint_relief_soft_sunken(cr, r);
         else      paint_relief_soft_raised(cr, r);
@@ -1141,18 +1143,35 @@ double line_baseline(const GuiFont& font, double line_y) {
 // -- THE CAPTION (architect 2026-10-05) ----------------------------------------
 //
 // THE CAPTION BUTTONS' GLYPHS — Windows' MARLETT characters as its caption
-// buttons draw them at the body size, authored cell by cell off the
-// architect's reference (a Windows 2000 window: the Minimise bar, the
-// Maximise box and the Close X measured there; the Restore pair, which that
-// maximisable window does not show, is Marlett's two overlapping boxes, the
-// back one up and right). Every glyph sits in ONE 9 x 9 Windows-px CELL, the
-// character cell Windows centres in the 16 x 14 button (at (3, 2) at 100 %),
-// and each glyph is a list of rectangles in that cell's Windows px: painted
-// as INTEGER RECTANGLES of unit u = scaled_px(1, 1) per Windows px, the cell
-// CENTRED IN THE BUTTON in device px, an odd difference flooring toward the
-// top-left — the trim lane's scroll-arrow idiom (kTrimArrowGlyphRows) — in
-// the theme's LABEL, the emboss when disabled, one relief line right and down
-// while pushed (paint_button_box's shift).
+// buttons draw them at the body size, off the architect's reference (a
+// Windows 2000 window: the Minimise bar, the Maximise box and the Close X
+// measured there; the Restore pair, which that maximisable window does not
+// show, is Marlett's two overlapping boxes, the back one up and right).
+// Every glyph sits in ONE 9 x 9 Windows-px CELL, the character cell Windows
+// centres in the 16 x 14 button (at (3, 2) at 100 %), of unit u =
+// scaled_px(1, 1) per Windows px, the cell CENTRED IN THE BUTTON in device
+// px, an odd difference flooring toward the top-left — the trim lane's
+// scroll-arrow idiom (kTrimArrowGlyphRows) — in the theme's LABEL, the
+// emboss when disabled, one relief line right and down while pushed
+// (paint_button_box's shift). THE GLYPHS ARE CHROME, NOT THE ICON SET'S
+// BITMAPS: Windows drew them in the button text, so they wear the label role
+// and never a drawing's literal inks.
+//
+// MINIMISE, MAXIMISE AND RESTORE ARE RECTANGLES and stay authored cells, a
+// list of rectangles in the cell's Windows px painted as INTEGER RECTANGLES
+// of u: they are rectangles at every scale, and a vector would draw the same
+// pixels.
+//
+// CLOSE IS THE ICON SET'S WindowClose DRAWING (architect 2026-10-06, the
+// whole chrome made scalable: "the X is part of the chrome"): Marlett's close
+// X as a vector, its diagonals smooth at any scale as Windows draws Marlett at
+// any DPI, worn as chrome (icons::draw_in_ink in the label, its disabled
+// face icons::draw_engraved_in_box — the roster's mask road). ITS INK IS
+// FITTED TO THE MARLETT CELL'S INK: the drawing's own ink box
+// (icons::ink_box, 11 x 9 units) mapped onto the extent the reference's X
+// inks, 8 x 7 Windows px at (1, 1) of the cell (kCaptionCloseInk) — the same
+// box and centre at every scale, each axis on its own scale (8/11 across,
+// 7/9 down; the two differ by 7 %).
 struct CaptionGlyphRect {
     int x, y, w, h;
 };
@@ -1166,10 +1185,7 @@ constexpr CaptionGlyphRect kCaptionRestoreGlyph[] = {
     {2, 0, 6, 2}, {2, 2, 1, 1}, {7, 2, 1, 3}, {6, 5, 2, 1},
     // the front window, whole
     {0, 3, 6, 2}, {0, 5, 1, 3}, {5, 5, 1, 3}, {0, 8, 6, 1}};
-constexpr CaptionGlyphRect kCaptionCloseGlyph[] = {
-    {1, 1, 2, 1}, {7, 1, 2, 1}, {2, 2, 2, 1}, {6, 2, 2, 1}, {3, 3, 4, 1},
-    {4, 4, 2, 1}, {3, 5, 4, 1}, {2, 6, 2, 1}, {6, 6, 2, 1}, {1, 7, 2, 1},
-    {7, 7, 2, 1}};
+constexpr CaptionGlyphRect kCaptionCloseInk = {1, 1, 8, 7};
 
 void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
                          int gx, int gy, int u, GuiColor ink) {
@@ -1177,6 +1193,48 @@ void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
         paint_cell_rect(cr, GuiRect{gx + r.x * u, gy + r.y * u, r.w * u,
                                     r.h * u},
                         ink);
+}
+
+// One caption button's glyph on its box `b` (already painted,
+// paint_button_box; `shift` its answer): the cell centred, the glyph by `id`
+// (Restore for Maximise while `maximized`), in the label or embossed.
+void paint_caption_button_glyph(cairo_t* cr, const GuiRect& b,
+                                GuiCaptionButton id, bool maximized,
+                                bool enabled, int shift) {
+    const GuiPalette& pal = palette();
+    const int u    = scaled_px(1, 1);
+    const int cell = kCaptionGlyphCellPx * u;
+    const int gx   = b.x + (b.w - cell) / 2 + shift;
+    const int gy   = b.y + (b.h - cell) / 2 + shift;
+    const int off  = relief_line_px();
+    if (id == GuiCaptionButton::Close) {
+        static const icons::InkBox ink = icons::ink_box(icons::Icon::WindowClose);
+        const double sx = kCaptionCloseInk.w * u / (ink.x1 - ink.x0);
+        const double sy = kCaptionCloseInk.h * u / (ink.y1 - ink.y0);
+        const double x  = gx + kCaptionCloseInk.x * u - ink.x0 * sx;
+        const double y  = gy + kCaptionCloseInk.y * u - ink.y0 * sy;
+        const double w  = 16.0 * sx, h = 16.0 * sy;
+        if (enabled)
+            icons::draw_in_ink(cr, icons::Icon::WindowClose, x, y, w, h,
+                               pal.label);
+        else
+            icons::draw_engraved_in_box(cr, icons::Icon::WindowClose, x, y, w,
+                                        h, off);
+        return;
+    }
+    const std::span<const CaptionGlyphRect> glyph =
+        id == GuiCaptionButton::Minimize ? std::span<const CaptionGlyphRect>(
+                                               kCaptionMinimizeGlyph)
+        : maximized ? std::span<const CaptionGlyphRect>(kCaptionRestoreGlyph)
+                    : std::span<const CaptionGlyphRect>(kCaptionMaximizeGlyph);
+    if (enabled) {
+        paint_caption_glyph(cr, glyph, gx, gy, u, pal.label);
+    } else {
+        // THE DISABLED EMBOSS (render.h's palette block): Hilight one
+        // Windows px right and down, Shadow at the glyph's place.
+        paint_caption_glyph(cr, glyph, gx + off, gy + off, u, pal.hilight);
+        paint_caption_glyph(cr, glyph, gx, gy, u, pal.shadow);
+    }
 }
 
 // The three buttons' rects in a caption lane, left to right (render.h's
@@ -1275,8 +1333,6 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // is maximised, and is disabled where the window cannot be restored
     // (the tablet). PUSHED while its Caption arm stands with the pointer
     // inside it.
-    const int u    = scaled_px(1, 1);
-    const int cell = kCaptionGlyphCellPx * u;
     for (int i = 0; i < kCaptionButtonCount; ++i) {
         const GuiCaptionButton id = static_cast<GuiCaptionButton>(i);
         AppState::CaptionButtonFace& face =
@@ -1292,26 +1348,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         const ButtonBoxFace box =
             paint_button_box(cr, b, /*lamp=*/false, pushed,
                              ButtonFamily::Toolbar);
-        std::span<const CaptionGlyphRect> glyph;
-        switch (id) {
-        case GuiCaptionButton::Minimize: glyph = kCaptionMinimizeGlyph; break;
-        case GuiCaptionButton::Maximize:
-            if (gui.window_maximized()) glyph = kCaptionRestoreGlyph;
-            else                        glyph = kCaptionMaximizeGlyph;
-            break;
-        case GuiCaptionButton::Close:    glyph = kCaptionCloseGlyph;    break;
-        }
-        const int gx = b.x + (b.w - cell) / 2 + box.shift;
-        const int gy = b.y + (b.h - cell) / 2 + box.shift;
-        if (face.enabled) {
-            paint_caption_glyph(cr, glyph, gx, gy, u, pal.label);
-        } else {
-            // THE DISABLED EMBOSS (render.h's palette block): Hilight one
-            // Windows px right and down, Shadow at the glyph's place.
-            const int off = relief_line_px();
-            paint_caption_glyph(cr, glyph, gx + off, gy + off, u, pal.hilight);
-            paint_caption_glyph(cr, glyph, gx, gy, u, pal.shadow);
-        }
+        paint_caption_button_glyph(cr, b, id, gui.window_maximized(),
+                                   face.enabled, box.shift);
     }
 
     cairo_restore(cr);
