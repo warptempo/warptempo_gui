@@ -148,6 +148,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
     src/gui/render.cpp
+    # THE CLEARLOOKS PAINTERS (2026-10-07): the chrome spec's clearlooks arm
+    # of the top strip's painters (clearlooks_paint.h). GUI-only like every
+    # painting concern.
+    src/gui/clearlooks_paint.cpp
     src/gui/warpmarkers.cpp
     src/gui/text_editor.cpp
     src/gui/phaseresetmarkers.cpp

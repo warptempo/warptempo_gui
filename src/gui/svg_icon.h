@@ -63,4 +63,17 @@ cairo_surface_t* rasterise(const Document& doc, int px);
 // premultiply. std::nearbyint at each channel (the rounding doctrine).
 cairo_surface_t* saturated_copy(cairo_surface_t* live);
 
+// THE SATURATED AND PIXELATED COPY — GTK 2's insensitive icon
+// (gtk_default_render_icon's INSENSITIVE arm, gdk_pixbuf_saturate_and_
+// pixelate (src, dest, 0.8, TRUE), gdk-pixbuf-util.c): a NEW surface the
+// caller owns, each pixel's UNPREMULTIPLIED colour (the pixbuf's) taken to
+// the intensity i = .30 R + .59 G + .11 B, then on the pixels whose
+// (x + y) is even the grey i / 2 + 127 and on the others each channel's
+// saturate 0.2 i + 0.8 v times DARK_FACTOR 0.7, clamped, each level
+// truncated to its byte as the pixbuf's uchar assignment does; the alpha
+// kept, the result premultiplied again by std::nearbyint. THE CHECKER'S
+// CELL IS ONE DEVICE PX (render.h's dither rule: the period technique at
+// native resolution), its phase the raster's own corner as the pixbuf's.
+cairo_surface_t* saturated_pixelated_copy(cairo_surface_t* live);
+
 } // namespace svg_icon

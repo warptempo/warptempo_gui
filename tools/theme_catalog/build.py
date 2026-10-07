@@ -492,7 +492,302 @@ def gnome2_entries():
              '#E0DEDD, the tooltip border #BABA45, the insensitive text #A9A5A2, the unfocused title #6B6A6A']
     e = entry('gnome2', 'Clearlooks', 'Clearlooks', prov, raw, computed, notes=notes, rule=rule)
     e['corroborated'] = 0
+    # THE PAINTERS' TONES (engine_tones, above): every ramp's rule must land within one level of the period's rows
+    tones = engine_tones(g, m, gtk, sc, clearlooks_geometry())
+    off = {k: v for k, v in tones.fit.items() if v > 1}
+    if off: raise SystemExit(f'build: the app\'s ramp rule misses the period\'s rows by more than one level: {off}')
+    e['engine_tones'] = {role: hx(v) for role, (v, _) in tones.tones.items()}
+    e['provenance']['rule']['engine_tones'] = {role: why for role, (_, why) in tones.tones.items()}
+    print(f'gnome2: {len(tones.tones)} engine tones; the ramp rule off the period by at most '
+          f'{max(tones.fit.values())} level(s) ({sum(1 for v in tones.fit.values() if v == 0)} of {len(tones.fit)} ramps exact)')
     return [e]
+
+
+# ------------------------------------------------------------------ the Clearlooks painters' tones (gnome2)
+# THE ENGINE'S TONES (architect 2026-10-07, the painters round; src/gui/clearlooks_paint.h states the rules the app
+# paints them by): every colour a Clearlooks painter puts down is a theme role `cl_<element>_<stop>`, and its byte is
+# the engine's own arithmetic on the gtkrc's colours run ONCE here — gtk-engines 2.20.2's Clearlooks (GUMMY) through
+# cairo 1.8 / pixman 0.16 for the GTK widgets, metacity 2.30's draw_ops through GDK for the caption — at THE
+# PRODUCT'S GEOMETRY, read off src/gui/chrome_spec.h's kChromeSpecClearlooks (clearlooks_geometry), so a length
+# changed there is re-run here and nowhere else. THREE KINDS OF TONE:
+#   A SOLID — a shade, mix or blend of a scheme colour, painted as one opaque byte (a line, a ring, a border, a text).
+#   A RAMP'S ENDS — a vertical ramp is recorded as the FIRST AND LAST ROWS THE PERIOD PAINTED of each segment the
+#     product paints (the renderer's own arithmetic: toolkit_rules.pixman_vertical_ramp_row, the GTK ramps' pixman
+#     sample at the row centre; metacity_vertical_gradient_rows, metacity's 16.16 stepping), and the app interpolates
+#     between them by the one rule (paint_cl_ramp: round(s + (e − s)·i/(n − 1)) per device row), so at 1 W px the end
+#     rows are the period's pixels and every row between lands within one level of them (ramp_fit, reported by
+#     build.py and asserted <= 1).
+#   A BAKED COMPOSITE — where the engine strokes a translucent colour over a known fill (the gummy button's 0.4
+#     top-left highlight, the pressed button's 0.58 -> 0 inner shadow), the composite over that fill's recorded row,
+#     by pixman's OVER (toolkit_rules.cairo_solid_over, pixman_over): the app paints opaque bytes only (render.h's
+#     palette head). Over a ramp the composite is itself a ramp's ends, per row or per column.
+# The role names are the C++ painters' (clearlooks_paint.cpp reads each by name; a renamed tone is a compile error
+# there), and they are written into the clearlooks entry's `engine_tones`, which gen_theme_files.py carries into
+# assets/themes/clearlooks.theme and the two generated includes.
+CHROME_SPEC_H = os.path.join(REPO, 'src', 'gui', 'chrome_spec.h')
+
+
+def clearlooks_geometry():
+    """kChromeSpecClearlooks's lengths, in W px (= GTK px), read off src/gui/chrome_spec.h."""
+    text = open(CHROME_SPEC_H).read()
+    body = text[text.index('kChromeSpecClearlooks = {'):]
+    body = body[:body.index('};')]
+    f = dict(re.findall(r'\.(\w+)\s*=\s*([^,\n]+),', body))
+    i = lambda k: int(f[k])
+    case_h = i('toolbar_case_lead_px') + i('toolbar_glyph_px') + i('toolbar_case_trail_y_px')
+    band, row8 = 2 * i('icon_row_air_px') + case_h, 2 * i('bottom_row_air_px') + case_h
+    if band != row8: raise SystemExit(f'build: the icon row\'s band ({band}) and row 8\'s ({row8}) differ; the one set of '
+                                      'toolbar tones paints both (clearlooks_paint.cpp)')
+    return {'caption_h': i('caption_height_px'), 'cbtn_w': i('caption_button_w_px'), 'cbtn_h': i('caption_button_h_px'),
+            'menu_head': i('menu_row_head_px'), 'menu_content': i('menu_row_content_px'),
+            'menu_foot': i('menu_row_foot_px'), 'case_h': case_h, 'band_h': band}
+
+
+def mc_eval(expr, env):
+    """A metacity position expression (theme.c's integer arithmetic: + - * /, parentheses, `max`; / truncates)."""
+    toks = re.findall(r'\d+|[A-Za-z_]+|`max`|[-+*/()]', expr)
+    pos = [0]
+    peek = lambda: toks[pos[0]] if pos[0] < len(toks) else None
+    def take():
+        pos[0] += 1
+        return toks[pos[0] - 1]
+    def prim():
+        t = take()
+        if t == '(':
+            v = top(); take(); return v
+        if t == '-': return -prim()
+        return int(t) if t.isdigit() else env[t]
+    def mul():
+        v = prim()
+        while peek() in ('*', '/'):
+            op, r = take(), prim()
+            v = v * r if op == '*' else int(v / r)
+        return v
+    def add():
+        v = mul()
+        while peek() in ('+', '-'):
+            op, r = take(), mul()
+            v = v + r if op == '+' else v - r
+        return v
+    def top():
+        v = add()
+        while peek() == '`max`':
+            take(); v = max(v, add())
+        return v
+    v = top()
+    assert pos[0] == len(toks), expr
+    return v
+
+
+def mc_byte(spec, gtk):
+    return T.gdk_byte(metacity_color(spec, gtk))
+
+
+def mc_render(ops, w, h, gtk, env_extra, ramp_rule=None):
+    """metacity's axis-aligned draw ops (<line> of width 1, vertical <gradient>) on a w x h grid of 8-bit pixels, in
+    order — the period's picture, or, with `ramp_rule`, the app's (each gradient the one rule between its end rows)."""
+    env = dict(width=w, height=h, Bmin=7, Bpad=6, **env_extra)
+    grid = [[None] * w for _ in range(h)]
+    for op in ops:
+        if op['op'] == 'line':
+            assert op.get('width', '1') in ('0', '1'), op
+            x1, y1, x2, y2 = (mc_eval(op[a], env) for a in ('x1', 'y1', 'x2', 'y2'))
+            assert x1 == x2 or y1 == y2, op
+            for y in range(min(y1, y2), max(y1, y2) + 1):
+                for x in range(min(x1, x2), max(x1, x2) + 1):
+                    if 0 <= x < w and 0 <= y < h: grid[y][x] = mc_byte(op['color'], gtk)
+        elif op['op'] == 'gradient':
+            assert op['type'] == 'vertical' and len(op['colors']) == 2, op
+            x, y, gw, gh = (mc_eval(op[a], env) for a in ('x', 'y', 'width', 'height'))
+            rows = T.metacity_vertical_gradient_rows(*(metacity_color(c, gtk) for c in op['colors']), gh)
+            if ramp_rule: rows = ramp_rule(rows[0], rows[-1], gh)
+            for i in range(gh):
+                for xx in range(x, x + gw):
+                    if 0 <= xx < w and 0 <= y + i < h: grid[y + i][xx] = rows[i]
+        else:
+            raise SystemExit(f'build: metacity op <{op["op"]}> is not one the caption painter draws')
+    return grid
+
+
+def ramp_rule(first, last, n):
+    """THE APP'S RAMP RULE (paint_cl_ramp, clearlooks_paint.cpp) at 1 W px: n rows from `first` to `last`, each
+    channel round(s + (e − s)·i/(n − 1)), C's nearbyint (half to even, Python's round)."""
+    if n == 1: return [first]
+    return [tuple(int(round(s + (e - s) * i / (n - 1))) for s, e in zip(first, last)) for i in range(n)]
+
+
+class Tones:
+    """The ordered tones: role -> (8-bit rgb, its derivation), and each ramp's fit of the app's rule."""
+    def __init__(self):
+        self.tones, self.fit = {}, {}
+
+    def add(self, role, rgb, rule):
+        assert re.fullmatch(r'cl_[a-z0-9_]+', role) and role not in self.tones, role
+        self.tones[role] = (tuple(int(v) for v in rgb), rule)
+
+    def ramp(self, role, rows, first, last, rule):
+        """A ramp segment's two ends (rows[first], rows[last]) as `role`_0 / _1, and the fit of the rule between them."""
+        seg = rows[first:last + 1]
+        self.add(role + '_0', seg[0], f'{rule}, its row {first}')
+        self.add(role + '_1', seg[-1], f'{rule}, its row {last}')
+        pred = ramp_rule(seg[0], seg[-1], len(seg))
+        self.fit[role] = max(max(abs(a - b) for a, b in zip(p, q)) for p, q in zip(pred, seg))
+
+
+def engine_tones(g, m, gtk, sc, geo):
+    """The Clearlooks painters' tones (the head) -> Tones."""
+    t = Tones()
+    unit = lambda c16: tuple(v / 65535.0 for v in c16)
+    cb = T.cairo_byte
+    sh, mix = T.gtk2_shade, T.gtk2_mix
+    style_bg = lambda style, state: unit(gtkrc_color(g['styles'][style]['colors'].get(
+        f'bg[{state}]', g['styles']['default']['colors'][f'bg[{state}]']), sc))
+    bg, sel = unit(gtk[('bg', 'NORMAL')]), unit(gtk[('bg', 'SELECTED')])
+    SH = [sh(bg, k) for k in (1.15, 0.95, 0.896, 0.82, 0.7, 0.665, 0.475, 0.45, 0.4)]   # clearlooks_style_realize
+    SP = [sh(sel, k) for k in (1.25, 1.05, 0.65)]
+    gummy = lambda c, dis: [(0.0, sh(c, 1.04 if dis else 1.08)), (0.5, sh(c, 1.01 if dis else 1.02)),
+                            (0.5, sh(c, 0.99) if dis else c), (1.0, sh(c, 0.96 if dis else 0.94))]   # gummy_gradient
+
+    # THE CAPTION (metacity: the maximised frame's bevel, the title, the buttons and their glyphs; GDK's byte road)
+    H = geo['caption_h']
+    env = dict(top_height=H, title_height=H - 7, mini_icon_width=16, mini_icon_height=16)
+    for state, ops_name, light in (('', 'bevel_maximized', False), ('unfocused_', 'bevel_maximized_unfocused', True)):
+        ops = draw_ops_flat(m, ops_name)
+        col = [r[4] for r in mc_render(ops, 9, 1000, gtk, env)][:H]
+        rule = f'metacity draw_ops {ops_name} at a {H}-row caption'
+        t.add(f'cl_caption_{state}edge', col[0], rule + ', its row 0')
+        if light: t.add(f'cl_caption_{state}light', col[1], rule + ', its row 1')
+        t.ramp(f'cl_caption_{state}upper', col, 2 if light else 1, H // 2 - 1, rule + ': the upper gradient')
+        t.ramp(f'cl_caption_{state}lower', col, H // 2, H - 2, rule + ': the lower gradient')
+        t.add(f'cl_caption_{state}foot', col[H - 1], rule + f', its row {H - 1}')
+    title = draw_ops_flat(m, 'title_text')
+    t.add('cl_title_text', mc_byte(title[-1]['color'], gtk), 'metacity draw_ops title_text: the title')
+    t.add('cl_title_shadow', mc_byte(title[0]['color'], gtk), 'metacity draw_ops title_text: its four shadow copies')
+    t.add('cl_title_unfocused', mc_byte(draw_ops_flat(m, 'title_text_unfocused')[0]['color'], gtk),
+          'metacity draw_ops title_text_unfocused')
+    close, close_un = draw_ops_flat(m, 'close_button_icon'), draw_ops_flat(m, 'close_button_icon_unfocused')
+    t.add('cl_cglyph_dark', mc_byte(close[0]['color'], gtk), 'metacity close_button_icon: the outline (and every glyph\'s)')
+    t.add('cl_cglyph_light', mc_byte(close[-1]['color'], gtk), 'metacity close_button_icon: the cross (and every glyph\'s)')
+    t.add('cl_cglyph_unfocused', mc_byte(close_un[0]['color'], gtk), 'metacity close_button_icon_unfocused (every glyph\'s)')
+    bw, bh = geo['cbtn_w'], geo['cbtn_h']
+    for state, ops_name in CAPTION_BUTTON_STATES:
+        ops = draw_ops_flat(m, ops_name)
+        period = mc_render(ops, bw, bh, gtk, env)
+        app = mc_render(ops, bw, bh, gtk, env, ramp_rule)
+        n = 0
+        for op in ops:
+            rule = f'metacity draw_ops {ops_name}'
+            if op['op'] == 'line':
+                role = caption_button_line_role(state, op)
+                if role not in t.tones: t.add(role, mc_byte(op['color'], gtk), f'{rule}: <line> {op["color"]}')
+            else:
+                gh = mc_eval(op['height'], dict(width=bw, height=bh))
+                rows = T.metacity_vertical_gradient_rows(*(metacity_color(c, gtk) for c in op['colors']), gh)
+                t.ramp(f'cl_cbtn_{state}_ramp{n}', rows, 0, gh - 1, f'{rule}: <gradient> {n}')
+                n += 1
+        t.fit[f'cl_cbtn_{state} (whole box)'] = max(max(abs(a - b) for a, b in zip(p, q))
+                                                     for pr, ar in zip(period, app) for p, q in zip(pr, ar) if p)
+
+    # THE MENU BAR (clearlooks_draw_menubar2) and its OPEN TITLE (clearlooks_gummy_draw_menubaritem), the texts
+    bar_h = geo['menu_head'] + geo['menu_content'] + geo['menu_foot']
+    rows = [T.pixman_vertical_ramp_row([(0.0, bg), (1.0, sh(bg, 0.96))], 0, bar_h, r) for r in range(bar_h)]
+    t.ramp('cl_menubar_ramp', rows, 0, bar_h - 2, f'clearlooks_draw_menubar2: bg -> 0.96 over the {bar_h}-row bar')
+    t.add('cl_menubar_shadow', cb(SH[3]), 'clearlooks_draw_menubar2: its last row, shade[3]')
+    t.add('cl_menubar_text', T.gdk_byte(gtk[('fg', 'NORMAL')]), 'the default style\'s fg[NORMAL]')
+    t.add('cl_text_insensitive', T.gdk_byte(gtk[('fg', 'INSENSITIVE')]),
+          'fg[INSENSITIVE] = darker (bg_color) (clearlooks_style_draw_layout\'s layout)')
+    t.add('cl_text_insensitive_etch', tuple(int(v * 65535) >> 8 for v in sh(bg, 1.2)),
+          'clearlooks_style_draw_layout: the etched copy at (+1, +1), shade (parentbg, 1.2) as a GdkColor')
+    y0, ih = geo['menu_head'], geo['menu_content'] + 1
+    rows = {r: T.pixman_vertical_ramp_row(gummy(SP[1], False), y0, y0 + ih, r) for r in range(y0, y0 + ih)}
+    step = T.pixman_step_row(y0, y0 + ih)
+    assert step == y0 + (ih + 1) // 2, step
+    rule = f'clearlooks_gummy_draw_menubaritem: spot[1]\'s gummy ramp over rows {y0}..{y0 + ih - 1}'
+    seg = lambda a, b: [rows[r] for r in range(a, b + 1)]
+    t.ramp('cl_menubaritem_upper', seg(y0 + 1, step - 1), 0, step - 2 - y0, rule + ' (above the step)')
+    t.ramp('cl_menubaritem_lower', seg(step, y0 + ih - 2), 0, y0 + ih - 2 - step, rule + ' (below it)')
+    t.add('cl_menubaritem_border', cb(SP[2]), 'clearlooks_gummy_draw_menubaritem: the border, spot[2]')
+    t.add('cl_menubaritem_text', T.gdk_byte(gtkrc_color(g['styles']['menu_item']['colors']['fg[PRELIGHT]'], sc)),
+          'the menu_item style\'s fg[PRELIGHT] (selected_fg_color)')
+
+    # THE TOOLBAR BAND (clearlooks_gummy_draw_toolbar, toolbarstyle 1, not topmost) and its SEPARATOR
+    bh_ = geo['band_h']
+    stops = [(0.0, sh(bg, 1.04)), (0.5, sh(bg, 1.01)), (0.5, bg), (1.0, sh(bg, 0.97))]
+    rows = [T.pixman_vertical_ramp_row(stops, 0, bh_, r) for r in range(bh_)]
+    step = T.pixman_step_row(0, bh_)
+    rule = f'clearlooks_gummy_draw_toolbar: 1.04 | 1.01 / 1.0 | 0.97 of bg over the {bh_}-row band'
+    t.add('cl_toolbar_light', cb(sh(bg, 1.1)), 'clearlooks_gummy_draw_toolbar: its first row, shade (bg, 1.1)')
+    t.ramp('cl_toolbar_upper', rows, 1, step - 1, rule + ' (above the step)')
+    t.ramp('cl_toolbar_lower', rows, step, bh_ - 2, rule + ' (below it)')
+    t.add('cl_toolbar_shadow', cb(SH[3]), 'clearlooks_gummy_draw_toolbar: its last row, shade[3]')
+    t.add('cl_separator_dark', cb(SH[3]), 'clearlooks_gummy_draw_separator: shade[3]')
+    t.add('cl_separator_light', cb(sh(SH[3], 1.3)), 'clearlooks_gummy_draw_separator: shade (shade[3], 1.3)')
+
+    # THE TOOL BUTTON (clearlooks_gummy_draw_button on the "button" style, xthickness 3, relief none): drawn HOT
+    # (prelight), PRESSED or CHECKED (active), HOT AND CHECKED (prelight + active) and DEAD AND CHECKED (insensitive +
+    # active); at rest and dead nothing (GtkButton paints no box for relief none)
+    ch = geo['case_h']
+    pbg = bg                                               # the toolbar's bg[NORMAL], the button's parentbg
+    # THE BUTTON STYLE'S OWN SHADE TABLE: clearlooks_style_realize shades each style's bg[NORMAL], and the button
+    # style's is 1.04 of bg, so its borders' shade[6] / shade[4] are not the window's (his capture: the hot border
+    # #928F8D, Nautilus' toolbar, 23-23-16)
+    BSH = [sh(style_bg('button', 'NORMAL'), k) for k in (1.15, 0.95, 0.896, 0.82, 0.7, 0.665, 0.475, 0.45, 0.4)]
+    t.add('cl_button_ring_outer', cb(sh(pbg, 0.97)), 'gummy button, reliefstyle 1: the outer ring, shade (parentbg, 0.97)')
+    t.add('cl_button_ring_inner', cb(sh(pbg, 0.93)), 'gummy button, reliefstyle 1: the inner ring, shade (parentbg, 0.93)')
+    t.add('cl_button_inset_dark', cb(sh(pbg, 0.94)), 'clearlooks_draw_inset: its top-left half, shade (parentbg, 0.94)')
+    t.add('cl_button_inset_light', cb(sh(pbg, 1.06)), 'clearlooks_draw_inset: its bottom-right half, shade (parentbg, 1.06)')
+    y0, y1 = 2, ch - 2
+    step = T.pixman_step_row(y0, y1)
+    for state, style_state, active, disabled in TOOL_BUTTON_STATES:
+        fill = style_bg('button', style_state)
+        ramp = {r: T.pixman_vertical_ramp_row(gummy(fill, disabled), y0, y1, r) for r in range(y0, y1)}
+        rule = f'gummy button {state} (bg[{style_state}] of the button style)'
+        first = 5 if active else 2
+        segs = ((first, step - 1), (step, ch - 3))
+        for name, (a, b) in zip(('upper', 'lower'), segs):
+            t.ramp(f'cl_button_{state}_{name}', [ramp[r] for r in range(a, b + 1)], 0, b - a,
+                   f'{rule}: its ramp, rows {a}..{b}')
+        t.add(f'cl_button_{state}_border', cb(BSH[4]) if disabled else cb(mix(BSH[6], fill, 0.2)),
+              rule + (': the border, the button style\'s shade[4]' if disabled
+                      else ': the border, mix (the button style\'s shade[6], fill, 0.2)'))
+        if not active:                                     # the top-left highlight, shade (fill, 1.3) at 0.4
+            hi = sh(fill, 1.3)
+            over = lambda r: T.cairo_solid_over(hi, 0.4, ramp[r])
+            t.add(f'cl_button_{state}_highlight_row', over(y0), rule + ': the top-left highlight over its first row')
+            for name, (a, b) in zip(('upper', 'lower'), ((6, step - 1), (step, ch - 6))):
+                t.ramp(f'cl_button_{state}_highlight_{name}', [over(r) for r in range(a, b + 1)], 0, b - a,
+                       rule + f': the top-left highlight down its left column, rows {a}..{b}')
+            continue
+        shadow = cb(sh(fill, 0.92))                         # the pressed shadow, 0.58 -> 0 over three px
+        alpha = [T.pixman_alpha_ramp_alpha(0.58, 2, 5, k) for k in (2, 3, 4)]
+        under = {k: T.pixman_over(shadow, alpha[k - 2], ramp[k]) for k in (2, 3, 4)}
+        for k in (2, 3, 4):
+            t.add(f'cl_button_{state}_shadow_row{k - 2}', under[k], rule + f': the inner shadow\'s row {k} over the ramp')
+        for c in (2, 3, 4):
+            for name, (a, b) in zip(('upper', 'lower'), segs):
+                t.ramp(f'cl_button_{state}_shadow_col{c - 2}_{name}',
+                       [T.pixman_over(shadow, alpha[c - 2], ramp[r]) for r in range(a, b + 1)], 0, b - a,
+                       rule + f': the inner shadow\'s column {c} over the ramp, rows {a}..{b}')
+            for k in (2, 3, 4):
+                t.add(f'cl_button_{state}_shadow_corner{k - 2}{c - 2}', T.pixman_over(shadow, alpha[c - 2], under[k]),
+                      rule + f': the inner shadow\'s column {c} over its row {k}')
+    return t
+
+
+# The caption buttons' four draw_ops (metacity's button_bg family; the frame style focused_maximized's and
+# normal_maximized's buttons: the prelight is not drawn, the product's caption having no hover face) and their
+# role prefixes.
+CAPTION_BUTTON_STATES = (('focused', 'button_bg'), ('pressed', 'button_bg_pressed'),
+                         ('unfocused', 'button_bg_unfocused'), ('unfocused_pressed', 'button_bg_unfocused_pressed'))
+# The tool button's drawn states: (role prefix, the GTK state whose bg fills it, active (shadow IN), insensitive).
+TOOL_BUTTON_STATES = (('hot', 'PRELIGHT', False, False), ('pressed', 'ACTIVE', True, False),
+                      ('hot_checked', 'PRELIGHT', True, False), ('dead_checked', 'INSENSITIVE', True, True))
+
+
+def caption_button_line_role(state, op):
+    """A caption button line's role: the state and its shade factor x 1000 (every button_bg line is a shade)."""
+    assert op['color'][0] == 'shade', op
+    return f'cl_cbtn_{state}_s{int(round(op["color"][2] * 1000)):04d}'
 
 
 # ------------------------------------------------------------------ the app

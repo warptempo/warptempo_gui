@@ -18,7 +18,7 @@ namespace {
 // load_svg_set before the window exists and never changed after.
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
-// disabled face asks, its SATURATED copy — two sizes per scale in use (the
+// disabled face asks, its DISABLED copy by the spec's rule (draw_disabled) — two sizes per scale in use (the
 // toolbar seat, icon_glyph_px, and the small icon's scaled 16 of the
 // caption, the cards and the list rows), so at most 4 x 59 surfaces. Main
 // thread only: every draw is the painter's.
@@ -98,7 +98,16 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
     const int px = static_cast<int>(std::nearbyint(size_px));
     if (px <= 0) return;
     Faces& f = faces_for(icon, px);
-    if (!f.disabled) f.disabled.reset(svg_icon::saturated_copy(f.live.get()));
+    if (!f.disabled) {
+        switch (live_chrome_spec().disabled_glyph) {
+        case GuiDisabledGlyph::ReactOSSaturate:
+            f.disabled.reset(svg_icon::saturated_copy(f.live.get()));
+            break;
+        case GuiDisabledGlyph::GtkSaturatePixelate:
+            f.disabled.reset(svg_icon::saturated_pixelated_copy(f.live.get()));
+            break;
+        }
+    }
     paint_raster(cr, f.disabled.get(), x, y);
 }
 

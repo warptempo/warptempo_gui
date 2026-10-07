@@ -34,35 +34,67 @@
 //   CLEARLOOKS — GNOME 2.30's Clearlooks as Debian 6 squeeze drew it
 //     (gtk-engines 2.20.2's GUMMY style under gnome-themes 2.30.2's gtkrc
 //     and metacity theme), his squeeze captures the law (tmp/squeeze/,
-//     INDEX.md). THIS ROUND CARRIES ITS METRICS ALONE (2026-10-07): every
-//     length below is Clearlooks' own, while the painters still draw
-//     Windows' faces in them (the flat toolbar, the DrawEdge boxes, the
-//     caption's ramp) until the painters round teaches each one its branch.
+//     INDEX.md), WORN AT WINDOWS' PROPORTIONS (architect 2026-10-07 ~02:20:
+//     "Windows is the base: a compact, nicely proportioned layout"; the
+//     instance's head). THE TOP STRIP IS CLEARLOOKS' OWN DRAWING since the
+//     painters round's first part (2026-10-07: the metacity caption, the
+//     menu bar, the toolbar band and its gummy buttons, the separators,
+//     GTK's insensitive icon — clearlooks_paint.h); the rest of the chrome
+//     (the dialogs, the trim lane, the scrub, the cards, the restored
+//     laptop's frame) still draws Windows' faces in Clearlooks' lengths
+//     until the round's later parts teach each one its branch.
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colours remain an ordinary theme
 // file. The table is kGuiChromeSpecs below, the live instance
 // live_chrome_spec(), set once by set_live_chrome_spec before the first
-// paint. What no vocabulary is expected to vary is a plain constant at its
-// owner, not a field here: the caption's smooth gradient
-// (paint_caption_gradient), the caption buttons' glyphs (paint_handler.cpp's
-// caption glyph block), the caption icon's 16-px size (kCaptionIconPx), the
-// open menu title's sunken box (paint_menu_row), the card frame's four
-// sides (paint_popup_chrome), the keyboard's Backspace word
-// (onscreen_keyboard.h's cap_word) — each until a painter branch of a later
-// round says otherwise.
+// paint. WHERE THE TWO DRAW DIFFERENTLY THE PAINTER FORKS ON THE SPEC'S
+// `vocabulary` (or on the toolbar style or the disabled glyph, where that
+// is the natural switch), the win2000 arm the code that stood before the
+// fork. What no vocabulary is expected to vary is a plain constant at its
+// owner, not a field here: the caption icon's 16-px size (kCaptionIconPx),
+// the card frame's four sides (paint_popup_chrome), the keyboard's
+// Backspace word (onscreen_keyboard.h's cap_word) — each until a painter
+// branch of a later round says otherwise.
 
-// THE ROSTER'S TWO TOOLBARS' FACES — the icon row's and row 8's cases
-// (paint_toolbar_box, paint_handler.cpp, where the faces stand). One style
-// today, worn by BOTH instances (the clearlooks instance's GTK relief-none
-// face is the painters round's); each painter that draws only this style
-// says so in a static_assert over every instance (chrome_specs_all), so a
-// second value names every site it must teach.
+// WHICH PERIOD DESKTOP DRAWS THE CHROME — the painters' one switch where
+// the two draw an element differently (the head): the caption's band,
+// title and buttons, the menu bar and its open title, the toolbar band,
+// the disabled words' emboss.
+enum class GuiChromeVocabulary {
+    Win2000,
+    Clearlooks,
+};
+
+// THE ROSTER'S TWO TOOLBARS' FACES — the icon row's and row 8's cases and
+// the render player's row (paint_toolbar_box, paint_handler.cpp, where the
+// faces stand), and the separator in their group gaps
+// (paint_toolbar_separator). Both styles have a HOT face, the one hover
+// face the product draws (toolbar_style_has_hot_face).
 enum class GuiToolbarStyle {
     // Explorer's FLAT toolbar (comctl32's TBSTYLE_FLAT as ReactOS 0.4.16's
     // toolbar.c draws it): no edge at rest, one raised line on the HOT case,
     // one sunken line pressed and checked, and an ETCHED SEPARATOR in every
     // group gap (TOOLBAR_DrawFlatSeparator).
     Flat,
+    // GTK 2's tool button, GtkToolbar::button-relief NONE, as Clearlooks'
+    // GUMMY style draws it (clearlooks_paint.h's tool button): nothing at
+    // rest, the gummy button in bg[PRELIGHT] on the HOT case, in bg[ACTIVE]
+    // with the inner shadow pressed and checked (the glyph one W px right
+    // and down, GtkButton::child-displacement), and the gummy separator in
+    // every group gap (clearlooks_gummy_draw_separator).
+    GtkReliefNone,
+};
+constexpr bool toolbar_style_has_hot_face(GuiToolbarStyle s) {
+    return s == GuiToolbarStyle::Flat || s == GuiToolbarStyle::GtkReliefNone;
+}
+
+// THE DISABLED GLYPH'S RULE (icons::draw_disabled, svg_icon.h): a dead
+// button's drawing as its desktop greyed it.
+enum class GuiDisabledGlyph {
+    // ReactOS's comctl32 imagelist: ILS_SATURATE | ILS_ALPHA at 192.
+    ReactOSSaturate,
+    // GTK 2's insensitive icon: gdk_pixbuf_saturate_and_pixelate (0.8, TRUE).
+    GtkSaturatePixelate,
 };
 
 // WHERE THE NOTIFICATION CARDS' STACK STARTS against the icon row's band
@@ -78,6 +110,8 @@ struct ChromeSpec {
     // THE VOCABULARY'S NAME, the `chrome` device key's value that chooses it
     // (is_chrome_key below).
     const char*        key;
+    // THE PAINTERS' SWITCH (GuiChromeVocabulary above).
+    GuiChromeVocabulary vocabulary;
     // THE THEME A CONFIG WITH NO `theme` LINE WEARS under this chrome
     // (effective_theme_key, theme_file.h): the vocabulary's own colours.
     const char*        default_theme;
@@ -99,6 +133,9 @@ struct ChromeSpec {
     int                caption_button_inset_px;
     int                caption_button_gap_px;
     int                caption_close_gap_px;
+    // THE TITLE'S ROOM ENDS this far short of Minimise's box (paint_caption_
+    // row's cut and, under clearlooks, its centring).
+    int                caption_title_trail_px;
     // THE MENU ROW, lane 1, in Windows px (render.h's menu-row block and
     // paint_menu_row): the face row above the content, the content (the
     // anchors' button height, the label's cell centred in it), the row
@@ -144,6 +181,12 @@ struct ChromeSpec {
     // tooltip arm, kTooltipLineGapPx beside it).
     int                tooltip_pad_px;
     GuiCardSeat        card_seat;
+    // THE CORNERS' RADIUS in Windows px, scaled like any length and drawn
+    // antialiased (clearlooks_paint.cpp: the gummy button, the open menu
+    // title): 0 is a square corner, every box of win2000's.
+    int                corner_radius_px;
+    // A DEAD BUTTON'S GLYPH (GuiDisabledGlyph above).
+    GuiDisabledGlyph   disabled_glyph;
     // THE ICON SET the vocabulary wears: a bundled folder under
     // assets/icons/, parsed at launch through resvg (icons.h's head).
     const char*        icon_set;
@@ -170,6 +213,7 @@ struct ChromeSpec {
 // glyph ReactOS's saturate.
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .key                          = "win2000",
+    .vocabulary                   = GuiChromeVocabulary::Win2000,
     .default_theme                = "windows-2000-standard",
     .face_set                     = &kGuiFaceSetWin2000,
     .caption_height_px            = 18,
@@ -182,6 +226,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .caption_button_inset_px      = 2,
     .caption_button_gap_px        = 0,
     .caption_close_gap_px         = 2,
+    .caption_title_trail_px       = 2,
     .menu_row_head_px             = 1,
     .menu_row_content_px          = 19,
     .menu_row_foot_px             = 0,
@@ -205,75 +250,103 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
     .card_seat                    = GuiCardSeat::UnderBand,
+    .corner_radius_px             = 0,
+    .disabled_glyph               = GuiDisabledGlyph::ReactOSSaturate,
     .icon_set                     = "tango",
 };
 
-// CLEARLOOKS (architect 2026-10-07, the planner's design; report CL1 §3 and
-// §5.1, every number checked against his squeeze captures, tmp/squeeze/ —
-// GTK px are Windows px, the 96-dpi pixel, the VM's captures one host px a
-// GTK px): THE CAPTION metacity's `normal_maximized` frame — the 17-px
-// title cell + title_border 4 above and 3 below = 24 (gedit rows 305-328)
-// — its buttons 20 x 20 (the lane less button_border 2 above and 2 below,
-// aspect 1.0) at y 2, each with a 1-px button_border both sides (so 2 px
-// between neighbours, a 22-px pitch) and Close's right edge 2 in (the
-// titlebar's 1-px edge and its border), the menu button's 16-px icon
-// centred in its 20 x 20 at (2, 2), i.e. (4, 4), the title's room from
-// 25 (that button's right edge 22 + its border 1 + title_border 2; the
-// title's centring is the painters round's); THE MENU ROW GtkMenuBar —
-// ythickness 1, the 23-row item (17 + 2 x 3), ythickness 1 = 25 (gedit
-// rows 329-353), the label 5 px in and 5 after (xthickness 2 +
-// horizontal-padding 3), the first item at x 1; THE TOOLBARS GtkToolbar —
-// the 36 x 36 tool button (24 + 2 x (xthickness 3 + focus 1 + focus-pad 1)
-// + inner-border 2, the icon at (6, 6)) under 2 px of air each way
-// (ythickness 1 + internal-padding 1) = 40 (gedit rows 354-393), no etched
-// pair (the menu bar's last row is the line) and no foot (GTK stacks
-// flush), row 8 the same 2-px air; the groups 12 px apart
-// (GtkSeparatorToolItem's space-size) round the separator's pair at 5-6
-// ((12 − xthickness 1) / 2) from 20 % to 80 % of the 36-row item, i.e. 7
-// rows in at each end (22 of the 36, CL4's reading); THE PUSH BUTTON 29
-// tall (17 + 12, the file chooser's Open, rows 861-889) with 6-px pads
-// (xthickness 3 + focus 1 + focus-pad 1 + inner-border 1); THE TOOLTIP
-// the tooltips style's 4-px pad; THE ICONS "mist", gnome-icon-theme 2.30's
-// drawings under Mist's own folders (assets/icons/mist/). THE TOOLBAR STYLE
-// IS FLAT FOR NOW (2026-10-07): the Windows flat painter stands in for
-// GTK's relief-none button until the painters round adds its enumerator.
+// CLEARLOOKS (architect 2026-10-07; report CL1 §3, his squeeze captures the
+// law for every drawing, tmp/squeeze/ — GTK px are Windows px, the 96-dpi
+// pixel). THE VOCABULARY WEARS WINDOWS' PROPORTIONS UNDER CLEARLOOKS' OWN
+// DRAWING (architect 2026-10-07 ~02:20: "Windows is the base: a compact,
+// nicely proportioned layout; the fonts and the icons become
+// disproportionate in Clearlooks"): THE BASE'S CELL — the 13-row cell, cap 8
+// (kGuiFaceSetGnome2, DejaVu Sans at GNOME's "Sans 8") — and THE BASE'S
+// SEAT — the 24-W large toolbar glyph — and every height GTK derives from
+// the cell RE-DERIVED AT 13 by GTK's and metacity's own arithmetic (his
+// squeeze captures, at Sans 10's 17-row cell, check that arithmetic: 24 /
+// 25 / 40 / 29 there, 20 / 21 / 36 / 25 here):
+//   THE CAPTION metacity's `normal_maximized` frame (metacity-theme-1.xml
+//   lines 13-31; theme.c meta_frame_layout_get_borders): the title cell 13
+//   + title_border.top 4 + .bottom 3 = 20; the buttons the lane less
+//   button_border.top 2 and .bottom 2 = 16 tall, aspect_ratio 1.0 = 16
+//   wide, at y 2, each with button_border.left / .right 1 (2 px between
+//   neighbours, an 18-px pitch) and Close's right edge 2 in
+//   (right_titlebar_edge 1 + its border 1); the glyphs at icon_size =
+//   Bmin 7 `max` (16 − Bpad 6 x 2) = 7, centred (hpadding 4); the menu
+//   button at left_titlebar_edge 1 + border 1 = (2, 2), its 16-px mini
+//   icon centred in its 16 x 16 — FILLING IT, NO MARGIN (the box the icon's
+//   own size); the title's room from 21 (the menu button's 2 + 16 + its
+//   border 1 + title_border.left 2) to 3 short of Minimise (its border 1 +
+//   title_border.right 2), the title centred in it (paint_caption_row).
+//   THE MENU ROW GtkMenuBar (gtkmenubar.c size_request): ythickness 1 + the
+//   item (gtkmenuitem.c: the cell 13 + 2 x the menu_item style's ythickness
+//   3 = 19) + ythickness 1 = 21, the label 5 px in and 5 after (xthickness 2
+//   + GtkMenuItem::horizontal-padding 3), the first item at the bar's
+//   xthickness 1.
+//   THE TOOLBARS GtkToolbar (gtktoolbar.c): the tool button 32 x 32, the
+//   24-px icon + 2 x the button style's xthickness 3 + inner-border 1 + 1
+//   (gtkbutton.c gtk_button_size_request), GtkWidget::focus-line-width and
+//   focus-padding ZEROED (architect 2026-10-07 ~02:20: the case at the
+//   base's proportion — squeeze's own 36 added 2 x (1 + 1) of focus
+//   ring, which the product never draws), the icon at (4, 4); 2 px of air
+//   each way (ythickness 1 + GtkToolbar::internal-padding 1), the band 36;
+//   no etched pair (the menu bar's last row is the line) and no foot (GTK
+//   stacks flush); row 8 the same 2-px air. THE GROUP GAP 12
+//   (GtkSeparatorToolItem's DEFAULT_SPACE_SIZE) round the separator's pair
+//   at 5-6 ((12 − xthickness 1) / 2) from 20 % to 80 % of the 32-row item
+//   (_gtk_toolbar_paint_space_line: 32 x 2 / 10 = 6 to 32 x 8 / 10 = 25,
+//   both rows drawn — the 36-row item's 7..28 on his gedit capture), 6 rows
+//   in at each end.
+//   THE PUSH BUTTON the cell 13 + 2 x (xthickness 3 + focus-line-width 1 +
+//   focus-padding 1 + inner-border 1) = 25 (his file chooser's Open, 29 at
+//   the 17 cell), the label 6 px in each way; THE TOOLTIP the tooltips
+//   style's 4-px pad.
+//   THE DRAWING: the gummy toolbar style (GtkReliefNone), radius 3 on the
+//   gummy boxes (the gtkrc's `radius = 3.0`), GTK's insensitive icon, the
+//   icons "mist" (gnome-icon-theme 2.30's drawings under Mist's own
+//   folders, assets/icons/mist/).
 inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .key                          = "clearlooks",
+    .vocabulary                   = GuiChromeVocabulary::Clearlooks,
     .default_theme                = "clearlooks",
     .face_set                     = &kGuiFaceSetGnome2,
-    .caption_height_px            = 24,
-    .caption_icon_x_px            = 4,
-    .caption_icon_y_px            = 4,
-    .caption_title_x_px           = 25,
-    .caption_button_w_px          = 20,
-    .caption_button_h_px          = 20,
+    .caption_height_px            = 20,
+    .caption_icon_x_px            = 2,
+    .caption_icon_y_px            = 2,
+    .caption_title_x_px           = 21,
+    .caption_button_w_px          = 16,
+    .caption_button_h_px          = 16,
     .caption_button_y_px          = 2,
     .caption_button_inset_px      = 2,
     .caption_button_gap_px        = 2,
     .caption_close_gap_px         = 2,
+    .caption_title_trail_px       = 3,
     .menu_row_head_px             = 1,
-    .menu_row_content_px          = 23,
+    .menu_row_content_px          = 19,
     .menu_row_foot_px             = 1,
     .menu_label_pad_left_px       = 5.0,
     .menu_label_pad_right_px      = 5.0,
     .menu_band_lead_px            = 1.0,
-    .toolbar_case_lead_px         = 6,
+    .toolbar_case_lead_px         = 4,
     .toolbar_glyph_px             = 24,
-    .toolbar_case_trail_x_px      = 6,
-    .toolbar_case_trail_y_px      = 6,
-    .toolbar_style                = GuiToolbarStyle::Flat,
+    .toolbar_case_trail_x_px      = 4,
+    .toolbar_case_trail_y_px      = 4,
+    .toolbar_style                = GuiToolbarStyle::GtkReliefNone,
     .toolbar_group_gap_px         = 12,
     .toolbar_separator_x_px       = 5,
-    .toolbar_separator_inset_y_px = 7,
+    .toolbar_separator_inset_y_px = 6,
     .icon_row_etched_pair         = false,
     .icon_row_air_px              = 2,
     .icon_row_foot_px             = 0,
     .bottom_row_air_px            = 2,
-    .push_button_box_px           = 29.0,
+    .push_button_box_px           = 25.0,
     .push_button_pad_left_px      = 6.0,
     .push_button_pad_right_px     = 6.0,
     .tooltip_pad_px               = 4,
     .card_seat                    = GuiCardSeat::UnderBand,
+    .corner_radius_px             = 3,
+    .disabled_glyph               = GuiDisabledGlyph::GtkSaturatePixelate,
     .icon_set                     = "mist",
 };
 

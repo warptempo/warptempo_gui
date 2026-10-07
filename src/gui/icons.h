@@ -29,8 +29,8 @@
 // THE PLACEMENT IS FIXED: in a toolbar case the cell sits at the spec's lead
 // from the case's corner (icon_case_lead_px, render.h — win2000's (3, 3),
 // Windows' own seat, the 24-px bitmap's in its large 31 x 30 button as the
-// 16-px one's in its small 23 x 22; clearlooks' (6, 6), GTK's in its 36 x
-// 36 tool button), filling the seat
+// 16-px one's in its small 23 x 22; clearlooks' (4, 4), GTK's in its 32 x
+// 32 tool button), filling the seat
 // (icon_glyph_px), plus the pressed/checked shift (draw_cased below).
 // Nothing is centred on its ink: Windows never did (12 of the 15 STD strip
 // cells with odd ink dimensions sit at the fixed offset). The sites with no
@@ -207,11 +207,16 @@ void drop_rasters();
 // parsed every drawing.
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 
-// THE DISABLED GLYPH — a dead button's face: REACTOS'S SATURATE (architect
+// THE DISABLED GLYPH — a dead button's face, by the live spec's
+// disabled_glyph (chrome_spec.h): win2000 REACTOS'S SATURATE (architect
 // 2026-10-06; comctl32's toolbar draws a disabled 32-bpp image with
-// ILS_SATURATE | ILS_ALPHA at 192, imagelist.c's saturate_image):
-// svg_icon::saturated_copy of the live raster, built the first time a
-// disabled face asks and cached beside it, copied at the same seat. A
+// ILS_SATURATE | ILS_ALPHA at 192, imagelist.c's saturate_image,
+// svg_icon::saturated_copy), clearlooks GTK 2'S INSENSITIVE ICON
+// (2026-10-07; gdk_pixbuf_saturate_and_pixelate (0.8, TRUE),
+// svg_icon::saturated_pixelated_copy, its checker one device px a cell) —
+// of the live raster, built the first time a disabled face asks and cached
+// beside it (one rule per process: the chrome is chosen once), copied at
+// the same seat. A
 // disabled WORD keeps Windows' DSS_DISABLED emboss (show_embossed_run,
 // render.h), whose mono mask a Tango drawing's gradients cannot give.
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,

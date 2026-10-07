@@ -172,24 +172,29 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
 // THE GNOME2 SET (architect 2026-10-07, the planner's design under his free
 // rein), the clearlooks chrome's: DEJAVU SANS AS DEBIAN 6 SQUEEZE SHIPS IT
 // (ttf-dejavu 2.31-1, DejaVuSans.ttf and DejaVuSans-Bold.ttf byte for byte;
-// fonts/README.md) — GNOME 2's "Sans 10" and metacity's "Sans Bold 10" at
-// 96 dpi, the faces his squeeze captures (tmp/squeeze/) are set in.
-//   METRICS: the body and the bold are Sans 10's 17-px cell — ascent 13 +
-//   descent 4, FreeType's rounded line metrics at 13.333 px, the cell his
-//   captures prove three times (the menu bar 25 = 17 + 8, the push button
-//   29 = 17 + 12, the caption 24 = 17 + 7) — with the CAP AT 10 ROWS, the
-//   unhinted outline's 9.72 rounded (squeeze's bytecode hinter drew 9; the
-//   nearer integer to Sans 10's own em is 10, its em 3 % over Sans 10's
-//   where 9's is 7 % under); the small is the same SIX-row digit as the
-//   win2000 set's, a cell all above the baseline, so the ruler lane keeps
-//   its 17 (GNOME has no small face: GTK's ruler drew the widget's own
-//   font, a 9-row digit that would make the lane 20).
+// fonts/README.md) — GNOME 2's Sans and metacity's Sans Bold, the faces his
+// squeeze captures (tmp/squeeze/) are set in, drawn at the size below.
+//   METRICS (architect 2026-10-07, ~02:20: "Windows is the base: a compact,
+//   nicely proportioned layout; the fonts and the icons become
+//   disproportionate in Clearlooks" — the Clearlooks vocabulary wears
+//   Windows' PROPORTIONS under Clearlooks' own drawing): THE BASE'S CELL,
+//   {11, 2, 8} for the body and the bold — ascent 11 + descent 2, the 13-row
+//   cell, the cap at 8 rows — so DejaVu Sans is drawn to a cap of 8 W px, its
+//   em derived at the install off its own "H" (0.729 em) as every face's is:
+//   10.97 W px, 8.2 pt at 96 dpi, GNOME 2's own "Sans 8" (Appearance ->
+//   Fonts' smallest common setting), not squeeze's default Sans 10 (the
+//   17-row cell his captures show, which the 2026-10-07 base of the
+//   vocabulary carried until this ruling); the small is the same SIX-row
+//   digit as the win2000 set's, a cell all above the baseline (its em 7.93
+//   off the "0"), so the ruler lane keeps its 17 (GNOME has no small face:
+//   GTK's ruler drew the widget's own font). Every height GTK derives from
+//   the cell is re-derived at 13 (chrome_spec.h's clearlooks instance).
 //   TRACKING: none ("compromise and approximate with modern HarfBuzz and
 //   DejaVu Sans": the bytecode look of 2010 is not reproduced, and Pango
 //   tracked nothing; Tahoma's -1/20 was a match to its own strike).
 inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
     .file        = {2, 3, 2},
-    .metrics     = {{13, 4, 10}, {13, 4, 10}, {6, 0, 6}},
+    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
     .tracking_px = 0.0,
 };
 

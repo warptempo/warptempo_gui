@@ -7478,12 +7478,14 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             break;
         }
     }
-    // THE HOT FACE'S ONE WRITE (AppState::roster_hot): the candidate in the
-    // flat toolbar style while no chrome press is armed — comctl32 shows no
-    // hot item while a toolbar holds the capture — and none otherwise, so a
-    // toolbar style with no hot face would never store one.
-    set_roster_hot(live_chrome_spec().toolbar_style ==
-                               GuiToolbarStyle::Flat &&
+    // THE HOT FACE'S ONE WRITE (AppState::roster_hot): the candidate in a
+    // toolbar style with a hot face (both: Explorer's flat raised line and
+    // GTK's prelit button, toolbar_style_has_hot_face) while no chrome press
+    // is armed — comctl32 shows no hot item while a toolbar holds the
+    // capture, and GTK prelights no other button under a grab — and none
+    // otherwise, so a toolbar style with no hot face would never store one.
+    set_roster_hot(toolbar_style_has_hot_face(
+                           live_chrome_spec().toolbar_style) &&
                            app.chrome_press.kind ==
                                AppState::ChromePress::Kind::None
                        ? hot

@@ -17,6 +17,8 @@
 # names each entry's rule in its `flag_rule`). These rules also run at render time on the app's face colours.
 # The asserts at the bottom are the research's checked values (tmp/win_derivation/FINDINGS.md), run at import.
 
+import math
+
 
 def _cdiv(a, b):
     """C integer division (truncates toward zero)."""
@@ -304,6 +306,103 @@ def metacity_blend(bg16, fg16, alpha):
     a = int(alpha * 0xffff)
     return tuple(b + (((f - b) * a + 0x8000) >> 16) for b, f in zip(bg16, fg16))
 
+
+
+# ------------------------------------------------------------------ the two renderers' arithmetic (the Clearlooks tones)
+# The engine's colours reach the screen through cairo 1.8.10 over pixman 0.16.4 (squeeze's libcairo2 and
+# libpixman-1-0); metacity's through GDK on a 24-bit visual and its own gradient code. These are THEIR integer roads,
+# ported so a ramp's painted rows and a translucent stroke's composite are recorded as the screen showed them
+# (build.py's Clearlooks tones). Checked against his squeeze captures at the bottom of this file: the toolbar band's
+# 38 ramp rows, the menu bar's 24 and the open menu title's 22, byte for byte.
+def _cairo_short(d):
+    """cairo 1.8 _cairo_color_double_to_short: d x (65536 - 1e-5), truncated."""
+    return int(d * (65536.0 - 1e-5))
+
+
+def _fixed_16_16(d):
+    """cairo 1.8 _cairo_fixed_16_16_from_double: the nearest 16.16 fixed value."""
+    return int(math.floor(d * 65536.0 + 0.5))
+
+
+def pixman_vertical_ramp_row(stops, y0, y1, row):
+    """A vertical cairo linear gradient from user y0 to y1 (whole px; cairo_pattern_create_linear (x, y0, x, y1)) with
+    `stops` [(offset, (r, g, b) doubles)], as pixman 0.16 samples it at pixel row `row`'s centre -> the 8-bit pixel
+    (pixman-linear-gradient.c: t = ((b x v) >> 16) + off with b = 2^32 / dy, the walker's 8-bit interpolation with
+    stepper ((1 << 24) + w / 2) / w and the PAD extend; the stops' channels cairo's 16-bit shorts' top bytes,
+    unpremultiplied). Opaque stops only (alpha 1)."""
+    dy = (y1 - y0) * 65536
+    b = (1 << 32) // dy
+    off = (-b * (y0 * 65536)) >> 16
+    t = ((b * (row * 65536 + 32768)) >> 16) + off
+    st = [(_fixed_16_16(o), tuple(_cairo_short(v) >> 8 for v in c)) for o, c in stops]
+    n = 0
+    while n < len(st) and not t < st[n][0]: n += 1
+    lx, lc = (-2 ** 31, st[0][1]) if n == 0 else st[n - 1]
+    rx, rc = (2 ** 31 - 1, st[-1][1]) if n == len(st) else st[n]
+    stepper = 0 if (lx == rx or lc == rc) else ((1 << 24) + (rx - lx) // 2) // (rx - lx)
+    dist = ((t - lx) * stepper) >> 16
+    return tuple((l * (256 - dist) + r * dist) >> 8 for l, r in zip(lc, rc))
+
+
+def pixman_vertical_t(y0, y1, row):
+    """The 16.16 gradient position pixman 0.16 gives pixel row `row` of a vertical gradient from y0 to y1 (whole px)."""
+    dy = (y1 - y0) * 65536
+    b = (1 << 32) // dy
+    return ((b * (row * 65536 + 32768)) >> 16) + ((-b * (y0 * 65536)) >> 16)
+
+
+def pixman_step_row(y0, y1):
+    """THE ROW WHERE A RAMP'S STEP AT 0.5 FALLS (the gummy ramps' two stops at 0.5): the first row of [y0, y1) whose
+    position is at or past one half -- y0 + (n + 1) / 2 in integers for every height the chrome draws (the truncated
+    b puts an odd ramp's middle row, exactly at one half, above the step)."""
+    return next(r for r in range(y0, y1) if pixman_vertical_t(y0, y1, r) >= 32768)
+
+
+def pixman_alpha_ramp_alpha(a0, y0, y1, row):
+    """The alpha byte pixman 0.16 gives row `row` of a gradient from alpha a0 at y0 to alpha 0 at y1 (the gummy
+    button's pressed shadow, clearlooks_draw_gummy.c: 0.58 -> 0 over three px), the colour the same at both stops."""
+    dy = (y1 - y0) * 65536
+    b = (1 << 32) // dy
+    off = (-b * (y0 * 65536)) >> 16
+    t = ((b * (row * 65536 + 32768)) >> 16) + off
+    left = _cairo_short(a0) >> 8
+    stepper = ((1 << 24) + 65536 // 2) // 65536
+    dist = min(256, max(0, (max(0, t) * stepper) >> 16))
+    return (left * (256 - dist)) >> 8
+
+
+def _mul_un8(a, b):
+    t = a * b + 0x80
+    return ((t >> 8) + t) >> 8
+
+
+def pixman_over(src8, alpha8, dst8):
+    """pixman's OVER of an UNPREMULTIPLIED source (8-bit colour, 8-bit alpha) onto an opaque 8-bit pixel: the source
+    premultiplied by the walker's rounding (x a / 255, rounded), then d x (255 - a) / 255 + s, saturating."""
+    return tuple(min(255, _mul_un8(d, 255 - alpha8) + _mul_un8(s, alpha8)) for s, d in zip(src8, dst8))
+
+
+def cairo_solid_over(c, alpha, dst8):
+    """A solid cairo source (r, g, b) doubles at `alpha` stroked or filled at full coverage onto an opaque 8-bit pixel
+    (cairo 1.8: the solid's shorts premultiplied, their top bytes, then pixman's OVER) -> the 8-bit pixel."""
+    a8 = _cairo_short(alpha) >> 8
+    s8 = tuple(_cairo_short(v * alpha) >> 8 for v in c)
+    return tuple(min(255, _mul_un8(d, 255 - a8) + s) for s, d in zip(s8, dst8))
+
+
+def metacity_vertical_gradient_rows(c0_16, c1_16, height):
+    """metacity 2.30 gradient.c meta_gradient_create_vertical (a two-colour <gradient type="vertical">): the GdkColors'
+    top bytes, stepped in 16.16 fixed point, C's truncating division -> the `height` rows' 8-bit pixels (the end colour
+    itself is never reached)."""
+    r0 = [v >> 8 for v in c0_16]
+    rf = [v >> 8 for v in c1_16]
+    acc = [v << 16 for v in r0]
+    d = [int(((f - s) << 16) / height) for s, f in zip(r0, rf)]
+    out = []
+    for _ in range(height):
+        out.append(tuple((a >> 16) & 255 for a in acc))
+        acc = [a + x for a, x in zip(acc, d)]
+    return out
 
 # ------------------------------------------------------------------ the flags' bevel
 FLAG_RULES = ('windows-dialog', 'kde3', 'motif', 'flat')

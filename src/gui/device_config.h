@@ -293,9 +293,9 @@ inline constexpr const char* kDefaultProjectsRepo =
 // device px at 300 % outside the view, 2052 inside it (the arithmetic is at
 // paint_icon_row, paint_handler.cpp, re-derived 2026-10-07 for Open Project
 // in Save's group; the earlier fit ceilings and their succession are git
-// history); under the clearlooks chrome's wider cases and gaps (844 and 808
-// Windows px) up to 275 % only, so its 300 % crops — and past it
-// the overflow rule answers. The
+// history); under the clearlooks chrome's 32-W cases and 12-W gaps (760 and
+// 728 Windows px) up to 304 % (2280 and 2184 at 300 %) — and past either
+// ceiling the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A

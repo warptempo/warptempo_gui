@@ -2,6 +2,7 @@
 #include "target_render.h"
 #include "notifications.h"
 #include "chrome_spec.h"
+#include "clearlooks_paint.h"
 
 #include "gui_font.h"
 #include "folder_overlay.h"
@@ -453,9 +454,11 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
     return ButtonBoxFace{down ? relief_line_px() : 0};
 }
 
-// THE ROSTER'S TOOLBAR CASE — the icon row's and row 8's every button — in
-// the chrome spec's toolbar style (chrome_spec.h's toolbar_style, the one
-// style this painter draws): EXPLORER'S FLAT TOOLBAR (architect
+// THE ROSTER'S TOOLBAR CASE — the icon row's and row 8's every button, and
+// the render player's — in the chrome spec's toolbar style (chrome_spec.h's
+// toolbar_style): GtkReliefNone hands the case to Clearlooks' tool button
+// (paint_cl_tool_button, clearlooks_paint.h, where its faces stand); Flat is
+// EXPLORER'S FLAT TOOLBAR (architect
 // 2026-10-06; comctl32's TBSTYLE_FLAT as ReactOS 0.4.16's toolbar.c draws it
 // — TOOLBAR_DrawFrame, TOOLBAR_DrawPattern, TOOLBAR_DrawImage — and the
 // captures are the law: tmp/reactos-hover.png, reactos-hoverpress.png,
@@ -490,9 +493,13 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
 // rule over DrawEdge's square join (paint_relief_frame).
 ButtonBoxFace paint_toolbar_box(cairo_t* cr, const GuiRect& r, bool lamp,
                                 bool pressed, bool hot, bool enabled) {
-    static_assert(chrome_specs_all([](const ChromeSpec& s) {
-        return s.toolbar_style == GuiToolbarStyle::Flat;
-    }));
+    switch (live_chrome_spec().toolbar_style) {
+    case GuiToolbarStyle::GtkReliefNone:
+        return ButtonBoxFace{
+            paint_cl_tool_button(cr, r, lamp, pressed, hot, enabled)};
+    case GuiToolbarStyle::Flat:
+        break;
+    }
     const int lw = relief_line_px();
     const bool hot_face = hot && enabled && !pressed;
     paint_cell_rect(cr, r, palette().ground);
@@ -508,19 +515,25 @@ ButtonBoxFace paint_toolbar_box(cairo_t* cr, const GuiRect& r, bool lamp,
     return ButtonBoxFace{(pressed || lamp) ? lw : 0};
 }
 
-// THE FLAT TOOLBARS' GROUP SEPARATOR (render.h's icon-row block; architect
-// 2026-10-06, comctl32's TOOLBAR_DrawFlatSeparator): in the group gap that
-// starts at `gap_x` (the spec's toolbar_group_gap_px), an etched vertical
-// pair — the Shadow column the spec's toolbar_separator_x_px in, the
-// Hilight column beside it — over the case [band_y, band_y + band_h) less
-// the spec's toolbar_separator_inset_y_px at each end (win2000 3 in and 2,
-// clearlooks 5 in and 7, the pair in Windows' tones until the painters
-// round). Inert ground for input, like the gap it stands in.
+// THE TOOLBARS' GROUP SEPARATOR (render.h's icon-row block): in the group
+// gap that starts at `gap_x` (the spec's toolbar_group_gap_px), over the case
+// [band_y, band_y + band_h) less the spec's toolbar_separator_inset_y_px at
+// each end, a vertical pair the spec's toolbar_separator_x_px in — FLAT
+// (architect 2026-10-06, comctl32's TOOLBAR_DrawFlatSeparator): the etched
+// pair, a Shadow column and a Hilight column beside it, 3 in and 2 from
+// each end; GtkReliefNone: Clearlooks' gummy separator, a shade[3] column
+// and its 1.3 beside it, 5 in and 6 from each end
+// (paint_cl_toolbar_separator). Inert ground for input, like the gap it
+// stands in.
 void paint_toolbar_separator(cairo_t* cr, int gap_x, int band_y, int band_h) {
-    static_assert(chrome_specs_all([](const ChromeSpec& s) {
-        return s.toolbar_style == GuiToolbarStyle::Flat;
-    }));
     const ChromeSpec& spec = live_chrome_spec();
+    switch (spec.toolbar_style) {
+    case GuiToolbarStyle::GtkReliefNone:
+        paint_cl_toolbar_separator(cr, gap_x, band_y, band_h);
+        return;
+    case GuiToolbarStyle::Flat:
+        break;
+    }
     const int inset = scaled_px(spec.toolbar_separator_inset_y_px);
     paint_relief_etched_vline(cr, gap_x + scaled_px(spec.toolbar_separator_x_px),
                               band_y + inset, band_h - 2 * inset);
@@ -1019,9 +1032,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // paint_icon_row, its one statement, re-derived 2026-10-07 for Open Project
 // in Save's group), so neither host reaches the rule at its scale: the
 // tablet's 2304 device px hold the row in both states up to 318 % and the
-// laptop's 1920 up to 268 %. UNDER CLEARLOOKS (844 and 808 Windows px) THE
-// TABLET'S 300 % DOES REACH IT: the row fits there up to 275 % (285 % in
-// the view), the laptop's up to 227 % (239 %).
+// laptop's 1920 up to 268 %. UNDER CLEARLOOKS (760 and 728 Windows px, the
+// 32-W case) neither does either: the tablet's 2304 holds the row up to
+// 304 % (314 % in the view), the laptop's 1920 up to 252 % (262 %).
 constexpr IconRowDef kIconRowViewGroup[] = {
     {RedesignButton::ViewSW, icons::Icon::DocumentExport},
     {RedesignButton::ViewTW, icons::Icon::DocumentImport},
@@ -1110,7 +1123,7 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // measured pair that could drift. THE PAD IS THE CHROME SPEC'S
 // (tooltip_pad_px, 2026-10-07): clearlooks' 4, the "tooltips" style's
 // xthickness / ythickness (clearlooks_draw_tooltip, report CL1 §3.8), a
-// one-line box 1 + 4 + 17 + 4 + 1 = 27; WIN2000'S 2 (architect 2026-10-06,
+// one-line box 1 + 4 + 13 + 4 + 1 = 23 at the base's cell; WIN2000'S 2 (architect 2026-10-06,
 // Views on tmp/reactos-tooltips.png): the capture's one-line box is 19 rows,
 // 1 + 2 + 13 + 2 + 1 — the black line, two rows of face, the 13-row cell,
 // two rows, the line — and two face columns stand between the left line and
@@ -1345,8 +1358,8 @@ constexpr int kCaptionGlyphCellPx = 9;
 constexpr int kCaptionGlyphSeatXPx = 3;
 constexpr int kCaptionGlyphSeatYPx = 2;
 // The cell fits every vocabulary's caption button (chrome_spec.h's
-// caption_button_* fields; clearlooks' 20 x 20 holds Windows' glyphs until
-// the painters round draws metacity's).
+// caption_button_* fields — clearlooks' 16 x 16 too, though its buttons
+// draw metacity's glyphs, paint_cl_caption_button).
 static_assert(chrome_specs_all([](const ChromeSpec& s) {
     return kCaptionGlyphSeatXPx + kCaptionGlyphCellPx <= s.caption_button_w_px &&
            kCaptionGlyphSeatYPx + kCaptionGlyphCellPx <= s.caption_button_h_px;
@@ -1457,17 +1470,25 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
 
     // THE GROUND: the active roles while the window has the focus, the
     // inactive ones without it (GuiPlatform::caption_active — always active
-    // on the tablet), through the one gradient painter.
+    // on the tablet), through the one gradient painter — UNDER CLEARLOOKS
+    // metacity's maximised bevel, focused or not (paint_cl_caption_band).
     const GuiPalette& pal = palette();
     const bool active = gui.caption_active();
-    paint_caption_gradient(cr, row,
-                           active ? pal.caption_active : pal.caption_inactive,
-                           active ? pal.caption_active_gradient
-                                  : pal.caption_inactive_gradient);
+    const bool clearlooks =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    if (clearlooks)
+        paint_cl_caption_band(cr, row, active);
+    else
+        paint_caption_gradient(cr, row,
+                               active ? pal.caption_active
+                                      : pal.caption_inactive,
+                               active ? pal.caption_active_gradient
+                                      : pal.caption_inactive_gradient);
 
-    // THE APP'S ICON at the spec's seat ((2, 1) under win2000, (4, 4) under
-    // clearlooks), 16 x 16: the set's AppIcon (icons.h), no case, at the
-    // caption's own placement.
+    // THE APP'S ICON at the spec's seat ((2, 1) under win2000, (2, 2) under
+    // clearlooks — metacity's menu button, the icon filling its 16 x 16),
+    // 16 x 16: the set's AppIcon (icons.h), no case, at the caption's own
+    // placement.
     const ChromeSpec& spec = live_chrome_spec();
     icons::draw(cr, icons::Icon::AppIcon,
                 static_cast<double>(row.x + scaled_px(spec.caption_icon_x_px)),
@@ -1480,17 +1501,25 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
-    // piece is open. THE BOLD FACE (gui_font.h: Tahoma Bold) through the
-    // shaping chokepoint, its cap band centred in the lane — Tahoma Bold's
-    // 8-row cap on rows 5..12 of the 18 at 100 %, ReactOS's own seat on its
-    // captures (2026-10-06); DejaVu Sans Bold's 10-row cap on rows 7..16 of
-    // the 24, the 17-row cell at metacity's y 4 (render.h's caption block) —
-    // in the caption's text role. TOO LONG FOR THE ROOM — the pen at the
-    // spec's caption_title_x_px to the spec's button inset short of Minimise
-    // — it is CUT AT A
-    // CODEPOINT and ends in Windows' "..." (DrawText's end ellipsis), the
-    // longest prefix whose own run and the ellipsis's fit; a room too narrow
-    // for even the ellipsis paints no title.
+    // piece is open. THE BOLD FACE (gui_font.h: Tahoma Bold, DejaVu Sans
+    // Bold under clearlooks) through the shaping chokepoint, its cap band
+    // centred in the lane — Tahoma Bold's 8-row cap on rows 5..12 of the 18
+    // at 100 %, ReactOS's own seat on its captures (2026-10-06); DejaVu Sans
+    // Bold's 8-row cap on rows 6..13 of the 20, the 13-row cell at
+    // metacity's title_border.top 4 (render.h's caption block). THE ROOM
+    // runs from the spec's caption_title_x_px to its caption_title_trail_px
+    // short of Minimise. WIN2000: the title at the room's left, in the
+    // caption's text role. CLEARLOOKS: metacity's title_text draw_ops —
+    // CENTRED in the room (x = (3 `max` (room − title)) / 2 focused, 4
+    // `max` (room − title) / 2 unfocused: one px apart only where the title
+    // nearly fills it), focused white over FOUR copies in shade (sel, 0.7)
+    // one W px down, right, left and up, unfocused one copy in blend (fg,
+    // bg, 0.45) and nothing under it (the theme's (+1, +1) copy is
+    // commented out). TOO LONG FOR THE ROOM it is CUT AT A CODEPOINT and
+    // ends in Windows' "..." (DrawText's end ellipsis; Pango's end
+    // ellipsizing under metacity alike), the longest prefix whose own run
+    // and the ellipsis's fit; a room too narrow for even the ellipsis paints
+    // no title.
     const GuiFont font = gui_font(GuiFace::Bold);
     const std::string title = app.project_name.empty()
                                   ? std::string("Warptempo")
@@ -1498,14 +1527,43 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     const int title_x = row.x + scaled_px(spec.caption_title_x_px);
     const double room = static_cast<double>(
         rects[static_cast<size_t>(GuiCaptionButton::Minimize)].x -
-        scaled_px(spec.caption_button_inset_px) - title_x);
+        scaled_px(spec.caption_title_trail_px) - title_x);
     const double baseline = redesign_baseline(
         font, static_cast<double>(row.y), static_cast<double>(row.h));
-    set_palette_source(cr, active ? pal.caption_active_text
-                                  : pal.caption_inactive_text);
+    // One title run at the room's pen (win2000) or centred in it with
+    // metacity's copies (clearlooks), the ellipsis after it when cut.
+    const auto show_title = [&](const text_shape::ShapedRun& head,
+                                const text_shape::ShapedRun* tail) {
+        const double w = head.width_px + (tail ? tail->width_px : 0.0);
+        double x = title_x;
+        if (clearlooks) {
+            x += active ? std::floor(std::max(scaled_px(3) * 1.0, room - w) / 2)
+                        : std::max(scaled_px(4) * 1.0,
+                                   std::floor((room - w) / 2));
+        }
+        const auto show = [&](double dx, double dy) {
+            text_shape::show_shaped_run(cr, head, x + dx, baseline + dy);
+            if (tail)
+                text_shape::show_shaped_run(cr, *tail, x + head.width_px + dx,
+                                            baseline + dy);
+        };
+        if (clearlooks && active) {
+            const double o = relief_line_px();
+            set_palette_source(cr, pal.cl_title_shadow);
+            show(0, o);
+            show(o, 0);
+            show(-o, 0);
+            show(0, -o);
+        }
+        set_palette_source(cr, !clearlooks ? (active ? pal.caption_active_text
+                                                     : pal.caption_inactive_text)
+                               : active    ? pal.cl_title_text
+                                           : pal.cl_title_unfocused);
+        show(0, 0);
+    };
     text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
     if (run.width_px <= room) {
-        text_shape::show_shaped_run(cr, run, title_x, baseline);
+        show_title(run, nullptr);
     } else {
         const text_shape::ShapedRun ellipsis =
             text_shape::shape_text_run(font, "...");
@@ -1519,11 +1577,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                 font, std::string_view(title).substr(0, cut));
             if (run.width_px + ellipsis.width_px <= room) break;
         }
-        if (ellipsis.width_px <= room) {
-            text_shape::show_shaped_run(cr, run, title_x, baseline);
-            text_shape::show_shaped_run(cr, ellipsis, title_x + run.width_px,
-                                        baseline);
-        }
+        if (ellipsis.width_px <= room) show_title(run, &ellipsis);
     }
 
     // THE THREE BUTTONS, published as painted (AppState::caption_buttons):
@@ -1544,6 +1598,17 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         const bool pushed =
             app.chrome_press.kind == AppState::ChromePress::Kind::Caption &&
             app.chrome_press.index == i && app.chrome_press.inside;
+        if (clearlooks) {
+            // METACITY'S BUTTONS (paint_cl_caption_button): the button_bg
+            // family's box, the glyph unpushed, Restore while maximised.
+            const ClCaptionGlyph g =
+                id == GuiCaptionButton::Minimize ? ClCaptionGlyph::Minimize
+                : id == GuiCaptionButton::Close  ? ClCaptionGlyph::Close
+                : gui.window_maximized()         ? ClCaptionGlyph::Restore
+                                                 : ClCaptionGlyph::Maximize;
+            paint_cl_caption_button(cr, b, g, active, pushed, face.enabled);
+            continue;
+        }
         const ButtonBoxFace box =
             paint_button_box(cr, b, /*lamp=*/false, pushed,
                              ButtonFamily::Toolbar);
@@ -1620,11 +1685,19 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE GROUND IS THE CONTENT GROUND, the icon row's own (architect
     // 2026-10-01: the menu row takes the icon row's ground), one fill over
     // the whole lane. It has one value focused and unfocused, so this row no
-    // longer darkens on the window's focus loss.
-    const GuiColor ground = palette().ground;
-    set_palette_source(cr, ground);
-    cairo_rectangle(cr, row.x, row.y, row.w, row.h);
-    cairo_fill(cr);
+    // longer darkens on the window's focus loss. UNDER CLEARLOOKS the lane
+    // is GtkMenuBar's own ground, menubarstyle 2's ramp and its shade[3]
+    // last row (paint_cl_menubar), focused or not alike.
+    const bool clearlooks =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    if (clearlooks) {
+        paint_cl_menubar(cr, row);
+    } else {
+        const GuiColor ground = palette().ground;
+        set_palette_source(cr, ground);
+        cairo_rectangle(cr, row.x, row.y, row.w, row.h);
+        cairo_fill(cr);
+    }
 
     // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED
     // from the one ShapedRun, so a button's width and its glyphs come from the
@@ -1655,8 +1728,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // line takes line_baseline from there. (redesign_baseline's cap-centring,
     // which every other chrome box keeps, would floor this row's 5.5 to 5 —
     // a plain menu.c bar's row, the head of the menu row's pads.)
-    // CLEARLOOKS, the same expression: GtkMenuItem's 23 rows round the
-    // 17-row cell stand it at (23 − 17) / 2 = 3, the menu item's ythickness,
+    // CLEARLOOKS, the same expression: GtkMenuItem's 19 rows round the
+    // 13-row cell stand it at (19 − 13) / 2 = 3, the menu item's ythickness,
     // so the cell's top is the bar's row 1 + 3 = 4 (report CL1 §3.2) — one
     // rule for both, no field.
     const GuiFaceMetrics& band_face = gui_face_metrics(GuiFace::Body);
@@ -1714,8 +1787,15 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         const bool open_anchor =
             app.dropdown.open() &&
             def.id == dropdown_anchor_button(app.dropdown.menu);
+        // UNDER CLEARLOOKS the open title is GTK's prelit menu bar item
+        // (paint_cl_menubar_item: spot[1]'s gummy ramp in its spot[2]
+        // border, the top corners round, one row taller than the item) under
+        // the label in selected_fg, NOT pushed; the dead label is GTK's
+        // insensitive text (show_embossed_run's clearlooks arm).
         int push = 0;
-        if (open_anchor) {
+        if (open_anchor && clearlooks) {
+            paint_cl_menubar_item(cr, row, x, btn_w);
+        } else if (open_anchor) {
             paint_relief_sunken_outer(
                 cr, GuiRect{x, content.y, btn_w, content.h});
             push = scaled_px(kMenuOpenTextShiftPx, kMenuOpenTextShiftPx);
@@ -1727,7 +1807,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         if (!face.enabled && !open_anchor) {
             show_embossed_run(cr, run, label_x, label_y);
         } else {
-            set_palette_source(cr, palette().label);
+            set_palette_source(cr, !clearlooks   ? palette().label
+                                   : open_anchor ? palette().cl_menubaritem_text
+                                                 : palette().cl_menubar_text);
             text_shape::show_shaped_run(cr, run, label_x, label_y);
         }
 
@@ -1937,11 +2019,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // opener's, in any window at least 567 + 148 = 715 Windows px wide
     // outside the view and 536 + 148 = 684 inside it — the tablet's 768
     // Windows px at 300 % holding it with 53 to spare. UNDER CLEARLOOKS
-    // (36-px cases, 12-px gaps) the same walks are 8 + 17·36 + 4·12 = 668 and
-    // 8 + 16·36 + 48 = 632 against a right span of 12 + 36 + 12 + 3·36 + 8 =
-    // 176: 844 and 808 Windows px, which THE TABLET'S 768 AT 300 % DOES NOT
-    // HOLD — the view group's overflow rule covers the left groups' tail
-    // there (kIconRowViewGroup).
+    // (32-px cases, 12-px gaps; architect 2026-10-07, the case at the base's
+    // proportion) the same walks are 8 + 17·32 + 4·12 = 600 and 8 + 16·32 +
+    // 48 = 568 against a right span of 12 + 32 + 12 + 3·32 + 8 = 160: 760
+    // and 728 Windows px, the tablet's 768 holding it with 8 to spare.
     //
     // THE DEVICE WIDTHS are taken off THE PAINTED WALKS, not off a Windows
     // total times the factor: every element is its own scaled_px (render.h's
@@ -1956,12 +2037,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // to 318 % (the view's own up to 337 %), the laptop's 1920 up to 268 %
     // (281 %) — so above the tablet's 300 % cap (architect 2026-10-06) the
     // view group's overflow rule would cover the left groups' tail (2860
-    // wanted at 400 %). UNDER CLEARLOOKS the laptop's 138 % paints 912 +
-    // 241 = 1153 (1104 in the view), and the tablet's 300 % WANTS 2004 + 528
-    // = 2532 of its 2304 (2424 in the view), 228 too many: the ceilings are
-    // 275 % on the tablet (285 % in the view) and 227 % on the laptop (239
-    // %). The row's width succession is in git history; a roster move
-    // restates these numbers.
+    // wanted at 400 %). UNDER CLEARLOOKS the laptop's 138 % paints 844 +
+    // 225 = 1069 (799 + 225 = 1024 in the view), and the tablet's 300 % 1800
+    // + 480 = 2280 of its 2304 (1704 + 480 = 2184 in the view), clearing the
+    // panel by 24: the ceilings are 304 % on the tablet (314 % in the view)
+    // and 252 % on the laptop (262 %). The row's width succession is in git
+    // history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // a case and a NEW GROUP a further gap — under win2000 at the tablet's
@@ -2021,6 +2102,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     set_palette_source(cr, palette().ground);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
+    // UNDER CLEARLOOKS THE BAND IS GtkToolbar's own ground over the ground
+    // fill (paint_cl_toolbar_band: its light first row, the gummy ramp, its
+    // shade[3] last row), the band alone — no etched pair above it and no
+    // foot below it in this instance, so the band is the lane.
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
+        paint_cl_toolbar_band(cr, GuiRect{lane.x,
+                                          lane.y + icon_row_etched_pair_px(),
+                                          lane.w, icon_row_band_h_px()});
 
     // THE ETCHED LINE PAIR, Windows' own menubar/toolbar separator
     // (architect 2026-10-05): under the menu row at the lane's top, spanning
@@ -5506,6 +5595,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
         paint_cell_rect(cr, lane, palette().ground);
         cairo_restore(cr);
     }
+    // UNDER CLEARLOOKS ROW 8 IS A TOOLBAR TOO (the icon row's band painter,
+    // paint_cl_toolbar_band, on the content under the row's one top row of
+    // ground) — while its own tenants stand: a modal yields the lane and
+    // paints on the plain ground (paint_modal_dialog), no toolbar under a
+    // dialog's fields.
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks &&
+        !modal_owns_bottom_row(app))
+        paint_cl_toolbar_band(cr, content);
 
     // THE ROW YIELDS TO THE MODAL (2026-08-13; the fork and the ruling are at
     // modal_owns_bottom_row just above). The ground above is the ROW'S
@@ -5733,9 +5830,10 @@ constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
 // either side.
 // THE BOX'S HEIGHT AND THE TWO LABEL PADS ARE THE CHROME SPEC'S SINCE
 // 2026-10-07 (push_button_box_px, push_button_pad_left_px / _right_px):
-// win2000 the 23 and 7 / 7 below; clearlooks GTK's 29-row button (the
-// 17-row cell + 2 x (xthickness 3 + focus 1 + focus-pad 1 + inner-border
-// 1), the file chooser's Open on his squeeze captures) with 6-px pads. The
+// win2000 the 23 and 7 / 7 below; clearlooks GTK's 25-row button (the
+// 13-row cell + 2 x (xthickness 3 + focus 1 + focus-pad 1 + inner-border
+// 1); the file chooser's Open on his squeeze captures is the same
+// arithmetic's 29 at the 17-row cell) with 6-px pads. The
 // minimum width stays Windows' 75 under both (GTK's dialogs' button box
 // drew its own 85 minimum, a painters-round question).
 // A WORD BUTTON IS WINDOWS' STANDARD PUSH BUTTON, 75 x 23 Windows px
@@ -5761,7 +5859,7 @@ constexpr double kModalBtnMinWidthPx  = 75.0;
 // at row 8's right pad (bottom_row_seats), so its frame paints in the pad.
 // One relief line (relief_line_px), so it fits at every scale by
 // construction: the vertical margin is (36 − 23) / 2 Windows px under
-// win2000 and (40 − 29) / 2 under clearlooks (row 8's content round the
+// win2000 and (36 − 25) / 2 under clearlooks (row 8's content round the
 // spec's push button) against its 1,
 // and the 6-px inter-button gap absorbs one frame from each neighbour.
 constexpr double kModalFocusFramePx   = 1.0;

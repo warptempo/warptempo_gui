@@ -2622,10 +2622,16 @@ void install_palette(const DeviceConfig& cfg) {
 
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline) {
+    // Under clearlooks GTK's own insensitive text, the same two copies in
+    // the engine's two tones (render.h's declaration).
+    const bool clearlooks =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     const double off = static_cast<double>(relief_line_px());
-    set_palette_source(cr, palette().hilight);
+    set_palette_source(cr, clearlooks ? palette().cl_text_insensitive_etch
+                                      : palette().hilight);
     text_shape::show_shaped_run(cr, run, x + off, baseline + off);
-    set_palette_source(cr, palette().shadow);
+    set_palette_source(cr, clearlooks ? palette().cl_text_insensitive
+                                      : palette().shadow);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 

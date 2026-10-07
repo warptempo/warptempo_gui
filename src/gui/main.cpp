@@ -147,17 +147,17 @@ namespace {
 // (every Windows-px length below the live chrome spec's, chrome_spec.h —
 // win2000's figures first, clearlooks' after them, 2026-10-07): THE
 // CAPTION (caption_row_h_px(), the window's own title bar, Windows'
-// 18-px SM_CYCAPTION or metacity's 24, at the window top on both devices —
+// 18-px SM_CYCAPTION or metacity's 20 at the 13-row cell, at the window top on both devices —
 // render.h's caption block), the MENU ROW (menu_row_h_px(), row 1 of the
 // kdenlive redesign, Windows' 19-px menu bar — the anchors' box — plus a
 // one-px row of ground above the content (architect 2026-10-05, Windows'
-// measured 20-px band; its place 2026-10-06), or GtkMenuBar's 1 + 23 + 1,
+// measured 20-px band; its place 2026-10-06), or GtkMenuBar's 1 + 19 + 1,
 // flush under the caption — render.h's menu-row block),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
 // menu row with nothing between, a period menu-bar-plus-toolbar stack
 // folded into one lane — one etched line pair, the 30-px case as the band
 // and 4 px of foot, 36 Windows px whole (architect 2026-10-06), or GTK's
-// 2 + 36 + 2 = 40; render.h's icon-row block — and NO BORDER beyond that foot:
+// 2 + 32 + 2 = 36; render.h's icon-row block — and NO BORDER beyond that foot:
 // the trim lane's own first row is the boundary), then FLEXIBLE GAP 1, then
 // THE CENTERED BLOCK's three: the TRIM lane (trim_lane_h_px(), the
 // miniaturized scroll bar — the dithered track and the window's thumb), the
@@ -248,8 +248,8 @@ namespace {
 // icon lane's etched pair is 2 x relief_line_px(), not scaled_px(2), so it
 // can differ from a naive total at a fractional gui_scale (none of the
 // scales below hit that case). THE TOP STACK IS 125 WINDOWS PX UNDER
-// WIN2000 AND 144 UNDER CLEARLOOKS (render.h's icon-row block). THE WELL'S
-// HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS UNDER WIN2000 AND 885 UNDER
+// WIN2000 AND 128 UNDER CLEARLOOKS (render.h's icon-row block). THE WELL'S
+// HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS UNDER WIN2000 AND 945 UNDER
 // CLEARLOOKS (the rule at centered_leftover_h below). THE WIN2000 STACKS
 // FIRST (the chrome key's round of 2026-10-07 moved none of them — the
 // accessors re-read at 138 and 300 gave every number below again), the
@@ -285,19 +285,20 @@ namespace {
 //   block) and 148 below (144 + its 4-row top row), leftover 792; both
 //   readings UNCLAMPED at 792, both gaps 0 (the rule would want 720 - 500 -
 //   396 = -176) — 72 / 80 / 144 / 0 / 204 / 792 / 0 / 148.
-// THE CLEARLOOKS STACKS (2026-10-07; caption 24 + menu 25 + icon 40 + trim
-// 16 + ruler 17 + marker 22 = 144 Windows px above, row 8's 1 + 2 + 36 + 2
-// = 41 below — the marker lane the 17-row cell's box, the ruler the same
-// 6-row digit's):
-//   1920x1080 AT 138 %: the lanes are 33 caption + 34 menu + 55 icon + 22
-//   trim + 24 ruler + 29 marker = 197 above (122 the caption and the two
-//   toolbar rows, 75 the block) and 56 below, leftover 827. At 364: the
-//   waveform CLAMPED at 502, gap 1 = 92, gap 2 = 233 — 33 / 34 / 55 / 92 /
-//   75 / 502 / 233 / 56. At 0: UNCLAMPED at 827, both gaps 0.
-//   2304x1440 AT 300 %: the lanes are 72 caption + 75 menu + 120 icon + 48
-//   trim + 51 ruler + 66 marker = 432 above (267 and 165) and 123 below,
-//   leftover 885; both readings UNCLAMPED at 885, both gaps 0 — 72 / 75 /
-//   120 / 0 / 165 / 885 / 0 / 123.
+// THE CLEARLOOKS STACKS (2026-10-07, at Windows' proportions — the 13-row
+// cell and the 32-W case, chrome_spec.h's instance; caption 20 + menu 21 +
+// icon 36 + trim 16 + ruler 17 + marker 18 = 128 Windows px above, row 8's
+// 1 + 2 + 32 + 2 = 37 below — the marker lane and the ruler the base's own,
+// the cells being the same):
+//   1920x1080 AT 138 %: the lanes are 28 caption + 28 menu + 51 icon + 22
+//   trim + 24 ruler + 23 marker = 176 above (107 the caption and the two
+//   toolbar rows, 69 the block) and 52 below, leftover 852. At 364: the
+//   waveform CLAMPED at 502, gap 1 = 113, gap 2 = 237 — 28 / 28 / 51 / 113 /
+//   69 / 502 / 237 / 52. At 0: UNCLAMPED at 852, both gaps 0.
+//   2304x1440 AT 300 %: the lanes are 60 caption + 63 menu + 108 icon + 48
+//   trim + 51 ruler + 54 marker = 384 above (231 and 153) and 111 below,
+//   leftover 945; both readings UNCLAMPED at 945, both gaps 0 — 60 / 63 /
+//   108 / 0 / 153 / 945 / 0 / 111.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
 //   exist for; no host runs this geometry), the same at either value:
 //     leftover 380 -> waveform UNCLAMPED at 380, both gaps 0
@@ -372,16 +373,16 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The CAPTION lane is its 18 Windows
-// px whole under win2000, 24 under clearlooks (render.h's caption block: the
+// px whole under win2000, 20 under clearlooks (render.h's caption block: the
 // title bar's ground, its icon, its title and its three buttons inside it),
 // the MENU lane is its anchors' 19 Windows px PLUS a one-px row of ground
 // (architect 2026-10-05, Windows' measured 20-px menu band — render.h's
-// menu-row block, the row above the content; clearlooks' 23 between one row
+// menu-row block, the row above the content; clearlooks' 19 between one row
 // above and one below; the anchors and the dropdown's hang point read the
 // lane, the label's seat alone reads the content between the rows),
 // the ICON lane is a period menu-bar-plus-toolbar stack folded into one row
 // — one etched line pair, the 30-px case as the band and 4 Windows px of
-// foot, 36 whole (architect 2026-10-06; clearlooks' 2 + 36 + 2, no pair, no
+// foot, 36 whole (architect 2026-10-06; clearlooks' 2 + 32 + 2, no pair, no
 // foot): render.h's icon-row block, icon_row_h_px; NO border of its own
 // beyond that foot — the trim lane's own first row is still the boundary
 // under it — and the UNIFIED BOTTOM ROW is the same case on the row's own
@@ -451,10 +452,10 @@ int strip_total_h(bool top_strip) {
 // the well takes what they leave, no lane squeezed to hold a number. On the
 // tablet's 2304 x 1440 at gui_scale 300 the win2000 lanes leave 1440 − 375 −
 // 111 = 954 device rows (318 Windows px; the ReactOS base settled on
-// mock_TF1, 2026-10-06), the clearlooks lanes 1440 − 432 − 123 = 885 (295
-// Windows px: 19 W more above, GNOME's caption, menu bar, toolbar and the
-// 17-row cell's marker lane, and 4 W more below; report CL1 §3.9, his
-// squeeze captures' 24 / 25 / 40). A THEME moves no lane: the 954 / 885
+// mock_TF1, 2026-10-06), the clearlooks lanes 1440 − 384 − 111 = 945 (315
+// Windows px: 3 W more above, metacity's caption, GtkMenuBar and the
+// toolbar band at the base's 13-row cell and a 32-W case, and the same 37
+// below; chrome_spec.h's instance). A THEME moves no lane: the 954 / 945
 // pair holds under every theme of each chrome. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
