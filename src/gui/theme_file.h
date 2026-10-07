@@ -10,27 +10,24 @@
 #include <string>
 #include <string_view>
 
-// THE THEME FILES (architect 2026-10-04) — every colour the GUI paints, as
-// ROLES, and where a theme other than the one built-in comes from.
+// THE THEME FILES (architect 2026-10-04) — every color the CHROME paints, as
+// ROLES, and where a theme other than the one built-in comes from. THE
+// PROGRAM'S COLORS ARE NO THEME'S since 2026-10-07: the waveform, the flags,
+// the playhead's stem and the scanner are THE PALETTE's, a file type of its
+// own (palette_file.h, whose head owns the rule that parts the two).
 //
-// A THEME IS A VALUE FOR EVERY ROLE. The roles are the role table below —
-// THE ONE ENUMERATION: its name (what a theme file spells), the GuiPalette
-// field it fills (render.h, whose palette block owns what each role paints)
-// and THE BUILT-IN's value. The chrome's roles are Windows 2000 Standard's
-// recorded chrome (architect 2026-10-06, the Windows 2000 pivot; the catalog
-// entry `windows-2000-standard`'s bytes, its setup hive's Control
+// A THEME IS A VALUE FOR EVERY CHROME ROLE. The roles are the role table
+// below — THE ONE ENUMERATION of the chrome's: its name (what a theme file
+// spells), the GuiPalette field it fills (render.h, whose palette block owns
+// what each role paints) and THE BUILT-IN's value. The roles are Windows 2000
+// Standard's recorded chrome (architect 2026-10-06, the Windows 2000 pivot;
+// the catalog entry `windows-2000-standard`'s bytes, its setup hive's Control
 // Panel\Colors: ButtonFace, ButtonText, the relief quartet, Hilight /
 // HilightText, Window / WindowText; Windows' status bar's ButtonFace /
 // ButtonText for the clock panel; Windows' InfoWindow / InfoText and its
 // tooltip's black border for the cards; ActiveTitle / GradientActiveTitle /
 // TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText for
-// the caption), and the program's roles are the waveform's canvas, ink and
-// outline from Windows' twenty solid colours, and each flag kind a face, a
-// selected face and a selected label of its own under the one white resting
-// label — the authoring kinds' pairs WINDOWS 2000'S OWN SCHEME BYTES, the
-// history's two Windows' true dark / bright pairs (architect 2026-10-07; the
-// role table's program block) — and the flags' one outline, the scheme's
-// DkShadow (architect 2026-10-07 ~05:30).
+// the caption), then the generated Clearlooks block.
 //
 // ONE THEME IS BUILT IN, compiled: `windows-2000-standard` (kBuiltinThemeKey),
 // the role table's values — Windows 2000's own "Windows Standard" scheme, the
@@ -53,18 +50,19 @@
 // read; neither is a directory or any other non-regular entry.
 //
 // THE BUNDLED FILES ARE COPIED IN AT EVERY LAUNCH (architect 2026-10-05):
-// every theme other than the built-in — the imported catalog, `warptempo`
-// and his colour-picker presets — SHIPS WITH THE
-// PROGRAM as a `.theme` file (generated into the repository's
+// every theme other than the built-in — the imported catalog (`warptempo`
+// and his color-picker presets were dropped 2026-10-07: "it'll still be in
+// the git history") — SHIPS WITH THE PROGRAM as a `.theme` file (generated into the repository's
 // `assets/themes/` by tools/theme_catalog/gen_theme_files.py, which states
 // what each file names), and each launch, BEFORE THE ONE READ, writes every
 // bundled file into the themes folder (copy_in_bundled_themes, gui_main),
 // creating the folder, overwriting a file of the same name: THE BUNDLE WINS
 // FOR ITS OWN NAMES, so a bundled name edited by hand is overwritten at the
 // next launch, and HIS OWN FILES TAKE OTHER NAMES — a file of any other name
-// is never touched — SAVE ONE: a file bearing the BUILT-IN'S name is deleted
-// by the copy-in with one advisory line, the app's own former copy left by a
-// rename of the built-in (the reason at copy_in_bundled_themes,
+// is never touched — SAVE THE APP'S OWN FORMER COPIES: a file bearing the
+// BUILT-IN'S name, or the name of a file an earlier bundle carried and this
+// one does not (kRetiredBundledThemeKeys below), is deleted by the copy-in
+// with one advisory line (the reason at copy_in_bundled_themes,
 // theme_file.cpp). Then the folder is read once as above, so a bundled file
 // is read exactly like his own. THE SOURCE IS PER DEVICE, behind the seam
 // (GuiPlatform::bundled_theme_files): on the laptop the repository's
@@ -78,24 +76,23 @@
 // warptempo_settings::scan_key_value_file: split at the first '=', no blank
 // line, no comment, no whitespace tolerance, no duplicate), each role a name
 // of the role table and each value THE ONE COLOUR GRAMMAR (theme_colour_word,
-// below). A FILE MAY NAME ONLY SOME ROLES, in any order: every role it does
-// not name takes the built-in's value — WITH TWO RULES OF THE FILE'S OWN.
-// THE FLAT CAPTION (architect 2026-10-05): a file that names a caption's START
+// below). A PROGRAM ROLE IS NO ROLE HERE: a theme file naming one (the
+// palette's fourteen, palette_file.h, or a role retired with the split — the
+// flag outline, the four selected labels) names an unknown role, the
+// launch's hard fail (architect 2026-10-07). A FILE MAY NAME ONLY SOME
+// ROLES, in any order: every role it does not name takes the built-in's
+// value — WITH ONE RULE OF THE FILE'S OWN. THE FLAT CAPTION (architect
+// 2026-10-05): a file that names a caption's START
 // (`caption_active` / `caption_inactive`) and not its GRADIENT END
 // (`caption_active_gradient` / `caption_inactive_gradient`) gets the end
 // EQUAL TO THE START — a flat caption, as a theme recording no gradient
 // (Windows 95's, Plus!'s, KDE 3's, CDE's) drew one — never the built-in's end
 // under the file's start, which would be a gradient no one recorded. The
 // pairs are kGuiThemeCaptionGradients below and the rule is applied once, at
-// the file's read (read_theme_file). THE FLAG OUTLINE FOLLOWS DkShadow
-// (architect 2026-10-07 ~05:30, the outline made a role of its own):
-// a file that names `dk_shadow` and not `flag_outline` gets the outline
-// EQUAL TO ITS DkShadow — the outline its own quartet gives a theme that
-// records none, never the built-in's 404040 under another theme's quartet —
-// so every bundled file but `clearlooks` (which names its own) outlines its
-// flags in its DkShadow. The pair is kGuiThemeFollowers below, applied at the
-// same read. The stem is the theme's KEY, under the key grammar
-// (is_theme_key_spelling).
+// the file's read (read_theme_file). (A second rule, THE FLAG OUTLINE
+// following a file's DkShadow, stood 2026-10-07 for a morning and left with
+// the outline role: the outline is the canvas, palette_file.h.) The stem is
+// the theme's KEY, under the key grammar (is_theme_key_spelling).
 //
 // EVERY VIOLATION IS THE LAUNCH'S FIRST-ERROR HARD FAIL (NO BACKSTOPS FOR
 // ADVERSARIAL USE: the files are the user's own, so a violation is a hand
@@ -116,6 +113,20 @@ inline constexpr const char* kBuiltinThemeKey = "windows-2000-standard";
 // static_assert on kChromeSpecWin2000.default_theme), so a config naming
 // neither key always resolves to a compiled theme.
 
+// THE APP'S OWN FORMER BUNDLED NAMES (planner, 2026-10-07): the keys an
+// earlier bundle carried and this one does not — `warptempo` and his two
+// picker presets, dropped with the program roles they named (a file of
+// theirs left in the folder would be the read's hard fail on every device
+// that ran the earlier build). The copy-in deletes each with one advisory
+// line, as it deletes a file of the built-in's name (copy_in_bundled_themes,
+// theme_file.cpp); the bundle was always their only writer, so no file of
+// his is lost.
+inline constexpr const char* kRetiredBundledThemeKeys[] = {
+    "warptempo",
+    "warptempo-preset-1",
+    "warptempo-preset-2",
+};
+
 // THE THEME THE PALETTE INSTALLS (architect 2026-10-07): the device config's
 // `theme` as written, or — EMPTY, no `theme` line — THE LIVE CHROME'S OWN
 // (chrome_spec.h's default_theme of live_chrome_spec(): win2000's
@@ -129,15 +140,15 @@ inline constexpr const char* kBuiltinThemeKey = "windows-2000-standard";
 // resolved key always passes is_theme_key (theme_words asserts it).
 std::string_view effective_theme_key(std::string_view theme);
 
-// THE ROLE TABLE — THE ONE ENUMERATION (architect 2026-10-04), in GuiPalette's
-// order: the chrome's twenty-one (the caption's six since 2026-10-05), then the
-// program's nineteen (the four selected labels and the flag outline since
-// 2026-10-07), then the
-// generated Clearlooks block (2026-10-07; its count is the include's,
-// kGuiThemeRoleCount the whole table's). The reader's arm,
-// the built-in, the files' fill and install_palette (render.cpp) all walk it,
-// so a role cannot be read and not painted. What each role paints is
-// render.h's palette block (THE MAPPING).
+// THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
+// 2026-10-04), in GuiPalette's order: the Windows chrome's twenty-one (the
+// caption's six since 2026-10-05), then the generated Clearlooks block
+// (2026-10-07; its count is the include's, kGuiThemeRoleCount the whole
+// table's). The program's fourteen left for the palette's own table
+// 2026-10-07 (kGuiPaletteRoles, palette_file.h). The reader's arm, the
+// built-in, the files' fill and install_palette (render.cpp) all walk it, so
+// a role cannot be read and not painted. What each role paints is render.h's
+// palette block (THE MAPPING).
 struct GuiThemeRole {
     const char*          name;
     GuiColor GuiPalette::* member;
@@ -174,63 +185,6 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"caption_inactive",          &GuiPalette::caption_inactive,          0x808080},
     {"caption_inactive_gradient", &GuiPalette::caption_inactive_gradient, 0xC0C0C0},
     {"caption_inactive_text",     &GuiPalette::caption_inactive_text,     0xD4D0C8},
-    // THE PROGRAM'S OWN ELEMENTS. THE WAVEFORM is Windows' twenty solid
-    // colours: the canvas black under Sound Recorder's lime trace (measured
-    // on his Windows 98 screenshot 2026-10-05), the lit outline green.
-    // THE FLAG PAIRS ARE WINDOWS 2000'S SCHEME BYTES (architect 2026-10-07:
-    // "coherence with the theme — Windows 2000 is the default"; "how well the
-    // selected version shows up on the flag"), each authoring kind a face and
-    // its brighter accent as Microsoft's own schemes paired them — WARP the
-    // Standard scheme's ActiveTitle 0A246A selected to its Background
-    // 3A6EA5; PHASE RESET the Teal scheme's ActiveTitle 008080 selected to its
-    // GradientActiveTitle 00CCD8 — and the history's two kept as Windows' true
-    // dark / bright pairs of the sixteen, ADDED green 008000 / lime 00FF00 and
-    // REMOVED maroon 800000 / red FF0000, which the invalid flag wears too
-    // (render.h's marker-lane paragraph).
-    // EVERY RESTING LABEL WHITE, the ONE `flag_label` (so a
-    // file that names flag faces and no labels gets white at rest); THE
-    // SELECTED LABEL PER KIND (architect 2026-10-07, replacing the one
-    // selected label of 2026-10-04): white on the warp blue, BLACK on the
-    // three bright accents, where white would not show.
-    // THE FLAG OUTLINE (architect 2026-10-07 ~05:30: "the stem looks like it
-    // has a lip around it because the border is so light compared to the
-    // well and the tick" — Clearlooks' DkShadow is lighter than its well): a
-    // ROLE OF ITS OWN, every flag box's one-px outline — the open flag
-    // editor's included — and its stem's flanks (render.h's marker-lane
-    // paragraph).
-    // UNDER CLEARLOOKS THE OUTLINE IS THE CANVAS'S COLOUR, so the stem's
-    // flanks vanish where they enter the well (architect 2026-10-07 ~06:10:
-    // "otherwise when it reaches the canvas it's noticeable"; both black,
-    // the clearlooks theme file). The built-in's value is its DkShadow byte,
-    // 404040 — its canvas is black too, but Windows' flags keep their
-    // DkShadow ring, so the win2000 flags are pixel-identical — and a file
-    // naming its DkShadow and not this takes its DkShadow (the head's rule).
-    // THE PLAYHEAD'S STEM AND THE SCANNER BOTH WHITE (architect 2026-10-07:
-    // "let's go back to a white scanner") and still TWO roles, so a file may
-    // part them — the head is no role at all, WordPad's ruler marker painted
-    // in the chrome's own label / hilight / shadow / ground (render.h).
-    // A FILE NAMING THE RETIRED `flag_label_selected` (the one selected label
-    // until 2026-10-07) is an unknown role, the launch's first-error hard
-    // fail — the only such file a hand-authored one: none is bundled.
-    {"waveform_canvas",            &GuiPalette::waveform_canvas,            0x000000},
-    {"waveform_ink",               &GuiPalette::waveform_ink,               0x00FF00},
-    {"waveform_outline",           &GuiPalette::waveform_outline,           0x008000},
-    {"warp_flag",                  &GuiPalette::warp_flag,                  0x0A246A},
-    {"warp_flag_selected",         &GuiPalette::warp_flag_selected,         0x3A6EA5},
-    {"phase_reset_flag",           &GuiPalette::phase_reset_flag,           0x008080},
-    {"phase_reset_flag_selected",  &GuiPalette::phase_reset_flag_selected,  0x00CCD8},
-    {"added_flag",                 &GuiPalette::added_flag,                 0x008000},
-    {"added_flag_selected",        &GuiPalette::added_flag_selected,        0x00FF00},
-    {"removed_flag",               &GuiPalette::removed_flag,               0x800000},
-    {"removed_flag_selected",      &GuiPalette::removed_flag_selected,      0xFF0000},
-    {"flag_label",                 &GuiPalette::flag_label,                 0xFFFFFF},
-    {"warp_label_selected",        &GuiPalette::warp_label_selected,        0xFFFFFF},
-    {"phase_reset_label_selected", &GuiPalette::phase_reset_label_selected, 0x000000},
-    {"added_label_selected",       &GuiPalette::added_label_selected,       0x000000},
-    {"removed_label_selected",     &GuiPalette::removed_label_selected,     0x000000},
-    {"flag_outline",               &GuiPalette::flag_outline,               0x404040},
-    {"playhead_stem",              &GuiPalette::playhead_stem,              0xFFFFFF},
-    {"scanner",                    &GuiPalette::scanner,                    0xFFFFFF},
     // THE CLEARLOOKS BLOCK (architect 2026-10-07, the painters round): the
     // Clearlooks painters' tones (clearlooks_paint.h), GENERATED by
     // tools/theme_catalog/gen_theme_files.py from build.py's engine tones —
@@ -240,8 +194,7 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // read a cl_ role, and a theme file names them or takes these bytes, so
     // a Windows theme file worn under chrome=clearlooks paints the
     // Clearlooks chrome in Clearlooks' colours round that file's ground,
-    // label, fields, cards and program roles — legal, and it looks like what
-    // it is.
+    // label, fields and cards — legal, and it looks like what it is.
 #include "theme_clearlooks_roles.inc"
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);
@@ -274,19 +227,8 @@ inline constexpr GuiThemeGradientPair kGuiThemeCaptionGradients[] = {
      theme_role_index("caption_inactive_gradient")},
 };
 
-// THE FOLLOWERS — the grammar's other rule of its own (the head): a file
-// naming the LEADER and not the FOLLOWER gets the follower equal to the
-// leader — the flag outline its DkShadow (architect 2026-10-07 ~05:30).
-struct GuiThemeFollower {
-    std::size_t leader;
-    std::size_t follower;
-};
-inline constexpr GuiThemeFollower kGuiThemeFollowers[] = {
-    {theme_role_index("dk_shadow"), theme_role_index("flag_outline")},
-};
-
 // THE ONE COLOUR GRAMMAR (architect 2026-10-03; every role's since
-// 2026-10-04): `#` and six hexadecimal digits, either case, OR one of
+// 2026-10-04, the palette files' too since 2026-10-07, palette_file.h): `#` and six hexadecimal digits, either case, OR one of
 // WINDOWS' TWENTY ALWAYS-SOLID COLOURS by name, lowercase — the colours a
 // 256-colour display's system palette reserved, so every program of the era
 // could count on them drawing solid:

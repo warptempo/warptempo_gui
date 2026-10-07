@@ -1277,7 +1277,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // the INVALID face — the REMOVED pair's `removed_flag` under the one
     // `flag_label` and a stem in the face (resolve_flag_face, render.cpp;
     // architect 2026-10-04, again 2026-10-07), its brighter
-    // `removed_flag_selected` under `removed_label_selected` marking a
+    // `removed_flag_selected` under the same `flag_label` marking a
     // selected one; DISABLED wins over it, a disabled invalid marker painting
     // the disabled face.
     // Read from the memoized caches (keyed on the respective store

@@ -89,7 +89,7 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // one `flag_label`, the stem in the face — render.h's palette block, architect
 // 2026-10-04, again 2026-10-07), selection being that pair's own selected face
 // (`removed_flag_selected`, the bright red: "bright red means selected and
-// error") under its own selected label (`removed_label_selected`), so the cue
+// error") under the same one `flag_label`, so the cue
 // is never masked. `red` is a PAINT cue with two meanings: the
 // render normalizes this marker, OR this marker shares its frame with another.
 // Three contributors, all computed SILENTLY from the display path (no resolver

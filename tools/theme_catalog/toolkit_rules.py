@@ -413,7 +413,7 @@ FLAG_RULES = ('windows-dialog', 'kde3', 'motif', 'flat')
 def flag_bevel(rule, face):
     """A flag's ONE-LINE BEVEL (architect 2026-10-03, late): (light, dark) for a 3D face of colour `face` (8-bit) by
     its theme family's own rule, `rule` being a catalog entry's flag_rule — {"id": "windows-dialog"} (the families
-    windows, windows-plus and warptempo: windows_dialog's Hilight and Shadow, Windows' BDR_RAISEDINNER pair),
+    windows and windows-plus: windows_dialog's Hilight and Shadow, Windows' BDR_RAISEDINNER pair),
     {"id": "kde3", "contrast": c} (kde3_palette's light and dark at the scheme's contrast), {"id": "motif"} (Motif's
     top and bottom shadow, motif_pair_8bit), {"id": "flat"} (the family gnome2: no bevel, the face on both sides --
     Clearlooks draws no one-line bevel round a raised face: clearlooks_gummy_draw_button, clearlooks_draw_gummy.c, fills

@@ -3446,6 +3446,10 @@ struct SettingsPopupItem {
 // same editor, refusal and recall, its label its key's name in Title Case;
 // its commit applies at the next launch and says so on a card
 // (commit_device_setting).
+//
+// `palette` (2026-10-07, the eighth device key) HAS NO ROW: the in-app
+// picker's list of palettes is its chooser (the next brief), so the device
+// half stays these six.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Title",               "title",         false},
     {"Notes",               "notes",         false},

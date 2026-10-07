@@ -5,31 +5,24 @@
 # rule named), and
 # its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
-# THE ONE EXCEPTION IS THE PROGRAM'S OWN FAMILY, `warptempo`, and it derives nothing either: `warptempo` is THE
-# ARCHITECT'S PICK, CHOSEN, NOT IMPORTED (chosen_entry: his ruling of 2026-10-03 on the colour loop's mock sets, its bytes his, recorded as ruled),
-# and so is each `warptempo-preset-<n>`, THE ARCHITECT'S PRESET <n> ON THE COLOUR PICKER (preset_entries, architect
-# 2026-10-04: his saved looks carried into the product, the picker's chrome rule applied here, at generation, so the
-# app derives nothing).
+# THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's colors are the palette's, compiled in
+# (src/gui/palette_file.h), and the program's own family of chosen entries (`warptempo` and his picker presets) left
+# the catalog the same day ("it'll still be in the git history").
 # NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
 # schemes no independent source records as Windows', the usability schemes, the KDE schemes KDE 3.5 did not ship, and
 # the role-identical duplicates. The
 # checks run before the write; the last lines report each family: entries, corroborated, sources.
 #
 #   python3 tools/theme_catalog/build.py
-#   python3 tools/theme_catalog/build.py --presets-only
+#   python3 tools/theme_catalog/build.py --check-only
 #
-# --presets-only (architect 2026-10-04) is the road for a host that cannot reach the pinned sources (the cloud: the
-# Trinity mirror is outside its egress): it re-derives only what needs no fetched file -- the program's own family
-# (the chosen entry, recomputed and asserted equal to the committed one, and the preset entries from presets.json) and
-# the header -- and carries every imported entry and the not-imported record from the committed catalog.json byte for
-# byte; the checks run on the whole. The full run writes the same bytes where the
-# sources are at hand (both roads build the document through one function, document()).
+# --check-only (2026-10-07, replacing the retired --presets-only) is the road for a host that cannot reach the pinned
+# sources (the cloud: the Trinity mirror is outside its egress; the squeeze image off the laptop): it runs the checks
+# on the committed catalog.json and writes nothing.
 import hashlib, json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from sources import SOURCES, REPO, local_path, provenance, LOCAL_SOURCES, local_file, local_provenance
-sys.path.insert(0, os.path.join(REPO, 'tools', 'palette'))
-import colour as CL      # the picker's chrome rule (windows95_chrome), the one the picker paints with
 from parse_windows import parse_hivedef, parse_hive_colors, parse_hive_schemes, parse_theme
 from parse_kde import parse_kcsrc
 from parse_cde import parse_dp
@@ -38,16 +31,16 @@ import toolkit_rules as T
 from roles import ROLES, MAPPING, map_roles
 
 OUT = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
-FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'gnome2', 'warptempo')
-# a key's prefix per family; GNOME 2's keys are the GTK theme's own name, lowercase (`clearlooks`), as the program's
-# own family's are its own (architect 2026-10-07: the bundled clearlooks.theme)
+FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'gnome2')
+# a key's prefix per family; GNOME 2's keys are the GTK theme's own name, lowercase (`clearlooks`; architect
+# 2026-10-07: the bundled clearlooks.theme)
 KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde', 'gnome2': None}
 # THE FLAGS' RULE per family (architect 2026-10-03, late: a flag's one-line bevel is its theme family's own rule on the
 # flag's face, toolkit_rules.flag_bevel): Windows' Appearance dialog for the Windows families and the program's own
 # ("take Windows' rule"), KDE 3's at the scheme's contrast, Motif's for CDE, FLAT for GNOME 2 (Clearlooks draws no
 # one-line bevel round a raised face: toolkit_rules.flag_bevel states why).
-FLAG_RULE = {'windows': 'windows-dialog', 'windows-plus': 'windows-dialog', 'warptempo': 'windows-dialog',
-             'kde3': 'kde3', 'cde': 'motif', 'gnome2': 'flat'}
+FLAG_RULE = {'windows': 'windows-dialog', 'windows-plus': 'windows-dialog', 'kde3': 'kde3', 'cde': 'motif',
+             'gnome2': 'flat'}
 
 # NOT IMPORTED (architect 2026-10-03, late), each group with its reason; build.py asserts every named scheme exists in
 # its source and, for a duplicate, that its roles equal its twin's, so a re-pinned source cannot change the list
@@ -351,7 +344,7 @@ RULES = {
     'windows-dialog': {'name': 'Windows\' Appearance dialog on a 3D face, in shlwapi\'s 240-scale integer HLS: Hilight = the '
                                'lightness halfway to white (the half rounded up), Shadow = two thirds of it (floored), hue and '
                                'saturation kept, 3DLight the face, DkShadow black; read by the flags\' one-line bevel '
-                               '(Hilight top and left, Shadow bottom and right) of the windows, windows-plus and warptempo '
+                               '(Hilight top and left, Shadow bottom and right) of the windows and windows-plus '
                                'families (tools/theme_catalog/toolkit_rules.py windows_dialog, flag_bevel)',
                        'sources': [provenance('wine_rules', 'dlls/shlwapi/ordinal.c')]},
     'kde3': {'name': 'KDE 3 createApplicationPalette over Qt 3\'s integer HSV at the scheme\'s contrast (default 7): '
@@ -433,66 +426,6 @@ GNOME2_DERIVATIONS = {
 }
 
 
-# THE CLEARLOOKS ENTRY'S PROGRAM ROLES (architect 2026-10-07 ~05:30, CL9's question answered: each chrome's theme file
-# names its own program colours, the one built-in staying win2000's): the waveform, the flags, the playhead's stem and
-# the scanner as he picked them on the CL10 sheets (tmp/clearlooks/report_CL10.md) — sheet a's third band (black
-# canvas, bg[SELECTED] the lit outline) and its two flags, the ink the selection blue's 1.3 stop (architect 2026-10-07
-# ~09:00, spot[1] too dark on black: the selected flag's byte); ONE PAIR FOR WARP AND
-# PHASE RESET (a scene shows one column, report CL10 section 4); sheet d's F1 history pair, the GNOME HIG green and red
-# lit by the engine's 1.3; black labels on every face; the flag outline the canvas's own colour (architect 2026-10-07
-# ~06:10: "otherwise when it reaches the canvas it's noticeable"). Each value is (a gtkrc colour-scheme key or a
-# literal byte, a ge_shade_color factor through cairo or None, the provenance), recorded with the entry
-# (program_roles, provenance.rule.program_roles) and named by gen_theme_files.py in clearlooks.theme.
-GNOME2_HIG_GREEN = '#83A67F'   # the GNOME HIG's palette green (report CL10 section 2)
-GNOME2_HIG_RED = '#C1665A'     # the GNOME HIG's palette red (report CL10 section 2)
-GNOME2_PROGRAM_ROLES = {
-    'waveform_canvas': ('#000000', None, 'black, his pick (CL10a band 3: the canvas under the accent ink)'),
-    'waveform_ink': ('selected_bg_color', 1.3, 'the engine\'s 1.3 stop of bg[SELECTED], the selected flag\'s byte: '
-                                              'spot[1] read too dark on the black canvas (architect 2026-10-07 '
-                                              '~09:00)'),
-    'waveform_outline': ('selected_bg_color', None, 'bg[SELECTED], the lit outline (CL10a band 3)'),
-    'warp_flag': ('selected_bg_color', None, 'bg[SELECTED], the flag at rest (CL10a)'),
-    'warp_flag_selected': ('selected_bg_color', 1.3, 'the flag selected, the engine\'s 1.3 stop (CL10a)'),
-    'phase_reset_flag': ('selected_bg_color', None, 'the warp flag\'s byte: one pair for both kinds (CL10 section 4)'),
-    'phase_reset_flag_selected': ('selected_bg_color', 1.3, 'the warp flag\'s selected byte (one pair)'),
-    'added_flag': (GNOME2_HIG_GREEN, None, 'the GNOME HIG green (CL10d F1)'),
-    'added_flag_selected': (GNOME2_HIG_GREEN, 1.3, 'the HIG green lit by the engine\'s 1.3 (CL10d F1)'),
-    'removed_flag': (GNOME2_HIG_RED, None, 'the GNOME HIG red (CL10d F1)'),
-    'removed_flag_selected': (GNOME2_HIG_RED, 1.3, 'the HIG red lit by the engine\'s 1.3 (CL10d F1)'),
-    'flag_label': ('fg_color', None, 'black on every resting face'),
-    'warp_label_selected': ('fg_color', None, 'black on the lit face'),
-    'phase_reset_label_selected': ('fg_color', None, 'black on the lit face'),
-    'added_label_selected': ('fg_color', None, 'black on the lit face'),
-    'removed_label_selected': ('fg_color', None, 'black on the lit face'),
-    'flag_outline': ('#000000', None, 'the canvas\'s own colour, so the stem\'s flanks vanish where they enter the '
-                                      'well (architect 2026-10-07 ~06:10)'),
-    'playhead_stem': ('#FFFFFF', None, 'white, his ruling (CL10a)'),
-    'scanner': ('#FFFFFF', None, 'white, his ruling (CL10a)'),
-}
-GNOME2_PROGRAM_NOTE = ('the program roles are the architect\'s picks on the CL10 sheets (2026-10-07 ~05:30): the '
-                       'waveform black under the selection blue lit to its 1.3 shade, the selected flag\'s byte '
-                       '(architect 2026-10-07 ~09:00: spot[1] too dark on black), bg[SELECTED] the lit outline; one '
-                       'flag pair for warp and phase reset, bg[SELECTED] lit to its 1.3 shade under black labels; the '
-                       'history\'s GNOME HIG green and red lit to 1.3, the invalid flag wearing the red pair; '
-                       'the playhead stem and the scanner white; under '
-                       'Clearlooks the flag outline is the canvas\'s colour, so the stem\'s flanks vanish where they '
-                       'enter the well (architect 2026-10-07 ~06:10)')
-
-
-def gnome2_program_roles(sc):
-    """The colour scheme `sc` (gtkrc key -> '#RRGGBB') -> ({role: '#RRGGBB'}, {role: provenance}) by
-    GNOME2_PROGRAM_ROLES, each shade ge_shade_color through cairo (T.gtk2_shade, T.cairo_byte)."""
-    unit = lambda h: tuple(int(h[i:i + 2], 16) / 255.0 for i in (1, 3, 5))
-    out, why = {}, {}
-    for role, (src, k, prov) in GNOME2_PROGRAM_ROLES.items():
-        literal = src.startswith('#')
-        base = src if literal else sc[src]
-        out[role] = base.upper() if k is None else hx(T.cairo_byte(T.gtk2_shade(unit(base), k)))
-        why[role] = (src if literal else f'gtkrc {src} {base}') + \
-            ('' if k is None else f', ge_shade_color x {k}') + f': {prov}'
-    return out, why
-
-
 def squeeze_file(path):
     """A squeeze image file on the build host, its sha256 checked against the pin -> its path."""
     p = local_file('squeeze_live', path)
@@ -558,8 +491,6 @@ def gnome2_entries():
     if off: raise SystemExit(f'build: the app\'s ramp rule misses the period\'s rows by more than one level: {off}')
     e['engine_tones'] = {role: hx(v) for role, (v, _) in tones.tones.items()}
     e['provenance']['rule']['engine_tones'] = {role: why for role, (_, why) in tones.tones.items()}
-    e['program_roles'], e['provenance']['rule']['program_roles'] = gnome2_program_roles(raw)
-    e['notes'].append(GNOME2_PROGRAM_NOTE)
     print(f'gnome2: {len(tones.tones)} engine tones; the ramp rule off the period by at most '
           f'{max(tones.fit.values())} level(s) ({sum(1 for v in tones.fit.values() if v == 0)} of {len(tones.fit)} ramps exact)')
     return [e]
@@ -1111,128 +1042,6 @@ def caption_button_line_role(state, op):
     return f'cl_cbtn_{state}_s{int(round(op["color"][2] * 1000)):04d}'
 
 
-# ------------------------------------------------------------------ the app
-# THE CHOSEN ENTRY (architect 2026-10-03, the colour loop's mock sets BA..BX): key and display name `warptempo` (all
-# lowercase, one word, his spelling), the app's default theme 2026-10-03..04. CHOSEN, NOT IMPORTED — no desktop of
-# the era recorded it, so it carries no source file: its record is the ruling. Its chrome is set BA03, Windows 95
-# Standard darkened in proportion to a ground of relative luminance 0.010 under white text (the quartet and the field
-# ground scaled with the face, DkShadow black), and its selection the grey of set BM02 under white; each byte below is
-# the ruled one, in the catalog's role order (its emboss's light copy the recorded Hilight, roles.light_roles' rule, as
-# for every entry). The info pair is not ruled, so it is absent and its bundled theme file names no card (the
-# built-in's card applies, gen_theme_files.py); the flags' rule is the family's.
-CHOSEN_ROLES = {'ground': '#191919', 'label': '#FFFFFF', 'bevel_hilight': '#212121', 'bevel_light': '#1D1D1D',
-                'bevel_shadow': '#111111', 'bevel_dkshadow': '#000000', 'selected_fill': '#666666',
-                'selected_text': '#FFFFFF', 'field_ground': '#212121', 'field_text': '#FFFFFF'}
-
-
-def chosen_entry():
-    e = {'key': 'warptempo', 'name': 'warptempo', 'family': 'warptempo',
-         'provenance': {'sources': [{
-             'project': 'chosen, not imported: the architect\'s ruling (2026-10-03)',
-             'record': 'the colour loop\'s mock sets: BA03 for the chrome (Windows 95 Standard darkened in proportion '
-                       'to a ground of relative luminance 0.010, white text), BM02 for the selection grey; the bytes '
-                       'as ruled'}]},
-         'raw': dict(CHOSEN_ROLES), 'roles': {r: CHOSEN_ROLES[r] for r in ROLES if r in CHOSEN_ROLES},
-         'flag_rule': {'id': FLAG_RULE['warptempo']}}
-    e['display_tier'] = display_tier(e['roles'])
-    e['notes'] = ['chosen by the architect on the colour loop, not imported from a desktop of the era; the app\'s '
-                  'default theme at its light level (2026-10-03)']
-    e['corroborated'] = 0
-    return e
-
-
-# THE PRESET ENTRIES (architect 2026-10-04): each preset the colour picker saved (tools/palette/picker/, README "THE
-# PRESETS"; the repository's copy of the tablet's presets.json) becomes `warptempo-preset-<n>`, display name
-# "Warptempo Preset <n>", CHOSEN, NOT IMPORTED, its record the preset. Its chrome is exactly what the picker painted:
-# the preset's chrome ground through the picker's chrome rule (colour.windows95_chrome: the relief lines, the field
-# ground and the emboss's light copy from the ground, DkShadow black) and THE LABEL, the chrome's text colour: the
-# preset's `label` when it records one (the picker's Label element, architect 2026-10-04: text is a pickable element,
-# not a black / white switch and not automatic contrast -- the product imports each theme's recorded text colour and
-# has no contrast rule), else white, the picker's starting colour and the label every preset saved before the Label
-# round was painted under. THE FIELD TEXT IS THE LABEL TOO: the chrome rule makes the field ground the Hilight, a
-# ground-family colour, so its text is the label's case (the picker's theme states field_text "@label"). THE SELECTED
-# PAIR the preset's `selected_fill` and `selected_text` when it records them (the picker's Selection and Selected Text,
-# the open-flag round, architect 2026-10-04), else #666666 under white, the picker's starting colours and the pair
-# every preset saved before that round was painted under. The preset's other elements (the canvas, the ink, the
-# flags, the playhead, the invalid flags -- the invalid-flags round, architect 2026-10-04) are not catalog roles: the
-# preset's bundled theme file names them as the program's roles (tools/theme_catalog/gen_theme_files.py, which owns
-# that mapping). The entries follow presets.json: a
-# new copy adds its new presets on the next run, and a preset's number is never reused (the picker only appends). A
-# colour key the preset names that is neither the chrome, a theme role it picks (PRESET_THEME_KEYS) nor a program key
-# is a hard fail: a newly pickable chrome role changes what a preset's theme is, which is a ruling, not a silent drop.
-PRESETS = os.path.join(REPO, 'tools', 'palette', 'picker', 'presets', 'presets.json')
-PRESET_PREFIX = 'warptempo-preset-'
-# the theme roles at a preset that records none of the picker's theme elements (each at its starting colour)
-PRESET_FIXED = {'label': '#FFFFFF', 'selected_fill': '#666666', 'selected_text': '#FFFFFF', 'field_text': '#FFFFFF'}
-# the picker's theme elements -> the roles each gives its colour (the label also the field text)
-PRESET_THEME_KEYS = {'label': ('label', 'field_text'), 'selected_fill': ('selected_fill',),
-                     'selected_text': ('selected_text',)}
-# (the Outline's and the flag kinds' keys since 2026-10-05, and the four a preset saved before then names, which
-# gen_theme_files.py's OLD_PRESET_KEYS reads as the picker does; `playhead_head` the picker's own element, colouring no
-# product role since 2026-10-05, accepted here and dropped by gen_theme_files.py's IGNORED_PRESET_KEYS)
-PRESET_PROGRAM_KEYS = ('canvas', 'ink', 'waveform_outline', 'warp_flag', 'warp_flag_selected', 'phase_reset_flag',
-                       'phase_reset_flag_selected', 'added_flag', 'added_flag_selected', 'removed_flag', 'removed_flag_selected', 'playhead_head',
-                       'playhead_stem', 'unselected_flag', 'selected_flag', 'unselected_invalid_flag',
-                       'selected_invalid_flag')
-
-
-def preset_fixed(picked):
-    """PRESET_FIXED with each role a picked theme element ({key: '#RRGGBB'}, PRESET_THEME_KEYS) gives its colour."""
-    return PRESET_FIXED | {r: picked[k] for k, rs in PRESET_THEME_KEYS.items() if k in picked for r in rs}
-
-
-def preset_roles(ground, picked={}):
-    """A preset's chrome ground and its picked theme elements ('#RRGGBB'; {key: hex}) -> its catalog roles: the chrome
-    rule's lines, the picked roles, and the picker's starting colours for the rest."""
-    ch = {r: hx(c) for r, c in CL.windows95_chrome(unhex(ground)).items()}
-    # roles.light_roles takes the emboss's light copy as the recorded Hilight; the chrome rule's is the same
-    assert ch['emboss_hilight'] == ch['bevel_hilight'], ground
-    fixed = preset_fixed(picked)
-    return {r: ch[r] if r in ch else fixed[r] for r in ROLES if r in ch or r in fixed}
-
-
-def preset_entries():
-    ps = json.load(open(PRESETS))['presets']
-    nums = [p['number'] for p in ps]
-    if any(not isinstance(n, int) or isinstance(n, bool) or n < 1 for n in nums) or len(nums) != len(set(nums)):
-        raise SystemExit(f'build: {PRESETS}: the preset numbers {nums} are not distinct whole numbers from 1')
-    out = []
-    for p in sorted(ps, key=lambda p: p['number']):
-        n, cols = p['number'], p['colours']
-        bad = sorted(set(cols) - {'chrome'} - set(PRESET_THEME_KEYS) - set(PRESET_PROGRAM_KEYS))
-        if bad: raise SystemExit(f'build: Preset {n} names {bad}, neither the chrome, a theme element nor a program key')
-        ground = cols['chrome']
-        picked = {k: cols[k] for k in PRESET_THEME_KEYS if k in cols}
-        given = {r for k in picked for r in PRESET_THEME_KEYS[k]}
-        roles = preset_roles(ground, picked)
-        raw = {'chrome': ground} | preset_fixed(picked)
-        record = (f'the chrome ground {ground}; the relief quartet, the field ground and the emboss\'s light '
-                  f'copy the picker\'s chrome rule over it (tools/palette/colour.py windows95_chrome: Windows '
-                  f'95\'s proportions, Hilight / 3DLight / Shadow the ground x 255 / 223 / 128 over 192 per '
-                  f'channel, half to even, capped; DkShadow black; the field ground and the emboss the Hilight)')
-        if 'label' in picked: record += f'; the label {picked["label"]}, the field text the label (the picker\'s Label element)'
-        if 'selected_fill' in picked: record += f'; the selected fill {picked["selected_fill"]} (the picker\'s Selection)'
-        if 'selected_text' in picked:
-            record += f'; the selected text {picked["selected_text"]} (the picker\'s Selected Text)'
-        e = {'key': f'{PRESET_PREFIX}{n}', 'name': f'Warptempo Preset {n}', 'family': 'warptempo',
-             'provenance': {'sources': [
-                 {'project': f'chosen, not imported: the architect\'s Preset {n} on the colour picker (architect 2026-10-04)',
-                  'file': os.path.relpath(PRESETS, REPO), 'preset': n, 'saved': p['saved'],
-                  'keys': ['chrome'] + list(picked), 'record': record},
-                 {'project': 'the colour picker\'s theme, the roles it shows fixed (2026-10-04)',
-                  'file': 'tools/palette/themes/picker.json',
-                  'keys': [r for r in PRESET_FIXED if r not in given]}]},
-             'raw': raw, 'roles': roles, 'flag_rule': {'id': FLAG_RULE['warptempo']}}
-        e['display_tier'] = display_tier(e['roles'])
-        e['notes'] = [f'chosen by the architect on the colour picker, not imported from a desktop of the era: his '
-                      f'Preset {n}\'s chrome, exactly as the picker painted it (2026-10-04); its canvas, ink and other '
-                      f'elements are the program\'s roles in its bundled theme file '
-                      f'(tools/theme_catalog/gen_theme_files.py)']
-        e['corroborated'] = 0
-        out.append(e)
-    return out
-
-
 # ------------------------------------------------------------------ the checks and the write
 def checks(entries):
     by = {e['key']: e for e in entries}
@@ -1286,30 +1095,9 @@ def checks(entries):
                            'disabled_text': '#A9A5A2', 'title_active': '#86ABD9', 'title_inactive': '#EDECEB'}, cl['roles']
     assert cl['raw']['title_text'] == '#FFFFFF' and cl['provenance']['rule']['computed']['metacity:title_unfocused'] == '#6B6A6A'
     assert cl['flag_rule'] == {'id': 'flat'} and cl['display_tier'] == 'high-colour'
-    # its program roles as he picked them on the CL10 sheets (2026-10-07 ~05:30; the outline ~06:10; the ink ~09:00)
-    assert cl['program_roles'] == {
-        'waveform_canvas': '#000000', 'waveform_ink': '#D2E3F7', 'waveform_outline': '#86ABD9',
-        'warp_flag': '#86ABD9', 'warp_flag_selected': '#D2E3F7', 'phase_reset_flag': '#86ABD9',
-        'phase_reset_flag_selected': '#D2E3F7', 'added_flag': '#83A67F', 'added_flag_selected': '#B3CEB0',
-        'removed_flag': '#C1665A', 'removed_flag_selected': '#E2988E', 'flag_label': '#000000',
-        'warp_label_selected': '#000000', 'phase_reset_label_selected': '#000000', 'added_label_selected': '#000000',
-        'removed_label_selected': '#000000', 'flag_outline': '#000000',
-        'playhead_stem': '#FFFFFF',
-        'scanner': '#FFFFFF'}, cl['program_roles']
-    assert by['warptempo']['roles'] == CHOSEN_ROLES and by['warptempo']['display_tier'] == 'high-colour'
-    # the preset road at the neutral ground #191919 is the chosen `warptempo` exactly (the picker's default chrome)
-    assert preset_roles('#191919') == CHOSEN_ROLES
-    # a preset recording a label carries it into the label and the field text, and nothing else moves (a synthetic
-    # preset: the neutral ground under a black label, the light variant a theme strip's #000000 makes)
-    assert preset_roles('#191919', {'label': '#000000'}) == CHOSEN_ROLES | {'label': '#000000', 'field_text': '#000000'}
-    # a preset recording the selected pair (the picker's Selection and Selected Text, architect 2026-10-04) carries it
-    # into its two roles alone (a synthetic preset: a Windows-blue selection under yellow text)
-    assert preset_roles('#191919', {'selected_fill': '#000080', 'selected_text': '#FFFF00'}) == \
-        CHOSEN_ROLES | {'selected_fill': '#000080', 'selected_text': '#FFFF00'}
-    for e in entries:
-        if e['key'].startswith(PRESET_PREFIX):
-            picked = {k: e['raw'][k] for k in PRESET_THEME_KEYS}
-            assert e['family'] == 'warptempo' and e['roles'] == preset_roles(e['raw']['chrome'], picked), e['key']
+    # the catalog is the chrome's alone (2026-10-07): no entry carries program roles, and the program's own family is
+    # gone with them (its colors are the palette's, src/gui/palette_file.h)
+    for e in entries: assert 'program_roles' not in e and e['family'] in FAMILIES, e['key']
 
 
 def drop_duplicates(entries):
@@ -1332,11 +1120,9 @@ def document(entries, not_imported):
                 'entry\'s provenance. "raw" holds every value '
                 'the source records under its own key names; "roles" the catalog roles (tools/theme_catalog/roles.py); '
                 'a role a source has no word for is absent and the app\'s own value applies. Bytes are #RRGGBB as the '
-                'source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family '
-                'that imports nothing is the program\'s own, "warptempo": the architect\'s chosen `warptempo` and his presets saved on the colour picker '
-                '(`warptempo-preset-<n>`, architect 2026-10-04: the preset\'s chrome ground through the picker\'s chrome '
-                'rule, the roles the picker shows fixed), chosen, not imported (their provenance is his ruling or his '
-                'preset).',
+                'source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The catalog is the '
+                'chrome\'s alone (2026-10-07): the program\'s colors are the app\'s compiled palettes '
+                '(src/gui/palette_file.h).',
         'roles': list(ROLES),
         'rules': RULES,
         'display_tiers': {'what': 'each entry\'s display_tier: the smallest of these period colour sets holding every '
@@ -1356,33 +1142,20 @@ def write(doc):
     print(f'wrote {os.path.relpath(OUT, REPO)}: {len(doc["entries"])} entries')
 
 
-def presets_only():
-    """The --presets-only road (the head): the committed catalog's imported entries and not-imported record carried,
-    the program's own family and the header written anew."""
-    old = json.load(open(OUT))
-    carried = [e for e in old['entries'] if e['family'] != 'warptempo']
-    by = {e['key']: e for e in old['entries']}
-    chosen = chosen_entry()
-    if {x: v for x, v in chosen.items() if x != 'corroborated'} != by[chosen['key']]:
-        raise SystemExit(f'build: {chosen["key"]} recomputed differs from the committed catalog; run the full build')
-    entries = carried + [chosen] + preset_entries()
-    entries.sort(key=lambda e: FAMILIES.index(e['family']))
-    checks(entries)
-    write(document(entries, old['not_imported']))
-    print(f'carried {len(carried)} entries from the committed catalog; presets: '
-          + ', '.join(e['key'] for e in entries if e['key'].startswith(PRESET_PREFIX)))
+def check_only():
+    """The --check-only road (the head): the checks on the committed catalog, nothing written."""
+    checks(json.load(open(OUT))['entries'])
+    print(f'checked {os.path.relpath(OUT, REPO)}: the checks pass')
 
 
 def main():
-    if sys.argv[1:] == ['--presets-only']: return presets_only()
-    if sys.argv[1:]: raise SystemExit('usage: python3 tools/theme_catalog/build.py [--presets-only]')
+    if sys.argv[1:] == ['--check-only']: return check_only()
+    if sys.argv[1:]: raise SystemExit('usage: python3 tools/theme_catalog/build.py [--check-only]')
     win, ros_only = windows_entries()
     kde, kde_later = kde_entries()
     entries = win + kde
     cde, mono = cde_entries(); entries += cde
     entries += gnome2_entries()
-    entries.append(chosen_entry())
-    entries += preset_entries()
     entries, dups = drop_duplicates(entries)
     entries.sort(key=lambda e: FAMILIES.index(e['family']))
     checks(entries)

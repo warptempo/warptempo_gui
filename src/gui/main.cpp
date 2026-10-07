@@ -24,6 +24,7 @@
 #include "audio.h"
 #include "device_config.h"
 #include "theme_file.h"
+#include "palette_file.h"  // the palettes folder's launch read
 #include "icons.h"         // the icon set's launch load
 #include "waveform_worker.h"
 #include "file_loader.h"
@@ -3308,6 +3309,15 @@ int gui_main(const char* argument) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }
+    // THE PALETTES FOLDER IS READ NEXT, ONCE (architect 2026-10-07,
+    // palette_file.h): the config's `palette` key is judged against the two
+    // compiled defaults and the files loaded here, so they too precede the
+    // config's reader; the same road for a bad file — one line, no window.
+    // Nothing is copied in: the folder holds his own palettes alone.
+    if (const std::optional<std::string> err = read_palette_folder()) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        return 1;
+    }
     DeviceConfig device_config;
     {
         auto cfg = load_device_config(GuiPlatform::device_config_defaults());
@@ -3359,8 +3369,11 @@ int gui_main(const char* argument) {
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme the
     // config names (the built-in or a file read above, 2026-10-04) — or, with
     // no `theme` line, THE LIVE CHROME'S OWN (2026-10-07, effective_theme_key,
-    // theme_file.h: resolved inside install_palette, so it needs the chrome
-    // set above) — installed before the first paint, and again at the
+    // theme_file.h) — for the chrome's colors, and the palette it names (a
+    // default or a file read above) — or, with no `palette` line, THE LIVE
+    // CHROME'S DEFAULT PALETTE (effective_palette_name, palette_file.h) — for
+    // the program's, both resolved inside install_palette, so it needs the
+    // chrome set above; installed before the first paint, and again at the
     // settings editor's `theme` commit (commit_device_setting). Every
     // painter reads it through palette() (render.h's palette block).
     install_palette(device_config);

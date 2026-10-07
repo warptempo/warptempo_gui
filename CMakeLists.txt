@@ -174,6 +174,10 @@ set(WARPTEMPO_GUI_SOURCES
     # the themes folder beside the device config, read once at launch.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
+    # THE PALETTE FILES (2026-10-07): the program's role table, the two
+    # default palettes and the palettes folder beside the device config,
+    # read once at launch and kept in step by the picker's writes. GUI-ONLY.
+    src/gui/palette_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp

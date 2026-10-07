@@ -7,6 +7,7 @@
 #include "theme_file.h"        // is_theme_key, kThemeGrammarReason; through
                                // render.h and gui_font.h, chrome_spec.h's
                                // is_chrome_key, kChromeGrammarReason
+#include "palette_file.h"      // is_palette_name, kPaletteGrammarReason
 
 #include <cstddef>
 #include <cstdio>
@@ -21,7 +22,7 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, the required
-// set below its subset (SEVEN keys since 2026-10-07; the count's
+// set below its subset (EIGHT keys since 2026-10-07; the count's
 // succession, up to seventeen with the tuning phases of 2026-09-23..27 and
 // nineteen with the colour keys of 2026-10-03..04, is the header's record
 // and git's). THE ORDER IS THE ARCHITECT'S OWN, given
@@ -31,14 +32,15 @@ namespace {
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). The writer's list and the required
-// list stand side by side below, the second the first less its two keys
+// list stand side by side below, the second the first less its three keys
 // that may be absent (2026-10-07; until then one list served both, so no
-// key could be written and not demanded — the two absent-able keys are the
+// key could be written and not demanded — the absent-able keys are the
 // deliberate exception, each saying what its absence means).
 //
 // `theme` IS APPENDED (2026-10-03); `chrome` STANDS BEFORE IT (2026-10-07),
 // the key whose vocabulary names the theme a file without a `theme` line
-// wears.
+// wears; `palette` FOLLOWS IT (2026-10-07), the program's colors after the
+// chrome's.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "max_waveform_height",
@@ -47,11 +49,13 @@ constexpr const char* kDeviceConfigKeys[] = {
     "last_project",
     "chrome",
     "theme",
+    "palette",
 };
-// THE REQUIRED SET — every key above but the two that may be ABSENT
-// (architect 2026-10-07, the chrome key's round): `chrome`, absent reading
-// as win2000 (the configs written before the key existed load as they
-// were), and `theme`, absent meaning the chrome's own theme. The scanner
+// THE REQUIRED SET — every key above but the three that may be ABSENT
+// (architect 2026-10-07): `chrome`, absent reading as windows-2000 (the
+// configs written before the key existed load as they were), `theme`,
+// absent meaning the chrome's own theme, and `palette`, absent meaning the
+// chrome's default palette. The scanner
 // checks presence against this list and duplicates against every key.
 constexpr const char* kDeviceConfigRequiredKeys[] = {
     "gui_scale",
@@ -98,6 +102,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         // AN UNSET THEME WRITES NO LINE (2026-10-07): its one spelling is
         // the line's absence, so the file keeps following the chrome.
         if (std::string_view(key) == "theme" && cfg.theme.empty()) continue;
+        // AN UNSET PALETTE WRITES NO LINE (2026-10-07), the theme's shape.
+        if (std::string_view(key) == "palette" && cfg.palette.empty())
+            continue;
         s += key;
         s += '=';
         const std::string_view k(key);
@@ -123,6 +130,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += cfg.chrome;
         } else if (k == "theme") {
             s += cfg.theme;
+        } else if (k == "palette") {
+            // The name verbatim (printable ASCII, palette_file.h's grammar).
+            s += cfg.palette;
         }
         s += '\n';
     }
@@ -210,7 +220,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
         }
         // THE CHROME (architect 2026-10-07): a vocabulary's key under its one
         // grammar owner (is_chrome_key, chrome_spec.h); absent, the struct's
-        // win2000 stands.
+        // windows-2000 stands.
         if (key == "chrome") {
             if (!is_chrome_key(value)) {
                 return bad_value(ln, key, value, kChromeGrammarReason);
@@ -228,6 +238,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kThemeGrammarReason);
             }
             out.theme = value;
+            return {};
+        }
+        // THE PALETTE (2026-10-07): a default's name or a palette file's read
+        // at launch, under its one grammar owner (is_palette_name,
+        // palette_file.h) — which is why gui_main reads the palettes folder
+        // BEFORE this file. An EMPTY value is refused like any other
+        // non-name: the unset palette is the line's absence.
+        if (key == "palette") {
+            if (!is_palette_name(value)) {
+                return bad_value(ln, key, value, kPaletteGrammarReason);
+            }
+            out.palette = value;
             return {};
         }
         return warptempo_parse::prefix_line_error(

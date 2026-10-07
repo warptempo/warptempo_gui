@@ -7,6 +7,7 @@
 #include "gui_font.h"
 #include "text_shape.h"
 #include "theme_file.h"
+#include "palette_file.h"   // kGuiPaletteRoles, palette_words, effective_palette_name
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -1575,8 +1576,8 @@ enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 // The resolved paint of ONE marker flag box (the palette block's marker-lane
 // paragraph, render.h, owns the look): its face, its label's ink — or the
 // disabled emboss — and the stem. The OUTLINE is no part of it: every flag's
-// is the `flag_outline` role, selected or not (palette().flag_outline at each
-// box painter).
+// is the canvas's color, selected or not, under every chrome
+// (palette().waveform_canvas at each box painter; architect 2026-10-07).
 struct FlagFace {
     GuiColor face;
     GuiColor label;
@@ -1585,30 +1586,25 @@ struct FlagFace {
     bool     has_stem;
 };
 
-// A kind's face, its selected face and the label on that selected face, off
-// the theme's roles (the selected label per kind since 2026-10-07; the
-// resting label is the one `flag_label` for every kind).
+// A kind's face and its selected face, off the palette's roles; the label
+// is the one `flag_label` on both (architect 2026-10-07, his one-label rule).
 struct FlagPair {
     GuiColor face;
     GuiColor selected;
-    GuiColor selected_label;
 };
 FlagPair flag_pair(GuiFlagKind kind) {
     const GuiPalette& p = palette();
     switch (kind) {
         case GuiFlagKind::Warp:
-            return {p.warp_flag, p.warp_flag_selected, p.warp_label_selected};
+            return {p.warp_flag, p.warp_flag_selected};
         case GuiFlagKind::PhaseReset:
-            return {p.phase_reset_flag, p.phase_reset_flag_selected,
-                    p.phase_reset_label_selected};
+            return {p.phase_reset_flag, p.phase_reset_flag_selected};
         case GuiFlagKind::Added:
-            return {p.added_flag, p.added_flag_selected,
-                    p.added_label_selected};
+            return {p.added_flag, p.added_flag_selected};
         case GuiFlagKind::Removed:
-            return {p.removed_flag, p.removed_flag_selected,
-                    p.removed_label_selected};
+            return {p.removed_flag, p.removed_flag_selected};
     }
-    return {p.warp_flag, p.warp_flag_selected, p.warp_label_selected};
+    return {p.warp_flag, p.warp_flag_selected};
 }
 
 // THE PAIR A BOX WEARS — the ladder's choice of pair, apart from its choice of
@@ -1627,9 +1623,9 @@ GuiFlagKind worn_flag_kind(GuiFlagKind kind, bool disabled, bool red) {
 // WEARS THE REMOVED PAIR (architect 2026-10-04, and again 2026-10-07 after a
 // morning of a red X in the kind's pair: one red for both, the context
 // telling them apart — invalid while authoring, removed in `h`), then the
-// KIND's own pair, the stem in the face. ONE RESTING LABEL, A SELECTED LABEL
-// PER KIND (architect 2026-10-07): `flag_label` on a face, the worn pair's own
-// selected label on a selected one (worn_flag_kind). SELECTION IS A BRIGHTER
+// KIND's own pair, the stem in the face. ONE LABEL (architect 2026-10-07,
+// his one-label rule): `flag_label` on every enabled face, resting or
+// selected. SELECTION IS A BRIGHTER
 // FACE (architect 2026-10-03, retiring the white outline): each arm answers
 // `selected` with its pair's selected face; and THE SELECTED DISABLED ARM,
 // PROVISIONAL (the palette block's THE STATES), is Windows 95's highlighted
@@ -1649,7 +1645,7 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red,
         return f;
     }
     f.face     = selected ? pair.selected : pair.face;
-    f.label    = selected ? pair.selected_label : p.flag_label;
+    f.label    = p.flag_label;
     f.embossed = false;
     f.stem     = f.face;
     f.has_stem = true;
@@ -1704,7 +1700,7 @@ static void paint_flag_stem_crossing(cairo_t* cr, const GuiRect& lane, int x,
 }
 
 // THE FLAG LABEL — the one body every flag box's text goes through: `run` at
-// (x, baseline) in the face's label ink (the selected label on a selected
+// (x, baseline) in the face's label ink (the one `flag_label` on every enabled
 // face), or embossed (show_embossed_run) when the face is disabled and
 // unselected. The run carries its own font.
 static void paint_flag_label(cairo_t* cr, const text_shape::ShapedRun& run,
@@ -1772,7 +1768,7 @@ static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
                                   const text_shape::ShapedRun& run,
                                   const FlagFace& face, bool closes) {
     paint_flat_flag_box(cr, lane, seam_x + border_w, fill_w, border_w, edge_h,
-                        closes, palette().flag_outline, face.face);
+                        closes, palette().waveform_canvas, face.face);
     paint_flag_label(cr, run, static_cast<double>(seam_x + border_w + pad_l),
                      baseline, face);
 }
@@ -2024,8 +2020,8 @@ void render_flag_boxes_impl(
             // and under a bound field it paints exactly as it does
             // at rest.
             if (pass_paints(MarkerCell::Payload)) {
-                // THE FLAT BOX (paint_flat_flag_box): the outline the flag
-                // outline role, selected or not, and the face the ladder's.
+                // THE FLAT BOX (paint_flat_flag_box): the outline the
+                // canvas's color, selected or not, and the face the ladder's.
                 //
                 // THE LEFT BORDER IS OUTSIDE THE FACE, one column LEFT of the
                 // frame column (the geometry clause and the clip-at-the-left-
@@ -2050,7 +2046,7 @@ void render_flag_boxes_impl(
                 // outline row at its own column, selected or not.
                 paint_flat_flag_box(cr, lane, bx, bw, border_w, edge_h,
                                     pass_closes && !paint_lower,
-                                    palette().flag_outline, face.face);
+                                    palette().waveform_canvas, face.face);
                 if (face.has_stem)
                     paint_flag_stem_crossing(cr, lane, bx, edge_h, face.stem);
                 // The label, on the run just measured — same font, same glyphs,
@@ -2502,11 +2498,12 @@ void render_history_diff_flags(
             if (w_removed > 0)
                 paint_flat_flag_box(cr, lane, bx, w_removed, border_w, edge_h,
                                     /*closes=*/w_added == 0,
-                                    palette().flag_outline, removed_face.face);
+                                    palette().waveform_canvas,
+                                    removed_face.face);
             if (w_added > 0)
                 paint_flat_flag_box(
                     cr, lane, bx + w_removed + seam_w, w_added, border_w,
-                    edge_h, /*closes=*/true, palette().flag_outline,
+                    edge_h, /*closes=*/true, palette().waveform_canvas,
                     added_face.face);
 
             // THE TWO LABELS, each on its own half through the one label body
@@ -2648,22 +2645,43 @@ const GuiPalette& palette() { return g_palette; }
 uint64_t palette_generation() { return g_palette_generation; }
 WaveformPlateInks waveform_plate_inks() { return g_plate_inks; }
 
-void install_palette(const DeviceConfig& cfg) {
-    // The key arrived through its one grammar (the config's reader or the
-    // settings editor's commit, is_theme_key), or is the live chrome's own
-    // (effective_theme_key: the built-in or a bundled file), so the lookup
-    // has no producer of a miss (theme_words asserts it). Every field is
-    // filled off the role table, the one enumeration (theme_file.h), so a
-    // role cannot be read and not painted.
-    const GuiThemeWords& w = theme_words(effective_theme_key(cfg.theme));
-    GuiPalette p{};
-    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
-        p.*(kGuiThemeRoles[i].member) = hex(w[i]);
-    g_palette = p;
-    static constexpr std::size_t kInk     = theme_role_index("waveform_ink");
-    static constexpr std::size_t kOutline = theme_role_index("waveform_outline");
-    static_assert(kInk < kGuiThemeRoleCount && kOutline < kGuiThemeRoleCount);
+namespace {
+// THE PROGRAM'S FOURTEEN into the installed struct and the plate's two baked
+// inks off the same words — the install family's shared half (the
+// generation is each member's own bump).
+void fill_program_palette(const GuiPaletteWords& w) {
+    for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
+        g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
+    static constexpr std::size_t kInk = palette_role_index("waveform_ink");
+    static constexpr std::size_t kOutline =
+        palette_role_index("waveform_outline");
+    static_assert(kInk < kGuiPaletteRoleCount &&
+                  kOutline < kGuiPaletteRoleCount);
     g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
+}
+} // namespace
+
+void install_palette(const DeviceConfig& cfg) {
+    // The keys arrived through their one grammars (the config's reader or
+    // the settings editor's commit, is_theme_key and is_palette_name), or
+    // are the live chrome's own (effective_theme_key: the built-in or a
+    // bundled file; effective_palette_name: a compiled default), so neither
+    // lookup has a producer of a miss (theme_words and palette_words assert
+    // it). The chrome's fields are filled off the theme's role table and the
+    // program's off the palette's (theme_file.h, palette_file.h), the two
+    // covering the struct exactly (palette_file.cpp), so a role cannot be
+    // read and not painted.
+    const GuiThemeWords& w = theme_words(effective_theme_key(cfg.theme));
+    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
+        g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
+    fill_program_palette(palette_words(effective_palette_name(cfg.palette)));
+    ++g_palette_generation;
+}
+
+void install_program_palette(const GuiPaletteWords& words) {
+    // The contract and the apply shape the caller owes are at the
+    // declaration (palette_file.h).
+    fill_program_palette(words);
     ++g_palette_generation;
 }
 
@@ -3021,21 +3039,19 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // stem … overall a lot less intuitive"): THE LADDER'S SELECTED ANSWER for
     // the edited marker — the kind's selected face, the removed pair's over
     // an invalid marker, the selected-disabled arm's face over a disabled
-    // one — its `face` the field's fill; the outline the
-    // flag's own `flag_outline`; and the SELECTED SUBSTRING THE CHROME'S
+    // one — its `face` the field's fill; the outline the flag's own, the
+    // canvas's color; and the SELECTED SUBSTRING THE CHROME'S
     // SELECTED PAIR, `selected_fill` under `selected_text` (Clearlooks'
     // 86ABD9 band under white, win2000's Hilight under HilightText) — part of
     // the chrome, as every selection in the product is.
     const FlagFace face =
         resolve_flag_face(kind, dis, red_class, /*selected=*/true);
     // AN EDIT FIELD IS NEVER THE DISABLED MENU ITEM (architect 2026-10-07):
-    // the text and caret take the worn pair's SELECTED LABEL — the ladder's
-    // ENABLED selected answer for the pair the face came from (a disabled
-    // marker wears its own kind's, worn_flag_kind) — never the flat Shadow.
-    const GuiColor field_ink =
-        resolve_flag_face(kind, /*disabled=*/false, red_class && !dis,
-                          /*selected=*/true).label;
+    // the text and caret take THE ONE FLAG LABEL on every face (his
+    // one-label rule), never the flat Shadow the selected-disabled arm
+    // answers.
     const GuiPalette& pal = palette();
+    const GuiColor field_ink = pal.flag_label;
     const GuiColor sel_fill  = pal.selected_fill;
     const GuiColor sel_text  = pal.selected_text;
     // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
@@ -3069,7 +3085,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    marker's field is this same box in the selected-disabled answer: an
     //    edit field is never embossed.
     paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
-                        /*closes=*/!ride_cells, pal.flag_outline, face.face);
+                        /*closes=*/!ride_cells, pal.waveform_canvas,
+                        face.face);
     // THE STEM FOLLOWS THE PAYLOAD BOX (architect 2026-10-04, "otherwise it
     // looks disconnected"). Under the PAYLOAD field the field IS the payload
     // box opened, and the open seats the axis there (set_single_selection
@@ -3149,7 +3166,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     }
 
     // THE RUN, SHOWN ONCE PER REGION (the ruling in the block above): the
-    // whole run in the selected label off the band, the whole run again in
+    // whole run in the flag label off the band, the whole run again in
     // the selected text on it, neither reaching a pixel the other painted.
     set_palette_source(cr, field_ink);
     if (!has_sel) {

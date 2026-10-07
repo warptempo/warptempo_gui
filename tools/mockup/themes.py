@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 # tools/mockup/themes.py — THE THEME GRAMMAR, read off the app's own source so the tool cannot drift from it.
 #
-# The built-in's 40 values, the twenty named colours, the flat-caption pairs, the follower pair and the built-in's
-# key are all parsed out
-# of src/gui/theme_file.h in the working tree on every run (the constants-from-source discipline of
-# tools/palette/common.py's face_metrics). A .theme file is read under the app's own rules (theme_file.cpp's
+# The built-in's 21 chrome values, the twenty named colours, the flat-caption pairs and the built-in's key are all
+# parsed out of src/gui/theme_file.h, and the program's fourteen out of src/gui/palette_file.h (its `windows-2000`
+# column: a theme names chrome roles only since 2026-10-07, and every scene here is a Windows capture, so a mock's
+# program colors are that default palette's), in the working tree on every run (the constants-from-source discipline
+# of tools/palette/common.py's face_metrics). A .theme file is read under the app's own rules (theme_file.cpp's
 # read_theme_file and read_theme_folder's stem checks, the shared scanner's lexical contract in
 # src/parser/settings_file.cpp): LF-terminated role=value lines split at the first '=', no blank line, no comment,
 # no whitespace tolerance, no duplicate; a role the file does not name takes the built-in's value; a caption start
-# named without its gradient end gets the end equal to the start; the follower pair's leader named without its
-# follower (dk_shadow / flag_outline) gets the follower equal to it. Every refusal is the app's own sentence.
+# named without its gradient end gets the end equal to the start; a program role named in a theme file is an unknown
+# role, as in the app. Every refusal is the app's own sentence.
 import os, re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, '..', '..'))
 THEME_FILE_H = os.path.join(REPO, 'src', 'gui', 'theme_file.h')
+PALETTE_FILE_H = os.path.join(REPO, 'src', 'gui', 'palette_file.h')
 
 
 class ThemeError(Exception):
@@ -41,16 +43,16 @@ def _load():
     pairs = re.findall(r'\{theme_role_index\("(\w+)"\),\s*theme_role_index\("(\w+)"\)\}',
                        _block(src, r'kGuiThemeCaptionGradients\[\] = \{'))
     key = re.search(r'kBuiltinThemeKey = "([^"]+)"', src).group(1)
-    follows = re.findall(r'\{theme_role_index\("(\w+)"\),\s*theme_role_index\("(\w+)"\)\}',
-                         _block(src, r'kGuiThemeFollowers\[\] = \{'))
-    if len(roles) != 40 or len(named) != 20 or len(pairs) != 2 or len(follows) != 1:
-        raise SystemExit(f'tools/mockup: {THEME_FILE_H}: read {len(roles)} roles, {len(named)} named colours, '
-                         f'{len(pairs)} caption pairs, {len(follows)} follower pairs (expected 40, 20, 2, 1: the '
-                         f'source moved)')
-    return roles, named, pairs, follows, key
+    program = [(n, int(v, 16)) for n, v, _ in re.findall(
+        r'\{"(\w+)",\s*&GuiPalette::\w+,\s*0x([0-9A-Fa-f]{6}),\s*0x([0-9A-Fa-f]{6})\}',
+        _block(open(PALETTE_FILE_H).read(), r'kGuiPaletteRoles\[\] = \{'))]
+    if len(roles) != 21 or len(named) != 20 or len(pairs) != 2 or len(program) != 14:
+        raise SystemExit(f'tools/mockup: read {len(roles)} chrome roles, {len(named)} named colours, {len(pairs)} '
+                         f'caption pairs, {len(program)} program roles (expected 21, 20, 2, 14: the source moved)')
+    return roles, named, pairs, key, program
 
 
-ROLE_TABLE, NAMED, CAPTION_PAIRS, FOLLOWERS, BUILTIN_KEY = _load()
+ROLE_TABLE, NAMED, CAPTION_PAIRS, BUILTIN_KEY, PROGRAM_TABLE = _load()
 ROLES = [n for n, _ in ROLE_TABLE]
 
 
@@ -77,8 +79,8 @@ def is_key_spelling(v):
 
 
 def builtin():
-    """The built-in theme as {role: (r, g, b)}."""
-    return {n: rgb(w) for n, w in ROLE_TABLE}
+    """The built-in theme as {role: (r, g, b)}, the `windows-2000` palette's program roles beside it."""
+    return {n: rgb(w) for n, w in ROLE_TABLE + PROGRAM_TABLE}
 
 
 INVALID_VALUE = "must be #rrggbb or one of the twenty Windows colour names"
@@ -127,9 +129,7 @@ def read_theme(path):
     for start, end in CAPTION_PAIRS:                  # THE FLAT CAPTION (theme_file.h's head)
         if start in named and end not in named:
             words[end] = words[start]
-    for leader, follower in FOLLOWERS:                # THE FOLLOWERS (the same head)
-        if leader in named and follower not in named:
-            words[follower] = words[leader]
+    words.update(PROGRAM_TABLE)                       # the program's: the `windows-2000` palette (the head)
     return {n: rgb(w) for n, w in words.items()}
 
 

@@ -10,7 +10,8 @@
 # recorded (roles.light_roles: the ground, the label, the relief quartet, the emboss's light copy, the selected pair,
 # the field ground), the one function the bundled theme files are written by too (gen_theme_files.py). THE
 # APP-SPECIFIC ROLES BY THE ROLE MAPPING (architect 2026-10-03; tablet.json states them): the ruler label the theme's
-# label, the ruler ticks its Shadow, the flag OUTLINE its DkShadow, the trim lane's arrow glyph its label (render.cpp
+# label, the ruler ticks its Shadow, the flag OUTLINE the canvas (since 2026-10-07; its DkShadow before), the trim
+# lane's arrow glyph its label (render.cpp
 # paint_trim_arrow_button); the checked face the ground under the Hilight dither. EVERY OPTION IS THE APP'S (the tablet
 # geometry fixes them, render.py TABLET_FIXED): the well's two-line PLAIN SUNKEN edge (Shadow then DkShadow inward on
 # top, 3DLight inward then Hilight outward at the bottom), the flat flag with its one-px DkShadow outline and the stem
@@ -20,12 +21,12 @@
 # copy one px right and down, then the word or glyph in Shadow), the playhead's head outlined in the theme's label. The
 # scene's flags show left to right EDITING (the in-place editor, the selected flag opened for edit: a black frame on the
 # selected face, its whole text in the selected pair), SELECTED, INVALID, DISABLED (the ground, the label embossed, no
-# stem) and unselected (FLAG_STATES). THE PROGRAM'S OWN COLOURS ARE THE ENTRY'S THEME FILE'S (architect 2026-10-05;
-# program_colours): each program role the entry's bundled file names, else the built-in's — the app's own resolution
-# (gen_theme_files.resolved_roles over the role table read off theme_file.h), so a crop paints what the app paints
-# under that theme: the waveform's canvas, ink and outline, the flag's face, selected face and label (the scene's flags
-# are warp markers, so the WARP pair), the one selected label, the invalid flag the removed pair under the one label,
-# the playhead's stem (its head the renderer's own, PROGRAM_KEYS); the icons' fixed inks are icons.cpp's (tablet.json).
+# stem) and unselected (FLAG_STATES). THE PROGRAM'S OWN COLORS ARE NO THEME'S since 2026-10-07 (program_colours): they
+# are the `windows-2000` default palette's, read off src/gui/palette_file.h's role table, what the app paints under
+# the Windows chrome with no `palette` line: the waveform's canvas, ink and outline, the flag's face, selected face
+# and the one label (the scene's flags are warp markers, so the WARP pair), the invalid flag the removed pair under
+# the same label, the playhead's stem (its head the renderer's own, PROGRAM_KEYS); the icons' fixed inks are
+# icons.cpp's (tablet.json).
 #
 # THE CROP: four regions of the 2304 x 1440 render stacked top to bottom, 1152 px wide, a 4-row FULLY TRANSPARENT gap
 # between them (alpha 0 there, 255 everywhere else, so no join reads as chrome): the top strip's left half (menu, the
@@ -43,7 +44,7 @@
 #   python3 tools/theme_catalog/crops.py [key ...]      (no keys: every entry)
 #   python3 tools/theme_catalog/crops.py --md           (renders nothing: CATALOG.md rewritten from catalog.json and the
 #                                                        crops of keys no longer in it deleted, the others untouched)
-import json, os, struct, subprocess, sys, zlib
+import json, os, re, struct, subprocess, sys, zlib
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 PALETTE = os.path.join(REPO, 'tools', 'palette')
@@ -62,26 +63,28 @@ MD = os.path.join(REPO, 'docs', 'themes', 'CATALOG.md')
 SCRATCH = os.path.join(REPO, 'tmp', 'theme_catalog')
 ICCP = open(os.path.join(PALETTE, 'display_p3.iccp'), 'rb').read()
 
-# the program's own elements: the renderer's colour key <- the app's role (the role table, theme_file.h), P3 bytes
-# as-is; one flag kind on the scene (warp), the invalid flag wearing the removed pair under the one resting flag
-# label; the renderer has ONE selected label (`flag_label_sel`, both selected faces'), so it takes the scene's kind's,
-# `warp_label_selected` — the app's per-kind selected labels of 2026-10-07 put `removed_label_selected` on a selected
-# invalid flag, which a crop does not show
+# the program's own elements: the renderer's color key <- the app's palette role (palette_file.h), P3 bytes as-is;
+# one flag kind on the scene (warp), the invalid flag wearing the removed pair, every face under the one flag label
+# (the one-label rule, 2026-10-07)
 PROGRAM_KEYS = (('canvas', 'waveform_canvas'), ('ink', 'waveform_ink'), ('outline', 'waveform_outline'),
                 ('flag_fill', 'warp_flag'), ('flag_fill_sel', 'warp_flag_selected'), ('flag_label', 'flag_label'),
-                ('flag_label_sel', 'warp_label_selected'), ('flag_fill_red', 'removed_flag'),
+                ('flag_label_sel', 'flag_label'), ('flag_fill_red', 'removed_flag'),
                 ('flag_fill_red_sel', 'removed_flag_selected'), ('flag_label_red', 'flag_label'),
-                ('playhead_stem', 'playhead_stem'))
+                ('playhead_stem', 'playhead_stem'), ('flag_border', 'waveform_canvas'))
 # (the renderer's `playhead_head` is no app role since 2026-10-05 — the app's head is WordPad's ruler marker in chrome
 # roles, render.h's THE PLAYHEAD block, which the renderer does not draw — so a crop keeps the renderer's own head at
 # tablet.json's grey)
-PRESETS, PICKER = G.inputs()
+PALETTE_FILE_H = os.path.join(REPO, 'src', 'gui', 'palette_file.h')
+PALETTE_ROW = r'\{"([a-z_]+)",\s*&GuiPalette::\w+,\s*0x([0-9A-Fa-f]{6}),\s*0x([0-9A-Fa-f]{6})\}'
 
 
 def program_colours(e):
-    """Entry e -> {renderer key: '#RRGGBB'} for the program's elements: the roles the app resolves for its theme."""
-    r = G.resolved_roles(e, PRESETS, PICKER)
-    return {k: r[role] for k, role in PROGRAM_KEYS}
+    """Entry e -> {renderer key: '#RRGGBB'} for the program's elements: the `windows-2000` default palette (the
+    head), whatever the entry."""
+    rows = re.findall(PALETTE_ROW, open(PALETTE_FILE_H).read())
+    if len(rows) != 14: raise SystemExit(f'crops: {PALETTE_FILE_H}: read {len(rows)} palette roles, not 14')
+    w2k = {n: '#' + a.upper() for n, a, _ in rows}
+    return {k: w2k[role] for k, role in PROGRAM_KEYS}
 # the scene's flags (1002: five, left to right) in every state, so each crop shows each one
 FLAG_STATES = {'editing': [0], 'selected': [1], 'invalid': [2], 'disabled': [3]}
 # the chrome roles (roles.LIGHT_ROLES, whose names are the renderer's own; the field text has no surface on the crop's
@@ -120,7 +123,7 @@ def theme_for(e):
                         f'the app on the tablet (tools/theme_catalog/crops.py)')
     col = t['colours']; r = roles.light_roles(e)
     for role in roles.LIGHT_ROLES: col[role] = r[role]
-    col.update({'ruler_label': '@label', 'ruler_tick': '@bevel_shadow', 'flag_border': '@bevel_dkshadow',
+    col.update({'ruler_label': '@label', 'ruler_tick': '@bevel_shadow',
                 'ruler_tick_light': '@bevel_hilight', 'down_face': '@ground', 'trim_arrow': '@label'})
     col.update(program_colours(e))
     t['flags'] = {'style': 'flat', 'states': FLAG_STATES}
@@ -186,8 +189,6 @@ FAMILY_HEAD = {
     'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',
     'gnome2': 'GNOME 2: Clearlooks as Debian 6 squeeze shipped it (its gtkrc\'s colour scheme; the relief, the tooltip '
               'border and the unfocused title by the engine\'s and metacity\'s own rules)',
-    'warptempo': 'Warptempo: the program\'s own (`warptempo`, the architect\'s pick of the colour loop, and his '
-                 'presets saved on the colour picker: chosen, not imported)',
 }
 
 
@@ -207,11 +208,9 @@ def write_md(cat, sizes):
          'imported only"): its colours are the bytes its source records, each with its provenance in '
          '[catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the '
          'relief at run time (KDE 3, CDE / Motif, GNOME 2\'s Clearlooks and metacity), that toolkit\'s rule ran once '
-         'at import and is named. The one '
-         'family that imports nothing is the program\'s own, Warptempo: `warptempo`, CHOSEN, NOT IMPORTED (the architect\'s pick of the colour '
-         'loop, 2026-10-03; its provenance is his ruling), and each `warptempo-preset-<n>`, his Preset <n> saved on '
-         'the colour picker, chosen, not imported either (2026-10-04: the preset\'s chrome ground through the '
-         'picker\'s chrome rule, the roles the picker shows fixed). The KEY is the name of the theme\'s file, '
+         'at import and is named. A theme is the CHROME\'s colors alone (2026-10-07): the program\'s own colors are '
+         'its palettes, compiled into the app (src/gui/palette_file.h), and the program\'s own family of chosen '
+         'entries left the catalog with them. The KEY is the name of the theme\'s file, '
          '`<key>.theme`, bundled with the app and copied into its `themes/` folder at every launch '
          '(`windows-2000-standard` is the one built-in theme and takes no file), and what to type in Settings\' Theme '
          'row to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet '
@@ -222,14 +221,11 @@ def write_md(cat, sizes):
          'renderer draws that design and cannot redraw them until it is ported to the live chrome and Wine Tahoma '
          '(tools/palette/common.py\'s head); a theme\'s colours read true in them, and a theme imported since has no '
          'crop. The chrome is the theme\'s as recorded; the waveform pane, '
-         'the flags and the playhead are the program\'s own elements in the theme\'s program colours as the app '
-         'resolves them: each program role the theme\'s file names, else the built-in\'s (`windows-2000-standard`: the '
-         'lime waveform on black with its green outline, the warp flag purple #800080 and its selected face fuchsia '
-         '#FF00FF, the phase-reset flag teal #008080 and its selected face aqua #00FFFF, the history\'s added flag '
-         'green #008000 and its selected face lime #00FF00, the invalid flag maroon #800000 and its selected face red '
-         '#FF0000, white labels on every face, the '
-         'playhead\'s white stem); only the colour-picker presets name their own (the crops draw the playhead\'s head '
-         'as the renderer\'s older grey head, not the app\'s WordPad ruler marker in the theme\'s chrome). The well '
+         'the flags and the playhead are the program\'s own elements in the colors of the crop\'s day (the lime '
+         'waveform on black with its green outline, the warp flag purple #800080 and its selected face fuchsia '
+         '#FF00FF, the invalid flag maroon #800000 and its selected face red #FF0000, white labels, the playhead\'s '
+         'white stem; a theme names none of them since 2026-10-07: they are the app\'s palettes), its playhead\'s head '
+         'the renderer\'s older grey head, not the app\'s WordPad ruler marker in the theme\'s chrome. The well '
          'keeps the app\'s two-line sunken edge (the theme\'s Shadow and DkShadow above, its 3DLight and Hilight below); '
          'the flags are the flat Acid flag (the scene\'s flags are warp markers, so the warp pair), the face with a '
          'one-px outline in the theme\'s DkShadow, the stem leaving the face across the bottom outline, shown left to '

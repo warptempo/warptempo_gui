@@ -107,7 +107,7 @@ LIGHT_ROLES = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow'
 # 95 Standard, the Plus! themes, KDE 3, CDE and GNOME 2 record none: metacity's band is a ramp of shades of its one
 # colour, which the Windows caption painter draws flat), and the app's theme-file rule then makes the end the start,
 # a flat caption. KDE 3's activeBlend / inactiveBlend are not read: a KDE 3 window decoration's own choice,
-# not the scheme's caption. The chosen `warptempo` entry and the presets record no caption: the built-in's applies.
+# not the scheme's caption.
 CAPTION = {
     'windows': (('caption_active', 'ActiveTitle'), ('caption_active_gradient', 'GradientActiveTitle'),
                 ('caption_active_text', 'TitleText'), ('caption_inactive', 'InactiveTitle'),

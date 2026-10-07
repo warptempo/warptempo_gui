@@ -52,16 +52,14 @@ static_assert(std::ranges::all_of(kGuiThemeCaptionGradients,
                                   [](const GuiThemeGradientPair& p) {
     return p.start < kGuiThemeRoleCount && p.end < kGuiThemeRoleCount;
 }));
-// Every follower pair names two roles of the table (theme_file.h's head).
-static_assert(std::ranges::all_of(kGuiThemeFollowers,
-                                  [](const GuiThemeFollower& f) {
-    return f.leader < kGuiThemeRoleCount && f.follower < kGuiThemeRoleCount;
-}));
-// The built-in's outline is its DkShadow, so a file naming neither paints
-// the outline the built-in does.
-static_assert(kGuiThemeRoles[theme_role_index("flag_outline")].builtin ==
-              kGuiThemeRoles[theme_role_index("dk_shadow")].builtin);
 static_assert(is_theme_key_spelling(kBuiltinThemeKey));
+// Every retired bundled key is a key and never the built-in's (the copy-in
+// deletes both, theme_file.h).
+static_assert(std::ranges::all_of(kRetiredBundledThemeKeys,
+                                  [](const char* k) {
+    return is_theme_key_spelling(k) &&
+           std::string_view(k) != kBuiltinThemeKey;
+}));
 // Every chrome's own theme is a theme key, and the default chrome's is the
 // built-in, so an unset theme under the default chrome always resolves.
 static_assert(chrome_specs_all([](const ChromeSpec& c) {
@@ -83,7 +81,7 @@ constexpr std::string_view kThemeSuffix = ".theme";
 
 // ONE FILE under the grammar (theme_file.h's head), its stem already judged:
 // the built-in's words, each role the file names overwritten, then THE FLAT
-// CAPTION's and THE FOLLOWERS' rules over what it named.
+// CAPTION's rule over what it named.
 std::expected<GuiThemeWords, std::string> read_theme_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
@@ -115,11 +113,6 @@ std::expected<GuiThemeWords, std::string> read_theme_file(
     // A START WITHOUT ITS END IS A FLAT CAPTION (the head's rule).
     for (const GuiThemeGradientPair& p : kGuiThemeCaptionGradients)
         if (named[p.start] && !named[p.end]) words[p.end] = words[p.start];
-    // A LEADER WITHOUT ITS FOLLOWER IS THE FOLLOWER (the head's rule: the
-    // flag outline its DkShadow).
-    for (const GuiThemeFollower& f : kGuiThemeFollowers)
-        if (named[f.leader] && !named[f.follower])
-            words[f.follower] = words[f.leader];
     return words;
 }
 
@@ -161,22 +154,38 @@ std::optional<std::string> copy_in_bundled_themes() {
     // state the app itself wrote must load, so the copy-in removes it with one
     // advisory line (the validation doctrine's class 5) before the read, and
     // the read's refusal of that name stays the rule. Keyed on
-    // kBuiltinThemeKey, it covers any later rename alike; it is the one place
-    // the app cleans up after its own earlier self, and no other migration
-    // exists. A removal that fails is the copy-in's failure, the same road.
+    // kBuiltinThemeKey, it covers any later rename alike. THE SAME ROAD TAKES
+    // THE RETIRED BUNDLED NAMES (planner 2026-10-07, kRetiredBundledThemeKeys,
+    // theme_file.h): `warptempo` and the two picker presets, which the bundle
+    // stopped carrying with the program roles they named, so a copy an
+    // earlier build wrote would now be the read's hard fail — a state the app
+    // wrote, which must load. This block is the one place the app cleans up
+    // after its own earlier self, and no other migration exists. A removal
+    // that fails is the copy-in's failure, the same road.
     {
-        const std::filesystem::path stale =
-            folder /
-            (std::string(kBuiltinThemeKey) + std::string(kThemeSuffix));
-        if (std::filesystem::remove(stale, ec)) {
-            std::fprintf(stderr,
-                         "warptempo_gui: removed '%s', an earlier build's "
-                         "copy of the built-in theme's name\n",
-                         stale.string().c_str());
-        }
-        if (ec) {
-            return "could not remove '" + stale.string() + "': " +
-                   ec.message();
+        const auto remove_stale = [&](std::string_view key, const char* what)
+                -> std::optional<std::string> {
+            const std::filesystem::path stale =
+                folder / (std::string(key) + std::string(kThemeSuffix));
+            if (std::filesystem::remove(stale, ec)) {
+                std::fprintf(stderr,
+                             "warptempo_gui: removed '%s', %s\n",
+                             stale.string().c_str(), what);
+            }
+            if (ec) {
+                return "could not remove '" + stale.string() + "': " +
+                       ec.message();
+            }
+            return std::nullopt;
+        };
+        if (auto err = remove_stale(kBuiltinThemeKey,
+                                    "an earlier build's copy of the built-in "
+                                    "theme's name"))
+            return err;
+        for (const char* key : kRetiredBundledThemeKeys) {
+            if (auto err = remove_stale(key,
+                                        "a theme an earlier build bundled"))
+                return err;
         }
     }
     for (const auto& [name, bytes] : *bundle) {

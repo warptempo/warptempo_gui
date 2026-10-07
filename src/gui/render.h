@@ -71,21 +71,26 @@ struct TrimRange {
 
 // -- Palette ---------------------------------------------------------------
 //
-// THE GUI'S COLOURS ARE ONE THEME'S ROLES AND NOTHING ELSE (architect
-// 2026-10-04): a THEME holds every colour the GUI paints — the chrome and its
-// relief, the time fields' own pair, the cards' three, the selected and field
-// pairs, and the program's own elements (the waveform's canvas, ink and
-// outline, each flag kind's face, selected face and selected label, the one
-// resting flag label, the flags' one outline, the playhead's stem and the
-// scanner). The roles, their
-// order and THE BUILT-IN's values are the role table (kGuiThemeRoles,
-// theme_file.h); the active theme is the device config's `theme` — the one
-// built-in and the default,
-// `windows-2000-standard` (since 2026-10-06), or a `<key>.theme` file read at
-// launch from the `themes/` folder beside the device config (theme_file.h's
-// head: the grammar, a file naming only some roles, the hard fail). There is
-// NO LEVEL: a dark look is a theme of its own
-// (architect 2026-10-04). The app computes no colour.
+// THE GUI'S COLORS ARE ROLES AND NOTHING ELSE, FROM TWO FILE TYPES
+// (architect 2026-10-04; the split 2026-10-07): a THEME holds every color
+// the CHROME paints — the chrome and its relief, the time fields' own pair,
+// the cards' three, the selected and field pairs, the caption — and THE
+// PALETTE every color the PROGRAM draws in the well or on a thing that
+// enters it (the waveform's canvas, ink and outline, each flag kind's face
+// and selected face, the one flag label, the playhead's stem and the
+// scanner; palette_file.h's head owns the rule that parts the two). The
+// chrome's roles, their order and THE BUILT-IN's values are the role table
+// (kGuiThemeRoles, theme_file.h); the active theme is the device config's
+// `theme` — the one built-in, `windows-2000-standard` (since 2026-10-06), or
+// a `<key>.theme` file read at launch from the `themes/` folder beside the
+// device config (theme_file.h's head: the grammar, a file naming only some
+// roles, the hard fail) — or, with no `theme` line, the live chrome's own.
+// The program's roles and the two compiled default palettes are
+// kGuiPaletteRoles (palette_file.h); the active palette is the device
+// config's `palette` — a default or a `<name>.palette` file from the
+// `palettes/` folder beside it — or, with no `palette` line, the live
+// chrome's default palette. There is NO LEVEL: a dark look is a theme of its
+// own (architect 2026-10-04). The app computes no color.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — no named literal stands beside them since
 // 2026-10-07, when the flag editor's black frame went — or THE ICON SET'S
@@ -175,9 +180,8 @@ struct TrimRange {
 //                 light copy of THE DISABLED EMBOSS (below); Shadow also the
 //                 ruler ticks (the etch's Hilight line beside each) and a
 //                 selected disabled flag's label, DkShadow also the dialog
-//                 focus frame (the flag outline is a role of its own since
-//                 2026-10-07, below — a theme file naming its DkShadow and
-//                 not the outline takes its DkShadow there, theme_file.h);
+//                 focus frame (the flag outline is the canvas since
+//                 2026-10-07, below);
 //   selected pair a dropdown's lit row, the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
@@ -215,13 +219,14 @@ struct TrimRange {
 //                 in the label — and the sizing frame round a
 //                 restored laptop window is the quartet and the ground
 //                 (paint_window_sizing_frame);
-//   the program's the waveform's canvas, ink and outline (ROW 6, below), the
-//                 flag kinds' faces and selected labels, the one resting
-//                 flag label and the flags' one outline, `flag_outline`
-//                 (THE MARKER LANE, below), the playhead's stem
-//                 and the scanner (THE PLAYHEAD, below — the head itself is
-//                 no longer a role: it is WordPad's ruler marker, painted in
-//                 the chrome's own label, hilight, shadow and ground).
+//   THE PALETTE   the program's (palette_file.h, 2026-10-07): the
+//                 waveform's canvas, ink and outline (ROW 6, below) — the
+//                 canvas also EVERY FLAG'S OUTLINE (THE MARKER LANE, below)
+//                 — the flag kinds' faces and selected faces, the one flag
+//                 label, the playhead's stem and the scanner (THE PLAYHEAD,
+//                 below — the head itself is no role: it is WordPad's ruler
+//                 marker, painted in the chrome's own label, hilight, shadow
+//                 and ground).
 // THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
@@ -288,10 +293,12 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
-// The resolved colours, one struct: the active theme's ROLES, one field each,
-// in the role table's order (kGuiThemeRoles, theme_file.h — the one
-// enumeration, which names each field's role and the built-in's value; the
-// mapping above says what each paints). Every field is a solid byte triple.
+// The resolved colors, ONE STRUCT, TWO SOURCES (2026-10-07): the active
+// theme's chrome ROLES and the active palette's program roles, one field
+// each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
+// program's in kGuiPaletteRoles' (palette_file.h), the two tables covering
+// the struct exactly (palette_file.cpp's static_asserts); the mapping above
+// says what each paints. Every field is a solid byte triple.
 struct GuiPalette {
     // THE CHROME (Windows' names for the built-in's recorded values).
     GuiColor ground;          // COLOR_3DFACE
@@ -315,7 +322,8 @@ struct GuiPalette {
     GuiColor caption_inactive;           // COLOR_INACTIVECAPTION
     GuiColor caption_inactive_gradient;  // COLOR_GRADIENTINACTIVECAPTION
     GuiColor caption_inactive_text;      // COLOR_INACTIVECAPTIONTEXT
-    // THE PROGRAM'S OWN ELEMENTS.
+    // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
+    // palette_file.h).
     GuiColor waveform_canvas;
     GuiColor waveform_ink;
     GuiColor waveform_outline;
@@ -328,11 +336,6 @@ struct GuiPalette {
     GuiColor removed_flag;
     GuiColor removed_flag_selected;
     GuiColor flag_label;
-    GuiColor warp_label_selected;
-    GuiColor phase_reset_label_selected;
-    GuiColor added_label_selected;
-    GuiColor removed_label_selected;
-    GuiColor flag_outline;
     GuiColor playhead_stem;
     GuiColor scanner;
     // THE CLEARLOOKS BLOCK (theme_file.h's table, generated; the painters
@@ -341,29 +344,41 @@ struct GuiPalette {
 };
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
-// state in render.cpp, written by install_palette alone at its TWO
-// application points — gui_main's startup, before the window exists, and the
-// settings editor's commit of the device config's `theme` key — the gui_scale
-// shape. Before the first install it is construction state (black), never
-// painted.
+// state in render.cpp, written by the install family below alone:
+// install_palette at its TWO application points — gui_main's startup,
+// before the window exists, and the settings editor's commit of the device
+// config's `theme` key — the gui_scale shape; and install_program_palette,
+// the picker's live road. Before the first install it is construction state
+// (black), never painted.
 const GuiPalette& palette();
 
-// Install the palette of the theme the device config `cfg` names (its `theme`
-// key, already through the one grammar, is_theme_key — the built-in or a
-// file read at launch, theme_file.h — or, with no `theme` line, the live
-// chrome's own, effective_theme_key), so this resolves and never refuses. It
-// bumps palette_generation below, the flag cache's fingerprint term, and the
-// plate's two baked inks (waveform_plate_inks) move with it; the settings
-// commit then rebuilds both caches synchronously and damages the window
-// (commit_device_setting's theme arm, settings_editor.cpp). Declared against device_config.h's struct, which
-// render.cpp includes.
+// Install every color the device config `cfg` names: THE CHROME'S off the
+// theme (its `theme` key, already through the one grammar, is_theme_key —
+// the built-in or a file read at launch, theme_file.h — or, with no `theme`
+// line, the live chrome's own, effective_theme_key) and THE PROGRAM'S off
+// the palette (its `palette` key, through is_palette_name — a default or a
+// file read at launch, its unnamed roles the live chrome's default's — or,
+// with no `palette` line, the live chrome's default palette,
+// effective_palette_name, palette_file.h), so this resolves and never
+// refuses. It bumps palette_generation below, the flag cache's fingerprint
+// term, and the plate's two baked inks (waveform_plate_inks) move with it;
+// the settings commit then rebuilds both caches synchronously and damages
+// the window (commit_device_setting's theme arm, settings_editor.cpp).
+// Declared against device_config.h's struct, which render.cpp includes.
 struct DeviceConfig;
 void install_palette(const DeviceConfig& cfg);
 
-// THE PALETTE'S GENERATION — a counter install_palette bumps, so a cached
-// surface whose pixels carry palette colours keys the palette BY FIELD (the
-// flag cache, FlagCache::fp_palette_generation). The waveform plate bakes only
-// its two inks and keys those directly (waveform_plate_inks).
+// (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
+// program's fourteen alone, the picker's live road — is declared in
+// palette_file.h beside the words it takes and defined in render.cpp beside
+// install_palette.)
+
+// THE PALETTE'S GENERATION — a counter the install family bumps, so a
+// cached surface whose pixels carry palette colors keys the palette BY
+// FIELD (the flag cache, FlagCache::fp_palette_generation, and the stem
+// stash its rebuild stages, AppState::staged_marker_stems). The waveform
+// plate bakes only its two inks and keys those directly
+// (waveform_plate_inks).
 uint64_t palette_generation();
 
 // -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
@@ -413,17 +428,19 @@ uint64_t palette_generation();
 // THE FLAG IS THE ACID FLAG (architect 2026-10-03, the bevelled Sonic Foundry
 // box retired as "a 3D surface with a cut through it"): a FLAT BOX in its
 // KIND's face, its label in `flag_label` (a pair, like Windows' — never a
-// luminance verdict), and a ONE-WINDOWS-PX OUTLINE in THE FLAG OUTLINE ROLE,
-// `flag_outline`, on all four sides, selected or not (below) — the box's left
-// border column, its top row, its run's closing column and its bottom row, so
-// the box keeps its width and height. THE OUTLINE IS ITS OWN ROLE (architect
-// 2026-10-07 ~05:30) because it must never be lighter than the well it
-// stands on ("visibly cutting through the well … the stem looks like it has
-// a lip around it because the border is so light compared to the well and
-// the tick"): the built-in's is its DkShadow byte (Windows' flags keep
-// their DkShadow ring), Clearlooks' THE CANVAS'S OWN COLOUR, black, so the
-// stem's flanks vanish where they enter the well (architect 2026-10-07
-// ~06:10; theme_file.h's program block). THE STEM leaves from the box's LEFTMOST FACE COLUMN (the
+// luminance verdict), and a ONE-WINDOWS-PX OUTLINE IN THE CANVAS'S COLOR,
+// `waveform_canvas`, on all four sides, selected or not (below) — the box's
+// left border column, its top row, its run's closing column and its bottom
+// row, so the box keeps its width and height. THE OUTLINE IS ALWAYS THE
+// CANVAS, UNDER EVERY CHROME (architect 2026-10-07: "otherwise it will poke
+// out when going into the canvas"; the flag outline's own role of that
+// morning retired): it must never be lighter than the well it stands on
+// ("the stem looks like it has a lip around it because the border is so
+// light compared to the well and the tick"), and the canvas's own color
+// makes the stem's flanks vanish where they enter the canvas. Under
+// clearlooks that was already so (its outline was the canvas, black); UNDER
+// WIN2000 THE FLAGS NOW RING BLACK on the ground, the canvas's black, where
+// they rang in the scheme's DkShadow 404040 (palette_file.h). THE STEM leaves from the box's LEFTMOST FACE COLUMN (the
 // marker's own frame column) and crosses the bottom outline into the well and
 // the canvas, one same-colour column. THE OUTLINE IS CARRIED DOWN BOTH SIDES
 // OF THE STEM (architect 2026-10-05, the flag "A+"): one outline-width column
@@ -440,15 +457,11 @@ uint64_t palette_generation();
 // `phase_reset_flag_selected`), each authoring column's flags by their column,
 // and the `h` view's ADDED (`added_flag` / `added_flag_selected`) and REMOVED
 // (`removed_flag` / `removed_flag_selected`), each a face and a brighter
-// selected face. ONE RESTING LABEL, A SELECTED LABEL PER KIND (architect
-// 2026-10-07, splitting the one selected label of 2026-10-04's "for now"):
-// `flag_label` on every resting face, white in the built-in, and on a
-// selected face the kind's own — `warp_label_selected`,
-// `phase_reset_label_selected`, `added_label_selected`,
-// `removed_label_selected` — so a bright accent can carry black where white
-// would not show (the built-in: white on the warp blue, black on the other
-// three; theme_file.h's program block). A label pairs with the FACE it sits
-// on: whatever pair a box wears, its selected label comes from that pair.
+// selected face. ONE LABEL FOR EVERY FACE, RESTING AND SELECTED (architect
+// 2026-10-07, his one-label rule, retiring the per-kind selected labels of
+// the same morning): `flag_label` on every face of every kind — white in
+// the `windows-2000` palette, black in `clearlooks` (palette_file.h, which
+// states the contrast white keeps on the bright accents).
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then invalid, then the kind's own pair; each arm answers selected and
@@ -467,9 +480,9 @@ uint64_t palette_generation();
 //             loop's sets BG..BT, retiring the white outline ring of mock
 //             AR02): the selected flag's FACE AND STEM take the selected face
 //             of its pair — the kind's, or `removed_flag_selected` over an
-//             invalid one ("bright red means selected and error") — and its
-//             LABEL that pair's selected label (`removed_label_selected` over
-//             an invalid one). The OUTLINE STAYS the one-line flag outline
+//             invalid one ("bright red means selected and error") — its
+//             LABEL the one `flag_label`. The OUTLINE STAYS the one-line flag
+//             outline, the canvas's color
 //             ("it has to be black and stay black; it's the only one that
 //             stays out of the way of the stem"), so every seam column is the
 //             outline whichever box paints it. It is Windows' own selected-icon
@@ -516,10 +529,10 @@ uint64_t palette_generation();
 // white box — "the current way would require chopping off the connection to
 // the stem … overall a lot less intuitive"): over the edited flag or cell
 // the flag's own FLAT box, of the flag's height and its run's width, on the
-// flag's own outline geometry in `flag_outline`, its face THE LADDER'S
+// flag's own outline geometry in the canvas's color, its face THE LADDER'S
 // SELECTED ANSWER for the marker (the kind's selected face, the removed
 // pair's over an invalid marker, the kind's selected face over a disabled
-// one), its text and caret that pair's selected label — AN EDIT FIELD IS
+// one), its text and caret the one `flag_label` — AN EDIT FIELD IS
 // NEVER THE DISABLED MENU ITEM (architect 2026-10-07): a disabled marker's
 // field takes the label, never the flat Shadow — the field pads (Windows'
 // margin strips) either side of the text, and THE
@@ -561,9 +574,9 @@ uint64_t palette_generation();
 // erosion at distance waveform_line_px() (1 px on the laptop at 138 %, 3 on
 // the tablet at 275 %), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
-// magnified and the compressed bars, the ink's hides it. The built-in's is
-// Windows' GREEN #008000 under Sound Recorder's LIME #00FF00 trace on black
-// (theme_file.h's role table). THE PLATE
+// magnified and the compressed bars, the ink's hides it. The `windows-2000`
+// palette's is Windows' GREEN #008000 under Sound Recorder's LIME #00FF00
+// trace on black (palette_file.h's role table). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the
 // pair rides each render job and the cache's fingerprint
 // (waveform_plate_inks); the canvas is laid live under the plate's
@@ -1536,7 +1549,8 @@ inline int marker_flag_edge_h_px() {
     return scaled_px(kMarkerFlagEdgePx, 1);
 }
 // THE 1px LEFT BORDER (architect 2026-08-02), full box height, in the flag
-// outline's colour (`flag_outline`, render.h's palette block). The
+// outline's color (the canvas's, `waveform_canvas`, render.h's palette
+// block). The
 // geometry clause that makes it a BORDER and not a wider
 // box is his and it is explicit: THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN,
 // so the border sits one column to the LEFT of the marker's own frame column
@@ -1655,7 +1669,7 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
 // well's lines. Each flank is the outline's own width
 // (marker_flag_border_px), the left one [col − b, col) and the right one
 // [col + t, col + t + b) beside the stem's [col, col + t); in the caller's
-// source colour (the outline's role, `flag_outline`). GATED ON THE
+// source color (the outline's, the canvas's `waveform_canvas`). GATED ON THE
 // STEM'S OWN COLUMN as fill_waveform_line is (no stem, no flanks), each flank
 // CLIPPED to the strip's columns [0, area_w). In the marker lane the flanks
 // are the box's own outline — its left border column and its bottom row —
@@ -3135,7 +3149,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // shaped + pad); the pads and the warp payload's scale truncation live at
 // kMarkerFlagPadLeftPx above. THE FLAT FLAG (architect 2026-10-03; the palette
 // block's marker-lane paragraph owns the look): the face flat in its state's
-// colour, a ONE-WINDOWS-PX OUTLINE in `flag_outline` — the box's top and
+// color, a ONE-WINDOWS-PX OUTLINE in the canvas's color — the box's top and
 // bottom rows (marker_flag_edge_h_px) inside the band, its left border column
 // and its run's closing column outside the face — and the stem leaving the
 // face's leftmost column across the bottom outline.
@@ -3179,8 +3193,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              alike (architect 2026-10-04) — under `flag_label`, the stem in
 //              the face.
 //   Selected:  the addressed cell's selected face (the kind's, or
-//              `removed_flag_selected` over an invalid one) under that
-//              pair's selected label; the stem in the FLAG BOX's face, so
+//              `removed_flag_selected` over an invalid one) under the one
+//              `flag_label`; the stem in the FLAG BOX's face, so
 //              selected only while the payload is the addressed cell
 //              (architect 2026-10-04);
 //              a selected DISABLED cell the kind's selected face under a flat
@@ -3409,7 +3423,7 @@ struct FlagEditorBox {
 // CHROME (architect 2026-10-07 ~09:45, retiring the morning's white box; the
 // palette block's editing paragraph) on the flag's own outline geometry —
 // its left border column, its top and bottom rows (marker_flag_edge_h_px)
-// and its closing column, all in `flag_outline` — so opening an editor
+// and its closing column, all in the canvas's color — so opening an editor
 // changes the flag's SIZE and nothing about where it stands or how it is
 // coloured: the flat box in the ladder's SELECTED answer for the marker
 // (resolve_flag_face — the removed pair's over an invalid marker, the
@@ -3597,7 +3611,7 @@ struct HistoryDiffFlag {
 // THE ANATOMY IS THE LIVE FLAG'S (the palette block's marker-lane paragraph):
 // the flat box in ITS KIND's face (architect 2026-10-04): an added half the
 // `added_flag` pair, a removed half the `removed_flag` pair, its
-// one-Windows-px outline in `flag_outline` — the left border outside the
+// one-Windows-px outline in the canvas's color — the left border outside the
 // face, the top and bottom rows, the closing column — and the label on the
 // redesign's sans
 // at the lane baseline in `flag_label`. THE LABEL CARRIES THE SIGN: `[+]`

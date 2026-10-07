@@ -58,12 +58,7 @@ for _what, _pat in (('the checker tile', r'cairo_image_surface_create\(CAIRO_FOR
 
 FACE_ROLES = ('warp_flag', 'phase_reset_flag', 'added_flag', 'removed_flag',
               'warp_flag_selected', 'phase_reset_flag_selected', 'added_flag_selected', 'removed_flag_selected')
-# each selected face -> the label it carries (the selected label per kind, theme_file.h, 2026-10-07); every resting
-# face carries the one `flag_label`
-SELECTED_LABEL = {'warp_flag_selected': 'warp_label_selected',
-                  'phase_reset_flag_selected': 'phase_reset_label_selected',
-                  'added_flag_selected': 'added_label_selected',
-                  'removed_flag_selected': 'removed_label_selected'}
+# every face, resting or selected, carries the one `flag_label` (the one-label rule, palette_file.h, 2026-10-07)
 
 
 def shift(m, dy, dx):
@@ -323,13 +318,9 @@ class Matcher:
         for r, fm in faces.items():
             self.put(reg, fm, self.TT[r])
             any_face |= fm
-        # the labels: a label-coloured run bounded on its row by faces on both sides, each selected face's run in its
-        # own kind's selected label
+        # the labels: a label-colored run bounded on its row by faces on both sides, every face's in the one label
         labc = self.m('flag_label')
-        for lr in SELECTED_LABEL.values():
-            labc = labc | self.m(lr)
         lab = np.zeros((self.H, self.W), bool)
-        on_sel = {r: np.zeros((self.H, self.W), bool) for r in SELECTED_LABEL}
         idx = np.arange(self.W)
         for y in range(y0, y1):
             nl = ~labc[y]
@@ -339,13 +330,7 @@ class Matcher:
             li, ri = np.clip(left, 0, self.W - 1), np.clip(right, 0, self.W - 1)
             ok &= any_face[y, li] & any_face[y, ri]
             lab[y] = ok
-            for r in SELECTED_LABEL:
-                on_sel[r][y] = ok & faces[r][y, li]
-        any_sel = np.zeros((self.H, self.W), bool)
-        for r, lr in SELECTED_LABEL.items():
-            any_sel |= on_sel[r]
-            self.put(reg, lab & on_sel[r], self.TT[lr])
-        self.put(reg, lab & ~any_sel, self.TT['flag_label'])
+        self.put(reg, lab, self.TT['flag_label'])
         # the frames: DkShadow touching a face
         self.put(reg, self.m('dk_shadow') & dilate(any_face, U), self.TT['dk_shadow'])
         if stem:

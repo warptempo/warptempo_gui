@@ -13,16 +13,24 @@
 // THE CHROME SPEC (architect 2026-10-06): the choices of the period desktop
 // the chrome follows, for the elements a later vocabulary may draw
 // differently — read by the chokepoint that paints each element, never a
-// literal at the painter. The colours stay the theme's (theme_file.h); the
-// spec chooses shapes, seats and faces, and names the theme a config with
-// no `theme` line wears.
+// literal at the painter. The colors stay the theme's (theme_file.h) and
+// the palette's (palette_file.h); the spec chooses shapes, seats and faces,
+// and names the theme a config with no `theme` line wears and the palette a
+// config with no `palette` line takes.
+//
+// THE NAME IS `windows-2000` (architect 2026-10-07): the `chrome` key's
+// value, the default palette's name and, with its scheme's word, the
+// built-in theme's (`windows-2000-standard`). C++ IDENTIFIERS AND FILE NAMES
+// KEEP `Win2000` / `win2000` AS THE ABBREVIATION (kChromeSpecWin2000,
+// GuiChromeVocabulary::Win2000, docs/engineering/win2000_deviations.md), and
+// prose may say win2000 for the vocabulary; only a KEY is spelled whole.
 //
 // TWO VOCABULARIES, ONE LIVE, CHOSEN AT LAUNCH (the `chrome` device key,
 // architect 2026-10-07, the planner's design under his free rein:
 // "authenticity wherever possible; the most Clearlooks assets; Windows
 // 2000's metrics the tie-break"):
-//   WIN2000 — Windows 2000's "Windows Standard" chrome as ReactOS 0.4.16
-//     draws it (architect 2026-10-06: "pivot to Win2K as the official
+//   WIN2000 (the key `windows-2000`) — Windows 2000's "Windows Standard"
+//     chrome as ReactOS 0.4.16 draws it (architect 2026-10-06: "pivot to Win2K as the official
 //     supported version and focus on that"; its classic chrome is that
 //     scheme in every colour and metric; Windows XP's Classic and Server
 //     2003's are the same), read off the architect's ReactOS captures
@@ -126,6 +134,11 @@ struct ChromeSpec {
     // THE THEME A CONFIG WITH NO `theme` LINE WEARS under this chrome
     // (effective_theme_key, theme_file.h): the vocabulary's own colours.
     const char*        default_theme;
+    // THE PALETTE A CONFIG WITH NO `palette` LINE TAKES under this chrome
+    // (effective_palette_name, palette_file.h; architect 2026-10-07): the
+    // vocabulary's own program colors, a compiled default palette, and the
+    // base every role a palette file leaves unnamed takes.
+    const char*        default_palette;
     // The vocabulary's text: the faces, their metrics and tracking (gui_font.h).
     const GuiFaceSet*  face_set;
     // THE CAPTION, the top strip's lane 0, in Windows px (render.h's caption
@@ -257,9 +270,10 @@ struct ChromeSpec {
 // 2026-10-06: assets/icons/tango/, its README the mapping), the disabled
 // glyph ReactOS's saturate.
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
-    .key                          = "win2000",
+    .key                          = "windows-2000",
     .vocabulary                   = GuiChromeVocabulary::Win2000,
     .default_theme                = "windows-2000-standard",
+    .default_palette              = "windows-2000",
     .face_set                     = &kGuiFaceSetWin2000,
     .caption_height_px            = 18,
     .caption_icon_x_px            = 2,
@@ -371,6 +385,7 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .key                          = "clearlooks",
     .vocabulary                   = GuiChromeVocabulary::Clearlooks,
     .default_theme                = "clearlooks",
+    .default_palette              = "clearlooks",
     .face_set                     = &kGuiFaceSetGnome2,
     .caption_height_px            = 20,
     .caption_icon_x_px            = 2,
@@ -447,10 +462,12 @@ constexpr bool is_chrome_key(std::string_view v) {
     return chrome_spec_for_key(v) != nullptr;
 }
 inline constexpr const char* kChromeGrammarReason =
-    "must be win2000 or clearlooks";
+    "must be windows-2000 or clearlooks";
 // THE DEFAULT, a config with no `chrome` line (DeviceConfig::chrome's
-// initializer spells it).
-inline constexpr const char* kDefaultChromeKey = "win2000";
+// initializer spells it). `windows-2000` since 2026-10-07 (architect: the
+// term spelled whole); the earlier `win2000` is an unknown word, the launch's
+// hard fail.
+inline constexpr const char* kDefaultChromeKey = "windows-2000";
 static_assert(is_chrome_key(kDefaultChromeKey));
 
 // THE LIVE SPEC — the one instance the process paints (architect

@@ -28,8 +28,9 @@ tools/mockup/push.sh --delete <name...>  # the superseded ones off it
   scene's `capture_path`. The scene is the one in `scenes/` naming that capture unless `--scene` says otherwise
   (a scene used on another capture is a stderr note, a size mismatch a hard fail).
 - `--capture-theme`: the theme the capture was painted in, what the matcher keys on. `builtin` (the default) is
-  `windows-2000-standard` since 2026-10-06 evening, its 39 values READ FROM `src/gui/theme_file.h` on every run, so
-  the tool cannot drift from the app. A capture painted in the earlier built-in, `windows-95-standard`, names that
+  `windows-2000-standard` since 2026-10-06 evening, its 21 chrome values READ FROM `src/gui/theme_file.h` and the
+  program's 14 from the `windows-2000` palette in `src/gui/palette_file.h` on every run, so the tool cannot drift from
+  the app (a theme names chrome roles only since 2026-10-07: every mock's program colors are that palette's). A capture painted in the earlier built-in, `windows-95-standard`, names that
   file: `--capture-theme assets/themes/windows-95-standard.theme`. Every scene in `scenes/` is a capture of the
   Windows 95 chrome, its small 23 x 22 toolbar case frozen in scene.py (the product dropped that chrome for Windows
   2000's on 2026-10-06; a Windows 2000 capture's large case has no scene field yet).
@@ -131,9 +132,12 @@ model: it calls chrome_win95.recolour for the role swap and only moves strips an
 
 ## Examples (`examples/`)
 
-The theme author's CDE files of 2026-10-06 (tmp/theme_author/report_CD1.md):
+The theme author's CDE files of 2026-10-06 (tmp/theme_author/report_CD1.md), their program lines (the warp flag, the
+waveform) stripped 2026-10-07 when a theme came to name chrome roles only — which left
+`cde-solaris9-default-calc.theme`, Default with the waveform on dtcalc's display colors, identical to Default, so it
+was deleted (git history keeps it), as `assets/themes/warptempo.theme` left the bundle; the verification records
+above name both as they ran:
 - `cde-solaris9-default.theme`: Solaris 9's Default as Sun ran it — dtsession's MEDIUM_COLOR mapping of Crimson.dp's
-  sets 1, 2 and 4 (Sun's own set 3, #63639C, for the warp flag), every shadow by Motif's rule; the catalog's
+  sets 1, 2 and 4 (Sun's own set 3, #63639C, its warp flag until the strip), every shadow by Motif's rule; the catalog's
   `cde-crimson` takes the HIGH_COLOR reading instead and differs.
 - `cde-solaris9-golden.theme`: Golden.dp (on Solaris 9's own palette list) under the same MEDIUM_COLOR mapping.
-- `cde-solaris9-default-calc.theme`: Default with the waveform on dtcalc's display colours (set 3 under cream).
