@@ -7,6 +7,7 @@
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdio>
 #include <expected>
@@ -14,6 +15,7 @@
 #include <iterator>
 #include <map>
 #include <span>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -29,10 +31,20 @@ constexpr GuiThemeWords builtin_words() {
 constexpr GuiThemeWords kBuiltinWords = builtin_words();
 
 // The role table names each role once, so the reader's lookup is a bijection.
+// AN EXHAUSTIVE PROOF IN N LOG N: every name measured once, the names sorted,
+// no two neighbours equal. (The pairwise form — theme_role_index asked of
+// every name — measured a name per comparison, N² strlens, and with the
+// generated Clearlooks block's 286 roles in a table of 322 it ran past
+// clang's default constexpr step budget, 1,048,576, on the NDK's compiler,
+// 2026-10-07; this form costs between 100,000 and 200,000 steps at 322
+// roles, growing as N log N, so the budget holds a table several times this
+// one.)
 constexpr bool role_names_unique() {
+    std::array<std::string_view, kGuiThemeRoleCount> names{};
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
-        if (theme_role_index(kGuiThemeRoles[i].name) != i) return false;
-    return true;
+        names[i] = kGuiThemeRoles[i].name;
+    std::ranges::sort(names);
+    return std::ranges::adjacent_find(names) == names.end();
 }
 static_assert(role_names_unique());
 // Every flat-caption pair names two roles of the table.
