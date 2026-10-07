@@ -13,10 +13,15 @@ namespace {
 // pixel value times 64.
 constexpr double k26Dot6 = 64.0;
 
-// RAII over the three handles the shaping pass borrows. Each release is
-// unconditional and ordered by declaration: the buffer and the hb font go
-// before the face unlock, which is what cairo requires. The body allocates
-// (the glyph vector), so no plain call at the end could be trusted to run.
+// RAII over the FT face lock the shaping pass holds. The release is
+// unconditional: the body allocates (the glyph vector), so no plain call at
+// the end could be trusted to run, and the buffer (declared after it) goes
+// before the unlock, which is what cairo requires.
+//
+// THE LOCK STAYS AROUND EVERY SHAPE, cached hb font or not: the body and the
+// small share one FT face (tahoma.ttf) at two sizes, cairo's lock sets this
+// scaled font's size on it, and hb-ft reads the face's live size for every
+// advance at shape time.
 class ScaledFontFace {
 public:
     explicit ScaledFontFace(cairo_scaled_font_t* font)
@@ -31,23 +36,46 @@ private:
     FT_Face              face_;
 };
 
+// THE ONE HB FONT PER SCALED FONT (architect 2026-10-07: the stutter at full
+// zoom-out on the phase-reset axis, 435 flag labels shaped per paint, is fixed
+// by caching it). Building an hb font through hb_ft_font_create also builds a
+// fresh hb face, so HarfBuzz re-read cmap/GSUB/GPOS and rebuilt its shape plan
+// and advance cache for EVERY run — 5 to 6.5 us a label on the laptop at 300,
+// nearly the whole cost of a shape; cached, a label costs under 1 us
+// (measured 2026-10-07). So the hb font is built ONCE PER
+// cairo_scaled_font_t and hung on it as cairo USER DATA, destroyed by cairo
+// with it: KEYED ON THE SCALED FONT'S IDENTITY AND INVALIDATED WITH IT by
+// construction. The face owner's per-(face, percent) cache
+// (gui_outline_scaled_font) rebuilds the scaled font when the percent moves,
+// and the new one carries no hb font until its first shape, so the two can
+// never disagree; a pointer-keyed mirror here could (a freed scaled font's
+// address reused by its successor), and a second cache in the owner would
+// pull HarfBuzz into the face owner for no gain. Built inside the caller's
+// lock, so hb-ft reads its scale off the face at this scaled font's own
+// size, exactly as the per-call build did, and the advances are the same
+// bits (checked 2026-10-07 on every face at 300 and the body at 138, the
+// widths and every glyph's offsets and advances compared before and after).
+//
 // THE HB FONT LOADS OUTLINES ONLY (gui_font_bundled.cpp's head, the strike
 // rule's glyph-load road): hb-ft's own default, unhinted, plus
 // FT_LOAD_NO_BITMAP, so no advance is ever read off an embedded strike.
-class HbFont {
-public:
-    explicit HbFont(FT_Face face) : font_(hb_ft_font_create(face, nullptr)) {
-        hb_ft_font_set_load_flags(
-            font_, FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP);
-    }
-    ~HbFont() { hb_font_destroy(font_); }
-    HbFont(const HbFont&) = delete;
-    HbFont& operator=(const HbFont&) = delete;
-    hb_font_t* get() const { return font_; }
+// GUI thread only, like the scaled font it hangs on.
+cairo_user_data_key_t g_hb_font_key;
 
-private:
-    hb_font_t* font_;
-};
+void destroy_hb_font(void* font) {
+    hb_font_destroy(static_cast<hb_font_t*>(font));
+}
+
+hb_font_t* hb_font_of(cairo_scaled_font_t* scaled, FT_Face locked_face) {
+    if (void* cached = cairo_scaled_font_get_user_data(scaled, &g_hb_font_key))
+        return static_cast<hb_font_t*>(cached);
+    hb_font_t* font = hb_ft_font_create(locked_face, nullptr);
+    hb_ft_font_set_load_flags(
+        font, FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP);
+    cairo_scaled_font_set_user_data(scaled, &g_hb_font_key, font,
+                                    destroy_hb_font);
+    return font;
+}
 
 class HbBuffer {
 public:
@@ -62,20 +90,17 @@ private:
 };
 
 // THE ONE ROAD: shape `utf8` whole with HarfBuzz on `font`'s scaled font's
-// own FT face and append the glyphs to `run`; each glyph's cluster is its
-// byte index into the string. EVERY GLYPH'S ADVANCE TAKES THE TRACKING
-// (kGuiTrackingPx, gui_font.h) after the 26.6 conversion, the last
-// included.
-//
-// The hb font is built per call, and stays that way deliberately: the
-// build is a face wrap plus a scale read, and a cache would have to be
-// keyed on the scaled font's identity and invalidated with it.
+// own FT face, through the hb font cached on that scaled font (hb_font_of),
+// and append the glyphs to `run`; each glyph's cluster is its byte index into
+// the string. EVERY GLYPH'S ADVANCE TAKES THE TRACKING (kGuiTrackingPx,
+// gui_font.h) after the 26.6 conversion, the last included.
 void append_glyphs(const GuiFont& font, std::string_view utf8,
                    ShapedRun& run) {
-    const double   tracking = gui_tracking_px(font);
-    ScaledFontFace locked(gui_outline_scaled_font(font));
-    HbFont         hb_font(locked.face());
-    HbBuffer       buffer;
+    const double         tracking = gui_tracking_px(font);
+    cairo_scaled_font_t* scaled   = gui_outline_scaled_font(font);
+    ScaledFontFace       locked(scaled);
+    hb_font_t*           hb_font  = hb_font_of(scaled, locked.face());
+    HbBuffer             buffer;
 
     hb_buffer_add_utf8(buffer.get(), utf8.data(),
                        static_cast<int>(utf8.size()), 0,
@@ -85,7 +110,7 @@ void append_glyphs(const GuiFont& font, std::string_view utf8,
     hb_buffer_set_direction(buffer.get(), HB_DIRECTION_LTR);
     hb_buffer_guess_segment_properties(buffer.get());
 
-    hb_shape(hb_font.get(), buffer.get(), nullptr, 0);
+    hb_shape(hb_font, buffer.get(), nullptr, 0);
 
     unsigned            count = 0;
     const hb_glyph_info_t*     infos =

@@ -170,7 +170,10 @@ double gui_face_em_px(GuiFace face) {
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     // One per face, rebuilt when the scale moves (its two application
-    // points, set_gui_scale_percent): a paint asks for it per run.
+    // points, set_gui_scale_percent): a paint asks for it per run. The hb
+    // font text_shape shapes with hangs on this scaled font as cairo user
+    // data and dies with it (text_shape.cpp's hb_font_of), so it follows this
+    // cache's key and rebuild without a second cache.
     struct Cached {
         int                  percent = -1;
         cairo_scaled_font_t* font    = nullptr;
