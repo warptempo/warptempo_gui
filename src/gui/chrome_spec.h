@@ -56,8 +56,9 @@
 //     ticks, the restored laptop's metacity frame). The waveform and the
 //     flags stay the program's own, the flag editor with them — the flag
 //     in its selected face under every chrome (architect 2026-10-07
-//     ~09:45). The trim lane's body is the product's own light slider
-//     (paint_cl_slider). The default when the config names no chrome.
+//     ~09:45). The trim lane's bar is the product's own: the light slider
+//     for the body and the caps in step with it (paint_cl_slider,
+//     paint_cl_stepper). The default when the config names no chrome.
 // THE TWO ARE NOT PEERS (architect 2026-10-07 ~16:00): CLEARLOOKS IS THE
 // DEVELOPMENT CHROME AND THE EXTERNAL ONE; WINDOWS-2000 IS THE REFERENCE
 // BEHIND IT — the sanity check and the metric base, not intended for

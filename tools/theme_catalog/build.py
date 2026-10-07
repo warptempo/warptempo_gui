@@ -894,28 +894,18 @@ def engine_tones(g, m, gtk, sc, geo):
     t.ramp('cl_trough_shadow', srows[:2], 0, 1,
            'clearlooks_draw_scrollbar_trough: the shadow, shade (shade[2], 0.95) -> shade[2] from row 1 to row 3, '
            'its rows 1..2')
-    # THE STEPPERS (clearlooks_gummy_draw_scrollbar_stepper, the bar horizontal): bg[state]'s gummy ramp from row 0 to
-    # row th over the fill's rows 1 .. th - 2, the top-left highlight (shade (fill, 1.3) at 0.4, gummy's constants)
-    # along row 1 and down column 1, the border mix (shade[7], fill, 0.2) (colorize_scrollbar: has_color). RESTING
-    # bg[NORMAL]; PRESSED bg[ACTIVE] = shade (0.9, bg), the default style's (the scrollbar style overrides no colour) —
-    # his capture 00-12-13's pressed up stepper. No prelight (the product draws one hover face, the toolbars').
-    step = T.pixman_step_row(0, th)
-    for state, style_state in (('normal', 'NORMAL'), ('pressed', 'ACTIVE')):
-        fill = style_bg('scrollbar', style_state)
-        ramp = {r: T.pixman_vertical_ramp_row(gummy(fill, False), 0, th, r) for r in range(1, th - 1)}
-        rule = f'clearlooks_gummy_draw_scrollbar_stepper {state} (bg[{style_state}]) across the {th}-row bar'
-        t.ramp(f'cl_stepper_{state}_upper', [ramp[r] for r in range(1, step)], 0, step - 2, rule + ', rows 1..'
-               f'{step - 1}')
-        t.ramp(f'cl_stepper_{state}_lower', [ramp[r] for r in range(step, th - 1)], 0, th - 2 - step,
-               rule + f', rows {step}..{th - 2}')
-        t.add(f'cl_stepper_{state}_border', cb(mix(SH[7], fill, 0.2)), rule + ': the border, mix (shade[7], fill, 0.2)')
-        hi = sh(fill, 1.3)
-        over = lambda r: T.cairo_solid_over(hi, 0.4, ramp[r])
-        t.add(f'cl_stepper_{state}_highlight_row', over(1), rule + ': the top-left highlight over its row 1')
-        t.ramp(f'cl_stepper_{state}_highlight_upper', [over(r) for r in range(2, step)], 0, step - 3,
-               rule + f': the top-left highlight down its column 1, rows 2..{step - 1}')
-        t.ramp(f'cl_stepper_{state}_highlight_lower', [over(r) for r in range(step, th - 1)], 0, th - 2 - step,
-               rule + f': the top-left highlight down its column 1, rows {step}..{th - 2}')
+    # THE CAPS ARE THE PRODUCT'S OWN, IN STEP WITH THE LIGHT BAR (architect 2026-10-07 ~16:40, on the glass, of the
+    # gummy stepper: its dark border ring "sits against the light of the scroll body ... the end caps look tacked on";
+    # "they need to start with a light side at the top, and the curve that forms the outer edge of each end cap needs
+    # to start on a light tone and then darken as it goes down, to imitate the reflection of light"; paint_cl_stepper,
+    # clearlooks_paint.h): the ring the bar's own two tones — cl_separator_light along the top, the one ramp down the
+    # sides to cl_separator_dark along the bottom (roles made above, so the ring adds none) — the face the window ground
+    # at rest, the inner edge the dark tone; THE PRESSED FACE bg[ACTIVE] of the scrollbar style (the default style's
+    # shade (0.9, @bg_color); the scrollbar style overrides no colour — his capture 00-12-13's pressed stepper), flat
+    # under the ring. The gummy stepper's twenty tones (its ramp, its border mix and its baked highlight, resting and
+    # pressed) retired with its drawing the same evening. The arrow stays the engine's.
+    t.add('cl_stepper_pressed_face', cb(style_bg('scrollbar', 'ACTIVE')),
+          'the pressed cap\'s face: bg[ACTIVE] of the scrollbar style (the default style\'s shade (0.9, @bg_color)), flat')
     t.add('cl_stepper_arrow', T.gdk_byte(gtk[('fg', 'NORMAL')]),
           'clearlooks_draw_arrow: fg[state] (fg[NORMAL] = fg[ACTIVE] = fg_color), the normal arrow')
     assert gtk[('fg', 'NORMAL')] == gtk[('fg', 'ACTIVE')]

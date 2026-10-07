@@ -426,8 +426,8 @@ uint64_t palette_generation();
 // from the press on it to the gesture's end, a motionless press included:
 // Windows draws a held scroll arrow DFCS_PUSHED | DFCS_FLAT — one Shadow line
 // round the face, the glyph one Windows px right and down (render_trim_flags).
-// UNDER CLEARLOOKS the lane is GTK's horizontal scroll bar — its trough and
-// steppers in their generated cl_ tones — round the product's own light body
+// UNDER CLEARLOOKS the lane is GTK's horizontal scroll bar — its trough in
+// its generated cl_ tones — round the product's own light bar, body and caps
 // (architect 2026-10-07; clearlooks_paint.h's trim block).
 
 // THE RULER LANE's inks: every timestamp in the LABEL (architect 2026-10-03;
@@ -1263,7 +1263,7 @@ int cl_scale_thumb_h_px();
 // construction. 44 device rows at 275 %, 22 at 138 %. UNDER CLEARLOOKS
 // (architect 2026-10-07, the painters round's last part) the same lane, the
 // same caps' rects and the same body are GTK'S HORIZONTAL SCROLL BAR — the
-// trough, the steppers and the slider (clearlooks_paint.h's trim block, where
+// trough, the caps and the slider (clearlooks_paint.h's trim block, where
 // the bar wears this 16 for GTK's 15) — and the trim bar still stands
 // outside the well, above the ruler, as his capture 00-17-24's bar stands
 // outside the list's frame.
@@ -1846,8 +1846,8 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // (kTrimLaneHeightPx, the same 16) — the ground under the plain raised edge
 // and an arrow glyph in the label, no hover face, and from the press on it to
 // the gesture's end the PRESSED scroll arrow (render_trim_flags; the palette
-// block's trim paragraph) — under clearlooks GTK's stepper on the same box,
-// the engine's arrow (paint_cl_stepper).
+// block's trim paragraph) — under clearlooks the light bar's own cap on the
+// same box, the engine's arrow (paint_cl_stepper).
 // THE BEGIN BUTTON'S LEFT EDGE STANDS ON THE BEGIN COLUMN and its arrow
 // points LEFT; THE END BUTTON'S RIGHT EDGE STANDS ON THE END COLUMN and its
 // arrow points RIGHT; the thumb's BODY runs between the two buttons' inner
@@ -3038,11 +3038,12 @@ struct TrimBarHit {
 
 // Draws the WHOLE TRIM LANE (architect 2026-10-02, the AC set; the geometry
 // at kTrimLaneHeightPx): Windows 95's scroll bar, miniaturized — under
-// clearlooks GTK's (architect 2026-10-07: the trough, the slider for the
-// body and the steppers for the caps, clearlooks_paint.h; every rect, the
-// order and the publication below the same). All pixel-bound integer fills,
-// no stroke and no antialiasing anywhere in the win2000 lane (the clearlooks
-// steppers' corners and arrows are antialiased, the renderer's). The lane band is the `trim_bar` PARAMETER — the caller passes
+// clearlooks GTK's trough round the light bar (architect 2026-10-07: the
+// trough, the slider for the body and the caps in step with it,
+// clearlooks_paint.h; every rect, the order and the publication below the
+// same). All pixel-bound integer fills, no stroke and no antialiasing
+// anywhere in the win2000 lane (the clearlooks caps' corners and arrows are
+// antialiased, the renderer's). The lane band is the `trim_bar` PARAMETER — the caller passes
 // top_trim_row_area(app) (top-strip lane 2), and the band painted in is
 // published as TrimBarHit::lane, the y-gate both trim hits read, so paint and
 // hit take the band as one value and cannot drift; nothing in here re-derives

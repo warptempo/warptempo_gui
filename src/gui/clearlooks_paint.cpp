@@ -993,11 +993,6 @@ void paint_cl_trough(cairo_t* cr, const GuiRect& lane) {
 
 namespace {
 
-// THE STEPPER'S STEP — the row where pixman put the gummy ramp's step over
-// the bar's rows (build.py's pixman_step_row(0, kTrimLaneHeightPx)):
-// (n + 1) / 2 of the n-row gradient from row 0, the lane's 16 giving 8.
-int stepper_step_w() { return (kTrimLaneHeightPx + 1) / 2; }
-
 // clearlooks_draw_normal_arrow's chevron at (0, 0) pointing DOWN, in device
 // px for an arrow box `box_w` W px wide (the engine's width and height both
 // GtkRange's arrow-scaling 0.5 of the stepper, truncated to whole px), `s`
@@ -1029,81 +1024,38 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
     const int    u   = relief_line_px();
     const double du  = u;
     const double rad = std::min<double>(scaled_px(live_chrome_spec().corner_radius_px),
-                                        std::min(b.w - 2 * du, b.h - 2 * du) / 2.0);
+                                        std::min(b.w, b.h) / 2.0);
     const unsigned corners = points_left ? (kTL | kBL) : (kTR | kBR);
-    const auto R = [pressed](Role normal, Role down) {
-        return palette().*(pressed ? down : normal);
-    };
-    const int step = at(b.y, stepper_step_w());
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    // THE FILL, clipped to its rounded rect one W in: the gummy ramp's two
-    // segments over the rows 1 .. h − 2.
+    // THE RING, the box inside its outer rounded path: the bar's light line
+    // along the top row and its dark line along the bottom row, flat (the
+    // body's own two rows continued), and between them the one ramp from
+    // the light tone to the dark — the outer curve lit at the top, shaded
+    // at the bottom. The clip's arcs are the renderer's antialiasing.
     cairo_save(cr);
-    rounded_path(cr, b.x + du, b.y + du, b.w - 2 * du, b.h - 2 * du, rad,
-                 corners);
+    rounded_path(cr, b.x, b.y, b.w, b.h, rad, corners);
     cairo_clip(cr);
-    paint_cl_ramp(cr, GuiRect{b.x, b.y + u, b.w, step - b.y - u},
-                  R(&GuiPalette::cl_stepper_normal_upper_0,
-                    &GuiPalette::cl_stepper_pressed_upper_0),
-                  R(&GuiPalette::cl_stepper_normal_upper_1,
-                    &GuiPalette::cl_stepper_pressed_upper_1));
-    paint_cl_ramp(cr, GuiRect{b.x, step, b.w, b.y + b.h - u - step},
-                  R(&GuiPalette::cl_stepper_normal_lower_0,
-                    &GuiPalette::cl_stepper_pressed_lower_0),
-                  R(&GuiPalette::cl_stepper_normal_lower_1,
-                    &GuiPalette::cl_stepper_pressed_lower_1));
-    // THE TOP-LEFT HIGHLIGHT (draw_top_left_highlight on the fill's rect):
-    // up column 1 from the bottom (less the radius on a rounded bottom-left),
-    // round a rounded top-left, along row 1 to the right (less the radius on
-    // a rounded top-right), in its row's baked tone; then the column's
-    // straight part over it, its two baked segments recorded over the whole
-    // column (rows 2 .. h − 2) and cut to the part this stepper draws.
-    const double left = b.x + 1.5 * du, top = b.y + 1.5 * du;
-    const double bottom = b.y + b.h - du - ((corners & kBL) ? rad : 0.0);
-    const double right  = b.x + b.w - du - ((corners & kTR) ? rad : 0.0);
-    cairo_save(cr);
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
-    cairo_new_path(cr);
-    cairo_move_to(cr, left, bottom);
-    if (corners & kTL)
-        cairo_arc(cr, left + rad, top + rad, rad, M_PI, M_PI * 1.5);
-    else
-        cairo_line_to(cr, left, top);
-    cairo_line_to(cr, right, top);
-    cairo_set_line_width(cr, du);
-    set_palette_source(cr, R(&GuiPalette::cl_stepper_normal_highlight_row,
-                             &GuiPalette::cl_stepper_pressed_highlight_row));
-    cairo_stroke(cr);
+    paint_cell_rect(cr, GuiRect{b.x, b.y, b.w, u}, pal.cl_separator_light);
+    paint_cell_rect(cr, GuiRect{b.x, b.y + b.h - u, b.w, u},
+                    pal.cl_separator_dark);
+    paint_cl_ramp(cr, GuiRect{b.x, b.y + u, b.w, b.h - 2 * u},
+                  pal.cl_separator_light, pal.cl_separator_dark);
     cairo_restore(cr);
-    {
-        const int ctop = (corners & kTL)
-                             ? static_cast<int>(std::ceil(top + rad))
-                             : b.y + 2 * u;
-        const int cbot = static_cast<int>(std::floor(bottom));
-        cairo_save(cr);
-        cairo_rectangle(cr, b.x + u, ctop, u, std::max(0, cbot - ctop));
-        cairo_clip(cr);
-        paint_cl_ramp(cr, GuiRect{b.x + u, b.y + 2 * u, u, step - b.y - 2 * u},
-                      R(&GuiPalette::cl_stepper_normal_highlight_upper_0,
-                        &GuiPalette::cl_stepper_pressed_highlight_upper_0),
-                      R(&GuiPalette::cl_stepper_normal_highlight_upper_1,
-                        &GuiPalette::cl_stepper_pressed_highlight_upper_1));
-        paint_cl_ramp(cr, GuiRect{b.x + u, step, u, b.y + b.h - u - step},
-                      R(&GuiPalette::cl_stepper_normal_highlight_lower_0,
-                        &GuiPalette::cl_stepper_pressed_highlight_lower_0),
-                      R(&GuiPalette::cl_stepper_normal_highlight_lower_1,
-                        &GuiPalette::cl_stepper_pressed_highlight_lower_1));
-        cairo_restore(cr);
-    }
-    cairo_restore(cr);   // the fill's clip
-    // THE BORDER, the outer ring at the radius.
-    rounded_path(cr, b.x + du / 2, b.y + du / 2, b.w - du, b.h - du, rad,
-                 corners);
-    cairo_set_line_width(cr, du);
-    set_palette_source(cr, R(&GuiPalette::cl_stepper_normal_border,
-                             &GuiPalette::cl_stepper_pressed_border));
-    cairo_stroke(cr);
+    // THE FACE, one W in, its rounded corners concentric with the ring's:
+    // the ground at rest, bg[ACTIVE] pressed.
+    cairo_save(cr);
+    rounded_path(cr, b.x + du, b.y + du, b.w - 2 * du, b.h - 2 * du,
+                 std::max(0.0, rad - du), corners);
+    cairo_clip(cr);
+    paint_cell_rect(cr, GuiRect{b.x + u, b.y + u, b.w - 2 * u, b.h - 2 * u},
+                    pressed ? pal.cl_stepper_pressed_face : pal.ground);
+    cairo_restore(cr);
+    // THE INNER EDGE: one W of the dark tone down the column where the cap
+    // meets the body, the lane's whole height (the begin cap's right column,
+    // the end cap's left).
+    paint_cell_rect(cr, GuiRect{points_left ? b.x + b.w - u : b.x, b.y, u, b.h},
+                    pal.cl_separator_dark);
     // THE ARROW, centred on the box, the engine's rotation for its
     // direction.
     const double s = static_cast<double>(scaled_px(100)) / 100.0;

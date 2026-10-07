@@ -263,12 +263,13 @@ inline constexpr int kClScaleTroughPx       = 7;
 inline constexpr int kClScaleSliderLengthPx = 23;
 inline constexpr int kClScaleSliderWidthPx  = 15;
 
-// THE TRIM LANE IS GTK'S HORIZONTAL SCROLL BAR — ITS TROUGH AND ITS STEPPERS,
-// the body between the caps the product's own light slider (paint_cl_slider
-// below) — (architect 2026-10-07, the painters round's last part; render.h's
-// trim block keeps every rect: the lane, the two caps' 16 x 16 boxes where
-// trim_endcap_rect puts them, the body between them, the hit stash). THE BAR
-// WEARS THE LANE'S 16 W ROWS,
+// THE TRIM LANE IS GTK'S HORIZONTAL SCROLL BAR — ITS TROUGH — round the
+// product's own light bar: the body between the caps the light slider
+// (paint_cl_slider below) and the caps in step with it (paint_cl_stepper
+// below, 2026-10-07 evening) — (architect 2026-10-07, the painters round's
+// last part; render.h's trim block keeps every rect: the lane, the two caps'
+// 16 x 16 boxes where trim_endcap_rect puts them, the body between them, the
+// hit stash). THE BAR WEARS THE LANE'S 16 W ROWS,
 // Windows' SM_CYHSCROLL, where GTK's is 15 (GtkRange::slider-width and
 // stepper-size 15): one row more of every ramp below, the base's thickness
 // kept (the settled rule: the proportional fit to Windows' layout).
@@ -284,21 +285,41 @@ inline constexpr int kClScaleSliderWidthPx  = 15;
 // (render_trim_flags' OFF SCREEN rule) — so the border is the two rows.
 void paint_cl_trough(cairo_t* cr, const GuiRect& lane);
 
-// ONE STEPPER — clearlooks_gummy_draw_scrollbar_stepper on a trim cap's box
-// `b` (trim_endcap_rect's 16 x 16): bg[NORMAL]'s gummy ramp across the
-// bar's rows (pressed, bg[ACTIVE] = shade (0.9, bg), the default style's —
-// his capture 00-12-13's pressed stepper), its two OUTER corners rounded at
-// the spec's radius (the begin cap's left ones, the end cap's right: GTK's
-// stepper A and D, the corners at the bar's ends), the top-left highlight
-// baked (gummy's shade 1.3 at 0.4), the border mix (shade[7], fill, 0.2)
-// (colorize_scrollbar's has_color); THE ARROW the engine's own
+// ONE CAP, THE PRODUCT'S OWN, IN STEP WITH THE LIGHT BAR (architect 2026-10-07
+// ~16:40, on the glass, of the gummy stepper this replaces — its shade[7]
+// border ring dark along its whole top row against the body's light line:
+// "the trim end caps look tacked on ... misaligned. They need to start with
+// a light side at the top, and the curve that forms the outer edge of each
+// end cap needs to start on a light tone and then darken as it goes down, to
+// imitate the reflection of light"; and ~17:10: "be careful that there is
+// some contrast between the trim end cap and the body, at least in the top
+// part — we don't want it to blur together either"; the TC1 sheet's variant
+// c) on a trim cap's box `b` (trim_endcap_rect's 16 x 16): THE RING, one W
+// wide, is the bar's own two tones — `cl_separator_light` along the top row
+// (the body's light line continued) and `cl_separator_dark` along the
+// bottom row (its dark line continued), the sides between them THE ONE RAMP
+// from the light to the dark (paint_cl_ramp, rule 2 of the head) — so its two
+// OUTER corners, rounded at the spec's radius (the begin cap's left ones, the
+// end cap's right: GTK's stepper A and D, the corners at the bar's ends),
+// start light and darken down the curve; THE FACE inside, its corners
+// concentric, is the window ground at rest (the bar's own, a button in the
+// bevel, not a gummy box on it) and `cl_stepper_pressed_face` pressed —
+// bg[ACTIVE] of the scrollbar style, the default style's shade (0.9,
+// bg_color), his capture 00-12-13's pressed stepper, flat here; THE INNER
+// EDGE, where the cap meets the body, one W of the dark tone the lane's
+// whole height — the contrast his caveat asks for, a dark cell notching the
+// light line at the top so the cap reads as a button against the body (the
+// sheet's variant e, without it, blurred into the body at rest). Every
+// tone a role: the ring's two are reused by the light bar's own ruling
+// (paint_cl_slider), the pressed face the one tone added, the gummy
+// stepper's twenty generated tones retired with its drawing (build.py's
+// engine tones). THE ARROW stays the engine's own, kept by ruling
 // (clearlooks_draw_normal_arrow, its chevron filled in fg) at GtkRange's
-// arrow-scaling 0.5 of the 16-W box — 8 W, so the engine's 8-wide, 4.75-tall
-// wedge, its line half-width 0.75 — centred on the box, pointing left on
-// the begin cap and right on the end cap. GTK displaces no arrow
+// arrow-scaling 0.5 of the 16-W box — 8 W, so the engine's 8-wide,
+// 4.75-tall wedge, its line half-width 0.75 — centred on the box, pointing
+// left on the begin cap and right on the end cap; GTK displaces no arrow
 // (GtkRange::arrow-displacement 0): pressed, only the face changes. NO
-// HOVER FACE (the prelit stepper is not drawn: the one hover face is the
-// toolbars').
+// HOVER FACE (the one hover face is the toolbars').
 void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
                       bool pressed);
 
@@ -314,9 +335,10 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
 // the window takes the body's end with it (render_trim_flags). The two lines
 // are the gummy separator's own tones, roles already made for
 // paint_cl_toolbar_separator: a role a second painter reads is that tone put
-// down again, not a colour derived here. The trough and the steppers stay
-// GTK's (above). (Gummy's spot[1] slider, its ring and its three grips
-// retired with their twelve generated tones the same day.)
+// down again, not a colour derived here. The trough stays GTK's (above); the
+// caps wear the same two tones (paint_cl_stepper, since the evening). (Gummy's
+// spot[1] slider, its ring and its three grips retired with their twelve
+// generated tones the same day.)
 void paint_cl_slider(cairo_t* cr, const GuiRect& body);
 
 // THE WELL'S FRAME — GtkScrolledWindow's shadow IN under GUMMY
