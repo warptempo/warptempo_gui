@@ -13,7 +13,7 @@ these seats, below): each file is one sheet's 48x48 slot EXTRACTED as a standalo
 — the elements of every visible layer that paint inside the slot's rectangle (each probed alone through rsvg-convert),
 the definitions they reference, the root `width="48" height="48" viewBox="0 0 48 48"`, the drawing translated to the
 origin, written with SVG as the default namespace — and verified against a render of the slot from the sheet itself
-(rsvg-convert at 72 px: maximum channel difference 0 on 52 of the 53 distinct drawings, 5 levels of 255 on EditDelete's
+(rsvg-convert at 72 px: maximum channel difference 0 on 53 of the 54 distinct drawings, 5 levels of 255 on EditDelete's
 user-trash; EditUndo's and EditRedo's judged on mask-stripped copies, below).
 Every layer, not only the icon's own: zoom.svg draws part of zoom-original's and zoom-fit-best's pictures from the
 zoom-in layer, and the slot shows them. 2 files are Mist's own scalable drawings, copied from the gnome-themes tarball
@@ -41,12 +41,19 @@ gnome's `view-refresh`, the reload's arrow — the walked version loaded into th
 carries neither name (its scalable folder holds folders and `document-open` only), so both are gnome's drawings by
 inheritance; Load in Place wore Mist's `document-open` and Revert gnome's `document-revert` until then. Both came by
 the road above (3.0.0's slot extracted, maximum difference 0 against the slot render at 72; 2.30.3's slot renders
-identically to 3.0.0's for both, maximum difference 0); `appointment-new`'s extraction is byte-identical to
-ShallowHistory's file.
+identically to 3.0.0's for both, maximum difference 0); `appointment-new`'s extraction is byte-identical to the
+file Toggle History Walk wore until its calendar, below.
+
+THE CALENDAR OF 2026-10-07 (architect ~04:45, ruled for both sets, resolving the clock the two history seats then
+shared: Revert keeps `appointment-new`): ShallowHistory (Toggle History Walk) wears gnome's `x-office-calendar`, the
+dated page — the walk through dated commits. Mist carries no such name, so it is gnome's drawing by inheritance, by the
+same road (3.0.0's `src/x-office-calendar.svg` slot extracted, one of the five candidates kept, maximum difference 0
+against the slot render at 72; 2.30.3's slot renders identically to 3.0.0's, maximum difference 0). Its page's "3" is
+a path, with no `<text>` for resvg to skip.
 
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
-MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder; gnome's `appointment-new` is ShallowHistory (Toggle History
-Walk) and DocumentRevert (Revert). Every other file is worn once: 59 enumerators over 55 distinct drawings.
+MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder. Every other file is worn once: 59 enumerators over 56
+distinct drawings.
 
 THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0 throughout). Squeeze installs
 gnome-icon-theme 2.30.3, whose sheets are not taken; at 53 of the 57 GNOME seats 3.0.0's slot renders identically to
@@ -68,10 +75,11 @@ in levels of 255: the median over the 58 is **0.52 at 72 px** (p90 1.20, worst 2
 px** (p90 3.46, worst 4.61 EditDelete); 1.03 at 48. Against GNOME's own 48-px PNGs in the 3.0.0 tarball, the median is
 1.08 for resvg and 0.62 for rsvg-convert. The two seats changed on 2026-10-07 and DocumentOpen, a byte copy of a
 checked file, were re-checked on a sheet of their own the same way: DialogOkApply's `view-refresh` 0.46 at 72 px and
-1.33 at 33 (1.07 from GNOME's 48-px PNG), DocumentRevert, a byte copy of ShallowHistory, 2.47 and 3.29 (its clock
-numerals, below), DocumentOpen 0.35 and 2.29. Every file draws in both renderers. Where they part, each was looked at
+1.33 at 33 (1.07 from GNOME's 48-px PNG), DocumentRevert, a byte copy of a checked file, 2.47 and 3.29 (its
+clock numerals, below), DocumentOpen 0.35 and 2.29; ShallowHistory's `x-office-calendar`, the same day's calendar,
+0.77 at 72 px and 2.38 at 33 (1.73 from GNOME's 48-px PNG, rsvg-convert 1.26). Every file draws in both renderers. Where they part, each was looked at
 on the sheet:
-- VcsDiff (`document-open-recent`), ShallowHistory and DocumentRevert (`appointment-new`) carry `<text>` clock
+- VcsDiff (`document-open-recent`) and DocumentRevert (`appointment-new`) carry `<text>` clock
   numerals, which the product's resvg (built without text) skips and rsvg-convert draws faintly (72-px max 94 / 109);
   GNOME's own PNGs show no numerals either. Kept as they are.
 - TimelineLift (`system-lock-screen`) and BlackSum (`accessories-calculator`) carry `feBlend` filters reading
@@ -136,13 +144,13 @@ licence texts) are not read.
 | PreviewRenderOn | Play Renders | 3.0.0 `src/applications-multimedia.svg`, slot `applications-multimedia` 48x48 at (296, 50) | — | — | `f7b387398baed6508ae4bfef7ec60ce354207bdcbf355a9e57a783a98f33ef80` |
 | DialogOkApply | Load in Place | 3.0.0 `src/navigation-icons.svg`, slot `view-refresh` 48x48 at (616, 50) (Mist carries no `view-refresh`) | — | — | `2371a1d6832ffc8180fc2df0f243455b3722dc1e253a62fc8111a22f98e507d6` |
 | VcsDiff | Toggle History View | 3.0.0 `src/clocks.svg`, slot `document-open-recent` 48x48 at (696.062, 355.996) | — | — | `129566f29230db701d06c68dfd99940c88a667fe42f0e6b9b9921f7c8b9ea21d` |
-| ShallowHistory | Toggle History Walk | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) | DocumentRevert | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
+| ShallowHistory | Toggle History Walk | 3.0.0 `src/x-office-calendar.svg`, slot `x-office-calendar` 48x48 at (296, 50) (Mist carries no `x-office-calendar`) | — | — | `5be1fdbb9349b36520c022200165c9d0d755feb95075e56970006895243820a9` |
 | EditSelect | Toggle Add to Selection | 3.0.0 `src/paper-sheets.svg`, slot `edit-select-all` 48x48 at (1500, 654) | — | — | `245ce65757ef40dce015a3fc99604e0a604678fae2032f74f959a5af06aeaf8d` |
 | KeyframePrevious | Older (`,`) | 3.0.0 `src/media-control-icons.svg`, slot `media-seek-backward` 48x48 at (206, 150) | — | — | `2ca7796acc08333c3995f99fa6bfdb55198f2b11a8360d6ce6afa8e8ddc1e278` |
 | KeyframeNext | Newer (`.`) | 3.0.0 `src/media-control-icons.svg`, slot `media-seek-forward` 48x48 at (406, 150) | — | — | `f34d18b3587fc220d4e832cf101c98ebad39dcddc14f0ec17610446fc9c942b6` |
 | GoPrevious | Left (the playhead step) | 3.0.0 `src/navigation-icons.svg`, slot `go-previous` 48x48 at (536, 50) | — | — | `3155504fad949f054c6d88a4a550eae714b05763d1d9266188e9ca2ad289f336` |
 | GoNext | Right (the playhead step) | 3.0.0 `src/navigation-icons.svg`, slot `go-next` 48x48 at (776, 50) | — | — | `d047a56474e708c114610291a130460e791531e46f1d0d5c9443a32b2112291c` |
-| DocumentRevert | Revert (`v`, to the viewed checkpoint) | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) (Mist carries no `appointment-new`) | ShallowHistory | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
+| DocumentRevert | Revert (`v`, to the viewed checkpoint) | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) (Mist carries no `appointment-new`) | — | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
 | MediaSkipBackward | Go to Start | 3.0.0 `src/media-control-icons.svg`, slot `media-skip-backward` 48x48 at (156, 150) | — | — | `36dd7c445acd6380eeed3f1b6b75d620d3e990ba3fe7fe5f2efbdf084a8942c5` |
 | MediaPlaybackStart | Play | 3.0.0 `src/media-control-icons.svg`, slot `media-playback-start` 48x48 at (306, 150) | — | — | `b622e494ee220ca90f417b4332b36121672dade8cc668986fd12b777ff018099` |
 | MediaPlaybackStop | Stop | 3.0.0 `src/media-control-icons.svg`, slot `media-playback-stop` 48x48 at (356, 150) | — | — | `43f78b6cfeb4e7f1ccc9a31e286c5e08fcad6c3b3d0efedfa54283ffc0763765` |

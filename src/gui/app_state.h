@@ -2565,8 +2565,8 @@ enum class RedesignButton {
     //
     // The lamp lights AWAY FROM HOME, which is the collapse's own rule across
     // all three: Git is the walk's default reading, so the lamp is LIT IN
-    // SESSION and it wears the Session glyph, ShallowHistory's clock on its
-    // sheet.
+    // SESSION and it wears the Session glyph, ShallowHistory — the sets'
+    // calendar since 2026-10-07 (icons.h).
     //
     // It STANDS ONLY IN THE `h` VIEW since 2026-10-05 (the stand-ins) and
     // its arm still answers DEAD outside it, the same answer its neighbours

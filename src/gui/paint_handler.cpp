@@ -969,11 +969,12 @@ constexpr IconRowDef kIconRowHistoryStepGroup[] = {
 };
 constexpr IconRowDef kIconRowHistoryReadingGroup[] = {
     // THE WALK LAMP (architect 2026-08-18 as a radio pair, one button since
-    // the 2026-09-04 collapse). It wears the LIT state's glyph —
-    // SHALLOW-HISTORY, the clock dial with no sweep arm,
-    // for a timeline reaching back no further than this run — because Git is
-    // the walk's default and the lamp reports Session. The Git half's
-    // deep-history clock left icons::Icon with that half.
+    // the 2026-09-04 collapse). It wears the LIT state's glyph,
+    // SHALLOW-HISTORY, because Git is the walk's default and the lamp reports
+    // Session — the sets' x-office-calendar since 2026-10-07 (icons.h), the
+    // dated page: the walk through dated commits, the clock being Revert's
+    // alone. The Git half's deep-history glyph left icons::Icon with that
+    // half.
     {RedesignButton::HistoryWalk,       icons::Icon::ShallowHistory},
     {RedesignButton::HistoryCumulative, icons::Icon::BlackSum},
 };
@@ -1249,7 +1250,8 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // band and has none, so a line's baseline is line_baseline() below and the cap
 // rule is not asked. TWELVE BOX SEATS (re-grepped 2026-10-06): the
 // caption's title, the row-8 clock (in its time field) and the
-// state line beside it (in the row's content band), the notification
+// state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
+// is at paint_bottom_row_buttons_and_clock), the notification
 // card's first line, the dropdown items, the prompt's message, the render player's
 // two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
@@ -3119,7 +3121,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the
         // period field's 3 px of face above and below its digits, by the one
         // box solver; the field is symmetric about its own lines, so the cap
-        // band sits centred inside them too.
+        // band sits centred inside them too. THE STATE LINE TAKES IT TOO (the
+        // ONE BASELINE block below).
         const double baseline =
             redesign_baseline(font, static_cast<double>(clock_field.y),
                               static_cast<double>(clock_field.h));
@@ -3172,10 +3175,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // through it, so the mode's line is what the line is for while the
         // view stands and the progress line is back the moment it closes.
         //
-        // ONE FACE, TWO SEATS (the line architect 2026-10-03, superseding the
-        // second status panel at the small face of 2026-10-02, which had
+        // ONE FACE, ONE BASELINE (the line architect 2026-10-03, superseding
+        // the second status panel at the small face of 2026-10-02, which had
         // itself superseded the one monospace run of 2026-08-31,
-        // `A | 00:00.100 | Updating...`; the clock's face 2026-10-05):
+        // `A | 00:00.100 | Updating...`; the clock's face 2026-10-05; the
+        // one baseline 2026-10-07):
         //   * THE CLOCK — the tab letter and the digits in the body face,
         //     filling the cell (the block above) on the field's own seat. IT
         //     IS NEVER CLIPPED: the row's
@@ -3184,9 +3188,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     ground.
         //   * THE STATE — THE BODY FACE (gui_font(GuiFace::Body)) in the
         //     theme's label, painted straight on the row's
-        //     ground as the menu row's words are, LEFT-ALIGNED a group space
-        //     past the clock's field, on the row's solved baseline over the
-        //     content band (redesign_baseline). The
+        //     ground as the menu row's words are, LEFT-ALIGNED a control
+        //     spacing past the clock's field, ON THE CLOCK'S OWN BASELINE
+        //     (architect 2026-10-07, his tablet capture under clearlooks: the
+        //     walk line "is a little bit lower down" — "whichever one is
+        //     right, the other should be centred to behave like it", and the
+        //     field is right, GTK centring an entry's text): the field's cap
+        //     band centred in the field by redesign_baseline is the one seat.
+        //     A seat of its own, the cap band centred in the content band,
+        //     parts from the field's by a row wherever the band's and the
+        //     field's heights round apart (its digits one row under the
+        //     field's at 100, 275 and 300 % under both chromes and at 138 %
+        //     under clearlooks, the same height in the same face), so the
+        //     line takes the field's. The
         //     normal face over the small one is the architect's (2026-10-03):
         //     "I don't really read it" at the small face, and a running
         //     render's progress should read. IT IS CLIPPED, NEVER ELLIPSISED —
@@ -3240,15 +3254,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                     run_x - letter_run.width_px, baseline);
         text_shape::show_shaped_run(cr, time_run, run_x, baseline);
         if (state_w > 0 && !state.empty()) {
-            // The same face as the clock's run, on the content band's seat.
-            const double state_baseline =
-                redesign_baseline(font, static_cast<double>(content_y),
-                                  static_cast<double>(content_h));
+            // The clock's face on THE CLOCK'S BASELINE (the block above).
             cairo_save(cr);
             cairo_rectangle(cr, state_x, lane.y, state_w, lane.h);
             cairo_clip(cr);
-            show_row_text(cr, font, static_cast<double>(state_x),
-                          state_baseline, state, palette().label);
+            show_row_text(cr, font, static_cast<double>(state_x), baseline,
+                          state, palette().label);
             cairo_restore(cr);
         }
     }

@@ -102,8 +102,9 @@ enum class Icon {
                          // the editor in place (architect 2026-10-07)
     VcsDiff,             // Toggle History View (`h`)
     ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
-                         // the sets' appointment-new, DocumentRevert's
-                         // drawing repeated by position (2026-10-07)
+                         // the sets' x-office-calendar, the dated page:
+                         // the walk through dated commits (architect
+                         // 2026-10-07; the clock is Revert's alone)
     EditSelect,          // Toggle Add to Selection
     KeyframePrevious,    // Older checkpoint (`,`)
     KeyframeNext,        // Newer checkpoint (`.`)
@@ -111,7 +112,8 @@ enum class Icon {
     GoNext,              // Row 8's right arrow (bare Right)
     DocumentRevert,      // Revert (bare `v`) — the sets' appointment-new,
                          // the clock: back to the viewed checkpoint in
-                         // time (architect 2026-10-07)
+                         // time (architect 2026-10-07; worn once since the
+                         // walk took the calendar the same day)
     // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
     // pause state); the render player's own Play/Pause button wears

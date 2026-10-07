@@ -12,7 +12,8 @@ and a file that is not well-formed SVG fails the launch, naming the file. A cons
 silently, so the set was checked at its import on a sheet against rsvg-convert (resvg sits 0.5 levels of 255 from it
 at 72 px, the median over the 58 files; DocumentOpen joined on 2026-10-07 as a byte copy of a file already checked,
 and the same day's two seat changes, below, put drawings the set already wore on DialogOkApply and DocumentRevert,
-re-checked on a sheet all the same: 0.70 and 0.88 at 72 px, 1.56 and 2.43 at 33). Files of other names in this folder
+re-checked on a sheet all the same: 0.70 and 0.88 at 72 px, 1.56 and 2.43 at 33; ShallowHistory's calendar, below, a
+file the set did not carry before, 0.69 at 72 px and 1.97 at 33). Files of other names in this folder
 (this README, the licence texts) are not read.
 
 THE TWO SEATS OF 2026-10-07 (architect: "the arrows pointing at each other become Load in Place, and the clock
@@ -21,11 +22,14 @@ loaded into the editor in place; DocumentRevert (Revert) wears `actions/appointm
 star — back to the viewed checkpoint in time. Open Project's DocumentOpen keeps `actions/document-open`, which Load
 in Place wore until then.
 
+THE CALENDAR OF 2026-10-07 (architect ~04:45, resolving the clock the two history seats then shared: Revert keeps
+`appointment-new`): ShallowHistory (Toggle History Walk) wears `mimetypes/x-office-calendar`, the dated page — the walk
+through dated commits. Its drawing is a path, with no `<text>` for resvg to skip.
+
 REPEATS, known by position (the files byte-identical): `mimetypes/audio-x-generic` is AppIcon (the caption and the
 program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `actions/view-refresh` is DialogOkApply
-(Load in Place) and MediaRepeatSingle (Toggle Repeat One); `actions/appointment-new` is ShallowHistory (Toggle History
-Walk) and DocumentRevert (Revert); `actions/process-stop` is DialogCancel and WindowClose; `actions/go-up` is GoUp and
-GoParentFolder. Every other file is worn once: 59 enumerators over 53 distinct drawings.
+(Load in Place) and MediaRepeatSingle (Toggle Repeat One); `actions/process-stop` is DialogCancel and WindowClose;
+`actions/go-up` is GoUp and GoParentFolder. Every other file is worn once: 59 enumerators over 54 distinct drawings.
 
 ## Provenance
 
@@ -89,13 +93,13 @@ the SVG files only; this repository carries the texts.
 | PreviewRenderOn | Play Renders | scalable/categories/applications-multimedia.svg | — | `97f2b4c4b59293d0a6a0dd02e6e8973e3c5b5ca6c5e11be4355f4d89c3abc3c1` |
 | DialogOkApply | Load in Place | scalable/actions/view-refresh.svg | MediaRepeatSingle | `a43596670cfced66e14bd9ee984288a9d69490f0f08953ad13f2a6bf5e4d70fb` |
 | VcsDiff | Toggle History View | scalable/status/image-loading.svg | — | `877fcc4feef211429cb1ebde25949a24a55db8808e317bde3cb22a54e4011001` |
-| ShallowHistory | Toggle History Walk | scalable/actions/appointment-new.svg | DocumentRevert | `a450debfdd4e8e0563c0d51edf208079a227f62735ebb27cc1baa89f11bf8d66` |
+| ShallowHistory | Toggle History Walk | scalable/mimetypes/x-office-calendar.svg | — | `60933d1d2721a300db02a813a31b7426c44e8eb855f9d210ab27b261c1a1f35b` |
 | EditSelect | Toggle Add to Selection | scalable/actions/edit-select-all.svg | — | `5699524dbb79821a707d238b4f18a32deca10a66e7c899fb0efb93ee4a449e2a` |
 | KeyframePrevious | Older (`,`) | scalable/actions/media-seek-backward.svg | — | `cbd686518c8ce0a9bb3b46535dacb18a0764ea68fbc477056df075c5721d7c1e` |
 | KeyframeNext | Newer (`.`) | scalable/actions/media-seek-forward.svg | — | `1c93a0c5ecc19c7bec6df68aa8b6da2022042cb1be470b299a96e6b966c582a4` |
 | GoPrevious | Left (the playhead step) | scalable/actions/go-previous.svg | — | `75269150414f9bdfb0eee741ad36209c500d27c0b2d8462b134e0cf7b6d8f7d8` |
 | GoNext | Right (the playhead step) | scalable/actions/go-next.svg | — | `e7e79d37fb27d42437e0449affe7b8effbc3391e4450f53f0f88602049f7b30c` |
-| DocumentRevert | Revert (`v`, to the viewed checkpoint) | scalable/actions/appointment-new.svg | ShallowHistory | `a450debfdd4e8e0563c0d51edf208079a227f62735ebb27cc1baa89f11bf8d66` |
+| DocumentRevert | Revert (`v`, to the viewed checkpoint) | scalable/actions/appointment-new.svg | — | `a450debfdd4e8e0563c0d51edf208079a227f62735ebb27cc1baa89f11bf8d66` |
 | MediaSkipBackward | Go to Start | scalable/actions/media-skip-backward.svg | — | `4c399158deade1c6210108b50b58cce29d01be84bf3400f9d80960159517bb75` |
 | MediaPlaybackStart | Play | scalable/actions/media-playback-start.svg | — | `b09e773d2a7982eb3c9c2e59115f7b9f7cae4b78abfb59baf8c752cc5626c028` |
 | MediaPlaybackStop | Stop | scalable/actions/media-playback-stop.svg | — | `c361b71d78b9f6ff225b863bdbad15ea9b1e1d8744092cea8ba4429c8f4c14de` |

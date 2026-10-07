@@ -254,25 +254,54 @@ void glyph_frame(cairo_t* cr, int ox, int oy, int x, int y, int w, int h,
     paint_cell_rect(cr, cells(ox, oy, x, y, x, y + h), tone(role));
     paint_cell_rect(cr, cells(ox, oy, x + w, y, x + w, y + h), tone(role));
 }
-// A filled <rectangle> or an opaque <tint> (x, y, w, h): cells x..x + w − 1.
+// A filled <rectangle> (x, y, w, h): cells x..x + w − 1.
 void glyph_fill(cairo_t* cr, int ox, int oy, int x, int y, int w, int h,
                 Role role) {
     if (w <= 0 || h <= 0) return;
     paint_cell_rect(cr, cells(ox, oy, x, y, x + w - 1, y + h - 1), tone(role));
 }
-// A <line> of `width` W px from cell (x1, y1) to cell (x2, y2): an
-// antialiased stroke between the cells' centres, butt caps (the scalable
-// form of X's wide line; the head of paint_cl_caption_button).
-void glyph_line(cairo_t* cr, int ox, int oy, int x1, int y1, int x2, int y2,
-                int width, Role role) {
-    const double u = relief_line_px();
+// A one-px horizontal <line> from cell x1 to cell x2 on row y: X's wide
+// line of width 1 between the two pixel centres, BUTT-capped, so its last
+// point is NOT drawn — cells x1 .. x2 − 1 (his capture 23-12-32: the Music
+// Player's Maximise, whose line ends on the light frame's last column and
+// leaves the outline's column under it dark). Drawing x2 as well put one
+// cell of the light line on the outline beside the frame (Maximise's
+// x2 = width − hpadding; the restored laptop's glass, 2026-10-07).
+void glyph_hline(cairo_t* cr, int ox, int oy, int x1, int x2, int y,
+                 Role role) {
+    if (x2 <= x1) return;
+    paint_cell_rect(cr, cells(ox, oy, x1, y, x2 - 1, y), tone(role));
+}
+
+// CLOSE'S CROSS — metacity's two <line> diagonals from cell (hp, vp) to cell
+// (w − hp − 1, h − vp − 1) and from (hp, h − vp − 1) to (w − hp − 1, vp),
+// drawn as ONE PATH PER TONE (architect 2026-10-07, his glass verdict on the
+// cell-built cross: "glitched out, a lot of artifacting"): both diagonals
+// stroked together from pixel centre to pixel centre, BUTT caps, `width` W px
+// wide, each end run on `overrun` W px along its own diagonal, the stroke
+// antialiased by the renderer (the head's rule 3). The centres are the device
+// box's own (`bw` x `bh` device px for the w x h W box), so the cross is
+// centred where metacity's paddings centre it at every scale.
+void glyph_cross(cairo_t* cr, int ox, int oy, int w, int h, int bw, int bh,
+                 int hp, int vp, double width, double overrun, Role role) {
+    const double sx = static_cast<double>(bw) / w;
+    const double sy = static_cast<double>(bh) / h;
+    const double cx = ox + bw / 2.0, cy = oy + bh / 2.0;
+    // Half the span between the end cells' centres, plus the overrun along
+    // the diagonal (each axis takes overrun / sqrt 2).
+    const double run = overrun / std::sqrt(2.0);
+    const double hx  = (w / 2.0 - hp - 0.5 + run) * sx;
+    const double hy  = (h / 2.0 - vp - 0.5 + run) * sy;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
-    cairo_set_line_width(cr, width * u);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+    cairo_set_line_width(cr, width * std::sqrt(sx * sy));
     cairo_new_path(cr);
-    cairo_move_to(cr, at(ox, x1) + u / 2, at(oy, y1) + u / 2);
-    cairo_line_to(cr, at(ox, x2) + u / 2, at(oy, y2) + u / 2);
+    cairo_move_to(cr, cx - hx, cy - hy);
+    cairo_line_to(cr, cx + hx, cy + hy);
+    cairo_move_to(cr, cx - hx, cy + hy);
+    cairo_line_to(cr, cx + hx, cy - hy);
     set_palette_source(cr, tone(role));
     cairo_stroke(cr);
     cairo_restore(cr);
@@ -288,24 +317,31 @@ void paint_caption_glyph(cairo_t* cr, int ox, int oy, int w, int h,
     const Role light = full ? &GuiPalette::cl_cglyph_light
                             : &GuiPalette::cl_cglyph_unfocused;
     switch (g) {
-    case ClCaptionGlyph::Close:
-        if (full) {
-            glyph_line(cr, ox, oy, hp, vp, w - hp - 1, h - vp - 1, 4, dark);
-            glyph_line(cr, ox, oy, hp, h - vp - 1, w - hp - 1, vp, 4, dark);
-            glyph_fill(cr, ox, oy, hp, vp - 1, 2, 1, dark);
-            glyph_fill(cr, ox, oy, hp - 1, vp, 1, 2, dark);
-            glyph_fill(cr, ox, oy, w - hp - 2, vp - 1, 2, 1, dark);
-            glyph_fill(cr, ox, oy, w - hp, vp, 1, 2, dark);
-            glyph_fill(cr, ox, oy, hp, h - vp, 2, 1, dark);
-            glyph_fill(cr, ox, oy, hp - 1, h - vp - 2, 1, 2, dark);
-            glyph_fill(cr, ox, oy, w - hp - 2, h - vp, 2, 1, dark);
-            glyph_fill(cr, ox, oy, w - hp, h - vp - 2, 1, 2, dark);
-        }
-        glyph_line(cr, ox, oy, hp, vp, w - hp - 1, h - vp - 1, 2, light);
-        glyph_line(cr, ox, oy, hp, vp, w - hp, h - vp, 1, light);
-        glyph_line(cr, ox, oy, hp, h - vp - 1, w - hp - 1, vp, 2, light);
-        glyph_line(cr, ox, oy, hp, h - vp - 1, w - hp, vp - 1, 1, light);
+    case ClCaptionGlyph::Close: {
+        // THE TWO TONES, EACH ONE PATH (glyph_cross): the cross the width-2
+        // diagonals' (the theme's `2`); under it, focused, the 0.7 outline the
+        // width-4 diagonals' (its `4`) RUN ONE W PAST EACH END, so the outline
+        // stands one W round the cross on every side, its ends as its flanks
+        // — what the theme's eight opaque <tint>s (2 x 1 and 1 x 2 cells at
+        // each end) drew in cells: X's butt-capped wide line stops at the
+        // end cell's centre, and the tints carried the outline past it (his
+        // capture 23-12-32, the Music Player's Close: the light X 8 x 8, its
+        // outline the one-px ring round it). Drawn as cells at 300 % they were
+        // square ears; the stroke's run carries them, and they are retired
+        // as P3 retired the caption buttons' hand-antialiasing corner tones —
+        // no role was theirs (the outline's cl_cglyph_dark). THE THEME'S
+        // WIDTH-1 LINES (the `+ 1`, from (hp, vp) to (w − hp, h − vp)) lie
+        // on the width-2 lines' diagonals and inside them: in X they fill
+        // the wide line's stair-stepped edges and their butt-capped last
+        // point is not drawn; as antialiased strokes they would add only
+        // one cell past each end (the pale spikes on his tablet crop
+        // tmp/shots_1007b/tab_X_x12.png), so they are not drawn.
+        const int bw = at(ox, w) - ox, bh = at(oy, h) - oy;
+        if (full)
+            glyph_cross(cr, ox, oy, w, h, bw, bh, hp, vp, 4.0, 1.0, dark);
+        glyph_cross(cr, ox, oy, w, h, bw, bh, hp, vp, 2.0, 0.0, light);
         return;
+    }
     case ClCaptionGlyph::Maximize:
         if (full) {
             glyph_frame(cr, ox, oy, hp - 1, vp - 1, w - hp * 2 + 1,
@@ -314,8 +350,7 @@ void paint_caption_glyph(cairo_t* cr, int ox, int oy, int w, int h,
                         h - vp * 2 - 4, dark);
         }
         glyph_frame(cr, ox, oy, hp, vp, w - hp * 2 - 1, h - vp * 2 - 1, light);
-        paint_cell_rect(cr, cells(ox, oy, hp + 1, vp + 1, w - hp, vp + 1),
-                        tone(light));
+        glyph_hline(cr, ox, oy, hp + 1, w - hp, vp + 1, light);
         return;
     case ClCaptionGlyph::Restore:
         if (full) {
@@ -326,8 +361,7 @@ void paint_caption_glyph(cairo_t* cr, int ox, int oy, int w, int h,
         }
         glyph_frame(cr, ox, oy, hp + 1, vp + 1, w - hp * 2 - 3,
                     h - vp * 2 - 3, light);
-        paint_cell_rect(cr, cells(ox, oy, hp + 2, vp + 2, w - hp - 2, vp + 2),
-                        tone(light));
+        glyph_hline(cr, ox, oy, hp + 2, w - hp - 2, vp + 2, light);
         return;
     case ClCaptionGlyph::Minimize:
         if (full)

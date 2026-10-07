@@ -97,10 +97,13 @@ enum class ClCaptionGlyph { Minimize, Maximize, Restore, Close };
 // derived) — then the glyph at metacity's icon_size = Bmin 7 `max`
 // (height − Bpad 6 x 2), centred — focused, the 0.7 outline under the
 // blend(sel, white, 0.75) shape; unfocused, the blend(fg, bg, 0.45) shape
-// alone. CLOSE'S DIAGONALS are antialiased strokes from pixel centre to
-// pixel centre at their recorded widths (4 under 2 + 1, butt caps, the
-// tints' square ears), the scalable form of X's wide lines; every other
-// glyph part is a cell rect. NO PUSH: metacity draws the pressed glyph in
+// alone. CLOSE'S CROSS is one antialiased path per tone — the width-2
+// diagonals from pixel centre to pixel centre, butt-capped, over the width-4
+// outline run one W past each end (the theme's end <tint>s, retired as
+// cells: clearlooks_paint.cpp's glyph_cross and its Close case, architect
+// 2026-10-07) — the scalable form of X's wide lines; every other glyph part
+// is a cell rect, a one-px <line> X's own (its last point not drawn,
+// glyph_hline). NO PUSH: metacity draws the pressed glyph in
 // place. A DISABLED BUTTON (the tablet's Restore, which cannot restore:
 // metacity draws no disabled button, it hides one) keeps its box and wears
 // the unfocused glyph — the window manager's own "not yours now" ink (the
