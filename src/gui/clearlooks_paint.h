@@ -92,20 +92,25 @@ enum class ClCaptionGlyph { Minimize, Maximize, Restore, Close };
 // ALONG (architect 2026-10-07, his glass verdict on the cell rects: "the
 // caption buttons' boxes are pixelated"; the head's rule 4) — the halo, the
 // border and the inner bevel about the point four W in, round the fill's
-// gradients, each line's tone a role and each gradient a ramp between two
-// (clearlooks_paint.cpp's caption-button block, where the radius is
-// derived) — then the glyph at metacity's icon_size = Bmin 7 `max`
-// (height − Bpad 6 x 2), centred — focused, the 0.7 outline under the
+// gradients, each line's tone a role and each gradient a ramp between two,
+// a ring's tones meeting on radial seams where the ops end its runs (the
+// bevel's at 45 degrees, architect 2026-10-07: clearlooks_paint.cpp's
+// caption-button block, where the radius and the seams are derived) — then
+// the glyph at its icon_size, centred: the capture's proportion of the box
+// under the fit, 6, for Close; metacity's Bmin 7 for Minimise, Maximise and
+// Restore, whose ops lose their window or their width below it (architect
+// 2026-10-07; caption_icon_size) — focused, the 0.7 outline under the
 // blend(sel, white, 0.75) shape; unfocused, the blend(fg, bg, 0.45) shape
-// alone. CLOSE'S CROSS is one antialiased path per tone — the width-2
-// diagonals from pixel centre to pixel centre, butt-capped, over the width-4
-// outline run one W past each end (the theme's end <tint>s, retired as
-// cells: clearlooks_paint.cpp's glyph_cross and its Close case, architect
+// alone. CLOSE'S
+// CROSS is one antialiased path per tone — the width-2 diagonals from pixel
+// centre to pixel centre, butt-capped, over the width-4 outline run one W
+// past each end (the theme's end <tint>s, retired as cells:
+// clearlooks_paint.cpp's glyph_cross and its Close case, architect
 // 2026-10-07) — the scalable form of X's wide lines; every other glyph part
 // is a cell rect, a one-px <line> X's own (its last point not drawn,
-// glyph_hline). NO PUSH: metacity draws the pressed glyph in
-// place. A DISABLED BUTTON (the tablet's Restore, which cannot restore:
-// metacity draws no disabled button, it hides one) keeps its box and wears
+// glyph_hline). NO PUSH: metacity draws the pressed glyph in place. A
+// DISABLED BUTTON (the tablet's Restore, which cannot restore: metacity
+// draws no disabled button, it hides one) keeps its box and wears
 // the unfocused glyph — the window manager's own "not yours now" ink (the
 // planner's reading, 2026-10-07).
 void paint_cl_caption_button(cairo_t* cr, const GuiRect& b,

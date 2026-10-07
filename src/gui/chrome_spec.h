@@ -193,9 +193,10 @@ struct ChromeSpec {
     // field is centred in its row's content band, its reserved cell this pad
     // in from its frame each way, so the field's width, the state line's
     // start and the clock's damage box all read them): the field's height
-    // and the pad. WIN2000 Windows' one-line sunken field, 17 tall with the
-    // cell 3 px in (architect 2026-10-05, measured on his ACID Pro 3.0 and
-    // Vegas Audio captures; the record stays at paint_handler.cpp's
+    // and the pad. WIN2000 Windows' one-line sunken field round Tahoma's
+    // digits, 16 tall with the cell 3 px in (architect 2026-10-07, "cater to
+    // Tahoma": ACID Pro 3.0's and Vegas Audio's 17 was measured round MS Sans
+    // Serif's 9-row digits; the record stays at paint_handler.cpp's
     // kTimeFieldHeightPx and kStatusPanelPadPx, which assert these two).
     // CLEARLOOKS GTK's entry (architect 2026-10-07: a time shown in a field
     // is an entry): gtkentry.c's size_request at the 13-row cell, 13 + 2 x
@@ -290,7 +291,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
-    .time_field_height_px         = 17.0,
+    .time_field_height_px         = 16.0,
     .time_field_pad_px            = 3.0,
     .scrub_handle_box_px          = 14.0,
     .popup_item_height_px         = 17,
@@ -318,8 +319,12 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 //   button_border.top 2 and .bottom 2 = 16 tall, aspect_ratio 1.0 = 16
 //   wide, at y 2, each with button_border.left / .right 1 (2 px between
 //   neighbours, an 18-px pitch) and Close's right edge 2 in
-//   (right_titlebar_edge 1 + its border 1); the glyphs at icon_size =
-//   Bmin 7 `max` (16 − Bpad 6 x 2) = 7, centred (hpadding 4); the menu
+//   (right_titlebar_edge 1 + its border 1); Close's glyph at the
+//   capture's proportion of the box, 16 x 8 / 20 held even = 6 (hpadding
+//   5), not Bmin 7 `max` (16 − Bpad 6 x 2) = 7 — Minimise, Maximise and
+//   Restore keep the 7 (hpadding 4), whose ops lose their window or their
+//   width below it (architect 2026-10-07; caption_icon_size,
+//   clearlooks_paint.cpp); the menu
 //   button at left_titlebar_edge 1 + border 1 = (2, 2), its 16-px mini
 //   icon centred in its 16 x 16 — FILLING IT, NO MARGIN (the box the icon's
 //   own size); the title's room from 21 (the menu button's 2 + 16 + its

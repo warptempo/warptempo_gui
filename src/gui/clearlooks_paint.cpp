@@ -68,28 +68,42 @@ void stroke_role(cairo_t* cr, Role role) {
 // -- THE CAPTION BUTTONS' BOXES (metacity-theme-1.xml's button_bg family) ----
 //
 // metacity draws each button_bg as one-px <line>s and vertical <gradient>s
-// whose ends step in by a cell a row — a staircase of three concentric rings
-// round a filled middle: THE HALO (the outer ring, cell rows 0 / h − 1 and
-// columns 0 / w − 1 — the top and bottom its two lines, the sides the
-// gradient `ramp0` down columns 0 and w − 1), THE BORDER (ring 1, one shade
-// all round) and THE INNER BEVEL (ring 2, a tone a side), round THE FILL
-// (the upper and lower gradients). Pressed, the halo is its bottom-right half
-// alone (the bottom line and the right column's gradient), the bevel the
-// inner shadow's top, left and bottom, the fill reaching the right ring.
+// whose ends step in by a cell a row — three concentric rings round a filled
+// middle. THE HALO (ring 0): the top lines on row 0 (`1.00` x 2 .. w − 3,
+// `0.98` x 3 .. w − 4) with the `0.99` cells (1, 1) and (0, 2) — the corner
+// the top's — then the inset gradient `ramp0` down columns 0 and w − 1 from
+// row 3, and the bottom's mirror. THE BORDER (ring 1): the `0.6` lines on
+// row 1 and down column 1 and the diagonal cell (2, 2), one shade all round.
+// THE INNER BEVEL (ring 2): the inside highlight `1.18` x 4 .. w − 5 on row
+// 2 and `1.1` y 4 .. h − 5 down column 2, the inside shadow `1.0` y 4 .. h − 5
+// down column w − 3, the bottom's `0.92` x 4 .. w − 5 on row h − 3 — each
+// run's end cell the "smooth effect"'s darker tone (`1.02`, `1.00`, `0.90`,
+// `0.84`) and the corner cell (2, 2) the border's, so NO RUN TURNS THE CORNER:
+// each stops at the corner's diagonal. Round THE FILL (the upper and lower
+// gradients). Pressed, the halo is its bottom-right half alone (the bottom
+// line and the right column's gradient), the bevel the inner shadow's top,
+// left and bottom, the fill reaching the right ring.
 // THE SCALABLE CHROME (architect 2026-10-07, his glass verdict on P1's cell
-// rects: "pixelated" at 300 %; clearlooks_paint.h's head, rule 4) DRAWS THE
-// RINGS AS THE ARCS THE STAIRCASE STEPS ALONG: each ring an antialiased
-// annulus between two rounded rects one W apart, the corners concentric
-// about the point FOUR W in from the box's corner — the radius at which the
-// art's three diagonal cells stand inside their rings (the halo's (1, 1) at
-// 3.5 W from it, the border's (2, 2) at 2.1, the bevel's (3, 2) / (2, 3) at
-// 1.6), so the halo's outer edge is radius 4, the border's 3, the bevel's 2
-// and the fill's 1. The art's other corner cells (the in-between tones at the
-// staircase's steps, metacity's hand antialiasing) are the arcs' own
-// antialiasing and carry no role (build.py CAPTION_BUTTON_DRAWN). Each ring's
-// sides take its lines' tones: across the top rows the top's, down the side
-// rows the sides', across the bottom rows the bottom's — the corners split
-// at the third row from each end, where the art's straight runs begin.
+// rects: "pixelated" at 300 %; clearlooks_paint.h's head, rule 4) DRAWS EACH
+// RING AS ONE SMOOTH PATH ROUND THE BOX — the straight runs and, at each
+// corner, an arc tangent to both: an antialiased annulus between two rounded
+// rects one W apart, the corners concentric about the point FOUR W in from
+// the box's corner — the radius at which the art's three diagonal cells stand
+// inside their rings (the halo's (1, 1) at 3.5 W from it, the border's (2, 2)
+// at 2.1, the bevel's (3, 2) / (2, 3) at 1.6), so the halo's outer edge is
+// radius 4, the border's 3, the bevel's 2 and the fill's 1. A RING'S TONES
+// MEET ON RADIAL SEAMS through its corner's centre, WHERE THE OPS END THE
+// RUNS (architect 2026-10-07 at 600 %, his glass verdict on the bevel's sides
+// cut off by a row across the arc: the highlight "curves in ... abruptly — it
+// looks like a notch ... turns and becomes a straight line parallel to the
+// ground"): THE BEVEL'S AT 45 DEGREES (cbtn_sector_clip) — each side's line
+// rounds half of each corner and ends on the diagonal, the next side's line
+// taking the other half, as the ops end every run there; THE HALO'S where
+// its top and bottom lines end, the ring's mid-line crossing rows 3 and
+// h − 3 (the corner cells the top's and the bottom's, the ramp the straight
+// sides'). The smooth effect's end cells and the art's in-between corner
+// tones are the arcs' own antialiasing and carry no role (build.py
+// CAPTION_BUTTON_DRAWN).
 struct ClCbtnFace {
     bool pressed;
     Role halo_top, halo_side0, halo_side1, halo_bottom;
@@ -153,18 +167,42 @@ void cbtn_ring_clip(cairo_t* cr, const GuiRect& b, int k) {
     cairo_clip(cr);
     cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
 }
-// One ring's sides under its clip: the top rows [0, 3) in `top`, the rows
-// between a ramp from `side0` to `side1` (or `side0` flat when `side1` is
-// null), the bottom rows [h − 3, h) in `bottom` — the columns [x0, x1).
-void cbtn_ring_sides(cairo_t* cr, const GuiRect& b, int x0, int x1, Role top,
-                     Role side0, Role side1, Role bottom) {
-    const int u  = relief_line_px();
-    const int y3 = b.y + 3 * u, yb = b.y + b.h - 3 * u;
-    paint_cell_rect(cr, GuiRect{x0, b.y, x1 - x0, y3 - b.y}, tone(top));
-    if (side1) paint_cl_ramp(cr, GuiRect{x0, y3, x1 - x0, yb - y3}, tone(side0),
-                             tone(side1));
-    else       paint_cell_rect(cr, GuiRect{x0, y3, x1 - x0, yb - y3}, tone(side0));
-    paint_cell_rect(cr, GuiRect{x0, yb, x1 - x0, b.y + b.h - yb}, tone(bottom));
+// Ring `k`'s corner centre, in device px in from each edge of the box (the
+// outer path's: k lines, then its radius 4 − k).
+double cbtn_corner_c(int k) {
+    const double s = static_cast<double>(scaled_px(100)) / 100.0;
+    return k * relief_line_px() + std::max(0.0, (4 - k) * s);
+}
+// THE TOP (or the bottom) SIDE'S SECTOR as the clip: the plane beyond the
+// line joining the two corner centres `c` in from the box's edges, bounded at
+// each corner by the RADIAL SEAM from the centre outward at `phi` radians
+// off the horizontal — so a ring's top run and the part of each corner arc
+// above its seam lie inside, the side runs outside.
+void cbtn_sector_clip(cairo_t* cr, const GuiRect& b, double c, double phi,
+                      bool top) {
+    const double far = 2.0 * (b.w + b.h);
+    const double sgn = top ? -1.0 : 1.0;
+    const double xl = b.x + c, xr = b.x + b.w - c;
+    const double yc = top ? b.y + c : b.y + b.h - c;
+    const double dx = far * std::cos(phi), dy = sgn * far * std::sin(phi);
+    cairo_new_path(cr);
+    cairo_move_to(cr, xl - dx, yc + dy);
+    cairo_line_to(cr, xl, yc);
+    cairo_line_to(cr, xr, yc);
+    cairo_line_to(cr, xr + dx, yc + dy);
+    cairo_line_to(cr, xr + dx, yc + sgn * 2.0 * far);
+    cairo_line_to(cr, xl - dx, yc + sgn * 2.0 * far);
+    cairo_close_path(cr);
+    cairo_clip(cr);
+}
+// `role` over the box `b` inside the top (or bottom) sector — under the
+// caller's ring clip, that side's line and its halves of the two corners.
+void cbtn_sector_fill(cairo_t* cr, const GuiRect& b, double c, double phi,
+                      bool top, Role role) {
+    cairo_save(cr);
+    cbtn_sector_clip(cr, b, c, phi, top);
+    paint_cell_rect(cr, b, tone(role));
+    cairo_restore(cr);
 }
 
 void paint_cbtn_box(cairo_t* cr, const GuiRect& b, const ClCbtnFace& f) {
@@ -195,21 +233,25 @@ void paint_cbtn_box(cairo_t* cr, const GuiRect& b, const ClCbtnFace& f) {
         }
         cairo_restore(cr);
     }
-    // THE INNER BEVEL, ring 2: the left and right columns, then the top and
-    // bottom rows over them (the art's corner cells take the top's and the
-    // bottom's tones).
+    // THE INNER BEVEL, ring 2: the left side's tone round the ring and the
+    // right side's over its right half (pressed, the left's over its left
+    // half alone, the fill showing through the right side), then the top's
+    // and the bottom's sectors over them — every seam at 45 degrees through
+    // a corner centre, where the ops end the runs.
     {
+        const double c = cbtn_corner_c(2);
+        const GuiRect left{b.x, b.y, b.w / 2, b.h};
+        const GuiRect right{b.x + b.w / 2, b.y, b.w - b.w / 2, b.h};
         cairo_save(cr);
         cbtn_ring_clip(cr, b, 2);
-        const int x0 = b.x + 2 * u, x1 = b.x + b.w - 2 * u;
-        const int y0 = b.y + 2 * u, y1 = b.y + b.h - 2 * u;
-        const int mid = b.x + b.w / 2;
-        paint_cell_rect(cr, GuiRect{x0, y0, mid - x0, y1 - y0}, tone(f.bevel_left));
-        if (f.bevel_right)
-            paint_cell_rect(cr, GuiRect{mid, y0, x1 - mid, y1 - y0},
-                            tone(f.bevel_right));
-        paint_cell_rect(cr, GuiRect{x0, y0, x1 - x0, u}, tone(f.bevel_top));
-        paint_cell_rect(cr, GuiRect{x0, y1 - u, x1 - x0, u}, tone(f.bevel_bottom));
+        if (f.bevel_right) {
+            paint_cell_rect(cr, b, tone(f.bevel_left));
+            paint_cell_rect(cr, right, tone(f.bevel_right));
+        } else {
+            paint_cell_rect(cr, left, tone(f.bevel_left));
+        }
+        cbtn_sector_fill(cr, b, c, M_PI_4, true, f.bevel_top);
+        cbtn_sector_fill(cr, b, c, M_PI_4, false, f.bevel_bottom);
         cairo_restore(cr);
     }
     // THE BORDER, ring 1, one tone.
@@ -219,9 +261,11 @@ void paint_cbtn_box(cairo_t* cr, const GuiRect& b, const ClCbtnFace& f) {
         paint_cell_rect(cr, b, tone(f.border));
         cairo_restore(cr);
     }
-    // THE HALO, ring 0: its top, its sides' gradient and its bottom;
-    // pressed, its bottom-right half alone (the inset's own split, along the
-    // diagonal from the bottom-left corner to the top-right).
+    // THE HALO, ring 0: the side gradient down the rows the ops give it (row 3
+    // to h − 3) with its end tones beyond, then the top's and the bottom's
+    // sectors over it, their seams where the ring's mid-line crosses rows 3
+    // and h − 3; pressed, its bottom-right half alone (the inset's own split,
+    // along the diagonal from the bottom-left corner to the top-right).
     {
         cairo_save(cr);
         cbtn_ring_clip(cr, b, 0);
@@ -236,8 +280,18 @@ void paint_cbtn_box(cairo_t* cr, const GuiRect& b, const ClCbtnFace& f) {
             cairo_close_path(cr);
             cairo_clip(cr);
         }
-        cbtn_ring_sides(cr, b, b.x, b.x + b.w, f.halo_top, f.halo_side0,
-                        f.halo_side1, f.halo_bottom);
+        const int y3 = b.y + 3 * u, yb = b.y + b.h - 3 * u;
+        const Role side1 = f.halo_side1 ? f.halo_side1 : f.halo_side0;
+        paint_cell_rect(cr, GuiRect{b.x, b.y, b.w, y3 - b.y},
+                        tone(f.halo_side0));
+        paint_cl_ramp(cr, GuiRect{b.x, y3, b.w, yb - y3}, tone(f.halo_side0),
+                      tone(side1));
+        paint_cell_rect(cr, GuiRect{b.x, yb, b.w, b.y + b.h - yb}, tone(side1));
+        const double c   = cbtn_corner_c(0);
+        const double phi = std::asin(std::clamp((c - 3.0 * u) / (c - u / 2.0),
+                                                0.0, 1.0));
+        cbtn_sector_fill(cr, b, c, phi, true, f.halo_top);
+        cbtn_sector_fill(cr, b, c, phi, false, f.halo_bottom);
         cairo_restore(cr);
     }
     cairo_restore(cr);
@@ -307,10 +361,35 @@ void glyph_cross(cairo_t* cr, int ox, int oy, int w, int h, int bw, int bh,
     cairo_restore(cr);
 }
 
+// THE GLYPH'S icon_size — metacity's `Bmin max (height − Bpad x 2)` (Bmin
+// 7, Bpad 6), centred by the paddings hpadding = (width − icon_size) / 2 and
+// vpadding = (height − icon_size) / 2. CLOSE'S icon_size IS THE CAPTURE'S
+// PROPORTION OF THE BOX UNDER THE FIT, NOT METACITY'S Bmin FLOOR (architect
+// 2026-10-07, his glass verdict at 600 %: "the X is a little too big ... the
+// original is a good bit smaller"): at squeeze's 20-px box the formula gives
+// 8 (his capture 23-12-32, the Music Player's Close: the light X 8 px, its
+// dark ring round it, three px from the highlight's column), and at the fit's
+// 16-W box Bmin held it at 7 where the proportion asks 16 x 8 / 20 = 6.4 — so
+// the X takes the proportion, held EVEN as the cross's centre-to-centre lines
+// want: 6, the X on cells 5 .. 10, its outline 4 .. 11, two W from the
+// highlight's column (the capture's three of 20, fitted). THE OTHER THREE
+// GLYPHS KEEP METACITY'S 7, A RECORDED ASYMMETRY (the planner's ruling,
+// 2026-10-07; his verdict named the X alone), because below it their ops
+// lose their window or their width: at 6 Maximise's dark inner frame leaves a
+// 2 x 1 slit of the fill where 7 (and squeeze's 8) leave 4 x 3, Restore's
+// collapses to a solid 2 x 1 bar where 7 leaves its 2 x 1 window, and
+// Minimise's bar falls two W narrower than the Maximise box beside it, where
+// the capture draws the bar and the box the same width (both 8 light cells in
+// the 20 box; at 7 both are 8 cells in the 16).
+constexpr double kClCaptionIconOfBox = 8.0 / 20.0;
+int caption_icon_size(int h, ClCaptionGlyph g) {
+    if (g != ClCaptionGlyph::Close) return std::max(7, h - 6 * 2);
+    return 2 * static_cast<int>(std::nearbyint(h * kClCaptionIconOfBox / 2.0));
+}
+
 void paint_caption_glyph(cairo_t* cr, int ox, int oy, int w, int h,
                          ClCaptionGlyph g, bool full) {
-    // icon_size = Bmin `max` (height − Bpad x 2); the paddings centre it.
-    const int isz = std::max(7, h - 6 * 2);
+    const int isz = caption_icon_size(h, g);
     const int hp  = (w - isz) / 2;
     const int vp  = (h - isz) / 2;
     const Role dark  = &GuiPalette::cl_cglyph_dark;

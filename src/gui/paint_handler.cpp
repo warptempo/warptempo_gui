@@ -2677,7 +2677,7 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // face, ACID's big clock included), its cap band centred in the field by
 // redesign_baseline: the recorded digits with the field's face split about
 // them, a half-row tie toward the top — Tahoma's 8 rows with 3 Windows px of
-// face above and 4 below at 100 %. The digits are TABULAR — Tahoma's every
+// face above and 3 below at 100 %. The digits are TABULAR — Tahoma's every
 // digit 0.545 em less the one tracking (gui_tracking_px, gui_font.h, which every
 // glyph takes alike), with no kerning between the digits, the colon and the
 // point — so the colon and the point stand still as the time runs.
@@ -2720,16 +2720,25 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 // values) — the set the letter slot is measured over.
 constexpr std::string_view kClockTabLetters = "AB";
 
-// THE FIELD'S HEIGHT, 17 WINDOWS PX UNDER WIN2000 (architect 2026-10-05):
-// ACID Pro 3.0's time fields run rows 716..732 of his lossless capture and
-// Vegas Audio's 484..500 — one line, three px of face, the 9-px digits,
-// three px of face, one line. One element, rounded once (scaled_px): 23
-// device px at 138 %, 47 at 275 %, 68 at 400 %, against the body face's
-// recorded cap band of 12.42, 24.75 and 36. THE LAYOUT READS THE CHROME
-// SPEC'S time_field_height_px (time_field_h_px below; chrome_spec.h, where
+// THE FIELD'S HEIGHT, 16 WINDOWS PX UNDER WIN2000 (architect 2026-10-07:
+// "cater to Tahoma; ACID was MS Sans Serif") — one line, three px of face,
+// TAHOMA'S 8-ROW DIGITS (gui_font.h's recorded cap), three px of face, one
+// line: 1 + 3 + 8 + 3 + 1 = 16, the digits standing 3 and 3 with no
+// half-row tie (17 left them 3 and 4). The period's own fields were measured
+// round MS Sans Serif's 9-row digits (architect 2026-10-05: ACID Pro 3.0's
+// time fields run rows 716..732 of his lossless capture and Vegas Audio's
+// 484..500, 17 = 1 + 3 + 9 + 3 + 1); the face is Tahoma's, so the field
+// keeps their lines and their face round its own digits. One element,
+// rounded once (scaled_px): 16 device rows at 100 %, 22 at 138 %, 48 at
+// 300 %, against the body face's cap of 8, 11.04 and 24 — 3 and 3, 9 and 9
+// device rows of face at 100 and 300 %; at 138 % the 20 rows inside the
+// lines leave the cap a tie, taken toward the top as the cap rule takes
+// every one (3.96 above, 5 below). Row 8's clock and the render player's two
+// fields take it alike. THE LAYOUT READS THE CHROME SPEC'S
+// time_field_height_px (time_field_h_px below; chrome_spec.h, where
 // clearlooks' 23, GTK's entry, stands — architect 2026-10-07), which this
 // record pins for win2000.
-constexpr double kTimeFieldHeightPx = 17.0;
+constexpr double kTimeFieldHeightPx = 16.0;
 static_assert(kChromeSpecWin2000.time_field_height_px == kTimeFieldHeightPx);
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
@@ -4210,7 +4219,7 @@ int ruler_lane_h_px() {
 // of face, the BODY FACE'S WHOLE RECORDED CELL (its ascent above the
 // baseline, its descent from the baseline's row down), a second Windows px of face and its
 // bottom edge band (architect 2026-10-05: 17 Windows px, the period's
-// one-line field); the label's baseline is the edge, the face and the ascent
+// list row); the label's baseline is the edge, the face and the ascent
 // under the box's top, at every scale and in either face; the lane is the
 // box with one Windows px of air above it and none below (architect
 // 2026-10-03: the box stands on the well). The ascent and the descent are

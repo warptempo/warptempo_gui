@@ -1288,7 +1288,7 @@ int ruler_lane_h_px();
 // cell and MS Sans Serif 8's alike; gui_font.h's recorded metrics, read in
 // marker_lane_rows, paint_handler.cpp), not the label's ink (architect
 // 2026-10-05) — THE FLAG IS 1 + 1 + 11 + 2 + 1 + 1 = 17 WINDOWS PX, the
-// period's one-line field (kTimeFieldHeightPx, the list row), so the
+// period's list row (kRowHeightPx, folder_overlay.h), so the
 // label's caps — Tahoma's 8 rows — get 4 Windows px above them (the cell's
 // top rows, the row "^" climbs into, and the face) and 3 below (the descent
 // and the face). The label sits on the cell's baseline at every scale, and a
