@@ -28,7 +28,7 @@ tools/mockup/push.sh --delete <name...>  # the superseded ones off it
   scene's `capture_path`. The scene is the one in `scenes/` naming that capture unless `--scene` says otherwise
   (a scene used on another capture is a stderr note, a size mismatch a hard fail).
 - `--capture-theme`: the theme the capture was painted in, what the matcher keys on. `builtin` (the default) is
-  `windows-2000-standard` since 2026-10-06 evening, its 36 values READ FROM `src/gui/theme_file.h` on every run, so
+  `windows-2000-standard` since 2026-10-06 evening, its 39 values READ FROM `src/gui/theme_file.h` on every run, so
   the tool cannot drift from the app. A capture painted in the earlier built-in, `windows-95-standard`, names that
   file: `--capture-theme assets/themes/windows-95-standard.theme`. Every scene in `scenes/` is a capture of the
   Windows 95 chrome, its small 23 x 22 toolbar case frozen in scene.py (the product dropped that chrome for Windows
@@ -39,7 +39,7 @@ tools/mockup/push.sh --delete <name...>  # the superseded ones off it
 - `--chrome`: `win95` is the capture's own stack recoloured, every role swapped, the geometry untouched; `motif`
   re-lays it as CDE's (chrome_motif.py's head, Solaris 9's measurements: frame 5 + title 17 + menu 27 + toolbar 28
   [+ `--separator` 2] + scroll bar 13 + ruler 15/17 + marker 18 = 125 Windows px, the ruler the flex lane).
-- `--extra`: the colours a vocabulary needs beyond the 36 roles — never a 37th role in a theme file (the app
+- `--extra`: the colours a vocabulary needs beyond the 39 roles — never a 40th role in a theme file (the app
   hard-fails unknown keys). motif: `trough` (the scroll bar's trough, Motif's select colour of the ground's set),
   `frame_ts` / `frame_bs` (the frame's shadows, the active title set's); one not given is Motif's own rule on its
   role's 8-bit value (stated on stderr), which can sit one step off a .dp palette's 16-bit values.

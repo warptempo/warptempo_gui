@@ -4184,6 +4184,24 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // rect must include it (below).
             const int    head_bottom = marker.y + marker_lane_air_px();
             const int    head_top    = head_bottom - rows;
+            // THE STEM PAINTS FIRST AND THE HEAD OVER IT — THE TIP SHOWS WHOLE
+            // (architect 2026-10-07, off his capture of the hidden tip): the
+            // band's last row is the marker lane's first, and the marker-lane
+            // stem is the tip's own column at the tip's own width (u = t, the
+            // quantum above), so a stem painted after the head covered the
+            // tip cell. The marker is WordPad's pointed indent marker and comes
+            // to its point, the stem continuing from under it. Fixed BY ORDER,
+            // never by starting the stem at head_bottom: the stem keeps its
+            // own gate ([0, wave_w), fill_waveform_line) and the head its own
+            // cull and clip (the half-head rule above), each unchanged, and a
+            // start row taken from the head's band would couple the two at the
+            // edges. The head is opaque over everything beneath its
+            // silhouette, the labels, the ticks and now the stem alike.
+            if (!playhead_stem_suppressed()) {
+                set_palette_source(cr, palette().playhead_stem);
+                fill_waveform_line(cr, lane.x, wave_w, col, marker.y,
+                                   marker.y + marker.h);
+            }
             // NO HOLD LAMP (architect 2026-10-05): the glyph's '.' region is
             // GROUND whether or not the hold posture stands; a visible hold
             // cue is a later discussion.
@@ -4221,7 +4239,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 cairo_close_path(cr);
             };
             // THE CLIP to the waveform's columns (the half-head rule above),
-            // over the head's band alone and released before the stem.
+            // over the head's band alone, the stem already painted.
             cairo_save(cr);
             cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
             cairo_clip(cr);
@@ -4257,12 +4275,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
             cairo_paint(cr);
             cairo_restore(cr);
-
-            if (!playhead_stem_suppressed()) {
-                set_palette_source(cr, palette().playhead_stem);
-                fill_waveform_line(cr, lane.x, wave_w, col, marker.y,
-                                   marker.y + marker.h);
-            }
         }
     }
 
@@ -5289,9 +5301,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // covers is a per-frame repaint anyway.
 //
 // THE SCANNER IS THE MOVING STEM, and it HAS ITS OWN ROLE, `scanner`
-// (architect 2026-10-05, undoing 2026-10-03's choice to share the resting
-// cursor's `playhead_stem` key — a yellow scanner reads apart from a white
-// resting stem at a glance).
+// (architect 2026-10-05), apart from the resting cursor's `playhead_stem`;
+// the built-in paints both white (architect 2026-10-07: "let's go back to a
+// white scanner"), and a theme may still part them.
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (the ruling is at paint_ruler_row's head block — render_playhead is shared
@@ -7561,8 +7573,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      275 % it rises 2 rows into the digits' own ink, and at 400 %
         //      it lands exactly on the baseline (render.h's
         //      kRulerBaselineToMarkerPx block) — and the cursor's column
-        //      through the marker lane, under the flags (the reasoning is at
-        //      that block in paint_ruler_row).
+        //      through the marker lane, under the flags, painted BEFORE the
+        //      head so the tip shows whole (architect 2026-10-07; the
+        //      reasoning is at that block in paint_ruler_row).
         //  10. the FLAG BLIT.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —

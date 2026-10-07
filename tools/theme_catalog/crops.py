@@ -62,10 +62,13 @@ SCRATCH = os.path.join(REPO, 'tmp', 'theme_catalog')
 ICCP = open(os.path.join(PALETTE, 'display_p3.iccp'), 'rb').read()
 
 # the program's own elements: the renderer's colour key <- the app's role (the role table, theme_file.h), P3 bytes
-# as-is; one flag kind on the scene (warp), the invalid flag wearing the removed pair under the one flag label
+# as-is; one flag kind on the scene (warp), the invalid flag wearing the removed pair under the one resting flag
+# label; the renderer has ONE selected label (`flag_label_sel`, both selected faces'), so it takes the scene's kind's,
+# `warp_label_selected` — the app's per-kind selected labels of 2026-10-07 put `removed_label_selected` on a selected
+# invalid flag, which a crop does not show
 PROGRAM_KEYS = (('canvas', 'waveform_canvas'), ('ink', 'waveform_ink'), ('outline', 'waveform_outline'),
                 ('flag_fill', 'warp_flag'), ('flag_fill_sel', 'warp_flag_selected'), ('flag_label', 'flag_label'),
-                ('flag_label_sel', 'flag_label_selected'), ('flag_fill_red', 'removed_flag'),
+                ('flag_label_sel', 'warp_label_selected'), ('flag_fill_red', 'removed_flag'),
                 ('flag_fill_red_sel', 'removed_flag_selected'), ('flag_label_red', 'flag_label'),
                 ('playhead_stem', 'playhead_stem'))
 # (the renderer's `playhead_head` is no app role since 2026-10-05 — the app's head is WordPad's ruler marker in chrome

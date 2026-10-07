@@ -1276,10 +1276,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
     // the INVALID face — the REMOVED pair's `removed_flag` under the one
     // `flag_label` and a stem in the face (resolve_flag_face, render.cpp;
-    // architect 2026-10-04), its brighter `removed_flag_selected` marking a
-    // selected one; DISABLED wins
-    // over it, a disabled
-    // invalid marker painting the disabled face.
+    // architect 2026-10-04), its brighter `removed_flag_selected` under
+    // `removed_label_selected` (2026-10-07) marking a selected one; DISABLED
+    // wins over it, a disabled invalid marker painting the disabled face.
     // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag

@@ -24,10 +24,12 @@
 // ButtonText for the clock panel; Windows' InfoWindow / InfoText and its
 // tooltip's black border for the cards; ActiveTitle / GradientActiveTitle /
 // TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText for
-// the caption), and the program's roles are the planner's picks from Windows'
-// twenty solid colours (the architect's delegation, 2026-10-04: "the default
-// theme is just a fallback"), each flag kind a face and a selected face of the
-// VGA sixteen under white labels (the role table's program block).
+// the caption), and the program's roles are the waveform's canvas, ink and
+// outline from Windows' twenty solid colours, and each flag kind a face, a
+// selected face and a selected label of its own under the one white resting
+// label — the authoring kinds' pairs WINDOWS 2000'S OWN SCHEME BYTES, the
+// history's two Windows' true dark / bright pairs (architect 2026-10-07; the
+// role table's program block).
 //
 // ONE THEME IS BUILT IN, compiled: `windows-2000-standard` (kBuiltinThemeKey),
 // the role table's values — Windows 2000's own "Windows Standard" scheme, the
@@ -108,7 +110,7 @@ inline constexpr const char* kDefaultThemeKey = kBuiltinThemeKey;
 
 // THE ROLE TABLE — THE ONE ENUMERATION (architect 2026-10-04), in GuiPalette's
 // order: the chrome's twenty-one (the caption's six since 2026-10-05), then the
-// program's fifteen. The reader's arm,
+// program's eighteen (the four selected labels since 2026-10-07). The reader's arm,
 // the built-in, the files' fill and install_palette (render.cpp) all walk it,
 // so a role cannot be read and not painted. What each role paints is
 // render.h's palette block (THE MAPPING).
@@ -148,36 +150,48 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"caption_inactive",          &GuiPalette::caption_inactive,          0x808080},
     {"caption_inactive_gradient", &GuiPalette::caption_inactive_gradient, 0xC0C0C0},
     {"caption_inactive_text",     &GuiPalette::caption_inactive_text,     0xD4D0C8},
-    // THE PROGRAM'S OWN ELEMENTS — Windows' twenty solid colours: the canvas
-    // black under Sound Recorder's lime trace (measured on his Windows 98
-    // screenshot 2026-10-05), the lit outline green; each flag kind a dark
-    // face and a selected face, each kind a true dark / bright pair of
-    // Windows' sixteen (architect 2026-10-05) — warp purple / fuchsia, phase
-    // reset teal / aqua, the history's added green / lime, its removed
-    // maroon / red, which the invalid flag wears too; BOTH FLAG LABELS WHITE
-    // (architect 2026-10-05: "white text for the flags is going to be the
-    // most common; the highlights will generally be chosen so white shows"
-    // — so a file that names flag faces and no labels gets white on both);
-    // the playhead's stem white, the scanner yellow (architect 2026-10-05,
-    // undoing that day's earlier yellow stem: the scanner is its own role
-    // now, Windows' own "yellow", one of the twenty named colours — the head
-    // is no longer a role at all, WordPad's ruler marker painted in the
-    // chrome's own label / hilight / shadow / ground, below).
-    {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000},
-    {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00},
-    {"waveform_outline",          &GuiPalette::waveform_outline,          0x008000},
-    {"warp_flag",                 &GuiPalette::warp_flag,                 0x800080},
-    {"warp_flag_selected",        &GuiPalette::warp_flag_selected,        0xFF00FF},
-    {"phase_reset_flag",          &GuiPalette::phase_reset_flag,          0x008080},
-    {"phase_reset_flag_selected", &GuiPalette::phase_reset_flag_selected, 0x00FFFF},
-    {"added_flag",                &GuiPalette::added_flag,                0x008000},
-    {"added_flag_selected",       &GuiPalette::added_flag_selected,       0x00FF00},
-    {"removed_flag",              &GuiPalette::removed_flag,              0x800000},
-    {"removed_flag_selected",     &GuiPalette::removed_flag_selected,     0xFF0000},
-    {"flag_label",                &GuiPalette::flag_label,                0xFFFFFF},
-    {"flag_label_selected",       &GuiPalette::flag_label_selected,       0xFFFFFF},
-    {"playhead_stem",             &GuiPalette::playhead_stem,             0xFFFFFF},
-    {"scanner",                   &GuiPalette::scanner,                   0xFFFF00},
+    // THE PROGRAM'S OWN ELEMENTS. THE WAVEFORM is Windows' twenty solid
+    // colours: the canvas black under Sound Recorder's lime trace (measured
+    // on his Windows 98 screenshot 2026-10-05), the lit outline green.
+    // THE FLAG PAIRS ARE WINDOWS 2000'S SCHEME BYTES (architect 2026-10-07:
+    // "coherence with the theme — Windows 2000 is the default"; "how well the
+    // selected version shows up on the flag"), each authoring kind a face and
+    // its brighter accent as Microsoft's own schemes paired them — WARP the
+    // Standard scheme's ActiveTitle 0A246A selected to its Background
+    // 3A6EA5; PHASE RESET the Teal scheme's ActiveTitle 008080 selected to its
+    // GradientActiveTitle 00CCD8 — and the history's two kept as Windows' true
+    // dark / bright pairs of the sixteen, ADDED green 008000 / lime 00FF00 and
+    // REMOVED maroon 800000 / red FF0000, which the invalid flag wears too.
+    // EVERY RESTING LABEL WHITE, the ONE `flag_label` (so a
+    // file that names flag faces and no labels gets white at rest); THE
+    // SELECTED LABEL PER KIND (architect 2026-10-07, replacing the one
+    // selected label of 2026-10-04): white on the warp blue, BLACK on the
+    // three bright accents, where white would not show.
+    // THE PLAYHEAD'S STEM AND THE SCANNER BOTH WHITE (architect 2026-10-07:
+    // "let's go back to a white scanner") and still TWO roles, so a file may
+    // part them — the head is no role at all, WordPad's ruler marker painted
+    // in the chrome's own label / hilight / shadow / ground (render.h).
+    // A FILE NAMING THE RETIRED `flag_label_selected` (the one selected label
+    // until 2026-10-07) is an unknown role, the launch's first-error hard
+    // fail — the only such file a hand-authored one: none is bundled.
+    {"waveform_canvas",            &GuiPalette::waveform_canvas,            0x000000},
+    {"waveform_ink",               &GuiPalette::waveform_ink,               0x00FF00},
+    {"waveform_outline",           &GuiPalette::waveform_outline,           0x008000},
+    {"warp_flag",                  &GuiPalette::warp_flag,                  0x0A246A},
+    {"warp_flag_selected",         &GuiPalette::warp_flag_selected,         0x3A6EA5},
+    {"phase_reset_flag",           &GuiPalette::phase_reset_flag,           0x008080},
+    {"phase_reset_flag_selected",  &GuiPalette::phase_reset_flag_selected,  0x00CCD8},
+    {"added_flag",                 &GuiPalette::added_flag,                 0x008000},
+    {"added_flag_selected",        &GuiPalette::added_flag_selected,        0x00FF00},
+    {"removed_flag",               &GuiPalette::removed_flag,               0x800000},
+    {"removed_flag_selected",      &GuiPalette::removed_flag_selected,      0xFF0000},
+    {"flag_label",                 &GuiPalette::flag_label,                 0xFFFFFF},
+    {"warp_label_selected",        &GuiPalette::warp_label_selected,        0xFFFFFF},
+    {"phase_reset_label_selected", &GuiPalette::phase_reset_label_selected, 0x000000},
+    {"added_label_selected",       &GuiPalette::added_label_selected,       0x000000},
+    {"removed_label_selected",     &GuiPalette::removed_label_selected,     0x000000},
+    {"playhead_stem",              &GuiPalette::playhead_stem,              0xFFFFFF},
+    {"scanner",                    &GuiPalette::scanner,                    0xFFFFFF},
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);
 

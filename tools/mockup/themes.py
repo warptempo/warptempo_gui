@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/mockup/themes.py — THE THEME GRAMMAR, read off the app's own source so the tool cannot drift from it.
 #
-# The built-in's 36 values, the twenty named colours, the flat-caption pairs and the built-in's key are all parsed out
+# The built-in's 39 values, the twenty named colours, the flat-caption pairs and the built-in's key are all parsed out
 # of src/gui/theme_file.h in the working tree on every run (the constants-from-source discipline of
 # tools/palette/common.py's face_metrics). A .theme file is read under the app's own rules (theme_file.cpp's
 # read_theme_file and read_theme_folder's stem checks, the shared scanner's lexical contract in
@@ -39,9 +39,9 @@ def _load():
     pairs = re.findall(r'\{theme_role_index\("(\w+)"\),\s*theme_role_index\("(\w+)"\)\}',
                        _block(src, r'kGuiThemeCaptionGradients\[\] = \{'))
     key = re.search(r'kBuiltinThemeKey = "([^"]+)"', src).group(1)
-    if len(roles) != 36 or len(named) != 20 or len(pairs) != 2:
+    if len(roles) != 39 or len(named) != 20 or len(pairs) != 2:
         raise SystemExit(f'tools/mockup: {THEME_FILE_H}: read {len(roles)} roles, {len(named)} named colours, '
-                         f'{len(pairs)} caption pairs (expected 36, 20, 2: the source moved)')
+                         f'{len(pairs)} caption pairs (expected 39, 20, 2: the source moved)')
     return roles, named, pairs, key
 
 

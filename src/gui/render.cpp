@@ -1536,24 +1536,40 @@ struct FlagFace {
     bool     has_stem;
 };
 
-// A kind's face and its selected face, off the theme's roles.
+// A kind's face, its selected face and the label on that selected face, off
+// the theme's roles (the selected label per kind since 2026-10-07; the
+// resting label is the one `flag_label` for every kind).
 struct FlagPair {
     GuiColor face;
     GuiColor selected;
+    GuiColor selected_label;
 };
 FlagPair flag_pair(GuiFlagKind kind) {
     const GuiPalette& p = palette();
     switch (kind) {
         case GuiFlagKind::Warp:
-            return {p.warp_flag, p.warp_flag_selected};
+            return {p.warp_flag, p.warp_flag_selected, p.warp_label_selected};
         case GuiFlagKind::PhaseReset:
-            return {p.phase_reset_flag, p.phase_reset_flag_selected};
+            return {p.phase_reset_flag, p.phase_reset_flag_selected,
+                    p.phase_reset_label_selected};
         case GuiFlagKind::Added:
-            return {p.added_flag, p.added_flag_selected};
+            return {p.added_flag, p.added_flag_selected,
+                    p.added_label_selected};
         case GuiFlagKind::Removed:
-            return {p.removed_flag, p.removed_flag_selected};
+            return {p.removed_flag, p.removed_flag_selected,
+                    p.removed_label_selected};
     }
-    return {p.warp_flag, p.warp_flag_selected};
+    return {p.warp_flag, p.warp_flag_selected, p.warp_label_selected};
+}
+
+// THE PAIR A BOX WEARS — the ladder's choice of pair, apart from its choice of
+// arm: a disabled box draws its (selected) face from its own kind's pair, an
+// invalid one from the Removed pair, any other from its kind's. The ladder
+// below and the flag editor's ink (render_flag_editor_box) both read it, so
+// the editor's text always takes the selected label of the very pair its
+// face came from (architect 2026-10-07).
+GuiFlagKind worn_flag_kind(GuiFlagKind kind, bool disabled, bool red) {
+    return (red && !disabled) ? GuiFlagKind::Removed : kind;
 }
 
 // THE ONE LADDER for every flag box — both marker columns, their bound cells,
@@ -1562,8 +1578,9 @@ FlagPair flag_pair(GuiFlagKind kind) {
 // wins (the theme's ground, the label embossed, no stem), then INVALID, which
 // WEARS THE REMOVED PAIR (one red for both, the context telling them apart:
 // invalid while authoring, removed in `h`), then the KIND's own pair, the
-// stem in the face. ONE LABEL PAIR FOR EVERY KIND: `flag_label` on a face,
-// `flag_label_selected` on a selected one. SELECTION IS A BRIGHTER FACE
+// stem in the face. ONE RESTING LABEL, A SELECTED LABEL PER KIND (architect
+// 2026-10-07): `flag_label` on a face, the worn pair's own selected label on
+// a selected one (worn_flag_kind). SELECTION IS A BRIGHTER FACE
 // (architect 2026-10-03, retiring the white outline): each arm answers
 // `selected` with its pair's selected face; and THE SELECTED DISABLED ARM,
 // PROVISIONAL (the palette block's THE STATES), is Windows 95's highlighted
@@ -1574,16 +1591,18 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red,
     const GuiPalette& p = palette();
     FlagFace f;
     if (disabled) {
-        f.face     = selected ? flag_pair(kind).selected : p.ground;
+        f.face     = selected
+            ? flag_pair(worn_flag_kind(kind, disabled, red)).selected
+            : p.ground;
         f.label    = p.shadow;   // the emboss's word ink, or the flat GrayText
         f.embossed = !selected;  // show_embossed_run on the ground only
         f.stem     = f.face;
         f.has_stem = false;      // NO STEM EVER for a disabled marker
         return f;
     }
-    const FlagPair pair = flag_pair(red ? GuiFlagKind::Removed : kind);
+    const FlagPair pair = flag_pair(worn_flag_kind(kind, disabled, red));
     f.face     = selected ? pair.selected : pair.face;
-    f.label    = selected ? p.flag_label_selected : p.flag_label;
+    f.label    = selected ? pair.selected_label : p.flag_label;
     f.embossed = false;
     f.stem     = f.face;
     f.has_stem = true;
@@ -2950,6 +2969,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // in that face (below).
     const FlagFace face =
         resolve_flag_face(kind, dis, red_class, /*selected=*/true);
+    // THE FIELD'S INK — its text and its caret — IS THE SELECTED LABEL OF THE
+    // PAIR ITS FACE CAME FROM (architect 2026-10-07, the selected label per
+    // kind): the kind's own, or `removed_label_selected` over an invalid
+    // marker, through the ladder's own choice of pair (worn_flag_kind), so the
+    // ink and the face cannot disagree. Read off the pair rather than
+    // `face.label`, which for a disabled marker is the provisional arm's flat
+    // Shadow — an edit field is never that menu item, its ink always the
+    // label of its face.
+    const GuiColor field_ink =
+        flag_pair(worn_flag_kind(kind, dis, red_class)).selected_label;
     // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
     // ends on ONE outline column on its rightmost box)? Iff nothing rides past
     // it — the UPPER field, the marker's last box by rank, or a payload field
@@ -3015,8 +3044,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     cairo_clip(cr);
 
     // 2. The selection highlight, then 3. the text — THE THEME'S SELECTED PAIR
-    //    over the selected face's own label, `flag_label_selected` (architect
-    //    2026-10-03, set BX).
+    //    over the selected face's own label, `field_ink` (architect
+    //    2026-10-03, set BX; per kind 2026-10-07).
     //
     //    THE SELECTED SUBSTRING IS THE WHOLE RUN RE-SHOWN UNDER A CLIP, never
     //    a run shaped from the substring alone: shaping the selected bytes on
@@ -3062,7 +3091,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE RUN, SHOWN ONCE PER REGION (the ruling in the block above): the
     // whole run in the selected label off the band, the whole run again in
     // the selected text on it, neither reaching a pixel the other painted.
-    set_palette_source(cr, palette().flag_label_selected);
+    set_palette_source(cr, field_ink);
     if (!has_sel) {
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
     } else {
@@ -3098,7 +3127,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // 4. The caret: a blink-gated filled integer column at the cursor's own
     //    byte boundary, AA off. IT IS INK, NOT FIELD, so it stays the box's
-    //    TEXT colour, `flag_label_selected`, wherever it lands (architect
+    //    TEXT colour, `field_ink`, wherever it lands (architect
     //    2026-10-03), over the selection band included — a caret that changed
     //    colour on crossing a selection edge would be stating something about
     //    the selection rather than about the cursor.
@@ -3107,7 +3136,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             static_cast<int>(std::nearbyint(text_origin_x + caret_off));
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        set_palette_source(cr, palette().flag_label_selected);
+        set_palette_source(cr, field_ink);
         cairo_rectangle(cr, cx, band_y, caret_px, band_h);
         cairo_fill(cr);
         cairo_restore(cr);

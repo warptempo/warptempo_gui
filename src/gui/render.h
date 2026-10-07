@@ -75,10 +75,11 @@ struct TrimRange {
 // 2026-10-04): a THEME holds every colour the GUI paints — the chrome and its
 // relief, the time fields' own pair, the cards' three, the selected and field
 // pairs, and the program's own elements (the waveform's canvas, ink and
-// outline, each flag kind's face and selected face, the flag labels, the
-// playhead's stem and the scanner). The roles, their order and THE BUILT-IN's values
-// are the role table (kGuiThemeRoles, theme_file.h); the active theme is the
-// device config's `theme` — the one built-in and the default,
+// outline, each flag kind's face, selected face and selected label, the one
+// resting flag label, the playhead's stem and the scanner). The roles, their
+// order and THE BUILT-IN's values are the role table (kGuiThemeRoles,
+// theme_file.h); the active theme is the device config's `theme` — the one
+// built-in and the default,
 // `windows-2000-standard` (since 2026-10-06), or a `<key>.theme` file read at
 // launch from the `themes/` folder beside the device config (theme_file.h's
 // head: the grammar, a file naming only some roles, the hard fail). There is
@@ -209,11 +210,11 @@ struct TrimRange {
 //                 restored laptop window is the quartet and the ground
 //                 (paint_window_sizing_frame);
 //   the program's the waveform's canvas, ink and outline (ROW 6, below), the
-//                 flag kinds' faces and the flag labels (THE MARKER LANE,
-//                 below), the playhead's stem and the scanner (THE PLAYHEAD,
-//                 below — the head itself is no longer a role: it is
-//                 WordPad's ruler marker, painted in the chrome's own label,
-//                 hilight, shadow and ground).
+//                 flag kinds' faces and selected labels and the one resting
+//                 flag label (THE MARKER LANE, below), the playhead's stem
+//                 and the scanner (THE PLAYHEAD, below — the head itself is
+//                 no longer a role: it is WordPad's ruler marker, painted in
+//                 the chrome's own label, hilight, shadow and ground).
 // THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
@@ -306,7 +307,10 @@ struct GuiPalette {
     GuiColor removed_flag;
     GuiColor removed_flag_selected;
     GuiColor flag_label;
-    GuiColor flag_label_selected;
+    GuiColor warp_label_selected;
+    GuiColor phase_reset_label_selected;
+    GuiColor added_label_selected;
+    GuiColor removed_label_selected;
     GuiColor playhead_stem;
     GuiColor scanner;
 };
@@ -379,10 +383,10 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // user's choice), and the zoom anchor's stem
 // (render_strip_anchor_stem) takes the same role. THE SCANNER — the moving
 // playback line, paint_scanner — HAS ITS OWN ROLE, `scanner` (architect
-// 2026-10-05, undoing that day's earlier choice to share the stem's role):
-// it is still the moving stem in every other respect (waveform-only, no
-// head, no lane presence), painted in its own colour so it can be told apart
-// from the resting cursor's stem at a glance.
+// 2026-10-05): it is the moving stem in every other respect (waveform-only,
+// no head, no lane presence), and the built-in paints it WHITE, the stem's
+// colour (architect 2026-10-07: "let's go back to a white scanner"); the two
+// stay two roles, so a theme may still part them.
 
 // -- THE MARKER LANE: THE FLAT FLAGS ---------------------------------------------
 //
@@ -409,8 +413,15 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // `phase_reset_flag_selected`), each authoring column's flags by their column,
 // and the `h` view's ADDED (`added_flag` / `added_flag_selected`) and REMOVED
 // (`removed_flag` / `removed_flag_selected`), each a face and a brighter
-// selected face. ONE LABEL PAIR FOR EVERY KIND: `flag_label` on a face,
-// `flag_label_selected` on a selected face (architect 2026-10-04, "for now").
+// selected face. ONE RESTING LABEL, A SELECTED LABEL PER KIND (architect
+// 2026-10-07, splitting the one selected label of 2026-10-04's "for now"):
+// `flag_label` on every resting face, white in the built-in, and on a
+// selected face the kind's own — `warp_label_selected`,
+// `phase_reset_label_selected`, `added_label_selected`,
+// `removed_label_selected` — so a bright accent can carry black where white
+// would not show (the built-in: white on the warp blue, black on the other
+// three; theme_file.h's program block). A label pairs with the FACE it sits
+// on: whatever pair a box wears, its selected label comes from that pair.
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then invalid, then the kind's own pair; each arm answers selected and
@@ -428,10 +439,10 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 //             AR02): the selected flag's FACE AND STEM take the selected face
 //             of its pair — the kind's, or `removed_flag_selected` over an
 //             invalid one ("bright red means selected and error") — and its
-//             LABEL `flag_label_selected`, on every selected face (the
-//             symmetry). The OUTLINE STAYS the one-line DkShadow ("it has to
-//             be black and stay black; it's the only one that stays out of
-//             the way of the stem"), so every seam column is DkShadow
+//             LABEL that pair's selected label (`removed_label_selected` over
+//             an invalid one). The OUTLINE STAYS the one-line DkShadow ("it
+//             has to be black and stay black; it's the only one that stays
+//             out of the way of the stem"), so every seam column is DkShadow
 //             whichever box paints it. It is Windows' own selected-icon
 //             reversal, a face that changes rather than a frame that appears.
 //             SELECTION IS ONE CELL'S (architect 2026-09-05): the ADDRESSED
@@ -476,13 +487,14 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // EDIT (architect 2026-10-03, set BX) — its BACKGROUND the edited marker's
 // SELECTED FACE (its kind's, or `removed_flag_selected` over an invalid
 // marker), framed ONE Windows px in black (kFlagEditorFrame), its TEXT
-// and caret `flag_label_selected`, the selected substring in the theme's
-// SELECTED pair, Windows' field margin strips (the pads) kept. THE STEM
-// FOLLOWS THE PAYLOAD BOX (architect 2026-10-04): the selected face under the
-// PAYLOAD field, which is the payload box opened and the addressed cell; the
-// marker's resting face under a BOUND-CELL field, the flag box standing at
-// rest beside it (render_flag_editor_box). The field pair plays no part in it;
-// the bound-cell editor is the same editor.
+// and caret THE SELECTED LABEL OF THE PAIR THAT FACE COMES FROM (its kind's,
+// or `removed_label_selected` over an invalid marker), the selected substring
+// in the theme's SELECTED pair, Windows' field margin strips (the pads) kept.
+// THE STEM FOLLOWS THE PAYLOAD BOX (architect 2026-10-04): the selected face
+// under the PAYLOAD field, which is the payload box opened and the addressed
+// cell; the marker's resting face under a BOUND-CELL field, the flag box
+// standing at rest beside it (render_flag_editor_box). The field pair plays no
+// part in it; the bound-cell editor is the same editor.
 //
 // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
@@ -3028,8 +3040,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              alike (architect 2026-10-04) — under `flag_label`, the stem in
 //              the face.
 //   Selected:  the addressed cell's selected face (the kind's, or
-//              `removed_flag_selected` over an invalid one) under
-//              `flag_label_selected`; the stem in the FLAG BOX's face, so
+//              `removed_flag_selected` over an invalid one) under that
+//              pair's selected label; the stem in the FLAG BOX's face, so
 //              selected only while the payload is the addressed cell
 //              (architect 2026-10-04);
 //              a selected DISABLED cell the kind's selected face under a flat
@@ -3260,9 +3272,9 @@ struct FlagEditorBox {
 // flag's own outline geometry, so opening an editor changes the flag's SIZE
 // and nothing about where it stands — on the edited marker's SELECTED FACE
 // (the selected flag opened for edit, architect 2026-10-03: the field pair
-// plays no part), its text and caret `flag_label_selected`, the selected
-// substring in the theme's selected pair, the pads Windows' field margin
-// strips. Since no field buys a caret column,
+// plays no part), its text and caret the selected label of that face's pair,
+// the selected substring in the theme's selected pair, the pads Windows' field
+// margin strips. Since no field buys a caret column,
 // the size only changes where the resting label was capped, the field opening
 // at the committed run's own width and growing only with what is typed past
 // it; the bound cells riding its right edge keep the flag anatomy. A REFUSED

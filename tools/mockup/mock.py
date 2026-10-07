@@ -35,7 +35,7 @@ def main(argv=None):
     ap.add_argument('--icons', help='a folder of <Enumerator>.svg: every case the scene lists takes its glyph')
     ap.add_argument('--scene', help="the scene JSON (default: the one in scenes/ naming the capture)")
     ap.add_argument('--extra', nargs='*', default=[], metavar='KEY=VALUE',
-                    help="the colours a vocabulary needs beyond the 36 roles (motif: trough, frame_ts, frame_bs)")
+                    help="the colours a vocabulary needs beyond the 39 roles (motif: trough, frame_ts, frame_bs)")
     ap.add_argument('-o', '--out', required=True)
     a = ap.parse_args(argv)
 

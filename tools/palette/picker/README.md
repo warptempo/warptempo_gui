@@ -65,9 +65,10 @@ product paints a flag's stem in its box's face), each kind's face and selected f
     selected faces in the flags scene's place), its stem the removed half's selected face (the stem is the face of the
     half it leaves from), and a removed `[-]b.33` clipped at the edge. Each label spells the sign as history mode does
     (history_diff_label).
-The flag labels stay FIXED white (his ruling: consistency; the product's own keys `flag_label` on a face and
-`flag_label_selected` on a selected face, one pair for every kind, not the theme's label, so the Label element below
-never moves them), fixed roles re-blended over the live faces; the flag outline is a fixed role too. The flags round
+The flag labels stay FIXED white (his ruling: consistency; the product's own roles `flag_label` on a face and, since
+2026-10-07, each kind's own selected label on a selected face — `warp_label_selected`, `phase_reset_label_selected`,
+`added_label_selected`, `removed_label_selected` — not the theme's label, so the Label element below never moves
+them), fixed roles re-blended over the live faces; the flag outline is a fixed role too. The flags round
 added the warp pair (then Unselected and Selected Flag) and the element button's fit: a name too long for it is set
 smaller, so it ends clear of the chooser's head. Then
 PLAYHEAD HEAD and PLAYHEAD STEM (architect 2026-10-04: the program's two playhead keys, render.h's THE PLAYHEAD block,

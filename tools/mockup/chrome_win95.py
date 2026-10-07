@@ -6,7 +6,7 @@ import numpy as np
 from matcher import Matcher
 
 NAME = 'win95'
-EXTRAS = {}                     # the 36 roles carry this vocabulary whole
+EXTRAS = {}                     # the 39 roles carry this vocabulary whole
 
 
 def dither_cell(scene, args):

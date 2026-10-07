@@ -41,7 +41,8 @@
 #     itself wins over an old one. THE LABELS:
 #     label and field_text the preset's label as build.py's preset rule gives them (the chrome above); the flag labels
 #     are never named, the picker having no flag-label element (it shows them fixed white), so a preset records none and
-#     the built-in's apply, white on both (architect 2026-10-05), as the picker painted them.
+#     the built-in's apply: the resting label white, as the picker painted it, and each kind's selected label the
+#     built-in's per-kind value (architect 2026-10-07: white on the warp blue, black on the three bright accents).
 #   Before writing, each preset's chrome is checked against the picker: its light roles must equal the chrome the
 #   picker paints for that preset, else a stale catalog (re-run build.py) or a changed picker theme (a ruling).
 #
@@ -75,7 +76,8 @@ ROLE_ORDER = ('ground', 'label', 'hilight', 'light_3d', 'shadow', 'dk_shadow', '
               'caption_inactive_gradient', 'caption_inactive_text',
               'waveform_canvas', 'waveform_ink', 'waveform_outline', 'warp_flag', 'warp_flag_selected',
               'phase_reset_flag', 'phase_reset_flag_selected', 'added_flag', 'added_flag_selected', 'removed_flag',
-              'removed_flag_selected', 'flag_label', 'flag_label_selected', 'playhead_stem', 'scanner')
+              'removed_flag_selected', 'flag_label', 'warp_label_selected', 'phase_reset_label_selected',
+              'added_label_selected', 'removed_label_selected', 'playhead_stem', 'scanner')
 # the chrome: theme-file role <- roles.light_roles' name
 CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight'), ('light_3d', 'bevel_light'),
           ('shadow', 'bevel_shadow'), ('dk_shadow', 'bevel_dkshadow'), ('selected_fill', 'selected_fill'),

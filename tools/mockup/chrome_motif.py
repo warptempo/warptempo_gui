@@ -15,7 +15,7 @@
 # the right frame. A LIST BODY (the render player) is the capture's sunken list, its top and bottom edges kept and
 # the interior rows and columns its new height and width lose cut from its bottom and right.
 #
-# THREE COLOURS THE 36 ROLES LACK (--extra): `trough` (the scroll bar's trough: Motif's select colour of the
+# THREE COLOURS THE 39 ROLES LACK (--extra): `trough` (the scroll bar's trough: Motif's select colour of the
 # ground's set), `frame_ts` / `frame_bs` (the window frame's and title bar's top and bottom shadows: the active
 # title set's). Any one not given is computed by Motif's own rule (lib/Xm/Color.c CalculateColorsRGB, as
 # tools/theme_catalog/toolkit_rules.py runs it) on the role it belongs to — `ground` for the trough,
