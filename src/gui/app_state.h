@@ -2677,8 +2677,10 @@ enum class RedesignButton {
     // either state, the other publishing zero rects — and they went back to the
     // ICON ROW with the roster relayout ("move cumulative/restore/older/newer
     // to top icon row"). The swap machinery went with them whole rather than
-    // being kept: the arrows paint unconditionally now, and the row's layout
-    // has no mode term left in it anywhere.
+    // being kept. THE ROW'S ONE MODE TERM SINCE 2026-10-07 is a subtraction,
+    // not a swap: in the `h` view a member whose chord the view refuses in
+    // every session — Up and Down among the arrows — is not painted
+    // (history_mode_hides_button), and nothing stands in its place.
     //
     // THE ROW GOT ITS SHAPE AT THE ARCHITECT'S LIVE LOOK (2026-08-15), and the
     // two halves are one ruling: the left cluster dropped to THREE and the
@@ -14045,6 +14047,14 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
 // restates none of its terms.
 bool history_mode_disables_button(const AppState& app, RedesignButton b);
 
+// IS THIS BUTTON ABSENT FROM ITS TOOLBAR? True iff the `h` view stands and
+// the button's chord is refused there in EVERY session — dead by
+// construction, never by state (architect 2026-10-07). The same chord walk
+// as the partition above, so a hidden button is always a greyed one; the
+// rule, its readers and what a hidden button publishes are at the
+// definition (input_pointer.cpp).
+bool history_mode_hides_button(const AppState& app, RedesignButton b);
+
 // A DROPDOWN ITEM'S ONE ENABLED VERDICT (architect 2026-09-24, the truthful
 // menus) — ONE OWNER, read by the dropdown's painter (the disabled ink, no
 // hover or press face), by the pointer's three item roads (the hover walk,
@@ -14110,10 +14120,11 @@ inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
 // refuses in this row now wears the ordinary dead face. (They came BACK on
 // 2026-08-18 and wear that same dead face at rest — their arm is at
 // redesign_button_enabled — which is the rule working rather than the
-// collapse returning.) THERE IS NO HIDING LEFT IN THE PRODUCT AT ALL since
-// that day: the bottom row's cluster SWAP was the last of it, and the modal's
-// yield — where the row's tenants publish zero rects — is the one remaining
-// site of that shape.)
+// collapse returning.) The bottom row's cluster SWAP went on 2026-08-18; what
+// hides now is the `h` view alone — the icon row's history stand-ins
+// (2026-10-05, kIconRowHistoryStandIns) and, on both toolbars, the buttons
+// the view refuses in every session (2026-10-07, history_mode_hides_button)
+// — beside the modal's yield, where the row's tenants publish zero rects.)
 
 // WOULD A PLAYBACK LAUNCH FROM `launch_pos` BE PLAYABLE? The launch body's
 // refusal set, hoisted whole (2026-08-15). THREE READERS:
@@ -14754,7 +14765,12 @@ inline bool redesign_button_enabled(const AppState& a,
     // says nothing while the press does nothing is the drift the enabled
     // predicate exists to prevent. Whose act is consumed is DERIVED from the
     // mode's own gates (history_mode_disables_button, above), so this line
-    // cannot fall out of step with the allowlist.
+    // cannot fall out of step with the allowlist. SINCE 2026-10-07 a button
+    // this line answers false in EVERY session is not painted in the view at
+    // all (history_mode_hides_button, the same walk) — its false still
+    // stashed, but on an empty rect no pixel shows and no press reaches —
+    // so the grey this line paints is the BY-STATE kind: Revert with no
+    // subject, Load in Place over an empty walk.
     //
     // IT HAS NO EXCEPTION SINCE 2026-08-30. From 2026-08-15 until then the
     // four HISTORY COMPANIONS were lifted over it INSIDE the view

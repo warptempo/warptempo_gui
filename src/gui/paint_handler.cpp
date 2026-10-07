@@ -602,9 +602,11 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
 // rect: THE MODAL YIELD (since 2026-08-18; the contract is at
 // paint_bottom_strip's yield branch), since 2026-10-01 the icon row's
 // OVERFLOW RULE at a window too narrow for the row, a member the view group
-// covers whole (kIconRowViewGroup), and since 2026-10-05 the icon row's
+// covers whole (kIconRowViewGroup), since 2026-10-05 the icon row's
 // HISTORY STAND-INS, a member that does not stand in the current state
-// (kIconRowHistoryStandIns).
+// (kIconRowHistoryStandIns), and since 2026-10-07 THE `h` VIEW'S HIDE on
+// both toolbars, a member whose chord the view refuses in every session
+// (history_mode_hides_button, input_pointer.cpp).
 //
 // THE CLIP TEST SURVIVED THE FACE-POLICY REVERSAL THAT FOLLOWED IT, and that is
 // deliberate rather than an oversight: it landed in the same arc that made the
@@ -940,7 +942,10 @@ constexpr IconRowDef kIconRowButtons[] = {
 // GROUP'S THREE take the two reading lamps, the walk source and the
 // cumulative reading, so that group stands one case narrower in the view
 // and the render-entry group right of it sits one case (31 Windows px)
-// further left there than outside. The history opener and the view group
+// further left there than outside — further still since 2026-10-07, the
+// zoom group and the render-entry group each standing on the one member the
+// view does not refuse in every session (Full Zoom Out, Enable Tooltips),
+// their others hidden (history_mode_hides_button, paint_icon_row's walk). The history opener and the view group
 // are right-anchored and do not move (kIconRowHistoryOpener).
 //
 // THE COMPANIONS' GLYPHS: the CUMULATIVE toggle wears BlackSum, the
@@ -1027,13 +1032,14 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // the view group cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
 // walks). Under win2000 the row fits whole down to 715 Windows px of window
-// at 100 % outside the `h` view and 684 inside it (the width math at
+// at 100 % outside the `h` view and 498 inside it (the width math at
 // paint_icon_row, its one statement, re-derived 2026-10-07 for Open Project
-// in Save's group), so neither host reaches the rule at its scale: the
-// tablet's 2304 device px hold the row in both states up to 318 % and the
-// laptop's 1920 up to 268 %. UNDER CLEARLOOKS (760 and 728 Windows px, the
-// 32-W case) neither does either: the tablet's 2304 holds the row up to
-// 304 % (314 % in the view), the laptop's 1920 up to 252 % (262 %).
+// in Save's group and for the view's hide), so neither host reaches the rule
+// at its scale: the tablet's 2304 device px hold the row in both states up
+// to 318 % and the laptop's 1920 up to 268 %. UNDER CLEARLOOKS (760 and 536
+// Windows px, the 32-W case) neither does either: the tablet's 2304 holds
+// the row up to 304 % (431 % in the view), the laptop's 1920 up to 252 %
+// (360 %).
 constexpr IconRowDef kIconRowViewGroup[] = {
     {RedesignButton::ViewSW, icons::Icon::DocumentExport},
     {RedesignButton::ViewTW, icons::Icon::DocumentImport},
@@ -1912,10 +1918,13 @@ static std::string history_walk_line(AppState& app) {
     // (github_status_word) — in the line's own `Label: value` shape, on BOTH
     // walks, because what Ctrl+S does in the view depends on it whichever walk
     // is showing. It stands ahead of the scale because the state cell clips
-    // at the verbs (paint_bottom_row_buttons_and_clock): where the line is
-    // wider than the cell — the tablet's, with the scale segment showing —
-    // the cut falls on the scale, which the diff lane also shows, and never
-    // on the word Ctrl+S forks on. A visit with no clone (the local fallback)
+    // at the right block (paint_bottom_row_buttons_and_clock): where the line
+    // is wider than the cell — a narrow window's; the tablet's in-view cell,
+    // ~1097 device px at 300 % since the view hides row 8's dead buttons
+    // (2026-10-07), holds `007/114 | GitHub: checking... | Scale: [-]1.0
+    // [+]1.1` whole, ~752 px of Tahoma's advances — the cut falls on the
+    // scale, which the diff lane also shows, and never on the word Ctrl+S
+    // forks on. A visit with no clone (the local fallback)
     // has no segment, and neither has an Unchecked status. The position
     // always precedes it (`0/0` at worst), so the separator is unconditional.
     if (history_remote_walk_available(app)) {
@@ -1968,7 +1977,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // window ground of the same value), and groups of toolbar cases touching
     // within a group, eight px of ground between groups with an etched
     // separator in each (the roster block above) — TWENTY-ONE members in
-    // SEVEN groups outside the `h` view and TWENTY in seven inside it (the
+    // SEVEN groups outside the `h` view and FOURTEEN in seven inside it (the
     // width math below is the count's one statement), RE-COUNTED off the
     // roster enum, the painter's tables and the divider owner rather than
     // adjusted: OPEN PROJECT at the row's head (architect 2026-10-07, its
@@ -2004,18 +2013,23 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // companions stand in the slots of the toolbar group behind Save and of
     // the iteration group (kIconRowHistoryStandIns, the swap's one owner).
     //
-    // ONE MODE SWAP AND NO OTHER HIDING (architect 2026-10-05, partly
-    // reversing 2026-08-14's "no more hiding/showing icons in top icon row"):
-    // the history stand-ins are the row's one state-dependent membership,
-    // and they replace only groups the view greys whole (the companions
-    // publish empty rects outside the view, the replaced members inside it).
-    // Everything else a mode refuses
-    // wears the DEAD FACE, and only a window too narrow for the row covers
-    // members otherwise, under the view group's overflow rule — a width,
-    // never a state. The mode-collapsing roster of 2026-08-12 (which skipped
-    // members across whole consumed groups with an owed-separator state
-    // machine) stays deleted; the walk below is a left-to-right accumulation
-    // whose one fork is the stand-in table's.
+    // ONE MODE SWAP AND ONE MODE HIDE (architect 2026-10-05 and 2026-10-07,
+    // reversing 2026-08-14's "no more hiding/showing icons in top icon row"
+    // for the `h` view alone): the history stand-ins replace the two groups
+    // the view refuses whole (the companions publish empty rects outside the
+    // view, the replaced members inside it), and inside the view every other
+    // member whose chord it refuses in EVERY session is not painted
+    // (history_mode_hides_button, input_pointer.cpp) — the magnification
+    // lamp, Follow and Restrict Undo behind Full Zoom Out, and Listen, the
+    // padlock and Settings ahead of Enable Tooltips — its neighbours closing
+    // up and its group standing while any member does. What the view refuses
+    // only BY STATE (Save with nothing to commit, Revert with no subject,
+    // Load in Place over an empty walk, Older / Newer at the walls) and what
+    // any other mode refuses wears the DEAD FACE, and a window too narrow for
+    // the row covers members otherwise, under the view group's overflow rule
+    // — a width, never a state. The mode-collapsing roster of 2026-08-12
+    // stays deleted; the walk below is a left-to-right accumulation whose two
+    // forks are the stand-in table's and the hide's.
     //
     // THE WIDTH MATH, RE-DERIVED from the roster after each move (architect
     // 2026-10-02, the Windows case; restated 2026-10-06 for the opener's
@@ -2027,39 +2041,40 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // cases, 8-px gaps), outside the `h` view the LEFT WALK is seventeen
     // members in five groups from the left pad,
     //   8 + 17·31 + (5−1)·8 = 567,
-    // and inside it sixteen in five (the iteration group's three slots
-    // holding the two reading lamps),
-    //   8 + 16·31 + 32 = 536;
+    // and inside it TEN in five (the iteration group's three slots holding
+    // the two reading lamps, the zoom group and the render-entry group one
+    // member each under the hide),
+    //   8 + 10·31 + 32 = 350;
     // the RIGHT-ANCHORED span from the right edge — the opener's gap and
     // case, the view group's gap and three cases, and the 8-px lead-out — is
     //   8 + 31 + 8 + 3·31 + 8 = 148,
     // so the row holds every group, with the full gap on both sides of the
     // opener's, in any window at least 567 + 148 = 715 Windows px wide
-    // outside the view and 536 + 148 = 684 inside it — the tablet's 768
+    // outside the view and 350 + 148 = 498 inside it — the tablet's 768
     // Windows px at 300 % holding it with 53 to spare. UNDER CLEARLOOKS
     // (32-px cases, 12-px gaps; architect 2026-10-07, the case at the base's
-    // proportion) the same walks are 8 + 17·32 + 4·12 = 600 and 8 + 16·32 +
-    // 48 = 568 against a right span of 12 + 32 + 12 + 3·32 + 8 = 160: 760
-    // and 728 Windows px, the tablet's 768 holding it with 8 to spare.
+    // proportion) the same walks are 8 + 17·32 + 4·12 = 600 and 8 + 10·32 +
+    // 48 = 376 against a right span of 12 + 32 + 12 + 3·32 + 8 = 160: 760
+    // and 536 Windows px, the tablet's 768 holding it with 8 to spare.
     //
     // THE DEVICE WIDTHS are taken off THE PAINTED WALKS, not off a Windows
     // total times the factor: every element is its own scaled_px (render.h's
     // composite rule), so the device width is 2·[8s] + N·([Ls] + [Gs] +
     // [Ts]) + 6·[Ps] with each bracket a banker's rounding, L, G and T the
     // case's lead, glyph seat and trail, P the group gap and N the members
-    // standing (21 outside, 20 inside). UNDER WIN2000 the laptop's 138 %
-    // paints 786 + 205 = 991 of its 1920 (743 + 205 = 948 in the view); the
-    // tablet's 300 % 1701 + 444 = 2145 of its 2304 (1608 + 444 = 2052 in the
+    // standing (21 outside, 14 inside). UNDER WIN2000 the laptop's 138 %
+    // paints 786 + 205 = 991 of its 1920 (485 + 205 = 690 in the view); the
+    // tablet's 300 % 1701 + 444 = 2145 of its 2304 (1050 + 444 = 1494 in the
     // view), clearing the panel by 159. THE FIT CEILINGS, every scale below
     // each one fitting too: the tablet's 2304 holds the row in both states up
-    // to 318 % (the view's own up to 337 %), the laptop's 1920 up to 268 %
-    // (281 %) — so above the tablet's 300 % cap (architect 2026-10-06) the
+    // to 318 % (the view's own up to 462 %), the laptop's 1920 up to 268 %
+    // (385 %) — so above the tablet's 300 % cap (architect 2026-10-06) the
     // view group's overflow rule would cover the left groups' tail (2860
     // wanted at 400 %). UNDER CLEARLOOKS the laptop's 138 % paints 844 +
-    // 225 = 1069 (799 + 225 = 1024 in the view), and the tablet's 300 % 1800
-    // + 480 = 2280 of its 2304 (1704 + 480 = 2184 in the view), clearing the
-    // panel by 24: the ceilings are 304 % on the tablet (314 % in the view)
-    // and 252 % on the laptop (262 %). The row's width succession is in git
+    // 225 = 1069 (529 + 225 = 754 in the view), and the tablet's 300 % 1800
+    // + 480 = 2280 of its 2304 (1128 + 480 = 1608 in the view), clearing the
+    // panel by 24: the ceilings are 304 % on the tablet (431 % in the view)
+    // and 252 % on the laptop (360 %). The row's width succession is in git
     // history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
@@ -2185,12 +2200,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // 2026-08-04) and, since 2026-08-15, the per-tab READ-ONLY LOCK. Both
         // are ruled EXCEPTIONS to the never-grey rule above and both are MODE
         // statements — that is what earns them the face, a refusal alone never
-        // does. EVERY button standing in this row that the view consumes
-        // wears it — the zoom group behind Full Zoom Out (magnification,
-        // Follow, Restrict Undo), listen, the read-only toggle, Settings, and
-        // the MOMENT-STATE Save (an empty head delta or a checkpoint in
-        // flight); the two groups the view consumes WHOLE do not stand in it
-        // since 2026-10-05, the history companions standing in their slots
+        // does. EVERY button standing in this row that the view refuses BY
+        // STATE wears it — the MOMENT-STATE Save (an empty head delta or a
+        // checkpoint in flight), Revert and Load in Place on their session
+        // terms (below); what the view refuses in EVERY session does not
+        // stand in it since 2026-10-07 (history_mode_hides_button: the zoom
+        // group behind Full Zoom Out, Listen, the read-only toggle,
+        // Settings), and the two groups it consumes WHOLE since 2026-10-05,
+        // the history companions standing in their slots
         // (kIconRowHistoryStandIns). The view group, Full Zoom Out, the
         // tooltip lamp and the history opener stay live, as do the history
         // COMPANIONS — each
@@ -2280,14 +2297,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
                                        box.shift);
     };
 
-    // THE LEFT GROUPS' WALK: one left-to-right accumulation, every member
-    // placed. A group LEADER (redesign_button_opens_icon_group, app_state.h —
+    // THE LEFT GROUPS' WALK: one left-to-right accumulation, every standing
+    // member placed. A group LEADER (redesign_button_opens_icon_group, app_state.h —
     // the roster's own divider owner) takes the eight-px group gap ahead of
     // itself and everything else touches its neighbour; the ROW'S FIRST
     // member needs no special case, `first` swallowing the gap its own
     // leader would owe. (The collapse state machine that skipped members and
-    // carried an OWED separator across them is deleted, 2026-08-14; the one
-    // membership fork left is the history stand-ins', 2026-10-05.) Everything
+    // carried an OWED separator across them is deleted, 2026-08-14; the
+    // membership forks are the history stand-ins', 2026-10-05, and the `h`
+    // view's hide, 2026-10-07, which asks a group whether it stands before
+    // its gap is spent rather than owing one.) Everything
     // here paints under the
     // clip that ends where the history opener's gap begins, and each member
     // PUBLISHES ITS RECT CUT AT THAT COLUMN — whole at every width the row
@@ -2300,11 +2319,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
                     std::max(0, left_limit - lane.x), lane.h);
     cairo_clip(cr);
     int x = lane.x + icon_row_pad_x();
+    // `first` falls at the first member PLACED, so a group gap is owed only
+    // between two groups that both stand.
     bool first = true;
     const auto place_member = [&](const IconRowDef& def) {
         const int shown_w = std::clamp(left_limit - x, 0, btn_w);
         paint_member(def, x, GuiRect{x, btn_y, shown_w, btn_h});
         x += btn_w;
+        first = false;
     };
     // A MEMBER THAT DOES NOT STAND in this state still publishes: an empty
     // rect, which contains no point and refreshes its bits unconditionally
@@ -2319,27 +2341,45 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // place, at its gap, and the rest of the replaced group is skipped up to
     // the next leader; outside the view the stand-in groups never paint.
     const bool history = app.history_mode.active;
+    const auto stand_in_for =
+        [&](RedesignButton leader) -> const IconRowStandIn* {
+        if (!history) return nullptr;
+        for (const IconRowStandIn& si : kIconRowHistoryStandIns)
+            if (si.replaces == leader) return &si;
+        return nullptr;
+    };
+    // THE HIDE (history_mode_hides_button, input_pointer.cpp, architect
+    // 2026-10-07): in the `h` view a member whose chord the view refuses in
+    // every session is skipped — no case, no width, its empty rect published
+    // — and its neighbours close up; a group STANDS, with its gap and
+    // separator, while any member of it does, which this asks of the group
+    // led by the table's entry `lead` before the walk reaches its members.
+    const auto group_stands = [&](std::size_t lead) {
+        for (std::size_t j = lead; j < std::size(kIconRowButtons); ++j) {
+            const RedesignButton id = kIconRowButtons[j].id;
+            if (j != lead && redesign_button_opens_icon_group(id)) break;
+            if (!history_mode_hides_button(app, id)) return true;
+        }
+        return false;
+    };
     bool replacing = false;
-    for (const IconRowDef& def : kIconRowButtons) {
-        const bool leads = redesign_button_opens_icon_group(def.id);
-        if (leads) {
-            replacing = false;
-            // A GROUP GAP and its etched separator
-            // (paint_toolbar_separator).
-            if (!first) {
-                paint_toolbar_separator(cr, x, btn_y, btn_h);
-                x += group_gap;
-            }
-            if (history) {
-                for (const IconRowStandIn& si : kIconRowHistoryStandIns) {
-                    if (si.replaces != def.id) continue;
-                    replacing = true;
-                    for (const IconRowDef& m : si.members) place_member(m);
+    for (std::size_t i = 0; i < std::size(kIconRowButtons); ++i) {
+        const IconRowDef& def = kIconRowButtons[i];
+        if (redesign_button_opens_icon_group(def.id)) {
+            const IconRowStandIn* si = stand_in_for(def.id);
+            replacing = (si != nullptr);
+            if (replacing || group_stands(i)) {
+                // A GROUP GAP and its etched separator
+                // (paint_toolbar_separator).
+                if (!first) {
+                    paint_toolbar_separator(cr, x, btn_y, btn_h);
+                    x += group_gap;
                 }
+                if (replacing)
+                    for (const IconRowDef& m : si->members) place_member(m);
             }
         }
-        first = false;
-        if (replacing) {
+        if (replacing || history_mode_hides_button(app, def.id)) {
             publish_absent(def.id);
             continue;
         }
@@ -2356,7 +2396,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // both states (its gap is the one the left groups stop at, wide ground
     // with no separator), then the view group's three members from view_x0
     // (its leader Source+Warp's gap standing between the two, with its
-    // separator in it).
+    // separator in it). NEITHER IS EVER HIDDEN (history_mode_hides_button):
+    // bare `h` is the view's own vocabulary and bare 1 / 2 / 3 its admitted
+    // selectors, so the hide does not reach this walk.
     paint_member(kIconRowHistoryOpener, history_x,
                  GuiRect{history_x, btn_y, btn_w, btn_h});
     paint_toolbar_separator(cr, view_x0 - group_gap, btn_y, btn_h);
@@ -2412,8 +2454,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERY BUTTON GREYS WHERE ITS PRESS WOULD BE A NO-OP (the truthful-buttons
 // ruling, redesign_button_enabled), the `h` view's derived partition on top.
-// Nothing on this row is conditional on a mode, and no member of it publishes
-// a zero rect except under a modal.
+// ONE MODE TERM (architect 2026-10-07): in the `h` view a member whose chord
+// the view refuses in every session is NOT PAINTED (history_mode_hides_button,
+// input_pointer.cpp) — Play / Stop, Up and Down, the four verbs and Jump to
+// Defining Marker — and publishes an empty rect, the block closing up from
+// the right margin and the state line taking the room; the row in there is
+// ADD TO SELECTION alone, the walk group's four, LEFT and RIGHT, and the two
+// skips: nine cases in four groups. Otherwise no member publishes a zero
+// rect except under a modal.
 //
 // (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
 // was DELETED at the architect's live pass — "looks like a missing button
@@ -2440,15 +2488,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the flat toolbar's faces,
 // the case on the row's air): same ground, same faces (paint_toolbar_box),
-// same dead glyph. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-29 evening — EIGHT
-// of the seventeen in the `h` view, where it used to be one: there
-// the derived partition greys the PLAY/STOP button (Space is consumed there),
-// UP and DOWN (bare
-// Up/Down are neither the mode's
-// vocabulary nor on its allowlist; LEFT / RIGHT are the mode's own playhead
-// step since 2026-09-26 and grey on their own arm), the FOUR MARKER VERBS and
-// JUMP TO DEFINING MARKER (Ctrl+J, consumed in there like
-// the verbs' chords); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
+// same dead glyph. WHO WEARS THE DEAD FACE HERE, re-derived 2026-10-07 — in
+// the `h` view the derived partition answers dead for the PLAY/STOP button
+// (Space is consumed there), UP and DOWN (bare Up/Down are neither the mode's
+// vocabulary nor on its allowlist), the FOUR MARKER VERBS and JUMP TO
+// DEFINING MARKER (Ctrl+J, consumed in there like the verbs' chords) — every
+// one of them dead in every session, so none of them is painted in the view
+// (history_mode_hides_button) — while LEFT / RIGHT are the mode's own
+// playhead step since 2026-09-26 and grey on their own arm (a focused diff
+// flag, the wall); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
 // being on that mode's allowlist now and the lamp producing the view's own
 // multi-selection; the two
 // SKIPS and THE WALK GROUP'S FOUR stay lit, Home/End being the mode's
@@ -2487,11 +2535,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // the icon faces changing, and it is a little distracting... the user is
 // expected to know that with the playhead outside trim it's not going to play
 // in target view". (The ARROWS had no in-view answer to paint at the time —
-// they were not painted in there at all under the cluster swap — and since
-// 2026-08-18 they do paint in there, GREYED: the mode consumes bare
-// Up/Down/Left/Right, so the derived partition dead-faces all four. That is
-// the partition's own answer and no part of the always-on ruling, which is
-// about the RESTING face.)
+// they were not painted in there at all under the cluster swap. In the view
+// since 2026-09-26 LEFT and RIGHT are the mode's own playhead step, live, and
+// UP and DOWN, whose bare chords the mode consumes, are not painted there
+// since 2026-10-07 (history_mode_hides_button). Those are the partition's
+// own answers and no part of the always-on ruling, which is about the
+// RESTING face.)
 // The ONE box-model difference is the lane's top row: a 1px strip of ground
 // above the content band, on the waveform side, where the row's border-top
 // stood — NO LINE IS DRAWN THERE since 2026-10-02 (architect: nothing between
@@ -2610,8 +2659,10 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // whichever was unpainted publishing zero rects. The relayout moved those four
 // back to the ICON ROW, so the swap had one cluster left and stopped being a
 // swap: the table, the shown/hidden selection, the four zero-rect publishes
-// and the mode term in this row's layout all went together. The arrows paint
-// unconditionally now — nothing on this lane is conditional on a mode.)
+// and the mode term in this row's layout all went together. The row's one
+// mode term since 2026-10-07 is the `h` view's hide, a subtraction and not a
+// swap: nothing stands in for a hidden member — history_mode_hides_button,
+// paint_bottom_row_buttons_and_clock's walk.)
 
 // THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
 // LENGTH, ONE FIELD SHAPE (architect 2026-10-05, measured on his ACID Pro 3.0
@@ -2895,9 +2946,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (kTransportGroup), whose last button's right edge is one pad in from
     // the lane's right edge. The whole block is measured first and laid left
     // to right from there, so one expression owns the anchor and no group
-    // re-derives it. It has no mode term: every button on this row publishes
-    // a real rect on every frame, except under a modal, where the row yields
-    // whole (paint_bottom_strip).
+    // re-derives it. ITS ONE MODE TERM is the `h` view's hide (architect
+    // 2026-10-07, history_mode_hides_button): a member hidden there publishes
+    // an empty rect, the block is measured over the members that stand, and
+    // a group hidden whole takes its gap with it; every other button on this
+    // row publishes a real rect on every frame, except under a modal, where
+    // the row yields whole (paint_bottom_strip).
     //
     // THE NUMBERS, re-derived whenever a group gains or loses a box (each case
     // moves the block by one case width, 31 Windows px): the cases touch
@@ -2914,29 +2968,55 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-10-07), 115, clipped one group space short of the block at 1134
     // (~1019 px); at the tablet's 300 % 17·93 + 3·24 = 1653, starting at
     // 2304 − 24 − 1653 = 627, the field (its cell ~199) spanning about
-    // 15..232, the state line about 250..603 (~353 device px) — under win2000
-    // (clearlooks' 32-W cases and 5-W field pads move both). THE ROW CARRIES NO
+    // 15..232, the state line about 250..603 (~353 device px) — under win2000.
+    // IN THE `h` VIEW (the hide, 2026-10-07) the block is 1 verb + 4 walk +
+    // 2 arrows + 2 transport = 9 cases and three gaps, 9·31 + 3·8 = 303
+    // Windows px: 9·43 + 3·11 = 420 at the laptop's 138 %, starting at 1489,
+    // the state line 115..1478 (~1363 px); 9·93 + 3·24 = 909 at the tablet's
+    // 300 %, starting at 1371, the state line about 250..1347 (~1097 device
+    // px, 744 more than outside the view). UNDER CLEARLOOKS (32-W cases,
+    // 12-W gaps; its 5-W field pads and the DejaVu cell move the field and
+    // so the line's left end) the block is 17·32 + 3·12 = 580 Windows px
+    // outside the view — 816 device px at 138 %, 1740 at 300 % — and 9·32 +
+    // 36 = 324 inside it, 456 and 972. THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
-    // scale driven toward the 1000 ceiling: the block reaches the field's
-    // right edge once the window falls below about 636 Windows px
-    // (8 − 3 + ~66 + 6 + 551 + 8) — the tablet's 2304 at 400 % would be 576,
-    // where it does. THE STATE LINE CANNOT PUSH ANYTHING: it is
+    // scale driven toward the 1000 ceiling: under win2000 the block reaches
+    // the field's right edge once the window falls below about 636 Windows
+    // px (8 − 3 + ~66 + 6 + 551 + 8), 388 in the view (303 for 551) — the
+    // tablet's 2304 at 400 % would be 576, where it does outside the view.
+    // THE STATE LINE CANNOT PUSH ANYTHING: it is
     // clipped one group space short of the block, so a long line is cut
     // rather than colliding.
     int right_block_x = seats.right_x;
     {
-        // Each group's count read off its own table, so a box joining or
-        // leaving moves this width with no second edit.
-        const int verbs_n  = static_cast<int>(std::size(kMarkerVerbGroup));
-        const int walk_n   = static_cast<int>(std::size(kTransportWalkGroup));
-        const int arrows_n = static_cast<int>(std::size(kTransportArrowGroup));
-        const int trans_n  = static_cast<int>(std::size(kTransportGroup));
-        const int block_w  =
-            (verbs_n + walk_n + arrows_n + trans_n) * btn_w + 3 * group_gap;
+        // THE FOUR GROUPS IN PAINTED ORDER, each read off its own table, so a
+        // box joining or leaving moves the block with no second edit.
+        const std::span<const TransportRowDef> groups[] = {
+            kMarkerVerbGroup, kTransportWalkGroup, kTransportArrowGroup,
+            kTransportGroup};
+        // THE BLOCK'S WIDTH IS THE PAINTED CASES' (architect 2026-10-07): in
+        // the `h` view a button whose chord the view refuses in every session
+        // is not painted (history_mode_hides_button, input_pointer.cpp), so
+        // the count is of the members that stand, and a gap stands only
+        // between two groups that each keep a member — a group hidden whole
+        // takes its separator with it. Outside the view nothing is hidden and
+        // this is every table's whole length.
+        int cases = 0;
+        int standing_groups = 0;
+        for (const std::span<const TransportRowDef> g : groups) {
+            int n = 0;
+            for (const TransportRowDef& def : g)
+                if (!history_mode_hides_button(app, def.id)) ++n;
+            cases += n;
+            if (n > 0) ++standing_groups;
+        }
+        const int block_w = cases * btn_w +
+                            std::max(0, standing_groups - 1) * group_gap;
         int ax = seats.right_x - block_w;
         // THE STATE LINE'S RIGHT BOUND (below) is this block's own left
-        // edge, published out of the scope so the line cannot guess it.
+        // edge, published out of the scope so the line cannot guess it — so
+        // the line widens by construction when the `h` view hides members.
         right_block_x = ax;
         // Each group gap carries its etched separator
         // (paint_toolbar_separator), and the wide ground left
@@ -2945,24 +3025,29 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             paint_toolbar_separator(cr, ax, btn_y, btn_h);
             ax += group_gap;
         };
-        for (const TransportRowDef& def : kMarkerVerbGroup) {
-            paint_button(def, ax);
-            ax += btn_w;
-        }
-        gap();
-        for (const TransportRowDef& def : kTransportWalkGroup) {
-            paint_button(def, ax);
-            ax += btn_w;
-        }
-        gap();
-        for (const TransportRowDef& def : kTransportArrowGroup) {
-            paint_button(def, ax);
-            ax += btn_w;
-        }
-        gap();
-        for (const TransportRowDef& def : kTransportGroup) {
-            paint_button(def, ax);
-            ax += btn_w;
+        // A HIDDEN MEMBER PUBLISHES THE EMPTY RECT (the icon row's absent
+        // members' shape): no point is inside it, so no press, hover or
+        // tooltip reaches it, and its bits refresh unconditionally
+        // (publish_button_face) — the same rect the modal yield publishes
+        // for the whole row.
+        bool first = true;
+        for (const std::span<const TransportRowDef> g : groups) {
+            bool group_open = false;
+            for (const TransportRowDef& def : g) {
+                if (history_mode_hides_button(app, def.id)) {
+                    (void)publish_button_face(cr, app, audio, playback,
+                                              target_render, def.id,
+                                              GuiRect{});
+                    continue;
+                }
+                if (!group_open) {
+                    if (!first) gap();
+                    group_open = true;
+                }
+                paint_button(def, ax);
+                ax += btn_w;
+                first = false;
+            }
         }
     }
 
@@ -3107,9 +3192,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     render's progress should read. IT IS CLIPPED, NEVER ELLIPSISED —
         //     a cairo rectangle clip, the folder overlay rows' precedent — one
         //     group space short of the right block, so a long line is cut
-        //     rather than colliding with the marker verbs. The tablet's span
-        //     (~860 device px at 275 %, the numbers above) can be narrower
-        //     than the longest walk line, so the composer puts the segment
+        //     rather than colliding with the block. The span (the numbers
+        //     above: ~353 device px at the tablet's 300 % outside the `h`
+        //     view, ~1097 inside it, where the hide has taken the dead
+        //     buttons off the row) can still be narrower than the longest
+        //     walk line in a narrow window, so the composer puts the segment
         //     that must survive the cut ahead of the one that may lose it —
         //     the GitHub word before the scale (history_walk_line, architect
         //     2026-09-29). With no span left nothing is shown.

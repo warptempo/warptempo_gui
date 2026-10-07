@@ -697,7 +697,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // 2026-10-05), directly under the caption. Lane 2 is the ICON row (the twenty-seven
 // view/mode/action buttons — kIconRowButtons, kIconRowViewGroup and the
 // history stand-ins, paint_handler.cpp, are the count's authority; twenty-one
-// stand outside the `h` view and twenty inside it), directly under the menu row
+// stand outside the `h` view and fourteen inside it), directly under the menu row
 // with nothing between and no border of its own. Lane 3 is the TRIM lane (the
 // thumb and its two ends, every trim gesture and the span-framing double-click),
 // the first lane UNDER GAP

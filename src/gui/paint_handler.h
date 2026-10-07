@@ -741,8 +741,9 @@ private:
     // flat sampled ground, the three menu anchors flush left and nothing
     // flush right), the ICON ROW (top lane 2, row 4: the
     // twenty-seven view/mode/action buttons, no border of its own since
-    // 2026-10-01, twenty-one standing outside the `h` view and twenty inside it
-    // since 2026-10-05 — kIconRowHistoryStandIns), and the
+    // 2026-10-01, twenty-one standing outside the `h` view and fourteen
+    // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
+    // history_mode_hides_button, since 2026-10-07), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom lane 0, the strip's ONE
     // lane, ON THE WINDOW'S FOOT: the clock cell and the STATE CELL left, then
     // the marker verbs, the marker walk, the arrow four and the transport

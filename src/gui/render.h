@@ -945,8 +945,9 @@ inline int relief_line_px() {
 // under the MENU ROW with nothing between (row 4 of the redesign: TWENTY-SEVEN
 // view/mode/action buttons — the kIconRowButtons, kIconRowViewGroup and
 // history stand-in tables are the count's one authority; twenty-one stand
-// outside the `h` view and twenty inside it, the swap's one owner
-// being kIconRowHistoryStandIns (paint_handler.cpp);
+// outside the `h` view and fourteen inside it, the swap's one owner
+// being kIconRowHistoryStandIns (paint_handler.cpp) and the hide's
+// history_mode_hides_button (input_pointer.cpp, 2026-10-07);
 // icons::kIconCount is a different number, the GLYPH set, which the row does
 // not exhaust). THE TOOLBAR CASE IS ALSO ROW 8's (and the render player's row
 // in its lane): both rows read the accessors below, so a retune of the case

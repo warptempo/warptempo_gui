@@ -2768,9 +2768,18 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // commit act's terms on 2026-09-01, and the whole AppState stays because the
 // REVERT admission composes the active tab's lock, which is no more the mode's
 // than the worker was.
-bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
-                              const AppState& app) {
-    const AppState::HistoryMode& mode = app.history_mode;
+//
+// ONE BODY, ASKED TWO WAYS (architect 2026-10-07, the `h` roster): `state` is
+// the session the two conditional admissions read, or nullptr to ask about
+// EVERY state at once — each conditional admission then answers for its
+// chord's SHAPE alone, as if its term stood. history_mode_key_blocked (the
+// key and the grey) hands it the session; history_mode_key_blocked_in_every_
+// state (the roster's HIDE, history_mode_hides_button, input_pointer.cpp)
+// hands it none, so a chord that answer refuses is refused whatever the
+// session holds — dead by construction, never by state — and the two
+// questions cannot disagree about any entry, both reading this one list.
+static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
+                                           const AppState* state) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -2799,7 +2808,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // gone (the vocabulary fork stays where it always was, at member_label's
     // spelling and at confirm_load_in_place).
     const bool is_load_in_place =
-        (key == GuiKeys::Apostrophe && bare && mode.walk_count() > 0);
+        (key == GuiKeys::Apostrophe && bare &&
+         (state == nullptr || state->history_mode.walk_count() > 0));
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
     // SECOND session-conditional admission: BARE `v` is admitted only while
     // there is a subject to revert — a selected diff flag, or the focused one
@@ -2825,7 +2835,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // it falls through to on_key's ordinary body, below the read-only gate,
     // which is a backstop for it now rather than its first refusal.
     const bool is_revert_act =
-        (key == GuiKeys::V && bare && history_revert_actionable(app));
+        (key == GuiKeys::V && bare &&
+         (state == nullptr || history_revert_actionable(*state)));
     // CTRL+S IS THE ACT IN HERE (architect 2026-08-08, moving it off Ctrl+Alt+R
     // — the act saves first, so it belongs on the save chord), AND IT IS
     // ADMITTED UNCONDITIONALLY SINCE 2026-09-01 (architect: a gate's
@@ -2952,6 +2963,15 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
              is_load_in_place || is_revert_act ||
              is_save || is_ctrl_q || is_open_project || is_revert_project ||
              is_tooltip_lamp);
+}
+
+bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
+                              const AppState& app) {
+    return history_mode_allowlist_refuses(key, mods, &app);
+}
+
+bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
+    return history_mode_allowlist_refuses(key, mods, nullptr);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------

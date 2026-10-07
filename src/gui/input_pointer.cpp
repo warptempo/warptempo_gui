@@ -1351,8 +1351,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   (bare `l`); the FOUR MARKER VERBS since
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
-//   this walk asks about a chord, never about a lane); ADD TO SELECTION (bare
-//   `k`, since 2026-08-18); the icon row's SETTINGS BUTTON (bare `;`, since
+//   this walk asks about a chord, never about a lane) — ADD TO SELECTION,
+//   their row's sixth, is NOT here: bare `k` is on the view's allowlist
+//   since 2026-09-17, the lamp producing the view's own multi-selection, so
+//   it answers LIVE; the icon row's SETTINGS BUTTON (bare `;`, since
 //   2026-09-29 — off the mode's allowlist, as the typed road always was); and the
 //   SETTINGS anchor
 //   — the only anchor here
@@ -1380,20 +1382,28 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // that ruling: `'` is one of the ten, and it greys on a locked tab in either
 // state now.) Only the VIEW's own consumption greys anything HERE.
 //
-// EVERY DEAD ANSWER IS PAINTED (architect 2026-08-14, "no more
-// hiding/showing icons in top icon row"): the mode-collapsing roster of
-// 2026-08-12, narrowed on 2026-08-13 and deleted whole on 2026-08-14, used to
-// take part of this partition's DEAD column out of the icon row's walk
-// entirely. It does not any more — this walk's verdict is the grey face
-// everywhere, on every row. ONE SWAP STANDS (architect 2026-10-05): in the
-// `h` view the history companions stand in the icon row's slots of the two
-// groups THIS WALK answers DEAD whole — Undo's (Undo, Redo, Copy Value,
-// Render) and the iteration group — and outside it the companions do not
-// stand (kIconRowHistoryStandIns, paint_handler.cpp, which names this walk as
-// the membership's derivation). A change here that answers one of those
-// seven LIVE in the view is a change to that table too. The bottom row's
-// arrows paint unconditionally.
-bool history_mode_disables_button(const AppState& app, RedesignButton b) {
+// A DEAD ANSWER IS PAINTED GREY WHERE IT IS A STATE, AND NOT PAINTED WHERE
+// IT IS THE CHORD'S (architect 2026-10-07, partly reversing 2026-08-14's "no
+// more hiding/showing icons in top icon row"): a button this walk answers
+// DEAD in EVERY session — its chord never admitted in the view — is absent
+// from both toolbars while the view stands (history_mode_hides_button,
+// below, the same walk asked about every state), and a button it answers
+// dead only for THIS session (Revert, Load in Place — the two conditional
+// admissions) wears the grey face. ONE SWAP STANDS beside it (architect
+// 2026-10-05): in the `h` view the history companions stand in the icon
+// row's slots of the two groups THIS WALK answers DEAD whole — Undo's (Undo,
+// Redo, Copy Value, Render) and the iteration group — and outside it the
+// companions do not stand (kIconRowHistoryStandIns, paint_handler.cpp,
+// which names this walk as the membership's derivation). A change here that
+// answers one of those seven LIVE in the view is a change to that table too.
+//
+// THE ONE CHORD WALK BOTH `h` ANSWERS TAKE (architect 2026-10-07): the grey
+// (history_mode_disables_button) asks the allowlist about THIS session, the
+// hide (history_mode_hides_button, below) about EVERY session
+// (history_mode_key_blocked_in_every_state, input_key_dispatch.cpp, the
+// allowlist's same body); the mode's own vocabulary answers LIVE for both.
+static bool history_mode_refuses_button_chord(const AppState* state,
+                                              RedesignButton b) {
     // THE THREE ANCHORS ARE NOT THIS PARTITION'S (2026-09-24): their one
     // verdict, menu_anchor_live (app_state.h), answers them at the head of
     // redesign_button_enabled, ahead of the `h` test that reaches this walk —
@@ -1401,7 +1411,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // Settings dead in the view, File live), and the item clause joined it.
     // The arm stays so an anchor, which carries no chord for the walk below
     // to ask about, is never answered by that walk's LIVE default; it names
-    // no set.
+    // no set — and so no anchor is ever hidden either: the menu row is not a
+    // toolbar, and a dead anchor greys as it always did.
     if (redesign_button_is_menu_anchor(b)) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
@@ -1410,13 +1421,50 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
         chord.shift = tc.shift;
         chord.alt   = tc.alt;
         if (history_mode_owns_key(tc.key, chord)) return false;
-        return history_mode_key_blocked(tc.key, chord, app);
+        return state != nullptr
+                   ? history_mode_key_blocked(tc.key, chord, *state)
+                   : history_mode_key_blocked_in_every_state(tc.key, chord);
     }
     // Not in the table and not an anchor: nothing to consume. Unreachable today
     // (the table plus the three anchors is the whole roster) and stated rather
     // than asserted, so a future button defaults to LIVE — the face it already
     // had — instead of greying on a chord nobody has written yet.
     return false;
+}
+
+bool history_mode_disables_button(const AppState& app, RedesignButton b) {
+    return history_mode_refuses_button_chord(&app, b);
+}
+
+// IS THIS BUTTON ABSENT FROM ITS TOOLBAR? (architect 2026-10-07: "a group
+// stays if any of it is live in h; not every button must be live" — the ask
+// being row 8's state line, which had no room for the walk line's text.) True
+// iff the `h` view stands and the button's act is DEAD THERE BY
+// CONSTRUCTION: its chord is neither the mode's own vocabulary nor admitted
+// by the allowlist in ANY session. A button the view refuses only BY STATE —
+// Revert with no diff flag selected, Load in Place over a memberless walk
+// (the allowlist's two conditional admissions), and every arm of
+// redesign_button_enabled's own (Older / Newer at the walk's walls, Save with
+// nothing to commit, Left / Right at the wall, a skip at the end) — is
+// painted and greys as it always did.
+//
+// THE SAME TABLE AS THE GREY, so the two can never disagree: hidden implies
+// greyed (a chord refused in every state is refused in this one), a chord
+// the view starts admitting shows its button, and one it stops admitting
+// hides it, with no list here to keep. Read by both toolbars' walks
+// (paint_icon_row, paint_bottom_row_buttons_and_clock), which publish the
+// hidden button's EMPTY RECT — no point is inside it, so no press, hover or
+// tooltip reaches it, and its face bits refresh unconditionally
+// (publish_button_face) — close its neighbours up, and drop a group, with
+// its separator and gap, only when every member is hidden. The icon row's
+// two groups the view refuses whole are swapped for the history stand-ins
+// rather than dropped (kIconRowHistoryStandIns, paint_handler.cpp); a
+// stand-in's chord is the mode's own or an admission, so no stand-in is
+// ever hidden. The keyboard is untouched: the chord is refused by the
+// allowlist exactly as before. Outside the view nothing is hidden.
+bool history_mode_hides_button(const AppState& app, RedesignButton b) {
+    return app.history_mode.active &&
+           history_mode_refuses_button_chord(nullptr, b);
 }
 
 // (THE MODE-COLLAPSING ROSTER IS DELETED — architect 2026-08-14, "no more
@@ -1428,10 +1476,12 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // `icon_group_end` span walk, `redesign_button_mode_companion` (app_state.h)
 // and `history_mode_admission_is_momentary` (input_key_dispatch.cpp), which
 // existed only to keep Save's and Revert's moment-state greys out of the
-// collapse. The row paints every member in every state now: what a mode
-// refuses GREYS, through `history_mode_disables_button` above and the
-// enabled predicate that reads it, which is the convention every other row
-// already used. The group boundaries stayed — `redesign_button_opens_icon_
+// collapse. What a mode refuses GREYS, through `history_mode_disables_button`
+// above and the enabled predicate that reads it, which is the convention
+// every other row already used — save in the `h` view, where since
+// 2026-10-07 a button refused in every session is not painted
+// (history_mode_hides_button, above: one chord walk, no owed-separator
+// machine). The group boundaries stayed — `redesign_button_opens_icon_
 // group` is the painter's divider owner, its one reader.)
 
 // THE MARKER LANE OWNS THE PLAYHEAD (architect 2026-07-28) — the rule this
@@ -7816,13 +7866,16 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // the skips on the jump's landing, Play on the launch, Copy value on
         // its eligibility — so this line consumes exactly the presses whose
         // chord would be a consumed no-op. Inside the view the derived
-        // partition adds its own: the PLAY/STOP button, the FOUR ARROWS and
-        // the verbs (Space and the bare arrows are consumed there), while the
-        // two skips — the mode's absolute jumps —
-        // and the marker-walk TWO — its diff-flag cycle — take no partition
-        // grey. The arrows joined the in-view list on
-        // 2026-08-18 by being PAINTED in the view at all — the cluster swap
-        // that hid them went with the history companions. ADD TO SELECTION IS
+        // partition adds its own: the PLAY/STOP button, UP and DOWN, the four
+        // verbs and Jump to Defining Marker (Space, the bare verticals and
+        // the verbs' chords are consumed there) — all of them dead by
+        // construction, so since 2026-10-07 none of them is PAINTED in the
+        // view (history_mode_hides_button: an empty rect, which no press
+        // reaches) — while the two skips (the mode's absolute jumps), LEFT
+        // and RIGHT (its own playhead step since 2026-09-26, greyed by their
+        // own arm over a focused diff flag and at the wall) and the
+        // marker-walk group's four (its diff-flag cycle, its centring, the
+        // admitted tab switch) take no partition grey. ADD TO SELECTION IS
         // IN NEITHER LIST ANY MORE: the `h` view ADMITTED bare `k` on
         // 2026-09-17, the lamp producing that view's own multi-selection, and
         // its RESTING REFUSAL out of the iteration lock — carried from

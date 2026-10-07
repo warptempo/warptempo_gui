@@ -492,7 +492,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // Viewport::land_subject and its zoom-out arm is the restore's own call of the
 // framer above.)
 
-// THE `h` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
+// THE `h` HISTORY MODE'S PURE KEY PREDICATES (bodies in
 // input_key_dispatch.cpp, beside the mode's other keyboard work; the mode itself
 // is stated at AppState::HistoryMode). They are free rather than members because
 // each has a SECOND reader that holds no press and no handler: the redesign
@@ -518,6 +518,12 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //   * history_mode_key_blocked — the allowlist gate, read_only_key_blocked's
 //     shape: true when the press is not admitted while the mode stands. Its
 //     admitted membership is enumerated at the definition.
+//   * history_mode_key_blocked_in_every_state — the same allowlist asked
+//     about EVERY session at once (architect 2026-10-07): true only for a
+//     chord the view refuses whatever its state, the two conditional
+//     admissions answering for their shapes alone. Its one reader is the
+//     roster's hide (history_mode_hides_button, input_pointer.cpp); the
+//     definition says why it is one body with the gate's.
 //
 // THE SECOND TAKES THE WHOLE AppState, THE FIRST TAKES NOTHING BUT THE PRESS,
 // and the asymmetry is the membership's own: the mode's keys are a fixed keymap,
@@ -550,6 +556,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 bool history_mode_owns_key(GuiKey key, GuiInputState mods);
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
                               const AppState& app);
+bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods);
 
 // Source-view read-only allowlist. Returns true if key+mods is NOT on the
 // allowlist of navigation / playback / zoom / view-switch / close-prompt /

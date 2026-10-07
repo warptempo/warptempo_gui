@@ -284,17 +284,19 @@ inline constexpr const char* kDefaultProjectsRepo =
 // arithmetic and the guard at waveform_area, main.cpp).
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: under the
-// win2000 chrome, below 715 Windows px of window at 100 % (684 in the `h`
-// view) the icon row's twenty-one standing buttons in seven groups (twenty
-// in the view, its history stand-ins — architect 2026-10-05) no longer fit,
+// win2000 chrome, below 715 Windows px of window at 100 % (498 in the `h`
+// view) the icon row's twenty-one standing buttons in seven groups (fourteen
+// in the view, its history stand-ins and the view's hide — architect
+// 2026-10-05 and 2026-10-07) no longer fit,
 // and its flush-right view group covers the groups to its left (the
 // overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
 // 2304-px panel holds the row whole in both states up to 318 % — 2145
-// device px at 300 % outside the view, 2052 inside it (the arithmetic is at
+// device px at 300 % outside the view, 1494 inside it (the arithmetic is at
 // paint_icon_row, paint_handler.cpp, re-derived 2026-10-07 for Open Project
-// in Save's group; the earlier fit ceilings and their succession are git
-// history); under the clearlooks chrome's 32-W cases and 12-W gaps (760 and
-// 728 Windows px) up to 304 % (2280 and 2184 at 300 %) — and past either
+// in Save's group and for the hide; the earlier fit ceilings and their
+// succession are git history); under the clearlooks chrome's 32-W cases and
+// 12-W gaps (760 and 536 Windows px) up to 304 % (2280 and 1608 at 300 %) —
+// and past either
 // ceiling the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
