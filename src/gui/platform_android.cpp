@@ -109,17 +109,12 @@ void* log_pump(void* arg) {
     return nullptr;
 }
 
-// THE SINK IS THE PROCESS'S, NOT THE ACTIVITY'S. android_main runs again if
-// the activity is destroyed and remade, and a second pipe would strand the
-// first: replacing stdout and stderr closes the old pipe's last writers, the
-// old pump reaches EOF and exits, and one more read fd is gone for each
-// recreation. One sink installed once outlives every entry — the second
-// android_main finds stdout and stderr already pointing at a pipe whose thread
-// is still blocked in read(), and there is nothing left to do.
+// THE SINK IS THE PROCESS'S, AND THE PROCESS IS ONE ACTIVITY'S: android_main
+// runs exactly once per process, because MainActivity.onDestroy ends the
+// process with the activity (2026-10-07; the rule and its reason are at
+// android_main's tail), so this installs once with no guard against a second
+// entry — there is none.
 void route_stdio_to_logcat() {
-    static bool installed = false;
-    if (installed) return;
-
     int fds[2];
     if (pipe(fds) != 0) return;
     // Line-buffer both streams so a message reaches the pump at its newline
@@ -151,7 +146,6 @@ void route_stdio_to_logcat() {
     pthread_detach(t);
     if (saved_out >= 0) close(saved_out);
     if (saved_err >= 0) close(saved_err);
-    installed = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -162,10 +156,12 @@ void route_stdio_to_logcat() {
 // GuiPlatform as an ordinary local, with the same signature on both platforms,
 // so there is no argument through which android_main could hand it the glue's
 // `android_app*`. android_main parks it here BEFORE calling gui_main and
-// init() adopts it; nothing else reads or writes it. The lifetime is trivially
-// safe — android_main's own frame outlives gui_main's — and a second entry
-// (android_main runs again if the activity is destroyed and remade) overwrites
-// it before the second gui_main runs.
+// init() adopts it; the two statics gui_main asks before any GuiPlatform
+// exists (device_config_defaults, read_asset_dir) read it too, and nothing
+// writes it but android_main. The lifetime is trivially safe — android_main's
+// own frame outlives gui_main's — and it is never cleared: nothing reads it
+// once gui_main has returned, and android_main runs once per process (its
+// tail), so no later entry could find a stale one.
 android_app* g_android_app = nullptr;
 
 // FINISHING THE ACTIVITY IS ONE ACT, ASKED AT MOST ONCE PER ACTIVITY. Two
@@ -178,9 +174,9 @@ android_app* g_android_app = nullptr;
 // scope beside the glue pointer, and android_main's tail takes it.
 // ANativeActivity_finish is not documented as idempotent, so the FLAG rather
 // than a second call is what makes the two roads safe to share: the first
-// asker wins and every later one is a no-op. Reset by android_main at entry —
-// the glue runs it again when an activity is destroyed and remade, and the new
-// activity has not been asked anything.
+// asker wins and every later one is a no-op. NEVER RESET: the process ends
+// with the activity (android_main's tail), so no second activity in this
+// process exists to be asked anything.
 // THE ASK IS ONLY HALF THE ORDERING: the finish is asynchronous, so the
 // framework's teardown lands on this thread afterwards and this thread must
 // still be there to acknowledge it. Both halves are stated together at
@@ -2414,7 +2410,11 @@ namespace {
 // whether each face is FT-backed and every set's carry their ems' glyphs
 // (its probe, gui_font.h), and false aborts here exactly as a missing asset
 // does — the Wayland backend's GuiPlatform::init asks the same owner the
-// same question of the bytes compiled into its executable.
+// same question of the bytes compiled into its executable. FALSE IS STILL
+// ONLY THE BUILD DEFECT: the install's other false, the once-per-process
+// answer to a second call, cannot meet this caller, because android_main
+// runs once per process (its tail says why; until 2026-10-07 a relaunch into
+// the kept process reached here a second time and aborted).
 //
 // The assets need not stay open for the process's life:
 // gui_font_install_bundled COPIES the bytes it keeps (its LIFETIME comment
@@ -2483,10 +2483,13 @@ void pump_glue_until(android_app* app, Predicate reached) {
 } // namespace
 
 void android_main(android_app* app) {
-    // android_main RUNS AGAIN if the activity is destroyed and remade. Nothing
-    // survives between entries: gui_main builds and tears down the whole GUI
-    // inside this frame — every project it opens in turn, through its own
-    // reopen loop — and the one file-scope pointer is re-parked below.
+    // ONE ENTRY PER PROCESS: the process ends with the activity (the tail
+    // below, MainActivity.onDestroy), so every launch is a cold process and
+    // nothing once-per-process — the font install, the stdio sink, the
+    // finish flag, every other static — ever meets a second android_main.
+    // gui_main builds and tears down the whole GUI inside this frame — every
+    // project it opens in turn, through its own reopen loop (a run stop, not
+    // a new entry).
     route_stdio_to_logcat();
 
     // THE ENVIRONMENT, BEFORE ANYTHING READS IT. The render cache is
@@ -2527,10 +2530,6 @@ void android_main(android_app* app) {
     }
 
     g_android_app = app;
-    // A REMADE ACTIVITY HAS BEEN ASKED NOTHING: the glue runs this entry again
-    // when the system destroys and recreates the activity, so the previous
-    // one's ask is cleared here rather than carried into this one.
-    g_activity_finish_asked = false;
 
     install_fonts_or_die(app);
 
@@ -2546,10 +2545,7 @@ void android_main(android_app* app) {
     pump_glue_until(app, [app] {
         return app->window != nullptr || app->destroyRequested != 0;
     });
-    if (app->destroyRequested != 0) {
-        g_android_app = nullptr;
-        return;
-    }
+    if (app->destroyRequested != 0) return;
 
     // NO ARGUMENT: the tablet has no command line, and what to open is the
     // project model's question, answered inside gui_main from the device
@@ -2577,7 +2573,6 @@ void android_main(android_app* app) {
     app->onAppCmd     = nullptr;
     app->onInputEvent = nullptr;
     app->userData     = nullptr;
-    g_android_app     = nullptr;
 
     // THE LOOP OUTLIVES THE ACTIVITY, NEVER THE REVERSE. Every lifecycle
     // callback the framework runs on the UI thread — onPause, onStop,
@@ -2597,5 +2592,27 @@ void android_main(android_app* app) {
     // own android_app_destroy run, satisfying onDestroy's wait as before; a
     // destroy already delivered (the system's own road, drain_looper's arm)
     // leaves the predicate true and this returns at once.
+    //
+    // AND THEN THE PROCESS ENDS — not here but at the end of
+    // MainActivity.onDestroy, where the rule's act lives (2026-10-07, his
+    // report: "closing the app and reopening — the window flashes and goes
+    // away"). Android keeps a process after its activity finishes, and the
+    // next launch creates a new activity in it and runs android_main again on
+    // a fresh glue thread; that second entry met gui_font_install_bundled's
+    // once-per-process answer (false, the FreeType library already standing)
+    // and install_fonts_or_die aborted (logcat 2026-10-07 03:45:40, the
+    // SIGABRT in the same pid as the session just quit). Ending the process
+    // with the activity closes the whole class, not that one static: every
+    // launch is cold. THE EXIT CANNOT BE HERE: destroyRequested is set while
+    // the UI thread is still inside NativeActivity.onDestroy, waiting on the
+    // glue's `destroyed`, which android_app_destroy sets only after this
+    // function returns — so an exit at this line would cut MainActivity's
+    // own onDestroy (the session's release, focus's abandon) short; the
+    // process ends once that has run. WHAT THE USER SEES: the caption's X,
+    // File → Quit and BACK are one route (the close prompt, then
+    // GuiCloseTarget::Exit, then GuiPlatform::request_exit), so each of them
+    // now ends the process, and a relaunch is always cold. The project
+    // picker's reopen is a run stop inside gui_main, not a destroy, and stays
+    // in this process.
     pump_glue_until(app, [app] { return app->destroyRequested != 0; });
 }

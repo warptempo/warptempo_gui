@@ -53,7 +53,10 @@
 //
 // LIFETIME: the library, the faces and the font options are created once
 // and never destroyed — the process's exit reclaims them, and there is no
-// second install. The byte buffers are COPIES this file owns, because
+// second install. On Android the process ends with the activity
+// (MainActivity.onDestroy; the rule at platform_android.cpp's android_main
+// tail, 2026-10-07), so this once-per-process rule never meets a second
+// android_main. The byte buffers are COPIES this file owns, because
 // FT_New_Memory_Face does not copy and the face reads from them for as long
 // as it lives.
 

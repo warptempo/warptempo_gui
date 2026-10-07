@@ -60,7 +60,9 @@ import java.nio.charset.StandardCharsets;
  * MediaSession (the block at the end of this comment) and, on 2026-09-03, THE
  * SYSTEM CLIPBOARD -- clipboardSet / clipboardGet, ClipboardManager being a
  * Java object with no NDK surface, so copy and paste reach every other app on
- * the tablet over the same JNI road the session opened. One need is still
+ * the tablet over the same JNI road the session opened. A THIRD, 2026-10-07,
+ * is no new method: onDestroy's last act ENDS THE PROCESS, so every launch is
+ * cold (the reason at that act). One need is still
  * known and unbuilt: the SAF picker's onActivityResult, which is
  * exactly why a subclass is required at all, NativeActivity never forwarding
  * it. The key-repeat cadence stays hard-coded from labwc's numbers in
@@ -494,6 +496,30 @@ public class MainActivity extends NativeActivity {
                 session = null;
             }
         }
+        // THE PROCESS ENDS WITH THE ACTIVITY (2026-10-07), as this method's
+        // last act. Android keeps a process after its activity is destroyed
+        // and the next launch makes a new activity in it, which runs the
+        // native android_main a second time; every once-per-process state
+        // there (the font install answered false and the launch aborted, his
+        // "the window flashes and goes away") would meet it. Ending the
+        // process here makes every launch cold, whichever road destroyed the
+        // activity — Quit, the caption's X and BACK (one route, through the
+        // native request_exit), a fatal startup refusal, or the system's own
+        // destroy; the whole rule is at android_main's tail
+        // (src/gui/platform_android.cpp). IT IS HERE AND NOT AT THAT TAIL
+        // because this is the activity's true end: super.onDestroy() above
+        // has joined the native thread, so the GUI's teardown, the glue's
+        // acknowledgements and this method's own release have all run, and
+        // the framework expects nothing of the process after onDestroy.
+        // killProcess (SIGKILL to this pid), NOT System.exit: exit runs the
+        // shutdown hooks and then libc's exit(), whose static destructors and
+        // atexit handlers in every loaded library would race the threads still
+        // running (binder, the renderer, the native log pump) — and there is
+        // nothing left for them to do. A diagnostic the native side wrote
+        // before its tail had that whole teardown to reach logcat; this line
+        // goes to logd directly, so it is the last one the pid writes.
+        Log.i(TAG, "onDestroy ends the process; the next launch is cold");
+        android.os.Process.killProcess(android.os.Process.myPid());
     }
 
     // THE ROAD UP (GuiPlatform::publish_media_state, src/gui/platform_android.cpp),
